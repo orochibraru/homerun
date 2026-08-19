@@ -3,7 +3,6 @@
 	import { ModeWatcher } from "mode-watcher";
 	import { browser } from "$app/environment";
 	import { onNavigate } from "$app/navigation";
-	import Navbar from "$lib/components/navbar.svelte";
 	import { Toaster } from "$lib/components/ui/sonner";
 	import { title } from "$lib/store/title";
 
@@ -24,12 +23,11 @@
 </script>
 
 <svelte:head>
-    <title>Local Run - {$title ?? "Home"}</title>
+  <title>Local Run - {$title ?? "Home"}</title>
 </svelte:head>
 
 <ModeWatcher defaultMode="light" />
-<Navbar />
-<main class="pt-16">
-    {@render children()}
+<main>
+  {@render children()}
 </main>
 <Toaster richColors />

@@ -123,7 +123,7 @@
             use:enhance
         >
             <fieldset disabled={loading} class="flex flex-col gap-4">
-                <div class="overflow-y-auto max-h-[40vh] md:max-h-[50vh]">
+                <div class="max-h-[40vh] overflow-y-auto md:max-h-[50vh]">
                     {@render content()}
                 </div>
                 {@render footerButtons()}
@@ -146,7 +146,7 @@
                 }
             }}
         >
-            <div class="overflow-y-auto max-h-[40vh] md:max-h-[50vh]">
+            <div class="max-h-[40vh] overflow-y-auto md:max-h-[50vh]">
                 {@render content()}
             </div>
             {@render footerButtons()}
@@ -174,7 +174,7 @@
             <Drawer.Header>
                 <Drawer.Title class="text-lg">{title}</Drawer.Title>
                 {#if description}
-                    <Drawer.Description class="text-sm text-muted-foreground">
+                    <Drawer.Description class="text-muted-foreground text-sm">
                         {description}
                     </Drawer.Description>
                 {/if}

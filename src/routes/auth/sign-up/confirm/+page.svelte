@@ -69,18 +69,18 @@
 </script>
 
 <div
-    class="flex justify-center items-center px-4 min-h-[calc(100vh-4rem)] bg-[var(--color-bg)]"
+    class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-[var(--color-bg)] px-4"
 >
     <div class="w-full max-w-lg">
         <!-- ── Main card ──────────────────────────────────────────────── -->
         <div
-            class="p-8 text-center rounded-2xl border shadow-sm border-[var(--color-border)] bg-[var(--color-surface)]"
+            class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center shadow-sm"
         >
             <!-- Icon -->
             <div
-                class="flex justify-center items-center mx-auto mb-6 rounded-2xl ring-8 size-16 bg-accent/10 ring-accent/5"
+                class="bg-accent/10 ring-accent/5 mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl ring-8"
             >
-                <Mail class="size-8 text-accent" />
+                <Mail class="text-accent size-8" />
             </div>
 
             <!-- Heading -->
@@ -103,10 +103,10 @@
             <ol class="mt-6 space-y-2 text-left">
                 {#each ["Open the email from Local Run", 'Click the "Confirm email" button', "You'll be signed in automatically"] as step, i}
                     <li
-                        class="flex gap-3 items-start text-sm text-[var(--color-text-muted)]"
+                        class="flex items-start gap-3 text-sm text-[var(--color-text-muted)]"
                     >
                         <span
-                            class="flex justify-center items-center mt-0.5 text-xs font-bold rounded-full size-5 shrink-0 bg-accent/10 text-accent"
+                            class="bg-accent/10 text-accent mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
                         >
                             {i + 1}
                         </span>
@@ -119,10 +119,10 @@
             <button
                 onclick={checkVerification}
                 disabled={checking}
-                class="flex gap-2 justify-center items-center py-3 px-4 mt-7 w-full text-sm font-semibold text-white rounded-xl shadow-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed bg-accent shadow-accent/30 hover:bg-accent-dark"
+                class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-7 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
             >
                 {#if checking}
-                    <Loader2 class="animate-spin size-4" />
+                    <Loader2 class="size-4 animate-spin" />
                     Checking…
                 {:else}
                     <CheckCircle class="size-4" />
@@ -135,7 +135,7 @@
             <div class="mt-4">
                 {#if resent}
                     <p
-                        class="flex gap-1.5 justify-center items-center text-sm text-green-600"
+                        class="flex items-center justify-center gap-1.5 text-sm text-green-600"
                     >
                         <CheckCircle class="size-4" />
                         Email sent! Check your spam folder if you don't see it.
@@ -144,10 +144,10 @@
                     <button
                         onclick={resendEmail}
                         disabled={resending}
-                        class="inline-flex gap-1.5 items-center text-sm transition-colors disabled:opacity-60 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                        class="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)] disabled:opacity-60"
                     >
                         {#if resending}
-                            <Loader2 class="animate-spin size-3.5" />
+                            <Loader2 class="size-3.5 animate-spin" />
                             Sending…
                         {:else}
                             <RefreshCw class="size-3.5" />
@@ -162,14 +162,14 @@
                 Wrong email?
                 <a
                     href={resolve("/auth/sign-up")}
-                    class="hover:underline text-accent"
+                    class="text-accent hover:underline"
                 >
                     Create a new account
                 </a>
                 or
                 <a
                     href={resolve("/auth/sign-in")}
-                    class="hover:underline text-accent"
+                    class="text-accent hover:underline"
                 >
                     sign in to a different one
                 </a>.
@@ -179,13 +179,13 @@
         <!-- ── Dev-only bypass ─────────────────────────────────────────── -->
         {#if data.isDev}
             <div
-                class="overflow-hidden mt-4 rounded-2xl border border-amber-300/40 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-950/20"
+                class="mt-4 overflow-hidden rounded-2xl border border-amber-300/40 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-950/20"
             >
                 <div
-                    class="flex gap-3 items-start py-3 px-4 border-b border-amber-200/60 dark:border-amber-800/30"
+                    class="flex items-start gap-3 border-b border-amber-200/60 px-4 py-3 dark:border-amber-800/30"
                 >
                     <TriangleAlert
-                        class="mt-0.5 text-amber-600 dark:text-amber-400 size-4 shrink-0"
+                        class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
                     />
                     <div>
                         <p
@@ -201,16 +201,16 @@
                         </p>
                     </div>
                     <span
-                        class="flex gap-1 items-center py-0.5 px-2 ml-auto font-bold tracking-wide text-amber-700 bg-amber-100 rounded-full dark:text-amber-300 text-[10px] dark:bg-amber-900/50"
+                        class="ml-auto flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
                     >
                         <FlaskConical class="size-3" />
                         DEV
                     </span>
                 </div>
-                <div class="py-3 px-4">
+                <div class="px-4 py-3">
                     <button
                         onclick={devBypass}
-                        class="flex gap-2 justify-center items-center py-2.5 px-4 w-full text-sm font-medium text-amber-800 bg-white rounded-xl border border-amber-300 transition-all duration-200 dark:text-amber-300 hover:bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/30 dark:hover:bg-amber-900/50"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-medium text-amber-800 transition-all duration-200 hover:bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
                     >
                         <FlaskConical class="size-4" />
                         Skip verification and go to dashboard

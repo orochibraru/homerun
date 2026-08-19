@@ -32,6 +32,16 @@ export const configSchema = zod.z.object({
 		password: zod.z.string().optional(),
 		from: zod.z.string().optional(),
 	}),
+	docker: zod.z.object({
+		socketPath: zod.z.string().default("/var/run/docker.sock"),
+		networkName: zod.z.string().default("localrun-network"),
+	}),
+	// Base domain deployed services get subdomained under: <slug>.<baseDomain>
+	baseDomain: zod.z.string().default("localhost"),
+	traefik: zod.z.object({
+		entrypoint: zod.z.string().default("websecure"),
+		certResolver: zod.z.string().default("letsencrypt"),
+	}),
 });
 
 export type PenombreConfig = zod.z.infer<typeof configSchema>;
@@ -44,7 +54,11 @@ export const parseConfig = (): PenombreConfig => {
 		dbPath: Bun.env.DB_PATH,
 		auth: {
 			origin: Bun.env.ORIGIN,
-			secret: Bun.env.AUTH_SECRET,
+			// AUTH_SECRET is the app-local override; BETTER_AUTH_SECRET is the
+			// name better-auth's own CLI (`auth generate`) expects by
+			// convention, and what `.env` sets — fall back to it so the
+			// generated secret is actually used instead of the zod default.
+			secret: Bun.env.AUTH_SECRET ?? Bun.env.BETTER_AUTH_SECRET,
 		},
 		smtp: {
 			enabled: Bun.env.SMTP_ENABLED === "true",
@@ -56,6 +70,15 @@ export const parseConfig = (): PenombreConfig => {
 			user: Bun.env.SMTP_USER,
 			password: Bun.env.SMTP_PASSWORD,
 			from: Bun.env.SMTP_FROM,
+		},
+		docker: {
+			socketPath: Bun.env.DOCKER_SOCKET_PATH,
+			networkName: Bun.env.DOCKER_NETWORK_NAME,
+		},
+		baseDomain: Bun.env.BASE_DOMAIN,
+		traefik: {
+			entrypoint: Bun.env.TRAEFIK_ENTRYPOINT,
+			certResolver: Bun.env.TRAEFIK_CERT_RESOLVER,
 		},
 	};
 	return configSchema.parse(envConfig);

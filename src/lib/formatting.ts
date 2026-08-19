@@ -37,9 +37,13 @@ export function getPasswordStrength(password: string): number {
 }
 
 export function getPasswordStrengthMeta(strength: number) {
-	if (strength === 0) return { label: "", bar: "bg-[var(--color-surface-3)]", text: "" };
-	if (strength === 1) return { label: "Weak", bar: "bg-red-500", text: "text-red-500" };
-	if (strength === 2) return { label: "Fair", bar: "bg-yellow-500", text: "text-yellow-500" };
-	if (strength === 3) return { label: "Good", bar: "bg-blue-500", text: "text-blue-500" };
+	if (strength === 0)
+		return { label: "", bar: "bg-[var(--color-surface-3)]", text: "" };
+	if (strength === 1)
+		return { label: "Weak", bar: "bg-red-500", text: "text-red-500" };
+	if (strength === 2)
+		return { label: "Fair", bar: "bg-yellow-500", text: "text-yellow-500" };
+	if (strength === 3)
+		return { label: "Good", bar: "bg-blue-500", text: "text-blue-500" };
 	return { label: "Strong", bar: "bg-green-500", text: "text-green-500" };
 }

@@ -1,3 +1,44 @@
+import { CheckCircle, Clock, Loader2, XCircle } from "@lucide/svelte";
+import type { ContainerStatus } from "$lib/types";
+
+export const SERVICE_STATUS_CONFIG: Record<
+	ContainerStatus,
+	{ label: string; class: string; icon: typeof CheckCircle }
+> = {
+	pending: {
+		label: "Pending",
+		class: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+		icon: Clock,
+	},
+	pulling: {
+		label: "Pulling",
+		class: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+		icon: Loader2,
+	},
+	starting: {
+		label: "Starting",
+		class:
+			"bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+		icon: Loader2,
+	},
+	running: {
+		label: "Running",
+		class:
+			"bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+		icon: CheckCircle,
+	},
+	stopped: {
+		label: "Stopped",
+		class: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+		icon: XCircle,
+	},
+	failed: {
+		label: "Failed",
+		class: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+		icon: XCircle,
+	},
+};
+
 export const GRADIENTS = [
 	"from-violet-500 to-purple-700",
 	"from-blue-500 to-indigo-700",

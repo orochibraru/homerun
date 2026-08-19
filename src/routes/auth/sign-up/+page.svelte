@@ -1,72 +1,72 @@
 <script lang="ts">
-  import { Eye, EyeOff, Loader2, Server, ShieldCheck } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { goto } from "$app/navigation";
-  import { resolve } from "$app/paths";
-  import { signUp, useSession } from "$lib/auth-client";
-  import AuthBrandingPanel from "$lib/components/auth-branding-panel.svelte";
-  import {
-    getPasswordStrength,
-    getPasswordStrengthMeta,
-  } from "$lib/formatting";
-  import { title } from "$lib/store/title";
+	import { Eye, EyeOff, Loader2, Server, ShieldCheck } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { signUp, useSession } from "$lib/auth-client";
+	import AuthBrandingPanel from "$lib/components/auth-branding-panel.svelte";
+	import {
+		getPasswordStrength,
+		getPasswordStrengthMeta,
+	} from "$lib/formatting";
+	import { title } from "$lib/store/title";
 
-  const session = useSession();
+	const session = useSession();
 
-  // Redirect if already logged in
-  $effect(() => {
-    if (!$session.isPending && $session.data?.user) {
-      goto(resolve("/"));
-    }
-  });
+	// Redirect if already logged in
+	$effect(() => {
+		if (!$session.isPending && $session.data?.user) {
+			goto(resolve("/"));
+		}
+	});
 
-  onMount(() => title.set("Create Account"));
+	onMount(() => title.set("Create Account"));
 
-  let name = $state("");
-  let email = $state("");
-  let password = $state("");
-  let confirm = $state("");
-  let loading = $state(false);
-  let showPassword = $state(false);
-  let showConfirm = $state(false);
+	let name = $state("");
+	let email = $state("");
+	let password = $state("");
+	let confirm = $state("");
+	let loading = $state(false);
+	let showPassword = $state(false);
+	let showConfirm = $state(false);
 
-  const inputClass =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+	const inputClass =
+		"w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
-  // ── Password strength ──────────────────────────────────────────────
-  const passwordStrength = $derived(getPasswordStrength(password));
-  const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
+	// ── Password strength ──────────────────────────────────────────────
+	const passwordStrength = $derived(getPasswordStrength(password));
+	const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
 
-  // ── Submit ─────────────────────────────────────────────────────────
-  async function handleSignUp(e: SubmitEvent) {
-    e.preventDefault();
-    if (password.length < 12) {
-      toast.error("Password must be at least 12 characters.");
-      return;
-    }
-    if (password !== confirm) {
-      toast.error("Passwords do not match.");
-      return;
-    }
-    loading = true;
-    try {
-      const { error } = await signUp.email({ email, password, name });
-      if (error) {
-        toast.error(
-          error.message ?? "Could not create account. Please try again.",
-        );
-        return;
-      }
-      // Always land on confirm so the user knows to check their email
-      // (or gets the dev-mode bypass if SMTP isn't configured)
-      goto(resolve("/auth/sign-up/confirm"));
-    } catch {
-      toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      loading = false;
-    }
-  }
+	// ── Submit ─────────────────────────────────────────────────────────
+	async function handleSignUp(e: SubmitEvent) {
+		e.preventDefault();
+		if (password.length < 12) {
+			toast.error("Password must be at least 12 characters.");
+			return;
+		}
+		if (password !== confirm) {
+			toast.error("Passwords do not match.");
+			return;
+		}
+		loading = true;
+		try {
+			const { error } = await signUp.email({ email, password, name });
+			if (error) {
+				toast.error(
+					error.message ?? "Could not create account. Please try again.",
+				);
+				return;
+			}
+			// Always land on confirm so the user knows to check their email
+			// (or gets the dev-mode bypass if SMTP isn't configured)
+			goto(resolve("/auth/sign-up/confirm"));
+		} catch {
+			toast.error("An unexpected error occurred. Please try again.");
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
@@ -74,15 +74,15 @@
 
   <!-- ── Right panel ──────────────────────────────────────────────── -->
   <div
-    class="flex flex-col flex-1 justify-center items-center py-10 px-6 sm:px-10 bg-[var(--color-bg)]"
+    class="flex flex-1 flex-col items-center justify-center bg-[var(--color-bg)] px-6 py-10 sm:px-10"
   >
     <!-- Mobile-only logo -->
     <div class="mb-8 text-center lg:hidden">
       <a
         href={resolve("/")}
-        class="inline-flex gap-1.5 items-center text-xl font-bold"
+        class="inline-flex items-center gap-1.5 text-xl font-bold"
       >
-        <Server class="size-5 text-accent" />
+        <Server class="text-accent size-5" />
         <span class="text-[var(--color-text)]">Local</span><span
           class="text-accent">Run</span
         >
@@ -108,7 +108,7 @@
         <div>
           <label
             for="name"
-            class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
+            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
           >
             Full name <span class="text-red-500">*</span>
           </label>
@@ -128,7 +128,7 @@
         <div>
           <label
             for="email"
-            class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
+            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
           >
             Email <span class="text-red-500">*</span>
           </label>
@@ -148,7 +148,7 @@
         <div>
           <label
             for="password"
-            class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
+            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
           >
             Password <span class="text-red-500">*</span>
           </label>
@@ -166,7 +166,7 @@
             <button
               type="button"
               onclick={() => (showPassword = !showPassword)}
-              class="absolute right-3.5 top-1/2 transition-colors -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {#if showPassword}
@@ -202,7 +202,7 @@
         <div>
           <label
             for="confirm"
-            class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
+            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
           >
             Confirm password <span class="text-red-500">*</span>
           </label>
@@ -225,7 +225,7 @@
             <button
               type="button"
               onclick={() => (showConfirm = !showConfirm)}
-              class="absolute right-3.5 top-1/2 transition-colors -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
               aria-label={showConfirm ? "Hide password" : "Show password"}
             >
               {#if showConfirm}
@@ -238,7 +238,7 @@
           {#if confirm && confirm !== password}
             <p class="mt-1 text-xs text-red-500">Passwords don't match.</p>
           {:else if confirm && confirm === password}
-            <p class="flex gap-1 items-center mt-1 text-xs text-green-500">
+            <p class="mt-1 flex items-center gap-1 text-xs text-green-500">
               <ShieldCheck class="size-3.5" /> Passwords match
             </p>
           {/if}
@@ -248,10 +248,10 @@
         <button
           type="submit"
           disabled={loading || !name || !email || !password || !confirm}
-          class="flex gap-2 justify-center items-center py-3 px-4 mt-2 w-full text-sm font-semibold text-white rounded-xl shadow-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed bg-accent shadow-accent/30 hover:bg-accent-dark"
+          class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {#if loading}
-            <Loader2 class="animate-spin size-4" />
+            <Loader2 class="size-4 animate-spin" />
             Creating account…
           {:else}
             Create account
@@ -260,11 +260,11 @@
         </button>
       </form>
 
-      <p class="mt-6 text-sm text-center text-[var(--color-text-muted)]">
+      <p class="mt-6 text-center text-sm text-[var(--color-text-muted)]">
         Already have an account?
         <a
           href={resolve("/auth/sign-in")}
-          class="font-medium hover:underline text-accent"
+          class="text-accent font-medium hover:underline"
         >
           Sign in
         </a>

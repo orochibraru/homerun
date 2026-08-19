@@ -1,24 +1,45 @@
+# Traefik bootstrap for Local Run's deployed services.
+#
+# This app itself is NOT containerized yet — run it directly on the host
+# (`bun run dev` / `bun run start`) with DOCKER_NETWORK_NAME=localrun-network
+# and access to /var/run/docker.sock. Traefik auto-discovers containers this
+# app creates via Docker labels (see src/lib/server/docker/labels.ts) — no
+# control-plane push needed.
+#
+# No-compose fallback: `docker network create localrun-network`, then run
+# Traefik standalone with the same command flags as below.
 services:
-  db:
-    image: postgres:18-alpine
+  traefik:
+    image: traefik:v3
     restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=localrun-network
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - db:/var/lib/postgresql
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB-localrun}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD-postgres}
-      - POSTGRES_USER=${POSTGRES_USER-postgres}
-      - TZ=${TZ-Europe/Paris}
-    healthcheck:
-      test:
-        [
-          CMD-SHELL,
-          "sh -c 'pg_isready -U ${POSTGRES_USER-postgres} -d ${POSTGRES_DB-localrun}'",
-        ]
-      interval: 1s
-      timeout: 2s
-      retries: 10
-      start_period: 3s
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
+    networks:
+      - localrun-network
+
+networks:
+  # external: true — this network is a shared resource, not compose-owned.
+  # The app's own Docker layer (src/lib/server/docker/service.ts) attaches
+  # deployed containers to it directly by name, and it must survive a
+  # `docker compose down` without taking those containers' routing with it.
+  # Create it once with: docker network create localrun-network
+  localrun-network:
+    name: localrun-network
+    external: true
 
 volumes:
-  db: {}
+  traefik-certs: {}
