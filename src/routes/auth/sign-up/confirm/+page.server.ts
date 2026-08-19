@@ -1,9 +1,8 @@
 import { redirect } from "@sveltejs/kit";
 import { dev } from "$app/environment";
 import { resolve } from "$app/paths";
-import type { PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load = async ({ locals }) => {
 	// No session at all → send back to sign-up
 	if (!locals.user) {
 		redirect(302, resolve("/auth/sign-up"));

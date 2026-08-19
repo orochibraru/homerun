@@ -3,9 +3,8 @@
 	import { onDestroy, onMount, tick } from "svelte";
 	import { resolve } from "$app/paths";
 	import { title } from "$lib/store/title";
-	import type { PageData } from "../$types";
 
-	const { data }: { data: PageData } = $props();
+	const { data } = $props();
 	const svc = $derived(data.service);
 
 	onMount(() => title.set(`${svc.name} · Logs`));

@@ -10,9 +10,8 @@
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { title } from "$lib/store/title";
-	import type { PageData } from "../$types";
 
-	const { data }: { data: PageData } = $props();
+	const { data } = $props();
 	const svc = $derived(data.service);
 
 	onMount(() => title.set(`${svc.name} · Env Vars`));

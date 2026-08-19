@@ -12,11 +12,8 @@ import {
 	stopContainer,
 } from "$lib/server/docker/service";
 import { ownedService } from "$lib/server/services";
-import type { Actions, PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ params, locals }) => {
-	if (!locals.user) redirect(302, resolve("/auth/sign-in"));
-
+export const load = async ({ params }) => {
 	const deployments = await db
 		.select()
 		.from(deployment)
@@ -27,9 +24,11 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	return { deployments };
 };
 
-export const actions: Actions = {
+export const actions = {
 	deploy: async ({ params, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const svc = await ownedService(params.serviceId, locals.user.id);
 		if (!svc) return fail(404, { error: "Service not found." });
 
@@ -109,7 +108,9 @@ export const actions: Actions = {
 	},
 
 	start: async ({ params, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const svc = await ownedService(params.serviceId, locals.user.id);
 		if (!svc) return fail(404, { error: "Service not found." });
 		if (!svc.containerId) {
@@ -125,7 +126,9 @@ export const actions: Actions = {
 	},
 
 	stop: async ({ params, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const svc = await ownedService(params.serviceId, locals.user.id);
 		if (!svc) return fail(404, { error: "Service not found." });
 		if (!svc.containerId) {
@@ -141,7 +144,9 @@ export const actions: Actions = {
 	},
 
 	restart: async ({ params, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const svc = await ownedService(params.serviceId, locals.user.id);
 		if (!svc) return fail(404, { error: "Service not found." });
 		if (!svc.containerId) {

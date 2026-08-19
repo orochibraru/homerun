@@ -5,11 +5,12 @@ import { db } from "$lib/server/db/lib";
 import { service } from "$lib/server/db/schema";
 import { ownedService } from "$lib/server/services";
 import { parseEnvVars } from "$lib/server/validation/service";
-import type { Actions } from "./$types";
 
-export const actions: Actions = {
+export const actions = {
 	update: async ({ request, params, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const svc = await ownedService(params.serviceId, locals.user.id);
 		if (!svc) return fail(404, { error: "Service not found." });
 

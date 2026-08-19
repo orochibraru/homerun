@@ -9,16 +9,16 @@ import {
 	createServiceSchema,
 	parseEnvVars,
 } from "$lib/server/validation/service";
-import type { Actions, PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+export const load = async () => {
 	return { baseDomain: config.baseDomain };
 };
 
-export const actions: Actions = {
+export const actions = {
 	create: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 
 		const formData = await request.formData();
 		const result = createServiceSchema.safeParse(Object.fromEntries(formData));

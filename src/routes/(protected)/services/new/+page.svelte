@@ -12,9 +12,8 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { title } from "$lib/store/title";
-	import type { ActionData, PageData } from "./$types";
 
-	const { data, form }: { data: PageData; form: ActionData } = $props();
+	const { data, form } = $props();
 
 	onMount(() => title.set("Deploy a Service"));
 

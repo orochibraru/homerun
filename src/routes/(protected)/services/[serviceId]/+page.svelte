@@ -13,9 +13,8 @@
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
-	import type { ActionData, PageData } from "./$types";
 
-	const { data, form }: { data: PageData; form: ActionData } = $props();
+	const { data, form } = $props();
 
 	const svc = $derived(data.service);
 

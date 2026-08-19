@@ -14,9 +14,8 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { title } from "$lib/store/title";
-	import type { ActionData, PageData } from "./$types";
 
-	const { data, form }: { data: PageData; form: ActionData } = $props();
+	const { data, form } = $props();
 	const svc = $derived(data.service);
 
 	onMount(() => title.set(`${svc.name} · Settings`));

@@ -1,15 +1,14 @@
-import { redirect } from "@sveltejs/kit";
 import { desc, eq } from "drizzle-orm";
-import { resolve } from "$app/paths";
 import { db } from "$lib/server/db/lib";
 import { deployment, service } from "$lib/server/db/schema";
-import type { PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+export const load = async ({ parent }) => {
+	// (protected)/+layout.server.ts already redirects unauthenticated users
+	// before this load runs — parent() gives the already-guaranteed user.
+	const { user } = await parent();
 
 	const [services, recentDeployments] = await Promise.all([
-		db.select().from(service).where(eq(service.userId, locals.user.id)),
+		db.select().from(service).where(eq(service.userId, user.id)),
 		db
 			.select({
 				deployment,
@@ -18,7 +17,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			})
 			.from(deployment)
 			.leftJoin(service, eq(deployment.serviceId, service.id))
-			.where(eq(deployment.userId, locals.user.id))
+			.where(eq(deployment.userId, user.id))
 			.orderBy(desc(deployment.createdAt))
 			.limit(5),
 	]);

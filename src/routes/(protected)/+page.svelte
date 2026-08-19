@@ -4,9 +4,8 @@
 	import { resolve } from "$app/paths";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
-	import type { PageData } from "./$types";
 
-	const { data }: { data: PageData } = $props();
+	const { data } = $props();
 
 	onMount(() => title.set("Dashboard"));
 

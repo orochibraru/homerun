@@ -12,7 +12,6 @@ import {
 	stopContainer,
 } from "$lib/server/docker/service";
 import { ownedService } from "$lib/server/services";
-import type { Actions, PageServerLoad } from "./$types";
 
 async function loadServices(userId: string) {
 	const rows = await db
@@ -35,12 +34,9 @@ async function loadServices(userId: string) {
 	return rows;
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) {
-		throw redirect(302, resolve("/auth/sign-in"));
-	}
-
-	const services = await loadServices(locals.user.id);
+export const load = async ({ parent }) => {
+	const { user } = await parent();
+	const services = await loadServices(user.id);
 
 	return {
 		services,
@@ -48,9 +44,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 };
 
-export const actions: Actions = {
+export const actions = {
 	start: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const data = await request.formData();
 		const serviceId = data.get("serviceId") as string | null;
 		if (!serviceId) return fail(400, { error: "Missing service id." });
@@ -70,7 +68,9 @@ export const actions: Actions = {
 	},
 
 	stop: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const data = await request.formData();
 		const serviceId = data.get("serviceId") as string | null;
 		if (!serviceId) return fail(400, { error: "Missing service id." });
@@ -90,7 +90,9 @@ export const actions: Actions = {
 	},
 
 	restart: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const data = await request.formData();
 		const serviceId = data.get("serviceId") as string | null;
 		if (!serviceId) return fail(400, { error: "Missing service id." });
@@ -106,7 +108,9 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ request, locals }) => {
-		if (!locals.user) redirect(302, resolve("/auth/sign-in"));
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 		const data = await request.formData();
 		const serviceId = data.get("serviceId") as string | null;
 		if (!serviceId) return fail(400, { error: "Missing service id." });
