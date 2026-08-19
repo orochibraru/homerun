@@ -3,6 +3,7 @@
     AlertTriangle,
     Check,
     ChevronDown,
+    FolderKanban,
     LayoutGrid,
     Loader2,
     Lock,
@@ -292,6 +293,57 @@
         </button>
       </div>
     </form>
+  </section>
+
+  <!-- ═══ Project ═══ -->
+  <section class="rounded-2xl border border-border bg-surface">
+    <div class="flex items-center justify-between gap-4 p-5">
+      <div class="flex items-center gap-3">
+        <div
+          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
+        >
+          <FolderKanban class="size-4" />
+        </div>
+        <div>
+          <p class="text-sm font-medium text-text">Project</p>
+          <p class="text-xs text-text-muted">
+            Move this service into a different project, or ungroup it.
+          </p>
+        </div>
+      </div>
+      <form
+        action="?/moveProject"
+        class="flex items-center gap-2"
+        method="POST"
+        use:enhance={() =>
+          async ({ result, update }) => {
+            if (result.type === "success") {
+              toast.success("Moved.");
+            } else {
+              toast.error("Couldn't move the service.");
+            }
+            await update();
+          }}
+      >
+        <select
+          class="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+          name="projectId"
+        >
+          <option selected={!svc.projectId} value="">Ungrouped</option>
+          {#each data.projects as proj (proj.id)}
+            <option selected={svc.projectId === proj.id} value={proj.id}>
+              {proj.name}
+            </option>
+          {/each}
+        </select>
+        <button
+          class="shrink-0 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
+          type="submit"
+        >
+          Move
+        </button>
+      </form>
+    </div>
   </section>
 
   <!-- ═══ Save as template ═══ -->

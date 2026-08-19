@@ -31,7 +31,9 @@
     </p>
     <a
       class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-4 flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
-      href="{resolve('/services/new')}?templateId={tmpl.id}"
+      href="{resolve('/services/new')}?templateId={tmpl.id}{data.project
+        ? `&projectId=${data.project.id}`
+        : ''}"
     >
       <Rocket class="size-3.5" />
       Deploy

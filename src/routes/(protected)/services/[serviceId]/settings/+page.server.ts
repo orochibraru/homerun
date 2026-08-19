@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
@@ -8,6 +9,13 @@ import { removeContainer } from "$lib/server/docker/service";
 import { updateServiceSchema } from "$lib/server/validation/service";
 
 const logger = new Logger("Services");
+
+export const load = async ({ parent }) => {
+  const { user } = await parent();
+  const projects = await ProjectDTO.list(user.id);
+
+  return { projects: projects.map((p) => p.toJSON()) };
+};
 
 export const actions = {
   delete: async ({ params, locals }) => {
@@ -29,6 +37,35 @@ export const actions = {
     await svc.delete();
     logger.info(`Service deleted: service=${svc.id} user=${locals.user.id}`);
     throw redirect(303, resolve("/services"));
+  },
+  moveProject: async ({ request, params, locals }) => {
+    if (!locals.user) {
+      throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+    if (!svc) {
+      return fail(404, { error: "Service not found." });
+    }
+
+    const formData = await request.formData();
+    const rawProjectId = formData.get("projectId") as string | null;
+
+    // Empty selection means "ungrouped" — otherwise confirm the target
+    // project is actually the user's own, never trust the form value alone.
+    let projectId: string | null = null;
+    if (rawProjectId) {
+      const proj = await ProjectDTO.get(rawProjectId, locals.user.id);
+      if (!proj) {
+        return fail(400, { error: "That project wasn't found." });
+      }
+      projectId = proj.id;
+    }
+
+    await svc.update({ projectId });
+    logger.info(
+      `Service moved: service=${svc.id} project=${projectId ?? "none"} user=${locals.user.id}`
+    );
+    return { moved: true };
   },
   saveAsTemplate: async ({ params, locals }) => {
     if (!locals.user) {

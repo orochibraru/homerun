@@ -286,6 +286,55 @@ export const deployment = sqliteTable(
   ]
 );
 
+export const storageVolume = sqliteTable(
+  "storage_volume",
+  {
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    description: text("description"),
+    id: text("id").primaryKey(),
+    // Docker Binds source: either a bind-mount host path ("/mnt/data/foo")
+    // or a Docker-managed named volume ("localrun-vol-xyz") — same field,
+    // Docker's Binds syntax tells them apart by whether it looks like a
+    // path. `kind` just drives which the create form asks for.
+    // "bind" | "volume"
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    source: text("source").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .$onUpdate(() => new Date())
+      .notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("storageVolume_userId_idx").on(table.userId)]
+);
+
+// One storage volume can be mounted into several services — that's what
+// makes it "shared" across a project, no separate project-level concept
+// needed (see TODO.md).
+export const serviceVolume = sqliteTable(
+  "service_volume",
+  {
+    containerPath: text("container_path").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    id: text("id").primaryKey(),
+    readOnly: integer("read_only", { mode: "boolean" })
+      .default(false)
+      .notNull(),
+    serviceId: text("service_id")
+      .notNull()
+      .references(() => service.id, { onDelete: "cascade" }),
+    volumeId: text("volume_id")
+      .notNull()
+      .references(() => storageVolume.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    index("serviceVolume_serviceId_idx").on(table.serviceId),
+    index("serviceVolume_volumeId_idx").on(table.volumeId),
+  ]
+);
+
 // ─── Relations ─────────────────────────────────────────────────────────────
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -295,6 +344,7 @@ export const userRelations = relations(user, ({ many }) => ({
   projects: many(project),
   services: many(service),
   sessions: many(session),
+  storageVolumes: many(storageVolume),
   templates: many(template),
 }));
 
@@ -314,6 +364,7 @@ export const serviceRelations = relations(service, ({ one, many }) => ({
     references: [project.id],
   }),
   user: one(user, { fields: [service.userId], references: [user.id] }),
+  volumeMounts: many(serviceVolume),
 }));
 
 export const deploymentRelations = relations(deployment, ({ one }) => ({
@@ -324,10 +375,31 @@ export const deploymentRelations = relations(deployment, ({ one }) => ({
   user: one(user, { fields: [deployment.userId], references: [user.id] }),
 }));
 
+export const storageVolumeRelations = relations(
+  storageVolume,
+  ({ one, many }) => ({
+    mounts: many(serviceVolume),
+    user: one(user, { fields: [storageVolume.userId], references: [user.id] }),
+  })
+);
+
+export const serviceVolumeRelations = relations(serviceVolume, ({ one }) => ({
+  service: one(service, {
+    fields: [serviceVolume.serviceId],
+    references: [service.id],
+  }),
+  volume: one(storageVolume, {
+    fields: [serviceVolume.volumeId],
+    references: [storageVolume.id],
+  }),
+}));
+
 export type Project = typeof project.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type Service = typeof service.$inferSelect;
 export type Deployment = typeof deployment.$inferSelect;
+export type StorageVolume = typeof storageVolume.$inferSelect;
+export type ServiceVolume = typeof serviceVolume.$inferSelect;
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {

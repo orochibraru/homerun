@@ -117,6 +117,14 @@ export async function pullImage(
   }
 }
 
+export interface VolumeMountParams {
+  containerPath: string;
+  readOnly: boolean;
+  // A bind-mount host path ("/mnt/data/foo") or a Docker-managed named
+  // volume name — see StorageVolume in the schema, same field either way.
+  source: string;
+}
+
 export interface CreateContainerParams {
   containerPort: number;
   cpuLimit?: string | null;
@@ -131,6 +139,7 @@ export interface CreateContainerParams {
   serviceId: string;
   slug: string;
   tag: string;
+  volumes?: VolumeMountParams[];
 }
 
 /**
@@ -173,12 +182,20 @@ export async function createAndStartContainer(
   const restartPolicyName =
     params.restartPolicy === "no" ? "" : params.restartPolicy;
 
+  // Docker's Binds syntax covers both a host bind-mount path and a
+  // Docker-managed named volume with the same "source:target[:ro]" form —
+  // it tells them apart by whether source looks like a path.
+  const binds = (params.volumes ?? []).map(
+    (v) => `${v.source}:${v.containerPath}${v.readOnly ? ":ro" : ""}`
+  );
+
   const container = await docker.createContainer({
     Env: Object.entries(params.envVars).map(
       ([key, value]) => `${key}=${value}`
     ),
     ExposedPorts: { [`${params.containerPort}/tcp`]: {} },
     HostConfig: {
+      Binds: binds.length > 0 ? binds : undefined,
       Memory: params.memoryLimitMb
         ? params.memoryLimitMb * 1024 * 1024
         : undefined,

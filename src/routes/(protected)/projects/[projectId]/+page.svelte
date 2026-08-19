@@ -3,6 +3,7 @@
     AlertTriangle,
     ArrowLeft,
     Check,
+    LayoutGrid,
     Loader2,
     Pencil,
     Plus,
@@ -60,6 +61,13 @@
           <Pencil class="size-3.5" />
           Rename
         </button>
+        <a
+          class="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
+          href="{resolve('/templates')}?projectId={proj.id}"
+        >
+          <LayoutGrid class="size-3.5" />
+          From Template
+        </a>
         <a
           class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
           href="{resolve('/services/new')}?projectId={proj.id}"
@@ -127,13 +135,22 @@
       <p class="text-sm font-medium text-text-muted">
         No services in this project yet
       </p>
-      <a
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-5 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-        href="{resolve('/services/new')}?projectId={proj.id}"
-      >
-        <Plus class="size-4" />
-        Add Service
-      </a>
+      <div class="mt-5 flex gap-2">
+        <a
+          class="flex items-center gap-1.5 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
+          href="{resolve('/templates')}?projectId={proj.id}"
+        >
+          <LayoutGrid class="size-4" />
+          From Template
+        </a>
+        <a
+          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
+          href="{resolve('/services/new')}?projectId={proj.id}"
+        >
+          <Plus class="size-4" />
+          Add Service
+        </a>
+      </div>
     </div>
   {:else}
     <div class="mb-8 space-y-3">

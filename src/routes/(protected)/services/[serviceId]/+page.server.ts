@@ -2,6 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { Logger } from "$lib/logger";
 import {
   buildAuthConfig,
@@ -58,6 +59,8 @@ export const actions = {
 
       await svc.update({ currentStatus: "starting" });
 
+      const mounts = await ServiceVolumeDTO.listForService(svc.id);
+
       const { containerId } = await createAndStartContainer(
         {
           containerPort: svc.containerPort,
@@ -70,6 +73,11 @@ export const actions = {
           serviceId: svc.id,
           slug: svc.slug,
           tag: svc.tag,
+          volumes: mounts.map((m) => ({
+            containerPath: m.mount.toJSON().containerPath,
+            readOnly: m.mount.toJSON().readOnly,
+            source: m.volumeSource,
+          })),
         },
         (line) => dep.appendLog(line)
       );

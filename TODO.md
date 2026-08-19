@@ -12,8 +12,18 @@
 - [ ] We need to be able to open a terminal from the web ui to access the containers
 - [ ] We need to be able to configure volumes for each service OR project to have shared volumes
 - [ ] We need to be able to configure storage sources for local volumes, mount paths in a dedicated page in the sidebar called "storage"
-- [ ] Add ability to move a service in a project or out of a project
-- [ ] Add ability to deploy template in a project
+- [x] Add ability to move a service in a project or out of a project
+- [x] Add ability to deploy template in a project
 - [x] If a service is deploying when reloading a page or accessing it, fetch the deploy logs and hide the deploy button
 - [x] in the deployment history show build outputs (record and store the build log)
 - [ ] Add instance settings/onboarding if basic settings aren't filled (like domain name, what DNS service is used (Cloudflare, Pangolin which are automatable via API for automatic TLD operations or something else), if SSL should be used etc)
+- [ ] Error catching service, adds a tab called "errors" with the amount of errors recorded for each service and what they are and when and the log that corresponds
+- [ ] Add possibility to setup a general OIDC provider to gatekeep some apps if needed. This should be choosable in the new service wizard if the app should be accessible unauthenticated or not.
+- [ ] Add a flag for an app to be DNS resolvable or subnet only
+- [ ] Add auto-backup feature to S3 destinations (like Dokploy does)
+- [ ] Custom SSL certificate handling
+- [ ] Add Git providers (even self hosted like Gitea) to build apps from a repo source
+- [ ] Enable Remote Servers for deployments or building apps from source to prevent overloading the main server
+- [ ] Every container created from a project should have it's name prefixed with the project name, same for the domain/subdomain
+- [ ] Show system stats like CPU, Ram, GPU & Disk
+- [ ] Ability to view logs from core services like the server running localrun, or Traefik
