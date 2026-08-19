@@ -54,3 +54,7 @@
 ## Onboarding
 
 - [ ] Instance settings/onboarding flow when basic settings aren't configured yet (domain name, DNS provider — e.g. Cloudflare, Pangolin, automatable via API for TLS/DNS ops — SSL usage, etc.), [this project](https://github.com/orochibraru/dokploy-to-pangolin) is a good example
+
+## UI
+
+- [ ] Componentize UI elements to ensure UI/UX consistency across the app and proper DevEx
