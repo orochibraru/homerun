@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { HardDrive, Plus, Trash2 } from "@lucide/svelte";
+  import { CloudUpload, HardDrive, Plus, Trash2 } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
@@ -78,7 +78,22 @@
                 {vol.description}
               </p>
             {/if}
+            {#if vol.backupEnabled}
+              <p
+                class="mt-0.5 flex items-center gap-1 text-xs text-emerald-600"
+              >
+                <CloudUpload class="size-3" />
+                auto-backup on
+              </p>
+            {/if}
           </div>
+          <a
+            class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text"
+            href={resolve("/storage/[volumeId]", { volumeId: vol.id })}
+            title="Backup settings"
+          >
+            <CloudUpload class="size-4" />
+          </a>
           <form
             action="?/delete"
             method="POST"

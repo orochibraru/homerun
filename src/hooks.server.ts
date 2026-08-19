@@ -3,11 +3,15 @@ import process, { cwd } from "node:process";
 import type { Handle } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
+import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { building } from "$app/environment";
 import { Logger } from "$lib/logger";
 import { auth } from "$lib/server/auth";
-import { getDb, resetDb } from "$lib/server/db";
+import { startBackupScheduler } from "$lib/server/backup-scheduler";
+import { startCronScheduler } from "$lib/server/cron-scheduler";
+import { db as appDb, getDb, resetDb } from "$lib/server/db";
+import { user as userTable } from "$lib/server/db/schema";
 import { seedBuiltinTemplates } from "$lib/server/db/seed";
 
 const logger = new Logger("Hooks");
@@ -97,6 +101,8 @@ export const init = async () => {
   await waitForDatabase();
   await runMigrations();
   await seedBuiltinTemplates();
+  startCronScheduler();
+  startBackupScheduler();
 };
 
 /** Paths under the auth basePath that are handled by SvelteKit, not better-auth */
@@ -124,7 +130,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
         .verifyApiKey({ body: { key: rawKey } })
         .catch(() => null);
 
-      if (!result?.valid) {
+      if (!(result?.valid && result.key)) {
         logger.warn("Invalid API key authentication attempt", {
           key: rawKey,
         });
@@ -134,14 +140,19 @@ const authHandler: Handle = async ({ event, resolve }) => {
         });
       }
 
-      const apiKeySession = await auth.api.getSession({
-        headers: new Headers({
-          "x-api-key": rawKey,
-        }),
-      });
+      // Look the owning user up directly by the key's referenceId rather
+      // than going through getSession's API-key session-mocking (that
+      // path is gated behind enableSessionForAPIKeys, which better-auth's
+      // own docs warn against enabling in production — see api-key
+      // plugin's types.d.ts).
+      const [apiKeyUser] = await appDb
+        .select()
+        .from(userTable)
+        .where(eq(userTable.id, result.key.referenceId))
+        .limit(1);
 
-      if (apiKeySession?.session && apiKeySession.user) {
-        event.locals.user = apiKeySession.user;
+      if (apiKeyUser) {
+        event.locals.user = apiKeyUser;
       }
     }
   }

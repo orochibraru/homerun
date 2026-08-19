@@ -50,6 +50,34 @@
       "when": 1787163849833,
       "tag": "0006_wet_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1787166003294,
+      "tag": "0007_cynical_gunslinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787166658586,
+      "tag": "0008_hard_excalibur",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1787167008134,
+      "tag": "0009_sweet_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787167608875,
+      "tag": "0010_unique_the_anarchist",
+      "breakpoints": true
     }
   ]
 }

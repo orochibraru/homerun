@@ -5,6 +5,7 @@
     FileText,
     HardDrive,
     LayoutGrid,
+    Network,
     Settings,
     SlidersHorizontal,
   } from "@lucide/svelte";
@@ -43,6 +44,12 @@
       href: resolve("/services/[serviceId]/volumes", { serviceId: svc.id }),
       icon: HardDrive,
       label: "Volumes",
+    },
+    {
+      exact: false,
+      href: resolve("/services/[serviceId]/networking", { serviceId: svc.id }),
+      icon: Network,
+      label: "Networking",
     },
     {
       exact: false,

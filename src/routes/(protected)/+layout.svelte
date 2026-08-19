@@ -10,6 +10,7 @@
     ScrollText,
     Server,
     Settings,
+    Wrench,
     X,
   } from "@lucide/svelte";
   import { fly } from "svelte/transition";
@@ -58,6 +59,12 @@
       href: resolve("/system-logs"),
       icon: ScrollText,
       label: "System Logs",
+    },
+    {
+      exact: false,
+      href: resolve("/setup"),
+      icon: Wrench,
+      label: "Setup",
     },
   ];
 

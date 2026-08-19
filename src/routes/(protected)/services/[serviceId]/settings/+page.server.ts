@@ -4,6 +4,7 @@ import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
+import { parseCronSchedule } from "$lib/server/cron";
 import { encryptSecret } from "$lib/server/docker/secrets";
 import { removeContainer } from "$lib/server/docker/service";
 import { updateServiceSchema } from "$lib/server/validation/service";
@@ -147,5 +148,36 @@ export const actions = {
       `Service settings updated: service=${svc.id} user=${locals.user.id}`
     );
     return { success: true };
+  },
+  updateCron: async ({ request, params, locals }) => {
+    if (!locals.user) {
+      throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+    if (!svc) {
+      return fail(404, { error: "Service not found." });
+    }
+
+    const formData = await request.formData();
+    const cronEnabled = formData.get("cronEnabled") === "on";
+    const cronSchedule =
+      (formData.get("cronSchedule") as string | null)?.trim() ?? "";
+
+    if (cronEnabled && !parseCronSchedule(cronSchedule)) {
+      return fail(400, {
+        cronError:
+          'Invalid schedule — use standard 5-field cron syntax (e.g. "0 3 * * *").',
+      });
+    }
+
+    await svc.update({
+      cronEnabled,
+      cronSchedule: cronSchedule || null,
+    });
+
+    logger.info(
+      `Cron schedule updated: service=${svc.id} enabled=${cronEnabled} schedule="${cronSchedule}" user=${locals.user.id}`
+    );
+    return { cronSaved: true };
   },
 };

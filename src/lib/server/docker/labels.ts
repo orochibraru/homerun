@@ -20,6 +20,15 @@ export function buildContainerLabels(params: {
   dnsResolvable?: boolean;
   // When set, prefixes the public subdomain: "<projectSlug>-<slug>.<baseDomain>".
   projectSlug?: string | null;
+  // Optional second hostname routed to the same backend — its own router,
+  // sharing the primary router's Traefik service (no duplicated backend
+  // config). Only applied when dnsResolvable is true.
+  customDomain?: string | null;
+  // When true, gatekeeps every router for this service behind a Traefik
+  // forwardAuth middleware pointing at config.authCheckUrl — see
+  // /api/v1/auth-check. Only applied when dnsResolvable is true (a
+  // subnet-only service has no public router to gate anyway).
+  authRequired?: boolean;
 }): Record<string, string> {
   const {
     serviceId,
@@ -27,6 +36,8 @@ export function buildContainerLabels(params: {
     containerPort,
     dnsResolvable = true,
     projectSlug,
+    customDomain,
+    authRequired,
   } = params;
 
   const baseLabels = {
@@ -40,7 +51,7 @@ export function buildContainerLabels(params: {
 
   const host = projectSlug ? `${projectSlug}-${slug}` : slug;
 
-  return {
+  const labels: Record<string, string> = {
     ...baseLabels,
     "traefik.docker.network": config.docker.networkName,
 
@@ -56,4 +67,31 @@ export function buildContainerLabels(params: {
     [`traefik.http.services.${slug}.loadbalancer.server.port`]:
       String(containerPort),
   };
+
+  if (customDomain) {
+    const customRouter = `${slug}-custom`;
+    labels[`traefik.http.routers.${customRouter}.rule`] =
+      `Host(\`${customDomain}\`)`;
+    labels[`traefik.http.routers.${customRouter}.entrypoints`] =
+      config.traefik.entrypoint;
+    labels[`traefik.http.routers.${customRouter}.tls`] = "true";
+    labels[`traefik.http.routers.${customRouter}.tls.certresolver`] =
+      config.traefik.certResolver;
+    // Reuses the primary router's service — same backend, just a second
+    // hostname reaching it, not a duplicated loadbalancer config.
+    labels[`traefik.http.routers.${customRouter}.service`] = slug;
+  }
+
+  if (authRequired) {
+    const authMiddleware = `${slug}-auth`;
+    labels[`traefik.http.middlewares.${authMiddleware}.forwardauth.address`] =
+      config.authCheckUrl;
+    labels[`traefik.http.routers.${slug}.middlewares`] = authMiddleware;
+    if (customDomain) {
+      labels[`traefik.http.routers.${slug}-custom.middlewares`] =
+        authMiddleware;
+    }
+  }
+
+  return labels;
 }

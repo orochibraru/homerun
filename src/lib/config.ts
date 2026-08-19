@@ -3,6 +3,16 @@ import { z } from "zod";
 
 export const configSchema = z.object({
   auth: z.object({
+    // Opt-in, off by default: scopes the session cookie to
+    // ".<baseDomain>" instead of the exact host, so a session started on
+    // this app's own origin is also valid on a gated deployed service's
+    // subdomain (see docker/labels.ts's authRequired forwardAuth
+    // middleware) — without this, "Require login" still blocks
+    // unauthenticated visitors, it just can't recognize an
+    // already-signed-in admin on a *different* subdomain. Widens the
+    // cookie's scope across every subdomain of baseDomain, which is a
+    // real tradeoff worth deciding deliberately rather than defaulting on.
+    crossSubdomainCookies: z.boolean().default(false),
     oauthProviders: z
       .array(
         z.object({
@@ -19,6 +29,14 @@ export const configSchema = z.object({
     origin: z.string().default("http://localhost:3000"),
     secret: z.string().default("default-secret"),
   }),
+  // URL Traefik's forwardAuth middleware calls to gatekeep a service with
+  // authRequired=true (see docker/labels.ts). Must be reachable *from
+  // inside the Traefik container*, not from the host — since this app
+  // isn't containerized, that's usually host.docker.internal (works out
+  // of the box on Docker Desktop; on Linux, compose.yaml's Traefik
+  // service needs `extra_hosts: ["host.docker.internal:host-gateway"]`
+  // added, which this app can't do for you).
+  authCheckUrl: z.string(),
   // Base domain deployed services get subdomained under: <slug>.<baseDomain>
   baseDomain: z.string().default("localhost"),
   dbPath: z.string().default("./database.db"),
@@ -49,6 +67,7 @@ export type PenombreConfig = z.infer<typeof configSchema>;
 export const parseConfig = (): PenombreConfig => {
   const envConfig = {
     auth: {
+      crossSubdomainCookies: Bun.env.AUTH_CROSS_SUBDOMAIN === "true",
       origin: Bun.env.ORIGIN,
       // AUTH_SECRET is the app-local override; BETTER_AUTH_SECRET is the
       // name better-auth's own CLI (`auth generate`) expects by
@@ -56,6 +75,13 @@ export const parseConfig = (): PenombreConfig => {
       // generated secret is actually used instead of the zod default.
       secret: Bun.env.AUTH_SECRET ?? Bun.env.BETTER_AUTH_SECRET,
     },
+    // Falls back to host.docker.internal on the app's own port — right
+    // for the common case (Docker Desktop, or Linux with the
+    // host-gateway extra_hosts entry documented above); override
+    // explicitly for anything else.
+    authCheckUrl:
+      Bun.env.AUTH_CHECK_URL ??
+      `http://host.docker.internal:${Bun.env.PORT ?? 3000}/api/v1/auth-check`,
     baseDomain: Bun.env.BASE_DOMAIN,
     dbPath: Bun.env.DB_PATH,
     docker: {

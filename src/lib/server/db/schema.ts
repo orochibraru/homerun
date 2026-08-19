@@ -209,15 +209,33 @@ export const template = sqliteTable(
 export const service = sqliteTable(
   "service",
   {
+    // When true, a Traefik forwardAuth middleware gatekeeps this service
+    // behind this app's own login (any provider, including a configured
+    // OIDC one) — see docker/labels.ts and /api/v1/auth-check.
+    authRequired: integer("auth_required", { mode: "boolean" })
+      .default(false)
+      .notNull(),
     containerId: text("container_id"),
     containerPort: integer("container_port").notNull(),
     cpuLimit: text("cpu_limit"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    // Standard 5-field cron expression ("min hour day month weekday"),
+    // evaluated in the server's local time — see $lib/server/cron.ts.
+    // Null/disabled unless the user opts in via the Overview tab.
+    cronEnabled: integer("cron_enabled", { mode: "boolean" })
+      .default(false)
+      .notNull(),
+    cronLastRunAt: integer("cron_last_run_at", { mode: "timestamp_ms" }),
+    cronSchedule: text("cron_schedule"),
     // pending | pulling | starting | running | stopped | failed
     currentStatus: text("current_status")
       .$type<ContainerStatus>()
       .default("pending")
       .notNull(),
+    // Optional second hostname routed to this service (its own DNS A/CNAME
+    // must already point at this host — the app doesn't manage that).
+    // Only takes effect when dnsResolvable is true.
+    customDomain: text("custom_domain").unique(),
     // running | stopped — the user's intent
     desiredState: text("desired_state")
       .$type<"running" | "stopped">()
@@ -300,6 +318,23 @@ export const deployment = sqliteTable(
 export const storageVolume = sqliteTable(
   "storage_volume",
   {
+    backupAccessKeyId: text("backup_access_key_id"),
+    // Cron expression for scheduled backups, evaluated by the same
+    // scheduler tick as service redeploys — see $lib/server/cron.ts.
+    backupBucket: text("backup_bucket"),
+    // AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
+    backupEnabled: integer("backup_enabled", { mode: "boolean" })
+      .default(false)
+      .notNull(),
+    // S3-compatible endpoint, e.g. "https://s3.us-east-1.amazonaws.com" or
+    // a self-hosted MinIO URL. Bind-mount sources only for now — Docker
+    // named volumes aren't backed up yet (see backup.ts).
+    backupEndpoint: text("backup_endpoint"),
+    backupLastRunAt: integer("backup_last_run_at", { mode: "timestamp_ms" }),
+    backupPrefix: text("backup_prefix"),
+    backupRegion: text("backup_region"),
+    backupSchedule: text("backup_schedule"),
+    backupSecretAccessKeyEnc: text("backup_secret_access_key_enc"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     description: text("description"),
     id: text("id").primaryKey(),

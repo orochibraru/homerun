@@ -124,7 +124,7 @@
   --color-border: #2e2e36;
   --color-border-light: #3f3f46;
 
-  --color-accent-light: rgba(58, 204, 237, 0.12);
+  --color-accent-light: rgba(20, 102, 209, 0.12);
   --color-accent-glow: rgba(58, 133, 237, 0.25);
 
   --color-text: #fafafa;
@@ -202,7 +202,7 @@
   --font-sans: "Inter Variable", sans-serif;
 
   --color-accent: #0b65c0;
-  --color-accent-dark: #0b5cc0;
+  --color-accent-dark: #0475ff;
 
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 

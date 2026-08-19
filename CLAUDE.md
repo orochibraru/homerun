@@ -64,41 +64,74 @@ Top-level sections (sidebar nav): **Overview** (dashboard stats + recent deploym
 
 - `+page.svelte` — list, grouped by project (with an "Ungrouped" bucket when more than one group exists), inline start/stop/restart/delete actions
 - `new/+page.svelte` — click-config create form; accepts `?projectId=` and/or `?templateId=` query params to pre-fill from a project or template context (does **not** deploy — just persists config)
-- `[serviceId]/+layout.server.ts` — ownership guard (id **and** userId must match, else 404) + syncs live Docker status on every visit. Tabs: **Overview** (deploy/start/stop/restart, live deploy progress panel, deployment history with expandable per-deployment logs), **Logs** (live-streamed via a `+server.ts` GET returning a chunked `ReadableStream`), **Env Vars**, **Volumes** (mount/unmount StorageVolumes), **Settings** (edit config, move between projects, save-as-template, danger-zone delete)
+- `[serviceId]/+layout.server.ts` — ownership guard (id **and** userId must match, else 404) + syncs live Docker status on every visit. Tabs: **Overview** (deploy/start/stop/restart, live deploy progress panel, deployment history with expandable per-deployment logs), **Logs** (live-streamed via a `+server.ts` GET returning a chunked `ReadableStream`), **Env Vars**, **Volumes** (mount/unmount StorageVolumes), **Networking** (custom domain mapping; SSL/Ports sections are read-only explainers, not controls — TLS is automatic, host ports are never published by design), **Errors** (failed deployments + a live "container currently down" banner), **Settings** (edit config, move between projects, save-as-template, auto-redeploy cron schedule, danger-zone delete)
 - `[serviceId]/deployments/[deploymentId]/progress/+server.ts` — polled by the Overview tab while a deploy is in flight; returns `{log, status}` JSON. The client pre-generates the deployment id itself (`crypto.randomUUID()`, set on the form via `formData.set("deploymentId", ...)` in `use:enhance`'s pre-submit callback) so it can start polling _before_ the deploy request even resolves. Polling is status-driven (stops once the deployment reaches a terminal status), which is also what makes resuming the progress view after a mid-deploy page reload work — `onMount` checks `svc.currentStatus` and resumes polling the latest deployment if it's still in-flight.
 
-`src/routes/(protected)/projects/`, `templates/`, `storage/` mirror this pattern (list + `new/` create route + `[id]` detail where applicable).
+`src/routes/(protected)/projects/`, `templates/`, `storage/` mirror this pattern (list + `new/` create route + `[id]` detail where applicable). `system-logs/` streams the Traefik container's own logs (see Docker integration below).
+
+### REST API (`src/routes/api/v1/`)
+
+Lives outside `(protected)/` — that group's guard is a page-`load` redirect, wrong for a JSON API that should 401 instead. Every handler starts with its own `if (!locals.user) return json({error:"Unauthorized"}, {status:401})`; `locals.user` is populated for both cookie sessions and `x-api-key`/`Bearer` requests by `hooks.server.ts` (see Auth below), so the same handlers serve the dashboard's own `fetch` calls and external API-key clients alike.
+
+- `services/` — `GET` list, `POST` create (zod-validated body, not the FormData-shaped schema `$lib/server/validation/service.ts` — that one's checkbox/`envKey[]`/`envValue[]` preprocessing is form-specific).
+- `services/[serviceId]/` — `GET`, `PATCH` (partial update; `registryPassword` in the body re-encrypts, omitted means unchanged), `DELETE` (stops/removes the container first, same as the Settings danger-zone action).
+- `services/[serviceId]/{deploy,start,stop,restart}/` — `POST`. `deploy` awaits the full pull→create→start pipeline via `deployService()` (see below) and returns once it's done — no separate polling endpoint for API clients (the dashboard's own progress-polling UI is unrelated, cookie-session only).
+- `projects/`, `templates/` — read/create, same pattern, thinner (no lifecycle actions).
+
+This is deliberately a thin JSON wrapper over the DTO layer, not a new abstraction — a future CLI is meant to talk to this.
+
+### Shared deploy pipeline (`src/lib/server/deploy.ts`)
+
+`deployService(svc, userId, clientDeploymentId?)` is the one pull→create-container→start implementation, used by the service Overview page's `deploy` action, `POST /api/v1/services/[serviceId]/deploy`, and the cron redeploy scheduler (below). Returns `{success, deploymentId, containerId?, error?}` rather than throwing — callers decide how to surface failure (a SvelteKit `fail()`, a JSON error body, a scheduler log line). Don't reimplement this inline in a new call site; extend the shared function instead.
+
+### Cron redeploy scheduler (`src/lib/server/cron.ts`, `cron-scheduler.ts`)
+
+Opt-in, per service, off by default — configured on the Settings tab (`cronEnabled` checkbox + `cronSchedule` text field, validated with the same parser used at redeploy time). `cron.ts` is a small dependency-free 5-field cron matcher (wildcard/number/range/list/step, minute resolution, server-local time — no external cron package, matching this app's generally dependency-light posture). `cron-scheduler.ts`'s `startCronScheduler()` runs a 60s `setInterval` (started from `hooks.server.ts`'s `init()`), HMR-safe via a `globalThis` guard (same pattern as the db singleton in `db/lib.ts`) so a dev-server hot reload never starts a second interval. Each tick calls `ServiceDTO.listCronEnabled()` (unscoped by user — the only DTO method that queries across all users, since the scheduler isn't running on behalf of a request) and fires `deployService()` for anything due, guarding against a double-fire in the same matching minute via `cronLastRunAt`.
+
+### S3 backups (`src/lib/server/backup/`, `backup-scheduler.ts`)
+
+Per-volume, off by default, configured on `storage/[volumeId]`. `backup/s3-client.ts` is a hand-rolled AWS Signature V4 client (`putObject` — single-request PUT, no multipart, no SDK dependency — verified end-to-end against a local MinIO container during development) that works against any S3-compatible endpoint (AWS S3, MinIO, R2, B2, etc.) via path-style addressing. `backup/backup.ts`'s `backupVolume()` shells out to `tar` to gzip the volume's `source` directory in memory, then PUTs it as `<prefix/>volumeName-<timestamp>.tar.gz`. **Bind-mount volumes only** — `kind: "volume"` (Docker-managed) is rejected, since its content isn't visible on the host filesystem the same way; would need a short-lived helper container to read it out (not built). `backup-scheduler.ts` mirrors `cron-scheduler.ts` exactly (same 60s-tick / `globalThis`-guard / `cronMatches` / last-run double-fire-guard pattern, own logger) — the two are independent schedulers, not shared code, since they operate on different DTOs. No restore flow — upload-only.
 
 ### Data model (`src/lib/server/db/schema.ts`)
 
 better-auth-owned tables (`user`, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 
-- `service` — image/tag, registry creds (`registryPasswordEnc`, AES-256-GCM), envVars (JSON), port/restart-policy/resource limits, `desiredState` (user intent) vs `currentStatus` (live reconciled Docker state), `containerId`, `projectId` (nullable FK, `onDelete: "set null"`).
+- `service` — image/tag, registry creds (`registryPasswordEnc`, AES-256-GCM), envVars (JSON), port/restart-policy/resource limits, `desiredState` (user intent) vs `currentStatus` (live reconciled Docker state), `containerId`, `projectId` (nullable FK, `onDelete: "set null"`), `cronEnabled`/`cronSchedule`/`cronLastRunAt` (opt-in scheduled redeploy, see below), `authRequired` (Traefik forwardAuth gate, see below — ships with a known real limitation, read that section before assuming it works end-to-end).
 - `deployment` — history of deploy attempts: status, image digest, error message, timestamps, and `log` (text, default `""`) — the live-appended progress log described above, kept after the deploy completes as an audit trail (shown as an expandable panel per row in the deployment history).
-- `project` — name/description/userId. Every project has a matching Docker network (see below), created alongside the row and removed on cascade-delete.
+- `service.customDomain` — optional second hostname (unique), a second Traefik router sharing the primary router's backend service — see labels.ts below. Configured on the service's Networking tab.
+- `project` — name/description/userId/`slug` (unique, DNS-safe — prefixes every member service's container name and public subdomain, see Docker integration below). Every project has a matching Docker network (see below), created alongside the row and removed on cascade-delete. Known gap: account deletion's cascade cleans up a user's services/containers but not their `project` rows — harmless clutter today (FK pragma is off) but should get the same explicit treatment eventually (see TODO.md Chores).
 - `template` — image/tag/port/envVars/etc., `ownerId` nullable (null = built-in, seeded, immutable).
-- `storage_volume` — a named local volume source: `kind` (`"bind"` | `"volume"`), `source` (an absolute host path for bind, or a Docker-managed volume name — Docker's own `Binds` syntax tells the two apart by whether it looks like a path).
+- `storage_volume` — a named local volume source: `kind` (`"bind"` | `"volume"`), `source` (an absolute host path for bind, or a Docker-managed volume name — Docker's own `Binds` syntax tells the two apart by whether it looks like a path). `backup*` columns (`backupEnabled`/`backupSchedule`/`backupEndpoint`/`backupBucket`/`backupRegion`/`backupAccessKeyId`/`backupSecretAccessKeyEnc`/`backupPrefix`/`backupLastRunAt`) hold its optional S3 destination — see Backups below.
 - `service_volume` — join table: one mount of one `storage_volume` into one `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by being mounted into more than one service — no separate project-volume concept.
 
 **`PRAGMA foreign_keys` is never enabled** on the `bun:sqlite` connection, so `onDelete: "cascade"` in the schema is decorative for anything that also needs real-world cleanup (stopping containers, removing Docker networks). Explicit cascade logic lives in `ProjectDTO.cascadeDelete()` and `beforeDelete` in `src/lib/server/auth.ts` (account deletion) — both stop/remove the user's actual Docker containers before the DB rows disappear.
 
-Migrations are incremental under `drizzle/` (`0000` baseline, `0001` project, `0002` template, `0003` deployment.log, `0004` storage/service volume). Mid-session schema changes get applied directly via a one-off script using `drizzle-orm/bun-sqlite/migrator`'s `migrate()` against the live `database.db`, without needing to restart the dev server.
+Migrations are incremental under `drizzle/` (`0000` baseline, `0001` project, `0002` template, `0003` deployment.log, `0004` storage/service volume, `0005` service.dns_resolvable, `0006` project.slug). Mid-session schema changes get applied directly via a one-off script using `drizzle-orm/bun-sqlite/migrator`'s `migrate()` against the live `database.db`, without needing to restart the dev server. **Adding a NOT-NULL column to a table that already has rows** (as `0006` did): SQLite's `ALTER TABLE ADD COLUMN NOT NULL` requires a `DEFAULT` even on an empty table — use a harmless default (e.g. `DEFAULT ''`) in the migration SQL, then backfill any pre-existing rows with a real value by hand; the ORM-level `notNull()` in `schema.ts` is what matters for new rows going forward (app-enforced, same as the FK-cascade note below).
 
 `src/lib/server/db/seed.ts` — `seedBuiltinTemplates()`, called from `hooks.server.ts`'s `init()` on every boot (idempotent, fixed ids like `"builtin-redis"`, `.onConflictDoNothing()`).
 
 ### Docker integration (`src/lib/server/docker/`)
 
 - `client.ts` — HMR-safe `dockerode` singleton, socket path from config.
-- `labels.ts` — every container gets `localrun.managed=true` + `localrun.service.id=<id>`, plus Traefik discovery labels. `listManagedContainers()` and any host-scanning code **must** filter on `localrun.managed=true` — this app must never touch a container it didn't create.
-- `networks.ts` — per-project Docker networks. `projectNetworkName(projectId)` is deterministic (`localrun-project-<id>`, no separate id stored). `ensureProjectNetwork`/`removeProjectNetwork` (idempotent create/remove, called from `ProjectDTO.create`/`cascadeDelete`). `connectToProjectNetwork(containerId, projectId, alias)` attaches a container to its project's network under a DNS alias equal to the service's slug.
+- `labels.ts` — every container gets `localrun.managed=true` + `localrun.service.id=<id>`, plus Traefik discovery labels (unless `dnsResolvable` is false — then only the two managed labels, no `traefik.*` at all, so it never gets a router). `listManagedContainers()` and any host-scanning code **must** filter on `localrun.managed=true` — this app must never touch a container it didn't create. When the service belongs to a project, the public subdomain is `<projectSlug>-<slug>.<baseDomain>` (`projectSlug` param, optional). When `customDomain` is set, a second router (`<slug>-custom`) is added pointing at the _same_ `traefik.http.services.<slug>` backend — one loadbalancer config, two hostnames reaching it, not a duplicated service block.
+- `networks.ts` — per-project Docker networks. `projectNetworkName(projectId)` is deterministic (`localrun-project-<id>`, no separate id stored). `ensureProjectNetwork`/`removeProjectNetwork` (idempotent create/remove, called from `ProjectDTO.create`/`cascadeDelete`). `connectToProjectNetwork(containerId, projectId, alias)` attaches a container to its project's network under a DNS alias equal to the service's slug (the _internal_ alias is never project-prefixed, only the container name and public subdomain are — sibling services keep addressing each other by plain slug).
 - `service.ts` — the operational surface:
   - `pullImage(image, tag, auth?, onProgress?)` — `onProgress` is called once per layer _status change_ (not per byte-tick — dockerode's raw progress events are far too chatty to log one-for-one), used to build the live deploy-progress log.
-  - `createAndStartContainer(params, onProgress?)` — container names include a random suffix (`localrun-<slug>-<hex8>`) so a redeploy never collides on "name already in use"; the _previous_ container for a service is found by its `localrun.service.id` label (`findServiceContainer`), not by name, since names are no longer stable across deploys. The container is aliased as its slug on the shared network (`NetworkingConfig.EndpointsConfig`) so other services can reach it at `http://<slug>:<containerPort>` regardless of the randomized name; if `params.projectId` is set, it also joins that project's network under the same alias. `params.volumes` (from `ServiceVolumeDTO.listForService`) becomes `HostConfig.Binds` (`"source:containerPath[:ro]"` — covers both bind-mounts and named volumes with the same syntax).
+  - `createAndStartContainer(params, onProgress?)` — container names include a random suffix (`localrun-[<projectSlug>-]<slug>-<hex8>`) so a redeploy never collides on "name already in use"; the _previous_ container for a service is found by its `localrun.service.id` label (`findServiceContainer`), not by name, since names are no longer stable across deploys. The container is aliased as its slug on the shared network (`NetworkingConfig.EndpointsConfig`) so other services can reach it at `http://<slug>:<containerPort>` regardless of the randomized name; if `params.projectId` is set, it also joins that project's network under the same alias. `params.volumes` (from `ServiceVolumeDTO.listForService`) becomes `HostConfig.Binds` (`"source:containerPath[:ro]"` — covers both bind-mounts and named volumes with the same syntax). Don't call this directly from a new route — go through `$lib/server/deploy.ts`'s `deployService()` instead (see above), which wraps it with deployment-row bookkeeping.
   - `start/stop/restartContainer`, `removeContainer`, `inspectStatus` → `ContainerStatus`, `streamLogs` (follow-mode web `ReadableStream`), `buildAuthConfig`.
 - `reconcile.ts` — `syncServiceStatus`/`syncAllServiceStatuses`: poll-on-page-load status reconciliation. There is intentionally no background worker or Docker event subscriber (yet — see Planned features).
 - `secrets.ts` — AES-256-GCM for `registryPasswordEnc`, key derived via `scryptSync` from `config.auth.secret`.
+- `core-services.ts` — `findTraefikContainer()`, a deliberate narrow exception to the managed-label-only rule: read-only (logs only, never lifecycle) lookup of the Traefik container by image-name prefix, backing the System Logs page.
 
-Containers attach to the external `localrun-network` Docker network (`docker network create localrun-network` once) rather than publishing host ports. `compose.yaml` bootstraps Traefik only; **the app itself is not containerized**.
+Containers attach to the external `localrun-network` Docker network (`docker network create localrun-network` once) rather than publishing host ports. `compose.yaml` bootstraps Traefik only; **the app itself is not containerized** (so its own logs aren't viewable in-app — see `system-logs/` above).
+
+### System stats (`src/lib/server/system-stats.ts`)
+
+`getSystemStats()` — host-level (not per-container) CPU/RAM/disk via Node's `os` module + a shelled-out `df -Pk .`, plus a best-effort GPU read via `nvidia-smi` (returns `gpu: null` when absent — the common case, not an error; no other vendor supported). CPU% needs a delta between two samples (`os.cpus()` gives cumulative counters since boot), so a module-scope `lastCpuSample` is diffed on each call — first call after boot always reads 0%. Polled by the dashboard's `/system-stats` endpoint every 5s.
+
+### Setup diagnostics (`src/lib/server/setup-checks.ts`)
+
+`runSetupChecks()` — read-only diagnostics (base domain/auth secret/origin still at their defaults, Traefik container reachable, Docker socket reachable, SMTP fully configured if enabled), each with a severity and the env var that fixes it. Surfaced on `/setup` and as a dismissed-by-navigating-away banner on the dashboard when anything isn't `"ok"`. Deliberately not a live-editable settings store — config stays env-var driven (see below) — and there's no DNS-provider (Cloudflare/Pangolin) automation; see TODO.md's Onboarding item for that larger, unbuilt scope.
 
 ### Config (`src/lib/config.ts`)
 
@@ -108,9 +141,17 @@ Zod-validated env config. Notable groups: `docker.{socketPath,networkName}`, `ba
 
 ### Auth (`src/lib/server/auth.ts`)
 
-better-auth at `basePath: "/api/v1/auth"`, `drizzleAdapter` over the same `bun:sqlite` db. `src/hooks.server.ts` populates `event.locals.user`/`session` from the cookie session, falling back to manual `x-api-key`/`Authorization: Bearer` verification when no cookie is present.
+better-auth at `basePath: "/api/v1/auth"`, `drizzleAdapter` over the same `bun:sqlite` db. `src/hooks.server.ts` populates `event.locals.user`/`session` from the cookie session, falling back to manual `x-api-key`/`Authorization: Bearer` verification when no cookie is present: `auth.api.verifyApiKey()` confirms the key, then the owning user is looked up **directly by `result.key.referenceId`** via a plain drizzle query — deliberately _not_ through `getSession()`'s API-key session-mocking, which is gated behind the `apiKey()` plugin's `enableSessionForAPIKeys` option (default `false`, and better-auth's own docs advise against enabling it in production). This is what makes `x-api-key`/`Bearer` auth work for `src/routes/api/v1/*` (see REST API above).
 
 `user.deleteUser` is enabled with a `beforeDelete` hook — don't assume better-auth's default account-deletion behavior is sufficient; it isn't, by design of this app's extra tables (see Data model above).
+
+`config.auth.crossSubdomainCookies` (env `AUTH_CROSS_SUBDOMAIN`, default off) sets better-auth's `advanced.crossSubDomainCookies` to scope the session cookie to `.{baseDomain}` instead of the exact host — see the per-service auth gate below for why, and its documented, tested limitation.
+
+### Per-service auth gating (`service.authRequired`, `/api/v1/auth-check`)
+
+When enabled (Networking tab), `docker/labels.ts` attaches a Traefik forwardAuth middleware to the service's router(s) pointing at `config.authCheckUrl` (default `http://host.docker.internal:<port>/api/v1/auth-check`, since this app isn't containerized — Traefik must reach it from inside its own container; the Linux case needs `extra_hosts: host-gateway` added to compose.yaml's Traefik service, which this app can't do for the user). `/api/v1/auth-check` just checks `locals.user` and returns 200/401, so it works with whatever the user authenticates into Homerun with — including a configured `genericOAuth`/OIDC provider (see auth.ts).
+
+**Real, tested limitation, not a hypothetical**: there's no login page mounted on a gated service's own subdomain, so this blocks _everyone_ — including a signed-in admin — unless `AUTH_CROSS_SUBDOMAIN=true`. Even with it enabled, during development a signed-in admin visiting the gated subdomain directly still got a 401 (verified: the cookie's `Domain` attribute did widen correctly, but better-auth's `getSession()` still appears to reject it based on request Host — not root-caused, better-auth's internals weren't dug into further). The Networking tab's copy says this plainly (bordering on a warning) rather than promising working SSO. Treat `authRequired` today as a hard "make this unreachable from outside" switch, not a finished login-gated-app feature — a real fix needs a login-redirect flow for gated subdomains.
 
 ### Logging
 
@@ -121,15 +162,13 @@ Every module that mutates state (`page.server.ts` actions, the Docker layer, cas
 Intentional gaps, noted so a future session has the intended shape rather than re-litigating design decisions.
 
 - **Web terminal**: shell into a running container from the UI (`docker exec` over a websocket/stream). Security-sensitive — needs an explicit auth/audit design before building.
-- **Cron / scheduled redeploy**: a per-service schedule to auto-repull-and-redeploy (useful for `:latest` tags). First real need for background/periodic execution — `reconcile.ts`'s poll-on-page-load model doesn't cover it; this is a deliberate architecture expansion (needs a scheduler, not an extension of reconciliation).
 - **Health-gated rollout**: opt-in health check (path + expected status/timeout) gating whether a newly-deployed container receives traffic — blue-green style, keep the old container alive/routable until the new one passes, roll back (never route to it) if it doesn't.
-- **API-driven / CLI**: the DTO layer is the groundwork; no REST endpoints or CLI client exist yet.
-- **Storage**: S3-compatible auto-backup destinations.
-- **Observability**: an "Errors" tab per service (error count/details/timestamps/log), system stats (CPU/RAM/GPU/disk), viewing core-service logs (Homerun itself, Traefik) from the UI.
-- **Security**: general OIDC provider support to gatekeep individual apps (selectable per-service in the new-service wizard), custom SSL certificate handling.
+- **CLI**: the REST API (`src/routes/api/v1/`) and the DTO layer underneath it are the groundwork — a CLI client itself doesn't exist yet.
+- **Storage**: S3 backup covers bind-mount volumes only (see below) — no named-volume backup, no restore flow.
+- **Observability**: system stats beyond the dashboard's host-level CPU/RAM/GPU/disk — no per-container `docker stats` view yet.
+- **Security**: per-service auth gating exists (`authRequired`, see below) but doesn't have a working login-redirect flow yet — see its own section for the real, tested limitation. Custom SSL certificate handling isn't built (would mean changing the live Traefik container's command/mounts, not just app-layer work).
 - **Source integration**: Git providers (including self-hosted, e.g. Gitea) to build from a repo source; remote servers for deployments/builds to avoid overloading the main host.
-- **Onboarding**: an instance-settings flow when domain/DNS provider/SSL aren't configured yet.
-- **Networking refinements**: prefix container names/domains with their project name; a flag to mark a service as DNS-resolvable vs. subnet-only.
+- **Onboarding**: basic setup diagnostics exist (`/setup`, see above) — the larger version (DNS-provider API automation for TLS/DNS ops, e.g. Cloudflare/Pangolin) isn't built.
 - **Notifications / webhooks**: in-app lifecycle event feed; outbound webhooks (Telegram/Discord/generic HTTP) on deploy success/failure.
 
 The living version of this list is `TODO.md` at the repo root — check it for current checkbox state before starting new work.

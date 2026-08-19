@@ -127,8 +127,15 @@ export interface VolumeMountParams {
 }
 
 export interface CreateContainerParams {
+  // When true, gatekeeps this service behind this app's own login via a
+  // Traefik forwardAuth middleware. No effect when dnsResolvable is false.
+  authRequired?: boolean;
   containerPort: number;
   cpuLimit?: string | null;
+  // Optional second hostname routed to this service (DNS must already
+  // point at this host — the app doesn't manage that). No effect when
+  // dnsResolvable is false.
+  customDomain?: string | null;
   // When false, the container gets no Traefik labels at all — no public
   // <slug>.<baseDomain>, subnet-only reachability. Defaults to true.
   dnsResolvable?: boolean;
@@ -214,7 +221,9 @@ export async function createAndStartContainer(
     },
     Image: `${params.image}:${params.tag}`,
     Labels: buildContainerLabels({
+      authRequired: params.authRequired,
       containerPort: params.containerPort,
+      customDomain: params.customDomain,
       dnsResolvable: params.dnsResolvable,
       projectSlug: params.projectSlug,
       serviceId: params.serviceId,

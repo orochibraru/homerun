@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    AlertTriangle,
     ArrowRight,
     Clock,
     Cpu,
@@ -78,6 +79,27 @@
       Here's an overview of your deployed services.
     </p>
   </div>
+
+  {#if data.setupIssues.length > 0}
+    <a
+      class="mb-8 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm transition-colors hover:bg-amber-100 dark:border-amber-900/40 dark:bg-amber-950/20 dark:hover:bg-amber-950/30"
+      href={resolve("/setup")}
+    >
+      <AlertTriangle class="size-4 shrink-0 text-amber-600" />
+      <span class="flex-1 text-amber-800 dark:text-amber-300">
+        {data.setupIssues.length}
+        {data.setupIssues.length === 1 ? "setup issue" : "setup issues"}
+        found — {data.setupIssues[0].label.toLowerCase()}
+        {data.setupIssues.length > 1
+          ? ", and more"
+          : ""}.
+      </span>
+      <span
+        class="shrink-0 font-medium text-amber-700 underline dark:text-amber-400"
+        >Review</span
+      >
+    </a>
+  {/if}
 
   <!-- ── Stat cards ───────────────────────────────────────────── -->
   <div class="mb-8 grid grid-cols-2 gap-4">

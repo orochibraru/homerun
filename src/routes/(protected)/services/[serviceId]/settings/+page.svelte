@@ -3,6 +3,7 @@
     AlertTriangle,
     Check,
     ChevronDown,
+    Clock,
     FolderKanban,
     LayoutGrid,
     Loader2,
@@ -15,6 +16,7 @@
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
+  import { timeAgo } from "$lib/formatting";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -451,6 +453,72 @@
         </button>
       </form>
     </div>
+  </section>
+
+  <!-- ═══ Auto-redeploy (cron) ═══ -->
+  <section class="rounded-2xl border border-border bg-surface p-5">
+    <div class="mb-4 flex items-center gap-3">
+      <div
+        class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
+      >
+        <Clock class="size-4" />
+      </div>
+      <div>
+        <p class="text-sm font-medium text-text">Auto-redeploy schedule</p>
+        <p class="text-xs text-text-muted">
+          Periodically repull the image and redeploy — useful for tracking a
+          <code>:latest</code>
+          tag. Disabled by default.
+        </p>
+      </div>
+    </div>
+
+    <form
+      action="?/updateCron"
+      class="space-y-3"
+      method="POST"
+      use:enhance={() =>
+        async ({ result, update }) => {
+          if (result.type === "success") {
+            toast.success("Saved.");
+          } else if (result.type === "failure") {
+            toast.error("Check the schedule for errors.");
+          }
+          await update();
+        }}
+    >
+      {#if form?.cronError}
+        <p class={errorClass}>{form.cronError}</p>
+      {/if}
+      <label class="flex items-center gap-2 text-sm text-text">
+        <input checked={svc.cronEnabled} name="cronEnabled" type="checkbox">
+        Enable auto-redeploy
+      </label>
+      <div>
+        <label class={label} for="cronSchedule">Schedule (cron syntax)</label>
+        <input
+          class="{input} font-mono"
+          id="cronSchedule"
+          name="cronSchedule"
+          placeholder="0 3 * * *"
+          type="text"
+          value={svc.cronSchedule ?? ""}
+        >
+        <p class="mt-1.5 text-xs text-text-subtle">
+          Standard 5-field cron ("min hour day month weekday"), server local
+          time. E.g. <code>0 3 * * *</code> = every day at 3am.
+          {#if svc.cronLastRunAt}
+            · last run {timeAgo(svc.cronLastRunAt)}
+          {/if}
+        </p>
+      </div>
+      <button
+        class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
+        type="submit"
+      >
+        Save schedule
+      </button>
+    </form>
   </section>
 
   <!-- ═══ Danger zone ═══ -->

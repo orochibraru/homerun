@@ -5,6 +5,7 @@ import { BaseDTO } from "./base-dto";
 
 /** Fields a caller supplies to insert a new service row. */
 export interface NewServiceInput {
+  authRequired?: boolean;
   containerPort: number;
   cpuLimit?: string | null;
   dnsResolvable?: boolean;
@@ -26,10 +27,15 @@ export interface NewServiceInput {
 export type ServiceUpdateInput = Partial<
   Pick<
     Service,
+    | "authRequired"
     | "containerId"
     | "containerPort"
     | "cpuLimit"
+    | "cronEnabled"
+    | "cronLastRunAt"
+    | "cronSchedule"
     | "currentStatus"
+    | "customDomain"
     | "desiredState"
     | "dnsResolvable"
     | "envVars"
@@ -103,6 +109,31 @@ export class ServiceDTO extends BaseDTO<Service> {
     }));
   }
 
+  /** Every service (across all users) with cron redeploys turned on — for the scheduler tick, which isn't scoped to one user. */
+  static async listCronEnabled(): Promise<ServiceDTO[]> {
+    const rows = await db
+      .select()
+      .from(service)
+      .where(eq(service.cronEnabled, true));
+    return rows.map((row) => new ServiceDTO(row));
+  }
+
+  /** Whether `customDomain` is already taken by a *different* service. */
+  static async customDomainTaken(
+    customDomain: string,
+    excludeId?: string
+  ): Promise<boolean> {
+    const conditions = excludeId
+      ? and(eq(service.customDomain, customDomain), ne(service.id, excludeId))
+      : eq(service.customDomain, customDomain);
+    const [row] = await db
+      .select({ id: service.id })
+      .from(service)
+      .where(conditions)
+      .limit(1);
+    return !!row;
+  }
+
   /** Whether `slug` is already taken by a *different* service (for uniqueness checks on create/update). */
   static async slugTaken(slug: string, excludeId?: string): Promise<boolean> {
     const conditions = excludeId
@@ -119,6 +150,7 @@ export class ServiceDTO extends BaseDTO<Service> {
   static async create(input: NewServiceInput): Promise<ServiceDTO> {
     const now = new Date();
     const row: Service = {
+      authRequired: input.authRequired ?? false,
       containerId: null,
       containerPort: input.containerPort,
       cpuLimit: input.cpuLimit ?? null,
@@ -210,5 +242,20 @@ export class ServiceDTO extends BaseDTO<Service> {
   }
   get dnsResolvable(): boolean {
     return this.row.dnsResolvable;
+  }
+  get cronEnabled(): boolean {
+    return this.row.cronEnabled;
+  }
+  get cronSchedule(): string | null {
+    return this.row.cronSchedule;
+  }
+  get customDomain(): string | null {
+    return this.row.customDomain;
+  }
+  get cronLastRunAt(): Date | null {
+    return this.row.cronLastRunAt;
+  }
+  get authRequired(): boolean {
+    return this.row.authRequired;
   }
 }

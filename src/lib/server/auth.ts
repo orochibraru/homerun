@@ -23,6 +23,19 @@ if (!(process.env.ORIGIN || dev || building)) {
 const logger = new Logger("Auth");
 
 export const auth = betterAuth({
+  advanced: {
+    // Opt-in (AUTH_CROSS_SUBDOMAIN=true) — see config.ts for the tradeoff.
+    // Required for a signed-in admin to be recognized on a gated deployed
+    // service's subdomain without a separate login there.
+    ...(config.auth.crossSubdomainCookies
+      ? {
+          crossSubDomainCookies: {
+            domain: `.${config.baseDomain}`,
+            enabled: true,
+          },
+        }
+      : {}),
+  },
   basePath: "/api/v1/auth",
   // Use ORIGIN env-var when explicitly set (production).
   // In dev ORIGIN is often unset; leaving baseURL undefined makes
