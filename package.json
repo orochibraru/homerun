@@ -8,6 +8,7 @@
 		"@icons-pack/svelte-simple-icons": "^7.2.0",
 		"@kitql/helpers": "^0.8.15",
 		"@lucide/svelte": "^1.32.0",
+		"@playwright/test": "^1.62.1",
 		"@sveltejs/kit": "^2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^7.3.0",
 		"@tailwindcss/forms": "^0.5.11",
@@ -52,7 +53,8 @@
 		"lint": "biome check . && rustywind --check-formatted .",
 		"lint:fix": "biome check . --write && rustywind --write .",
 		"auth:db:generate": "auth generate",
-		"db:generate": "drizzle-kit generate"
+		"db:generate": "drizzle-kit generate",
+		"test:e2e": "playwright test"
 	},
 	"type": "module",
 	"dependencies": {

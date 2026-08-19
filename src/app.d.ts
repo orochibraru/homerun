@@ -32,8 +32,8 @@ declare global {
 		}
 	}
 
-	namespace svelteHTML {
-		interface HTMLAttributes<T> {
+	namespace svelteHtml {
+		interface HtmlAttributes<T> {
 			ontap?: (event: CustomEvent<null>) => void;
 			onlongpress?: (event: CustomEvent<null>) => void;
 		}

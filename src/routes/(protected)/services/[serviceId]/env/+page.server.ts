@@ -12,7 +12,9 @@ export const actions = {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		const svc = await ownedService(params.serviceId, locals.user.id);
-		if (!svc) return fail(404, { error: "Service not found." });
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
 
 		const formData = await request.formData();
 		await db

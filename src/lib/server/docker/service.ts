@@ -1,8 +1,8 @@
 import { config } from "$lib/config";
 import type { ContainerStatus } from "$lib/types";
-import { getDocker } from "./client";
-import { buildContainerLabels, MANAGED_LABEL } from "./labels";
-import { decryptSecret } from "./secrets";
+import { getDocker } from "./client.ts";
+import { buildContainerLabels, MANAGED_LABEL } from "./labels.ts";
+import { decryptSecret } from "./secrets.ts";
 
 export type { ContainerStatus };
 
@@ -165,8 +165,12 @@ export async function inspectStatus(
 		const info = await getDocker().getContainer(containerId).inspect();
 		const status = info.State.Status;
 
-		if (status === "running") return "running";
-		if (status === "created" || status === "restarting") return "starting";
+		if (status === "running") {
+			return "running";
+		}
+		if (status === "created" || status === "restarting") {
+			return "starting";
+		}
 		if (status === "exited" || status === "dead") {
 			return info.State.ExitCode === 0 ? "stopped" : "failed";
 		}

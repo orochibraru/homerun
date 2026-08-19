@@ -24,8 +24,8 @@
 
 	function withPending(action: string) {
 		pendingAction = action;
-		return () => {
-			return async ({
+		return () =>
+			async ({
 				result,
 				update,
 			}: {
@@ -40,7 +40,6 @@
 				}
 				await update();
 			};
-		};
 	}
 </script>
 

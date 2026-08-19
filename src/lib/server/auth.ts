@@ -1,3 +1,4 @@
+import process from "node:process";
 import { apiKey } from "@better-auth/api-key";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
@@ -14,7 +15,7 @@ import * as schema from "$lib/server/db/schema";
 import { removeContainer } from "$lib/server/docker/service";
 import { Email } from "$lib/server/email";
 
-if (!process.env.ORIGIN && !dev && !building) {
+if (!(process.env.ORIGIN || dev || building)) {
 	throw new Error("ORIGIN environment variable is not set");
 }
 

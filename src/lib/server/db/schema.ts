@@ -113,7 +113,7 @@ export const apikey = sqliteTable(
 		rateLimitEnabled: integer("rate_limit_enabled", {
 			mode: "boolean",
 		}).default(true),
-		rateLimitTimeWindow: integer("rate_limit_time_window").default(86400000),
+		rateLimitTimeWindow: integer("rate_limit_time_window").default(86_400_000),
 		rateLimitMax: integer("rate_limit_max").default(10),
 		requestCount: integer("request_count").default(0),
 		remaining: integer("remaining"),

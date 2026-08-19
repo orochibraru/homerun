@@ -1,5 +1,5 @@
 import { createTransport, type Transporter } from "nodemailer";
-import type SMTPTransport from "nodemailer/lib/smtp-transport";
+import type SmtpTransport from "nodemailer/lib/smtp-transport";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
 
@@ -17,8 +17,8 @@ export class Email {
 	subject: string;
 	content: string;
 	transporter: Transporter<
-		SMTPTransport.SentMessageInfo,
-		SMTPTransport.Options
+		SmtpTransport.SentMessageInfo,
+		SmtpTransport.Options
 	>;
 
 	constructor({ to, subject, content }: EmailProps) {
@@ -27,7 +27,7 @@ export class Email {
 		this.subject = subject;
 		this.content = content;
 
-		if (!isSmtpEnabled() || !config.smtp?.from) {
+		if (!(isSmtpEnabled() && config.smtp?.from)) {
 			logger.error("SMTP configuration is not defined or not enabled");
 			throw new Error("SMTP configuration is not defined or not enabled");
 		}

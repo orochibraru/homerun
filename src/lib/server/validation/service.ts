@@ -28,7 +28,7 @@ export const createServiceSchema = z.object({
 		.number({ error: "Container port is required." })
 		.int()
 		.min(1)
-		.max(65535),
+		.max(65_535),
 	restartPolicy: z
 		.enum(["no", "always", "on-failure", "unless-stopped"])
 		.default("unless-stopped"),

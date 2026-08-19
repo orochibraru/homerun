@@ -26,7 +26,7 @@
 			const res = await fetch(
 				resolve("/services/[serviceId]/logs", { serviceId: svc.id }),
 			);
-			if (!res.ok || !res.body) {
+			if (!(res.ok && res.body)) {
 				errored = true;
 				return;
 			}

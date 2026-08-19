@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { service } from "$lib/server/db/schema";
-import { inspectStatus } from "./service";
+import { inspectStatus } from "./service.ts";
 
 /**
  * Syncs one service's `currentStatus` with the live Docker state of its

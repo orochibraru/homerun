@@ -25,8 +25,8 @@
 
 	function withPending(serviceId: string) {
 		pending[serviceId] = true;
-		return () => {
-			return async ({
+		return () =>
+			async ({
 				result,
 				update,
 			}: {
@@ -39,7 +39,6 @@
 				}
 				await update();
 			};
-		};
 	}
 
 	function confirmDelete(e: SubmitEvent, name: string) {

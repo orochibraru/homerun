@@ -10,9 +10,7 @@ import {
 	parseEnvVars,
 } from "$lib/server/validation/service";
 
-export const load = async () => {
-	return { baseDomain: config.baseDomain };
-};
+export const load = async () => ({ baseDomain: config.baseDomain });
 
 export const actions = {
 	create: async ({ request, locals }) => {

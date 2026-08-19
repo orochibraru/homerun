@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { cwd } from "node:process";
+import process, { cwd } from "node:process";
 import type { Handle } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
@@ -25,8 +25,6 @@ export function handleError({ event, error, status }) {
 
 		return new Error("An unknown error occured.");
 	}
-
-	return;
 }
 
 async function sleep(ms: number) {

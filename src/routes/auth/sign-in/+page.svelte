@@ -38,7 +38,7 @@
 				return;
 			}
 			// In production, block unverified accounts from accessing the dashboard
-			if (!data?.user?.emailVerified && !dev) {
+			if (!(data?.user?.emailVerified || dev)) {
 				goto(resolve("/auth/sign-up/confirm"));
 				return;
 			}
