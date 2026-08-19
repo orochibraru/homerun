@@ -29,7 +29,7 @@ export function getHash(id: string): number {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = Math.imul(31, hash) + id.charCodeAt(i);
-    hash = hash | 0;
+    hash |= 0;
   }
   return Math.abs(hash);
 }

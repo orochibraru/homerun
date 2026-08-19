@@ -6,11 +6,11 @@ import { decryptSecret } from "./secrets.ts";
 
 export type { ContainerStatus };
 
-export type RegistryAuth = {
-  username: string;
+export interface RegistryAuth {
   password: string;
   serveraddress?: string;
-};
+  username: string;
+}
 
 /** Container name this app gives its containers — also used to find/replace on redeploy. */
 function containerName(slug: string): string {
@@ -67,17 +67,17 @@ export async function pullImage(
   }
 }
 
-export type CreateContainerParams = {
+export interface CreateContainerParams {
+  containerPort: number;
+  cpuLimit?: string | null;
+  envVars: Record<string, string>;
+  image: string;
+  memoryLimitMb?: number | null;
+  restartPolicy: string;
   serviceId: string;
   slug: string;
-  image: string;
   tag: string;
-  envVars: Record<string, string>;
-  containerPort: number;
-  restartPolicy: string;
-  cpuLimit?: string | null;
-  memoryLimitMb?: number | null;
-};
+}
 
 /**
  * Creates and starts the container for a service, replacing any

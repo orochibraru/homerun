@@ -12,6 +12,8 @@ import { expect, test } from "@playwright/test";
 const email = `pw-smoke-${Date.now()}@example.com`;
 const password = "playwright-smoke-test-pw";
 const serviceName = "Playwright Smoke Nginx";
+const SIGN_UP_LANDING_URL_RE = /\/(auth\/sign-up\/confirm)?$/;
+const SIGN_IN_URL_RE = /\/auth\/sign-in/;
 
 test("sign up, deploy a service, verify it runs, clean up", async ({
   page,
@@ -28,7 +30,7 @@ test("sign up, deploy a service, verify it runs, clean up", async ({
     // sign-up page's own "redirect home if already logged in" effect and
     // its explicit post-signup navigation to /auth/sign-up/confirm —
     // either can win. Accept both landing spots.
-    await page.waitForURL(/\/(auth\/sign-up\/confirm)?$/, {
+    await page.waitForURL(SIGN_UP_LANDING_URL_RE, {
       timeout: 10_000,
     });
   });
@@ -87,7 +89,7 @@ test("sign up, deploy a service, verify it runs, clean up", async ({
       await page
         .getByRole("button", { name: "Yes, delete my account" })
         .click();
-      await expect(page).toHaveURL(/\/auth\/sign-in/, { timeout: 15_000 });
+      await expect(page).toHaveURL(SIGN_IN_URL_RE, { timeout: 15_000 });
     });
   }
 });

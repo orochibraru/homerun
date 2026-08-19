@@ -13,7 +13,7 @@ export default defineConfig({
   reporter: "list",
   retries: 0,
   testDir: "./e2e",
-  timeout: 90_000,
+  timeout: 180_000, // real Docker image pull + container start, not mocked
   use: {
     baseURL: "http://localhost:5173",
     trace: "retain-on-failure",

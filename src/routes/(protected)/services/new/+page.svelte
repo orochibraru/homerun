@@ -53,7 +53,10 @@
     slugTouched = true;
   }
 
-  type EnvRow = { key: string; value: string };
+  interface EnvRow {
+    key: string;
+    value: string;
+  }
   let envRows = $state<EnvRow[]>([{ key: "", value: "" }]);
 
   function addEnvRow() {

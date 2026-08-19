@@ -19,7 +19,10 @@
   const input =
     "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] font-mono";
 
-  type EnvRow = { key: string; value: string };
+  interface EnvRow {
+    key: string;
+    value: string;
+  }
   let envRows = $state<EnvRow[]>(
     Object.entries(svc.envVars ?? {}).length > 0
       ? Object.entries(svc.envVars ?? {}).map(([key, value]) => ({

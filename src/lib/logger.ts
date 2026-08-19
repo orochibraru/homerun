@@ -23,13 +23,13 @@ export enum LOG_LEVELS {
 
 type RawLogLevels = "debug" | "info" | "warn" | "error" | "trace";
 
-export type HttpLog = {
-  req: Request;
-  url: URL;
-  res: Response;
+export interface HttpLog {
   duration: number;
+  req: Request;
+  res: Response;
   type: "pre" | "post";
-};
+  url: URL;
+}
 
 export class Logger {
   logFormat: "console" | "json";

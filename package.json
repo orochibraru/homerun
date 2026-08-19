@@ -10,7 +10,7 @@
     "component:add": "shadcn-svelte add",
     "db:generate": "drizzle-kit generate",
     "dev": "vite dev",
-    "fix": "ultracite fix",
+    "fix": "ultracite fix --unsafe",
     "preinstall": "bunx only-allow bun",
     "prepare": "husky",
     "preview": "vite preview",

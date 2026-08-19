@@ -7,9 +7,9 @@
   import { title } from "$lib/store/title";
   import { cn } from "$lib/utils";
 
-  type Props = {
+  interface Props {
     normalHeight: boolean;
-  };
+  }
 
   const { normalHeight = false }: Props = $props();
 
