@@ -1,7 +1,8 @@
 {
-  "name": "local-run",
+  "name": "homerun",
   "version": "0.0.1",
   "private": true,
+  "description": "A Cloud Run alternative for your homelab",
   "type": "module",
   "scripts": {
     "auth:db:generate": "auth generate",
