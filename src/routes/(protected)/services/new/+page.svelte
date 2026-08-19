@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    AlertTriangle,
     ChevronDown,
     Loader2,
     Lock,
@@ -15,7 +16,10 @@
 
   const { data, form } = $props();
 
-  onMount(() => title.set("Deploy a Service"));
+  onMount(() => {
+    title.set("Deploy a Service");
+    scheduleImageCheck();
+  });
 
   const input =
     "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
@@ -37,6 +41,32 @@
   let slugTouched = $state(false);
   let submitting = $state(false);
   let showRegistry = $derived(!!values?.registryUsername);
+
+  let image = $state(values?.image ?? data.template?.image ?? "");
+  let tag = $state(values?.tag ?? data.template?.tag ?? "latest");
+  let registryUrl = $state(values?.registryUrl ?? "");
+  let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
+  let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function scheduleImageCheck() {
+    clearTimeout(imageCheckTimer);
+    if (!image.trim()) {
+      imageCheck = null;
+      return;
+    }
+    imageCheckTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(resolve("/services/check-image"), {
+          body: JSON.stringify({ image, registryUrl, tag }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        imageCheck = res.ok ? await res.json() : null;
+      } catch {
+        imageCheck = null;
+      }
+    }, 600);
+  }
 
   function slugify(value: string): string {
     return value
@@ -211,10 +241,11 @@
               class={input}
               id="image"
               name="image"
+              oninput={scheduleImageCheck}
               placeholder="ghcr.io/acme/api"
               required
               type="text"
-              value={values?.image ?? data.template?.image ?? ""}
+              bind:value={image}
             >
             {#if errors?.image}
               <p class={errorClass}>{errors.image[0]}</p>
@@ -226,12 +257,26 @@
               class={input}
               id="tag"
               name="tag"
+              oninput={scheduleImageCheck}
               placeholder="latest"
               type="text"
-              value={values?.tag ?? data.template?.tag ?? "latest"}
+              bind:value={tag}
             >
           </div>
         </div>
+
+        {#if imageCheck?.checked && !imageCheck.exists}
+          <div
+            class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
+          >
+            <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              <strong>{image}:{tag}</strong>
+              wasn't found in its registry. You can still save — this doesn't
+              block deploying, in case you're still preparing the image.
+            </span>
+          </div>
+        {/if}
 
         <div>
           <label class={label} for="containerPort">
@@ -291,9 +336,10 @@
               class={input}
               id="registryUrl"
               name="registryUrl"
+              oninput={scheduleImageCheck}
               placeholder="ghcr.io (blank = Docker Hub)"
               type="text"
-              value={values?.registryUrl ?? ""}
+              bind:value={registryUrl}
             >
           </div>
           <div class="grid grid-cols-2 gap-3">

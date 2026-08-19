@@ -47,6 +47,36 @@
   let showRegistry = $state(!!svc.registryUsername);
   let showDeleteConfirm = $state(false);
   let deleting = $state(false);
+
+  let image = $state(values.image);
+  let tag = $state(values.tag);
+  let registryUrl = $state(values.registryUrl);
+  let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
+  let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function scheduleImageCheck() {
+    clearTimeout(imageCheckTimer);
+    if (!image.trim()) {
+      imageCheck = null;
+      return;
+    }
+    imageCheckTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(resolve("/services/check-image"), {
+          body: JSON.stringify({ image, registryUrl, tag }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        imageCheck = res.ok ? await res.json() : null;
+      } catch {
+        imageCheck = null;
+      }
+    }, 600);
+  }
+
+  onMount(() => {
+    scheduleImageCheck();
+  });
 </script>
 
 <div class="space-y-6">
@@ -140,9 +170,10 @@
             class={input}
             id="image"
             name="image"
+            oninput={scheduleImageCheck}
             required
             type="text"
-            value={values.image}
+            bind:value={image}
           >
           {#if errors?.image}
             <p class={errorClass}>{errors.image[0]}</p>
@@ -154,11 +185,25 @@
             class={input}
             id="tag"
             name="tag"
+            oninput={scheduleImageCheck}
             type="text"
-            value={values.tag}
+            bind:value={tag}
           >
         </div>
       </div>
+
+      {#if imageCheck?.checked && !imageCheck.exists}
+        <div
+          class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
+        >
+          <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            <strong>{image}:{tag}</strong>
+            wasn't found in its registry. You can still save — this doesn't
+            block deploying.
+          </span>
+        </div>
+      {/if}
 
       <div>
         <label class={label} for="containerPort">
@@ -246,8 +291,9 @@
                 class={input}
                 id="registryUrl"
                 name="registryUrl"
+                oninput={scheduleImageCheck}
                 type="text"
-                value={values.registryUrl}
+                bind:value={registryUrl}
               >
             </div>
             <div class="grid grid-cols-2 gap-3">

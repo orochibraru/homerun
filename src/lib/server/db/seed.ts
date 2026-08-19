@@ -94,7 +94,7 @@ const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     id: "builtin-uptime-kuma",
     image: "louislam/uptime-kuma",
     name: "Uptime Kuma",
-    tag: "1",
+    tag: "2",
   },
   {
     category: "automation",
