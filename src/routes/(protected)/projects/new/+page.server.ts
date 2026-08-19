@@ -1,8 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { ProjectDTO } from "$lib/dto/project-dto";
 import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import { project } from "$lib/server/db/schema";
 
 const logger = new Logger("Projects");
 
@@ -21,18 +20,13 @@ export const actions = {
       return fail(400, { error: "Name is required." });
     }
 
-    const now = new Date();
-    const id = crypto.randomUUID();
-    await db.insert(project).values({
-      createdAt: now,
+    const proj = await ProjectDTO.create({
       description,
-      id,
       name,
-      updatedAt: now,
       userId: locals.user.id,
     });
 
-    logger.info(`Project created: project=${id} user=${locals.user.id}`);
+    logger.info(`Project created: project=${proj.id} user=${locals.user.id}`);
     redirect(303, resolve("/projects"));
   },
 };

@@ -11,23 +11,23 @@
   onMount(() => title.set("New Project"));
 
   const input =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
-  const label = "block mb-1.5 text-sm font-medium text-[var(--color-text)]";
+    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+  const label = "block mb-1.5 text-sm font-medium text-text";
 
   let submitting = $state(false);
 </script>
 
-<div class="mx-auto max-w-lg space-y-6 p-6 md:p-8">
+<div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-xl font-bold text-[var(--color-text)]">New Project</h1>
-    <p class="mt-0.5 text-sm text-[var(--color-text-muted)]">
+    <h1 class="text-xl font-bold text-text">New Project</h1>
+    <p class="mt-0.5 text-sm text-text-muted">
       Group related services together.
     </p>
   </div>
 
   <form
     action="?/create"
-    class="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+    class="space-y-5 rounded-2xl border border-border bg-surface p-5"
     method="POST"
     use:enhance={() => {
       submitting = true;
@@ -75,7 +75,7 @@
 
     <div class="flex justify-end gap-3">
       <a
-        class="rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+        class="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
         href={resolve("/projects")}
       >
         Cancel

@@ -1,21 +1,21 @@
 import { error } from "@sveltejs/kit";
 import { config } from "$lib/config";
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { syncServiceStatus } from "$lib/server/docker/reconcile";
-import { ownedService } from "$lib/server/services";
 
 export const load = async ({ params, parent }) => {
   const { user } = await parent();
 
-  const row = await ownedService(params.serviceId, user.id);
-  if (!row) {
+  const svc = await ServiceDTO.get(params.serviceId, user.id);
+  if (!svc) {
     error(404, "Service not found");
   }
 
-  if (row.containerId) {
-    await syncServiceStatus(row.id);
-    const fresh = await ownedService(params.serviceId, user.id);
-    return { baseDomain: config.baseDomain, service: fresh ?? row };
+  if (svc.containerId) {
+    await syncServiceStatus(svc.id);
+    const fresh = await ServiceDTO.get(params.serviceId, user.id);
+    return { baseDomain: config.baseDomain, service: (fresh ?? svc).toJSON() };
   }
 
-  return { baseDomain: config.baseDomain, service: row };
+  return { baseDomain: config.baseDomain, service: svc.toJSON() };
 };

@@ -12,8 +12,8 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-[var(--color-text)]">Projects</h1>
-      <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+      <h1 class="text-2xl font-bold text-text">Projects</h1>
+      <p class="mt-1 text-sm text-text-muted">
         Group related services together.
       </p>
     </div>
@@ -28,15 +28,11 @@
 
   {#if data.projects.length === 0}
     <div
-      class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] py-20 text-center"
+      class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center"
     >
-      <FolderKanban
-        class="mb-3 size-10 text-[var(--color-text-muted)] opacity-40"
-      />
-      <p class="text-sm font-medium text-[var(--color-text-muted)]">
-        No projects yet
-      </p>
-      <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+      <FolderKanban class="mb-3 size-10 text-text-muted opacity-40" />
+      <p class="text-sm font-medium text-text-muted">No projects yet</p>
+      <p class="mt-1 text-xs text-text-subtle">
         Create one to group related services together.
       </p>
       <a
@@ -51,7 +47,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each data.projects as proj (proj.id)}
         <a
-          class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-shadow hover:shadow-md"
+          class="rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
           href="{resolve('/projects')}/{proj.id}"
         >
           <div
@@ -59,19 +55,15 @@
           >
             <FolderKanban class="size-5" />
           </div>
-          <p class="truncate font-semibold text-[var(--color-text)]">
+          <p class="truncate font-semibold text-text">
             {proj.name}
           </p>
           {#if proj.description}
-            <p
-              class="mt-0.5 line-clamp-2 text-xs text-[var(--color-text-muted)]"
-            >
+            <p class="mt-0.5 line-clamp-2 text-xs text-text-muted">
               {proj.description}
             </p>
           {/if}
-          <div
-            class="mt-3 flex items-center gap-1.5 text-xs text-[var(--color-text-subtle)]"
-          >
+          <div class="mt-3 flex items-center gap-1.5 text-xs text-text-subtle">
             <Server class="size-3.5" />
             {proj.serviceCount}
             {proj.serviceCount === 1 ? "service" : "services"}

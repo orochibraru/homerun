@@ -22,8 +22,8 @@
   onMount(() => title.set(`${svc.name} · Settings`));
 
   const input =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
-  const label = "block mb-1.5 text-sm font-medium text-[var(--color-text)]";
+    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+  const label = "block mb-1.5 text-sm font-medium text-text";
   const errorClass = "mt-1.5 text-xs text-red-500";
 
   const values = $derived(
@@ -49,22 +49,16 @@
 </script>
 
 <div class="space-y-6">
-  <section
-    class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-  >
-    <div
-      class="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4"
-    >
+  <section class="rounded-2xl border border-border bg-surface">
+    <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div
         class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
       >
         <Settings class="size-4" />
       </div>
       <div>
-        <h2 class="text-sm font-semibold text-[var(--color-text)]">
-          Service settings
-        </h2>
-        <p class="text-xs text-[var(--color-text-muted)]">
+        <h2 class="text-sm font-semibold text-text">Service settings</h2>
+        <p class="text-xs text-text-muted">
           Changes take effect on the next deploy.
         </p>
       </div>
@@ -75,14 +69,15 @@
       class="space-y-5 p-5"
       method="POST"
       use:enhance={() => {
-				submitting = true;
-				return async ({ result, update }) => {
-					submitting = false;
-					if (result.type === "success") toast.success("Saved.");
-					if (result.type === "failure") toast.error("Check the form for errors.");
-					await update();
-				};
-			}}
+        submitting = true;
+        return async ({ result, update }) => {
+          submitting = false;
+          if (result.type === "success") toast.success("Saved.");
+          if (result.type === "failure")
+            toast.error("Check the form for errors.");
+          await update();
+        };
+      }}
     >
       <div>
         <label class={label} for="name">
@@ -115,7 +110,7 @@
           type="text"
           value={values.slug}
         >
-        <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+        <p class="mt-1 text-xs text-text-subtle">
           Routed at
           <span class="text-accent">{values.slug}.{data.baseDomain}</span>
           — redeploy to apply a change.
@@ -216,24 +211,24 @@
         </div>
       </div>
 
-      <div class="rounded-xl border border-[var(--color-border)]">
+      <div class="rounded-xl border border-border">
         <button
           class="flex w-full items-center gap-3 px-4 py-3 text-left"
           onclick={() => (showRegistry = !showRegistry)}
           type="button"
         >
-          <Lock class="size-4 text-[var(--color-text-muted)]" />
-          <span class="flex-1 text-sm font-medium text-[var(--color-text)]">
+          <Lock class="size-4 text-text-muted" />
+          <span class="flex-1 text-sm font-medium text-text">
             Private registry
           </span>
           <ChevronDown
-            class="size-4 text-[var(--color-text-muted)] transition-transform {showRegistry
-							? 'rotate-180'
-							: ''}"
+            class="size-4 text-text-muted transition-transform {showRegistry
+              ? 'rotate-180'
+              : ''}"
           />
         </button>
         {#if showRegistry}
-          <div class="space-y-4 border-t border-[var(--color-border)] p-4">
+          <div class="space-y-4 border-t border-border p-4">
             <div>
               <label class={label} for="registryUrl">Registry URL</label>
               <input
@@ -291,9 +286,7 @@
   </section>
 
   <!-- ═══ Save as template ═══ -->
-  <section
-    class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-  >
+  <section class="rounded-2xl border border-border bg-surface">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
         <div
@@ -302,10 +295,8 @@
           <LayoutGrid class="size-4" />
         </div>
         <div>
-          <p class="text-sm font-medium text-[var(--color-text)]">
-            Save as template
-          </p>
-          <p class="text-xs text-[var(--color-text-muted)]">
+          <p class="text-sm font-medium text-text">Save as template</p>
+          <p class="text-xs text-text-muted">
             Reuse this config to deploy another service later.
           </p>
         </div>
@@ -313,17 +304,18 @@
       <form
         action="?/saveAsTemplate"
         method="POST"
-        use:enhance={() => async ({ result, update }) => {
-          if (result.type === "success") {
-            toast.success("Saved as a template.");
-          } else {
-            toast.error("Couldn't save the template.");
-          }
-          await update();
-        }}
+        use:enhance={() =>
+          async ({ result, update }) => {
+            if (result.type === "success") {
+              toast.success("Saved as a template.");
+            } else {
+              toast.error("Couldn't save the template.");
+            }
+            await update();
+          }}
       >
         <button
-          class="shrink-0 rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+          class="shrink-0 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
           type="submit"
         >
           Save as template
@@ -334,7 +326,7 @@
 
   <!-- ═══ Danger zone ═══ -->
   <section
-    class="rounded-2xl border border-red-200 bg-[var(--color-surface)] dark:border-red-900/40"
+    class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40"
   >
     <div
       class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
@@ -348,7 +340,7 @@
         <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
           Danger zone
         </h2>
-        <p class="text-xs text-[var(--color-text-muted)]">
+        <p class="text-xs text-text-muted">
           Irreversible. Removes the container and all deployment history.
         </p>
       </div>
@@ -357,9 +349,7 @@
       {#if !showDeleteConfirm}
         <div class="flex items-center justify-between gap-4">
           <div>
-            <p class="text-sm font-medium text-[var(--color-text)]">
-              Delete this service
-            </p>
+            <p class="text-sm font-medium text-text">Delete this service</p>
           </div>
           <button
             class="shrink-0 rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-700/60"
@@ -374,17 +364,17 @@
           class="space-y-4"
           method="POST"
           use:enhance={() => {
-						deleting = true;
-						return async ({ result }) => {
-							if (result.type === "redirect") {
-								toast.success("Service deleted.");
-								goto(result.location);
-							} else {
-								deleting = false;
-								toast.error("Couldn't delete the service.");
-							}
-						};
-					}}
+            deleting = true;
+            return async ({ result }) => {
+              if (result.type === "redirect") {
+                toast.success("Service deleted.");
+                goto(result.location);
+              } else {
+                deleting = false;
+                toast.error("Couldn't delete the service.");
+              }
+            };
+          }}
         >
           <div
             class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
@@ -396,7 +386,7 @@
           </div>
           <div class="flex items-center gap-3">
             <button
-              class="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+              class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
               onclick={() => (showDeleteConfirm = false)}
               type="button"
             >

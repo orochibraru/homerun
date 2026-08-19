@@ -30,10 +30,10 @@
 <div class="p-6 md:p-8">
   <!-- Page header -->
   <div class="mb-8">
-    <h1 class="text-2xl font-bold text-[var(--color-text)]">
+    <h1 class="text-2xl font-bold text-text">
       Welcome back, {data.user?.name?.split(" ")[0]} 👋
     </h1>
-    <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+    <p class="mt-1 text-sm text-text-muted">
       Here's an overview of your deployed services.
     </p>
   </div>
@@ -43,17 +43,17 @@
     {#each statCards as card}
       {@const StatIcon = card.icon}
       <div
-        class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-shadow hover:shadow-md"
+        class="rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
       >
         <div class="mb-3 flex items-start justify-between">
           <div class="rounded-xl p-2.5 {card.color} {card.dark}">
             <StatIcon class="size-5" />
           </div>
         </div>
-        <p class="text-2xl font-bold text-[var(--color-text)]">
+        <p class="text-2xl font-bold text-text">
           {card.value}
         </p>
-        <p class="mt-0.5 text-xs font-medium text-[var(--color-text-muted)]">
+        <p class="mt-0.5 text-xs font-medium text-text-muted">
           {card.label}
         </p>
       </div>
@@ -63,17 +63,13 @@
   <!-- ── Bottom grid ───────────────────────────────────────────── -->
   <div class="grid gap-6 lg:grid-cols-3">
     <!-- Recent deployments (2/3 width on lg) -->
-    <div
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] lg:col-span-2"
-    >
+    <div class="rounded-2xl border border-border bg-surface lg:col-span-2">
       <div
-        class="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4"
+        class="flex items-center justify-between border-b border-border px-5 py-4"
       >
         <div class="flex items-center gap-2">
-          <Clock class="size-4 text-[var(--color-text-muted)]" />
-          <h2 class="text-sm font-semibold text-[var(--color-text)]">
-            Recent Deployments
-          </h2>
+          <Clock class="size-4 text-text-muted" />
+          <h2 class="text-sm font-semibold text-text">Recent Deployments</h2>
         </div>
         <a
           class="text-accent flex items-center gap-1 text-xs font-medium hover:underline"
@@ -87,32 +83,26 @@
         <div
           class="flex flex-col items-center justify-center py-12 text-center"
         >
-          <Server
-            class="mb-3 size-8 text-[var(--color-text-muted)] opacity-40"
-          />
-          <p class="text-sm font-medium text-[var(--color-text-muted)]">
-            No deployments yet
-          </p>
-          <p class="mt-0.5 text-xs text-[var(--color-text-subtle)]">
+          <Server class="mb-3 size-8 text-text-muted opacity-40" />
+          <p class="text-sm font-medium text-text-muted">No deployments yet</p>
+          <p class="mt-0.5 text-xs text-text-subtle">
             Deploy your first service to get started
           </p>
         </div>
       {:else}
-        <div class="divide-y divide-[var(--color-border)]">
+        <div class="divide-y divide-border">
           {#each data.recentDeployments as dep}
             <div class="flex items-center gap-4 px-5 py-3">
               <div class="min-w-0 flex-1">
-                <p
-                  class="truncate text-sm font-medium text-[var(--color-text)]"
-                >
+                <p class="truncate text-sm font-medium text-text">
                   {dep.serviceName ?? "Unknown service"}
                 </p>
-                <p class="truncate text-xs text-[var(--color-text-muted)]">
+                <p class="truncate text-xs text-text-muted">
                   {timeAgo(dep.createdAt)}
                 </p>
               </div>
               <span
-                class="rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-[0.65rem] font-semibold text-[var(--color-text-muted)] capitalize"
+                class="rounded-full bg-surface-2 px-2.5 py-0.5 text-[0.65rem] font-semibold text-text-muted capitalize"
               >
                 {dep.status}
               </span>
@@ -123,17 +113,13 @@
     </div>
 
     <!-- Quick actions (1/3 width on lg) -->
-    <div
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-    >
-      <div class="border-b border-[var(--color-border)] px-5 py-4">
-        <h2 class="text-sm font-semibold text-[var(--color-text)]">
-          Quick Actions
-        </h2>
+    <div class="rounded-2xl border border-border bg-surface">
+      <div class="border-b border-border px-5 py-4">
+        <h2 class="text-sm font-semibold text-text">Quick Actions</h2>
       </div>
       <div class="space-y-2 p-4">
         <a
-          class="hover:border-accent/40 hover:text-accent flex w-full items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-medium text-[var(--color-text)] transition-all duration-200 hover:bg-[var(--color-accent-light)]"
+          class="hover:border-accent/40 hover:text-accent flex w-full items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-medium text-text transition-all duration-200 hover:bg-[var(--color-accent-light)]"
           href={resolve("/services/new")}
         >
           <div
@@ -143,16 +129,16 @@
           </div>
           <div class="min-w-0 flex-1 text-left">
             <p class="font-medium">Deploy a Service</p>
-            <p class="text-xs text-[var(--color-text-muted)]">
+            <p class="text-xs text-text-muted">
               Point at an image, click deploy
             </p>
           </div>
-          <Plus class="size-4 text-[var(--color-text-muted)]" />
+          <Plus class="size-4 text-text-muted" />
         </a>
 
         {#if data.stats.totalServices > 0}
           <a
-            class="hover:border-accent/40 hover:text-accent flex w-full items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm font-medium text-[var(--color-text)] transition-all duration-200 hover:bg-[var(--color-accent-light)]"
+            class="hover:border-accent/40 hover:text-accent flex w-full items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-medium text-text transition-all duration-200 hover:bg-[var(--color-accent-light)]"
             href={resolve("/services")}
           >
             <div
@@ -162,11 +148,9 @@
             </div>
             <div class="min-w-0 flex-1 text-left">
               <p class="font-medium">All Services</p>
-              <p class="text-xs text-[var(--color-text-muted)]">
-                View and manage services
-              </p>
+              <p class="text-xs text-text-muted">View and manage services</p>
             </div>
-            <ArrowRight class="size-4 text-[var(--color-text-muted)]" />
+            <ArrowRight class="size-4 text-text-muted" />
           </a>
         {/if}
       </div>

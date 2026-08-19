@@ -1,6 +1,5 @@
-import { desc, eq } from "drizzle-orm";
-import { db } from "$lib/server/db/lib";
-import { deployment, service } from "$lib/server/db/schema";
+import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
 
 export const load = async ({ parent }) => {
   // (protected)/+layout.server.ts already redirects unauthenticated users
@@ -8,23 +7,13 @@ export const load = async ({ parent }) => {
   const { user } = await parent();
 
   const [services, recentDeployments] = await Promise.all([
-    db.select().from(service).where(eq(service.userId, user.id)),
-    db
-      .select({
-        deployment,
-        serviceName: service.name,
-        serviceSlug: service.slug,
-      })
-      .from(deployment)
-      .leftJoin(service, eq(deployment.serviceId, service.id))
-      .where(eq(deployment.userId, user.id))
-      .orderBy(desc(deployment.createdAt))
-      .limit(5),
+    ServiceDTO.list(user.id),
+    DeploymentDTO.listRecentForUser(user.id),
   ]);
 
   return {
     recentDeployments: recentDeployments.map((r) => ({
-      ...r.deployment,
+      ...r.deployment.toJSON(),
       serviceName: r.serviceName,
       serviceSlug: r.serviceSlug,
     })),

@@ -11,8 +11,8 @@
   onMount(() => title.set("New Template"));
 
   const input =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
-  const label = "block mb-1.5 text-sm font-medium text-[var(--color-text)]";
+    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+  const label = "block mb-1.5 text-sm font-medium text-text";
   const errorClass = "mt-1.5 text-xs text-red-500";
   const values = $derived(form?.values as Record<string, string> | undefined);
   const errors = $derived(form?.errors as Record<string, string[]> | undefined);
@@ -37,10 +37,10 @@
   }
 </script>
 
-<div class="mx-auto max-w-2xl space-y-6 p-6 md:p-8">
+<div class="mspace-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-xl font-bold text-[var(--color-text)]">New Template</h1>
-    <p class="mt-0.5 text-sm text-[var(--color-text-muted)]">
+    <h1 class="text-xl font-bold text-text">New Template</h1>
+    <p class="mt-0.5 text-sm text-text-muted">
       A reusable config you can deploy from again later.
     </p>
   </div>
@@ -60,18 +60,14 @@
       };
     }}
   >
-    <section
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-    >
-      <div
-        class="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4"
-      >
+    <section class="rounded-2xl border border-border bg-surface">
+      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
         <div
           class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
         >
           <LayoutGrid class="size-4" />
         </div>
-        <h2 class="text-sm font-semibold text-[var(--color-text)]">Basics</h2>
+        <h2 class="text-sm font-semibold text-text">Basics</h2>
       </div>
 
       <div class="space-y-5 p-5">
@@ -171,13 +167,9 @@
       </div>
     </section>
 
-    <section
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-    >
-      <div class="border-b border-[var(--color-border)] px-5 py-4">
-        <h2 class="text-sm font-semibold text-[var(--color-text)]">
-          Environment variables
-        </h2>
+    <section class="rounded-2xl border border-border bg-surface">
+      <div class="border-b border-border px-5 py-4">
+        <h2 class="text-sm font-semibold text-text">Environment variables</h2>
       </div>
       <div class="space-y-2.5 p-5">
         {#each envRows as row, i}
@@ -219,7 +211,7 @@
 
     <div class="flex justify-end gap-3">
       <a
-        class="rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+        class="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
         href={resolve("/templates")}
       >
         Cancel

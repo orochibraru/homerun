@@ -74,15 +74,13 @@
   }
 </script>
 
-<section
-  class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
->
+<section class="rounded-2xl border border-border bg-surface">
   <div
-    class="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4"
+    class="flex items-center justify-between gap-3 border-b border-border px-5 py-4"
   >
     <div class="flex items-center gap-2">
-      <Terminal class="size-4 text-[var(--color-text-muted)]" />
-      <h2 class="text-sm font-semibold text-[var(--color-text)]">Logs</h2>
+      <Terminal class="size-4 text-text-muted" />
+      <h2 class="text-sm font-semibold text-text">Logs</h2>
       {#if connected}
         <span class="flex items-center gap-1 text-xs text-green-600">
           <span class="size-1.5 rounded-full bg-green-500"></span>
@@ -91,7 +89,7 @@
       {/if}
     </div>
     <button
-      class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-50"
+      class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
       disabled={!svc.containerId}
       onclick={reconnect}
     >

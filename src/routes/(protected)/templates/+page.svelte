@@ -13,20 +13,20 @@
 {#snippet card(tmpl: (typeof data.builtins)[number])}
   {@const Icon = templateIcon(tmpl.icon)}
   <div
-    class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-shadow hover:shadow-md"
+    class="rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
   >
     <div
       class="bg-accent/10 text-accent mb-3 flex size-10 items-center justify-center rounded-xl"
     >
       <Icon class="size-5" />
     </div>
-    <p class="font-semibold text-[var(--color-text)]">{tmpl.name}</p>
+    <p class="font-semibold text-text">{tmpl.name}</p>
     {#if tmpl.description}
-      <p class="mt-0.5 line-clamp-2 text-xs text-[var(--color-text-muted)]">
+      <p class="mt-0.5 line-clamp-2 text-xs text-text-muted">
         {tmpl.description}
       </p>
     {/if}
-    <p class="mt-2 font-mono text-xs text-[var(--color-text-subtle)]">
+    <p class="mt-2 font-mono text-xs text-text-subtle">
       {tmpl.image}:{tmpl.tag}
     </p>
     <a
@@ -42,13 +42,13 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-[var(--color-text)]">Templates</h1>
-      <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+      <h1 class="text-2xl font-bold text-text">Templates</h1>
+      <p class="mt-1 text-sm text-text-muted">
         One-click configs for common services.
       </p>
     </div>
     <a
-      class="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+      class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
       href={resolve("/templates/new")}
     >
       <Plus class="size-4" />
@@ -58,7 +58,7 @@
 
   <div class="mb-8">
     <h2
-      class="mb-3 text-xs font-semibold tracking-widest text-[var(--color-text-subtle)] uppercase"
+      class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
     >
       Built-in
     </h2>
@@ -71,21 +71,19 @@
 
   <div>
     <h2
-      class="mb-3 text-xs font-semibold tracking-widest text-[var(--color-text-subtle)] uppercase"
+      class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
     >
       My Templates
     </h2>
     {#if data.mine.length === 0}
       <div
-        class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] py-12 text-center"
+        class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center"
       >
-        <LayoutGrid
-          class="mb-3 size-8 text-[var(--color-text-muted)] opacity-40"
-        />
-        <p class="text-sm font-medium text-[var(--color-text-muted)]">
+        <LayoutGrid class="mb-3 size-8 text-text-muted opacity-40" />
+        <p class="text-sm font-medium text-text-muted">
           No custom templates yet
         </p>
-        <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+        <p class="mt-1 text-xs text-text-subtle">
           Build one from scratch, or save an existing service as a template from
           its Settings tab.
         </p>

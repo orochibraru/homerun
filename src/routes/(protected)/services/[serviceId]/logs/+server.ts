@@ -1,13 +1,12 @@
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { streamLogs } from "$lib/server/docker/service";
-import { ownedService } from "$lib/server/services";
-import type { RequestHandler } from "./$types";
 
-export const GET: RequestHandler = async ({ params, locals }) => {
+export const GET = async ({ params, locals }) => {
   if (!locals.user) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const svc = await ownedService(params.serviceId, locals.user.id);
+  const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
   if (!svc) {
     return new Response("Not found", { status: 404 });
   }

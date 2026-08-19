@@ -51,7 +51,7 @@
 
 <div class="p-6 md:p-8">
   <a
-    class="mb-4 inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+    class="mb-4 inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text"
     href={resolve("/services")}
   >
     <ArrowLeft class="size-3.5" />
@@ -60,25 +60,25 @@
 
   <!-- ── Hero ─────────────────────────────────────────────── -->
   <div class="mb-6 flex flex-wrap items-center gap-3">
-    <h1 class="text-2xl font-bold text-[var(--color-text)]">{svc.name}</h1>
+    <h1 class="text-2xl font-bold text-text">{svc.name}</h1>
     <StatusBadge status={svc.currentStatus} />
   </div>
-  <p class="-mt-4 mb-6 text-sm text-[var(--color-text-muted)]">
+  <p class="-mt-4 mb-6 text-sm text-text-muted">
     {svc.image}:{svc.tag}
     ·
     <span class="text-accent">{svc.slug}.{data.baseDomain}</span>
   </p>
 
   <!-- ── Tabs ─────────────────────────────────────────────── -->
-  <div class="mb-6 flex gap-1 border-b border-[var(--color-border)]">
+  <div class="mb-6 flex gap-1 border-b border-border">
     {#each tabs as tab}
       {@const active = isActive(tab.href, tab.exact)}
       {@const TabIcon = tab.icon}
       <a
         class="flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-all duration-200
 					{active
-					? 'border-accent text-accent'
-					: 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}"
+          ? 'border-accent text-accent'
+          : 'border-transparent text-text-muted hover:text-text'}"
         href={tab.href}
       >
         <TabIcon class="size-4" />

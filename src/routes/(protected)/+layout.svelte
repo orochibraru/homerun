@@ -89,6 +89,7 @@
   >
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto p-3 pt-4">
+      <p class="font-bold text-xl px-2">Local Run</p>
       <p
         class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
       >
@@ -141,6 +142,7 @@
       <button
         class="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-red-500 transition-all duration-200 hover:bg-red-500/10"
         onclick={handleSignOut}
+        type="button"
       >
         <LogOut class="size-3.5" />
         Sign out
@@ -153,7 +155,10 @@
     <button
       aria-label="Close sidebar"
       class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
-      onclick={() => (sidebarOpen = false)}
+      onclick={() => {
+        sidebarOpen = false;
+      }}
+      type="button"
     ></button>
 
     <div
@@ -175,7 +180,9 @@
               ? 'bg-accent-light text-accent'
               : 'text-text-muted hover:bg-surface-2 hover:text-text'}"
             href={item.href}
-            onclick={() => (sidebarOpen = false)}
+            onclick={() => {
+              sidebarOpen = false;
+            }}
           >
             <MobileNavIcon class="size-4 shrink-0" />
             {item.label}
@@ -210,6 +217,7 @@
         <button
           class="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-red-500 transition-all duration-200 hover:bg-red-500/10"
           onclick={handleSignOut}
+          type="button"
         >
           <LogOut class="size-3.5" />
           Sign out
@@ -227,7 +235,10 @@
       <button
         aria-label="Toggle sidebar"
         class="text-text-muted hover:bg-surface-2 hover:text-text rounded-lg p-1.5 transition-all"
-        onclick={() => (sidebarOpen = !sidebarOpen)}
+        onclick={() => {
+          sidebarOpen = !sidebarOpen;
+        }}
+        type="button"
       >
         {#if sidebarOpen}
           <X class="size-5" />
@@ -235,7 +246,7 @@
           <Menu class="size-5" />
         {/if}
       </button>
-      <span class="text-sm font-medium text-[var(--color-text)]">
+      <span class="text-sm font-medium text-text">
         {mobileTitle}
       </span>
     </div>

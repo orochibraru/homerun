@@ -23,7 +23,7 @@
   onMount(() => title.set(proj.name));
 
   const input =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
   let editing = $state(false);
   let renaming = $state(false);
@@ -33,7 +33,7 @@
 
 <div class="p-6 md:p-8">
   <a
-    class="mb-4 inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+    class="mb-4 inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text"
     href={resolve("/projects")}
   >
     <ArrowLeft class="size-3.5" />
@@ -43,18 +43,18 @@
   {#if !editing}
     <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-[var(--color-text)]">
+        <h1 class="text-2xl font-bold text-text">
           {proj.name}
         </h1>
         {#if proj.description}
-          <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+          <p class="mt-1 text-sm text-text-muted">
             {proj.description}
           </p>
         {/if}
       </div>
       <div class="flex gap-2">
         <button
-          class="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+          class="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
           onclick={() => (editing = true)}
         >
           <Pencil class="size-3.5" />
@@ -72,7 +72,7 @@
   {:else}
     <form
       action="?/rename"
-      class="mb-8 space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+      class="mb-8 space-y-4 rounded-2xl border border-border bg-surface p-5"
       method="POST"
       use:enhance={() => {
         renaming = true;
@@ -96,7 +96,7 @@
 
       <div class="flex justify-end gap-3">
         <button
-          class="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+          class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
           onclick={() => (editing = false)}
           type="button"
         >
@@ -121,10 +121,10 @@
   <!-- ═══ Services ═══ -->
   {#if data.services.length === 0}
     <div
-      class="mb-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] py-16 text-center"
+      class="mb-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center"
     >
-      <Server class="mb-3 size-8 text-[var(--color-text-muted)] opacity-40" />
-      <p class="text-sm font-medium text-[var(--color-text-muted)]">
+      <Server class="mb-3 size-8 text-text-muted opacity-40" />
+      <p class="text-sm font-medium text-text-muted">
         No services in this project yet
       </p>
       <a
@@ -139,7 +139,7 @@
     <div class="mb-8 space-y-3">
       {#each data.services as svc (svc.id)}
         <a
-          class="flex items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-shadow hover:shadow-md"
+          class="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
           href="{resolve('/services')}/{svc.id}"
         >
           <div
@@ -149,14 +149,12 @@
           </div>
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
-              <p
-                class="truncate text-sm font-semibold text-[var(--color-text)]"
-              >
+              <p class="truncate text-sm font-semibold text-text">
                 {svc.name}
               </p>
               <StatusBadge status={svc.currentStatus} />
             </div>
-            <p class="mt-0.5 truncate text-xs text-[var(--color-text-muted)]">
+            <p class="mt-0.5 truncate text-xs text-text-muted">
               {svc.image}:{svc.tag}
             </p>
           </div>
@@ -167,7 +165,7 @@
 
   <!-- ═══ Danger zone ═══ -->
   <section
-    class="rounded-2xl border border-red-200 bg-[var(--color-surface)] dark:border-red-900/40"
+    class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40"
   >
     <div
       class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
@@ -181,7 +179,7 @@
         <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
           Danger zone
         </h2>
-        <p class="text-xs text-[var(--color-text-muted)]">
+        <p class="text-xs text-text-muted">
           Deletes every service in this project and their containers.
           Irreversible.
         </p>
@@ -227,7 +225,7 @@
           </div>
           <div class="flex items-center gap-3">
             <button
-              class="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+              class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
               onclick={() => (showDeleteConfirm = false)}
               type="button"
             >

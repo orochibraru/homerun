@@ -1,12 +1,10 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { and, eq, ne } from "drizzle-orm";
 import { resolve } from "$app/paths";
+import { ServiceDTO } from "$lib/dto/service-dto";
+import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import { service, template } from "$lib/server/db/schema";
 import { encryptSecret } from "$lib/server/docker/secrets";
 import { removeContainer } from "$lib/server/docker/service";
-import { ownedService } from "$lib/server/services";
 import { updateServiceSchema } from "$lib/server/validation/service";
 
 const logger = new Logger("Services");
@@ -16,7 +14,7 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    const svc = await ownedService(params.serviceId, locals.user.id);
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
     if (!svc) {
       return fail(404, { error: "Service not found." });
     }
@@ -28,7 +26,7 @@ export const actions = {
         // Container may already be gone proceed with deleting the record.
       }
     }
-    await db.delete(service).where(eq(service.id, svc.id));
+    await svc.delete();
     logger.info(`Service deleted: service=${svc.id} user=${locals.user.id}`);
     throw redirect(303, resolve("/services"));
   },
@@ -36,26 +34,22 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    const svc = await ownedService(params.serviceId, locals.user.id);
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
     if (!svc) {
       return fail(404, { error: "Service not found." });
     }
 
-    const now = new Date();
-    await db.insert(template).values({
+    await TemplateDTO.create({
       containerPort: svc.containerPort,
       cpuLimit: svc.cpuLimit,
-      createdAt: now,
       description: `Saved from ${svc.name}`,
       envVars: svc.envVars,
-      id: crypto.randomUUID(),
       image: svc.image,
       memoryLimitMb: svc.memoryLimitMb,
       name: svc.name,
       ownerId: locals.user.id,
       restartPolicy: svc.restartPolicy,
       tag: svc.tag,
-      updatedAt: now,
     });
 
     logger.info(
@@ -67,7 +61,7 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    const svc = await ownedService(params.serviceId, locals.user.id);
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
     if (!svc) {
       return fail(404, { error: "Service not found." });
     }
@@ -82,41 +76,34 @@ export const actions = {
     }
     const input = result.data;
 
-    if (input.slug !== svc.slug) {
-      const [slugTaken] = await db
-        .select({ id: service.id })
-        .from(service)
-        .where(and(eq(service.slug, input.slug), ne(service.id, svc.id)))
-        .limit(1);
-      if (slugTaken) {
-        return fail(400, {
-          errors: { slug: ["That slug is already in use."] },
-          values: Object.fromEntries(formData),
-        });
-      }
+    if (
+      input.slug !== svc.slug &&
+      (await ServiceDTO.slugTaken(input.slug, svc.id))
+    ) {
+      return fail(400, {
+        errors: { slug: ["That slug is already in use."] },
+        values: Object.fromEntries(formData),
+      });
     }
 
-    await db
-      .update(service)
-      .set({
-        image: input.image,
-        name: input.name,
-        registryUrl: input.registryUrl || null,
-        registryUsername: input.registryUsername || null,
-        slug: input.slug,
-        tag: input.tag,
-        // Blank password field means "leave unchanged" — never
-        // overwrite a stored credential with nothing just because
-        // the user didn't retype it.
-        ...(input.registryPassword
-          ? { registryPasswordEnc: encryptSecret(input.registryPassword) }
-          : {}),
-        containerPort: input.containerPort,
-        cpuLimit: input.cpuLimit || null,
-        memoryLimitMb: input.memoryLimitMb ?? null,
-        restartPolicy: input.restartPolicy,
-      })
-      .where(eq(service.id, svc.id));
+    await svc.update({
+      image: input.image,
+      name: input.name,
+      registryUrl: input.registryUrl || null,
+      registryUsername: input.registryUsername || null,
+      slug: input.slug,
+      tag: input.tag,
+      // Blank password field means "leave unchanged" — never
+      // overwrite a stored credential with nothing just because
+      // the user didn't retype it.
+      ...(input.registryPassword
+        ? { registryPasswordEnc: encryptSecret(input.registryPassword) }
+        : {}),
+      containerPort: input.containerPort,
+      cpuLimit: input.cpuLimit || null,
+      memoryLimitMb: input.memoryLimitMb ?? null,
+      restartPolicy: input.restartPolicy,
+    });
 
     logger.info(
       `Service settings updated: service=${svc.id} user=${locals.user.id}`

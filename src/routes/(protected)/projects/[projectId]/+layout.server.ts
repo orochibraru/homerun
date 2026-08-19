@@ -1,13 +1,13 @@
 import { error } from "@sveltejs/kit";
-import { ownedProject } from "$lib/server/projects";
+import { ProjectDTO } from "$lib/dto/project-dto";
 
 export const load = async ({ params, parent }) => {
   const { user } = await parent();
 
-  const row = await ownedProject(params.projectId, user.id);
-  if (!row) {
+  const proj = await ProjectDTO.get(params.projectId, user.id);
+  if (!proj) {
     error(404, "Project not found");
   }
 
-  return { project: row };
+  return { project: proj.toJSON() };
 };

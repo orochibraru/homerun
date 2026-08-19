@@ -1,10 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { eq } from "drizzle-orm";
 import { resolve } from "$app/paths";
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import { service } from "$lib/server/db/schema";
-import { ownedService } from "$lib/server/services";
 import { parseEnvVars } from "$lib/server/validation/service";
 
 const logger = new Logger("Services");
@@ -14,16 +11,13 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    const svc = await ownedService(params.serviceId, locals.user.id);
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
     if (!svc) {
       return fail(404, { error: "Service not found." });
     }
 
     const formData = await request.formData();
-    await db
-      .update(service)
-      .set({ envVars: parseEnvVars(formData) })
-      .where(eq(service.id, svc.id));
+    await svc.update({ envVars: parseEnvVars(formData) });
 
     logger.info(`Env vars updated: service=${svc.id} user=${locals.user.id}`);
     return { success: true };

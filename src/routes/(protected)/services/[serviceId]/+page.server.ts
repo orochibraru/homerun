@@ -1,9 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { desc, eq } from "drizzle-orm";
 import { resolve } from "$app/paths";
+import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import { deployment, service } from "$lib/server/db/schema";
 import {
   buildAuthConfig,
   createAndStartContainer,
@@ -12,19 +11,13 @@ import {
   startContainer,
   stopContainer,
 } from "$lib/server/docker/service";
-import { ownedService } from "$lib/server/services";
 
 const logger = new Logger("Services");
 
 export const load = async ({ params }) => {
-  const deployments = await db
-    .select()
-    .from(deployment)
-    .where(eq(deployment.serviceId, params.serviceId))
-    .orderBy(desc(deployment.createdAt))
-    .limit(10);
+  const deployments = await DeploymentDTO.listForService(params.serviceId);
 
-  return { deployments };
+  return { deployments: deployments.map((d) => d.toJSON()) };
 };
 
 export const actions = {
@@ -32,7 +25,7 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    const svc = await ownedService(params.serviceId, locals.user.id);
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
     if (!svc) {
       return fail(404, { error: "Service not found." });
     }
@@ -41,20 +34,12 @@ export const actions = {
       `Deploy started: service=${svc.name} (${svc.id}) image=${svc.image}:${svc.tag} user=${locals.user.id}`
     );
 
-    const deploymentId = crypto.randomUUID();
-    const now = new Date();
-    await db.insert(deployment).values({
-      createdAt: now,
-      id: deploymentId,
+    const dep = await DeploymentDTO.create({
       serviceId: svc.id,
-      startedAt: now,
       status: "pulling",
       userId: locals.user.id,
     });
-    await db
-      .update(service)
-      .set({ currentStatus: "pulling" })
-      .where(eq(service.id, svc.id));
+    await svc.update({ currentStatus: "pulling" });
 
     try {
       const auth = buildAuthConfig(svc);
@@ -63,10 +48,7 @@ export const actions = {
         `Image pulled: ${svc.image}:${svc.tag} digest=${digest ?? "unknown"} service=${svc.id}`
       );
 
-      await db
-        .update(service)
-        .set({ currentStatus: "starting" })
-        .where(eq(service.id, svc.id));
+      await svc.update({ currentStatus: "starting" });
 
       const { containerId } = await createAndStartContainer({
         containerPort: svc.containerPort,
@@ -80,41 +62,29 @@ export const actions = {
         tag: svc.tag,
       });
 
-      await db
-        .update(service)
-        .set({
-          containerId,
-          currentStatus: "running",
-          desiredState: "running",
-        })
-        .where(eq(service.id, svc.id));
-      await db
-        .update(deployment)
-        .set({
-          containerId,
-          finishedAt: new Date(),
-          imageDigest: digest,
-          status: "running",
-        })
-        .where(eq(deployment.id, deploymentId));
+      await svc.update({
+        containerId,
+        currentStatus: "running",
+        desiredState: "running",
+      });
+      await dep.update({
+        containerId,
+        finishedAt: new Date(),
+        imageDigest: digest,
+        status: "running",
+      });
       logger.info(
-        `Deploy succeeded: service=${svc.id} container=${containerId} deployment=${deploymentId}`
+        `Deploy succeeded: service=${svc.id} container=${containerId} deployment=${dep.id}`
       );
     } catch (err) {
-      await db
-        .update(service)
-        .set({ currentStatus: "failed" })
-        .where(eq(service.id, svc.id));
-      await db
-        .update(deployment)
-        .set({
-          errorMessage: err instanceof Error ? err.message : String(err),
-          finishedAt: new Date(),
-          status: "failed",
-        })
-        .where(eq(deployment.id, deploymentId));
+      await svc.update({ currentStatus: "failed" });
+      await dep.update({
+        errorMessage: err instanceof Error ? err.message : String(err),
+        finishedAt: new Date(),
+        status: "failed",
+      });
       logger.error(
-        `Deploy failed: service=${svc.id} deployment=${deploymentId}`,
+        `Deploy failed: service=${svc.id} deployment=${dep.id}`,
         err
       );
       return fail(500, {
@@ -130,7 +100,7 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    const svc = await ownedService(params.serviceId, locals.user.id);
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
     if (!svc) {
       return fail(404, { error: "Service not found." });
     }
@@ -147,7 +117,7 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    const svc = await ownedService(params.serviceId, locals.user.id);
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
     if (!svc) {
       return fail(404, { error: "Service not found." });
     }
@@ -156,10 +126,7 @@ export const actions = {
     }
 
     await startContainer(svc.containerId);
-    await db
-      .update(service)
-      .set({ desiredState: "running" })
-      .where(eq(service.id, svc.id));
+    await svc.update({ desiredState: "running" });
     logger.info(`Service started: service=${svc.id} user=${locals.user.id}`);
     return { success: true };
   },
@@ -168,7 +135,7 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    const svc = await ownedService(params.serviceId, locals.user.id);
+    const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
     if (!svc) {
       return fail(404, { error: "Service not found." });
     }
@@ -177,10 +144,7 @@ export const actions = {
     }
 
     await stopContainer(svc.containerId);
-    await db
-      .update(service)
-      .set({ desiredState: "stopped" })
-      .where(eq(service.id, svc.id));
+    await svc.update({ desiredState: "stopped" });
     logger.info(`Service stopped: service=${svc.id} user=${locals.user.id}`);
     return { success: true };
   },

@@ -26,7 +26,7 @@
   let showPassword = $state(false);
 
   const inputClass =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+    "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
   async function handleSignIn(e: SubmitEvent) {
     e.preventDefault();
@@ -148,7 +148,7 @@
         </button>
       </form>
 
-      <p class="mt-6 text-center text-sm text-[var(--color-text-muted)]">
+      <p class="mt-6 text-center text-sm text-text-muted">
         Don't have an account?
         <a
           class="text-accent font-medium hover:underline"

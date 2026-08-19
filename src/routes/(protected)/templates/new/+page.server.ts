@@ -1,8 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import { template } from "$lib/server/db/schema";
 import { parseEnvVars } from "$lib/server/validation/service";
 import { createTemplateSchema } from "$lib/server/validation/template";
 
@@ -25,24 +24,20 @@ export const actions = {
     }
 
     const input = result.data;
-    const now = new Date();
 
-    await db.insert(template).values({
+    await TemplateDTO.create({
       category: input.category || null,
       containerPort: input.containerPort,
       cpuLimit: input.cpuLimit || null,
-      createdAt: now,
       description: input.description || null,
       envVars: parseEnvVars(formData),
       icon: input.icon || null,
-      id: crypto.randomUUID(),
       image: input.image,
       memoryLimitMb: input.memoryLimitMb ?? null,
       name: input.name,
       ownerId: locals.user.id,
       restartPolicy: input.restartPolicy,
       tag: input.tag,
-      updatedAt: now,
     });
 
     logger.info(`Template created: name=${input.name} user=${locals.user.id}`);

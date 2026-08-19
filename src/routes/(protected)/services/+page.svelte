@@ -46,9 +46,9 @@
   let pending = $state<Record<string, boolean>>({});
 
   function withPending(serviceId: string) {
-    pending[serviceId] = true;
-    return () =>
-      async ({
+    return () => {
+      pending[serviceId] = true;
+      return async ({
         result,
         update,
       }: {
@@ -61,6 +61,7 @@
         }
         await update();
       };
+    };
   }
 
   function confirmDelete(e: SubmitEvent, name: string) {
@@ -77,8 +78,8 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-[var(--color-text)]">Services</h1>
-      <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+      <h1 class="text-2xl font-bold text-text">Services</h1>
+      <p class="mt-1 text-sm text-text-muted">
         Containers deployed to this server.
       </p>
     </div>
@@ -93,13 +94,11 @@
 
   {#if data.services.length === 0}
     <div
-      class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] py-20 text-center"
+      class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center"
     >
-      <Server class="mb-3 size-10 text-[var(--color-text-muted)] opacity-40" />
-      <p class="text-sm font-medium text-[var(--color-text-muted)]">
-        No services yet
-      </p>
-      <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+      <Server class="mb-3 size-10 text-text-muted opacity-40" />
+      <p class="text-sm font-medium text-text-muted">No services yet</p>
+      <p class="mt-1 text-xs text-text-subtle">
         Point at an image, fill in a config, and deploy.
       </p>
       <a
@@ -116,7 +115,7 @@
         <div>
           {#if groups.length > 1}
             <h2
-              class="mb-3 text-xs font-semibold tracking-widest text-[var(--color-text-subtle)] uppercase"
+              class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
             >
               {label}
             </h2>
@@ -124,7 +123,7 @@
           <div class="space-y-3">
             {#each services as svc (svc.id)}
               <div
-                class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-shadow hover:shadow-md"
+                class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
               >
                 <a
                   class="flex min-w-0 flex-1 items-center gap-4"
@@ -137,16 +136,12 @@
                   </div>
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                      <p
-                        class="truncate text-sm font-semibold text-[var(--color-text)]"
-                      >
+                      <p class="truncate text-sm font-semibold text-text">
                         {svc.name}
                       </p>
                       <StatusBadge status={svc.currentStatus} />
                     </div>
-                    <p
-                      class="mt-0.5 truncate text-xs text-[var(--color-text-muted)]"
-                    >
+                    <p class="mt-0.5 truncate text-xs text-text-muted">
                       {svc.image}:{svc.tag}
                       · {svc.slug}.{data.baseDomain}
                     </p>
@@ -162,7 +157,7 @@
                     >
                       <input name="serviceId" type="hidden" value={svc.id}>
                       <button
-                        class="rounded-lg p-2 text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] disabled:opacity-50"
+                        class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:opacity-50"
                         disabled={pending[svc.id]}
                         title="Stop"
                         type="submit"
@@ -182,11 +177,11 @@
                     >
                       <input name="serviceId" type="hidden" value={svc.id}>
                       <button
-                        class="rounded-lg p-2 text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] disabled:opacity-50"
+                        class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:opacity-50"
                         disabled={pending[svc.id] || !svc.containerId}
                         title={svc.containerId
-                    ? "Start"
-                    : "Deploy first from the service page"}
+                          ? "Start"
+                          : "Deploy first from the service page"}
                         type="submit"
                       >
                         {#if pending[svc.id]}
@@ -205,7 +200,7 @@
                   >
                     <input name="serviceId" type="hidden" value={svc.id}>
                     <button
-                      class="rounded-lg p-2 text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] disabled:opacity-50"
+                      class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:opacity-50"
                       disabled={pending[svc.id] || !svc.containerId}
                       title="Restart"
                       type="submit"

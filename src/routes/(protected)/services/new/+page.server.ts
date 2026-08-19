@@ -1,13 +1,11 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { eq } from "drizzle-orm";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
+import { ProjectDTO } from "$lib/dto/project-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
+import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import { service } from "$lib/server/db/schema";
 import { encryptSecret } from "$lib/server/docker/secrets";
-import { ownedProject } from "$lib/server/projects";
-import { usableTemplate } from "$lib/server/templates";
 import {
   createServiceSchema,
   parseEnvVars,
@@ -24,12 +22,16 @@ export const load = async ({ url, parent }) => {
   // templateId the user isn't allowed to use, rather than erroring — the
   // form just falls back to blank/no-project silently safe.
   const project =
-    projectId && (await ownedProject(projectId, user.id)) ? projectId : null;
+    projectId && (await ProjectDTO.get(projectId, user.id)) ? projectId : null;
   const template = templateId
-    ? await usableTemplate(templateId, user.id)
+    ? await TemplateDTO.usable(templateId, user.id)
     : null;
 
-  return { baseDomain: config.baseDomain, projectId: project, template };
+  return {
+    baseDomain: config.baseDomain,
+    projectId: project,
+    template: template?.toJSON() ?? null,
+  };
 };
 
 export const actions = {
@@ -41,7 +43,7 @@ export const actions = {
     const formData = await request.formData();
     const rawProjectId = formData.get("projectId") as string | null;
     const projectId =
-      rawProjectId && (await ownedProject(rawProjectId, locals.user.id))
+      rawProjectId && (await ProjectDTO.get(rawProjectId, locals.user.id))
         ? rawProjectId
         : null;
 
@@ -56,30 +58,17 @@ export const actions = {
 
     const input = result.data;
 
-    const [slugTaken] = await db
-      .select({ id: service.id })
-      .from(service)
-      .where(eq(service.slug, input.slug))
-      .limit(1);
-
-    if (slugTaken) {
+    if (await ServiceDTO.slugTaken(input.slug)) {
       return fail(400, {
         errors: { slug: ["That slug is already in use."] },
         values: Object.fromEntries(formData),
       });
     }
 
-    const now = new Date();
-    const id = crypto.randomUUID();
-
-    await db.insert(service).values({
+    const svc = await ServiceDTO.create({
       containerPort: input.containerPort,
       cpuLimit: input.cpuLimit || null,
-      createdAt: now,
-      currentStatus: "pending",
-      desiredState: "stopped",
       envVars: parseEnvVars(formData),
-      id,
       image: input.image,
       memoryLimitMb: input.memoryLimitMb ?? null,
       name: input.name,
@@ -92,12 +81,11 @@ export const actions = {
       restartPolicy: input.restartPolicy,
       slug: input.slug,
       tag: input.tag,
-      updatedAt: now,
       userId: locals.user.id,
     });
 
     logger.info(
-      `Service created: service=${id} slug=${input.slug} image=${input.image}:${input.tag} user=${locals.user.id}`
+      `Service created: service=${svc.id} slug=${input.slug} image=${input.image}:${input.tag} user=${locals.user.id}`
     );
 
     redirect(

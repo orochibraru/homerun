@@ -32,13 +32,13 @@
 
   // ── Shared input style ─────────────────────────────────────────
   const input =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
   // ──────────────────────────────────────────────────────────────
   // Account section (name + avatar — updated via authClient)
   // ──────────────────────────────────────────────────────────────
-  let accountName = $state(user?.name ?? "");
-  let accountImage = $state(user?.image ?? "");
+  let accountName = $derived(user?.name ?? "");
+  let accountImage = $derived(user?.image ?? "");
   let accountLoading = $state(false);
 
   // Keep fields in sync if the session refreshes
@@ -156,10 +156,10 @@
   );
 </script>
 
-<div class="mx-auto max-w-2xl space-y-6 p-6 md:p-8">
+<div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-xl font-bold text-[var(--color-text)]">Settings</h1>
-    <p class="mt-0.5 text-sm text-[var(--color-text-muted)]">
+    <h1 class="text-xl font-bold text-text">Settings</h1>
+    <p class="mt-0.5 text-sm text-text-muted">
       Manage your profile and account preferences.
     </p>
   </div>
@@ -167,20 +167,16 @@
   <!-- ═══════════════════════════════════════════════════════════
 	     ACCOUNT
 	════════════════════════════════════════════════════════════ -->
-  <section
-    class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-  >
-    <div
-      class="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4"
-    >
+  <section class="rounded-2xl border border-border bg-surface">
+    <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div
         class="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400"
       >
         <UserCircle class="size-4" />
       </div>
       <div>
-        <h2 class="text-sm font-semibold text-[var(--color-text)]">Account</h2>
-        <p class="text-xs text-[var(--color-text-muted)]">
+        <h2 class="text-sm font-semibold text-text">Account</h2>
+        <p class="text-xs text-text-muted">
           Your display name and avatar shown across the platform.
         </p>
       </div>
@@ -206,7 +202,7 @@
         </div>
         <div class="min-w-0 flex-1">
           <label
-            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
+            class="mb-1.5 block text-sm font-medium text-text"
             for="accountImage"
           >
             Avatar URL
@@ -218,7 +214,7 @@
             type="url"
             bind:value={accountImage}
           >
-          <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+          <p class="mt-1 text-xs text-text-subtle">
             Paste a direct image link (JPEG, PNG, WebP).
           </p>
         </div>
@@ -227,7 +223,7 @@
       <!-- Display name -->
       <div>
         <label
-          class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
+          class="mb-1.5 block text-sm font-medium text-text"
           for="accountName"
         >
           Display name <span class="text-red-500">*</span>
@@ -244,15 +240,13 @@
 
       <!-- Email (read-only) -->
       <div>
-        <label
-          class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
-        >
+        <label class="mb-1.5 block text-sm font-medium text-text" for="email">
           Email
         </label>
         <div
-          class="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2.5"
+          class="flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-2.5"
         >
-          <span class="flex-1 text-sm text-[var(--color-text-muted)]">
+          <span class="flex-1 text-sm text-text-muted">
             {user?.email ?? "—"}
           </span>
           {#if user?.emailVerified}
@@ -270,7 +264,7 @@
             </span>
           {/if}
         </div>
-        <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+        <p class="mt-1 text-xs text-text-subtle">
           Email changes are not yet supported.
         </p>
       </div>
@@ -296,20 +290,16 @@
   <!-- ═══════════════════════════════════════════════════════════
 	     PASSWORD
 	════════════════════════════════════════════════════════════ -->
-  <section
-    class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-  >
-    <div
-      class="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4"
-    >
+  <section class="rounded-2xl border border-border bg-surface">
+    <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div
         class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400"
       >
         <KeyRound class="size-4" />
       </div>
       <div>
-        <h2 class="text-sm font-semibold text-[var(--color-text)]">Password</h2>
-        <p class="text-xs text-[var(--color-text-muted)]">
+        <h2 class="text-sm font-semibold text-text">Password</h2>
+        <p class="text-xs text-text-muted">
           Change your password. All other sessions will be signed out.
         </p>
       </div>
@@ -319,7 +309,7 @@
       <!-- Current password -->
       <div>
         <label
-          class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
+          class="mb-1.5 block text-sm font-medium text-text"
           for="currentPassword"
         >
           Current password
@@ -335,7 +325,7 @@
             bind:value={currentPassword}
           >
           <button
-            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
             onclick={() => (showCurrent = !showCurrent)}
             type="button"
           >
@@ -351,7 +341,7 @@
       <!-- New password -->
       <div>
         <label
-          class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
+          class="mb-1.5 block text-sm font-medium text-text"
           for="newPassword"
         >
           New password
@@ -367,7 +357,7 @@
             bind:value={newPassword}
           >
           <button
-            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
             onclick={() => (showNew = !showNew)}
             type="button"
           >
@@ -384,13 +374,13 @@
               {#each [1, 2, 3, 4] as level}
                 <div
                   class="h-1 flex-1 rounded-full transition-all duration-300 {level <=
-                                    passwordStrength
-                                        ? strengthMeta.bar
-                                        : 'bg-[var(--color-surface-3)]'}"
+                  passwordStrength
+                    ? strengthMeta.bar
+                    : 'bg-[var(--color-surface-3)]'}"
                 ></div>
               {/each}
             </div>
-            <p class="mt-1 text-xs text-[var(--color-text-muted)]">
+            <p class="mt-1 text-xs text-text-muted">
               Strength:
               <span class="font-medium {strengthMeta.text}"
                 >{strengthMeta.label}</span
@@ -403,7 +393,7 @@
       <!-- Confirm new password -->
       <div>
         <label
-          class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
+          class="mb-1.5 block text-sm font-medium text-text"
           for="confirmPassword"
         >
           Confirm new password
@@ -412,11 +402,11 @@
           <input
             autocomplete="new-password"
             class="{input} pr-11 {confirmPassword &&
-                        confirmPassword !== newPassword
-                            ? 'border-red-500 focus:ring-red-500'
-                            : confirmPassword && confirmPassword === newPassword
-                              ? 'border-green-500 focus:ring-green-500'
-                              : ''}"
+            confirmPassword !== newPassword
+              ? 'border-red-500 focus:ring-red-500'
+              : confirmPassword && confirmPassword === newPassword
+                ? 'border-green-500 focus:ring-green-500'
+                : ''}"
             id="confirmPassword"
             placeholder="Repeat new password"
             required
@@ -424,7 +414,7 @@
             bind:value={confirmPassword}
           >
           <button
-            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
             onclick={() => (showConfirm = !showConfirm)}
             type="button"
           >
@@ -449,9 +439,9 @@
         <button
           class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
           disabled={passwordLoading ||
-                        !currentPassword ||
-                        !newPassword ||
-                        !confirmPassword}
+            !currentPassword ||
+            !newPassword ||
+            !confirmPassword}
           type="submit"
         >
           {#if passwordLoading}
@@ -470,7 +460,7 @@
 	     DANGER ZONE
 	════════════════════════════════════════════════════════════ -->
   <section
-    class="rounded-2xl border border-red-200 bg-[var(--color-surface)] dark:border-red-900/40"
+    class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40"
   >
     <div
       class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
@@ -484,7 +474,7 @@
         <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
           Danger zone
         </h2>
-        <p class="text-xs text-[var(--color-text-muted)]">
+        <p class="text-xs text-text-muted">
           Irreversible actions. Proceed with caution.
         </p>
       </div>
@@ -494,10 +484,8 @@
       {#if !showDeleteConfirm}
         <div class="flex items-center justify-between gap-4">
           <div>
-            <p class="text-sm font-medium text-[var(--color-text)]">
-              Delete account
-            </p>
-            <p class="mt-0.5 text-xs text-[var(--color-text-muted)]">
+            <p class="text-sm font-medium text-text">Delete account</p>
+            <p class="mt-0.5 text-xs text-text-muted">
               Permanently removes your account, all your services, and their
               deployment history. This cannot be undone.
             </p>
@@ -530,9 +518,8 @@
               bind:value={deletePassword}
             >
             <button
-              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              onclick={() =>
-                                (showDeletePassword = !showDeletePassword)}
+              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
+              onclick={() => (showDeletePassword = !showDeletePassword)}
               type="button"
             >
               {#if showDeletePassword}
@@ -545,11 +532,11 @@
 
           <div class="flex items-center gap-3">
             <button
-              class="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+              class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
               onclick={() => {
-                                showDeleteConfirm = false;
-                                deletePassword = "";
-                            }}
+                showDeleteConfirm = false;
+                deletePassword = "";
+              }}
               type="button"
             >
               Cancel

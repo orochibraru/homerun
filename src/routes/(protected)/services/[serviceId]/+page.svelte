@@ -66,7 +66,7 @@
     {#if svc.desiredState === "running"}
       <form action="?/stop" method="POST" use:enhance={withPending("stop")}>
         <button
-          class="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-60"
+          class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={pendingAction !== null}
           type="submit"
         >
@@ -81,7 +81,7 @@
     {:else}
       <form action="?/start" method="POST" use:enhance={withPending("start")}>
         <button
-          class="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-60"
+          class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={pendingAction !== null}
           type="submit"
         >
@@ -97,7 +97,7 @@
 
     <form action="?/restart" method="POST" use:enhance={withPending("restart")}>
       <button
-        class="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-60"
+        class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={pendingAction !== null}
         type="submit"
       >
@@ -114,43 +114,33 @@
 
 {#if !svc.containerId}
   <div
-    class="mb-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 text-sm text-[var(--color-text-muted)]"
+    class="mb-6 rounded-xl border border-border bg-surface-2 p-4 text-sm text-text-muted"
   >
     This service hasn't been deployed yet — click <strong>Deploy</strong> to
     pull
-    <span class="font-mono text-[var(--color-text)]"
-      >{svc.image}:{svc.tag}</span
-    >
+    <span class="font-mono text-text">{svc.image}:{svc.tag}</span>
     and start it.
   </div>
 {/if}
 
 <!-- ═══ Deployment history ═══ -->
-<section
-  class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
->
-  <div
-    class="flex items-center gap-2 border-b border-[var(--color-border)] px-5 py-4"
-  >
-    <Clock class="size-4 text-[var(--color-text-muted)]" />
-    <h2 class="text-sm font-semibold text-[var(--color-text)]">
-      Deployment history
-    </h2>
+<section class="rounded-2xl border border-border bg-surface">
+  <div class="flex items-center gap-2 border-b border-border px-5 py-4">
+    <Clock class="size-4 text-text-muted" />
+    <h2 class="text-sm font-semibold text-text">Deployment history</h2>
   </div>
 
   {#if data.deployments.length === 0}
     <div class="flex flex-col items-center justify-center py-12 text-center">
-      <p class="text-sm font-medium text-[var(--color-text-muted)]">
-        No deployments yet
-      </p>
+      <p class="text-sm font-medium text-text-muted">No deployments yet</p>
     </div>
   {:else}
-    <div class="divide-y divide-[var(--color-border)]">
+    <div class="divide-y divide-border">
       {#each data.deployments as dep (dep.id)}
         <div class="flex items-center gap-4 px-5 py-3">
           <StatusBadge status={dep.status} />
           <div class="min-w-0 flex-1">
-            <p class="truncate text-xs text-[var(--color-text-muted)]">
+            <p class="truncate text-xs text-text-muted">
               {timeAgo(dep.createdAt)}
               {#if dep.imageDigest}
                 · <span class="font-mono">{dep.imageDigest.slice(0, 19)}</span>

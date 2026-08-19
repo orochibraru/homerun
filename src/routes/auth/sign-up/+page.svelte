@@ -32,7 +32,7 @@
   let showConfirm = $state(false);
 
   const inputClass =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+    "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
   // ── Password strength ──────────────────────────────────────────────
   const passwordStrength = $derived(getPasswordStrength(password));
@@ -83,10 +83,9 @@
         href={resolve("/")}
       >
         <Server class="text-accent size-5" />
-        <span class="text-[var(--color-text)]">Local</span
-        ><span class="text-accent">Run</span>
+        <span class="text-text">Local</span><span class="text-accent">Run</span>
       </a>
-      <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+      <p class="mt-1 text-sm text-text-muted">
         Deploy containers to your own server.
       </p>
     </div>
@@ -94,10 +93,8 @@
     <div class="w-full max-w-md">
       <!-- Header -->
       <div class="mb-8">
-        <h2 class="text-2xl font-bold text-[var(--color-text)]">
-          Create your account
-        </h2>
-        <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+        <h2 class="text-2xl font-bold text-text">Create your account</h2>
+        <p class="mt-1 text-sm text-text-muted">
           Deploy your first container in minutes.
         </p>
       </div>
@@ -105,10 +102,7 @@
       <form class="space-y-5" novalidate onsubmit={handleSignUp}>
         <!-- Full name -->
         <div>
-          <label
-            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
-            for="name"
-          >
+          <label class="mb-1.5 block text-sm font-medium text-text" for="name">
             Full name <span class="text-red-500">*</span>
           </label>
           <input
@@ -125,10 +119,7 @@
 
         <!-- Email -->
         <div>
-          <label
-            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
-            for="email"
-          >
+          <label class="mb-1.5 block text-sm font-medium text-text" for="email">
             Email <span class="text-red-500">*</span>
           </label>
           <input
@@ -146,7 +137,7 @@
         <!-- Password -->
         <div>
           <label
-            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
+            class="mb-1.5 block text-sm font-medium text-text"
             for="password"
           >
             Password <span class="text-red-500">*</span>
@@ -164,7 +155,7 @@
             >
             <button
               aria-label={showPassword ? "Hide password" : "Show password"}
-              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted transition-colors hover:text-text"
               onclick={() => (showPassword = !showPassword)}
               type="button"
             >
@@ -187,7 +178,7 @@
                   ></div>
                 {/each}
               </div>
-              <p class="mt-1 text-xs text-[var(--color-text-muted)]">
+              <p class="mt-1 text-xs text-text-muted">
                 Password strength:
                 <span class="font-medium {strengthMeta.text}"
                   >{strengthMeta.label}</span
@@ -200,7 +191,7 @@
         <!-- Confirm password -->
         <div>
           <label
-            class="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
+            class="mb-1.5 block text-sm font-medium text-text"
             for="confirm"
           >
             Confirm password <span class="text-red-500">*</span>
@@ -223,7 +214,7 @@
             >
             <button
               aria-label={showConfirm ? "Hide password" : "Show password"}
-              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted transition-colors hover:text-text"
               onclick={() => (showConfirm = !showConfirm)}
               type="button"
             >
@@ -260,7 +251,7 @@
         </button>
       </form>
 
-      <p class="mt-6 text-center text-sm text-[var(--color-text-muted)]">
+      <p class="mt-6 text-center text-sm text-text-muted">
         Already have an account?
         <a
           class="text-accent font-medium hover:underline"

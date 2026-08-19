@@ -1,21 +1,16 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { desc, eq } from "drizzle-orm";
 import { resolve } from "$app/paths";
+import { ProjectDTO } from "$lib/dto/project-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
-import { db } from "$lib/server/db/lib";
-import { project, service } from "$lib/server/db/schema";
-import { deleteProjectCascade } from "$lib/server/projects";
 
 const logger = new Logger("Projects");
 
-export const load = async ({ params }) => {
-  const services = await db
-    .select()
-    .from(service)
-    .where(eq(service.projectId, params.projectId))
-    .orderBy(desc(service.createdAt));
+export const load = async ({ params, parent }) => {
+  const { user } = await parent();
+  const services = await ServiceDTO.listByProject(params.projectId, user.id);
 
-  return { services };
+  return { services: services.map((s) => s.toJSON()) };
 };
 
 export const actions = {
@@ -23,7 +18,11 @@ export const actions = {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
     }
-    await deleteProjectCascade(params.projectId, locals.user.id);
+    const proj = await ProjectDTO.get(params.projectId, locals.user.id);
+    if (!proj) {
+      return fail(404, { error: "Project not found." });
+    }
+    await proj.cascadeDelete();
     logger.info(
       `Project deleted: project=${params.projectId} user=${locals.user.id}`
     );
@@ -32,6 +31,10 @@ export const actions = {
   rename: async ({ request, params, locals }) => {
     if (!locals.user) {
       throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const proj = await ProjectDTO.get(params.projectId, locals.user.id);
+    if (!proj) {
+      return fail(404, { error: "Project not found." });
     }
     const formData = await request.formData();
     const name = (formData.get("name") as string | null)?.trim() ?? "";
@@ -42,10 +45,7 @@ export const actions = {
       return fail(400, { error: "Name is required." });
     }
 
-    await db
-      .update(project)
-      .set({ description, name })
-      .where(eq(project.id, params.projectId));
+    await proj.update({ description, name });
 
     logger.info(
       `Project renamed: project=${params.projectId} user=${locals.user.id}`

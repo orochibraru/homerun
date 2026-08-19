@@ -73,7 +73,7 @@
   <div class="w-full max-w-lg">
     <!-- ── Main card ──────────────────────────────────────────────── -->
     <div
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center shadow-sm"
+      class="rounded-2xl border border-border bg-surface p-8 text-center shadow-sm"
     >
       <!-- Icon -->
       <div
@@ -83,14 +83,10 @@
       </div>
 
       <!-- Heading -->
-      <h1 class="text-2xl font-bold text-[var(--color-text)]">
-        Check your inbox
-      </h1>
-      <p class="mt-3 text-sm leading-relaxed text-[var(--color-text-muted)]">
+      <h1 class="text-2xl font-bold text-text">Check your inbox</h1>
+      <p class="mt-3 text-sm leading-relaxed text-text-muted">
         We sent a confirmation link to
-        <strong class="font-semibold text-[var(--color-text)]"
-          >{data.email}</strong
-        >.
+        <strong class="font-semibold text-text">{data.email}</strong>.
         <br>
         Click that link to verify your account and access your dashboard.
       </p>
@@ -98,9 +94,7 @@
       <!-- Steps -->
       <ol class="mt-6 space-y-2 text-left">
         {#each ["Open the email from Local Run", 'Click the "Confirm email" button', "You'll be signed in automatically"] as step, i}
-          <li
-            class="flex items-start gap-3 text-sm text-[var(--color-text-muted)]"
-          >
+          <li class="flex items-start gap-3 text-sm text-text-muted">
             <span
               class="bg-accent/10 text-accent mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
             >
@@ -138,7 +132,7 @@
           </p>
         {:else}
           <button
-            class="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)] disabled:opacity-60"
+            class="inline-flex items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-text disabled:opacity-60"
             disabled={resending}
             onclick={resendEmail}
           >
@@ -154,7 +148,7 @@
       </div>
 
       <!-- Sign in with a different account -->
-      <p class="mt-6 text-xs text-[var(--color-text-subtle)]">
+      <p class="mt-6 text-xs text-text-subtle">
         Wrong email?
         <a class="text-accent hover:underline" href={resolve("/auth/sign-up")}>
           Create a new account

@@ -18,8 +18,8 @@
   onMount(() => title.set("Deploy a Service"));
 
   const input =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
-  const label = "block mb-1.5 text-sm font-medium text-[var(--color-text)]";
+    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+  const label = "block mb-1.5 text-sm font-medium text-text";
   const errorClass = "mt-1.5 text-xs text-red-500";
   const values = $derived(form?.values as Record<string, string> | undefined);
   const errors = $derived(form?.errors as Record<string, string[]> | undefined);
@@ -27,16 +27,16 @@
   // dedicated <p> for still surfaces instead of silently failing.
   const errorMessages = $derived(errors ? Object.values(errors).flat() : []);
 
-  let name = $state(
+  let name = $derived(
     (form?.values?.name as string) ?? data.template?.name ?? ""
   );
-  let slug = $state(
+  let slug = $derived(
     (form?.values?.slug as string) ??
       (data.template ? slugify(data.template.name) : "")
   );
   let slugTouched = $state(false);
   let submitting = $state(false);
-  let showRegistry = $state(!!values?.registryUsername);
+  let showRegistry = $derived(!!values?.registryUsername);
 
   function slugify(value: string): string {
     return value
@@ -62,13 +62,15 @@
     key: string;
     value: string;
   }
-  const templateEnvRows = data.template
-    ? Object.entries(data.template.envVars ?? {}).map(([key, value]) => ({
-        key,
-        value,
-      }))
-    : [];
-  let envRows = $state<EnvRow[]>(
+  const templateEnvRows = $derived(
+    data.template
+      ? Object.entries(data.template.envVars ?? {}).map(([key, value]) => ({
+          key,
+          value,
+        }))
+      : []
+  );
+  let envRows = $derived<EnvRow[]>(
     templateEnvRows.length > 0 ? templateEnvRows : [{ key: "", value: "" }]
   );
 
@@ -84,10 +86,10 @@
   }
 </script>
 
-<div class="mx-auto max-w-2xl space-y-6 p-6 md:p-8">
+<div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-xl font-bold text-[var(--color-text)]">Deploy a Service</h1>
-    <p class="mt-0.5 text-sm text-[var(--color-text-muted)]">
+    <h1 class="text-xl font-bold text-text">Deploy a Service</h1>
+    <p class="mt-0.5 text-sm text-text-muted">
       Point at an image, fill in the config, deploy.
     </p>
   </div>
@@ -97,23 +99,21 @@
     class="space-y-6"
     method="POST"
     use:enhance={() => {
-			submitting = true;
-			return async ({ result, update }) => {
-				submitting = false;
-				if (result.type === "failure") {
-					const data = result.data as
-						| { errors?: Record<string, string[]> }
-						| undefined;
-					const first = data?.errors
-						? Object.values(data.errors).flat()[0]
-						: undefined;
-					toast.error(first ?? "Check the form for errors.");
-				} else if (result.type === "error") {
-					toast.error(result.error?.message ?? "Something went wrong.");
-				}
-				await update();
-			};
-		}}
+      submitting = true;
+      return async ({ result, update }) => {
+        submitting = false;
+        if (result.type === "failure") {
+          const data = result.data as { errors?: Record } | undefined;
+          const first = data?.errors
+            ? Object.values(data.errors).flat()[0]
+            : undefined;
+          toast.error(first ?? "Check the form for errors.");
+        } else if (result.type === "error") {
+          toast.error(result.error?.message ?? "Something went wrong.");
+        }
+        await update();
+      };
+    }}
   >
     {#if data.projectId}
       <input name="projectId" type="hidden" value={data.projectId}>
@@ -142,22 +142,16 @@
     {/if}
 
     <!-- ═══ Basics ═══ -->
-    <section
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-    >
-      <div
-        class="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4"
-      >
+    <section class="rounded-2xl border border-border bg-surface">
+      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
         <div
           class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
         >
           <Server class="size-4" />
         </div>
         <div>
-          <h2 class="text-sm font-semibold text-[var(--color-text)]">Basics</h2>
-          <p class="text-xs text-[var(--color-text-muted)]">
-            Name it and point at an image.
-          </p>
+          <h2 class="text-sm font-semibold text-text">Basics</h2>
+          <p class="text-xs text-text-muted">Name it and point at an image.</p>
         </div>
       </div>
 
@@ -197,7 +191,7 @@
             type="text"
             bind:value={slug}
           >
-          <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+          <p class="mt-1 text-xs text-text-subtle">
             Routed at
             <span class="text-accent"
               >{slug || "your-slug"}.{data.baseDomain}</span
@@ -254,7 +248,7 @@
             type="number"
             value={values?.containerPort ?? data.template?.containerPort ?? ""}
           >
-          <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+          <p class="mt-1 text-xs text-text-subtle">
             The port your app listens on inside the container.
           </p>
           {#if errors?.containerPort}
@@ -265,9 +259,7 @@
     </section>
 
     <!-- ═══ Private registry (collapsible) ═══ -->
-    <section
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-    >
+    <section class="rounded-2xl border border-border bg-surface">
       <button
         class="flex w-full items-center gap-3 px-5 py-4 text-left"
         onclick={() => (showRegistry = !showRegistry)}
@@ -279,22 +271,20 @@
           <Lock class="size-4" />
         </div>
         <div class="flex-1">
-          <h2 class="text-sm font-semibold text-[var(--color-text)]">
-            Private registry
-          </h2>
-          <p class="text-xs text-[var(--color-text-muted)]">
+          <h2 class="text-sm font-semibold text-text">Private registry</h2>
+          <p class="text-xs text-text-muted">
             Only needed for non-public images.
           </p>
         </div>
         <ChevronDown
-          class="size-4 text-[var(--color-text-muted)] transition-transform {showRegistry
-						? 'rotate-180'
-						: ''}"
+          class="size-4 text-text-muted transition-transform {showRegistry
+            ? 'rotate-180'
+            : ''}"
         />
       </button>
 
       {#if showRegistry}
-        <div class="space-y-4 border-t border-[var(--color-border)] p-5">
+        <div class="space-y-4 border-t border-border p-5">
           <div>
             <label class={label} for="registryUrl"> Registry URL </label>
             <input
@@ -334,14 +324,10 @@
     </section>
 
     <!-- ═══ Environment variables ═══ -->
-    <section
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-    >
-      <div class="border-b border-[var(--color-border)] px-5 py-4">
-        <h2 class="text-sm font-semibold text-[var(--color-text)]">
-          Environment variables
-        </h2>
-        <p class="text-xs text-[var(--color-text-muted)]">
+    <section class="rounded-2xl border border-border bg-surface">
+      <div class="border-b border-border px-5 py-4">
+        <h2 class="text-sm font-semibold text-text">Environment variables</h2>
+        <p class="text-xs text-text-muted">
           Passed to the container at deploy time.
         </p>
       </div>
@@ -386,11 +372,9 @@
     </section>
 
     <!-- ═══ Runtime ═══ -->
-    <section
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-    >
-      <div class="border-b border-[var(--color-border)] px-5 py-4">
-        <h2 class="text-sm font-semibold text-[var(--color-text)]">Runtime</h2>
+    <section class="rounded-2xl border border-border bg-surface">
+      <div class="border-b border-border px-5 py-4">
+        <h2 class="text-sm font-semibold text-text">Runtime</h2>
       </div>
       <div class="space-y-5 p-5">
         <div>
@@ -443,15 +427,13 @@
             {/if}
           </div>
         </div>
-        <p class="text-xs text-[var(--color-text-subtle)]">
-          Leave blank for unlimited.
-        </p>
+        <p class="text-xs text-text-subtle">Leave blank for unlimited.</p>
       </div>
     </section>
 
     <div class="flex justify-end gap-3">
       <a
-        class="rounded-xl border border-[var(--color-border)] px-5 py-2.5 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+        class="rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
         href={resolve("/services")}
       >
         Cancel
