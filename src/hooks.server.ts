@@ -28,7 +28,7 @@ export function handleError({ event, error, status }) {
   }
 }
 
-async function sleep(ms: number) {
+function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -36,10 +36,11 @@ async function waitForDatabase() {
   const maxRetries = 10;
   const retryDelay = 2000;
 
-  for (let i = 0; i < maxRetries; i++) {
+  for (let i = 0; i < maxRetries; i += 1) {
     try {
       // Reset connection before each attempt to avoid stale connections
       if (i > 0) {
+        // biome-ignore lint/performance/noAwaitInLoops: each retry must wait for the previous attempt's reset before trying again — inherently sequential.
         await resetDb();
       }
       getDb();
@@ -84,6 +85,7 @@ async function runMigrations() {
         process.exit(1);
       }
       // Reset the database connection before retrying
+      // biome-ignore lint/performance/noAwaitInLoops: each retry must wait for the previous attempt's reset before trying again — inherently sequential.
       await resetDb();
       retries -= 1;
       await sleep(3000);
@@ -132,14 +134,14 @@ const authHandler: Handle = async ({ event, resolve }) => {
         });
       }
 
-      const session = await auth.api.getSession({
+      const apiKeySession = await auth.api.getSession({
         headers: new Headers({
           "x-api-key": rawKey,
         }),
       });
 
-      if (session?.session && session.user) {
-        event.locals.user = session.user;
+      if (apiKeySession?.session && apiKeySession.user) {
+        event.locals.user = apiKeySession.user;
       }
     }
   }

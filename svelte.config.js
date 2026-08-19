@@ -5,6 +5,7 @@ const config = {
   compilerOptions: {
     // Force runes mode for the project, except for libraries. Can be removed in svelte 6.
     runes: ({ filename }) =>
+      // biome-ignore lint/performance/useTopLevelRegex: svelte conf
       filename.split(/[/\\]/).includes("node_modules") ? undefined : true,
   },
   kit: {

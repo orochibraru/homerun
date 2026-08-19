@@ -33,6 +33,14 @@
 
   const inputClass =
     "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+  const confirmClass = $derived.by(() => {
+    if (!confirm) {
+      return "";
+    }
+    return confirm === password
+      ? "border-green-500 focus:ring-green-500"
+      : "border-red-500 focus:ring-red-500";
+  });
 
   // ── Password strength ──────────────────────────────────────────────
   const passwordStrength = $derived(getPasswordStrength(password));
@@ -156,7 +164,7 @@
             <button
               aria-label={showPassword ? "Hide password" : "Show password"}
               class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted transition-colors hover:text-text"
-              onclick={() => (showPassword = !showPassword)}
+              onclick={() => { showPassword = !showPassword; }}
               type="button"
             >
               {#if showPassword}
@@ -199,12 +207,7 @@
           <div class="relative">
             <input
               autocomplete="new-password"
-              class="{inputClass} pr-12
-							{confirm && confirm !== password
-                ? 'border-red-500 focus:ring-red-500'
-                : confirm && confirm === password
-                  ? 'border-green-500 focus:ring-green-500'
-                  : ''}"
+              class="{inputClass} pr-12 {confirmClass}"
               disabled={loading}
               id="confirm"
               placeholder="Repeat your password"
@@ -215,7 +218,7 @@
             <button
               aria-label={showConfirm ? "Hide password" : "Show password"}
               class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted transition-colors hover:text-text"
-              onclick={() => (showConfirm = !showConfirm)}
+              onclick={() => { showConfirm = !showConfirm; }}
               type="button"
             >
               {#if showConfirm}

@@ -87,6 +87,14 @@
   let passwordLoading = $state(false);
 
   const passwordStrength = $derived(getPasswordStrength(newPassword));
+  const confirmPasswordClass = $derived.by(() => {
+    if (!confirmPassword) {
+      return "";
+    }
+    return confirmPassword === newPassword
+      ? "border-green-500 focus:ring-green-500"
+      : "border-red-500 focus:ring-red-500";
+  });
   const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
 
   async function changePassword(e: SubmitEvent) {
@@ -326,7 +334,7 @@
           >
           <button
             class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
-            onclick={() => (showCurrent = !showCurrent)}
+            onclick={() => { showCurrent = !showCurrent; }}
             type="button"
           >
             {#if showCurrent}
@@ -358,7 +366,7 @@
           >
           <button
             class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
-            onclick={() => (showNew = !showNew)}
+            onclick={() => { showNew = !showNew; }}
             type="button"
           >
             {#if showNew}
@@ -401,12 +409,7 @@
         <div class="relative">
           <input
             autocomplete="new-password"
-            class="{input} pr-11 {confirmPassword &&
-            confirmPassword !== newPassword
-              ? 'border-red-500 focus:ring-red-500'
-              : confirmPassword && confirmPassword === newPassword
-                ? 'border-green-500 focus:ring-green-500'
-                : ''}"
+            class="{input} pr-11 {confirmPasswordClass}"
             id="confirmPassword"
             placeholder="Repeat new password"
             required
@@ -415,7 +418,7 @@
           >
           <button
             class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
-            onclick={() => (showConfirm = !showConfirm)}
+            onclick={() => { showConfirm = !showConfirm; }}
             type="button"
           >
             {#if showConfirm}
@@ -492,7 +495,8 @@
           </div>
           <button
             class="shrink-0 rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-700/60"
-            onclick={() => (showDeleteConfirm = true)}
+            onclick={() => { showDeleteConfirm = true; }}
+            type="button"
           >
             Delete account
           </button>
@@ -519,7 +523,7 @@
             >
             <button
               class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
-              onclick={() => (showDeletePassword = !showDeletePassword)}
+              onclick={() => { showDeletePassword = !showDeletePassword; }}
               type="button"
             >
               {#if showDeletePassword}

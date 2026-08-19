@@ -15,6 +15,7 @@
 - [x] Add ability to deploy a template into a project
 - [x] Fix quick actions in `/services` (start/stop/restart/delete from the list)
 - [ ] Add a web terminal to shell into a running container from the UI
+- [ ] Add an image existence checker, when a user enters an image validate that it exists before saving changes. If it doesn't exist just warn the user don't block saving they may just be preparing the setup.
 
 ## Projects & Networking
 
@@ -61,4 +62,4 @@
 
 ## Chores
 
-- [ ] Fix all Biome errors
+- [x] Fix all Biome errors

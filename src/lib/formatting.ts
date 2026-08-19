@@ -27,12 +27,17 @@ export function timeAgo(date: Date | string): string {
 /** Deterministic small hash, used to pick a stable gradient/color per entity id. */
 export function getHash(id: string): number {
   let hash = 0;
-  for (let i = 0; i < id.length; i++) {
+  for (let i = 0; i < id.length; i += 1) {
     hash = Math.imul(31, hash) + id.charCodeAt(i);
+    // biome-ignore lint/suspicious/noBitwiseOperators: standard int32-truncation idiom for a rolling hash — not a typo.
     hash |= 0;
   }
   return Math.abs(hash);
 }
+
+const UPPERCASE_RE = /[A-Z]/;
+const DIGIT_RE = /[0-9]/;
+const SYMBOL_RE = /[^A-Za-z0-9]/;
 
 export function getPasswordStrength(password: string): number {
   if (!password) {
@@ -40,16 +45,16 @@ export function getPasswordStrength(password: string): number {
   }
   let s = 0;
   if (password.length >= 12) {
-    s++;
+    s += 1;
   }
-  if (/[A-Z]/.test(password)) {
-    s++;
+  if (UPPERCASE_RE.test(password)) {
+    s += 1;
   }
-  if (/[0-9]/.test(password)) {
-    s++;
+  if (DIGIT_RE.test(password)) {
+    s += 1;
   }
-  if (/[^A-Za-z0-9]/.test(password)) {
-    s++;
+  if (SYMBOL_RE.test(password)) {
+    s += 1;
   }
   return s;
 }

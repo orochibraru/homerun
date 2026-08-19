@@ -11,7 +11,10 @@
   onMount(() => title.set("Storage"));
 
   function confirmDelete(e: SubmitEvent, name: string) {
-    if (!confirm(`Delete "${name}"? Services using it will need a redeploy.`)) {
+    if (
+      // biome-ignore lint/suspicious/noAlert: a native confirm() is the simplest correct guard here — no custom UI built for this yet.
+      !confirm(`Delete "${name}"? Services using it will need a redeploy.`)
+    ) {
       e.preventDefault();
     }
   }

@@ -262,7 +262,7 @@
     <section class="rounded-2xl border border-border bg-surface">
       <button
         class="flex w-full items-center gap-3 px-5 py-4 text-left"
-        onclick={() => (showRegistry = !showRegistry)}
+        onclick={() => { showRegistry = !showRegistry; }}
         type="button"
       >
         <div

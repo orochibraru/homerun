@@ -10,7 +10,7 @@ import {
 import { connectToProjectNetwork } from "./networks.ts";
 import { decryptSecret } from "./secrets.ts";
 
-export type { ContainerStatus };
+export type { ContainerStatus } from "$lib/types";
 
 const logger = new Logger("Docker");
 
@@ -343,7 +343,7 @@ export async function streamLogs(
  * This app must never enumerate, inspect side effects on, or remove
  * containers on the host that it didn't create.
  */
-export async function listManagedContainers() {
+export function listManagedContainers() {
   return getDocker().listContainers({
     all: true,
     filters: JSON.stringify({ label: [`${MANAGED_LABEL}=true`] }),

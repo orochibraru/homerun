@@ -13,15 +13,15 @@ import { config } from "$lib/config";
 
 export type LogFormats = "console" | "json";
 
-export enum LOG_LEVELS {
-  DEBUG = "debug",
-  INFO = "info",
-  WARN = "warn",
-  ERROR = "error",
-  TRACE = "trace",
-}
+export const LOG_LEVELS = {
+  DEBUG: "debug",
+  ERROR: "error",
+  INFO: "info",
+  TRACE: "trace",
+  WARN: "warn",
+} as const;
 
-type RawLogLevels = "debug" | "info" | "warn" | "error" | "trace";
+export type LogLevel = (typeof LOG_LEVELS)[keyof typeof LOG_LEVELS];
 
 export interface HttpLog {
   duration: number;
@@ -35,7 +35,7 @@ export class Logger {
   logFormat: "console" | "json";
   prefix?: string;
   prettyPrefix?: string;
-  logLevel: LOG_LEVELS | RawLogLevels;
+  logLevel: LogLevel;
 
   /**
    * Initializes a new instance of the Logger class.
@@ -51,7 +51,7 @@ export class Logger {
       this.logLevel = LOG_LEVELS.DEBUG;
     } else if (
       config.logFormat === "console" &&
-      !Object.values(LOG_LEVELS).includes(config.logLevel as LOG_LEVELS)
+      !Object.values(LOG_LEVELS).includes(config.logLevel as LogLevel)
     ) {
       throw new Error(
         `Invalid log level: ${config.logLevel}. Valid levels are: ${Object.values(
@@ -68,7 +68,7 @@ export class Logger {
     message,
     metadata = [],
   }: {
-    level: LOG_LEVELS | RawLogLevels;
+    level: LogLevel;
     message: string;
     metadata?: unknown[];
   }) {
@@ -175,7 +175,7 @@ export class Logger {
       LOG_LEVELS.DEBUG,
       LOG_LEVELS.TRACE,
     ];
-    if (!acceptedLogLevels.includes(this.logLevel as LOG_LEVELS)) {
+    if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
       return;
     }
 
@@ -211,7 +211,7 @@ export class Logger {
       LOG_LEVELS.DEBUG,
       LOG_LEVELS.TRACE,
     ];
-    if (!acceptedLogLevels.includes(this.logLevel as LOG_LEVELS)) {
+    if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
       return;
     }
 
@@ -248,7 +248,7 @@ export class Logger {
       LOG_LEVELS.DEBUG,
       LOG_LEVELS.TRACE,
     ];
-    if (!acceptedLogLevels.includes(this.logLevel as LOG_LEVELS)) {
+    if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
       return;
     }
 
@@ -278,7 +278,7 @@ export class Logger {
    */
   debug(input: unknown, ...optionalParams: unknown[]) {
     const acceptedLogLevels = [LOG_LEVELS.DEBUG, LOG_LEVELS.TRACE];
-    if (!acceptedLogLevels.includes(this.logLevel as LOG_LEVELS)) {
+    if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
       return;
     }
 
@@ -309,7 +309,7 @@ export class Logger {
 
   trace(input: unknown, ...optionalParams: unknown[]) {
     const acceptedLogLevels = [LOG_LEVELS.TRACE];
-    if (!acceptedLogLevels.includes(this.logLevel as LOG_LEVELS)) {
+    if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
       return;
     }
 

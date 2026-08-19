@@ -87,6 +87,7 @@
       status &&
       IN_FLIGHT_STATUSES.has(status)
     ) {
+      // biome-ignore lint/performance/noAwaitInLoops: a poll tick must wait out the interval before the next fetch — inherently sequential.
       await new Promise((r) => setTimeout(r, 1000));
       if (myGeneration !== pollGeneration) {
         return;
@@ -238,9 +239,10 @@
         <div>
           <button
             class="flex w-full items-center gap-4 px-5 py-3 text-left"
-            onclick={() =>
-              (expandedDeploymentId =
-                expandedDeploymentId === dep.id ? null : dep.id)}
+            onclick={() => {
+              expandedDeploymentId =
+                expandedDeploymentId === dep.id ? null : dep.id;
+            }}
             type="button"
           >
             <StatusBadge status={dep.status} />

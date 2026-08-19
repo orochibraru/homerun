@@ -39,6 +39,7 @@
       let buffer = "";
 
       while (!cancelled) {
+        // biome-ignore lint/performance/noAwaitInLoops: streaming reads are inherently sequential — each chunk depends on the previous read() resolving.
         const { done, value } = await reader.read();
         if (done) {
           break;
@@ -92,6 +93,7 @@
       class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
       disabled={!svc.containerId}
       onclick={reconnect}
+      type="button"
     >
       <RefreshCw class="size-3.5" />
       Reconnect

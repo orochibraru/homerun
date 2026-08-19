@@ -69,8 +69,12 @@
       submitting = true;
       return async ({ result, update }) => {
         submitting = false;
-        if (result.type === "success") toast.success("Saved.");
-        if (result.type === "failure") toast.error("Couldn't save.");
+        if (result.type === "success") {
+          toast.success("Saved.");
+        }
+        if (result.type === "failure") {
+          toast.error("Couldn't save.");
+        }
         await update();
       };
     }}

@@ -60,7 +60,7 @@
 
       <!-- Stats -->
       <div class="mb-10 grid grid-cols-3 gap-3">
-        {#each [{ icon: Server, value: "Self-hosted", label: "Your server" }, { icon: Container, value: "Any image", label: "Bring your own" }, { icon: Lock, value: "Zero", label: "Vendor lock-in" }] as stat}
+        {#each [{ icon: Server, label: "Your server", value: "Self-hosted" }, { icon: Container, label: "Bring your own", value: "Any image" }, { icon: Lock, label: "Vendor lock-in", value: "Zero" }] as stat}
           <div
             class="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
           >

@@ -83,8 +83,9 @@
               description: "Changes take effect on the next deploy.",
             });
           }
-          if (result.type === "failure")
+          if (result.type === "failure") {
             toast.error("Check the form for errors.");
+          }
           await update();
         };
       }}
@@ -224,7 +225,7 @@
       <div class="rounded-xl border border-border">
         <button
           class="flex w-full items-center gap-3 px-4 py-3 text-left"
-          onclick={() => (showRegistry = !showRegistry)}
+          onclick={() => { showRegistry = !showRegistry; }}
           type="button"
         >
           <Lock class="size-4 text-text-muted" />
@@ -414,7 +415,8 @@
           </div>
           <button
             class="shrink-0 rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-700/60"
-            onclick={() => (showDeleteConfirm = true)}
+            onclick={() => { showDeleteConfirm = true; }}
+            type="button"
           >
             Delete service
           </button>
@@ -426,7 +428,7 @@
           method="POST"
           use:enhance={() => {
             deleting = true;
-            return async ({ result }) => {
+            return ({ result }) => {
               if (result.type === "redirect") {
                 toast.success("Service deleted.");
                 goto(result.location);
@@ -448,7 +450,7 @@
           <div class="flex items-center gap-3">
             <button
               class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-              onclick={() => (showDeleteConfirm = false)}
+              onclick={() => { showDeleteConfirm = false; }}
               type="button"
             >
               Cancel

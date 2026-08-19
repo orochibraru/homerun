@@ -1,50 +1,50 @@
 import Bun from "bun";
-import * as zod from "zod";
+import { z } from "zod";
 
-export const configSchema = zod.z.object({
-  auth: zod.z.object({
-    oauthProviders: zod.z
+export const configSchema = z.object({
+  auth: z.object({
+    oauthProviders: z
       .array(
-        zod.z.object({
-          clientId: zod.z.string(),
-          clientSecret: zod.z.string(),
-          discoveryUrl: zod.z.string(),
-          enabled: zod.z.boolean().default(false),
-          name: zod.z.string(),
-          pkce: zod.z.boolean().default(true),
-          scopes: zod.z.array(zod.z.string()).default([]),
+        z.object({
+          clientId: z.string(),
+          clientSecret: z.string(),
+          discoveryUrl: z.string(),
+          enabled: z.boolean().default(false),
+          name: z.string(),
+          pkce: z.boolean().default(true),
+          scopes: z.array(z.string()).default([]),
         })
       )
       .default([]),
-    origin: zod.z.string().default("http://localhost:3000"),
-    secret: zod.z.string().default("default-secret"),
+    origin: z.string().default("http://localhost:3000"),
+    secret: z.string().default("default-secret"),
   }),
   // Base domain deployed services get subdomained under: <slug>.<baseDomain>
-  baseDomain: zod.z.string().default("localhost"),
-  dbPath: zod.z.string().default("./database.db"),
-  docker: zod.z.object({
-    networkName: zod.z.string().default("localrun-network"),
-    socketPath: zod.z.string().default("/var/run/docker.sock"),
+  baseDomain: z.string().default("localhost"),
+  dbPath: z.string().default("./database.db"),
+  docker: z.object({
+    networkName: z.string().default("localrun-network"),
+    socketPath: z.string().default("/var/run/docker.sock"),
   }),
-  logFormat: zod.z.enum(["console", "json"]).default("console"),
-  logLevel: zod.z.enum(["debug", "info", "warn", "error"]).default("info"),
-  port: zod.z.number().default(3000),
-  smtp: zod.z.object({
-    enabled: zod.z.boolean().default(false),
-    from: zod.z.string().optional(),
-    host: zod.z.string().optional(),
-    password: zod.z.string().optional(),
-    port: zod.z.number().optional(),
-    secure: zod.z.boolean().optional(),
-    user: zod.z.string().optional(),
+  logFormat: z.enum(["console", "json"]).default("console"),
+  logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  port: z.number().default(3000),
+  smtp: z.object({
+    enabled: z.boolean().default(false),
+    from: z.string().optional(),
+    host: z.string().optional(),
+    password: z.string().optional(),
+    port: z.number().optional(),
+    secure: z.boolean().optional(),
+    user: z.string().optional(),
   }),
-  traefik: zod.z.object({
-    certResolver: zod.z.string().default("letsencrypt"),
-    entrypoint: zod.z.string().default("websecure"),
+  traefik: z.object({
+    certResolver: z.string().default("letsencrypt"),
+    entrypoint: z.string().default("websecure"),
   }),
 });
 
-export type PenombreConfig = zod.z.infer<typeof configSchema>;
+export type PenombreConfig = z.infer<typeof configSchema>;
 
 export const parseConfig = (): PenombreConfig => {
   const envConfig = {

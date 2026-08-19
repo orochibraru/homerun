@@ -11,6 +11,7 @@ import { getRequestEvent } from "$app/server";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
+// biome-ignore lint/performance/noNamespaceImport: drizzleAdapter needs the whole schema module (every table), not a hand-picked subset.
 import * as schema from "$lib/server/db/schema";
 import { removeContainer } from "$lib/server/docker/service";
 import { Email } from "$lib/server/email";
@@ -112,15 +113,17 @@ export const auth = betterAuth({
           `Deleting account: user=${user.id} services=${services.length}`
         );
 
-        for (const svc of services) {
-          if (svc.containerId) {
-            try {
-              await removeContainer(svc.containerId, { force: true });
-            } catch {
-              // Already gone on the host — fine, keep cleaning up.
-            }
-          }
-        }
+        await Promise.all(
+          services
+            .filter((svc) => svc.containerId)
+            .map((svc) =>
+              removeContainer(svc.containerId as string, {
+                force: true,
+              }).catch(() => {
+                // Already gone on the host — fine, keep cleaning up.
+              })
+            )
+        );
 
         await db
           .delete(schema.deployment)

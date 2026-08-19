@@ -47,7 +47,7 @@ export class Email {
     logger.debug("SMTP transporter created successfully");
   }
 
-  public send() {
+  send() {
     logger.info(`Sending email to: ${this.to}, subject: ${this.subject}`);
     return this.transporter.sendMail({
       from: this.from,

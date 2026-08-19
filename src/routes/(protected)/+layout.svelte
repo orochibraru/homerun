@@ -167,7 +167,7 @@
 
     <div
       class="border-border bg-surface fixed top-0 left-0 z-50 flex h-screen w-72 flex-col border-r shadow-2xl md:hidden"
-      transition:fly={{ x: -280, duration: 240, opacity: 1 }}
+      transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
       <nav class="flex-1 overflow-y-auto p-3 pt-4">
         <p

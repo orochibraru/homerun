@@ -66,6 +66,7 @@
 
   function confirmDelete(e: SubmitEvent, name: string) {
     if (
+      // biome-ignore lint/suspicious/noAlert: a native confirm() is the simplest correct guard here — no custom UI built for this yet.
       !confirm(
         `Delete "${name}"? This removes its container and can't be undone.`
       )

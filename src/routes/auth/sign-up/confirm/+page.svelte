@@ -110,6 +110,7 @@
         class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-7 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={checking}
         onclick={checkVerification}
+        type="button"
       >
         {#if checking}
           <Loader2 class="size-4 animate-spin" />
@@ -135,6 +136,7 @@
             class="inline-flex items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-text disabled:opacity-60"
             disabled={resending}
             onclick={resendEmail}
+            type="button"
           >
             {#if resending}
               <Loader2 class="size-3.5 animate-spin" />
@@ -191,6 +193,7 @@
           <button
             class="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-medium text-amber-800 transition-all duration-200 hover:bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
             onclick={devBypass}
+            type="button"
           >
             <FlaskConical class="size-4" />
             Skip verification and go to dashboard

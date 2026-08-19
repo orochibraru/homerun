@@ -120,7 +120,7 @@
             <button
               aria-label={showPassword ? "Hide password" : "Show password"}
               class="text-text-muted hover:text-text absolute top-1/2 right-3.5 -translate-y-1/2 transition-colors"
-              onclick={() => (showPassword = !showPassword)}
+              onclick={() => { showPassword = !showPassword; }}
               type="button"
             >
               {#if showPassword}

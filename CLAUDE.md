@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Homerun (displayed in the UI as "Homerun") — a self-hosted, single-user PaaS for deploying Docker containers with a click-config form (a minimal Dokploy/Cloud-Run alternative). Point at an image, fill in env vars/port/resources, deploy — Traefik auto-routes it to `<slug>.<baseDomain>` with TLS. Single host, local Docker socket only; no multi-node orchestration, no git/Dockerfile build pipeline (bring-your-own-image only).
+Homerun — a self-hosted, single-user PaaS for deploying Docker containers with a click-config form (a minimal Dokploy/Cloud-Run alternative). Point at an image, fill in env vars/port/resources, deploy — Traefik auto-routes it to `<slug>.<baseDomain>` with TLS. Single host, local Docker socket only; no multi-node orchestration, no git/Dockerfile build pipeline (bring-your-own-image only).
 
 Stack: SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over `bun:sqlite`, Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
 
