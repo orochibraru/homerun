@@ -93,7 +93,7 @@
 
       <!-- Steps -->
       <ol class="mt-6 space-y-2 text-left">
-        {#each ["Open the email from Local Run", 'Click the "Confirm email" button', "You'll be signed in automatically"] as step, i}
+        {#each ["Open the email from Homerun", 'Click the "Confirm email" button', "You'll be signed in automatically"] as step, i}
           <li class="flex items-start gap-3 text-sm text-text-muted">
             <span
               class="bg-accent/10 text-accent mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"

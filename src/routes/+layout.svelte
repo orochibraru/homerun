@@ -27,7 +27,7 @@
 </script>
 
 <svelte:head>
-  <title>Local Run - {$title ?? "Home"}</title>
+  <title>Homerun - {$title ?? "Home"}</title>
 </svelte:head>
 
 <ModeWatcher defaultMode="light" />

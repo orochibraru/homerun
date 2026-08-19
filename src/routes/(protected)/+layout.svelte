@@ -90,7 +90,7 @@
   >
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto p-3 pt-4">
-      <p class="font-bold text-xl px-2">Local Run</p>
+      <p class="font-bold text-xl px-2">Homerun</p>
       <p
         class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
       >

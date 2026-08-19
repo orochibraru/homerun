@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Local Run — a self-hosted, single-user PaaS for deploying Docker containers with a click-config form (a minimal Dokploy/Cloud-Run alternative). Point at an image, fill in env vars/port/resources, deploy — Traefik auto-routes it to `<slug>.<baseDomain>` with TLS. Single host, local Docker socket only; no multi-node orchestration, no git/Dockerfile build pipeline (bring-your-own-image only).
+Homerun — a self-hosted, single-user PaaS for deploying Docker containers with a click-config form (a minimal Dokploy/Cloud-Run alternative). Point at an image, fill in env vars/port/resources, deploy — Traefik auto-routes it to `<slug>.<baseDomain>` with TLS. Single host, local Docker socket only; no multi-node orchestration, no git/Dockerfile build pipeline (bring-your-own-image only).
 
 Stack: SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over `bun:sqlite`, Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
 
@@ -24,13 +24,13 @@ docker compose up -d     # bootstraps Traefik (see compose.yaml) — required fo
 
 No test framework is set up in this repo.
 
-**`bun run check` is currently broken**, unrelated to app code: `typescript` is pinned to `^7.0.2`, and `svelte-check`'s `--tsgo` mode requires a *second*, aliased TypeScript 6 install alongside it (`npm install -D typescript@~6 @typescript/native@npm:typescript@7`). Until that's set up, verify changes by booting `bun run dev` and exercising routes directly rather than trusting a clean `check` run.
+**`bun run check` is currently broken**, unrelated to app code: `typescript` is pinned to `^7.0.2`, and `svelte-check`'s `--tsgo` mode requires a _second_, aliased TypeScript 6 install alongside it (`npm install -D typescript@~6 @typescript/native@npm:typescript@7`). Until that's set up, verify changes by booting `bun run dev` and exercising routes directly rather than trusting a clean `check` run.
 
 Biome formats with tabs + double quotes; svelte/vue/astro files have `useConst`/`useImportType`/unused-import rules turned off (Svelte 5 `$state`/`$props` destructuring trips them).
 
 ## Conventions (strict — apply to every change)
 
-- **Never manually type anything in a route file** — `+page.svelte`, `+layout.svelte`, `+page.server.ts`, `+layout.server.ts`, `+server.ts`. This covers `$props()` (`data`/`form`/`children`/`params`) in the `.svelte` files *and* `load`/`actions` in the `.server.ts` files. All of it is inferred by SvelteKit's tooling from the route's generated `./$types`, based on file location — that's the framework working as designed, don't fight it. Concretely:
+- **Never manually type anything in a route file** — `+page.svelte`, `+layout.svelte`, `+page.server.ts`, `+layout.server.ts`, `+server.ts`. This covers `$props()` (`data`/`form`/`children`/`params`) in the `.svelte` files _and_ `load`/`actions` in the `.server.ts` files. All of it is inferred by SvelteKit's tooling from the route's generated `./$types`, based on file location — that's the framework working as designed, don't fight it. Concretely:
   - `.svelte`: `const { data } = $props();` — never `: { data: PageData }`, never `: PageProps`. No `PageData`/`LayoutData`/`ActionData`/`PageProps`/`LayoutProps` type name appears in a route component at all.
   - `.server.ts`: `export const load = async ({ locals, parent }) => {...}` — never `: PageServerLoad`/`: LayoutServerLoad`. `export const actions = {...}` — never `: Actions`. No `import type {...} from "./$types"` for these at all.
   - This rule is specific to route files. Non-route components (`$lib/components/**`) and shared server modules (`$lib/server/**`) are normal TypeScript/Svelte code and should still be typed explicitly as usual — there's no route-based inference for those.
@@ -42,9 +42,11 @@ Biome formats with tabs + double quotes; svelte/vue/astro files have `useConst`/
 ## Architecture
 
 ### Routing: dashboard-only, no public pages
+
 `src/routes/(protected)/` is a route group living at `/` itself (not `/dashboard`) — its `+layout.server.ts` is the single auth guard, redirecting to `/auth/sign-in` when signed out. There is no public marketing page. `src/routes/auth/**` (sign-in, sign-up, sign-up/confirm) is the only unauthenticated surface.
 
 The core feature lives under `src/routes/(protected)/services/`:
+
 - `+page.svelte` — list, with inline start/stop/restart/delete actions
 - `new/+page.svelte` — click-config create form (does **not** deploy — just persists config)
 - `[serviceId]/+layout.server.ts` — ownership guard (id **and** userId must match, else 404) + syncs live Docker status on every visit; tabs: Overview (deploy/start/stop/restart + deployment history), `logs/` (live-streamed via a `+server.ts` GET returning a chunked `ReadableStream`, consumed client-side with `fetch()` + `body.getReader()` — no SSE/WebSocket), `env/` (edits `service.envVars`, takes effect on next deploy), `settings/` (edit + danger-zone delete)
@@ -52,7 +54,9 @@ The core feature lives under `src/routes/(protected)/services/`:
 `src/lib/server/services.ts` exports `ownedService(serviceId, userId)`, the shared ownership-check query — every service-scoped route/action uses it; never trust a route param alone.
 
 ### Data model (`src/lib/server/db/schema.ts`)
+
 better-auth-owned tables (`user`, `session`, `account`, `verification`, `apikey`, `passkey`) plus two app tables:
+
 - `service` — one row per deployable unit: image/tag, registry creds (`registryPasswordEnc`, AES-256-GCM), envVars (JSON column), port/restart-policy/resource limits, `desiredState` (user intent: running/stopped) vs `currentStatus` (live reconciled Docker state, `ContainerStatus` from `src/lib/types.ts`), `containerId`.
 - `deployment` — immutable history of deploy attempts (status, image digest, error message, timestamps) tied to a `service`.
 
@@ -61,8 +65,9 @@ better-auth-owned tables (`user`, `session`, `account`, `verification`, `apikey`
 Migration history is a single squashed baseline (`drizzle/0000_*.sql`) — this was a from-scratch schema replacement, not an incremental migration chain.
 
 ### Docker integration (`src/lib/server/docker/`)
+
 - `client.ts` — HMR-safe `dockerode` singleton (same `globalThis`-caching pattern as `db/lib.ts`), socket path from config.
-- `labels.ts` — every container this app creates gets `localrun.managed=true` + `localrun.service.id=<id>`, plus the Traefik discovery labels (`traefik.enable`, router rule `Host(\`<slug>.<baseDomain>\`)`, entrypoint/certresolver, network). `listManagedContainers()` and any host-scanning code **must** filter on `localrun.managed=true` — this app must never touch a container on the host that it didn't create.
+- `labels.ts` — every container this app creates gets `localrun.managed=true` + `localrun.service.id=<id>`, plus the Traefik discovery labels (`traefik.enable`, router rule `Host(\`<slug>.<baseDomain>\`)`, entrypoint/certresolver, network). `listManagedContainers()`and any host-scanning code **must** filter on`localrun.managed=true` — this app must never touch a container on the host that it didn't create.
 - `service.ts` — the operational surface: `pullImage`, `createAndStartContainer` (replaces any same-named container by convention — this is what makes "deploy" and "redeploy" the same code path), `start/stop/restartContainer`, `removeContainer`, `inspectStatus` → `ContainerStatus`, `streamLogs` (follow-mode web `ReadableStream`), `buildAuthConfig` (decrypts registry creds for a pull).
 - `reconcile.ts` — `syncServiceStatus`/`syncAllServiceStatuses`: poll-on-page-load status reconciliation. There is intentionally no background worker or Docker event subscriber.
 - `secrets.ts` — AES-256-GCM for `registryPasswordEnc`, key derived via `scryptSync` from `config.auth.secret` (no separate secret to manage).
@@ -70,11 +75,13 @@ Migration history is a single squashed baseline (`drizzle/0000_*.sql`) — this 
 Containers are attached directly to the external `localrun-network` Docker network (`docker network create localrun-network` once) rather than publishing host ports — Traefik reaches them over that network. `compose.yaml` bootstraps Traefik only; **the app itself is not containerized** — run it directly on the host (`bun run dev` / `bun run start`) with `DOCKER_NETWORK_NAME`/`DOCKER_SOCKET_PATH` set and socket access.
 
 ### Config (`src/lib/config.ts`)
+
 Zod-validated env config, parsed once at import into a `config` singleton. Notable groups: `docker.{socketPath,networkName}`, `baseDomain` (subdomain suffix for deployed services), `traefik.{entrypoint,certResolver}`, `auth.{origin,secret}`, `smtp.*` (gates email verification via `isSmtpEnabled()`).
 
 `config.auth.secret` reads `AUTH_SECRET` **falling back to `BETTER_AUTH_SECRET`** — the latter is better-auth's own CLI convention (and what `.env` sets), so don't "fix" this to a single var without checking both are still honored.
 
 ### Auth (`src/lib/server/auth.ts`)
+
 better-auth at `basePath: "/api/v1/auth"`, `drizzleAdapter` over the same `bun:sqlite` db. Plugins: `sveltekitCookies`, `openAPI`, `apiKey`, `passkey`, `admin`, `bearer`, `genericOAuth` (provider list from config, empty by default). `src/hooks.server.ts` populates `event.locals.user`/`session` from the cookie session, falling back to manual `x-api-key`/`Authorization: Bearer` verification via `auth.api.verifyApiKey()` when no cookie is present — this is the auth path a future CLI/API client would use.
 
 `user.deleteUser` is enabled with a `beforeDelete` hook (see Data model section above) — don't assume better-auth's default account-deletion behavior is sufficient here; it isn't, by design of this app's extra tables.
