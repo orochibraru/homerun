@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	// Already verified → straight to the dashboard
 	if (locals.user.emailVerified) {
-		redirect(302, resolve("/dashboard"));
+		redirect(302, resolve("/"));
 	}
 
 	return {

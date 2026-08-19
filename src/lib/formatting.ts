@@ -1,17 +1,3 @@
-import { GRADIENTS, GRADIENTS_DARKER } from "./constants";
-
-export function formatCurrency(cents: number): string {
-	if (cents === 0) return "$0";
-	return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
-}
-
-export function formatSpend(cents: number): string {
-	if (cents === 0) return "$0";
-	if (cents >= 100_000_00) return `$${(cents / 100_000_00).toFixed(1)}k`;
-	if (cents >= 100_000) return `$${(cents / 100_000).toFixed(1)}k`;
-	return `$${Math.round(cents / 100).toLocaleString("en-US")}`;
-}
-
 export function formatDate(date: Date | null): string {
 	if (!date) return "—";
 	return new Date(date).toLocaleDateString("en-US", {
@@ -30,6 +16,7 @@ export function timeAgo(date: Date | string): string {
 	return `${Math.floor(diff / 86_400_000)}d ago`;
 }
 
+/** Deterministic small hash, used to pick a stable gradient/color per entity id. */
 export function getHash(id: string): number {
 	let hash = 0;
 	for (let i = 0; i < id.length; i++) {
@@ -37,16 +24,6 @@ export function getHash(id: string): number {
 		hash = hash | 0;
 	}
 	return Math.abs(hash);
-}
-
-export function carGradient(id: string): string {
-	const hash = getHash(id);
-	return GRADIENTS[hash % GRADIENTS.length];
-}
-
-export function carGradientDarker(id: string): string {
-	const hash = getHash(id);
-	return GRADIENTS_DARKER[hash % GRADIENTS_DARKER.length];
 }
 
 export function getPasswordStrength(password: string): number {

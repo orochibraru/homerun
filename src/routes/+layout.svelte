@@ -24,7 +24,7 @@
 </script>
 
 <svelte:head>
-    <title>Mods Parts - {$title ?? "Home"}</title>
+    <title>Local Run - {$title ?? "Home"}</title>
 </svelte:head>
 
 <ModeWatcher defaultMode="light" />

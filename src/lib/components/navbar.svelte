@@ -6,20 +6,17 @@
 		LogOut,
 		Menu,
 		Moon,
+		Server,
 		Sun,
-		Wrench,
 		X,
-		Zap,
 	} from "@lucide/svelte";
 	import { mode, toggleMode } from "mode-watcher";
 	import { fly } from "svelte/transition";
 	import { browser } from "$app/environment";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 	import { signOut, useSession } from "$lib/auth-client";
 	import { Button } from "$lib/components/ui/button";
-	import { navLinks } from "$lib/nav";
 
 	const session = useSession();
 
@@ -35,10 +32,6 @@
 		window.addEventListener("scroll", handleScroll, { passive: true });
 		return () => window.removeEventListener("scroll", handleScroll);
 	});
-
-	const visibleLinks = $derived(
-		navLinks.filter((link) => !link.requiresAuth || !!$session.data?.user),
-	);
 
 	const userInitial = $derived(
 		$session.data?.user?.name?.[0]?.toUpperCase() ?? "?",
@@ -86,26 +79,11 @@
             onclick={closeAll}
             class="flex gap-1 items-center text-lg font-bold select-none"
         >
-            <Zap class="size-5 text-accent" />
-            <span class="text-[var(--color-text)]">Mods</span><span
-                class="text-accent">Parts</span
+            <Server class="size-5 text-accent" />
+            <span class="text-[var(--color-text)]">Local</span><span
+                class="text-accent">Run</span
             >
         </a>
-
-        <!-- ── Desktop nav links ────────────────────────── -->
-        <div class="hidden gap-1 items-center md:flex">
-            {#each visibleLinks as link}
-                <a
-                    href={link.href}
-                    class="rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200
-						{page.url.pathname === link.href
-                        ? 'bg-[var(--color-accent-light)] text-accent'
-                        : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]'}"
-                >
-                    {link.label}
-                </a>
-            {/each}
-        </div>
 
         <!-- ── Right side ─────────────────────────────────────── -->
         <div class="flex gap-1 items-center">
@@ -183,7 +161,7 @@
                             </div>
                             <div class="p-1.5">
                                 <a
-                                    href={resolve("/dashboard")}
+                                    href={resolve("/")}
                                     onclick={closeAll}
                                     class="flex gap-3 items-center py-2 px-3 text-sm rounded-lg transition-all duration-200 text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
                                 >
@@ -193,14 +171,14 @@
                                     Dashboard
                                 </a>
                                 <a
-                                    href={resolve("/dashboard/cars")}
+                                    href={resolve("/services")}
                                     onclick={closeAll}
                                     class="flex gap-3 items-center py-2 px-3 text-sm rounded-lg transition-all duration-200 text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
                                 >
-                                    <Wrench
+                                    <Server
                                         class="size-4 text-[var(--color-text-muted)]"
                                     />
-                                    My Garage
+                                    Services
                                 </a>
                                 <div
                                     class="my-1.5 h-px bg-[var(--color-border)]"
@@ -259,25 +237,6 @@
             class="border-t shadow-lg md:hidden border-[var(--color-border)] bg-[var(--color-surface)]"
         >
             <div class="py-3 px-4 mx-auto max-w-7xl">
-                <!-- Nav links -->
-                {#if visibleLinks.length > 0}
-                    <div class="mb-3 space-y-1">
-                        {#each visibleLinks as link}
-                            <a
-                                href={link.href}
-                                onclick={closeAll}
-                                class="flex items-center rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200
-									{page.url.pathname === link.href
-                                    ? 'bg-[var(--color-accent-light)] text-accent'
-                                    : 'text-[var(--color-text)] hover:bg-[var(--color-surface-2)]'}"
-                            >
-                                {link.label}
-                            </a>
-                        {/each}
-                    </div>
-                    <div class="mb-3 h-px bg-[var(--color-border)]"></div>
-                {/if}
-
                 {#if $session.isPending}
                     <div class="flex justify-center items-center py-4">
                         <Loader2
@@ -315,14 +274,24 @@
                     </div>
                     <div class="space-y-1">
                         <a
-                            href={resolve("/dashboard/cars")}
+                            href={resolve("/")}
                             onclick={closeAll}
                             class="flex gap-3 items-center py-2.5 px-4 text-sm rounded-xl transition-all duration-200 text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
                         >
-                            <Wrench
+                            <LayoutDashboard
                                 class="size-4 text-[var(--color-text-muted)]"
                             />
-                            My Garage
+                            Dashboard
+                        </a>
+                        <a
+                            href={resolve("/services")}
+                            onclick={closeAll}
+                            class="flex gap-3 items-center py-2.5 px-4 text-sm rounded-xl transition-all duration-200 text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
+                        >
+                            <Server
+                                class="size-4 text-[var(--color-text-muted)]"
+                            />
+                            Services
                         </a>
                         <button
                             onclick={handleSignOut}

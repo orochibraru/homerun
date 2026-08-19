@@ -1,11 +1,15 @@
 <script lang="ts">
-  import { Eye, EyeOff, Loader2, ShieldCheck, Zap } from "@lucide/svelte";
+  import { Eye, EyeOff, Loader2, Server, ShieldCheck } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { signUp, useSession } from "$lib/auth-client";
   import AuthBrandingPanel from "$lib/components/auth-branding-panel.svelte";
+  import {
+    getPasswordStrength,
+    getPasswordStrengthMeta,
+  } from "$lib/formatting";
   import { title } from "$lib/store/title";
 
   const session = useSession();
@@ -13,14 +17,13 @@
   // Redirect if already logged in
   $effect(() => {
     if (!$session.isPending && $session.data?.user) {
-      goto(resolve("/dashboard"));
+      goto(resolve("/"));
     }
   });
 
   onMount(() => title.set("Create Account"));
 
   let name = $state("");
-  let username = $state("");
   let email = $state("");
   let password = $state("");
   let confirm = $state("");
@@ -79,13 +82,13 @@
         href={resolve("/")}
         class="inline-flex gap-1.5 items-center text-xl font-bold"
       >
-        <Zap class="size-5 text-accent" />
-        <span class="text-[var(--color-text)]">Mods</span><span
-          class="text-accent">Parts</span
+        <Server class="size-5 text-accent" />
+        <span class="text-[var(--color-text)]">Local</span><span
+          class="text-accent">Run</span
         >
       </a>
       <p class="mt-1 text-sm text-[var(--color-text-muted)]">
-        Track every mod. Show off your build.
+        Deploy containers to your own server.
       </p>
     </div>
 
@@ -96,48 +99,29 @@
           Create your account
         </h2>
         <p class="mt-1 text-sm text-[var(--color-text-muted)]">
-          Join thousands of car enthusiasts today.
+          Deploy your first container in minutes.
         </p>
       </div>
 
       <form onsubmit={handleSignUp} class="space-y-5" novalidate>
-        <!-- Name + Username row -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label
-              for="name"
-              class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
-            >
-              Full name <span class="text-red-500">*</span>
-            </label>
-            <input
-              id="name"
-              type="text"
-              bind:value={name}
-              placeholder="Jane Smith"
-              autocomplete="name"
-              required
-              disabled={loading}
-              class={inputClass}
-            />
-          </div>
-          <div>
-            <label
-              for="username"
-              class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
-            >
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              bind:value={username}
-              placeholder="janesmith"
-              autocomplete="username"
-              disabled={loading}
-              class={inputClass}
-            />
-          </div>
+        <!-- Full name -->
+        <div>
+          <label
+            for="name"
+            class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
+          >
+            Full name <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="name"
+            type="text"
+            bind:value={name}
+            placeholder="Jane Smith"
+            autocomplete="name"
+            required
+            disabled={loading}
+            class={inputClass}
+          />
         </div>
 
         <!-- Email -->

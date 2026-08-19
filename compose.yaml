@@ -5,15 +5,20 @@ services:
     volumes:
       - db:/var/lib/postgresql
     environment:
-      - POSTGRES_DATABASE=${POSTGRES_DATABASE-mods-parts}
+      - POSTGRES_DB=${POSTGRES_DB-localrun}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD-postgres}
       - POSTGRES_USER=${POSTGRES_USER-postgres}
       - TZ=${TZ-Europe/Paris}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test:
+        [
+          CMD-SHELL,
+          "sh -c 'pg_isready -U ${POSTGRES_USER-postgres} -d ${POSTGRES_DB-localrun}'",
+        ]
+      interval: 1s
+      timeout: 2s
+      retries: 10
+      start_period: 3s
 
 volumes:
   db: {}

@@ -1,5 +1,6 @@
 CREATE TABLE `account` (
 	`id` text PRIMARY KEY NOT NULL,
+	`issuer` text NOT NULL,
 	`account_id` text NOT NULL,
 	`provider_id` text NOT NULL,
 	`user_id` text NOT NULL,
@@ -15,6 +16,7 @@ CREATE TABLE `account` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `account_issuer_accountId_uidx` ON `account` (`issuer`,`account_id`);--> statement-breakpoint
 CREATE INDEX `account_userId_idx` ON `account` (`user_id`);--> statement-breakpoint
 CREATE TABLE `apikey` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -44,6 +46,23 @@ CREATE TABLE `apikey` (
 CREATE INDEX `apikey_configId_idx` ON `apikey` (`config_id`);--> statement-breakpoint
 CREATE INDEX `apikey_referenceId_idx` ON `apikey` (`reference_id`);--> statement-breakpoint
 CREATE INDEX `apikey_key_idx` ON `apikey` (`key`);--> statement-breakpoint
+CREATE TABLE `deployment` (
+	`id` text PRIMARY KEY NOT NULL,
+	`service_id` text NOT NULL,
+	`user_id` text NOT NULL,
+	`status` text DEFAULT 'pending' NOT NULL,
+	`image_digest` text,
+	`container_id` text,
+	`error_message` text,
+	`started_at` integer,
+	`finished_at` integer,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`service_id`) REFERENCES `service`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `deployment_serviceId_idx` ON `deployment` (`service_id`);--> statement-breakpoint
+CREATE INDEX `deployment_userId_idx` ON `deployment` (`user_id`);--> statement-breakpoint
 CREATE TABLE `passkey` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text,
@@ -61,6 +80,32 @@ CREATE TABLE `passkey` (
 --> statement-breakpoint
 CREATE INDEX `passkey_userId_idx` ON `passkey` (`user_id`);--> statement-breakpoint
 CREATE INDEX `passkey_credentialID_idx` ON `passkey` (`credential_id`);--> statement-breakpoint
+CREATE TABLE `service` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`name` text NOT NULL,
+	`slug` text NOT NULL,
+	`image` text NOT NULL,
+	`tag` text DEFAULT 'latest' NOT NULL,
+	`registry_url` text,
+	`registry_username` text,
+	`registry_password_enc` text,
+	`env_vars` text DEFAULT '{}',
+	`container_port` integer NOT NULL,
+	`restart_policy` text DEFAULT 'unless-stopped' NOT NULL,
+	`cpu_limit` text,
+	`memory_limit_mb` integer,
+	`desired_state` text DEFAULT 'stopped' NOT NULL,
+	`container_id` text,
+	`current_status` text DEFAULT 'pending' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `service_slug_unique` ON `service` (`slug`);--> statement-breakpoint
+CREATE INDEX `service_userId_idx` ON `service` (`user_id`);--> statement-breakpoint
+CREATE INDEX `service_slug_idx` ON `service` (`slug`);--> statement-breakpoint
 CREATE TABLE `session` (
 	`id` text PRIMARY KEY NOT NULL,
 	`expires_at` integer NOT NULL,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Eye, EyeOff, Loader2, ShieldCheck, Zap } from "@lucide/svelte";
+  import { Eye, EyeOff, Loader2, Server } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { dev } from "$app/environment";
@@ -52,6 +52,8 @@
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
+  <AuthBrandingPanel />
+
   <!-- ── Right panel ──────────────────────────────────────────────── -->
   <div
     class="flex flex-col flex-1 justify-center items-center py-10 px-6 sm:px-10 bg-[var(--color-bg)]"
@@ -62,12 +64,12 @@
         href={resolve("/")}
         class="inline-flex gap-1.5 items-center text-xl font-bold"
       >
-        <Zap class="size-5 text-accent" />
-        <span class="text-text">Mods</span><span class="text-accent">Parts</span
+        <Server class="size-5 text-accent" />
+        <span class="text-text">Local</span><span class="text-accent">Run</span
         >
       </a>
       <p class="mt-1 text-sm text-text-muted">
-        Track every mod. Show off your build.
+        Deploy containers to your own server.
       </p>
     </div>
 
@@ -76,7 +78,7 @@
       <div class="mb-8">
         <h2 class="text-2xl font-bold text-text">Welcome back</h2>
         <p class="mt-1 text-sm text-text-muted">
-          Sign in to access your garage and feed.
+          Sign in to manage your services.
         </p>
       </div>
 

@@ -1,5 +1,11 @@
 import { relations } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+	index,
+	integer,
+	sqliteTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
 	id: text("id").primaryKey(),
@@ -43,6 +49,7 @@ export const account = sqliteTable(
 	"account",
 	{
 		id: text("id").primaryKey(),
+		issuer: text("issuer").notNull(),
 		accountId: text("account_id").notNull(),
 		providerId: text("provider_id").notNull(),
 		userId: text("user_id")
@@ -64,7 +71,13 @@ export const account = sqliteTable(
 			.$onUpdate(() => new Date())
 			.notNull(),
 	},
-	(table) => [index("account_userId_idx").on(table.userId)],
+	(table) => [
+		uniqueIndex("account_issuer_accountId_uidx").on(
+			table.issuer,
+			table.accountId,
+		),
+		index("account_userId_idx").on(table.userId),
+	],
 );
 
 export const verification = sqliteTable(
@@ -140,190 +153,95 @@ export const passkey = sqliteTable(
 	],
 );
 
-// ─── Car Mods Domain ──────────────────────────────────────────────────────
+// ─── PaaS Domain ────────────────────────────────────────────────────────────
 
-export const profile = sqliteTable(
-	"profile",
+export const service = sqliteTable(
+	"service",
 	{
 		id: text("id").primaryKey(),
-		userId: text("user_id")
-			.notNull()
-			.unique()
-			.references(() => user.id, { onDelete: "cascade" }),
-		username: text("username").notNull().unique(),
-		bio: text("bio"),
-		location: text("location"),
-		coverImage: text("cover_image"),
-		isPublic: integer("is_public", { mode: "boolean" }).default(true).notNull(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.$onUpdate(() => new Date())
-			.notNull(),
-	},
-	(table) => [index("profile_userId_idx").on(table.userId)],
-);
-
-export const car = sqliteTable(
-	"car",
-	{
-		id: text("id").primaryKey(),
-		userId: text("user_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-		make: text("make").notNull(),
-		model: text("model").notNull(),
-		year: integer("year").notNull(),
-		trim: text("trim"),
-		color: text("color"),
-		nickname: text("nickname"),
-		description: text("description"),
-		coverImage: text("cover_image"),
-		isPublic: integer("is_public", { mode: "boolean" })
-			.default(false)
-			.notNull(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.$onUpdate(() => new Date())
-			.notNull(),
-	},
-	(table) => [
-		index("car_userId_idx").on(table.userId),
-		index("car_isPublic_idx").on(table.isPublic),
-	],
-);
-
-export const mod = sqliteTable(
-	"mod",
-	{
-		id: text("id").primaryKey(),
-		carId: text("car_id")
-			.notNull()
-			.references(() => car.id, { onDelete: "cascade" }),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
-		// engine | turbo | exhaust | suspension | wheels | brakes
-		// exterior | interior | electronics | audio | fuel | transmission | drivetrain | other
-		category: text("category").notNull(),
-		brand: text("brand"),
-		partNumber: text("part_number"),
-		// stored in cents to avoid floating-point issues
-		price: integer("price").default(0).notNull(),
-		laborCost: integer("labor_cost").default(0).notNull(),
-		description: text("description"),
-		installDate: integer("install_date", { mode: "timestamp_ms" }),
-		// planned | installed | removed
-		status: text("status").default("installed").notNull(),
-		isPublic: integer("is_public", { mode: "boolean" }).default(true).notNull(),
+		// subdomain: <slug>.<baseDomain>
+		slug: text("slug").notNull().unique(),
+		// e.g. "ghcr.io/acme/api"
+		image: text("image").notNull(),
+		tag: text("tag").default("latest").notNull(),
+		registryUrl: text("registry_url"),
+		registryUsername: text("registry_username"),
+		// AES-256-GCM ciphertext — see $lib/server/docker/secrets
+		registryPasswordEnc: text("registry_password_enc"),
+		envVars: text("env_vars", { mode: "json" })
+			.$type<Record<string, string>>()
+			.default({}),
+		containerPort: integer("container_port").notNull(),
+		// no | always | on-failure | unless-stopped
+		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
+		cpuLimit: text("cpu_limit"),
+		memoryLimitMb: integer("memory_limit_mb"),
+		// running | stopped — the user's intent
+		desiredState: text("desired_state").default("stopped").notNull(),
+		containerId: text("container_id"),
+		// pending | pulling | starting | running | stopped | failed
+		currentStatus: text("current_status").default("pending").notNull(),
 		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 	},
 	(table) => [
-		index("mod_carId_idx").on(table.carId),
-		index("mod_userId_idx").on(table.userId),
-		index("mod_category_idx").on(table.category),
-		index("mod_status_idx").on(table.status),
+		index("service_userId_idx").on(table.userId),
+		index("service_slug_idx").on(table.slug),
 	],
 );
 
-export const carImage = sqliteTable(
-	"car_image",
+export const deployment = sqliteTable(
+	"deployment",
 	{
 		id: text("id").primaryKey(),
-		carId: text("car_id")
+		serviceId: text("service_id")
 			.notNull()
-			.references(() => car.id, { onDelete: "cascade" }),
+			.references(() => service.id, { onDelete: "cascade" }),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		url: text("url").notNull(),
-		caption: text("caption"),
-		isMain: integer("is_main", { mode: "boolean" }).default(false).notNull(),
+		// pending | pulling | starting | running | failed | stopped
+		status: text("status").default("pending").notNull(),
+		imageDigest: text("image_digest"),
+		containerId: text("container_id"),
+		errorMessage: text("error_message"),
+		startedAt: integer("started_at", { mode: "timestamp_ms" }),
+		finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
 		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 	},
 	(table) => [
-		index("car_image_carId_idx").on(table.carId),
-		index("car_image_userId_idx").on(table.userId),
-	],
-);
-
-export const follow = sqliteTable(
-	"follow",
-	{
-		id: text("id").primaryKey(),
-		followerId: text("follower_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-		followingId: text("following_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-	},
-	(table) => [
-		index("follow_followerId_idx").on(table.followerId),
-		index("follow_followingId_idx").on(table.followingId),
-	],
-);
-
-export const like = sqliteTable(
-	"like",
-	{
-		id: text("id").primaryKey(),
-		userId: text("user_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-		carId: text("car_id")
-			.notNull()
-			.references(() => car.id, { onDelete: "cascade" }),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-	},
-	(table) => [
-		index("like_userId_idx").on(table.userId),
-		index("like_carId_idx").on(table.carId),
-	],
-);
-
-export const comment = sqliteTable(
-	"comment",
-	{
-		id: text("id").primaryKey(),
-		userId: text("user_id")
-			.notNull()
-			.references(() => user.id, { onDelete: "cascade" }),
-		carId: text("car_id")
-			.notNull()
-			.references(() => car.id, { onDelete: "cascade" }),
-		content: text("content").notNull(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.$onUpdate(() => new Date())
-			.notNull(),
-	},
-	(table) => [
-		index("comment_userId_idx").on(table.userId),
-		index("comment_carId_idx").on(table.carId),
+		index("deployment_serviceId_idx").on(table.serviceId),
+		index("deployment_userId_idx").on(table.userId),
 	],
 );
 
 // ─── Relations ─────────────────────────────────────────────────────────────
 
-export const userRelations = relations(user, ({ many, one }) => ({
-	profile: one(profile, {
-		fields: [user.id],
-		references: [profile.userId],
-	}),
-	cars: many(car),
-	mods: many(mod),
-	followers: many(follow, { relationName: "followers" }),
-	following: many(follow, { relationName: "following" }),
-	likes: many(like),
-	comments: many(comment),
+export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),
 	passkeys: many(passkey),
+	services: many(service),
+	deployments: many(deployment),
+}));
+
+export const serviceRelations = relations(service, ({ one, many }) => ({
+	user: one(user, { fields: [service.userId], references: [user.id] }),
+	deployments: many(deployment),
+}));
+
+export const deploymentRelations = relations(deployment, ({ one }) => ({
+	service: one(service, {
+		fields: [deployment.serviceId],
+		references: [service.id],
+	}),
+	user: one(user, { fields: [deployment.userId], references: [user.id] }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -344,80 +262,5 @@ export const passkeyRelations = relations(passkey, ({ one }) => ({
 	user: one(user, {
 		fields: [passkey.userId],
 		references: [user.id],
-	}),
-}));
-
-export const profileRelations = relations(profile, ({ one }) => ({
-	user: one(user, {
-		fields: [profile.userId],
-		references: [user.id],
-	}),
-}));
-
-export const carRelations = relations(car, ({ one, many }) => ({
-	user: one(user, {
-		fields: [car.userId],
-		references: [user.id],
-	}),
-	mods: many(mod),
-	images: many(carImage),
-	likes: many(like),
-	comments: many(comment),
-}));
-
-export const carImageRelations = relations(carImage, ({ one }) => ({
-	car: one(car, {
-		fields: [carImage.carId],
-		references: [car.id],
-	}),
-	user: one(user, {
-		fields: [carImage.userId],
-		references: [user.id],
-	}),
-}));
-
-export const modRelations = relations(mod, ({ one }) => ({
-	car: one(car, {
-		fields: [mod.carId],
-		references: [car.id],
-	}),
-	user: one(user, {
-		fields: [mod.userId],
-		references: [user.id],
-	}),
-}));
-
-export const followRelations = relations(follow, ({ one }) => ({
-	follower: one(user, {
-		fields: [follow.followerId],
-		references: [user.id],
-		relationName: "followers",
-	}),
-	following: one(user, {
-		fields: [follow.followingId],
-		references: [user.id],
-		relationName: "following",
-	}),
-}));
-
-export const likeRelations = relations(like, ({ one }) => ({
-	user: one(user, {
-		fields: [like.userId],
-		references: [user.id],
-	}),
-	car: one(car, {
-		fields: [like.carId],
-		references: [car.id],
-	}),
-}));
-
-export const commentRelations = relations(comment, ({ one }) => ({
-	user: one(user, {
-		fields: [comment.userId],
-		references: [user.id],
-	}),
-	car: one(car, {
-		fields: [comment.carId],
-		references: [car.id],
 	}),
 }));

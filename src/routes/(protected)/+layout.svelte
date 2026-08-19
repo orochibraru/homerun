@@ -1,10 +1,10 @@
 <script lang="ts">
 	import {
-		Car,
 		ChevronRight,
 		LayoutDashboard,
 		LogOut,
 		Menu,
+		Server,
 		Settings,
 		X,
 	} from "@lucide/svelte";
@@ -20,19 +20,19 @@
 
 	const navItems = [
 		{
-			href: resolve("/dashboard"),
+			href: resolve("/"),
 			label: "Overview",
 			icon: LayoutDashboard,
 			exact: true,
 		},
 		{
-			href: resolve("/dashboard/cars"),
-			label: "My Garage",
-			icon: Car,
+			href: resolve("/services"),
+			label: "Services",
+			icon: Server,
 			exact: false,
 		},
 		{
-			href: resolve("/dashboard/settings"),
+			href: resolve("/settings"),
 			label: "Settings",
 			icon: Settings,
 			exact: false,
@@ -50,7 +50,7 @@
 	const mobileTitle = $derived.by(() => {
 		const p = page.url.pathname;
 		if (p.includes("/settings")) return "Settings";
-		if (p.includes("/cars")) return "My Garage";
+		if (p.includes("/services")) return "Services";
 		return "Dashboard";
 	});
 

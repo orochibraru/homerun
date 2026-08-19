@@ -4,29 +4,23 @@
         Check,
         Eye,
         EyeOff,
-        Globe,
         KeyRound,
         Loader2,
         Lock,
-        MapPin,
         ShieldCheck,
         Trash2,
         UserCircle,
     } from "@lucide/svelte";
     import { onMount } from "svelte";
     import { toast } from "svelte-sonner";
-    import { enhance } from "$app/forms";
     import { goto } from "$app/navigation";
     import { resolve } from "$app/paths";
     import { authClient } from "$lib/auth-client";
+    import {
+        getPasswordStrength,
+        getPasswordStrengthMeta,
+    } from "$lib/formatting";
     import { title } from "$lib/store/title";
-    import type { ActionData } from "./$types";
-
-    // profile is available via the dashboard layout's load result
-    const { form, data } = $props<{
-        form: ActionData;
-        data: import("../$types").LayoutData;
-    }>();
 
     // Access layout-injected data via the session / parent
     const session = authClient.useSession();
@@ -154,9 +148,6 @@
         }
     }
 
-    // Username pattern — stored as a constant to avoid Svelte's {}-parsing in attributes
-    const USERNAME_PATTERN = "[a-z0-9_-]{3,32}";
-
     // Derived initials for avatar preview
     const initials = $derived(
         (accountName || user?.name || "?")[0]?.toUpperCase() ?? "?",
@@ -170,163 +161,6 @@
             Manage your profile and account preferences.
         </p>
     </div>
-
-    <!-- ═══════════════════════════════════════════════════════════
-	     PUBLIC PROFILE
-	════════════════════════════════════════════════════════════ -->
-    <section
-        class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-    >
-        <div
-            class="flex gap-3 items-center py-4 px-5 border-b border-[var(--color-border)]"
-        >
-            <div
-                class="flex justify-center items-center rounded-lg size-8 bg-accent/10 text-accent"
-            >
-                <Globe class="size-4" />
-            </div>
-            <div>
-                <h2 class="text-sm font-semibold text-[var(--color-text)]">
-                    Public Profile
-                </h2>
-                <p class="text-xs text-[var(--color-text-muted)]">
-                    What other builders see when they visit your page.
-                </p>
-            </div>
-        </div>
-
-        <form
-            method="POST"
-            action="?/updateProfile"
-            use:enhance={() => {
-                return ({ update }) => update({ reset: false });
-            }}
-            class="p-5 space-y-5"
-        >
-            <!-- Username -->
-            <div>
-                <label
-                    for="username"
-                    class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
-                >
-                    Username <span class="text-red-500">*</span>
-                </label>
-                <!-- svelte-ignore a11y_no_static_element_interactions -->
-                <div class="relative">
-                    <span
-                        class="absolute left-3.5 top-1/2 text-sm -translate-y-1/2 pointer-events-none text-[var(--color-text-muted)]"
-                    >
-                        @
-                    </span>
-                    <input
-                        id="username"
-                        name="username"
-                        type="text"
-                        placeholder="yourname"
-                        required
-                        class="{input} pl-8"
-                        pattern={USERNAME_PATTERN}
-                        title="3–32 lowercase letters, numbers, underscores, or hyphens"
-                    />
-                </div>
-                <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
-                    Used in your public profile URL: /profile/<span
-                        class="text-accent">yourname</span
-                    >
-                </p>
-                {#if form?.profileError}
-                    <p class="mt-1.5 text-sm text-red-500">
-                        {form.profileError}
-                    </p>
-                {/if}
-                {#if form?.profileSuccess}
-                    <p
-                        class="flex gap-1 items-center mt-1.5 text-sm text-green-600"
-                    >
-                        <Check class="size-3.5" /> Profile saved.
-                    </p>
-                {/if}
-            </div>
-
-            <!-- Bio -->
-            <div>
-                <label
-                    for="bio"
-                    class="block mb-1.5 text-sm font-medium text-[var(--color-text)]"
-                >
-                    Bio
-                </label>
-                <textarea
-                    id="bio"
-                    name="bio"
-                    rows="3"
-                    placeholder="A few words about you and your build…"
-                    maxlength="300"
-                    class="{input} resize-none"
-                ></textarea>
-                <p
-                    class="mt-1 text-xs text-right text-[var(--color-text-subtle)]"
-                >
-                    Max 300 characters
-                </p>
-            </div>
-
-            <!-- Location -->
-            <div>
-                <label
-                    for="location"
-                    class="flex gap-1.5 items-center mb-1.5 text-sm font-medium text-[var(--color-text)]"
-                >
-                    <MapPin class="size-3.5 text-[var(--color-text-muted)]" />
-                    Location
-                </label>
-                <input
-                    id="location"
-                    name="location"
-                    type="text"
-                    placeholder="City, Country"
-                    maxlength="100"
-                    class={input}
-                />
-            </div>
-
-            <!-- Public toggle -->
-            <div
-                class="flex justify-between items-center p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]"
-            >
-                <div>
-                    <p class="text-sm font-medium text-[var(--color-text)]">
-                        Public profile
-                    </p>
-                    <p class="mt-0.5 text-xs text-[var(--color-text-muted)]">
-                        Anyone can find and view your profile and public builds.
-                    </p>
-                </div>
-                <!-- Hidden radio pair as CSS-only toggle -->
-                <label class="inline-flex relative items-center cursor-pointer">
-                    <input
-                        type="checkbox"
-                        name="isPublic"
-                        value="true"
-                        class="sr-only peer"
-                    />
-                    <div
-                        class="w-11 h-6 rounded-full transition-all peer bg-[var(--color-surface-3)] peer-checked:bg-accent after:absolute after:left-0.5 after:top-0.5 after:size-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
-                    ></div>
-                </label>
-            </div>
-
-            <div class="flex justify-end">
-                <button
-                    type="submit"
-                    class="flex gap-2 items-center py-2.5 px-5 text-sm font-semibold text-white rounded-xl shadow-sm transition-all bg-accent shadow-accent/30 hover:bg-accent-dark"
-                >
-                    <Check class="size-4" />
-                    Save profile
-                </button>
-            </div>
-        </form>
-    </section>
 
     <!-- ═══════════════════════════════════════════════════════════
 	     ACCOUNT
@@ -666,8 +500,9 @@
                         <p
                             class="mt-0.5 text-xs text-[var(--color-text-muted)]"
                         >
-                            Permanently removes your account, all your cars,
-                            mods, and profile data. This cannot be undone.
+                            Permanently removes your account, all your
+                            services, and their deployment history. This
+                            cannot be undone.
                         </p>
                     </div>
                     <button

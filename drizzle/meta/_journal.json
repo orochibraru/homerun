@@ -1,20 +1,13 @@
 {
-	"version": "7",
-	"dialect": "sqlite",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "6",
-			"when": 1777630288010,
-			"tag": "0000_rainy_avengers",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "6",
-			"when": 1778144730799,
-			"tag": "0001_minor_the_anarchist",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1787133721898,
+      "tag": "0000_real_stranger",
+      "breakpoints": true
+    }
+  ]
 }

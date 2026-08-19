@@ -31,7 +31,7 @@
 		try {
 			await authClient.sendVerificationEmail({
 				email: data.email,
-				callbackURL: resolve("/dashboard"),
+				callbackURL: resolve("/"),
 			});
 			resent = true;
 			toast.success("Verification email sent! Check your inbox.");
@@ -51,7 +51,7 @@
 			const session = await authClient.getSession();
 			if (session.data?.user?.emailVerified) {
 				toast.success("Email verified! Taking you to your dashboard…");
-				goto(resolve("/dashboard"));
+				goto(resolve("/"));
 			} else {
 				toast.info("Not verified yet — check your inbox and click the link.");
 			}
@@ -64,7 +64,7 @@
 
 	// ── Dev bypass ─────────────────────────────────────────────────────
 	function devBypass() {
-		goto(resolve("/dashboard"));
+		goto(resolve("/"));
 	}
 </script>
 
@@ -95,12 +95,13 @@
                     >{data.email}</strong
                 >.
                 <br />
-                Click that link to verify your account and access your garage.
+                Click that link to verify your account and access your
+                dashboard.
             </p>
 
             <!-- Steps -->
             <ol class="mt-6 space-y-2 text-left">
-                {#each ["Open the email from ModsParts", 'Click the "Confirm email" button', "You'll be signed in automatically"] as step, i}
+                {#each ["Open the email from Local Run", 'Click the "Confirm email" button', "You'll be signed in automatically"] as step, i}
                     <li
                         class="flex gap-3 items-start text-sm text-[var(--color-text-muted)]"
                     >
