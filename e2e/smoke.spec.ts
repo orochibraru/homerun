@@ -58,16 +58,25 @@ test("sign up, deploy a service, verify it runs, clean up", async ({
       await expect(page.getByText(serviceName)).toBeVisible();
     });
 
+    let serviceUrl = "";
+
     await test.step("open it and deploy", async () => {
       await page.getByRole("link").filter({ hasText: serviceName }).click();
+      serviceUrl = page.url();
       await page.getByRole("button", { exact: true, name: "Deploy" }).click();
-      await expect(page.getByText("Running", { exact: true })).toBeVisible({
+      await expect(
+        page.getByText("Running", { exact: true }).first()
+      ).toBeVisible({
         timeout: 60_000,
       });
     });
 
     await test.step("logs show real container output", async () => {
-      await page.getByRole("link", { name: "Logs" }).click();
+      // The sidebar also has a "Services" link and other global nav items,
+      // but "Logs" only appears once — still, prefer the unambiguous
+      // href-scoped tab link so this doesn't break if the sidebar ever
+      // grows a same-named entry (as happened with "Settings" below).
+      await page.locator(`a[href="${serviceUrl}/logs"]`).click();
       await expect(page.getByText("live")).toBeVisible({ timeout: 15_000 });
       await expect(page.locator("body")).toContainText("nginx", {
         timeout: 15_000,
@@ -75,7 +84,9 @@ test("sign up, deploy a service, verify it runs, clean up", async ({
     });
 
     await test.step("delete the service", async () => {
-      await page.getByRole("link", { name: "Settings" }).click();
+      // The sidebar also has a global "Settings" link (to /settings) — scope
+      // to this service's own tab link by href to avoid the ambiguity.
+      await page.locator(`a[href="${serviceUrl}/settings"]`).click();
       await page.getByRole("button", { name: "Delete service" }).click();
       await page.getByRole("button", { name: "Yes, delete" }).click();
       await expect(page).toHaveURL("/services");

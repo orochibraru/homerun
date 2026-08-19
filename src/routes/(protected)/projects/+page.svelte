@@ -1,0 +1,83 @@
+<script lang="ts">
+  import { FolderKanban, Plus, Server } from "@lucide/svelte";
+  import { onMount } from "svelte";
+  import { resolve } from "$app/paths";
+  import { title } from "$lib/store/title";
+
+  const { data } = $props();
+
+  onMount(() => title.set("Projects"));
+</script>
+
+<div class="p-6 md:p-8">
+  <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-[var(--color-text)]">Projects</h1>
+      <p class="mt-1 text-sm text-[var(--color-text-muted)]">
+        Group related services together.
+      </p>
+    </div>
+    <a
+      class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
+      href={resolve("/projects/new")}
+    >
+      <Plus class="size-4" />
+      New Project
+    </a>
+  </div>
+
+  {#if data.projects.length === 0}
+    <div
+      class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] py-20 text-center"
+    >
+      <FolderKanban
+        class="mb-3 size-10 text-[var(--color-text-muted)] opacity-40"
+      />
+      <p class="text-sm font-medium text-[var(--color-text-muted)]">
+        No projects yet
+      </p>
+      <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
+        Create one to group related services together.
+      </p>
+      <a
+        class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-5 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
+        href={resolve("/projects/new")}
+      >
+        <Plus class="size-4" />
+        New Project
+      </a>
+    </div>
+  {:else}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {#each data.projects as proj (proj.id)}
+        <a
+          class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-shadow hover:shadow-md"
+          href="{resolve('/projects')}/{proj.id}"
+        >
+          <div
+            class="bg-accent/10 text-accent mb-3 flex size-10 items-center justify-center rounded-xl"
+          >
+            <FolderKanban class="size-5" />
+          </div>
+          <p class="truncate font-semibold text-[var(--color-text)]">
+            {proj.name}
+          </p>
+          {#if proj.description}
+            <p
+              class="mt-0.5 line-clamp-2 text-xs text-[var(--color-text-muted)]"
+            >
+              {proj.description}
+            </p>
+          {/if}
+          <div
+            class="mt-3 flex items-center gap-1.5 text-xs text-[var(--color-text-subtle)]"
+          >
+            <Server class="size-3.5" />
+            {proj.serviceCount}
+            {proj.serviceCount === 1 ? "service" : "services"}
+          </div>
+        </a>
+      {/each}
+    </div>
+  {/if}
+</div>

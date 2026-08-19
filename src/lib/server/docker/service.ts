@@ -1,10 +1,13 @@
 import { config } from "$lib/config";
+import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
 import { getDocker } from "./client.ts";
 import { buildContainerLabels, MANAGED_LABEL } from "./labels.ts";
 import { decryptSecret } from "./secrets.ts";
 
 export type { ContainerStatus };
+
+const logger = new Logger("Docker");
 
 export interface RegistryAuth {
   password: string;
@@ -51,6 +54,7 @@ export async function pullImage(
   const docker = getDocker();
   const ref = `${image}:${tag}`;
 
+  logger.info(`Pulling image: ${ref}`);
   const stream = await docker.pull(ref, auth ? { authconfig: auth } : {});
   await new Promise<void>((resolvePromise, reject) => {
     docker.modem.followProgress(stream, (err: Error | null) =>
@@ -61,8 +65,10 @@ export async function pullImage(
   try {
     const inspect = await docker.getImage(ref).inspect();
     const digest = inspect.RepoDigests?.[0]?.split("@")[1] ?? null;
+    logger.info(`Pulled image: ${ref} digest=${digest ?? "unknown"}`);
     return { digest };
-  } catch {
+  } catch (err) {
+    logger.warn(`Pulled image but inspect failed: ${ref}`, err);
     return { digest: null };
   }
 }
@@ -137,19 +143,23 @@ export async function createAndStartContainer(
   });
 
   await container.start();
+  logger.info(`Container created and started: ${name} (${container.id})`);
   return { containerId: container.id };
 }
 
 export async function startContainer(containerId: string): Promise<void> {
   await getDocker().getContainer(containerId).start();
+  logger.info(`Container started: ${containerId}`);
 }
 
 export async function stopContainer(containerId: string): Promise<void> {
   await getDocker().getContainer(containerId).stop();
+  logger.info(`Container stopped: ${containerId}`);
 }
 
 export async function restartContainer(containerId: string): Promise<void> {
   await getDocker().getContainer(containerId).restart();
+  logger.info(`Container restarted: ${containerId}`);
 }
 
 export async function removeContainer(
@@ -159,6 +169,7 @@ export async function removeContainer(
   await getDocker()
     .getContainer(containerId)
     .remove({ force: opts?.force ?? true });
+  logger.info(`Container removed: ${containerId}`);
 }
 
 /** Inspects a container's live Docker state and maps it to our status enum. */

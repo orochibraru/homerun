@@ -1,10 +1,13 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import { resolve } from "$app/paths";
+import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import { service } from "$lib/server/db/schema";
 import { ownedService } from "$lib/server/services";
 import { parseEnvVars } from "$lib/server/validation/service";
+
+const logger = new Logger("Services");
 
 export const actions = {
   update: async ({ request, params, locals }) => {
@@ -22,6 +25,7 @@ export const actions = {
       .set({ envVars: parseEnvVars(formData) })
       .where(eq(service.id, svc.id));
 
+    logger.info(`Env vars updated: service=${svc.id} user=${locals.user.id}`);
     return { success: true };
   },
 };

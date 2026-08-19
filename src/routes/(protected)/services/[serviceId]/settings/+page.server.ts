@@ -1,12 +1,15 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { and, eq, ne } from "drizzle-orm";
 import { resolve } from "$app/paths";
+import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
-import { service } from "$lib/server/db/schema";
+import { service, template } from "$lib/server/db/schema";
 import { encryptSecret } from "$lib/server/docker/secrets";
 import { removeContainer } from "$lib/server/docker/service";
 import { ownedService } from "$lib/server/services";
 import { updateServiceSchema } from "$lib/server/validation/service";
+
+const logger = new Logger("Services");
 
 export const actions = {
   delete: async ({ params, locals }) => {
@@ -26,7 +29,39 @@ export const actions = {
       }
     }
     await db.delete(service).where(eq(service.id, svc.id));
+    logger.info(`Service deleted: service=${svc.id} user=${locals.user.id}`);
     throw redirect(303, resolve("/services"));
+  },
+  saveAsTemplate: async ({ params, locals }) => {
+    if (!locals.user) {
+      throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const svc = await ownedService(params.serviceId, locals.user.id);
+    if (!svc) {
+      return fail(404, { error: "Service not found." });
+    }
+
+    const now = new Date();
+    await db.insert(template).values({
+      containerPort: svc.containerPort,
+      cpuLimit: svc.cpuLimit,
+      createdAt: now,
+      description: `Saved from ${svc.name}`,
+      envVars: svc.envVars,
+      id: crypto.randomUUID(),
+      image: svc.image,
+      memoryLimitMb: svc.memoryLimitMb,
+      name: svc.name,
+      ownerId: locals.user.id,
+      restartPolicy: svc.restartPolicy,
+      tag: svc.tag,
+      updatedAt: now,
+    });
+
+    logger.info(
+      `Template saved from service: service=${svc.id} user=${locals.user.id}`
+    );
+    return { templateSaved: true };
   },
   update: async ({ request, params, locals }) => {
     if (!locals.user) {
@@ -83,6 +118,9 @@ export const actions = {
       })
       .where(eq(service.id, svc.id));
 
+    logger.info(
+      `Service settings updated: service=${svc.id} user=${locals.user.id}`
+    );
     return { success: true };
   },
 };

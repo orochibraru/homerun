@@ -3,6 +3,7 @@
     AlertTriangle,
     Check,
     ChevronDown,
+    LayoutGrid,
     Loader2,
     Lock,
     Settings,
@@ -287,6 +288,48 @@
         </button>
       </div>
     </form>
+  </section>
+
+  <!-- ═══ Save as template ═══ -->
+  <section
+    class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+  >
+    <div class="flex items-center justify-between gap-4 p-5">
+      <div class="flex items-center gap-3">
+        <div
+          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
+        >
+          <LayoutGrid class="size-4" />
+        </div>
+        <div>
+          <p class="text-sm font-medium text-[var(--color-text)]">
+            Save as template
+          </p>
+          <p class="text-xs text-[var(--color-text-muted)]">
+            Reuse this config to deploy another service later.
+          </p>
+        </div>
+      </div>
+      <form
+        action="?/saveAsTemplate"
+        method="POST"
+        use:enhance={() => async ({ result, update }) => {
+          if (result.type === "success") {
+            toast.success("Saved as a template.");
+          } else {
+            toast.error("Couldn't save the template.");
+          }
+          await update();
+        }}
+      >
+        <button
+          class="shrink-0 rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)] transition-all hover:bg-[var(--color-surface-2)]"
+          type="submit"
+        >
+          Save as template
+        </button>
+      </form>
+    </div>
   </section>
 
   <!-- ═══ Danger zone ═══ -->

@@ -27,8 +27,13 @@
   // dedicated <p> for still surfaces instead of silently failing.
   const errorMessages = $derived(errors ? Object.values(errors).flat() : []);
 
-  let name = $state((form?.values?.name as string) ?? "");
-  let slug = $state((form?.values?.slug as string) ?? "");
+  let name = $state(
+    (form?.values?.name as string) ?? data.template?.name ?? ""
+  );
+  let slug = $state(
+    (form?.values?.slug as string) ??
+      (data.template ? slugify(data.template.name) : "")
+  );
   let slugTouched = $state(false);
   let submitting = $state(false);
   let showRegistry = $state(!!values?.registryUsername);
@@ -57,7 +62,15 @@
     key: string;
     value: string;
   }
-  let envRows = $state<EnvRow[]>([{ key: "", value: "" }]);
+  const templateEnvRows = data.template
+    ? Object.entries(data.template.envVars ?? {}).map(([key, value]) => ({
+        key,
+        value,
+      }))
+    : [];
+  let envRows = $state<EnvRow[]>(
+    templateEnvRows.length > 0 ? templateEnvRows : [{ key: "", value: "" }]
+  );
 
   function addEnvRow() {
     envRows.push({ key: "", value: "" });
@@ -102,6 +115,19 @@
 			};
 		}}
   >
+    {#if data.projectId}
+      <input name="projectId" type="hidden" value={data.projectId}>
+    {/if}
+
+    {#if data.template}
+      <div
+        class="bg-accent/10 text-accent rounded-xl px-4 py-3 text-sm font-medium"
+      >
+        Starting from the {data.template.name} template — review everything
+        below (especially any placeholder passwords) before deploying.
+      </div>
+    {/if}
+
     {#if errorMessages.length > 0}
       <div
         class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
@@ -194,7 +220,7 @@
               placeholder="ghcr.io/acme/api"
               required
               type="text"
-              value={values?.image ?? ""}
+              value={values?.image ?? data.template?.image ?? ""}
             >
             {#if errors?.image}
               <p class={errorClass}>{errors.image[0]}</p>
@@ -208,7 +234,7 @@
               name="tag"
               placeholder="latest"
               type="text"
-              value={values?.tag ?? "latest"}
+              value={values?.tag ?? data.template?.tag ?? "latest"}
             >
           </div>
         </div>
@@ -226,7 +252,7 @@
             placeholder="3000"
             required
             type="number"
-            value={values?.containerPort ?? ""}
+            value={values?.containerPort ?? data.template?.containerPort ?? ""}
           >
           <p class="mt-1 text-xs text-[var(--color-text-subtle)]">
             The port your app listens on inside the container.
@@ -369,8 +395,15 @@
       <div class="space-y-5 p-5">
         <div>
           <label class={label} for="restartPolicy"> Restart policy </label>
-          <select class={input} id="restartPolicy" name="restartPolicy">
-            <option selected value="unless-stopped">Unless stopped</option>
+          <select
+            class={input}
+            id="restartPolicy"
+            name="restartPolicy"
+            value={values?.restartPolicy ??
+              data.template?.restartPolicy ??
+              "unless-stopped"}
+          >
+            <option value="unless-stopped">Unless stopped</option>
             <option value="always">Always</option>
             <option value="on-failure">On failure</option>
             <option value="no">Never</option>
@@ -386,6 +419,7 @@
               name="cpuLimit"
               placeholder="e.g. 0.5 (cores)"
               type="text"
+              value={values?.cpuLimit ?? data.template?.cpuLimit ?? ""}
             >
             {#if errors?.cpuLimit}
               <p class={errorClass}>{errors.cpuLimit[0]}</p>
@@ -400,6 +434,9 @@
               name="memoryLimitMb"
               placeholder="e.g. 512"
               type="number"
+              value={values?.memoryLimitMb ??
+                data.template?.memoryLimitMb ??
+                ""}
             >
             {#if errors?.memoryLimitMb}
               <p class={errorClass}>{errors.memoryLimitMb[0]}</p>

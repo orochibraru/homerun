@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { desc, eq } from "drizzle-orm";
 import { resolve } from "$app/paths";
+import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import { deployment, service } from "$lib/server/db/schema";
 import {
@@ -12,6 +13,8 @@ import {
   stopContainer,
 } from "$lib/server/docker/service";
 import { ownedService } from "$lib/server/services";
+
+const logger = new Logger("Services");
 
 export const load = async ({ params }) => {
   const deployments = await db
@@ -34,6 +37,10 @@ export const actions = {
       return fail(404, { error: "Service not found." });
     }
 
+    logger.info(
+      `Deploy started: service=${svc.name} (${svc.id}) image=${svc.image}:${svc.tag} user=${locals.user.id}`
+    );
+
     const deploymentId = crypto.randomUUID();
     const now = new Date();
     await db.insert(deployment).values({
@@ -52,6 +59,9 @@ export const actions = {
     try {
       const auth = buildAuthConfig(svc);
       const { digest } = await pullImage(svc.image, svc.tag, auth);
+      logger.info(
+        `Image pulled: ${svc.image}:${svc.tag} digest=${digest ?? "unknown"} service=${svc.id}`
+      );
 
       await db
         .update(service)
@@ -87,6 +97,9 @@ export const actions = {
           status: "running",
         })
         .where(eq(deployment.id, deploymentId));
+      logger.info(
+        `Deploy succeeded: service=${svc.id} container=${containerId} deployment=${deploymentId}`
+      );
     } catch (err) {
       await db
         .update(service)
@@ -100,6 +113,10 @@ export const actions = {
           status: "failed",
         })
         .where(eq(deployment.id, deploymentId));
+      logger.error(
+        `Deploy failed: service=${svc.id} deployment=${deploymentId}`,
+        err
+      );
       return fail(500, {
         error:
           "Deploy failed — check the deployment history below for details.",
@@ -122,6 +139,7 @@ export const actions = {
     }
 
     await restartContainer(svc.containerId);
+    logger.info(`Service restarted: service=${svc.id} user=${locals.user.id}`);
     return { success: true };
   },
 
@@ -142,6 +160,7 @@ export const actions = {
       .update(service)
       .set({ desiredState: "running" })
       .where(eq(service.id, svc.id));
+    logger.info(`Service started: service=${svc.id} user=${locals.user.id}`);
     return { success: true };
   },
 
@@ -162,6 +181,7 @@ export const actions = {
       .update(service)
       .set({ desiredState: "stopped" })
       .where(eq(service.id, svc.id));
+    logger.info(`Service stopped: service=${svc.id} user=${locals.user.id}`);
     return { success: true };
   },
 };

@@ -1,4 +1,15 @@
-import { CheckCircle, Clock, Loader2, XCircle } from "@lucide/svelte";
+import {
+  Activity,
+  Box,
+  CheckCircle,
+  Clock,
+  Database,
+  Loader2,
+  Lock,
+  Table,
+  Workflow,
+  XCircle,
+} from "@lucide/svelte";
 import type { ContainerStatus } from "$lib/types";
 
 export const SERVICE_STATUS_CONFIG: Record<
@@ -38,6 +49,20 @@ export const SERVICE_STATUS_CONFIG: Record<
     label: "Stopped",
   },
 };
+
+// Keyed by the plain string stored in template.icon — same pattern as
+// SERVICE_STATUS_CONFIG, just for the template gallery.
+export const TEMPLATE_ICONS: Record<string, typeof Database> = {
+  activity: Activity,
+  database: Database,
+  lock: Lock,
+  table: Table,
+  workflow: Workflow,
+};
+
+export function templateIcon(icon: string | null): typeof Database {
+  return (icon && TEMPLATE_ICONS[icon]) || Box;
+}
 
 export const GRADIENTS = [
   "from-violet-500 to-purple-700",

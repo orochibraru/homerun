@@ -34,4 +34,4 @@
 <main>
   {@render children()}
 </main>
-<Toaster richColors />
+<Toaster closeButton position="top-center" richColors />

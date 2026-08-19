@@ -108,6 +108,10 @@ export const auth = betterAuth({
           .from(schema.service)
           .where(eq(schema.service.userId, user.id));
 
+        logger.info(
+          `Deleting account: user=${user.id} services=${services.length}`
+        );
+
         for (const svc of services) {
           if (svc.containerId) {
             try {
@@ -124,6 +128,7 @@ export const auth = betterAuth({
         await db
           .delete(schema.service)
           .where(eq(schema.service.userId, user.id));
+        logger.info(`Account deletion cleanup complete: user=${user.id}`);
       },
       enabled: true,
     },

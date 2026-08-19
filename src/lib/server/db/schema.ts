@@ -156,6 +156,52 @@ export const passkey = sqliteTable(
 
 // ─── PaaS Domain ────────────────────────────────────────────────────────────
 
+export const project = sqliteTable(
+  "project",
+  {
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    description: text("description"),
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .$onUpdate(() => new Date())
+      .notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("project_userId_idx").on(table.userId)]
+);
+
+export const template = sqliteTable(
+  "template",
+  {
+    category: text("category"), // "database" | "cache" | "monitoring" | "automation" | "other"
+    containerPort: integer("container_port").notNull(),
+    cpuLimit: text("cpu_limit"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    description: text("description"),
+    envVars: text("env_vars", { mode: "json" })
+      .$type<Record<string, string>>()
+      .default({}),
+    icon: text("icon"), // lucide icon name, looked up the same way SERVICE_STATUS_CONFIG maps a key to an icon component
+    id: text("id").primaryKey(),
+    image: text("image").notNull(),
+    memoryLimitMb: integer("memory_limit_mb"),
+    name: text("name").notNull(),
+    // null = built-in (seeded), immutable — not owned by any user
+    ownerId: text("owner_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
+    restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
+    tag: text("tag").default("latest").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index("template_ownerId_idx").on(table.ownerId)]
+);
+
 export const service = sqliteTable(
   "service",
   {
@@ -181,6 +227,10 @@ export const service = sqliteTable(
     image: text("image").notNull(),
     memoryLimitMb: integer("memory_limit_mb"),
     name: text("name").notNull(),
+    // nullable — grouping is opt-in, ungrouped services stay valid
+    projectId: text("project_id").references(() => project.id, {
+      onDelete: "set null",
+    }),
     // AES-256-GCM ciphertext — see $lib/server/docker/secrets
     registryPasswordEnc: text("registry_password_enc"),
     registryUrl: text("registry_url"),
@@ -200,6 +250,7 @@ export const service = sqliteTable(
   (table) => [
     index("service_userId_idx").on(table.userId),
     index("service_slug_idx").on(table.slug),
+    index("service_projectId_idx").on(table.projectId),
   ]
 );
 
@@ -237,12 +288,27 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   deployments: many(deployment),
   passkeys: many(passkey),
+  projects: many(project),
   services: many(service),
   sessions: many(session),
+  templates: many(template),
+}));
+
+export const projectRelations = relations(project, ({ one, many }) => ({
+  services: many(service),
+  user: one(user, { fields: [project.userId], references: [user.id] }),
+}));
+
+export const templateRelations = relations(template, ({ one }) => ({
+  owner: one(user, { fields: [template.ownerId], references: [user.id] }),
 }));
 
 export const serviceRelations = relations(service, ({ one, many }) => ({
   deployments: many(deployment),
+  project: one(project, {
+    fields: [service.projectId],
+    references: [project.id],
+  }),
   user: one(user, { fields: [service.userId], references: [user.id] }),
 }));
 
@@ -254,6 +320,8 @@ export const deploymentRelations = relations(deployment, ({ one }) => ({
   user: one(user, { fields: [deployment.userId], references: [user.id] }),
 }));
 
+export type Project = typeof project.$inferSelect;
+export type Template = typeof template.$inferSelect;
 export type Service = typeof service.$inferSelect;
 export type Deployment = typeof deployment.$inferSelect;
 

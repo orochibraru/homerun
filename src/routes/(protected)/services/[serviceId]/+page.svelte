@@ -23,9 +23,9 @@
   let pendingAction = $state<string | null>(null);
 
   function withPending(action: string) {
-    pendingAction = action;
-    return () =>
-      async ({
+    return () => {
+      pendingAction = action;
+      return async ({
         result,
         update,
       }: {
@@ -40,6 +40,7 @@
         }
         await update();
       };
+    };
   }
 </script>
 

@@ -2,8 +2,9 @@ import { fail, redirect } from "@sveltejs/kit";
 import { desc, eq } from "drizzle-orm";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
+import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
-import { service } from "$lib/server/db/schema";
+import { project, service } from "$lib/server/db/schema";
 import { syncAllServiceStatuses } from "$lib/server/docker/reconcile";
 import {
   removeContainer,
@@ -13,25 +14,29 @@ import {
 } from "$lib/server/docker/service";
 import { ownedService } from "$lib/server/services";
 
+const logger = new Logger("Services");
+
 async function loadServices(userId: string) {
-  const rows = await db
-    .select()
-    .from(service)
-    .where(eq(service.userId, userId))
-    .orderBy(desc(service.createdAt));
-
-  await syncAllServiceStatuses(
-    rows.filter((r) => r.containerId).map((r) => r.id)
-  );
-
-  if (rows.some((r) => r.containerId)) {
-    return db
-      .select()
+  const query = () =>
+    db
+      .select({
+        projectName: project.name,
+        service,
+      })
       .from(service)
+      .leftJoin(project, eq(service.projectId, project.id))
       .where(eq(service.userId, userId))
       .orderBy(desc(service.createdAt));
-  }
-  return rows;
+
+  const rows = await query();
+
+  await syncAllServiceStatuses(
+    rows.filter((r) => r.service.containerId).map((r) => r.service.id)
+  );
+
+  const fresh = rows.some((r) => r.service.containerId) ? await query() : rows;
+
+  return fresh.map((r) => ({ ...r.service, projectName: r.projectName }));
 }
 
 export const load = async ({ parent }) => {
@@ -69,6 +74,7 @@ export const actions = {
       }
     }
     await db.delete(service).where(eq(service.id, serviceId));
+    logger.info(`Service deleted: service=${serviceId} user=${locals.user.id}`);
     return { success: true };
   },
 
@@ -91,6 +97,9 @@ export const actions = {
     }
 
     await restartContainer(row.containerId);
+    logger.info(
+      `Service restarted: service=${serviceId} user=${locals.user.id}`
+    );
     return { success: true };
   },
   start: async ({ request, locals }) => {
@@ -116,6 +125,7 @@ export const actions = {
       .update(service)
       .set({ desiredState: "running" })
       .where(eq(service.id, serviceId));
+    logger.info(`Service started: service=${serviceId} user=${locals.user.id}`);
     return { success: true };
   },
 
@@ -142,6 +152,7 @@ export const actions = {
       .update(service)
       .set({ desiredState: "stopped" })
       .where(eq(service.id, serviceId));
+    logger.info(`Service stopped: service=${serviceId} user=${locals.user.id}`);
     return { success: true };
   },
 };

@@ -1,7 +1,9 @@
 <script lang="ts">
   import {
     ChevronRight,
+    FolderKanban,
     LayoutDashboard,
+    LayoutGrid,
     LogOut,
     Menu,
     Server,
@@ -30,6 +32,18 @@
       href: resolve("/services"),
       icon: Server,
       label: "Services",
+    },
+    {
+      exact: false,
+      href: resolve("/projects"),
+      icon: FolderKanban,
+      label: "Projects",
+    },
+    {
+      exact: false,
+      href: resolve("/templates"),
+      icon: LayoutGrid,
+      label: "Templates",
     },
     {
       exact: false,

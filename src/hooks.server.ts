@@ -8,6 +8,7 @@ import { building } from "$app/environment";
 import { Logger } from "$lib/logger";
 import { auth } from "$lib/server/auth";
 import { getDb, resetDb } from "$lib/server/db";
+import { seedBuiltinTemplates } from "$lib/server/db/seed";
 
 const logger = new Logger("Hooks");
 
@@ -93,6 +94,7 @@ async function runMigrations() {
 export const init = async () => {
   await waitForDatabase();
   await runMigrations();
+  await seedBuiltinTemplates();
 };
 
 /** Paths under the auth basePath that are handled by SvelteKit, not better-auth */

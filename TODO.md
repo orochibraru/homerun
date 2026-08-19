@@ -1,3 +1,4 @@
 - Make the app API-driven so we can build a CLI on top of the API.
 - No sql/drizzle queries in page.server.ts, we need DTOs that are OOP classes (in lib/dto/service-dto.ts for example in which we'd have class ServiceDTO extends BaseDTO) in which we have streamlined methods like "get, list, new, add, delete, update".
--
+- When saving settings for a service, prompt user to redeploy.
+- When deploying add a div showing container pull logs or steps like "pulling image", "starting container", "waiting for container to be healthy: retries left, attempt #number, result: "
