@@ -1,29 +1,58 @@
 # TODO
 
-- [ ] Make the app API-driven so we can build a CLI on top of the API. (groundwork done — DTOs give a clean layer a REST surface can call; no actual API/CLI endpoints yet)
-- [x] No sql/drizzle queries in page.server.ts, we need DTOs that are OOP classes (in lib/dto/service-dto.ts for example in which we'd have class ServiceDTO extends BaseDTO) in which we have streamlined methods like "get, list, new, add, delete, update".
-- [x] When saving settings for a service, prompt user to redeploy.
-- [x] When deploying add a div showing container pull logs or steps like "pulling image", "starting container", "waiting for container to be healthy: retries left, attempt #number, result: "
+## Architecture & API
+
+- [x] No sql/drizzle queries in `page.server.ts` — DTOs as OOP classes (e.g. `lib/dto/service-dto.ts`, `class ServiceDTO extends BaseDTO`) with streamlined methods (`get`, `list`, `new`, `add`, `delete`, `update`)
+- [ ] Make the app API-driven so we can build a CLI on top of the API (groundwork done — DTOs give a clean layer a REST surface can call; no actual API/CLI endpoints yet)
+
+## Deployment & Container Lifecycle
+
+- [x] When saving settings for a service, prompt user to redeploy
+- [x] When deploying, show a live log div with pull/start/health steps ("pulling image", "starting container", "waiting for container to be healthy: retries left, attempt #number, result: ...")
 - [x] Add random number to container name to prevent duplicates/failures
-- [x] When containers are in the same project, they should share the same network and subnetwork (unless user asks for isolated deployment in which case the project will have its own network independent of the main localrun network). Creating a project/group/folder should create a subnetwork.
-- [x] When a service gets deployed let's print its hostname and port so it can be accessed by other services that are in the same network
-- [x] Quick actions in /services don't work
-- [ ] We need to be able to setup a cron (with a cron wizard) for each service (disabled by default) that auto-updates services periodically
-- [ ] We need to be able to open a terminal from the web ui to access the containers
-- [ ] We need to be able to configure volumes for each service OR project to have shared volumes
-- [ ] We need to be able to configure storage sources for local volumes, mount paths in a dedicated page in the sidebar called "storage"
-- [x] Add ability to move a service in a project or out of a project
-- [x] Add ability to deploy template in a project
-- [x] If a service is deploying when reloading a page or accessing it, fetch the deploy logs and hide the deploy button
-- [x] in the deployment history show build outputs (record and store the build log)
-- [ ] Add instance settings/onboarding if basic settings aren't filled (like domain name, what DNS service is used (Cloudflare, Pangolin which are automatable via API for automatic TLD operations or something else), if SSL should be used etc)
-- [ ] Error catching service, adds a tab called "errors" with the amount of errors recorded for each service and what they are and when and the log that corresponds
-- [ ] Add possibility to setup a general OIDC provider to gatekeep some apps if needed. This should be choosable in the new service wizard if the app should be accessible unauthenticated or not.
-- [ ] Add a flag for an app to be DNS resolvable or subnet only
-- [ ] Add auto-backup feature to S3 destinations (like Dokploy does)
+- [x] If a service is deploying when reloading/accessing its page, fetch the in-progress deploy logs and hide the deploy button
+- [x] In the deployment history, show build outputs (record and store the build log)
+- [x] Add ability to deploy a template into a project
+- [x] Fix quick actions in `/services` (start/stop/restart/delete from the list)
+- [ ] Add a web terminal to shell into a running container from the UI
+
+## Projects & Networking
+
+- [x] Containers in the same project share a network/subnetwork by default (unless isolated deployment is requested, in which case the project gets its own independent network); creating a project/group/folder creates its subnetwork
+- [x] When a service deploys, print its hostname and port so other services on the same network can reach it
+- [x] Add ability to move a service into or out of a project
+- [ ] Prefix every container name (and domain/subdomain) created from a project with the project name
+- [ ] Add a flag to mark an app as DNS-resolvable vs. subnet-only
+
+## Storage & Volumes
+
+- [ ] Configure volumes per service, or shared volumes per project
+- [ ] Dedicated "Storage" sidebar page to configure storage sources/mount paths for local volumes
+- [ ] Auto-backup feature to S3-compatible destinations (like Dokploy)
+
+## Scheduling & Automation
+
+- [ ] Cron wizard per service (disabled by default) to auto-update/redeploy periodically
+
+## Observability & Monitoring
+
+- [ ] Error-catching service: an "Errors" tab per service showing error count, details, timestamps, and the corresponding log
+- [ ] Show system stats: CPU, RAM, GPU, and disk usage
+- [ ] Ability to view logs from core services (the LocalRun server itself, Traefik)
+
+## Security & Access Control
+
+- [ ] General OIDC provider support to gatekeep apps — selectable in the new-service wizard (authenticated vs. unauthenticated access)
 - [ ] Custom SSL certificate handling
-- [ ] Add Git providers (even self hosted like Gitea) to build apps from a repo source
-- [ ] Enable Remote Servers for deployments or building apps from source to prevent overloading the main server
-- [ ] Every container created from a project should have it's name prefixed with the project name, same for the domain/subdomain
-- [ ] Show system stats like CPU, Ram, GPU & Disk
-- [ ] Ability to view logs from core services like the server running localrun, or Traefik
+
+## Source & Build Integration
+
+- [ ] Add Git providers (including self-hosted, e.g. Gitea) to build apps from a repo source
+
+## Multi-Server / Remote Execution
+
+- [ ] Support remote servers for deployments/builds, to avoid overloading the main server
+
+## Onboarding
+
+- [ ] Instance settings/onboarding flow when basic settings aren't configured yet (domain name, DNS provider — e.g. Cloudflare, Pangolin, automatable via API for TLS/DNS ops — SSL usage, etc.)
