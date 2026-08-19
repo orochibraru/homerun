@@ -4,6 +4,10 @@ import { type Deployment, deployment, service } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
 
 export interface NewDeploymentInput {
+  // Lets a caller pre-generate the id (e.g. the client, so it can start
+  // polling the progress endpoint before the create-deployment request
+  // even resolves) — falls back to a fresh one when omitted.
+  id?: string;
   serviceId: string;
   status: Deployment["status"];
   userId: string;
@@ -12,12 +16,26 @@ export interface NewDeploymentInput {
 export type DeploymentUpdateInput = Partial<
   Pick<
     Deployment,
-    "containerId" | "errorMessage" | "finishedAt" | "imageDigest" | "status"
+    | "containerId"
+    | "errorMessage"
+    | "finishedAt"
+    | "imageDigest"
+    | "log"
+    | "status"
   >
 >;
 
 /** Wraps the `deployment` table — see ServiceDTO for the pattern this follows. */
 export class DeploymentDTO extends BaseDTO<Deployment> {
+  static async get(id: string): Promise<DeploymentDTO | null> {
+    const [row] = await db
+      .select()
+      .from(deployment)
+      .where(eq(deployment.id, id))
+      .limit(1);
+    return row ? new DeploymentDTO(row) : null;
+  }
+
   static async listForService(
     serviceId: string,
     limit = 10
@@ -67,8 +85,9 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
       createdAt: now,
       errorMessage: null,
       finishedAt: null,
-      id: crypto.randomUUID(),
+      id: input.id || crypto.randomUUID(),
       imageDigest: null,
+      log: "",
       serviceId: input.serviceId,
       startedAt: now,
       status: input.status,
@@ -86,7 +105,16 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
     Object.assign(this.row, input);
   }
 
+  /** Appends one line to the live progress log (see the `deployment.log` column). */
+  async appendLog(line: string): Promise<void> {
+    const next = `${this.row.log ?? ""}${line}\n`;
+    await this.update({ log: next });
+  }
+
   get id(): string {
     return this.row.id;
+  }
+  get log(): string {
+    return this.row.log ?? "";
   }
 }

@@ -72,7 +72,16 @@
         submitting = true;
         return async ({ result, update }) => {
           submitting = false;
-          if (result.type === "success") toast.success("Saved.");
+          if (result.type === "success") {
+            toast.success("Saved.", {
+              action: {
+                label: "Redeploy",
+                onClick: () =>
+                  goto(resolve("/services/[serviceId]", { serviceId: svc.id })),
+              },
+              description: "Changes take effect on the next deploy.",
+            });
+          }
           if (result.type === "failure")
             toast.error("Check the form for errors.");
           await update();

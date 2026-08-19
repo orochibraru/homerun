@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    ChevronDown,
     Clock,
     Loader2,
     Play,
@@ -10,6 +11,7 @@
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
+  import { resolve } from "$app/paths";
   import StatusBadge from "$lib/components/status-badge.svelte";
   import { timeAgo } from "$lib/formatting";
   import { title } from "$lib/store/title";
@@ -21,6 +23,9 @@
   onMount(() => title.set(svc.name));
 
   let pendingAction = $state<string | null>(null);
+  let progressLines = $state<string[]>([]);
+  let pollGeneration = 0;
+  let expandedDeploymentId = $state<string | null>(null);
 
   function withPending(action: string) {
     return () => {
@@ -42,11 +47,94 @@
       };
     };
   }
+
+  const IN_FLIGHT_STATUSES = new Set(["pending", "pulling", "starting"]);
+
+  /** One poll tick — returns the deployment's current status, or undefined on a missed tick. */
+  async function fetchProgress(
+    deploymentId: string
+  ): Promise<string | undefined> {
+    try {
+      const res = await fetch(
+        resolve("/services/[serviceId]/deployments/[deploymentId]/progress", {
+          deploymentId,
+          serviceId: svc.id,
+        })
+      );
+      if (res.ok) {
+        const body = (await res.json()) as { log: string; status: string };
+        progressLines = body.log.split("\n").filter(Boolean);
+        return body.status;
+      }
+    } catch {
+      // A missed poll tick isn't worth surfacing — the next one usually succeeds.
+    }
+  }
+
+  /**
+   * Polls until the deployment reaches a terminal status, then clears
+   * pendingAction itself — this is the single mechanism for both a live
+   * deploy just submitted from this tab AND resuming the progress view
+   * after a mid-deploy page reload (see onMount below), since in both
+   * cases there's no other signal telling the client when it's done.
+   */
+  async function pollProgress(deploymentId: string) {
+    pollGeneration += 1;
+    const myGeneration = pollGeneration;
+    let status = await fetchProgress(deploymentId);
+    while (
+      myGeneration === pollGeneration &&
+      status &&
+      IN_FLIGHT_STATUSES.has(status)
+    ) {
+      await new Promise((r) => setTimeout(r, 1000));
+      if (myGeneration !== pollGeneration) {
+        return;
+      }
+      status = await fetchProgress(deploymentId);
+    }
+    if (myGeneration === pollGeneration) {
+      pendingAction = null;
+    }
+  }
+
+  onMount(() => {
+    const [latest] = data.deployments;
+    if (latest && IN_FLIGHT_STATUSES.has(svc.currentStatus)) {
+      pendingAction = "deploy";
+      pollProgress(latest.id);
+    }
+  });
+
+  function deployEnhance() {
+    return ({ formData }: { formData: FormData }) => {
+      pendingAction = "deploy";
+      progressLines = [];
+      const deploymentId = crypto.randomUUID();
+      formData.set("deploymentId", deploymentId);
+      pollProgress(deploymentId);
+
+      return async ({
+        result,
+        update,
+      }: {
+        result: { type: string; data?: { error?: string } };
+        update: () => Promise<void>;
+      }) => {
+        if (result.type === "failure" && result.data?.error) {
+          toast.error(result.data.error);
+        } else if (result.type === "success") {
+          toast.success("Deployed.");
+        }
+        await update();
+      };
+    };
+  }
 </script>
 
 <!-- ═══ Actions ═══ -->
 <div class="mb-6 flex flex-wrap gap-2">
-  <form action="?/deploy" method="POST" use:enhance={withPending("deploy")}>
+  <form action="?/deploy" method="POST" use:enhance={deployEnhance()}>
     <button
       class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pendingAction !== null}
@@ -112,6 +200,16 @@
   {/if}
 </div>
 
+{#if pendingAction === "deploy" && progressLines.length > 0}
+  <div
+    class="mb-6 h-48 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+  >
+    {#each progressLines as line, i (i)}
+      <div class="break-all whitespace-pre-wrap">{line}</div>
+    {/each}
+  </div>
+{/if}
+
 {#if !svc.containerId}
   <div
     class="mb-6 rounded-xl border border-border bg-surface-2 p-4 text-sm text-text-muted"
@@ -137,21 +235,47 @@
   {:else}
     <div class="divide-y divide-border">
       {#each data.deployments as dep (dep.id)}
-        <div class="flex items-center gap-4 px-5 py-3">
-          <StatusBadge status={dep.status} />
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-xs text-text-muted">
-              {timeAgo(dep.createdAt)}
-              {#if dep.imageDigest}
-                · <span class="font-mono">{dep.imageDigest.slice(0, 19)}</span>
-              {/if}
-            </p>
-            {#if dep.errorMessage}
-              <p class="mt-0.5 truncate text-xs text-red-500">
-                {dep.errorMessage}
+        <div>
+          <button
+            class="flex w-full items-center gap-4 px-5 py-3 text-left"
+            onclick={() =>
+              (expandedDeploymentId =
+                expandedDeploymentId === dep.id ? null : dep.id)}
+            type="button"
+          >
+            <StatusBadge status={dep.status} />
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-xs text-text-muted">
+                {timeAgo(dep.createdAt)}
+                {#if dep.imageDigest}
+                  ·
+                  <span class="font-mono">{dep.imageDigest.slice(0, 19)}</span>
+                {/if}
               </p>
+              {#if dep.errorMessage}
+                <p class="mt-0.5 truncate text-xs text-red-500">
+                  {dep.errorMessage}
+                </p>
+              {/if}
+            </div>
+            {#if dep.log}
+              <ChevronDown
+                class="size-4 shrink-0 text-text-muted transition-transform {expandedDeploymentId ===
+                dep.id
+                  ? 'rotate-180'
+                  : ''}"
+              />
             {/if}
-          </div>
+          </button>
+          {#if expandedDeploymentId === dep.id && dep.log}
+            <div
+              class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+            >
+              {#each dep.log.split("\n").filter(Boolean) as line, i (i)}
+                <div class="break-all whitespace-pre-wrap">{line}</div>
+              {/each}
+            </div>
+          {/if}
         </div>
       {/each}
     </div>

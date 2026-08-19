@@ -2,7 +2,12 @@ import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
 import { getDocker } from "./client.ts";
-import { buildContainerLabels, MANAGED_LABEL } from "./labels.ts";
+import {
+  buildContainerLabels,
+  MANAGED_LABEL,
+  SERVICE_ID_LABEL,
+} from "./labels.ts";
+import { connectToProjectNetwork } from "./networks.ts";
 import { decryptSecret } from "./secrets.ts";
 
 export type { ContainerStatus };
@@ -15,9 +20,27 @@ export interface RegistryAuth {
   username: string;
 }
 
-/** Container name this app gives its containers — also used to find/replace on redeploy. */
+/**
+ * Container name this app gives its containers. Includes a random suffix
+ * so a redeploy never collides on "name already in use" — even if the
+ * previous container's removal (below) silently failed to fully complete.
+ * The *previous* container for a service is found by its
+ * `localrun.service.id` label, not by name, since names are no longer
+ * stable across deploys.
+ */
 function containerName(slug: string): string {
-  return `localrun-${slug}`;
+  const suffix = crypto.randomUUID().slice(0, 8);
+  return `localrun-${slug}-${suffix}`;
+}
+
+/** The currently-running (or last) container for a service, if any — found by label, not name. */
+async function findServiceContainer(serviceId: string) {
+  const docker = getDocker();
+  const containers = await docker.listContainers({
+    all: true,
+    filters: JSON.stringify({ label: [`${SERVICE_ID_LABEL}=${serviceId}`] }),
+  });
+  return containers[0] ?? null;
 }
 
 /**
@@ -45,20 +68,41 @@ export function buildAuthConfig(service: {
   };
 }
 
+export interface PullProgressEvent {
+  id?: string;
+  status: string;
+}
+
 /** Pulls `image:tag`, optionally authenticating against a private registry. */
 export async function pullImage(
   image: string,
   tag: string,
-  auth?: RegistryAuth
+  auth?: RegistryAuth,
+  onProgress?: (line: string) => void
 ): Promise<{ digest: string | null }> {
   const docker = getDocker();
   const ref = `${image}:${tag}`;
 
   logger.info(`Pulling image: ${ref}`);
+  onProgress?.(`Pulling ${ref}...`);
   const stream = await docker.pull(ref, auth ? { authconfig: auth } : {});
+
+  // Docker emits one progress event per byte-range update per layer —
+  // far too chatty to log a line for each. Only emit a line when a given
+  // layer's status actually changes ("Downloading" → "Pull complete" etc).
+  const lastStatusById = new Map<string, string>();
   await new Promise<void>((resolvePromise, reject) => {
-    docker.modem.followProgress(stream, (err: Error | null) =>
-      err ? reject(err) : resolvePromise()
+    docker.modem.followProgress(
+      stream,
+      (err: Error | null) => (err ? reject(err) : resolvePromise()),
+      (event: PullProgressEvent) => {
+        const key = event.id ?? "";
+        if (lastStatusById.get(key) === event.status) {
+          return;
+        }
+        lastStatusById.set(key, event.status);
+        onProgress?.(event.id ? `${event.status}: ${event.id}` : event.status);
+      }
     );
   });
 
@@ -79,6 +123,10 @@ export interface CreateContainerParams {
   envVars: Record<string, string>;
   image: string;
   memoryLimitMb?: number | null;
+  // When set, the container also joins this project's dedicated network
+  // (see docker/networks.ts) — lets sibling services in the same project
+  // reach it, in addition to the shared Traefik network below.
+  projectId?: string | null;
   restartPolicy: string;
   serviceId: string;
   slug: string;
@@ -87,27 +135,38 @@ export interface CreateContainerParams {
 
 /**
  * Creates and starts the container for a service, replacing any
- * previous container with the same name (a redeploy). Attaches
- * directly to the shared Traefik network by name — no host port
- * publishing needed, Traefik reaches it over that network.
+ * previous container for the same service (a redeploy — see
+ * findServiceContainer above). Attaches to the shared Traefik network
+ * under a DNS alias equal to the service's slug — no host port
+ * publishing needed, Traefik reaches it over that network, and other
+ * services can reach it at `http://<slug>:<containerPort>` regardless of
+ * the container's own (randomized) name.
  */
 export async function createAndStartContainer(
-  params: CreateContainerParams
+  params: CreateContainerParams,
+  onProgress?: (line: string) => void
 ): Promise<{ containerId: string }> {
   const docker = getDocker();
   const name = containerName(params.slug);
 
-  // Replace any previous container for this service (redeploy).
-  try {
-    const existing = docker.getContainer(name);
-    const info = await existing.inspect();
-    if (info.State.Running) {
-      await existing.stop();
+  // Replace any previous container for this service (redeploy), found by
+  // its service-id label rather than by name (see containerName above).
+  const existingInfo = await findServiceContainer(params.serviceId);
+  if (existingInfo) {
+    onProgress?.("Replacing previous container...");
+    try {
+      const existing = docker.getContainer(existingInfo.Id);
+      if (existingInfo.State === "running") {
+        await existing.stop();
+      }
+      await existing.remove({ force: true });
+    } catch {
+      // Already gone / couldn't be removed cleanly — proceed anyway, the
+      // random name suffix means the new container won't collide with it.
     }
-    await existing.remove({ force: true });
-  } catch {
-    // No previous container — nothing to clean up.
   }
+
+  onProgress?.("Creating container...");
 
   // "no" is our restart-policy value (matches docker-compose convention
   // for the dropdown); the Docker Engine API itself wants "" for that.
@@ -135,6 +194,14 @@ export async function createAndStartContainer(
       serviceId: params.serviceId,
       slug: params.slug,
     }),
+    // Alias the container as its slug on the shared network, so other
+    // services can reach it at a stable hostname even though the
+    // container's own name carries a random per-deploy suffix.
+    NetworkingConfig: {
+      EndpointsConfig: {
+        [config.docker.networkName]: { Aliases: [params.slug] },
+      },
+    },
     name,
     // Tty combines stdout/stderr into one unframed stream, which keeps
     // the v1 log viewer simple (no demux of Docker's multiplexed
@@ -142,8 +209,38 @@ export async function createAndStartContainer(
     Tty: true,
   });
 
+  onProgress?.("Starting container...");
   await container.start();
   logger.info(`Container created and started: ${name} (${container.id})`);
+
+  if (params.projectId) {
+    try {
+      await connectToProjectNetwork(
+        container.id,
+        params.projectId,
+        params.slug
+      );
+      logger.info(
+        `Joined project network: service=${params.serviceId} project=${params.projectId}`
+      );
+    } catch (err) {
+      // The container is already up on the shared network and reachable
+      // via Traefik — a failed project-network join shouldn't fail the
+      // whole deploy, just log it as degraded connectivity.
+      logger.warn(
+        `Could not join project network: service=${params.serviceId} project=${params.projectId}`,
+        err
+      );
+    }
+  }
+
+  logger.info(
+    `Reachable internally at ${params.slug}:${params.containerPort} (service=${params.serviceId})`
+  );
+  onProgress?.(
+    `Reachable at ${params.slug}:${params.containerPort} from other services.`
+  );
+
   return { containerId: container.id };
 }
 

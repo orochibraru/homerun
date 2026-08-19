@@ -263,6 +263,10 @@ export const deployment = sqliteTable(
     finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
     id: text("id").primaryKey(),
     imageDigest: text("image_digest"),
+    // Progress lines appended live during deploy ("Pulling image...",
+    // "Starting container...") — polled by the Overview tab while a deploy
+    // is in flight, kept around after for a lightweight audit trail.
+    log: text("log").default(""),
     serviceId: text("service_id")
       .notNull()
       .references(() => service.id, { onDelete: "cascade" }),

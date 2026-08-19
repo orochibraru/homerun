@@ -6,6 +6,10 @@ import {
   project,
   service,
 } from "$lib/server/db/schema";
+import {
+  ensureProjectNetwork,
+  removeProjectNetwork,
+} from "$lib/server/docker/networks";
 import { removeContainer } from "$lib/server/docker/service";
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
@@ -69,6 +73,7 @@ export class ProjectDTO extends BaseDTO<Project> {
       userId: input.userId,
     };
     await db.insert(project).values(row);
+    await ensureProjectNetwork(row.id);
     return new ProjectDTO(row);
   }
 
@@ -115,6 +120,7 @@ export class ProjectDTO extends BaseDTO<Project> {
     }
     await db.delete(service).where(eq(service.projectId, this.row.id));
     await this.delete();
+    await removeProjectNetwork(this.row.id);
   }
 
   get id(): string {

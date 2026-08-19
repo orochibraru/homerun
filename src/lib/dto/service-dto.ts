@@ -34,6 +34,7 @@ export type ServiceUpdateInput = Partial<
     | "image"
     | "memoryLimitMb"
     | "name"
+    | "projectId"
     | "registryPasswordEnc"
     | "registryUrl"
     | "registryUsername"

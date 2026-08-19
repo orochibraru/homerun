@@ -67,6 +67,12 @@
     {svc.image}:{svc.tag}
     ·
     <span class="text-accent">{svc.slug}.{data.baseDomain}</span>
+    {#if svc.containerId}
+      · internal:
+      <span class="font-mono text-text-subtle"
+        >{svc.slug}:{svc.containerPort}</span
+      >
+    {/if}
   </p>
 
   <!-- ── Tabs ─────────────────────────────────────────────── -->

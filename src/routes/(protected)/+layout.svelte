@@ -45,12 +45,6 @@
       icon: LayoutGrid,
       label: "Templates",
     },
-    {
-      exact: false,
-      href: resolve("/settings"),
-      icon: Settings,
-      label: "Settings",
-    },
   ];
 
   const userInitial = $derived(data.user?.name?.[0]?.toUpperCase() ?? "?");
@@ -65,8 +59,8 @@
   /** Derive a human-readable title from the current pathname for mobile */
   const mobileTitle = $derived.by(() => {
     const p = page.url.pathname;
-    if (p.includes("/settings")) {
-      return "Settings";
+    if (p.includes("/profile")) {
+      return "Profile";
     }
     if (p.includes("/services")) {
       return "Services";
@@ -116,7 +110,10 @@
 
     <!-- User section -->
     <div class="border-border border-t p-3">
-      <div class="flex items-center gap-3 rounded-xl p-2">
+      <a
+        class="flex items-center gap-3 rounded-xl p-2 hover:bg-muted transition-colors"
+        href={resolve("/profile")}
+      >
         {#if data.user?.image}
           <img
             alt={data.user.name}
@@ -138,7 +135,7 @@
             {data.user?.email}
           </p>
         </div>
-      </div>
+      </a>
       <button
         class="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-red-500 transition-all duration-200 hover:bg-red-500/10"
         onclick={handleSignOut}
