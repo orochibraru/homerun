@@ -38,6 +38,12 @@ export const createServiceSchema = z.object({
 
 export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 
+// Same shape as create — every field (including slug) can be edited after
+// the fact. registryPassword is optional here too: blank means "leave the
+// stored credential unchanged", not "clear it" (see settings +page.server.ts).
+export const updateServiceSchema = createServiceSchema;
+export type UpdateServiceInput = z.infer<typeof updateServiceSchema>;
+
 /** Zips parallel envKey[]/envValue[] form fields into a record, dropping blank keys. */
 export function parseEnvVars(formData: FormData): Record<string, string> {
 	const keys = formData.getAll("envKey").map(String);

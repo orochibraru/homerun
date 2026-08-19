@@ -6,6 +6,7 @@ import {
 	text,
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import type { ContainerStatus } from "$lib/types";
 
 export const user = sqliteTable("user", {
 	id: text("id").primaryKey(),
@@ -181,10 +182,16 @@ export const service = sqliteTable(
 		cpuLimit: text("cpu_limit"),
 		memoryLimitMb: integer("memory_limit_mb"),
 		// running | stopped — the user's intent
-		desiredState: text("desired_state").default("stopped").notNull(),
+		desiredState: text("desired_state")
+			.$type<"running" | "stopped">()
+			.default("stopped")
+			.notNull(),
 		containerId: text("container_id"),
 		// pending | pulling | starting | running | stopped | failed
-		currentStatus: text("current_status").default("pending").notNull(),
+		currentStatus: text("current_status")
+			.$type<ContainerStatus>()
+			.default("pending")
+			.notNull(),
 		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
 			.$onUpdate(() => new Date())
@@ -207,7 +214,10 @@ export const deployment = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 		// pending | pulling | starting | running | failed | stopped
-		status: text("status").default("pending").notNull(),
+		status: text("status")
+			.$type<ContainerStatus>()
+			.default("pending")
+			.notNull(),
 		imageDigest: text("image_digest"),
 		containerId: text("container_id"),
 		errorMessage: text("error_message"),
@@ -243,6 +253,9 @@ export const deploymentRelations = relations(deployment, ({ one }) => ({
 	}),
 	user: one(user, { fields: [deployment.userId], references: [user.id] }),
 }));
+
+export type Service = typeof service.$inferSelect;
+export type Deployment = typeof deployment.$inferSelect;
 
 export const sessionRelations = relations(session, ({ one }) => ({
 	user: one(user, {

@@ -1,5 +1,5 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { db } from "$lib/server/db/lib";
@@ -11,6 +11,7 @@ import {
 	startContainer,
 	stopContainer,
 } from "$lib/server/docker/service";
+import { ownedService } from "$lib/server/services";
 import type { Actions, PageServerLoad } from "./$types";
 
 async function loadServices(userId: string) {
@@ -32,16 +33,6 @@ async function loadServices(userId: string) {
 			.orderBy(desc(service.createdAt));
 	}
 	return rows;
-}
-
-/** Loads a service and confirms it belongs to `userId`, or returns null. */
-async function ownedService(serviceId: string, userId: string) {
-	const [row] = await db
-		.select()
-		.from(service)
-		.where(and(eq(service.id, serviceId), eq(service.userId, userId)))
-		.limit(1);
-	return row ?? null;
 }
 
 export const load: PageServerLoad = async ({ locals }) => {

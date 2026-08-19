@@ -4,12 +4,14 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, bearer, genericOAuth, openAPI } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
+import { eq } from "drizzle-orm";
 import { building, dev } from "$app/environment";
 import { getRequestEvent } from "$app/server";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import * as schema from "$lib/server/db/schema";
+import { removeContainer } from "$lib/server/docker/service";
 import { Email } from "$lib/server/email";
 
 if (!process.env.ORIGIN && !dev && !building) {
@@ -66,6 +68,41 @@ export const auth = betterAuth({
 				content: `Click the link to verify your email: ${fullUrl.toString()}`,
 			});
 			await email.send();
+		},
+	},
+	user: {
+		deleteUser: {
+			enabled: true,
+			// better-auth's own internalAdapter.deleteUser only cleans up its
+			// own session/account rows — it has no knowledge of our
+			// service/deployment tables, and PRAGMA foreign_keys is never
+			// enabled on the sqlite connection, so onDelete:cascade in the
+			// schema is inert. Worse, leaving this out would leak running
+			// Docker containers on the host. Clean up explicitly, before the
+			// user row (and better-auth's cascade of it) goes away.
+			beforeDelete: async (user) => {
+				const services = await db
+					.select()
+					.from(schema.service)
+					.where(eq(schema.service.userId, user.id));
+
+				for (const svc of services) {
+					if (svc.containerId) {
+						try {
+							await removeContainer(svc.containerId, { force: true });
+						} catch {
+							// Already gone on the host — fine, keep cleaning up.
+						}
+					}
+				}
+
+				await db
+					.delete(schema.deployment)
+					.where(eq(schema.deployment.userId, user.id));
+				await db
+					.delete(schema.service)
+					.where(eq(schema.service.userId, user.id));
+			},
 		},
 	},
 	plugins: [

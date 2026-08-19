@@ -61,7 +61,7 @@
 	}
 </script>
 
-<!-- Fills the viewport below the fixed global navbar (h-16 = 4 rem) -->
+<!-- Fills the full viewport — there's no global navbar above this. -->
 <div class="bg-bg flex h-screen overflow-hidden">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
   <aside
@@ -138,7 +138,7 @@
 
     <div
       transition:fly={{ x: -280, duration: 240, opacity: 1 }}
-      class="border-border bg-surface fixed top-16 left-0 z-50 flex h-[calc(100vh-4rem)] w-72 flex-col border-r shadow-2xl md:hidden"
+      class="border-border bg-surface fixed top-0 left-0 z-50 flex h-screen w-72 flex-col border-r shadow-2xl md:hidden"
     >
       <nav class="flex-1 overflow-y-auto p-3 pt-4">
         <p
