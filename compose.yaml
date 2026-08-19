@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    volumes:
+      - db:/var/lib/postgresql
+    environment:
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE-mods-parts}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD-postgres}
+      - POSTGRES_USER=${POSTGRES_USER-postgres}
+      - TZ=${TZ-Europe/Paris}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db: {}
