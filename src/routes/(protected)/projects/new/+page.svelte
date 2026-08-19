@@ -15,6 +15,29 @@
   const label = "block mb-1.5 text-sm font-medium text-text";
 
   let submitting = $state(false);
+  let name = $state("");
+  let slug = $state("");
+  let slugTouched = $state(false);
+
+  function slugify(value: string): string {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 63);
+  }
+
+  function onNameInput() {
+    if (!slugTouched) {
+      slug = slugify(name);
+    }
+  }
+
+  function onSlugInput() {
+    slugTouched = true;
+  }
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
@@ -56,10 +79,33 @@
         class={input}
         id="name"
         name="name"
+        oninput={onNameInput}
         placeholder="e.g. Marketing site"
         required
         type="text"
+        bind:value={name}
       >
+    </div>
+
+    <div>
+      <label class={label} for="slug">
+        Slug <span class="text-red-500">*</span>
+      </label>
+      <input
+        class="{input} font-mono"
+        id="slug"
+        name="slug"
+        oninput={onSlugInput}
+        pattern={"[a-z0-9-]{1,63}"}
+        placeholder="marketing-site"
+        required
+        type="text"
+        bind:value={slug}
+      >
+      <p class="mt-1.5 text-xs text-text-subtle">
+        Prefixes every member service's container name and subdomain (e.g.
+        <code>{slug || "slug"}-my-service.example.com</code>).
+      </p>
     </div>
 
     <div>

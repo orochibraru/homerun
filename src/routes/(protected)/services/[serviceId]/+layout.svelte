@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    AlertTriangle,
     ArrowLeft,
     FileText,
     HardDrive,
@@ -14,6 +15,9 @@
   const { data, children } = $props();
 
   const svc = $derived(data.service);
+  const publicHost = $derived(
+    data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug
+  );
 
   const tabs = $derived([
     {
@@ -39,6 +43,12 @@
       href: resolve("/services/[serviceId]/volumes", { serviceId: svc.id }),
       icon: HardDrive,
       label: "Volumes",
+    },
+    {
+      exact: false,
+      href: resolve("/services/[serviceId]/errors", { serviceId: svc.id }),
+      icon: AlertTriangle,
+      label: "Errors",
     },
     {
       exact: false,
@@ -73,7 +83,11 @@
   <p class="-mt-4 mb-6 text-sm text-text-muted">
     {svc.image}:{svc.tag}
     ·
-    <span class="text-accent">{svc.slug}.{data.baseDomain}</span>
+    {#if svc.dnsResolvable}
+      <span class="text-accent">{publicHost}.{data.baseDomain}</span>
+    {:else}
+      <span class="text-text-subtle">not publicly routed</span>
+    {/if}
     {#if svc.containerId}
       · internal:
       <span class="font-mono text-text-subtle"

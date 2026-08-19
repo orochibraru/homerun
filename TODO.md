@@ -22,8 +22,8 @@
 - [x] Containers in the same project share a network/subnetwork by default (unless isolated deployment is requested, in which case the project gets its own independent network); creating a project/group/folder creates its subnetwork
 - [x] When a service deploys, print its hostname and port so other services on the same network can reach it
 - [x] Add ability to move a service into or out of a project
-- [ ] Prefix every container name (and domain/subdomain) created from a project with the project name
-- [ ] Add a flag to mark an app as DNS-resolvable vs. subnet-only
+- [x] Prefix every container name (and domain/subdomain) created from a project with the project name
+- [x] Add a flag to mark an app as DNS-resolvable vs. subnet-only
 - [ ] Add a new service tab called "Networking" in which we'll control SSL, DNS, Port mapping
 
 ## Storage & Volumes
@@ -38,9 +38,9 @@
 
 ## Observability & Monitoring
 
-- [ ] Error-catching service: an "Errors" tab per service showing error count, details, timestamps, and the corresponding log
-- [ ] Show system stats: CPU, RAM, GPU, and disk usage
-- [ ] Ability to view logs from core services (the LocalRun server itself, Traefik)
+- [x] Error-catching service: an "Errors" tab per service showing error count, details, timestamps, and the corresponding log
+- [x] Show system stats: CPU, RAM, GPU, and disk usage
+- [x] Ability to view logs from core services (the LocalRun server itself, Traefik)
 
 ## Security & Access Control
 
@@ -63,3 +63,4 @@
 ## Chores
 
 - [x] Fix all Biome errors
+- [ ] `beforeDelete` in `src/lib/server/auth.ts` cleans up a deleted user's services/containers but not their `project` rows — orphaned projects survive account deletion (found while testing project-slug prefixing). Not urgent (FK pragma is off, so it's just clutter, not a leak), but should get the same explicit-cascade treatment as services.

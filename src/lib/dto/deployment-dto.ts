@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type Deployment, deployment, service } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -44,6 +44,25 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
       .select()
       .from(deployment)
       .where(eq(deployment.serviceId, serviceId))
+      .orderBy(desc(deployment.createdAt))
+      .limit(limit);
+    return rows.map((row) => new DeploymentDTO(row));
+  }
+
+  /** Every failed deployment attempt for a service, newest first — for the Errors tab. */
+  static async listFailedForService(
+    serviceId: string,
+    limit = 50
+  ): Promise<DeploymentDTO[]> {
+    const rows = await db
+      .select()
+      .from(deployment)
+      .where(
+        and(
+          eq(deployment.serviceId, serviceId),
+          eq(deployment.status, "failed")
+        )
+      )
       .orderBy(desc(deployment.createdAt))
       .limit(limit);
     return rows.map((row) => new DeploymentDTO(row));

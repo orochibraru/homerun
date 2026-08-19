@@ -7,6 +7,7 @@ import { BaseDTO } from "./base-dto";
 export interface NewServiceInput {
   containerPort: number;
   cpuLimit?: string | null;
+  dnsResolvable?: boolean;
   envVars: Record<string, string>;
   image: string;
   memoryLimitMb?: number | null;
@@ -30,6 +31,7 @@ export type ServiceUpdateInput = Partial<
     | "cpuLimit"
     | "currentStatus"
     | "desiredState"
+    | "dnsResolvable"
     | "envVars"
     | "image"
     | "memoryLimitMb"
@@ -123,6 +125,7 @@ export class ServiceDTO extends BaseDTO<Service> {
       createdAt: now,
       currentStatus: "pending",
       desiredState: "stopped",
+      dnsResolvable: input.dnsResolvable ?? true,
       envVars: input.envVars,
       id: crypto.randomUUID(),
       image: input.image,
@@ -204,5 +207,8 @@ export class ServiceDTO extends BaseDTO<Service> {
   }
   get projectId(): string | null {
     return this.row.projectId;
+  }
+  get dnsResolvable(): boolean {
+    return this.row.dnsResolvable;
   }
 }

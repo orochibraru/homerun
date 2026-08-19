@@ -124,6 +124,7 @@ export const actions = {
     }
 
     await svc.update({
+      dnsResolvable: input.dnsResolvable,
       image: input.image,
       name: input.name,
       registryUrl: input.registryUrl || null,

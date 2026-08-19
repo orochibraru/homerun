@@ -7,6 +7,7 @@
     LayoutGrid,
     LogOut,
     Menu,
+    ScrollText,
     Server,
     Settings,
     X,
@@ -51,6 +52,12 @@
       href: resolve("/storage"),
       icon: HardDrive,
       label: "Storage",
+    },
+    {
+      exact: false,
+      href: resolve("/system-logs"),
+      icon: ScrollText,
+      label: "System Logs",
     },
   ];
 

@@ -300,6 +300,26 @@
             <p class={errorClass}>{errors.containerPort[0]}</p>
           {/if}
         </div>
+
+        <label class="flex items-start gap-2.5">
+          <input
+            checked={values?.dnsResolvable !== "off" &&
+              values?.dnsResolvable !== "false"}
+            class="mt-0.5"
+            name="dnsResolvable"
+            type="checkbox"
+          >
+          <span>
+            <span class="block text-sm font-medium text-text">
+              DNS-resolvable
+            </span>
+            <span class="block text-xs text-text-muted">
+              Get a public <span class="font-mono">slug.{data.baseDomain}</span>
+              route. Turn off to keep this service reachable only from other
+              services on the same network.
+            </span>
+          </span>
+        </label>
       </div>
     </section>
 

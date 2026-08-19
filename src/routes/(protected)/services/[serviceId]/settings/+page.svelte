@@ -31,6 +31,7 @@
     (form?.values as Record<string, string> | undefined) ?? {
       containerPort: String(svc.containerPort),
       cpuLimit: svc.cpuLimit ?? "",
+      dnsResolvable: svc.dnsResolvable ? "on" : "",
       image: svc.image,
       memoryLimitMb: svc.memoryLimitMb ? String(svc.memoryLimitMb) : "",
       name: svc.name,
@@ -223,6 +224,26 @@
           <p class={errorClass}>{errors.containerPort[0]}</p>
         {/if}
       </div>
+
+      <label class="flex items-start gap-2.5">
+        <input
+          checked={values.dnsResolvable === "on"}
+          class="mt-0.5"
+          name="dnsResolvable"
+          type="checkbox"
+        >
+        <span>
+          <span class="block text-sm font-medium text-text">
+            DNS-resolvable
+          </span>
+          <span class="block text-xs text-text-muted">
+            Get a public
+            <span class="font-mono">{values.slug}.{data.baseDomain}</span>
+            route. Turn off to keep this service reachable only from other
+            services on the same network. Takes effect on the next deploy.
+          </span>
+        </span>
+      </label>
 
       <div>
         <label class={label} for="restartPolicy">Restart policy</label>

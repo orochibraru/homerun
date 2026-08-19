@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import {
   deployment,
@@ -17,10 +17,13 @@ import { ServiceDTO } from "./service-dto";
 export interface NewProjectInput {
   description?: string | null;
   name: string;
+  slug: string;
   userId: string;
 }
 
-export type ProjectUpdateInput = Partial<Pick<Project, "description" | "name">>;
+export type ProjectUpdateInput = Partial<
+  Pick<Project, "description" | "name" | "slug">
+>;
 
 /** Wraps the `project` table — see ServiceDTO for the pattern this follows. */
 export class ProjectDTO extends BaseDTO<Project> {
@@ -62,6 +65,15 @@ export class ProjectDTO extends BaseDTO<Project> {
     }));
   }
 
+  /** Whether `slug` is already taken by a *different* project (for uniqueness checks on create/update). */
+  static async slugTaken(slug: string, excludeId?: string): Promise<boolean> {
+    const where = excludeId
+      ? and(eq(project.slug, slug), ne(project.id, excludeId))
+      : eq(project.slug, slug);
+    const [row] = await db.select().from(project).where(where).limit(1);
+    return Boolean(row);
+  }
+
   static async create(input: NewProjectInput): Promise<ProjectDTO> {
     const now = new Date();
     const row: Project = {
@@ -69,6 +81,7 @@ export class ProjectDTO extends BaseDTO<Project> {
       description: input.description ?? null,
       id: crypto.randomUUID(),
       name: input.name,
+      slug: input.slug,
       updatedAt: now,
       userId: input.userId,
     };
@@ -134,5 +147,8 @@ export class ProjectDTO extends BaseDTO<Project> {
   }
   get description(): string | null {
     return this.row.description;
+  }
+  get slug(): string {
+    return this.row.slug;
   }
 }

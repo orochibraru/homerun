@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { Logger } from "$lib/logger";
@@ -60,15 +61,20 @@ export const actions = {
       await svc.update({ currentStatus: "starting" });
 
       const mounts = await ServiceVolumeDTO.listForService(svc.id);
+      const project = svc.projectId
+        ? await ProjectDTO.get(svc.projectId, locals.user.id)
+        : null;
 
       const { containerId } = await createAndStartContainer(
         {
           containerPort: svc.containerPort,
           cpuLimit: svc.cpuLimit,
+          dnsResolvable: svc.dnsResolvable,
           envVars: svc.envVars ?? {},
           image: svc.image,
           memoryLimitMb: svc.memoryLimitMb,
           projectId: svc.projectId,
+          projectSlug: project?.slug,
           restartPolicy: svc.restartPolicy,
           serviceId: svc.id,
           slug: svc.slug,

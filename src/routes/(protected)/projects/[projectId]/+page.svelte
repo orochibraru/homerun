@@ -99,6 +99,14 @@
         <p class="text-sm text-red-500">{form.error}</p>
       {/if}
       <input class={input} name="name" required type="text" value={proj.name}>
+      <input
+        class="{input} font-mono"
+        name="slug"
+        pattern={"[a-z0-9-]{1,63}"}
+        required
+        type="text"
+        value={proj.slug}
+      >
       <textarea class="{input} resize-none" name="description" rows="2">
         {proj.description ?? ""}
       </textarea>

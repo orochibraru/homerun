@@ -68,6 +68,7 @@ export const actions = {
     const svc = await ServiceDTO.create({
       containerPort: input.containerPort,
       cpuLimit: input.cpuLimit || null,
+      dnsResolvable: input.dnsResolvable,
       envVars: parseEnvVars(formData),
       image: input.image,
       memoryLimitMb: input.memoryLimitMb ?? null,

@@ -28,9 +28,10 @@ export interface RegistryAuth {
  * `localrun.service.id` label, not by name, since names are no longer
  * stable across deploys.
  */
-function containerName(slug: string): string {
+function containerName(slug: string, projectSlug?: string | null): string {
   const suffix = crypto.randomUUID().slice(0, 8);
-  return `localrun-${slug}-${suffix}`;
+  const prefix = projectSlug ? `${projectSlug}-` : "";
+  return `localrun-${prefix}${slug}-${suffix}`;
 }
 
 /** The currently-running (or last) container for a service, if any — found by label, not name. */
@@ -128,6 +129,9 @@ export interface VolumeMountParams {
 export interface CreateContainerParams {
   containerPort: number;
   cpuLimit?: string | null;
+  // When false, the container gets no Traefik labels at all — no public
+  // <slug>.<baseDomain>, subnet-only reachability. Defaults to true.
+  dnsResolvable?: boolean;
   envVars: Record<string, string>;
   image: string;
   memoryLimitMb?: number | null;
@@ -135,6 +139,9 @@ export interface CreateContainerParams {
   // (see docker/networks.ts) — lets sibling services in the same project
   // reach it, in addition to the shared Traefik network below.
   projectId?: string | null;
+  // Prefixes the container name and public subdomain when the service
+  // belongs to a project (e.g. "<projectSlug>-<slug>.<baseDomain>").
+  projectSlug?: string | null;
   restartPolicy: string;
   serviceId: string;
   slug: string;
@@ -156,7 +163,7 @@ export async function createAndStartContainer(
   onProgress?: (line: string) => void
 ): Promise<{ containerId: string }> {
   const docker = getDocker();
-  const name = containerName(params.slug);
+  const name = containerName(params.slug, params.projectSlug);
 
   // Replace any previous container for this service (redeploy), found by
   // its service-id label rather than by name (see containerName above).
@@ -208,6 +215,8 @@ export async function createAndStartContainer(
     Image: `${params.image}:${params.tag}`,
     Labels: buildContainerLabels({
       containerPort: params.containerPort,
+      dnsResolvable: params.dnsResolvable,
+      projectSlug: params.projectSlug,
       serviceId: params.serviceId,
       slug: params.slug,
     }),

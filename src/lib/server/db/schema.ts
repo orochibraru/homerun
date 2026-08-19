@@ -163,6 +163,10 @@ export const project = sqliteTable(
     description: text("description"),
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    // DNS-safe prefix applied to every member service's container name and
+    // subdomain (e.g. "<projectSlug>-<serviceSlug>.<baseDomain>") — see
+    // docker/service.ts's containerName() and docker/labels.ts.
+    slug: text("slug").notNull().unique(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .$onUpdate(() => new Date())
       .notNull(),
@@ -218,6 +222,13 @@ export const service = sqliteTable(
     desiredState: text("desired_state")
       .$type<"running" | "stopped">()
       .default("stopped")
+      .notNull(),
+    // When false, no Traefik router/service labels are attached at deploy
+    // time — the container never gets a public <slug>.<baseDomain>, only
+    // reachable over the internal network(s) it's attached to (the shared
+    // network by slug alias, plus its project's network if any).
+    dnsResolvable: integer("dns_resolvable", { mode: "boolean" })
+      .default(true)
       .notNull(),
     envVars: text("env_vars", { mode: "json" })
       .$type<Record<string, string>>()

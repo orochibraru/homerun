@@ -17,6 +17,12 @@ export const createServiceSchema = z.object({
     .min(1)
     .max(65_535),
   cpuLimit: z.string().optional(),
+  // Checkbox convention: present ("on") when checked, absent from
+  // FormData entirely when unchecked — never a literal "false" to coerce.
+  dnsResolvable: z.preprocess(
+    (val) => val === "on" || val === true,
+    z.boolean()
+  ),
   image: z.string().min(1, "Image is required."),
   memoryLimitMb: optionalNumber(z.coerce.number().int().positive()),
   name: z.string().min(1, "Name is required.").max(100),
