@@ -1,4 +1,4 @@
-# Local Run
+# Homerun
 
 A self-hosted, single-user PaaS for deploying Docker containers with a click-config form — a minimal Dokploy/Cloud-Run alternative. Point at an image, fill in env vars/port/resources, deploy — Traefik auto-routes it to `<slug>.<baseDomain>` with TLS.
 
