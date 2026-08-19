@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Container, Lock, Server, Zap } from "@lucide/svelte";
-	import { resolve } from "$app/paths";
+  import { Container, Lock, Server, Zap } from "@lucide/svelte";
+  import { resolve } from "$app/paths";
 </script>
 
 <div
@@ -28,8 +28,8 @@
   <div class="relative z-10 flex h-full flex-col justify-between p-10 xl:p-14">
     <!-- Logo -->
     <a
-      href={resolve("/")}
       class="inline-flex items-center gap-1.5 text-lg font-bold text-white"
+      href={resolve("/")}
     >
       <Server class="text-accent size-5" />
       <span>Local</span><span class="text-accent">Run</span>
@@ -45,7 +45,7 @@
       </div>
 
       <h1 class="mb-4 text-4xl leading-tight font-bold text-white xl:text-5xl">
-        Deploy containers.<br />
+        Deploy containers.<br>
         <span
           class="bg-linear-to-r from-violet-400 to-purple-300 bg-clip-text text-transparent"
         >
@@ -83,8 +83,8 @@
       <p class="mb-1 text-sm font-medium text-white">How it works</p>
       <p class="text-sm leading-relaxed text-zinc-400">
         Image + tag → env vars & port → deploy. Traefik routes
-        <span class="text-accent">your-service.yourdomain</span> straight to the
-        container, TLS included.
+        <span class="text-accent">your-service.yourdomain</span>
+        straight to the container, TLS included.
       </p>
     </div>
   </div>

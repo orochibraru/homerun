@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { onMount } from "svelte";
-	import { dev } from "$app/environment";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
-	import { Button } from "$lib/components/ui/button";
-	import { title } from "$lib/store/title";
-	import { cn } from "$lib/utils";
+  import { onMount } from "svelte";
+  import { dev } from "$app/environment";
+  import { resolve } from "$app/paths";
+  import { page } from "$app/state";
+  import { Button } from "$lib/components/ui/button";
+  import { title } from "$lib/store/title";
+  import { cn } from "$lib/utils";
 
-	type Props = {
-		normalHeight: boolean;
-	};
+  type Props = {
+    normalHeight: boolean;
+  };
 
-	const { normalHeight = false }: Props = $props();
+  const { normalHeight = false }: Props = $props();
 
-	onMount(() => {
-		$title = "Error";
-	});
+  onMount(() => {
+    $title = "Error";
+  });
 </script>
 
 <div

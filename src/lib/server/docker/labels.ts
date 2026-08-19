@@ -10,27 +10,27 @@ export const MANAGED_LABEL = "localrun.managed";
 export const SERVICE_ID_LABEL = "localrun.service.id";
 
 export function buildContainerLabels(params: {
-	serviceId: string;
-	slug: string;
-	containerPort: number;
+  serviceId: string;
+  slug: string;
+  containerPort: number;
 }): Record<string, string> {
-	const { serviceId, slug, containerPort } = params;
+  const { serviceId, slug, containerPort } = params;
 
-	return {
-		[MANAGED_LABEL]: "true",
-		[SERVICE_ID_LABEL]: serviceId,
+  return {
+    [MANAGED_LABEL]: "true",
+    [SERVICE_ID_LABEL]: serviceId,
+    "traefik.docker.network": config.docker.networkName,
 
-		// Traefik auto-discovers this container via the Docker provider —
-		// no control-plane push required. See compose.yaml for how Traefik
-		// itself is bootstrapped.
-		"traefik.enable": "true",
-		"traefik.docker.network": config.docker.networkName,
-		[`traefik.http.routers.${slug}.rule`]: `Host(\`${slug}.${config.baseDomain}\`)`,
-		[`traefik.http.routers.${slug}.entrypoints`]: config.traefik.entrypoint,
-		[`traefik.http.routers.${slug}.tls`]: "true",
-		[`traefik.http.routers.${slug}.tls.certresolver`]:
-			config.traefik.certResolver,
-		[`traefik.http.services.${slug}.loadbalancer.server.port`]:
-			String(containerPort),
-	};
+    // Traefik auto-discovers this container via the Docker provider —
+    // no control-plane push required. See compose.yaml for how Traefik
+    // itself is bootstrapped.
+    "traefik.enable": "true",
+    [`traefik.http.routers.${slug}.rule`]: `Host(\`${slug}.${config.baseDomain}\`)`,
+    [`traefik.http.routers.${slug}.entrypoints`]: config.traefik.entrypoint,
+    [`traefik.http.routers.${slug}.tls`]: "true",
+    [`traefik.http.routers.${slug}.tls.certresolver`]:
+      config.traefik.certResolver,
+    [`traefik.http.services.${slug}.loadbalancer.server.port`]:
+      String(containerPort),
+  };
 }

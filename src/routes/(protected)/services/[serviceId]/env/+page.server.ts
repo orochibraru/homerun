@@ -7,21 +7,21 @@ import { ownedService } from "$lib/server/services";
 import { parseEnvVars } from "$lib/server/validation/service";
 
 export const actions = {
-	update: async ({ request, params, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		const svc = await ownedService(params.serviceId, locals.user.id);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
+  update: async ({ request, params, locals }) => {
+    if (!locals.user) {
+      throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const svc = await ownedService(params.serviceId, locals.user.id);
+    if (!svc) {
+      return fail(404, { error: "Service not found." });
+    }
 
-		const formData = await request.formData();
-		await db
-			.update(service)
-			.set({ envVars: parseEnvVars(formData) })
-			.where(eq(service.id, svc.id));
+    const formData = await request.formData();
+    await db
+      .update(service)
+      .set({ envVars: parseEnvVars(formData) })
+      .where(eq(service.id, svc.id));
 
-		return { success: true };
-	},
+    return { success: true };
+  },
 };

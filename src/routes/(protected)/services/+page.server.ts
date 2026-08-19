@@ -6,127 +6,142 @@ import { db } from "$lib/server/db/lib";
 import { service } from "$lib/server/db/schema";
 import { syncAllServiceStatuses } from "$lib/server/docker/reconcile";
 import {
-	removeContainer,
-	restartContainer,
-	startContainer,
-	stopContainer,
+  removeContainer,
+  restartContainer,
+  startContainer,
+  stopContainer,
 } from "$lib/server/docker/service";
 import { ownedService } from "$lib/server/services";
 
 async function loadServices(userId: string) {
-	const rows = await db
-		.select()
-		.from(service)
-		.where(eq(service.userId, userId))
-		.orderBy(desc(service.createdAt));
+  const rows = await db
+    .select()
+    .from(service)
+    .where(eq(service.userId, userId))
+    .orderBy(desc(service.createdAt));
 
-	await syncAllServiceStatuses(
-		rows.filter((r) => r.containerId).map((r) => r.id),
-	);
+  await syncAllServiceStatuses(
+    rows.filter((r) => r.containerId).map((r) => r.id)
+  );
 
-	if (rows.some((r) => r.containerId)) {
-		return db
-			.select()
-			.from(service)
-			.where(eq(service.userId, userId))
-			.orderBy(desc(service.createdAt));
-	}
-	return rows;
+  if (rows.some((r) => r.containerId)) {
+    return db
+      .select()
+      .from(service)
+      .where(eq(service.userId, userId))
+      .orderBy(desc(service.createdAt));
+  }
+  return rows;
 }
 
 export const load = async ({ parent }) => {
-	const { user } = await parent();
-	const services = await loadServices(user.id);
+  const { user } = await parent();
+  const services = await loadServices(user.id);
 
-	return {
-		services,
-		baseDomain: config.baseDomain,
-	};
+  return {
+    baseDomain: config.baseDomain,
+    services,
+  };
 };
 
 export const actions = {
-	start: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		const data = await request.formData();
-		const serviceId = data.get("serviceId") as string | null;
-		if (!serviceId) return fail(400, { error: "Missing service id." });
+  delete: async ({ request, locals }) => {
+    if (!locals.user) {
+      throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const data = await request.formData();
+    const serviceId = data.get("serviceId") as string | null;
+    if (!serviceId) {
+      return fail(400, { error: "Missing service id." });
+    }
 
-		const row = await ownedService(serviceId, locals.user.id);
-		if (!row) return fail(404, { error: "Service not found." });
-		if (!row.containerId) {
-			return fail(400, { error: "This service hasn't been deployed yet." });
-		}
+    const row = await ownedService(serviceId, locals.user.id);
+    if (!row) {
+      return fail(404, { error: "Service not found." });
+    }
 
-		await startContainer(row.containerId);
-		await db
-			.update(service)
-			.set({ desiredState: "running" })
-			.where(eq(service.id, serviceId));
-		return { success: true };
-	},
+    if (row.containerId) {
+      try {
+        await removeContainer(row.containerId, { force: true });
+      } catch {
+        // Container may already be gone on the host — proceed with
+        // deleting our record regardless.
+      }
+    }
+    await db.delete(service).where(eq(service.id, serviceId));
+    return { success: true };
+  },
 
-	stop: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		const data = await request.formData();
-		const serviceId = data.get("serviceId") as string | null;
-		if (!serviceId) return fail(400, { error: "Missing service id." });
+  restart: async ({ request, locals }) => {
+    if (!locals.user) {
+      throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const data = await request.formData();
+    const serviceId = data.get("serviceId") as string | null;
+    if (!serviceId) {
+      return fail(400, { error: "Missing service id." });
+    }
 
-		const row = await ownedService(serviceId, locals.user.id);
-		if (!row) return fail(404, { error: "Service not found." });
-		if (!row.containerId) {
-			return fail(400, { error: "This service hasn't been deployed yet." });
-		}
+    const row = await ownedService(serviceId, locals.user.id);
+    if (!row) {
+      return fail(404, { error: "Service not found." });
+    }
+    if (!row.containerId) {
+      return fail(400, { error: "This service hasn't been deployed yet." });
+    }
 
-		await stopContainer(row.containerId);
-		await db
-			.update(service)
-			.set({ desiredState: "stopped" })
-			.where(eq(service.id, serviceId));
-		return { success: true };
-	},
+    await restartContainer(row.containerId);
+    return { success: true };
+  },
+  start: async ({ request, locals }) => {
+    if (!locals.user) {
+      throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const data = await request.formData();
+    const serviceId = data.get("serviceId") as string | null;
+    if (!serviceId) {
+      return fail(400, { error: "Missing service id." });
+    }
 
-	restart: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		const data = await request.formData();
-		const serviceId = data.get("serviceId") as string | null;
-		if (!serviceId) return fail(400, { error: "Missing service id." });
+    const row = await ownedService(serviceId, locals.user.id);
+    if (!row) {
+      return fail(404, { error: "Service not found." });
+    }
+    if (!row.containerId) {
+      return fail(400, { error: "This service hasn't been deployed yet." });
+    }
 
-		const row = await ownedService(serviceId, locals.user.id);
-		if (!row) return fail(404, { error: "Service not found." });
-		if (!row.containerId) {
-			return fail(400, { error: "This service hasn't been deployed yet." });
-		}
+    await startContainer(row.containerId);
+    await db
+      .update(service)
+      .set({ desiredState: "running" })
+      .where(eq(service.id, serviceId));
+    return { success: true };
+  },
 
-		await restartContainer(row.containerId);
-		return { success: true };
-	},
+  stop: async ({ request, locals }) => {
+    if (!locals.user) {
+      throw redirect(302, resolve("/auth/sign-in"));
+    }
+    const data = await request.formData();
+    const serviceId = data.get("serviceId") as string | null;
+    if (!serviceId) {
+      return fail(400, { error: "Missing service id." });
+    }
 
-	delete: async ({ request, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		const data = await request.formData();
-		const serviceId = data.get("serviceId") as string | null;
-		if (!serviceId) return fail(400, { error: "Missing service id." });
+    const row = await ownedService(serviceId, locals.user.id);
+    if (!row) {
+      return fail(404, { error: "Service not found." });
+    }
+    if (!row.containerId) {
+      return fail(400, { error: "This service hasn't been deployed yet." });
+    }
 
-		const row = await ownedService(serviceId, locals.user.id);
-		if (!row) return fail(404, { error: "Service not found." });
-
-		if (row.containerId) {
-			try {
-				await removeContainer(row.containerId, { force: true });
-			} catch {
-				// Container may already be gone on the host — proceed with
-				// deleting our record regardless.
-			}
-		}
-		await db.delete(service).where(eq(service.id, serviceId));
-		return { success: true };
-	},
+    await stopContainer(row.containerId);
+    await db
+      .update(service)
+      .set({ desiredState: "stopped" })
+      .where(eq(service.id, serviceId));
+    return { success: true };
+  },
 };

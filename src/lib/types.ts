@@ -3,9 +3,9 @@
 // (SvelteKit blocks it) — so status-adjacent types that both server logic
 // and UI components need live here instead.
 export type ContainerStatus =
-	| "pending"
-	| "pulling"
-	| "starting"
-	| "running"
-	| "stopped"
-	| "failed";
+  | "pending"
+  | "pulling"
+  | "starting"
+  | "running"
+  | "stopped"
+  | "failed";

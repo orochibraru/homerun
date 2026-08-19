@@ -1,54 +1,54 @@
 <script lang="ts">
-	import { Eye, EyeOff, Loader2, Server } from "@lucide/svelte";
-	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
-	import { dev } from "$app/environment";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { signIn, useSession } from "$lib/auth-client";
-	import AuthBrandingPanel from "$lib/components/auth-branding-panel.svelte";
-	import { title } from "$lib/store/title";
+  import { Eye, EyeOff, Loader2, Server } from "@lucide/svelte";
+  import { onMount } from "svelte";
+  import { toast } from "svelte-sonner";
+  import { dev } from "$app/environment";
+  import { goto } from "$app/navigation";
+  import { resolve } from "$app/paths";
+  import { signIn, useSession } from "$lib/auth-client";
+  import AuthBrandingPanel from "$lib/components/auth-branding-panel.svelte";
+  import { title } from "$lib/store/title";
 
-	const session = useSession();
+  const session = useSession();
 
-	// Redirect if already logged in
-	$effect(() => {
-		if (!$session.isPending && $session.data?.user) {
-			goto(resolve("/"));
-		}
-	});
+  // Redirect if already logged in
+  $effect(() => {
+    if (!$session.isPending && $session.data?.user) {
+      goto(resolve("/"));
+    }
+  });
 
-	onMount(() => title.set("Sign In"));
+  onMount(() => title.set("Sign In"));
 
-	let email = $state("");
-	let password = $state("");
-	let loading = $state(false);
-	let showPassword = $state(false);
+  let email = $state("");
+  let password = $state("");
+  let loading = $state(false);
+  let showPassword = $state(false);
 
-	const inputClass =
-		"w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+  const inputClass =
+    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
-	async function handleSignIn(e: SubmitEvent) {
-		e.preventDefault();
-		loading = true;
-		try {
-			const { data, error } = await signIn.email({ email, password });
-			if (error) {
-				toast.error(error.message ?? "Invalid credentials. Please try again.");
-				return;
-			}
-			// In production, block unverified accounts from accessing the dashboard
-			if (!(data?.user?.emailVerified || dev)) {
-				goto(resolve("/auth/sign-up/confirm"));
-				return;
-			}
-			goto(resolve("/"));
-		} catch {
-			toast.error("An unexpected error occurred. Please try again.");
-		} finally {
-			loading = false;
-		}
-	}
+  async function handleSignIn(e: SubmitEvent) {
+    e.preventDefault();
+    loading = true;
+    try {
+      const { data, error } = await signIn.email({ email, password });
+      if (error) {
+        toast.error(error.message ?? "Invalid credentials. Please try again.");
+        return;
+      }
+      // In production, block unverified accounts from accessing the dashboard
+      if (!(data?.user?.emailVerified || dev)) {
+        goto(resolve("/auth/sign-up/confirm"));
+        return;
+      }
+      goto(resolve("/"));
+    } catch {
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      loading = false;
+    }
+  }
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
@@ -61,12 +61,11 @@
     <!-- Mobile-only logo -->
     <div class="mb-8 text-center lg:hidden">
       <a
-        href={resolve("/")}
         class="inline-flex items-center gap-1.5 text-xl font-bold"
+        href={resolve("/")}
       >
         <Server class="text-accent size-5" />
-        <span class="text-text">Local</span><span class="text-accent">Run</span
-        >
+        <span class="text-text">Local</span><span class="text-accent">Run</span>
       </a>
       <p class="text-text-muted mt-1 text-sm">
         Deploy containers to your own server.
@@ -82,47 +81,47 @@
         </p>
       </div>
 
-      <form onsubmit={handleSignIn} class="space-y-5" novalidate>
+      <form class="space-y-5" novalidate onsubmit={handleSignIn}>
         <!-- Email -->
         <div>
-          <label for="email" class="text-text mb-1.5 block text-sm font-medium">
+          <label class="text-text mb-1.5 block text-sm font-medium" for="email">
             Email
           </label>
           <input
+            autocomplete="email"
+            class={inputClass}
+            disabled={loading}
             id="email"
+            placeholder="you@example.com"
+            required
             type="email"
             bind:value={email}
-            placeholder="you@example.com"
-            autocomplete="email"
-            required
-            disabled={loading}
-            class={inputClass}
-          />
+          >
         </div>
 
         <!-- Password -->
         <div>
           <div class="mb-1.5 flex items-center justify-between">
-            <label for="password" class="text-text text-sm font-medium">
+            <label class="text-text text-sm font-medium" for="password">
               Password
             </label>
           </div>
           <div class="relative">
             <input
+              autocomplete="current-password"
+              class="{inputClass} pr-12"
+              disabled={loading}
               id="password"
+              placeholder="••••••••••••"
+              required
               type={showPassword ? "text" : "password"}
               bind:value={password}
-              placeholder="••••••••••••"
-              autocomplete="current-password"
-              required
-              disabled={loading}
-              class="{inputClass} pr-12"
-            />
+            >
             <button
-              type="button"
-              onclick={() => (showPassword = !showPassword)}
-              class="text-text-muted hover:text-text absolute top-1/2 right-3.5 -translate-y-1/2 transition-colors"
               aria-label={showPassword ? "Hide password" : "Show password"}
+              class="text-text-muted hover:text-text absolute top-1/2 right-3.5 -translate-y-1/2 transition-colors"
+              onclick={() => (showPassword = !showPassword)}
+              type="button"
             >
               {#if showPassword}
                 <EyeOff class="size-4" />
@@ -135,9 +134,9 @@
 
         <!-- Submit -->
         <button
-          type="submit"
-          disabled={loading || !email || !password}
           class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={loading || !email || !password}
+          type="submit"
         >
           {#if loading}
             <Loader2 class="size-4 animate-spin" />
@@ -152,8 +151,8 @@
       <p class="mt-6 text-center text-sm text-[var(--color-text-muted)]">
         Don't have an account?
         <a
-          href={resolve("/auth/sign-up")}
           class="text-accent font-medium hover:underline"
+          href={resolve("/auth/sign-up")}
         >
           Create one free
         </a>
