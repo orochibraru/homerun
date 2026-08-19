@@ -58,3 +58,7 @@
 ## UI
 
 - [ ] Componentize UI elements to ensure UI/UX consistency across the app and proper DevEx
+
+## Chores
+
+- [ ] Fix all Biome errors
