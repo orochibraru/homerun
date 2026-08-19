@@ -1,12 +1,14 @@
 #!/bin/sh
 # ultracite
 # Check if there are any staged files
+echo "Registering staged files..."
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
 if [ -z "$STAGED_FILES" ]; then
   echo "No staged files to format"
   exit 0
 fi
 
+echo "Formatting/linting staged files..."
 # Run formatter, capturing the exit code so we can still re-stage and report
 FORMAT_EXIT_CODE=0
 bun x ultracite fix || FORMAT_EXIT_CODE=$?
@@ -14,6 +16,7 @@ bun x ultracite fix || FORMAT_EXIT_CODE=$?
 # Re-stage files that were already staged
 echo "$STAGED_FILES" | while IFS= read -r file; do
   if [ -f "$file" ]; then
+    echo "Staging modified changes for '$file'"
     git add -- "$file"
   fi
 done
