@@ -41,16 +41,12 @@
   --color-border: #e0e0e8;
   --color-border-light: #d0d0d8;
 
-  --color-accent-light: rgba(124, 58, 237, 0.08);
-  --color-accent-glow: rgba(124, 58, 237, 0.18);
-
-  --color-e85-light: rgba(34, 197, 94, 0.08);
-  --color-e85-glow: rgba(34, 197, 94, 0.18);
+  --color-accent-light: rgba(58, 165, 237, 0.08);
+  --color-accent-glow: rgba(58, 127, 237, 0.18);
 
   --color-text: #0f0f11;
   --color-text-muted: #4a4a58;
   --color-text-subtle: #6e6e74;
-  --color-e85-text: #15803d;
 
   --color-nav-scrolled: rgba(248, 248, 248, 0.92);
 
@@ -128,16 +124,12 @@
   --color-border: #2e2e36;
   --color-border-light: #3f3f46;
 
-  --color-accent-light: rgba(124, 58, 237, 0.12);
-  --color-accent-glow: rgba(124, 58, 237, 0.25);
-
-  --color-e85-light: rgba(34, 197, 94, 0.1);
-  --color-e85-glow: rgba(34, 197, 94, 0.25);
+  --color-accent-light: rgba(58, 204, 237, 0.12);
+  --color-accent-glow: rgba(58, 133, 237, 0.25);
 
   --color-text: #fafafa;
   --color-text-muted: #a1a1aa;
   --color-text-subtle: #94949a;
-  --color-e85-text: #4ade80;
 
   --color-nav-scrolled: rgba(9, 9, 11, 0.88);
 
@@ -207,13 +199,10 @@
 /* ─── Tailwind theme ─────────────────────────────────────────── */
 /* Static values (never change between themes) */
 @theme {
-  --font-sans: 'Inter Variable', sans-serif;
+  --font-sans: "Inter Variable", sans-serif;
 
-  --color-accent: #7c3aed;
-  --color-accent-dark: #6d28d9;
-
-  --color-e85: #22c55e;
-  --color-e85-dark: #16a34a;
+  --color-accent: #0b65c0;
+  --color-accent-dark: #0b5cc0;
 
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -304,13 +293,9 @@
   --color-accent-light: var(--color-accent-light);
   --color-accent-glow: var(--color-accent-glow);
 
-  --color-e85-light: var(--color-e85-light);
-  --color-e85-glow: var(--color-e85-glow);
-
   --color-text: var(--color-text);
   --color-text-muted: var(--color-text-muted);
   --color-text-subtle: var(--color-text-subtle);
-  --color-e85-text: var(--color-e85-text);
 
   --color-nav-scrolled: var(--color-nav-scrolled);
 }
@@ -319,7 +304,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-  	@apply font-sans;
+    @apply font-sans;
   }
 
   body {
@@ -327,7 +312,7 @@
     background-color: var(--color-bg);
     color: var(--color-text);
     -webkit-font-smoothing: antialiased;
-  	@apply bg-background text-foreground;
+    @apply bg-background text-foreground;
   }
 
   h1,
@@ -345,7 +330,7 @@
   button {
     cursor: pointer;
   }
-	* {
-		@apply border-border outline-ring/50;
+  * {
+    @apply border-border outline-ring/50;
   }
 }

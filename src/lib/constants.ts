@@ -44,7 +44,8 @@ export const SERVICE_STATUS_CONFIG: Record<
     label: "Starting",
   },
   stopped: {
-    class: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+    class:
+      "bg-orange-100 text-orange-600 dark:bg-orange-800 dark:text-orange-400",
     icon: XCircle,
     label: "Stopped",
   },

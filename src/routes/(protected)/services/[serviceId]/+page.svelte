@@ -154,7 +154,7 @@
     {#if svc.desiredState === "running"}
       <form action="?/stop" method="POST" use:enhance={withPending("stop")}>
         <button
-          class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
+          class="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60 bg-red-600/10 text-red-600 border-red-100"
           disabled={pendingAction !== null}
           type="submit"
         >
@@ -169,7 +169,7 @@
     {:else}
       <form action="?/start" method="POST" use:enhance={withPending("start")}>
         <button
-          class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
+          class="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60 bg-green-600/10 text-green-600 border-green-100"
           disabled={pendingAction !== null}
           type="submit"
         >

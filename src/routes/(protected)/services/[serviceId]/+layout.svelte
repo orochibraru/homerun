@@ -2,6 +2,7 @@
   import {
     ArrowLeft,
     FileText,
+    HardDrive,
     LayoutGrid,
     Settings,
     SlidersHorizontal,
@@ -32,6 +33,12 @@
       href: resolve("/services/[serviceId]/env", { serviceId: svc.id }),
       icon: SlidersHorizontal,
       label: "Env Vars",
+    },
+    {
+      exact: false,
+      href: resolve("/services/[serviceId]/volumes", { serviceId: svc.id }),
+      icon: HardDrive,
+      label: "Volumes",
     },
     {
       exact: false,

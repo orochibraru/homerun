@@ -23,6 +23,7 @@
 - [x] Add ability to move a service into or out of a project
 - [ ] Prefix every container name (and domain/subdomain) created from a project with the project name
 - [ ] Add a flag to mark an app as DNS-resolvable vs. subnet-only
+- [ ] Add a new service tab called "Networking" in which we'll control SSL, DNS, Port mapping
 
 ## Storage & Volumes
 
