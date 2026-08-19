@@ -26,8 +26,8 @@
 
 ## Storage & Volumes
 
-- [ ] Configure volumes per service, or shared volumes per project
-- [ ] Dedicated "Storage" sidebar page to configure storage sources/mount paths for local volumes
+- [x] Configure volumes per service, or shared volumes per project (a volume is "shared" simply by mounting it into more than one service — no separate project-volume concept needed)
+- [x] Dedicated "Storage" sidebar page to configure storage sources/mount paths for local volumes
 - [ ] Auto-backup feature to S3-compatible destinations (like Dokploy)
 
 ## Scheduling & Automation
@@ -48,11 +48,8 @@
 ## Source & Build Integration
 
 - [ ] Add Git providers (including self-hosted, e.g. Gitea) to build apps from a repo source
-
-## Multi-Server / Remote Execution
-
 - [ ] Support remote servers for deployments/builds, to avoid overloading the main server
 
 ## Onboarding
 
-- [ ] Instance settings/onboarding flow when basic settings aren't configured yet (domain name, DNS provider — e.g. Cloudflare, Pangolin, automatable via API for TLS/DNS ops — SSL usage, etc.)
+- [ ] Instance settings/onboarding flow when basic settings aren't configured yet (domain name, DNS provider — e.g. Cloudflare, Pangolin, automatable via API for TLS/DNS ops — SSL usage, etc.), [this project](https://github.com/orochibraru/dokploy-to-pangolin) is a good example

@@ -2,6 +2,7 @@
   import {
     ChevronRight,
     FolderKanban,
+    HardDrive,
     LayoutDashboard,
     LayoutGrid,
     LogOut,
@@ -44,6 +45,12 @@
       href: resolve("/templates"),
       icon: LayoutGrid,
       label: "Templates",
+    },
+    {
+      exact: false,
+      href: resolve("/storage"),
+      icon: HardDrive,
+      label: "Storage",
     },
   ];
 
