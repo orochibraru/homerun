@@ -1,8 +1,10 @@
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ProjectDTO } from "$lib/dto/project-dto";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { Logger } from "$lib/logger";
+import { buildFromGit } from "$lib/server/docker/git-build";
 import {
   buildAuthConfig,
   createAndStartContainer,
@@ -19,18 +21,23 @@ export interface DeployResult {
 }
 
 /**
- * The full pull → create → start pipeline for one service, shared by the
- * service Overview page's deploy action, the REST API's deploy endpoint,
- * and (future) the cron redeploy scheduler — single source of truth so
- * these three trigger points can't drift out of sync.
+ * The full build-or-pull → create → start pipeline for one service,
+ * shared by the service Overview page's deploy action, the REST API's
+ * deploy endpoint, and the cron redeploy scheduler — single source of
+ * truth so these three trigger points can't drift out of sync.
  */
 export async function deployService(
   svc: ServiceDTO,
   userId: string,
   clientDeploymentId?: string | null
 ): Promise<DeployResult> {
+  const isGitBuild = svc.buildSource === "git";
   logger.info(
-    `Deploy started: service=${svc.name} (${svc.id}) image=${svc.image}:${svc.tag} user=${userId}`
+    `Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${
+      isGitBuild
+        ? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
+        : `image=${svc.image}:${svc.tag}`
+    } user=${userId}`
   );
 
   const dep = await DeploymentDTO.create({
@@ -42,17 +49,59 @@ export async function deployService(
   await svc.update({ currentStatus: "pulling" });
 
   try {
-    const auth = buildAuthConfig(svc);
-    const { digest } = await pullImage(svc.image, svc.tag, auth, (line) =>
-      dep.appendLog(line)
-    );
-    logger.info(
-      `Image pulled: ${svc.image}:${svc.tag} digest=${digest ?? "unknown"} service=${svc.id}`
-    );
+    let digest: string | undefined;
+    let { image, tag } = svc;
+
+    const remote = await RemoteHostDTO.connectionFor(svc, userId);
+    // Volumes are host-local — a bind-mount source on this host has no
+    // meaning on a remote daemon, so skip attaching them there rather
+    // than silently create an empty/wrong mount on the remote side.
+    const mounts = remote ? [] : await ServiceVolumeDTO.listForService(svc.id);
+
+    if (isGitBuild) {
+      if (!svc.gitUrl) {
+        throw new Error("No git repository URL configured.");
+      }
+      // A fresh tag per build — same "never reuse a name across deploys"
+      // precedent as container names (service.ts's containerName()), so
+      // a build failure never leaves a stale image masquerading as current.
+      image = `localrun-build-${svc.slug}`;
+      tag = Date.now().toString(36);
+
+      const result = await buildFromGit(
+        {
+          buildContext: svc.gitBuildContext,
+          dockerfilePath: svc.gitDockerfilePath,
+          gitRef: svc.gitRef,
+          gitUrl: svc.gitUrl,
+          remote,
+          tag: `${image}:${tag}`,
+        },
+        (line) => dep.appendLog(line)
+      );
+      if (!result.success) {
+        throw new Error(result.error ?? "Build failed.");
+      }
+      // Persist the resolved tag immediately — createAndStartContainer
+      // below, and any future redeploy that reads svc.image/tag before
+      // this function returns, must see the image that actually exists.
+      await svc.update({ image, tag });
+    } else {
+      const auth = buildAuthConfig(svc);
+      ({ digest } = await pullImage(
+        svc.image,
+        svc.tag,
+        auth,
+        (line) => dep.appendLog(line),
+        remote
+      ));
+      logger.info(
+        `Image pulled: ${svc.image}:${svc.tag} digest=${digest ?? "unknown"} service=${svc.id}`
+      );
+    }
 
     await svc.update({ currentStatus: "starting" });
 
-    const mounts = await ServiceVolumeDTO.listForService(svc.id);
     const project = svc.projectId
       ? await ProjectDTO.get(svc.projectId, userId)
       : null;
@@ -65,14 +114,15 @@ export async function deployService(
         customDomain: svc.customDomain,
         dnsResolvable: svc.dnsResolvable,
         envVars: svc.envVars ?? {},
-        image: svc.image,
+        image,
         memoryLimitMb: svc.memoryLimitMb,
         projectId: svc.projectId,
         projectSlug: project?.slug,
+        remote,
         restartPolicy: svc.restartPolicy,
         serviceId: svc.id,
         slug: svc.slug,
-        tag: svc.tag,
+        tag,
         volumes: mounts.map((m) => ({
           containerPath: m.mount.toJSON().containerPath,
           readOnly: m.mount.toJSON().readOnly,

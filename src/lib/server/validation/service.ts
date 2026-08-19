@@ -10,20 +10,33 @@ const optionalNumber = (schema: z.ZodNumber) =>
     schema.optional()
   );
 
-export const createServiceSchema = z.object({
+const baseServiceSchema = z.object({
+  // Checkbox convention (also used below): present ("on") when checked,
+  // absent from FormData entirely when unchecked — never a literal
+  // "false" to coerce.
+  authRequired: z.preprocess(
+    (val) => val === "on" || val === true,
+    z.boolean()
+  ),
+  // "image" (bring-your-own, the default) | "git" (clone + build a
+  // Dockerfile) — cross-checked against the other git*/image fields below,
+  // since which of those is required depends on this.
+  buildSource: z.enum(["image", "git"]).default("image"),
   containerPort: z.coerce
     .number({ error: "Container port is required." })
     .int()
     .min(1)
     .max(65_535),
   cpuLimit: z.string().optional(),
-  // Checkbox convention: present ("on") when checked, absent from
-  // FormData entirely when unchecked — never a literal "false" to coerce.
   dnsResolvable: z.preprocess(
     (val) => val === "on" || val === true,
     z.boolean()
   ),
-  image: z.string().min(1, "Image is required."),
+  gitBuildContext: z.string().optional(),
+  gitDockerfilePath: z.string().optional(),
+  gitRef: z.string().optional(),
+  gitUrl: z.string().optional(),
+  image: z.string().optional(),
   memoryLimitMb: optionalNumber(z.coerce.number().int().positive()),
   name: z.string().min(1, "Name is required.").max(100),
   registryPassword: z.string().optional(),
@@ -39,8 +52,30 @@ export const createServiceSchema = z.object({
       /^[a-z0-9-]{1,63}$/,
       "Lowercase letters, numbers, and hyphens only."
     ),
-  tag: z.string().min(1).default("latest"),
+  tag: z.string().optional(),
 });
+
+export const createServiceSchema = baseServiceSchema.superRefine(
+  (input, ctx) => {
+    if (input.buildSource === "git") {
+      if (!input.gitUrl) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Git repository URL is required.",
+          path: ["gitUrl"],
+        });
+      }
+      return;
+    }
+    if (!input.image) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Image is required.",
+        path: ["image"],
+      });
+    }
+  }
+);
 
 export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 

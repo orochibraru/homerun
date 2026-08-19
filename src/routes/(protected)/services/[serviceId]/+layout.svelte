@@ -8,6 +8,7 @@
     Network,
     Settings,
     SlidersHorizontal,
+    Terminal,
   } from "@lucide/svelte";
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
@@ -50,6 +51,12 @@
       href: resolve("/services/[serviceId]/networking", { serviceId: svc.id }),
       icon: Network,
       label: "Networking",
+    },
+    {
+      exact: false,
+      href: resolve("/services/[serviceId]/terminal", { serviceId: svc.id }),
+      icon: Terminal,
+      label: "Terminal",
     },
     {
       exact: false,

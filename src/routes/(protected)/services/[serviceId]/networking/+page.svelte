@@ -4,6 +4,10 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import {
+    inputClass as input,
+    labelClass as label,
+  } from "$lib/components/form-styles";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -13,10 +17,6 @@
   );
 
   onMount(() => title.set(`${svc.name} · Networking`));
-
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
-  const label = "block mb-1.5 text-sm font-medium text-text";
 
   let submitting = $state(false);
 </script>
@@ -139,7 +139,7 @@
 
   <!-- ═══ SSL ═══ -->
   <section class="rounded-2xl border border-border bg-surface p-5">
-    <div class="flex items-center gap-3">
+    <div class="mb-4 flex items-center gap-3">
       <div
         class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
       >
@@ -151,14 +151,82 @@
           {#if svc.dnsResolvable}
             TLS is automatic via Traefik's
             <code>{data.certResolver}</code>
-            resolver for every publicly-routed hostname above — no per-service
-            certificate handling to configure.
+            resolver for {publicHost}.{data.baseDomain}
+            — no certificate handling needed for that hostname.
           {:else}
             Not applicable — this service isn't publicly routed.
           {/if}
         </p>
       </div>
     </div>
+
+    {#if svc.dnsResolvable && svc.customDomain}
+      <form
+        action="?/updateNetworking"
+        class="space-y-3 border-t border-border pt-4"
+        method="POST"
+        use:enhance={() => {
+          submitting = true;
+          return async ({ result, update }) => {
+            submitting = false;
+            if (result.type === "success") {
+              toast.success("Saved.");
+            } else if (result.type === "failure") {
+              toast.error("Check the certificate and try again.");
+            }
+            await update();
+          };
+        }}
+      >
+        <p class="text-xs text-text-muted">
+          A custom certificate for <strong>{svc.customDomain}</strong> — since
+          it isn't a subdomain of this instance's base domain, the automatic
+          resolver above can't cover it. Requires the admin to have set
+          <code>TRAEFIK_DYNAMIC_CONFIG_DIR</code>
+          and enabled Traefik's file provider (see compose.yaml) — this app
+          writes the cert/key files there, it doesn't touch the Traefik
+          container itself.
+        </p>
+        <div>
+          <label class={label} for="customSslCert">Certificate (PEM)</label>
+          <textarea
+            class="{input} resize-none font-mono"
+            id="customSslCert"
+            name="customSslCert"
+            placeholder={svc.customSslCertEnc ? "Unchanged" : "-----BEGIN CERTIFICATE-----"}
+            rows="4"
+          ></textarea>
+        </div>
+        <div>
+          <label class={label} for="customSslKey">Private key (PEM)</label>
+          <textarea
+            class="{input} resize-none font-mono"
+            id="customSslKey"
+            name="customSslKey"
+            placeholder={svc.customSslKeyEnc ? "Unchanged" : "-----BEGIN PRIVATE KEY-----"}
+            rows="4"
+          ></textarea>
+        </div>
+        {#if svc.customSslCertEnc}
+          <label class="flex items-center gap-2 text-xs text-text-muted">
+            <input name="clearSsl" type="checkbox">
+            Remove the stored certificate instead of replacing it
+          </label>
+        {/if}
+        <button
+          class="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={submitting}
+          type="submit"
+        >
+          {#if submitting}
+            <Loader2 class="size-4 animate-spin" />
+          {:else}
+            <Check class="size-4" />
+          {/if}
+          Save certificate
+        </button>
+      </form>
+    {/if}
   </section>
 
   <!-- ═══ Ports ═══ -->

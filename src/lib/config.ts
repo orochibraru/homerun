@@ -58,6 +58,15 @@ export const configSchema = z.object({
   }),
   traefik: z.object({
     certResolver: z.string().default("letsencrypt"),
+    // Where custom SSL cert/key files + per-domain dynamic-config YAML
+    // get written (see docker/custom-ssl.ts) — unset by default, which
+    // makes the feature a no-op (services can still store a cert/key,
+    // it just never gets written anywhere until this is configured).
+    // Must be the same host path bind-mounted into the Traefik
+    // container per compose.yaml's commented-out example, with its file
+    // provider enabled — an opt-in the admin performs themselves, this
+    // app never touches the Traefik container's own config.
+    dynamicConfigDir: z.string().optional(),
     entrypoint: z.string().default("websecure"),
   }),
 });
@@ -104,6 +113,7 @@ export const parseConfig = (): PenombreConfig => {
     },
     traefik: {
       certResolver: Bun.env.TRAEFIK_CERT_RESOLVER,
+      dynamicConfigDir: Bun.env.TRAEFIK_DYNAMIC_CONFIG_DIR,
       entrypoint: Bun.env.TRAEFIK_ENTRYPOINT,
     },
   };

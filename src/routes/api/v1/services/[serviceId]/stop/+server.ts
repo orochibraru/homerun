@@ -1,4 +1,5 @@
 import { json } from "@sveltejs/kit";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { stopContainer } from "$lib/server/docker/service";
@@ -20,7 +21,8 @@ export const POST = async ({ params, locals }) => {
     );
   }
 
-  await stopContainer(svc.containerId);
+  const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+  await stopContainer(svc.containerId, remote);
   await svc.update({ desiredState: "stopped" });
   logger.info(
     `Service stopped via API: service=${svc.id} user=${locals.user.id}`

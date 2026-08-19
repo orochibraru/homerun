@@ -1,11 +1,18 @@
 <script lang="ts">
   import {
     AlertTriangle,
+    ArrowLeft,
+    ArrowRight,
+    Check,
     ChevronDown,
+    Cpu,
+    GitBranch,
     Loader2,
     Lock,
+    Network,
     Plus,
     Server,
+    SlidersHorizontal,
     Trash2,
   } from "@lucide/svelte";
   import { onMount } from "svelte";
@@ -31,22 +38,56 @@
   // dedicated <p> for still surfaces instead of silently failing.
   const errorMessages = $derived(errors ? Object.values(errors).flat() : []);
 
-  let name = $derived(
+  const STEPS = [
+    { icon: Server, label: "Basic info" },
+    { icon: Network, label: "Networking" },
+    { icon: SlidersHorizontal, label: "Environment" },
+    { icon: Cpu, label: "Compute" },
+  ];
+  // Every field lives in $state (not an uncontrolled `value={}`) so its
+  // value survives a step being hidden — steps are hidden with a CSS
+  // class, not {#if}, specifically so the DOM nodes (and their bound
+  // state) never unmount between steps.
+  let currentStep = $state(0);
+
+  let name = $state(
     (form?.values?.name as string) ?? data.template?.name ?? ""
   );
-  let slug = $derived(
+  let slug = $state(
     (form?.values?.slug as string) ??
       (data.template ? slugify(data.template.name) : "")
   );
   let slugTouched = $state(false);
   let submitting = $state(false);
-  let showRegistry = $derived(!!values?.registryUsername);
+  let showRegistry = $state(!!values?.registryUsername);
 
+  let buildSource = $state<"image" | "git">(
+    (values?.buildSource as "image" | "git") ?? "image"
+  );
   let image = $state(values?.image ?? data.template?.image ?? "");
   let tag = $state(values?.tag ?? data.template?.tag ?? "latest");
   let registryUrl = $state(values?.registryUrl ?? "");
+  let registryUsername = $state(values?.registryUsername ?? "");
+  let gitUrl = $state(values?.gitUrl ?? "");
+  let gitRef = $state(values?.gitRef ?? "main");
+  let gitDockerfilePath = $state(values?.gitDockerfilePath ?? "");
+  let gitBuildContext = $state(values?.gitBuildContext ?? "");
   let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
   let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
+
+  let containerPort = $state(
+    values?.containerPort ?? String(data.template?.containerPort ?? "")
+  );
+  let dnsResolvable = $state(
+    values?.dnsResolvable !== "off" && values?.dnsResolvable !== "false"
+  );
+  let restartPolicy = $state(
+    values?.restartPolicy ?? data.template?.restartPolicy ?? "unless-stopped"
+  );
+  let cpuLimit = $state(values?.cpuLimit ?? data.template?.cpuLimit ?? "");
+  let memoryLimitMb = $state(
+    values?.memoryLimitMb ?? String(data.template?.memoryLimitMb ?? "")
+  );
 
   function scheduleImageCheck() {
     clearTimeout(imageCheckTimer);
@@ -114,6 +155,23 @@
       envRows.push({ key: "", value: "" });
     }
   }
+
+  function goNext() {
+    currentStep = Math.min(currentStep + 1, STEPS.length - 1);
+  }
+  function goBack() {
+    currentStep = Math.max(currentStep - 1, 0);
+  }
+
+  function stepButtonClass(i: number): string {
+    if (i === currentStep) {
+      return "border-accent bg-accent-light text-accent";
+    }
+    if (i < currentStep) {
+      return "border-border text-text bg-surface-2";
+    }
+    return "border-border text-text-muted";
+  }
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
@@ -122,6 +180,38 @@
     <p class="mt-0.5 text-sm text-text-muted">
       Point at an image, fill in the config, deploy.
     </p>
+  </div>
+
+  <!-- ═══ Step indicator ═══ -->
+  <div class="flex items-center gap-1">
+    {#each STEPS as step, i}
+      {@const StepIcon = step.icon}
+      <button
+        class="flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all {stepButtonClass(
+          i
+        )}"
+        onclick={() => {
+          currentStep = i;
+        }}
+        type="button"
+      >
+        <div
+          class="flex size-5 shrink-0 items-center justify-center rounded-full text-xs {i <=
+          currentStep
+            ? 'bg-accent text-white'
+            : 'bg-surface-2 text-text-subtle'}"
+        >
+          {#if i < currentStep}
+            <Check class="size-3" />
+          {:else}
+            {i + 1}
+          {/if}
+        </div>
+        <span class="hidden sm:inline"
+          ><StepIcon class="mr-1 inline size-3.5" />{step.label}</span
+        >
+      </button>
+    {/each}
   </div>
 
   <form
@@ -138,6 +228,11 @@
             ? Object.values(data.errors).flat()[0]
             : undefined;
           toast.error(first ?? "Check the form for errors.");
+          // The failing field could be on any step — jump back to the
+          // first one so the top error banner and per-field messages are
+          // actually visible, not stranded behind whatever step the user
+          // happened to be on when they hit Create.
+          currentStep = 0;
         } else if (result.type === "error") {
           toast.error(result.error?.message ?? "Something went wrong.");
         }
@@ -171,8 +266,11 @@
       </div>
     {/if}
 
-    <!-- ═══ Basics ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
+    <!-- ═══ Step 1: Basic info ═══ -->
+    <section
+      class="rounded-2xl border border-border bg-surface"
+      class:hidden={currentStep !== 0}
+    >
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
         <div
           class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
@@ -180,7 +278,7 @@
           <Server class="size-4" />
         </div>
         <div>
-          <h2 class="text-sm font-semibold text-text">Basics</h2>
+          <h2 class="text-sm font-semibold text-text">Basic info</h2>
           <p class="text-xs text-text-muted">Name it and point at an image.</p>
         </div>
       </div>
@@ -232,102 +330,162 @@
           {/if}
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
-          <div class="col-span-2">
-            <label class={label} for="image">
-              Image <span class="text-red-500">*</span>
+        <div>
+          <div class={label}>Deploy from</div>
+          <div class="flex gap-2">
+            <button
+              class="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+              'image'
+                ? 'border-accent bg-accent-light text-accent'
+                : 'border-border text-text-muted hover:bg-surface-2'}"
+              onclick={() => {
+                buildSource = "image";
+              }}
+              type="button"
+            >
+              <Server class="size-4" />
+              Docker image
+            </button>
+            <button
+              class="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+              'git'
+                ? 'border-accent bg-accent-light text-accent'
+                : 'border-border text-text-muted hover:bg-surface-2'}"
+              onclick={() => {
+                buildSource = "git";
+              }}
+              type="button"
+            >
+              <GitBranch class="size-4" />
+              Git repository
+            </button>
+          </div>
+          <input name="buildSource" type="hidden" value={buildSource}>
+        </div>
+
+        {#if buildSource === "image"}
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-2">
+              <label class={label} for="image">
+                Image <span class="text-red-500">*</span>
+              </label>
+              <input
+                class={input}
+                id="image"
+                name="image"
+                oninput={scheduleImageCheck}
+                placeholder="ghcr.io/acme/api"
+                required
+                type="text"
+                bind:value={image}
+              >
+              {#if errors?.image}
+                <p class={errorClass}>{errors.image[0]}</p>
+              {/if}
+            </div>
+            <div>
+              <label class={label} for="tag">Tag</label>
+              <input
+                class={input}
+                id="tag"
+                name="tag"
+                oninput={scheduleImageCheck}
+                placeholder="latest"
+                type="text"
+                bind:value={tag}
+              >
+            </div>
+          </div>
+
+          {#if imageCheck?.checked && !imageCheck.exists}
+            <div
+              class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
+            >
+              <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+              <span>
+                <strong>{image}:{tag}</strong>
+                wasn't found in its registry. You can still save — this doesn't
+                block deploying, in case you're still preparing the image.
+              </span>
+            </div>
+          {/if}
+        {:else}
+          <div>
+            <label class={label} for="gitUrl">
+              Repository URL <span class="text-red-500">*</span>
             </label>
             <input
               class={input}
-              id="image"
-              name="image"
-              oninput={scheduleImageCheck}
-              placeholder="ghcr.io/acme/api"
+              id="gitUrl"
+              name="gitUrl"
+              placeholder="https://github.com/acme/api.git"
               required
               type="text"
-              bind:value={image}
+              bind:value={gitUrl}
             >
-            {#if errors?.image}
-              <p class={errorClass}>{errors.image[0]}</p>
+            <p class="mt-1.5 text-xs text-text-subtle">
+              Any git-clone-able HTTPS URL — GitHub, GitLab, a self-hosted Gitea
+              instance, whatever. Private repos: embed a token in the URL
+              yourself (<code>https://TOKEN@host/...</code>), there's no
+              separate credential field for this yet.
+            </p>
+            {#if errors?.gitUrl}
+              <p class={errorClass}>{errors.gitUrl[0]}</p>
             {/if}
           </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class={label} for="gitRef">Branch / tag</label>
+              <input
+                class={input}
+                id="gitRef"
+                name="gitRef"
+                placeholder="main"
+                type="text"
+                bind:value={gitRef}
+              >
+            </div>
+            <div>
+              <label class={label} for="gitDockerfilePath"
+                >Dockerfile path</label
+              >
+              <input
+                class={input}
+                id="gitDockerfilePath"
+                name="gitDockerfilePath"
+                placeholder="Dockerfile"
+                type="text"
+                bind:value={gitDockerfilePath}
+              >
+            </div>
+          </div>
           <div>
-            <label class={label} for="tag">Tag</label>
+            <label class={label} for="gitBuildContext">
+              Build context (subdirectory)
+            </label>
             <input
               class={input}
-              id="tag"
-              name="tag"
-              oninput={scheduleImageCheck}
-              placeholder="latest"
+              id="gitBuildContext"
+              name="gitBuildContext"
+              placeholder="Leave blank for repo root"
               type="text"
-              bind:value={tag}
+              bind:value={gitBuildContext}
             >
           </div>
-        </div>
-
-        {#if imageCheck?.checked && !imageCheck.exists}
-          <div
-            class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
-          >
-            <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              <strong>{image}:{tag}</strong>
-              wasn't found in its registry. You can still save — this doesn't
-              block deploying, in case you're still preparing the image.
-            </span>
-          </div>
         {/if}
-
-        <div>
-          <label class={label} for="containerPort">
-            Container port <span class="text-red-500">*</span>
-          </label>
-          <input
-            class={input}
-            id="containerPort"
-            max="65535"
-            min="1"
-            name="containerPort"
-            placeholder="3000"
-            required
-            type="number"
-            value={values?.containerPort ?? data.template?.containerPort ?? ""}
-          >
-          <p class="mt-1 text-xs text-text-subtle">
-            The port your app listens on inside the container.
-          </p>
-          {#if errors?.containerPort}
-            <p class={errorClass}>{errors.containerPort[0]}</p>
-          {/if}
-        </div>
-
-        <label class="flex items-start gap-2.5">
-          <input
-            checked={values?.dnsResolvable !== "off" &&
-              values?.dnsResolvable !== "false"}
-            class="mt-0.5"
-            name="dnsResolvable"
-            type="checkbox"
-          >
-          <span>
-            <span class="block text-sm font-medium text-text">
-              DNS-resolvable
-            </span>
-            <span class="block text-xs text-text-muted">
-              Get a public <span class="font-mono">slug.{data.baseDomain}</span>
-              route. Turn off to keep this service reachable only from other
-              services on the same network.
-            </span>
-          </span>
-        </label>
       </div>
     </section>
 
-    <!-- ═══ Private registry (collapsible) ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
+    <!-- ═══ Step 1: Private registry (collapsible) ═══ -->
+    <section
+      class="rounded-2xl border border-border bg-surface"
+      class:hidden={currentStep !== 0}
+    >
       <button
         class="flex w-full items-center gap-3 px-5 py-4 text-left"
-        onclick={() => { showRegistry = !showRegistry; }}
+        onclick={() => {
+          showRegistry = !showRegistry;
+        }}
         type="button"
       >
         <div
@@ -370,7 +528,7 @@
                 id="registryUsername"
                 name="registryUsername"
                 type="text"
-                value={values?.registryUsername ?? ""}
+                bind:value={registryUsername}
               >
             </div>
             <div>
@@ -389,8 +547,77 @@
       {/if}
     </section>
 
-    <!-- ═══ Environment variables ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
+    <!-- ═══ Step 2: Networking ═══ -->
+    <section
+      class="rounded-2xl border border-border bg-surface"
+      class:hidden={currentStep !== 1}
+    >
+      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+        <div
+          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
+        >
+          <Network class="size-4" />
+        </div>
+        <div>
+          <h2 class="text-sm font-semibold text-text">Networking</h2>
+          <p class="text-xs text-text-muted">
+            The port it listens on, and how it's routed.
+          </p>
+        </div>
+      </div>
+
+      <div class="space-y-5 p-5">
+        <div>
+          <label class={label} for="containerPort">
+            Container port <span class="text-red-500">*</span>
+          </label>
+          <input
+            class={input}
+            id="containerPort"
+            max="65535"
+            min="1"
+            name="containerPort"
+            placeholder="3000"
+            required={currentStep === 1}
+            type="number"
+            bind:value={containerPort}
+          >
+          <p class="mt-1 text-xs text-text-subtle">
+            The port your app listens on inside the container.
+          </p>
+          {#if errors?.containerPort}
+            <p class={errorClass}>{errors.containerPort[0]}</p>
+          {/if}
+        </div>
+
+        <label class="flex items-start gap-2.5">
+          <input
+            class="mt-0.5"
+            name="dnsResolvable"
+            type="checkbox"
+            bind:checked={dnsResolvable}
+          >
+          <span>
+            <span class="block text-sm font-medium text-text">
+              DNS-resolvable
+            </span>
+            <span class="block text-xs text-text-muted">
+              Get a public <span class="font-mono">slug.{data.baseDomain}</span>
+              route. Turn off to keep this service reachable only from other
+              services on the same network. More networking controls (custom
+              domain, auth gate) are on the service's Networking tab after it's
+              created.
+            </span>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ═══ Step 3: Environment ═══ -->
+    <section
+      class="rounded-2xl border border-border bg-surface"
+      class:hidden={currentStep !== 2}
+    >
       <div class="border-b border-border px-5 py-4">
         <h2 class="text-sm font-semibold text-text">Environment variables</h2>
         <p class="text-xs text-text-muted">
@@ -437,10 +664,18 @@
       </div>
     </section>
 
-    <!-- ═══ Runtime ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">Runtime</h2>
+    <!-- ═══ Step 4: Compute ═══ -->
+    <section
+      class="rounded-2xl border border-border bg-surface"
+      class:hidden={currentStep !== 3}
+    >
+      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+        <div
+          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
+        >
+          <Cpu class="size-4" />
+        </div>
+        <h2 class="text-sm font-semibold text-text">Compute</h2>
       </div>
       <div class="space-y-5 p-5">
         <div>
@@ -449,9 +684,7 @@
             class={input}
             id="restartPolicy"
             name="restartPolicy"
-            value={values?.restartPolicy ??
-              data.template?.restartPolicy ??
-              "unless-stopped"}
+            bind:value={restartPolicy}
           >
             <option value="unless-stopped">Unless stopped</option>
             <option value="always">Always</option>
@@ -469,7 +702,7 @@
               name="cpuLimit"
               placeholder="e.g. 0.5 (cores)"
               type="text"
-              value={values?.cpuLimit ?? data.template?.cpuLimit ?? ""}
+              bind:value={cpuLimit}
             >
             {#if errors?.cpuLimit}
               <p class={errorClass}>{errors.cpuLimit[0]}</p>
@@ -484,9 +717,7 @@
               name="memoryLimitMb"
               placeholder="e.g. 512"
               type="number"
-              value={values?.memoryLimitMb ??
-                data.template?.memoryLimitMb ??
-                ""}
+              bind:value={memoryLimitMb}
             >
             {#if errors?.memoryLimitMb}
               <p class={errorClass}>{errors.memoryLimitMb[0]}</p>
@@ -497,25 +728,51 @@
       </div>
     </section>
 
-    <div class="flex justify-end gap-3">
-      <a
-        class="rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
-        href={resolve("/services")}
-      >
-        Cancel
-      </a>
-      <button
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={submitting}
-        type="submit"
-      >
-        {#if submitting}
-          <Loader2 class="size-4 animate-spin" />
-          Creating…
-        {:else}
-          Create service
+    <!-- ═══ Step nav ═══ -->
+    <div class="flex justify-between gap-3">
+      <div>
+        {#if currentStep > 0}
+          <button
+            class="flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
+            onclick={goBack}
+            type="button"
+          >
+            <ArrowLeft class="size-4" />
+            Back
+          </button>
         {/if}
-      </button>
+      </div>
+      <div class="flex gap-3">
+        <a
+          class="rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
+          href={resolve("/services")}
+        >
+          Cancel
+        </a>
+        {#if currentStep < STEPS.length - 1}
+          <button
+            class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
+            onclick={goNext}
+            type="button"
+          >
+            Next
+            <ArrowRight class="size-4" />
+          </button>
+        {:else}
+          <button
+            class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={submitting}
+            type="submit"
+          >
+            {#if submitting}
+              <Loader2 class="size-4 animate-spin" />
+              Creating…
+            {:else}
+              Create service
+            {/if}
+          </button>
+        {/if}
+      </div>
     </div>
   </form>
 </div>

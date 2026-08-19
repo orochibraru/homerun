@@ -5,9 +5,11 @@
     ChevronDown,
     Clock,
     FolderKanban,
+    GitBranch,
     LayoutGrid,
     Loader2,
     Lock,
+    Server,
     Settings,
     Trash2,
   } from "@lucide/svelte";
@@ -31,9 +33,14 @@
 
   const values = $derived(
     (form?.values as Record<string, string> | undefined) ?? {
+      buildSource: svc.buildSource,
       containerPort: String(svc.containerPort),
       cpuLimit: svc.cpuLimit ?? "",
       dnsResolvable: svc.dnsResolvable ? "on" : "",
+      gitBuildContext: svc.gitBuildContext ?? "",
+      gitDockerfilePath: svc.gitDockerfilePath ?? "",
+      gitRef: svc.gitRef ?? "main",
+      gitUrl: svc.gitUrl ?? "",
       image: svc.image,
       memoryLimitMb: svc.memoryLimitMb ? String(svc.memoryLimitMb) : "",
       name: svc.name,
@@ -51,9 +58,14 @@
   let showDeleteConfirm = $state(false);
   let deleting = $state(false);
 
+  let buildSource = $state<"image" | "git">(
+    (values.buildSource as "image" | "git") ?? "image"
+  );
   let image = $state(values.image);
   let tag = $state(values.tag);
   let registryUrl = $state(values.registryUrl);
+  let gitUrl = $state(values.gitUrl);
+  let gitRef = $state(values.gitRef);
   let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
   let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -164,47 +176,140 @@
         {/if}
       </div>
 
-      <div class="grid grid-cols-3 gap-3">
-        <div class="col-span-2">
-          <label class={label} for="image">
-            Image <span class="text-red-500">*</span>
+      <div>
+        <div class={label}>Deploy from</div>
+        <div class="flex gap-2">
+          <button
+            class="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+            'image'
+              ? 'border-accent bg-accent-light text-accent'
+              : 'border-border text-text-muted hover:bg-surface-2'}"
+            onclick={() => {
+              buildSource = "image";
+            }}
+            type="button"
+          >
+            Docker image
+          </button>
+          <button
+            class="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+            'git'
+              ? 'border-accent bg-accent-light text-accent'
+              : 'border-border text-text-muted hover:bg-surface-2'}"
+            onclick={() => {
+              buildSource = "git";
+            }}
+            type="button"
+          >
+            <GitBranch class="size-4" />
+            Git repository
+          </button>
+        </div>
+        <input name="buildSource" type="hidden" value={buildSource}>
+        <p class="mt-1.5 text-xs text-text-subtle">
+          Switching this doesn't redeploy by itself — save, then redeploy from
+          the Overview tab.
+        </p>
+      </div>
+
+      {#if buildSource === "image"}
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class={label} for="image">
+              Image <span class="text-red-500">*</span>
+            </label>
+            <input
+              class={input}
+              id="image"
+              name="image"
+              oninput={scheduleImageCheck}
+              required
+              type="text"
+              bind:value={image}
+            >
+            {#if errors?.image}
+              <p class={errorClass}>{errors.image[0]}</p>
+            {/if}
+          </div>
+          <div>
+            <label class={label} for="tag">Tag</label>
+            <input
+              class={input}
+              id="tag"
+              name="tag"
+              oninput={scheduleImageCheck}
+              type="text"
+              bind:value={tag}
+            >
+          </div>
+        </div>
+
+        {#if imageCheck?.checked && !imageCheck.exists}
+          <div
+            class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
+          >
+            <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              <strong>{image}:{tag}</strong>
+              wasn't found in its registry. You can still save — this doesn't
+              block deploying.
+            </span>
+          </div>
+        {/if}
+      {:else}
+        <div>
+          <label class={label} for="gitUrl">
+            Repository URL <span class="text-red-500">*</span>
           </label>
           <input
             class={input}
-            id="image"
-            name="image"
-            oninput={scheduleImageCheck}
+            id="gitUrl"
+            name="gitUrl"
+            placeholder="https://github.com/acme/api.git"
             required
             type="text"
-            bind:value={image}
+            bind:value={gitUrl}
           >
-          {#if errors?.image}
-            <p class={errorClass}>{errors.image[0]}</p>
+          {#if errors?.gitUrl}
+            <p class={errorClass}>{errors.gitUrl[0]}</p>
           {/if}
         </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class={label} for="gitRef">Branch / tag</label>
+            <input
+              class={input}
+              id="gitRef"
+              name="gitRef"
+              placeholder="main"
+              type="text"
+              bind:value={gitRef}
+            >
+          </div>
+          <div>
+            <label class={label} for="gitDockerfilePath">Dockerfile path</label>
+            <input
+              class={input}
+              id="gitDockerfilePath"
+              name="gitDockerfilePath"
+              placeholder="Dockerfile"
+              type="text"
+              value={values.gitDockerfilePath}
+            >
+          </div>
+        </div>
         <div>
-          <label class={label} for="tag">Tag</label>
+          <label class={label} for="gitBuildContext">
+            Build context (subdirectory)
+          </label>
           <input
             class={input}
-            id="tag"
-            name="tag"
-            oninput={scheduleImageCheck}
+            id="gitBuildContext"
+            name="gitBuildContext"
+            placeholder="Leave blank for repo root"
             type="text"
-            bind:value={tag}
+            value={values.gitBuildContext}
           >
-        </div>
-      </div>
-
-      {#if imageCheck?.checked && !imageCheck.exists}
-        <div
-          class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
-        >
-          <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
-          <span>
-            <strong>{image}:{tag}</strong>
-            wasn't found in its registry. You can still save — this doesn't
-            block deploying.
-          </span>
         </div>
       {/if}
 
@@ -411,6 +516,59 @@
           type="submit"
         >
           Move
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ═══ Deploy target (remote host) ═══ -->
+  <section class="rounded-2xl border border-border bg-surface">
+    <div class="flex items-center justify-between gap-4 p-5">
+      <div class="flex items-center gap-3">
+        <div
+          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
+        >
+          <Server class="size-4" />
+        </div>
+        <div>
+          <p class="text-sm font-medium text-text">Deploy target</p>
+          <p class="text-xs text-text-muted">
+            Which Docker daemon this service runs on. Changing this only takes
+            effect on the next deploy — the current container, if any, keeps
+            running where it is.
+          </p>
+        </div>
+      </div>
+      <form
+        action="?/moveRemoteHost"
+        class="flex items-center gap-2 w-75"
+        method="POST"
+        use:enhance={() =>
+          async ({ result, update }) => {
+            if (result.type === "success") {
+              toast.success("Saved.");
+            } else {
+              toast.error("Couldn't change the deploy target.");
+            }
+            await update();
+          }}
+      >
+        <select
+          class="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent w-full"
+          name="remoteHostId"
+        >
+          <option selected={!svc.remoteHostId} value="">This host</option>
+          {#each data.remoteHosts as host (host.id)}
+            <option selected={svc.remoteHostId === host.id} value={host.id}>
+              {host.name}
+            </option>
+          {/each}
+        </select>
+        <button
+          class="shrink-0 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
+          type="submit"
+        >
+          Save
         </button>
       </form>
     </div>

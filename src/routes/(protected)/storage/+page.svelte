@@ -4,6 +4,7 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import EmptyState from "$lib/components/empty-state.svelte";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -38,22 +39,21 @@
   </div>
 
   {#if data.volumes.length === 0}
-    <div
-      class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center"
+    <EmptyState
+      icon={HardDrive}
+      subtitle="Create one, then mount it into a service from its Settings tab."
+      title="No storage volumes yet"
     >
-      <HardDrive class="mb-3 size-10 text-text-muted opacity-40" />
-      <p class="text-sm font-medium text-text-muted">No storage volumes yet</p>
-      <p class="mt-1 text-xs text-text-subtle">
-        Create one, then mount it into a service from its Settings tab.
-      </p>
-      <a
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-5 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-        href={resolve("/storage/new")}
-      >
-        <Plus class="size-4" />
-        New Volume
-      </a>
-    </div>
+      {#snippet children()}
+        <a
+          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
+          href={resolve("/storage/new")}
+        >
+          <Plus class="size-4" />
+          New Volume
+        </a>
+      {/snippet}
+    </EmptyState>
   {:else}
     <div class="space-y-3">
       {#each data.volumes as vol (vol.id)}

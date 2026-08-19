@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { deployService } from "$lib/server/deploy";
@@ -57,7 +58,8 @@ export const actions = {
       return fail(400, { error: "This service hasn't been deployed yet." });
     }
 
-    await restartContainer(svc.containerId);
+    const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+    await restartContainer(svc.containerId, remote);
     logger.info(`Service restarted: service=${svc.id} user=${locals.user.id}`);
     return { success: true };
   },
@@ -74,7 +76,8 @@ export const actions = {
       return fail(400, { error: "This service hasn't been deployed yet." });
     }
 
-    await startContainer(svc.containerId);
+    const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+    await startContainer(svc.containerId, remote);
     await svc.update({ desiredState: "running" });
     logger.info(`Service started: service=${svc.id} user=${locals.user.id}`);
     return { success: true };
@@ -92,7 +95,8 @@ export const actions = {
       return fail(400, { error: "This service hasn't been deployed yet." });
     }
 
-    await stopContainer(svc.containerId);
+    const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+    await stopContainer(svc.containerId, remote);
     await svc.update({ desiredState: "stopped" });
     logger.info(`Service stopped: service=${svc.id} user=${locals.user.id}`);
     return { success: true };

@@ -5,14 +5,16 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, bearer, genericOAuth, openAPI } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { building, dev } from "$app/environment";
 import { getRequestEvent } from "$app/server";
 import { config, isSmtpEnabled } from "$lib/config";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 // biome-ignore lint/performance/noNamespaceImport: drizzleAdapter needs the whole schema module (every table), not a hand-picked subset.
 import * as schema from "$lib/server/db/schema";
+import { removeProjectNetwork } from "$lib/server/docker/networks";
 import { removeContainer } from "$lib/server/docker/service";
 import { Email } from "$lib/server/email";
 
@@ -129,13 +131,18 @@ export const auth = betterAuth({
         await Promise.all(
           services
             .filter((svc) => svc.containerId)
-            .map((svc) =>
-              removeContainer(svc.containerId as string, {
-                force: true,
-              }).catch(() => {
+            .map(async (svc) => {
+              try {
+                const remote = await RemoteHostDTO.connectionFor(svc, user.id);
+                await removeContainer(
+                  svc.containerId as string,
+                  { force: true },
+                  remote
+                );
+              } catch {
                 // Already gone on the host — fine, keep cleaning up.
-              })
-            )
+              }
+            })
         );
 
         await db
@@ -144,6 +151,44 @@ export const auth = betterAuth({
         await db
           .delete(schema.service)
           .where(eq(schema.service.userId, user.id));
+
+        // Same explicit-cleanup precedent as services above — FK cascade
+        // alone would leave the project's Docker network dangling.
+        const projects = await db
+          .select()
+          .from(schema.project)
+          .where(eq(schema.project.userId, user.id));
+        await Promise.all(
+          projects.map((proj) =>
+            removeProjectNetwork(proj.id).catch(() => {
+              // Already gone — fine, keep cleaning up.
+            })
+          )
+        );
+        await db
+          .delete(schema.project)
+          .where(eq(schema.project.userId, user.id));
+
+        // Row-only — no host-side resource (unlike services/projects,
+        // nothing was ever created on the user's behalf just by defining
+        // a storage volume source). Delete the join rows first (no userId
+        // column of its own to filter by directly).
+        const volumes = await db
+          .select({ id: schema.storageVolume.id })
+          .from(schema.storageVolume)
+          .where(eq(schema.storageVolume.userId, user.id));
+        if (volumes.length > 0) {
+          await db.delete(schema.serviceVolume).where(
+            inArray(
+              schema.serviceVolume.volumeId,
+              volumes.map((v) => v.id)
+            )
+          );
+        }
+        await db
+          .delete(schema.storageVolume)
+          .where(eq(schema.storageVolume.userId, user.id));
+
         logger.info(`Account deletion cleanup complete: user=${user.id}`);
       },
       enabled: true,

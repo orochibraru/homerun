@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { syncAllServiceStatuses } from "$lib/server/docker/reconcile";
@@ -17,7 +18,8 @@ async function loadServices(userId: string) {
   const rows = await ServiceDTO.listWithProjectNames(userId);
 
   await syncAllServiceStatuses(
-    rows.filter((r) => r.service.containerId).map((r) => r.service.id)
+    rows.filter((r) => r.service.containerId).map((r) => r.service.id),
+    userId
   );
 
   const fresh = rows.some((r) => r.service.containerId)
@@ -58,7 +60,8 @@ export const actions = {
 
     if (svc.containerId) {
       try {
-        await removeContainer(svc.containerId, { force: true });
+        const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+        await removeContainer(svc.containerId, { force: true }, remote);
       } catch {
         // Container may already be gone on the host — proceed with
         // deleting our record regardless.
@@ -87,7 +90,8 @@ export const actions = {
       return fail(400, { error: "This service hasn't been deployed yet." });
     }
 
-    await restartContainer(svc.containerId);
+    const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+    await restartContainer(svc.containerId, remote);
     logger.info(
       `Service restarted: service=${serviceId} user=${locals.user.id}`
     );
@@ -111,7 +115,8 @@ export const actions = {
       return fail(400, { error: "This service hasn't been deployed yet." });
     }
 
-    await startContainer(svc.containerId);
+    const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+    await startContainer(svc.containerId, remote);
     await svc.update({ desiredState: "running" });
     logger.info(`Service started: service=${serviceId} user=${locals.user.id}`);
     return { success: true };
@@ -135,7 +140,8 @@ export const actions = {
       return fail(400, { error: "This service hasn't been deployed yet." });
     }
 
-    await stopContainer(svc.containerId);
+    const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+    await stopContainer(svc.containerId, remote);
     await svc.update({ desiredState: "stopped" });
     logger.info(`Service stopped: service=${serviceId} user=${locals.user.id}`);
     return { success: true };

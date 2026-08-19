@@ -17,7 +17,7 @@ export const load = async ({ params, parent }) => {
     : null;
 
   if (svc.containerId) {
-    await syncServiceStatus(svc.id);
+    await syncServiceStatus(svc.id, user.id);
     const fresh = await ServiceDTO.get(params.serviceId, user.id);
     return {
       baseDomain: config.baseDomain,

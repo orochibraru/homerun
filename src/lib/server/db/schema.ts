@@ -177,6 +177,33 @@ export const project = sqliteTable(
   (table) => [index("project_userId_idx").on(table.userId)]
 );
 
+export const remoteHost = sqliteTable(
+  "remote_host",
+  {
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    // "tcp://host:2376" (optionally TLS-secured with the ca/cert/key
+    // below) or "ssh://user@host" — passed to dockerode's constructor
+    // as-is, parsed by docker/client.ts's getDocker(). Never a bare
+    // "unix://..." — the local socket is always the implicit default
+    // (remoteHostId: null on a service), not a row in this table.
+    dockerHost: text("docker_host").notNull(),
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    // AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc
+    // — only set when dockerHost uses TLS-secured tcp://.
+    tlsCaEnc: text("tls_ca_enc"),
+    tlsCertEnc: text("tls_cert_enc"),
+    tlsKeyEnc: text("tls_key_enc"),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .$onUpdate(() => new Date())
+      .notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("remoteHost_userId_idx").on(table.userId)]
+);
+
 export const template = sqliteTable(
   "template",
   {
@@ -215,6 +242,14 @@ export const service = sqliteTable(
     authRequired: integer("auth_required", { mode: "boolean" })
       .default(false)
       .notNull(),
+    // "image" (bring-your-own, the original/default) | "git" (clone +
+    // build a Dockerfile locally — see $lib/server/docker/git-build.ts).
+    // When "git", `image`/`tag` are overwritten after each successful
+    // build with the resulting local tag, not user-editable directly.
+    buildSource: text("build_source")
+      .$type<"image" | "git">()
+      .default("image")
+      .notNull(),
     containerId: text("container_id"),
     containerPort: integer("container_port").notNull(),
     cpuLimit: text("cpu_limit"),
@@ -236,6 +271,13 @@ export const service = sqliteTable(
     // must already point at this host — the app doesn't manage that).
     // Only takes effect when dnsResolvable is true.
     customDomain: text("custom_domain").unique(),
+    // AES-256-GCM ciphertext (PEM), same scheme as registryPasswordEnc.
+    // Only take effect together, and only when customDomain is set — see
+    // $lib/server/docker/custom-ssl.ts. Requires the admin's own opt-in
+    // (TRAEFIK_DYNAMIC_CONFIG_DIR + a Traefik file-provider config
+    // change, see compose.yaml) to actually be picked up by Traefik.
+    customSslCertEnc: text("custom_ssl_cert_enc"),
+    customSslKeyEnc: text("custom_ssl_key_enc"),
     // running | stopped — the user's intent
     desiredState: text("desired_state")
       .$type<"running" | "stopped">()
@@ -251,6 +293,13 @@ export const service = sqliteTable(
     envVars: text("env_vars", { mode: "json" })
       .$type<Record<string, string>>()
       .default({}),
+    // Relative to gitBuildContext. Defaults to "Dockerfile" when unset.
+    gitBuildContext: text("git_build_context"),
+    gitDockerfilePath: text("git_dockerfile_path"),
+    // Branch or tag — see $lib/server/docker/git-build.ts (a bare commit
+    // SHA needs a full, non-shallow clone, not supported here).
+    gitRef: text("git_ref"),
+    gitUrl: text("git_url"),
     id: text("id").primaryKey(),
     // e.g. "ghcr.io/acme/api"
     image: text("image").notNull(),
@@ -264,6 +313,11 @@ export const service = sqliteTable(
     registryPasswordEnc: text("registry_password_enc"),
     registryUrl: text("registry_url"),
     registryUsername: text("registry_username"),
+    // Null = the local Docker socket (the default, and the only option
+    // before remote hosts existed). See docker/client.ts's getDocker().
+    remoteHostId: text("remote_host_id").references(() => remoteHost.id, {
+      onDelete: "set null",
+    }),
     // no | always | on-failure | unless-stopped
     restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
     // subdomain: <slug>.<baseDomain>
@@ -446,6 +500,7 @@ export type Service = typeof service.$inferSelect;
 export type Deployment = typeof deployment.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
+export type RemoteHost = typeof remoteHost.$inferSelect;
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {

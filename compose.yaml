@@ -22,12 +22,23 @@ services:
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      # Opt-in: only needed for custom SSL certificates (see the service
+      # Networking tab and $lib/server/docker/custom-ssl.ts). Uncomment
+      # this line, set TRAEFIK_DYNAMIC_CONFIG_DIR to the same host path
+      # as the bind mount below, and `docker compose up -d` to pick it
+      # up — the app writes cert/key files + per-domain dynamic config
+      # into that directory itself, it does not touch this container.
+      # - --providers.file.directory=/etc/traefik/dynamic
+      # - --providers.file.watch=true
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certs:/letsencrypt
+      # Uncomment alongside the --providers.file.* flags above — must be
+      # the same host path this app's TRAEFIK_DYNAMIC_CONFIG_DIR points at.
+      # - ${TRAEFIK_DYNAMIC_CONFIG_DIR:-./traefik-dynamic}:/etc/traefik/dynamic:ro
     networks:
       - localrun-network
 

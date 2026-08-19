@@ -1,7 +1,7 @@
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
-import { getDocker } from "./client.ts";
+import { getDocker, type RemoteHostConnection } from "./client.ts";
 import {
   buildContainerLabels,
   MANAGED_LABEL,
@@ -11,6 +11,7 @@ import { connectToProjectNetwork } from "./networks.ts";
 import { decryptSecret } from "./secrets.ts";
 
 export type { ContainerStatus } from "$lib/types";
+export type { RemoteHostConnection } from "./client.ts";
 
 const logger = new Logger("Docker");
 
@@ -35,8 +36,11 @@ function containerName(slug: string, projectSlug?: string | null): string {
 }
 
 /** The currently-running (or last) container for a service, if any — found by label, not name. */
-async function findServiceContainer(serviceId: string) {
-  const docker = getDocker();
+async function findServiceContainer(
+  serviceId: string,
+  remote?: RemoteHostConnection | null
+) {
+  const docker = getDocker(remote);
   const containers = await docker.listContainers({
     all: true,
     filters: JSON.stringify({ label: [`${SERVICE_ID_LABEL}=${serviceId}`] }),
@@ -79,9 +83,10 @@ export async function pullImage(
   image: string,
   tag: string,
   auth?: RegistryAuth,
-  onProgress?: (line: string) => void
+  onProgress?: (line: string) => void,
+  remote?: RemoteHostConnection | null
 ): Promise<{ digest: string | null }> {
-  const docker = getDocker();
+  const docker = getDocker(remote);
   const ref = `${image}:${tag}`;
 
   logger.info(`Pulling image: ${ref}`);
@@ -149,6 +154,14 @@ export interface CreateContainerParams {
   // Prefixes the container name and public subdomain when the service
   // belongs to a project (e.g. "<projectSlug>-<slug>.<baseDomain>").
   projectSlug?: string | null;
+  // When set, this container is created on a remote Docker daemon instead
+  // of the local socket — see docker/client.ts's getDocker(). Note: the
+  // shared/project Docker networks and Traefik itself all live on the
+  // *local* host, so a remote-hosted service isn't reachable through the
+  // normal internal-network or Traefik paths — only directly, if you
+  // publish a port yourself. Effectively an isolated remote workload
+  // today, not (yet) a fully integrated second node.
+  remote?: RemoteHostConnection | null;
   restartPolicy: string;
   serviceId: string;
   slug: string;
@@ -169,12 +182,15 @@ export async function createAndStartContainer(
   params: CreateContainerParams,
   onProgress?: (line: string) => void
 ): Promise<{ containerId: string }> {
-  const docker = getDocker();
+  const docker = getDocker(params.remote);
   const name = containerName(params.slug, params.projectSlug);
 
   // Replace any previous container for this service (redeploy), found by
   // its service-id label rather than by name (see containerName above).
-  const existingInfo = await findServiceContainer(params.serviceId);
+  const existingInfo = await findServiceContainer(
+    params.serviceId,
+    params.remote
+  );
   if (existingInfo) {
     onProgress?.("Replacing previous container...");
     try {
@@ -198,10 +214,14 @@ export async function createAndStartContainer(
 
   // Docker's Binds syntax covers both a host bind-mount path and a
   // Docker-managed named volume with the same "source:target[:ro]" form —
-  // it tells them apart by whether source looks like a path.
+  // it tells them apart by whether source looks like a path. Bind-mount
+  // sources only make sense for the local host — a remote deploy with
+  // volumes attached would try to bind a path on the *remote* machine.
   const binds = (params.volumes ?? []).map(
     (v) => `${v.source}:${v.containerPath}${v.readOnly ? ":ro" : ""}`
   );
+
+  const isRemote = !!params.remote;
 
   const container = await docker.createContainer({
     Env: Object.entries(params.envVars).map(
@@ -216,7 +236,11 @@ export async function createAndStartContainer(
       NanoCpus: params.cpuLimit
         ? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
         : undefined,
-      NetworkMode: config.docker.networkName,
+      // The shared network only exists on the local host — a remote
+      // daemon has no such network, so a remote container gets Docker's
+      // own default bridge instead (no Traefik routing, no internal
+      // service-discovery alias; see CreateContainerParams.remote).
+      NetworkMode: isRemote ? undefined : config.docker.networkName,
       RestartPolicy: { Name: restartPolicyName },
     },
     Image: `${params.image}:${params.tag}`,
@@ -231,12 +255,15 @@ export async function createAndStartContainer(
     }),
     // Alias the container as its slug on the shared network, so other
     // services can reach it at a stable hostname even though the
-    // container's own name carries a random per-deploy suffix.
-    NetworkingConfig: {
-      EndpointsConfig: {
-        [config.docker.networkName]: { Aliases: [params.slug] },
-      },
-    },
+    // container's own name carries a random per-deploy suffix. Only
+    // meaningful on the local host — see NetworkMode above.
+    NetworkingConfig: isRemote
+      ? undefined
+      : {
+          EndpointsConfig: {
+            [config.docker.networkName]: { Aliases: [params.slug] },
+          },
+        },
     name,
     // Tty combines stdout/stderr into one unframed stream, which keeps
     // the v1 log viewer simple (no demux of Docker's multiplexed
@@ -246,9 +273,11 @@ export async function createAndStartContainer(
 
   onProgress?.("Starting container...");
   await container.start();
-  logger.info(`Container created and started: ${name} (${container.id})`);
+  logger.info(
+    `Container created and started: ${name} (${container.id})${isRemote ? ` on remote host=${params.remote?.id}` : ""}`
+  );
 
-  if (params.projectId) {
+  if (params.projectId && !isRemote) {
     try {
       await connectToProjectNetwork(
         container.id,
@@ -269,36 +298,52 @@ export async function createAndStartContainer(
     }
   }
 
-  logger.info(
-    `Reachable internally at ${params.slug}:${params.containerPort} (service=${params.serviceId})`
-  );
-  onProgress?.(
-    `Reachable at ${params.slug}:${params.containerPort} from other services.`
-  );
+  if (isRemote) {
+    onProgress?.(
+      "Deployed to remote host — not on the shared network, no Traefik routing (see remote host docs)."
+    );
+  } else {
+    logger.info(
+      `Reachable internally at ${params.slug}:${params.containerPort} (service=${params.serviceId})`
+    );
+    onProgress?.(
+      `Reachable at ${params.slug}:${params.containerPort} from other services.`
+    );
+  }
 
   return { containerId: container.id };
 }
 
-export async function startContainer(containerId: string): Promise<void> {
-  await getDocker().getContainer(containerId).start();
+export async function startContainer(
+  containerId: string,
+  remote?: RemoteHostConnection | null
+): Promise<void> {
+  await getDocker(remote).getContainer(containerId).start();
   logger.info(`Container started: ${containerId}`);
 }
 
-export async function stopContainer(containerId: string): Promise<void> {
-  await getDocker().getContainer(containerId).stop();
+export async function stopContainer(
+  containerId: string,
+  remote?: RemoteHostConnection | null
+): Promise<void> {
+  await getDocker(remote).getContainer(containerId).stop();
   logger.info(`Container stopped: ${containerId}`);
 }
 
-export async function restartContainer(containerId: string): Promise<void> {
-  await getDocker().getContainer(containerId).restart();
+export async function restartContainer(
+  containerId: string,
+  remote?: RemoteHostConnection | null
+): Promise<void> {
+  await getDocker(remote).getContainer(containerId).restart();
   logger.info(`Container restarted: ${containerId}`);
 }
 
 export async function removeContainer(
   containerId: string,
-  opts?: { force?: boolean }
+  opts?: { force?: boolean },
+  remote?: RemoteHostConnection | null
 ): Promise<void> {
-  await getDocker()
+  await getDocker(remote)
     .getContainer(containerId)
     .remove({ force: opts?.force ?? true });
   logger.info(`Container removed: ${containerId}`);
@@ -306,10 +351,11 @@ export async function removeContainer(
 
 /** Inspects a container's live Docker state and maps it to our status enum. */
 export async function inspectStatus(
-  containerId: string
+  containerId: string,
+  remote?: RemoteHostConnection | null
 ): Promise<ContainerStatus> {
   try {
-    const info = await getDocker().getContainer(containerId).inspect();
+    const info = await getDocker(remote).getContainer(containerId).inspect();
     const status = info.State.Status;
 
     if (status === "running") {
@@ -332,9 +378,10 @@ export async function inspectStatus(
 /** Streams a container's combined stdout/stderr as a web ReadableStream. */
 export async function streamLogs(
   containerId: string,
-  opts?: { tail?: number; follow?: boolean }
+  opts?: { tail?: number; follow?: boolean },
+  remote?: RemoteHostConnection | null
 ): Promise<ReadableStream<Uint8Array>> {
-  const container = getDocker().getContainer(containerId);
+  const container = getDocker(remote).getContainer(containerId);
   const nodeStream = await container.logs({
     follow: opts?.follow ?? true,
     stderr: true,

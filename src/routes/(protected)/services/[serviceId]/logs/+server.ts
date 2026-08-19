@@ -1,3 +1,4 @@
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { streamLogs } from "$lib/server/docker/service";
 
@@ -16,7 +17,12 @@ export const GET = async ({ params, locals }) => {
     });
   }
 
-  const stream = await streamLogs(svc.containerId, { follow: true, tail: 200 });
+  const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
+  const stream = await streamLogs(
+    svc.containerId,
+    { follow: true, tail: 200 },
+    remote
+  );
   return new Response(stream, {
     headers: {
       "Cache-Control": "no-store",

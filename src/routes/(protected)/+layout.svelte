@@ -7,6 +7,7 @@
     LayoutGrid,
     LogOut,
     Menu,
+    Network,
     ScrollText,
     Server,
     Settings,
@@ -53,6 +54,12 @@
       href: resolve("/storage"),
       icon: HardDrive,
       label: "Storage",
+    },
+    {
+      exact: false,
+      href: resolve("/remote-hosts"),
+      icon: Network,
+      label: "Remote Hosts",
     },
     {
       exact: false,

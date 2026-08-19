@@ -7,11 +7,36 @@ import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
 import { encryptSecret } from "$lib/server/docker/secrets";
 import {
+  type CreateServiceInput,
   createServiceSchema,
   parseEnvVars,
 } from "$lib/server/validation/service";
 
 const logger = new Logger("Services");
+
+/** Maps the validated form input's image-vs-git fields to what ServiceDTO.create expects — pulled out to keep the create action's complexity in check. */
+function buildSourceFields(input: CreateServiceInput, slug: string) {
+  if (input.buildSource !== "git") {
+    return {
+      gitBuildContext: null,
+      gitDockerfilePath: null,
+      gitRef: null,
+      gitUrl: null,
+      image: input.image as string,
+      tag: input.tag || "latest",
+    };
+  }
+  return {
+    gitBuildContext: input.gitBuildContext || null,
+    gitDockerfilePath: input.gitDockerfilePath || null,
+    gitRef: input.gitRef || null,
+    gitUrl: input.gitUrl || null,
+    // No real image/tag until the first build — deployService()
+    // overwrites both with the resolved local tag once it's built.
+    image: `localrun-build-${slug}`,
+    tag: "pending",
+  };
+}
 
 export const load = async ({ url, parent }) => {
   const { user } = await parent();
@@ -66,11 +91,12 @@ export const actions = {
     }
 
     const svc = await ServiceDTO.create({
+      authRequired: input.authRequired,
+      buildSource: input.buildSource,
       containerPort: input.containerPort,
       cpuLimit: input.cpuLimit || null,
       dnsResolvable: input.dnsResolvable,
       envVars: parseEnvVars(formData),
-      image: input.image,
       memoryLimitMb: input.memoryLimitMb ?? null,
       name: input.name,
       projectId,
@@ -81,12 +107,12 @@ export const actions = {
       registryUsername: input.registryUsername || null,
       restartPolicy: input.restartPolicy,
       slug: input.slug,
-      tag: input.tag,
       userId: locals.user.id,
+      ...buildSourceFields(input, input.slug),
     });
 
     logger.info(
-      `Service created: service=${svc.id} slug=${input.slug} image=${input.image}:${input.tag} user=${locals.user.id}`
+      `Service created: service=${svc.id} slug=${input.slug} source=${input.buildSource} user=${locals.user.id}`
     );
 
     redirect(

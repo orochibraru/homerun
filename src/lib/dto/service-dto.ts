@@ -6,10 +6,15 @@ import { BaseDTO } from "./base-dto";
 /** Fields a caller supplies to insert a new service row. */
 export interface NewServiceInput {
   authRequired?: boolean;
+  buildSource?: "image" | "git";
   containerPort: number;
   cpuLimit?: string | null;
   dnsResolvable?: boolean;
   envVars: Record<string, string>;
+  gitBuildContext?: string | null;
+  gitDockerfilePath?: string | null;
+  gitRef?: string | null;
+  gitUrl?: string | null;
   image: string;
   memoryLimitMb?: number | null;
   name: string;
@@ -17,6 +22,7 @@ export interface NewServiceInput {
   registryPasswordEnc?: string | null;
   registryUrl?: string | null;
   registryUsername?: string | null;
+  remoteHostId?: string | null;
   restartPolicy: string;
   slug: string;
   tag: string;
@@ -28,6 +34,7 @@ export type ServiceUpdateInput = Partial<
   Pick<
     Service,
     | "authRequired"
+    | "buildSource"
     | "containerId"
     | "containerPort"
     | "cpuLimit"
@@ -36,9 +43,15 @@ export type ServiceUpdateInput = Partial<
     | "cronSchedule"
     | "currentStatus"
     | "customDomain"
+    | "customSslCertEnc"
+    | "customSslKeyEnc"
     | "desiredState"
     | "dnsResolvable"
     | "envVars"
+    | "gitBuildContext"
+    | "gitDockerfilePath"
+    | "gitRef"
+    | "gitUrl"
     | "image"
     | "memoryLimitMb"
     | "name"
@@ -46,6 +59,7 @@ export type ServiceUpdateInput = Partial<
     | "registryPasswordEnc"
     | "registryUrl"
     | "registryUsername"
+    | "remoteHostId"
     | "restartPolicy"
     | "slug"
     | "tag"
@@ -151,6 +165,7 @@ export class ServiceDTO extends BaseDTO<Service> {
     const now = new Date();
     const row: Service = {
       authRequired: input.authRequired ?? false,
+      buildSource: input.buildSource ?? "image",
       containerId: null,
       containerPort: input.containerPort,
       cpuLimit: input.cpuLimit ?? null,
@@ -159,6 +174,10 @@ export class ServiceDTO extends BaseDTO<Service> {
       desiredState: "stopped",
       dnsResolvable: input.dnsResolvable ?? true,
       envVars: input.envVars,
+      gitBuildContext: input.gitBuildContext ?? null,
+      gitDockerfilePath: input.gitDockerfilePath ?? null,
+      gitRef: input.gitRef ?? null,
+      gitUrl: input.gitUrl ?? null,
       id: crypto.randomUUID(),
       image: input.image,
       memoryLimitMb: input.memoryLimitMb ?? null,
@@ -167,6 +186,7 @@ export class ServiceDTO extends BaseDTO<Service> {
       registryPasswordEnc: input.registryPasswordEnc ?? null,
       registryUrl: input.registryUrl ?? null,
       registryUsername: input.registryUsername ?? null,
+      remoteHostId: input.remoteHostId ?? null,
       restartPolicy: input.restartPolicy,
       slug: input.slug,
       tag: input.tag,
@@ -252,10 +272,34 @@ export class ServiceDTO extends BaseDTO<Service> {
   get customDomain(): string | null {
     return this.row.customDomain;
   }
+  get customSslCertEnc(): string | null {
+    return this.row.customSslCertEnc;
+  }
+  get customSslKeyEnc(): string | null {
+    return this.row.customSslKeyEnc;
+  }
   get cronLastRunAt(): Date | null {
     return this.row.cronLastRunAt;
   }
   get authRequired(): boolean {
     return this.row.authRequired;
+  }
+  get buildSource(): Service["buildSource"] {
+    return this.row.buildSource;
+  }
+  get gitUrl(): string | null {
+    return this.row.gitUrl;
+  }
+  get gitRef(): string | null {
+    return this.row.gitRef;
+  }
+  get gitBuildContext(): string | null {
+    return this.row.gitBuildContext;
+  }
+  get gitDockerfilePath(): string | null {
+    return this.row.gitDockerfilePath;
+  }
+  get remoteHostId(): string | null {
+    return this.row.remoteHostId;
   }
 }
