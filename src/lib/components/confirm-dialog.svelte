@@ -16,7 +16,7 @@
 		description?: string;
 		confirmLabel?: string;
 		cancelLabel?: string;
-		// Styles the confirm button red — off for confirmations that aren't
+		// Styles the confirm button red : off for confirmations that aren't
 		// destructive (e.g. "restart Traefik").
 		destructive?: boolean;
 		onConfirm: () => void;
@@ -24,13 +24,13 @@
 </script>
 
 <!--
-  Shared replacement for the browser's own confirm() — every destructive
+  Shared replacement for the browser's own confirm() : every destructive
   action in this app (delete, remove, restart) used to gate its <form>
   submission behind a plain confirm() call; this renders as an actual
   themed dialog instead, consistent with the rest of the UI (and testable,
   unlike a native confirm() Playwright can't easily assert against).
   Consumers own their own trigger (a button that sets `open = true`) and
-  their own submission (`onConfirm` — usually `formEl.requestSubmit()`).
+  their own submission (`onConfirm` : usually `formEl.requestSubmit()`).
 -->
 <Dialog.Root bind:open>
   <Dialog.Content>

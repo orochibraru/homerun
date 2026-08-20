@@ -17,7 +17,7 @@ export class UserService {
 	 *before* the user row itself goes away. Postgres enforces the schema's
 	 * `onDelete: "cascade"`/`"set null"` FK constraints for real (unlike the
 	 * previous SQLite setup, where `PRAGMA foreign_keys` was intentionally
-	 * left off and cascade was decorative) — so this explicit cleanup is
+	 * left off and cascade was decorative) : so this explicit cleanup is
 	 * still required for anything with a real-world side effect a DB
 	 * constraint can't touch (stopping/removing containers, Docker networks),
 	 * but the row-level cascade is now a genuine DB-level safety net too, not
@@ -29,9 +29,9 @@ export class UserService {
 	 * - The Users page's admin "remove user" action. Real, tested-in-review
 	 *   finding: better-auth's admin plugin `removeUser` endpoint calls
 	 *   `internalAdapter.deleteUser()` directly, which does **not** run the
-	 *   `deleteUser.beforeDelete` option — that option is only read by the
+	 *   `deleteUser.beforeDelete` option : that option is only read by the
 	 *   self-service delete-account endpoints (confirmed against
-	 *   node_modules/better-auth/dist/api/routes/update-user.mjs — the only
+	 *   node_modules/better-auth/dist/api/routes/update-user.mjs : the only
 	 *   place `beforeDelete`/`afterDelete` are referenced at all). Calling
 	 *   `auth.api.removeUser` without first calling this method would leak
 	 *   the removed user's running containers.
@@ -58,7 +58,7 @@ export class UserService {
 							remote,
 						);
 					} catch {
-						// Already gone on the host — fine, keep cleaning up.
+						// Already gone on the host : fine, keep cleaning up.
 					}
 				}),
 		);
@@ -68,7 +68,7 @@ export class UserService {
 			.where(eq(schema.deployment.userId, userId));
 		await db.delete(schema.service).where(eq(schema.service.userId, userId));
 
-		// Same explicit-cleanup precedent as services above — FK cascade alone
+		// Same explicit-cleanup precedent as services above : FK cascade alone
 		// would leave the project's Docker network dangling.
 		const projects = await db
 			.select()
@@ -77,13 +77,13 @@ export class UserService {
 		await Promise.all(
 			projects.map((proj) =>
 				DockerService.removeProjectNetwork(proj.id).catch(() => {
-					// Already gone — fine, keep cleaning up.
+					// Already gone : fine, keep cleaning up.
 				}),
 			),
 		);
 		await db.delete(schema.project).where(eq(schema.project.userId, userId));
 
-		// Row-only — no host-side resource (unlike services/projects, nothing was
+		// Row-only : no host-side resource (unlike services/projects, nothing was
 		// ever created on the user's behalf just by defining a storage volume
 		// source). Delete the join rows first (no userId column of its own to
 		// filter by directly).
@@ -108,7 +108,7 @@ export class UserService {
 
 	/**
 	 * Small read helpers for the `user` table, used by the admin Users page.
-	 * Raw queries rather than a DTO — there's no DTO for better-auth-owned
+	 * Raw queries rather than a DTO : there's no DTO for better-auth-owned
 	 * tables, same precedent hooks.server.ts and auth.ts already use.
 	 */
 	static async listUsers(): Promise<User[]> {

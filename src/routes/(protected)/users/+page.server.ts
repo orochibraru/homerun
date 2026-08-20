@@ -30,7 +30,7 @@ export const load = async ({ locals }) => {
 	};
 };
 
-/** Refuses to strip admin-ness from the only remaining admin — mirrors better-auth's own "can't remove yourself" guard on admin.removeUser, but for the case that action doesn't cover. */
+/** Refuses to strip admin-ness from the only remaining admin : mirrors better-auth's own "can't remove yourself" guard on admin.removeUser, but for the case that action doesn't cover. */
 async function wouldRemoveLastAdmin(userId: string): Promise<boolean> {
 	const target = (await UserService.listUsers()).find((u) => u.id === userId);
 	if (target?.role !== "admin") {
@@ -166,7 +166,7 @@ export const actions = {
 			return fail(500, {
 				action: "invite",
 				error:
-					"Invite created but the email failed to send — check SMTP settings.",
+					"Invite created but the email failed to send : check SMTP settings.",
 			});
 		}
 
@@ -190,7 +190,7 @@ export const actions = {
 		if (userId === locals.user.id) {
 			return fail(400, {
 				action: "removeUser",
-				error: "You can't remove your own account here — use Profile instead.",
+				error: "You can't remove your own account here : use Profile instead.",
 			});
 		}
 		if (await wouldRemoveLastAdmin(userId)) {
@@ -200,7 +200,7 @@ export const actions = {
 			});
 		}
 
-		// See user.service.ts's docstring — admin.removeUser alone would leak
+		// See user.service.ts's docstring : admin.removeUser alone would leak
 		// this user's containers/networks, so the same cleanup self-service
 		// account deletion gets has to run first.
 		await UserService.cleanupUserResources(userId);

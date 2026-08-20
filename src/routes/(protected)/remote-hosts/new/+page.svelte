@@ -74,7 +74,7 @@
         <code>tcp://host:port</code>
         (add TLS certs below for a TLS-secured daemon) or
         <code>ssh://user@host</code>
-        (uses the system's own SSH agent — no key field here).
+        (uses the system's own SSH agent : no key field here).
       </p>
     </div>
 

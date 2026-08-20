@@ -4,7 +4,7 @@ import type { DeployInput } from "./schemas";
 
 export type { DeployInput };
 
-/** Same convention as the main app's docker/labels.ts — kept identical on purpose so both sides read the same way. */
+/** Same convention as the main app's docker/labels.ts : kept identical on purpose so both sides read the same way. */
 export const MANAGED_LABEL = "homerun.managed";
 export const SERVICE_ID_LABEL = "homerun.service.id";
 
@@ -26,7 +26,7 @@ export interface DeployResult {
 	log: string[];
 }
 
-/** Ensures the shared network exists — mirrors the main app's `ensureProjectNetwork`, just one flat network here since an agent host has no notion of "projects". */
+/** Ensures the shared network exists : mirrors the main app's `ensureProjectNetwork`, just one flat network here since an agent host has no notion of "projects". */
 export async function ensureNetwork(): Promise<void> {
 	const d = getDocker();
 	const networks = await d.listNetworks({
@@ -53,7 +53,7 @@ function exposedPorts(
 	return out;
 }
 
-/** Finds the previous container for this serviceId by label, not by name (names carry a random suffix so a redeploy never collides) — same pattern as the main app's `findServiceContainer`. */
+/** Finds the previous container for this serviceId by label, not by name (names carry a random suffix so a redeploy never collides) : same pattern as the main app's `findServiceContainer`. */
 export async function findServiceContainer(
 	serviceId: string,
 ): Promise<Docker.ContainerInfo | null> {
@@ -146,7 +146,7 @@ export async function deploy(input: DeployInput): Promise<DeployResult> {
 			[SERVICE_ID_LABEL]: input.serviceId,
 			"homerun.agent": "true",
 		},
-		// Omitted entirely in host mode — see the main app's CLAUDE.md "Network
+		// Omitted entirely in host mode : see the main app's CLAUDE.md "Network
 		// mode" section for why: combining NetworkMode:"host" with an explicit
 		// NetworkingConfig doesn't error, it silently attaches to the named
 		// network instead of real host networking. Verified there; assumed to
@@ -199,7 +199,7 @@ export async function inspectStatus(id: string): Promise<ContainerStatus> {
 	};
 }
 
-/** A ReadableStream of raw log chunks — the HTTP route pipes this straight through as the response body, same shape as the main app's `streamLogs`. */
+/** A ReadableStream of raw log chunks : the HTTP route pipes this straight through as the response body, same shape as the main app's `streamLogs`. */
 export async function streamLogs(
 	id: string,
 	follow: boolean,
@@ -207,7 +207,7 @@ export async function streamLogs(
 	const container = getDocker().getContainer(id);
 
 	if (!follow) {
-		// The non-follow overload resolves a plain Buffer, not a stream —
+		// The non-follow overload resolves a plain Buffer, not a stream :
 		// wrap it in a single-chunk ReadableStream so callers get one shape
 		// regardless of `follow`.
 		const buffer = await container.logs({
@@ -232,7 +232,7 @@ export async function streamLogs(
 	});
 	return new ReadableStream<Uint8Array>({
 		cancel() {
-			// @ts-expect-error — dockerode's stream is a duplex; destroy exists at runtime even if not in its types.
+			// @ts-expect-error : dockerode's stream is a duplex; destroy exists at runtime even if not in its types.
 			dockerStream.destroy?.();
 		},
 		start(controller) {

@@ -18,7 +18,7 @@ export const load = async ({ parent }) => {
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
-		// Only providers this user has actually connected — see the Git
+		// Only providers this user has actually connected : see the Git
 		// Providers page for connecting one.
 		connectedGitProviders: connections
 			.filter((c) => providersById.has(c.providerId))
@@ -55,7 +55,7 @@ export const actions = {
 			buildSource: input.buildSource,
 			registryUrl: input.registryUrl || null,
 			registryUsername: input.registryUsername || null,
-			// Blank password field means "leave unchanged" — never overwrite a
+			// Blank password field means "leave unchanged" : never overwrite a
 			// stored credential with nothing just because the user didn't
 			// retype it.
 			...(input.registryPassword

@@ -147,7 +147,7 @@
   >
     <Info class="mt-0.5 size-3.5 shrink-0" />
     <p>
-      Local Run's own server isn't containerized — it runs directly on the host,
+      Local Run's own server isn't containerized : it runs directly on the host,
       so its logs are whatever process manager or terminal you started
       <code class="bg-surface rounded px-1 py-0.5">bun run start</code>
       from is already capturing (no in-app viewer for it here).
@@ -226,7 +226,7 @@
     >
       {#if !data.traefik}
         <p class="text-zinc-500">
-          Traefik container not found — is it running (`docker compose up -d`)?
+          Traefik container not found : is it running (`docker compose up -d`)?
         </p>
       {:else if errored}
         <p class="text-red-400">
@@ -252,6 +252,6 @@
   title={confirmKind === "restart" ? "Restart Traefik?" : "Update Traefik?"}
   description={confirmKind === "restart"
     ? "Every deployed service routed through it will be briefly unreachable while it comes back up."
-    : "If a newer image is available, this stops and recreates the container in place (same config, new image) — brief downtime for every routed service, and no automatic rollback if the new container fails to start."}
+    : "If a newer image is available, this stops and recreates the container in place (same config, new image) : brief downtime for every routed service, and no automatic rollback if the new container fails to start."}
   confirmLabel={confirmKind === "restart" ? "Restart" : "Update"}
 />

@@ -10,16 +10,16 @@ import {
  * Covers the System Logs page's Traefik restart/update controls
  * (src/lib/server/docker/core-services.ts's restartTraefikContainer /
  * updateTraefikContainer, wired into system-logs/+page.server.ts's
- * restartTraefik / updateTraefik actions) — admin-only, both confirm()-gated.
+ * restartTraefik / updateTraefik actions) : admin-only, both confirm()-gated.
  *
  * Real Docker side effects are asserted via `docker inspect` against the
  * live compose-bootstrapped Traefik container, not just trusted from the
- * UI's own success toast — a dockerode call succeeding is only as
+ * UI's own success toast : a dockerode call succeeding is only as
  * trustworthy as observing the real side effect.
  *
  * Traefik itself is NOT `homerun.managed=true` labeled (a deliberate, narrow
  * exception documented in core-services.ts), so it's located by image name
- * here too, the same way findTraefikContainer() does — never assume a fixed
+ * here too, the same way findTraefikContainer() does : never assume a fixed
  * container name.
  */
 
@@ -107,7 +107,7 @@ test("admin can restart/update Traefik from System Logs; a developer can't see t
 			await expect(page.getByText("Couldn't update Traefik.")).toHaveCount(0);
 
 			// Whether or not it actually recreated the container, Traefik must
-			// still be there and running afterward — this is the real infra the
+			// still be there and running afterward : this is the real infra the
 			// maintainer depends on, not a throwaway per-test container.
 			const id = traefikContainerId();
 			expect(traefikRunning(id)).toBe(true);
@@ -148,7 +148,7 @@ test("admin can restart/update Traefik from System Logs; a developer can't see t
 				await devContext.close();
 			}
 			// The developer never mutated any instance-wide state, so cleanup is
-			// just removing the account — done by the admin via /users, same as
+			// just removing the account : done by the admin via /users, same as
 			// the app's own real "remove a user" path (also exercises
 			// cleanupUserResources for that account, harmless no-op here since it
 			// never created any services).

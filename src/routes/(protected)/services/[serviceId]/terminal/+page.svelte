@@ -24,7 +24,7 @@
 	let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 	let cancelled = false;
 
-	// Strips ANSI escape/color codes for readable plain-text rendering — no
+	// Strips ANSI escape/color codes for readable plain-text rendering : no
 	// terminal-emulator dependency, this is a REPL-style view, not a full
 	// xterm.js pty. Cursor-movement/clear-screen sequences aren't honored,
 	// just stripped, so full-screen TUIs (vim, top) won't render usefully.
@@ -77,7 +77,7 @@
 			}
 
 			// Unlike the plain log viewer, a shell prompt often has no trailing
-			// newline while it waits for input — so the in-progress last line
+			// newline while it waits for input : so the in-progress last line
 			// has to render too, not just completed ones. `lines`'s final
 			// element is always that in-progress line, replaced (not appended
 			// to) on every chunk until a "\n" promotes it to a completed line.
@@ -123,7 +123,7 @@
 				),
 				{ method: "POST" },
 			).catch(() => {
-				// Best-effort — the idle reaper will clean it up regardless.
+				// Best-effort : the idle reaper will clean it up regardless.
 			});
 		}
 	});
@@ -172,7 +172,7 @@
     <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
     <p>
       Runs <code>/bin/sh</code> inside this service's live container, with
-      whatever access that shell has — anything you run here can modify or break
+      whatever access that shell has : anything you run here can modify or break
       the running service. Plain-text output only (ANSI codes are stripped), so
       full-screen tools like <code>vim</code> or
       <code>top</code>
@@ -186,7 +186,7 @@
         This service isn't running.
       </p>
       <p class="mt-1 text-xs text-text-subtle">
-        Deploy or start it first — a terminal needs a live container.
+        Deploy or start it first : a terminal needs a live container.
       </p>
     </div>
   {:else}

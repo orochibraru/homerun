@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 /**
- * Request-body schemas for the JSON REST API (`src/routes/api/v1/**`) — kept
+ * Request-body schemas for the JSON REST API (`src/routes/api/v1/**`) : kept
  * separate from `validation/service.ts`'s FormData-shaped schemas (checkbox/
  * `envKey[]`/`envValue[]` preprocessing that only makes sense for an HTML
  * form submission). These are also the single source of truth the OpenAPI
- * spec (`$lib/openapi/`) is generated from via `z.toJSONSchema()` — the same
+ * spec (`$lib/openapi/`) is generated from via `z.toJSONSchema()` : the same
  * schema instance validates a request *and* documents it, so the two can't
  * drift the way a hand-maintained spec would.
  */

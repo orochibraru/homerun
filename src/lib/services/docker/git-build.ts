@@ -14,9 +14,9 @@ export interface GitBuildParams {
 	buildContext?: string | null;
 	// Relative to buildContext.
 	dockerfilePath?: string | null;
-	// Branch, tag, or commit — passed to `git clone --branch`, so only
+	// Branch, tag, or commit : passed to `git clone --branch`, so only
 	// branches/tags work directly (a bare commit SHA needs a full clone,
-	// not attempted here — shallow-clone-by-ref covers the common case).
+	// not attempted here : shallow-clone-by-ref covers the common case).
 	gitRef?: string | null;
 	gitUrl: string;
 	remote?: RemoteHostConnection | null;
@@ -30,7 +30,7 @@ export interface GitBuildResult {
 
 /**
  * Clones a git repo at a specific ref and builds its Dockerfile into a
- * local image, tagged `tag` — the deploy pipeline then runs that tag like
+ * local image, tagged `tag` : the deploy pipeline then runs that tag like
  * any other image, no registry involved. Shells out to the system `git`
  * binary (same "shell out to a well-known CLI tool" precedent as
  * `tar`/`df`/`nvidia-smi` elsewhere in this app) rather than a git
@@ -87,7 +87,7 @@ export async function buildFromGit(
 					}
 					const text = event.stream?.trim();
 					// Docker build output is far chattier than a pull's layer
-					// events — only forward lines that actually changed, same
+					// events : only forward lines that actually changed, same
 					// "status change, not byte-tick" filtering as pullImage.
 					if (text && text !== lastStatus) {
 						lastStatus = text;
@@ -105,7 +105,7 @@ export async function buildFromGit(
 		return { error: message, success: false };
 	} finally {
 		await rm(dir, { force: true, recursive: true }).catch(() => {
-			// Best-effort cleanup — a leftover temp dir isn't worth failing the build over.
+			// Best-effort cleanup : a leftover temp dir isn't worth failing the build over.
 		});
 	}
 }

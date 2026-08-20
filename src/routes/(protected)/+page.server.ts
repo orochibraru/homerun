@@ -5,7 +5,7 @@ import { SystemStatsService } from "$lib/services/system-stats.service";
 
 export const load = async ({ parent }) => {
 	// (protected)/+layout.server.ts already redirects unauthenticated users
-	// before this load runs — parent() gives the already-guaranteed user.
+	// before this load runs : parent() gives the already-guaranteed user.
 	const { user } = await parent();
 
 	const [services, recentDeployments, systemStats, setupChecks] =
@@ -20,7 +20,7 @@ export const load = async ({ parent }) => {
 
 	return {
 		// Which /settings fields to deep-link + highlight for the current
-		// issues — see AdminService.SETUP_CHECK_FIELDS's docstring for why not every issue
+		// issues : see AdminService.SETUP_CHECK_FIELDS's docstring for why not every issue
 		// maps to a field.
 		highlightFields: [
 			...new Set(

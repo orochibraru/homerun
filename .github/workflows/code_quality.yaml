@@ -17,7 +17,7 @@ env:
 
 jobs:
   # ===========================================
-  # TypeScript: Lint, Format, Build — always runs
+  # TypeScript: Lint, Format, Build : always runs
   # ===========================================
   ts-build-check:
     name: TypeScript Build & Check

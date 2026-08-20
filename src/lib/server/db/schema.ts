@@ -163,7 +163,7 @@ export const project = pgTable(
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
 		// DNS-safe prefix applied to every member service's container name and
-		// subdomain (e.g. "<projectSlug>-<serviceSlug>.<baseDomain>") — see
+		// subdomain (e.g. "<projectSlug>-<serviceSlug>.<baseDomain>") : see
 		// docker/service.ts's containerName() and docker/labels.ts.
 		slug: text("slug").notNull().unique(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -181,15 +181,15 @@ export const remoteHost = pgTable(
 	{
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// "tcp://host:2376" (optionally TLS-secured with the ca/cert/key
-		// below) or "ssh://user@host" — passed to dockerode's constructor
+		// below) or "ssh://user@host" : passed to dockerode's constructor
 		// as-is, parsed by docker/client.ts's getDocker(). Never a bare
-		// "unix://..." — the local socket is always the implicit default
+		// "unix://..." : the local socket is always the implicit default
 		// (remoteHostId: null on a service), not a row in this table.
 		dockerHost: text("docker_host").notNull(),
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
 		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc
-		// — only set when dockerHost uses TLS-secured tcp://.
+		// : only set when dockerHost uses TLS-secured tcp://.
 		tlsCaEnc: text("tls_ca_enc"),
 		tlsCertEnc: text("tls_cert_enc"),
 		tlsKeyEnc: text("tls_key_enc"),
@@ -206,7 +206,7 @@ export const remoteHost = pgTable(
 // Singleton row (id is always "default") holding DB overrides for
 // instance-level config that otherwise defaults from env vars (see
 // $lib/config.ts's envDefaults + applyInstanceSettings()). Every column is
-// nullable — null means "fall back to the env default", a non-null value
+// nullable : null means "fall back to the env default", a non-null value
 // overrides it. Secrets (smtpPasswordEnc, each oauth provider's
 // clientSecretEnc) use the same AES-256-GCM scheme as
 // service.registryPasswordEnc.
@@ -214,12 +214,12 @@ export const instanceSettings = pgTable("instance_settings", {
 	authCheckUrl: text("auth_check_url"),
 	authCrossSubdomainCookies: boolean("auth_cross_subdomain_cookies"),
 	authOrigin: text("auth_origin"),
-	// Opt-in, off by default — same "background automation that touches
+	// Opt-in, off by default : same "background automation that touches
 	// live containers must default to inert" posture as cronEnabled/
 	// backupEnabled elsewhere in this app. When on, CronService's autoscale
 	// tick migrates autoscale-eligible services (service.autoscaleEligible)
 	// off the local host onto autoscaleOverflowRemoteHostId whenever host
-	// CPU or memory crosses its threshold — see $lib/services/cron.service.ts
+	// CPU or memory crosses its threshold : see $lib/services/cron.service.ts
 	// and the Settings page's Autoscaling section.
 	autoscaleCpuThresholdPercent: integer("autoscale_cpu_threshold_percent")
 		.notNull()
@@ -228,7 +228,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	autoscaleMemoryThresholdPercent: integer("autoscale_memory_threshold_percent")
 		.notNull()
 		.default(80),
-	// Nullable FK to remote_host — where an over-threshold service gets
+	// Nullable FK to remote_host : where an over-threshold service gets
 	// migrated to. Not a hard requirement at the schema level (autoscaling
 	// is simply a no-op with this unset) since Postgres FKs aren't the
 	// enforcement mechanism this app leans on for row-cleanup anyway (see
@@ -240,13 +240,13 @@ export const instanceSettings = pgTable("instance_settings", {
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	dockerNetworkName: text("docker_network_name"),
 	dockerSocketPath: text("docker_socket_path"),
-	// {id, kind, name, baseUrl, clientId, clientSecretEnc, enabled}[] — OAuth
+	// {id, kind, name, baseUrl, clientId, clientSecretEnc, enabled}[] : OAuth
 	// App registrations for git-hosting providers (see the Git Providers
 	// page and $lib/services/git-provider.service.ts), separate from
 	// oauthProviders above (those are for signing *into* Homerun itself via
 	// an OIDC provider; these are for connecting *out* to GitHub/GitLab/
 	// Gitea/Bitbucket to browse a user's repos when creating a git-based
-	// service). Deliberately not part of applyInstanceSettings()'s merge —
+	// service). Deliberately not part of applyInstanceSettings()'s merge :
 	// same reasoning as onboardingCompletedAt, this isn't an env-default-
 	// backed config value.
 	gitProviders: jsonb("git_providers")
@@ -255,15 +255,15 @@ export const instanceSettings = pgTable("instance_settings", {
 		.default([]),
 	id: text("id").primaryKey(),
 	// {name, clientId, clientSecretEnc, discoveryUrl, enabled, pkce, scopes}[]
-	// — see genericOAuth's config shape in $lib/services/auth.ts.
+	// : see genericOAuth's config shape in $lib/services/auth.ts.
 	oauthProviders: jsonb("oauth_providers")
 		.$type<InstanceOauthProvider[]>()
 		.notNull()
 		.default([]),
-	// Non-null once the onboarding wizard has been completed — gates every
+	// Non-null once the onboarding wizard has been completed : gates every
 	// (protected)/ route (see (protected)/+layout.server.ts). Unlike every
 	// other column here, not part of the config-override merge in
-	// $lib/config.ts — this is onboarding-flow state, not an instance config
+	// $lib/config.ts : this is onboarding-flow state, not an instance config
 	// value.
 	onboardingCompletedAt: timestamp("onboarding_completed_at", {
 		mode: "date",
@@ -297,7 +297,7 @@ export type GitProviderKind = "github" | "gitlab" | "gitea" | "bitbucket";
 
 export interface GitProviderConfig {
 	// Referenced by git_connection.providerId and the /api/v1/git-providers/
-	// [providerId]/* routes — not a DB FK since these live inside the
+	// [providerId]/* routes : not a DB FK since these live inside the
 	// instance_settings JSON column, not their own table.
 	baseUrl: string | null;
 	clientId: string;
@@ -308,7 +308,7 @@ export interface GitProviderConfig {
 	name: string;
 }
 
-// A pending admin-sent invite to create an account — see InvitationDTO and
+// A pending admin-sent invite to create an account : see InvitationDTO and
 // the Users page's "Send invite" action. Accepting one (at
 // /auth/accept-invite/[token]) creates the user directly via
 // auth.api.createUser and sets acceptedAt; there's no separate account
@@ -344,7 +344,7 @@ export const template = pgTable(
 		image: text("image").notNull(),
 		memoryLimitMb: integer("memory_limit_mb"),
 		name: text("name").notNull(),
-		// null = built-in (seeded), immutable — not owned by any user
+		// null = built-in (seeded), immutable : not owned by any user
 		ownerId: text("owner_id").references(() => user.id, {
 			onDelete: "cascade",
 		}),
@@ -362,16 +362,16 @@ export const service = pgTable(
 	{
 		// When true, a Traefik forwardAuth middleware gatekeeps this service
 		// behind this app's own login (any provider, including a configured
-		// OIDC one) — see docker/labels.ts and /api/v1/auth-check.
+		// OIDC one) : see docker/labels.ts and /api/v1/auth-check.
 		authRequired: boolean("auth_required").default(false).notNull(),
-		// Opt-in, off by default (Compute tab) — whether CronService's
+		// Opt-in, off by default (Compute tab) : whether CronService's
 		// autoscale tick is allowed to migrate this service onto
 		// instanceSettings.autoscaleOverflowRemoteHostId when the local
 		// host is over its configured resource threshold. No effect unless
 		// autoscaling is also enabled instance-wide.
 		autoscaleEligible: boolean("autoscale_eligible").default(false).notNull(),
 		// "image" (bring-your-own, the original/default) | "git" (clone +
-		// build a Dockerfile locally — see $lib/services/docker/git-build.ts).
+		// build a Dockerfile locally : see $lib/services/docker/git-build.ts).
 		// When "git", `image`/`tag` are overwritten after each successful
 		// build with the resulting local tag, not user-editable directly.
 		buildSource: text("build_source")
@@ -383,7 +383,7 @@ export const service = pgTable(
 		cpuLimit: text("cpu_limit"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// Standard 5-field cron expression ("min hour day month weekday"),
-		// evaluated in the server's local time — see $lib/services/cron.service.ts.
+		// evaluated in the server's local time : see $lib/services/cron.service.ts.
 		// Null/disabled unless the user opts in via the Overview tab.
 		cronEnabled: boolean("cron_enabled").default(false).notNull(),
 		cronLastRunAt: timestamp("cron_last_run_at", { mode: "date" }),
@@ -394,23 +394,23 @@ export const service = pgTable(
 			.default("pending")
 			.notNull(),
 		// Optional second hostname routed to this service (its own DNS A/CNAME
-		// must already point at this host — the app doesn't manage that).
+		// must already point at this host : the app doesn't manage that).
 		// Only takes effect when dnsResolvable is true.
 		customDomain: text("custom_domain").unique(),
 		// AES-256-GCM ciphertext (PEM), same scheme as registryPasswordEnc.
-		// Only take effect together, and only when customDomain is set — see
+		// Only take effect together, and only when customDomain is set : see
 		// $lib/services/docker/custom-ssl.ts. Requires the admin's own opt-in
 		// (TRAEFIK_DYNAMIC_CONFIG_DIR + a Traefik file-provider config
 		// change, see compose.yaml) to actually be picked up by Traefik.
 		customSslCertEnc: text("custom_ssl_cert_enc"),
 		customSslKeyEnc: text("custom_ssl_key_enc"),
-		// running | stopped — the user's intent
+		// running | stopped : the user's intent
 		desiredState: text("desired_state")
 			.$type<"running" | "stopped">()
 			.default("stopped")
 			.notNull(),
 		// When false, no Traefik router/service labels are attached at deploy
-		// time — the container never gets a public <slug>.<baseDomain>, only
+		// time : the container never gets a public <slug>.<baseDomain>, only
 		// reachable over the internal network(s) it's attached to (the shared
 		// network by slug alias, plus its project's network if any).
 		dnsResolvable: boolean("dns_resolvable").default(true).notNull(),
@@ -418,7 +418,7 @@ export const service = pgTable(
 		// Relative to gitBuildContext. Defaults to "Dockerfile" when unset.
 		gitBuildContext: text("git_build_context"),
 		gitDockerfilePath: text("git_dockerfile_path"),
-		// Branch or tag — see $lib/services/docker/git-build.ts (a bare commit
+		// Branch or tag : see $lib/services/docker/git-build.ts (a bare commit
 		// SHA needs a full, non-shallow clone, not supported here).
 		gitRef: text("git_ref"),
 		gitUrl: text("git_url"),
@@ -427,31 +427,31 @@ export const service = pgTable(
 		image: text("image").notNull(),
 		memoryLimitMb: integer("memory_limit_mb"),
 		name: text("name").notNull(),
-		// "bridge" (default — the shared homerun-network + project network,
+		// "bridge" (default : the shared homerun-network + project network,
 		// Traefik-routed) | "host" (shares the host's network namespace
-		// directly, e.g. for mDNS/SSDP-dependent apps like Home Assistant —
+		// directly, e.g. for mDNS/SSDP-dependent apps like Home Assistant :
 		// no Traefik routing, no internal slug alias, not on any Docker
 		// network at all; Docker doesn't allow combining host mode with
 		// other network attachments). Forces dnsResolvable false server-side
-		// regardless of what's submitted — see docker/containers.ts.
+		// regardless of what's submitted : see docker/containers.ts.
 		networkMode: text("network_mode")
 			.$type<"bridge" | "host">()
 			.default("bridge")
 			.notNull(),
-		// "tcp" | "udp" | "both" — which protocol(s) containerPort is exposed
+		// "tcp" | "udp" | "both" : which protocol(s) containerPort is exposed
 		// under (Docker's ExposedPorts declaration). Informational only in
-		// bridge mode (this app never publishes a host port — see the
+		// bridge mode (this app never publishes a host port : see the
 		// Networking tab's own copy); the container's actual host-visible
 		// port(s) in host mode, since there's no publish/mapping step there.
 		portProtocol: text("port_protocol")
 			.$type<"tcp" | "udp" | "both">()
 			.default("tcp")
 			.notNull(),
-		// nullable — grouping is opt-in, ungrouped services stay valid
+		// nullable : grouping is opt-in, ungrouped services stay valid
 		projectId: text("project_id").references(() => project.id, {
 			onDelete: "set null",
 		}),
-		// AES-256-GCM ciphertext — see $lib/services/secrets
+		// AES-256-GCM ciphertext : see $lib/services/secrets
 		registryPasswordEnc: text("registry_password_enc"),
 		registryUrl: text("registry_url"),
 		registryUsername: text("registry_username"),
@@ -489,7 +489,7 @@ export const deployment = pgTable(
 		id: text("id").primaryKey(),
 		imageDigest: text("image_digest"),
 		// Progress lines appended live during deploy ("Pulling image...",
-		// "Starting container...") — polled by the Overview tab while a deploy
+		// "Starting container...") : polled by the Overview tab while a deploy
 		// is in flight, kept around after for a lightweight audit trail.
 		log: text("log").default(""),
 		serviceId: text("service_id")
@@ -516,12 +516,12 @@ export const storageVolume = pgTable(
 	{
 		backupAccessKeyId: text("backup_access_key_id"),
 		// Cron expression for scheduled backups, evaluated by the same
-		// scheduler tick as service redeploys — see $lib/services/cron.service.ts.
+		// scheduler tick as service redeploys : see $lib/services/cron.service.ts.
 		backupBucket: text("backup_bucket"),
 		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
 		backupEnabled: boolean("backup_enabled").default(false).notNull(),
 		// S3-compatible endpoint, e.g. "https://s3.us-east-1.amazonaws.com" or
-		// a self-hosted MinIO URL. Bind-mount sources only for now — Docker
+		// a self-hosted MinIO URL. Bind-mount sources only for now : Docker
 		// named volumes aren't backed up yet (see backup.ts).
 		backupEndpoint: text("backup_endpoint"),
 		backupLastRunAt: timestamp("backup_last_run_at", { mode: "date" }),
@@ -533,7 +533,7 @@ export const storageVolume = pgTable(
 		description: text("description"),
 		id: text("id").primaryKey(),
 		// Docker Binds source: either a bind-mount host path ("/mnt/data/foo")
-		// or a Docker-managed named volume ("homerun-vol-xyz") — same field,
+		// or a Docker-managed named volume ("homerun-vol-xyz") : same field,
 		// Docker's Binds syntax tells them apart by whether it looks like a
 		// path. `kind` just drives which the create form asks for.
 		// "bind" | "volume"
@@ -550,7 +550,7 @@ export const storageVolume = pgTable(
 	(table) => [index("storageVolume_userId_idx").on(table.userId)],
 );
 
-// One storage volume can be mounted into several services — that's what
+// One storage volume can be mounted into several services : that's what
 // makes it "shared" across a project, no separate project-level concept
 // needed (see TODO.md).
 export const serviceVolume = pgTable(
@@ -576,11 +576,11 @@ export const serviceVolume = pgTable(
 // Persisted warn/error-level application log entries, captured by
 // $lib/logger.ts's Logger.warn()/error() (best-effort, never blocks the
 // caller) so the per-service Errors tab can show app-level failures
-// alongside deployment failures, not just deploy failures — see TODO.md.
+// alongside deployment failures, not just deploy failures : see TODO.md.
 // serviceId is populated heuristically (message text scanned for a
 // "service=<uuid>" token most call sites already include, e.g. deploy/Docker
 // logs) rather than threaded explicitly through every one of the ~40
-// existing Logger call sites — null means "not attributable to one service",
+// existing Logger call sites : null means "not attributable to one service",
 // still shown on a future instance-wide log view, just not on any one
 // service's Errors tab.
 export const appLog = pgTable(
@@ -604,24 +604,24 @@ export const appLog = pgTable(
 );
 
 // One user's OAuth connection to one configured git provider (see
-// instanceSettings.gitProviders) — the access/refresh token that lets
+// instanceSettings.gitProviders) : the access/refresh token that lets
 // $lib/services/git-provider.service.ts list that user's repos and check
 // for a Dockerfile when creating a git-based service. providerId references
 // a GitProviderConfig.id (not a DB FK, same reasoning as appLog.serviceId
-// vs. the JSON-embedded provider configs — see gitProviders' docstring).
+// vs. the JSON-embedded provider configs : see gitProviders' docstring).
 export const gitConnection = pgTable(
 	"git_connection",
 	{
 		accessTokenEnc: text("access_token_enc").notNull(),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// Null for providers whose tokens don't expire (classic GitHub OAuth
-		// Apps) — present for GitLab/Gitea/Bitbucket, which do issue
+		// Apps) : present for GitLab/Gitea/Bitbucket, which do issue
 		// short-lived tokens with a refresh token.
 		expiresAt: timestamp("expires_at", { mode: "date" }),
 		id: text("id").primaryKey(),
 		providerId: text("provider_id").notNull(),
 		providerKind: text("provider_kind").$type<GitProviderKind>().notNull(),
-		// The connected account's own username on that provider — shown in
+		// The connected account's own username on that provider : shown in
 		// the UI so it's obvious *which* account is connected.
 		providerUsername: text("provider_username").notNull(),
 		refreshTokenEnc: text("refresh_token_enc"),
@@ -633,7 +633,7 @@ export const gitConnection = pgTable(
 			.references(() => user.id, { onDelete: "cascade" }),
 	},
 	(table) => [
-		// One connection per user per provider — reconnecting replaces it
+		// One connection per user per provider : reconnecting replaces it
 		// rather than accumulating duplicates.
 		uniqueIndex("gitConnection_userId_providerId_uidx").on(
 			table.userId,

@@ -21,7 +21,7 @@ export type RemoteHostUpdateInput = Partial<
 	>
 >;
 
-/** Wraps the `remote_host` table — see ServiceDTO for the pattern this follows. */
+/** Wraps the `remote_host` table : see ServiceDTO for the pattern this follows. */
 export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 	static async get(id: string, userId: string): Promise<RemoteHostDTO | null> {
 		const [row] = await db
@@ -66,7 +66,7 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		Object.assign(this.row, input);
 	}
 
-	/** Row-only delete — services referencing this host have their remoteHostId cleared by the FK's onDelete: set null. */
+	/** Row-only delete : services referencing this host have their remoteHostId cleared by the FK's onDelete: set null. */
 	async delete(): Promise<void> {
 		await db.delete(remoteHost).where(eq(remoteHost.id, this.row.id));
 	}
@@ -93,7 +93,7 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 	}
 
 	/**
-	 * The connection to use for a service's docker operations — undefined
+	 * The connection to use for a service's docker operations : undefined
 	 * for the local socket (remoteHostId unset, the default), or the
 	 * decrypted remote connection otherwise. Every lifecycle action
 	 * (start/stop/restart/logs/deploy) should route through this rather

@@ -49,7 +49,7 @@
     <div>
       <h2 class="text-sm font-semibold text-text">Environment variables</h2>
       <p class="text-xs text-text-muted">
-        Changes take effect on the next deploy — hit Redeploy on Overview after
+        Changes take effect on the next deploy : hit Redeploy on Overview after
         saving.
       </p>
     </div>

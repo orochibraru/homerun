@@ -8,7 +8,7 @@ export const GET = async ({ locals }) => {
 	const traefik = await DockerService.findTraefikContainer();
 	if (!traefik) {
 		return new Response(
-			"Traefik container not found — is it running (`docker compose up -d`)?",
+			"Traefik container not found : is it running (`docker compose up -d`)?",
 			{ status: 404 },
 		);
 	}

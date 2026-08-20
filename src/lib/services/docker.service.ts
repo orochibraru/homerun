@@ -1,4 +1,4 @@
-// Slim barrel over src/lib/services/docker/** — every route/DTO that needs
+// Slim barrel over src/lib/services/docker/** : every route/DTO that needs
 // a Docker operation imports DockerService (and its re-exported types) from
 // here, never reaching into services/docker/* directly. The subfolder keeps
 // the same per-concern file split the old src/lib/server/docker/ already
@@ -51,7 +51,7 @@ import {
 } from "./docker/terminal.ts";
 
 /**
- * Docker operational surface — container lifecycle, networking, git-based
+ * Docker operational surface : container lifecycle, networking, git-based
  * builds, Traefik/custom-SSL config, status reconciliation, and the
  * interactive terminal. Backs every route/DTO that touches a service's
  * container or the shared Traefik/network infra. See services/docker/** for

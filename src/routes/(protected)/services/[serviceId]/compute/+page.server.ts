@@ -12,7 +12,7 @@ export const load = async () => {
 	return {
 		// Just enough to explain *why* the autoscale toggle might not do
 		// anything yet (instance-wide autoscaling off, or no overflow host
-		// configured) — full config lives on Settings' Autoscaling section.
+		// configured) : full config lives on Settings' Autoscaling section.
 		autoscale: settings.autoscale,
 	};
 };

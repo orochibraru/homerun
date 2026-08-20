@@ -2,7 +2,7 @@ import { json } from "@sveltejs/kit";
 import { ApiService } from "$lib/services/api.service";
 
 /**
- * Checked from the create/settings forms as the user fills in image/tag —
+ * Checked from the create/settings forms as the user fills in image/tag :
  * warns, never blocks: a missing image might just mean the user hasn't
  * pushed it yet, or a private registry needs credentials this check
  * doesn't have.

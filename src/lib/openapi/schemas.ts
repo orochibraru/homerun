@@ -5,7 +5,7 @@ import { z } from "zod";
  * straight from `$lib/server/validation/api.ts`'s real validation schemas
  * (single source of truth, zero drift risk); these response schemas are
  * hand-mirrored from `src/lib/server/db/schema.ts`'s columns instead,
- * because every route's response is a DTO's `.toJSON()` — the raw DB row,
+ * because every route's response is a DTO's `.toJSON()` : the raw DB row,
  * not something already validated by a zod schema at runtime. Keep these in
  * sync by hand if the schema changes; there's no single source of truth for
  * the response side the way there is for requests.
@@ -41,7 +41,7 @@ export const serviceResponse = z.object({
 		"failed",
 	]),
 	customDomain: z.string().nullable(),
-	// Ciphertext (AES-256-GCM), not plaintext — present because `.toJSON()`
+	// Ciphertext (AES-256-GCM), not plaintext : present because `.toJSON()`
 	// returns the raw row as-is. Documented honestly rather than hidden, since
 	// hiding it here would make the spec describe a smaller response than the
 	// API actually returns.

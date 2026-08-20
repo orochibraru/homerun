@@ -22,7 +22,7 @@ export interface GpuStats {
 	utilizationPercent: number;
 }
 
-// os.cpus() returns cumulative counters since boot — CPU% needs a delta
+// os.cpus() returns cumulative counters since boot : CPU% needs a delta
 // between two samples. Kept module-scope so repeated calls (e.g. a
 // polling dashboard) diff against the previous call instead of each
 // blocking for a fresh sample window.
@@ -89,7 +89,7 @@ async function getDiskUsage(): Promise<{
 
 const CSV_SEPARATOR_RE = /,\s*/;
 
-/** Best-effort — most hosts running this app have no GPU, that's the expected/common case, not an error. */
+/** Best-effort : most hosts running this app have no GPU, that's the expected/common case, not an error. */
 async function getGpuStats(): Promise<GpuStats | null> {
 	try {
 		const { stdout } = await execFileAsync("nvidia-smi", [
@@ -108,7 +108,7 @@ async function getGpuStats(): Promise<GpuStats | null> {
 			utilizationPercent: Number(util),
 		};
 	} catch {
-		// No nvidia-smi on PATH — no GPU, or a non-NVIDIA one. Not an error.
+		// No nvidia-smi on PATH : no GPU, or a non-NVIDIA one. Not an error.
 		return null;
 	}
 }

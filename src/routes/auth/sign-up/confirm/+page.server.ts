@@ -15,7 +15,7 @@ export const load = ({ locals }) => {
 
 	return {
 		email: locals.user.email,
-		/** True when running `vite dev` — enables the bypass button */
+		/** True when running `vite dev` : enables the bypass button */
 		isDev: dev,
 	};
 };

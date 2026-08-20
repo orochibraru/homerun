@@ -6,7 +6,7 @@ import { BaseDTO } from "./base-dto";
 export interface NewDeploymentInput {
 	// Lets a caller pre-generate the id (e.g. the client, so it can start
 	// polling the progress endpoint before the create-deployment request
-	// even resolves) — falls back to a fresh one when omitted.
+	// even resolves) : falls back to a fresh one when omitted.
 	id?: string;
 	serviceId: string;
 	status: Deployment["status"];
@@ -25,7 +25,7 @@ export type DeploymentUpdateInput = Partial<
 	>
 >;
 
-/** Wraps the `deployment` table — see ServiceDTO for the pattern this follows. */
+/** Wraps the `deployment` table : see ServiceDTO for the pattern this follows. */
 export class DeploymentDTO extends BaseDTO<Deployment> {
 	static async get(id: string): Promise<DeploymentDTO | null> {
 		const [row] = await db
@@ -49,7 +49,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return rows.map((row) => new DeploymentDTO(row));
 	}
 
-	/** Every failed deployment attempt for a service, newest first — for the Errors tab. */
+	/** Every failed deployment attempt for a service, newest first : for the Errors tab. */
 	static async listFailedForService(
 		serviceId: string,
 		limit = 50,
@@ -68,7 +68,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return rows.map((row) => new DeploymentDTO(row));
 	}
 
-	/** Same as `listForService`, scoped to a user across all their services — plus each row's service name/slug, for the dashboard. */
+	/** Same as `listForService`, scoped to a user across all their services : plus each row's service name/slug, for the dashboard. */
 	static async listRecentForUser(
 		userId: string,
 		limit = 5,

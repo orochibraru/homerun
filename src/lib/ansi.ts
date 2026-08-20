@@ -1,10 +1,10 @@
 /**
  * Minimal ANSI SGR (Select Graphic Rendition) parser for container log
- * lines — Docker doesn't strip color codes from a container's stdout, so a
+ * lines : Docker doesn't strip color codes from a container's stdout, so a
  * raw log line often contains escape sequences like `\x1b[32mOK\x1b[0m`.
  * Rather than rendering that literally (garbled control characters) or
  * stripping it (losing the color the app itself chose), this splits one
- * line into styled segments the UI renders as `<span>`s — no `{@html}`
+ * line into styled segments the UI renders as `<span>`s : no `{@html}`
  * anywhere, so there's no injection surface even though the source is a
  * live container's own output.
  *
@@ -13,7 +13,7 @@
  * colors, and default-color resets (39/49). 256-color and truecolor SGR
  * sequences (38;5;n / 38;2;r;g;b) are recognized and skipped over (their
  * text still renders, just without that color) rather than leaking into
- * the visible text — better an uncolored line than a `[38;5;208m` you
+ * the visible text : better an uncolored line than a `[38;5;208m` you
  * have to read past.
  */
 
@@ -103,7 +103,7 @@ function applyCodes(state: SgrState, codes: number[]): void {
 		} else if (code === 49) {
 			state.bg = undefined;
 		} else if (code === 38 || code === 48) {
-			// Extended color (256-color or truecolor) — consume its trailing
+			// Extended color (256-color or truecolor) : consume its trailing
 			// params so they don't get misread as separate SGR codes, but
 			// don't attempt to render the actual color (see module docstring).
 			const mode = codes[i + 1];

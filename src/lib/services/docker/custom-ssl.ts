@@ -19,12 +19,12 @@ export interface CustomSslService {
  * `config.traefik.dynamicConfigDir`. This is genuinely inert unless the
  * admin has configured that dir *and* bind-mounted the same path into
  * the Traefik container with its file provider enabled (see
- * compose.yaml's commented-out example) — this app never touches the
+ * compose.yaml's commented-out example) : this app never touches the
  * Traefik container itself, only files on the host it's told to write
  * to. A no-op (logged once, not per-call) when dynamicConfigDir is unset.
  *
  * Traefik's file provider picks up the dynamic config on its own
- * (`--providers.file.watch=true`) — no restart needed, unlike the
+ * (`--providers.file.watch=true`) : no restart needed, unlike the
  * Docker-provider labels used for everything else in this app.
  */
 export async function syncCustomSslConfig(
@@ -46,7 +46,7 @@ export async function syncCustomSslConfig(
 	);
 
 	if (!hasCert) {
-		// Not (or no longer) configured — remove any previously-written
+		// Not (or no longer) configured : remove any previously-written
 		// files rather than leaving a stale cert Traefik might still be
 		// serving for a domain that's since changed.
 		await Promise.all([
@@ -76,7 +76,7 @@ export async function syncCustomSslConfig(
 		await Promise.all([writeFile(certPath, cert), writeFile(keyPath, key)]);
 		await writeFile(
 			configPath,
-			`# Written by Homerun for service "${svc.slug}" — do not edit by hand.\ntls:\n  certificates:\n    - certFile: ${certPath}\n      keyFile: ${keyPath}\n`,
+			`# Written by Homerun for service "${svc.slug}" : do not edit by hand.\ntls:\n  certificates:\n    - certFile: ${certPath}\n      keyFile: ${keyPath}\n`,
 		);
 		logger.info(
 			`Wrote dynamic TLS config: service=${svc.slug} domain=${svc.customDomain}`,

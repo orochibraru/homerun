@@ -1,17 +1,17 @@
 export type InstallMode = "agent" | "full";
 
 export interface Options {
-	/** Print every command instead of running it — the only way this installer's logic gets exercised in review/CI without root or a disposable VM. */
+	/** Print every command instead of running it : the only way this installer's logic gets exercised in review/CI without root or a disposable VM. */
 	dryRun: boolean;
 	/** The rootless-Docker system user to create (or reuse if it already exists). */
 	rootlessUser: string;
-	/** "agent" installs just the Homerun Agent (lighter — for a host that only receives migrated/placed workloads). "full" also brings up the main app + Traefik + Postgres via docker compose. */
+	/** "agent" installs just the Homerun Agent (lighter : for a host that only receives migrated/placed workloads). "full" also brings up the main app + Traefik + Postgres via docker compose. */
 	mode: InstallMode;
-	/** Where to clone the app from, to build the agent (and, in --mode=full, the app itself) from source — there's no prebuilt-binary release feed yet, see README. */
+	/** Where to clone the app from, to build the agent (and, in --mode=full, the app itself) from source : there's no prebuilt-binary release feed yet, see README. */
 	repoUrl: string;
 	repoRef: string;
 	agentPort: number;
-	/** Skip the "here's what I'm about to do, continue?" prompt — required for a non-interactive `curl | sh` install. */
+	/** Skip the "here's what I'm about to do, continue?" prompt : required for a non-interactive `curl | sh` install. */
 	yes: boolean;
 }
 
@@ -57,14 +57,14 @@ export function parseArgs(argv: string[]): Options {
 
 export function printHelp(): void {
 	console.log(`
-homerun-install — sets up Docker (rootless), the homerun-network, and the
+homerun-install : sets up Docker (rootless), the homerun-network, and the
 Homerun Agent (or the full stack) on a fresh Linux server.
 
 Usage:
   homerun-install --repo=<git url> [options]
 
 Options:
-  --repo=<url>       Git URL to build from (required — no prebuilt-binary
+  --repo=<url>       Git URL to build from (required : no prebuilt-binary
                       feed exists yet). Also settable via HOMERUN_REPO_URL.
   --ref=<ref>         Branch/tag to build (default: main)
   --mode=agent|full   agent = just the Homerun Agent (default)

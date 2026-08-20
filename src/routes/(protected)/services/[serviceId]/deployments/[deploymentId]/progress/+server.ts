@@ -4,7 +4,7 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 
 /**
  * Polled by the Overview tab while a deploy is in flight (including right
- * after a page reload mid-deploy — see the resume logic there) — returns
+ * after a page reload mid-deploy : see the resume logic there) : returns
  * the growing progress log plus the deployment's current status, so the
  * client knows when to stop polling.
  */

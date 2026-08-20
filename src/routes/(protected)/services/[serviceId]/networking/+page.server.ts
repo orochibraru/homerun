@@ -8,7 +8,7 @@ import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("Services");
 
-// Loose hostname check — real validation is "does DNS for this actually
+// Loose hostname check : real validation is "does DNS for this actually
 // point here", which the app has no way to verify; this just rejects
 // obviously-malformed input.
 const DOMAIN_RE =
@@ -84,7 +84,7 @@ export const actions = {
 		);
 		return { success: true };
 	},
-	// Container port, protocol, network mode, and DNS-resolvability — moved
+	// Container port, protocol, network mode, and DNS-resolvability : moved
 	// here from the old Settings tab (see validation/service.ts's
 	// updatePortsSchema docstring).
 	updatePorts: async ({ request, params, locals }) => {
@@ -110,7 +110,7 @@ export const actions = {
 		await svc.update({
 			containerPort: input.containerPort,
 			// Host mode has no container-specific network for Traefik to
-			// route to — force this off regardless of what was submitted,
+			// route to : force this off regardless of what was submitted,
 			// same enforcement docker/containers.ts does at deploy time (this
 			// just keeps the stored value honest ahead of the next deploy).
 			dnsResolvable: isHostNetwork ? false : input.dnsResolvable,

@@ -53,7 +53,7 @@
 
 	const IN_FLIGHT_STATUSES = new Set(["pending", "pulling", "starting"]);
 
-	/** One poll tick — returns the deployment's current status, or undefined on a missed tick. */
+	/** One poll tick : returns the deployment's current status, or undefined on a missed tick. */
 	async function fetchProgress(
 		deploymentId: string,
 	): Promise<string | undefined> {
@@ -73,13 +73,13 @@
 				return body.status;
 			}
 		} catch {
-			// A missed poll tick isn't worth surfacing — the next one usually succeeds.
+			// A missed poll tick isn't worth surfacing : the next one usually succeeds.
 		}
 	}
 
 	/**
 	 * Polls until the deployment reaches a terminal status, then clears
-	 * pendingAction itself — this is the single mechanism for both a live
+	 * pendingAction itself : this is the single mechanism for both a live
 	 * deploy just submitted from this tab AND resuming the progress view
 	 * after a mid-deploy page reload (see onMount below), since in both
 	 * cases there's no other signal telling the client when it's done.
@@ -214,13 +214,13 @@
   <div
     class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm"
   >
-    This service hasn't been deployed yet — click <strong>Deploy</strong> to
+    This service hasn't been deployed yet : click <strong>Deploy</strong> to
     pull
     <span class="text-text font-mono">{svc.image}:{svc.tag}</span>
     and start it.
   </div>
 {:else if pendingAction !== "deploy"}
-  <!-- Live container logs, right on the Overview tab — same panel as the
+  <!-- Live container logs, right on the Overview tab : same panel as the
        Logs tab (see $lib/components/live-log-viewer.svelte), just shorter.
        Hidden mid-deploy since the progress panel above already covers
        live output for that. -->

@@ -3,7 +3,7 @@
 		"dockerode": "^5.0.1",
 		"zod": "^4.4.3"
 	},
-	"description": "Standalone Homerun Agent — runs on a remote host's own Docker daemon and exposes an HTTP control surface (deploy/start/stop/restart/logs/stats) for the main Homerun instance to drive, instead of exposing the raw Docker socket over TCP/SSH.",
+	"description": "Standalone Homerun Agent : runs on a remote host's own Docker daemon and exposes an HTTP control surface (deploy/start/stop/restart/logs/stats) for the main Homerun instance to drive, instead of exposing the raw Docker socket over TCP/SSH.",
 	"devDependencies": {
 		"@types/bun": "^1.3.14",
 		"@types/dockerode": "^4.0.1"

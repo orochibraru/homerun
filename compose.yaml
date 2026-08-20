@@ -1,10 +1,10 @@
 # Traefik + Postgres bootstrap for Homerun.
 #
-# This app itself is NOT containerized yet — run it directly on the host
+# This app itself is NOT containerized yet : run it directly on the host
 # (`bun run dev` / `bun run start`) with DOCKER_NETWORK_NAME=homerun-network
 # and access to /var/run/docker.sock. Traefik auto-discovers containers this
-# app creates via Docker labels (see src/lib/services/docker/labels.ts) — no
-# control-plane push needed. Postgres is required — there's no SQLite
+# app creates via Docker labels (see src/lib/services/docker/labels.ts) : no
+# control-plane push needed. Postgres is required : there's no SQLite
 # fallback (see CLAUDE.md's "SQLite → Postgres conversion" note).
 #
 # No-compose fallback: `docker network create homerun-network`, then run
@@ -28,7 +28,7 @@ services:
       # Networking tab and $lib/services/docker/custom-ssl.ts). Uncomment
       # this line, set TRAEFIK_DYNAMIC_CONFIG_DIR to the same host path
       # as the bind mount below, and `docker compose up -d` to pick it
-      # up — the app writes cert/key files + per-domain dynamic config
+      # up : the app writes cert/key files + per-domain dynamic config
       # into that directory itself, it does not touch this container.
       # - --providers.file.directory=/etc/traefik/dynamic
       # - --providers.file.watch=true
@@ -38,19 +38,19 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certs:/letsencrypt
-      # Uncomment alongside the --providers.file.* flags above — must be
+      # Uncomment alongside the --providers.file.* flags above : must be
       # the same host path this app's TRAEFIK_DYNAMIC_CONFIG_DIR points at.
       # - ${TRAEFIK_DYNAMIC_CONFIG_DIR:-./traefik-dynamic}:/etc/traefik/dynamic:ro
     networks:
       - homerun-network
 
-  # The app's own database — not a deployed service, so it deliberately
+  # The app's own database : not a deployed service, so it deliberately
   # doesn't go through the Docker layer above (no homerun.managed label, not
   # attached to homerun-network, not Traefik-routed). Match DATABASE_URL to
   # whatever POSTGRES_USER/PASSWORD/DB you set here (defaults line up with
   # $lib/config.ts's own default, so this works with zero .env changes for
   # local dev). Published on the host port so `bun run dev` (running
-  # directly on the host, not in this compose file — see the top comment)
+  # directly on the host, not in this compose file : see the top comment)
   # can reach it.
   postgres:
     image: postgres:16-alpine
@@ -70,7 +70,7 @@ services:
       timeout: 5s
 
 networks:
-  # external: true — this network is a shared resource, not compose-owned.
+  # external: true : this network is a shared resource, not compose-owned.
   # The app's own Docker layer (src/lib/services/docker/containers.ts)
   # attaches deployed containers to it directly by name, and it must
   # survive a `docker compose down` without taking those containers'

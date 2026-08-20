@@ -1,6 +1,6 @@
 import type { StepRunner } from "../exec";
 
-/** Creates the shared network on the rootless daemon — same name convention as the main app's homerun-network, idempotent (docker network create errors on a duplicate name, so check first). */
+/** Creates the shared network on the rootless daemon : same name convention as the main app's homerun-network, idempotent (docker network create errors on a duplicate name, so check first). */
 export async function ensureHomerunNetwork(
 	run: StepRunner,
 	username: string,

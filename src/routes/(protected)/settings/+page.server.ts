@@ -12,13 +12,13 @@ import { rebuildAuth } from "$lib/services/auth";
 const logger = new Logger("InstanceSettings");
 
 /**
- * A bad discoveryUrl doesn't just break sign-in with that one provider —
+ * A bad discoveryUrl doesn't just break sign-in with that one provider :
  * better-auth's genericOAuth plugin validates every configured provider's
  * discovery document while building its auth *context*, which every
  * request touching auth (including plain email/password sign-in, and
  * getSession() on every page load) goes through. An unreachable/invalid
  * discovery URL saved here would otherwise lock the admin out of the whole
- * app, /settings included — verified live while building this. So, unlike
+ * app, /settings included : verified live while building this. So, unlike
  * the image-existence checker's "warn, don't block" precedent, this one
  * hard-blocks the save.
  */
@@ -42,7 +42,7 @@ async function validateDiscoveryUrl(url: string): Promise<string | null> {
 	}
 }
 
-/** Blank text field means "no override — fall back to the env default". */
+/** Blank text field means "no override : fall back to the env default". */
 function nullableText(formData: FormData, key: string): string | null {
 	const value = (formData.get(key) as string | null)?.trim();
 	return value ? value : null;
@@ -53,7 +53,7 @@ function checkbox(formData: FormData, key: string): boolean {
 }
 
 export const load = async ({ locals }) => {
-	// Instance-wide config — admin only. Developers get the rest of the
+	// Instance-wide config : admin only. Developers get the rest of the
 	// dashboard (their own services/projects, already isolated per-user).
 	if (!locals.isAdmin) {
 		throw redirect(302, resolve("/"));
@@ -169,7 +169,7 @@ export const actions = {
 		const providers: OauthProviderInput[] = [];
 		for (let i = 0; i < names.length; i += 1) {
 			const name = names[i]?.trim();
-			// Blank rows are dropped, not an error — same "dropping blank keys"
+			// Blank rows are dropped, not an error : same "dropping blank keys"
 			// convention as the envKey[]/envValue[] zip in validation/service.ts.
 			if (!name) {
 				continue;
@@ -195,7 +195,7 @@ export const actions = {
 			});
 		}
 
-		// Validate every provider's discovery doc before persisting anything —
+		// Validate every provider's discovery doc before persisting anything :
 		// see validateDiscoveryUrl()'s docstring for why this can't be a
 		// "warn, don't block" check like the image-existence checker.
 		const validations = await Promise.all(

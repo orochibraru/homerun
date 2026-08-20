@@ -37,7 +37,7 @@
 	let submitting = $state(false);
 
 	// Every field pre-fills with the *effective* current value (DB override,
-	// falling back to the env default) — "required" is then trivially
+	// falling back to the env default) : "required" is then trivially
 	// satisfied by just clicking through if the defaults are already fine.
 	const { settings, envDefaults } = $derived(data);
 
@@ -232,7 +232,7 @@
 		return ok;
 	}
 
-	/** Maps a fail()'d field-error map back onto local state — jumps to the first offending step, same idea as services/new's simpler "jump to step 0" but to the actual step. */
+	/** Maps a fail()'d field-error map back onto local state : jumps to the first offending step, same idea as services/new's simpler "jump to step 0" but to the actual step. */
 	function applyServerErrors(failErrors: Record<string, string[]> | undefined) {
 		if (!failErrors) {
 			return;
@@ -288,7 +288,7 @@
     <div>
       <h1 class="text-xl font-bold text-text">Set up Homerun</h1>
       <p class="mt-0.5 text-sm text-text-muted">
-        A few instance-wide settings before the dashboard unlocks — every field
+        A few instance-wide settings before the dashboard unlocks : every field
         below is also editable later from Settings.
       </p>
     </div>
@@ -299,7 +299,7 @@
       >
         <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
         <span>
-          Still using the built-in placeholder auth secret — this can't be fixed
+          Still using the built-in placeholder auth secret : this can't be fixed
           from this wizard. Set <code>AUTH_SECRET</code> (e.g.
           <code>openssl rand -base64 32</code>) and restart when you get a
           chance.
@@ -445,7 +445,7 @@
                 class="{input} font-mono"
                 id="traefikDynamicConfigDir"
                 name="traefikDynamicConfigDir"
-                placeholder="unset — custom SSL is a no-op"
+                placeholder="unset : custom SSL is a no-op"
                 type="text"
                 bind:value={traefikDynamicConfigDir}
               >
@@ -543,7 +543,7 @@
               </div>
             {:else}
               <p class="text-xs text-text-subtle">
-                Skippable — email verification just won't send until this is
+                Skippable : email verification just won't send until this is
                 configured, here or later on Settings.
               </p>
             {/if}

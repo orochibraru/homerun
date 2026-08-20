@@ -33,7 +33,7 @@
 	onMount(() => title.set("Settings"));
 
 	// ──────────────────────────────────────────────────────────────
-	// Account section (name + avatar — updated via authClient)
+	// Account section (name + avatar : updated via authClient)
 	// ──────────────────────────────────────────────────────────────
 	let accountName = $derived(user?.name ?? "");
 	let accountImage = $derived(user?.image ?? "");

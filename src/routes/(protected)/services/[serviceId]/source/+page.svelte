@@ -54,7 +54,7 @@
 	let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
 	let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
 
-	// "Browse repos" — only shown when the user has at least one connected
+	// "Browse repos" : only shown when the user has at least one connected
 	// git provider (see the Git Providers page). Picking a repo autofills
 	// gitUrl/gitRef below rather than requiring a pasted URL, and checks for
 	// a Dockerfile at the picked ref so there's a heads-up before deploying
@@ -113,7 +113,7 @@
 				dockerfileCheck = { checked: true, exists: body.exists };
 			}
 		} catch {
-			// Best-effort — not finding out doesn't block picking the repo.
+			// Best-effort : not finding out doesn't block picking the repo.
 		}
 	}
 
@@ -217,7 +217,7 @@
       </div>
       <input name="buildSource" type="hidden" value={buildSource}>
       <p class="text-text-subtle mt-1.5 text-xs">
-        Switching this doesn't redeploy by itself — save, then redeploy from
+        Switching this doesn't redeploy by itself : save, then redeploy from
         the Overview tab.
       </p>
     </div>
@@ -259,7 +259,7 @@
           <TriangleAlertIcon class="mt-0.5 size-3.5 shrink-0" />
           <span>
             <strong>{image}:{tag}</strong>
-            wasn't found in its registry. You can still save — this doesn't
+            wasn't found in its registry. You can still save : this doesn't
             block deploying.
           </span>
         </div>
@@ -314,7 +314,7 @@
               >
                 {dockerfileCheck.exists
                   ? "✓ Dockerfile found at the repo root."
-                  : "⚠ No Dockerfile found at the repo root on this branch — the build will fail unless one exists at the path you set below."}
+                  : "⚠ No Dockerfile found at the repo root on this branch : the build will fail unless one exists at the path you set below."}
               </p>
             {/if}
           {/if}

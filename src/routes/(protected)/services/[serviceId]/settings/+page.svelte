@@ -142,7 +142,7 @@
         <p class="text-text-subtle mt-1 text-xs">
           Routed at
           <span class="text-accent">{values.slug}.{data.baseDomain}</span>
-          — redeploy to apply a change.
+          : redeploy to apply a change.
         </p>
         {#if errors?.slug}
           <p class={errorClass}>{errors.slug[0]}</p>
@@ -262,7 +262,7 @@
           <p class="text-text text-sm font-medium">Deploy target</p>
           <p class="text-text-muted text-xs">
             Which Docker daemon this service runs on. Changing this only takes
-            effect on the next deploy — the current container, if any, keeps
+            effect on the next deploy : the current container, if any, keeps
             running where it is.
           </p>
         </div>
@@ -344,7 +344,7 @@
       <div>
         <p class="text-text text-sm font-medium">Auto-redeploy schedule</p>
         <p class="text-text-muted text-xs">
-          Periodically repull the image and redeploy — useful for tracking a
+          Periodically repull the image and redeploy : useful for tracking a
           <code>:latest</code>
           tag. Disabled by default.
         </p>

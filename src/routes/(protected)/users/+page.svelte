@@ -65,7 +65,7 @@
       <h1 class="text-text text-2xl font-bold">Users</h1>
       <p class="text-text-muted mt-1 text-sm">
         Admin and developer accounts for this instance. Public sign-up is closed
-        once the first account exists — every account after that is created
+        once the first account exists : every account after that is created
         here.
       </p>
     </div>
@@ -147,7 +147,7 @@
               type="text"
             />
             <p class="text-text-subtle mt-1.5 text-xs">
-              At least 12 characters — share this with them out of band.
+              At least 12 characters : share this with them out of band.
             </p>
           </div>
           <div>
@@ -293,7 +293,7 @@
               </p>
               <p class="text-text-muted text-xs">
                 {inv.role}
-                — expires {new Date(inv.expiresAt).toLocaleDateString()}
+                : expires {new Date(inv.expiresAt).toLocaleDateString()}
               </p>
             </div>
             <form
@@ -321,7 +321,7 @@
 <ConfirmDialog
   bind:open={removeDialogOpen}
   confirmLabel="Remove"
-  description={`Remove "${pendingRemoveName}"? Their services and containers are stopped and deleted — this can't be undone.`}
+  description={`Remove "${pendingRemoveName}"? Their services and containers are stopped and deleted : this can't be undone.`}
   onConfirm={() => pendingRemoveForm?.requestSubmit()}
   title="Remove user"
 />

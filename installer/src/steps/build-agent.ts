@@ -3,7 +3,7 @@ import { commandExists } from "../exec";
 
 const BUN_INSTALL_SCRIPT = "https://bun.sh/install";
 
-/** No prebuilt-binary release feed exists yet (see installer/README.md) — every install builds the agent from source, same as a developer would. */
+/** No prebuilt-binary release feed exists yet (see installer/README.md) : every install builds the agent from source, same as a developer would. */
 export async function ensureBunInstalled(
 	run: StepRunner,
 	username: string,
@@ -29,7 +29,7 @@ export async function cloneRepo(
 ): Promise<void> {
 	if (!repoUrl) {
 		throw new Error(
-			"--repo=<git url> is required (or set HOMERUN_REPO_URL) — see --help.",
+			"--repo=<git url> is required (or set HOMERUN_REPO_URL) : see --help.",
 		);
 	}
 	const alreadyCloned = await run.runOk(["test", "-d", `${dest}/.git`], {
@@ -87,7 +87,7 @@ export async function buildAndInstallAgent(
 
 /**
  * A systemd --user unit (run as the rootless-Docker user, same session the
- * daemon itself lives in) rather than a system-wide unit — keeps the agent
+ * daemon itself lives in) rather than a system-wide unit : keeps the agent
  * process under the same non-root account as the containers it manages,
  * consistent with the "rootless permissions" requirement.
  */
@@ -132,7 +132,7 @@ export async function installAgentSystemdUnit(
 	await run.run(["mkdir", "-p", unitDir], { as: username });
 	// StepRunner's `run` captures stdout/stderr but has no stdin-piping path,
 	// so the unit file is written directly rather than via a `cat > file`
-	// heredoc — this is a no-op under --dry-run (see writeFile below).
+	// heredoc : this is a no-op under --dry-run (see writeFile below).
 	await run.writeFile(`${unitDir}/homerun-agent.service`, unit);
 	await run.run(["chown", "-R", `${username}:${username}`, unitDir]);
 

@@ -1,9 +1,9 @@
 /**
  * The Tailwind class strings every form page in this app redefines
  * identically (services/new, service settings, project/storage/remote-host
- * create forms, etc.) — one shared source instead of copy-pasted literals
+ * create forms, etc.) : one shared source instead of copy-pasted literals
  * that'd drift out of sync. Import and use directly as a class string
- * (`class={inputClass}`), not a component — most of these pages predate
+ * (`class={inputClass}`), not a component : most of these pages predate
  * this file and use a plain `<input>`/`<label>` styled this way rather
  * than a wrapper component, so this keeps the existing markup shape
  * intact while still deduplicating the one thing that was actually

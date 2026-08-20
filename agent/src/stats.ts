@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import os from "node:os";
 
 /**
- * Self-contained port of the main app's `SystemStatsService` — not imported
+ * Self-contained port of the main app's `SystemStatsService` : not imported
  * from there since the agent is a separately-deployed binary with no access
  * to the main app's source tree at runtime. Keep the two in sync by hand if
  * one changes; they're small and unlikely to drift silently.

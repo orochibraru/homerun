@@ -88,7 +88,7 @@
   <div class="p-5">
     {#if data.volumes.length === 0}
       <p class="text-text-subtle text-xs">
-        No storage volumes yet —
+        No storage volumes yet :
         <button
           class="text-accent underline"
           onclick={() => {
@@ -179,7 +179,7 @@
     <Dialog.Header>
       <Dialog.Title>New volume</Dialog.Title>
       <Dialog.Description>
-        A local storage source — mount it into this service right after, no
+        A local storage source : mount it into this service right after, no
         need to leave the page.
       </Dialog.Description>
     </Dialog.Header>
@@ -206,7 +206,7 @@
             if (newId) {
               volumeId = newId;
             }
-            toast.success("Volume created — select it above to mount it.");
+            toast.success("Volume created : select it above to mount it.");
           }
         };
       }}

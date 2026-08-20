@@ -61,7 +61,7 @@ export const actions = {
 					remote,
 				);
 			} catch {
-				// Container may already be gone on the host — proceed with
+				// Container may already be gone on the host : proceed with
 				// deleting our record regardless.
 			}
 		}

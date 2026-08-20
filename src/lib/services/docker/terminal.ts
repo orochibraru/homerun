@@ -4,7 +4,7 @@ import { getDocker } from "./client";
 
 /**
  * Interactive `docker exec` sessions, exposed to the browser over plain
- * chunked HTTP rather than a WebSocket — this app has no custom server
+ * chunked HTTP rather than a WebSocket : this app has no custom server
  * (SvelteKit route handlers only, `vite dev` in dev / a plain Bun HTTP
  * server via `bun run start` in prod), so there's no upgrade hook to hang
  * a `ws` server off. Output streams via one long-lived GET (same
@@ -14,21 +14,21 @@ import { getDocker } from "./client";
  * usable for basic shell work.
  *
  * **Why this doesn't use dockerode's `exec.start()`**: verified during
- * development that it hangs forever under Bun — `exec.start({hijack:true})`
+ * development that it hangs forever under Bun : `exec.start({hijack:true})`
  * relies on Node's `http.request` completing an HTTP/1.1 `Connection:
  * Upgrade` handshake and handing back the raw duplex socket, and that
  * upgrade flow never resolves under Bun's `node:http` compatibility layer
  * (confirmed via a minimal repro before writing this). `container.exec()`
- * — the *create* call, a normal request/response — works fine and is
+ * : the *create* call, a normal request/response : works fine and is
  * still used below. Only the *start* step is done manually: a raw
  * `Bun.connect()` Unix-socket connection to the Docker daemon, writing
  * the HTTP/1.1 Upgrade request by hand and treating the socket as a raw
- * duplex stream once the "101 UPGRADED" response header block is past —
+ * duplex stream once the "101 UPGRADED" response header block is past :
  * confirmed working end-to-end (real shell prompt, real command echoed
  * back) against a live container before this was wired into routes.
  *
  * Security-sensitive by nature (arbitrary command execution inside a
- * container this app manages) — every route that touches this module
+ * container this app manages) : every route that touches this module
  * MUST re-check service ownership itself; this module only trusts the
  * containerId it's given.
  */
@@ -76,7 +76,7 @@ export interface OpenSessionParams {
 
 const HEADER_END = "\r\n\r\n";
 
-/** Starts a new interactive shell session inside the container. Tries `/bin/sh` — the one shell essentially every image has. */
+/** Starts a new interactive shell session inside the container. Tries `/bin/sh` : the one shell essentially every image has. */
 export async function openTerminalSession(
 	params: OpenSessionParams,
 ): Promise<string> {
@@ -199,7 +199,7 @@ export function closeSession(sessionId: string): void {
 	try {
 		session.socket.end();
 	} catch {
-		// Already closed on the Docker side — fine.
+		// Already closed on the Docker side : fine.
 	}
 	sessions.delete(sessionId);
 }
