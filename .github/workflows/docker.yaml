@@ -16,7 +16,6 @@ on:
         required: true
         description: "Docker registry target to authenticate against and push to"
         type: string
-        default: hub.docker.com
       registry_username:
         required: true
         description: "Docker registry username"
