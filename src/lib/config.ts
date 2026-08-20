@@ -71,7 +71,7 @@ export const configSchema = z.object({
 	}),
 });
 
-export type PenombreConfig = z.infer<typeof configSchema>;
+export type AppConfig = z.infer<typeof configSchema>;
 
 /** The plain-value shape InstanceSettingsDTO.toConfigOverride() produces — kept here rather than imported from the DTO so this module stays DB-free (see applyInstanceSettings below). */
 export interface InstanceSettingsOverride {
@@ -81,7 +81,7 @@ export interface InstanceSettingsOverride {
 	baseDomain?: string | null;
 	dockerNetworkName?: string | null;
 	dockerSocketPath?: string | null;
-	oauthProviders?: PenombreConfig["auth"]["oauthProviders"];
+	oauthProviders?: AppConfig["auth"]["oauthProviders"];
 	smtpEnabled?: boolean | null;
 	smtpFrom?: string | null;
 	smtpHost?: string | null;
@@ -94,7 +94,7 @@ export interface InstanceSettingsOverride {
 	traefikEntrypoint?: string | null;
 }
 
-export const parseConfig = (): PenombreConfig => {
+export const parseConfig = (): AppConfig => {
 	const envConfig = {
 		auth: {
 			crossSubdomainCookies: Bun.env.AUTH_CROSS_SUBDOMAIN === "true",
@@ -118,8 +118,8 @@ export const parseConfig = (): PenombreConfig => {
 			networkName: Bun.env.DOCKER_NETWORK_NAME,
 			socketPath: Bun.env.DOCKER_SOCKET_PATH,
 		},
-		logFormat: Bun.env.LOG_FORMAT as PenombreConfig["logFormat"],
-		logLevel: Bun.env.LOG_LEVEL as PenombreConfig["logLevel"],
+		logFormat: Bun.env.LOG_FORMAT as AppConfig["logFormat"],
+		logLevel: Bun.env.LOG_LEVEL as AppConfig["logLevel"],
 		port: Bun.env.PORT ? Number.parseInt(Bun.env.PORT, 10) : undefined,
 		smtp: {
 			enabled: Bun.env.SMTP_ENABLED === "true",
@@ -193,7 +193,7 @@ const envDefaults = parseConfig();
 // `config` is a stable object reference every other module imports and
 // reads properties off live — mutated in place (never reassigned) so a
 // settings change is visible everywhere without re-importing anything.
-export const config: PenombreConfig = structuredClone(envDefaults);
+export const config: AppConfig = structuredClone(envDefaults);
 
 /**
  * Merges DB-backed instance settings (see InstanceSettingsDTO) over the env
