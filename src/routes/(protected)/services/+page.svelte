@@ -85,7 +85,7 @@
         Containers deployed to this server.
       </p>
     </div>
-    <Button href={resolve("/services/new")}>
+    <Button href={resolve("/services/new")} size="sm">
       <Plus class="size-4" />
       Deploy a Service
     </Button>

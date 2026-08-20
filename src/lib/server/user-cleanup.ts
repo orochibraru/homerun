@@ -12,7 +12,7 @@ const logger = new Logger("UserCleanup");
 /**
  * Stops/removes a user's actual Docker containers and networks and deletes
  * their app-owned rows (deployments/services/projects/storage volumes)
- * *before* the user row itself goes away — PRAGMA foreign_keys is never
+ *before* the user row itself goes away — PRAGMA foreign_keys is never
  * enabled on the sqlite connection, so onDelete:cascade in the schema is
  * decorative for anything with a real-world side effect.
  *

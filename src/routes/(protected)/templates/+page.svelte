@@ -2,6 +2,7 @@
   import { LayoutGrid, Plus, Rocket } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { resolve } from "$app/paths";
+  import { Button } from "$lib/components/ui/button";
   import { templateIcon } from "$lib/constants";
   import { title } from "$lib/store/title";
 
@@ -13,31 +14,30 @@
 {#snippet card(tmpl: (typeof data.builtins)[number])}
   {@const Icon = templateIcon(tmpl.icon)}
   <div
-    class="rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
+    class="rounded-2xl border flex flex-col justify-between gap-2 h-full border-border bg-surface p-5 transition-shadow hover:shadow-md"
   >
     <div
-      class="bg-accent/10 text-accent mb-3 flex size-10 items-center justify-center rounded-xl"
+      class="bg-accent/10 text-accent flex size-10 items-center justify-center rounded-xl"
     >
       <Icon class="size-5" />
     </div>
     <p class="font-semibold text-text">{tmpl.name}</p>
     {#if tmpl.description}
-      <p class="mt-0.5 line-clamp-2 text-xs text-text-muted">
+      <p class="line-clamp-2 text-xs text-text-muted">
         {tmpl.description}
       </p>
     {/if}
-    <p class="mt-2 font-mono text-xs text-text-subtle">
-      {tmpl.image}:{tmpl.tag}
-    </p>
-    <a
-      class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-4 flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
+    <p class="font-mono text-xs text-text-subtle">{tmpl.image}:{tmpl.tag}</p>
+    <Button
+      class="w-full"
       href="{resolve('/services/new')}?templateId={tmpl.id}{data.project
         ? `&projectId=${data.project.id}`
         : ''}"
+      size="sm"
     >
       <Rocket class="size-3.5" />
       Deploy
-    </a>
+    </Button>
   </div>
 {/snippet}
 
@@ -49,13 +49,10 @@
         One-click configs for common services.
       </p>
     </div>
-    <a
-      class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
-      href={resolve("/templates/new")}
-    >
+    <Button href={resolve("/templates/new")} size="sm">
       <Plus class="size-4" />
       New Template
-    </a>
+    </Button>
   </div>
 
   <div class="mb-8">

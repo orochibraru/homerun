@@ -6,12 +6,7 @@
   import { resolve } from "$app/paths";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
-  import {
-    SelectContent,
-    SelectItem,
-    Select as SelectRoot,
-    SelectTrigger,
-  } from "$lib/components/ui/select/index.js";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
@@ -58,9 +53,9 @@
 </script>
 
 <div class="mspace-y-6 p-6 md:p-8">
-  <div>
+  <div class="mb-3">
     <h1 class="text-xl font-bold text-text">New Template</h1>
-    <p class="mt-0.5 text-sm text-text-muted">
+    <p class="text-sm text-text-muted">
       A reusable config you can deploy from again later.
     </p>
   </div>
@@ -123,16 +118,16 @@
 
         <div>
           <label class={label} for="category">Category</label>
-          <SelectRoot name="category" type="single" bind:value={category}>
-            <SelectTrigger class="w-full" id="category">
+          <Select.Root name="category" type="single" bind:value={category}>
+            <Select.Trigger class="w-full" id="category">
               {categoryLabel}
-            </SelectTrigger>
-            <SelectContent>
+            </Select.Trigger>
+            <Select.Content>
               {#each categoryOptions as opt (opt.value)}
-                <SelectItem label={opt.label} value={opt.value} />
+                <Select.Item label={opt.label} value={opt.value} />
               {/each}
-            </SelectContent>
-          </SelectRoot>
+            </Select.Content>
+          </Select.Root>
         </div>
 
         <div class="grid grid-cols-3 gap-3">

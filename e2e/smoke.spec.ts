@@ -1,4 +1,10 @@
 import { expect, test } from "@playwright/test";
+import {
+  cleanUpThrowawayAccount,
+  createBasicService,
+  makeThrowawayUser,
+  signUpThrowawayUser,
+} from "./helpers";
 
 /**
  * End-to-end smoke test against the real app — real signup, real Docker
@@ -9,58 +15,27 @@ import { expect, test } from "@playwright/test";
  * Requires a working local Docker daemon (see src/lib/server/docker/).
  */
 
-const email = `pw-smoke-${Date.now()}@example.com`;
-const password = "playwright-smoke-test-pw";
+const user = makeThrowawayUser("smoke");
 const serviceName = "Playwright Smoke Nginx";
-const SIGN_UP_LANDING_URL_RE = /\/(auth\/sign-up\/confirm)?$/;
-const SIGN_IN_URL_RE = /\/auth\/sign-in/;
 const SERVICE_OVERVIEW_URL_RE = /\/services\/[^/]+$/;
 
 test("sign up, deploy a service, verify it runs, clean up", async ({
   page,
 }) => {
-  await test.step("sign up", async () => {
-    await page.goto("/auth/sign-up");
-    await page.locator("#name").fill("Playwright Smoke");
-    await page.locator("#email").fill(email);
-    await page.locator("#password").fill(password);
-    await page.locator("#confirm").fill(password);
-    await page.getByRole("button", { name: "Create account" }).click();
-    // signUp.email() establishes a session immediately (email verification
-    // isn't required to sign in), so there's a real race between the
-    // sign-up page's own "redirect home if already logged in" effect and
-    // its explicit post-signup navigation to /auth/sign-up/confirm —
-    // either can win. Accept both landing spots.
-    await page.waitForURL(SIGN_UP_LANDING_URL_RE, {
-      timeout: 10_000,
-    });
-  });
-
-  await test.step("bypass email verification (dev mode)", async () => {
-    if (page.url().includes("/auth/sign-up/confirm")) {
-      await page
-        .getByRole("button", {
-          name: "Skip verification and go to dashboard",
-        })
-        .click();
-    }
-    await expect(page).toHaveURL("/");
-  });
-
   try {
+    await test.step("sign up", async () => {
+      await signUpThrowawayUser(page, user);
+      await expect(page).toHaveURL("/");
+    });
+
     await test.step("create a service", async () => {
-      await page.goto("/services/new");
-      await page.locator("#name").fill(serviceName);
-      // The slug field auto-derives from the name field via an oninput
-      // handler, but Playwright's fill() (a single synthetic dispatch)
-      // doesn't reliably trigger it the way real per-keystroke typing does
-      // — fill it explicitly rather than depend on that reactivity here.
-      await page.locator("#slug").fill("playwright-smoke-nginx");
-      await page.locator("#image").fill("nginx");
-      await page.locator("#tag").fill("alpine");
-      await page.locator("#containerPort").fill("80");
-      await page.getByRole("button", { name: "Create service" }).click();
-      await expect(page).toHaveURL("/services");
+      await createBasicService(page, {
+        containerPort: "80",
+        image: "nginx",
+        name: serviceName,
+        slug: "playwright-smoke-nginx",
+        tag: "alpine",
+      });
       await expect(page.getByText(serviceName)).toBeVisible();
     });
 
@@ -107,13 +82,7 @@ test("sign up, deploy a service, verify it runs, clean up", async ({
     });
   } finally {
     await test.step("clean up: delete the account (also removes any leftover container)", async () => {
-      await page.goto("/settings");
-      await page.getByRole("button", { name: "Delete account" }).click();
-      await page.getByPlaceholder("Confirm your password").fill(password);
-      await page
-        .getByRole("button", { name: "Yes, delete my account" })
-        .click();
-      await expect(page).toHaveURL(SIGN_IN_URL_RE, { timeout: 15_000 });
+      await cleanUpThrowawayAccount(page, user.password);
     });
   }
 });

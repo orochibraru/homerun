@@ -24,7 +24,9 @@ docker compose up -d     # bootstraps Traefik (see compose.yaml) — required fo
 
 No test framework is set up in this repo.
 
-**`bun run check` is currently broken**, unrelated to app code: `typescript` is pinned to `^7.0.2`, and `svelte-check`'s `--tsgo` mode requires a _second_, aliased TypeScript 6 install alongside it. Until that's set up, verify changes by booting `bun run dev` and exercising routes directly (real signups, real deploys, throwaway accounts — never the maintainer's own account) rather than trusting a clean `check` run.
+**`bun run check` is currently broken**, unrelated to app code: `typescript` is pinned to `^7.0.2`, and `svelte-check`'s `--tsgo` mode requires a _second_, aliased TypeScript 6 install alongside it. Until that's set up, verify changes at runtime rather than trusting a clean `check` run.
+
+**Runtime verification: the `qa` subagent (`.claude/agents/qa.md`).** After implementing or changing app functionality — before calling a change done — invoke it (`Agent` tool / "use the qa agent") to actually run the app: it drives real Playwright specs under `e2e/` against a real Docker daemon on an isolated DB (`.env.test`'s `DB_PATH`, never `database.db` — see `playwright.config.ts`), crawling every page for render errors and running/extending behavioral coverage for whatever area changed. Real signups, real deploys, throwaway accounts, cleaned up in `finally` — never the maintainer's own account. `e2e/helpers.ts` holds the shared sign-up/cleanup/error-collection helpers every spec builds on. Full manual command reference and conventions live in the agent file itself; don't duplicate them here.
 
 Biome formats with tabs + double quotes; svelte/vue/astro files have `useConst`/`useImportType`/unused-import rules turned off (Svelte 5 `$state`/`$props` destructuring trips them). Note: the IDE's inline diagnostics have proven frequently stale/phantom in this repo (showing parse errors that don't reflect the real file) — `bunx biome check <file>` is ground truth, always verify against it before trusting an IDE-reported error.
 

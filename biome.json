@@ -38,6 +38,9 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "performance": {
+        "noNamespaceImport": "off"
+      },
       "style": {
         "useConst": "error",
         "noParameterAssign": "error",

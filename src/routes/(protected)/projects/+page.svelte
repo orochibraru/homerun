@@ -2,6 +2,7 @@
   import { FolderKanban, Plus, Server } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { resolve } from "$app/paths";
+  import { Button } from "$lib/components/ui/button";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -17,13 +18,10 @@
         Group related services together.
       </p>
     </div>
-    <a
-      class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-      href={resolve("/projects/new")}
-    >
+    <Button href={resolve("/projects/new")} size="sm">
       <Plus class="size-4" />
       New Project
-    </a>
+    </Button>
   </div>
 
   {#if data.projects.length === 0}
@@ -32,16 +30,13 @@
     >
       <FolderKanban class="mb-3 size-10 text-text-muted opacity-40" />
       <p class="text-sm font-medium text-text-muted">No projects yet</p>
-      <p class="mt-1 text-xs text-text-subtle">
+      <p class="mt-1 text-xs text-text-subtle mb-3">
         Create one to group related services together.
       </p>
-      <a
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-5 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-        href={resolve("/projects/new")}
-      >
+      <Button href={resolve("/projects/new")}>
         <Plus class="size-4" />
         New Project
-      </a>
+      </Button>
     </div>
   {:else}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
