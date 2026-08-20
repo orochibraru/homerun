@@ -33,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+      - code_quality
     steps:
       - name: Download meta bake definition
         uses: actions/download-artifact@v8
