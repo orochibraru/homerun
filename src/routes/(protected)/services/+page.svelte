@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    Loader2,
+    LayoutGridIcon,
     Play,
     Plus,
     RotateCw,
@@ -14,6 +14,7 @@
   import { resolve } from "$app/paths";
   import StatusBadge from "$lib/components/status-badge.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -100,10 +101,21 @@
       <p class="mt-1 text-xs text-text-subtle">
         Point at an image, fill in a config, and deploy.
       </p>
-      <Button class="mt-5" href={resolve("/services/new")}>
-        <Plus class="size-4" />
-        Deploy your first service
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button class="mt-5" href={resolve("/services/new")} size="sm">
+          <Plus class="size-4" />
+          Deploy your first service
+        </Button>
+        <Button
+          class="mt-5"
+          href={resolve("/templates")}
+          size="sm"
+          variant="outline"
+        >
+          <LayoutGridIcon class="size-4" />
+          Start from a template
+        </Button>
+      </div>
     </div>
   {:else}
     <div class="space-y-8">
@@ -160,7 +172,7 @@
                         variant="ghost"
                       >
                         {#if pending[svc.id]}
-                          <Loader2 class="size-4 animate-spin" />
+                          <Spinner />
                         {:else}
                           <Square class="size-4" />
                         {/if}
@@ -183,7 +195,7 @@
                         variant="ghost"
                       >
                         {#if pending[svc.id]}
-                          <Loader2 class="size-4 animate-spin" />
+                          <Spinner />
                         {:else}
                           <Play class="size-4" />
                         {/if}

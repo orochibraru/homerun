@@ -5,7 +5,6 @@
     Eye,
     EyeOff,
     KeyRound,
-    Loader2,
     Lock,
     ShieldCheck,
     Trash2,
@@ -18,6 +17,7 @@
   import { authClient } from "$lib/auth-client";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import {
     getPasswordStrength,
     getPasswordStrengthMeta,
@@ -276,7 +276,7 @@
       <div class="flex justify-end">
         <Button disabled={accountLoading} type="submit">
           {#if accountLoading}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
             Saving…
           {:else}
             <Check class="size-4" />
@@ -448,7 +448,7 @@
           type="submit"
         >
           {#if passwordLoading}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
             Updating…
           {:else}
             <Lock class="size-4" />
@@ -552,10 +552,10 @@
             <Button
               disabled={deleteLoading || !deletePassword}
               type="submit"
-              variant="destructive-solid"
+              variant="destructive"
             >
               {#if deleteLoading}
-                <Loader2 class="size-4 animate-spin" />
+                <Spinner />
                 Deleting…
               {:else}
                 <Trash2 class="size-4" />

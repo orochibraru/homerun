@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, Check, CloudUpload, Loader2 } from "@lucide/svelte";
+  import { ArrowLeft, Check, CloudUpload } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
@@ -7,6 +7,7 @@
   import CheckBox from "$lib/components/check-box.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { timeAgo } from "$lib/formatting";
   import { title } from "$lib/store/title";
 
@@ -174,7 +175,7 @@
 
         <Button disabled={submitting} type="submit">
           {#if submitting}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
           {:else}
             <Check class="size-4" />
           {/if}
@@ -205,7 +206,7 @@
         variant="outline"
       >
         {#if backingUp}
-          <Loader2 class="size-4 animate-spin" />
+          <Spinner />
           Backing up…
         {:else}
           <CloudUpload class="size-4" />

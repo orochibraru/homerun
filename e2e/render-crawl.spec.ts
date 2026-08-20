@@ -147,10 +147,11 @@ test("every dashboard page renders without error", async ({ page }) => {
       await page.locator("#source").fill(`pw-crawl-volume-${runId}`);
       await page.getByRole("button", { name: "Create volume" }).click();
       await expect(page).toHaveURL("/storage");
-      await page
-        .getByRole("link")
-        .filter({ hasText: `Playwright Crawl Volume ${runId}` })
-        .click();
+      // Unlike the projects/services list, a volume's name isn't itself a
+      // link — the only link on its row is the icon-only "Backup settings"
+      // button. This is the only volume this run creates, so it's the only
+      // match.
+      await page.getByRole("link", { name: "Backup settings" }).click();
       await page.waitForURL(VOLUME_PATH_RE);
       volumePath = new URL(page.url()).pathname;
     });

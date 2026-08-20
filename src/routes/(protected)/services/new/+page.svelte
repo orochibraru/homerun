@@ -7,7 +7,6 @@
     ChevronDown,
     Cpu,
     GitBranch,
-    Loader2,
     Lock,
     Network,
     Plus,
@@ -28,6 +27,7 @@
     Select as SelectRoot,
     SelectTrigger,
   } from "$lib/components/ui/select/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -206,7 +206,7 @@
       {@const StepIcon = step.icon}
       <button
         class="flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all {stepButtonClass(
-          i
+          i,
         )}"
         onclick={() => {
           currentStep = i;
@@ -739,7 +739,7 @@
         {:else}
           <Button disabled={submitting} type="submit">
             {#if submitting}
-              <Loader2 class="size-4 animate-spin" />
+              <Spinner />
               Creating…
             {:else}
               Create service

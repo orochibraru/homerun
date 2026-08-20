@@ -2,7 +2,6 @@
   import {
     ChevronDown,
     Clock,
-    Loader2,
     Play,
     Rocket,
     RotateCw,
@@ -14,10 +13,11 @@
   import { resolve } from "$app/paths";
   import StatusBadge from "$lib/components/status-badge.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { timeAgo } from "$lib/formatting";
   import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
+  const { data } = $props();
 
   const svc = $derived(data.service);
 
@@ -139,7 +139,7 @@
   <form action="?/deploy" method="POST" use:enhance={deployEnhance()}>
     <Button disabled={pendingAction !== null} type="submit">
       {#if pendingAction === "deploy"}
-        <Loader2 class="size-4 animate-spin" />
+        <Spinner />
         {svc.containerId ? "Deploying…" : "Deploying…"}
       {:else}
         <Rocket class="size-4" />
@@ -158,7 +158,7 @@
           variant="outline"
         >
           {#if pendingAction === "stop"}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
           {:else}
             <Square class="size-4" />
           {/if}
@@ -174,7 +174,7 @@
           variant="outline"
         >
           {#if pendingAction === "start"}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
           {:else}
             <Play class="size-4" />
           {/if}
@@ -186,7 +186,7 @@
     <form action="?/restart" method="POST" use:enhance={withPending("restart")}>
       <Button disabled={pendingAction !== null} type="submit" variant="outline">
         {#if pendingAction === "restart"}
-          <Loader2 class="size-4 animate-spin" />
+          <Spinner />
         {:else}
           <RotateCw class="size-4" />
         {/if}

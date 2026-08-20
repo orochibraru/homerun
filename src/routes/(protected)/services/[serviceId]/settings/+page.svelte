@@ -1,17 +1,16 @@
 <script lang="ts">
   import {
-    AlertTriangle,
     Check,
     ChevronDown,
     Clock,
     FolderKanban,
     GitBranch,
     LayoutGrid,
-    Loader2,
     Lock,
     Server,
     Settings,
-    Trash2,
+    Trash2Icon,
+    TriangleAlertIcon,
   } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
@@ -27,6 +26,7 @@
     Select as SelectRoot,
     SelectTrigger,
   } from "$lib/components/ui/select/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { timeAgo } from "$lib/formatting";
   import { title } from "$lib/store/title";
 
@@ -267,7 +267,7 @@
           <div
             class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
           >
-            <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+            <TriangleAlertIcon class="mt-0.5 size-3.5 shrink-0" />
             <span>
               <strong>{image}:{tag}</strong>
               wasn't found in its registry. You can still save — this doesn't
@@ -461,7 +461,7 @@
       <div class="flex justify-end">
         <Button disabled={submitting} type="submit">
           {#if submitting}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
             Saving…
           {:else}
             <Check class="size-4" />
@@ -677,7 +677,7 @@
       <div
         class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600"
       >
-        <AlertTriangle class="size-4" />
+        <TriangleAlertIcon class="size-4" />
       </div>
       <div>
         <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
@@ -695,11 +695,10 @@
             <p class="text-sm font-medium text-text">Delete this service</p>
           </div>
           <Button
-            class="shrink-0 border-red-300 text-red-600 hover:bg-red-500 hover:text-white dark:border-red-700/60"
             onclick={() => {
               showDeleteConfirm = true;
             }}
-            variant="outline"
+            variant="destructive"
           >
             Delete service
           </Button>
@@ -739,16 +738,12 @@
             >
               Cancel
             </Button>
-            <Button
-              disabled={deleting}
-              type="submit"
-              variant="destructive-solid"
-            >
+            <Button disabled={deleting} type="submit" variant="destructive">
               {#if deleting}
-                <Loader2 class="size-4 animate-spin" />
+                <Spinner />
                 Deleting…
               {:else}
-                <Trash2 class="size-4" />
+                <Trash2Icon class="size-4" />
                 Yes, delete
               {/if}
             </Button>

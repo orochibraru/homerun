@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Eye, EyeOff, Loader2, Server } from "@lucide/svelte";
+  import { Eye, EyeOff, Server } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { dev } from "$app/environment";
@@ -8,6 +8,7 @@
   import { signIn, useSession } from "$lib/auth-client";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { title } from "$lib/store/title";
 
   let email = $state("");
@@ -137,7 +138,7 @@
           type="submit"
         >
           {#if loading}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
             Signing in…
           {:else}
             Sign in

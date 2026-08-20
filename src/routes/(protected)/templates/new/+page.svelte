@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, LayoutGrid, Loader2, Plus, Trash2 } from "@lucide/svelte";
+  import { Check, LayoutGrid, Plus, Trash2 } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
@@ -7,6 +7,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
@@ -27,7 +28,7 @@
     { label: "Automation", value: "automation" },
     { label: "Other", value: "other" },
   ];
-  let category = $state(values?.category ?? "");
+  let category = $derived(values?.category ?? "");
   const categoryLabel = $derived(
     categoryOptions.find((c) => c.value === category)?.label ?? "None"
   );
@@ -223,7 +224,7 @@
       <Button href={resolve("/templates")} variant="outline">Cancel</Button>
       <Button disabled={submitting} type="submit">
         {#if submitting}
-          <Loader2 class="size-4 animate-spin" />
+          <Spinner />
           Creating…
         {:else}
           <Check class="size-4" />

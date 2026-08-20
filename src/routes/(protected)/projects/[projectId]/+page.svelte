@@ -4,7 +4,6 @@
     ArrowLeft,
     Check,
     LayoutGrid,
-    Loader2,
     Pencil,
     Plus,
     Server,
@@ -18,6 +17,7 @@
   import StatusBadge from "$lib/components/status-badge.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
@@ -120,7 +120,7 @@
         </Button>
         <Button disabled={renaming} type="submit">
           {#if renaming}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
           {:else}
             <Check class="size-4" />
           {/if}
@@ -253,13 +253,9 @@
             >
               Cancel
             </Button>
-            <Button
-              disabled={deleting}
-              type="submit"
-              variant="destructive-solid"
-            >
+            <Button disabled={deleting} type="submit" variant="destructive">
               {#if deleting}
-                <Loader2 class="size-4 animate-spin" />
+                <Spinner />
                 Deleting…
               {:else}
                 <Trash2 class="size-4" />

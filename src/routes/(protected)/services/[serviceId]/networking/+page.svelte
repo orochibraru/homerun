@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, Globe, Loader2, Network, ShieldCheck } from "@lucide/svelte";
+  import { Check, Globe, Network, ShieldCheck } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
@@ -8,6 +8,7 @@
   import { labelClass as label } from "$lib/components/form-styles";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
@@ -122,7 +123,7 @@
 
         <Button disabled={submitting} type="submit" variant="outline">
           {#if submitting}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
           {:else}
             <Check class="size-4" />
           {/if}
@@ -188,7 +189,9 @@
             class="resize-none font-mono"
             id="customSslCert"
             name="customSslCert"
-            placeholder={svc.customSslCertEnc ? "Unchanged" : "-----BEGIN CERTIFICATE-----"}
+            placeholder={svc.customSslCertEnc
+              ? "Unchanged"
+              : "-----BEGIN CERTIFICATE-----"}
             rows={4}
           />
         </div>
@@ -198,7 +201,9 @@
             class="resize-none font-mono"
             id="customSslKey"
             name="customSslKey"
-            placeholder={svc.customSslKeyEnc ? "Unchanged" : "-----BEGIN PRIVATE KEY-----"}
+            placeholder={svc.customSslKeyEnc
+              ? "Unchanged"
+              : "-----BEGIN PRIVATE KEY-----"}
             rows={4}
           />
         </div>
@@ -217,7 +222,7 @@
           type="submit"
         >
           {#if submitting}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
           {:else}
             <Check class="size-4" />
           {/if}

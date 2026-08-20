@@ -148,6 +148,10 @@ export interface BasicServiceInput {
  * every field up front. Steps 3/4 (Environment/Compute) have no required
  * fields, so clicking through them with no input is enough to reach the
  * real submit button ("Create service", only rendered on the last step).
+ *
+ * On success the `create` action redirects to `/projects/<projectId>` when
+ * `projectId` was passed (back to the project it was created under),
+ * otherwise to `/services` — not always the latter.
  */
 export async function createBasicService(
   page: Page,
@@ -168,7 +172,9 @@ export async function createBasicService(
   await page.getByRole("button", { exact: true, name: "Next" }).click(); // → Environment
   await page.getByRole("button", { exact: true, name: "Next" }).click(); // → Compute
   await page.getByRole("button", { name: "Create service" }).click();
-  await page.waitForURL("/services", { timeout: 15_000 });
+  await page.waitForURL(projectId ? `/projects/${projectId}` : "/services", {
+    timeout: 15_000,
+  });
 }
 
 export interface PageErrors {

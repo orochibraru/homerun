@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Eye, EyeOff, Loader2, Server, ShieldCheck } from "@lucide/svelte";
+  import { Eye, EyeOff, Server, ShieldCheck } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { goto } from "$app/navigation";
@@ -7,6 +7,7 @@
   import { signUp, useSession } from "$lib/auth-client";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import {
     getPasswordStrength,
     getPasswordStrengthMeta,
@@ -247,7 +248,7 @@
           type="submit"
         >
           {#if loading}
-            <Loader2 class="size-4 animate-spin" />
+            <Spinner />
             Creating account…
           {:else}
             Create account
