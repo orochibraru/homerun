@@ -105,9 +105,12 @@
         type="text"
         value={proj.slug}
       />
-      <Textarea class="resize-none" name="description" rows={2}>
-        {proj.description ?? ""}
-      </Textarea>
+      <Textarea
+        class="resize-none"
+        content={proj.description ?? ""}
+        name="description"
+        rows={2}
+      />
 
       <div class="flex justify-end gap-3">
         <Button

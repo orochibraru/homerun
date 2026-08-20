@@ -4,7 +4,7 @@ import { z } from "zod";
 // optionalNumber — an empty <input type="number"> still submits "" in
 // FormData, and z.coerce.number() would otherwise turn that into 0 rather
 // than failing the intended "not provided" case.
-const optionalNumber = (schema: z.ZodNumber) =>
+const optionalNumber = (schema: z.ZodNumber | z.ZodCoercedNumber) =>
   z.preprocess(
     (val) => (val === "" || val === undefined ? undefined : val),
     schema.optional()

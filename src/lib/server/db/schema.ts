@@ -573,6 +573,7 @@ export const serviceVolumeRelations = relations(serviceVolume, ({ one }) => ({
   }),
 }));
 
+export type UserRole = "user" | "admin";
 export type Project = typeof project.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type Service = typeof service.$inferSelect;
@@ -581,7 +582,11 @@ export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
-export type Invitation = typeof invitation.$inferSelect;
+export type InvitationBase = typeof invitation.$inferSelect;
+export type InvitationRefactored = Omit<InvitationBase, "role">;
+export type Invitation = InvitationRefactored & {
+  role: UserRole;
+};
 export type User = typeof user.$inferSelect;
 
 export const sessionRelations = relations(session, ({ one }) => ({

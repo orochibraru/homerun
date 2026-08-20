@@ -378,16 +378,22 @@ export async function inspectStatus(
 /** Streams a container's combined stdout/stderr as a web ReadableStream. */
 export async function streamLogs(
   containerId: string,
-  opts?: { tail?: number; follow?: boolean },
+  // follow is always true — this function only supports live-tailing
+  // (dockerode's `follow: false` shape resolves to a Buffer, not a
+  // stream, which doesn't fit this function's return type).
+  opts?: { tail?: number; follow?: true },
   remote?: RemoteHostConnection | null
 ): Promise<ReadableStream<Uint8Array>> {
   const container = getDocker(remote).getContainer(containerId);
-  const nodeStream = await container.logs({
-    follow: opts?.follow ?? true,
+  // dockerode's NodeJS.ReadableStream return type is the old vestigial
+  // "streams2" interface (no `destroy`), but the actual object is a real
+  // Node Readable (from the underlying HTTP response) which does have one.
+  const nodeStream = (await container.logs({
+    follow: true,
     stderr: true,
     stdout: true,
     tail: opts?.tail ?? 200,
-  });
+  })) as NodeJS.ReadableStream & { destroy: () => void };
 
   return new ReadableStream<Uint8Array>({
     cancel() {

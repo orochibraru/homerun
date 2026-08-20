@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const optionalNumber = (schema: z.ZodNumber) =>
+const optionalNumber = (schema: z.ZodNumber | z.ZodCoercedNumber) =>
   z.preprocess(
     (val) => (val === "" || val === undefined ? undefined : val),
     schema.optional()

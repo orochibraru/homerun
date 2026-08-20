@@ -42,7 +42,7 @@
             Not publicly routed — subnet-only. Change this on the
             <a
               class="underline"
-              href={resolve("/services/[serviceId]/settings", {
+              href={resolve("/(protected)/services/[serviceId]/settings", {
                 serviceId: svc.id,
               })}
               >Settings</a

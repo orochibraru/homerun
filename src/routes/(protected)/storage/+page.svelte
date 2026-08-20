@@ -83,7 +83,9 @@
             {/if}
           </div>
           <Button
-            href={resolve("/storage/[volumeId]", { volumeId: vol.id })}
+            href={resolve("/(protected)/storage/[volumeId]", {
+              volumeId: vol.id,
+            })}
             size="icon-sm"
             title="Backup settings"
             variant="ghost"

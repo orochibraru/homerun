@@ -57,42 +57,42 @@
   // state) never unmount between steps.
   let currentStep = $state(0);
 
-  let name = $state(
+  let name = $derived(
     (form?.values?.name as string) ?? data.template?.name ?? ""
   );
-  let slug = $state(
+  let slug = $derived(
     (form?.values?.slug as string) ??
       (data.template ? slugify(data.template.name) : "")
   );
   let slugTouched = $state(false);
   let submitting = $state(false);
-  let showRegistry = $state(!!values?.registryUsername);
+  let showRegistry = $derived(!!values?.registryUsername);
 
-  let buildSource = $state<"image" | "git">(
+  let buildSource = $derived<"image" | "git">(
     (values?.buildSource as "image" | "git") ?? "image"
   );
-  let image = $state(values?.image ?? data.template?.image ?? "");
-  let tag = $state(values?.tag ?? data.template?.tag ?? "latest");
-  let registryUrl = $state(values?.registryUrl ?? "");
-  let registryUsername = $state(values?.registryUsername ?? "");
-  let gitUrl = $state(values?.gitUrl ?? "");
-  let gitRef = $state(values?.gitRef ?? "main");
-  let gitDockerfilePath = $state(values?.gitDockerfilePath ?? "");
-  let gitBuildContext = $state(values?.gitBuildContext ?? "");
+  let image = $derived(values?.image ?? data.template?.image ?? "");
+  let tag = $derived(values?.tag ?? data.template?.tag ?? "latest");
+  let registryUrl = $derived(values?.registryUrl ?? "");
+  let registryUsername = $derived(values?.registryUsername ?? "");
+  let gitUrl = $derived(values?.gitUrl ?? "");
+  let gitRef = $derived(values?.gitRef ?? "main");
+  let gitDockerfilePath = $derived(values?.gitDockerfilePath ?? "");
+  let gitBuildContext = $derived(values?.gitBuildContext ?? "");
   let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
   let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
 
-  let containerPort = $state(
+  let containerPort = $derived(
     values?.containerPort ?? String(data.template?.containerPort ?? "")
   );
-  let dnsResolvable = $state(
+  let dnsResolvable = $derived(
     values?.dnsResolvable !== "off" && values?.dnsResolvable !== "false"
   );
-  let restartPolicy = $state(
+  let restartPolicy = $derived(
     values?.restartPolicy ?? data.template?.restartPolicy ?? "unless-stopped"
   );
-  let cpuLimit = $state(values?.cpuLimit ?? data.template?.cpuLimit ?? "");
-  let memoryLimitMb = $state(
+  let cpuLimit = $derived(values?.cpuLimit ?? data.template?.cpuLimit ?? "");
+  let memoryLimitMb = $derived(
     values?.memoryLimitMb ?? String(data.template?.memoryLimitMb ?? "")
   );
 
@@ -241,10 +241,9 @@
       return async ({ result, update }) => {
         submitting = false;
         if (result.type === "failure") {
-          const data = result.data as { errors?: Record } | undefined;
-          const first = data?.errors
-            ? Object.values(data.errors).flat()[0]
-            : undefined;
+          const first: string = result.data?.errors
+            ? ((Object.values(result.data.errors).flat()[0] as string) ?? "")
+            : "";
           toast.error(first ?? "Check the form for errors.");
           // The failing field could be on any step — jump back to the
           // first one so the top error banner and per-field messages are

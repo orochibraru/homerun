@@ -108,13 +108,12 @@
           <label class={label} for="description">Description</label>
           <Textarea
             class="resize-none"
+            content={values?.description ?? ""}
             id="description"
             name="description"
             placeholder="Optional"
             rows={2}
-          >
-            {values?.description ?? ""}
-          </Textarea>
+          />
         </div>
 
         <div>

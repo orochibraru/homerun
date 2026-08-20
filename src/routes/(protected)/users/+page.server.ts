@@ -4,13 +4,14 @@ import { config, isSmtpEnabled } from "$lib/config";
 import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { Logger } from "$lib/logger";
 import { auth } from "$lib/server/auth";
+import type { UserRole } from "$lib/server/db/schema.js";
 import { Email } from "$lib/server/email";
 import { cleanupUserResources } from "$lib/server/user-cleanup";
 import { countAdmins, listUsers } from "$lib/server/user-directory";
 
 const logger = new Logger("Users");
 
-const ROLES = new Set(["admin", "developer"]);
+const roleSet = new Set(["admin", "developer"]);
 
 export const load = async ({ locals }) => {
   if (!locals.isAdmin) {
@@ -67,7 +68,7 @@ export const actions = {
       ?.trim()
       .toLowerCase();
     const password = (formData.get("password") as string | null) ?? "";
-    const role = formData.get("role") as string;
+    const role = formData.get("role") as UserRole;
 
     if (!(name && email)) {
       return fail(400, {
@@ -75,7 +76,7 @@ export const actions = {
         error: "Name and email are required.",
       });
     }
-    if (!ROLES.has(role)) {
+    if (!roleSet.has(role)) {
       return fail(400, { action: "createDirect", error: "Invalid role." });
     }
     if (password.length < 12) {
@@ -127,7 +128,7 @@ export const actions = {
     const email = (formData.get("email") as string | null)
       ?.trim()
       .toLowerCase();
-    const role = formData.get("role") as string;
+    const role = formData.get("role") as UserRole;
 
     if (!(name && email)) {
       return fail(400, {
@@ -135,7 +136,7 @@ export const actions = {
         error: "Name and email are required.",
       });
     }
-    if (!ROLES.has(role)) {
+    if (!roleSet.has(role)) {
       return fail(400, { action: "invite", error: "Invalid role." });
     }
 
@@ -220,9 +221,9 @@ export const actions = {
 
     const formData = await request.formData();
     const userId = formData.get("userId") as string;
-    const role = formData.get("role") as string;
+    const role = formData.get("role") as UserRole;
 
-    if (!ROLES.has(role)) {
+    if (!roleSet.has(role)) {
       return fail(400, { action: "setRole", error: "Invalid role." });
     }
     if (role !== "admin" && (await wouldRemoveLastAdmin(userId))) {

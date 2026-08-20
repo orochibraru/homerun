@@ -4,7 +4,7 @@ import { z } from "zod";
 // still submits as "" in FormData, and z.coerce.number() turns "" into 0
 // (not NaN/undefined) — which then fails a .positive()/.min() check with
 // no obvious cause. Treat "" as "not provided" before coercion.
-const optionalNumber = (schema: z.ZodNumber) =>
+const optionalNumber = (schema: z.ZodNumber | z.ZodCoercedNumber) =>
   z.preprocess(
     (val) => (val === "" || val === undefined ? undefined : val),
     schema.optional()

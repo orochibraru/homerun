@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
-import type { Invitation } from "$lib/server/db/schema";
+import type { Invitation, UserRole } from "$lib/server/db/schema";
 import { invitation } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
 
@@ -10,7 +10,7 @@ const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export interface InvitationCreateInput {
   email: string;
   invitedByUserId: string;
-  role: string;
+  role: UserRole;
 }
 
 /**
@@ -52,7 +52,8 @@ export class InvitationDTO extends BaseDTO<Invitation> {
     if (!row || row.acceptedAt || row.expiresAt < new Date()) {
       return null;
     }
-    return new InvitationDTO(row);
+
+    return new InvitationDTO(row as Invitation);
   }
 
   static async listPending(): Promise<InvitationDTO[]> {
@@ -60,7 +61,7 @@ export class InvitationDTO extends BaseDTO<Invitation> {
       .select()
       .from(invitation)
       .where(isNull(invitation.acceptedAt));
-    return rows.map((row) => new InvitationDTO(row));
+    return rows.map((row) => new InvitationDTO(row as Invitation));
   }
 
   /** For the Users page's "cancel invite" action, which only has the id from the pending-invitations list, not a loaded instance. */

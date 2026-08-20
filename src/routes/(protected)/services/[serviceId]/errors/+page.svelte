@@ -23,7 +23,7 @@
         Check its
         <a
           class="underline"
-          href={resolve("/services/[serviceId]/logs", {
+          href={resolve("/(protected)/services/[serviceId]/logs", {
             serviceId: data.service.id,
           })}
           >Logs</a
