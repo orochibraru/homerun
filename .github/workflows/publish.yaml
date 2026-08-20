@@ -11,7 +11,7 @@ concurrency:
 
 env:
   TZ: Europe/Paris
-  REGISTRY_IMAGE: orochibraru/penombre
+  REGISTRY_IMAGE: orochibraru/homerun
 
 permissions:
   contents: read
