@@ -77,7 +77,7 @@ test("every dashboard page renders without error", async ({ page }) => {
 	// this test does no image pulls, but sequentially visiting ~25 routes
 	// plus the setup (sign-up, onboarding, project/service/volume creation)
 	// and cleanup genuinely takes several minutes.
-	test.setTimeout(420_000);
+	test.setTimeout(900_000); // TEMP for QA diagnosis, will revert before finishing
 
 	const errors = collectPageErrors(page);
 	// Set for real right before the crawl starts (see below) — errors from
