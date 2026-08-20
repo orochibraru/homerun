@@ -4,12 +4,25 @@ description: Builds docker images for this app via the Bake conf
 on:
   workflow_call:
     inputs:
-      image_tag:
-        description: "Tag to apply to the built image, e.g. pr-123 or a commit SHA"
+      image_name:
         required: true
+        description: "Subpath and image to push to, example myorg/myimage"
+        type: string
+      image_tag:
+        required: true
+        description: "Tag to apply to the built image, e.g. pr-123 or a commit SHA"
+        type: string
+      registry_name:
+        required: true
+        description: "Docker registry target to authenticate against and push to"
+        type: string
+        default: hub.docker.com
+      registry_username:
+        required: true
+        description: "Docker registry username"
         type: string
     secrets:
-      docker_hub_token:
+      registry_password:
         required: true
     outputs:
       image-tag:
@@ -18,9 +31,6 @@ on:
 
 permissions:
   contents: read
-
-env:
-  IMAGE_NAME: orochibraru/homerun
 
 jobs:
   prepare:
@@ -54,7 +64,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ inputs.image_name }}
           tags: |
             type=raw,value=${{ inputs.image_tag }}
 
@@ -104,8 +114,9 @@ jobs:
       - name: Login to Container registry
         uses: docker/login-action@v4
         with:
-          username: orochibraru
-          password: ${{ secrets.docker_hub_token }}
+          registry: ${{ inputs.registry_name }}
+          username: ${{ inputs.registry_username }}
+          password: ${{ secrets.registry_password }}
 
       - name: Build
         id: bake
@@ -116,7 +127,7 @@ jobs:
             cwd://${{ runner.temp }}/bake-meta.json
           targets: image
           set: |
-            *.tags=${{ env.IMAGE_NAME }}
+            *.tags=${{ inputs.image_name }}
             *.platform=${{ matrix.platform }}
             *.output=type=image,push-by-digest=true,name-canonical=true,push=true
 
@@ -162,19 +173,20 @@ jobs:
       - name: Login to Container registry
         uses: docker/login-action@v4
         with:
-          username: orochibraru
-          password: ${{ secrets.docker_hub_token }}
+          registry: ${{ inputs.registry_name }}
+          username: ${{ inputs.registry_username }}
+          password: ${{ secrets.registry_password }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create \
             $(jq -cr '.target."docker-metadata-action".tags | map("-t " + .) | join(" ")' "$RUNNER_TEMP/bake-meta.json") \
-            $(printf '${{ env.IMAGE_NAME }}@sha256:%s ' *)
+            $(printf '${{ inputs.image_name }}@sha256:%s ' *)
 
       - name: Inspect image
         id: inspect
         run: |
           tag=$(jq -r '.target."docker-metadata-action".args.DOCKER_META_VERSION' ${{ runner.temp }}/bake-meta.json)
           echo "tag=$tag" >> $GITHUB_OUTPUT
-          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:$tag
+          docker buildx imagetools inspect ${{ inputs.image_name }}:$tag
