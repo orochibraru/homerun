@@ -8,40 +8,40 @@ import { config } from "$lib/config";
  * eventually hitting "too many clients" in PostgreSQL.
  */
 const globalForDb = globalThis as unknown as {
-  __db_client?: Database;
-  __db_instance?: BunSQLiteDatabase<Record<string, never>>;
+	__db_client?: Database;
+	__db_instance?: BunSQLiteDatabase<Record<string, never>>;
 };
 
 function createClient(): Database {
-  if (globalForDb.__db_client) {
-    return globalForDb.__db_client;
-  }
+	if (globalForDb.__db_client) {
+		return globalForDb.__db_client;
+	}
 
-  const client = new Database(config.dbPath);
+	const client = new Database(config.dbPath);
 
-  globalForDb.__db_client = client;
-  return client;
+	globalForDb.__db_client = client;
+	return client;
 }
 
 function createDb(): BunSQLiteDatabase<Record<string, never>> {
-  if (globalForDb.__db_instance) {
-    return globalForDb.__db_instance;
-  }
+	if (globalForDb.__db_instance) {
+		return globalForDb.__db_instance;
+	}
 
-  const instance = drizzle({ client: createClient() });
-  globalForDb.__db_instance = instance;
-  return instance;
+	const instance = drizzle({ client: createClient() });
+	globalForDb.__db_instance = instance;
+	return instance;
 }
 
 export const db = createDb();
 
 // For backward compatibility and proper singleton access
 export function getDb() {
-  // If instance was reset, recreate it
-  if (!globalForDb.__db_instance) {
-    return createDb();
-  }
-  return globalForDb.__db_instance;
+	// If instance was reset, recreate it
+	if (!globalForDb.__db_instance) {
+		return createDb();
+	}
+	return globalForDb.__db_instance;
 }
 
 /**
@@ -49,11 +49,11 @@ export function getDb() {
  * Call this during graceful shutdown.
  */
 export async function closeDb(): Promise<void> {
-  if (globalForDb.__db_client) {
-    await globalForDb.__db_client.close();
-    globalForDb.__db_client = undefined;
-    globalForDb.__db_instance = undefined;
-  }
+	if (globalForDb.__db_client) {
+		await globalForDb.__db_client.close();
+		globalForDb.__db_client = undefined;
+		globalForDb.__db_instance = undefined;
+	}
 }
 
 /**
@@ -61,8 +61,8 @@ export async function closeDb(): Promise<void> {
  * Useful when the connection is in a bad state and needs to be recreated.
  */
 export async function resetDb(): Promise<void> {
-  await closeDb();
-  // Force recreation on next getDb() call by clearing the singleton
-  globalForDb.__db_instance = undefined;
-  globalForDb.__db_client = undefined;
+	await closeDb();
+	// Force recreation on next getDb() call by clearing the singleton
+	globalForDb.__db_instance = undefined;
+	globalForDb.__db_client = undefined;
 }

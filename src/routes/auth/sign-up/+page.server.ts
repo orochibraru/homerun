@@ -3,11 +3,11 @@ import { resolve } from "$app/paths";
 import { hasAnyUser } from "$lib/server/onboarding";
 
 export const load = async () => {
-  // Public self-service sign-up only exists to create the instance's first
-  // (admin) account — see hooks.server.ts's hard block on the underlying
-  // endpoint. Once that account exists, this page just bounces to sign-in;
-  // every later account comes from the admin-only Users page instead.
-  if (await hasAnyUser()) {
-    throw redirect(302, resolve("/auth/sign-in"));
-  }
+	// Public self-service sign-up only exists to create the instance's first
+	// (admin) account — see hooks.server.ts's hard block on the underlying
+	// endpoint. Once that account exists, this page just bounces to sign-in;
+	// every later account comes from the admin-only Users page instead.
+	if (await hasAnyUser()) {
+		throw redirect(302, resolve("/auth/sign-in"));
+	}
 };

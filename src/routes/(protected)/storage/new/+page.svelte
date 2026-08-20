@@ -1,23 +1,23 @@
 <script lang="ts">
-  import { Check } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { title } from "$lib/store/title";
+	import { Check } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { title } from "$lib/store/title";
 
-  const { form } = $props();
+	const { form } = $props();
 
-  onMount(() => title.set("New Volume"));
+	onMount(() => title.set("New Volume"));
 
-  const label = "block mb-1.5 text-sm font-medium text-text";
+	const label = "block mb-1.5 text-sm font-medium text-text";
 
-  let submitting = $state(false);
-  let kind = $state<"bind" | "volume">("volume");
+	let submitting = $state(false);
+	let kind = $state<"bind" | "volume">("volume");
 </script>
 
 <div class="space-y-6 p-6 md:p-8">

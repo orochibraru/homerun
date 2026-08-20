@@ -16,9 +16,9 @@ import type { Page } from "@playwright/test";
  */
 
 export interface ThrowawayUser {
-  email: string;
-  name: string;
-  password: string;
+	email: string;
+	name: string;
+	password: string;
 }
 
 // Matches "/", "/auth/sign-up/confirm", or "/onboarding" — the three
@@ -28,12 +28,12 @@ const SIGN_IN_URL_RE = /\/auth\/sign-in/;
 
 /** A unique-per-run throwaway account. Never reuse across test files. */
 export function makeThrowawayUser(label: string): ThrowawayUser {
-  const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  return {
-    email: `pw-${label}-${unique}@example.com`,
-    name: `Playwright ${label}`,
-    password: "playwright-test-password",
-  };
+	const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+	return {
+		email: `pw-${label}-${unique}@example.com`,
+		name: `Playwright ${label}`,
+		password: "playwright-test-password",
+	};
 }
 
 /**
@@ -44,37 +44,37 @@ export function makeThrowawayUser(label: string): ThrowawayUser {
  * side effect to work around.
  */
 export async function signUpThrowawayUser(page: Page, user: ThrowawayUser) {
-  await page.goto("/auth/sign-up");
-  await page.locator("#name").fill(user.name);
-  await page.locator("#email").fill(user.email);
-  await page.locator("#password").fill(user.password);
-  await page.locator("#confirm").fill(user.password);
-  await page.getByRole("button", { name: "Create account" }).click();
-  // signUp.email() establishes a session immediately, so there's a real
-  // race between the sign-up page's own "already logged in" redirect and
-  // its explicit post-signup navigation to /auth/sign-up/confirm — accept
-  // either landing spot.
-  await page.waitForURL(POST_SIGNUP_URL_RE, { timeout: 10_000 });
+	await page.goto("/auth/sign-up");
+	await page.locator("#name").fill(user.name);
+	await page.locator("#email").fill(user.email);
+	await page.locator("#password").fill(user.password);
+	await page.locator("#confirm").fill(user.password);
+	await page.getByRole("button", { name: "Create account" }).click();
+	// signUp.email() establishes a session immediately, so there's a real
+	// race between the sign-up page's own "already logged in" redirect and
+	// its explicit post-signup navigation to /auth/sign-up/confirm — accept
+	// either landing spot.
+	await page.waitForURL(POST_SIGNUP_URL_RE, { timeout: 10_000 });
 
-  if (page.url().includes("/auth/sign-up/confirm")) {
-    await page
-      .getByRole("button", { name: "Skip verification and go to dashboard" })
-      .click();
-    await page.waitForURL(POST_SIGNUP_URL_RE, { timeout: 10_000 });
-  }
+	if (page.url().includes("/auth/sign-up/confirm")) {
+		await page
+			.getByRole("button", { name: "Skip verification and go to dashboard" })
+			.click();
+		await page.waitForURL(POST_SIGNUP_URL_RE, { timeout: 10_000 });
+	}
 
-  // On a blank/isolated test DB this throwaway user is the instance's
-  // first-ever account, so it's both the bootstrap admin and the one
-  // forced through the onboarding wizard (see (protected)/+layout.server.ts's
-  // onboarding guard) before anything else in the dashboard is reachable.
-  // A plain goto("/") here (rather than trusting whatever URL the sign-up
-  // flow's own client-side redirect settled on) forces a real round trip
-  // through that guard's server `load`, so this can't race a client-side
-  // navigation that hasn't reached it yet.
-  await page.goto("/");
-  if (page.url().includes("/onboarding")) {
-    await completeOnboarding(page);
-  }
+	// On a blank/isolated test DB this throwaway user is the instance's
+	// first-ever account, so it's both the bootstrap admin and the one
+	// forced through the onboarding wizard (see (protected)/+layout.server.ts's
+	// onboarding guard) before anything else in the dashboard is reachable.
+	// A plain goto("/") here (rather than trusting whatever URL the sign-up
+	// flow's own client-side redirect settled on) forces a real round trip
+	// through that guard's server `load`, so this can't race a client-side
+	// navigation that hasn't reached it yet.
+	await page.goto("/");
+	if (page.url().includes("/onboarding")) {
+		await completeOnboarding(page);
+	}
 }
 
 /**
@@ -86,13 +86,12 @@ export async function signUpThrowawayUser(page: Page, user: ThrowawayUser) {
  * to exercise entering different values.
  */
 export async function completeOnboarding(page: Page) {
-  const next = page.getByRole("button", { exact: true, name: "Next" });
-  for (let i = 0; i < 4; i += 1) {
-    // biome-ignore lint/performance/noAwaitInLoops: one shared page/tab clicking through wizard steps in sequence — each Next depends on the previous step's state.
-    await next.click();
-  }
-  await page.getByRole("button", { name: "Finish setup" }).click();
-  await page.waitForURL("/", { timeout: 15_000 });
+	const next = page.getByRole("button", { exact: true, name: "Next" });
+	for (let i = 0; i < 4; i += 1) {
+		await next.click();
+	}
+	await page.getByRole("button", { name: "Finish setup" }).click();
+	await page.waitForURL("/", { timeout: 15_000 });
 }
 
 /**
@@ -102,11 +101,11 @@ export async function completeOnboarding(page: Page) {
  * running container.
  */
 export async function deleteThrowawayAccount(page: Page, password: string) {
-  await page.goto("/settings");
-  await page.getByRole("button", { name: "Delete account" }).click();
-  await page.getByPlaceholder("Confirm your password").fill(password);
-  await page.getByRole("button", { name: "Yes, delete my account" }).click();
-  await page.waitForURL(SIGN_IN_URL_RE, { timeout: 15_000 });
+	await page.goto("/settings");
+	await page.getByRole("button", { name: "Delete account" }).click();
+	await page.getByPlaceholder("Confirm your password").fill(password);
+	await page.getByRole("button", { name: "Yes, delete my account" }).click();
+	await page.waitForURL(SIGN_IN_URL_RE, { timeout: 15_000 });
 }
 
 /**
@@ -120,22 +119,22 @@ export async function deleteThrowawayAccount(page: Page, password: string) {
  * annoyance there, not a leaked resource on a real instance.
  */
 export async function cleanUpThrowawayAccount(page: Page, password: string) {
-  if (page.url().includes("/auth/sign-in")) {
-    return; // never got a session — nothing to delete
-  }
-  try {
-    await deleteThrowawayAccount(page, password);
-  } catch (err) {
-    console.warn("cleanUpThrowawayAccount: best-effort cleanup failed:", err);
-  }
+	if (page.url().includes("/auth/sign-in")) {
+		return; // never got a session — nothing to delete
+	}
+	try {
+		await deleteThrowawayAccount(page, password);
+	} catch (err) {
+		console.warn("cleanUpThrowawayAccount: best-effort cleanup failed:", err);
+	}
 }
 
 export interface BasicServiceInput {
-  containerPort: string;
-  image: string;
-  name: string;
-  slug: string;
-  tag: string;
+	containerPort: string;
+	image: string;
+	name: string;
+	slug: string;
+	tag: string;
 }
 
 /**
@@ -154,32 +153,32 @@ export interface BasicServiceInput {
  * otherwise to `/services` — not always the latter.
  */
 export async function createBasicService(
-  page: Page,
-  input: BasicServiceInput,
-  { projectId }: { projectId?: string } = {}
+	page: Page,
+	input: BasicServiceInput,
+	{ projectId }: { projectId?: string } = {},
 ) {
-  await page.goto(
-    projectId ? `/services/new?projectId=${projectId}` : "/services/new"
-  );
-  await page.locator("#name").fill(input.name);
-  // The slug field auto-derives from name via an oninput handler, which
-  // Playwright's fill() doesn't reliably trigger — fill it explicitly.
-  await page.locator("#slug").fill(input.slug);
-  await page.locator("#image").fill(input.image);
-  await page.locator("#tag").fill(input.tag);
-  await page.getByRole("button", { exact: true, name: "Next" }).click(); // → Networking
-  await page.locator("#containerPort").fill(input.containerPort);
-  await page.getByRole("button", { exact: true, name: "Next" }).click(); // → Environment
-  await page.getByRole("button", { exact: true, name: "Next" }).click(); // → Compute
-  await page.getByRole("button", { name: "Create service" }).click();
-  await page.waitForURL(projectId ? `/projects/${projectId}` : "/services", {
-    timeout: 15_000,
-  });
+	await page.goto(
+		projectId ? `/services/new?projectId=${projectId}` : "/services/new",
+	);
+	await page.locator("#name").fill(input.name);
+	// The slug field auto-derives from name via an oninput handler, which
+	// Playwright's fill() doesn't reliably trigger — fill it explicitly.
+	await page.locator("#slug").fill(input.slug);
+	await page.locator("#image").fill(input.image);
+	await page.locator("#tag").fill(input.tag);
+	await page.getByRole("button", { exact: true, name: "Next" }).click(); // → Networking
+	await page.locator("#containerPort").fill(input.containerPort);
+	await page.getByRole("button", { exact: true, name: "Next" }).click(); // → Environment
+	await page.getByRole("button", { exact: true, name: "Next" }).click(); // → Compute
+	await page.getByRole("button", { name: "Create service" }).click();
+	await page.waitForURL(projectId ? `/projects/${projectId}` : "/services", {
+		timeout: 15_000,
+	});
 }
 
 export interface PageErrors {
-  consoleErrors: string[];
-  pageErrors: string[];
+	consoleErrors: string[];
+	pageErrors: string[];
 }
 
 /**
@@ -189,16 +188,16 @@ export interface PageErrors {
  * A fresh instance per page/test — listeners aren't reset between calls.
  */
 export function collectPageErrors(page: Page): PageErrors {
-  const errors: PageErrors = { consoleErrors: [], pageErrors: [] };
-  page.on("console", (msg) => {
-    if (msg.type() === "error") {
-      errors.consoleErrors.push(msg.text());
-    }
-  });
-  page.on("pageerror", (err) => {
-    errors.pageErrors.push(err.message);
-  });
-  return errors;
+	const errors: PageErrors = { consoleErrors: [], pageErrors: [] };
+	page.on("console", (msg) => {
+		if (msg.type() === "error") {
+			errors.consoleErrors.push(msg.text());
+		}
+	});
+	page.on("pageerror", (err) => {
+		errors.pageErrors.push(err.message);
+	});
+	return errors;
 }
 
 /**
@@ -211,9 +210,9 @@ export function collectPageErrors(page: Page): PageErrors {
 const HTTP_STATUS_HEADING_RE = /^\d{3}$/;
 
 export async function isOnErrorPage(page: Page): Promise<boolean> {
-  return await page
-    .locator("h1", { hasText: HTTP_STATUS_HEADING_RE })
-    .first()
-    .isVisible()
-    .catch(() => false);
+	return await page
+		.locator("h1", { hasText: HTTP_STATUS_HEADING_RE })
+		.first()
+		.isVisible()
+		.catch(() => false);
 }

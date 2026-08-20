@@ -1,73 +1,73 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    ArrowRight,
-    Clock,
-    Cpu,
-    HardDrive,
-    MemoryStick,
-    Plus,
-    Server,
-  } from "@lucide/svelte";
-  import { onMount, untrack } from "svelte";
-  import { resolve } from "$app/paths";
-  import { Button } from "$lib/components/ui/button";
-  import { timeAgo } from "$lib/formatting";
-  import type { SystemStats } from "$lib/server/system-stats";
-  import { title } from "$lib/store/title";
+	import {
+		AlertTriangle,
+		ArrowRight,
+		Clock,
+		Cpu,
+		HardDrive,
+		MemoryStick,
+		Plus,
+		Server,
+	} from "@lucide/svelte";
+	import { onMount, untrack } from "svelte";
+	import { resolve } from "$app/paths";
+	import { Button } from "$lib/components/ui/button";
+	import { timeAgo } from "$lib/formatting";
+	import type { SystemStats } from "$lib/server/system-stats";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
+	const { data } = $props();
 
-  // Seeded once from the initial load, then diverges via the poll below —
-  // untrack() is intentional, not a lint workaround.
-  let systemStats = $state<SystemStats>(untrack(() => data.systemStats));
+	// Seeded once from the initial load, then diverges via the poll below —
+	// untrack() is intentional, not a lint workaround.
+	let systemStats = $state<SystemStats>(untrack(() => data.systemStats));
 
-  onMount(() => {
-    title.set("Dashboard");
+	onMount(() => {
+		title.set("Dashboard");
 
-    const interval = setInterval(async () => {
-      const res = await fetch(resolve("/system-stats"));
-      if (res.ok) {
-        systemStats = await res.json();
-      }
-    }, 5000);
+		const interval = setInterval(async () => {
+			const res = await fetch(resolve("/system-stats"));
+			if (res.ok) {
+				systemStats = await res.json();
+			}
+		}, 5000);
 
-    return () => clearInterval(interval);
-  });
+		return () => clearInterval(interval);
+	});
 
-  function pct(used: number, total: number): number {
-    if (total <= 0) {
-      return 0;
-    }
-    return Math.max(0, Math.min(100, (used / total) * 100));
-  }
+	function pct(used: number, total: number): number {
+		if (total <= 0) {
+			return 0;
+		}
+		return Math.max(0, Math.min(100, (used / total) * 100));
+	}
 
-  function barColor(percent: number): string {
-    if (percent >= 90) {
-      return "bg-red-500";
-    }
-    if (percent >= 70) {
-      return "bg-amber-500";
-    }
-    return "bg-accent";
-  }
+	function barColor(percent: number): string {
+		if (percent >= 90) {
+			return "bg-red-500";
+		}
+		if (percent >= 70) {
+			return "bg-amber-500";
+		}
+		return "bg-accent";
+	}
 
-  const statCards = $derived([
-    {
-      color: "bg-blue-50 text-blue-600",
-      dark: "dark:bg-blue-950/40 dark:text-blue-400",
-      icon: Server,
-      label: "Total Services",
-      value: String(data.stats.totalServices),
-    },
-    {
-      color: "bg-emerald-50 text-emerald-600",
-      dark: "dark:bg-emerald-950/40 dark:text-emerald-400",
-      icon: Server,
-      label: "Running",
-      value: String(data.stats.running),
-    },
-  ]);
+	const statCards = $derived([
+		{
+			color: "bg-blue-50 text-blue-600",
+			dark: "dark:bg-blue-950/40 dark:text-blue-400",
+			icon: Server,
+			label: "Total Services",
+			value: String(data.stats.totalServices),
+		},
+		{
+			color: "bg-emerald-50 text-emerald-600",
+			dark: "dark:bg-emerald-950/40 dark:text-emerald-400",
+			icon: Server,
+			label: "Running",
+			value: String(data.stats.running),
+		},
+	]);
 </script>
 
 <div class="p-6 md:p-8">

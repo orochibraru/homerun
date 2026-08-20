@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { FolderKanban, Plus, Server } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { resolve } from "$app/paths";
-  import { Button } from "$lib/components/ui/button";
-  import { title } from "$lib/store/title";
+	import { FolderKanban, Plus, Server } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { resolve } from "$app/paths";
+	import { Button } from "$lib/components/ui/button";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
+	const { data } = $props();
 
-  onMount(() => title.set("Projects"));
+	onMount(() => title.set("Projects"));
 </script>
 
 <div class="p-6 md:p-8">

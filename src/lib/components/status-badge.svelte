@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { SERVICE_STATUS_CONFIG } from "$lib/constants";
-  import type { ContainerStatus } from "$lib/types";
+	import { SERVICE_STATUS_CONFIG } from "$lib/constants";
+	import type { ContainerStatus } from "$lib/types";
 
-  const { status }: { status: ContainerStatus } = $props();
+	const { status }: { status: ContainerStatus } = $props();
 
-  const meta = $derived(SERVICE_STATUS_CONFIG[status]);
+	const meta = $derived(SERVICE_STATUS_CONFIG[status]);
 </script>
 
 <span

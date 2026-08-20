@@ -1,26 +1,26 @@
 <script lang="ts">
-  import { Check, Globe, Network, ShieldCheck } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import CheckBox from "$lib/components/check-box.svelte";
-  import { labelClass as label } from "$lib/components/form-styles";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { title } from "$lib/store/title";
+	import { Check, Globe, Network, ShieldCheck } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import CheckBox from "$lib/components/check-box.svelte";
+	import { labelClass as label } from "$lib/components/form-styles";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
-  const svc = $derived(data.service);
-  const publicHost = $derived(
-    data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug
-  );
+	const { data, form } = $props();
+	const svc = $derived(data.service);
+	const publicHost = $derived(
+		data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug,
+	);
 
-  onMount(() => title.set(`${svc.name} · Networking`));
+	onMount(() => title.set(`${svc.name} · Networking`));
 
-  let submitting = $state(false);
+	let submitting = $state(false);
 </script>
 
 <div class="space-y-6">

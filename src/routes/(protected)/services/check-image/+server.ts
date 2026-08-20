@@ -8,35 +8,35 @@ import { checkImageExists } from "$lib/server/docker/registry";
  * doesn't have.
  */
 export const POST = async ({ request, locals }) => {
-  if (!locals.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+	if (!locals.user) {
+		return new Response("Unauthorized", { status: 401 });
+	}
 
-  const body = await request.json();
-  const image = typeof body.image === "string" ? body.image.trim() : "";
-  const tag =
-    typeof body.tag === "string" && body.tag.trim()
-      ? body.tag.trim()
-      : "latest";
-  const registryUrl =
-    typeof body.registryUrl === "string" && body.registryUrl.trim()
-      ? body.registryUrl.trim()
-      : null;
-  const registryUsername =
-    typeof body.registryUsername === "string" && body.registryUsername.trim()
-      ? body.registryUsername.trim()
-      : null;
-  const registryPassword =
-    typeof body.registryPassword === "string" ? body.registryPassword : "";
+	const body = await request.json();
+	const image = typeof body.image === "string" ? body.image.trim() : "";
+	const tag =
+		typeof body.tag === "string" && body.tag.trim()
+			? body.tag.trim()
+			: "latest";
+	const registryUrl =
+		typeof body.registryUrl === "string" && body.registryUrl.trim()
+			? body.registryUrl.trim()
+			: null;
+	const registryUsername =
+		typeof body.registryUsername === "string" && body.registryUsername.trim()
+			? body.registryUsername.trim()
+			: null;
+	const registryPassword =
+		typeof body.registryPassword === "string" ? body.registryPassword : "";
 
-  if (!image) {
-    return json({ checked: false, exists: true });
-  }
+	if (!image) {
+		return json({ checked: false, exists: true });
+	}
 
-  const auth = registryUsername
-    ? { password: registryPassword, username: registryUsername }
-    : undefined;
+	const auth = registryUsername
+		? { password: registryPassword, username: registryUsername }
+		: undefined;
 
-  const result = await checkImageExists(image, tag, registryUrl, auth);
-  return json(result);
+	const result = await checkImageExists(image, tag, registryUrl, auth);
+	return json(result);
 };

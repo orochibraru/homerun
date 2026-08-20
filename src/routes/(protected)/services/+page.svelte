@@ -1,81 +1,80 @@
 <script lang="ts">
-  import {
-    LayoutGridIcon,
-    Play,
-    Plus,
-    RotateCw,
-    Server,
-    Square,
-    Trash2,
-  } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import StatusBadge from "$lib/components/status-badge.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { title } from "$lib/store/title";
+	import {
+		LayoutGridIcon,
+		Play,
+		Plus,
+		RotateCw,
+		Server,
+		Square,
+		Trash2,
+	} from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import StatusBadge from "$lib/components/status-badge.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
+	const { data } = $props();
 
-  onMount(() => title.set("Services"));
+	onMount(() => title.set("Services"));
 
-  // Group by project name, "Ungrouped" last — order of first appearance
-  // otherwise, matching the underlying createdAt-desc query order.
-  const groups = $derived.by(() => {
-    const byLabel = new Map<string, typeof data.services>();
-    for (const svc of data.services) {
-      const label = svc.projectName ?? "Ungrouped";
-      const bucket = byLabel.get(label);
-      if (bucket) {
-        bucket.push(svc);
-      } else {
-        byLabel.set(label, [svc]);
-      }
-    }
-    const ungrouped = byLabel.get("Ungrouped");
-    byLabel.delete("Ungrouped");
-    const entries = [...byLabel.entries()];
-    if (ungrouped) {
-      entries.push(["Ungrouped", ungrouped]);
-    }
-    return entries;
-  });
+	// Group by project name, "Ungrouped" last — order of first appearance
+	// otherwise, matching the underlying createdAt-desc query order.
+	const groups = $derived.by(() => {
+		const byLabel = new Map<string, typeof data.services>();
+		for (const svc of data.services) {
+			const label = svc.projectName ?? "Ungrouped";
+			const bucket = byLabel.get(label);
+			if (bucket) {
+				bucket.push(svc);
+			} else {
+				byLabel.set(label, [svc]);
+			}
+		}
+		const ungrouped = byLabel.get("Ungrouped");
+		byLabel.delete("Ungrouped");
+		const entries = [...byLabel.entries()];
+		if (ungrouped) {
+			entries.push(["Ungrouped", ungrouped]);
+		}
+		return entries;
+	});
 
-  // Tracks which service's action is in flight, keyed by serviceId, so
-  // only that row's buttons show a spinner/disable.
-  let pending = $state<Record<string, boolean>>({});
+	// Tracks which service's action is in flight, keyed by serviceId, so
+	// only that row's buttons show a spinner/disable.
+	let pending = $state<Record<string, boolean>>({});
 
-  function withPending(serviceId: string) {
-    return () => {
-      pending[serviceId] = true;
-      return async ({
-        result,
-        update,
-      }: {
-        result: { type: string; data?: { error?: string } };
-        update: () => Promise<void>;
-      }) => {
-        pending[serviceId] = false;
-        if (result.type === "failure" && result.data?.error) {
-          toast.error(result.data.error);
-        }
-        await update();
-      };
-    };
-  }
+	function withPending(serviceId: string) {
+		return () => {
+			pending[serviceId] = true;
+			return async ({
+				result,
+				update,
+			}: {
+				result: { type: string; data?: { error?: string } };
+				update: () => Promise<void>;
+			}) => {
+				pending[serviceId] = false;
+				if (result.type === "failure" && result.data?.error) {
+					toast.error(result.data.error);
+				}
+				await update();
+			};
+		};
+	}
 
-  function confirmDelete(e: SubmitEvent, name: string) {
-    if (
-      // biome-ignore lint/suspicious/noAlert: a native confirm() is the simplest correct guard here — no custom UI built for this yet.
-      !confirm(
-        `Delete "${name}"? This removes its container and can't be undone.`
-      )
-    ) {
-      e.preventDefault();
-    }
-  }
+	function confirmDelete(e: SubmitEvent, name: string) {
+		if (
+			!confirm(
+				`Delete "${name}"? This removes its container and can't be undone.`,
+			)
+		) {
+			e.preventDefault();
+		}
+	}
 </script>
 
 <div class="p-6 md:p-8">

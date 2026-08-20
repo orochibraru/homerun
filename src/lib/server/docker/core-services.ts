@@ -13,17 +13,17 @@ const LEADING_SLASH_RE = /^\//;
  * setups (no-compose / standalone Traefik is a documented fallback too).
  */
 export async function findTraefikContainer(): Promise<{
-  id: string;
-  name: string;
+	id: string;
+	name: string;
 } | null> {
-  const containers = await getDocker().listContainers({ all: true });
-  const match = containers.find((c) => c.Image.startsWith("traefik"));
-  if (!match) {
-    return null;
-  }
-  return {
-    id: match.Id,
-    name:
-      match.Names[0]?.replace(LEADING_SLASH_RE, "") ?? match.Id.slice(0, 12),
-  };
+	const containers = await getDocker().listContainers({ all: true });
+	const match = containers.find((c) => c.Image.startsWith("traefik"));
+	if (!match) {
+		return null;
+	}
+	return {
+		id: match.Id,
+		name:
+			match.Names[0]?.replace(LEADING_SLASH_RE, "") ?? match.Id.slice(0, 12),
+	};
 }

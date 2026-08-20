@@ -1,56 +1,56 @@
 <script lang="ts">
-  import { Check, LayoutGrid, Plus, Trash2 } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import * as Select from "$lib/components/ui/select/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { title } from "$lib/store/title";
+	import { Check, LayoutGrid, Plus, Trash2 } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { title } from "$lib/store/title";
 
-  const { form } = $props();
+	const { form } = $props();
 
-  onMount(() => title.set("New Template"));
+	onMount(() => title.set("New Template"));
 
-  const label = "block mb-1.5 text-sm font-medium text-text";
-  const errorClass = "mt-1.5 text-xs text-red-500";
-  const values = $derived(form?.values as Record<string, string> | undefined);
-  const errors = $derived(form?.errors as Record<string, string[]> | undefined);
+	const label = "block mb-1.5 text-sm font-medium text-text";
+	const errorClass = "mt-1.5 text-xs text-red-500";
+	const values = $derived(form?.values as Record<string, string> | undefined);
+	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
-  const categoryOptions = [
-    { label: "None", value: "" },
-    { label: "Database", value: "database" },
-    { label: "Cache", value: "cache" },
-    { label: "Monitoring", value: "monitoring" },
-    { label: "Automation", value: "automation" },
-    { label: "Other", value: "other" },
-  ];
-  let category = $derived(values?.category ?? "");
-  const categoryLabel = $derived(
-    categoryOptions.find((c) => c.value === category)?.label ?? "None"
-  );
+	const categoryOptions = [
+		{ label: "None", value: "" },
+		{ label: "Database", value: "database" },
+		{ label: "Cache", value: "cache" },
+		{ label: "Monitoring", value: "monitoring" },
+		{ label: "Automation", value: "automation" },
+		{ label: "Other", value: "other" },
+	];
+	let category = $derived(values?.category ?? "");
+	const categoryLabel = $derived(
+		categoryOptions.find((c) => c.value === category)?.label ?? "None",
+	);
 
-  let submitting = $state(false);
+	let submitting = $state(false);
 
-  interface EnvRow {
-    key: string;
-    value: string;
-  }
-  let envRows = $state<EnvRow[]>([{ key: "", value: "" }]);
+	interface EnvRow {
+		key: string;
+		value: string;
+	}
+	let envRows = $state<EnvRow[]>([{ key: "", value: "" }]);
 
-  function addEnvRow() {
-    envRows.push({ key: "", value: "" });
-  }
+	function addEnvRow() {
+		envRows.push({ key: "", value: "" });
+	}
 
-  function removeEnvRow(i: number) {
-    envRows.splice(i, 1);
-    if (envRows.length === 0) {
-      envRows.push({ key: "", value: "" });
-    }
-  }
+	function removeEnvRow(i: number) {
+		envRows.splice(i, 1);
+		if (envRows.length === 0) {
+			envRows.push({ key: "", value: "" });
+		}
+	}
 </script>
 
 <div class="mspace-y-6 p-6 md:p-8">

@@ -1,138 +1,140 @@
 <script lang="ts">
-  import {
-    ChevronRight,
-    FolderKanban,
-    HardDrive,
-    LayoutDashboard,
-    LayoutGrid,
-    LogOut,
-    Menu,
-    Network,
-    ScrollText,
-    Server,
-    Settings,
-    Users,
-    X,
-  } from "@lucide/svelte";
-  import { fly } from "svelte/transition";
-  import { toast } from "svelte-sonner";
-  import { goto, invalidateAll } from "$app/navigation";
-  import { resolve } from "$app/paths";
-  import { page } from "$app/state";
-  import { signOut } from "$lib/auth-client";
-  import { Button } from "$lib/components/ui/button/index.js";
+	import {
+		ChevronRight,
+		FolderKanban,
+		HardDrive,
+		LayoutDashboard,
+		LayoutGrid,
+		LogOut,
+		Menu,
+		Network,
+		ScrollText,
+		Server,
+		Settings,
+		Users,
+		X,
+	} from "@lucide/svelte";
+	import { fly } from "svelte/transition";
+	import { toast } from "svelte-sonner";
+	import { goto, invalidateAll } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
+	import { signOut } from "$lib/auth-client";
+	import { Button } from "$lib/components/ui/button/index.js";
 
-  const { data, children } = $props();
+	const { data, children } = $props();
 
-  let sidebarOpen = $state(false);
+	let sidebarOpen = $state(false);
 
-  const allNavItems = [
-    {
-      adminOnly: false,
-      exact: true,
-      href: resolve("/"),
-      icon: LayoutDashboard,
-      label: "Overview",
-    },
-    {
-      adminOnly: false,
-      exact: false,
-      href: resolve("/services"),
-      icon: Server,
-      label: "Services",
-    },
-    {
-      adminOnly: false,
-      exact: false,
-      href: resolve("/projects"),
-      icon: FolderKanban,
-      label: "Projects",
-    },
-    {
-      adminOnly: false,
-      exact: false,
-      href: resolve("/templates"),
-      icon: LayoutGrid,
-      label: "Templates",
-    },
-    {
-      adminOnly: false,
-      exact: false,
-      href: resolve("/storage"),
-      icon: HardDrive,
-      label: "Storage",
-    },
-    {
-      adminOnly: false,
-      exact: false,
-      href: resolve("/remote-hosts"),
-      icon: Network,
-      label: "Remote Hosts",
-    },
-    {
-      adminOnly: true,
-      exact: false,
-      href: resolve("/users"),
-      icon: Users,
-      label: "Users",
-    },
-    {
-      adminOnly: true,
-      exact: false,
-      href: resolve("/settings"),
-      icon: Settings,
-      label: "Settings",
-    },
-    {
-      adminOnly: true,
-      exact: false,
-      href: resolve("/system-logs"),
-      icon: ScrollText,
-      label: "System Logs",
-    },
-  ];
+	const allNavItems = [
+		{
+			adminOnly: false,
+			exact: true,
+			href: resolve("/"),
+			icon: LayoutDashboard,
+			label: "Overview",
+		},
+		{
+			adminOnly: false,
+			exact: false,
+			href: resolve("/services"),
+			icon: Server,
+			label: "Services",
+		},
+		{
+			adminOnly: false,
+			exact: false,
+			href: resolve("/projects"),
+			icon: FolderKanban,
+			label: "Projects",
+		},
+		{
+			adminOnly: false,
+			exact: false,
+			href: resolve("/templates"),
+			icon: LayoutGrid,
+			label: "Templates",
+		},
+		{
+			adminOnly: false,
+			exact: false,
+			href: resolve("/storage"),
+			icon: HardDrive,
+			label: "Storage",
+		},
+		{
+			adminOnly: false,
+			exact: false,
+			href: resolve("/remote-hosts"),
+			icon: Network,
+			label: "Remote Hosts",
+		},
+		{
+			adminOnly: true,
+			exact: false,
+			href: resolve("/users"),
+			icon: Users,
+			label: "Users",
+		},
+		{
+			adminOnly: true,
+			exact: false,
+			href: resolve("/settings"),
+			icon: Settings,
+			label: "Settings",
+		},
+		{
+			adminOnly: true,
+			exact: false,
+			href: resolve("/system-logs"),
+			icon: ScrollText,
+			label: "System Logs",
+		},
+	];
 
-  // Users/Settings are instance-wide admin controls — hidden from
-  // developers, who otherwise get the same dashboard (their own
-  // services/projects, already isolated per-user).
-  const navItems = $derived(
-    allNavItems.filter((item) => !item.adminOnly || data.user?.role === "admin")
-  );
+	// Users/Settings are instance-wide admin controls — hidden from
+	// developers, who otherwise get the same dashboard (their own
+	// services/projects, already isolated per-user).
+	const navItems = $derived(
+		allNavItems.filter(
+			(item) => !item.adminOnly || data.user?.role === "admin",
+		),
+	);
 
-  const userInitial = $derived(data.user?.name?.[0]?.toUpperCase() ?? "?");
+	const userInitial = $derived(data.user?.name?.[0]?.toUpperCase() ?? "?");
 
-  function isActive(href: string, exact: boolean): boolean {
-    if (exact) {
-      return page.url.pathname === href;
-    }
-    return page.url.pathname.startsWith(href);
-  }
+	function isActive(href: string, exact: boolean): boolean {
+		if (exact) {
+			return page.url.pathname === href;
+		}
+		return page.url.pathname.startsWith(href);
+	}
 
-  /** Derive a human-readable title from the current pathname for mobile */
-  const mobileTitle = $derived.by(() => {
-    const p = page.url.pathname;
-    if (p.includes("/profile")) {
-      return "Profile";
-    }
-    if (p.includes("/services")) {
-      return "Services";
-    }
-    return "Dashboard";
-  });
+	/** Derive a human-readable title from the current pathname for mobile */
+	const mobileTitle = $derived.by(() => {
+		const p = page.url.pathname;
+		if (p.includes("/profile")) {
+			return "Profile";
+		}
+		if (p.includes("/services")) {
+			return "Services";
+		}
+		return "Dashboard";
+	});
 
-  async function signOutCallback() {
-    sidebarOpen = false;
-    await signOut();
-    await invalidateAll();
-  }
+	async function signOutCallback() {
+		sidebarOpen = false;
+		await signOut();
+		await invalidateAll();
+	}
 
-  function handleSignOut() {
-    return toast.promise(signOutCallback, {
-      error: (e) => (e instanceof Error ? e.message : "Failed to sign you out"),
-      loading: "Signing you out",
-      success: "Signed you out successfully",
-    });
-  }
+	function handleSignOut() {
+		return toast.promise(signOutCallback, {
+			error: (e) => (e instanceof Error ? e.message : "Failed to sign you out"),
+			loading: "Signing you out",
+			success: "Signed you out successfully",
+		});
+	}
 </script>
 
 <!-- Fills the full viewport — there's no global navbar above this. -->

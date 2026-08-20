@@ -120,7 +120,7 @@ for a full pass.
     total-lockout bug, and the guard is the fix, not a formality to route
     around.
   - Run `bunx biome check --write <file>` on anything you write before
-    considering it done — this repo's lint (ultracite/biome) applies to
+    considering it done — this repo's lint (biome) applies to
     `e2e/**` too (top-level regex constants, sorted object/interface keys,
     `biome-ignore` with a reason for an intentionally-sequential
     `for`-loop `await`, matching the precedent in `src/hooks.server.ts`).

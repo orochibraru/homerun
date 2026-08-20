@@ -1,62 +1,61 @@
 <script lang="ts">
-  import { Mail, Plus, Trash2, UserPlus, X } from "@lucide/svelte";
-  import type { SubmitFunction } from "@sveltejs/kit";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import {
-    inputClass as input,
-    labelClass as label,
-  } from "$lib/components/form-styles";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import * as Select from "$lib/components/ui/select/index.js";
-  import { title } from "$lib/store/title";
+	import { Mail, Plus, Trash2, UserPlus, X } from "@lucide/svelte";
+	import type { SubmitFunction } from "@sveltejs/kit";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import {
+		inputClass as input,
+		labelClass as label,
+	} from "$lib/components/form-styles";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
+	const { data, form } = $props();
 
-  onMount(() => title.set("Users"));
+	onMount(() => title.set("Users"));
 
-  const roleOptions = [
-    { label: "Developer", value: "developer" },
-    { label: "Admin", value: "admin" },
-  ];
+	const roleOptions = [
+		{ label: "Developer", value: "developer" },
+		{ label: "Admin", value: "admin" },
+	];
 
-  let showAddForm = $state(false);
-  let addMode = $state<"direct" | "invite">("direct");
-  let newRole = $state("developer");
-  const newRoleLabel = $derived(
-    roleOptions.find((r) => r.value === newRole)?.label ?? "Developer"
-  );
-  let submitting = $state(false);
+	let showAddForm = $state(false);
+	let addMode = $state<"direct" | "invite">("direct");
+	let newRole = $state("developer");
+	const newRoleLabel = $derived(
+		roleOptions.find((r) => r.value === newRole)?.label ?? "Developer",
+	);
+	let submitting = $state(false);
 
-  function submitToast(successMessage: string): SubmitFunction {
-    return () =>
-      async ({ result, update }) => {
-        submitting = false;
-        if (result.type === "success") {
-          toast.success(successMessage);
-          showAddForm = false;
-        } else if (result.type === "failure") {
-          toast.error(
-            (result.data as { error?: string })?.error ??
-              "Something went wrong."
-          );
-        }
-        await update();
-      };
-  }
+	function submitToast(successMessage: string): SubmitFunction {
+		return () =>
+			async ({ result, update }) => {
+				submitting = false;
+				if (result.type === "success") {
+					toast.success(successMessage);
+					showAddForm = false;
+				} else if (result.type === "failure") {
+					toast.error(
+						(result.data as { error?: string })?.error ??
+							"Something went wrong.",
+					);
+				}
+				await update();
+			};
+	}
 
-  function confirmRemove(e: SubmitEvent, name: string) {
-    if (
-      // biome-ignore lint/suspicious/noAlert: same "no custom confirm dialog built yet" precedent as remote-hosts' delete action.
-      !confirm(
-        `Remove "${name}"? Their services and containers are stopped and deleted — this can't be undone.`
-      )
-    ) {
-      e.preventDefault();
-    }
-  }
+	function confirmRemove(e: SubmitEvent, name: string) {
+		if (
+			!confirm(
+				`Remove "${name}"? Their services and containers are stopped and deleted — this can't be undone.`,
+			)
+		) {
+			e.preventDefault();
+		}
+	}
 </script>
 
 <div class="p-6 md:p-8">
@@ -245,7 +244,7 @@
             method="POST"
             use:enhance={submitToast("Role updated.")}
           >
-            <input name="userId" type="hidden" value={u.id}>
+            <input name="userId" type="hidden" value={u.id} />
             <select
               class="{input} py-1.5 text-xs"
               name="role"
@@ -262,7 +261,7 @@
             onsubmit={(e) => confirmRemove(e, u.name)}
             use:enhance={submitToast("User removed.")}
           >
-            <input name="userId" type="hidden" value={u.id}>
+            <input name="userId" type="hidden" value={u.id} />
             <Button
               aria-label="Remove user"
               class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
@@ -301,7 +300,7 @@
               method="POST"
               use:enhance={submitToast("Invite canceled.")}
             >
-              <input name="id" type="hidden" value={inv.id}>
+              <input name="id" type="hidden" value={inv.id} />
               <Button
                 aria-label="Cancel invite"
                 size="icon-sm"

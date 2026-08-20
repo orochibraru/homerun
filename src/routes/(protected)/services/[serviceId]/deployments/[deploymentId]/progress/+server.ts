@@ -9,22 +9,22 @@ import { ServiceDTO } from "$lib/dto/service-dto";
  * client knows when to stop polling.
  */
 export const GET = async ({ params, locals }) => {
-  if (!locals.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+	if (!locals.user) {
+		return new Response("Unauthorized", { status: 401 });
+	}
 
-  const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
-  if (!svc) {
-    return new Response("Not found", { status: 404 });
-  }
+	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+	if (!svc) {
+		return new Response("Not found", { status: 404 });
+	}
 
-  const dep = await DeploymentDTO.get(params.deploymentId);
-  if (!dep || dep.toJSON().serviceId !== svc.id) {
-    return new Response("Not found", { status: 404 });
-  }
+	const dep = await DeploymentDTO.get(params.deploymentId);
+	if (!dep || dep.toJSON().serviceId !== svc.id) {
+		return new Response("Not found", { status: 404 });
+	}
 
-  return json(
-    { log: dep.log, status: dep.toJSON().status },
-    { headers: { "Cache-Control": "no-store" } }
-  );
+	return json(
+		{ log: dep.log, status: dep.toJSON().status },
+		{ headers: { "Cache-Control": "no-store" } },
+	);
 };

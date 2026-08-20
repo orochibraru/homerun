@@ -7,37 +7,37 @@ const logger = new Logger("Projects");
 const SLUG_RE = /^[a-z0-9-]{1,63}$/;
 
 export const actions = {
-  create: async ({ request, locals }) => {
-    if (!locals.user) {
-      throw redirect(302, resolve("/auth/sign-in"));
-    }
+	create: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
 
-    const formData = await request.formData();
-    const name = (formData.get("name") as string | null)?.trim() ?? "";
-    const slug = (formData.get("slug") as string | null)?.trim() ?? "";
-    const description =
-      (formData.get("description") as string | null)?.trim() || null;
+		const formData = await request.formData();
+		const name = (formData.get("name") as string | null)?.trim() ?? "";
+		const slug = (formData.get("slug") as string | null)?.trim() ?? "";
+		const description =
+			(formData.get("description") as string | null)?.trim() || null;
 
-    if (!name) {
-      return fail(400, { error: "Name is required." });
-    }
-    if (!SLUG_RE.test(slug)) {
-      return fail(400, {
-        error: "Slug must be lowercase letters, numbers, and hyphens only.",
-      });
-    }
-    if (await ProjectDTO.slugTaken(slug)) {
-      return fail(400, { error: "That slug is already in use." });
-    }
+		if (!name) {
+			return fail(400, { error: "Name is required." });
+		}
+		if (!SLUG_RE.test(slug)) {
+			return fail(400, {
+				error: "Slug must be lowercase letters, numbers, and hyphens only.",
+			});
+		}
+		if (await ProjectDTO.slugTaken(slug)) {
+			return fail(400, { error: "That slug is already in use." });
+		}
 
-    const proj = await ProjectDTO.create({
-      description,
-      name,
-      slug,
-      userId: locals.user.id,
-    });
+		const proj = await ProjectDTO.create({
+			description,
+			name,
+			slug,
+			userId: locals.user.id,
+		});
 
-    logger.info(`Project created: project=${proj.id} user=${locals.user.id}`);
-    redirect(303, resolve("/projects"));
-  },
+		logger.info(`Project created: project=${proj.id} user=${locals.user.id}`);
+		redirect(303, resolve("/projects"));
+	},
 };

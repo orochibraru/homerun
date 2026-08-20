@@ -1,5 +1,5 @@
 #!/bin/sh
-# ultracite
+# biome
 # Check if there are any staged files
 echo "Registering staged files..."
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
@@ -11,7 +11,7 @@ fi
 echo "Formatting/linting staged files..."
 # Run formatter, capturing the exit code so we can still re-stage and report
 FORMAT_EXIT_CODE=0
-bun x ultracite fix || FORMAT_EXIT_CODE=$?
+bun run biome check || FORMAT_EXIT_CODE=$?
 
 # Re-stage files that were already staged
 echo "$STAGED_FILES" | while IFS= read -r file; do
@@ -22,9 +22,9 @@ echo "$STAGED_FILES" | while IFS= read -r file; do
 done
 
 if [ $FORMAT_EXIT_CODE -ne 0 ]; then
-  echo "Ultracite found issues that could not be auto-fixed."
+  echo "Biome found issues that could not be auto-fixed."
   exit $FORMAT_EXIT_CODE
 fi
 
-echo "✨ Files formatted by Ultracite"
-# ultracite end
+echo "✨ Files formatted by Biome"
+# biome end

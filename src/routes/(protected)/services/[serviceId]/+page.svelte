@@ -1,140 +1,139 @@
 <script lang="ts">
-  import {
-    ChevronDown,
-    Clock,
-    Play,
-    Rocket,
-    RotateCw,
-    Square,
-  } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import StatusBadge from "$lib/components/status-badge.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { timeAgo } from "$lib/formatting";
-  import { title } from "$lib/store/title";
+	import {
+		ChevronDown,
+		Clock,
+		Play,
+		Rocket,
+		RotateCw,
+		Square,
+	} from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import StatusBadge from "$lib/components/status-badge.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { timeAgo } from "$lib/formatting";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
+	const { data } = $props();
 
-  const svc = $derived(data.service);
+	const svc = $derived(data.service);
 
-  onMount(() => title.set(svc.name));
+	onMount(() => title.set(svc.name));
 
-  let pendingAction = $state<string | null>(null);
-  let progressLines = $state<string[]>([]);
-  let pollGeneration = 0;
-  let expandedDeploymentId = $state<string | null>(null);
+	let pendingAction = $state<string | null>(null);
+	let progressLines = $state<string[]>([]);
+	let pollGeneration = 0;
+	let expandedDeploymentId = $state<string | null>(null);
 
-  function withPending(action: string) {
-    return () => {
-      pendingAction = action;
-      return async ({
-        result,
-        update,
-      }: {
-        result: { type: string; data?: { error?: string } };
-        update: () => Promise<void>;
-      }) => {
-        pendingAction = null;
-        if (result.type === "failure" && result.data?.error) {
-          toast.error(result.data.error);
-        } else if (result.type === "success") {
-          toast.success("Done.");
-        }
-        await update();
-      };
-    };
-  }
+	function withPending(action: string) {
+		return () => {
+			pendingAction = action;
+			return async ({
+				result,
+				update,
+			}: {
+				result: { type: string; data?: { error?: string } };
+				update: () => Promise<void>;
+			}) => {
+				pendingAction = null;
+				if (result.type === "failure" && result.data?.error) {
+					toast.error(result.data.error);
+				} else if (result.type === "success") {
+					toast.success("Done.");
+				}
+				await update();
+			};
+		};
+	}
 
-  const IN_FLIGHT_STATUSES = new Set(["pending", "pulling", "starting"]);
+	const IN_FLIGHT_STATUSES = new Set(["pending", "pulling", "starting"]);
 
-  /** One poll tick — returns the deployment's current status, or undefined on a missed tick. */
-  async function fetchProgress(
-    deploymentId: string
-  ): Promise<string | undefined> {
-    try {
-      const res = await fetch(
-        resolve(
-          "/(protected)/services/[serviceId]/deployments/[deploymentId]/progress",
-          {
-            deploymentId,
-            serviceId: svc.id,
-          }
-        )
-      );
-      if (res.ok) {
-        const body = (await res.json()) as { log: string; status: string };
-        progressLines = body.log.split("\n").filter(Boolean);
-        return body.status;
-      }
-    } catch {
-      // A missed poll tick isn't worth surfacing — the next one usually succeeds.
-    }
-  }
+	/** One poll tick — returns the deployment's current status, or undefined on a missed tick. */
+	async function fetchProgress(
+		deploymentId: string,
+	): Promise<string | undefined> {
+		try {
+			const res = await fetch(
+				resolve(
+					"/(protected)/services/[serviceId]/deployments/[deploymentId]/progress",
+					{
+						deploymentId,
+						serviceId: svc.id,
+					},
+				),
+			);
+			if (res.ok) {
+				const body = (await res.json()) as { log: string; status: string };
+				progressLines = body.log.split("\n").filter(Boolean);
+				return body.status;
+			}
+		} catch {
+			// A missed poll tick isn't worth surfacing — the next one usually succeeds.
+		}
+	}
 
-  /**
-   * Polls until the deployment reaches a terminal status, then clears
-   * pendingAction itself — this is the single mechanism for both a live
-   * deploy just submitted from this tab AND resuming the progress view
-   * after a mid-deploy page reload (see onMount below), since in both
-   * cases there's no other signal telling the client when it's done.
-   */
-  async function pollProgress(deploymentId: string) {
-    pollGeneration += 1;
-    const myGeneration = pollGeneration;
-    let status = await fetchProgress(deploymentId);
-    while (
-      myGeneration === pollGeneration &&
-      status &&
-      IN_FLIGHT_STATUSES.has(status)
-    ) {
-      // biome-ignore lint/performance/noAwaitInLoops: a poll tick must wait out the interval before the next fetch — inherently sequential.
-      await new Promise((r) => setTimeout(r, 1000));
-      if (myGeneration !== pollGeneration) {
-        return;
-      }
-      status = await fetchProgress(deploymentId);
-    }
-    if (myGeneration === pollGeneration) {
-      pendingAction = null;
-    }
-  }
+	/**
+	 * Polls until the deployment reaches a terminal status, then clears
+	 * pendingAction itself — this is the single mechanism for both a live
+	 * deploy just submitted from this tab AND resuming the progress view
+	 * after a mid-deploy page reload (see onMount below), since in both
+	 * cases there's no other signal telling the client when it's done.
+	 */
+	async function pollProgress(deploymentId: string) {
+		pollGeneration += 1;
+		const myGeneration = pollGeneration;
+		let status = await fetchProgress(deploymentId);
+		while (
+			myGeneration === pollGeneration &&
+			status &&
+			IN_FLIGHT_STATUSES.has(status)
+		) {
+			await new Promise((r) => setTimeout(r, 1000));
+			if (myGeneration !== pollGeneration) {
+				return;
+			}
+			status = await fetchProgress(deploymentId);
+		}
+		if (myGeneration === pollGeneration) {
+			pendingAction = null;
+		}
+	}
 
-  onMount(() => {
-    const [latest] = data.deployments;
-    if (latest && IN_FLIGHT_STATUSES.has(svc.currentStatus)) {
-      pendingAction = "deploy";
-      pollProgress(latest.id);
-    }
-  });
+	onMount(() => {
+		const [latest] = data.deployments;
+		if (latest && IN_FLIGHT_STATUSES.has(svc.currentStatus)) {
+			pendingAction = "deploy";
+			pollProgress(latest.id);
+		}
+	});
 
-  function deployEnhance() {
-    return ({ formData }: { formData: FormData }) => {
-      pendingAction = "deploy";
-      progressLines = [];
-      const deploymentId = crypto.randomUUID();
-      formData.set("deploymentId", deploymentId);
-      pollProgress(deploymentId);
+	function deployEnhance() {
+		return ({ formData }: { formData: FormData }) => {
+			pendingAction = "deploy";
+			progressLines = [];
+			const deploymentId = crypto.randomUUID();
+			formData.set("deploymentId", deploymentId);
+			pollProgress(deploymentId);
 
-      return async ({
-        result,
-        update,
-      }: {
-        result: { type: string; data?: { error?: string } };
-        update: () => Promise<void>;
-      }) => {
-        if (result.type === "failure" && result.data?.error) {
-          toast.error(result.data.error);
-        } else if (result.type === "success") {
-          toast.success("Deployed.");
-        }
-        await update();
-      };
-    };
-  }
+			return async ({
+				result,
+				update,
+			}: {
+				result: { type: string; data?: { error?: string } };
+				update: () => Promise<void>;
+			}) => {
+				if (result.type === "failure" && result.data?.error) {
+					toast.error(result.data.error);
+				} else if (result.type === "success") {
+					toast.success("Deployed.");
+				}
+				await update();
+			};
+		};
+	}
 </script>
 
 <!-- ═══ Actions ═══ -->

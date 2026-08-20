@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { ArrowLeft, Check, CloudUpload } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import CheckBox from "$lib/components/check-box.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { timeAgo } from "$lib/formatting";
-  import { title } from "$lib/store/title";
+	import { ArrowLeft, Check, CloudUpload } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import CheckBox from "$lib/components/check-box.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { timeAgo } from "$lib/formatting";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
-  const vol = $derived(data.volume);
+	const { data, form } = $props();
+	const vol = $derived(data.volume);
 
-  onMount(() => title.set(`${vol.name} · Backup`));
+	onMount(() => title.set(`${vol.name} · Backup`));
 
-  const label = "block mb-1.5 text-sm font-medium text-text";
+	const label = "block mb-1.5 text-sm font-medium text-text";
 
-  let submitting = $state(false);
-  let backingUp = $state(false);
+	let submitting = $state(false);
+	let backingUp = $state(false);
 </script>
 
 <div class="space-y-6 p-6 md:p-8">

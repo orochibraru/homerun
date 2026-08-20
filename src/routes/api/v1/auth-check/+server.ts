@@ -13,8 +13,8 @@
  * provider — see auth.ts's genericOAuth plugin).
  */
 export const GET = ({ locals }) => {
-  if (!locals.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-  return new Response("OK", { status: 200 });
+	if (!locals.user) {
+		return new Response("Unauthorized", { status: 401 });
+	}
+	return new Response("OK", { status: 200 });
 };

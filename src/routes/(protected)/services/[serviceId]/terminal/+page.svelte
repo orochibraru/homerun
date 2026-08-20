@@ -1,154 +1,153 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    Loader2,
-    Terminal as TerminalIcon,
-  } from "@lucide/svelte";
-  import { onDestroy, onMount, tick } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { resolve } from "$app/paths";
-  import { title } from "$lib/store/title";
+	import {
+		AlertTriangle,
+		Loader2,
+		Terminal as TerminalIcon,
+	} from "@lucide/svelte";
+	import { onDestroy, onMount, tick } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { resolve } from "$app/paths";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
-  const svc = $derived(data.service);
+	const { data } = $props();
+	const svc = $derived(data.service);
 
-  onMount(() => title.set(`${svc.name} · Terminal`));
+	onMount(() => title.set(`${svc.name} · Terminal`));
 
-  let sessionId = $state<string | null>(null);
-  let lines = $state<string[]>([]);
-  let connecting = $state(false);
-  let errored = $state<string | null>(null);
-  let command = $state("");
-  let termEl = $state<HTMLElement | undefined>();
-  let inputEl = $state<HTMLInputElement | undefined>();
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  let cancelled = false;
+	let sessionId = $state<string | null>(null);
+	let lines = $state<string[]>([]);
+	let connecting = $state(false);
+	let errored = $state<string | null>(null);
+	let command = $state("");
+	let termEl = $state<HTMLElement | undefined>();
+	let inputEl = $state<HTMLInputElement | undefined>();
+	let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+	let cancelled = false;
 
-  // Strips ANSI escape/color codes for readable plain-text rendering — no
-  // terminal-emulator dependency, this is a REPL-style view, not a full
-  // xterm.js pty. Cursor-movement/clear-screen sequences aren't honored,
-  // just stripped, so full-screen TUIs (vim, top) won't render usefully.
-  const ANSI_RE = new RegExp(
-    `${String.fromCharCode(27)}\\[[0-9;]*[a-zA-Z]`,
-    "g"
-  );
-  function stripAnsi(text: string): string {
-    return text.replace(ANSI_RE, "");
-  }
+	// Strips ANSI escape/color codes for readable plain-text rendering — no
+	// terminal-emulator dependency, this is a REPL-style view, not a full
+	// xterm.js pty. Cursor-movement/clear-screen sequences aren't honored,
+	// just stripped, so full-screen TUIs (vim, top) won't render usefully.
+	const ANSI_RE = new RegExp(
+		`${String.fromCharCode(27)}\\[[0-9;]*[a-zA-Z]`,
+		"g",
+	);
+	function stripAnsi(text: string): string {
+		return text.replace(ANSI_RE, "");
+	}
 
-  async function connect() {
-    connecting = true;
-    errored = null;
-    lines = [];
+	async function connect() {
+		connecting = true;
+		errored = null;
+		lines = [];
 
-    try {
-      const res = await fetch(
-        resolve("/(protected)/services/[serviceId]/terminal/open", {
-          serviceId: svc.id,
-        }),
-        { method: "POST" }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        errored = body.error ?? "Couldn't open a session.";
-        return;
-      }
-      const { sessionId: openedSessionId } = await res.json();
-      sessionId = openedSessionId;
-      connecting = false;
+		try {
+			const res = await fetch(
+				resolve("/(protected)/services/[serviceId]/terminal/open", {
+					serviceId: svc.id,
+				}),
+				{ method: "POST" },
+			);
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				errored = body.error ?? "Couldn't open a session.";
+				return;
+			}
+			const { sessionId: openedSessionId } = await res.json();
+			sessionId = openedSessionId;
+			connecting = false;
 
-      if (!sessionId) {
-        toast.error("Invalid terminal session");
-        throw new Error("No session ID found!");
-      }
+			if (!sessionId) {
+				toast.error("Invalid terminal session");
+				throw new Error("No session ID found!");
+			}
 
-      const streamRes = await fetch(
-        resolve(
-          "/(protected)/services/[serviceId]/terminal/[sessionId]/stream",
-          {
-            serviceId: svc.id,
-            sessionId,
-          }
-        )
-      );
-      if (!(streamRes.ok && streamRes.body)) {
-        errored = "Couldn't connect to the session output.";
-        return;
-      }
+			const streamRes = await fetch(
+				resolve(
+					"/(protected)/services/[serviceId]/terminal/[sessionId]/stream",
+					{
+						serviceId: svc.id,
+						sessionId,
+					},
+				),
+			);
+			if (!(streamRes.ok && streamRes.body)) {
+				errored = "Couldn't connect to the session output.";
+				return;
+			}
 
-      // Unlike the plain log viewer, a shell prompt often has no trailing
-      // newline while it waits for input — so the in-progress last line
-      // has to render too, not just completed ones. `lines`'s final
-      // element is always that in-progress line, replaced (not appended
-      // to) on every chunk until a "\n" promotes it to a completed line.
-      const decoder = new TextDecoder();
-      reader = streamRes.body.getReader();
-      let pending = "";
-      lines = [""];
+			// Unlike the plain log viewer, a shell prompt often has no trailing
+			// newline while it waits for input — so the in-progress last line
+			// has to render too, not just completed ones. `lines`'s final
+			// element is always that in-progress line, replaced (not appended
+			// to) on every chunk until a "\n" promotes it to a completed line.
+			const decoder = new TextDecoder();
+			reader = streamRes.body.getReader();
+			let pending = "";
+			lines = [""];
 
-      while (!cancelled) {
-        // biome-ignore lint/performance/noAwaitInLoops: streaming reads are inherently sequential — each chunk depends on the previous read() resolving.
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-        pending += stripAnsi(decoder.decode(value, { stream: true }));
-        const parts = pending.split("\n");
-        pending = parts.pop() ?? "";
-        lines = [...lines.slice(0, -1), ...parts, pending];
-        await tick();
-        termEl?.scrollTo({ top: termEl.scrollHeight });
-      }
-    } catch {
-      if (!cancelled) {
-        errored = "Connection lost.";
-      }
-    } finally {
-      connecting = false;
-    }
-  }
+			while (!cancelled) {
+				const { done, value } = await reader.read();
+				if (done) {
+					break;
+				}
+				pending += stripAnsi(decoder.decode(value, { stream: true }));
+				const parts = pending.split("\n");
+				pending = parts.pop() ?? "";
+				lines = [...lines.slice(0, -1), ...parts, pending];
+				await tick();
+				termEl?.scrollTo({ top: termEl.scrollHeight });
+			}
+		} catch {
+			if (!cancelled) {
+				errored = "Connection lost.";
+			}
+		} finally {
+			connecting = false;
+		}
+	}
 
-  onMount(connect);
+	onMount(connect);
 
-  onDestroy(() => {
-    cancelled = true;
-    reader?.cancel();
-    if (sessionId) {
-      fetch(
-        resolve(
-          "/(protected)/services/[serviceId]/terminal/[sessionId]/close",
-          {
-            serviceId: svc.id,
-            sessionId,
-          }
-        ),
-        { method: "POST" }
-      ).catch(() => {
-        // Best-effort — the idle reaper will clean it up regardless.
-      });
-    }
-  });
+	onDestroy(() => {
+		cancelled = true;
+		reader?.cancel();
+		if (sessionId) {
+			fetch(
+				resolve(
+					"/(protected)/services/[serviceId]/terminal/[sessionId]/close",
+					{
+						serviceId: svc.id,
+						sessionId,
+					},
+				),
+				{ method: "POST" },
+			).catch(() => {
+				// Best-effort — the idle reaper will clean it up regardless.
+			});
+		}
+	});
 
-  async function sendCommand(e: SubmitEvent) {
-    e.preventDefault();
-    if (!sessionId) {
-      return;
-    }
-    const toSend = `${command}\n`;
-    command = "";
-    await fetch(
-      resolve("/(protected)/services/[serviceId]/terminal/[sessionId]/input", {
-        serviceId: svc.id,
-        sessionId,
-      }),
-      {
-        body: JSON.stringify({ data: toSend }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      }
-    );
-    inputEl?.focus();
-  }
+	async function sendCommand(e: SubmitEvent) {
+		e.preventDefault();
+		if (!sessionId) {
+			return;
+		}
+		const toSend = `${command}\n`;
+		command = "";
+		await fetch(
+			resolve("/(protected)/services/[serviceId]/terminal/[sessionId]/input", {
+				serviceId: svc.id,
+				sessionId,
+			}),
+			{
+				body: JSON.stringify({ data: toSend }),
+				headers: { "Content-Type": "application/json" },
+				method: "POST",
+			},
+		);
+		inputEl?.focus();
+	}
 </script>
 
 <section class="rounded-2xl border border-border bg-surface">
@@ -221,7 +220,7 @@
         type="text"
         bind:this={inputEl}
         bind:value={command}
-      >
+      />
     </form>
   {/if}
 </section>

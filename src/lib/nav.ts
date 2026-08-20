@@ -3,4 +3,4 @@
 // (protected) sidebar instead. Kept as an array (not deleted) so a
 // future top-level link has an obvious home.
 export const navLinks: { href: string; label: string; requiresAuth?: true }[] =
-  [];
+	[];

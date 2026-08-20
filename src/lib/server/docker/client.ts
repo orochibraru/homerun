@@ -6,22 +6,22 @@ import { config } from "$lib/config";
 // Vite reload. Keyed by remote host id ("local" for the default socket),
 // so a remote connection is only opened once and reused.
 const globalForDocker = globalThis as unknown as {
-  __docker_clients?: Map<string, Docker>;
+	__docker_clients?: Map<string, Docker>;
 };
 
 function clientCache(): Map<string, Docker> {
-  if (!globalForDocker.__docker_clients) {
-    globalForDocker.__docker_clients = new Map();
-  }
-  return globalForDocker.__docker_clients;
+	if (!globalForDocker.__docker_clients) {
+		globalForDocker.__docker_clients = new Map();
+	}
+	return globalForDocker.__docker_clients;
 }
 
 export interface RemoteHostConnection {
-  dockerHost: string;
-  id: string;
-  tlsCa?: string | null;
-  tlsCert?: string | null;
-  tlsKey?: string | null;
+	dockerHost: string;
+	id: string;
+	tlsCa?: string | null;
+	tlsCert?: string | null;
+	tlsKey?: string | null;
 }
 
 /**
@@ -32,26 +32,26 @@ export interface RemoteHostConnection {
  * "https://" to the daemon).
  */
 function parseDockerHost(conn: RemoteHostConnection): Docker.DockerOptions {
-  const url = new URL(conn.dockerHost);
-  const hasTls = !!(conn.tlsCa && conn.tlsCert && conn.tlsKey);
+	const url = new URL(conn.dockerHost);
+	const hasTls = !!(conn.tlsCa && conn.tlsCert && conn.tlsKey);
 
-  if (url.protocol === "ssh:") {
-    return {
-      host: url.hostname,
-      port: url.port ? Number(url.port) : 22,
-      protocol: "ssh",
-      username: url.username || undefined,
-    };
-  }
+	if (url.protocol === "ssh:") {
+		return {
+			host: url.hostname,
+			port: url.port ? Number(url.port) : 22,
+			protocol: "ssh",
+			username: url.username || undefined,
+		};
+	}
 
-  return {
-    ca: conn.tlsCa ?? undefined,
-    cert: conn.tlsCert ?? undefined,
-    host: url.hostname,
-    key: conn.tlsKey ?? undefined,
-    port: url.port ? Number(url.port) : 2375,
-    protocol: hasTls ? "https" : "http",
-  };
+	return {
+		ca: conn.tlsCa ?? undefined,
+		cert: conn.tlsCert ?? undefined,
+		host: url.hostname,
+		key: conn.tlsKey ?? undefined,
+		port: url.port ? Number(url.port) : 2375,
+		protocol: hasTls ? "https" : "http",
+	};
 }
 
 /**
@@ -62,17 +62,17 @@ function parseDockerHost(conn: RemoteHostConnection): Docker.DockerOptions {
  * remote Docker daemon instead — services opt in via `remoteHostId`.
  */
 export function getDocker(remote?: RemoteHostConnection | null): Docker {
-  const cache = clientCache();
-  const key = remote ? remote.id : "local";
+	const cache = clientCache();
+	const key = remote ? remote.id : "local";
 
-  const existing = cache.get(key);
-  if (existing) {
-    return existing;
-  }
+	const existing = cache.get(key);
+	if (existing) {
+		return existing;
+	}
 
-  const client = remote
-    ? new Docker(parseDockerHost(remote))
-    : new Docker({ socketPath: config.docker.socketPath });
-  cache.set(key, client);
-  return client;
+	const client = remote
+		? new Docker(parseDockerHost(remote))
+		: new Docker({ socketPath: config.docker.socketPath });
+	cache.set(key, client);
+	return client;
 }

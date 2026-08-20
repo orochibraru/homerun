@@ -9,9 +9,9 @@ const logger = new Logger("Backup");
 const execFileAsync = promisify(execFile);
 
 export interface BackupResult {
-  error?: string;
-  key?: string;
-  success: boolean;
+	error?: string;
+	key?: string;
+	success: boolean;
 }
 
 /**
@@ -25,66 +25,66 @@ export interface BackupResult {
  * an oversight.
  */
 export async function backupVolume(
-  volume: StorageVolumeDTO
+	volume: StorageVolumeDTO,
 ): Promise<BackupResult> {
-  if (volume.kind !== "bind") {
-    return {
-      error: "Only bind-mount volumes can be backed up right now.",
-      success: false,
-    };
-  }
-  if (
-    !(
-      volume.backupEndpoint &&
-      volume.backupBucket &&
-      volume.backupRegion &&
-      volume.backupAccessKeyId &&
-      volume.backupSecretAccessKeyEnc
-    )
-  ) {
-    return {
-      error: "Backup destination isn't fully configured.",
-      success: false,
-    };
-  }
+	if (volume.kind !== "bind") {
+		return {
+			error: "Only bind-mount volumes can be backed up right now.",
+			success: false,
+		};
+	}
+	if (
+		!(
+			volume.backupEndpoint &&
+			volume.backupBucket &&
+			volume.backupRegion &&
+			volume.backupAccessKeyId &&
+			volume.backupSecretAccessKeyEnc
+		)
+	) {
+		return {
+			error: "Backup destination isn't fully configured.",
+			success: false,
+		};
+	}
 
-  const secretAccessKey = decryptSecret(volume.backupSecretAccessKeyEnc);
-  if (!secretAccessKey) {
-    return { error: "Couldn't decrypt the stored secret key.", success: false };
-  }
+	const secretAccessKey = decryptSecret(volume.backupSecretAccessKeyEnc);
+	if (!secretAccessKey) {
+		return { error: "Couldn't decrypt the stored secret key.", success: false };
+	}
 
-  try {
-    // Tar the source directory in memory (gzip'd) — fine at the scale a
-    // single-PUT, no-multipart uploader supports anyway (see s3-client.ts).
-    const { stdout } = await execFileAsync(
-      "tar",
-      ["-czf", "-", "-C", volume.source, "."],
-      { encoding: "buffer", maxBuffer: 1024 * 1024 * 1024 }
-    );
+	try {
+		// Tar the source directory in memory (gzip'd) — fine at the scale a
+		// single-PUT, no-multipart uploader supports anyway (see s3-client.ts).
+		const { stdout } = await execFileAsync(
+			"tar",
+			["-czf", "-", "-C", volume.source, "."],
+			{ encoding: "buffer", maxBuffer: 1024 * 1024 * 1024 },
+		);
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const prefix = volume.backupPrefix ? `${volume.backupPrefix}/` : "";
-    const key = `${prefix}${volume.name}-${timestamp}.tar.gz`;
+		const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+		const prefix = volume.backupPrefix ? `${volume.backupPrefix}/` : "";
+		const key = `${prefix}${volume.name}-${timestamp}.tar.gz`;
 
-    await putObject(
-      {
-        accessKeyId: volume.backupAccessKeyId,
-        bucket: volume.backupBucket,
-        endpoint: volume.backupEndpoint,
-        region: volume.backupRegion,
-        secretAccessKey,
-      },
-      key,
-      stdout
-    );
+		await putObject(
+			{
+				accessKeyId: volume.backupAccessKeyId,
+				bucket: volume.backupBucket,
+				endpoint: volume.backupEndpoint,
+				region: volume.backupRegion,
+				secretAccessKey,
+			},
+			key,
+			stdout,
+		);
 
-    logger.info(
-      `Backup uploaded: volume=${volume.id} key=${key} bytes=${stdout.length}`
-    );
-    return { key, success: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    logger.error(`Backup failed: volume=${volume.id}`, err);
-    return { error: message, success: false };
-  }
+		logger.info(
+			`Backup uploaded: volume=${volume.id} key=${key} bytes=${stdout.length}`,
+		);
+		return { key, success: true };
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		logger.error(`Backup failed: volume=${volume.id}`, err);
+		return { error: message, success: false };
+	}
 }

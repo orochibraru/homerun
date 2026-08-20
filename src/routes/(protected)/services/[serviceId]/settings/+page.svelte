@@ -1,126 +1,126 @@
 <script lang="ts">
-  import {
-    Check,
-    ChevronDown,
-    Clock,
-    FolderKanban,
-    GitBranch,
-    LayoutGrid,
-    Lock,
-    Server,
-    Settings,
-    Trash2Icon,
-    TriangleAlertIcon,
-  } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { goto } from "$app/navigation";
-  import { resolve } from "$app/paths";
-  import CheckBox from "$lib/components/check-box.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import {
-    SelectContent,
-    SelectItem,
-    Select as SelectRoot,
-    SelectTrigger,
-  } from "$lib/components/ui/select/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { timeAgo } from "$lib/formatting";
-  import { title } from "$lib/store/title";
+	import {
+		Check,
+		ChevronDown,
+		Clock,
+		FolderKanban,
+		GitBranch,
+		LayoutGrid,
+		Lock,
+		Server,
+		Settings,
+		Trash2Icon,
+		TriangleAlertIcon,
+	} from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import CheckBox from "$lib/components/check-box.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { timeAgo } from "$lib/formatting";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
-  const svc = $derived(data.service);
+	const { data, form } = $props();
+	const svc = $derived(data.service);
 
-  onMount(() => title.set(`${svc.name} · Settings`));
+	onMount(() => title.set(`${svc.name} · Settings`));
 
-  const label = "block mb-1.5 text-sm font-medium text-text";
-  const errorClass = "mt-1.5 text-xs text-red-500";
+	const label = "block mb-1.5 text-sm font-medium text-text";
+	const errorClass = "mt-1.5 text-xs text-red-500";
 
-  const values = $derived(
-    (form?.values as Record<string, string> | undefined) ?? {
-      buildSource: svc.buildSource,
-      containerPort: String(svc.containerPort),
-      cpuLimit: svc.cpuLimit ?? "",
-      dnsResolvable: svc.dnsResolvable ? "on" : "",
-      gitBuildContext: svc.gitBuildContext ?? "",
-      gitDockerfilePath: svc.gitDockerfilePath ?? "",
-      gitRef: svc.gitRef ?? "main",
-      gitUrl: svc.gitUrl ?? "",
-      image: svc.image,
-      memoryLimitMb: svc.memoryLimitMb ? String(svc.memoryLimitMb) : "",
-      name: svc.name,
-      registryUrl: svc.registryUrl ?? "",
-      registryUsername: svc.registryUsername ?? "",
-      restartPolicy: svc.restartPolicy,
-      slug: svc.slug,
-      tag: svc.tag,
-    }
-  );
-  const errors = $derived(form?.errors as Record<string, string[]> | undefined);
+	const values = $derived(
+		(form?.values as Record<string, string> | undefined) ?? {
+			buildSource: svc.buildSource,
+			containerPort: String(svc.containerPort),
+			cpuLimit: svc.cpuLimit ?? "",
+			dnsResolvable: svc.dnsResolvable ? "on" : "",
+			gitBuildContext: svc.gitBuildContext ?? "",
+			gitDockerfilePath: svc.gitDockerfilePath ?? "",
+			gitRef: svc.gitRef ?? "main",
+			gitUrl: svc.gitUrl ?? "",
+			image: svc.image,
+			memoryLimitMb: svc.memoryLimitMb ? String(svc.memoryLimitMb) : "",
+			name: svc.name,
+			registryUrl: svc.registryUrl ?? "",
+			registryUsername: svc.registryUsername ?? "",
+			restartPolicy: svc.restartPolicy,
+			slug: svc.slug,
+			tag: svc.tag,
+		},
+	);
+	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
-  let submitting = $state(false);
-  let showRegistry = $derived(!!svc.registryUsername);
-  let showDeleteConfirm = $state(false);
-  let deleting = $state(false);
+	let submitting = $state(false);
+	let showRegistry = $derived(!!svc.registryUsername);
+	let showDeleteConfirm = $state(false);
+	let deleting = $state(false);
 
-  let buildSource = $derived<"image" | "git">(
-    (values.buildSource as "image" | "git") ?? "image"
-  );
-  let image = $derived(values.image);
-  let tag = $derived(values.tag);
-  let registryUrl = $derived(values.registryUrl);
-  let gitUrl = $derived(values.gitUrl);
-  let gitRef = $derived(values.gitRef);
-  let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
-  let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
+	let buildSource = $derived<"image" | "git">(
+		(values.buildSource as "image" | "git") ?? "image",
+	);
+	let image = $derived(values.image);
+	let tag = $derived(values.tag);
+	let registryUrl = $derived(values.registryUrl);
+	let gitUrl = $derived(values.gitUrl);
+	let gitRef = $derived(values.gitRef);
+	let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
+	let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const restartPolicyOptions: [string, string][] = [
-    ["unless-stopped", "Unless stopped"],
-    ["always", "Always"],
-    ["on-failure", "On failure"],
-    ["no", "Never"],
-  ];
-  let restartPolicy = $derived(values.restartPolicy);
-  const restartPolicyLabel = $derived(
-    restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
-      "Unless stopped"
-  );
+	const restartPolicyOptions: [string, string][] = [
+		["unless-stopped", "Unless stopped"],
+		["always", "Always"],
+		["on-failure", "On failure"],
+		["no", "Never"],
+	];
+	let restartPolicy = $derived(values.restartPolicy);
+	const restartPolicyLabel = $derived(
+		restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
+			"Unless stopped",
+	);
 
-  let projectId = $derived(svc.projectId ?? "");
-  const projectLabel = $derived(
-    data.projects.find((p) => p.id === projectId)?.name ?? "Ungrouped"
-  );
+	let projectId = $derived(svc.projectId ?? "");
+	const projectLabel = $derived(
+		data.projects.find((p) => p.id === projectId)?.name ?? "Ungrouped",
+	);
 
-  let remoteHostId = $derived(svc.remoteHostId ?? "");
-  const remoteHostLabel = $derived(
-    data.remoteHosts.find((h) => h.id === remoteHostId)?.name ?? "This host"
-  );
+	let remoteHostId = $derived(svc.remoteHostId ?? "");
+	const remoteHostLabel = $derived(
+		data.remoteHosts.find((h) => h.id === remoteHostId)?.name ?? "This host",
+	);
 
-  function scheduleImageCheck() {
-    clearTimeout(imageCheckTimer);
-    if (!image.trim()) {
-      imageCheck = null;
-      return;
-    }
-    imageCheckTimer = setTimeout(async () => {
-      try {
-        const res = await fetch(resolve("/services/check-image"), {
-          body: JSON.stringify({ image, registryUrl, tag }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
-        imageCheck = res.ok ? await res.json() : null;
-      } catch {
-        imageCheck = null;
-      }
-    }, 600);
-  }
+	function scheduleImageCheck() {
+		clearTimeout(imageCheckTimer);
+		if (!image.trim()) {
+			imageCheck = null;
+			return;
+		}
+		imageCheckTimer = setTimeout(async () => {
+			try {
+				const res = await fetch(resolve("/services/check-image"), {
+					body: JSON.stringify({ image, registryUrl, tag }),
+					headers: { "Content-Type": "application/json" },
+					method: "POST",
+				});
+				imageCheck = res.ok ? await res.json() : null;
+			} catch {
+				imageCheck = null;
+			}
+		}, 600);
+	}
 
-  onMount(() => {
-    scheduleImageCheck();
-  });
+	onMount(() => {
+		scheduleImageCheck();
+	});
 </script>
 
 <div class="space-y-6">

@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { LayoutGrid, Plus, Rocket } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { resolve } from "$app/paths";
-  import { Button } from "$lib/components/ui/button";
-  import { templateIcon } from "$lib/constants";
-  import { title } from "$lib/store/title";
+	import { LayoutGrid, Plus, Rocket } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { resolve } from "$app/paths";
+	import { Button } from "$lib/components/ui/button";
+	import { templateIcon } from "$lib/constants";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
+	const { data } = $props();
 
-  onMount(() => title.set("Templates"));
+	onMount(() => title.set("Templates"));
 </script>
 
 {#snippet card(tmpl: (typeof data.builtins)[number])}
