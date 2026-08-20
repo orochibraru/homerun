@@ -20,7 +20,6 @@
 			"!dist",
 			"!.vercel",
 			"!test-results",
-			"!playwright-report",
 			"!node_modules",
 			"!.svelte-kit/*",
 			"!.svelte-kit",
