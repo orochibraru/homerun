@@ -4,6 +4,7 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import CheckBox from "$lib/components/check-box.svelte";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -124,10 +125,15 @@
             type="text"
           >
         </div>
-        <label class="flex items-center gap-1.5 pb-2.5 text-xs text-text-muted">
-          <input name="readOnly" type="checkbox">
-          Read-only
-        </label>
+        <div class="w-full sm:w-auto">
+          <CheckBox
+            checked={false}
+            helperText="Mount this volume without write access"
+            id="readOnly"
+            label="Read-only"
+            name="readOnly"
+          />
+        </div>
         <button
           class="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
           type="submit"

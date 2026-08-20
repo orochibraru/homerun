@@ -204,6 +204,55 @@ export const remoteHost = sqliteTable(
   (table) => [index("remoteHost_userId_idx").on(table.userId)]
 );
 
+// Singleton row (id is always "default") holding DB overrides for
+// instance-level config that otherwise defaults from env vars (see
+// $lib/config.ts's envDefaults + applyInstanceSettings()). Every column is
+// nullable — null means "fall back to the env default", a non-null value
+// overrides it. Secrets (smtpPasswordEnc, each oauth provider's
+// clientSecretEnc) use the same AES-256-GCM scheme as
+// service.registryPasswordEnc.
+export const instanceSettings = sqliteTable("instance_settings", {
+  authCheckUrl: text("auth_check_url"),
+  authCrossSubdomainCookies: integer("auth_cross_subdomain_cookies", {
+    mode: "boolean",
+  }),
+  authOrigin: text("auth_origin"),
+  baseDomain: text("base_domain"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  dockerNetworkName: text("docker_network_name"),
+  dockerSocketPath: text("docker_socket_path"),
+  id: text("id").primaryKey(),
+  // {name, clientId, clientSecretEnc, discoveryUrl, enabled, pkce, scopes}[]
+  // — see genericOAuth's config shape in $lib/server/auth.ts.
+  oauthProviders: text("oauth_providers", { mode: "json" })
+    .$type<InstanceOauthProvider[]>()
+    .notNull()
+    .default([]),
+  smtpEnabled: integer("smtp_enabled", { mode: "boolean" }),
+  smtpFrom: text("smtp_from"),
+  smtpHost: text("smtp_host"),
+  smtpPasswordEnc: text("smtp_password_enc"),
+  smtpPort: integer("smtp_port"),
+  smtpSecure: integer("smtp_secure", { mode: "boolean" }),
+  smtpUser: text("smtp_user"),
+  traefikCertResolver: text("traefik_cert_resolver"),
+  traefikDynamicConfigDir: text("traefik_dynamic_config_dir"),
+  traefikEntrypoint: text("traefik_entrypoint"),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export interface InstanceOauthProvider {
+  clientId: string;
+  clientSecretEnc: string;
+  discoveryUrl: string;
+  enabled: boolean;
+  name: string;
+  pkce: boolean;
+  scopes: string[];
+}
+
 export const template = sqliteTable(
   "template",
   {
@@ -498,6 +547,7 @@ export type Project = typeof project.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type Service = typeof service.$inferSelect;
 export type Deployment = typeof deployment.$inferSelect;
+export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;

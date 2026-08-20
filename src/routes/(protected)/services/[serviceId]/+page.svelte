@@ -13,6 +13,7 @@
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
   import StatusBadge from "$lib/components/status-badge.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
   import { timeAgo } from "$lib/formatting";
   import { title } from "$lib/store/title";
 
@@ -136,11 +137,7 @@
 <!-- ═══ Actions ═══ -->
 <div class="mb-6 flex flex-wrap gap-2">
   <form action="?/deploy" method="POST" use:enhance={deployEnhance()}>
-    <button
-      class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-      disabled={pendingAction !== null}
-      type="submit"
-    >
+    <Button disabled={pendingAction !== null} type="submit">
       {#if pendingAction === "deploy"}
         <Loader2 class="size-4 animate-spin" />
         {svc.containerId ? "Deploying…" : "Deploying…"}
@@ -148,16 +145,17 @@
         <Rocket class="size-4" />
         {svc.containerId ? "Redeploy" : "Deploy"}
       {/if}
-    </button>
+    </Button>
   </form>
 
   {#if svc.containerId}
     {#if svc.desiredState === "running"}
       <form action="?/stop" method="POST" use:enhance={withPending("stop")}>
-        <button
-          class="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60 bg-red-600/10 text-red-600 border-red-100 dark:border-red-600"
+        <Button
+          class="border-red-100 bg-red-600/10 text-red-600 dark:border-red-600"
           disabled={pendingAction !== null}
           type="submit"
+          variant="outline"
         >
           {#if pendingAction === "stop"}
             <Loader2 class="size-4 animate-spin" />
@@ -165,14 +163,15 @@
             <Square class="size-4" />
           {/if}
           Stop
-        </button>
+        </Button>
       </form>
     {:else}
       <form action="?/start" method="POST" use:enhance={withPending("start")}>
-        <button
-          class="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60 bg-green-600/10 text-green-600 border-green-100 dark:border-green-600"
+        <Button
+          class="border-green-100 bg-green-600/10 text-green-600 dark:border-green-600"
           disabled={pendingAction !== null}
           type="submit"
+          variant="outline"
         >
           {#if pendingAction === "start"}
             <Loader2 class="size-4 animate-spin" />
@@ -180,23 +179,19 @@
             <Play class="size-4" />
           {/if}
           Start
-        </button>
+        </Button>
       </form>
     {/if}
 
     <form action="?/restart" method="POST" use:enhance={withPending("restart")}>
-      <button
-        class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={pendingAction !== null}
-        type="submit"
-      >
+      <Button disabled={pendingAction !== null} type="submit" variant="outline">
         {#if pendingAction === "restart"}
           <Loader2 class="size-4 animate-spin" />
         {:else}
           <RotateCw class="size-4" />
         {/if}
         Restart
-      </button>
+      </Button>
     </form>
   {/if}
 </div>

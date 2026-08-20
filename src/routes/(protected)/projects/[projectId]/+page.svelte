@@ -16,15 +16,15 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import StatusBadge from "$lib/components/status-badge.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
   const proj = $derived(data.project);
 
   onMount(() => title.set(proj.name));
-
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
   let editing = $state(false);
   let renaming = $state(false);
@@ -54,28 +54,26 @@
         {/if}
       </div>
       <div class="flex gap-2">
-        <button
-          class="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          onclick={() => { editing = true; }}
-          type="button"
+        <Button
+          onclick={() => {
+            editing = true;
+          }}
+          variant="outline"
         >
           <Pencil class="size-3.5" />
           Rename
-        </button>
-        <a
-          class="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
+        </Button>
+        <Button
           href="{resolve('/templates')}?projectId={proj.id}"
+          variant="outline"
         >
           <LayoutGrid class="size-3.5" />
           From Template
-        </a>
-        <a
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
-          href="{resolve('/services/new')}?projectId={proj.id}"
-        >
+        </Button>
+        <Button href="{resolve('/services/new')}?projectId={proj.id}">
           <Plus class="size-4" />
           Add Service
-        </a>
+        </Button>
       </div>
     </div>
   {:else}
@@ -98,39 +96,36 @@
       {#if form?.error}
         <p class="text-sm text-red-500">{form.error}</p>
       {/if}
-      <input class={input} name="name" required type="text" value={proj.name}>
-      <input
-        class="{input} font-mono"
+      <Input name="name" required type="text" value={proj.name} />
+      <Input
+        class="font-mono"
         name="slug"
         pattern={"[a-z0-9-]{1,63}"}
         required
         type="text"
         value={proj.slug}
-      >
-      <textarea class="{input} resize-none" name="description" rows="2">
+      />
+      <Textarea class="resize-none" name="description" rows={2}>
         {proj.description ?? ""}
-      </textarea>
+      </Textarea>
 
       <div class="flex justify-end gap-3">
-        <button
-          class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          onclick={() => { editing = false; }}
-          type="button"
+        <Button
+          onclick={() => {
+            editing = false;
+          }}
+          variant="outline"
         >
           Cancel
-        </button>
-        <button
-          class="bg-accent hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={renaming}
-          type="submit"
-        >
+        </Button>
+        <Button disabled={renaming} type="submit">
           {#if renaming}
             <Loader2 class="size-4 animate-spin" />
           {:else}
             <Check class="size-4" />
           {/if}
           Save
-        </button>
+        </Button>
       </div>
     </form>
   {/if}
@@ -145,20 +140,17 @@
         No services in this project yet
       </p>
       <div class="mt-5 flex gap-2">
-        <a
-          class="flex items-center gap-1.5 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
+        <Button
           href="{resolve('/templates')}?projectId={proj.id}"
+          variant="outline"
         >
           <LayoutGrid class="size-4" />
           From Template
-        </a>
-        <a
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-          href="{resolve('/services/new')}?projectId={proj.id}"
-        >
+        </Button>
+        <Button href="{resolve('/services/new')}?projectId={proj.id}">
           <Plus class="size-4" />
           Add Service
-        </a>
+        </Button>
       </div>
     </div>
   {:else}
@@ -213,13 +205,15 @@
     </div>
     <div class="p-5">
       {#if !showDeleteConfirm}
-        <button
-          class="rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-700/60"
-          onclick={() => { showDeleteConfirm = true; }}
-          type="button"
+        <Button
+          class="border-red-300 text-red-600 hover:bg-red-500 hover:text-white dark:border-red-700/60"
+          onclick={() => {
+            showDeleteConfirm = true;
+          }}
+          variant="outline"
         >
           Delete project
-        </button>
+        </Button>
       {:else}
         <form
           action="?/delete"
@@ -251,17 +245,18 @@
             </p>
           </div>
           <div class="flex items-center gap-3">
-            <button
-              class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-              onclick={() => { showDeleteConfirm = false; }}
-              type="button"
+            <Button
+              onclick={() => {
+                showDeleteConfirm = false;
+              }}
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
-              class="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            </Button>
+            <Button
               disabled={deleting}
               type="submit"
+              variant="destructive-solid"
             >
               {#if deleting}
                 <Loader2 class="size-4 animate-spin" />
@@ -270,7 +265,7 @@
                 <Trash2 class="size-4" />
                 Yes, delete everything
               {/if}
-            </button>
+            </Button>
           </div>
         </form>
       {/if}

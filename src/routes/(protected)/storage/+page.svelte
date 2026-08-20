@@ -5,6 +5,7 @@
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
   import EmptyState from "$lib/components/empty-state.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -29,13 +30,10 @@
         Local volume sources services can mount for persistent or shared data.
       </p>
     </div>
-    <a
-      class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-      href={resolve("/storage/new")}
-    >
+    <Button href={resolve("/storage/new")}>
       <Plus class="size-4" />
       New Volume
-    </a>
+    </Button>
   </div>
 
   {#if data.volumes.length === 0}
@@ -45,13 +43,10 @@
       title="No storage volumes yet"
     >
       {#snippet children()}
-        <a
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-          href={resolve("/storage/new")}
-        >
+        <Button href={resolve("/storage/new")}>
           <Plus class="size-4" />
           New Volume
-        </a>
+        </Button>
       {/snippet}
     </EmptyState>
   {:else}
@@ -87,13 +82,14 @@
               </p>
             {/if}
           </div>
-          <a
-            class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text"
+          <Button
             href={resolve("/storage/[volumeId]", { volumeId: vol.id })}
+            size="icon-sm"
             title="Backup settings"
+            variant="ghost"
           >
             <CloudUpload class="size-4" />
-          </a>
+          </Button>
           <form
             action="?/delete"
             method="POST"
@@ -107,13 +103,15 @@
               }}
           >
             <input name="volumeId" type="hidden" value={vol.id}>
-            <button
-              class="rounded-lg p-2 text-red-500 transition-all hover:bg-red-500/10"
+            <Button
+              class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+              size="icon-sm"
               title="Delete"
               type="submit"
+              variant="ghost"
             >
               <Trash2 class="size-4" />
-            </button>
+            </Button>
           </form>
         </div>
       {/each}

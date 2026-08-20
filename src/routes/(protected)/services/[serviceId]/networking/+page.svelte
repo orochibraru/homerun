@@ -4,6 +4,7 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import CheckBox from "$lib/components/check-box.svelte";
   import {
     inputClass as input,
     labelClass as label,
@@ -91,14 +92,13 @@
         </div>
 
         <div class="border-t border-border pt-3">
-          <label class="flex items-center gap-2 text-sm text-text">
-            <input
-              checked={svc.authRequired}
-              name="authRequired"
-              type="checkbox"
-            >
-            Require login to access this app
-          </label>
+          <CheckBox
+            checked={svc.authRequired}
+            helperText="Gate this app behind Homerun's own login via Traefik forwardAuth"
+            id="authRequired"
+            label="Require login to access this app"
+            name="authRequired"
+          />
           <p class="mt-1.5 text-xs text-red-500">
             ⚠ In its current form this blocks <em>everyone</em>, including you —
             there's no login page mounted on this app's own hostname to
@@ -208,10 +208,13 @@
           ></textarea>
         </div>
         {#if svc.customSslCertEnc}
-          <label class="flex items-center gap-2 text-xs text-text-muted">
-            <input name="clearSsl" type="checkbox">
-            Remove the stored certificate instead of replacing it
-          </label>
+          <CheckBox
+            checked={false}
+            helperText="Clears the certificate and key instead of saving new ones above"
+            id="clearSsl"
+            label="Remove the stored certificate instead of replacing it"
+            name="clearSsl"
+          />
         {/if}
         <button
           class="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"

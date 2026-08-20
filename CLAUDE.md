@@ -169,7 +169,7 @@ Containers attach to the external `localrun-network` Docker network (`docker net
 
 ### Setup diagnostics (`src/lib/server/setup-checks.ts`)
 
-`runSetupChecks()` — read-only diagnostics (base domain/auth secret/origin still at their defaults, Traefik container reachable, Docker socket reachable, SMTP fully configured if enabled), each with a severity and the env var that fixes it. Surfaced on `/setup` and as a dismissed-by-navigating-away banner on the dashboard when anything isn't `"ok"`. Deliberately not a live-editable settings store — config stays env-var driven (see below) — and there's no DNS-provider (Cloudflare/Pangolin) automation; see TODO.md's Onboarding item for that larger, unbuilt scope.
+`runSetupChecks()` — read-only diagnostics (base domain/auth secret/origin still at their defaults, Traefik container reachable, Docker socket reachable, SMTP fully configured if enabled), each with a severity and the env var that fixes it. Surfaced on `/setup` and as a dismissed-by-navigating-away banner on the dashboard when anything isn't `"ok"`. Reads `config`, which already reflects any DB-backed instance settings merged over the env defaults (see Config and Instance settings below) — these checks just report the effective value, they don't care which layer it came from. There's still no DNS-provider (Cloudflare/Pangolin) automation; see TODO.md's Onboarding item for that larger, unbuilt scope.
 
 ### Config (`src/lib/config.ts`)
 
@@ -177,13 +177,29 @@ Zod-validated env config. Notable groups: `docker.{socketPath,networkName}`, `ba
 
 `config.auth.secret` reads `AUTH_SECRET` **falling back to `BETTER_AUTH_SECRET`** — don't collapse this to one var without checking both are honored.
 
+`config` is a single stable object every other module imports and reads properties off live — the env-parsed values are captured once into a private `envDefaults`, then `config` starts as a clone of that and is **mutated in place** (never reassigned) by `applyInstanceSettings(override)`. See Instance settings below for who calls that and when.
+
+### Instance settings (DB-backed) (`instance_settings` table, `InstanceSettingsDTO`, `/settings`)
+
+Most of `config` — OAuth providers, Docker socket/network defaults, Traefik entrypoint/cert-resolver/dynamic-config-dir, SMTP, and core settings (base domain, origin, the auth-check URL, cross-subdomain cookies) — is now live-editable from a `/settings` page, not just env vars. `instance_settings` is a **singleton row** (`InstanceSettingsDTO`, id always `"default"`, auto-created on first read): every column is nullable, `null` meaning "fall back to the env default", a non-null value overriding it. Secrets (`smtpPasswordEnc`, each OAuth provider's `clientSecretEnc` inside the `oauthProviders` JSON array) use the same AES-256-GCM scheme as `service.registryPasswordEnc` (`docker/secrets.ts`, reused as-is).
+
+**Not DB-backed** — `dbPath`/`port`/`auth.secret`/`logLevel`/`logFormat` stay env-only: `dbPath` has to be known before the DB is even reachable, and `auth.secret` is the key every `*Enc` column's encryption derives from, so DB-backing it would be circular.
+
+`InstanceSettingsDTO.toConfigOverride()` decrypts every stored secret and returns the plain-value shape `applyInstanceSettings()` merges over `envDefaults`. This runs twice: once in `hooks.server.ts`'s `init()` at boot (before the server accepts any request, so DB-backed settings are in effect from the very first request, not just after a save), and again at the end of every `/settings` action — so a saved change is live immediately, no restart, for every section including OAuth (see Auth below for how that one specifically applies live).
+
+`config.ts` deliberately never imports the DTO or `db` itself — `db/lib.ts` imports `config.ts` for `dbPath`, so `config.ts` has to stay a leaf module or the two would form a circular import. The DB-reading glue lives in `hooks.server.ts` and `settings/+page.server.ts` instead.
+
+**Real, tested finding from building this**: a bad OAuth provider (unreachable/invalid discovery URL) isn't just a broken login button — better-auth's `genericOAuth` plugin validates every configured provider's discovery document while building its auth _context_, which every request touching auth goes through, including plain `getSession()` on every page load and even email/password sign-in. Saving one unvalidated **locked the whole app out**, `/settings` included, with no way back in short of editing the DB directly — verified live. Fixed two ways: `settings/+page.server.ts`'s `updateOauth` action fetches and validates each provider's discovery document (must return 200 with a JSON body containing an `issuer`) _before_ persisting anything, rejecting the save with a clear error otherwise — deliberately **not** the "warn, don't block" precedent the image-existence checker uses, since the failure mode here is total lockout rather than one broken service. And as defense in depth against any other cause, `hooks.server.ts`'s `authHandler` wraps `auth.api.getSession()` in a `catch` that degrades to "no session" on any error rather than letting it 500 every request — so even if auth context construction fails for some other reason, the rest of the app (and `/settings`, to fix whatever's wrong) stays reachable, just signed out.
+
 ### Auth (`src/lib/server/auth.ts`)
 
 better-auth at `basePath: "/api/v1/auth"`, `drizzleAdapter` over the same `bun:sqlite` db. `src/hooks.server.ts` populates `event.locals.user`/`session` from the cookie session, falling back to manual `x-api-key`/`Authorization: Bearer` verification when no cookie is present: `auth.api.verifyApiKey()` confirms the key, then the owning user is looked up **directly by `result.key.referenceId`** via a plain drizzle query — deliberately _not_ through `getSession()`'s API-key session-mocking, which is gated behind the `apiKey()` plugin's `enableSessionForAPIKeys` option (default `false`, and better-auth's own docs advise against enabling it in production). This is what makes `x-api-key`/`Bearer` auth work for `src/routes/api/v1/*` (see REST API above).
 
 `user.deleteUser` is enabled with a `beforeDelete` hook — don't assume better-auth's default account-deletion behavior is sufficient; it isn't, by design of this app's extra tables (see Data model above).
 
-`config.auth.crossSubdomainCookies` (env `AUTH_CROSS_SUBDOMAIN`, default off) sets better-auth's `advanced.crossSubDomainCookies` to scope the session cookie to `.{baseDomain}` instead of the exact host — see the per-service auth gate below for why, and its documented, tested limitation.
+`config.auth.crossSubdomainCookies` (env `AUTH_CROSS_SUBDOMAIN`, default off, also DB-editable — see Instance settings above) sets better-auth's `advanced.crossSubDomainCookies` to scope the session cookie to `.{baseDomain}` instead of the exact host — see the per-service auth gate below for why, and its documented, tested limitation.
+
+The `betterAuth({...})` call is wrapped in `buildAuth()` rather than assigned once to a `const` — `export let auth = buildAuth()`, plus `export function rebuildAuth()` which reassigns `auth = buildAuth()`. This is what makes OAuth provider changes saved on `/settings` apply live: every consumer (`hooks.server.ts`'s `auth.api.getSession`/`svelteKitHandler({ auth, ... })`) reads `auth.*` per-request rather than destructuring it at import time, so ES module live-bindings mean a reassignment inside `auth.ts` is immediately visible everywhere without a restart. `rebuildAuth()` is called at the end of `hooks.server.ts`'s `init()` and every `/settings` action.
 
 ### Per-service auth gating (`service.authRequired`, `/api/v1/auth-check`)
 

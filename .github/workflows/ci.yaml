@@ -46,6 +46,9 @@ jobs:
       - name: Type check Webapp
         run: bun run check
 
+      - name: Lint
+        run: bun run lint
+
   ts-lint-test:
     name: TypeScript Lint & Test
     runs-on: ubuntu-latest

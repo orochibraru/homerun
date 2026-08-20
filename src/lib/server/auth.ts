@@ -24,176 +24,199 @@ if (!(process.env.ORIGIN || dev || building)) {
 
 const logger = new Logger("Auth");
 
-export const auth = betterAuth({
-  advanced: {
-    // Opt-in (AUTH_CROSS_SUBDOMAIN=true) — see config.ts for the tradeoff.
-    // Required for a signed-in admin to be recognized on a gated deployed
-    // service's subdomain without a separate login there.
-    ...(config.auth.crossSubdomainCookies
-      ? {
-          crossSubDomainCookies: {
-            domain: `.${config.baseDomain}`,
-            enabled: true,
-          },
+/**
+ * Builds the better-auth instance from the current `config` (env defaults
+ * merged with any DB-backed instance settings — see $lib/config.ts). Wrapped
+ * in a function, rather than inlined into a single `betterAuth({...})` call
+ * assigned once, so OAuth provider changes saved on the Settings page can
+ * take effect live: rebuildAuth() below reassigns the exported `auth`
+ * binding, and since every consumer reads `auth.*` per-request rather than
+ * destructuring it at import time, the new instance is picked up
+ * immediately everywhere without a process restart.
+ */
+function buildAuth() {
+  return betterAuth({
+    advanced: {
+      // Opt-in (AUTH_CROSS_SUBDOMAIN=true) — see config.ts for the tradeoff.
+      // Required for a signed-in admin to be recognized on a gated deployed
+      // service's subdomain without a separate login there.
+      ...(config.auth.crossSubdomainCookies
+        ? {
+            crossSubDomainCookies: {
+              domain: `.${config.baseDomain}`,
+              enabled: true,
+            },
+          }
+        : {}),
+    },
+    basePath: "/api/v1/auth",
+    // Use ORIGIN env-var when explicitly set (production).
+    // In dev ORIGIN is often unset; leaving baseURL undefined makes
+    // svelteKitHandler derive the origin from each incoming request,
+    // which avoids the port-mismatch 404 on /api/v1/auth/*.
+    baseURL: process.env.ORIGIN,
+    database: drizzleAdapter(db, {
+      provider: "sqlite",
+      schema,
+    }),
+    emailAndPassword: {
+      disableSignUp: false,
+      enabled: true,
+      minPasswordLength: 12,
+    },
+    emailVerification: {
+      sendOnSignUp: isSmtpEnabled(),
+      sendVerificationEmail: async (params) => {
+        const fullUrl = new URL(params.url);
+        // If not hostname, add it
+        if (!fullUrl.hostname) {
+          fullUrl.hostname = "localhost:5173"; // Change this to your frontend domain
+          fullUrl.protocol = "http:"; // or 'https:' in production
         }
-      : {}),
-  },
-  basePath: "/api/v1/auth",
-  // Use ORIGIN env-var when explicitly set (production).
-  // In dev ORIGIN is often unset; leaving baseURL undefined makes
-  // svelteKitHandler derive the origin from each incoming request,
-  // which avoids the port-mismatch 404 on /api/v1/auth/*.
-  baseURL: process.env.ORIGIN,
-  database: drizzleAdapter(db, {
-    provider: "sqlite",
-    schema,
-  }),
-  emailAndPassword: {
-    disableSignUp: false,
-    enabled: true,
-    minPasswordLength: 12,
-  },
-  emailVerification: {
-    sendOnSignUp: isSmtpEnabled(),
-    sendVerificationEmail: async (params) => {
-      const fullUrl = new URL(params.url);
-      // If not hostname, add it
-      if (!fullUrl.hostname) {
-        fullUrl.hostname = "localhost:5173"; // Change this to your frontend domain
-        fullUrl.protocol = "http:"; // or 'https:' in production
-      }
-      const email = new Email({
-        content: `Click the link to verify your email: ${fullUrl.toString()}`,
-        subject: "Verify your email address",
-        to: params.user.email,
-      });
-      await email.send();
+        const email = new Email({
+          content: `Click the link to verify your email: ${fullUrl.toString()}`,
+          subject: "Verify your email address",
+          to: params.user.email,
+        });
+        await email.send();
+      },
     },
-  },
-  logger: {
-    level: dev ? "debug" : config.logLevel,
-    log: (level, message, ...metadata) => {
-      // Send logs to a custom logging service
-      logger.log({
-        level,
-        message,
-        metadata,
-      });
+    logger: {
+      level: dev ? "debug" : config.logLevel,
+      log: (level, message, ...metadata) => {
+        // Send logs to a custom logging service
+        logger.log({
+          level,
+          message,
+          metadata,
+        });
+      },
     },
-  },
-  plugins: [
-    sveltekitCookies(getRequestEvent),
-    openAPI({
-      disableDefaultReference: true,
-      path: "/openapi",
-    }),
-    apiKey(),
-    passkey(),
-    admin(),
-    bearer(),
-    genericOAuth({
-      config: config.auth.oauthProviders.map((provider) => ({
-        clientId: provider.clientId,
-        clientSecret: provider.clientSecret,
-        discoveryUrl: provider.discoveryUrl,
-        enabled: provider.enabled,
-        pkce: provider.pkce,
-        providerId: provider.name,
-        scopes: provider.scopes,
-      })),
-    }),
-  ],
-  rateLimit: {
-    enabled: !dev, // Disable rate limiting in development for easier testing
-    max: 100, // limit each IP to 100 requests per window
-    window: 15 * 60 * 1000, // 15 minutes
-  },
-  secret: config.auth.secret,
-  user: {
-    deleteUser: {
-      // better-auth's own internalAdapter.deleteUser only cleans up its
-      // own session/account rows — it has no knowledge of our
-      // service/deployment tables, and PRAGMA foreign_keys is never
-      // enabled on the sqlite connection, so onDelete:cascade in the
-      // schema is inert. Worse, leaving this out would leak running
-      // Docker containers on the host. Clean up explicitly, before the
-      // user row (and better-auth's cascade of it) goes away.
-      beforeDelete: async (user) => {
-        const services = await db
-          .select()
-          .from(schema.service)
-          .where(eq(schema.service.userId, user.id));
+    plugins: [
+      sveltekitCookies(getRequestEvent),
+      openAPI({
+        disableDefaultReference: true,
+        path: "/openapi",
+      }),
+      apiKey(),
+      passkey(),
+      admin(),
+      bearer(),
+      genericOAuth({
+        config: config.auth.oauthProviders.map((provider) => ({
+          clientId: provider.clientId,
+          clientSecret: provider.clientSecret,
+          discoveryUrl: provider.discoveryUrl,
+          enabled: provider.enabled,
+          pkce: provider.pkce,
+          providerId: provider.name,
+          scopes: provider.scopes,
+        })),
+      }),
+    ],
+    rateLimit: {
+      enabled: !dev, // Disable rate limiting in development for easier testing
+      max: 100, // limit each IP to 100 requests per window
+      window: 15 * 60 * 1000, // 15 minutes
+    },
+    secret: config.auth.secret,
+    user: {
+      deleteUser: {
+        // better-auth's own internalAdapter.deleteUser only cleans up its
+        // own session/account rows — it has no knowledge of our
+        // service/deployment tables, and PRAGMA foreign_keys is never
+        // enabled on the sqlite connection, so onDelete:cascade in the
+        // schema is inert. Worse, leaving this out would leak running
+        // Docker containers on the host. Clean up explicitly, before the
+        // user row (and better-auth's cascade of it) goes away.
+        beforeDelete: async (user) => {
+          const services = await db
+            .select()
+            .from(schema.service)
+            .where(eq(schema.service.userId, user.id));
 
-        logger.info(
-          `Deleting account: user=${user.id} services=${services.length}`
-        );
+          logger.info(
+            `Deleting account: user=${user.id} services=${services.length}`
+          );
 
-        await Promise.all(
-          services
-            .filter((svc) => svc.containerId)
-            .map(async (svc) => {
-              try {
-                const remote = await RemoteHostDTO.connectionFor(svc, user.id);
-                await removeContainer(
-                  svc.containerId as string,
-                  { force: true },
-                  remote
-                );
-              } catch {
-                // Already gone on the host — fine, keep cleaning up.
-              }
-            })
-        );
+          await Promise.all(
+            services
+              .filter((svc) => svc.containerId)
+              .map(async (svc) => {
+                try {
+                  const remote = await RemoteHostDTO.connectionFor(
+                    svc,
+                    user.id
+                  );
+                  await removeContainer(
+                    svc.containerId as string,
+                    { force: true },
+                    remote
+                  );
+                } catch {
+                  // Already gone on the host — fine, keep cleaning up.
+                }
+              })
+          );
 
-        await db
-          .delete(schema.deployment)
-          .where(eq(schema.deployment.userId, user.id));
-        await db
-          .delete(schema.service)
-          .where(eq(schema.service.userId, user.id));
+          await db
+            .delete(schema.deployment)
+            .where(eq(schema.deployment.userId, user.id));
+          await db
+            .delete(schema.service)
+            .where(eq(schema.service.userId, user.id));
 
-        // Same explicit-cleanup precedent as services above — FK cascade
-        // alone would leave the project's Docker network dangling.
-        const projects = await db
-          .select()
-          .from(schema.project)
-          .where(eq(schema.project.userId, user.id));
-        await Promise.all(
-          projects.map((proj) =>
-            removeProjectNetwork(proj.id).catch(() => {
-              // Already gone — fine, keep cleaning up.
-            })
-          )
-        );
-        await db
-          .delete(schema.project)
-          .where(eq(schema.project.userId, user.id));
-
-        // Row-only — no host-side resource (unlike services/projects,
-        // nothing was ever created on the user's behalf just by defining
-        // a storage volume source). Delete the join rows first (no userId
-        // column of its own to filter by directly).
-        const volumes = await db
-          .select({ id: schema.storageVolume.id })
-          .from(schema.storageVolume)
-          .where(eq(schema.storageVolume.userId, user.id));
-        if (volumes.length > 0) {
-          await db.delete(schema.serviceVolume).where(
-            inArray(
-              schema.serviceVolume.volumeId,
-              volumes.map((v) => v.id)
+          // Same explicit-cleanup precedent as services above — FK cascade
+          // alone would leave the project's Docker network dangling.
+          const projects = await db
+            .select()
+            .from(schema.project)
+            .where(eq(schema.project.userId, user.id));
+          await Promise.all(
+            projects.map((proj) =>
+              removeProjectNetwork(proj.id).catch(() => {
+                // Already gone — fine, keep cleaning up.
+              })
             )
           );
-        }
-        await db
-          .delete(schema.storageVolume)
-          .where(eq(schema.storageVolume.userId, user.id));
+          await db
+            .delete(schema.project)
+            .where(eq(schema.project.userId, user.id));
 
-        logger.info(`Account deletion cleanup complete: user=${user.id}`);
+          // Row-only — no host-side resource (unlike services/projects,
+          // nothing was ever created on the user's behalf just by defining
+          // a storage volume source). Delete the join rows first (no userId
+          // column of its own to filter by directly).
+          const volumes = await db
+            .select({ id: schema.storageVolume.id })
+            .from(schema.storageVolume)
+            .where(eq(schema.storageVolume.userId, user.id));
+          if (volumes.length > 0) {
+            await db.delete(schema.serviceVolume).where(
+              inArray(
+                schema.serviceVolume.volumeId,
+                volumes.map((v) => v.id)
+              )
+            );
+          }
+          await db
+            .delete(schema.storageVolume)
+            .where(eq(schema.storageVolume.userId, user.id));
+
+          logger.info(`Account deletion cleanup complete: user=${user.id}`);
+        },
+        enabled: true,
       },
-      enabled: true,
     },
-  },
-});
+  });
+}
+
+export let auth = buildAuth();
+
+/** Reconstructs `auth` from the current config — see buildAuth()'s docstring. */
+export function rebuildAuth(): void {
+  auth = buildAuth();
+  logger.info("Rebuilt auth instance from updated instance settings");
+}
 
 export type AuthType = typeof auth.$Infer.Session;

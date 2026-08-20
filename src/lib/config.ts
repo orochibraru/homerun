@@ -73,6 +73,27 @@ export const configSchema = z.object({
 
 export type PenombreConfig = z.infer<typeof configSchema>;
 
+/** The plain-value shape InstanceSettingsDTO.toConfigOverride() produces — kept here rather than imported from the DTO so this module stays DB-free (see applyInstanceSettings below). */
+export interface InstanceSettingsOverride {
+  authCheckUrl?: string | null;
+  authCrossSubdomainCookies?: boolean | null;
+  authOrigin?: string | null;
+  baseDomain?: string | null;
+  dockerNetworkName?: string | null;
+  dockerSocketPath?: string | null;
+  oauthProviders?: PenombreConfig["auth"]["oauthProviders"];
+  smtpEnabled?: boolean | null;
+  smtpFrom?: string | null;
+  smtpHost?: string | null;
+  smtpPassword?: string | null;
+  smtpPort?: number | null;
+  smtpSecure?: boolean | null;
+  smtpUser?: string | null;
+  traefikCertResolver?: string | null;
+  traefikDynamicConfigDir?: string | null;
+  traefikEntrypoint?: string | null;
+}
+
 export const parseConfig = (): PenombreConfig => {
   const envConfig = {
     auth: {
@@ -120,6 +141,31 @@ export const parseConfig = (): PenombreConfig => {
   return configSchema.parse(envConfig);
 };
 
+/**
+ * A non-secret subset of the env defaults, safe to send to the client as
+ * placeholder text on the /settings page ("blank = falls back to this").
+ * Deliberately omits auth.secret and smtp.password — those never get
+ * echoed back to the browser even as an env-default hint.
+ */
+export function envDefaultsForDisplay() {
+  return {
+    authCheckUrl: envDefaults.authCheckUrl,
+    authOrigin: envDefaults.auth.origin,
+    baseDomain: envDefaults.baseDomain,
+    dockerNetworkName: envDefaults.docker.networkName,
+    dockerSocketPath: envDefaults.docker.socketPath,
+    smtpEnabled: envDefaults.smtp.enabled,
+    smtpFrom: envDefaults.smtp.from ?? null,
+    smtpHost: envDefaults.smtp.host ?? null,
+    smtpPort: envDefaults.smtp.port ?? null,
+    smtpSecure: envDefaults.smtp.secure ?? false,
+    smtpUser: envDefaults.smtp.user ?? null,
+    traefikCertResolver: envDefaults.traefik.certResolver,
+    traefikDynamicConfigDir: envDefaults.traefik.dynamicConfigDir ?? null,
+    traefikEntrypoint: envDefaults.traefik.entrypoint,
+  };
+}
+
 export function isSmtpEnabled(): boolean {
   const enabledInConfig = config.smtp?.enabled;
   const configuredProperly =
@@ -139,4 +185,50 @@ export function isSmtpEnabled(): boolean {
   return !!(enabledInConfig && configuredProperly);
 }
 
-export const config = parseConfig();
+// The env-only baseline — applyInstanceSettings() below always recomputes
+// against this, never against the current `config`, so clearing a DB
+// override reverts to the env value instead of going stale.
+const envDefaults = parseConfig();
+
+// `config` is a stable object reference every other module imports and
+// reads properties off live — mutated in place (never reassigned) so a
+// settings change is visible everywhere without re-importing anything.
+export const config: PenombreConfig = structuredClone(envDefaults);
+
+/**
+ * Merges DB-backed instance settings (see InstanceSettingsDTO) over the env
+ * defaults, in place. Called once at boot (hooks.server.ts's init(), before
+ * the server accepts requests) and again after every settings save so
+ * changes apply live — no process restart needed. Deliberately doesn't
+ * import the DTO or the db itself: db/lib.ts imports this module for
+ * `dbPath`, so this module must stay a leaf to avoid a circular import.
+ */
+export function applyInstanceSettings(
+  override: InstanceSettingsOverride = {}
+): void {
+  config.authCheckUrl = override.authCheckUrl ?? envDefaults.authCheckUrl;
+  config.baseDomain = override.baseDomain ?? envDefaults.baseDomain;
+  config.auth.crossSubdomainCookies =
+    override.authCrossSubdomainCookies ??
+    envDefaults.auth.crossSubdomainCookies;
+  config.auth.oauthProviders =
+    override.oauthProviders ?? envDefaults.auth.oauthProviders;
+  config.auth.origin = override.authOrigin ?? envDefaults.auth.origin;
+  config.docker.networkName =
+    override.dockerNetworkName ?? envDefaults.docker.networkName;
+  config.docker.socketPath =
+    override.dockerSocketPath ?? envDefaults.docker.socketPath;
+  config.smtp.enabled = override.smtpEnabled ?? envDefaults.smtp.enabled;
+  config.smtp.from = override.smtpFrom ?? envDefaults.smtp.from;
+  config.smtp.host = override.smtpHost ?? envDefaults.smtp.host;
+  config.smtp.password = override.smtpPassword ?? envDefaults.smtp.password;
+  config.smtp.port = override.smtpPort ?? envDefaults.smtp.port;
+  config.smtp.secure = override.smtpSecure ?? envDefaults.smtp.secure;
+  config.smtp.user = override.smtpUser ?? envDefaults.smtp.user;
+  config.traefik.certResolver =
+    override.traefikCertResolver ?? envDefaults.traefik.certResolver;
+  config.traefik.dynamicConfigDir =
+    override.traefikDynamicConfigDir ?? envDefaults.traefik.dynamicConfigDir;
+  config.traefik.entrypoint =
+    override.traefikEntrypoint ?? envDefaults.traefik.entrypoint;
+}

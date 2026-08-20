@@ -13,6 +13,7 @@
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
   import StatusBadge from "$lib/components/status-badge.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -84,13 +85,10 @@
         Containers deployed to this server.
       </p>
     </div>
-    <a
-      class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-      href={resolve("/services/new")}
-    >
+    <Button href={resolve("/services/new")}>
       <Plus class="size-4" />
       Deploy a Service
-    </a>
+    </Button>
   </div>
 
   {#if data.services.length === 0}
@@ -102,13 +100,10 @@
       <p class="mt-1 text-xs text-text-subtle">
         Point at an image, fill in a config, and deploy.
       </p>
-      <a
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-5 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-        href={resolve("/services/new")}
-      >
+      <Button class="mt-5" href={resolve("/services/new")}>
         <Plus class="size-4" />
         Deploy your first service
-      </a>
+      </Button>
     </div>
   {:else}
     <div class="space-y-8">
@@ -157,18 +152,19 @@
                       use:enhance={withPending(svc.id)}
                     >
                       <input name="serviceId" type="hidden" value={svc.id}>
-                      <button
-                        class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:opacity-50"
+                      <Button
                         disabled={pending[svc.id]}
+                        size="icon-sm"
                         title="Stop"
                         type="submit"
+                        variant="ghost"
                       >
                         {#if pending[svc.id]}
                           <Loader2 class="size-4 animate-spin" />
                         {:else}
                           <Square class="size-4" />
                         {/if}
-                      </button>
+                      </Button>
                     </form>
                   {:else}
                     <form
@@ -177,20 +173,21 @@
                       use:enhance={withPending(svc.id)}
                     >
                       <input name="serviceId" type="hidden" value={svc.id}>
-                      <button
-                        class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:opacity-50"
+                      <Button
                         disabled={pending[svc.id] || !svc.containerId}
+                        size="icon-sm"
                         title={svc.containerId
                           ? "Start"
                           : "Deploy first from the service page"}
                         type="submit"
+                        variant="ghost"
                       >
                         {#if pending[svc.id]}
                           <Loader2 class="size-4 animate-spin" />
                         {:else}
                           <Play class="size-4" />
                         {/if}
-                      </button>
+                      </Button>
                     </form>
                   {/if}
 
@@ -200,14 +197,15 @@
                     use:enhance={withPending(svc.id)}
                   >
                     <input name="serviceId" type="hidden" value={svc.id}>
-                    <button
-                      class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:opacity-50"
+                    <Button
                       disabled={pending[svc.id] || !svc.containerId}
+                      size="icon-sm"
                       title="Restart"
                       type="submit"
+                      variant="ghost"
                     >
                       <RotateCw class="size-4" />
-                    </button>
+                    </Button>
                   </form>
 
                   <form
@@ -217,14 +215,16 @@
                     use:enhance={withPending(svc.id)}
                   >
                     <input name="serviceId" type="hidden" value={svc.id}>
-                    <button
-                      class="rounded-lg p-2 text-red-500 transition-all hover:bg-red-500/10 disabled:opacity-50"
+                    <Button
+                      class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
                       disabled={pending[svc.id]}
+                      size="icon-sm"
                       title="Delete"
                       type="submit"
+                      variant="ghost"
                     >
                       <Trash2 class="size-4" />
-                    </button>
+                    </Button>
                   </form>
                 </div>
               </div>

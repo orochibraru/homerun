@@ -6,13 +6,16 @@ import { svelteKitHandler } from "better-auth/svelte-kit";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { building } from "$app/environment";
+import { applyInstanceSettings } from "$lib/config";
+import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
-import { auth } from "$lib/server/auth";
+import { auth, rebuildAuth } from "$lib/server/auth";
 import { startBackupScheduler } from "$lib/server/backup-scheduler";
 import { startCronScheduler } from "$lib/server/cron-scheduler";
 import { db as appDb, getDb, resetDb } from "$lib/server/db";
 import { user as userTable } from "$lib/server/db/schema";
 import { seedBuiltinTemplates } from "$lib/server/db/seed";
+import { hasAnyUser } from "$lib/server/onboarding";
 
 const logger = new Logger("Hooks");
 
@@ -101,6 +104,16 @@ export const init = async () => {
   await waitForDatabase();
   await runMigrations();
   await seedBuiltinTemplates();
+
+  // Merge DB-backed instance settings over the env defaults before the
+  // server starts accepting requests — see $lib/config.ts. rebuildAuth()
+  // reconstructs the better-auth singleton so OAuth providers configured
+  // in the DB (rather than env) are present from the very first request,
+  // not just after a settings-page save.
+  const settings = await InstanceSettingsDTO.get();
+  applyInstanceSettings(settings.toConfigOverride());
+  rebuildAuth();
+
   startCronScheduler();
   startBackupScheduler();
 };
@@ -109,9 +122,20 @@ export const init = async () => {
 const customAuthPaths = new Set(["/api/v1/auth/providers"]);
 
 const authHandler: Handle = async ({ event, resolve }) => {
-  const session = await auth.api.getSession({
-    headers: event.request.headers,
-  });
+  // A misconfigured OAuth provider (bad discovery URL, unreachable IdP —
+  // now editable at any time via /settings, not just at deploy time via
+  // env vars) makes better-auth's genericOAuth plugin throw while building
+  // its auth context, which getSession() triggers on *every* request. Left
+  // unguarded that's a full lockout — every page 500s, including /settings
+  // itself, so there'd be no way back in to fix the bad provider. Degrade
+  // to "no session" instead so the rest of the app (and /settings, to fix
+  // the provider) stays reachable.
+  const session = await auth.api
+    .getSession({ headers: event.request.headers })
+    .catch((error) => {
+      logger.error("auth.getSession() failed — treating as signed out", error);
+      return null;
+    });
 
   if (session) {
     // Make session and user available on server

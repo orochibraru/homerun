@@ -4,10 +4,10 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import EmptyState from "$lib/components/empty-state.svelte";
-  import {
-    inputClass as input,
-    labelClass as label,
-  } from "$lib/components/form-styles";
+  import { labelClass as label } from "$lib/components/form-styles";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -41,16 +41,14 @@
         practice.
       </p>
     </div>
-    <button
-      class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
+    <Button
       onclick={() => {
         showForm = !showForm;
       }}
-      type="button"
     >
       <Plus class="size-4" />
       Add Host
-    </button>
+    </Button>
   </div>
 
   {#if showForm}
@@ -80,18 +78,18 @@
       {/if}
       <div>
         <label class={label} for="name">Name</label>
-        <input class={input} id="name" name="name" required type="text">
+        <Input id="name" name="name" required type="text" />
       </div>
       <div>
         <label class={label} for="dockerHost">Docker host</label>
-        <input
-          class="{input} font-mono"
+        <Input
+          class="font-mono"
           id="dockerHost"
           name="dockerHost"
           placeholder="tcp://192.168.1.50:2376"
           required
           type="text"
-        >
+        />
         <p class="mt-1.5 text-xs text-text-subtle">
           <code>tcp://host:port</code>
           (add TLS certs below for a TLS-secured daemon) or
@@ -100,58 +98,54 @@
         </p>
       </div>
 
-      <button
-        class="text-accent flex items-center gap-1.5 text-sm font-medium hover:underline"
+      <Button
+        class="h-auto p-0"
         onclick={() => {
           showTls = !showTls;
         }}
-        type="button"
+        variant="link"
       >
         <ChevronDown
           class="size-3.5 transition-transform {showTls ? 'rotate-180' : ''}"
         />
         TLS client certificate (optional, tcp:// only)
-      </button>
+      </Button>
       {#if showTls}
         <div class="space-y-3">
           <div>
             <label class={label} for="tlsCa">CA certificate</label>
-            <textarea
-              class="{input} resize-none font-mono"
+            <Textarea
+              class="resize-none font-mono"
               id="tlsCa"
               name="tlsCa"
-              rows="3"
-            ></textarea>
+              rows={3}
+            />
           </div>
           <div>
             <label class={label} for="tlsCert">Client certificate</label>
-            <textarea
-              class="{input} resize-none font-mono"
+            <Textarea
+              class="resize-none font-mono"
               id="tlsCert"
               name="tlsCert"
-              rows="3"
-            ></textarea>
+              rows={3}
+            />
           </div>
           <div>
             <label class={label} for="tlsKey">Client key</label>
-            <textarea
-              class="{input} resize-none font-mono"
+            <Textarea
+              class="resize-none font-mono"
               id="tlsKey"
               name="tlsKey"
-              rows="3"
-            ></textarea>
+              rows={3}
+            />
           </div>
         </div>
       {/if}
 
       <div class="flex justify-end gap-3">
-        <button
-          class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          disabled={submitting}
-          type="submit"
-        >
+        <Button disabled={submitting} type="submit" variant="outline">
           Add host
-        </button>
+        </Button>
       </div>
     </form>
   {/if}
@@ -194,13 +188,15 @@
               }}
           >
             <input name="hostId" type="hidden" value={host.id}>
-            <button
-              class="rounded-lg p-2 text-red-500 transition-all hover:bg-red-500/10"
+            <Button
+              class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+              size="icon-sm"
               title="Delete"
               type="submit"
+              variant="ghost"
             >
               <Trash2 class="size-4" />
-            </button>
+            </Button>
           </form>
         </div>
       {/each}

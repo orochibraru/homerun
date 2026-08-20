@@ -18,6 +18,15 @@
   import { enhance } from "$app/forms";
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
+  import CheckBox from "$lib/components/check-box.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import {
+    SelectContent,
+    SelectItem,
+    Select as SelectRoot,
+    SelectTrigger,
+  } from "$lib/components/ui/select/index.js";
   import { timeAgo } from "$lib/formatting";
   import { title } from "$lib/store/title";
 
@@ -26,8 +35,6 @@
 
   onMount(() => title.set(`${svc.name} · Settings`));
 
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
   const label = "block mb-1.5 text-sm font-medium text-text";
   const errorClass = "mt-1.5 text-xs text-red-500";
 
@@ -68,6 +75,28 @@
   let gitRef = $state(values.gitRef);
   let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
   let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const restartPolicyOptions: [string, string][] = [
+    ["unless-stopped", "Unless stopped"],
+    ["always", "Always"],
+    ["on-failure", "On failure"],
+    ["no", "Never"],
+  ];
+  let restartPolicy = $state(values.restartPolicy);
+  const restartPolicyLabel = $derived(
+    restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
+      "Unless stopped"
+  );
+
+  let projectId = $state(svc.projectId ?? "");
+  const projectLabel = $derived(
+    data.projects.find((p) => p.id === projectId)?.name ?? "Ungrouped"
+  );
+
+  let remoteHostId = $state(svc.remoteHostId ?? "");
+  const remoteHostLabel = $derived(
+    data.remoteHosts.find((h) => h.id === remoteHostId)?.name ?? "This host"
+  );
 
   function scheduleImageCheck() {
     clearTimeout(imageCheckTimer);
@@ -139,14 +168,7 @@
         <label class={label} for="name">
           Name <span class="text-red-500">*</span>
         </label>
-        <input
-          class={input}
-          id="name"
-          name="name"
-          required
-          type="text"
-          value={values.name}
-        >
+        <Input id="name" name="name" required type="text" value={values.name} />
         {#if errors?.name}
           <p class={errorClass}>{errors.name[0]}</p>
         {/if}
@@ -156,16 +178,15 @@
         <label class={label} for="slug">
           Slug <span class="text-red-500">*</span>
         </label>
-        <input
-          class={input}
+        <Input
           id="slug"
-          maxlength="63"
+          maxlength={63}
           name="slug"
           pattern="[a-z0-9\-]+"
           required
           type="text"
           value={values.slug}
-        >
+        />
         <p class="mt-1 text-xs text-text-subtle">
           Routed at
           <span class="text-accent">{values.slug}.{data.baseDomain}</span>
@@ -218,29 +239,27 @@
             <label class={label} for="image">
               Image <span class="text-red-500">*</span>
             </label>
-            <input
-              class={input}
+            <Input
               id="image"
               name="image"
               oninput={scheduleImageCheck}
               required
               type="text"
               bind:value={image}
-            >
+            />
             {#if errors?.image}
               <p class={errorClass}>{errors.image[0]}</p>
             {/if}
           </div>
           <div>
             <label class={label} for="tag">Tag</label>
-            <input
-              class={input}
+            <Input
               id="tag"
               name="tag"
               oninput={scheduleImageCheck}
               type="text"
               bind:value={tag}
-            >
+            />
           </div>
         </div>
 
@@ -261,15 +280,14 @@
           <label class={label} for="gitUrl">
             Repository URL <span class="text-red-500">*</span>
           </label>
-          <input
-            class={input}
+          <Input
             id="gitUrl"
             name="gitUrl"
             placeholder="https://github.com/acme/api.git"
             required
             type="text"
             bind:value={gitUrl}
-          >
+          />
           {#if errors?.gitUrl}
             <p class={errorClass}>{errors.gitUrl[0]}</p>
           {/if}
@@ -277,39 +295,36 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class={label} for="gitRef">Branch / tag</label>
-            <input
-              class={input}
+            <Input
               id="gitRef"
               name="gitRef"
               placeholder="main"
               type="text"
               bind:value={gitRef}
-            >
+            />
           </div>
           <div>
             <label class={label} for="gitDockerfilePath">Dockerfile path</label>
-            <input
-              class={input}
+            <Input
               id="gitDockerfilePath"
               name="gitDockerfilePath"
               placeholder="Dockerfile"
               type="text"
               value={values.gitDockerfilePath}
-            >
+            />
           </div>
         </div>
         <div>
           <label class={label} for="gitBuildContext">
             Build context (subdirectory)
           </label>
-          <input
-            class={input}
+          <Input
             id="gitBuildContext"
             name="gitBuildContext"
             placeholder="Leave blank for repo root"
             type="text"
             value={values.gitBuildContext}
-          >
+          />
         </div>
       {/if}
 
@@ -317,8 +332,7 @@
         <label class={label} for="containerPort">
           Container port <span class="text-red-500">*</span>
         </label>
-        <input
-          class={input}
+        <Input
           id="containerPort"
           max="65535"
           min="1"
@@ -326,69 +340,62 @@
           required
           type="number"
           value={values.containerPort}
-        >
+        />
         {#if errors?.containerPort}
           <p class={errorClass}>{errors.containerPort[0]}</p>
         {/if}
       </div>
 
-      <label class="flex items-start gap-2.5">
-        <input
-          checked={values.dnsResolvable === "on"}
-          class="mt-0.5"
-          name="dnsResolvable"
-          type="checkbox"
-        >
-        <span>
-          <span class="block text-sm font-medium text-text">
-            DNS-resolvable
-          </span>
-          <span class="block text-xs text-text-muted">
-            Get a public
-            <span class="font-mono">{values.slug}.{data.baseDomain}</span>
-            route. Turn off to keep this service reachable only from other
-            services on the same network. Takes effect on the next deploy.
-          </span>
-        </span>
-      </label>
+      <CheckBox
+        checked={values.dnsResolvable === "on"}
+        helperText="Get a public {values.slug}.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network. Takes effect on the next deploy."
+        id="dnsResolvable"
+        label="DNS-resolvable"
+        name="dnsResolvable"
+      />
 
       <div>
         <label class={label} for="restartPolicy">Restart policy</label>
-        <select class={input} id="restartPolicy" name="restartPolicy">
-          {#each [["unless-stopped", "Unless stopped"], ["always", "Always"], ["on-failure", "On failure"], ["no", "Never"]] as [val, lbl]}
-            <option selected={values.restartPolicy === val} value={val}>
-              {lbl}
-            </option>
-          {/each}
-        </select>
+        <SelectRoot
+          name="restartPolicy"
+          type="single"
+          bind:value={restartPolicy}
+        >
+          <SelectTrigger class="w-full" id="restartPolicy">
+            {restartPolicyLabel}
+          </SelectTrigger>
+          <SelectContent>
+            {#each restartPolicyOptions as [val, lbl] (val)}
+              <SelectItem label={lbl} value={val} />
+            {/each}
+          </SelectContent>
+        </SelectRoot>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class={label} for="cpuLimit">CPU limit</label>
-          <input
-            class={input}
+          <Input
             id="cpuLimit"
             name="cpuLimit"
             placeholder="e.g. 0.5 (cores)"
             type="text"
             value={values.cpuLimit}
-          >
+          />
           {#if errors?.cpuLimit}
             <p class={errorClass}>{errors.cpuLimit[0]}</p>
           {/if}
         </div>
         <div>
           <label class={label} for="memoryLimitMb">Memory limit (MB)</label>
-          <input
-            class={input}
+          <Input
             id="memoryLimitMb"
             min="1"
             name="memoryLimitMb"
             placeholder="e.g. 512"
             type="number"
             value={values.memoryLimitMb}
-          >
+          />
           {#if errors?.memoryLimitMb}
             <p class={errorClass}>{errors.memoryLimitMb[0]}</p>
           {/if}
@@ -396,10 +403,12 @@
       </div>
 
       <div class="rounded-xl border border-border">
-        <button
-          class="flex w-full items-center gap-3 px-4 py-3 text-left"
-          onclick={() => { showRegistry = !showRegistry; }}
-          type="button"
+        <Button
+          class="h-auto w-full justify-start gap-3 px-4 py-3 font-normal text-text"
+          onclick={() => {
+            showRegistry = !showRegistry;
+          }}
+          variant="ghost"
         >
           <Lock class="size-4 text-text-muted" />
           <span class="flex-1 text-sm font-medium text-text">
@@ -410,42 +419,39 @@
               ? 'rotate-180'
               : ''}"
           />
-        </button>
+        </Button>
         {#if showRegistry}
           <div class="space-y-4 border-t border-border p-4">
             <div>
               <label class={label} for="registryUrl">Registry URL</label>
-              <input
-                class={input}
+              <Input
                 id="registryUrl"
                 name="registryUrl"
                 oninput={scheduleImageCheck}
                 type="text"
                 bind:value={registryUrl}
-              >
+              />
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class={label} for="registryUsername">Username</label>
-                <input
-                  class={input}
+                <Input
                   id="registryUsername"
                   name="registryUsername"
                   type="text"
                   value={values.registryUsername}
-                >
+                />
               </div>
               <div>
                 <label class={label} for="registryPassword">
                   Password / token
                 </label>
-                <input
-                  class={input}
+                <Input
                   id="registryPassword"
                   name="registryPassword"
                   placeholder="Leave blank to keep current"
                   type="password"
-                >
+                />
               </div>
             </div>
           </div>
@@ -453,11 +459,7 @@
       </div>
 
       <div class="flex justify-end">
-        <button
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={submitting}
-          type="submit"
-        >
+        <Button disabled={submitting} type="submit">
           {#if submitting}
             <Loader2 class="size-4 animate-spin" />
             Saving…
@@ -465,7 +467,7 @@
             <Check class="size-4" />
             Save
           {/if}
-        </button>
+        </Button>
       </div>
     </form>
   </section>
@@ -500,23 +502,18 @@
             await update();
           }}
       >
-        <select
-          class="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent w-full"
-          name="projectId"
-        >
-          <option selected={!svc.projectId} value="">Ungrouped</option>
-          {#each data.projects as proj (proj.id)}
-            <option selected={svc.projectId === proj.id} value={proj.id}>
-              {proj.name}
-            </option>
-          {/each}
-        </select>
-        <button
-          class="shrink-0 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          type="submit"
-        >
-          Move
-        </button>
+        <SelectRoot name="projectId" type="single" bind:value={projectId}>
+          <SelectTrigger class="w-full">
+            {projectLabel}
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem label="Ungrouped" value="" />
+            {#each data.projects as proj (proj.id)}
+              <SelectItem label={proj.name} value={proj.id} />
+            {/each}
+          </SelectContent>
+        </SelectRoot>
+        <Button class="shrink-0" type="submit" variant="outline">Move</Button>
       </form>
     </div>
   </section>
@@ -553,23 +550,18 @@
             await update();
           }}
       >
-        <select
-          class="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent w-full"
-          name="remoteHostId"
-        >
-          <option selected={!svc.remoteHostId} value="">This host</option>
-          {#each data.remoteHosts as host (host.id)}
-            <option selected={svc.remoteHostId === host.id} value={host.id}>
-              {host.name}
-            </option>
-          {/each}
-        </select>
-        <button
-          class="shrink-0 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          type="submit"
-        >
-          Save
-        </button>
+        <SelectRoot name="remoteHostId" type="single" bind:value={remoteHostId}>
+          <SelectTrigger class="w-full">
+            {remoteHostLabel}
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem label="This host" value="" />
+            {#each data.remoteHosts as host (host.id)}
+              <SelectItem label={host.name} value={host.id} />
+            {/each}
+          </SelectContent>
+        </SelectRoot>
+        <Button class="shrink-0" type="submit" variant="outline">Save</Button>
       </form>
     </div>
   </section>
@@ -603,12 +595,9 @@
             await update();
           }}
       >
-        <button
-          class="shrink-0 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          type="submit"
-        >
+        <Button class="shrink-0" type="submit" variant="outline">
           Save as template
-        </button>
+        </Button>
       </form>
     </div>
   </section>
@@ -648,20 +637,24 @@
       {#if form?.cronError}
         <p class={errorClass}>{form.cronError}</p>
       {/if}
-      <label class="flex items-center gap-2 text-sm text-text">
-        <input checked={svc.cronEnabled} name="cronEnabled" type="checkbox">
-        Enable auto-redeploy
-      </label>
+
+      <CheckBox
+        checked={svc.cronEnabled}
+        helperText="Automatically re-deploy this app"
+        id="cronEnabled"
+        label="Enable auto-redeploy"
+        name="cronEnabled"
+      />
       <div>
         <label class={label} for="cronSchedule">Schedule (cron syntax)</label>
-        <input
-          class="{input} font-mono"
+        <Input
+          class="font-mono"
           id="cronSchedule"
           name="cronSchedule"
           placeholder="0 3 * * *"
           type="text"
           value={svc.cronSchedule ?? ""}
-        >
+        />
         <p class="mt-1.5 text-xs text-text-subtle">
           Standard 5-field cron ("min hour day month weekday"), server local
           time. E.g. <code>0 3 * * *</code> = every day at 3am.
@@ -670,12 +663,7 @@
           {/if}
         </p>
       </div>
-      <button
-        class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-        type="submit"
-      >
-        Save schedule
-      </button>
+      <Button type="submit" variant="outline">Save schedule</Button>
     </form>
   </section>
 
@@ -706,13 +694,15 @@
           <div>
             <p class="text-sm font-medium text-text">Delete this service</p>
           </div>
-          <button
-            class="shrink-0 rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-700/60"
-            onclick={() => { showDeleteConfirm = true; }}
-            type="button"
+          <Button
+            class="shrink-0 border-red-300 text-red-600 hover:bg-red-500 hover:text-white dark:border-red-700/60"
+            onclick={() => {
+              showDeleteConfirm = true;
+            }}
+            variant="outline"
           >
             Delete service
-          </button>
+          </Button>
         </div>
       {:else}
         <form
@@ -741,17 +731,18 @@
             </p>
           </div>
           <div class="flex items-center gap-3">
-            <button
-              class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-              onclick={() => { showDeleteConfirm = false; }}
-              type="button"
+            <Button
+              onclick={() => {
+                showDeleteConfirm = false;
+              }}
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
-              class="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            </Button>
+            <Button
               disabled={deleting}
               type="submit"
+              variant="destructive-solid"
             >
               {#if deleting}
                 <Loader2 class="size-4 animate-spin" />
@@ -760,7 +751,7 @@
                 <Trash2 class="size-4" />
                 Yes, delete
               {/if}
-            </button>
+            </Button>
           </div>
         </form>
       {/if}
