@@ -11,23 +11,22 @@ export interface SetupCheck {
 	severity: "ok" | "warn" | "danger";
 }
 
-/**
- * Maps a check's id to the `/settings` field id(s) it corresponds to, so the
- * dashboard banner can deep-link straight to (and highlight) the offending
- * field instead of just linking to the page in general. "auth-secret" (env
- * only, no /settings field) and "traefik" (a live container check, not a
- * form input) are deliberately absent : nothing to highlight for either.
- */
-const SETUP_CHECK_FIELDS: Record<string, string[]> = {
-	"base-domain": ["baseDomain"],
-	docker: ["dockerSocketPath"],
-	origin: ["authOrigin"],
-	smtp: ["smtpHost", "smtpPort", "smtpUser", "smtpPassword", "smtpFrom"],
-};
-
 /** Instance-level admin operations: setup diagnostics and bootstrap-state checks. */
-export class AdminService {
-	static SETUP_CHECK_FIELDS = SETUP_CHECK_FIELDS;
+class AdminServiceClass {
+	/**
+	 * Maps a check's id to the `/settings` field id(s) it corresponds to, so
+	 * the dashboard banner can deep-link straight to (and highlight) the
+	 * offending field instead of just linking to the page in general.
+	 * "auth-secret" (env only, no /settings field) and "traefik" (a live
+	 * container check, not a form input) are deliberately absent : nothing
+	 * to highlight for either.
+	 */
+	readonly SETUP_CHECK_FIELDS: Record<string, string[]> = {
+		"base-domain": ["baseDomain"],
+		docker: ["dockerSocketPath"],
+		origin: ["authOrigin"],
+		smtp: ["smtpHost", "smtpPort", "smtpUser", "smtpPassword", "smtpFrom"],
+	};
 
 	/**
 	 * Whether any account exists at all yet. Drives two things: the very first
@@ -40,7 +39,7 @@ export class AdminService {
 	 * better-auth-owned tables, same precedent hooks.server.ts already uses for
 	 * the API-key lookup below.
 	 */
-	static async hasAnyUser(): Promise<boolean> {
+	async hasAnyUser(): Promise<boolean> {
 		const [row] = await db
 			.select({ id: userTable.id })
 			.from(userTable)
@@ -58,7 +57,7 @@ export class AdminService {
 	 * before ever visiting /settings. Still no DNS/SSL-provider automation
 	 * flow : out of scope here, see TODO.md's Onboarding section.
 	 */
-	static async runSetupChecks(): Promise<SetupCheck[]> {
+	async runSetupChecks(): Promise<SetupCheck[]> {
 		const checks: SetupCheck[] = [];
 
 		checks.push(
@@ -180,3 +179,5 @@ export class AdminService {
 		return checks;
 	}
 }
+
+export const AdminService = new AdminServiceClass();

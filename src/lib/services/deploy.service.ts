@@ -21,8 +21,8 @@ export interface DeployResult {
  * deploy endpoint, and the cron redeploy scheduler : single source of
  * truth so these three trigger points can't drift out of sync.
  */
-export class DeploymentService {
-	static async deployService(
+class DeploymentServiceClass {
+	async deployService(
 		svc: ServiceDTO,
 		userId: string,
 		clientDeploymentId?: string | null,
@@ -165,3 +165,5 @@ export class DeploymentService {
 		}
 	}
 }
+
+export const DeploymentService = new DeploymentServiceClass();

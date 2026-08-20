@@ -22,43 +22,6 @@ export interface GpuStats {
 	utilizationPercent: number;
 }
 
-// os.cpus() returns cumulative counters since boot : CPU% needs a delta
-// between two samples. Kept module-scope so repeated calls (e.g. a
-// polling dashboard) diff against the previous call instead of each
-// blocking for a fresh sample window.
-let lastCpuSample: ReturnType<typeof sampleCpuTimes> | null = null;
-
-function sampleCpuTimes() {
-	const cpus = os.cpus();
-	let idle = 0;
-	let total = 0;
-	for (const cpu of cpus) {
-		idle += cpu.times.idle;
-		total +=
-			cpu.times.user +
-			cpu.times.nice +
-			cpu.times.sys +
-			cpu.times.idle +
-			cpu.times.irq;
-	}
-	return { idle, total };
-}
-
-function getCpuPercent(): number {
-	const sample = sampleCpuTimes();
-	if (!lastCpuSample) {
-		lastCpuSample = sample;
-		return 0;
-	}
-	const idleDelta = sample.idle - lastCpuSample.idle;
-	const totalDelta = sample.total - lastCpuSample.total;
-	lastCpuSample = sample;
-	if (totalDelta <= 0) {
-		return 0;
-	}
-	return Math.max(0, Math.min(100, 100 * (1 - idleDelta / totalDelta)));
-}
-
 const DF_LINE_RE = /\s+/;
 
 async function getDiskUsage(): Promise<{
@@ -113,15 +76,60 @@ async function getGpuStats(): Promise<GpuStats | null> {
 	}
 }
 
+interface CpuSample {
+	idle: number;
+	total: number;
+}
+
 /** Host-level (not per-container) CPU/RAM/disk/GPU stats for the dashboard. */
-export class SystemStatsService {
-	static async getSystemStats(): Promise<SystemStats> {
+class SystemStatsServiceClass {
+	// os.cpus() returns cumulative counters since boot : CPU% needs a delta
+	// between two samples. Real instance state (rather than the module-scope
+	// `let` this used to be) : the singleton this class is exported as below
+	// lives for the app's lifetime, so behavior is identical — repeated
+	// calls (e.g. a polling dashboard) diff against the previous call
+	// instead of each blocking for a fresh sample window — this is just the
+	// OOP-correct place for that state to live.
+	#lastCpuSample: CpuSample | null = null;
+
+	#sampleCpuTimes(): CpuSample {
+		const cpus = os.cpus();
+		let idle = 0;
+		let total = 0;
+		for (const cpu of cpus) {
+			idle += cpu.times.idle;
+			total +=
+				cpu.times.user +
+				cpu.times.nice +
+				cpu.times.sys +
+				cpu.times.idle +
+				cpu.times.irq;
+		}
+		return { idle, total };
+	}
+
+	#getCpuPercent(): number {
+		const sample = this.#sampleCpuTimes();
+		if (!this.#lastCpuSample) {
+			this.#lastCpuSample = sample;
+			return 0;
+		}
+		const idleDelta = sample.idle - this.#lastCpuSample.idle;
+		const totalDelta = sample.total - this.#lastCpuSample.total;
+		this.#lastCpuSample = sample;
+		if (totalDelta <= 0) {
+			return 0;
+		}
+		return Math.max(0, Math.min(100, 100 * (1 - idleDelta / totalDelta)));
+	}
+
+	async getSystemStats(): Promise<SystemStats> {
 		const [disk, gpu] = await Promise.all([getDiskUsage(), getGpuStats()]);
 		const memTotalMb = os.totalmem() / 1024 / 1024;
 		const memUsedMb = memTotalMb - os.freemem() / 1024 / 1024;
 
 		return {
-			cpuPercent: getCpuPercent(),
+			cpuPercent: this.#getCpuPercent(),
 			diskTotalGb: disk.totalGb,
 			diskUsedGb: disk.usedGb,
 			gpu,
@@ -130,3 +138,5 @@ export class SystemStatsService {
 		};
 	}
 }
+
+export const SystemStatsService = new SystemStatsServiceClass();
