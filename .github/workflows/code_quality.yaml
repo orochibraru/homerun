@@ -76,14 +76,24 @@ jobs:
       - name: Linting
         run: bun run check
 
+  docker:
+    name: Docker
+    uses: ./.github/workflows/docker.yaml
+    if: github.event_name != 'workflow_dispatch'
+    with:
+      publish: true
+      image-name: orochibraru/homerun
+    secrets:
+      docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
+
   # ===========================================
-  # Gate — always runs; set this as the single
+  # Gate always runs; set this as the single
   # required status check in branch protection
   # ===========================================
   gate:
     name: CI Gate
     if: always()
-    needs: [ts-build-check, ts-lint-test]
+    needs: [ts-build-check, ts-lint-test, docker]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
