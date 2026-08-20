@@ -2,6 +2,7 @@
 	import {
 		ChevronRight,
 		FolderKanban,
+		GitBranch,
 		HardDrive,
 		LayoutDashboard,
 		LayoutGrid,
@@ -70,6 +71,13 @@
 			label: "Remote Hosts",
 		},
 		{
+			adminOnly: false,
+			exact: false,
+			href: resolve("/git-providers"),
+			icon: GitBranch,
+			label: "Git Providers",
+		},
+		{
 			adminOnly: true,
 			exact: false,
 			href: resolve("/users"),
@@ -92,13 +100,16 @@
 		},
 	];
 
-	// Users/Settings are instance-wide admin controls — hidden from
-	// developers, who otherwise get the same dashboard (their own
-	// services/projects, already isolated per-user).
-	const navItems = $derived(
-		allNavItems.filter(
-			(item) => !item.adminOnly || data.user?.role === "admin",
-		),
+	// Users/Settings/System Logs are instance-wide admin controls — hidden
+	// from developers, who otherwise get the same dashboard (their own
+	// services/projects, already isolated per-user). Split into their own
+	// nav section (rather than interleaved) so the sidebar visually groups
+	// "your stuff" from "instance administration".
+	const mainNavItems = $derived(allNavItems.filter((item) => !item.adminOnly));
+	const adminNavItems = $derived(
+		data.user?.role === "admin"
+			? allNavItems.filter((item) => item.adminOnly)
+			: [],
 	);
 
 	const userInitial = $derived(data.user?.name?.[0]?.toUpperCase() ?? "?");
@@ -145,13 +156,13 @@
   >
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto p-3 pt-4">
-      <p class="font-bold text-xl px-2">Homerun</p>
+      <p class="px-2 text-xl font-bold">Homerun</p>
       <p
         class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
       >
         Navigation
       </p>
-      {#each navItems as item}
+      {#each mainNavItems as item}
         {@const active = isActive(item.href, item.exact)}
         {@const NavIcon = item.icon}
         <a
@@ -168,12 +179,37 @@
           {/if}
         </a>
       {/each}
+
+      {#if adminNavItems.length > 0}
+        <p
+          class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
+        >
+          Administration
+        </p>
+        {#each adminNavItems as item}
+          {@const active = isActive(item.href, item.exact)}
+          {@const NavIcon = item.icon}
+          <a
+            class="mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+						{active
+              ? 'bg-accent-light text-accent'
+              : 'text-text-muted hover:bg-surface-2 hover:text-text'}"
+            href={item.href}
+          >
+            <NavIcon class="size-4 shrink-0" />
+            {item.label}
+            {#if active}
+              <ChevronRight class="ml-auto size-3.5 opacity-60" />
+            {/if}
+          </a>
+        {/each}
+      {/if}
     </nav>
 
     <!-- User section -->
     <div class="border-border border-t p-3">
       <a
-        class="flex items-center gap-3 rounded-xl p-2 hover:bg-muted transition-colors"
+        class="hover:bg-muted flex items-center gap-3 rounded-xl p-2 transition-colors"
         href={resolve("/profile")}
       >
         {#if data.user?.image}
@@ -230,7 +266,7 @@
         >
           Navigation
         </p>
-        {#each navItems as item}
+        {#each mainNavItems as item}
           {@const active = isActive(item.href, item.exact)}
           {@const MobileNavIcon = item.icon}
           <a
@@ -247,6 +283,31 @@
             {item.label}
           </a>
         {/each}
+
+        {#if adminNavItems.length > 0}
+          <p
+            class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
+          >
+            Administration
+          </p>
+          {#each adminNavItems as item}
+            {@const active = isActive(item.href, item.exact)}
+            {@const MobileNavIcon = item.icon}
+            <a
+              class="mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+							{active
+                ? 'bg-accent-light text-accent'
+                : 'text-text-muted hover:bg-surface-2 hover:text-text'}"
+              href={item.href}
+              onclick={() => {
+                sidebarOpen = false;
+              }}
+            >
+              <MobileNavIcon class="size-4 shrink-0" />
+              {item.label}
+            </a>
+          {/each}
+        {/if}
       </nav>
 
       <div class="border-border border-t p-3">
@@ -305,7 +366,7 @@
           <Menu class="size-5" />
         {/if}
       </Button>
-      <span class="text-sm font-medium text-text">
+      <span class="text-text text-sm font-medium">
         {mobileTitle}
       </span>
     </div>

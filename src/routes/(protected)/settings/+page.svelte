@@ -9,12 +9,26 @@
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
 	import { title } from "$lib/store/title";
 
 	const { data, form } = $props();
 
+	let autoscaleOverflowRemoteHostId = $state(
+		data.settings.autoscaleOverflowRemoteHostId ?? "",
+	);
+	const autoscaleOverflowRemoteHostLabel = $derived(
+		data.remoteHosts.find((h) => h.id === autoscaleOverflowRemoteHostId)
+			?.name ?? "Choose a remote host…",
+	);
+
 	// Field ids the dashboard's setup-issue banner deep-linked here for —
-	// see SETUP_CHECK_FIELDS in $lib/server/setup-checks.ts.
+	// see AdminService.SETUP_CHECK_FIELDS in $lib/services/admin.service.ts.
 	const highlighted = $derived(
 		new Set(
 			(page.url.searchParams.get("highlight") ?? "").split(",").filter(Boolean),
@@ -99,8 +113,8 @@
 
 <div class="p-6 md:p-8">
   <div class="mb-8">
-    <h1 class="text-2xl font-bold text-text">Settings</h1>
-    <p class="mt-1 text-sm text-text-muted">
+    <h1 class="text-text text-2xl font-bold">Settings</h1>
+    <p class="text-text-muted mt-1 text-sm">
       Instance-wide configuration — stored in the database and applied live, no
       restart needed. Leave a field blank to fall back to its env-var default
       (shown as the placeholder); env vars still work for anyone bootstrapping
@@ -114,10 +128,10 @@
 
   <div class="space-y-6">
     <!-- ═══ Core ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">Core</h2>
-        <p class="text-xs text-text-muted">
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">Core</h2>
+        <p class="text-text-muted text-xs">
           Base domain, origin, and the auth-gate check URL.
         </p>
       </div>
@@ -137,7 +151,7 @@
             type="text"
             value={data.settings.baseDomain ?? ""}
           />
-          <p class="mt-1.5 text-xs text-text-subtle">
+          <p class="text-text-subtle mt-1.5 text-xs">
             Deployed services are routed under &lt;slug&gt;.&lt;this&gt;.
           </p>
         </div>
@@ -151,7 +165,7 @@
             type="text"
             value={data.settings.authOrigin ?? ""}
           />
-          <p class="mt-1.5 text-xs text-text-subtle">
+          <p class="text-text-subtle mt-1.5 text-xs">
             Display-only today — better-auth's own baseURL still reads the
             <code>ORIGIN</code>
             env var directly (not this override), to avoid changing its dev-mode
@@ -169,7 +183,7 @@
             type="text"
             value={data.settings.authCheckUrl ?? ""}
           />
-          <p class="mt-1.5 text-xs text-text-subtle">
+          <p class="text-text-subtle mt-1.5 text-xs">
             What Traefik's forwardAuth middleware calls to gatekeep a "Require
             login" service — must be reachable from inside the Traefik
             container.
@@ -189,10 +203,10 @@
     </section>
 
     <!-- ═══ Docker ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">Docker</h2>
-        <p class="text-xs text-text-muted">
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">Docker</h2>
+        <p class="text-text-muted text-xs">
           The default local connection — separate from the per-service "Deploy
           target" picker on Remote Hosts.
         </p>
@@ -233,11 +247,96 @@
       </form>
     </section>
 
+    <!-- ═══ Autoscaling ═══ -->
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">Autoscaling</h2>
+        <p class="text-text-muted text-xs">
+          "GCP Cloud Run"-style load shedding — when this host crosses a
+          resource threshold, one autoscale-eligible service (opt in from its
+          Compute tab) gets migrated onto the overflow remote host below.
+          This moves the service, it doesn't run a second replica of it —
+          off by default, and inert unless both enabled here and opted into
+          per-service.
+        </p>
+      </div>
+      <form
+        action="?/updateAutoscale"
+        class="space-y-4 p-5"
+        method="POST"
+        use:enhance={submitToast("Autoscaling settings")}
+      >
+        <CheckBox
+          checked={data.settings.autoscaleEnabled}
+          helperText="Allow the autoscale scheduler to migrate eligible services off this host"
+          id="autoscaleEnabled"
+          label="Enable autoscaling"
+          name="autoscaleEnabled"
+        />
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class={label} for="autoscaleCpuThresholdPercent">
+              CPU threshold (%)
+            </label>
+            <Input
+              id="autoscaleCpuThresholdPercent"
+              max="99"
+              min="1"
+              name="autoscaleCpuThresholdPercent"
+              type="number"
+              value={data.settings.autoscaleCpuThresholdPercent}
+            />
+          </div>
+          <div>
+            <label class={label} for="autoscaleMemoryThresholdPercent">
+              Memory threshold (%)
+            </label>
+            <Input
+              id="autoscaleMemoryThresholdPercent"
+              max="99"
+              min="1"
+              name="autoscaleMemoryThresholdPercent"
+              type="number"
+              value={data.settings.autoscaleMemoryThresholdPercent}
+            />
+          </div>
+        </div>
+        <div>
+          <p class={label}>Overflow remote host</p>
+          {#if data.remoteHosts.length === 0}
+            <p class="text-text-subtle text-xs">
+              No remote hosts registered yet — add one on the Remote Hosts
+              page first.
+            </p>
+          {:else}
+            <SelectRoot
+              name="autoscaleOverflowRemoteHostId"
+              type="single"
+              bind:value={autoscaleOverflowRemoteHostId}
+            >
+              <SelectTrigger class="w-full">
+                {autoscaleOverflowRemoteHostLabel}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem label="None" value="" />
+                {#each data.remoteHosts as host (host.id)}
+                  <SelectItem label={host.name} value={host.id} />
+                {/each}
+              </SelectContent>
+            </SelectRoot>
+          {/if}
+        </div>
+        <div class="flex justify-end">
+          <Button type="submit">Save</Button>
+        </div>
+      </form>
+    </section>
+
     <!-- ═══ Traefik ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">Traefik</h2>
-        <p class="text-xs text-text-muted">
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">Traefik</h2>
+        <p class="text-text-muted text-xs">
           Entrypoint, cert resolver, and the custom-SSL dynamic-config
           directory.
         </p>
@@ -281,7 +380,7 @@
             type="text"
             value={data.settings.traefikDynamicConfigDir ?? ""}
           />
-          <p class="mt-1.5 text-xs text-text-subtle">
+          <p class="text-text-subtle mt-1.5 text-xs">
             Must match the path bind-mounted into the Traefik container — see
             compose.yaml's commented-out example. Unset means per-service custom
             SSL certs are stored but never written anywhere.
@@ -294,10 +393,10 @@
     </section>
 
     <!-- ═══ SMTP ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">Email (SMTP)</h2>
-        <p class="text-xs text-text-muted">
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">Email (SMTP)</h2>
+        <p class="text-text-muted text-xs">
           Used for email verification on sign-up.
         </p>
       </div>
@@ -388,10 +487,10 @@
     </section>
 
     <!-- ═══ OAuth Providers ═══ -->
-    <section class="rounded-2xl border border-border bg-surface">
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">OAuth Providers</h2>
-        <p class="text-xs text-text-muted">
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">OAuth Providers</h2>
+        <p class="text-text-muted text-xs">
           Any generic OIDC provider — used both for signing into Homerun itself
           and for gating a service with "Require login" (Networking tab). Saving
           here rebuilds the auth backend live, no restart needed.
@@ -404,11 +503,11 @@
         use:enhance={submitToast("OAuth providers")}
       >
         {#each oauthRows as row, i (i)}
-          <div class="space-y-3 rounded-xl border border-border p-4">
+          <div class="border-border space-y-3 rounded-xl border p-4">
             <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2 text-text-muted">
+              <div class="text-text-muted flex items-center gap-2">
                 <KeyRound class="size-4" />
-                <span class="text-xs font-medium uppercase tracking-wide"
+                <span class="text-xs font-medium tracking-wide uppercase"
                   >Provider {i + 1}</span
                 >
               </div>

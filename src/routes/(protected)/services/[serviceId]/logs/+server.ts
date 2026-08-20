@@ -1,6 +1,6 @@
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
-import { streamLogs } from "$lib/server/docker/service";
+import { DockerService } from "$lib/services/docker.service";
 
 export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
@@ -18,7 +18,7 @@ export const GET = async ({ params, locals }) => {
 	}
 
 	const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-	const stream = await streamLogs(
+	const stream = await DockerService.streamLogs(
 		svc.containerId,
 		{ follow: true, tail: 200 },
 		remote,

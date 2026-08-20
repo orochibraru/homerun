@@ -4,8 +4,8 @@ import type { Page } from "@playwright/test";
  * Shared helpers for e2e specs. Every spec in this suite runs against the
  * real app (real Docker, real DB, real Traefik-labeled containers) — no
  * mocks — per playwright.config.ts, which points webServer at an isolated
- * NODE_ENV=test instance (see .env.test / DB_PATH) so this suite never
- * touches the maintainer's own database.db or a real dev session.
+ * NODE_ENV=test instance (see .env.test / DATABASE_URL) so this suite never
+ * touches the maintainer's own database or a real dev session.
  *
  * All helpers here exist to keep that safe and consistent: throwaway
  * accounts only, cleanup in `finally`, one place to detect a broken page

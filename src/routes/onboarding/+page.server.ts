@@ -7,8 +7,8 @@ import {
 } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
-import { rebuildAuth } from "$lib/server/auth";
 import { onboardingSchema } from "$lib/server/validation/onboarding";
+import { rebuildAuth } from "$lib/services/auth";
 
 const logger = new Logger("Onboarding");
 

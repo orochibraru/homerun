@@ -4,20 +4,14 @@ import { config } from "$lib/config";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
-import { syncAllServiceStatuses } from "$lib/server/docker/reconcile";
-import {
-	removeContainer,
-	restartContainer,
-	startContainer,
-	stopContainer,
-} from "$lib/server/docker/service";
+import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Services");
 
 async function loadServices(userId: string) {
 	const rows = await ServiceDTO.listWithProjectNames(userId);
 
-	await syncAllServiceStatuses(
+	await DockerService.syncAllServiceStatuses(
 		rows.filter((r) => r.service.containerId).map((r) => r.service.id),
 		userId,
 	);
@@ -61,7 +55,11 @@ export const actions = {
 		if (svc.containerId) {
 			try {
 				const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-				await removeContainer(svc.containerId, { force: true }, remote);
+				await DockerService.removeContainer(
+					svc.containerId,
+					{ force: true },
+					remote,
+				);
 			} catch {
 				// Container may already be gone on the host — proceed with
 				// deleting our record regardless.
@@ -91,7 +89,7 @@ export const actions = {
 		}
 
 		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await restartContainer(svc.containerId, remote);
+		await DockerService.restartContainer(svc.containerId, remote);
 		logger.info(
 			`Service restarted: service=${serviceId} user=${locals.user.id}`,
 		);
@@ -116,7 +114,7 @@ export const actions = {
 		}
 
 		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await startContainer(svc.containerId, remote);
+		await DockerService.startContainer(svc.containerId, remote);
 		await svc.update({ desiredState: "running" });
 		logger.info(`Service started: service=${serviceId} user=${locals.user.id}`);
 		return { success: true };
@@ -141,7 +139,7 @@ export const actions = {
 		}
 
 		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await stopContainer(svc.containerId, remote);
+		await DockerService.stopContainer(svc.containerId, remote);
 		await svc.update({ desiredState: "stopped" });
 		logger.info(`Service stopped: service=${serviceId} user=${locals.user.id}`);
 		return { success: true };

@@ -7,6 +7,8 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+# Compiled binaries from agent/, installer/, cli/ (bun build --compile)
+dist
 
 # OS
 .DS_Store

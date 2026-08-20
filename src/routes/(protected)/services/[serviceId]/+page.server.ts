@@ -4,12 +4,8 @@ import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
-import { deployService } from "$lib/server/deploy";
-import {
-	restartContainer,
-	startContainer,
-	stopContainer,
-} from "$lib/server/docker/service";
+import { DeploymentService } from "$lib/services/deploy.service";
+import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Services");
 
@@ -34,7 +30,11 @@ export const actions = {
 		const formData = await request.formData();
 		const clientDeploymentId = formData.get("deploymentId") as string | null;
 
-		const result = await deployService(svc, locals.user.id, clientDeploymentId);
+		const result = await DeploymentService.deployService(
+			svc,
+			locals.user.id,
+			clientDeploymentId,
+		);
 		if (!result.success) {
 			return fail(500, {
 				deploymentId: result.deploymentId,
@@ -59,7 +59,7 @@ export const actions = {
 		}
 
 		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await restartContainer(svc.containerId, remote);
+		await DockerService.restartContainer(svc.containerId, remote);
 		logger.info(`Service restarted: service=${svc.id} user=${locals.user.id}`);
 		return { success: true };
 	},
@@ -77,7 +77,7 @@ export const actions = {
 		}
 
 		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await startContainer(svc.containerId, remote);
+		await DockerService.startContainer(svc.containerId, remote);
 		await svc.update({ desiredState: "running" });
 		logger.info(`Service started: service=${svc.id} user=${locals.user.id}`);
 		return { success: true };
@@ -96,7 +96,7 @@ export const actions = {
 		}
 
 		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await stopContainer(svc.containerId, remote);
+		await DockerService.stopContainer(svc.containerId, remote);
 		await svc.update({ desiredState: "stopped" });
 		logger.info(`Service stopped: service=${svc.id} user=${locals.user.id}`);
 		return { success: true };

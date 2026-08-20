@@ -1,4 +1,4 @@
-import { subscribeToSession } from "$lib/server/docker/terminal";
+import { DockerService } from "$lib/services/docker.service";
 
 export const GET = ({ params, locals }) => {
 	if (!locals.user) {
@@ -13,14 +13,18 @@ export const GET = ({ params, locals }) => {
 			unsubscribe?.();
 		},
 		start(controller) {
-			unsubscribe = subscribeToSession(params.sessionId, userId, (chunk) => {
-				try {
-					controller.enqueue(chunk);
-				} catch {
-					// Controller already closed (client disconnected) — the
-					// cancel() callback will unsubscribe.
-				}
-			});
+			unsubscribe = DockerService.subscribeToSession(
+				params.sessionId,
+				userId,
+				(chunk) => {
+					try {
+						controller.enqueue(chunk);
+					} catch {
+						// Controller already closed (client disconnected) — the
+						// cancel() callback will unsubscribe.
+					}
+				},
+			);
 			if (!unsubscribe) {
 				controller.error(new Error("Session not found"));
 			}

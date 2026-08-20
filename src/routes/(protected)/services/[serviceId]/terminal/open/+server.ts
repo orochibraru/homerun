@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
-import { openTerminalSession } from "$lib/server/docker/terminal";
+import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Terminal");
 
@@ -17,7 +17,7 @@ export const POST = async ({ params, locals }) => {
 		return json({ error: "This service isn't running." }, { status: 400 });
 	}
 
-	const sessionId = await openTerminalSession({
+	const sessionId = await DockerService.openTerminalSession({
 		containerId: svc.containerId,
 		serviceId: svc.id,
 		userId: locals.user.id,

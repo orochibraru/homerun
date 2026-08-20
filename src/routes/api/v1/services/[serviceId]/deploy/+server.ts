@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
-import { deployService } from "$lib/server/deploy";
+import { DeploymentService } from "$lib/services/deploy.service";
 
 export const POST = async ({ params, locals }) => {
 	if (!locals.user) {
@@ -11,7 +11,7 @@ export const POST = async ({ params, locals }) => {
 		return json({ error: "Not found" }, { status: 404 });
 	}
 
-	const result = await deployService(svc, locals.user.id);
+	const result = await DeploymentService.deployService(svc, locals.user.id);
 	if (!result.success) {
 		return json(
 			{ deploymentId: result.deploymentId, error: result.error },

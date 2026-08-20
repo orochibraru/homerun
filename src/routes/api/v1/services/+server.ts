@@ -1,47 +1,11 @@
 import { json } from "@sveltejs/kit";
-import { z } from "zod";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
-import { encryptSecret } from "$lib/server/docker/secrets";
+import { createServiceApiBody } from "$lib/server/validation/api";
+import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("API");
-
-const SLUG_RE = /^[a-z0-9-]{1,63}$/;
-
-const createServiceBody = z
-	.object({
-		authRequired: z.boolean().default(false),
-		buildSource: z.enum(["image", "git"]).default("image"),
-		containerPort: z.number().int().min(1).max(65_535),
-		cpuLimit: z.string().optional(),
-		dnsResolvable: z.boolean().default(true),
-		envVars: z.record(z.string(), z.string()).default({}),
-		gitBuildContext: z.string().optional(),
-		gitDockerfilePath: z.string().optional(),
-		gitRef: z.string().optional(),
-		gitUrl: z.string().optional(),
-		image: z.string().optional(),
-		memoryLimitMb: z.number().int().positive().optional(),
-		name: z.string().min(1).max(100),
-		projectId: z.string().optional(),
-		registryPassword: z.string().optional(),
-		registryUrl: z.string().optional(),
-		registryUsername: z.string().optional(),
-		restartPolicy: z
-			.enum(["no", "always", "on-failure", "unless-stopped"])
-			.default("unless-stopped"),
-		slug: z.string().regex(SLUG_RE),
-		tag: z.string().min(1).optional(),
-	})
-	.refine((v) => v.buildSource !== "git" || !!v.gitUrl, {
-		error: 'gitUrl is required when buildSource is "git".',
-		path: ["gitUrl"],
-	})
-	.refine((v) => v.buildSource === "git" || !!v.image, {
-		error: 'image is required when buildSource is "image".',
-		path: ["image"],
-	});
 
 export const GET = async ({ locals }) => {
 	if (!locals.user) {
@@ -58,7 +22,7 @@ export const POST = async ({ request, locals }) => {
 	}
 
 	const body = await request.json().catch(() => null);
-	const result = createServiceBody.safeParse(body);
+	const result = createServiceApiBody.safeParse(body);
 	if (!result.success) {
 		return json(
 			{ error: "Invalid request body", issues: result.error.flatten() },

@@ -1,17 +1,9 @@
 import { json } from "@sveltejs/kit";
-import { z } from "zod";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { Logger } from "$lib/logger";
+import { createProjectApiBody } from "$lib/server/validation/api";
 
 const logger = new Logger("API");
-
-const SLUG_RE = /^[a-z0-9-]{1,63}$/;
-
-const createProjectBody = z.object({
-	description: z.string().optional(),
-	name: z.string().min(1).max(100),
-	slug: z.string().regex(SLUG_RE),
-});
 
 export const GET = async ({ locals }) => {
 	if (!locals.user) {
@@ -27,7 +19,7 @@ export const POST = async ({ request, locals }) => {
 	}
 
 	const body = await request.json().catch(() => null);
-	const result = createProjectBody.safeParse(body);
+	const result = createProjectApiBody.safeParse(body);
 	if (!result.success) {
 		return json(
 			{ error: "Invalid request body", issues: result.error.flatten() },

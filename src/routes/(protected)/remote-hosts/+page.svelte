@@ -4,6 +4,7 @@
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -18,22 +19,22 @@
 	let showTls = $state(false);
 	let submitting = $state(false);
 
-	function confirmDelete(e: SubmitEvent, name: string) {
-		if (
-			!confirm(
-				`Delete "${name}"? Services deployed to it keep running there — they just won't be manageable from here anymore.`,
-			)
-		) {
-			e.preventDefault();
-		}
+	let deleteDialogOpen = $state(false);
+	let pendingDeleteName = $state("");
+	let pendingDeleteForm: HTMLFormElement | null = null;
+
+	function requestDelete(e: MouseEvent, name: string) {
+		pendingDeleteForm = (e.currentTarget as HTMLElement).closest("form");
+		pendingDeleteName = name;
+		deleteDialogOpen = true;
 	}
 </script>
 
 <div class="p-6 md:p-8">
   <div class="mb-8 flex items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-text">Remote Hosts</h1>
-      <p class="mt-1 text-sm text-text-muted">
+      <h1 class="text-text text-2xl font-bold">Remote Hosts</h1>
+      <p class="text-text-muted mt-1 text-sm">
         Other Docker daemons a service can be deployed to instead of this host.
         A remote-hosted service isn't on the shared network or routed through
         Traefik — see the docs on the Networking tab for what that means in
@@ -61,7 +62,7 @@
     <div class="space-y-3">
       {#each data.hosts as host (host.id)}
         <div
-          class="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5"
+          class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5"
         >
           <div
             class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl"
@@ -69,17 +70,16 @@
             <Server class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-semibold text-text">
+            <p class="text-text truncate text-sm font-semibold">
               {host.name}
             </p>
-            <p class="mt-0.5 truncate font-mono text-xs text-text-muted">
+            <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
               {host.dockerHost}
             </p>
           </div>
           <form
             action="?/delete"
             method="POST"
-            onsubmit={(e) => confirmDelete(e, host.name)}
             use:enhance={() =>
               async ({ result, update }) => {
                 if (result.type === "failure") {
@@ -91,9 +91,10 @@
             <input name="hostId" type="hidden" value={host.id}>
             <Button
               class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+              onclick={(e) => requestDelete(e, host.name)}
               size="icon-sm"
               title="Delete"
-              type="submit"
+              type="button"
               variant="ghost"
             >
               <Trash2 class="size-4" />
@@ -104,3 +105,11 @@
     </div>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={deleteDialogOpen}
+  confirmLabel="Delete"
+  description={`Delete "${pendingDeleteName}"? Services deployed to it keep running there — they just won't be manageable from here anymore.`}
+  onConfirm={() => pendingDeleteForm?.requestSubmit()}
+  title="Delete remote host"
+/>

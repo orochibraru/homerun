@@ -1,16 +1,12 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { Logger } from "$lib/logger";
-import {
-	findTraefikContainer,
-	restartTraefikContainer,
-	updateTraefikContainer,
-} from "$lib/server/docker/core-services";
+import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Traefik");
 
 export const load = async () => {
-	const traefik = await findTraefikContainer();
+	const traefik = await DockerService.findTraefikContainer();
 	return { traefik };
 };
 
@@ -24,7 +20,7 @@ export const actions = {
 		}
 
 		try {
-			await restartTraefikContainer();
+			await DockerService.restartTraefikContainer();
 			logger.info(`Traefik restarted by user=${locals.user.id}`);
 			return { action: "restartTraefik", success: true };
 		} catch (err) {
@@ -46,7 +42,7 @@ export const actions = {
 		}
 
 		try {
-			const result = await updateTraefikContainer();
+			const result = await DockerService.updateTraefikContainer();
 			logger.info(
 				`Traefik update by user=${locals.user.id}: ${result.message}`,
 			);

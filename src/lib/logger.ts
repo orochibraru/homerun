@@ -11,6 +11,74 @@ import {
 import { building, dev } from "$app/environment";
 import { config } from "$lib/config";
 
+// Matches this codebase's own `service=<uuid>` convention in log messages
+// (deploy.service.ts, docker/containers.ts, etc.) so a persisted warn/error
+// log can be heuristically attributed to a service without threading an
+// explicit serviceId through every one of the ~40 existing Logger call
+// sites — see schema.ts's `appLog` docstring.
+const SERVICE_ID_RE = /service=([0-9a-fA-F-]{36})/;
+
+function extractServiceId(text: string): string | null {
+	return SERVICE_ID_RE.exec(text)?.[1] ?? null;
+}
+
+function stringifyForPersist(value: unknown): string {
+	if (typeof value === "string") {
+		return value;
+	}
+	if (value instanceof Error) {
+		return value.stack ?? value.message;
+	}
+	try {
+		return JSON.stringify(value);
+	} catch {
+		return String(value);
+	}
+}
+
+/**
+ * Best-effort persistence of a warn/error-level log line to the `app_log`
+ * table, for the per-service Errors tab (and a future instance-wide log
+ * view) — see schema.ts's `appLog` docstring. Dynamically imports the DTO
+ * (rather than a static top-level import) since $lib/logger.ts itself
+ * isn't under `$lib/server/`, so this keeps the server-only db code out of
+ * the module graph unless a warn/error call actually fires. Never throws,
+ * never awaited by the caller — a logging call must never fail the
+ * operation it's logging.
+ */
+function persistLog(
+	level: "warn" | "error",
+	scope: string | undefined,
+	input: unknown,
+	optionalParams: unknown[],
+): void {
+	if (building) {
+		return;
+	}
+	const message = stringifyForPersist(input);
+	const metadata =
+		optionalParams.length > 0
+			? stringifyForPersist(optionalParams.map(stringifyForPersist))
+			: null;
+	const serviceId =
+		extractServiceId(message) ?? (metadata ? extractServiceId(metadata) : null);
+
+	import("$lib/dto/app-log-dto")
+		.then(({ AppLogDTO }) =>
+			AppLogDTO.create({
+				level,
+				message,
+				metadata,
+				scope: scope ?? null,
+				serviceId,
+			}),
+		)
+		.catch(() => {
+			// Logging must never throw — if the DB isn't up yet (e.g. very
+			// early boot) or the write fails, just drop it.
+		});
+}
+
 export type LogFormats = "console" | "json";
 
 export const logLevels = {
@@ -215,6 +283,8 @@ export class Logger {
 			return;
 		}
 
+		persistLog("warn", this.prefix, input, optionalParams);
+
 		if (this.logFormat === "console") {
 			return console.log(
 				yellow(`[LEVEL::${logLevels.WARN.toUpperCase()}] `),
@@ -251,6 +321,8 @@ export class Logger {
 		if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
 			return;
 		}
+
+		persistLog("error", this.prefix, err, optionalParams);
 
 		if (this.logFormat === "console") {
 			return console.error(

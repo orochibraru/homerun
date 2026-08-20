@@ -2,7 +2,7 @@ import { error } from "@sveltejs/kit";
 import { config } from "$lib/config";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
-import { syncServiceStatus } from "$lib/server/docker/reconcile";
+import { DockerService } from "$lib/services/docker.service";
 
 export const load = async ({ params, parent }) => {
 	const { user } = await parent();
@@ -17,7 +17,7 @@ export const load = async ({ params, parent }) => {
 		: null;
 
 	if (svc.containerId) {
-		await syncServiceStatus(svc.id, user.id);
+		await DockerService.syncServiceStatus(svc.id, user.id);
 		const fresh = await ServiceDTO.get(params.serviceId, user.id);
 		return {
 			baseDomain: config.baseDomain,

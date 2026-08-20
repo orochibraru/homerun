@@ -11,6 +11,8 @@
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
 
@@ -21,28 +23,31 @@
 	let restarting = $state(false);
 	let updating = $state(false);
 
-	function confirmRestart(e: SubmitEvent) {
-		if (
-			!confirm(
-				"Restart Traefik? Every deployed service routed through it will be briefly unreachable while it comes back up.",
-			)
-		) {
-			e.preventDefault();
-			return;
-		}
-		restarting = true;
+	let confirmKind = $state<"restart" | "update" | null>(null);
+	let confirmDialogOpen = $state(false);
+	let restartForm: HTMLFormElement | null = null;
+	let updateForm: HTMLFormElement | null = null;
+
+	function requestRestart(e: MouseEvent) {
+		restartForm = (e.currentTarget as HTMLElement).closest("form");
+		confirmKind = "restart";
+		confirmDialogOpen = true;
 	}
 
-	function confirmUpdate(e: SubmitEvent) {
-		if (
-			!confirm(
-				"Update Traefik? If a newer image is available, this stops and recreates the container in place (same config, new image) — brief downtime for every routed service, and no automatic rollback if the new container fails to start.",
-			)
-		) {
-			e.preventDefault();
-			return;
+	function requestUpdate(e: MouseEvent) {
+		updateForm = (e.currentTarget as HTMLElement).closest("form");
+		confirmKind = "update";
+		confirmDialogOpen = true;
+	}
+
+	function confirmPending() {
+		if (confirmKind === "restart") {
+			restarting = true;
+			restartForm?.requestSubmit();
+		} else if (confirmKind === "update") {
+			updating = true;
+			updateForm?.requestSubmit();
 		}
-		updating = true;
 	}
 
 	let lines = $state<string[]>([]);
@@ -170,16 +175,12 @@
       </div>
       <div class="flex items-center gap-2">
         {#if data.traefik && data.user.role === "admin"}
-          <form
-            action="?/restartTraefik"
-            method="POST"
-            onsubmit={confirmRestart}
-            use:enhance
-          >
+          <form action="?/restartTraefik" method="POST" use:enhance>
             <Button
               disabled={restarting || updating}
+              onclick={requestRestart}
               size="sm"
-              type="submit"
+              type="button"
               variant="ghost"
             >
               {#if restarting}
@@ -190,16 +191,12 @@
               Restart
             </Button>
           </form>
-          <form
-            action="?/updateTraefik"
-            method="POST"
-            onsubmit={confirmUpdate}
-            use:enhance
-          >
+          <form action="?/updateTraefik" method="POST" use:enhance>
             <Button
               disabled={restarting || updating}
+              onclick={requestUpdate}
               size="sm"
-              type="submit"
+              type="button"
               variant="ghost"
             >
               {#if updating}
@@ -242,9 +239,19 @@
         </p>
       {:else}
         {#each lines as line, i (i)}
-          <div class="break-all whitespace-pre-wrap">{line}</div>
+          <AnsiLine {line} />
         {/each}
       {/if}
     </div>
   </section>
 </div>
+
+<ConfirmDialog
+  bind:open={confirmDialogOpen}
+  onConfirm={confirmPending}
+  title={confirmKind === "restart" ? "Restart Traefik?" : "Update Traefik?"}
+  description={confirmKind === "restart"
+    ? "Every deployed service routed through it will be briefly unreachable while it comes back up."
+    : "If a newer image is available, this stops and recreates the container in place (same config, new image) — brief downtime for every routed service, and no automatic rollback if the new container fails to start."}
+  confirmLabel={confirmKind === "restart" ? "Restart" : "Update"}
+/>

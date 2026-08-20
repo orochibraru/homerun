@@ -5,10 +5,9 @@ import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
-import { parseCronSchedule } from "$lib/server/cron";
-import { encryptSecret } from "$lib/server/docker/secrets";
-import { removeContainer } from "$lib/server/docker/service";
-import { updateServiceSchema } from "$lib/server/validation/service";
+import { updateGeneralSchema } from "$lib/server/validation/service";
+import { CronService } from "$lib/services/cron.service";
+import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Services");
 
@@ -38,7 +37,11 @@ export const actions = {
 		if (svc.containerId) {
 			try {
 				const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-				await removeContainer(svc.containerId, { force: true }, remote);
+				await DockerService.removeContainer(
+					svc.containerId,
+					{ force: true },
+					remote,
+				);
 			} catch {
 				// Container may already be gone proceed with deleting the record.
 			}
@@ -142,7 +145,7 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const result = updateServiceSchema.safeParse(Object.fromEntries(formData));
+		const result = updateGeneralSchema.safeParse(Object.fromEntries(formData));
 		if (!result.success) {
 			return fail(400, {
 				errors: result.error.flatten().fieldErrors,
@@ -161,40 +164,10 @@ export const actions = {
 			});
 		}
 
-		const isGitBuild = input.buildSource === "git";
-
 		await svc.update({
-			buildSource: input.buildSource,
-			dnsResolvable: input.dnsResolvable,
 			name: input.name,
-			registryUrl: input.registryUrl || null,
-			registryUsername: input.registryUsername || null,
-			slug: input.slug,
-			// Blank password field means "leave unchanged" — never
-			// overwrite a stored credential with nothing just because
-			// the user didn't retype it.
-			...(input.registryPassword
-				? { registryPasswordEnc: encryptSecret(input.registryPassword) }
-				: {}),
-			containerPort: input.containerPort,
-			cpuLimit: input.cpuLimit || null,
-			memoryLimitMb: input.memoryLimitMb ?? null,
 			restartPolicy: input.restartPolicy,
-			...(isGitBuild
-				? {
-						gitBuildContext: input.gitBuildContext || null,
-						gitDockerfilePath: input.gitDockerfilePath || null,
-						gitRef: input.gitRef || null,
-						gitUrl: input.gitUrl || null,
-					}
-				: {
-						gitBuildContext: null,
-						gitDockerfilePath: null,
-						gitRef: null,
-						gitUrl: null,
-						image: input.image,
-						tag: input.tag,
-					}),
+			slug: input.slug,
 		});
 
 		logger.info(
@@ -216,7 +189,7 @@ export const actions = {
 		const cronSchedule =
 			(formData.get("cronSchedule") as string | null)?.trim() ?? "";
 
-		if (cronEnabled && !parseCronSchedule(cronSchedule)) {
+		if (cronEnabled && !CronService.parseCronSchedule(cronSchedule)) {
 			return fail(400, {
 				cronError:
 					'Invalid schedule — use standard 5-field cron syntax (e.g. "0 3 * * *").',

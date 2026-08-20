@@ -11,6 +11,8 @@
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
@@ -203,35 +205,55 @@
     class="mb-6 h-48 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
   >
     {#each progressLines as line, i (i)}
-      <div class="break-all whitespace-pre-wrap">{line}</div>
+      <AnsiLine {line} />
     {/each}
   </div>
 {/if}
 
 {#if !svc.containerId}
   <div
-    class="mb-6 rounded-xl border border-border bg-surface-2 p-4 text-sm text-text-muted"
+    class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm"
   >
     This service hasn't been deployed yet — click <strong>Deploy</strong> to
     pull
-    <span class="font-mono text-text">{svc.image}:{svc.tag}</span>
+    <span class="text-text font-mono">{svc.image}:{svc.tag}</span>
     and start it.
+  </div>
+{:else if pendingAction !== "deploy"}
+  <!-- Live container logs, right on the Overview tab — same panel as the
+       Logs tab (see $lib/components/live-log-viewer.svelte), just shorter.
+       Hidden mid-deploy since the progress panel above already covers
+       live output for that. -->
+  <div class="mb-6">
+    <LiveLogViewer
+      containerId={svc.containerId}
+      heightClass="h-56"
+      serviceId={svc.id}
+    />
+    <a
+      class="text-accent mt-2 inline-block text-xs underline"
+      href={resolve("/(protected)/services/[serviceId]/logs", {
+        serviceId: svc.id,
+      })}
+    >
+      View full logs
+    </a>
   </div>
 {/if}
 
 <!-- ═══ Deployment history ═══ -->
-<section class="rounded-2xl border border-border bg-surface">
-  <div class="flex items-center gap-2 border-b border-border px-5 py-4">
-    <Clock class="size-4 text-text-muted" />
-    <h2 class="text-sm font-semibold text-text">Deployment history</h2>
+<section class="border-border bg-surface rounded-2xl border">
+  <div class="border-border flex items-center gap-2 border-b px-5 py-4">
+    <Clock class="text-text-muted size-4" />
+    <h2 class="text-text text-sm font-semibold">Deployment history</h2>
   </div>
 
   {#if data.deployments.length === 0}
     <div class="flex flex-col items-center justify-center py-12 text-center">
-      <p class="text-sm font-medium text-text-muted">No deployments yet</p>
+      <p class="text-text-muted text-sm font-medium">No deployments yet</p>
     </div>
   {:else}
-    <div class="divide-y divide-border">
+    <div class="divide-border divide-y">
       {#each data.deployments as dep (dep.id)}
         <div>
           <button
@@ -244,7 +266,7 @@
           >
             <StatusBadge status={dep.status} />
             <div class="min-w-0 flex-1">
-              <p class="truncate text-xs text-text-muted">
+              <p class="text-text-muted truncate text-xs">
                 {timeAgo(dep.createdAt)}
                 {#if dep.imageDigest}
                   ·
@@ -259,7 +281,7 @@
             </div>
             {#if dep.log}
               <ChevronDown
-                class="size-4 shrink-0 text-text-muted transition-transform {expandedDeploymentId ===
+                class="text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
                 dep.id
                   ? 'rotate-180'
                   : ''}"
@@ -271,7 +293,7 @@
               class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
             >
               {#each dep.log.split("\n").filter(Boolean) as line, i (i)}
-                <div class="break-all whitespace-pre-wrap">{line}</div>
+                <AnsiLine {line} />
               {/each}
             </div>
           {/if}

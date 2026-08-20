@@ -1,0 +1,466 @@
+import { config } from "$lib/config";
+import { Logger } from "$lib/logger";
+import type { ContainerStatus } from "$lib/types";
+import { decryptSecret } from "../secrets.ts";
+import { getDocker, type RemoteHostConnection } from "./client.ts";
+import {
+	buildContainerLabels,
+	MANAGED_LABEL,
+	SERVICE_ID_LABEL,
+} from "./labels.ts";
+import { connectToProjectNetwork } from "./networks.ts";
+
+export type { ContainerStatus } from "$lib/types";
+export type { RemoteHostConnection } from "./client.ts";
+
+const logger = new Logger("Docker");
+
+export interface RegistryAuth {
+	password: string;
+	serveraddress?: string;
+	username: string;
+}
+
+/**
+ * Container name this app gives its containers. Includes a random suffix
+ * so a redeploy never collides on "name already in use" — even if the
+ * previous container's removal (below) silently failed to fully complete.
+ * The *previous* container for a service is found by its
+ * `homerun.service.id` label, not by name, since names are no longer
+ * stable across deploys.
+ */
+function containerName(slug: string, projectSlug?: string | null): string {
+	const suffix = crypto.randomUUID().slice(0, 8);
+	const prefix = projectSlug ? `${projectSlug}-` : "";
+	return `homerun-${prefix}${slug}-${suffix}`;
+}
+
+/** The currently-running (or last) container for a service, if any — found by label, not name. */
+async function findServiceContainer(
+	serviceId: string,
+	remote?: RemoteHostConnection | null,
+) {
+	const docker = getDocker(remote);
+	const containers = await docker.listContainers({
+		all: true,
+		filters: JSON.stringify({ label: [`${SERVICE_ID_LABEL}=${serviceId}`] }),
+	});
+	return containers[0] ?? null;
+}
+
+/**
+ * Builds a dockerode authconfig from a service's stored registry
+ * credentials, decrypting the password. Returns undefined for public
+ * images (no registryUsername set).
+ */
+export function buildAuthConfig(service: {
+	registryUrl: string | null;
+	registryUsername: string | null;
+	registryPasswordEnc: string | null;
+}): RegistryAuth | undefined {
+	if (!service.registryUsername) {
+		return;
+	}
+
+	const password = service.registryPasswordEnc
+		? decryptSecret(service.registryPasswordEnc)
+		: null;
+
+	return {
+		password: password ?? "",
+		serveraddress: service.registryUrl ?? undefined,
+		username: service.registryUsername,
+	};
+}
+
+export interface PullProgressEvent {
+	id?: string;
+	status: string;
+}
+
+/** Pulls `image:tag`, optionally authenticating against a private registry. */
+export async function pullImage(
+	image: string,
+	tag: string,
+	auth?: RegistryAuth,
+	onProgress?: (line: string) => void,
+	remote?: RemoteHostConnection | null,
+): Promise<{ digest: string | null }> {
+	const docker = getDocker(remote);
+	const ref = `${image}:${tag}`;
+
+	logger.info(`Pulling image: ${ref}`);
+	onProgress?.(`Pulling ${ref}...`);
+	const stream = await docker.pull(ref, auth ? { authconfig: auth } : {});
+
+	// Docker emits one progress event per byte-range update per layer —
+	// far too chatty to log a line for each. Only emit a line when a given
+	// layer's status actually changes ("Downloading" → "Pull complete" etc).
+	const lastStatusById = new Map<string, string>();
+	await new Promise<void>((resolvePromise, reject) => {
+		docker.modem.followProgress(
+			stream,
+			(err: Error | null) => (err ? reject(err) : resolvePromise()),
+			(event: PullProgressEvent) => {
+				const key = event.id ?? "";
+				if (lastStatusById.get(key) === event.status) {
+					return;
+				}
+				lastStatusById.set(key, event.status);
+				onProgress?.(event.id ? `${event.status}: ${event.id}` : event.status);
+			},
+		);
+	});
+
+	try {
+		const inspect = await docker.getImage(ref).inspect();
+		const digest = inspect.RepoDigests?.[0]?.split("@")[1] ?? null;
+		logger.info(`Pulled image: ${ref} digest=${digest ?? "unknown"}`);
+		return { digest };
+	} catch (err) {
+		logger.warn(`Pulled image but inspect failed: ${ref}`, err);
+		return { digest: null };
+	}
+}
+
+export interface VolumeMountParams {
+	containerPath: string;
+	readOnly: boolean;
+	// A bind-mount host path ("/mnt/data/foo") or a Docker-managed named
+	// volume name — see StorageVolume in the schema, same field either way.
+	source: string;
+}
+
+export interface CreateContainerParams {
+	// When true, gatekeeps this service behind this app's own login via a
+	// Traefik forwardAuth middleware. No effect when dnsResolvable is false.
+	authRequired?: boolean;
+	containerPort: number;
+	cpuLimit?: string | null;
+	// Optional second hostname routed to this service (DNS must already
+	// point at this host — the app doesn't manage that). No effect when
+	// dnsResolvable is false.
+	customDomain?: string | null;
+	// When false, the container gets no Traefik labels at all — no public
+	// <slug>.<baseDomain>, subnet-only reachability. Defaults to true.
+	dnsResolvable?: boolean;
+	envVars: Record<string, string>;
+	image: string;
+	memoryLimitMb?: number | null;
+	// "bridge" (default) | "host" — shares the host's network namespace
+	// directly instead of joining the shared/project Docker networks, for
+	// apps that need it (mDNS/SSDP discovery, e.g. Home Assistant). Docker
+	// doesn't allow combining host mode with any other network attachment,
+	// so when this is "host": no shared-network alias, no project-network
+	// join, no Traefik labels regardless of dnsResolvable (there's no
+	// container-specific IP/network for Traefik's docker provider to route
+	// to) — the container is reachable only directly on the host's own
+	// network interfaces, on whatever port(s) it binds to itself.
+	networkMode?: "bridge" | "host";
+	// When set, the container also joins this project's dedicated network
+	// (see docker/networks.ts) — lets sibling services in the same project
+	// reach it, in addition to the shared Traefik network below. No effect
+	// when networkMode is "host" (see above).
+	projectId?: string | null;
+	// "tcp" (default) | "udp" | "both" — which protocol(s) containerPort is
+	// declared under (Docker's ExposedPorts). Doesn't publish/map anything by
+	// itself either way — see the Networking tab's own "no host port
+	// publishing by design" stance; matters for real host-visible reachability
+	// only in combination with networkMode: "host" above.
+	portProtocol?: "tcp" | "udp" | "both";
+	// Prefixes the container name and public subdomain when the service
+	// belongs to a project (e.g. "<projectSlug>-<slug>.<baseDomain>").
+	projectSlug?: string | null;
+	// When set, this container is created on a remote Docker daemon instead
+	// of the local socket — see docker/client.ts's getDocker(). Note: the
+	// shared/project Docker networks and Traefik itself all live on the
+	// *local* host, so a remote-hosted service isn't reachable through the
+	// normal internal-network or Traefik paths — only directly, if you
+	// publish a port yourself. Effectively an isolated remote workload
+	// today, not (yet) a fully integrated second node.
+	remote?: RemoteHostConnection | null;
+	restartPolicy: string;
+	serviceId: string;
+	slug: string;
+	tag: string;
+	volumes?: VolumeMountParams[];
+}
+
+/**
+ * Creates and starts the container for a service, replacing any
+ * previous container for the same service (a redeploy — see
+ * findServiceContainer above). Attaches to the shared Traefik network
+ * under a DNS alias equal to the service's slug — no host port
+ * publishing needed, Traefik reaches it over that network, and other
+ * services can reach it at `http://<slug>:<containerPort>` regardless of
+ * the container's own (randomized) name.
+ */
+export async function createAndStartContainer(
+	params: CreateContainerParams,
+	onProgress?: (line: string) => void,
+): Promise<{ containerId: string }> {
+	const docker = getDocker(params.remote);
+	const name = containerName(params.slug, params.projectSlug);
+
+	// Replace any previous container for this service (redeploy), found by
+	// its service-id label rather than by name (see containerName above).
+	const existingInfo = await findServiceContainer(
+		params.serviceId,
+		params.remote,
+	);
+	if (existingInfo) {
+		onProgress?.("Replacing previous container...");
+		try {
+			const existing = docker.getContainer(existingInfo.Id);
+			if (existingInfo.State === "running") {
+				await existing.stop();
+			}
+			await existing.remove({ force: true });
+		} catch {
+			// Already gone / couldn't be removed cleanly — proceed anyway, the
+			// random name suffix means the new container won't collide with it.
+		}
+	}
+
+	onProgress?.("Creating container...");
+
+	// "no" is our restart-policy value (matches docker-compose convention
+	// for the dropdown); the Docker Engine API itself wants "" for that.
+	const restartPolicyName =
+		params.restartPolicy === "no" ? "" : params.restartPolicy;
+
+	// Docker's Binds syntax covers both a host bind-mount path and a
+	// Docker-managed named volume with the same "source:target[:ro]" form —
+	// it tells them apart by whether source looks like a path. Bind-mount
+	// sources only make sense for the local host — a remote deploy with
+	// volumes attached would try to bind a path on the *remote* machine.
+	const binds = (params.volumes ?? []).map(
+		(v) => `${v.source}:${v.containerPath}${v.readOnly ? ":ro" : ""}`,
+	);
+
+	const isRemote = !!params.remote;
+	const isHostNetwork = params.networkMode === "host";
+	const protocols =
+		params.portProtocol === "both"
+			? (["tcp", "udp"] as const)
+			: [params.portProtocol ?? "tcp"];
+
+	const container = await docker.createContainer({
+		Env: Object.entries(params.envVars).map(
+			([key, value]) => `${key}=${value}`,
+		),
+		ExposedPorts: Object.fromEntries(
+			protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
+		),
+		HostConfig: {
+			Binds: binds.length > 0 ? binds : undefined,
+			Memory: params.memoryLimitMb
+				? params.memoryLimitMb * 1024 * 1024
+				: undefined,
+			NanoCpus: params.cpuLimit
+				? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
+				: undefined,
+			// Host mode shares the host's network namespace directly — Docker
+			// doesn't allow combining it with any other network attachment
+			// (see CreateContainerParams.networkMode), so it wins over
+			// everything below regardless of remote/local. Otherwise: the
+			// shared network only exists on the local host, so a remote
+			// daemon gets Docker's own default bridge instead (no Traefik
+			// routing, no internal service-discovery alias; see
+			// CreateContainerParams.remote).
+			NetworkMode: isHostNetwork
+				? "host"
+				: isRemote
+					? undefined
+					: config.docker.networkName,
+			RestartPolicy: { Name: restartPolicyName },
+		},
+		Image: `${params.image}:${params.tag}`,
+		// Host-mode containers never get Traefik labels regardless of
+		// dnsResolvable — there's no container-specific IP/network for
+		// Traefik's docker provider to route to in host mode, only the
+		// host's own interfaces (see CreateContainerParams.networkMode).
+		Labels: buildContainerLabels({
+			authRequired: params.authRequired,
+			containerPort: params.containerPort,
+			customDomain: params.customDomain,
+			dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
+			projectSlug: params.projectSlug,
+			serviceId: params.serviceId,
+			slug: params.slug,
+		}),
+		// Alias the container as its slug on the shared network, so other
+		// services can reach it at a stable hostname even though the
+		// container's own name carries a random per-deploy suffix. Only
+		// meaningful on the local host in bridge mode — see NetworkMode above.
+		NetworkingConfig:
+			isHostNetwork || isRemote
+				? undefined
+				: {
+						EndpointsConfig: {
+							[config.docker.networkName]: { Aliases: [params.slug] },
+						},
+					},
+		name,
+		// Tty combines stdout/stderr into one unframed stream, which keeps
+		// the v1 log viewer simple (no demux of Docker's multiplexed
+		// stdout/stderr frames needed).
+		Tty: true,
+	});
+
+	onProgress?.("Starting container...");
+	await container.start();
+	logger.info(
+		`Container created and started: ${name} (${container.id})${isRemote ? ` on remote host=${params.remote?.id}` : ""}`,
+	);
+
+	if (params.projectId && !isRemote && !isHostNetwork) {
+		try {
+			await connectToProjectNetwork(
+				container.id,
+				params.projectId,
+				params.slug,
+			);
+			logger.info(
+				`Joined project network: service=${params.serviceId} project=${params.projectId}`,
+			);
+		} catch (err) {
+			// The container is already up on the shared network and reachable
+			// via Traefik — a failed project-network join shouldn't fail the
+			// whole deploy, just log it as degraded connectivity.
+			logger.warn(
+				`Could not join project network: service=${params.serviceId} project=${params.projectId}`,
+				err,
+			);
+		}
+	}
+
+	if (isHostNetwork) {
+		logger.info(
+			`Container on host network: service=${params.serviceId} port=${params.containerPort}`,
+		);
+		onProgress?.(
+			`Running on the host network — reachable directly on this machine's own port ${params.containerPort}, not through Traefik.`,
+		);
+	} else if (isRemote) {
+		onProgress?.(
+			"Deployed to remote host — not on the shared network, no Traefik routing (see remote host docs).",
+		);
+	} else {
+		logger.info(
+			`Reachable internally at ${params.slug}:${params.containerPort} (service=${params.serviceId})`,
+		);
+		onProgress?.(
+			`Reachable at ${params.slug}:${params.containerPort} from other services.`,
+		);
+	}
+
+	return { containerId: container.id };
+}
+
+export async function startContainer(
+	containerId: string,
+	remote?: RemoteHostConnection | null,
+): Promise<void> {
+	await getDocker(remote).getContainer(containerId).start();
+	logger.info(`Container started: ${containerId}`);
+}
+
+export async function stopContainer(
+	containerId: string,
+	remote?: RemoteHostConnection | null,
+): Promise<void> {
+	await getDocker(remote).getContainer(containerId).stop();
+	logger.info(`Container stopped: ${containerId}`);
+}
+
+export async function restartContainer(
+	containerId: string,
+	remote?: RemoteHostConnection | null,
+): Promise<void> {
+	await getDocker(remote).getContainer(containerId).restart();
+	logger.info(`Container restarted: ${containerId}`);
+}
+
+export async function removeContainer(
+	containerId: string,
+	opts?: { force?: boolean },
+	remote?: RemoteHostConnection | null,
+): Promise<void> {
+	await getDocker(remote)
+		.getContainer(containerId)
+		.remove({ force: opts?.force ?? true });
+	logger.info(`Container removed: ${containerId}`);
+}
+
+/** Inspects a container's live Docker state and maps it to our status enum. */
+export async function inspectStatus(
+	containerId: string,
+	remote?: RemoteHostConnection | null,
+): Promise<ContainerStatus> {
+	try {
+		const info = await getDocker(remote).getContainer(containerId).inspect();
+		const status = info.State.Status;
+
+		if (status === "running") {
+			return "running";
+		}
+		if (status === "created" || status === "restarting") {
+			return "starting";
+		}
+		if (status === "exited" || status === "dead") {
+			return info.State.ExitCode === 0 ? "stopped" : "failed";
+		}
+		return "stopped";
+	} catch {
+		// Container doesn't exist (e.g. removed out-of-band) — treat as failed
+		// so it's visibly wrong in the UI rather than silently stale.
+		return "failed";
+	}
+}
+
+/** Streams a container's combined stdout/stderr as a web ReadableStream. */
+export async function streamLogs(
+	containerId: string,
+	// follow is always true — this function only supports live-tailing
+	// (dockerode's `follow: false` shape resolves to a Buffer, not a
+	// stream, which doesn't fit this function's return type).
+	opts?: { tail?: number; follow?: true },
+	remote?: RemoteHostConnection | null,
+): Promise<ReadableStream<Uint8Array>> {
+	const container = getDocker(remote).getContainer(containerId);
+	// dockerode's NodeJS.ReadableStream return type is the old vestigial
+	// "streams2" interface (no `destroy`), but the actual object is a real
+	// Node Readable (from the underlying HTTP response) which does have one.
+	const nodeStream = (await container.logs({
+		follow: true,
+		stderr: true,
+		stdout: true,
+		tail: opts?.tail ?? 200,
+	})) as NodeJS.ReadableStream & { destroy: () => void };
+
+	return new ReadableStream<Uint8Array>({
+		cancel() {
+			nodeStream.destroy();
+		},
+		start(controller) {
+			nodeStream.on("data", (chunk: Buffer) => {
+				controller.enqueue(new Uint8Array(chunk));
+			});
+			nodeStream.on("end", () => controller.close());
+			nodeStream.on("error", (err: Error) => controller.error(err));
+		},
+	});
+}
+
+/**
+ * Lists only containers this app created (filtered on MANAGED_LABEL).
+ * This app must never enumerate, inspect side effects on, or remove
+ * containers on the host that it didn't create.
+ */
+export function listManagedContainers() {
+	return getDocker().listContainers({
+		all: true,
+		filters: JSON.stringify({ label: [`${MANAGED_LABEL}=true`] }),
+	});
+}

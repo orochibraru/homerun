@@ -1,7 +1,7 @@
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
-import { runSetupChecks, SETUP_CHECK_FIELDS } from "$lib/server/setup-checks";
-import { getSystemStats } from "$lib/server/system-stats";
+import { AdminService } from "$lib/services/admin.service";
+import { SystemStatsService } from "$lib/services/system-stats.service";
 
 export const load = async ({ parent }) => {
 	// (protected)/+layout.server.ts already redirects unauthenticated users
@@ -12,18 +12,20 @@ export const load = async ({ parent }) => {
 		await Promise.all([
 			ServiceDTO.list(user.id),
 			DeploymentDTO.listRecentForUser(user.id),
-			getSystemStats(),
-			runSetupChecks(),
+			SystemStatsService.getSystemStats(),
+			AdminService.runSetupChecks(),
 		]);
 
 	const setupIssues = setupChecks.filter((c) => c.severity !== "ok");
 
 	return {
 		// Which /settings fields to deep-link + highlight for the current
-		// issues — see SETUP_CHECK_FIELDS's docstring for why not every issue
+		// issues — see AdminService.SETUP_CHECK_FIELDS's docstring for why not every issue
 		// maps to a field.
 		highlightFields: [
-			...new Set(setupIssues.flatMap((c) => SETUP_CHECK_FIELDS[c.id] ?? [])),
+			...new Set(
+				setupIssues.flatMap((c) => AdminService.SETUP_CHECK_FIELDS[c.id] ?? []),
+			),
 		],
 		recentDeployments: recentDeployments.map((r) => ({
 			...r.deployment.toJSON(),

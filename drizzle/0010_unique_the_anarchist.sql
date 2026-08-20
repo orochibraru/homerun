@@ -1,1 +1,0 @@
-ALTER TABLE `service` ADD `auth_required` integer DEFAULT false NOT NULL;

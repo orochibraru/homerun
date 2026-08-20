@@ -14,13 +14,13 @@ own real, tested footguns, several of which this file cross-references.
 
 ## Non-negotiable safety rules
 
-1. **Never touch the maintainer's real account, `database.db`, or an
-   already-running `bun run dev` session.** This suite is wired for
+1. **Never touch the maintainer's real account, their Postgres database, or
+   an already-running `bun run dev` session.** This suite is wired for
    isolation:
    - `playwright.config.ts`'s `webServer.command` runs
      `NODE_ENV=test bun run dev`, which makes Bun load `.env.test`
-     (`DB_PATH=./e2e-test.db`) — a disposable SQLite file, never the real
-     one.
+     (`DATABASE_URL` pointing at a separate `homerun_test` database) — a
+     disposable Postgres database, never the real one.
    - `reuseExistingServer: false` — Playwright always launches its own
      instance rather than silently attaching to whatever's already on
      :5173. **If that fails with `EADDRINUSE`, the maintainer likely has

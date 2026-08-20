@@ -1,5 +1,5 @@
 import { json } from "@sveltejs/kit";
-import { checkImageExists } from "$lib/server/docker/registry";
+import { ApiService } from "$lib/services/api.service";
 
 /**
  * Checked from the create/settings forms as the user fills in image/tag —
@@ -37,6 +37,11 @@ export const POST = async ({ request, locals }) => {
 		? { password: registryPassword, username: registryUsername }
 		: undefined;
 
-	const result = await checkImageExists(image, tag, registryUrl, auth);
+	const result = await ApiService.checkImageExists(
+		image,
+		tag,
+		registryUrl,
+		auth,
+	);
 	return json(result);
 };

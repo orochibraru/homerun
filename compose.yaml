@@ -1,13 +1,15 @@
-# Traefik bootstrap for Homerun's deployed services.
+# Traefik + Postgres bootstrap for Homerun.
 #
 # This app itself is NOT containerized yet — run it directly on the host
 # (`bun run dev` / `bun run start`) with DOCKER_NETWORK_NAME=homerun-network
 # and access to /var/run/docker.sock. Traefik auto-discovers containers this
-# app creates via Docker labels (see src/lib/server/docker/labels.ts) — no
-# control-plane push needed.
+# app creates via Docker labels (see src/lib/services/docker/labels.ts) — no
+# control-plane push needed. Postgres is required — there's no SQLite
+# fallback (see CLAUDE.md's "SQLite → Postgres conversion" note).
 #
 # No-compose fallback: `docker network create homerun-network`, then run
-# Traefik standalone with the same command flags as below.
+# Traefik standalone with the same command flags as below, and Postgres
+# standalone (or point DATABASE_URL at any Postgres you already run).
 services:
   traefik:
     image: traefik:v3
@@ -23,7 +25,7 @@ services:
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
       # Opt-in: only needed for custom SSL certificates (see the service
-      # Networking tab and $lib/server/docker/custom-ssl.ts). Uncomment
+      # Networking tab and $lib/services/docker/custom-ssl.ts). Uncomment
       # this line, set TRAEFIK_DYNAMIC_CONFIG_DIR to the same host path
       # as the bind mount below, and `docker compose up -d` to pick it
       # up — the app writes cert/key files + per-domain dynamic config
@@ -42,15 +44,42 @@ services:
     networks:
       - homerun-network
 
+  # The app's own database — not a deployed service, so it deliberately
+  # doesn't go through the Docker layer above (no homerun.managed label, not
+  # attached to homerun-network, not Traefik-routed). Match DATABASE_URL to
+  # whatever POSTGRES_USER/PASSWORD/DB you set here (defaults line up with
+  # $lib/config.ts's own default, so this works with zero .env changes for
+  # local dev). Published on the host port so `bun run dev` (running
+  # directly on the host, not in this compose file — see the top comment)
+  # can reach it.
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-homerun}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homerun}
+      POSTGRES_USER: ${POSTGRES_USER:-homerun}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      interval: 5s
+      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homerun}"]
+      timeout: 5s
+
 networks:
   # external: true — this network is a shared resource, not compose-owned.
-  # The app's own Docker layer (src/lib/server/docker/service.ts) attaches
-  # deployed containers to it directly by name, and it must survive a
-  # `docker compose down` without taking those containers' routing with it.
+  # The app's own Docker layer (src/lib/services/docker/containers.ts)
+  # attaches deployed containers to it directly by name, and it must
+  # survive a `docker compose down` without taking those containers'
+  # routing with it.
   # Create it once with: docker network create homerun-network
   homerun-network:
     name: homerun-network
     external: true
 
 volumes:
+  postgres-data: {}
   traefik-certs: {}

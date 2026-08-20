@@ -1,1 +1,0 @@
-ALTER TABLE `service` ADD `dns_resolvable` integer DEFAULT true NOT NULL;

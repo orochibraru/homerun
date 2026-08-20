@@ -3,11 +3,10 @@ import { resolve } from "$app/paths";
 import { config, isSmtpEnabled } from "$lib/config";
 import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { Logger } from "$lib/logger";
-import { auth } from "$lib/server/auth";
 import type { UserRole } from "$lib/server/db/schema.js";
-import { Email } from "$lib/server/email";
-import { cleanupUserResources } from "$lib/server/user-cleanup";
-import { countAdmins, listUsers } from "$lib/server/user-directory";
+import { auth } from "$lib/services/auth";
+import { EmailService } from "$lib/services/email.service";
+import { UserService } from "$lib/services/user.service";
 
 const logger = new Logger("Users");
 
@@ -19,7 +18,7 @@ export const load = async ({ locals }) => {
 	}
 
 	const [users, invites] = await Promise.all([
-		listUsers(),
+		UserService.listUsers(),
 		InvitationDTO.listPending(),
 	]);
 
@@ -33,11 +32,11 @@ export const load = async ({ locals }) => {
 
 /** Refuses to strip admin-ness from the only remaining admin — mirrors better-auth's own "can't remove yourself" guard on admin.removeUser, but for the case that action doesn't cover. */
 async function wouldRemoveLastAdmin(userId: string): Promise<boolean> {
-	const target = (await listUsers()).find((u) => u.id === userId);
+	const target = (await UserService.listUsers()).find((u) => u.id === userId);
 	if (target?.role !== "admin") {
 		return false;
 	}
-	return (await countAdmins()) <= 1;
+	return (await UserService.countAdmins()) <= 1;
 }
 
 export const actions = {
@@ -140,7 +139,7 @@ export const actions = {
 			return fail(400, { action: "invite", error: "Invalid role." });
 		}
 
-		const existing = await listUsers();
+		const existing = await UserService.listUsers();
 		if (existing.some((u) => u.email === email)) {
 			return fail(400, {
 				action: "invite",
@@ -156,7 +155,7 @@ export const actions = {
 		const link = `${config.auth.origin}/auth/accept-invite/${invitation.toJSON().token}`;
 
 		try {
-			const mail = new Email({
+			const mail = new EmailService({
 				content: `${name}, you've been invited to Homerun as a ${role}.\n\nSet up your account: ${link}\n\nThis link expires in 7 days.`,
 				subject: "You've been invited to Homerun",
 				to: email,
@@ -201,10 +200,10 @@ export const actions = {
 			});
 		}
 
-		// See user-cleanup.ts's docstring — admin.removeUser alone would leak
+		// See user.service.ts's docstring — admin.removeUser alone would leak
 		// this user's containers/networks, so the same cleanup self-service
 		// account deletion gets has to run first.
-		await cleanupUserResources(userId);
+		await UserService.cleanupUserResources(userId);
 		await auth.api.removeUser({ body: { userId }, headers: request.headers });
 
 		logger.info(`User removed: user=${userId} by=${locals.user.id}`);

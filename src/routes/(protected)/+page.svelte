@@ -13,7 +13,7 @@
 	import { resolve } from "$app/paths";
 	import { Button } from "$lib/components/ui/button";
 	import { timeAgo } from "$lib/formatting";
-	import type { SystemStats } from "$lib/server/system-stats";
+	import type { SystemStats } from "$lib/services/system-stats.service";
 	import { title } from "$lib/store/title";
 
 	const { data } = $props();

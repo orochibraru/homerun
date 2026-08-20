@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import {
+	type GitProviderConfig,
+	type GitProviderKind,
 	type InstanceOauthProvider,
 	type InstanceSettings,
 	instanceSettings,
 } from "$lib/server/db/schema";
-import { decryptSecret, encryptSecret } from "$lib/server/docker/secrets";
+import { decryptSecret, encryptSecret } from "$lib/services/secrets";
 import { BaseDTO } from "./base-dto";
 
 /** Fixed id — this table only ever holds one row. */
@@ -29,6 +31,13 @@ export interface InstanceSettingsTraefikInput {
 	traefikEntrypoint: string | null;
 }
 
+export interface InstanceSettingsAutoscaleInput {
+	autoscaleCpuThresholdPercent: number;
+	autoscaleEnabled: boolean;
+	autoscaleMemoryThresholdPercent: number;
+	autoscaleOverflowRemoteHostId: string | null;
+}
+
 export interface InstanceSettingsSmtpInput {
 	smtpEnabled: boolean | null;
 	smtpFrom: string | null;
@@ -38,6 +47,18 @@ export interface InstanceSettingsSmtpInput {
 	smtpPort: number | null;
 	smtpSecure: boolean | null;
 	smtpUser: string | null;
+}
+
+/** A git provider row coming off the Git Providers form — plaintext secret, blank means "keep existing" on an edit. */
+export interface GitProviderInput {
+	baseUrl?: string | null;
+	clientId: string;
+	clientSecret?: string;
+	enabled: boolean;
+	/** Present when editing an existing provider; absent when adding a new one. */
+	id?: string;
+	kind: GitProviderKind;
+	name: string;
 }
 
 /** A provider row coming off the settings form — plaintext secret, blank means "keep existing". */
@@ -103,10 +124,15 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			authCheckUrl: null,
 			authCrossSubdomainCookies: null,
 			authOrigin: null,
+			autoscaleCpuThresholdPercent: 80,
+			autoscaleEnabled: false,
+			autoscaleMemoryThresholdPercent: 80,
+			autoscaleOverflowRemoteHostId: null,
 			baseDomain: null,
 			createdAt: now,
 			dockerNetworkName: null,
 			dockerSocketPath: null,
+			gitProviders: [],
 			id: SINGLETON_ID,
 			oauthProviders: [],
 			onboardingCompletedAt: null,
@@ -143,6 +169,19 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		await this.persist(input);
 	}
 
+	get autoscale(): InstanceSettingsAutoscaleInput {
+		return {
+			autoscaleCpuThresholdPercent: this.row.autoscaleCpuThresholdPercent,
+			autoscaleEnabled: this.row.autoscaleEnabled,
+			autoscaleMemoryThresholdPercent: this.row.autoscaleMemoryThresholdPercent,
+			autoscaleOverflowRemoteHostId: this.row.autoscaleOverflowRemoteHostId,
+		};
+	}
+
+	async updateAutoscale(input: InstanceSettingsAutoscaleInput): Promise<void> {
+		await this.persist(input);
+	}
+
 	async updateTraefik(input: InstanceSettingsTraefikInput): Promise<void> {
 		await this.persist(input);
 	}
@@ -156,6 +195,26 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			// with nothing just because the admin didn't retype it).
 			...(smtpPassword ? { smtpPasswordEnc: encryptSecret(smtpPassword) } : {}),
 		});
+	}
+
+	get gitProviders(): GitProviderConfig[] {
+		return this.row.gitProviders;
+	}
+
+	async updateGitProviders(providers: GitProviderInput[]): Promise<void> {
+		const existingById = new Map(this.row.gitProviders.map((p) => [p.id, p]));
+		const rows: GitProviderConfig[] = providers.map((p) => ({
+			baseUrl: p.baseUrl?.trim() || null,
+			clientId: p.clientId,
+			clientSecretEnc: p.clientSecret
+				? encryptSecret(p.clientSecret)
+				: (existingById.get(p.id ?? "")?.clientSecretEnc ?? ""),
+			enabled: p.enabled,
+			id: p.id ?? crypto.randomUUID(),
+			kind: p.kind,
+			name: p.name,
+		}));
+		await this.persist({ gitProviders: rows });
 	}
 
 	async updateOauthProviders(providers: OauthProviderInput[]): Promise<void> {
