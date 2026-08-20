@@ -6,7 +6,8 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { signIn, useSession } from "$lib/auth-client";
-  import AuthBrandingPanel from "$lib/components/auth-branding-panel.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import { title } from "$lib/store/title";
 
   const session = useSession();
@@ -24,9 +25,6 @@
   let password = $state("");
   let loading = $state(false);
   let showPassword = $state(false);
-
-  const inputClass =
-    "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
   async function handleSignIn(e: SubmitEvent) {
     e.preventDefault();
@@ -52,11 +50,9 @@
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
-  <AuthBrandingPanel />
-
   <!-- ── Right panel ──────────────────────────────────────────────── -->
   <div
-    class="flex flex-1 flex-col items-center justify-center bg-[var(--color-bg)] px-6 py-10 sm:px-10"
+    class="flex flex-1 flex-col items-center justify-center bg-bg px-6 py-10 sm:px-10"
   >
     <!-- Mobile-only logo -->
     <div class="mb-8 text-center lg:hidden">
@@ -87,16 +83,15 @@
           <label class="text-text mb-1.5 block text-sm font-medium" for="email">
             Email
           </label>
-          <input
+          <Input
             autocomplete="email"
-            class={inputClass}
             disabled={loading}
             id="email"
             placeholder="you@example.com"
             required
             type="email"
             bind:value={email}
-          >
+          />
         </div>
 
         <!-- Password -->
@@ -107,34 +102,37 @@
             </label>
           </div>
           <div class="relative">
-            <input
+            <Input
               autocomplete="current-password"
-              class="{inputClass} pr-12"
+              class="pr-12"
               disabled={loading}
               id="password"
               placeholder="••••••••••••"
               required
               type={showPassword ? "text" : "password"}
               bind:value={password}
-            >
-            <button
+            />
+            <Button
               aria-label={showPassword ? "Hide password" : "Show password"}
-              class="text-text-muted hover:text-text absolute top-1/2 right-3.5 -translate-y-1/2 transition-colors"
-              onclick={() => { showPassword = !showPassword; }}
-              type="button"
+              class="absolute top-1/2 right-1.5 -translate-y-1/2"
+              onclick={() => {
+                showPassword = !showPassword;
+              }}
+              size="icon-sm"
+              variant="ghost"
             >
               {#if showPassword}
                 <EyeOff class="size-4" />
               {:else}
                 <Eye class="size-4" />
               {/if}
-            </button>
+            </Button>
           </div>
         </div>
 
         <!-- Submit -->
-        <button
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+        <Button
+          class="mt-2 w-full"
           disabled={loading || !email || !password}
           type="submit"
         >
@@ -145,7 +143,7 @@
             Sign in
             <span class="opacity-70">→</span>
           {/if}
-        </button>
+        </Button>
       </form>
 
       <p class="mt-6 text-center text-sm text-text-muted">

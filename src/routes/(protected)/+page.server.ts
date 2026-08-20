@@ -1,6 +1,6 @@
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
-import { runSetupChecks } from "$lib/server/setup-checks";
+import { runSetupChecks, SETUP_CHECK_FIELDS } from "$lib/server/setup-checks";
 import { getSystemStats } from "$lib/server/system-stats";
 
 export const load = async ({ parent }) => {
@@ -16,13 +16,21 @@ export const load = async ({ parent }) => {
       runSetupChecks(),
     ]);
 
+  const setupIssues = setupChecks.filter((c) => c.severity !== "ok");
+
   return {
+    // Which /settings fields to deep-link + highlight for the current
+    // issues — see SETUP_CHECK_FIELDS's docstring for why not every issue
+    // maps to a field.
+    highlightFields: [
+      ...new Set(setupIssues.flatMap((c) => SETUP_CHECK_FIELDS[c.id] ?? [])),
+    ],
     recentDeployments: recentDeployments.map((r) => ({
       ...r.deployment.toJSON(),
       serviceName: r.serviceName,
       serviceSlug: r.serviceSlug,
     })),
-    setupIssues: setupChecks.filter((c) => c.severity !== "ok"),
+    setupIssues,
     stats: {
       running: services.filter((s) => s.currentStatus === "running").length,
       totalServices: services.length,

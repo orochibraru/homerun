@@ -13,6 +13,7 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { authClient } from "$lib/auth-client";
+  import { Button } from "$lib/components/ui/button/index.js";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -68,7 +69,7 @@
 </script>
 
 <div
-  class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-[var(--color-bg)] px-4"
+  class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-bg px-4"
 >
   <div class="w-full max-w-lg">
     <!-- ── Main card ──────────────────────────────────────────────── -->
@@ -106,11 +107,10 @@
       </ol>
 
       <!-- Already confirmed? -->
-      <button
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-7 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+      <Button
+        class="mt-7 w-full"
         disabled={checking}
         onclick={checkVerification}
-        type="button"
       >
         {#if checking}
           <Loader2 class="size-4 animate-spin" />
@@ -120,7 +120,7 @@
           I've confirmed my email
           <ArrowRight class="size-4" />
         {/if}
-      </button>
+      </Button>
 
       <!-- Resend -->
       <div class="mt-4">
@@ -132,11 +132,11 @@
             Email sent! Check your spam folder if you don't see it.
           </p>
         {:else}
-          <button
-            class="inline-flex items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-text disabled:opacity-60"
+          <Button
+            class="text-text-muted hover:text-text"
             disabled={resending}
             onclick={resendEmail}
-            type="button"
+            variant="link"
           >
             {#if resending}
               <Loader2 class="size-3.5 animate-spin" />
@@ -145,7 +145,7 @@
               <RefreshCw class="size-3.5" />
               Resend confirmation email
             {/if}
-          </button>
+          </Button>
         {/if}
       </div>
 

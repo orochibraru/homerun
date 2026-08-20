@@ -5,7 +5,8 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { signUp, useSession } from "$lib/auth-client";
-  import AuthBrandingPanel from "$lib/components/auth-branding-panel.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import {
     getPasswordStrength,
     getPasswordStrengthMeta,
@@ -31,8 +32,6 @@
   let showPassword = $state(false);
   let showConfirm = $state(false);
 
-  const inputClass =
-    "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
   const confirmClass = $derived.by(() => {
     if (!confirm) {
       return "";
@@ -78,11 +77,9 @@
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
-  <AuthBrandingPanel />
-
   <!-- ── Right panel ──────────────────────────────────────────────── -->
   <div
-    class="flex flex-1 flex-col items-center justify-center bg-[var(--color-bg)] px-6 py-10 sm:px-10"
+    class="flex flex-1 flex-col items-center justify-center bg-bg px-6 py-10 sm:px-10"
   >
     <!-- Mobile-only logo -->
     <div class="mb-8 text-center lg:hidden">
@@ -113,16 +110,15 @@
           <label class="mb-1.5 block text-sm font-medium text-text" for="name">
             Full name <span class="text-red-500">*</span>
           </label>
-          <input
+          <Input
             autocomplete="name"
-            class={inputClass}
             disabled={loading}
             id="name"
             placeholder="Jane Smith"
             required
             type="text"
             bind:value={name}
-          >
+          />
         </div>
 
         <!-- Email -->
@@ -130,16 +126,15 @@
           <label class="mb-1.5 block text-sm font-medium text-text" for="email">
             Email <span class="text-red-500">*</span>
           </label>
-          <input
+          <Input
             autocomplete="email"
-            class={inputClass}
             disabled={loading}
             id="email"
             placeholder="you@example.com"
             required
             type="email"
             bind:value={email}
-          >
+          />
         </div>
 
         <!-- Password -->
@@ -151,28 +146,31 @@
             Password <span class="text-red-500">*</span>
           </label>
           <div class="relative">
-            <input
+            <Input
               autocomplete="new-password"
-              class="{inputClass} pr-12"
+              class="pr-12"
               disabled={loading}
               id="password"
               placeholder="Min. 12 characters"
               required
               type={showPassword ? "text" : "password"}
               bind:value={password}
-            >
-            <button
+            />
+            <Button
               aria-label={showPassword ? "Hide password" : "Show password"}
-              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted transition-colors hover:text-text"
-              onclick={() => { showPassword = !showPassword; }}
-              type="button"
+              class="absolute top-1/2 right-1.5 -translate-y-1/2"
+              onclick={() => {
+                showPassword = !showPassword;
+              }}
+              size="icon-sm"
+              variant="ghost"
             >
               {#if showPassword}
                 <EyeOff class="size-4" />
               {:else}
                 <Eye class="size-4" />
               {/if}
-            </button>
+            </Button>
           </div>
 
           <!-- Strength meter -->
@@ -205,28 +203,31 @@
             Confirm password <span class="text-red-500">*</span>
           </label>
           <div class="relative">
-            <input
+            <Input
               autocomplete="new-password"
-              class="{inputClass} pr-12 {confirmClass}"
+              class="pr-12 {confirmClass}"
               disabled={loading}
               id="confirm"
               placeholder="Repeat your password"
               required
               type={showConfirm ? "text" : "password"}
               bind:value={confirm}
-            >
-            <button
+            />
+            <Button
               aria-label={showConfirm ? "Hide password" : "Show password"}
-              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted transition-colors hover:text-text"
-              onclick={() => { showConfirm = !showConfirm; }}
-              type="button"
+              class="absolute top-1/2 right-1.5 -translate-y-1/2"
+              onclick={() => {
+                showConfirm = !showConfirm;
+              }}
+              size="icon-sm"
+              variant="ghost"
             >
               {#if showConfirm}
                 <EyeOff class="size-4" />
               {:else}
                 <Eye class="size-4" />
               {/if}
-            </button>
+            </Button>
           </div>
           {#if confirm && confirm !== password}
             <p class="mt-1 text-xs text-red-500">Passwords don't match.</p>
@@ -239,8 +240,8 @@
         </div>
 
         <!-- Submit -->
-        <button
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+        <Button
+          class="mt-2 w-full"
           disabled={loading || !name || !email || !password || !confirm}
           type="submit"
         >
@@ -251,7 +252,7 @@
             Create account
             <span class="opacity-70">→</span>
           {/if}
-        </button>
+        </Button>
       </form>
 
       <p class="mt-6 text-center text-sm text-text-muted">

@@ -2,6 +2,7 @@
   import { Loader2, RefreshCw, Terminal } from "@lucide/svelte";
   import { onDestroy, onMount, tick } from "svelte";
   import { resolve } from "$app/paths";
+  import { Button } from "$lib/components/ui/button/index.js";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -89,15 +90,15 @@
         </span>
       {/if}
     </div>
-    <button
-      class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+    <Button
       disabled={!svc.containerId}
       onclick={reconnect}
-      type="button"
+      size="sm"
+      variant="ghost"
     >
       <RefreshCw class="size-3.5" />
       Reconnect
-    </button>
+    </Button>
   </div>
 
   <div

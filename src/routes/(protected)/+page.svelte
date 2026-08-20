@@ -71,28 +71,38 @@
 
 <div class="p-6 md:p-8">
   <!-- Page header -->
-  <div class="mb-8">
-    <h1 class="text-2xl font-bold text-text">
-      Welcome back, {data.user?.name?.split(" ")[0]} 👋
-    </h1>
-    <p class="mt-1 text-sm text-text-muted">
-      Here's an overview of your deployed services.
-    </p>
+  <div class="mb-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-text">
+        Welcome back, {data.user?.name?.split(" ")[0]} 👋
+      </h1>
+      <p class="mt-1 text-sm text-text-muted">
+        Here's an overview of your deployed services.
+      </p>
+    </div>
+
+    <a
+      class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
+      href={resolve("/services/new")}
+    >
+      <Plus class="size-4" />
+      Deploy a Service
+    </a>
   </div>
 
   {#if data.setupIssues.length > 0}
     <a
       class="mb-8 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm transition-colors hover:bg-amber-100 dark:border-amber-900/40 dark:bg-amber-950/20 dark:hover:bg-amber-950/30"
-      href={resolve("/setup")}
+      href={data.highlightFields.length > 0
+        ? `${resolve("/settings")}?highlight=${data.highlightFields.join(",")}`
+        : resolve("/settings")}
     >
       <AlertTriangle class="size-4 shrink-0 text-amber-600" />
       <span class="flex-1 text-amber-800 dark:text-amber-300">
         {data.setupIssues.length}
         {data.setupIssues.length === 1 ? "setup issue" : "setup issues"}
         found — {data.setupIssues[0].label.toLowerCase()}
-        {data.setupIssues.length > 1
-          ? ", and more"
-          : ""}.
+        {data.setupIssues.length > 1 ? ", and more" : ""}.
       </span>
       <span
         class="shrink-0 font-medium text-amber-700 underline dark:text-amber-400"
@@ -140,7 +150,7 @@
         <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
           <div
             class="h-full rounded-full transition-all duration-500 {barColor(
-              systemStats.cpuPercent
+              systemStats.cpuPercent,
             )}"
             style="width: {systemStats.cpuPercent}%"
           ></div>
@@ -156,21 +166,16 @@
           <span class="font-mono text-text-subtle">
             {(systemStats.memUsedMb / 1024).toFixed(1)}
             /
-            {(
-              systemStats.memTotalMb / 1024
-            ).toFixed(1)}
+            {(systemStats.memTotalMb / 1024).toFixed(1)}
             GB
           </span>
         </div>
         <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
           <div
             class="h-full rounded-full transition-all duration-500 {barColor(
-              pct(systemStats.memUsedMb, systemStats.memTotalMb)
+              pct(systemStats.memUsedMb, systemStats.memTotalMb),
             )}"
-            style="width: {pct(
-              systemStats.memUsedMb,
-              systemStats.memTotalMb
-            )}%"
+            style="width: {pct(systemStats.memUsedMb, systemStats.memTotalMb)}%"
           ></div>
         </div>
       </div>
@@ -185,9 +190,7 @@
             {#if systemStats.diskUsedGb !== null && systemStats.diskTotalGb !== null}
               {systemStats.diskUsedGb.toFixed(0)}
               /
-              {systemStats.diskTotalGb.toFixed(
-                0
-              )}
+              {systemStats.diskTotalGb.toFixed(0)}
               GB
             {:else}
               unavailable
@@ -197,11 +200,11 @@
         <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
           <div
             class="h-full rounded-full transition-all duration-500 {barColor(
-              pct(systemStats.diskUsedGb ?? 0, systemStats.diskTotalGb ?? 0)
+              pct(systemStats.diskUsedGb ?? 0, systemStats.diskTotalGb ?? 0),
             )}"
             style="width: {pct(
               systemStats.diskUsedGb ?? 0,
-              systemStats.diskTotalGb ?? 0
+              systemStats.diskTotalGb ?? 0,
             )}%"
           ></div>
         </div>
@@ -218,16 +221,14 @@
             {systemStats.gpu.utilizationPercent}% ·
             {(systemStats.gpu.memUsedMb / 1024).toFixed(1)}
             /
-            {(
-              systemStats.gpu.memTotalMb / 1024
-            ).toFixed(1)}
+            {(systemStats.gpu.memTotalMb / 1024).toFixed(1)}
             GB
           </span>
         </div>
         <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
           <div
             class="h-full rounded-full transition-all duration-500 {barColor(
-              systemStats.gpu.utilizationPercent
+              systemStats.gpu.utilizationPercent,
             )}"
             style="width: {systemStats.gpu.utilizationPercent}%"
           ></div>

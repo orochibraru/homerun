@@ -19,6 +19,7 @@
   import { resolve } from "$app/paths";
   import { page } from "$app/state";
   import { signOut } from "$lib/auth-client";
+  import { Button } from "$lib/components/ui/button/index.js";
 
   const { data, children } = $props();
 
@@ -60,6 +61,12 @@
       href: resolve("/remote-hosts"),
       icon: Network,
       label: "Remote Hosts",
+    },
+    {
+      exact: false,
+      href: resolve("/settings"),
+      icon: Settings,
+      label: "Settings",
     },
     {
       exact: false,
@@ -164,14 +171,14 @@
           </p>
         </div>
       </a>
-      <button
-        class="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-red-500 transition-all duration-200 hover:bg-red-500/10"
+      <Button
+        class="mt-1 w-full justify-start gap-2.5 text-xs text-red-500 hover:bg-red-500/10 hover:text-red-500"
         onclick={handleSignOut}
-        type="button"
+        variant="ghost"
       >
         <LogOut class="size-3.5" />
         Sign out
-      </button>
+      </Button>
     </div>
   </aside>
 
@@ -257,20 +264,20 @@
     <div
       class="border-border bg-surface flex h-12 shrink-0 items-center gap-3 border-b px-4 md:hidden"
     >
-      <button
+      <Button
         aria-label="Toggle sidebar"
-        class="text-text-muted hover:bg-surface-2 hover:text-text rounded-lg p-1.5 transition-all"
         onclick={() => {
           sidebarOpen = !sidebarOpen;
         }}
-        type="button"
+        size="icon-sm"
+        variant="ghost"
       >
         {#if sidebarOpen}
           <X class="size-5" />
         {:else}
           <Menu class="size-5" />
         {/if}
-      </button>
+      </Button>
       <span class="text-sm font-medium text-text">
         {mobileTitle}
       </span>

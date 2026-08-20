@@ -4,14 +4,15 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
   const { form } = $props();
 
   onMount(() => title.set("New Volume"));
 
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
   const label = "block mb-1.5 text-sm font-medium text-text";
 
   let submitting = $state(false);
@@ -53,14 +54,13 @@
       <label class={label} for="name">
         Name <span class="text-red-500">*</span>
       </label>
-      <input
-        class={input}
+      <Input
         id="name"
         name="name"
         placeholder="e.g. Media library"
         required
         type="text"
-      >
+      />
     </div>
 
     <div>
@@ -104,14 +104,14 @@
         {kind === "bind" ? "Host path" : "Volume name"}
         <span class="text-red-500">*</span>
       </label>
-      <input
-        class="{input} font-mono"
+      <Input
+        class="font-mono"
         id="source"
         name="source"
         placeholder={kind === "bind" ? "/mnt/data/media" : "localrun-media"}
         required
         type="text"
-      >
+      />
       <p class="mt-1 text-xs text-text-subtle">
         {#if kind === "bind"}
           An absolute directory on this host — created automatically if it
@@ -124,27 +124,18 @@
 
     <div>
       <label class={label} for="description">Description</label>
-      <textarea
-        class="{input} resize-none"
+      <Textarea
+        class="resize-none"
         id="description"
         name="description"
         placeholder="Optional"
-        rows="2"
-      ></textarea>
+        rows={2}
+      />
     </div>
 
     <div class="flex justify-end gap-3">
-      <a
-        class="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
-        href={resolve("/storage")}
-      >
-        Cancel
-      </a>
-      <button
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={submitting}
-        type="submit"
-      >
+      <Button href={resolve("/storage")} variant="outline">Cancel</Button>
+      <Button disabled={submitting} type="submit">
         {#if submitting}
           <Loader2 class="size-4 animate-spin" />
           Creating…
@@ -152,7 +143,7 @@
           <Check class="size-4" />
           Create volume
         {/if}
-      </button>
+      </Button>
     </div>
   </form>
 </div>

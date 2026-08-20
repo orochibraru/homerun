@@ -4,6 +4,9 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import CheckBox from "$lib/components/check-box.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import { timeAgo } from "$lib/formatting";
   import { title } from "$lib/store/title";
 
@@ -12,8 +15,6 @@
 
   onMount(() => title.set(`${vol.name} · Backup`));
 
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
   const label = "block mb-1.5 text-sm font-medium text-text";
 
   let submitting = $state(false);
@@ -85,111 +86,100 @@
           <p class="text-xs text-red-500">{form.error}</p>
         {/if}
 
-        <label class="flex items-center gap-2 text-sm text-text">
-          <input
-            checked={vol.backupEnabled}
-            name="backupEnabled"
-            type="checkbox"
-          >
-          Enable scheduled backups
-        </label>
+        <CheckBox
+          checked={vol.backupEnabled}
+          helperText="Tar this directory and upload it to the S3 destination below on schedule"
+          id="backupEnabled"
+          label="Enable scheduled backups"
+          name="backupEnabled"
+        />
 
         <div>
           <label class={label} for="backupSchedule"
             >Schedule (cron syntax)</label
           >
-          <input
-            class="{input} font-mono"
+          <Input
+            class="font-mono"
             id="backupSchedule"
             name="backupSchedule"
             placeholder="0 3 * * *"
             type="text"
             value={vol.backupSchedule ?? ""}
-          >
+          />
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
             <label class={label} for="backupEndpoint">Endpoint</label>
-            <input
-              class={input}
+            <Input
               id="backupEndpoint"
               name="backupEndpoint"
               placeholder="https://s3.us-east-1.amazonaws.com"
               type="text"
               value={vol.backupEndpoint ?? ""}
-            >
+            />
           </div>
           <div>
             <label class={label} for="backupBucket">Bucket</label>
-            <input
-              class={input}
+            <Input
               id="backupBucket"
               name="backupBucket"
               type="text"
               value={vol.backupBucket ?? ""}
-            >
+            />
           </div>
           <div>
             <label class={label} for="backupRegion">Region</label>
-            <input
-              class={input}
+            <Input
               id="backupRegion"
               name="backupRegion"
               placeholder="us-east-1"
               type="text"
               value={vol.backupRegion ?? ""}
-            >
+            />
           </div>
           <div>
             <label class={label} for="backupPrefix"
               >Key prefix (optional)</label
             >
-            <input
-              class={input}
+            <Input
               id="backupPrefix"
               name="backupPrefix"
               placeholder="backups/my-app"
               type="text"
               value={vol.backupPrefix ?? ""}
-            >
+            />
           </div>
           <div>
             <label class={label} for="backupAccessKeyId">Access key ID</label>
-            <input
-              class={input}
+            <Input
               id="backupAccessKeyId"
               name="backupAccessKeyId"
               type="text"
               value={vol.backupAccessKeyId ?? ""}
-            >
+            />
           </div>
           <div>
             <label class={label} for="backupSecretAccessKey"
               >Secret access key</label
             >
-            <input
-              class={input}
+            <Input
               id="backupSecretAccessKey"
               name="backupSecretAccessKey"
               placeholder={vol.backupAccessKeyId ? "Unchanged" : ""}
               type="password"
-            >
+            />
           </div>
         </div>
 
-        <button
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={submitting}
-          type="submit"
-        >
+        <Button disabled={submitting} type="submit">
           {#if submitting}
             <Loader2 class="size-4 animate-spin" />
           {:else}
             <Check class="size-4" />
           {/if}
           Save
-        </button>
+        </Button>
       </form>
     </section>
 
@@ -209,10 +199,10 @@
         };
       }}
     >
-      <button
-        class="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
+      <Button
         disabled={backingUp || !vol.backupEndpoint}
         type="submit"
+        variant="outline"
       >
         {#if backingUp}
           <Loader2 class="size-4 animate-spin" />
@@ -221,7 +211,7 @@
           <CloudUpload class="size-4" />
           Backup now
         {/if}
-      </button>
+      </Button>
     </form>
   {/if}
 </div>

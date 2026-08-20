@@ -9,15 +9,14 @@
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
   const svc = $derived(data.service);
 
   onMount(() => title.set(`${svc.name} · Env Vars`));
-
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] font-mono";
 
   interface EnvRow {
     key: string;
@@ -81,46 +80,39 @@
   >
     {#each envRows as row, i}
       <div class="flex items-center gap-2">
-        <input
-          class={input}
+        <Input
+          class="font-mono"
           name="envKey"
           placeholder="KEY"
           type="text"
           bind:value={row.key}
-        >
-        <input
-          class={input}
+        />
+        <Input
+          class="font-mono"
           name="envValue"
           placeholder="value"
           type="text"
           bind:value={row.value}
-        >
-        <button
+        />
+        <Button
           aria-label="Remove"
-          class="shrink-0 rounded-lg p-2 text-red-500 transition-all hover:bg-red-500/10"
+          class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
           onclick={() => removeRow(i)}
-          type="button"
+          size="icon-sm"
+          variant="ghost"
         >
           <Trash2 class="size-4" />
-        </button>
+        </Button>
       </div>
     {/each}
 
-    <button
-      class="text-accent mt-1 flex items-center gap-1.5 text-sm font-medium hover:underline"
-      onclick={addRow}
-      type="button"
-    >
+    <Button class="mt-1 h-auto p-0" onclick={addRow} variant="link">
       <Plus class="size-3.5" />
       Add variable
-    </button>
+    </Button>
 
     <div class="flex justify-end pt-2">
-      <button
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={submitting}
-        type="submit"
-      >
+      <Button disabled={submitting} type="submit">
         {#if submitting}
           <Loader2 class="size-4 animate-spin" />
           Saving…
@@ -128,7 +120,7 @@
           <Check class="size-4" />
           Save
         {/if}
-      </button>
+      </Button>
     </div>
   </form>
 </section>

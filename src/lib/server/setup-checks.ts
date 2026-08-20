@@ -11,12 +11,28 @@ export interface SetupCheck {
 }
 
 /**
- * Lightweight diagnostics for "is this instance actually configured", not
- * a live-editable settings store — config here stays env-var driven by
- * design (see $lib/config.ts). Surfaced as a dashboard banner + a
- * dedicated /setup page linking each finding back to the env var that
- * fixes it, rather than a DNS/SSL-provider automation flow (out of scope
- * here — see TODO.md's Onboarding section for the larger version of this).
+ * Maps a check's id to the `/settings` field id(s) it corresponds to, so the
+ * dashboard banner can deep-link straight to (and highlight) the offending
+ * field instead of just linking to the page in general. "auth-secret" (env
+ * only, no /settings field) and "traefik" (a live container check, not a
+ * form input) are deliberately absent — nothing to highlight for either.
+ */
+export const SETUP_CHECK_FIELDS: Record<string, string[]> = {
+  "base-domain": ["baseDomain"],
+  docker: ["dockerSocketPath"],
+  origin: ["authOrigin"],
+  smtp: ["smtpHost", "smtpPort", "smtpUser", "smtpPassword", "smtpFrom"],
+};
+
+/**
+ * Lightweight diagnostics for "is this instance actually configured".
+ * `config` here already reflects DB-backed instance settings merged over
+ * env defaults (see $lib/config.ts's applyInstanceSettings() and the
+ * /settings page) — these checks just report the effective value, they
+ * don't care which layer it came from. `envVar` is still worth showing:
+ * it's the env-var equivalent for anyone bootstrapping via docker-compose
+ * before ever visiting /settings. Still no DNS/SSL-provider automation
+ * flow — out of scope here, see TODO.md's Onboarding section.
  */
 export async function runSetupChecks(): Promise<SetupCheck[]> {
   const checks: SetupCheck[] = [];
@@ -25,7 +41,7 @@ export async function runSetupChecks(): Promise<SetupCheck[]> {
     config.baseDomain === "localhost"
       ? {
           detail:
-            "Deployed services will only be reachable at <slug>.localhost from this machine — set a real domain for public routing.",
+            "Deployed services will only be reachable at <slug>.localhost from this machine — set a real domain for public routing (env var below, or the Core section of /settings).",
           envVar: "BASE_DOMAIN",
           id: "base-domain",
           label: "Base domain",
@@ -61,7 +77,7 @@ export async function runSetupChecks(): Promise<SetupCheck[]> {
     config.auth.origin === "http://localhost:3000"
       ? {
           detail:
-            "Using the default origin — auth callbacks/redirects may misbehave once this isn't served from localhost:3000.",
+            "Using the default origin — auth callbacks/redirects may misbehave once this isn't served from localhost:3000 (env var below, or the Core section of /settings).",
           envVar: "ORIGIN",
           id: "origin",
           label: "Origin URL",
@@ -106,7 +122,7 @@ export async function runSetupChecks(): Promise<SetupCheck[]> {
           severity: "ok",
         }
       : {
-          detail: `Couldn't reach the Docker socket at ${config.docker.socketPath} — nothing will deploy until this is fixed.`,
+          detail: `Couldn't reach the Docker socket at ${config.docker.socketPath} — nothing will deploy until this is fixed (env var below, or the Docker section of /settings).`,
           envVar: "DOCKER_SOCKET_PATH",
           id: "docker",
           label: "Docker socket",
@@ -125,7 +141,7 @@ export async function runSetupChecks(): Promise<SetupCheck[]> {
           }
         : {
             detail:
-              "SMTP_ENABLED is true but one or more of SMTP_HOST/PORT/USER/PASSWORD/FROM is missing — email verification won't work.",
+              "SMTP is enabled but one or more of host/port/user/password/from is missing — email verification won't work (env vars below, or the SMTP section of /settings).",
             envVar:
               "SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM",
             id: "smtp",

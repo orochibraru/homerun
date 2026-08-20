@@ -4,18 +4,38 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import {
+    SelectContent,
+    SelectItem,
+    Select as SelectRoot,
+    SelectTrigger,
+  } from "$lib/components/ui/select/index.js";
+  import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
   const { form } = $props();
 
   onMount(() => title.set("New Template"));
 
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
   const label = "block mb-1.5 text-sm font-medium text-text";
   const errorClass = "mt-1.5 text-xs text-red-500";
   const values = $derived(form?.values as Record<string, string> | undefined);
   const errors = $derived(form?.errors as Record<string, string[]> | undefined);
+
+  const categoryOptions = [
+    { label: "None", value: "" },
+    { label: "Database", value: "database" },
+    { label: "Cache", value: "cache" },
+    { label: "Monitoring", value: "monitoring" },
+    { label: "Automation", value: "automation" },
+    { label: "Other", value: "other" },
+  ];
+  let category = $state(values?.category ?? "");
+  const categoryLabel = $derived(
+    categoryOptions.find((c) => c.value === category)?.label ?? "None"
+  );
 
   let submitting = $state(false);
 
@@ -75,15 +95,14 @@
           <label class={label} for="name">
             Name <span class="text-red-500">*</span>
           </label>
-          <input
-            class={input}
+          <Input
             id="name"
             name="name"
             placeholder="My stack"
             required
             type="text"
             value={values?.name ?? ""}
-          >
+          />
           {#if errors?.name}
             <p class={errorClass}>{errors.name[0]}</p>
           {/if}
@@ -91,27 +110,29 @@
 
         <div>
           <label class={label} for="description">Description</label>
-          <textarea
-            class="{input} resize-none"
+          <Textarea
+            class="resize-none"
             id="description"
             name="description"
             placeholder="Optional"
-            rows="2"
+            rows={2}
           >
             {values?.description ?? ""}
-          </textarea>
+          </Textarea>
         </div>
 
         <div>
           <label class={label} for="category">Category</label>
-          <select class={input} id="category" name="category">
-            <option value="">None</option>
-            <option value="database">Database</option>
-            <option value="cache">Cache</option>
-            <option value="monitoring">Monitoring</option>
-            <option value="automation">Automation</option>
-            <option value="other">Other</option>
-          </select>
+          <SelectRoot name="category" type="single" bind:value={category}>
+            <SelectTrigger class="w-full" id="category">
+              {categoryLabel}
+            </SelectTrigger>
+            <SelectContent>
+              {#each categoryOptions as opt (opt.value)}
+                <SelectItem label={opt.label} value={opt.value} />
+              {/each}
+            </SelectContent>
+          </SelectRoot>
         </div>
 
         <div class="grid grid-cols-3 gap-3">
@@ -119,29 +140,27 @@
             <label class={label} for="image">
               Image <span class="text-red-500">*</span>
             </label>
-            <input
-              class={input}
+            <Input
               id="image"
               name="image"
               placeholder="ghcr.io/acme/api"
               required
               type="text"
               value={values?.image ?? ""}
-            >
+            />
             {#if errors?.image}
               <p class={errorClass}>{errors.image[0]}</p>
             {/if}
           </div>
           <div>
             <label class={label} for="tag">Tag</label>
-            <input
-              class={input}
+            <Input
               id="tag"
               name="tag"
               placeholder="latest"
               type="text"
               value={values?.tag ?? "latest"}
-            >
+            />
           </div>
         </div>
 
@@ -149,8 +168,7 @@
           <label class={label} for="containerPort">
             Container port <span class="text-red-500">*</span>
           </label>
-          <input
-            class={input}
+          <Input
             id="containerPort"
             max="65535"
             min="1"
@@ -159,7 +177,7 @@
             required
             type="number"
             value={values?.containerPort ?? ""}
-          >
+          />
           {#if errors?.containerPort}
             <p class={errorClass}>{errors.containerPort[0]}</p>
           {/if}
@@ -174,53 +192,41 @@
       <div class="space-y-2.5 p-5">
         {#each envRows as row, i}
           <div class="flex items-center gap-2">
-            <input
-              class="{input} font-mono"
+            <Input
+              class="font-mono"
               name="envKey"
               placeholder="KEY"
               type="text"
               bind:value={row.key}
-            >
-            <input
-              class="{input} font-mono"
+            />
+            <Input
+              class="font-mono"
               name="envValue"
               placeholder="value"
               type="text"
               bind:value={row.value}
-            >
-            <button
+            />
+            <Button
               aria-label="Remove"
-              class="shrink-0 rounded-lg p-2 text-red-500 transition-all hover:bg-red-500/10"
+              class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
               onclick={() => removeEnvRow(i)}
-              type="button"
+              size="icon-sm"
+              variant="ghost"
             >
               <Trash2 class="size-4" />
-            </button>
+            </Button>
           </div>
         {/each}
-        <button
-          class="text-accent mt-1 flex items-center gap-1.5 text-sm font-medium hover:underline"
-          onclick={addEnvRow}
-          type="button"
-        >
+        <Button class="mt-1 h-auto p-0" onclick={addEnvRow} variant="link">
           <Plus class="size-3.5" />
           Add variable
-        </button>
+        </Button>
       </div>
     </section>
 
     <div class="flex justify-end gap-3">
-      <a
-        class="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
-        href={resolve("/templates")}
-      >
-        Cancel
-      </a>
-      <button
-        class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={submitting}
-        type="submit"
-      >
+      <Button href={resolve("/templates")} variant="outline">Cancel</Button>
+      <Button disabled={submitting} type="submit">
         {#if submitting}
           <Loader2 class="size-4 animate-spin" />
           Creating…
@@ -228,7 +234,7 @@
           <Check class="size-4" />
           Create template
         {/if}
-      </button>
+      </Button>
     </div>
   </form>
 </div>

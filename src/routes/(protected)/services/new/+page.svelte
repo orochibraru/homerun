@@ -19,6 +19,7 @@
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import CheckBox from "$lib/components/check-box.svelte";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -590,26 +591,13 @@
           {/if}
         </div>
 
-        <label class="flex items-start gap-2.5">
-          <input
-            class="mt-0.5"
-            name="dnsResolvable"
-            type="checkbox"
-            bind:checked={dnsResolvable}
-          >
-          <span>
-            <span class="block text-sm font-medium text-text">
-              DNS-resolvable
-            </span>
-            <span class="block text-xs text-text-muted">
-              Get a public <span class="font-mono">slug.{data.baseDomain}</span>
-              route. Turn off to keep this service reachable only from other
-              services on the same network. More networking controls (custom
-              domain, auth gate) are on the service's Networking tab after it's
-              created.
-            </span>
-          </span>
-        </label>
+        <CheckBox
+          helperText="Get a public slug.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network. More networking controls (custom domain, auth gate) are on the service's Networking tab after it's created."
+          id="dnsResolvable"
+          label="DNS-resolvable"
+          name="dnsResolvable"
+          bind:checked={dnsResolvable}
+        />
       </div>
     </section>
 

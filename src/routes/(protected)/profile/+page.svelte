@@ -16,6 +16,8 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { authClient } from "$lib/auth-client";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import {
     getPasswordStrength,
     getPasswordStrengthMeta,
@@ -29,10 +31,6 @@
   const user = $derived($session.data?.user);
 
   onMount(() => title.set("Settings"));
-
-  // ── Shared input style ─────────────────────────────────────────
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
   // ──────────────────────────────────────────────────────────────
   // Account section (name + avatar — updated via authClient)
@@ -215,13 +213,12 @@
           >
             Avatar URL
           </label>
-          <input
-            class={input}
+          <Input
             id="accountImage"
             placeholder="https://example.com/avatar.jpg"
             type="url"
             bind:value={accountImage}
-          >
+          />
           <p class="mt-1 text-xs text-text-subtle">
             Paste a direct image link (JPEG, PNG, WebP).
           </p>
@@ -236,14 +233,13 @@
         >
           Display name <span class="text-red-500">*</span>
         </label>
-        <input
-          class={input}
+        <Input
           id="accountName"
           placeholder="Your full name"
           required
           type="text"
           bind:value={accountName}
-        >
+        />
       </div>
 
       <!-- Email (read-only) -->
@@ -278,11 +274,7 @@
       </div>
 
       <div class="flex justify-end">
-        <button
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={accountLoading}
-          type="submit"
-        >
+        <Button disabled={accountLoading} type="submit">
           {#if accountLoading}
             <Loader2 class="size-4 animate-spin" />
             Saving…
@@ -290,7 +282,7 @@
             <Check class="size-4" />
             Save account
           {/if}
-        </button>
+        </Button>
       </div>
     </form>
   </section>
@@ -323,26 +315,29 @@
           Current password
         </label>
         <div class="relative">
-          <input
+          <Input
             autocomplete="current-password"
-            class="{input} pr-11"
+            class="pr-11"
             id="currentPassword"
             placeholder="••••••••••••"
             required
             type={showCurrent ? "text" : "password"}
             bind:value={currentPassword}
-          >
-          <button
-            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
-            onclick={() => { showCurrent = !showCurrent; }}
-            type="button"
+          />
+          <Button
+            class="absolute top-1/2 right-1.5 -translate-y-1/2"
+            onclick={() => {
+              showCurrent = !showCurrent;
+            }}
+            size="icon-sm"
+            variant="ghost"
           >
             {#if showCurrent}
               <EyeOff class="size-4" />
             {:else}
               <Eye class="size-4" />
             {/if}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -355,26 +350,29 @@
           New password
         </label>
         <div class="relative">
-          <input
+          <Input
             autocomplete="new-password"
-            class="{input} pr-11"
+            class="pr-11"
             id="newPassword"
             placeholder="Min. 12 characters"
             required
             type={showNew ? "text" : "password"}
             bind:value={newPassword}
-          >
-          <button
-            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
-            onclick={() => { showNew = !showNew; }}
-            type="button"
+          />
+          <Button
+            class="absolute top-1/2 right-1.5 -translate-y-1/2"
+            onclick={() => {
+              showNew = !showNew;
+            }}
+            size="icon-sm"
+            variant="ghost"
           >
             {#if showNew}
               <EyeOff class="size-4" />
             {:else}
               <Eye class="size-4" />
             {/if}
-          </button>
+          </Button>
         </div>
         {#if newPassword}
           <div class="mt-2.5">
@@ -407,26 +405,29 @@
           Confirm new password
         </label>
         <div class="relative">
-          <input
+          <Input
             autocomplete="new-password"
-            class="{input} pr-11 {confirmPasswordClass}"
+            class="pr-11 {confirmPasswordClass}"
             id="confirmPassword"
             placeholder="Repeat new password"
             required
             type={showConfirm ? "text" : "password"}
             bind:value={confirmPassword}
-          >
-          <button
-            class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
-            onclick={() => { showConfirm = !showConfirm; }}
-            type="button"
+          />
+          <Button
+            class="absolute top-1/2 right-1.5 -translate-y-1/2"
+            onclick={() => {
+              showConfirm = !showConfirm;
+            }}
+            size="icon-sm"
+            variant="ghost"
           >
             {#if showConfirm}
               <EyeOff class="size-4" />
             {:else}
               <Eye class="size-4" />
             {/if}
-          </button>
+          </Button>
         </div>
         {#if confirmPassword && confirmPassword !== newPassword}
           <p class="mt-1 text-xs text-red-500">Passwords don't match.</p>
@@ -439,8 +440,7 @@
       </div>
 
       <div class="flex justify-end">
-        <button
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
+        <Button
           disabled={passwordLoading ||
             !currentPassword ||
             !newPassword ||
@@ -454,7 +454,7 @@
             <Lock class="size-4" />
             Update password
           {/if}
-        </button>
+        </Button>
       </div>
     </form>
   </section>
@@ -493,13 +493,15 @@
               deployment history. This cannot be undone.
             </p>
           </div>
-          <button
-            class="shrink-0 rounded-xl border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-500 hover:text-white dark:border-red-700/60"
-            onclick={() => { showDeleteConfirm = true; }}
-            type="button"
+          <Button
+            class="shrink-0 border-red-300 text-red-600 hover:bg-red-500 hover:text-white dark:border-red-700/60"
+            onclick={() => {
+              showDeleteConfirm = true;
+            }}
+            variant="outline"
           >
             Delete account
-          </button>
+          </Button>
         </div>
       {:else}
         <form class="space-y-4" onsubmit={deleteAccount}>
@@ -514,41 +516,43 @@
           </div>
 
           <div class="relative">
-            <input
-              class="{input} pr-11"
+            <Input
+              class="pr-11"
               placeholder="Confirm your password"
               required
               type={showDeletePassword ? "text" : "password"}
               bind:value={deletePassword}
-            >
-            <button
-              class="absolute top-1/2 right-3.5 -translate-y-1/2 text-text-muted hover:text-text"
-              onclick={() => { showDeletePassword = !showDeletePassword; }}
-              type="button"
+            />
+            <Button
+              class="absolute top-1/2 right-1.5 -translate-y-1/2"
+              onclick={() => {
+                showDeletePassword = !showDeletePassword;
+              }}
+              size="icon-sm"
+              variant="ghost"
             >
               {#if showDeletePassword}
                 <EyeOff class="size-4" />
               {:else}
                 <Eye class="size-4" />
               {/if}
-            </button>
+            </Button>
           </div>
 
           <div class="flex items-center gap-3">
-            <button
-              class="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
+            <Button
               onclick={() => {
                 showDeleteConfirm = false;
                 deletePassword = "";
               }}
-              type="button"
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
-              class="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            </Button>
+            <Button
               disabled={deleteLoading || !deletePassword}
               type="submit"
+              variant="destructive-solid"
             >
               {#if deleteLoading}
                 <Loader2 class="size-4 animate-spin" />
@@ -557,7 +561,7 @@
                 <Trash2 class="size-4" />
                 Yes, delete my account
               {/if}
-            </button>
+            </Button>
           </div>
         </form>
       {/if}
