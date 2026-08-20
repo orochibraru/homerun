@@ -33,9 +33,10 @@ export async function deployService(
 ): Promise<DeployResult> {
   const isGitBuild = svc.buildSource === "git";
   logger.info(
-    `Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${isGitBuild
-      ? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
-      : `image=${svc.image}:${svc.tag}`
+    `Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${
+      isGitBuild
+        ? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
+        : `image=${svc.image}:${svc.tag}`
     } user=${userId}`
   );
 
