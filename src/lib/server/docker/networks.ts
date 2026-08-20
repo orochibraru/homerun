@@ -6,38 +6,38 @@ const logger = new Logger("Docker");
 
 /** Deterministic — no need to persist a network id anywhere, it's derived from the project id. */
 export function projectNetworkName(projectId: string): string {
-  return `homerun-project-${projectId}`;
+	return `homerun-project-${projectId}`;
 }
 
 /** Creates the project's dedicated network if it doesn't already exist. Idempotent. */
 export async function ensureProjectNetwork(projectId: string): Promise<void> {
-  const name = projectNetworkName(projectId);
-  try {
-    await getDocker().createNetwork({
-      CheckDuplicate: true,
-      Driver: "bridge",
-      Labels: { [MANAGED_LABEL]: "true" },
-      Name: name,
-    });
-    logger.info(`Project network created: ${name}`);
-  } catch (err) {
-    // 409 = already exists — fine, idempotent by design.
-    const status = (err as { statusCode?: number }).statusCode;
-    if (status !== 409) {
-      throw err;
-    }
-  }
+	const name = projectNetworkName(projectId);
+	try {
+		await getDocker().createNetwork({
+			CheckDuplicate: true,
+			Driver: "bridge",
+			Labels: { [MANAGED_LABEL]: "true" },
+			Name: name,
+		});
+		logger.info(`Project network created: ${name}`);
+	} catch (err) {
+		// 409 = already exists — fine, idempotent by design.
+		const status = (err as { statusCode?: number }).statusCode;
+		if (status !== 409) {
+			throw err;
+		}
+	}
 }
 
 /** Removes the project's dedicated network. Safe to call even if it's already gone. */
 export async function removeProjectNetwork(projectId: string): Promise<void> {
-  const name = projectNetworkName(projectId);
-  try {
-    await getDocker().getNetwork(name).remove();
-    logger.info(`Project network removed: ${name}`);
-  } catch {
-    // Already gone, or never existed — nothing to clean up.
-  }
+	const name = projectNetworkName(projectId);
+	try {
+		await getDocker().getNetwork(name).remove();
+		logger.info(`Project network removed: ${name}`);
+	} catch {
+		// Already gone, or never existed — nothing to clean up.
+	}
 }
 
 /**
@@ -47,15 +47,15 @@ export async function removeProjectNetwork(projectId: string): Promise<void> {
  * (randomized, see docker/service.ts) name.
  */
 export async function connectToProjectNetwork(
-  containerId: string,
-  projectId: string,
-  alias: string
+	containerId: string,
+	projectId: string,
+	alias: string,
 ): Promise<void> {
-  const name = projectNetworkName(projectId);
-  await getDocker()
-    .getNetwork(name)
-    .connect({
-      Container: containerId,
-      EndpointConfig: { Aliases: [alias] },
-    });
+	const name = projectNetworkName(projectId);
+	await getDocker()
+		.getNetwork(name)
+		.connect({
+			Container: containerId,
+			EndpointConfig: { Aliases: [alias] },
+		});
 }

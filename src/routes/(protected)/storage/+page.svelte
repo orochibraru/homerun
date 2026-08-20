@@ -1,25 +1,22 @@
 <script lang="ts">
-  import { CloudUpload, HardDrive, Plus, Trash2 } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import EmptyState from "$lib/components/empty-state.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { title } from "$lib/store/title";
+	import { CloudUpload, HardDrive, Plus, Trash2 } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import EmptyState from "$lib/components/empty-state.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
+	const { data } = $props();
 
-  onMount(() => title.set("Storage"));
+	onMount(() => title.set("Storage"));
 
-  function confirmDelete(e: SubmitEvent, name: string) {
-    if (
-      // biome-ignore lint/suspicious/noAlert: a native confirm() is the simplest correct guard here — no custom UI built for this yet.
-      !confirm(`Delete "${name}"? Services using it will need a redeploy.`)
-    ) {
-      e.preventDefault();
-    }
-  }
+	function confirmDelete(e: SubmitEvent, name: string) {
+		if (!confirm(`Delete "${name}"? Services using it will need a redeploy.`)) {
+			e.preventDefault();
+		}
+	}
 </script>
 
 <div class="p-6 md:p-8">
@@ -104,7 +101,7 @@
                 await update();
               }}
           >
-            <input name="volumeId" type="hidden" value={vol.id}>
+            <input name="volumeId" type="hidden" value={vol.id} />
             <Button
               class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
               size="icon-sm"

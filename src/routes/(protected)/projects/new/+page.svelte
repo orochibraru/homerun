@@ -1,45 +1,45 @@
 <script lang="ts">
-  import { Check } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { title } from "$lib/store/title";
+	import { Check } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { title } from "$lib/store/title";
 
-  const { form } = $props();
+	const { form } = $props();
 
-  onMount(() => title.set("New Project"));
+	onMount(() => title.set("New Project"));
 
-  const label = "block mb-1.5 text-sm font-medium text-text";
+	const label = "block mb-1.5 text-sm font-medium text-text";
 
-  let submitting = $state(false);
-  let name = $state("");
-  let slug = $state("");
-  let slugTouched = $state(false);
+	let submitting = $state(false);
+	let name = $state("");
+	let slug = $state("");
+	let slugTouched = $state(false);
 
-  function slugify(value: string): string {
-    return value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 63);
-  }
+	function slugify(value: string): string {
+		return value
+			.toLowerCase()
+			.trim()
+			.replace(/[^a-z0-9-]+/g, "-")
+			.replace(/-+/g, "-")
+			.replace(/^-|-$/g, "")
+			.slice(0, 63);
+	}
 
-  function onNameInput() {
-    if (!slugTouched) {
-      slug = slugify(name);
-    }
-  }
+	function onNameInput() {
+		if (!slugTouched) {
+			slug = slugify(name);
+		}
+	}
 
-  function onSlugInput() {
-    slugTouched = true;
-  }
+	function onSlugInput() {
+		slugTouched = true;
+	}
 </script>
 
 <div class="space-y-6 p-6 md:p-8">

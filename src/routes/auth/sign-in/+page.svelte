@@ -1,53 +1,53 @@
 <script lang="ts">
-  import { Eye, EyeOff, Server } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { dev } from "$app/environment";
-  import { goto } from "$app/navigation";
-  import { resolve } from "$app/paths";
-  import { signIn, useSession } from "$lib/auth-client";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { title } from "$lib/store/title";
+	import { Eye, EyeOff, Server } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { dev } from "$app/environment";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { signIn, useSession } from "$lib/auth-client";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { title } from "$lib/store/title";
 
-  let email = $state("");
-  let password = $state("");
-  let loading = $state(false);
-  let showPassword = $state(false);
+	let email = $state("");
+	let password = $state("");
+	let loading = $state(false);
+	let showPassword = $state(false);
 
-  const session = useSession();
+	const session = useSession();
 
-  // Redirect if already logged in
-  $effect(() => {
-    if (!$session.isPending && $session.data?.user) {
-      loading = true;
-      goto(resolve("/"));
-    }
-  });
+	// Redirect if already logged in
+	$effect(() => {
+		if (!$session.isPending && $session.data?.user) {
+			loading = true;
+			goto(resolve("/"));
+		}
+	});
 
-  onMount(() => title.set("Sign In"));
+	onMount(() => title.set("Sign In"));
 
-  async function handleSignIn(e: SubmitEvent) {
-    e.preventDefault();
-    loading = true;
-    try {
-      const { data, error } = await signIn.email({ email, password });
-      if (error) {
-        toast.error(error.message ?? "Invalid credentials. Please try again.");
-        return;
-      }
-      // In production, block unverified accounts from accessing the dashboard
-      if (!(data?.user?.emailVerified || dev)) {
-        goto(resolve("/auth/sign-up/confirm"));
-        return;
-      }
-      goto(resolve("/"));
-    } catch {
-      toast.error("An unexpected error occurred. Please try again.");
-      loading = false;
-    }
-  }
+	async function handleSignIn(e: SubmitEvent) {
+		e.preventDefault();
+		loading = true;
+		try {
+			const { data, error } = await signIn.email({ email, password });
+			if (error) {
+				toast.error(error.message ?? "Invalid credentials. Please try again.");
+				return;
+			}
+			// In production, block unverified accounts from accessing the dashboard
+			if (!(data?.user?.emailVerified || dev)) {
+				goto(resolve("/auth/sign-up/confirm"));
+				return;
+			}
+			goto(resolve("/"));
+		} catch {
+			toast.error("An unexpected error occurred. Please try again.");
+			loading = false;
+		}
+	}
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">

@@ -1,42 +1,42 @@
 <script lang="ts" module>
-  import type { HTMLFormAttributes } from "svelte/elements";
-  import type { ButtonVariant } from "$lib/components/ui/button";
+	import type { HTMLFormAttributes } from "svelte/elements";
+	import type { ButtonVariant } from "$lib/components/ui/button";
 
-  export type DialogSize = "sm" | "md" | "lg" | "fullscreen";
+	export type DialogSize = "sm" | "md" | "lg" | "fullscreen";
 
-  export interface ResponsiveDialogProps {
-    contentClass?: string;
-    description?: string;
-    /** Form props - if provided, children are wrapped in a form */
-    form?: {
-      action?: HTMLFormAttributes["action"];
-      method?: HTMLFormAttributes["method"];
-      enctype?: HTMLFormAttributes["enctype"];
-      onsubmit?: (e: SubmitEvent) => void;
-    };
-    loading?: boolean;
-    /** Label shown on submit button while loading */
-    loadingLabel?: string;
-    /** Callback fired when the submit button is clicked (non-form mode) */
-    onsubmit?: () => void;
-    open: boolean;
-    /** Dialog size: sm, md, lg, or fullscreen. Default is md */
-    size?: DialogSize;
-    /** If true, submit button is disabled */
-    submitDisabled?: boolean;
-    /** Label for the submit button */
-    submitLabel?: string;
-    /** Button variant for submit button (e.g., "destructive") */
-    submitVariant?: ButtonVariant;
-    title: string;
-  }
+	export interface ResponsiveDialogProps {
+		contentClass?: string;
+		description?: string;
+		/** Form props - if provided, children are wrapped in a form */
+		form?: {
+			action?: HTMLFormAttributes["action"];
+			method?: HTMLFormAttributes["method"];
+			enctype?: HTMLFormAttributes["enctype"];
+			onsubmit?: (e: SubmitEvent) => void;
+		};
+		loading?: boolean;
+		/** Label shown on submit button while loading */
+		loadingLabel?: string;
+		/** Callback fired when the submit button is clicked (non-form mode) */
+		onsubmit?: () => void;
+		open: boolean;
+		/** Dialog size: sm, md, lg, or fullscreen. Default is md */
+		size?: DialogSize;
+		/** If true, submit button is disabled */
+		submitDisabled?: boolean;
+		/** Label for the submit button */
+		submitLabel?: string;
+		/** Button variant for submit button (e.g., "destructive") */
+		submitVariant?: ButtonVariant;
+		title: string;
+	}
 
-  const sizeClasses: Record<DialogSize, string> = {
-    fullscreen: "!max-w-none !w-screen !h-screen !rounded-none",
-    lg: "md:max-w-3xl lg:max-w-5xl xl:max-w-7xl",
-    md: "max-w-2xl",
-    sm: "max-w-md",
-  };
+	const sizeClasses: Record<DialogSize, string> = {
+		fullscreen: "!max-w-none !w-screen !h-screen !rounded-none",
+		lg: "md:max-w-3xl lg:max-w-5xl xl:max-w-7xl",
+		md: "max-w-2xl",
+		sm: "max-w-md",
+	};
 </script>
 
 <script lang="ts">

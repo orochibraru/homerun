@@ -1,22 +1,22 @@
 <script lang="ts">
-  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
+	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+	import { Label } from "$lib/components/ui/label/index.js";
 
-  interface Props {
-    checked: boolean;
-    helperText: string;
-    id: string;
-    label: string;
-    name: string;
-  }
+	interface Props {
+		checked: boolean;
+		helperText: string;
+		id: string;
+		label: string;
+		name: string;
+	}
 
-  let {
-    id,
-    label,
-    helperText,
-    name,
-    checked = $bindable(false),
-  }: Props = $props();
+	let {
+		id,
+		label,
+		helperText,
+		name,
+		checked = $bindable(false),
+	}: Props = $props();
 </script>
 
 <Label

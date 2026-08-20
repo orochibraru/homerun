@@ -1,165 +1,165 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    Check,
-    Eye,
-    EyeOff,
-    KeyRound,
-    Lock,
-    ShieldCheck,
-    Trash2,
-    UserCircle,
-  } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { goto } from "$app/navigation";
-  import { resolve } from "$app/paths";
-  import { authClient } from "$lib/auth-client";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import {
-    getPasswordStrength,
-    getPasswordStrengthMeta,
-  } from "$lib/formatting";
-  import { title } from "$lib/store/title";
+	import {
+		AlertTriangle,
+		Check,
+		Eye,
+		EyeOff,
+		KeyRound,
+		Lock,
+		ShieldCheck,
+		Trash2,
+		UserCircle,
+	} from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { authClient } from "$lib/auth-client";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import {
+		getPasswordStrength,
+		getPasswordStrengthMeta,
+	} from "$lib/formatting";
+	import { title } from "$lib/store/title";
 
-  // Access layout-injected data via the session / parent
-  const session = authClient.useSession();
+	// Access layout-injected data via the session / parent
+	const session = authClient.useSession();
 
-  // Reactive references to the current user + profile from layout
-  const user = $derived($session.data?.user);
+	// Reactive references to the current user + profile from layout
+	const user = $derived($session.data?.user);
 
-  onMount(() => title.set("Settings"));
+	onMount(() => title.set("Settings"));
 
-  // ──────────────────────────────────────────────────────────────
-  // Account section (name + avatar — updated via authClient)
-  // ──────────────────────────────────────────────────────────────
-  let accountName = $derived(user?.name ?? "");
-  let accountImage = $derived(user?.image ?? "");
-  let accountLoading = $state(false);
+	// ──────────────────────────────────────────────────────────────
+	// Account section (name + avatar — updated via authClient)
+	// ──────────────────────────────────────────────────────────────
+	let accountName = $derived(user?.name ?? "");
+	let accountImage = $derived(user?.image ?? "");
+	let accountLoading = $state(false);
 
-  // Keep fields in sync if the session refreshes
-  $effect(() => {
-    if (user?.name && !accountLoading) {
-      accountName = user.name;
-    }
-    if (!accountLoading) {
-      accountImage = user?.image ?? "";
-    }
-  });
+	// Keep fields in sync if the session refreshes
+	$effect(() => {
+		if (user?.name && !accountLoading) {
+			accountName = user.name;
+		}
+		if (!accountLoading) {
+			accountImage = user?.image ?? "";
+		}
+	});
 
-  async function saveAccount(e: SubmitEvent) {
-    e.preventDefault();
-    if (!accountName.trim()) {
-      toast.error("Display name cannot be empty.");
-      return;
-    }
-    accountLoading = true;
-    try {
-      const { error } = await authClient.updateUser({
-        image: accountImage.trim() || undefined,
-        name: accountName.trim(),
-      });
-      if (error) {
-        toast.error(error.message ?? "Could not update account.");
-      } else {
-        toast.success("Account updated.");
-      }
-    } catch {
-      toast.error("An unexpected error occurred.");
-    } finally {
-      accountLoading = false;
-    }
-  }
+	async function saveAccount(e: SubmitEvent) {
+		e.preventDefault();
+		if (!accountName.trim()) {
+			toast.error("Display name cannot be empty.");
+			return;
+		}
+		accountLoading = true;
+		try {
+			const { error } = await authClient.updateUser({
+				image: accountImage.trim() || undefined,
+				name: accountName.trim(),
+			});
+			if (error) {
+				toast.error(error.message ?? "Could not update account.");
+			} else {
+				toast.success("Account updated.");
+			}
+		} catch {
+			toast.error("An unexpected error occurred.");
+		} finally {
+			accountLoading = false;
+		}
+	}
 
-  // ──────────────────────────────────────────────────────────────
-  // Password section
-  // ──────────────────────────────────────────────────────────────
-  let currentPassword = $state("");
-  let newPassword = $state("");
-  let confirmPassword = $state("");
-  let showCurrent = $state(false);
-  let showNew = $state(false);
-  let showConfirm = $state(false);
-  let passwordLoading = $state(false);
+	// ──────────────────────────────────────────────────────────────
+	// Password section
+	// ──────────────────────────────────────────────────────────────
+	let currentPassword = $state("");
+	let newPassword = $state("");
+	let confirmPassword = $state("");
+	let showCurrent = $state(false);
+	let showNew = $state(false);
+	let showConfirm = $state(false);
+	let passwordLoading = $state(false);
 
-  const passwordStrength = $derived(getPasswordStrength(newPassword));
-  const confirmPasswordClass = $derived.by(() => {
-    if (!confirmPassword) {
-      return "";
-    }
-    return confirmPassword === newPassword
-      ? "border-green-500 focus:ring-green-500"
-      : "border-red-500 focus:ring-red-500";
-  });
-  const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
+	const passwordStrength = $derived(getPasswordStrength(newPassword));
+	const confirmPasswordClass = $derived.by(() => {
+		if (!confirmPassword) {
+			return "";
+		}
+		return confirmPassword === newPassword
+			? "border-green-500 focus:ring-green-500"
+			: "border-red-500 focus:ring-red-500";
+	});
+	const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
 
-  async function changePassword(e: SubmitEvent) {
-    e.preventDefault();
-    if (newPassword.length < 12) {
-      toast.error("New password must be at least 12 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match.");
-      return;
-    }
-    passwordLoading = true;
-    try {
-      const { error } = await authClient.changePassword({
-        currentPassword,
-        newPassword,
-        revokeOtherSessions: true,
-      });
-      if (error) {
-        toast.error(error.message ?? "Could not change password.");
-      } else {
-        toast.success("Password changed. Other sessions have been signed out.");
-        currentPassword = "";
-        newPassword = "";
-        confirmPassword = "";
-      }
-    } catch {
-      toast.error("An unexpected error occurred.");
-    } finally {
-      passwordLoading = false;
-    }
-  }
+	async function changePassword(e: SubmitEvent) {
+		e.preventDefault();
+		if (newPassword.length < 12) {
+			toast.error("New password must be at least 12 characters.");
+			return;
+		}
+		if (newPassword !== confirmPassword) {
+			toast.error("Passwords do not match.");
+			return;
+		}
+		passwordLoading = true;
+		try {
+			const { error } = await authClient.changePassword({
+				currentPassword,
+				newPassword,
+				revokeOtherSessions: true,
+			});
+			if (error) {
+				toast.error(error.message ?? "Could not change password.");
+			} else {
+				toast.success("Password changed. Other sessions have been signed out.");
+				currentPassword = "";
+				newPassword = "";
+				confirmPassword = "";
+			}
+		} catch {
+			toast.error("An unexpected error occurred.");
+		} finally {
+			passwordLoading = false;
+		}
+	}
 
-  // ──────────────────────────────────────────────────────────────
-  // Delete account
-  // ──────────────────────────────────────────────────────────────
-  let showDeleteConfirm = $state(false);
-  let deletePassword = $state("");
-  let deleteLoading = $state(false);
-  let showDeletePassword = $state(false);
+	// ──────────────────────────────────────────────────────────────
+	// Delete account
+	// ──────────────────────────────────────────────────────────────
+	let showDeleteConfirm = $state(false);
+	let deletePassword = $state("");
+	let deleteLoading = $state(false);
+	let showDeletePassword = $state(false);
 
-  async function deleteAccount(e: SubmitEvent) {
-    e.preventDefault();
-    deleteLoading = true;
-    try {
-      const { error } = await authClient.deleteUser({
-        callbackURL: resolve("/"),
-        password: deletePassword,
-      });
-      if (error) {
-        toast.error(error.message ?? "Could not delete account.");
-      } else {
-        toast.success("Account deleted.");
-        goto(resolve("/"));
-      }
-    } catch {
-      toast.error("An unexpected error occurred.");
-    } finally {
-      deleteLoading = false;
-    }
-  }
+	async function deleteAccount(e: SubmitEvent) {
+		e.preventDefault();
+		deleteLoading = true;
+		try {
+			const { error } = await authClient.deleteUser({
+				callbackURL: resolve("/"),
+				password: deletePassword,
+			});
+			if (error) {
+				toast.error(error.message ?? "Could not delete account.");
+			} else {
+				toast.success("Account deleted.");
+				goto(resolve("/"));
+			}
+		} catch {
+			toast.error("An unexpected error occurred.");
+		} finally {
+			deleteLoading = false;
+		}
+	}
 
-  // Derived initials for avatar preview
-  const initials = $derived(
-    (accountName || user?.name || "?")[0]?.toUpperCase() ?? "?"
-  );
+	// Derived initials for avatar preview
+	const initials = $derived(
+		(accountName || user?.name || "?")[0]?.toUpperCase() ?? "?",
+	);
 </script>
 
 <div class="space-y-6 p-6 md:p-8">

@@ -1,80 +1,80 @@
 <script lang="ts">
-  import { Eye, EyeOff, Server, ShieldCheck } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { goto } from "$app/navigation";
-  import { resolve } from "$app/paths";
-  import { signUp, useSession } from "$lib/auth-client";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import {
-    getPasswordStrength,
-    getPasswordStrengthMeta,
-  } from "$lib/formatting";
-  import { title } from "$lib/store/title";
+	import { Eye, EyeOff, Server, ShieldCheck } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { signUp, useSession } from "$lib/auth-client";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import {
+		getPasswordStrength,
+		getPasswordStrengthMeta,
+	} from "$lib/formatting";
+	import { title } from "$lib/store/title";
 
-  const session = useSession();
+	const session = useSession();
 
-  // Redirect if already logged in
-  $effect(() => {
-    if (!$session.isPending && $session.data?.user) {
-      goto(resolve("/"));
-    }
-  });
+	// Redirect if already logged in
+	$effect(() => {
+		if (!$session.isPending && $session.data?.user) {
+			goto(resolve("/"));
+		}
+	});
 
-  onMount(() => title.set("Create Account"));
+	onMount(() => title.set("Create Account"));
 
-  let name = $state("");
-  let email = $state("");
-  let password = $state("");
-  let confirm = $state("");
-  let loading = $state(false);
-  let showPassword = $state(false);
-  let showConfirm = $state(false);
+	let name = $state("");
+	let email = $state("");
+	let password = $state("");
+	let confirm = $state("");
+	let loading = $state(false);
+	let showPassword = $state(false);
+	let showConfirm = $state(false);
 
-  const confirmClass = $derived.by(() => {
-    if (!confirm) {
-      return "";
-    }
-    return confirm === password
-      ? "border-green-500 focus:ring-green-500"
-      : "border-red-500 focus:ring-red-500";
-  });
+	const confirmClass = $derived.by(() => {
+		if (!confirm) {
+			return "";
+		}
+		return confirm === password
+			? "border-green-500 focus:ring-green-500"
+			: "border-red-500 focus:ring-red-500";
+	});
 
-  // ── Password strength ──────────────────────────────────────────────
-  const passwordStrength = $derived(getPasswordStrength(password));
-  const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
+	// ── Password strength ──────────────────────────────────────────────
+	const passwordStrength = $derived(getPasswordStrength(password));
+	const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
 
-  // ── Submit ─────────────────────────────────────────────────────────
-  async function handleSignUp(e: SubmitEvent) {
-    e.preventDefault();
-    if (password.length < 12) {
-      toast.error("Password must be at least 12 characters.");
-      return;
-    }
-    if (password !== confirm) {
-      toast.error("Passwords do not match.");
-      return;
-    }
-    loading = true;
-    try {
-      const { error } = await signUp.email({ email, name, password });
-      if (error) {
-        toast.error(
-          error.message ?? "Could not create account. Please try again."
-        );
-        return;
-      }
-      // Always land on confirm so the user knows to check their email
-      // (or gets the dev-mode bypass if SMTP isn't configured)
-      goto(resolve("/auth/sign-up/confirm"));
-    } catch {
-      toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      loading = false;
-    }
-  }
+	// ── Submit ─────────────────────────────────────────────────────────
+	async function handleSignUp(e: SubmitEvent) {
+		e.preventDefault();
+		if (password.length < 12) {
+			toast.error("Password must be at least 12 characters.");
+			return;
+		}
+		if (password !== confirm) {
+			toast.error("Passwords do not match.");
+			return;
+		}
+		loading = true;
+		try {
+			const { error } = await signUp.email({ email, name, password });
+			if (error) {
+				toast.error(
+					error.message ?? "Could not create account. Please try again.",
+				);
+				return;
+			}
+			// Always land on confirm so the user knows to check their email
+			// (or gets the dev-mode bypass if SMTP isn't configured)
+			goto(resolve("/auth/sign-up/confirm"));
+		} catch {
+			toast.error("An unexpected error occurred. Please try again.");
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">

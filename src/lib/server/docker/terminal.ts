@@ -34,13 +34,13 @@ import { getDocker } from "./client";
  */
 
 interface TerminalSession {
-  containerId: string;
-  createdAt: number;
-  lastActivity: number;
-  listeners: Set<(chunk: Uint8Array) => void>;
-  serviceId: string;
-  socket: Bun.Socket<undefined>;
-  userId: string;
+	containerId: string;
+	createdAt: number;
+	lastActivity: number;
+	listeners: Set<(chunk: Uint8Array) => void>;
+	serviceId: string;
+	socket: Bun.Socket<undefined>;
+	userId: string;
 }
 
 const sessions = new Map<string, TerminalSession>();
@@ -50,111 +50,111 @@ const REAP_INTERVAL_MS = 60 * 1000;
 
 // Survives Vite HMR the same way the other schedulers do (cron-scheduler.ts).
 const globalForTerminal = globalThis as unknown as {
-  __terminal_reaper?: ReturnType<typeof setInterval>;
+	__terminal_reaper?: ReturnType<typeof setInterval>;
 };
 
 function startReaper(): void {
-  if (globalForTerminal.__terminal_reaper) {
-    return;
-  }
-  globalForTerminal.__terminal_reaper = setInterval(() => {
-    const now = Date.now();
-    for (const [id, session] of sessions) {
-      if (now - session.lastActivity > IDLE_TIMEOUT_MS) {
-        closeSession(id);
-      }
-    }
-  }, REAP_INTERVAL_MS);
+	if (globalForTerminal.__terminal_reaper) {
+		return;
+	}
+	globalForTerminal.__terminal_reaper = setInterval(() => {
+		const now = Date.now();
+		for (const [id, session] of sessions) {
+			if (now - session.lastActivity > IDLE_TIMEOUT_MS) {
+				closeSession(id);
+			}
+		}
+	}, REAP_INTERVAL_MS);
 }
 startReaper();
 
 export interface OpenSessionParams {
-  containerId: string;
-  serviceId: string;
-  userId: string;
+	containerId: string;
+	serviceId: string;
+	userId: string;
 }
 
 const HEADER_END = "\r\n\r\n";
 
 /** Starts a new interactive shell session inside the container. Tries `/bin/sh` — the one shell essentially every image has. */
 export async function openTerminalSession(
-  params: OpenSessionParams
+	params: OpenSessionParams,
 ): Promise<string> {
-  const container = getDocker().getContainer(params.containerId);
-  const exec = await container.exec({
-    AttachStderr: true,
-    AttachStdin: true,
-    AttachStdout: true,
-    Cmd: ["/bin/sh"],
-    Tty: true,
-  });
+	const container = getDocker().getContainer(params.containerId);
+	const exec = await container.exec({
+		AttachStderr: true,
+		AttachStdin: true,
+		AttachStdout: true,
+		Cmd: ["/bin/sh"],
+		Tty: true,
+	});
 
-  const sessionId = crypto.randomUUID();
-  const listeners = new Set<(chunk: Uint8Array) => void>();
+	const sessionId = crypto.randomUUID();
+	const listeners = new Set<(chunk: Uint8Array) => void>();
 
-  const startPayload = JSON.stringify({ Detach: false, Tty: true });
-  const startRequest = [
-    `POST /exec/${exec.id}/start HTTP/1.1`,
-    "Host: docker",
-    "Content-Type: application/json",
-    `Content-Length: ${Buffer.byteLength(startPayload)}`,
-    "Connection: Upgrade",
-    "Upgrade: tcp",
-    "",
-    startPayload,
-  ].join("\r\n");
+	const startPayload = JSON.stringify({ Detach: false, Tty: true });
+	const startRequest = [
+		`POST /exec/${exec.id}/start HTTP/1.1`,
+		"Host: docker",
+		"Content-Type: application/json",
+		`Content-Length: ${Buffer.byteLength(startPayload)}`,
+		"Connection: Upgrade",
+		"Upgrade: tcp",
+		"",
+		startPayload,
+	].join("\r\n");
 
-  let headerBuffer = "";
-  let headersParsed = false;
+	let headerBuffer = "";
+	let headersParsed = false;
 
-  const socket = await Bun.connect({
-    socket: {
-      close() {
-        sessions.delete(sessionId);
-      },
-      data(_s, chunk) {
-        if (!headersParsed) {
-          headerBuffer += chunk.toString("binary");
-          const idx = headerBuffer.indexOf(HEADER_END);
-          if (idx === -1) {
-            return;
-          }
-          headersParsed = true;
-          const rest = headerBuffer.slice(idx + HEADER_END.length);
-          headerBuffer = "";
-          if (rest) {
-            const bytes = Buffer.from(rest, "binary");
-            for (const listener of listeners) {
-              listener(new Uint8Array(bytes));
-            }
-          }
-          return;
-        }
-        for (const listener of listeners) {
-          listener(new Uint8Array(chunk));
-        }
-      },
-      error() {
-        sessions.delete(sessionId);
-      },
-    },
-    unix: config.docker.socketPath,
-  });
+	const socket = await Bun.connect({
+		socket: {
+			close() {
+				sessions.delete(sessionId);
+			},
+			data(_s, chunk) {
+				if (!headersParsed) {
+					headerBuffer += chunk.toString("binary");
+					const idx = headerBuffer.indexOf(HEADER_END);
+					if (idx === -1) {
+						return;
+					}
+					headersParsed = true;
+					const rest = headerBuffer.slice(idx + HEADER_END.length);
+					headerBuffer = "";
+					if (rest) {
+						const bytes = Buffer.from(rest, "binary");
+						for (const listener of listeners) {
+							listener(new Uint8Array(bytes));
+						}
+					}
+					return;
+				}
+				for (const listener of listeners) {
+					listener(new Uint8Array(chunk));
+				}
+			},
+			error() {
+				sessions.delete(sessionId);
+			},
+		},
+		unix: config.docker.socketPath,
+	});
 
-  socket.write(startRequest);
+	socket.write(startRequest);
 
-  const now = Date.now();
-  sessions.set(sessionId, {
-    containerId: params.containerId,
-    createdAt: now,
-    lastActivity: now,
-    listeners,
-    serviceId: params.serviceId,
-    socket,
-    userId: params.userId,
-  });
+	const now = Date.now();
+	sessions.set(sessionId, {
+		containerId: params.containerId,
+		createdAt: now,
+		lastActivity: now,
+		listeners,
+		serviceId: params.serviceId,
+		socket,
+		userId: params.userId,
+	});
 
-  return sessionId;
+	return sessionId;
 }
 
 /**
@@ -162,48 +162,48 @@ export async function openTerminalSession(
  * null if the session doesn't exist / isn't owned by this user.
  */
 export function subscribeToSession(
-  sessionId: string,
-  userId: string,
-  onChunk: (chunk: Uint8Array) => void
+	sessionId: string,
+	userId: string,
+	onChunk: (chunk: Uint8Array) => void,
 ): (() => void) | null {
-  const session = sessions.get(sessionId);
-  if (!session || session.userId !== userId) {
-    return null;
-  }
-  session.lastActivity = Date.now();
-  session.listeners.add(onChunk);
-  return () => session.listeners.delete(onChunk);
+	const session = sessions.get(sessionId);
+	if (!session || session.userId !== userId) {
+		return null;
+	}
+	session.lastActivity = Date.now();
+	session.listeners.add(onChunk);
+	return () => session.listeners.delete(onChunk);
 }
 
 /** Writes to the session's stdin. Returns false if the session doesn't exist / isn't owned by this user. */
 export function writeToSession(
-  sessionId: string,
-  userId: string,
-  data: string
+	sessionId: string,
+	userId: string,
+	data: string,
 ): boolean {
-  const session = sessions.get(sessionId);
-  if (!session || session.userId !== userId) {
-    return false;
-  }
-  session.lastActivity = Date.now();
-  session.socket.write(data);
-  return true;
+	const session = sessions.get(sessionId);
+	if (!session || session.userId !== userId) {
+		return false;
+	}
+	session.lastActivity = Date.now();
+	session.socket.write(data);
+	return true;
 }
 
 /** Closes and forgets a session. No-op if it's already gone. */
 export function closeSession(sessionId: string): void {
-  const session = sessions.get(sessionId);
-  if (!session) {
-    return;
-  }
-  try {
-    session.socket.end();
-  } catch {
-    // Already closed on the Docker side — fine.
-  }
-  sessions.delete(sessionId);
+	const session = sessions.get(sessionId);
+	if (!session) {
+		return;
+	}
+	try {
+		session.socket.end();
+	} catch {
+		// Already closed on the Docker side — fine.
+	}
+	sessions.delete(sessionId);
 }
 
 export function ownsSession(sessionId: string, userId: string): boolean {
-  return sessions.get(sessionId)?.userId === userId;
+	return sessions.get(sessionId)?.userId === userId;
 }

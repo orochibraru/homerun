@@ -1,195 +1,195 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    ArrowLeft,
-    ArrowRight,
-    Check,
-    ChevronDown,
-    Cpu,
-    GitBranch,
-    Lock,
-    Network,
-    Plus,
-    Server,
-    SlidersHorizontal,
-    Trash2,
-  } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import CheckBox from "$lib/components/check-box.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import {
-    SelectContent,
-    SelectItem,
-    Select as SelectRoot,
-    SelectTrigger,
-  } from "$lib/components/ui/select/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { title } from "$lib/store/title";
+	import {
+		AlertTriangle,
+		ArrowLeft,
+		ArrowRight,
+		Check,
+		ChevronDown,
+		Cpu,
+		GitBranch,
+		Lock,
+		Network,
+		Plus,
+		Server,
+		SlidersHorizontal,
+		Trash2,
+	} from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import CheckBox from "$lib/components/check-box.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
+	const { data, form } = $props();
 
-  onMount(() => {
-    title.set("Deploy a Service");
-    scheduleImageCheck();
-  });
+	onMount(() => {
+		title.set("Deploy a Service");
+		scheduleImageCheck();
+	});
 
-  const label = "block mb-1.5 text-sm font-medium text-text";
-  const errorClass = "mt-1.5 text-xs text-red-500";
-  const values = $derived(form?.values as Record<string, string> | undefined);
-  const errors = $derived(form?.errors as Record<string, string[]> | undefined);
-  // Flat list of every error message, so a field we forgot to render a
-  // dedicated <p> for still surfaces instead of silently failing.
-  const errorMessages = $derived(errors ? Object.values(errors).flat() : []);
+	const label = "block mb-1.5 text-sm font-medium text-text";
+	const errorClass = "mt-1.5 text-xs text-red-500";
+	const values = $derived(form?.values as Record<string, string> | undefined);
+	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
+	// Flat list of every error message, so a field we forgot to render a
+	// dedicated <p> for still surfaces instead of silently failing.
+	const errorMessages = $derived(errors ? Object.values(errors).flat() : []);
 
-  const STEPS = [
-    { icon: Server, label: "Basic info" },
-    { icon: Network, label: "Networking" },
-    { icon: SlidersHorizontal, label: "Environment" },
-    { icon: Cpu, label: "Compute" },
-  ];
-  // Every field lives in $state (not an uncontrolled `value={}`) so its
-  // value survives a step being hidden — steps are hidden with a CSS
-  // class, not {#if}, specifically so the DOM nodes (and their bound
-  // state) never unmount between steps.
-  let currentStep = $state(0);
+	const STEPS = [
+		{ icon: Server, label: "Basic info" },
+		{ icon: Network, label: "Networking" },
+		{ icon: SlidersHorizontal, label: "Environment" },
+		{ icon: Cpu, label: "Compute" },
+	];
+	// Every field lives in $state (not an uncontrolled `value={}`) so its
+	// value survives a step being hidden — steps are hidden with a CSS
+	// class, not {#if}, specifically so the DOM nodes (and their bound
+	// state) never unmount between steps.
+	let currentStep = $state(0);
 
-  let name = $derived(
-    (form?.values?.name as string) ?? data.template?.name ?? ""
-  );
-  let slug = $derived(
-    (form?.values?.slug as string) ??
-      (data.template ? slugify(data.template.name) : "")
-  );
-  let slugTouched = $state(false);
-  let submitting = $state(false);
-  let showRegistry = $derived(!!values?.registryUsername);
+	let name = $derived(
+		(form?.values?.name as string) ?? data.template?.name ?? "",
+	);
+	let slug = $derived(
+		(form?.values?.slug as string) ??
+			(data.template ? slugify(data.template.name) : ""),
+	);
+	let slugTouched = $state(false);
+	let submitting = $state(false);
+	let showRegistry = $derived(!!values?.registryUsername);
 
-  let buildSource = $derived<"image" | "git">(
-    (values?.buildSource as "image" | "git") ?? "image"
-  );
-  let image = $derived(values?.image ?? data.template?.image ?? "");
-  let tag = $derived(values?.tag ?? data.template?.tag ?? "latest");
-  let registryUrl = $derived(values?.registryUrl ?? "");
-  let registryUsername = $derived(values?.registryUsername ?? "");
-  let gitUrl = $derived(values?.gitUrl ?? "");
-  let gitRef = $derived(values?.gitRef ?? "main");
-  let gitDockerfilePath = $derived(values?.gitDockerfilePath ?? "");
-  let gitBuildContext = $derived(values?.gitBuildContext ?? "");
-  let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
-  let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
+	let buildSource = $derived<"image" | "git">(
+		(values?.buildSource as "image" | "git") ?? "image",
+	);
+	let image = $derived(values?.image ?? data.template?.image ?? "");
+	let tag = $derived(values?.tag ?? data.template?.tag ?? "latest");
+	let registryUrl = $derived(values?.registryUrl ?? "");
+	let registryUsername = $derived(values?.registryUsername ?? "");
+	let gitUrl = $derived(values?.gitUrl ?? "");
+	let gitRef = $derived(values?.gitRef ?? "main");
+	let gitDockerfilePath = $derived(values?.gitDockerfilePath ?? "");
+	let gitBuildContext = $derived(values?.gitBuildContext ?? "");
+	let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
+	let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
 
-  let containerPort = $derived(
-    values?.containerPort ?? String(data.template?.containerPort ?? "")
-  );
-  let dnsResolvable = $derived(
-    values?.dnsResolvable !== "off" && values?.dnsResolvable !== "false"
-  );
-  let restartPolicy = $derived(
-    values?.restartPolicy ?? data.template?.restartPolicy ?? "unless-stopped"
-  );
-  let cpuLimit = $derived(values?.cpuLimit ?? data.template?.cpuLimit ?? "");
-  let memoryLimitMb = $derived(
-    values?.memoryLimitMb ?? String(data.template?.memoryLimitMb ?? "")
-  );
+	let containerPort = $derived(
+		values?.containerPort ?? String(data.template?.containerPort ?? ""),
+	);
+	let dnsResolvable = $derived(
+		values?.dnsResolvable !== "off" && values?.dnsResolvable !== "false",
+	);
+	let restartPolicy = $derived(
+		values?.restartPolicy ?? data.template?.restartPolicy ?? "unless-stopped",
+	);
+	let cpuLimit = $derived(values?.cpuLimit ?? data.template?.cpuLimit ?? "");
+	let memoryLimitMb = $derived(
+		values?.memoryLimitMb ?? String(data.template?.memoryLimitMb ?? ""),
+	);
 
-  const restartPolicyOptions: [string, string][] = [
-    ["unless-stopped", "Unless stopped"],
-    ["always", "Always"],
-    ["on-failure", "On failure"],
-    ["no", "Never"],
-  ];
-  const restartPolicyLabel = $derived(
-    restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
-      "Unless stopped"
-  );
+	const restartPolicyOptions: [string, string][] = [
+		["unless-stopped", "Unless stopped"],
+		["always", "Always"],
+		["on-failure", "On failure"],
+		["no", "Never"],
+	];
+	const restartPolicyLabel = $derived(
+		restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
+			"Unless stopped",
+	);
 
-  function scheduleImageCheck() {
-    clearTimeout(imageCheckTimer);
-    if (!image.trim()) {
-      imageCheck = null;
-      return;
-    }
-    imageCheckTimer = setTimeout(async () => {
-      try {
-        const res = await fetch(resolve("/services/check-image"), {
-          body: JSON.stringify({ image, registryUrl, tag }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
-        imageCheck = res.ok ? await res.json() : null;
-      } catch {
-        imageCheck = null;
-      }
-    }, 600);
-  }
+	function scheduleImageCheck() {
+		clearTimeout(imageCheckTimer);
+		if (!image.trim()) {
+			imageCheck = null;
+			return;
+		}
+		imageCheckTimer = setTimeout(async () => {
+			try {
+				const res = await fetch(resolve("/services/check-image"), {
+					body: JSON.stringify({ image, registryUrl, tag }),
+					headers: { "Content-Type": "application/json" },
+					method: "POST",
+				});
+				imageCheck = res.ok ? await res.json() : null;
+			} catch {
+				imageCheck = null;
+			}
+		}, 600);
+	}
 
-  function slugify(value: string): string {
-    return value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 63);
-  }
+	function slugify(value: string): string {
+		return value
+			.toLowerCase()
+			.trim()
+			.replace(/[^a-z0-9-]+/g, "-")
+			.replace(/-+/g, "-")
+			.replace(/^-|-$/g, "")
+			.slice(0, 63);
+	}
 
-  function onNameInput() {
-    if (!slugTouched) {
-      slug = slugify(name);
-    }
-  }
+	function onNameInput() {
+		if (!slugTouched) {
+			slug = slugify(name);
+		}
+	}
 
-  function onSlugInput() {
-    slugTouched = true;
-  }
+	function onSlugInput() {
+		slugTouched = true;
+	}
 
-  interface EnvRow {
-    key: string;
-    value: string;
-  }
-  const templateEnvRows = $derived(
-    data.template
-      ? Object.entries(data.template.envVars ?? {}).map(([key, value]) => ({
-          key,
-          value,
-        }))
-      : []
-  );
-  let envRows = $derived<EnvRow[]>(
-    templateEnvRows.length > 0 ? templateEnvRows : [{ key: "", value: "" }]
-  );
+	interface EnvRow {
+		key: string;
+		value: string;
+	}
+	const templateEnvRows = $derived(
+		data.template
+			? Object.entries(data.template.envVars ?? {}).map(([key, value]) => ({
+					key,
+					value,
+				}))
+			: [],
+	);
+	let envRows = $derived<EnvRow[]>(
+		templateEnvRows.length > 0 ? templateEnvRows : [{ key: "", value: "" }],
+	);
 
-  function addEnvRow() {
-    envRows.push({ key: "", value: "" });
-  }
+	function addEnvRow() {
+		envRows.push({ key: "", value: "" });
+	}
 
-  function removeEnvRow(i: number) {
-    envRows.splice(i, 1);
-    if (envRows.length === 0) {
-      envRows.push({ key: "", value: "" });
-    }
-  }
+	function removeEnvRow(i: number) {
+		envRows.splice(i, 1);
+		if (envRows.length === 0) {
+			envRows.push({ key: "", value: "" });
+		}
+	}
 
-  function goNext() {
-    currentStep = Math.min(currentStep + 1, STEPS.length - 1);
-  }
-  function goBack() {
-    currentStep = Math.max(currentStep - 1, 0);
-  }
+	function goNext() {
+		currentStep = Math.min(currentStep + 1, STEPS.length - 1);
+	}
+	function goBack() {
+		currentStep = Math.max(currentStep - 1, 0);
+	}
 
-  function stepButtonClass(i: number): string {
-    if (i === currentStep) {
-      return "border-accent bg-accent-light text-accent";
-    }
-    if (i < currentStep) {
-      return "border-border text-text bg-surface-2";
-    }
-    return "border-border text-text-muted";
-  }
+	function stepButtonClass(i: number): string {
+		if (i === currentStep) {
+			return "border-accent bg-accent-light text-accent";
+		}
+		if (i < currentStep) {
+			return "border-border text-text bg-surface-2";
+		}
+		return "border-border text-text-muted";
+	}
 </script>
 
 <div class="space-y-6 p-6 md:p-8">

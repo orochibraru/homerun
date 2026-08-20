@@ -9,13 +9,13 @@ import { user as userTable } from "$lib/server/db/schema";
  * tables, same precedent hooks.server.ts and auth.ts already use.
  */
 export async function listUsers(): Promise<User[]> {
-  return await db.select().from(userTable).orderBy(desc(userTable.createdAt));
+	return await db.select().from(userTable).orderBy(desc(userTable.createdAt));
 }
 
 export async function countAdmins(): Promise<number> {
-  const [row] = await db
-    .select({ total: count() })
-    .from(userTable)
-    .where(eq(userTable.role, "admin"));
-  return row?.total ?? 0;
+	const [row] = await db
+		.select({ total: count() })
+		.from(userTable)
+		.where(eq(userTable.role, "admin"));
+	return row?.total ?? 0;
 }

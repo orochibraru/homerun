@@ -4,22 +4,22 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { hasAnyUser } from "$lib/server/onboarding";
 
 export const load = async ({ locals }) => {
-  if (!locals.user) {
-    throw redirect(
-      302,
-      resolve((await hasAnyUser()) ? "/auth/sign-in" : "/auth/sign-up")
-    );
-  }
+	if (!locals.user) {
+		throw redirect(
+			302,
+			resolve((await hasAnyUser()) ? "/auth/sign-in" : "/auth/sign-up"),
+		);
+	}
 
-  const settings = await InstanceSettingsDTO.get();
-  const onboardingDone = settings.onboardingComplete;
+	const settings = await InstanceSettingsDTO.get();
+	const onboardingDone = settings.onboardingComplete;
 
-  if (onboardingDone) {
-    throw redirect(302, resolve("/"));
-  }
+	if (onboardingDone) {
+		throw redirect(302, resolve("/"));
+	}
 
-  return {
-    onboardingDone,
-    user: locals.user,
-  };
+	return {
+		onboardingDone,
+		user: locals.user,
+	};
 };

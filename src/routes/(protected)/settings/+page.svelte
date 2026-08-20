@@ -1,100 +1,100 @@
 <script lang="ts">
-  import { KeyRound, Plus, Trash2 } from "@lucide/svelte";
-  import type { SubmitFunction } from "@sveltejs/kit";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { page } from "$app/state";
-  import CheckBox from "$lib/components/check-box.svelte";
-  import { labelClass as label } from "$lib/components/form-styles";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { title } from "$lib/store/title";
+	import { KeyRound, Plus, Trash2 } from "@lucide/svelte";
+	import type { SubmitFunction } from "@sveltejs/kit";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { page } from "$app/state";
+	import CheckBox from "$lib/components/check-box.svelte";
+	import { labelClass as label } from "$lib/components/form-styles";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
+	const { data, form } = $props();
 
-  // Field ids the dashboard's setup-issue banner deep-linked here for —
-  // see SETUP_CHECK_FIELDS in $lib/server/setup-checks.ts.
-  const highlighted = $derived(
-    new Set(
-      (page.url.searchParams.get("highlight") ?? "").split(",").filter(Boolean)
-    )
-  );
-  function highlightClass(field: string): string {
-    return highlighted.has(field) ? "ring-2 ring-amber-400" : "";
-  }
+	// Field ids the dashboard's setup-issue banner deep-linked here for —
+	// see SETUP_CHECK_FIELDS in $lib/server/setup-checks.ts.
+	const highlighted = $derived(
+		new Set(
+			(page.url.searchParams.get("highlight") ?? "").split(",").filter(Boolean),
+		),
+	);
+	function highlightClass(field: string): string {
+		return highlighted.has(field) ? "ring-2 ring-amber-400" : "";
+	}
 
-  onMount(() => {
-    title.set("Settings");
-    const [first] = highlighted;
-    if (first) {
-      document
-        .getElementById(first)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  });
+	onMount(() => {
+		title.set("Settings");
+		const [first] = highlighted;
+		if (first) {
+			document
+				.getElementById(first)
+				?.scrollIntoView({ behavior: "smooth", block: "center" });
+		}
+	});
 
-  interface OauthRow {
-    clientId: string;
-    clientSecret: string;
-    discoveryUrl: string;
-    enabled: boolean;
-    hasSecret: boolean;
-    name: string;
-    pkce: boolean;
-    scopes: string;
-  }
+	interface OauthRow {
+		clientId: string;
+		clientSecret: string;
+		discoveryUrl: string;
+		enabled: boolean;
+		hasSecret: boolean;
+		name: string;
+		pkce: boolean;
+		scopes: string;
+	}
 
-  function toRow(p: (typeof data.settings.oauthProviders)[number]): OauthRow {
-    return {
-      clientId: p.clientId,
-      clientSecret: "",
-      discoveryUrl: p.discoveryUrl,
-      enabled: p.enabled,
-      hasSecret: !!p.clientSecretEnc,
-      name: p.name,
-      pkce: p.pkce,
-      scopes: p.scopes.join(", "),
-    };
-  }
+	function toRow(p: (typeof data.settings.oauthProviders)[number]): OauthRow {
+		return {
+			clientId: p.clientId,
+			clientSecret: "",
+			discoveryUrl: p.discoveryUrl,
+			enabled: p.enabled,
+			hasSecret: !!p.clientSecretEnc,
+			name: p.name,
+			pkce: p.pkce,
+			scopes: p.scopes.join(", "),
+		};
+	}
 
-  let oauthRows = $derived<OauthRow[]>(
-    data.settings.oauthProviders.length > 0
-      ? data.settings.oauthProviders.map(toRow)
-      : []
-  );
+	let oauthRows = $derived<OauthRow[]>(
+		data.settings.oauthProviders.length > 0
+			? data.settings.oauthProviders.map(toRow)
+			: [],
+	);
 
-  function addOauthRow() {
-    oauthRows.push({
-      clientId: "",
-      clientSecret: "",
-      discoveryUrl: "",
-      enabled: true,
-      hasSecret: false,
-      name: "",
-      pkce: true,
-      scopes: "",
-    });
-  }
+	function addOauthRow() {
+		oauthRows.push({
+			clientId: "",
+			clientSecret: "",
+			discoveryUrl: "",
+			enabled: true,
+			hasSecret: false,
+			name: "",
+			pkce: true,
+			scopes: "",
+		});
+	}
 
-  function removeOauthRow(i: number) {
-    oauthRows.splice(i, 1);
-  }
+	function removeOauthRow(i: number) {
+		oauthRows.splice(i, 1);
+	}
 
-  function submitToast(sectionLabel: string): SubmitFunction {
-    return () =>
-      async ({ result, update }) => {
-        if (result.type === "success") {
-          toast.success(`${sectionLabel} saved.`);
-        } else if (result.type === "failure") {
-          toast.error(
-            (result.data as { error?: string })?.error ??
-              "Check the form for errors."
-          );
-        }
-        await update();
-      };
-  }
+	function submitToast(sectionLabel: string): SubmitFunction {
+		return () =>
+			async ({ result, update }) => {
+				if (result.type === "success") {
+					toast.success(`${sectionLabel} saved.`);
+				} else if (result.type === "failure") {
+					toast.error(
+						(result.data as { error?: string })?.error ??
+							"Check the form for errors.",
+					);
+				}
+				await update();
+			};
+	}
 </script>
 
 <div class="p-6 md:p-8">

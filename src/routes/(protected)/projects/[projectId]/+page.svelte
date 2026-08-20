@@ -1,35 +1,35 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    ArrowLeft,
-    Check,
-    LayoutGrid,
-    Pencil,
-    Plus,
-    Server,
-    Trash2,
-  } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { goto } from "$app/navigation";
-  import { resolve } from "$app/paths";
-  import StatusBadge from "$lib/components/status-badge.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { title } from "$lib/store/title";
+	import {
+		AlertTriangle,
+		ArrowLeft,
+		Check,
+		LayoutGrid,
+		Pencil,
+		Plus,
+		Server,
+		Trash2,
+	} from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import StatusBadge from "$lib/components/status-badge.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
-  const proj = $derived(data.project);
+	const { data, form } = $props();
+	const proj = $derived(data.project);
 
-  onMount(() => title.set(proj.name));
+	onMount(() => title.set(proj.name));
 
-  let editing = $state(false);
-  let renaming = $state(false);
-  let showDeleteConfirm = $state(false);
-  let deleting = $state(false);
+	let editing = $state(false);
+	let renaming = $state(false);
+	let showDeleteConfirm = $state(false);
+	let deleting = $state(false);
 </script>
 
 <div class="p-6 md:p-8">

@@ -9,14 +9,14 @@
  * serialize a class instance, only the plain row underneath it.
  */
 export abstract class BaseDTO<TRow> {
-  protected readonly row: TRow;
+	protected readonly row: TRow;
 
-  protected constructor(row: TRow) {
-    this.row = row;
-  }
+	protected constructor(row: TRow) {
+		this.row = row;
+	}
 
-  /** The raw underlying row, for handing to a `load`/action return value. */
-  toJSON(): TRow {
-    return this.row;
-  }
+	/** The raw underlying row, for handing to a `load`/action return value. */
+	toJSON(): TRow {
+		return this.row;
+	}
 }

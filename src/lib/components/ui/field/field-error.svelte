@@ -1,42 +1,42 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
-  import type { HTMLAttributes } from "svelte/elements";
-  import { cn, type WithElementRef } from "$lib/utils.js";
+	import type { Snippet } from "svelte";
+	import type { HTMLAttributes } from "svelte/elements";
+	import { cn, type WithElementRef } from "$lib/utils.js";
 
-  let {
-    ref = $bindable(null),
-    class: className,
-    children,
-    errors,
-    ...restProps
-  }: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
-    children?: Snippet;
-    errors?: { message?: string }[];
-  } = $props();
+	let {
+		ref = $bindable(null),
+		class: className,
+		children,
+		errors,
+		...restProps
+	}: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
+		children?: Snippet;
+		errors?: { message?: string }[];
+	} = $props();
 
-  const hasContent = $derived.by(() => {
-    // has slotted error
-    if (children) {
-      return true;
-    }
+	const hasContent = $derived.by(() => {
+		// has slotted error
+		if (children) {
+			return true;
+		}
 
-    // no errors
-    if (!errors || errors.length === 0) {
-      return false;
-    }
+		// no errors
+		if (!errors || errors.length === 0) {
+			return false;
+		}
 
-    // has an error but no message
-    if (errors.length === 1 && !errors[0]?.message) {
-      return false;
-    }
+		// has an error but no message
+		if (errors.length === 1 && !errors[0]?.message) {
+			return false;
+		}
 
-    return true;
-  });
+		return true;
+	});
 
-  const isMultipleErrors = $derived(errors && errors.length > 1);
-  const singleErrorMessage = $derived(
-    errors && errors.length === 1 && errors[0]?.message
-  );
+	const isMultipleErrors = $derived(errors && errors.length > 1);
+	const singleErrorMessage = $derived(
+		errors && errors.length === 1 && errors[0]?.message,
+	);
 </script>
 
 {#if hasContent}
@@ -53,9 +53,9 @@
       {singleErrorMessage}
     {:else if isMultipleErrors}
       <ul class="ml-4 flex list-disc flex-col gap-1">
-        {#each errors ?? [] as error, index (index)}
-          {#if error?.message}
-            <li>{error.message}</li>
+        {#each errors ?? [] as fieldErr, index (index)}
+          {#if fieldErr?.message}
+            <li>{fieldErr.message}</li>
           {/if}
         {/each}
       </ul>

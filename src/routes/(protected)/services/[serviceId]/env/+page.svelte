@@ -1,42 +1,42 @@
 <script lang="ts">
-  import { Check, Plus, SlidersHorizontal, Trash2 } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { title } from "$lib/store/title";
+	import { Check, Plus, SlidersHorizontal, Trash2 } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
-  const svc = $derived(data.service);
+	const { data } = $props();
+	const svc = $derived(data.service);
 
-  onMount(() => title.set(`${svc.name} · Env Vars`));
+	onMount(() => title.set(`${svc.name} · Env Vars`));
 
-  interface EnvRow {
-    key: string;
-    value: string;
-  }
-  let envRows = $derived<EnvRow[]>(
-    Object.entries(svc.envVars ?? {}).length > 0
-      ? Object.entries(svc.envVars ?? {}).map(([key, value]) => ({
-          key,
-          value,
-        }))
-      : [{ key: "", value: "" }]
-  );
-  let submitting = $state(false);
+	interface EnvRow {
+		key: string;
+		value: string;
+	}
+	let envRows = $derived<EnvRow[]>(
+		Object.entries(svc.envVars ?? {}).length > 0
+			? Object.entries(svc.envVars ?? {}).map(([key, value]) => ({
+					key,
+					value,
+				}))
+			: [{ key: "", value: "" }],
+	);
+	let submitting = $state(false);
 
-  function addRow() {
-    envRows.push({ key: "", value: "" });
-  }
+	function addRow() {
+		envRows.push({ key: "", value: "" });
+	}
 
-  function removeRow(i: number) {
-    envRows.splice(i, 1);
-    if (envRows.length === 0) {
-      envRows.push({ key: "", value: "" });
-    }
-  }
+	function removeRow(i: number) {
+		envRows.splice(i, 1);
+		if (envRows.length === 0) {
+			envRows.push({ key: "", value: "" });
+		}
+	}
 </script>
 
 <section class="rounded-2xl border border-border bg-surface">

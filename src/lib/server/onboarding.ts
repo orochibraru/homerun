@@ -13,6 +13,6 @@ import { user as userTable } from "$lib/server/db/schema";
  * the API-key lookup below.
  */
 export async function hasAnyUser(): Promise<boolean> {
-  const [row] = await db.select({ id: userTable.id }).from(userTable).limit(1);
-  return !!row;
+	const [row] = await db.select({ id: userTable.id }).from(userTable).limit(1);
+	return !!row;
 }

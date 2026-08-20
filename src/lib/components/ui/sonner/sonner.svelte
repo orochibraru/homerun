@@ -1,16 +1,16 @@
 <script lang="ts">
-  import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
-  import InfoIcon from "@lucide/svelte/icons/info";
-  import OctagonXIcon from "@lucide/svelte/icons/octagon-x";
-  import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
-  import { mode } from "mode-watcher";
-  import {
-    Toaster as Sonner,
-    type ToasterProps as SonnerProps,
-  } from "svelte-sonner";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
+	import InfoIcon from "@lucide/svelte/icons/info";
+	import OctagonXIcon from "@lucide/svelte/icons/octagon-x";
+	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+	import { mode } from "mode-watcher";
+	import {
+		Toaster as Sonner,
+		type ToasterProps as SonnerProps,
+	} from "svelte-sonner";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 
-  let { ...restProps }: SonnerProps = $props();
+	let { ...restProps }: SonnerProps = $props();
 </script>
 
 <Sonner

@@ -1,71 +1,71 @@
 <script lang="ts">
-  import {
-    ArrowRight,
-    CircleCheckIcon,
-    FlaskConical,
-    Mail,
-    RefreshCw,
-    TriangleAlert,
-  } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { goto } from "$app/navigation";
-  import { resolve } from "$app/paths";
-  import { authClient } from "$lib/auth-client";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { title } from "$lib/store/title";
+	import {
+		ArrowRight,
+		CircleCheckIcon,
+		FlaskConical,
+		Mail,
+		RefreshCw,
+		TriangleAlert,
+	} from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { authClient } from "$lib/auth-client";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
+	const { data } = $props();
 
-  onMount(() => title.set("Confirm your email"));
+	onMount(() => title.set("Confirm your email"));
 
-  let resending = $state(false);
-  let resent = $state(false);
-  let checking = $state(false);
+	let resending = $state(false);
+	let resent = $state(false);
+	let checking = $state(false);
 
-  // ── Resend verification email ──────────────────────────────────────
-  async function resendEmail() {
-    resending = true;
-    resent = false;
-    try {
-      await authClient.sendVerificationEmail({
-        callbackURL: resolve("/"),
-        email: data.email,
-      });
-      resent = true;
-      toast.success("Verification email sent! Check your inbox.");
-    } catch {
-      toast.error("Could not resend the email. Please try again.");
-    } finally {
-      resending = false;
-    }
-  }
+	// ── Resend verification email ──────────────────────────────────────
+	async function resendEmail() {
+		resending = true;
+		resent = false;
+		try {
+			await authClient.sendVerificationEmail({
+				callbackURL: resolve("/"),
+				email: data.email,
+			});
+			resent = true;
+			toast.success("Verification email sent! Check your inbox.");
+		} catch {
+			toast.error("Could not resend the email. Please try again.");
+		} finally {
+			resending = false;
+		}
+	}
 
-  // ── Poll / manual check ────────────────────────────────────────────
-  async function checkVerification() {
-    checking = true;
-    try {
-      // Re-fetch the session; if email is now verified the server
-      // will redirect away from this page on the next full load.
-      const session = await authClient.getSession();
-      if (session.data?.user?.emailVerified) {
-        toast.success("Email verified! Taking you to your dashboard…");
-        goto(resolve("/"));
-      } else {
-        toast.info("Not verified yet — check your inbox and click the link.");
-      }
-    } catch {
-      toast.error("Could not check verification status.");
-    } finally {
-      checking = false;
-    }
-  }
+	// ── Poll / manual check ────────────────────────────────────────────
+	async function checkVerification() {
+		checking = true;
+		try {
+			// Re-fetch the session; if email is now verified the server
+			// will redirect away from this page on the next full load.
+			const session = await authClient.getSession();
+			if (session.data?.user?.emailVerified) {
+				toast.success("Email verified! Taking you to your dashboard…");
+				goto(resolve("/"));
+			} else {
+				toast.info("Not verified yet — check your inbox and click the link.");
+			}
+		} catch {
+			toast.error("Could not check verification status.");
+		} finally {
+			checking = false;
+		}
+	}
 
-  // ── Dev bypass ─────────────────────────────────────────────────────
-  function devBypass() {
-    goto(resolve("/"));
-  }
+	// ── Dev bypass ─────────────────────────────────────────────────────
+	function devBypass() {
+		goto(resolve("/"));
+	}
 </script>
 
 <div

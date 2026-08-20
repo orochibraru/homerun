@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { HardDrive, Plus, X } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import CheckBox from "$lib/components/check-box.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import {
-    SelectContent,
-    SelectItem,
-    Select as SelectRoot,
-    SelectTrigger,
-  } from "$lib/components/ui/select/index.js";
-  import { title } from "$lib/store/title";
+	import { HardDrive, Plus, X } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import CheckBox from "$lib/components/check-box.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
+	import { title } from "$lib/store/title";
 
-  let volumeId = $state("");
+	let volumeId = $state("");
 
-  const { data } = $props();
+	const { data } = $props();
 
-  onMount(() => title.set("Volumes"));
+	onMount(() => title.set("Volumes"));
 </script>
 
 <section class="rounded-2xl border border-border bg-surface">

@@ -4,15 +4,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  fullyParallel: false,
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  reporter: "list",
-  retries: 0,
-  testDir: "./e2e",
-  timeout: 180_000,
-  use: {
-    baseURL: "http://localhost:5199",
-    trace: "retain-on-failure",
-  },
-  workers: 1,
+	fullyParallel: false,
+	projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+	reporter: "list",
+	retries: 0,
+	testDir: "./e2e",
+	timeout: 180_000,
+	use: {
+		baseURL: "http://localhost:5199",
+		trace: "retain-on-failure",
+	},
+	workers: 1,
 });

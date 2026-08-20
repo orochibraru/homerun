@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { AlertTriangle, ChevronDown } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { resolve } from "$app/paths";
-  import { timeAgo } from "$lib/formatting";
-  import { title } from "$lib/store/title";
+	import { AlertTriangle, ChevronDown } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { resolve } from "$app/paths";
+	import { timeAgo } from "$lib/formatting";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
+	const { data } = $props();
 
-  onMount(() => title.set(`${data.service.name} · Errors`));
+	onMount(() => title.set(`${data.service.name} · Errors`));
 
-  let expandedDeploymentId = $state<string | null>(null);
+	let expandedDeploymentId = $state<string | null>(null);
 </script>
 
 {#if data.service.currentStatus === "failed"}

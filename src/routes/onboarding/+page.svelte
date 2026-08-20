@@ -1,275 +1,275 @@
 <script lang="ts">
-  import {
-    Cpu,
-    Globe,
-    LoaderIcon,
-    Mail,
-    Server,
-    TriangleAlert,
-  } from "@lucide/svelte";
-  import type { ActionResult } from "@sveltejs/kit";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import CheckBox from "$lib/components/check-box.svelte";
-  import {
-    errorClass,
-    inputClass as input,
-    labelClass as label,
-  } from "$lib/components/form-styles";
-  import Stepper, { type StepperStep } from "$lib/components/stepper.svelte";
-  import { ONBOARDING_FIELD_STEP } from "$lib/onboarding-fields";
-  import { title } from "$lib/store/title";
+	import {
+		Cpu,
+		Globe,
+		LoaderIcon,
+		Mail,
+		Server,
+		TriangleAlert,
+	} from "@lucide/svelte";
+	import type { ActionResult } from "@sveltejs/kit";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import CheckBox from "$lib/components/check-box.svelte";
+	import {
+		errorClass,
+		inputClass as input,
+		labelClass as label,
+	} from "$lib/components/form-styles";
+	import Stepper, { type StepperStep } from "$lib/components/stepper.svelte";
+	import { ONBOARDING_FIELD_STEP } from "$lib/onboarding-fields";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
+	const { data, form } = $props();
 
-  onMount(() => title.set("Set up Homerun"));
+	onMount(() => title.set("Set up Homerun"));
 
-  const STEPS: StepperStep[] = [
-    { icon: Globe, label: "Core" },
-    { icon: Server, label: "Docker" },
-    { icon: Cpu, label: "Traefik" },
-    { icon: Mail, label: "Email" },
-    { label: "Review" },
-  ];
+	const STEPS: StepperStep[] = [
+		{ icon: Globe, label: "Core" },
+		{ icon: Server, label: "Docker" },
+		{ icon: Cpu, label: "Traefik" },
+		{ icon: Mail, label: "Email" },
+		{ label: "Review" },
+	];
 
-  let activeStep = $state(0);
-  let submitting = $state(false);
+	let activeStep = $state(0);
+	let submitting = $state(false);
 
-  // Every field pre-fills with the *effective* current value (DB override,
-  // falling back to the env default) — "required" is then trivially
-  // satisfied by just clicking through if the defaults are already fine.
-  const { settings, envDefaults } = $derived(data);
+	// Every field pre-fills with the *effective* current value (DB override,
+	// falling back to the env default) — "required" is then trivially
+	// satisfied by just clicking through if the defaults are already fine.
+	const { settings, envDefaults } = $derived(data);
 
-  let baseDomain = $derived(
-    (form?.values?.baseDomain as string) ??
-      settings?.baseDomain ??
-      envDefaults?.baseDomain ??
-      ""
-  );
-  let authOrigin = $derived(
-    (form?.values?.authOrigin as string) ??
-      settings?.authOrigin ??
-      envDefaults?.authOrigin ??
-      ""
-  );
-  let authCrossSubdomainCookies = $derived(
-    settings?.authCrossSubdomainCookies ?? false
-  );
+	let baseDomain = $derived(
+		(form?.values?.baseDomain as string) ??
+			settings?.baseDomain ??
+			envDefaults?.baseDomain ??
+			"",
+	);
+	let authOrigin = $derived(
+		(form?.values?.authOrigin as string) ??
+			settings?.authOrigin ??
+			envDefaults?.authOrigin ??
+			"",
+	);
+	let authCrossSubdomainCookies = $derived(
+		settings?.authCrossSubdomainCookies ?? false,
+	);
 
-  let dockerSocketPath = $derived(
-    (form?.values?.dockerSocketPath as string) ??
-      settings?.dockerSocketPath ??
-      envDefaults?.dockerSocketPath ??
-      ""
-  );
-  let dockerNetworkName = $derived(
-    (form?.values?.dockerNetworkName as string) ??
-      settings?.dockerNetworkName ??
-      envDefaults?.dockerNetworkName ??
-      ""
-  );
+	let dockerSocketPath = $derived(
+		(form?.values?.dockerSocketPath as string) ??
+			settings?.dockerSocketPath ??
+			envDefaults?.dockerSocketPath ??
+			"",
+	);
+	let dockerNetworkName = $derived(
+		(form?.values?.dockerNetworkName as string) ??
+			settings?.dockerNetworkName ??
+			envDefaults?.dockerNetworkName ??
+			"",
+	);
 
-  let traefikEntrypoint = $derived(
-    (form?.values?.traefikEntrypoint as string) ??
-      settings?.traefikEntrypoint ??
-      envDefaults?.traefikEntrypoint ??
-      ""
-  );
-  let traefikCertResolver = $derived(
-    (form?.values?.traefikCertResolver as string) ??
-      settings?.traefikCertResolver ??
-      envDefaults?.traefikCertResolver ??
-      ""
-  );
-  let traefikDynamicConfigDir = $derived(
-    (form?.values?.traefikDynamicConfigDir as string) ??
-      settings?.traefikDynamicConfigDir ??
-      envDefaults?.traefikDynamicConfigDir ??
-      ""
-  );
+	let traefikEntrypoint = $derived(
+		(form?.values?.traefikEntrypoint as string) ??
+			settings?.traefikEntrypoint ??
+			envDefaults?.traefikEntrypoint ??
+			"",
+	);
+	let traefikCertResolver = $derived(
+		(form?.values?.traefikCertResolver as string) ??
+			settings?.traefikCertResolver ??
+			envDefaults?.traefikCertResolver ??
+			"",
+	);
+	let traefikDynamicConfigDir = $derived(
+		(form?.values?.traefikDynamicConfigDir as string) ??
+			settings?.traefikDynamicConfigDir ??
+			envDefaults?.traefikDynamicConfigDir ??
+			"",
+	);
 
-  let smtpEnabled = $derived(
-    settings?.smtpEnabled ?? envDefaults?.smtpEnabled ?? false
-  );
-  let smtpHost = $derived(
-    (form?.values?.smtpHost as string) ??
-      settings?.smtpHost ??
-      envDefaults?.smtpHost ??
-      ""
-  );
-  let smtpPort = $derived(
-    (form?.values?.smtpPort as string) ??
-      settings?.smtpPort?.toString() ??
-      envDefaults?.smtpPort?.toString() ??
-      ""
-  );
-  let smtpUser = $derived(
-    (form?.values?.smtpUser as string) ??
-      settings?.smtpUser ??
-      envDefaults?.smtpUser ??
-      ""
-  );
-  let smtpPassword = $state("");
-  let smtpFrom = $derived(
-    (form?.values?.smtpFrom as string) ??
-      settings?.smtpFrom ??
-      envDefaults?.smtpFrom ??
-      ""
-  );
-  let smtpSecure = $derived(
-    settings?.smtpSecure ?? envDefaults?.smtpSecure ?? false
-  );
+	let smtpEnabled = $derived(
+		settings?.smtpEnabled ?? envDefaults?.smtpEnabled ?? false,
+	);
+	let smtpHost = $derived(
+		(form?.values?.smtpHost as string) ??
+			settings?.smtpHost ??
+			envDefaults?.smtpHost ??
+			"",
+	);
+	let smtpPort = $derived(
+		(form?.values?.smtpPort as string) ??
+			settings?.smtpPort?.toString() ??
+			envDefaults?.smtpPort?.toString() ??
+			"",
+	);
+	let smtpUser = $derived(
+		(form?.values?.smtpUser as string) ??
+			settings?.smtpUser ??
+			envDefaults?.smtpUser ??
+			"",
+	);
+	let smtpPassword = $state("");
+	let smtpFrom = $derived(
+		(form?.values?.smtpFrom as string) ??
+			settings?.smtpFrom ??
+			envDefaults?.smtpFrom ??
+			"",
+	);
+	let smtpSecure = $derived(
+		settings?.smtpSecure ?? envDefaults?.smtpSecure ?? false,
+	);
 
-  type FieldErrors = Record<string, string>;
-  let errors = $state<FieldErrors>({});
-  let attempted = $state<Set<number>>(new Set());
+	type FieldErrors = Record<string, string>;
+	let errors = $state<FieldErrors>({});
+	let attempted = $state<Set<number>>(new Set());
 
-  function showError(field: string): string | undefined {
-    return attempted.has(ONBOARDING_FIELD_STEP[field] ?? 0)
-      ? errors[field]
-      : undefined;
-  }
+	function showError(field: string): string | undefined {
+		return attempted.has(ONBOARDING_FIELD_STEP[field] ?? 0)
+			? errors[field]
+			: undefined;
+	}
 
-  function isValidUrl(value: string): boolean {
-    return URL.canParse(value);
-  }
+	function isValidUrl(value: string): boolean {
+		return URL.canParse(value);
+	}
 
-  function setStepErrors(fields: string[], next: FieldErrors) {
-    const merged = { ...errors };
-    for (const f of fields) {
-      delete merged[f];
-    }
-    Object.assign(merged, next);
-    errors = merged;
-  }
+	function setStepErrors(fields: string[], next: FieldErrors) {
+		const merged = { ...errors };
+		for (const f of fields) {
+			delete merged[f];
+		}
+		Object.assign(merged, next);
+		errors = merged;
+	}
 
-  function validateCore(): FieldErrors {
-    const next: FieldErrors = {};
-    if (!baseDomain.trim()) {
-      next.baseDomain = "Base domain is required.";
-    }
-    if (!authOrigin.trim()) {
-      next.authOrigin = "Origin URL is required.";
-    } else if (!isValidUrl(authOrigin)) {
-      next.authOrigin = "Enter a valid URL.";
-    }
-    return next;
-  }
+	function validateCore(): FieldErrors {
+		const next: FieldErrors = {};
+		if (!baseDomain.trim()) {
+			next.baseDomain = "Base domain is required.";
+		}
+		if (!authOrigin.trim()) {
+			next.authOrigin = "Origin URL is required.";
+		} else if (!isValidUrl(authOrigin)) {
+			next.authOrigin = "Enter a valid URL.";
+		}
+		return next;
+	}
 
-  function validateDocker(): FieldErrors {
-    const next: FieldErrors = {};
-    if (!dockerSocketPath.trim()) {
-      next.dockerSocketPath = "Socket path is required.";
-    }
-    if (!dockerNetworkName.trim()) {
-      next.dockerNetworkName = "Network name is required.";
-    }
-    return next;
-  }
+	function validateDocker(): FieldErrors {
+		const next: FieldErrors = {};
+		if (!dockerSocketPath.trim()) {
+			next.dockerSocketPath = "Socket path is required.";
+		}
+		if (!dockerNetworkName.trim()) {
+			next.dockerNetworkName = "Network name is required.";
+		}
+		return next;
+	}
 
-  function validateTraefik(): FieldErrors {
-    const next: FieldErrors = {};
-    if (!traefikEntrypoint.trim()) {
-      next.traefikEntrypoint = "Entrypoint is required.";
-    }
-    if (!traefikCertResolver.trim()) {
-      next.traefikCertResolver = "Cert resolver is required.";
-    }
-    return next;
-  }
+	function validateTraefik(): FieldErrors {
+		const next: FieldErrors = {};
+		if (!traefikEntrypoint.trim()) {
+			next.traefikEntrypoint = "Entrypoint is required.";
+		}
+		if (!traefikCertResolver.trim()) {
+			next.traefikCertResolver = "Cert resolver is required.";
+		}
+		return next;
+	}
 
-  function validateSmtp(): FieldErrors {
-    const next: FieldErrors = {};
-    if (!smtpEnabled) {
-      return next;
-    }
-    if (!smtpHost.trim()) {
-      next.smtpHost = "Host is required when SMTP is enabled.";
-    }
-    if (!smtpPort.trim()) {
-      next.smtpPort = "Port is required when SMTP is enabled.";
-    }
-    if (!smtpUser.trim()) {
-      next.smtpUser = "Username is required when SMTP is enabled.";
-    }
-    if (!smtpFrom.trim()) {
-      next.smtpFrom = "From address is required when SMTP is enabled.";
-    }
-    return next;
-  }
+	function validateSmtp(): FieldErrors {
+		const next: FieldErrors = {};
+		if (!smtpEnabled) {
+			return next;
+		}
+		if (!smtpHost.trim()) {
+			next.smtpHost = "Host is required when SMTP is enabled.";
+		}
+		if (!smtpPort.trim()) {
+			next.smtpPort = "Port is required when SMTP is enabled.";
+		}
+		if (!smtpUser.trim()) {
+			next.smtpUser = "Username is required when SMTP is enabled.";
+		}
+		if (!smtpFrom.trim()) {
+			next.smtpFrom = "From address is required when SMTP is enabled.";
+		}
+		return next;
+	}
 
-  // Index-aligned with STEPS (minus the fields-less Review step).
-  const STEP_FIELDS: string[][] = [
-    ["baseDomain", "authOrigin"],
-    ["dockerSocketPath", "dockerNetworkName"],
-    ["traefikEntrypoint", "traefikCertResolver"],
-    ["smtpHost", "smtpPort", "smtpUser", "smtpFrom"],
-  ];
-  const STEP_VALIDATORS = [
-    validateCore,
-    validateDocker,
-    validateTraefik,
-    validateSmtp,
-  ];
+	// Index-aligned with STEPS (minus the fields-less Review step).
+	const STEP_FIELDS: string[][] = [
+		["baseDomain", "authOrigin"],
+		["dockerSocketPath", "dockerNetworkName"],
+		["traefikEntrypoint", "traefikCertResolver"],
+		["smtpHost", "smtpPort", "smtpUser", "smtpFrom"],
+	];
+	const STEP_VALIDATORS = [
+		validateCore,
+		validateDocker,
+		validateTraefik,
+		validateSmtp,
+	];
 
-  function validateStep(step: number): boolean {
-    attempted.add(step);
-    attempted = new Set(attempted);
+	function validateStep(step: number): boolean {
+		attempted.add(step);
+		attempted = new Set(attempted);
 
-    const next = STEP_VALIDATORS[step]?.() ?? {};
-    setStepErrors(STEP_FIELDS[step] ?? [], next);
-    return Object.keys(next).length === 0;
-  }
+		const next = STEP_VALIDATORS[step]?.() ?? {};
+		setStepErrors(STEP_FIELDS[step] ?? [], next);
+		return Object.keys(next).length === 0;
+	}
 
-  function validateAll(): boolean {
-    let ok = true;
-    for (let i = 0; i < STEPS.length - 1; i += 1) {
-      if (!validateStep(i)) {
-        ok = false;
-      }
-    }
-    return ok;
-  }
+	function validateAll(): boolean {
+		let ok = true;
+		for (let i = 0; i < STEPS.length - 1; i += 1) {
+			if (!validateStep(i)) {
+				ok = false;
+			}
+		}
+		return ok;
+	}
 
-  /** Maps a fail()'d field-error map back onto local state — jumps to the first offending step, same idea as services/new's simpler "jump to step 0" but to the actual step. */
-  function applyServerErrors(failErrors: Record<string, string[]> | undefined) {
-    if (!failErrors) {
-      return;
-    }
-    const flat: FieldErrors = {};
-    for (const [field, msgs] of Object.entries(failErrors)) {
-      if (msgs?.[0]) {
-        flat[field] = msgs[0];
-      }
-    }
-    errors = { ...errors, ...flat };
-    for (const field of Object.keys(flat)) {
-      attempted.add(ONBOARDING_FIELD_STEP[field] ?? 0);
-    }
-    attempted = new Set(attempted);
-    const [firstField] = Object.keys(flat);
-    if (firstField) {
-      activeStep = ONBOARDING_FIELD_STEP[firstField] ?? 0;
-    }
-  }
+	/** Maps a fail()'d field-error map back onto local state — jumps to the first offending step, same idea as services/new's simpler "jump to step 0" but to the actual step. */
+	function applyServerErrors(failErrors: Record<string, string[]> | undefined) {
+		if (!failErrors) {
+			return;
+		}
+		const flat: FieldErrors = {};
+		for (const [field, msgs] of Object.entries(failErrors)) {
+			if (msgs?.[0]) {
+				flat[field] = msgs[0];
+			}
+		}
+		errors = { ...errors, ...flat };
+		for (const field of Object.keys(flat)) {
+			attempted.add(ONBOARDING_FIELD_STEP[field] ?? 0);
+		}
+		attempted = new Set(attempted);
+		const [firstField] = Object.keys(flat);
+		if (firstField) {
+			activeStep = ONBOARDING_FIELD_STEP[firstField] ?? 0;
+		}
+	}
 
-  async function handleSubmitResult(
-    result: ActionResult,
-    update: () => Promise<void>
-  ) {
-    submitting = false;
-    if (result.type === "failure") {
-      applyServerErrors(
-        (result.data as { errors?: Record<string, string[]> } | undefined)
-          ?.errors
-      );
-      toast.error("Check the form for errors.");
-    } else if (result.type === "error") {
-      toast.error(result.error?.message ?? "Something went wrong.");
-    }
-    await update();
-  }
+	async function handleSubmitResult(
+		result: ActionResult,
+		update: () => Promise<void>,
+	) {
+		submitting = false;
+		if (result.type === "failure") {
+			applyServerErrors(
+				(result.data as { errors?: Record<string, string[]> } | undefined)
+					?.errors,
+			);
+			toast.error("Check the form for errors.");
+		} else if (result.type === "error") {
+			toast.error(result.error?.message ?? "Something went wrong.");
+		}
+		await update();
+	}
 </script>
 
 {#if data.waitingForAdmin}

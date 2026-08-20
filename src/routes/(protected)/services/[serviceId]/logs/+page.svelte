@@ -1,81 +1,80 @@
 <script lang="ts">
-  import { Loader2, RefreshCw, Terminal } from "@lucide/svelte";
-  import { onDestroy, onMount, tick } from "svelte";
-  import { resolve } from "$app/paths";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { title } from "$lib/store/title";
+	import { Loader2, RefreshCw, Terminal } from "@lucide/svelte";
+	import { onDestroy, onMount, tick } from "svelte";
+	import { resolve } from "$app/paths";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { title } from "$lib/store/title";
 
-  const { data } = $props();
-  const svc = $derived(data.service);
+	const { data } = $props();
+	const svc = $derived(data.service);
 
-  onMount(() => title.set(`${svc.name} · Logs`));
+	onMount(() => title.set(`${svc.name} · Logs`));
 
-  let lines = $state<string[]>([]);
-  let connected = $state(false);
-  let errored = $state(false);
-  let logEl = $state<HTMLElement | undefined>();
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  let cancelled = false;
+	let lines = $state<string[]>([]);
+	let connected = $state(false);
+	let errored = $state(false);
+	let logEl = $state<HTMLElement | undefined>();
+	let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+	let cancelled = false;
 
-  async function connect() {
-    if (!svc.containerId) {
-      return;
-    }
-    lines = [];
-    connected = false;
-    errored = false;
+	async function connect() {
+		if (!svc.containerId) {
+			return;
+		}
+		lines = [];
+		connected = false;
+		errored = false;
 
-    try {
-      const res = await fetch(
-        resolve("/(protected)/services/[serviceId]/logs", {
-          serviceId: svc.id,
-        })
-      );
-      if (!(res.ok && res.body)) {
-        errored = true;
-        return;
-      }
-      connected = true;
+		try {
+			const res = await fetch(
+				resolve("/(protected)/services/[serviceId]/logs", {
+					serviceId: svc.id,
+				}),
+			);
+			if (!(res.ok && res.body)) {
+				errored = true;
+				return;
+			}
+			connected = true;
 
-      const decoder = new TextDecoder();
-      reader = res.body.getReader();
-      let buffer = "";
+			const decoder = new TextDecoder();
+			reader = res.body.getReader();
+			let buffer = "";
 
-      while (!cancelled) {
-        // biome-ignore lint/performance/noAwaitInLoops: streaming reads are inherently sequential — each chunk depends on the previous read() resolving.
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n");
-        buffer = parts.pop() ?? "";
-        if (parts.length > 0) {
-          lines.push(...parts);
-          await tick();
-          logEl?.scrollTo({ top: logEl.scrollHeight });
-        }
-      }
-    } catch {
-      if (!cancelled) {
-        errored = true;
-      }
-    } finally {
-      connected = false;
-    }
-  }
+			while (!cancelled) {
+				const { done, value } = await reader.read();
+				if (done) {
+					break;
+				}
+				buffer += decoder.decode(value, { stream: true });
+				const parts = buffer.split("\n");
+				buffer = parts.pop() ?? "";
+				if (parts.length > 0) {
+					lines.push(...parts);
+					await tick();
+					logEl?.scrollTo({ top: logEl.scrollHeight });
+				}
+			}
+		} catch {
+			if (!cancelled) {
+				errored = true;
+			}
+		} finally {
+			connected = false;
+		}
+	}
 
-  onMount(connect);
+	onMount(connect);
 
-  onDestroy(() => {
-    cancelled = true;
-    reader?.cancel();
-  });
+	onDestroy(() => {
+		cancelled = true;
+		reader?.cancel();
+	});
 
-  function reconnect() {
-    cancelled = false;
-    connect();
-  }
+	function reconnect() {
+		cancelled = false;
+		connect();
+	}
 </script>
 
 <section class="rounded-2xl border border-border bg-surface">

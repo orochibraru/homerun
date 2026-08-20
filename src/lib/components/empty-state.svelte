@@ -1,17 +1,17 @@
 <script lang="ts">
-  import type { Component, Snippet } from "svelte";
+	import type { Component, Snippet } from "svelte";
 
-  const {
-    icon: Icon,
-    title,
-    subtitle,
-    children,
-  }: {
-    icon: Component<{ class?: string }>;
-    title: string;
-    subtitle?: string;
-    children?: Snippet;
-  } = $props();
+	const {
+		icon: Icon,
+		title,
+		subtitle,
+		children,
+	}: {
+		icon: Component<{ class?: string }>;
+		title: string;
+		subtitle?: string;
+		children?: Snippet;
+	} = $props();
 </script>
 
 <div

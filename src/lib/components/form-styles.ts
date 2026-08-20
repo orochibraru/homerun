@@ -10,7 +10,7 @@
  * copy-pasted everywhere.
  */
 export const inputClass =
-  "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+	"w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 
 export const labelClass = "block mb-1.5 text-sm font-medium text-text";
 

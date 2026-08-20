@@ -1,33 +1,32 @@
 <script lang="ts">
-  import { ChevronDown, Plus, PlusIcon, Server, Trash2 } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { toast } from "svelte-sonner";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import EmptyState from "$lib/components/empty-state.svelte";
-  import { labelClass as label } from "$lib/components/form-styles";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { title } from "$lib/store/title";
+	import { ChevronDown, Plus, PlusIcon, Server, Trash2 } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import EmptyState from "$lib/components/empty-state.svelte";
+	import { labelClass as label } from "$lib/components/form-styles";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
+	const { data, form } = $props();
 
-  onMount(() => title.set("Remote Hosts"));
+	onMount(() => title.set("Remote Hosts"));
 
-  let showTls = $state(false);
-  let submitting = $state(false);
+	let showTls = $state(false);
+	let submitting = $state(false);
 
-  function confirmDelete(e: SubmitEvent, name: string) {
-    if (
-      // biome-ignore lint/suspicious/noAlert: a native confirm() is the simplest correct guard here — no custom UI built for this yet.
-      !confirm(
-        `Delete "${name}"? Services deployed to it keep running there — they just won't be manageable from here anymore.`
-      )
-    ) {
-      e.preventDefault();
-    }
-  }
+	function confirmDelete(e: SubmitEvent, name: string) {
+		if (
+			!confirm(
+				`Delete "${name}"? Services deployed to it keep running there — they just won't be manageable from here anymore.`,
+			)
+		) {
+			e.preventDefault();
+		}
+	}
 </script>
 
 <div class="p-6 md:p-8">

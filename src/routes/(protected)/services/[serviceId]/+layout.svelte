@@ -1,97 +1,97 @@
 <script lang="ts">
-  import {
-    ArrowLeft,
-    FileText,
-    HardDrive,
-    LayoutGrid,
-    Network,
-    Settings,
-    SlidersHorizontal,
-    Terminal,
-    TriangleAlert,
-  } from "@lucide/svelte";
-  import { resolve } from "$app/paths";
-  import { page } from "$app/state";
-  import StatusBadge from "$lib/components/status-badge.svelte";
+	import {
+		ArrowLeft,
+		FileText,
+		HardDrive,
+		LayoutGrid,
+		Network,
+		Settings,
+		SlidersHorizontal,
+		Terminal,
+		TriangleAlert,
+	} from "@lucide/svelte";
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
+	import StatusBadge from "$lib/components/status-badge.svelte";
 
-  const { data, children } = $props();
+	const { data, children } = $props();
 
-  const svc = $derived(data.service);
-  const publicHost = $derived(
-    data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug
-  );
+	const svc = $derived(data.service);
+	const publicHost = $derived(
+		data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug,
+	);
 
-  const tabs = $derived([
-    {
-      exact: true,
-      href: resolve("/(protected)/services/[serviceId]", { serviceId: svc.id }),
-      icon: LayoutGrid,
-      label: "Overview",
-    },
-    {
-      exact: false,
-      href: resolve("/(protected)/services/[serviceId]/logs", {
-        serviceId: svc.id,
-      }),
-      icon: FileText,
-      label: "Logs",
-    },
-    {
-      exact: false,
-      href: resolve("/(protected)/services/[serviceId]/env", {
-        serviceId: svc.id,
-      }),
-      icon: SlidersHorizontal,
-      label: "Env Vars",
-    },
-    {
-      exact: false,
-      href: resolve("/(protected)/services/[serviceId]/volumes", {
-        serviceId: svc.id,
-      }),
-      icon: HardDrive,
-      label: "Volumes",
-    },
-    {
-      exact: false,
-      href: resolve("/(protected)/services/[serviceId]/networking", {
-        serviceId: svc.id,
-      }),
-      icon: Network,
-      label: "Networking",
-    },
-    {
-      exact: false,
-      href: resolve("/(protected)/services/[serviceId]/terminal", {
-        serviceId: svc.id,
-      }),
-      icon: Terminal,
-      label: "Terminal",
-    },
-    {
-      exact: false,
-      href: resolve("/(protected)/services/[serviceId]/errors", {
-        serviceId: svc.id,
-      }),
-      icon: TriangleAlert,
-      label: "Errors",
-    },
-    {
-      exact: false,
-      href: resolve("/(protected)/services/[serviceId]/settings", {
-        serviceId: svc.id,
-      }),
-      icon: Settings,
-      label: "Settings",
-    },
-  ]);
+	const tabs = $derived([
+		{
+			exact: true,
+			href: resolve("/(protected)/services/[serviceId]", { serviceId: svc.id }),
+			icon: LayoutGrid,
+			label: "Overview",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/logs", {
+				serviceId: svc.id,
+			}),
+			icon: FileText,
+			label: "Logs",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/env", {
+				serviceId: svc.id,
+			}),
+			icon: SlidersHorizontal,
+			label: "Env Vars",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/volumes", {
+				serviceId: svc.id,
+			}),
+			icon: HardDrive,
+			label: "Volumes",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/networking", {
+				serviceId: svc.id,
+			}),
+			icon: Network,
+			label: "Networking",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/terminal", {
+				serviceId: svc.id,
+			}),
+			icon: Terminal,
+			label: "Terminal",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/errors", {
+				serviceId: svc.id,
+			}),
+			icon: TriangleAlert,
+			label: "Errors",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/settings", {
+				serviceId: svc.id,
+			}),
+			icon: Settings,
+			label: "Settings",
+		},
+	]);
 
-  function isActive(href: string, exact: boolean): boolean {
-    if (exact) {
-      return page.url.pathname === href;
-    }
-    return page.url.pathname.startsWith(href);
-  }
+	function isActive(href: string, exact: boolean): boolean {
+		if (exact) {
+			return page.url.pathname === href;
+		}
+		return page.url.pathname.startsWith(href);
+	}
 </script>
 
 <div class="p-6 md:p-8">

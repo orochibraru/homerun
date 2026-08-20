@@ -1,8 +1,8 @@
 <script lang="ts" module>
-  export interface StepperStep {
-    icon?: Component<{ class?: string }>;
-    label: string;
-  }
+	export interface StepperStep {
+		icon?: Component<{ class?: string }>;
+		label: string;
+	}
 </script>
 
 <script lang="ts">

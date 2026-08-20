@@ -1,23 +1,23 @@
 <script lang="ts">
-  import { Eye, EyeOff, Server } from "@lucide/svelte";
-  import { onMount } from "svelte";
-  import { enhance } from "$app/forms";
-  import { resolve } from "$app/paths";
-  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-  import { title } from "$lib/store/title";
+	import { Eye, EyeOff, Server } from "@lucide/svelte";
+	import { onMount } from "svelte";
+	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { title } from "$lib/store/title";
 
-  const { data, form } = $props();
+	const { data, form } = $props();
 
-  onMount(() => title.set("Accept Invite"));
+	onMount(() => title.set("Accept Invite"));
 
-  let name = $state("");
-  let password = $state("");
-  let confirm = $state("");
-  let showPassword = $state(false);
-  let submitting = $state(false);
+	let name = $state("");
+	let password = $state("");
+	let confirm = $state("");
+	let showPassword = $state(false);
+	let submitting = $state(false);
 
-  const inputClass =
-    "w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+	const inputClass =
+		"w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
