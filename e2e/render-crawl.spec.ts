@@ -56,7 +56,8 @@ const STATIC_ROUTES = [
   "/settings",
   "/users",
   "/system-logs",
-  "/system-logs/traefik",
+  // Not "/system-logs/traefik" — that's a +server.ts stream endpoint the
+  // system-logs page itself fetches from, not a page to navigate to.
 ];
 
 // Service detail tabs, relative to the created service's own path.
@@ -72,7 +73,16 @@ const SERVICE_TABS = [
 ];
 
 test("every dashboard page renders without error", async ({ page }) => {
+  // Well beyond the default 180s (set for the deploy-heavy smoke test) —
+  // this test does no image pulls, but sequentially visiting ~25 routes
+  // plus the setup (sign-up, onboarding, project/service/volume creation)
+  // and cleanup genuinely takes several minutes.
+  test.setTimeout(420_000);
+
   const errors = collectPageErrors(page);
+  // Set for real right before the crawl starts (see below) — errors from
+  // sign-up/onboarding/entity-creation aren't attributed to any of the
+  // crawled routes.
   let sinceConsole = 0;
   let sincePageErr = 0;
 
@@ -155,6 +165,12 @@ test("every dashboard page renders without error", async ({ page }) => {
       await page.waitForURL(VOLUME_PATH_RE);
       volumePath = new URL(page.url()).pathname;
     });
+
+    // Errors from sign-up/onboarding/entity-creation above are real if they
+    // happen, but they're not attributable to a single crawled route —
+    // start the per-route accounting fresh from here.
+    sinceConsole = errors.consoleErrors.length;
+    sincePageErr = errors.pageErrors.length;
 
     await test.step("crawl every static route", async () => {
       for (const path of STATIC_ROUTES) {

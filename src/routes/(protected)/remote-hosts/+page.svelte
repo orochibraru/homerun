@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { ChevronDown, Plus, Server, Trash2 } from "@lucide/svelte";
+  import { ChevronDown, Plus, PlusIcon, Server, Trash2 } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
+  import { resolve } from "$app/paths";
   import EmptyState from "$lib/components/empty-state.svelte";
   import { labelClass as label } from "$lib/components/form-styles";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -14,7 +15,6 @@
 
   onMount(() => title.set("Remote Hosts"));
 
-  let showForm = $state(false);
   let showTls = $state(false);
   let submitting = $state(false);
 
@@ -31,7 +31,7 @@
 </script>
 
 <div class="p-6 md:p-8">
-  <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+  <div class="mb-8 flex items-center justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold text-text">Remote Hosts</h1>
       <p class="mt-1 text-sm text-text-muted">
@@ -41,121 +41,23 @@
         practice.
       </p>
     </div>
-    <Button
-      onclick={() => {
-        showForm = !showForm;
-      }}
-    >
+    <Button href={resolve("/remote-hosts/new")}>
       <Plus class="size-4" />
       Add Host
     </Button>
   </div>
-
-  {#if showForm}
-    <form
-      action="?/create"
-      class="mb-6 space-y-4 rounded-2xl border border-border bg-surface p-5"
-      method="POST"
-      use:enhance={() => {
-        submitting = true;
-        return async ({ result, update }) => {
-          submitting = false;
-          if (result.type === "success") {
-            toast.success("Remote host added.");
-            showForm = false;
-          } else if (result.type === "failure") {
-            toast.error(
-              (result.data as { error?: string })?.error ??
-                "Check the form for errors."
-            );
-          }
-          await update();
-        };
-      }}
-    >
-      {#if form?.error}
-        <p class="text-sm text-red-500">{form.error}</p>
-      {/if}
-      <div>
-        <label class={label} for="name">Name</label>
-        <Input id="name" name="name" required type="text" />
-      </div>
-      <div>
-        <label class={label} for="dockerHost">Docker host</label>
-        <Input
-          class="font-mono"
-          id="dockerHost"
-          name="dockerHost"
-          placeholder="tcp://192.168.1.50:2376"
-          required
-          type="text"
-        />
-        <p class="mt-1.5 text-xs text-text-subtle">
-          <code>tcp://host:port</code>
-          (add TLS certs below for a TLS-secured daemon) or
-          <code>ssh://user@host</code>
-          (uses the system's own SSH agent — no key field here).
-        </p>
-      </div>
-
-      <Button
-        class="h-auto p-0"
-        onclick={() => {
-          showTls = !showTls;
-        }}
-        variant="link"
-      >
-        <ChevronDown
-          class="size-3.5 transition-transform {showTls ? 'rotate-180' : ''}"
-        />
-        TLS client certificate (optional, tcp:// only)
-      </Button>
-      {#if showTls}
-        <div class="space-y-3">
-          <div>
-            <label class={label} for="tlsCa">CA certificate</label>
-            <Textarea
-              class="resize-none font-mono"
-              id="tlsCa"
-              name="tlsCa"
-              rows={3}
-            />
-          </div>
-          <div>
-            <label class={label} for="tlsCert">Client certificate</label>
-            <Textarea
-              class="resize-none font-mono"
-              id="tlsCert"
-              name="tlsCert"
-              rows={3}
-            />
-          </div>
-          <div>
-            <label class={label} for="tlsKey">Client key</label>
-            <Textarea
-              class="resize-none font-mono"
-              id="tlsKey"
-              name="tlsKey"
-              rows={3}
-            />
-          </div>
-        </div>
-      {/if}
-
-      <div class="flex justify-end gap-3">
-        <Button disabled={submitting} type="submit" variant="outline">
-          Add host
-        </Button>
-      </div>
-    </form>
-  {/if}
 
   {#if data.hosts.length === 0}
     <EmptyState
       icon={Server}
       subtitle="Every service deploys to this host until you add one."
       title="No remote hosts yet"
-    />
+    >
+      <Button href={resolve("/remote-hosts/new")}>
+        <PlusIcon />
+        Add your first remote host
+      </Button>
+    </EmptyState>
   {:else}
     <div class="space-y-3">
       {#each data.hosts as host (host.id)}
