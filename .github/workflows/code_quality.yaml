@@ -78,7 +78,7 @@ jobs:
 
   docker:
     name: Docker
-    uses: ./.github/workflows/docker.yaml
+    uses: ./.github/actions/docker.yaml
     needs:
       - ts-lint-test
       - ts-build-check

@@ -24,7 +24,7 @@ jobs:
 
   build:
     name: Docker Build
-    uses: ./.github/workflows/docker.yaml
+    uses: ./.github/actions/docker.yaml
     needs:
       - code_quality
     with:
