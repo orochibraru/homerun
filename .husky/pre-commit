@@ -11,7 +11,7 @@ fi
 echo "Formatting/linting staged files..."
 # Run formatter, capturing the exit code so we can still re-stage and report
 FORMAT_EXIT_CODE=0
-bun run biome check || FORMAT_EXIT_CODE=$?
+bun run biome check --write || FORMAT_EXIT_CODE=$?
 
 # Re-stage files that were already staged
 echo "$STAGED_FILES" | while IFS= read -r file; do
