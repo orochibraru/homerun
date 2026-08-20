@@ -34,7 +34,7 @@ export abstract class BackupService {
 	 * rather than silently doing nothing; that's a documented follow-up, not
 	 * an oversight.
 	 */
-	protected static async runBackup(
+	protected async runBackup(
 		volume: StorageVolumeDTO,
 		upload: (
 			volume: StorageVolumeDTO,

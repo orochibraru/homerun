@@ -98,13 +98,13 @@ function authHeader(token: string): Record<string, string> {
 	return { Authorization: `Bearer ${token}` };
 }
 
-export class GitProviderService {
+class GitProviderServiceClass {
 	/**
 	 * Signed, stateless CSRF state param for the OAuth redirect round-trip :
 	 * no server-side storage/cleanup needed (unlike a DB-backed state
 	 * table), verified purely from the value itself plus config.auth.secret.
 	 */
-	static createState(providerId: string, userId: string): string {
+	createState(providerId: string, userId: string): string {
 		const nonce = randomBytes(8).toString("hex");
 		const payload = `${providerId}:${userId}:${nonce}:${Date.now()}`;
 		const sig = createHmac("sha256", config.auth.secret)
@@ -113,11 +113,7 @@ export class GitProviderService {
 		return Buffer.from(`${payload}:${sig}`).toString("base64url");
 	}
 
-	static verifyState(
-		state: string,
-		providerId: string,
-		userId: string,
-	): boolean {
+	verifyState(state: string, providerId: string, userId: string): boolean {
 		try {
 			const decoded = Buffer.from(state, "base64url").toString("utf8");
 			const parts = decoded.split(":");
@@ -146,7 +142,7 @@ export class GitProviderService {
 	}
 
 	/** URL to send the browser to, kicking off the provider's own consent screen. */
-	static authorizeUrl(
+	authorizeUrl(
 		provider: GitProviderConfig,
 		state: string,
 		redirectUri: string,
@@ -162,7 +158,7 @@ export class GitProviderService {
 	}
 
 	/** Exchanges the callback's `code` for an access (+ refresh) token, then fetches the connected account's own username. */
-	static async exchangeCode(
+	async exchangeCode(
 		provider: GitProviderConfig,
 		code: string,
 		redirectUri: string,
@@ -235,10 +231,7 @@ export class GitProviderService {
 			expiresIn = body.expires_in ?? null;
 		}
 
-		const providerUsername = await GitProviderService.fetchUsername(
-			provider,
-			accessToken,
-		);
+		const providerUsername = await this.fetchUsername(provider, accessToken);
 
 		return {
 			accessToken,
@@ -248,7 +241,7 @@ export class GitProviderService {
 		};
 	}
 
-	private static async fetchUsername(
+	private async fetchUsername(
 		provider: GitProviderConfig,
 		accessToken: string,
 	): Promise<string> {
@@ -267,7 +260,7 @@ export class GitProviderService {
 	}
 
 	/** Lists repos the connected account is a member of, normalized across providers. */
-	static async listRepos(
+	async listRepos(
 		provider: GitProviderConfig,
 		connection: GitConnectionDTO,
 	): Promise<GitRepo[]> {
@@ -371,7 +364,7 @@ export class GitProviderService {
 	}
 
 	/** Whether `repoFullName` has a Dockerfile at its root, on the given ref. */
-	static async hasDockerfile(
+	async hasDockerfile(
 		provider: GitProviderConfig,
 		connection: GitConnectionDTO,
 		repoFullName: string,
@@ -410,7 +403,7 @@ export class GitProviderService {
 		}
 	}
 
-	static defaultsFor(kind: GitProviderKind): {
+	defaultsFor(kind: GitProviderKind): {
 		name: string;
 		requiresBaseUrl: boolean;
 	} {
@@ -430,3 +423,5 @@ export class GitProviderService {
 		}
 	}
 }
+
+export const GitProviderService = new GitProviderServiceClass();

@@ -9,7 +9,7 @@ const TRAILING_SLASH_RE = /\/$/;
 const BEARER_CHALLENGE_RE = /^Bearer\s+(.+)$/i;
 const QUOTES_RE = /^"|"$/g;
 
-/** Splits "image:tag" style refs into a registry host + repository path, defaulting to Docker Hub conventions. */
+/** Splits "image:tag" style refs into a registry host + repository path, defaulting to Docker Hub conventions. Pure : stays a plain function, no need for an instance. */
 function parseImageRef(
 	image: string,
 	registryUrl?: string | null,
@@ -99,7 +99,7 @@ const MANIFEST_ACCEPT = [
  * registries (via the Docker Registry HTTP API v2), distinct from
  * DockerService which only talks to a Docker daemon (local or remote).
  */
-export class ApiService {
+class ApiServiceClass {
 	/**
 	 * Checks whether `image:tag` exists in its registry, via the Docker
 	 * Registry HTTP API v2 (a manifest HEAD, not a pull : no layers ever
@@ -109,7 +109,7 @@ export class ApiService {
 	 * Fails open (`exists: true`) on network/parse trouble : this is a
 	 * warn-don't-block check, a false negative is worse than a missed check.
 	 */
-	static async checkImageExists(
+	async checkImageExists(
 		image: string,
 		tag: string,
 		registryUrl?: string | null,
@@ -157,3 +157,5 @@ export class ApiService {
 		}
 	}
 }
+
+export const ApiService = new ApiServiceClass();

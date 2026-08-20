@@ -10,7 +10,7 @@ import { DockerService } from "./docker.service.ts";
 const logger = new Logger("UserCleanup");
 
 /** Read/cleanup operations for the `user` table and everything a user owns. */
-export class UserService {
+class UserServiceClass {
 	/**
 	 * Stops/removes a user's actual Docker containers and networks and deletes
 	 * their app-owned rows (deployments/services/projects/storage volumes)
@@ -36,7 +36,7 @@ export class UserService {
 	 *   `auth.api.removeUser` without first calling this method would leak
 	 *   the removed user's running containers.
 	 */
-	static async cleanupUserResources(userId: string): Promise<void> {
+	async cleanupUserResources(userId: string): Promise<void> {
 		const services = await db
 			.select()
 			.from(schema.service)
@@ -111,11 +111,11 @@ export class UserService {
 	 * Raw queries rather than a DTO : there's no DTO for better-auth-owned
 	 * tables, same precedent hooks.server.ts and auth.ts already use.
 	 */
-	static async listUsers(): Promise<User[]> {
+	async listUsers(): Promise<User[]> {
 		return await db.select().from(userTable).orderBy(desc(userTable.createdAt));
 	}
 
-	static async countAdmins(): Promise<number> {
+	async countAdmins(): Promise<number> {
 		const [row] = await db
 			.select({ total: count() })
 			.from(userTable)
@@ -123,3 +123,5 @@ export class UserService {
 		return row?.total ?? 0;
 	}
 }
+
+export const UserService = new UserServiceClass();
