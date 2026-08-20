@@ -27,5 +27,8 @@ jobs:
       - code_quality
     with:
       image_tag: ${{ github.sha }}
+      image_name: orochibraru/homerun
+      registry_name: git.ombrage.space
+      registry_username: orochibraru
     secrets:
-      docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
+      registry_password: ${{ secrets.GITEA_TOKEN }}
