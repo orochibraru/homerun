@@ -35,6 +35,7 @@ permissions:
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    name: "Prepare architecture matrix and metadata"
     outputs:
       matrix: ${{ steps.platforms.outputs.matrix }}
     steps:
@@ -49,8 +50,6 @@ jobs:
 
       - name: Create matrix
         id: platforms
-        env:
-          GARAGE_RPC_SECRET: "e2e"
         run: |
           touch .env
           docker buildx bake image-all --print
@@ -84,7 +83,7 @@ jobs:
   # Docker: Build & push per-platform digests
   # ===========================================
   build:
-    name: Docker
+    name: Build Images
     runs-on: ${{ startsWith(matrix.platform, 'linux/arm') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     needs: prepare
     strategy:
@@ -144,11 +143,12 @@ jobs:
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
+
   # ===========================================
   # Merge per-platform digests into a manifest
   # ===========================================
   merge:
-    name: Create Manifest & Tag
+    name: Create Manifest and Tag then Push
     runs-on: ubuntu-latest
     needs: [prepare, build]
     outputs:
