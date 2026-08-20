@@ -29,4 +29,4 @@ jobs:
       registry_name: git.ombrage.space
       registry_username: orochibraru
     secrets:
-      registry_password: ${{ secrets.GITEA_TOKEN }}
+      registry_password: ${{ secrets.PACKAGES_TOKEN }}
