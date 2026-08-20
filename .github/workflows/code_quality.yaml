@@ -3,9 +3,6 @@ name: CI
 on:
   pull_request:
   workflow_call:
-  push:
-    branches:
-      - main
 
 permissions:
   contents: read

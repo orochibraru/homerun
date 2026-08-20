@@ -18,6 +18,9 @@ permissions:
   packages: write
 
 jobs:
+  code_quality:
+    uses: ./.github/workflows/code_quality.yaml
+
   build:
     uses: ./.github/workflows/docker.yaml
     with:
