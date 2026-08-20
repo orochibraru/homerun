@@ -5,18 +5,16 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, bearer, genericOAuth, openAPI } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
-import { eq, inArray } from "drizzle-orm";
 import { building, dev } from "$app/environment";
 import { getRequestEvent } from "$app/server";
 import { config, isSmtpEnabled } from "$lib/config";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 // biome-ignore lint/performance/noNamespaceImport: drizzleAdapter needs the whole schema module (every table), not a hand-picked subset.
 import * as schema from "$lib/server/db/schema";
-import { removeProjectNetwork } from "$lib/server/docker/networks";
-import { removeContainer } from "$lib/server/docker/service";
 import { Email } from "$lib/server/email";
+import { hasAnyUser } from "$lib/server/onboarding";
+import { cleanupUserResources } from "$lib/server/user-cleanup";
 
 if (!(process.env.ORIGIN || dev || building)) {
   throw new Error("ORIGIN environment variable is not set");
@@ -59,6 +57,34 @@ function buildAuth() {
       provider: "sqlite",
       schema,
     }),
+    databaseHooks: {
+      user: {
+        create: {
+          // The very first account on the instance becomes admin,
+          // regardless of which path created it (self-service sign-up is
+          // the only one reachable while hasAnyUser() is still false — see
+          // hooks.server.ts). Real, tested-in-review finding: gating this
+          // on "!user.role" doesn't work — the admin plugin registers its
+          // own databaseHooks.user.create.before (setting role to
+          // defaultRole) via its init(), and depending on hook-merge order
+          // that can run *before* this one, making `user.role` already
+          // truthy by the time this hook sees it (verified live: the
+          // bootstrap account came out "developer", not "admin", with that
+          // guard). Checking hasAnyUser() directly instead sidesteps hook
+          // ordering entirely — both hooks run pre-insert, so it's still
+          // reliably false only before the very first user exists. Every
+          // other creation path (admin-direct-create, invite-accept)
+          // always passes an explicit role and runs once hasAnyUser() is
+          // already true, so this never overrides those.
+          before: async (user) => {
+            if (await hasAnyUser()) {
+              return;
+            }
+            return { data: { ...user, role: "admin" } };
+          },
+        },
+      },
+    },
     emailAndPassword: {
       disableSignUp: false,
       enabled: true,
@@ -100,7 +126,11 @@ function buildAuth() {
       }),
       apiKey(),
       passkey(),
-      admin(),
+      // "developer" is the sane fallback default — every real creation
+      // path (admin-direct-create, invite-accept) always passes an
+      // explicit role, and the bootstrap-admin case is handled by the
+      // databaseHooks below, not this option.
+      admin({ defaultRole: "developer" }),
       bearer(),
       genericOAuth({
         config: config.auth.oauthProviders.map((provider) => ({
@@ -122,88 +152,13 @@ function buildAuth() {
     secret: config.auth.secret,
     user: {
       deleteUser: {
-        // better-auth's own internalAdapter.deleteUser only cleans up its
-        // own session/account rows — it has no knowledge of our
-        // service/deployment tables, and PRAGMA foreign_keys is never
-        // enabled on the sqlite connection, so onDelete:cascade in the
-        // schema is inert. Worse, leaving this out would leak running
-        // Docker containers on the host. Clean up explicitly, before the
-        // user row (and better-auth's cascade of it) goes away.
+        // Extracted to user-cleanup.ts — the admin Users page's "remove
+        // user" action needs the exact same cleanup and can't get it for
+        // free from better-auth's admin.removeUser (see that module's
+        // docstring for why). Thin wrapper here keeps self-service account
+        // deletion unchanged.
         beforeDelete: async (user) => {
-          const services = await db
-            .select()
-            .from(schema.service)
-            .where(eq(schema.service.userId, user.id));
-
-          logger.info(
-            `Deleting account: user=${user.id} services=${services.length}`
-          );
-
-          await Promise.all(
-            services
-              .filter((svc) => svc.containerId)
-              .map(async (svc) => {
-                try {
-                  const remote = await RemoteHostDTO.connectionFor(
-                    svc,
-                    user.id
-                  );
-                  await removeContainer(
-                    svc.containerId as string,
-                    { force: true },
-                    remote
-                  );
-                } catch {
-                  // Already gone on the host — fine, keep cleaning up.
-                }
-              })
-          );
-
-          await db
-            .delete(schema.deployment)
-            .where(eq(schema.deployment.userId, user.id));
-          await db
-            .delete(schema.service)
-            .where(eq(schema.service.userId, user.id));
-
-          // Same explicit-cleanup precedent as services above — FK cascade
-          // alone would leave the project's Docker network dangling.
-          const projects = await db
-            .select()
-            .from(schema.project)
-            .where(eq(schema.project.userId, user.id));
-          await Promise.all(
-            projects.map((proj) =>
-              removeProjectNetwork(proj.id).catch(() => {
-                // Already gone — fine, keep cleaning up.
-              })
-            )
-          );
-          await db
-            .delete(schema.project)
-            .where(eq(schema.project.userId, user.id));
-
-          // Row-only — no host-side resource (unlike services/projects,
-          // nothing was ever created on the user's behalf just by defining
-          // a storage volume source). Delete the join rows first (no userId
-          // column of its own to filter by directly).
-          const volumes = await db
-            .select({ id: schema.storageVolume.id })
-            .from(schema.storageVolume)
-            .where(eq(schema.storageVolume.userId, user.id));
-          if (volumes.length > 0) {
-            await db.delete(schema.serviceVolume).where(
-              inArray(
-                schema.serviceVolume.volumeId,
-                volumes.map((v) => v.id)
-              )
-            );
-          }
-          await db
-            .delete(schema.storageVolume)
-            .where(eq(schema.storageVolume.userId, user.id));
-
-          logger.info(`Account deletion cleanup complete: user=${user.id}`);
+          await cleanupUserResources(user.id);
         },
         enabled: true,
       },

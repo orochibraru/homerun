@@ -6,10 +6,9 @@
   import { enhance } from "$app/forms";
   import { page } from "$app/state";
   import CheckBox from "$lib/components/check-box.svelte";
-  import {
-    inputClass as input,
-    labelClass as label,
-  } from "$lib/components/form-styles";
+  import { labelClass as label } from "$lib/components/form-styles";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -130,28 +129,28 @@
       >
         <div>
           <label class={label} for="baseDomain">Base domain</label>
-          <input
-            class="{input} {highlightClass('baseDomain')}"
+          <Input
+            class={highlightClass("baseDomain")}
             id="baseDomain"
             name="baseDomain"
             placeholder={data.envDefaults.baseDomain}
             type="text"
             value={data.settings.baseDomain ?? ""}
-          >
+          />
           <p class="mt-1.5 text-xs text-text-subtle">
             Deployed services are routed under &lt;slug&gt;.&lt;this&gt;.
           </p>
         </div>
         <div>
           <label class={label} for="authOrigin">Origin URL</label>
-          <input
-            class="{input} {highlightClass('authOrigin')}"
+          <Input
+            class={highlightClass("authOrigin")}
             id="authOrigin"
             name="authOrigin"
             placeholder={data.envDefaults.authOrigin}
             type="text"
             value={data.settings.authOrigin ?? ""}
-          >
+          />
           <p class="mt-1.5 text-xs text-text-subtle">
             Display-only today — better-auth's own baseURL still reads the
             <code>ORIGIN</code>
@@ -163,14 +162,13 @@
         </div>
         <div>
           <label class={label} for="authCheckUrl">Auth-check URL</label>
-          <input
-            class={input}
+          <Input
             id="authCheckUrl"
             name="authCheckUrl"
             placeholder={data.envDefaults.authCheckUrl}
             type="text"
             value={data.settings.authCheckUrl ?? ""}
-          >
+          />
           <p class="mt-1.5 text-xs text-text-subtle">
             What Traefik's forwardAuth middleware calls to gatekeep a "Require
             login" service — must be reachable from inside the Traefik
@@ -185,12 +183,7 @@
           name="authCrossSubdomainCookies"
         />
         <div class="flex justify-end">
-          <button
-            class="bg-accent shadow-accent/30 hover:bg-accent-dark rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
-            type="submit"
-          >
-            Save
-          </button>
+          <Button type="submit">Save</Button>
         </div>
       </form>
     </section>
@@ -212,35 +205,30 @@
       >
         <div>
           <label class={label} for="dockerSocketPath">Socket path</label>
-          <input
-            class="{input} font-mono {highlightClass('dockerSocketPath')}"
+          <Input
+            class="font-mono {highlightClass('dockerSocketPath')}"
             id="dockerSocketPath"
             name="dockerSocketPath"
             placeholder={data.envDefaults.dockerSocketPath}
             type="text"
             value={data.settings.dockerSocketPath ?? ""}
-          >
+          />
         </div>
         <div>
           <label class={label} for="dockerNetworkName"
             >Shared network name</label
           >
-          <input
-            class="{input} font-mono"
+          <Input
+            class="font-mono"
             id="dockerNetworkName"
             name="dockerNetworkName"
             placeholder={data.envDefaults.dockerNetworkName}
             type="text"
             value={data.settings.dockerNetworkName ?? ""}
-          >
+          />
         </div>
         <div class="flex justify-end">
-          <button
-            class="bg-accent shadow-accent/30 hover:bg-accent-dark rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
-            type="submit"
-          >
-            Save
-          </button>
+          <Button type="submit">Save</Button>
         </div>
       </form>
     </section>
@@ -262,38 +250,36 @@
       >
         <div>
           <label class={label} for="traefikEntrypoint">Entrypoint</label>
-          <input
-            class={input}
+          <Input
             id="traefikEntrypoint"
             name="traefikEntrypoint"
             placeholder={data.envDefaults.traefikEntrypoint}
             type="text"
             value={data.settings.traefikEntrypoint ?? ""}
-          >
+          />
         </div>
         <div>
           <label class={label} for="traefikCertResolver">Cert resolver</label>
-          <input
-            class={input}
+          <Input
             id="traefikCertResolver"
             name="traefikCertResolver"
             placeholder={data.envDefaults.traefikCertResolver}
             type="text"
             value={data.settings.traefikCertResolver ?? ""}
-          >
+          />
         </div>
         <div>
           <label class={label} for="traefikDynamicConfigDir"
             >Dynamic config directory</label
           >
-          <input
-            class="{input} font-mono"
+          <Input
+            class="font-mono"
             id="traefikDynamicConfigDir"
             name="traefikDynamicConfigDir"
             placeholder={data.envDefaults.traefikDynamicConfigDir ?? "unset — custom SSL is a no-op"}
             type="text"
             value={data.settings.traefikDynamicConfigDir ?? ""}
-          >
+          />
           <p class="mt-1.5 text-xs text-text-subtle">
             Must match the path bind-mounted into the Traefik container — see
             compose.yaml's commented-out example. Unset means per-service custom
@@ -301,12 +287,7 @@
           </p>
         </div>
         <div class="flex justify-end">
-          <button
-            class="bg-accent shadow-accent/30 hover:bg-accent-dark rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
-            type="submit"
-          >
-            Save
-          </button>
+          <Button type="submit">Save</Button>
         </div>
       </form>
     </section>
@@ -335,57 +316,57 @@
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
             <label class={label} for="smtpHost">Host</label>
-            <input
-              class="{input} {highlightClass('smtpHost')}"
+            <Input
+              class={highlightClass("smtpHost")}
               id="smtpHost"
               name="smtpHost"
               placeholder={data.envDefaults.smtpHost ?? "smtp.example.com"}
               type="text"
               value={data.settings.smtpHost ?? ""}
-            >
+            />
           </div>
           <div>
             <label class={label} for="smtpPort">Port</label>
-            <input
-              class="{input} {highlightClass('smtpPort')}"
+            <Input
+              class={highlightClass("smtpPort")}
               id="smtpPort"
               name="smtpPort"
               placeholder={data.envDefaults.smtpPort?.toString() ?? "587"}
               type="text"
               value={data.settings.smtpPort ?? ""}
-            >
+            />
           </div>
           <div>
             <label class={label} for="smtpUser">Username</label>
-            <input
-              class="{input} {highlightClass('smtpUser')}"
+            <Input
+              class={highlightClass("smtpUser")}
               id="smtpUser"
               name="smtpUser"
               placeholder={data.envDefaults.smtpUser ?? ""}
               type="text"
               value={data.settings.smtpUser ?? ""}
-            >
+            />
           </div>
           <div>
             <label class={label} for="smtpPassword">Password</label>
-            <input
-              class="{input} {highlightClass('smtpPassword')}"
+            <Input
+              class={highlightClass("smtpPassword")}
               id="smtpPassword"
               name="smtpPassword"
               placeholder={data.settings.smtpPasswordEnc ? "Leave blank to keep current" : "Password"}
               type="password"
-            >
+            />
           </div>
           <div>
             <label class={label} for="smtpFrom">From address</label>
-            <input
-              class="{input} {highlightClass('smtpFrom')}"
+            <Input
+              class={highlightClass("smtpFrom")}
               id="smtpFrom"
               name="smtpFrom"
               placeholder={data.envDefaults.smtpFrom ?? "no-reply@example.com"}
               type="text"
               value={data.settings.smtpFrom ?? ""}
-            >
+            />
           </div>
           <div class="sm:col-span-2">
             <CheckBox
@@ -398,12 +379,7 @@
           </div>
         </div>
         <div class="flex justify-end">
-          <button
-            class="bg-accent shadow-accent/30 hover:bg-accent-dark rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
-            type="submit"
-          >
-            Save
-          </button>
+          <Button type="submit">Save</Button>
         </div>
       </form>
     </section>
@@ -433,75 +409,74 @@
                   >Provider {i + 1}</span
                 >
               </div>
-              <button
+              <Button
                 aria-label="Remove provider"
-                class="rounded-lg p-1.5 text-red-500 transition-all hover:bg-red-500/10"
+                class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
                 onclick={() => removeOauthRow(i)}
-                type="button"
+                size="icon-sm"
+                variant="ghost"
               >
                 <Trash2 class="size-4" />
-              </button>
+              </Button>
             </div>
             <div class="grid gap-3 sm:grid-cols-2">
               <div>
                 <label class={label} for="oauthName-{i}">Provider id</label>
-                <input
-                  class="{input} font-mono"
+                <Input
+                  class="font-mono"
                   id="oauthName-{i}"
                   name="oauthName"
                   placeholder="my-oidc-provider"
                   type="text"
                   bind:value={row.name}
-                >
+                />
               </div>
               <div>
                 <label class={label} for="oauthClientId-{i}">Client id</label>
-                <input
-                  class={input}
+                <Input
                   id="oauthClientId-{i}"
                   name="oauthClientId"
                   type="text"
                   bind:value={row.clientId}
-                >
+                />
               </div>
               <div>
                 <label class={label} for="oauthClientSecret-{i}"
                   >Client secret</label
                 >
-                <input
-                  class={input}
+                <Input
                   id="oauthClientSecret-{i}"
                   name="oauthClientSecret"
                   placeholder={row.hasSecret ? "Leave blank to keep current" : "Client secret"}
                   type="password"
                   bind:value={row.clientSecret}
-                >
+                />
               </div>
               <div>
                 <label class={label} for="oauthDiscoveryUrl-{i}"
                   >Discovery URL</label
                 >
-                <input
-                  class="{input} font-mono"
+                <Input
+                  class="font-mono"
                   id="oauthDiscoveryUrl-{i}"
                   name="oauthDiscoveryUrl"
                   placeholder="https://provider.example.com/.well-known/openid-configuration"
                   type="text"
                   bind:value={row.discoveryUrl}
-                >
+                />
               </div>
               <div class="sm:col-span-2">
                 <label class={label} for="oauthScopes-{i}"
                   >Scopes (comma-separated)</label
                 >
-                <input
-                  class="{input} font-mono"
+                <Input
+                  class="font-mono"
                   id="oauthScopes-{i}"
                   name="oauthScopes"
                   placeholder="openid, email, profile"
                   type="text"
                   bind:value={row.scopes}
-                >
+                />
               </div>
             </div>
             <div class="grid gap-3 sm:grid-cols-2">
@@ -537,22 +512,13 @@
           </div>
         {/each}
 
-        <button
-          class="text-accent flex items-center gap-1.5 text-sm font-medium hover:underline"
-          onclick={addOauthRow}
-          type="button"
-        >
+        <Button class="h-auto p-0" onclick={addOauthRow} variant="link">
           <Plus class="size-3.5" />
           Add provider
-        </button>
+        </Button>
 
         <div class="flex justify-end">
-          <button
-            class="bg-accent shadow-accent/30 hover:bg-accent-dark rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all"
-            type="submit"
-          >
-            Save
-          </button>
+          <Button type="submit">Save</Button>
         </div>
       </form>
     </section>

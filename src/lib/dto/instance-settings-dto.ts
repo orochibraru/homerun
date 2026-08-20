@@ -109,6 +109,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
       dockerSocketPath: null,
       id: SINGLETON_ID,
       oauthProviders: [],
+      onboardingCompletedAt: null,
       smtpEnabled: null,
       smtpFrom: null,
       smtpHost: null,
@@ -123,6 +124,15 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
     };
     await db.insert(instanceSettings).values(row).onConflictDoNothing();
     return new InstanceSettingsDTO(row);
+  }
+
+  /** Whether the onboarding wizard has been completed on this instance. */
+  get onboardingComplete(): boolean {
+    return this.row.onboardingCompletedAt !== null;
+  }
+
+  async markOnboardingComplete(): Promise<void> {
+    await this.persist({ onboardingCompletedAt: new Date() });
   }
 
   async updateCore(input: InstanceSettingsCoreInput): Promise<void> {

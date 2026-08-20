@@ -5,7 +5,17 @@
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
   import CheckBox from "$lib/components/check-box.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import {
+    SelectContent,
+    SelectItem,
+    Select as SelectRoot,
+    SelectTrigger,
+  } from "$lib/components/ui/select/index.js";
   import { title } from "$lib/store/title";
+
+  let volumeId = $state("");
 
   const { data } = $props();
 
@@ -57,13 +67,9 @@
               }}
           >
             <input name="mountId" type="hidden" value={mount.id}>
-            <button
-              class="rounded-lg p-2 text-text-muted transition-all hover:bg-surface-2 hover:text-text"
-              title="Remove"
-              type="submit"
-            >
+            <Button size="icon-sm" title="Remove" type="submit" variant="ghost">
               <X class="size-4" />
-            </button>
+            </Button>
           </form>
         </div>
       {/each}
@@ -99,15 +105,17 @@
           >
             Volume
           </label>
-          <select
-            class="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent"
-            id="volumeId"
-            name="volumeId"
-          >
-            {#each data.volumes as vol (vol.id)}
-              <option value={vol.id}>{vol.name}</option>
-            {/each}
-          </select>
+          <SelectRoot name="volumeId" type="single" bind:value={volumeId}>
+            <SelectTrigger class="w-full" id="volumeId">
+              {data.volumes.find((v) => v.id === volumeId)?.name ??
+                "Select a volume"}
+            </SelectTrigger>
+            <SelectContent>
+              {#each data.volumes as vol (vol.id)}
+                <SelectItem label={vol.name} value={vol.id} />
+              {/each}
+            </SelectContent>
+          </SelectRoot>
         </div>
         <div class="flex-1">
           <label
@@ -116,14 +124,14 @@
           >
             Mount path
           </label>
-          <input
-            class="w-full rounded-xl border border-border bg-surface px-3 py-2 font-mono text-sm text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
+          <Input
+            class="font-mono"
             id="containerPath"
             name="containerPath"
             placeholder="/data"
             required
             type="text"
-          >
+          />
         </div>
         <div class="w-full sm:w-auto">
           <CheckBox
@@ -134,13 +142,10 @@
             name="readOnly"
           />
         </div>
-        <button
-          class="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          type="submit"
-        >
+        <Button type="submit" variant="outline">
           <Plus class="size-3.5" />
           Mount
-        </button>
+        </Button>
       </form>
     {/if}
   </div>
