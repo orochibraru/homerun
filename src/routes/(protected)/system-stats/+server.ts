@@ -1,11 +1,11 @@
 import { json } from "@sveltejs/kit";
-import { getSystemStats } from "$lib/server/system-stats";
+import { SystemStatsService } from "$lib/services/system-stats.service";
 
 export const GET = async ({ locals }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const stats = await getSystemStats();
+	const stats = await SystemStatsService.getSystemStats();
 	return json(stats);
 };

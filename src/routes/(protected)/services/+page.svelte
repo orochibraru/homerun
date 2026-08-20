@@ -12,6 +12,7 @@
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
@@ -66,22 +67,22 @@
 		};
 	}
 
-	function confirmDelete(e: SubmitEvent, name: string) {
-		if (
-			!confirm(
-				`Delete "${name}"? This removes its container and can't be undone.`,
-			)
-		) {
-			e.preventDefault();
-		}
+	let deleteDialogOpen = $state(false);
+	let pendingDeleteName = $state("");
+	let pendingDeleteForm: HTMLFormElement | null = null;
+
+	function requestDelete(e: MouseEvent, name: string) {
+		pendingDeleteForm = (e.currentTarget as HTMLElement).closest("form");
+		pendingDeleteName = name;
+		deleteDialogOpen = true;
 	}
 </script>
 
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-text">Services</h1>
-      <p class="mt-1 text-sm text-text-muted">
+      <h1 class="text-text text-2xl font-bold">Services</h1>
+      <p class="text-text-muted mt-1 text-sm">
         Containers deployed to this server.
       </p>
     </div>
@@ -93,11 +94,11 @@
 
   {#if data.services.length === 0}
     <div
-      class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center"
+      class="border-border flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center"
     >
-      <Server class="mb-3 size-10 text-text-muted opacity-40" />
-      <p class="text-sm font-medium text-text-muted">No services yet</p>
-      <p class="mt-1 text-xs text-text-subtle">
+      <Server class="text-text-muted mb-3 size-10 opacity-40" />
+      <p class="text-text-muted text-sm font-medium">No services yet</p>
+      <p class="text-text-subtle mt-1 text-xs">
         Point at an image, fill in a config, and deploy.
       </p>
       <div class="flex items-center gap-2">
@@ -122,7 +123,7 @@
         <div>
           {#if groups.length > 1}
             <h2
-              class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
+              class="text-text-subtle mb-3 text-xs font-semibold tracking-widest uppercase"
             >
               {label}
             </h2>
@@ -130,7 +131,7 @@
           <div class="space-y-3">
             {#each services as svc (svc.id)}
               <div
-                class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
+                class="border-border bg-surface flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 transition-shadow hover:shadow-md"
               >
                 <a
                   class="flex min-w-0 flex-1 items-center gap-4"
@@ -143,12 +144,12 @@
                   </div>
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                      <p class="truncate text-sm font-semibold text-text">
+                      <p class="text-text truncate text-sm font-semibold">
                         {svc.name}
                       </p>
                       <StatusBadge status={svc.currentStatus} />
                     </div>
-                    <p class="mt-0.5 truncate text-xs text-text-muted">
+                    <p class="text-text-muted mt-0.5 truncate text-xs">
                       {svc.image}:{svc.tag}
                       · {svc.slug}.{data.baseDomain}
                     </p>
@@ -222,16 +223,16 @@
                   <form
                     action="?/delete"
                     method="POST"
-                    onsubmit={(e) => confirmDelete(e, svc.name)}
                     use:enhance={withPending(svc.id)}
                   >
                     <input name="serviceId" type="hidden" value={svc.id}>
                     <Button
                       class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
                       disabled={pending[svc.id]}
+                      onclick={(e) => requestDelete(e, svc.name)}
                       size="icon-sm"
                       title="Delete"
-                      type="submit"
+                      type="button"
                       variant="ghost"
                     >
                       <Trash2 class="size-4" />
@@ -246,3 +247,11 @@
     </div>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={deleteDialogOpen}
+  confirmLabel="Delete"
+  description={`Delete "${pendingDeleteName}"? This removes its container and can't be undone.`}
+  onConfirm={() => pendingDeleteForm?.requestSubmit()}
+  title="Delete service"
+/>

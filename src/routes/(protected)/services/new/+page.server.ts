@@ -5,12 +5,12 @@ import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
-import { encryptSecret } from "$lib/server/docker/secrets";
 import {
 	type CreateServiceInput,
 	createServiceSchema,
 	parseEnvVars,
 } from "$lib/server/validation/service";
+import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("Services");
 

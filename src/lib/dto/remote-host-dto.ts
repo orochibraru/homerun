@@ -1,8 +1,8 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type RemoteHost, remoteHost } from "$lib/server/db/schema";
-import type { RemoteHostConnection } from "$lib/server/docker/client";
-import { decryptSecret } from "$lib/server/docker/secrets";
+import type { RemoteHostConnection } from "$lib/services/docker.service";
+import { decryptSecret } from "$lib/services/secrets";
 import { BaseDTO } from "./base-dto";
 
 export interface NewRemoteHostInput {

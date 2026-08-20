@@ -6,11 +6,7 @@ import {
 	project,
 	service,
 } from "$lib/server/db/schema";
-import {
-	ensureProjectNetwork,
-	removeProjectNetwork,
-} from "$lib/server/docker/networks";
-import { removeContainer } from "$lib/server/docker/service";
+import { DockerService } from "$lib/services/docker.service";
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
 
@@ -86,7 +82,7 @@ export class ProjectDTO extends BaseDTO<Project> {
 			userId: input.userId,
 		};
 		await db.insert(project).values(row);
-		await ensureProjectNetwork(row.id);
+		await DockerService.ensureProjectNetwork(row.id);
 		return new ProjectDTO(row);
 	}
 
@@ -104,7 +100,7 @@ export class ProjectDTO extends BaseDTO<Project> {
 	 * Deletes this project and everything in it — stops/removes every member
 	 * service's container, deletes their deployment history, deletes the
 	 * services, then the project itself. Same explicit-cleanup precedent as
-	 * account deletion (src/lib/server/auth.ts's beforeDelete hook): DB-level
+	 * account deletion (src/lib/services/auth.ts's beforeDelete hook): DB-level
 	 * cascade alone would leak running containers.
 	 */
 	async cascadeDelete(): Promise<void> {
@@ -117,11 +113,11 @@ export class ProjectDTO extends BaseDTO<Project> {
 			services
 				.filter((svc) => svc.containerId)
 				.map((svc) =>
-					removeContainer(svc.containerId as string, { force: true }).catch(
-						() => {
-							// Already gone on the host — proceed with deleting the record.
-						},
-					),
+					DockerService.removeContainer(svc.containerId as string, {
+						force: true,
+					}).catch(() => {
+						// Already gone on the host — proceed with deleting the record.
+					}),
 				),
 		);
 
@@ -133,7 +129,7 @@ export class ProjectDTO extends BaseDTO<Project> {
 		}
 		await db.delete(service).where(eq(service.projectId, this.row.id));
 		await this.delete();
-		await removeProjectNetwork(this.row.id);
+		await DockerService.removeProjectNetwork(this.row.id);
 	}
 
 	get id(): string {

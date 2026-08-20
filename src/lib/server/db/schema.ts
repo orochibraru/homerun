@@ -1,41 +1,42 @@
 import { relations } from "drizzle-orm";
 import {
+	boolean,
 	index,
 	integer,
-	sqliteTable,
+	jsonb,
+	pgTable,
 	text,
+	timestamp,
 	uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+} from "drizzle-orm/pg-core";
 import type { ContainerStatus } from "$lib/types";
 
-export const user = sqliteTable("user", {
-	banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
-	banned: integer("banned", { mode: "boolean" }).default(false),
+export const user = pgTable("user", {
+	banExpires: timestamp("ban_expires", { mode: "date" }),
+	banned: boolean("banned").default(false),
 	banReason: text("ban_reason"),
-	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	email: text("email").notNull().unique(),
-	emailVerified: integer("email_verified", { mode: "boolean" })
-		.default(false)
-		.notNull(),
+	emailVerified: boolean("email_verified").default(false).notNull(),
 	id: text("id").primaryKey(),
 	image: text("image"),
 	name: text("name").notNull(),
 	role: text("role"),
-	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+	updatedAt: timestamp("updated_at", { mode: "date" })
 		.$onUpdate(() => new Date())
 		.notNull(),
 });
 
-export const session = sqliteTable(
+export const session = pgTable(
 	"session",
 	{
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
 		id: text("id").primaryKey(),
 		impersonatedBy: text("impersonated_by"),
 		ipAddress: text("ip_address"),
 		token: text("token").notNull().unique(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 		userAgent: text("user_agent"),
@@ -46,26 +47,26 @@ export const session = sqliteTable(
 	(table) => [index("session_userId_idx").on(table.userId)],
 );
 
-export const account = sqliteTable(
+export const account = pgTable(
 	"account",
 	{
 		accessToken: text("access_token"),
-		accessTokenExpiresAt: integer("access_token_expires_at", {
-			mode: "timestamp_ms",
+		accessTokenExpiresAt: timestamp("access_token_expires_at", {
+			mode: "date",
 		}),
 		accountId: text("account_id").notNull(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		id: text("id").primaryKey(),
 		idToken: text("id_token"),
 		issuer: text("issuer").notNull(),
 		password: text("password"),
 		providerId: text("provider_id").notNull(),
 		refreshToken: text("refresh_token"),
-		refreshTokenExpiresAt: integer("refresh_token_expires_at", {
-			mode: "timestamp_ms",
+		refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+			mode: "date",
 		}),
 		scope: text("scope"),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 		userId: text("user_id")
@@ -81,14 +82,14 @@ export const account = sqliteTable(
 	],
 );
 
-export const verification = sqliteTable(
+export const verification = pgTable(
 	"verification",
 	{
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
 		id: text("id").primaryKey(),
 		identifier: text("identifier").notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 		value: text("value").notNull(),
@@ -96,24 +97,22 @@ export const verification = sqliteTable(
 	(table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const apikey = sqliteTable(
+export const apikey = pgTable(
 	"apikey",
 	{
 		configId: text("config_id").default("default").notNull(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-		enabled: integer("enabled", { mode: "boolean" }).default(true),
-		expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		enabled: boolean("enabled").default(true),
+		expiresAt: timestamp("expires_at", { mode: "date" }),
 		id: text("id").primaryKey(),
 		key: text("key").notNull(),
-		lastRefillAt: integer("last_refill_at", { mode: "timestamp_ms" }),
-		lastRequest: integer("last_request", { mode: "timestamp_ms" }),
+		lastRefillAt: timestamp("last_refill_at", { mode: "date" }),
+		lastRequest: timestamp("last_request", { mode: "date" }),
 		metadata: text("metadata"),
 		name: text("name"),
 		permissions: text("permissions"),
 		prefix: text("prefix"),
-		rateLimitEnabled: integer("rate_limit_enabled", {
-			mode: "boolean",
-		}).default(true),
+		rateLimitEnabled: boolean("rate_limit_enabled").default(true),
 		rateLimitMax: integer("rate_limit_max").default(10),
 		rateLimitTimeWindow: integer("rate_limit_time_window").default(86_400_000),
 		referenceId: text("reference_id").notNull(),
@@ -122,7 +121,7 @@ export const apikey = sqliteTable(
 		remaining: integer("remaining"),
 		requestCount: integer("request_count").default(0),
 		start: text("start"),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" }).notNull(),
 	},
 	(table) => [
 		index("apikey_configId_idx").on(table.configId),
@@ -131,13 +130,13 @@ export const apikey = sqliteTable(
 	],
 );
 
-export const passkey = sqliteTable(
+export const passkey = pgTable(
 	"passkey",
 	{
 		aaguid: text("aaguid"),
-		backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+		backedUp: boolean("backed_up").notNull(),
 		counter: integer("counter").notNull(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }),
+		createdAt: timestamp("created_at", { mode: "date" }),
 		credentialID: text("credential_id").notNull(),
 		deviceType: text("device_type").notNull(),
 		id: text("id").primaryKey(),
@@ -156,10 +155,10 @@ export const passkey = sqliteTable(
 
 // ─── PaaS Domain ────────────────────────────────────────────────────────────
 
-export const project = sqliteTable(
+export const project = pgTable(
 	"project",
 	{
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
@@ -167,7 +166,7 @@ export const project = sqliteTable(
 		// subdomain (e.g. "<projectSlug>-<serviceSlug>.<baseDomain>") — see
 		// docker/service.ts's containerName() and docker/labels.ts.
 		slug: text("slug").notNull().unique(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 		userId: text("user_id")
@@ -177,10 +176,10 @@ export const project = sqliteTable(
 	(table) => [index("project_userId_idx").on(table.userId)],
 );
 
-export const remoteHost = sqliteTable(
+export const remoteHost = pgTable(
 	"remote_host",
 	{
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// "tcp://host:2376" (optionally TLS-secured with the ca/cert/key
 		// below) or "ssh://user@host" — passed to dockerode's constructor
 		// as-is, parsed by docker/client.ts's getDocker(). Never a bare
@@ -194,7 +193,7 @@ export const remoteHost = sqliteTable(
 		tlsCaEnc: text("tls_ca_enc"),
 		tlsCertEnc: text("tls_cert_enc"),
 		tlsKeyEnc: text("tls_key_enc"),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 		userId: text("user_id")
@@ -211,20 +210,53 @@ export const remoteHost = sqliteTable(
 // overrides it. Secrets (smtpPasswordEnc, each oauth provider's
 // clientSecretEnc) use the same AES-256-GCM scheme as
 // service.registryPasswordEnc.
-export const instanceSettings = sqliteTable("instance_settings", {
+export const instanceSettings = pgTable("instance_settings", {
 	authCheckUrl: text("auth_check_url"),
-	authCrossSubdomainCookies: integer("auth_cross_subdomain_cookies", {
-		mode: "boolean",
-	}),
+	authCrossSubdomainCookies: boolean("auth_cross_subdomain_cookies"),
 	authOrigin: text("auth_origin"),
+	// Opt-in, off by default — same "background automation that touches
+	// live containers must default to inert" posture as cronEnabled/
+	// backupEnabled elsewhere in this app. When on, CronService's autoscale
+	// tick migrates autoscale-eligible services (service.autoscaleEligible)
+	// off the local host onto autoscaleOverflowRemoteHostId whenever host
+	// CPU or memory crosses its threshold — see $lib/services/cron.service.ts
+	// and the Settings page's Autoscaling section.
+	autoscaleCpuThresholdPercent: integer("autoscale_cpu_threshold_percent")
+		.notNull()
+		.default(80),
+	autoscaleEnabled: boolean("autoscale_enabled").notNull().default(false),
+	autoscaleMemoryThresholdPercent: integer("autoscale_memory_threshold_percent")
+		.notNull()
+		.default(80),
+	// Nullable FK to remote_host — where an over-threshold service gets
+	// migrated to. Not a hard requirement at the schema level (autoscaling
+	// is simply a no-op with this unset) since Postgres FKs aren't the
+	// enforcement mechanism this app leans on for row-cleanup anyway (see
+	// the Postgres-vs-SQLite FK note above).
+	autoscaleOverflowRemoteHostId: text(
+		"autoscale_overflow_remote_host_id",
+	).references(() => remoteHost.id, { onDelete: "set null" }),
 	baseDomain: text("base_domain"),
-	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	dockerNetworkName: text("docker_network_name"),
 	dockerSocketPath: text("docker_socket_path"),
+	// {id, kind, name, baseUrl, clientId, clientSecretEnc, enabled}[] — OAuth
+	// App registrations for git-hosting providers (see the Git Providers
+	// page and $lib/services/git-provider.service.ts), separate from
+	// oauthProviders above (those are for signing *into* Homerun itself via
+	// an OIDC provider; these are for connecting *out* to GitHub/GitLab/
+	// Gitea/Bitbucket to browse a user's repos when creating a git-based
+	// service). Deliberately not part of applyInstanceSettings()'s merge —
+	// same reasoning as onboardingCompletedAt, this isn't an env-default-
+	// backed config value.
+	gitProviders: jsonb("git_providers")
+		.$type<GitProviderConfig[]>()
+		.notNull()
+		.default([]),
 	id: text("id").primaryKey(),
 	// {name, clientId, clientSecretEnc, discoveryUrl, enabled, pkce, scopes}[]
-	// — see genericOAuth's config shape in $lib/server/auth.ts.
-	oauthProviders: text("oauth_providers", { mode: "json" })
+	// — see genericOAuth's config shape in $lib/services/auth.ts.
+	oauthProviders: jsonb("oauth_providers")
 		.$type<InstanceOauthProvider[]>()
 		.notNull()
 		.default([]),
@@ -233,20 +265,20 @@ export const instanceSettings = sqliteTable("instance_settings", {
 	// other column here, not part of the config-override merge in
 	// $lib/config.ts — this is onboarding-flow state, not an instance config
 	// value.
-	onboardingCompletedAt: integer("onboarding_completed_at", {
-		mode: "timestamp_ms",
+	onboardingCompletedAt: timestamp("onboarding_completed_at", {
+		mode: "date",
 	}),
-	smtpEnabled: integer("smtp_enabled", { mode: "boolean" }),
+	smtpEnabled: boolean("smtp_enabled"),
 	smtpFrom: text("smtp_from"),
 	smtpHost: text("smtp_host"),
 	smtpPasswordEnc: text("smtp_password_enc"),
 	smtpPort: integer("smtp_port"),
-	smtpSecure: integer("smtp_secure", { mode: "boolean" }),
+	smtpSecure: boolean("smtp_secure"),
 	smtpUser: text("smtp_user"),
 	traefikCertResolver: text("traefik_cert_resolver"),
 	traefikDynamicConfigDir: text("traefik_dynamic_config_dir"),
 	traefikEntrypoint: text("traefik_entrypoint"),
-	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+	updatedAt: timestamp("updated_at", { mode: "date" })
 		.$onUpdate(() => new Date())
 		.notNull(),
 });
@@ -261,18 +293,33 @@ export interface InstanceOauthProvider {
 	scopes: string[];
 }
 
+export type GitProviderKind = "github" | "gitlab" | "gitea" | "bitbucket";
+
+export interface GitProviderConfig {
+	// Referenced by git_connection.providerId and the /api/v1/git-providers/
+	// [providerId]/* routes — not a DB FK since these live inside the
+	// instance_settings JSON column, not their own table.
+	baseUrl: string | null;
+	clientId: string;
+	clientSecretEnc: string;
+	enabled: boolean;
+	id: string;
+	kind: GitProviderKind;
+	name: string;
+}
+
 // A pending admin-sent invite to create an account — see InvitationDTO and
 // the Users page's "Send invite" action. Accepting one (at
 // /auth/accept-invite/[token]) creates the user directly via
 // auth.api.createUser and sets acceptedAt; there's no separate account
 // row until then.
-export const invitation = sqliteTable(
+export const invitation = pgTable(
 	"invitation",
 	{
-		acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		acceptedAt: timestamp("accepted_at", { mode: "date" }),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		email: text("email").notNull(),
-		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+		expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
 		id: text("id").primaryKey(),
 		invitedByUserId: text("invited_by_user_id")
 			.notNull()
@@ -283,17 +330,15 @@ export const invitation = sqliteTable(
 	(table) => [index("invitation_email_idx").on(table.email)],
 );
 
-export const template = sqliteTable(
+export const template = pgTable(
 	"template",
 	{
 		category: text("category"), // "database" | "cache" | "monitoring" | "automation" | "other"
 		containerPort: integer("container_port").notNull(),
 		cpuLimit: text("cpu_limit"),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
-		envVars: text("env_vars", { mode: "json" })
-			.$type<Record<string, string>>()
-			.default({}),
+		envVars: jsonb("env_vars").$type<Record<string, string>>().default({}),
 		icon: text("icon"), // lucide icon name, looked up the same way SERVICE_STATUS_CONFIG maps a key to an icon component
 		id: text("id").primaryKey(),
 		image: text("image").notNull(),
@@ -305,24 +350,28 @@ export const template = sqliteTable(
 		}),
 		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
 		tag: text("tag").default("latest").notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 	},
 	(table) => [index("template_ownerId_idx").on(table.ownerId)],
 );
 
-export const service = sqliteTable(
+export const service = pgTable(
 	"service",
 	{
 		// When true, a Traefik forwardAuth middleware gatekeeps this service
 		// behind this app's own login (any provider, including a configured
 		// OIDC one) — see docker/labels.ts and /api/v1/auth-check.
-		authRequired: integer("auth_required", { mode: "boolean" })
-			.default(false)
-			.notNull(),
+		authRequired: boolean("auth_required").default(false).notNull(),
+		// Opt-in, off by default (Compute tab) — whether CronService's
+		// autoscale tick is allowed to migrate this service onto
+		// instanceSettings.autoscaleOverflowRemoteHostId when the local
+		// host is over its configured resource threshold. No effect unless
+		// autoscaling is also enabled instance-wide.
+		autoscaleEligible: boolean("autoscale_eligible").default(false).notNull(),
 		// "image" (bring-your-own, the original/default) | "git" (clone +
-		// build a Dockerfile locally — see $lib/server/docker/git-build.ts).
+		// build a Dockerfile locally — see $lib/services/docker/git-build.ts).
 		// When "git", `image`/`tag` are overwritten after each successful
 		// build with the resulting local tag, not user-editable directly.
 		buildSource: text("build_source")
@@ -332,14 +381,12 @@ export const service = sqliteTable(
 		containerId: text("container_id"),
 		containerPort: integer("container_port").notNull(),
 		cpuLimit: text("cpu_limit"),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// Standard 5-field cron expression ("min hour day month weekday"),
-		// evaluated in the server's local time — see $lib/server/cron.ts.
+		// evaluated in the server's local time — see $lib/services/cron.service.ts.
 		// Null/disabled unless the user opts in via the Overview tab.
-		cronEnabled: integer("cron_enabled", { mode: "boolean" })
-			.default(false)
-			.notNull(),
-		cronLastRunAt: integer("cron_last_run_at", { mode: "timestamp_ms" }),
+		cronEnabled: boolean("cron_enabled").default(false).notNull(),
+		cronLastRunAt: timestamp("cron_last_run_at", { mode: "date" }),
 		cronSchedule: text("cron_schedule"),
 		// pending | pulling | starting | running | stopped | failed
 		currentStatus: text("current_status")
@@ -352,7 +399,7 @@ export const service = sqliteTable(
 		customDomain: text("custom_domain").unique(),
 		// AES-256-GCM ciphertext (PEM), same scheme as registryPasswordEnc.
 		// Only take effect together, and only when customDomain is set — see
-		// $lib/server/docker/custom-ssl.ts. Requires the admin's own opt-in
+		// $lib/services/docker/custom-ssl.ts. Requires the admin's own opt-in
 		// (TRAEFIK_DYNAMIC_CONFIG_DIR + a Traefik file-provider config
 		// change, see compose.yaml) to actually be picked up by Traefik.
 		customSslCertEnc: text("custom_ssl_cert_enc"),
@@ -366,16 +413,12 @@ export const service = sqliteTable(
 		// time — the container never gets a public <slug>.<baseDomain>, only
 		// reachable over the internal network(s) it's attached to (the shared
 		// network by slug alias, plus its project's network if any).
-		dnsResolvable: integer("dns_resolvable", { mode: "boolean" })
-			.default(true)
-			.notNull(),
-		envVars: text("env_vars", { mode: "json" })
-			.$type<Record<string, string>>()
-			.default({}),
+		dnsResolvable: boolean("dns_resolvable").default(true).notNull(),
+		envVars: jsonb("env_vars").$type<Record<string, string>>().default({}),
 		// Relative to gitBuildContext. Defaults to "Dockerfile" when unset.
 		gitBuildContext: text("git_build_context"),
 		gitDockerfilePath: text("git_dockerfile_path"),
-		// Branch or tag — see $lib/server/docker/git-build.ts (a bare commit
+		// Branch or tag — see $lib/services/docker/git-build.ts (a bare commit
 		// SHA needs a full, non-shallow clone, not supported here).
 		gitRef: text("git_ref"),
 		gitUrl: text("git_url"),
@@ -384,11 +427,31 @@ export const service = sqliteTable(
 		image: text("image").notNull(),
 		memoryLimitMb: integer("memory_limit_mb"),
 		name: text("name").notNull(),
+		// "bridge" (default — the shared homerun-network + project network,
+		// Traefik-routed) | "host" (shares the host's network namespace
+		// directly, e.g. for mDNS/SSDP-dependent apps like Home Assistant —
+		// no Traefik routing, no internal slug alias, not on any Docker
+		// network at all; Docker doesn't allow combining host mode with
+		// other network attachments). Forces dnsResolvable false server-side
+		// regardless of what's submitted — see docker/containers.ts.
+		networkMode: text("network_mode")
+			.$type<"bridge" | "host">()
+			.default("bridge")
+			.notNull(),
+		// "tcp" | "udp" | "both" — which protocol(s) containerPort is exposed
+		// under (Docker's ExposedPorts declaration). Informational only in
+		// bridge mode (this app never publishes a host port — see the
+		// Networking tab's own copy); the container's actual host-visible
+		// port(s) in host mode, since there's no publish/mapping step there.
+		portProtocol: text("port_protocol")
+			.$type<"tcp" | "udp" | "both">()
+			.default("tcp")
+			.notNull(),
 		// nullable — grouping is opt-in, ungrouped services stay valid
 		projectId: text("project_id").references(() => project.id, {
 			onDelete: "set null",
 		}),
-		// AES-256-GCM ciphertext — see $lib/server/docker/secrets
+		// AES-256-GCM ciphertext — see $lib/services/secrets
 		registryPasswordEnc: text("registry_password_enc"),
 		registryUrl: text("registry_url"),
 		registryUsername: text("registry_username"),
@@ -402,7 +465,7 @@ export const service = sqliteTable(
 		// subdomain: <slug>.<baseDomain>
 		slug: text("slug").notNull().unique(),
 		tag: text("tag").default("latest").notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 		userId: text("user_id")
@@ -416,13 +479,13 @@ export const service = sqliteTable(
 	],
 );
 
-export const deployment = sqliteTable(
+export const deployment = pgTable(
 	"deployment",
 	{
 		containerId: text("container_id"),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		errorMessage: text("error_message"),
-		finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
+		finishedAt: timestamp("finished_at", { mode: "date" }),
 		id: text("id").primaryKey(),
 		imageDigest: text("image_digest"),
 		// Progress lines appended live during deploy ("Pulling image...",
@@ -432,7 +495,7 @@ export const deployment = sqliteTable(
 		serviceId: text("service_id")
 			.notNull()
 			.references(() => service.id, { onDelete: "cascade" }),
-		startedAt: integer("started_at", { mode: "timestamp_ms" }),
+		startedAt: timestamp("started_at", { mode: "date" }),
 		// pending | pulling | starting | running | failed | stopped
 		status: text("status")
 			.$type<ContainerStatus>()
@@ -448,27 +511,25 @@ export const deployment = sqliteTable(
 	],
 );
 
-export const storageVolume = sqliteTable(
+export const storageVolume = pgTable(
 	"storage_volume",
 	{
 		backupAccessKeyId: text("backup_access_key_id"),
 		// Cron expression for scheduled backups, evaluated by the same
-		// scheduler tick as service redeploys — see $lib/server/cron.ts.
+		// scheduler tick as service redeploys — see $lib/services/cron.service.ts.
 		backupBucket: text("backup_bucket"),
 		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
-		backupEnabled: integer("backup_enabled", { mode: "boolean" })
-			.default(false)
-			.notNull(),
+		backupEnabled: boolean("backup_enabled").default(false).notNull(),
 		// S3-compatible endpoint, e.g. "https://s3.us-east-1.amazonaws.com" or
 		// a self-hosted MinIO URL. Bind-mount sources only for now — Docker
 		// named volumes aren't backed up yet (see backup.ts).
 		backupEndpoint: text("backup_endpoint"),
-		backupLastRunAt: integer("backup_last_run_at", { mode: "timestamp_ms" }),
+		backupLastRunAt: timestamp("backup_last_run_at", { mode: "date" }),
 		backupPrefix: text("backup_prefix"),
 		backupRegion: text("backup_region"),
 		backupSchedule: text("backup_schedule"),
 		backupSecretAccessKeyEnc: text("backup_secret_access_key_enc"),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
 		id: text("id").primaryKey(),
 		// Docker Binds source: either a bind-mount host path ("/mnt/data/foo")
@@ -479,7 +540,7 @@ export const storageVolume = sqliteTable(
 		kind: text("kind").notNull(),
 		name: text("name").notNull(),
 		source: text("source").notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
 		userId: text("user_id")
@@ -492,15 +553,13 @@ export const storageVolume = sqliteTable(
 // One storage volume can be mounted into several services — that's what
 // makes it "shared" across a project, no separate project-level concept
 // needed (see TODO.md).
-export const serviceVolume = sqliteTable(
+export const serviceVolume = pgTable(
 	"service_volume",
 	{
 		containerPath: text("container_path").notNull(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		id: text("id").primaryKey(),
-		readOnly: integer("read_only", { mode: "boolean" })
-			.default(false)
-			.notNull(),
+		readOnly: boolean("read_only").default(false).notNull(),
 		serviceId: text("service_id")
 			.notNull()
 			.references(() => service.id, { onDelete: "cascade" }),
@@ -511,6 +570,75 @@ export const serviceVolume = sqliteTable(
 	(table) => [
 		index("serviceVolume_serviceId_idx").on(table.serviceId),
 		index("serviceVolume_volumeId_idx").on(table.volumeId),
+	],
+);
+
+// Persisted warn/error-level application log entries, captured by
+// $lib/logger.ts's Logger.warn()/error() (best-effort, never blocks the
+// caller) so the per-service Errors tab can show app-level failures
+// alongside deployment failures, not just deploy failures — see TODO.md.
+// serviceId is populated heuristically (message text scanned for a
+// "service=<uuid>" token most call sites already include, e.g. deploy/Docker
+// logs) rather than threaded explicitly through every one of the ~40
+// existing Logger call sites — null means "not attributable to one service",
+// still shown on a future instance-wide log view, just not on any one
+// service's Errors tab.
+export const appLog = pgTable(
+	"app_log",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		level: text("level").$type<"warn" | "error">().notNull(),
+		message: text("message").notNull(),
+		// JSON-stringified extra args passed to logger.warn()/error(), if any.
+		metadata: text("metadata"),
+		scope: text("scope"),
+		serviceId: text("service_id").references(() => service.id, {
+			onDelete: "set null",
+		}),
+	},
+	(table) => [
+		index("appLog_createdAt_idx").on(table.createdAt),
+		index("appLog_serviceId_idx").on(table.serviceId),
+	],
+);
+
+// One user's OAuth connection to one configured git provider (see
+// instanceSettings.gitProviders) — the access/refresh token that lets
+// $lib/services/git-provider.service.ts list that user's repos and check
+// for a Dockerfile when creating a git-based service. providerId references
+// a GitProviderConfig.id (not a DB FK, same reasoning as appLog.serviceId
+// vs. the JSON-embedded provider configs — see gitProviders' docstring).
+export const gitConnection = pgTable(
+	"git_connection",
+	{
+		accessTokenEnc: text("access_token_enc").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		// Null for providers whose tokens don't expire (classic GitHub OAuth
+		// Apps) — present for GitLab/Gitea/Bitbucket, which do issue
+		// short-lived tokens with a refresh token.
+		expiresAt: timestamp("expires_at", { mode: "date" }),
+		id: text("id").primaryKey(),
+		providerId: text("provider_id").notNull(),
+		providerKind: text("provider_kind").$type<GitProviderKind>().notNull(),
+		// The connected account's own username on that provider — shown in
+		// the UI so it's obvious *which* account is connected.
+		providerUsername: text("provider_username").notNull(),
+		refreshTokenEnc: text("refresh_token_enc"),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		// One connection per user per provider — reconnecting replaces it
+		// rather than accumulating duplicates.
+		uniqueIndex("gitConnection_userId_providerId_uidx").on(
+			table.userId,
+			table.providerId,
+		),
 	],
 );
 
@@ -582,6 +710,8 @@ export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
+export type AppLog = typeof appLog.$inferSelect;
+export type GitConnection = typeof gitConnection.$inferSelect;
 export type InvitationBase = typeof invitation.$inferSelect;
 export type InvitationRefactored = Omit<InvitationBase, "role">;
 export type Invitation = InvitationRefactored & {

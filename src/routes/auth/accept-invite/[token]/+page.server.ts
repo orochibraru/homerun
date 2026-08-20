@@ -2,7 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { Logger } from "$lib/logger";
-import { auth } from "$lib/server/auth";
+import { auth } from "$lib/services/auth";
 
 const logger = new Logger("AcceptInvite");
 

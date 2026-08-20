@@ -4,18 +4,17 @@ import type { Handle } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 import { eq } from "drizzle-orm";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { migrate } from "drizzle-orm/bun-sql/migrator";
 import { building } from "$app/environment";
 import { applyInstanceSettings } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
-import { auth, rebuildAuth } from "$lib/server/auth";
-import { startBackupScheduler } from "$lib/server/backup-scheduler";
-import { startCronScheduler } from "$lib/server/cron-scheduler";
 import { db as appDb, getDb, resetDb } from "$lib/server/db";
 import { user as userTable } from "$lib/server/db/schema";
 import { seedBuiltinTemplates } from "$lib/server/db/seed";
-import { hasAnyUser } from "$lib/server/onboarding";
+import { AdminService } from "$lib/services/admin.service";
+import { auth, rebuildAuth } from "$lib/services/auth";
+import { CronService } from "$lib/services/cron.service";
 
 const logger = new Logger("Hooks");
 
@@ -49,7 +48,12 @@ async function waitForDatabase() {
 			if (i > 0) {
 				await resetDb();
 			}
-			getDb();
+			// getDb() alone doesn't prove connectivity — drizzle-orm/bun-sql's
+			// client is lazy (unlike bun:sqlite's `new Database(path)`, which
+			// used to fail synchronously on an inaccessible path here). A
+			// trivial real query is what actually verifies Postgres is up.
+			const db = getDb();
+			await db.execute("select 1");
 			logger.info("Database connection established.");
 			return;
 		} catch (error) {
@@ -74,7 +78,13 @@ async function runMigrations() {
 		try {
 			logger.info(`Running migrations (retries left: ${retries})`);
 			const db = getDb();
-			migrate(db, {
+			// Real, tested-in-review finding: this was missing `await` — with
+			// Postgres (real network I/O, unlike bun:sqlite's local-file
+			// migrator which apparently never surfaced this), a rejected
+			// migrate() became an *unhandled* promise rejection outside this
+			// try/catch, which crashes the whole process instead of being
+			// caught and retried below.
+			await migrate(db, {
 				migrationsFolder,
 			});
 			logger.info("Database migrated successfully.");
@@ -112,8 +122,9 @@ export const init = async () => {
 	applyInstanceSettings(settings.toConfigOverride());
 	rebuildAuth();
 
-	startCronScheduler();
-	startBackupScheduler();
+	CronService.startCronScheduler();
+	CronService.startBackupScheduler();
+	CronService.startAutoscaleScheduler();
 };
 
 /** Paths under the auth basePath that are handled by SvelteKit, not better-auth */
@@ -133,7 +144,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
 	if (
 		event.request.method === "POST" &&
 		event.url.pathname === SIGN_UP_PATH &&
-		(await hasAnyUser())
+		(await AdminService.hasAnyUser())
 	) {
 		return new Response(
 			JSON.stringify({

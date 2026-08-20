@@ -1,5 +1,5 @@
 import { json } from "@sveltejs/kit";
-import { writeToSession } from "$lib/server/docker/terminal";
+import { DockerService } from "$lib/services/docker.service";
 
 export const POST = async ({ params, request, locals }) => {
 	if (!locals.user) {
@@ -12,7 +12,11 @@ export const POST = async ({ params, request, locals }) => {
 		return json({ error: "Missing data" }, { status: 400 });
 	}
 
-	const ok = writeToSession(params.sessionId, locals.user.id, data);
+	const ok = DockerService.writeToSession(
+		params.sessionId,
+		locals.user.id,
+		data,
+	);
 	if (!ok) {
 		return json({ error: "Session not found" }, { status: 404 });
 	}

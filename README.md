@@ -6,7 +6,7 @@ Single host, local Docker socket only. No multi-node orchestration. No git/Docke
 
 ## Stack
 
-SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over `bun:sqlite`, Tailwind v4 + shadcn-svelte, dockerode.
+SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over Postgres (via Bun's built-in `SQL` client), Tailwind v4 + shadcn-svelte, dockerode.
 
 ## Features
 
@@ -26,7 +26,7 @@ bun run dev              # vite dev
 bun run build            # vite build
 bun run start            # bun run ./build/index.js
 bun run db:generate      # drizzle-kit generate — regenerate migrations from schema.ts
-docker compose up -d     # bootstraps Traefik — required for subdomain routing
+docker compose up -d     # bootstraps Traefik + Postgres — both required
 ```
 
 See `CLAUDE.md` for architecture details and conventions for contributors (human or AI).

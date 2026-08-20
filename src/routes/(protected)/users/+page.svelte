@@ -4,6 +4,7 @@
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import {
 		inputClass as input,
 		labelClass as label,
@@ -47,22 +48,22 @@
 			};
 	}
 
-	function confirmRemove(e: SubmitEvent, name: string) {
-		if (
-			!confirm(
-				`Remove "${name}"? Their services and containers are stopped and deleted — this can't be undone.`,
-			)
-		) {
-			e.preventDefault();
-		}
+	let removeDialogOpen = $state(false);
+	let pendingRemoveName = $state("");
+	let pendingRemoveForm: HTMLFormElement | null = null;
+
+	function requestRemove(e: MouseEvent, name: string) {
+		pendingRemoveForm = (e.currentTarget as HTMLElement).closest("form");
+		pendingRemoveName = name;
+		removeDialogOpen = true;
 	}
 </script>
 
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-text">Users</h1>
-      <p class="mt-1 text-sm text-text-muted">
+      <h1 class="text-text text-2xl font-bold">Users</h1>
+      <p class="text-text-muted mt-1 text-sm">
         Admin and developer accounts for this instance. Public sign-up is closed
         once the first account exists — every account after that is created
         here.
@@ -79,7 +80,7 @@
   </div>
 
   {#if showAddForm}
-    <div class="mb-6 rounded-2xl border border-border bg-surface p-5">
+    <div class="border-border bg-surface mb-6 rounded-2xl border p-5">
       <div class="mb-4 flex gap-2">
         <button
           class="flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-all {addMode ===
@@ -109,7 +110,7 @@
       </div>
 
       {#if addMode === "invite" && !data.smtpEnabled}
-        <p class="mb-4 text-xs text-text-subtle">
+        <p class="text-text-subtle mb-4 text-xs">
           Configure SMTP on Settings to enable email invites.
         </p>
       {/if}
@@ -145,7 +146,7 @@
               required
               type="text"
             />
-            <p class="mt-1.5 text-xs text-text-subtle">
+            <p class="text-text-subtle mt-1.5 text-xs">
               At least 12 characters — share this with them out of band.
             </p>
           </div>
@@ -227,16 +228,16 @@
   <div class="space-y-3">
     {#each data.users as u (u.id)}
       <div
-        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4"
+        class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4"
       >
         <div class="min-w-0">
-          <p class="truncate text-sm font-medium text-text">
+          <p class="text-text truncate text-sm font-medium">
             {u.name}
             {#if u.id === data.currentUserId}
-              <span class="text-xs font-normal text-text-subtle">(you)</span>
+              <span class="text-text-subtle text-xs font-normal">(you)</span>
             {/if}
           </p>
-          <p class="truncate text-xs text-text-muted">{u.email}</p>
+          <p class="text-text-muted truncate text-xs">{u.email}</p>
         </div>
         <div class="flex items-center gap-2">
           <form
@@ -258,7 +259,6 @@
           <form
             action="?/removeUser"
             method="POST"
-            onsubmit={(e) => confirmRemove(e, u.name)}
             use:enhance={submitToast("User removed.")}
           >
             <input name="userId" type="hidden" value={u.id} />
@@ -266,8 +266,9 @@
               aria-label="Remove user"
               class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
               disabled={u.id === data.currentUserId}
+              onclick={(e) => requestRemove(e, u.name)}
               size="icon-sm"
-              type="submit"
+              type="button"
               variant="ghost"
             >
               <Trash2 class="size-4" />
@@ -280,17 +281,17 @@
 
   {#if data.invites.length > 0}
     <div class="mt-8">
-      <h2 class="mb-3 text-sm font-semibold text-text">Pending invitations</h2>
+      <h2 class="text-text mb-3 text-sm font-semibold">Pending invitations</h2>
       <div class="space-y-3">
         {#each data.invites as inv (inv.id)}
           <div
-            class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-surface p-4"
+            class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed p-4"
           >
             <div class="min-w-0">
-              <p class="truncate text-sm font-medium text-text">
+              <p class="text-text truncate text-sm font-medium">
                 {inv.email}
               </p>
-              <p class="text-xs text-text-muted">
+              <p class="text-text-muted text-xs">
                 {inv.role}
                 — expires {new Date(inv.expiresAt).toLocaleDateString()}
               </p>
@@ -316,3 +317,11 @@
     </div>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={removeDialogOpen}
+  confirmLabel="Remove"
+  description={`Remove "${pendingRemoveName}"? Their services and containers are stopped and deleted — this can't be undone.`}
+  onConfirm={() => pendingRemoveForm?.requestSubmit()}
+  title="Remove user"
+/>

@@ -19,9 +19,10 @@ export default defineConfig({
 		trace: "retain-on-failure",
 	},
 	webServer: {
-		// NODE_ENV=test makes Bun load .env.test (DB_PATH=./e2e-test.db) on top
-		// of .env, so every e2e run hits its own disposable SQLite file rather
-		// than the maintainer's real database.db. reuseExistingServer is
+		// NODE_ENV=test makes Bun load .env.test (DATABASE_URL pointing at a
+		// separate homerun_test database) on top of .env, so every e2e run
+		// hits its own disposable Postgres database rather than the
+		// maintainer's real one. reuseExistingServer is
 		// deliberately false, even outside CI — true would let this suite
 		// silently attach to whatever's already listening on 5173 (e.g. the
 		// maintainer's own `bun run dev`, backed by the real DB) instead of

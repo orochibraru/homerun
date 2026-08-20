@@ -1,6 +1,8 @@
 <script lang="ts">
 	import {
 		ArrowLeft,
+		Container,
+		Cpu,
 		FileText,
 		HardDrive,
 		LayoutGrid,
@@ -27,6 +29,14 @@
 			href: resolve("/(protected)/services/[serviceId]", { serviceId: svc.id }),
 			icon: LayoutGrid,
 			label: "Overview",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/source", {
+				serviceId: svc.id,
+			}),
+			icon: Container,
+			label: "Source",
 		},
 		{
 			exact: false,
@@ -59,6 +69,14 @@
 			}),
 			icon: Network,
 			label: "Networking",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/compute", {
+				serviceId: svc.id,
+			}),
+			icon: Cpu,
+			label: "Compute",
 		},
 		{
 			exact: false,
@@ -96,7 +114,7 @@
 
 <div class="p-6 md:p-8">
   <a
-    class="mb-4 inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text"
+    class="text-text-muted hover:text-text mb-4 inline-flex items-center gap-1.5 text-sm"
     href={resolve("/services")}
   >
     <ArrowLeft class="size-3.5" />
@@ -105,10 +123,10 @@
 
   <!-- ── Hero ─────────────────────────────────────────────── -->
   <div class="mb-6 flex flex-wrap items-center gap-3">
-    <h1 class="text-2xl font-bold text-text">{svc.name}</h1>
+    <h1 class="text-text text-2xl font-bold">{svc.name}</h1>
     <StatusBadge status={svc.currentStatus} />
   </div>
-  <p class="-mt-4 mb-6 text-sm text-text-muted">
+  <p class="text-text-muted -mt-4 mb-6 text-sm">
     {svc.image}:{svc.tag}
     ·
     {#if svc.dnsResolvable}
@@ -118,14 +136,14 @@
     {/if}
     {#if svc.containerId}
       · internal:
-      <span class="font-mono text-text-subtle"
+      <span class="text-text-subtle font-mono"
         >{svc.slug}:{svc.containerPort}</span
       >
     {/if}
   </p>
 
   <!-- ── Tabs ─────────────────────────────────────────────── -->
-  <div class="mb-6 flex gap-1 border-b border-border">
+  <div class="border-border mb-6 flex gap-1 border-b">
     {#each tabs as tab}
       {@const active = isActive(tab.href, tab.exact)}
       {@const TabIcon = tab.icon}

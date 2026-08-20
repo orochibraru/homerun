@@ -2,9 +2,9 @@ import { error, fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
-import { backupVolume } from "$lib/server/backup/backup";
-import { parseCronSchedule } from "$lib/server/cron";
-import { encryptSecret } from "$lib/server/docker/secrets";
+import { CronService } from "$lib/services/cron.service";
+import { S3BackupService } from "$lib/services/s3-backup.service";
+import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("Storage");
 
@@ -27,7 +27,7 @@ export const actions = {
 			return fail(404, { error: "Volume not found." });
 		}
 
-		const result = await backupVolume(volume);
+		const result = await S3BackupService.backupVolume(volume);
 		await volume.update({ backupLastRunAt: new Date() });
 
 		if (!result.success) {
@@ -69,7 +69,7 @@ export const actions = {
 				error: "Only bind-mount volumes can be backed up right now.",
 			});
 		}
-		if (backupEnabled && !parseCronSchedule(backupSchedule ?? "")) {
+		if (backupEnabled && !CronService.parseCronSchedule(backupSchedule ?? "")) {
 			return fail(400, {
 				error:
 					'Invalid schedule — use standard 5-field cron syntax (e.g. "0 3 * * *").',

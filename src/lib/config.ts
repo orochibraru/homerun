@@ -39,7 +39,11 @@ export const configSchema = z.object({
 	authCheckUrl: z.string(),
 	// Base domain deployed services get subdomained under: <slug>.<baseDomain>
 	baseDomain: z.string().default("localhost"),
-	dbPath: z.string().default("./database.db"),
+	// Postgres connection string — see compose.yaml's `postgres` service for
+	// the local-dev default this matches out of the box.
+	databaseUrl: z
+		.string()
+		.default("postgres://homerun:homerun@localhost:5432/homerun"),
 	docker: z.object({
 		networkName: z.string().default("homerun-network"),
 		socketPath: z.string().default("/var/run/docker.sock"),
@@ -113,7 +117,7 @@ export const parseConfig = (): AppConfig => {
 			Bun.env.AUTH_CHECK_URL ??
 			`http://host.docker.internal:${Bun.env.PORT ?? 3000}/api/v1/auth-check`,
 		baseDomain: Bun.env.BASE_DOMAIN,
-		dbPath: Bun.env.DB_PATH,
+		databaseUrl: Bun.env.DATABASE_URL,
 		docker: {
 			networkName: Bun.env.DOCKER_NETWORK_NAME,
 			socketPath: Bun.env.DOCKER_SOCKET_PATH,
@@ -201,7 +205,7 @@ export const config: AppConfig = structuredClone(envDefaults);
  * the server accepts requests) and again after every settings save so
  * changes apply live — no process restart needed. Deliberately doesn't
  * import the DTO or the db itself: db/lib.ts imports this module for
- * `dbPath`, so this module must stay a leaf to avoid a circular import.
+ * `databaseUrl`, so this module must stay a leaf to avoid a circular import.
  */
 export function applyInstanceSettings(
 	override: InstanceSettingsOverride = {},

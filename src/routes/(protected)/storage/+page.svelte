@@ -4,6 +4,7 @@
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
@@ -12,18 +13,22 @@
 
 	onMount(() => title.set("Storage"));
 
-	function confirmDelete(e: SubmitEvent, name: string) {
-		if (!confirm(`Delete "${name}"? Services using it will need a redeploy.`)) {
-			e.preventDefault();
-		}
+	let deleteDialogOpen = $state(false);
+	let pendingDeleteName = $state("");
+	let pendingDeleteForm: HTMLFormElement | null = null;
+
+	function requestDelete(e: MouseEvent, name: string) {
+		pendingDeleteForm = (e.currentTarget as HTMLElement).closest("form");
+		pendingDeleteName = name;
+		deleteDialogOpen = true;
 	}
 </script>
 
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-text">Storage</h1>
-      <p class="mt-1 text-sm text-text-muted">
+      <h1 class="text-text text-2xl font-bold">Storage</h1>
+      <p class="text-text-muted mt-1 text-sm">
         Local volume sources services can mount for persistent or shared data.
       </p>
     </div>
@@ -50,7 +55,7 @@
     <div class="space-y-3">
       {#each data.volumes as vol (vol.id)}
         <div
-          class="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5"
+          class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5"
         >
           <div
             class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl"
@@ -58,15 +63,15 @@
             <HardDrive class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-semibold text-text">
+            <p class="text-text truncate text-sm font-semibold">
               {vol.name}
             </p>
-            <p class="mt-0.5 truncate font-mono text-xs text-text-muted">
+            <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
               {vol.kind === "bind" ? "bind" : "volume"}
               · {vol.source}
             </p>
             {#if vol.description}
-              <p class="mt-0.5 truncate text-xs text-text-subtle">
+              <p class="text-text-subtle mt-0.5 truncate text-xs">
                 {vol.description}
               </p>
             {/if}
@@ -92,7 +97,6 @@
           <form
             action="?/delete"
             method="POST"
-            onsubmit={(e) => confirmDelete(e, vol.name)}
             use:enhance={() =>
               async ({ result, update }) => {
                 if (result.type === "failure") {
@@ -104,9 +108,10 @@
             <input name="volumeId" type="hidden" value={vol.id} />
             <Button
               class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+              onclick={(e) => requestDelete(e, vol.name)}
               size="icon-sm"
               title="Delete"
-              type="submit"
+              type="button"
               variant="ghost"
             >
               <Trash2 class="size-4" />
@@ -117,3 +122,11 @@
     </div>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={deleteDialogOpen}
+  confirmLabel="Delete"
+  description={`Delete "${pendingDeleteName}"? Services using it will need a redeploy.`}
+  onConfirm={() => pendingDeleteForm?.requestSubmit()}
+  title="Delete volume"
+/>

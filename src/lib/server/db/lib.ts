@@ -1,29 +1,33 @@
-import { Database } from "bun:sqlite";
-import { type BunSQLiteDatabase, drizzle } from "drizzle-orm/bun-sqlite";
+import { SQL } from "bun";
+import { type BunSQLDatabase, drizzle } from "drizzle-orm/bun-sql";
 import { config } from "$lib/config";
 
 /**
  * Database singleton that survives Vite HMR.
  * Without this, every hot reload creates a new connection pool,
  * eventually hitting "too many clients" in PostgreSQL.
+ *
+ * Uses Bun's built-in `SQL` Postgres client (via drizzle-orm/bun-sql) rather
+ * than the `pg` package — keeps this app's dependency-light posture (no new
+ * npm dependency for the DB driver) and matches its "Bun runtime" identity.
  */
 const globalForDb = globalThis as unknown as {
-	__db_client?: Database;
-	__db_instance?: BunSQLiteDatabase<Record<string, never>>;
+	__db_client?: SQL;
+	__db_instance?: BunSQLDatabase<Record<string, never>>;
 };
 
-function createClient(): Database {
+function createClient(): SQL {
 	if (globalForDb.__db_client) {
 		return globalForDb.__db_client;
 	}
 
-	const client = new Database(config.dbPath);
+	const client = new SQL(config.databaseUrl);
 
 	globalForDb.__db_client = client;
 	return client;
 }
 
-function createDb(): BunSQLiteDatabase<Record<string, never>> {
+function createDb(): BunSQLDatabase<Record<string, never>> {
 	if (globalForDb.__db_instance) {
 		return globalForDb.__db_instance;
 	}

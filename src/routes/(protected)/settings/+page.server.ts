@@ -5,8 +5,9 @@ import {
 	InstanceSettingsDTO,
 	type OauthProviderInput,
 } from "$lib/dto/instance-settings-dto";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
-import { rebuildAuth } from "$lib/server/auth";
+import { rebuildAuth } from "$lib/services/auth";
 
 const logger = new Logger("InstanceSettings");
 
@@ -58,9 +59,13 @@ export const load = async ({ locals }) => {
 		throw redirect(302, resolve("/"));
 	}
 
-	const settings = await InstanceSettingsDTO.get();
+	const [settings, remoteHosts] = await Promise.all([
+		InstanceSettingsDTO.get(),
+		RemoteHostDTO.list(locals.user.id),
+	]);
 	return {
 		envDefaults: envDefaultsForDisplay(),
+		remoteHosts: remoteHosts.map((h) => h.toJSON()),
 		settings: settings.toJSON(),
 	};
 };
@@ -72,6 +77,47 @@ function applyAndRebuild(settings: InstanceSettingsDTO) {
 }
 
 export const actions = {
+	updateAutoscale: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const overflowRemoteHostId =
+			(formData.get("autoscaleOverflowRemoteHostId") as string | null) || null;
+		const cpuThreshold = Number.parseInt(
+			(formData.get("autoscaleCpuThresholdPercent") as string | null) ?? "80",
+			10,
+		);
+		const memThreshold = Number.parseInt(
+			(formData.get("autoscaleMemoryThresholdPercent") as string | null) ??
+				"80",
+			10,
+		);
+
+		if (overflowRemoteHostId) {
+			const host = await RemoteHostDTO.get(
+				overflowRemoteHostId,
+				locals.user.id,
+			);
+			if (!host) {
+				return fail(400, { error: "That remote host wasn't found." });
+			}
+		}
+
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateAutoscale({
+			autoscaleCpuThresholdPercent: Number.isFinite(cpuThreshold)
+				? Math.min(99, Math.max(1, cpuThreshold))
+				: 80,
+			autoscaleEnabled: checkbox(formData, "autoscaleEnabled"),
+			autoscaleMemoryThresholdPercent: Number.isFinite(memThreshold)
+				? Math.min(99, Math.max(1, memThreshold))
+				: 80,
+			autoscaleOverflowRemoteHostId: overflowRemoteHostId,
+		});
+		logger.info(`Autoscale settings updated: user=${locals.user.id}`);
+		return { savedSection: "autoscale", success: true };
+	},
 	updateCore: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

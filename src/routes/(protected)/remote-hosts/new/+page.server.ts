@@ -2,7 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
-import { encryptSecret } from "$lib/server/docker/secrets";
+import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("RemoteHosts");
 
