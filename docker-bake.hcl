@@ -7,7 +7,6 @@ variable "TAG" {
 }
 
 variable "IMAGE" {
-  default = "orochibraru/homerun"
   validation {
     condition = IMAGE != ""
     error_message = "The variable 'IMAGE' must not be empty."
@@ -16,7 +15,7 @@ variable "IMAGE" {
 
 // Special target: https://github.com/docker/metadata-action#bake-definition
 target "docker-metadata-action" {
-  tags = ["orochibraru/homerun:latest","orochibraru/homerun:${TAG}"]
+  tags = ["${IMAGE}:latest","${IMAGE}:${TAG}"]
 }
 
 group "default" {
