@@ -33,7 +33,7 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
     gitUrl: input.gitUrl || null,
     // No real image/tag until the first build — deployService()
     // overwrites both with the resolved local tag once it's built.
-    image: `localrun-build-${slug}`,
+    image: `homerun-build-${slug}`,
     tag: "pending",
   };
 }

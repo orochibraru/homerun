@@ -26,13 +26,13 @@ export interface RegistryAuth {
  * so a redeploy never collides on "name already in use" — even if the
  * previous container's removal (below) silently failed to fully complete.
  * The *previous* container for a service is found by its
- * `localrun.service.id` label, not by name, since names are no longer
+ * `homerun.service.id` label, not by name, since names are no longer
  * stable across deploys.
  */
 function containerName(slug: string, projectSlug?: string | null): string {
   const suffix = crypto.randomUUID().slice(0, 8);
   const prefix = projectSlug ? `${projectSlug}-` : "";
-  return `localrun-${prefix}${slug}-${suffix}`;
+  return `homerun-${prefix}${slug}-${suffix}`;
 }
 
 /** The currently-running (or last) container for a service, if any — found by label, not name. */
@@ -260,10 +260,10 @@ export async function createAndStartContainer(
     NetworkingConfig: isRemote
       ? undefined
       : {
-          EndpointsConfig: {
-            [config.docker.networkName]: { Aliases: [params.slug] },
-          },
+        EndpointsConfig: {
+          [config.docker.networkName]: { Aliases: [params.slug] },
         },
+      },
     name,
     // Tty combines stdout/stderr into one unframed stream, which keeps
     // the v1 log viewer simple (no demux of Docker's multiplexed

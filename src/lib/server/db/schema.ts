@@ -472,7 +472,7 @@ export const storageVolume = sqliteTable(
     description: text("description"),
     id: text("id").primaryKey(),
     // Docker Binds source: either a bind-mount host path ("/mnt/data/foo")
-    // or a Docker-managed named volume ("localrun-vol-xyz") — same field,
+    // or a Docker-managed named volume ("homerun-vol-xyz") — same field,
     // Docker's Binds syntax tells them apart by whether it looks like a
     // path. `kind` just drives which the create form asks for.
     // "bind" | "volume"

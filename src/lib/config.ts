@@ -41,7 +41,7 @@ export const configSchema = z.object({
   baseDomain: z.string().default("localhost"),
   dbPath: z.string().default("./database.db"),
   docker: z.object({
-    networkName: z.string().default("localrun-network"),
+    networkName: z.string().default("homerun-network"),
     socketPath: z.string().default("/var/run/docker.sock"),
   }),
   logFormat: z.enum(["console", "json"]).default("console"),

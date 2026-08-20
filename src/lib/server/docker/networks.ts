@@ -6,7 +6,7 @@ const logger = new Logger("Docker");
 
 /** Deterministic — no need to persist a network id anywhere, it's derived from the project id. */
 export function projectNetworkName(projectId: string): string {
-  return `localrun-project-${projectId}`;
+  return `homerun-project-${projectId}`;
 }
 
 /** Creates the project's dedicated network if it doesn't already exist. Idempotent. */
