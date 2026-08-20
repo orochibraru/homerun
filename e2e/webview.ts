@@ -146,9 +146,18 @@ export class Page {
 		return { status: this.lastDocStatus };
 	}
 
-	/** Fill a text input/textarea matched by a CSS selector (e.g. `"#email"`). */
+	/**
+	 * Fill a text input/textarea matched by a CSS selector (e.g. `"#email"`).
+	 * Selects any existing value first — `type()` only inserts at the
+	 * cursor, so a field with a pre-filled default (e.g. the tag field
+	 * defaulting to `"latest"`) would otherwise end up with the new text
+	 * merged into the old (`"latestalpine"`), not replacing it.
+	 */
 	async fill(selector: string, text: string, opts?: { timeoutMs?: number }) {
 		await this.view.click(selector, { timeout: opts?.timeoutMs });
+		await this.view.evaluate(
+			`document.querySelector(${JSON.stringify(selector)})?.select()`,
+		);
 		await this.view.type(text);
 	}
 
