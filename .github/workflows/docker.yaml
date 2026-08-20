@@ -31,6 +31,9 @@ on:
 permissions:
   contents: read
 
+env:
+  IMAGE: ${{ inputs.image_name }}
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
