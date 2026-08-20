@@ -40,13 +40,13 @@ jobs:
       - build
     steps:
       - name: Download meta bake definition
-        uses: actions/download-artifact@v8
+        uses: orochibraru/download-artifact@v8
         with:
           name: bake-meta
           path: ${{ runner.temp }}
 
       - name: Download digests
-        uses: actions/download-artifact@v8
+        uses: orochibraru/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-*
