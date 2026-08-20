@@ -260,10 +260,10 @@ export async function createAndStartContainer(
     NetworkingConfig: isRemote
       ? undefined
       : {
-        EndpointsConfig: {
-          [config.docker.networkName]: { Aliases: [params.slug] },
+          EndpointsConfig: {
+            [config.docker.networkName]: { Aliases: [params.slug] },
+          },
         },
-      },
     name,
     // Tty combines stdout/stderr into one unframed stream, which keeps
     // the v1 log viewer simple (no demux of Docker's multiplexed

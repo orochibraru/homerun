@@ -79,7 +79,7 @@
             type="radio"
             value="volume"
             bind:group={kind}
-          />
+          >
           Docker volume
         </label>
         <label
@@ -94,7 +94,7 @@
             type="radio"
             value="bind"
             bind:group={kind}
-          />
+          >
           Host path
         </label>
       </div>
