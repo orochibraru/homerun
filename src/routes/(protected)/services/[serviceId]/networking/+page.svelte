@@ -5,10 +5,10 @@
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
   import CheckBox from "$lib/components/check-box.svelte";
-  import {
-    inputClass as input,
-    labelClass as label,
-  } from "$lib/components/form-styles";
+  import { labelClass as label } from "$lib/components/form-styles";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -75,14 +75,13 @@
         {/if}
         <div>
           <label class={label} for="customDomain">Custom domain</label>
-          <input
-            class={input}
+          <Input
             id="customDomain"
             name="customDomain"
             placeholder="app.example.com"
             type="text"
             value={svc.customDomain ?? ""}
-          >
+          />
           <p class="mt-1.5 text-xs text-text-subtle">
             Optional second hostname routed to this service, alongside its
             {publicHost}.{data.baseDomain}
@@ -121,18 +120,14 @@
           </p>
         </div>
 
-        <button
-          class="flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-text transition-all hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={submitting}
-          type="submit"
-        >
+        <Button disabled={submitting} type="submit" variant="outline">
           {#if submitting}
             <Loader2 class="size-4 animate-spin" />
           {:else}
             <Check class="size-4" />
           {/if}
           Save
-        </button>
+        </Button>
       </form>
     {/if}
   </section>
@@ -189,23 +184,23 @@
         </p>
         <div>
           <label class={label} for="customSslCert">Certificate (PEM)</label>
-          <textarea
-            class="{input} resize-none font-mono"
+          <Textarea
+            class="resize-none font-mono"
             id="customSslCert"
             name="customSslCert"
             placeholder={svc.customSslCertEnc ? "Unchanged" : "-----BEGIN CERTIFICATE-----"}
-            rows="4"
-          ></textarea>
+            rows={4}
+          />
         </div>
         <div>
           <label class={label} for="customSslKey">Private key (PEM)</label>
-          <textarea
-            class="{input} resize-none font-mono"
+          <Textarea
+            class="resize-none font-mono"
             id="customSslKey"
             name="customSslKey"
             placeholder={svc.customSslKeyEnc ? "Unchanged" : "-----BEGIN PRIVATE KEY-----"}
-            rows="4"
-          ></textarea>
+            rows={4}
+          />
         </div>
         {#if svc.customSslCertEnc}
           <CheckBox

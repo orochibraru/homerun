@@ -121,7 +121,30 @@ export const init = async () => {
 /** Paths under the auth basePath that are handled by SvelteKit, not better-auth */
 const customAuthPaths = new Set(["/api/v1/auth/providers"]);
 
+/**
+ * better-auth's real email/password sign-up endpoint (confirmed against
+ * node_modules/better-auth/dist/api/routes/sign-up.mjs — `/sign-up/email`
+ * relative to the basePath). Blocked directly here, not just hidden in the
+ * UI, once any account exists — every account after the first is created
+ * by an admin from the Users page (direct-create or email invite), never
+ * through public self-service sign-up again.
+ */
+const SIGN_UP_PATH = "/api/v1/auth/sign-up/email";
+
 const authHandler: Handle = async ({ event, resolve }) => {
+  if (
+    event.request.method === "POST" &&
+    event.url.pathname === SIGN_UP_PATH &&
+    (await hasAnyUser())
+  ) {
+    return new Response(
+      JSON.stringify({
+        message: "Sign-up is closed — an admin account already exists.",
+      }),
+      { headers: { "content-type": "application/json" }, status: 403 }
+    );
+  }
+
   // A misconfigured OAuth provider (bad discovery URL, unreachable IdP —
   // now editable at any time via /settings, not just at deploy time via
   // env vars) makes better-auth's genericOAuth plugin throw while building
@@ -180,6 +203,10 @@ const authHandler: Handle = async ({ event, resolve }) => {
       }
     }
   }
+
+  // Declared in app.d.ts for exactly this — populated here so every route
+  // can check `locals.isAdmin` instead of re-deriving it from `role`.
+  event.locals.isAdmin = event.locals.user?.role === "admin";
 
   // Skip better-auth handler for custom SvelteKit-managed auth routes
   if (customAuthPaths.has(event.url.pathname)) {

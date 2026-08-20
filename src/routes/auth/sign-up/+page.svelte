@@ -98,9 +98,10 @@
     <div class="w-full max-w-md">
       <!-- Header -->
       <div class="mb-8">
-        <h2 class="text-2xl font-bold text-text">Create your account</h2>
+        <h2 class="text-2xl font-bold text-text">Create your admin account</h2>
         <p class="mt-1 text-sm text-text-muted">
-          Deploy your first container in minutes.
+          This is the first account on this instance, so it becomes the admin.
+          Additional accounts are created from the Users page afterward.
         </p>
       </div>
 

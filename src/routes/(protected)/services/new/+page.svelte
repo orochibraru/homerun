@@ -20,6 +20,14 @@
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
   import CheckBox from "$lib/components/check-box.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import {
+    SelectContent,
+    SelectItem,
+    Select as SelectRoot,
+    SelectTrigger,
+  } from "$lib/components/ui/select/index.js";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -29,8 +37,6 @@
     scheduleImageCheck();
   });
 
-  const input =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
   const label = "block mb-1.5 text-sm font-medium text-text";
   const errorClass = "mt-1.5 text-xs text-red-500";
   const values = $derived(form?.values as Record<string, string> | undefined);
@@ -88,6 +94,17 @@
   let cpuLimit = $state(values?.cpuLimit ?? data.template?.cpuLimit ?? "");
   let memoryLimitMb = $state(
     values?.memoryLimitMb ?? String(data.template?.memoryLimitMb ?? "")
+  );
+
+  const restartPolicyOptions: [string, string][] = [
+    ["unless-stopped", "Unless stopped"],
+    ["always", "Always"],
+    ["on-failure", "On failure"],
+    ["no", "Never"],
+  ];
+  const restartPolicyLabel = $derived(
+    restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
+      "Unless stopped"
   );
 
   function scheduleImageCheck() {
@@ -289,8 +306,7 @@
           <label class={label} for="name">
             Name <span class="text-red-500">*</span>
           </label>
-          <input
-            class={input}
+          <Input
             id="name"
             name="name"
             oninput={onNameInput}
@@ -298,7 +314,7 @@
             required
             type="text"
             bind:value={name}
-          >
+          />
           {#if errors?.name}
             <p class={errorClass}>{errors.name[0]}</p>
           {/if}
@@ -308,10 +324,9 @@
           <label class={label} for="slug">
             Slug <span class="text-red-500">*</span>
           </label>
-          <input
-            class={input}
+          <Input
             id="slug"
-            maxlength="63"
+            maxlength={63}
             name="slug"
             oninput={onSlugInput}
             pattern="[a-z0-9\-]+"
@@ -319,7 +334,7 @@
             required
             type="text"
             bind:value={slug}
-          >
+          />
           <p class="mt-1 text-xs text-text-subtle">
             Routed at
             <span class="text-accent"
@@ -370,8 +385,7 @@
               <label class={label} for="image">
                 Image <span class="text-red-500">*</span>
               </label>
-              <input
-                class={input}
+              <Input
                 id="image"
                 name="image"
                 oninput={scheduleImageCheck}
@@ -379,22 +393,21 @@
                 required
                 type="text"
                 bind:value={image}
-              >
+              />
               {#if errors?.image}
                 <p class={errorClass}>{errors.image[0]}</p>
               {/if}
             </div>
             <div>
               <label class={label} for="tag">Tag</label>
-              <input
-                class={input}
+              <Input
                 id="tag"
                 name="tag"
                 oninput={scheduleImageCheck}
                 placeholder="latest"
                 type="text"
                 bind:value={tag}
-              >
+              />
             </div>
           </div>
 
@@ -415,15 +428,14 @@
             <label class={label} for="gitUrl">
               Repository URL <span class="text-red-500">*</span>
             </label>
-            <input
-              class={input}
+            <Input
               id="gitUrl"
               name="gitUrl"
               placeholder="https://github.com/acme/api.git"
               required
               type="text"
               bind:value={gitUrl}
-            >
+            />
             <p class="mt-1.5 text-xs text-text-subtle">
               Any git-clone-able HTTPS URL — GitHub, GitLab, a self-hosted Gitea
               instance, whatever. Private repos: embed a token in the URL
@@ -437,41 +449,38 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class={label} for="gitRef">Branch / tag</label>
-              <input
-                class={input}
+              <Input
                 id="gitRef"
                 name="gitRef"
                 placeholder="main"
                 type="text"
                 bind:value={gitRef}
-              >
+              />
             </div>
             <div>
               <label class={label} for="gitDockerfilePath"
                 >Dockerfile path</label
               >
-              <input
-                class={input}
+              <Input
                 id="gitDockerfilePath"
                 name="gitDockerfilePath"
                 placeholder="Dockerfile"
                 type="text"
                 bind:value={gitDockerfilePath}
-              >
+              />
             </div>
           </div>
           <div>
             <label class={label} for="gitBuildContext">
               Build context (subdirectory)
             </label>
-            <input
-              class={input}
+            <Input
               id="gitBuildContext"
               name="gitBuildContext"
               placeholder="Leave blank for repo root"
               type="text"
               bind:value={gitBuildContext}
-            >
+            />
           </div>
         {/if}
       </div>
@@ -482,19 +491,19 @@
       class="rounded-2xl border border-border bg-surface"
       class:hidden={currentStep !== 0}
     >
-      <button
-        class="flex w-full items-center gap-3 px-5 py-4 text-left"
+      <Button
+        class="h-auto w-full items-center justify-start gap-3 px-5 py-4 font-normal"
         onclick={() => {
           showRegistry = !showRegistry;
         }}
-        type="button"
+        variant="ghost"
       >
         <div
           class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400"
         >
           <Lock class="size-4" />
         </div>
-        <div class="flex-1">
+        <div class="flex-1 text-left">
           <h2 class="text-sm font-semibold text-text">Private registry</h2>
           <p class="text-xs text-text-muted">
             Only needed for non-public images.
@@ -505,43 +514,40 @@
             ? 'rotate-180'
             : ''}"
         />
-      </button>
+      </Button>
 
       {#if showRegistry}
         <div class="space-y-4 border-t border-border p-5">
           <div>
             <label class={label} for="registryUrl"> Registry URL </label>
-            <input
-              class={input}
+            <Input
               id="registryUrl"
               name="registryUrl"
               oninput={scheduleImageCheck}
               placeholder="ghcr.io (blank = Docker Hub)"
               type="text"
               bind:value={registryUrl}
-            >
+            />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class={label} for="registryUsername"> Username </label>
-              <input
-                class={input}
+              <Input
                 id="registryUsername"
                 name="registryUsername"
                 type="text"
                 bind:value={registryUsername}
-              >
+              />
             </div>
             <div>
               <label class={label} for="registryPassword">
                 Password / token
               </label>
-              <input
-                class={input}
+              <Input
                 id="registryPassword"
                 name="registryPassword"
                 type="password"
-              >
+              />
             </div>
           </div>
         </div>
@@ -572,8 +578,7 @@
           <label class={label} for="containerPort">
             Container port <span class="text-red-500">*</span>
           </label>
-          <input
-            class={input}
+          <Input
             id="containerPort"
             max="65535"
             min="1"
@@ -582,7 +587,7 @@
             required={currentStep === 1}
             type="number"
             bind:value={containerPort}
-          >
+          />
           <p class="mt-1 text-xs text-text-subtle">
             The port your app listens on inside the container.
           </p>
@@ -616,39 +621,36 @@
       <div class="space-y-2.5 p-5">
         {#each envRows as row, i}
           <div class="flex items-center gap-2">
-            <input
-              class="{input} font-mono"
+            <Input
+              class="font-mono"
               name="envKey"
               placeholder="KEY"
               type="text"
               bind:value={row.key}
-            >
-            <input
-              class="{input} font-mono"
+            />
+            <Input
+              class="font-mono"
               name="envValue"
               placeholder="value"
               type="text"
               bind:value={row.value}
-            >
-            <button
+            />
+            <Button
               aria-label="Remove"
-              class="shrink-0 rounded-lg p-2 text-red-500 transition-all hover:bg-red-500/10"
+              class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
               onclick={() => removeEnvRow(i)}
-              type="button"
+              size="icon-sm"
+              variant="ghost"
             >
               <Trash2 class="size-4" />
-            </button>
+            </Button>
           </div>
         {/each}
 
-        <button
-          class="text-accent mt-1 flex items-center gap-1.5 text-sm font-medium hover:underline"
-          onclick={addEnvRow}
-          type="button"
-        >
+        <Button class="mt-1 h-auto p-0" onclick={addEnvRow} variant="link">
           <Plus class="size-3.5" />
           Add variable
-        </button>
+        </Button>
       </div>
     </section>
 
@@ -668,45 +670,46 @@
       <div class="space-y-5 p-5">
         <div>
           <label class={label} for="restartPolicy"> Restart policy </label>
-          <select
-            class={input}
-            id="restartPolicy"
+          <SelectRoot
             name="restartPolicy"
+            type="single"
             bind:value={restartPolicy}
           >
-            <option value="unless-stopped">Unless stopped</option>
-            <option value="always">Always</option>
-            <option value="on-failure">On failure</option>
-            <option value="no">Never</option>
-          </select>
+            <SelectTrigger class="w-full" id="restartPolicy">
+              {restartPolicyLabel}
+            </SelectTrigger>
+            <SelectContent>
+              {#each restartPolicyOptions as [val, lbl] (val)}
+                <SelectItem label={lbl} value={val} />
+              {/each}
+            </SelectContent>
+          </SelectRoot>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class={label} for="cpuLimit"> CPU limit </label>
-            <input
-              class={input}
+            <Input
               id="cpuLimit"
               name="cpuLimit"
               placeholder="e.g. 0.5 (cores)"
               type="text"
               bind:value={cpuLimit}
-            >
+            />
             {#if errors?.cpuLimit}
               <p class={errorClass}>{errors.cpuLimit[0]}</p>
             {/if}
           </div>
           <div>
             <label class={label} for="memoryLimitMb"> Memory limit (MB) </label>
-            <input
-              class={input}
+            <Input
               id="memoryLimitMb"
               min="1"
               name="memoryLimitMb"
               placeholder="e.g. 512"
               type="number"
               bind:value={memoryLimitMb}
-            >
+            />
             {#if errors?.memoryLimitMb}
               <p class={errorClass}>{errors.memoryLimitMb[0]}</p>
             {/if}
@@ -720,45 +723,28 @@
     <div class="flex justify-between gap-3">
       <div>
         {#if currentStep > 0}
-          <button
-            class="flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
-            onclick={goBack}
-            type="button"
-          >
+          <Button onclick={goBack} variant="outline">
             <ArrowLeft class="size-4" />
             Back
-          </button>
+          </Button>
         {/if}
       </div>
       <div class="flex gap-3">
-        <a
-          class="rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          href={resolve("/services")}
-        >
-          Cancel
-        </a>
+        <Button href={resolve("/services")} variant="outline">Cancel</Button>
         {#if currentStep < STEPS.length - 1}
-          <button
-            class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-            onclick={goNext}
-            type="button"
-          >
+          <Button onclick={goNext}>
             Next
             <ArrowRight class="size-4" />
-          </button>
+          </Button>
         {:else}
-          <button
-            class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={submitting}
-            type="submit"
-          >
+          <Button disabled={submitting} type="submit">
             {#if submitting}
               <Loader2 class="size-4 animate-spin" />
               Creating…
             {:else}
               Create service
             {/if}
-          </button>
+          </Button>
         {/if}
       </div>
     </div>

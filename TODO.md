@@ -6,3 +6,4 @@
 - The errors tab shouldn't be just for deployment failures, it should also be for errors logged in the app's logs. A bit like Sentry tracking.
 - We need to parse colors and special chars in the container logs
 - Setup log retention (for 24hours days by default, extendable to 3months). Logs should be stored as log files and shouldn't be too big so they need to be split. Setup Meilisearch to index logs so we can search them if needed.
+- For git sources we need to be able to link a git account through oauth, not have to paste in an insecure token. We need to be able to setup a git connection to a git provider (github, gitea, gitlab, bibucket) and from there list available repos and detect their contents to see if they have a Dockerfile or not.

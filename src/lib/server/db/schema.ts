@@ -228,6 +228,14 @@ export const instanceSettings = sqliteTable("instance_settings", {
     .$type<InstanceOauthProvider[]>()
     .notNull()
     .default([]),
+  // Non-null once the onboarding wizard has been completed — gates every
+  // (protected)/ route (see (protected)/+layout.server.ts). Unlike every
+  // other column here, not part of the config-override merge in
+  // $lib/config.ts — this is onboarding-flow state, not an instance config
+  // value.
+  onboardingCompletedAt: integer("onboarding_completed_at", {
+    mode: "timestamp_ms",
+  }),
   smtpEnabled: integer("smtp_enabled", { mode: "boolean" }),
   smtpFrom: text("smtp_from"),
   smtpHost: text("smtp_host"),
@@ -252,6 +260,28 @@ export interface InstanceOauthProvider {
   pkce: boolean;
   scopes: string[];
 }
+
+// A pending admin-sent invite to create an account — see InvitationDTO and
+// the Users page's "Send invite" action. Accepting one (at
+// /auth/accept-invite/[token]) creates the user directly via
+// auth.api.createUser and sets acceptedAt; there's no separate account
+// row until then.
+export const invitation = sqliteTable(
+  "invitation",
+  {
+    acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    email: text("email").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    id: text("id").primaryKey(),
+    invitedByUserId: text("invited_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    token: text("token").notNull().unique(),
+  },
+  (table) => [index("invitation_email_idx").on(table.email)]
+);
 
 export const template = sqliteTable(
   "template",
@@ -551,6 +581,8 @@ export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
+export type Invitation = typeof invitation.$inferSelect;
+export type User = typeof user.$inferSelect;
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
