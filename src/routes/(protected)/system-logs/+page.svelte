@@ -1,13 +1,49 @@
 <script lang="ts">
-	import { Info, Loader2, RefreshCw, Terminal } from "@lucide/svelte";
+	import {
+		Info,
+		Loader2,
+		RefreshCw,
+		RotateCw,
+		Terminal,
+		Wrench,
+	} from "@lucide/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
 
-	const { data } = $props();
+	const { data, form } = $props();
 
 	onMount(() => title.set("System Logs"));
+
+	let restarting = $state(false);
+	let updating = $state(false);
+
+	function confirmRestart(e: SubmitEvent) {
+		if (
+			!confirm(
+				"Restart Traefik? Every deployed service routed through it will be briefly unreachable while it comes back up.",
+			)
+		) {
+			e.preventDefault();
+			return;
+		}
+		restarting = true;
+	}
+
+	function confirmUpdate(e: SubmitEvent) {
+		if (
+			!confirm(
+				"Update Traefik? If a newer image is available, this stops and recreates the container in place (same config, new image) — brief downtime for every routed service, and no automatic rollback if the new container fails to start.",
+			)
+		) {
+			e.preventDefault();
+			return;
+		}
+		updating = true;
+	}
 
 	let lines = $state<string[]>([]);
 	let connected = $state(false);
@@ -70,35 +106,61 @@
 		cancelled = false;
 		connect();
 	}
+
+	$effect(() => {
+		if (!form) {
+			return;
+		}
+		if (form.action === "restartTraefik") {
+			restarting = false;
+			if (form.success) {
+				toast.success("Traefik restarted.");
+			} else {
+				toast.error(form.error ?? "Couldn't restart Traefik.");
+			}
+		} else if (form.action === "updateTraefik") {
+			updating = false;
+			if (form.success) {
+				toast[form.updated ? "success" : "info"](form.message);
+			} else {
+				toast.error(form.error ?? "Couldn't update Traefik.");
+			}
+		}
+	});
 </script>
 
 <div class="p-6 md:p-8">
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-text">System Logs</h1>
-    <p class="mt-1 text-sm text-text-muted">
+    <h1 class="text-text text-2xl font-bold">System Logs</h1>
+    <p class="text-text-muted mt-1 text-sm">
       Logs from core infrastructure this app depends on.
     </p>
   </div>
 
   <div
-    class="mb-6 flex items-start gap-2.5 rounded-xl border border-border bg-surface-2 px-4 py-3 text-xs text-text-muted"
+    class="border-border bg-surface-2 text-text-muted mb-6 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs"
   >
     <Info class="mt-0.5 size-3.5 shrink-0" />
     <p>
       Local Run's own server isn't containerized — it runs directly on the host,
       so its logs are whatever process manager or terminal you started
-      <code class="rounded bg-surface px-1 py-0.5">bun run start</code>
+      <code class="bg-surface rounded px-1 py-0.5">bun run start</code>
       from is already capturing (no in-app viewer for it here).
     </p>
   </div>
 
-  <section class="rounded-2xl border border-border bg-surface">
+  <section class="border-border bg-surface rounded-2xl border">
     <div
-      class="flex items-center justify-between gap-3 border-b border-border px-5 py-4"
+      class="border-border flex items-center justify-between gap-3 border-b px-5 py-4"
     >
       <div class="flex items-center gap-2">
-        <Terminal class="size-4 text-text-muted" />
-        <h2 class="text-sm font-semibold text-text">Traefik</h2>
+        <Terminal class="text-text-muted size-4" />
+        <h2 class="text-text text-sm font-semibold">Traefik</h2>
+        {#if data.traefik}
+          <code class="bg-surface-2 text-text-muted rounded px-1.5 py-0.5 text-[11px]">
+            {data.traefik.image}
+          </code>
+        {/if}
         {#if connected}
           <span class="flex items-center gap-1 text-xs text-green-600">
             <span class="size-1.5 rounded-full bg-green-500"></span>
@@ -106,15 +168,59 @@
           </span>
         {/if}
       </div>
-      <Button
-        disabled={!data.traefik}
-        onclick={reconnect}
-        size="sm"
-        variant="ghost"
-      >
-        <RefreshCw class="size-3.5" />
-        Reconnect
-      </Button>
+      <div class="flex items-center gap-2">
+        {#if data.traefik && data.user.role === "admin"}
+          <form
+            action="?/restartTraefik"
+            method="POST"
+            onsubmit={confirmRestart}
+            use:enhance
+          >
+            <Button
+              disabled={restarting || updating}
+              size="sm"
+              type="submit"
+              variant="ghost"
+            >
+              {#if restarting}
+                <Loader2 class="size-3.5 animate-spin" />
+              {:else}
+                <RotateCw class="size-3.5" />
+              {/if}
+              Restart
+            </Button>
+          </form>
+          <form
+            action="?/updateTraefik"
+            method="POST"
+            onsubmit={confirmUpdate}
+            use:enhance
+          >
+            <Button
+              disabled={restarting || updating}
+              size="sm"
+              type="submit"
+              variant="ghost"
+            >
+              {#if updating}
+                <Loader2 class="size-3.5 animate-spin" />
+              {:else}
+                <Wrench class="size-3.5" />
+              {/if}
+              Update
+            </Button>
+          </form>
+        {/if}
+        <Button
+          disabled={!data.traefik}
+          onclick={reconnect}
+          size="sm"
+          variant="ghost"
+        >
+          <RefreshCw class="size-3.5" />
+          Reconnect
+        </Button>
+      </div>
     </div>
 
     <div
