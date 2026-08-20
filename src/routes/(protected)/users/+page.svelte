@@ -10,19 +10,14 @@
   } from "$lib/components/form-styles";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
-  import {
-    SelectContent,
-    SelectItem,
-    Select as SelectRoot,
-    SelectTrigger,
-  } from "$lib/components/ui/select/index.js";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
 
   onMount(() => title.set("Users"));
 
-  const ROLE_OPTIONS = [
+  const roleOptions = [
     { label: "Developer", value: "developer" },
     { label: "Admin", value: "admin" },
   ];
@@ -31,7 +26,7 @@
   let addMode = $state<"direct" | "invite">("direct");
   let newRole = $state("developer");
   const newRoleLabel = $derived(
-    ROLE_OPTIONS.find((r) => r.value === newRole)?.label ?? "Developer"
+    roleOptions.find((r) => r.value === newRole)?.label ?? "Developer"
   );
   let submitting = $state(false);
 
@@ -129,9 +124,9 @@
           action="?/createDirect"
           class="space-y-4"
           method="POST"
-          use:enhance={() => {
+          use:enhance={async () => {
             submitting = true;
-            return submitToast("User created.")();
+            await submitToast("User created.");
           }}
         >
           <div>
@@ -157,16 +152,26 @@
           </div>
           <div>
             <div class={label}>Role</div>
-            <SelectRoot name="role" type="single" bind:value={newRole}>
-              <SelectTrigger class="w-full" id="role">
+
+            <Select.Root name="role" type="single" bind:value={newRole}>
+              <Select.Trigger class="w-45">
                 {newRoleLabel}
-              </SelectTrigger>
-              <SelectContent>
-                {#each ROLE_OPTIONS as opt (opt.value)}
-                  <SelectItem label={opt.label} value={opt.value} />
-                {/each}
-              </SelectContent>
-            </SelectRoot>
+              </Select.Trigger>
+              <Select.Content>
+                <Select.Group>
+                  <Select.Label>Role</Select.Label>
+                  {#each roleOptions as opt (opt.value)}
+                    <Select.Item
+                      disabled={opt.value === "grapes"}
+                      label={opt.label}
+                      value={opt.value}
+                    >
+                      {opt.label}
+                    </Select.Item>
+                  {/each}
+                </Select.Group>
+              </Select.Content>
+            </Select.Root>
           </div>
           <div class="flex justify-end">
             <Button disabled={submitting} type="submit">
@@ -180,9 +185,9 @@
           action="?/invite"
           class="space-y-4"
           method="POST"
-          use:enhance={() => {
+          use:enhance={async () => {
             submitting = true;
-            return submitToast("Invite sent.")();
+            await submitToast("Invite sent.");
           }}
         >
           <div>
@@ -195,16 +200,19 @@
           </div>
           <div>
             <div class={label}>Role</div>
-            <SelectRoot name="role" type="single" bind:value={newRole}>
-              <SelectTrigger class="w-full" id="inviteRole">
+            <Select.Root name="role" type="single" bind:value={newRole}>
+              <Select.Trigger class="w-full" id="inviteRole">
                 {newRoleLabel}
-              </SelectTrigger>
-              <SelectContent>
-                {#each ROLE_OPTIONS as opt (opt.value)}
-                  <SelectItem label={opt.label} value={opt.value} />
-                {/each}
-              </SelectContent>
-            </SelectRoot>
+              </Select.Trigger>
+              <Select.Content>
+                <Select.Group>
+                  <Select.Label>Role</Select.Label>
+                  {#each roleOptions as opt (opt.value)}
+                    <Select.Item label={opt.label} value={opt.value} />
+                  {/each}
+                </Select.Group>
+              </Select.Content>
+            </Select.Root>
           </div>
           <div class="flex justify-end">
             <Button disabled={submitting}>

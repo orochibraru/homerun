@@ -11,6 +11,7 @@
   } from "@lucide/svelte";
   import { onMount, untrack } from "svelte";
   import { resolve } from "$app/paths";
+  import { Button } from "$lib/components/ui/button";
   import { timeAgo } from "$lib/formatting";
   import type { SystemStats } from "$lib/server/system-stats";
   import { title } from "$lib/store/title";
@@ -81,13 +82,10 @@
       </p>
     </div>
 
-    <a
-      class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-      href={resolve("/services/new")}
-    >
+    <Button href={resolve("/services/new")} size="sm">
       <Plus class="size-4" />
       Deploy a Service
-    </a>
+    </Button>
   </div>
 
   {#if data.setupIssues.length > 0}

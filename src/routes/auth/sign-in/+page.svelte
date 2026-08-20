@@ -10,21 +10,22 @@
   import { Input } from "$lib/components/ui/input/index.js";
   import { title } from "$lib/store/title";
 
+  let email = $state("");
+  let password = $state("");
+  let loading = $state(false);
+  let showPassword = $state(false);
+
   const session = useSession();
 
   // Redirect if already logged in
   $effect(() => {
     if (!$session.isPending && $session.data?.user) {
+      loading = true;
       goto(resolve("/"));
     }
   });
 
   onMount(() => title.set("Sign In"));
-
-  let email = $state("");
-  let password = $state("");
-  let loading = $state(false);
-  let showPassword = $state(false);
 
   async function handleSignIn(e: SubmitEvent) {
     e.preventDefault();
@@ -43,7 +44,6 @@
       goto(resolve("/"));
     } catch {
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
       loading = false;
     }
   }

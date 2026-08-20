@@ -201,8 +201,8 @@
 @theme {
   --font-sans: "Inter Variable", sans-serif;
 
-  --color-accent: #0b65c0;
-  --color-accent-dark: #0475ff;
+  --color-accent: #0b8ac0;
+  --color-accent-dark: #0b8ac0;
 
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -327,9 +327,11 @@
     text-decoration: none;
   }
 
-  button {
+  button,
+  input {
     cursor: pointer;
   }
+
   * {
     @apply border-border outline-ring/50;
   }

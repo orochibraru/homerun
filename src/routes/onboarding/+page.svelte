@@ -1,11 +1,11 @@
 <script lang="ts">
   import {
-    AlertTriangle,
     Cpu,
     Globe,
-    Loader2,
+    LoaderIcon,
     Mail,
     Server,
+    TriangleAlert,
   } from "@lucide/svelte";
   import type { ActionResult } from "@sveltejs/kit";
   import { onMount } from "svelte";
@@ -18,7 +18,7 @@
     labelClass as label,
   } from "$lib/components/form-styles";
   import Stepper, { type StepperStep } from "$lib/components/stepper.svelte";
-  import { ONBOARDING_FIELD_STEP } from "$lib/server/validation/onboarding";
+  import { ONBOARDING_FIELD_STEP } from "$lib/onboarding-fields";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -39,85 +39,85 @@
   // Every field pre-fills with the *effective* current value (DB override,
   // falling back to the env default) — "required" is then trivially
   // satisfied by just clicking through if the defaults are already fine.
-  const { settings, envDefaults } = data;
+  const { settings, envDefaults } = $derived(data);
 
-  let baseDomain = $state(
+  let baseDomain = $derived(
     (form?.values?.baseDomain as string) ??
       settings?.baseDomain ??
       envDefaults?.baseDomain ??
       ""
   );
-  let authOrigin = $state(
+  let authOrigin = $derived(
     (form?.values?.authOrigin as string) ??
       settings?.authOrigin ??
       envDefaults?.authOrigin ??
       ""
   );
-  let authCrossSubdomainCookies = $state(
+  let authCrossSubdomainCookies = $derived(
     settings?.authCrossSubdomainCookies ?? false
   );
 
-  let dockerSocketPath = $state(
+  let dockerSocketPath = $derived(
     (form?.values?.dockerSocketPath as string) ??
       settings?.dockerSocketPath ??
       envDefaults?.dockerSocketPath ??
       ""
   );
-  let dockerNetworkName = $state(
+  let dockerNetworkName = $derived(
     (form?.values?.dockerNetworkName as string) ??
       settings?.dockerNetworkName ??
       envDefaults?.dockerNetworkName ??
       ""
   );
 
-  let traefikEntrypoint = $state(
+  let traefikEntrypoint = $derived(
     (form?.values?.traefikEntrypoint as string) ??
       settings?.traefikEntrypoint ??
       envDefaults?.traefikEntrypoint ??
       ""
   );
-  let traefikCertResolver = $state(
+  let traefikCertResolver = $derived(
     (form?.values?.traefikCertResolver as string) ??
       settings?.traefikCertResolver ??
       envDefaults?.traefikCertResolver ??
       ""
   );
-  let traefikDynamicConfigDir = $state(
+  let traefikDynamicConfigDir = $derived(
     (form?.values?.traefikDynamicConfigDir as string) ??
       settings?.traefikDynamicConfigDir ??
       envDefaults?.traefikDynamicConfigDir ??
       ""
   );
 
-  let smtpEnabled = $state(
+  let smtpEnabled = $derived(
     settings?.smtpEnabled ?? envDefaults?.smtpEnabled ?? false
   );
-  let smtpHost = $state(
+  let smtpHost = $derived(
     (form?.values?.smtpHost as string) ??
       settings?.smtpHost ??
       envDefaults?.smtpHost ??
       ""
   );
-  let smtpPort = $state(
+  let smtpPort = $derived(
     (form?.values?.smtpPort as string) ??
       settings?.smtpPort?.toString() ??
       envDefaults?.smtpPort?.toString() ??
       ""
   );
-  let smtpUser = $state(
+  let smtpUser = $derived(
     (form?.values?.smtpUser as string) ??
       settings?.smtpUser ??
       envDefaults?.smtpUser ??
       ""
   );
   let smtpPassword = $state("");
-  let smtpFrom = $state(
+  let smtpFrom = $derived(
     (form?.values?.smtpFrom as string) ??
       settings?.smtpFrom ??
       envDefaults?.smtpFrom ??
       ""
   );
-  let smtpSecure = $state(
+  let smtpSecure = $derived(
     settings?.smtpSecure ?? envDefaults?.smtpSecure ?? false
   );
 
@@ -274,8 +274,8 @@
 
 {#if data.waitingForAdmin}
   <div class="flex min-h-screen items-center justify-center p-6">
-    <div class="max-w-md text-center">
-      <AlertTriangle class="mx-auto mb-4 size-8 text-amber-500" />
+    <div class="text-center">
+      <TriangleAlert class="mx-auto mb-4 size-8 text-amber-500" />
       <h1 class="text-lg font-semibold text-text">Almost there</h1>
       <p class="mt-2 text-sm text-text-muted">
         An admin needs to finish setting up this instance before you can
@@ -284,7 +284,7 @@
     </div>
   </div>
 {:else}
-  <div class="mx-auto max-w-2xl space-y-6 p-6 md:p-10">
+  <div class="mx-auto space-y-6 p-6 md:p-10">
     <div>
       <h1 class="text-xl font-bold text-text">Set up Homerun</h1>
       <p class="mt-0.5 text-sm text-text-muted">
@@ -297,7 +297,7 @@
       <div
         class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
       >
-        <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+        <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
         <span>
           Still using the built-in placeholder auth secret — this can't be fixed
           from this wizard. Set <code>AUTH_SECRET</code> (e.g.
@@ -313,7 +313,9 @@
       use:enhance={({ cancel }) => {
         if (!validateAll()) {
           const [firstField] = Object.keys(errors);
-          activeStep = firstField ? (ONBOARDING_FIELD_STEP[firstField] ?? 0) : 0;
+          activeStep = firstField
+            ? (ONBOARDING_FIELD_STEP[firstField] ?? 0)
+            : 0;
           toast.error("Check the form for errors.");
           cancel();
           return;
@@ -509,7 +511,9 @@
                     class={input}
                     id="smtpPassword"
                     name="smtpPassword"
-                    placeholder={settings?.smtpPasswordEnc ? "Leave blank to keep current" : "Password"}
+                    placeholder={settings?.smtpPasswordEnc
+                      ? "Leave blank to keep current"
+                      : "Password"}
                     type="password"
                     bind:value={smtpPassword}
                   >
@@ -586,7 +590,7 @@
             type="submit"
           >
             {#if submitting}
-              <Loader2 class="size-4 animate-spin" />
+              <LoaderIcon class="size-4 animate-spin" />
               Finishing…
             {:else}
               Finish setup

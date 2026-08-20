@@ -14,8 +14,8 @@ export const load = async ({ locals }) => {
   const settings = await InstanceSettingsDTO.get();
   const onboardingDone = settings.onboardingComplete;
 
-  if (!onboardingDone) {
-    throw redirect(302, resolve("/onboarding"));
+  if (onboardingDone) {
+    throw redirect(302, resolve("/"));
   }
 
   return {

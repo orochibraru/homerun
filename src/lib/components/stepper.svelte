@@ -72,13 +72,17 @@
 </script>
 
 <div class="space-y-6">
-  <!-- ═══ Step indicator ═══ -->
-  <div class="flex items-center gap-1">
+  <!-- ═══ Step indicator — full labeled row at sm+, compact progress bar
+       below it. Two separate layouts rather than one that just hides the
+       label at small widths: five equal-width pill buttons with nothing
+       but a bare number in them (padding and border intact) reads as
+       broken, not minimal, once there's no room for the label. ═══ -->
+  <div class="hidden flex-wrap justify-center gap-1 sm:flex">
     {#each steps as step, i (step.label)}
       {@const StepIcon = step.icon}
       <button
-        class="flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 {stepButtonClass(
-          i
+        class="flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 {stepButtonClass(
+          i,
         )}"
         disabled={i > reachableStep}
         onclick={() => goToStep(i)}
@@ -96,14 +100,27 @@
             {i + 1}
           {/if}
         </div>
-        <span class="hidden sm:inline">
-          {#if StepIcon}
-            <StepIcon class="mr-1 inline size-3.5" />
-          {/if}
-          {step.label}
-        </span>
+        {#if StepIcon}
+          <StepIcon class="size-3.5" />
+        {/if}
+        {step.label}
       </button>
     {/each}
+  </div>
+
+  <div class="sm:hidden">
+    <div
+      class="flex items-center justify-between text-sm font-medium text-text"
+    >
+      <span>Step {activeStep + 1} of {steps.length}</span>
+      <span class="text-text-muted">{steps[activeStep]?.label}</span>
+    </div>
+    <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+      <div
+        class="h-full rounded-full bg-accent transition-all"
+        style="width: {((activeStep + 1) / steps.length) * 100}%"
+      ></div>
+    </div>
   </div>
 
   {@render children()}
