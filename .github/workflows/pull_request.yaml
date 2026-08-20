@@ -1,13 +1,10 @@
-name: Publish
+name: Pull Request
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  pull_request:
 
 concurrency:
-  group: publish
-  cancel-in-progress: false
+  group: pull-request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 env:
   TZ: Europe/Paris
@@ -27,6 +24,6 @@ jobs:
     needs:
       - code_quality
     with:
-      image_tag: ${{ github.sha }}
+      image_tag: pr-${{ github.event.pull_request.number }}
     secrets:
       docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}

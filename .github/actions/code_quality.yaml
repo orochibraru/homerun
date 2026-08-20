@@ -1,5 +1,4 @@
 name: CI
-
 on:
   pull_request:
   workflow_call:
@@ -75,16 +74,3 @@ jobs:
 
       - name: Linting
         run: bun run check
-
-  docker:
-    name: Docker
-    uses: ./.github/actions/docker.yaml
-    needs:
-      - ts-lint-test
-      - ts-build-check
-    if: github.event_name != 'workflow_dispatch'
-    with:
-      publish: true
-      image-name: orochibraru/homerun
-    secrets:
-      docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
