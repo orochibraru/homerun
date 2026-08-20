@@ -45,6 +45,9 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
+			"complexity": {
+				"noStaticOnlyClass": "off"
+			},
 			"nursery": {
 				"useSortedClasses": "info"
 			},
