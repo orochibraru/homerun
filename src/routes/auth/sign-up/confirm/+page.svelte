@@ -1,9 +1,8 @@
 <script lang="ts">
   import {
     ArrowRight,
-    CheckCircle,
+    CircleCheckIcon,
     FlaskConical,
-    Loader2,
     Mail,
     RefreshCw,
     TriangleAlert,
@@ -14,6 +13,7 @@
   import { resolve } from "$app/paths";
   import { authClient } from "$lib/auth-client";
   import { Button } from "$lib/components/ui/button/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -113,10 +113,10 @@
         onclick={checkVerification}
       >
         {#if checking}
-          <Loader2 class="size-4 animate-spin" />
+          <Spinner />
           Checking…
         {:else}
-          <CheckCircle class="size-4" />
+          <CircleCheckIcon class="size-4" />
           I've confirmed my email
           <ArrowRight class="size-4" />
         {/if}
@@ -128,7 +128,7 @@
           <p
             class="flex items-center justify-center gap-1.5 text-sm text-green-600"
           >
-            <CheckCircle class="size-4" />
+            <CircleCheckIcon class="size-4" />
             Email sent! Check your spam folder if you don't see it.
           </p>
         {:else}
@@ -139,7 +139,7 @@
             variant="link"
           >
             {#if resending}
-              <Loader2 class="size-3.5 animate-spin" />
+              <Spinner />
               Sending…
             {:else}
               <RefreshCw class="size-3.5" />

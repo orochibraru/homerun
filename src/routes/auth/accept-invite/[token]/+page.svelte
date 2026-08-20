@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Eye, EyeOff, Loader2, Server } from "@lucide/svelte";
+  import { Eye, EyeOff, Server } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { enhance } from "$app/forms";
   import { resolve } from "$app/paths";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { title } from "$lib/store/title";
 
   const { data, form } = $props();
@@ -151,11 +152,14 @@
 
           <button
             class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={submitting || !name || password.length < 12 || password !== confirm}
+            disabled={submitting ||
+              !name ||
+              password.length < 12 ||
+              password !== confirm}
             type="submit"
           >
             {#if submitting}
-              <Loader2 class="size-4 animate-spin" />
+              <Spinner />
               Creating account…
             {:else}
               Create account

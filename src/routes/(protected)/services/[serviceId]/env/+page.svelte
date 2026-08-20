@@ -1,16 +1,11 @@
 <script lang="ts">
-  import {
-    Check,
-    Loader2,
-    Plus,
-    SlidersHorizontal,
-    Trash2,
-  } from "@lucide/svelte";
+  import { Check, Plus, SlidersHorizontal, Trash2 } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { enhance } from "$app/forms";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import Spinner from "$lib/components/ui/spinner/spinner.svelte";
   import { title } from "$lib/store/title";
 
   const { data } = $props();
@@ -22,7 +17,7 @@
     key: string;
     value: string;
   }
-  let envRows = $state<EnvRow[]>(
+  let envRows = $derived<EnvRow[]>(
     Object.entries(svc.envVars ?? {}).length > 0
       ? Object.entries(svc.envVars ?? {}).map(([key, value]) => ({
           key,
@@ -114,7 +109,7 @@
     <div class="flex justify-end pt-2">
       <Button disabled={submitting} type="submit">
         {#if submitting}
-          <Loader2 class="size-4 animate-spin" />
+          <Spinner />
           Saving…
         {:else}
           <Check class="size-4" />

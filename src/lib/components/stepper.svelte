@@ -77,11 +77,11 @@
        label at small widths: five equal-width pill buttons with nothing
        but a bare number in them (padding and border intact) reads as
        broken, not minimal, once there's no room for the label. ═══ -->
-  <div class="hidden flex-wrap justify-center gap-1 sm:flex">
+  <div class="hidden justify-between gap-1 sm:flex">
     {#each steps as step, i (step.label)}
       {@const StepIcon = step.icon}
       <button
-        class="flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 {stepButtonClass(
+        class="flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 {stepButtonClass(
           i,
         )}"
         disabled={i > reachableStep}
