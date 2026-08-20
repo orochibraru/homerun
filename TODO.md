@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] If we don't already, we need to use Docker Swarm
 - [ ] Migrate classes using standard methods to real classes, perfect example is src/lib/services/docker.service.ts. Instead of importing methods it should have a BaseDockerService that's extended to other classes like DockerNetwork, DockerImage, DockerTerminal etc... and all merge in the DockerService class. Same for all other classes that import standard methods, the goal of this app is to use real OOP. Need to migrate other services to classes with OOP like the src/lib/services/cron.service.ts service.
 - [ ] In the UI we need a page dedicated to have a swagger UI showing the openapi
 - [ ] We can't register an oauth provider.
