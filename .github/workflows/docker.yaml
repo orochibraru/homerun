@@ -32,7 +32,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE: ${{ inputs.image_name }}
+  IMAGE: ${{ inputs.registry_name }}/${{ inputs.image_name }}
 
 jobs:
   prepare:
@@ -65,7 +65,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ inputs.image_name }}
+          images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=${{ inputs.image_tag }}
             type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
@@ -129,7 +129,7 @@ jobs:
             cwd://${{ runner.temp }}/bake-meta.json
           targets: image
           set: |
-            *.tags=${{ inputs.image_name }}
+            *.tags=${{ env.IMAGE }}
             *.platform=${{ matrix.platform }}
             *.output=type=image,push-by-digest=true,name-canonical=true,push=true
 
@@ -185,11 +185,11 @@ jobs:
         run: |
           docker buildx imagetools create \
             $(jq -cr '.target."docker-metadata-action".tags | map("-t " + .) | join(" ")' "$RUNNER_TEMP/bake-meta.json") \
-            $(printf '${{ inputs.image_name }}@sha256:%s ' *)
+            $(printf '${{ env.IMAGE }}@sha256:%s ' *)
 
       - name: Inspect image
         id: inspect
         run: |
           tag=$(jq -r '.target."docker-metadata-action".args.DOCKER_META_VERSION' ${{ runner.temp }}/bake-meta.json)
           echo "tag=$tag" >> $GITHUB_OUTPUT
-          docker buildx imagetools inspect ${{ inputs.image_name }}:$tag
+          docker buildx imagetools inspect ${{ env.IMAGE }}:$tag
