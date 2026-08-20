@@ -66,6 +66,7 @@ jobs:
           images: ${{ inputs.image_name }}
           tags: |
             type=raw,value=${{ inputs.image_tag }}
+            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
 
       - name: Rename meta bake definition file
         run: |
