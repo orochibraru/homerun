@@ -45,6 +45,32 @@ const DEFAULT_TEST_TIMEOUT_MS = 180_000;
 
 const repoRoot = join(import.meta.dir, "..");
 
+/**
+ * Kills whatever is listening on our dedicated port, by PID rather than by
+ * process handle. Necessary because `devServer.kill()` alone isn't
+ * reliable here — verified live that `bun run dev -- <extra args>` spawns
+ * `vite` as a genuine child process rather than exec'ing into it in-place,
+ * so killing the `bun run` wrapper's own PID can leave the real `vite`
+ * process (the one actually holding the port and the Postgres
+ * connections) running as an orphan.
+ */
+async function killPortListeners() {
+	const lsof = Bun.spawn(["lsof", "-ti", `tcp:${PORT}`, "-sTCP:LISTEN"], {
+		stderr: "ignore",
+		stdout: "pipe",
+	});
+	const out = (await new Response(lsof.stdout).text()).trim();
+	await lsof.exited;
+	const pids = out.split("\n").filter(Boolean);
+	if (pids.length === 0) {
+		return;
+	}
+	Bun.spawn(["kill", ...pids]);
+	await new Promise((resolve) => setTimeout(resolve, 500));
+	// Escalate to SIGKILL for anything that ignored the first signal.
+	Bun.spawn(["kill", "-9", ...pids], { stderr: "ignore", stdout: "ignore" });
+}
+
 async function waitForReady() {
 	const deadline = Date.now() + READY_TIMEOUT_MS;
 	while (Date.now() < deadline) {
@@ -72,6 +98,11 @@ async function main() {
 		console.error("No e2e/*.spec.ts files found.");
 		process.exit(1);
 	}
+
+	// Belt and suspenders against exactly the orphan this function's own doc
+	// comment describes, from a previous run that got interrupted hard
+	// enough to skip the `finally` below (e.g. a killed shell).
+	await killPortListeners();
 
 	console.log(`Starting isolated e2e dev server on ${BASE_URL} ...`);
 	const devServer = Bun.spawn(
@@ -140,6 +171,7 @@ async function main() {
 		// (see Bun.WebView's own docs), nothing to do for it from here.
 		devServer.kill();
 		await devServer.exited;
+		await killPortListeners();
 	}
 
 	process.exit(exitCode);

@@ -17,3 +17,7 @@
 - [ ] We need a cron scheduler page
 - [ ] We need a dedicated page for backups to configure them and view the logs to see at which time they ran and if they succeded. Any scheduled backup should appear on the cron page
 - [ ] Since we're adding a lot of new pages we need to have submenus in the menu and proper categorization
+- [ ] We need to setup release automation with semantic release to start versioning the app, for now 0.0.1 version we'll move slow
+- [ ] We need a better readme that showcases the features and prints a curl command for the setup. The command should be in the latest release comments and the installer (and homerun agent) in each release artifact
+- [ ] We need a docs website (ideally in sveltekit as well)
+- [ ]
