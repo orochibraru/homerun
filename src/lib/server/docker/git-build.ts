@@ -41,7 +41,7 @@ export async function buildFromGit(
   onProgress?: (line: string) => void
 ): Promise<GitBuildResult> {
   const ref = params.gitRef || "main";
-  const dir = await mkdtemp(join(tmpdir(), "localrun-build-"));
+  const dir = await mkdtemp(join(tmpdir(), "homerun-build-"));
 
   try {
     onProgress?.(`Cloning ${params.gitUrl} (${ref})...`);

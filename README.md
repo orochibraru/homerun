@@ -17,7 +17,7 @@ SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over `bun:s
 - **Templates** — one-click deploy for common services (Redis, Postgres, MySQL, MongoDB, Adminer, Uptime Kuma, n8n, Vaultwarden), plus save any service's config as a reusable custom template
 - **Storage volumes** — define local Docker-managed volumes or host bind-mount paths once, mount them into one or more services from each service's Volumes tab
 - **Live log streaming** — tail a running container's stdout/stderr from the browser
-- **Account/service isolation** — every container is labeled `localrun.managed=true`; the app never touches a container it didn't create
+- **Account/service isolation** — every container is labeled `homerun.managed=true`; the app never touches a container it didn't create
 
 ## Commands
 

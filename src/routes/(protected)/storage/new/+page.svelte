@@ -79,7 +79,7 @@
             type="radio"
             value="volume"
             bind:group={kind}
-          >
+          />
           Docker volume
         </label>
         <label
@@ -94,7 +94,7 @@
             type="radio"
             value="bind"
             bind:group={kind}
-          >
+          />
           Host path
         </label>
       </div>
@@ -109,7 +109,7 @@
         class="font-mono"
         id="source"
         name="source"
-        placeholder={kind === "bind" ? "/mnt/data/media" : "localrun-media"}
+        placeholder={kind === "bind" ? "/mnt/data/media" : "homerun-media"}
         required
         type="text"
       />

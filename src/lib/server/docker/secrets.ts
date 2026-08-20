@@ -16,7 +16,7 @@ let cachedKey: Buffer | undefined;
 
 function getKey(): Buffer {
   if (!cachedKey) {
-    cachedKey = scryptSync(config.auth.secret, "localrun-registry-secrets", 32);
+    cachedKey = scryptSync(config.auth.secret, "homerun-registry-secrets", 32);
   }
   return cachedKey;
 }

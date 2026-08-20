@@ -34,10 +34,10 @@ own real, tested footguns, several of which this file cross-references.
 2. **Every account created in a spec must be deleted in a `finally` block**
    (see `e2e/helpers.ts`'s `deleteThrowawayAccount`) so a failed run never
    leaks a running container. If you interrupt a run midway (Ctrl-C,
-   timeout), check `docker ps --filter label=localrun.managed=true` for
+   timeout), check `docker ps --filter label=homerun.managed=true` for
    containers left over from previous throwaway runs (named
-   `localrun-*pw-*` or similar) and clean them up — but **only** containers
-   carrying `localrun.managed=true`; never touch an unlabeled container.
+   `homerun-*pw-*` or similar) and clean them up — but **only** containers
+   carrying `homerun.managed=true`; never touch an unlabeled container.
 3. Real image pulls happen — keep using small, already-cached images
    (`nginx:alpine`, matching the existing specs) rather than introducing
    new/heavy ones, to keep runs fast.
@@ -55,7 +55,7 @@ own real, tested footguns, several of which this file cross-references.
   Docker-dependent specs silently, since most of this app's real behavior
   requires it.
 - Confirm the shared network exists: `docker network inspect
-  localrun-network` (create it with `docker network create localrun-network`
+  homerun-network` (create it with `docker network create homerun-network`
   if this is a fresh environment — same one-time step `compose.yaml`
   documents).
 - `bun install` if `node_modules` looks stale/missing.

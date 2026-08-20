@@ -1,12 +1,12 @@
 # Traefik bootstrap for Homerun's deployed services.
 #
 # This app itself is NOT containerized yet — run it directly on the host
-# (`bun run dev` / `bun run start`) with DOCKER_NETWORK_NAME=localrun-network
+# (`bun run dev` / `bun run start`) with DOCKER_NETWORK_NAME=homerun-network
 # and access to /var/run/docker.sock. Traefik auto-discovers containers this
 # app creates via Docker labels (see src/lib/server/docker/labels.ts) — no
 # control-plane push needed.
 #
-# No-compose fallback: `docker network create localrun-network`, then run
+# No-compose fallback: `docker network create homerun-network`, then run
 # Traefik standalone with the same command flags as below.
 services:
   traefik:
@@ -15,7 +15,7 @@ services:
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=localrun-network
+      - --providers.docker.network=homerun-network
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
@@ -40,16 +40,16 @@ services:
       # the same host path this app's TRAEFIK_DYNAMIC_CONFIG_DIR points at.
       # - ${TRAEFIK_DYNAMIC_CONFIG_DIR:-./traefik-dynamic}:/etc/traefik/dynamic:ro
     networks:
-      - localrun-network
+      - homerun-network
 
 networks:
   # external: true — this network is a shared resource, not compose-owned.
   # The app's own Docker layer (src/lib/server/docker/service.ts) attaches
   # deployed containers to it directly by name, and it must survive a
   # `docker compose down` without taking those containers' routing with it.
-  # Create it once with: docker network create localrun-network
-  localrun-network:
-    name: localrun-network
+  # Create it once with: docker network create homerun-network
+  homerun-network:
+    name: homerun-network
     external: true
 
 volumes:

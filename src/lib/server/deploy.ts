@@ -33,10 +33,9 @@ export async function deployService(
 ): Promise<DeployResult> {
   const isGitBuild = svc.buildSource === "git";
   logger.info(
-    `Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${
-      isGitBuild
-        ? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
-        : `image=${svc.image}:${svc.tag}`
+    `Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${isGitBuild
+      ? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
+      : `image=${svc.image}:${svc.tag}`
     } user=${userId}`
   );
 
@@ -65,7 +64,7 @@ export async function deployService(
       // A fresh tag per build, same "never reuse a name across deploys"
       // precedent as container names (service.ts's containerName()), so
       // a build failure never leaves a stale image masquerading as current.
-      image = `localrun-build-${svc.slug}`;
+      image = `homerun-build-${svc.slug}`;
       tag = Date.now().toString(36);
 
       const result = await buildFromGit(

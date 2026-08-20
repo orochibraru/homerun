@@ -6,8 +6,8 @@ import { config } from "$lib/config";
  * MANAGED_LABEL — this app must never list, inspect, or touch a
  * container on the host that it didn't create itself.
  */
-export const MANAGED_LABEL = "localrun.managed";
-export const SERVICE_ID_LABEL = "localrun.service.id";
+export const MANAGED_LABEL = "homerun.managed";
+export const SERVICE_ID_LABEL = "homerun.service.id";
 
 export function buildContainerLabels(params: {
   serviceId: string;
