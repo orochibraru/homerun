@@ -62,7 +62,7 @@ export const actions = {
 		const formData = await request.formData();
 		const rawProjectId = formData.get("projectId") as string | null;
 
-		// Empty selection means "ungrouped" — otherwise confirm the target
+		// Empty selection means "ungrouped" : otherwise confirm the target
 		// project is actually the user's own, never trust the form value alone.
 		let projectId: string | null = null;
 		if (rawProjectId) {
@@ -91,7 +91,7 @@ export const actions = {
 		const formData = await request.formData();
 		const rawHostId = formData.get("remoteHostId") as string | null;
 
-		// Empty selection means "this host" — otherwise confirm the target
+		// Empty selection means "this host" : otherwise confirm the target
 		// host is actually the user's own, never trust the form value alone.
 		let remoteHostId: string | null = null;
 		if (rawHostId) {
@@ -192,7 +192,7 @@ export const actions = {
 		if (cronEnabled && !CronService.parseCronSchedule(cronSchedule)) {
 			return fail(400, {
 				cronError:
-					'Invalid schedule — use standard 5-field cron syntax (e.g. "0 3 * * *").',
+					'Invalid schedule : use standard 5-field cron syntax (e.g. "0 3 * * *").',
 			});
 		}
 

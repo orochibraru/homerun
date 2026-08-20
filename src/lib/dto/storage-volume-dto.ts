@@ -26,7 +26,7 @@ export type StorageVolumeUpdateInput = Partial<
 	>
 >;
 
-/** Wraps the `storage_volume` table — see ServiceDTO for the pattern this follows. */
+/** Wraps the `storage_volume` table : see ServiceDTO for the pattern this follows. */
 export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 	static async get(
 		id: string,
@@ -49,7 +49,7 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 		return rows.map((row) => new StorageVolumeDTO(row));
 	}
 
-	/** Every volume (across all users) with scheduled backups turned on — for the scheduler tick, same pattern as ServiceDTO.listCronEnabled. */
+	/** Every volume (across all users) with scheduled backups turned on : for the scheduler tick, same pattern as ServiceDTO.listCronEnabled. */
 	static async listBackupEnabled(): Promise<StorageVolumeDTO[]> {
 		const rows = await db
 			.select()
@@ -91,7 +91,7 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 		Object.assign(this.row, input);
 	}
 
-	/** Row-only delete — the `service_volume` FK is `onDelete: cascade`, so any mounts referencing this volume go with it. */
+	/** Row-only delete : the `service_volume` FK is `onDelete: cascade`, so any mounts referencing this volume go with it. */
 	async delete(): Promise<void> {
 		await db.delete(storageVolume).where(eq(storageVolume.id, this.row.id));
 	}

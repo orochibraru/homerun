@@ -7,7 +7,7 @@ export const configSchema = z.object({
 		// ".<baseDomain>" instead of the exact host, so a session started on
 		// this app's own origin is also valid on a gated deployed service's
 		// subdomain (see docker/labels.ts's authRequired forwardAuth
-		// middleware) — without this, "Require login" still blocks
+		// middleware) : without this, "Require login" still blocks
 		// unauthenticated visitors, it just can't recognize an
 		// already-signed-in admin on a *different* subdomain. Widens the
 		// cookie's scope across every subdomain of baseDomain, which is a
@@ -31,7 +31,7 @@ export const configSchema = z.object({
 	}),
 	// URL Traefik's forwardAuth middleware calls to gatekeep a service with
 	// authRequired=true (see docker/labels.ts). Must be reachable *from
-	// inside the Traefik container*, not from the host — since this app
+	// inside the Traefik container*, not from the host : since this app
 	// isn't containerized, that's usually host.docker.internal (works out
 	// of the box on Docker Desktop; on Linux, compose.yaml's Traefik
 	// service needs `extra_hosts: ["host.docker.internal:host-gateway"]`
@@ -39,7 +39,7 @@ export const configSchema = z.object({
 	authCheckUrl: z.string(),
 	// Base domain deployed services get subdomained under: <slug>.<baseDomain>
 	baseDomain: z.string().default("localhost"),
-	// Postgres connection string — see compose.yaml's `postgres` service for
+	// Postgres connection string : see compose.yaml's `postgres` service for
 	// the local-dev default this matches out of the box.
 	databaseUrl: z
 		.string()
@@ -63,12 +63,12 @@ export const configSchema = z.object({
 	traefik: z.object({
 		certResolver: z.string().default("letsencrypt"),
 		// Where custom SSL cert/key files + per-domain dynamic-config YAML
-		// get written (see docker/custom-ssl.ts) — unset by default, which
+		// get written (see docker/custom-ssl.ts) : unset by default, which
 		// makes the feature a no-op (services can still store a cert/key,
 		// it just never gets written anywhere until this is configured).
 		// Must be the same host path bind-mounted into the Traefik
 		// container per compose.yaml's commented-out example, with its file
-		// provider enabled — an opt-in the admin performs themselves, this
+		// provider enabled : an opt-in the admin performs themselves, this
 		// app never touches the Traefik container's own config.
 		dynamicConfigDir: z.string().optional(),
 		entrypoint: z.string().default("websecure"),
@@ -77,7 +77,7 @@ export const configSchema = z.object({
 
 export type AppConfig = z.infer<typeof configSchema>;
 
-/** The plain-value shape InstanceSettingsDTO.toConfigOverride() produces — kept here rather than imported from the DTO so this module stays DB-free (see applyInstanceSettings below). */
+/** The plain-value shape InstanceSettingsDTO.toConfigOverride() produces : kept here rather than imported from the DTO so this module stays DB-free (see applyInstanceSettings below). */
 export interface InstanceSettingsOverride {
 	authCheckUrl?: string | null;
 	authCrossSubdomainCookies?: boolean | null;
@@ -105,11 +105,11 @@ export const parseConfig = (): AppConfig => {
 			origin: Bun.env.ORIGIN,
 			// AUTH_SECRET is the app-local override; BETTER_AUTH_SECRET is the
 			// name better-auth's own CLI (`auth generate`) expects by
-			// convention, and what `.env` sets — fall back to it so the
+			// convention, and what `.env` sets : fall back to it so the
 			// generated secret is actually used instead of the zod default.
 			secret: Bun.env.AUTH_SECRET ?? Bun.env.BETTER_AUTH_SECRET,
 		},
-		// Falls back to host.docker.internal on the app's own port — right
+		// Falls back to host.docker.internal on the app's own port : right
 		// for the common case (Docker Desktop, or Linux with the
 		// host-gateway extra_hosts entry documented above); override
 		// explicitly for anything else.
@@ -148,7 +148,7 @@ export const parseConfig = (): AppConfig => {
 /**
  * A non-secret subset of the env defaults, safe to send to the client as
  * placeholder text on the /settings page ("blank = falls back to this").
- * Deliberately omits auth.secret and smtp.password — those never get
+ * Deliberately omits auth.secret and smtp.password : those never get
  * echoed back to the browser even as an env-default hint.
  */
 export function envDefaultsForDisplay() {
@@ -189,13 +189,13 @@ export function isSmtpEnabled(): boolean {
 	return !!(enabledInConfig && configuredProperly);
 }
 
-// The env-only baseline — applyInstanceSettings() below always recomputes
+// The env-only baseline : applyInstanceSettings() below always recomputes
 // against this, never against the current `config`, so clearing a DB
 // override reverts to the env value instead of going stale.
 const envDefaults = parseConfig();
 
 // `config` is a stable object reference every other module imports and
-// reads properties off live — mutated in place (never reassigned) so a
+// reads properties off live : mutated in place (never reassigned) so a
 // settings change is visible everywhere without re-importing anything.
 export const config: AppConfig = structuredClone(envDefaults);
 
@@ -203,7 +203,7 @@ export const config: AppConfig = structuredClone(envDefaults);
  * Merges DB-backed instance settings (see InstanceSettingsDTO) over the env
  * defaults, in place. Called once at boot (hooks.server.ts's init(), before
  * the server accepts requests) and again after every settings save so
- * changes apply live — no process restart needed. Deliberately doesn't
+ * changes apply live : no process restart needed. Deliberately doesn't
  * import the DTO or the db itself: db/lib.ts imports this module for
  * `databaseUrl`, so this module must stay a leaf to avoid a circular import.
  */

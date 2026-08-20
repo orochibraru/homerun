@@ -1,5 +1,5 @@
 /**
- * Every shell-out in this installer goes through here — same "shell out to a
+ * Every shell-out in this installer goes through here : same "shell out to a
  * well-known CLI" precedent the main app uses for git/tar/df/nvidia-smi, just
  * centralized so --dry-run has exactly one place to intercept.
  */
@@ -12,12 +12,12 @@ export interface ExecResult {
 export class StepRunner {
 	constructor(private readonly dryRun: boolean) {}
 
-	/** Runs `cmd` and throws on a non-zero exit — the default for steps where "continue anyway" would leave the system in a half-configured state. */
+	/** Runs `cmd` and throws on a non-zero exit : the default for steps where "continue anyway" would leave the system in a half-configured state. */
 	async run(
 		cmd: string[],
 		opts?: { as?: string; cwd?: string; env?: Record<string, string> },
 	): Promise<ExecResult> {
-		// `sudo` resets the environment by default (env_reset) — passing env
+		// `sudo` resets the environment by default (env_reset) : passing env
 		// vars via Bun.spawn's own `env` option wouldn't survive that, so when
 		// running `as` another user they're threaded through an explicit `env
 		// K=V ...` prefix inside the sudo'd command instead.
@@ -54,7 +54,7 @@ export class StepRunner {
 		return { code, stderr, stdout };
 	}
 
-	/** Like `run`, but a non-zero exit is reported and swallowed rather than thrown — for idempotency checks ("does this user already exist?") where failure just means "not yet, keep going". */
+	/** Like `run`, but a non-zero exit is reported and swallowed rather than thrown : for idempotency checks ("does this user already exist?") where failure just means "not yet, keep going". */
 	async runOk(
 		cmd: string[],
 		opts?: { as?: string; cwd?: string },
@@ -67,7 +67,7 @@ export class StepRunner {
 		}
 	}
 
-	/** Writes a file's content directly (systemd units, etc.) — a no-op under --dry-run, just logged like everything else. */
+	/** Writes a file's content directly (systemd units, etc.) : a no-op under --dry-run, just logged like everything else. */
 	async writeFile(path: string, content: string): Promise<void> {
 		console.log(
 			`${this.dryRun ? "[dry-run]" : "[write]"} ${path} (${content.length} bytes)`,

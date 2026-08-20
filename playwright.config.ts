@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
 	forbidOnly: !!process.env.CI,
-	fullyParallel: false, // these tests hit real Docker/DB state — keep them serial
+	fullyParallel: false, // these tests hit real Docker/DB state : keep them serial
 	projects: [
 		{
 			name: "chromium",
@@ -23,7 +23,7 @@ export default defineConfig({
 		// separate homerun_test database) on top of .env, so every e2e run
 		// hits its own disposable Postgres database rather than the
 		// maintainer's real one. reuseExistingServer is
-		// deliberately false, even outside CI — true would let this suite
+		// deliberately false, even outside CI : true would let this suite
 		// silently attach to whatever's already listening on 5173 (e.g. the
 		// maintainer's own `bun run dev`, backed by the real DB) instead of
 		// spinning up the isolated instance below; failing loudly with

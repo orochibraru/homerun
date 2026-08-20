@@ -53,7 +53,7 @@
 				toast.success("Email verified! Taking you to your dashboard…");
 				goto(resolve("/"));
 			} else {
-				toast.info("Not verified yet — check your inbox and click the link.");
+				toast.info("Not verified yet : check your inbox and click the link.");
 			}
 		} catch {
 			toast.error("Could not check verification status.");

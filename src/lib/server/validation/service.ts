@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Optional numeric fields that come from a plain <input>: an empty field
 // still submits as "" in FormData, and z.coerce.number() turns "" into 0
-// (not NaN/undefined) — which then fails a .positive()/.min() check with
+// (not NaN/undefined) : which then fails a .positive()/.min() check with
 // no obvious cause. Treat "" as "not provided" before coercion.
 const optionalNumber = (schema: z.ZodNumber | z.ZodCoercedNumber) =>
 	z.preprocess(
@@ -12,13 +12,13 @@ const optionalNumber = (schema: z.ZodNumber | z.ZodCoercedNumber) =>
 
 const baseServiceSchema = z.object({
 	// Checkbox convention (also used below): present ("on") when checked,
-	// absent from FormData entirely when unchecked — never a literal
+	// absent from FormData entirely when unchecked : never a literal
 	// "false" to coerce.
 	authRequired: z.preprocess(
 		(val) => val === "on" || val === true,
 		z.boolean(),
 	),
-	// Opt-in — whether CronService's autoscale tick may migrate this service
+	// Opt-in : whether CronService's autoscale tick may migrate this service
 	// onto the configured overflow remote host (Settings' Autoscaling
 	// section) when the local host is over threshold. See schema.ts's
 	// `service.autoscaleEligible` docstring.
@@ -27,7 +27,7 @@ const baseServiceSchema = z.object({
 		z.boolean(),
 	),
 	// "image" (bring-your-own, the default) | "git" (clone + build a
-	// Dockerfile) — cross-checked against the other git*/image fields below,
+	// Dockerfile) : cross-checked against the other git*/image fields below,
 	// since which of those is required depends on this.
 	buildSource: z.enum(["image", "git"]).default("image"),
 	containerPort: z.coerce
@@ -48,11 +48,11 @@ const baseServiceSchema = z.object({
 	memoryLimitMb: optionalNumber(z.coerce.number().int().positive()),
 	name: z.string().min(1, "Name is required.").max(100),
 	// "bridge" (default, Traefik-routed on the shared network) | "host"
-	// (shares the host's network namespace directly — mDNS/SSDP-dependent
+	// (shares the host's network namespace directly : mDNS/SSDP-dependent
 	// apps like Home Assistant; forces dnsResolvable off server-side, see
 	// networking/+page.server.ts's `updatePorts` action).
 	networkMode: z.enum(["bridge", "host"]).default("bridge"),
-	// Which protocol(s) containerPort is exposed under — see schema.ts's
+	// Which protocol(s) containerPort is exposed under : see schema.ts's
 	// `service.portProtocol` docstring for what this does and doesn't mean.
 	portProtocol: z.enum(["tcp", "udp", "both"]).default("tcp"),
 	registryPassword: z.string().optional(),
@@ -102,8 +102,8 @@ export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 
 // The existing-service Settings tab is split across independent forms/
 // actions/routes (Settings for the fields below, Source for build/image/git/
-// registry — see services/[serviceId]/source/, Networking's own "Network"
-// section for port/protocol/network-mode/DNS — see updatePortsSchema below),
+// registry : see services/[serviceId]/source/, Networking's own "Network"
+// section for port/protocol/network-mode/DNS : see updatePortsSchema below),
 // each validated against only its own subset of baseServiceSchema rather
 // than the full create-time shape.
 export const updateGeneralSchema = baseServiceSchema.pick({
@@ -113,7 +113,7 @@ export const updateGeneralSchema = baseServiceSchema.pick({
 });
 export type UpdateGeneralInput = z.infer<typeof updateGeneralSchema>;
 
-// Backs the Compute tab — cpu/memory limits (moved off the old Settings
+// Backs the Compute tab : cpu/memory limits (moved off the old Settings
 // tab) plus autoscale opt-in, since they're all "how much of the host this
 // service is allowed to use, and what happens when that's not enough"
 // (see the Autoscaling section on Settings for the instance-wide half).
@@ -124,7 +124,7 @@ export const updateComputeSchema = baseServiceSchema.pick({
 });
 export type UpdateComputeInput = z.infer<typeof updateComputeSchema>;
 
-// Backs the Networking tab's "Network" section — container port, which
+// Backs the Networking tab's "Network" section : container port, which
 // protocol(s) it's exposed under, network mode (bridge/host), and
 // DNS-resolvability all live together here since they're all "how this
 // container attaches to the network" in one way or another (moved off the

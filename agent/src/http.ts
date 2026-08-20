@@ -23,7 +23,7 @@ function json(body: unknown, init?: ResponseInit): Response {
 	});
 }
 
-/** Every route below /v1 requires this — health is deliberately the only unauthenticated route, so a monitor/load balancer can probe liveness without holding the token. */
+/** Every route below /v1 requires this : health is deliberately the only unauthenticated route, so a monitor/load balancer can probe liveness without holding the token. */
 function checkAuth(req: Request, token: string): boolean {
 	const header = req.headers.get("authorization") ?? "";
 	const presented = header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -40,7 +40,7 @@ export function createHandler(token: string) {
 		}
 
 		// Same "public, doesn't expose data" stance as the main app's
-		// /api/v1/openapi.json — the spec describes shapes, not data.
+		// /api/v1/openapi.json : the spec describes shapes, not data.
 		if (path === "/v1/openapi.json" && req.method === "GET") {
 			return json(buildOpenApiDocument(url.origin));
 		}

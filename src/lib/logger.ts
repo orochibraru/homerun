@@ -15,7 +15,7 @@ import { config } from "$lib/config";
 // (deploy.service.ts, docker/containers.ts, etc.) so a persisted warn/error
 // log can be heuristically attributed to a service without threading an
 // explicit serviceId through every one of the ~40 existing Logger call
-// sites — see schema.ts's `appLog` docstring.
+// sites : see schema.ts's `appLog` docstring.
 const SERVICE_ID_RE = /service=([0-9a-fA-F-]{36})/;
 
 function extractServiceId(text: string): string | null {
@@ -39,11 +39,11 @@ function stringifyForPersist(value: unknown): string {
 /**
  * Best-effort persistence of a warn/error-level log line to the `app_log`
  * table, for the per-service Errors tab (and a future instance-wide log
- * view) — see schema.ts's `appLog` docstring. Dynamically imports the DTO
+ * view) : see schema.ts's `appLog` docstring. Dynamically imports the DTO
  * (rather than a static top-level import) since $lib/logger.ts itself
  * isn't under `$lib/server/`, so this keeps the server-only db code out of
  * the module graph unless a warn/error call actually fires. Never throws,
- * never awaited by the caller — a logging call must never fail the
+ * never awaited by the caller : a logging call must never fail the
  * operation it's logging.
  */
 function persistLog(
@@ -74,7 +74,7 @@ function persistLog(
 			}),
 		)
 		.catch(() => {
-			// Logging must never throw — if the DB isn't up yet (e.g. very
+			// Logging must never throw : if the DB isn't up yet (e.g. very
 			// early boot) or the write fails, just drop it.
 		});
 }

@@ -23,7 +23,7 @@ const logger = new Logger("Auth");
 
 /**
  * Builds the better-auth instance from the current `config` (env defaults
- * merged with any DB-backed instance settings — see $lib/config.ts). Wrapped
+ * merged with any DB-backed instance settings : see $lib/config.ts). Wrapped
  * in a function, rather than inlined into a single `betterAuth({...})` call
  * assigned once, so OAuth provider changes saved on the Settings page can
  * take effect live: rebuildAuth() below reassigns the exported `auth`
@@ -34,7 +34,7 @@ const logger = new Logger("Auth");
 function buildAuth() {
 	return betterAuth({
 		advanced: {
-			// Opt-in (AUTH_CROSS_SUBDOMAIN=true) — see config.ts for the tradeoff.
+			// Opt-in (AUTH_CROSS_SUBDOMAIN=true) : see config.ts for the tradeoff.
 			// Required for a signed-in admin to be recognized on a gated deployed
 			// service's subdomain without a separate login there.
 			...(config.auth.crossSubdomainCookies
@@ -61,16 +61,16 @@ function buildAuth() {
 				create: {
 					// The very first account on the instance becomes admin,
 					// regardless of which path created it (self-service sign-up is
-					// the only one reachable while hasAnyUser() is still false — see
+					// the only one reachable while hasAnyUser() is still false : see
 					// hooks.server.ts). Real, tested-in-review finding: gating this
-					// on "!user.role" doesn't work — the admin plugin registers its
+					// on "!user.role" doesn't work : the admin plugin registers its
 					// own databaseHooks.user.create.before (setting role to
 					// defaultRole) via its init(), and depending on hook-merge order
 					// that can run *before* this one, making `user.role` already
 					// truthy by the time this hook sees it (verified live: the
 					// bootstrap account came out "developer", not "admin", with that
 					// guard). Checking hasAnyUser() directly instead sidesteps hook
-					// ordering entirely — both hooks run pre-insert, so it's still
+					// ordering entirely : both hooks run pre-insert, so it's still
 					// reliably false only before the very first user exists. Every
 					// other creation path (admin-direct-create, invite-accept)
 					// always passes an explicit role and runs once hasAnyUser() is
@@ -125,7 +125,7 @@ function buildAuth() {
 			}),
 			apiKey(),
 			passkey(),
-			// "developer" is the sane fallback default — every real creation
+			// "developer" is the sane fallback default : every real creation
 			// path (admin-direct-create, invite-accept) always passes an
 			// explicit role, and the bootstrap-admin case is handled by the
 			// databaseHooks below, not this option.
@@ -151,7 +151,7 @@ function buildAuth() {
 		secret: config.auth.secret,
 		user: {
 			deleteUser: {
-				// Extracted to user.service.ts — the admin Users page's "remove
+				// Extracted to user.service.ts : the admin Users page's "remove
 				// user" action needs the exact same cleanup and can't get it for
 				// free from better-auth's admin.removeUser (see that module's
 				// docstring for why). Thin wrapper here keeps self-service account
@@ -167,7 +167,7 @@ function buildAuth() {
 
 export let auth = buildAuth();
 
-/** Reconstructs `auth` from the current config — see buildAuth()'s docstring. */
+/** Reconstructs `auth` from the current config : see buildAuth()'s docstring. */
 export function rebuildAuth(): void {
 	auth = buildAuth();
 	logger.info("Rebuilt auth instance from updated instance settings");

@@ -9,7 +9,7 @@ export const load = async ({ parent, url }) => {
 	// Carried through to each "Deploy" link so deploying from here while
 	// browsing a project's templates lands the new service in that project.
 	// Ignore a projectId that isn't actually the user's own, rather than
-	// erroring — deploying just falls back to ungrouped.
+	// erroring : deploying just falls back to ungrouped.
 	const rawProjectId = url.searchParams.get("projectId");
 	const project = rawProjectId
 		? await ProjectDTO.get(rawProjectId, user.id)

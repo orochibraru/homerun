@@ -43,7 +43,7 @@
     <div
       class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
     >
-      Only bind-mount volumes can be backed up right now — this is a
+      Only bind-mount volumes can be backed up right now : this is a
       Docker-managed named volume.
     </div>
   {:else}
@@ -194,7 +194,7 @@
           if (result.type === "success") {
             toast.success("Backup uploaded.");
           } else {
-            toast.error("Backup failed — check the volume's config.");
+            toast.error("Backup failed : check the volume's config.");
           }
           await update();
         };

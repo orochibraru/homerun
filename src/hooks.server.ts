@@ -48,7 +48,7 @@ async function waitForDatabase() {
 			if (i > 0) {
 				await resetDb();
 			}
-			// getDb() alone doesn't prove connectivity — drizzle-orm/bun-sql's
+			// getDb() alone doesn't prove connectivity : drizzle-orm/bun-sql's
 			// client is lazy (unlike bun:sqlite's `new Database(path)`, which
 			// used to fail synchronously on an inaccessible path here). A
 			// trivial real query is what actually verifies Postgres is up.
@@ -78,7 +78,7 @@ async function runMigrations() {
 		try {
 			logger.info(`Running migrations (retries left: ${retries})`);
 			const db = getDb();
-			// Real, tested-in-review finding: this was missing `await` — with
+			// Real, tested-in-review finding: this was missing `await` : with
 			// Postgres (real network I/O, unlike bun:sqlite's local-file
 			// migrator which apparently never surfaced this), a rejected
 			// migrate() became an *unhandled* promise rejection outside this
@@ -114,7 +114,7 @@ export const init = async () => {
 	await seedBuiltinTemplates();
 
 	// Merge DB-backed instance settings over the env defaults before the
-	// server starts accepting requests — see $lib/config.ts. rebuildAuth()
+	// server starts accepting requests : see $lib/config.ts. rebuildAuth()
 	// reconstructs the better-auth singleton so OAuth providers configured
 	// in the DB (rather than env) are present from the very first request,
 	// not just after a settings-page save.
@@ -132,9 +132,9 @@ const customAuthPaths = new Set(["/api/v1/auth/providers"]);
 
 /**
  * better-auth's real email/password sign-up endpoint (confirmed against
- * node_modules/better-auth/dist/api/routes/sign-up.mjs — `/sign-up/email`
+ * node_modules/better-auth/dist/api/routes/sign-up.mjs : `/sign-up/email`
  * relative to the basePath). Blocked directly here, not just hidden in the
- * UI, once any account exists — every account after the first is created
+ * UI, once any account exists : every account after the first is created
  * by an admin from the Users page (direct-create or email invite), never
  * through public self-service sign-up again.
  */
@@ -148,24 +148,24 @@ const authHandler: Handle = async ({ event, resolve }) => {
 	) {
 		return new Response(
 			JSON.stringify({
-				message: "Sign-up is closed — an admin account already exists.",
+				message: "Sign-up is closed : an admin account already exists.",
 			}),
 			{ headers: { "content-type": "application/json" }, status: 403 },
 		);
 	}
 
-	// A misconfigured OAuth provider (bad discovery URL, unreachable IdP —
+	// A misconfigured OAuth provider (bad discovery URL, unreachable IdP :
 	// now editable at any time via /settings, not just at deploy time via
 	// env vars) makes better-auth's genericOAuth plugin throw while building
 	// its auth context, which getSession() triggers on *every* request. Left
-	// unguarded that's a full lockout — every page 500s, including /settings
+	// unguarded that's a full lockout : every page 500s, including /settings
 	// itself, so there'd be no way back in to fix the bad provider. Degrade
 	// to "no session" instead so the rest of the app (and /settings, to fix
 	// the provider) stays reachable.
 	const session = await auth.api
 		.getSession({ headers: event.request.headers })
 		.catch((error) => {
-			logger.error("auth.getSession() failed — treating as signed out", error);
+			logger.error("auth.getSession() failed : treating as signed out", error);
 			return null;
 		});
 
@@ -199,7 +199,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
 			// Look the owning user up directly by the key's referenceId rather
 			// than going through getSession's API-key session-mocking (that
 			// path is gated behind enableSessionForAPIKeys, which better-auth's
-			// own docs warn against enabling in production — see api-key
+			// own docs warn against enabling in production : see api-key
 			// plugin's types.d.ts).
 			const [apiKeyUser] = await appDb
 				.select()
@@ -213,7 +213,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// Declared in app.d.ts for exactly this — populated here so every route
+	// Declared in app.d.ts for exactly this : populated here so every route
 	// can check `locals.isAdmin` instead of re-deriving it from `role`.
 	event.locals.isAdmin = event.locals.user?.role === "admin";
 

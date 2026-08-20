@@ -51,9 +51,9 @@ const badRequest: ResponseDef = {
 /**
  * Every route under `src/routes/api/v1/**` that's meant to be part of the
  * public API surface (auth-check, git-provider OAuth round-trip, and the
- * agent's own routes are deliberately excluded — internal/unauthenticated-
+ * agent's own routes are deliberately excluded : internal/unauthenticated-
  * by-design or not part of this app at all). This is a hand-maintained list,
- * not derived from the filesystem — SvelteKit route files don't carry
+ * not derived from the filesystem : SvelteKit route files don't carry
  * metadata (summary/tags/params) anywhere else, so there's no way to
  * generate this automatically without duplicating that metadata into the
  * route files themselves. Keep it in sync when a route's shape changes;
@@ -77,7 +77,7 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Persists config only — does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it.",
+			"Persists config only : does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it.",
 		method: "post",
 		path: "/services",
 		requestBody: createServiceApiBody,
@@ -132,7 +132,7 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Awaits the full pull-or-build → create → start pipeline and returns once it's done — no separate polling endpoint for API clients.",
+			"Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients.",
 		method: "post",
 		path: "/services/{serviceId}/deploy",
 		pathParams: [{ description: "Service id", name: "serviceId" }],

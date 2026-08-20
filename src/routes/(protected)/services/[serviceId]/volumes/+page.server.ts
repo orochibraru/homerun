@@ -66,7 +66,7 @@ export const actions = {
 		);
 		return { volumeAttached: true };
 	},
-	// Mirrors storage/new/+page.server.ts's `create` action — lets the "New
+	// Mirrors storage/new/+page.server.ts's `create` action : lets the "New
 	// volume" modal on this tab create a StorageVolume without navigating
 	// away from the service (see storage/new for the full-page equivalent).
 	createVolume: async ({ request, locals }) => {
@@ -127,7 +127,7 @@ export const actions = {
 			return fail(400, { error: "Missing mount id." });
 		}
 
-		// Ownership check happens by scoping to this service's own mounts —
+		// Ownership check happens by scoping to this service's own mounts :
 		// never trust a mount id from the form alone.
 		const mounts = await ServiceVolumeDTO.listForService(svc.id);
 		const target = mounts.find((m) => m.mount.id === mountId);

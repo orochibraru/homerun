@@ -4,7 +4,7 @@ import { MANAGED_LABEL } from "./labels.ts";
 
 const logger = new Logger("Docker");
 
-/** Deterministic — no need to persist a network id anywhere, it's derived from the project id. */
+/** Deterministic : no need to persist a network id anywhere, it's derived from the project id. */
 export function projectNetworkName(projectId: string): string {
 	return `homerun-project-${projectId}`;
 }
@@ -21,7 +21,7 @@ export async function ensureProjectNetwork(projectId: string): Promise<void> {
 		});
 		logger.info(`Project network created: ${name}`);
 	} catch (err) {
-		// 409 = already exists — fine, idempotent by design.
+		// 409 = already exists : fine, idempotent by design.
 		const status = (err as { statusCode?: number }).statusCode;
 		if (status !== 409) {
 			throw err;
@@ -36,13 +36,13 @@ export async function removeProjectNetwork(projectId: string): Promise<void> {
 		await getDocker().getNetwork(name).remove();
 		logger.info(`Project network removed: ${name}`);
 	} catch {
-		// Already gone, or never existed — nothing to clean up.
+		// Already gone, or never existed : nothing to clean up.
 	}
 }
 
 /**
  * Attaches a container to its project's network under a stable DNS alias
- * (the service's slug) — so other containers in the same project can reach
+ * (the service's slug) : so other containers in the same project can reach
  * it as `http://<slug>:<port>` regardless of the container's own
  * (randomized, see docker/service.ts) name.
  */

@@ -10,8 +10,8 @@ import { fail } from "./output";
 
 function printHelp(): void {
 	console.log(`
-homerun — CLI for the Homerun REST API (openapi-fetch, typed against
-/api/v1/openapi.json — see cli/README.md).
+homerun : CLI for the Homerun REST API (openapi-fetch, typed against
+/api/v1/openapi.json : see cli/README.md).
 
 Usage:
   homerun services list [--json]
@@ -29,7 +29,7 @@ Auth/target (flag or env var):
 `);
 }
 
-/** Splits argv into positionals (resource/action/id) vs the handful of known flags — small and fixed enough that a real parser library isn't worth pulling in, same instinct as installer/'s hand-rolled options.ts. */
+/** Splits argv into positionals (resource/action/id) vs the handful of known flags : small and fixed enough that a real parser library isn't worth pulling in, same instinct as installer/'s hand-rolled options.ts. */
 function parseArgv(argv: string[]): { positionals: string[]; json: boolean } {
 	const positionals: string[] = [];
 	let json = false;

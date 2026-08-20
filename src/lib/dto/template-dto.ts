@@ -18,9 +18,9 @@ export interface NewTemplateInput {
 	tag: string;
 }
 
-/** Wraps the `template` table — see ServiceDTO for the pattern this follows. */
+/** Wraps the `template` table : see ServiceDTO for the pattern this follows. */
 export class TemplateDTO extends BaseDTO<Template> {
-	/** A built-in (`ownerId` null) or a template owned by `userId` — for deploy-from-template. Never trust a route param alone. */
+	/** A built-in (`ownerId` null) or a template owned by `userId` : for deploy-from-template. Never trust a route param alone. */
 	static async usable(id: string, userId: string): Promise<TemplateDTO | null> {
 		const [row] = await db
 			.select()
@@ -36,7 +36,7 @@ export class TemplateDTO extends BaseDTO<Template> {
 		return new TemplateDTO(row);
 	}
 
-	/** A template owned by `userId` (never a built-in) — for edit/delete. */
+	/** A template owned by `userId` (never a built-in) : for edit/delete. */
 	static async owned(id: string, userId: string): Promise<TemplateDTO | null> {
 		const [row] = await db
 			.select()
@@ -46,7 +46,7 @@ export class TemplateDTO extends BaseDTO<Template> {
 		return row && row.ownerId === userId ? new TemplateDTO(row) : null;
 	}
 
-	/** Every built-in plus everything `userId` owns — the templates gallery splits the two itself. */
+	/** Every built-in plus everything `userId` owns : the templates gallery splits the two itself. */
 	static async listForUser(userId: string): Promise<TemplateDTO[]> {
 		const rows = await db
 			.select()

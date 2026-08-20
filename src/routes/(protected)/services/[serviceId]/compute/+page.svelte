@@ -102,7 +102,7 @@
     <div class="border-border border-t pt-4">
       <CheckBox
         checked={svc.autoscaleEligible}
-        helperText="Let the instance's autoscale scheduler migrate this service onto the configured overflow remote host when the local host is over its resource threshold — moves the service, doesn't run a second copy of it"
+        helperText="Let the instance's autoscale scheduler migrate this service onto the configured overflow remote host when the local host is over its resource threshold : moves the service, doesn't run a second copy of it"
         id="autoscaleEligible"
         label="Autoscale-eligible"
         name="autoscaleEligible"
@@ -111,7 +111,7 @@
         <p class="mt-2 text-xs text-amber-600">
           ⚠ Autoscaling isn't fully configured instance-wide yet (enable it
           and pick an overflow remote host on
-          <a class="underline" href={resolve("/settings")}>Settings</a>) — this
+          <a class="underline" href={resolve("/settings")}>Settings</a>) : this
           toggle won't do anything until then.
         </p>
       {/if}

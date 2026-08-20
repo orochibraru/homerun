@@ -1,4 +1,4 @@
-/** Minimal table renderer — no dependency, matches this codebase's generally dependency-light posture (see the main app's hand-rolled cron matcher/SigV4 client for the same instinct). */
+/** Minimal table renderer : no dependency, matches this codebase's generally dependency-light posture (see the main app's hand-rolled cron matcher/SigV4 client for the same instinct). */
 export function printTable(
 	rows: Record<string, unknown>[],
 	columns: string[],

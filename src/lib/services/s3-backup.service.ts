@@ -3,10 +3,10 @@ import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { type BackupResult, BackupService } from "./backup.service.ts";
 
 /**
- * Minimal AWS Signature V4 client — just enough to PUT one object to an
+ * Minimal AWS Signature V4 client : just enough to PUT one object to an
  * S3-compatible endpoint (AWS S3, MinIO, R2, Backblaze B2, etc.). No SDK
  * dependency, deliberately: this app stays dependency-light (see also
- * CronService's hand-rolled matcher). Single-request PUT only — no
+ * CronService's hand-rolled matcher). Single-request PUT only : no
  * multipart upload, so there's a practical size ceiling (comfortably fine
  * for typical home-lab bind-mount backups, not for huge datasets).
  */
@@ -15,7 +15,7 @@ export interface S3Config {
 	bucket: string;
 	// Full endpoint URL, e.g. "https://s3.us-east-1.amazonaws.com" or a
 	// self-hosted MinIO URL. Path-style addressing is used (bucket in the
-	// path, not the hostname) — works against both AWS and MinIO.
+	// path, not the hostname) : works against both AWS and MinIO.
 	endpoint: string;
 	region: string;
 	secretAccessKey: string;
@@ -94,7 +94,7 @@ async function putObject(
 
 	if (!HEX_RE.test(signature)) {
 		// Unreachable in practice (hex digest is always 64 lowercase hex
-		// chars) — guards against a future refactor silently breaking this.
+		// chars) : guards against a future refactor silently breaking this.
 		throw new Error("Failed to compute a valid signature.");
 	}
 
@@ -117,7 +117,7 @@ async function putObject(
 	}
 }
 
-/** S3-compatible backup destination — the only BackupService implementation today. */
+/** S3-compatible backup destination : the only BackupService implementation today. */
 export class S3BackupService extends BackupService {
 	static async backupVolume(volume: StorageVolumeDTO): Promise<BackupResult> {
 		return BackupService.runBackup(volume, (v, key, body, secretAccessKey) =>

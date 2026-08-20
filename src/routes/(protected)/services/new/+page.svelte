@@ -52,7 +52,7 @@
 		{ icon: Cpu, label: "Compute" },
 	];
 	// Every field lives in $state (not an uncontrolled `value={}`) so its
-	// value survives a step being hidden — steps are hidden with a CSS
+	// value survives a step being hidden : steps are hidden with a CSS
 	// class, not {#if}, specifically so the DOM nodes (and their bound
 	// state) never unmount between steps.
 	let currentStep = $state(0);
@@ -245,7 +245,7 @@
             ? ((Object.values(result.data.errors).flat()[0] as string) ?? "")
             : "";
           toast.error(first ?? "Check the form for errors.");
-          // The failing field could be on any step — jump back to the
+          // The failing field could be on any step : jump back to the
           // first one so the top error banner and per-field messages are
           // actually visible, not stranded behind whatever step the user
           // happened to be on when they hit Create.
@@ -265,7 +265,7 @@
       <div
         class="bg-accent/10 text-accent rounded-xl px-4 py-3 text-sm font-medium"
       >
-        Starting from the {data.template.name} template — review everything
+        Starting from the {data.template.name} template : review everything
         below (especially any placeholder passwords) before deploying.
       </div>
     {/if}
@@ -417,7 +417,7 @@
               <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
               <span>
                 <strong>{image}:{tag}</strong>
-                wasn't found in its registry. You can still save — this doesn't
+                wasn't found in its registry. You can still save : this doesn't
                 block deploying, in case you're still preparing the image.
               </span>
             </div>
@@ -436,7 +436,7 @@
               bind:value={gitUrl}
             />
             <p class="mt-1.5 text-xs text-text-subtle">
-              Any git-clone-able HTTPS URL — GitHub, GitLab, a self-hosted Gitea
+              Any git-clone-able HTTPS URL : GitHub, GitLab, a self-hosted Gitea
               instance, whatever. Private repos: embed a token in the URL
               yourself (<code>https://TOKEN@host/...</code>), there's no
               separate credential field for this yet.

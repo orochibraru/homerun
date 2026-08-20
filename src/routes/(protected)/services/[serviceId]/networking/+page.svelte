@@ -74,10 +74,10 @@
             Publicly routed at
             <span class="text-accent">{publicHost}.{data.baseDomain}</span>.
           {:else if svc.networkMode === "host"}
-            Not publicly routed — this service is on the host network (see
+            Not publicly routed : this service is on the host network (see
             Network below), which Traefik can't route to.
           {:else}
-            Not publicly routed — subnet-only. Change this in the Network
+            Not publicly routed : subnet-only. Change this in the Network
             section below.
           {/if}
         </p>
@@ -117,7 +117,7 @@
           <p class="text-text-subtle mt-1.5 text-xs">
             Optional second hostname routed to this service, alongside its
             {publicHost}.{data.baseDomain}
-            address. Point its DNS (A/CNAME) at this server yourself first —
+            address. Point its DNS (A/CNAME) at this server yourself first :
             this app only tells Traefik to route it, it doesn't manage DNS.
           </p>
         </div>
@@ -131,7 +131,7 @@
             name="authRequired"
           />
           <p class="mt-1.5 text-xs text-red-500">
-            ⚠ In its current form this blocks <em>everyone</em>, including you —
+            ⚠ In its current form this blocks <em>everyone</em>, including you :
             there's no login page mounted on this app's own hostname to
             authenticate against. Treat it as a hard "make this unreachable from
             the public internet" switch (defense-in-depth, or temporarily
@@ -140,14 +140,14 @@
           <p class="text-text-subtle mt-1.5 text-xs">
             Checks Traefik forwardAuth requests against this instance's own
             session (any provider you sign into Homerun with, including a
-            configured OIDC one) — anyone without a valid session for
+            configured OIDC one) : anyone without a valid session for
             <em>this exact hostname</em>
             gets a 401. Setting
             <code>AUTH_CROSS_SUBDOMAIN=true</code>
             widens the session cookie to cover every subdomain of the base
             domain, which is a real security tradeoff and, in testing, wasn't
             sufficient on its own for a signed-in admin to pass through
-            automatically — a proper login-redirect flow for gated subdomains
+            automatically : a proper login-redirect flow for gated subdomains
             isn't built yet.
           </p>
         </div>
@@ -179,9 +179,9 @@
             TLS is automatic via Traefik's
             <code>{data.certResolver}</code>
             resolver for {publicHost}.{data.baseDomain}
-            — no certificate handling needed for that hostname.
+            : no certificate handling needed for that hostname.
           {:else}
-            Not applicable — this service isn't publicly routed.
+            Not applicable : this service isn't publicly routed.
           {/if}
         </p>
       </div>
@@ -206,11 +206,11 @@
         }}
       >
         <p class="text-text-muted text-xs">
-          A custom certificate for <strong>{svc.customDomain}</strong> — since
+          A custom certificate for <strong>{svc.customDomain}</strong> : since
           it isn't a subdomain of this instance's base domain, the automatic
           resolver above can't cover it. Requires the admin to have set
           <code>TRAEFIK_DYNAMIC_CONFIG_DIR</code>
-          and enabled Traefik's file provider (see compose.yaml) — this app
+          and enabled Traefik's file provider (see compose.yaml) : this app
           writes the cert/key files there, it doesn't touch the Traefik
           container itself.
         </p>
@@ -275,7 +275,7 @@
         <p class="text-text text-sm font-medium">Network</p>
         <p class="text-text-muted text-xs">
           {#if networkMode === "host"}
-            Runs on the host's own network — reachable directly on this
+            Runs on the host's own network : reachable directly on this
             machine at its own port, not through Traefik or the shared
             network.
           {:else if svc.containerId}
@@ -342,13 +342,13 @@
         <input name="networkMode" type="hidden" value={networkMode}>
         <p class="text-text-subtle mt-1.5 text-xs">
           {#if networkMode === "host"}
-            Shares this machine's network namespace directly — for apps that
+            Shares this machine's network namespace directly : for apps that
             need real host-network access (mDNS/SSDP discovery, e.g. Home
             Assistant). No shared/project network, no Traefik routing, no
             public DNS route regardless of the setting below.
           {:else}
             Joins the shared Traefik network (plus its project's network, if
-            any) — the normal mode for anything that doesn't specifically
+            any) : the normal mode for anything that doesn't specifically
             need host networking.
           {/if}
         </p>

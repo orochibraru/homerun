@@ -10,7 +10,7 @@ import {
 import { decryptSecret, encryptSecret } from "$lib/services/secrets";
 import { BaseDTO } from "./base-dto";
 
-/** Fixed id — this table only ever holds one row. */
+/** Fixed id : this table only ever holds one row. */
 const SINGLETON_ID = "default";
 
 export interface InstanceSettingsCoreInput {
@@ -49,7 +49,7 @@ export interface InstanceSettingsSmtpInput {
 	smtpUser: string | null;
 }
 
-/** A git provider row coming off the Git Providers form — plaintext secret, blank means "keep existing" on an edit. */
+/** A git provider row coming off the Git Providers form : plaintext secret, blank means "keep existing" on an edit. */
 export interface GitProviderInput {
 	baseUrl?: string | null;
 	clientId: string;
@@ -61,7 +61,7 @@ export interface GitProviderInput {
 	name: string;
 }
 
-/** A provider row coming off the settings form — plaintext secret, blank means "keep existing". */
+/** A provider row coming off the settings form : plaintext secret, blank means "keep existing". */
 export interface OauthProviderInput {
 	clientId: string;
 	clientSecret?: string;
@@ -102,7 +102,7 @@ export interface InstanceSettingsOverride {
 }
 
 /**
- * Wraps the singleton `instance_settings` row — DB overrides for
+ * Wraps the singleton `instance_settings` row : DB overrides for
  * instance-level config that otherwise defaults from env vars (see
  * $lib/config.ts). Unlike every other DTO this isn't user-scoped: there's
  * exactly one row, shared across the whole (single-user) instance.
@@ -190,7 +190,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		const { smtpPassword, ...rest } = input;
 		await this.persist({
 			...rest,
-			// Blank password field means "leave unchanged" — same convention as
+			// Blank password field means "leave unchanged" : same convention as
 			// service.registryPasswordEnc (never overwrite a stored credential
 			// with nothing just because the admin didn't retype it).
 			...(smtpPassword ? { smtpPasswordEnc: encryptSecret(smtpPassword) } : {}),

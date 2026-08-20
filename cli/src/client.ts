@@ -20,16 +20,16 @@ export function resolveConfig(argv: string[]): ClientConfig {
 
 	if (!baseUrl) {
 		throw new Error(
-			"Missing base URL — pass --base-url or set HOMERUN_BASE_URL.",
+			"Missing base URL : pass --base-url or set HOMERUN_BASE_URL.",
 		);
 	}
 	if (!apiKey) {
-		throw new Error("Missing API key — pass --api-key or set HOMERUN_API_KEY.");
+		throw new Error("Missing API key : pass --api-key or set HOMERUN_API_KEY.");
 	}
 	return { apiKey, baseUrl: baseUrl.replace(/\/$/, "") };
 }
 
-/** `x-api-key` is the header hooks.server.ts checks first for a non-cookie caller — see CLAUDE.md's Auth section. */
+/** `x-api-key` is the header hooks.server.ts checks first for a non-cookie caller : see CLAUDE.md's Auth section. */
 export function makeClient(config: ClientConfig) {
 	return createClient<paths>({
 		baseUrl: `${config.baseUrl}/api/v1`,

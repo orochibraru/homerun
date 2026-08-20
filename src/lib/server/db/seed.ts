@@ -14,7 +14,7 @@ interface BuiltinTemplate {
 }
 
 // ownerId: null = built-in, immutable, usable by every user. Fixed ids +
-// onConflictDoNothing() make this idempotent — safe to call on every boot.
+// onConflictDoNothing() make this idempotent : safe to call on every boot.
 const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 	{
 		category: "cache",

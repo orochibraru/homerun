@@ -24,7 +24,7 @@ export type GitConnectionUpdateInput = Partial<
 	>
 >;
 
-/** Wraps the `git_connection` table — one user's OAuth connection to one configured git provider, see schema.ts's docstring. */
+/** Wraps the `git_connection` table : one user's OAuth connection to one configured git provider, see schema.ts's docstring. */
 export class GitConnectionDTO extends BaseDTO<GitConnection> {
 	static async listForUser(userId: string): Promise<GitConnectionDTO[]> {
 		const rows = await db

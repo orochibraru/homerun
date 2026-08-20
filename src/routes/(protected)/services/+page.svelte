@@ -22,7 +22,7 @@
 
 	onMount(() => title.set("Services"));
 
-	// Group by project name, "Ungrouped" last — order of first appearance
+	// Group by project name, "Ungrouped" last : order of first appearance
 	// otherwise, matching the underlying createdAt-desc query order.
 	const groups = $derived.by(() => {
 		const byLabel = new Map<string, typeof data.services>();

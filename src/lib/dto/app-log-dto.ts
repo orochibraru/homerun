@@ -11,7 +11,7 @@ export interface NewAppLogInput {
 	serviceId?: string | null;
 }
 
-// Amortized retention cap — rather than a scheduled prune job for what's
+// Amortized retention cap : rather than a scheduled prune job for what's
 // meant to be a lightweight best-effort log, `create()` deletes anything
 // past this count on a small fraction of writes (see below). Keeps the
 // table bounded without adding a third scheduler alongside CronService's
@@ -19,9 +19,9 @@ export interface NewAppLogInput {
 const MAX_ROWS = 5000;
 const PRUNE_PROBABILITY = 0.02;
 
-/** Wraps the `app_log` table — persisted warn/error-level Logger output, see schema.ts's docstring on `appLog`. */
+/** Wraps the `app_log` table : persisted warn/error-level Logger output, see schema.ts's docstring on `appLog`. */
 export class AppLogDTO extends BaseDTO<AppLog> {
-	/** Most recent warn/error logs attributable to one service (see schema.ts on how serviceId gets populated) — for that service's Errors tab. */
+	/** Most recent warn/error logs attributable to one service (see schema.ts on how serviceId gets populated) : for that service's Errors tab. */
 	static async listForService(
 		serviceId: string,
 		limit = 50,
@@ -35,7 +35,7 @@ export class AppLogDTO extends BaseDTO<AppLog> {
 		return rows.map((row) => new AppLogDTO(row));
 	}
 
-	/** Most recent warn/error logs instance-wide, regardless of service attribution — for a future instance-wide log view. */
+	/** Most recent warn/error logs instance-wide, regardless of service attribution : for a future instance-wide log view. */
 	static async listRecent(limit = 100): Promise<AppLogDTO[]> {
 		const rows = await db
 			.select()

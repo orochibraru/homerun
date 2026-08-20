@@ -69,7 +69,7 @@ export const DELETE = async ({ params, locals }) => {
 				remote,
 			);
 		} catch {
-			// Already gone on the host — proceed with deleting the record.
+			// Already gone on the host : proceed with deleting the record.
 		}
 	}
 	await svc.delete();

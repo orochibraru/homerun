@@ -8,7 +8,7 @@
 </script>
 
 <!--
-  Just the form fields — no <form> tag of its own, so each consumer wraps
+  Just the form fields : no <form> tag of its own, so each consumer wraps
   it in their own <form action=...> with their own use:enhance behavior
   (a full-page create-then-redirect on /storage/new, an in-place
   create-then-refresh in a modal on a service's Volumes tab). Same
@@ -66,10 +66,10 @@
   />
   <p class="text-text-subtle mt-1 text-xs">
     {#if kind === "bind"}
-      An absolute directory on this host — created automatically if it
+      An absolute directory on this host : created automatically if it
       doesn't exist.
     {:else}
-      A Docker-managed named volume — created automatically on first use.
+      A Docker-managed named volume : created automatically on first use.
     {/if}
   </p>
 </div>

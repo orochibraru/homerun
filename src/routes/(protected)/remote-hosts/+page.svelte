@@ -37,7 +37,7 @@
       <p class="text-text-muted mt-1 text-sm">
         Other Docker daemons a service can be deployed to instead of this host.
         A remote-hosted service isn't on the shared network or routed through
-        Traefik — see the docs on the Networking tab for what that means in
+        Traefik : see the docs on the Networking tab for what that means in
         practice.
       </p>
     </div>
@@ -109,7 +109,7 @@
 <ConfirmDialog
   bind:open={deleteDialogOpen}
   confirmLabel="Delete"
-  description={`Delete "${pendingDeleteName}"? Services deployed to it keep running there — they just won't be manageable from here anymore.`}
+  description={`Delete "${pendingDeleteName}"? Services deployed to it keep running there : they just won't be manageable from here anymore.`}
   onConfirm={() => pendingDeleteForm?.requestSubmit()}
   title="Delete remote host"
 />

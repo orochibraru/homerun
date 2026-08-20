@@ -23,10 +23,10 @@ export const load = async ({ parent, locals }) => {
 	return {
 		connectedProviderIds: [...connectedProviderIds],
 		// Configuring providers (add/delete) is admin-only, same as every
-		// other instance-wide config surface — connecting *to* one is not,
+		// other instance-wide config surface : connecting *to* one is not,
 		// every developer needs that for their own git-based services.
 		isAdmin: locals.isAdmin,
-		// clientSecretEnc never leaves the server — the form only ever shows
+		// clientSecretEnc never leaves the server : the form only ever shows
 		// "configured" vs not, same convention as registryPassword/smtpPassword.
 		providers: settings.gitProviders.map((p) => ({
 			baseUrl: p.baseUrl,

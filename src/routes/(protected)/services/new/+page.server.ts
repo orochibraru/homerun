@@ -14,7 +14,7 @@ import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("Services");
 
-/** Maps the validated form input's image-vs-git fields to what ServiceDTO.create expects — pulled out to keep the create action's complexity in check. */
+/** Maps the validated form input's image-vs-git fields to what ServiceDTO.create expects : pulled out to keep the create action's complexity in check. */
 function buildSourceFields(input: CreateServiceInput, slug: string) {
 	if (input.buildSource !== "git") {
 		return {
@@ -31,7 +31,7 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 		gitDockerfilePath: input.gitDockerfilePath || null,
 		gitRef: input.gitRef || null,
 		gitUrl: input.gitUrl || null,
-		// No real image/tag until the first build — deployService()
+		// No real image/tag until the first build : deployService()
 		// overwrites both with the resolved local tag once it's built.
 		image: `homerun-build-${slug}`,
 		tag: "pending",
@@ -44,7 +44,7 @@ export const load = async ({ url, parent }) => {
 	const templateId = url.searchParams.get("templateId");
 
 	// Ignore a projectId that isn't actually the user's own project, or a
-	// templateId the user isn't allowed to use, rather than erroring — the
+	// templateId the user isn't allowed to use, rather than erroring : the
 	// form just falls back to blank/no-project silently safe.
 	const project =
 		projectId && (await ProjectDTO.get(projectId, user.id)) ? projectId : null;

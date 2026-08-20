@@ -32,17 +32,17 @@ interface ProviderEndpoints {
 
 /**
  * OAuth App client for git-hosting providers (GitHub/GitLab/Gitea/
- * Bitbucket) — lets a user connect their own account (see the Git
+ * Bitbucket) : lets a user connect their own account (see the Git
  * Providers page for the instance-wide OAuth App config each of these
  * needs registered on the provider's own site first) so the Source tab can
  * browse their repos and check for a Dockerfile instead of pasting a raw
  * (possibly token-embedded) URL. One standard OAuth2 authorization-code
- * flow per provider, differing mainly in endpoint URLs/request shapes —
+ * flow per provider, differing mainly in endpoint URLs/request shapes :
  * see `endpoints()` below for exactly what differs.
  *
  * Not live-tested against a real registered OAuth App on each provider
  * (that requires the admin to actually register one on GitHub/GitLab/
- * Gitea/Bitbucket's own site first, with a real callback URL — nothing
+ * Gitea/Bitbucket's own site first, with a real callback URL : nothing
  * this session could do on its own, unlike everything else built this
  * session). Built carefully from each provider's own standard, well-
  * documented OAuth2 + REST API shapes; verify the first real connect end
@@ -68,7 +68,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 			};
 		}
 		case "gitea": {
-			// Self-hosted only — there's no public gitea.com instance to
+			// Self-hosted only : there's no public gitea.com instance to
 			// default to, unlike the other three.
 			if (!base) {
 				throw new Error("Gitea providers require a base URL.");
@@ -100,7 +100,7 @@ function authHeader(token: string): Record<string, string> {
 
 export class GitProviderService {
 	/**
-	 * Signed, stateless CSRF state param for the OAuth redirect round-trip —
+	 * Signed, stateless CSRF state param for the OAuth redirect round-trip :
 	 * no server-side storage/cleanup needed (unlike a DB-backed state
 	 * table), verified purely from the value itself plus config.auth.secret.
 	 */

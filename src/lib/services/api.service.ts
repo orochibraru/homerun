@@ -33,7 +33,7 @@ function parseImageRef(
 	}
 
 	// Bare names ("nginx") and single-namespace names ("user/repo") are both
-	// Docker Hub — official images live under the implicit "library/" namespace.
+	// Docker Hub : official images live under the implicit "library/" namespace.
 	const repo = image.includes("/") ? image : `library/${image}`;
 	return { host: DOCKER_HUB_HOST, repo };
 }
@@ -95,18 +95,18 @@ const MANIFEST_ACCEPT = [
 ].join(", ");
 
 /**
- * Outbound HTTP calls to third-party APIs — currently just container
+ * Outbound HTTP calls to third-party APIs : currently just container
  * registries (via the Docker Registry HTTP API v2), distinct from
  * DockerService which only talks to a Docker daemon (local or remote).
  */
 export class ApiService {
 	/**
 	 * Checks whether `image:tag` exists in its registry, via the Docker
-	 * Registry HTTP API v2 (a manifest HEAD, not a pull — no layers ever
+	 * Registry HTTP API v2 (a manifest HEAD, not a pull : no layers ever
 	 * touch disk). Anonymous-token flow covers public images on Docker Hub,
 	 * GHCR, etc.; `auth` is used for private registries.
 	 *
-	 * Fails open (`exists: true`) on network/parse trouble — this is a
+	 * Fails open (`exists: true`) on network/parse trouble : this is a
 	 * warn-don't-block check, a false negative is worse than a missed check.
 	 */
 	static async checkImageExists(
@@ -149,7 +149,7 @@ export class ApiService {
 			if (res.ok) {
 				return { checked: true, exists: true };
 			}
-			// Any other status (403, 5xx, unexpected auth requirement) — inconclusive.
+			// Any other status (403, 5xx, unexpected auth requirement) : inconclusive.
 			return { checked: false, exists: true };
 		} catch (err) {
 			logger.warn(`Image existence check failed: ${image}:${tag}`, err);

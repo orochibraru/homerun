@@ -12,14 +12,14 @@ import { rebuildAuth } from "$lib/services/auth";
 
 const logger = new Logger("Onboarding");
 
-/** Blank optional field means "no override — fall back to the env default", same convention as settings/+page.server.ts's nullableText(). */
+/** Blank optional field means "no override : fall back to the env default", same convention as settings/+page.server.ts's nullableText(). */
 function blankToNull(value: string | undefined): string | null {
 	const trimmed = value?.trim();
 	return trimmed ? trimmed : null;
 }
 
 export const load = async ({ locals }) => {
-	// Onboarding is instance-wide, not per-user — a non-admin account can
+	// Onboarding is instance-wide, not per-user : a non-admin account can
 	// exist before the bootstrap admin has finished it (created by that
 	// admin before they got around to this step). They land here too (the
 	// parent layout's gate doesn't know about roles), but get a holding
@@ -58,7 +58,7 @@ export const actions = {
 
 		const settings = await InstanceSettingsDTO.get();
 		// authCheckUrl isn't part of this wizard (advanced/rarely-changed,
-		// editable later on /settings) — preserve whatever it's currently set
+		// editable later on /settings) : preserve whatever it's currently set
 		// to rather than resetting it.
 		await settings.updateCore({
 			authCheckUrl: settings.toJSON().authCheckUrl,

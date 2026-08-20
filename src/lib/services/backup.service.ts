@@ -16,7 +16,7 @@ export interface BackupResult {
 /**
  * Base class for backing up a storage volume to some destination. Owns the
  * generic tar-then-upload pipeline (validate config, decrypt the stored
- * secret, tar the source directory, log/return the result) — a concrete
+ * secret, tar the source directory, log/return the result) : a concrete
  * subclass only supplies the "put these bytes at this key" transport, via
  * `upload()`. S3BackupService is the only implementation today; a future
  * non-S3 destination would extend this the same way.
@@ -27,7 +27,7 @@ export abstract class BackupService {
 	 * key" transport to `upload` (the decrypted destination secret is
 	 * passed through so the subclass never has to decrypt it itself).
 	 *
-	 * Bind-mount sources only for v1 — `source` is a real host directory, so
+	 * Bind-mount sources only for v1 : `source` is a real host directory, so
 	 * it can be tar'd directly. A Docker-managed named volume's content isn't
 	 * visible on the host filesystem the same way (would need a short-lived
 	 * helper container to read it out), so `kind: "volume"` is rejected here
@@ -73,7 +73,7 @@ export abstract class BackupService {
 		}
 
 		try {
-			// Tar the source directory in memory (gzip'd) — fine at the scale a
+			// Tar the source directory in memory (gzip'd) : fine at the scale a
 			// single-PUT, no-multipart uploader supports anyway.
 			const { stdout } = await execFileAsync(
 				"tar",

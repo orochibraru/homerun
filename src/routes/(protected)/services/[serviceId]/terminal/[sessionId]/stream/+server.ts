@@ -20,7 +20,7 @@ export const GET = ({ params, locals }) => {
 					try {
 						controller.enqueue(chunk);
 					} catch {
-						// Controller already closed (client disconnected) — the
+						// Controller already closed (client disconnected) : the
 						// cancel() callback will unsubscribe.
 					}
 				},

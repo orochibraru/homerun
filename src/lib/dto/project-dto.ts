@@ -21,7 +21,7 @@ export type ProjectUpdateInput = Partial<
 	Pick<Project, "description" | "name" | "slug">
 >;
 
-/** Wraps the `project` table — see ServiceDTO for the pattern this follows. */
+/** Wraps the `project` table : see ServiceDTO for the pattern this follows. */
 export class ProjectDTO extends BaseDTO<Project> {
 	static async get(id: string, userId: string): Promise<ProjectDTO | null> {
 		const [row] = await db
@@ -91,13 +91,13 @@ export class ProjectDTO extends BaseDTO<Project> {
 		Object.assign(this.row, input);
 	}
 
-	/** Row-only delete — does not touch member services/containers. Use `cascadeDelete` for that. */
+	/** Row-only delete : does not touch member services/containers. Use `cascadeDelete` for that. */
 	async delete(): Promise<void> {
 		await db.delete(project).where(eq(project.id, this.row.id));
 	}
 
 	/**
-	 * Deletes this project and everything in it — stops/removes every member
+	 * Deletes this project and everything in it : stops/removes every member
 	 * service's container, deletes their deployment history, deletes the
 	 * services, then the project itself. Same explicit-cleanup precedent as
 	 * account deletion (src/lib/services/auth.ts's beforeDelete hook): DB-level
@@ -116,7 +116,7 @@ export class ProjectDTO extends BaseDTO<Project> {
 					DockerService.removeContainer(svc.containerId as string, {
 						force: true,
 					}).catch(() => {
-						// Already gone on the host — proceed with deleting the record.
+						// Already gone on the host : proceed with deleting the record.
 					}),
 				),
 		);

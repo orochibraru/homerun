@@ -2,9 +2,9 @@ import { z } from "zod";
 
 /**
  * Single source of truth for both request validation and the OpenAPI spec
- * (`openapi.ts`) — same "one zod schema drives both" approach as the main
+ * (`openapi.ts`) : same "one zod schema drives both" approach as the main
  * app's `$lib/server/validation/api.ts` / `$lib/openapi/`. Previously
- * `/v1/deploy`'s body was just `as DeployInput` — an unchecked cast, not
+ * `/v1/deploy`'s body was just `as DeployInput` : an unchecked cast, not
  * real validation; a malformed request would fail deep inside dockerode
  * with a confusing error instead of a clean 400. Fixed by actually parsing
  * against this schema in `http.ts`.

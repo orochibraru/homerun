@@ -14,20 +14,20 @@ import {
  * no uncaught client-side exception, and it isn't showing this app's own
  * error boundary (src/lib/components/error-page.svelte).
  *
- * This is deliberately shallow — it doesn't exercise behavior (see
+ * This is deliberately shallow : it doesn't exercise behavior (see
  * smoke.spec.ts and the other *.spec.ts files for that), it just catches
  * "this page is broken" regressions across the whole app in one pass.
- * Extend STATIC_ROUTES / SERVICE_TABS whenever a new page is added — a
+ * Extend STATIC_ROUTES / SERVICE_TABS whenever a new page is added : a
  * page missing from those lists never gets crawled.
  *
  * Uses expect.soft so one broken page doesn't stop the rest of the crawl
- * from being checked in the same run — read the whole report, not just
+ * from being checked in the same run : read the whole report, not just
  * the first failure.
  *
  * Project/service/volume names are suffixed with a run-unique id (not
  * fixed strings) because project.slug is globally unique and account
  * deletion doesn't cascade-delete project/storage_volume rows (a known,
- * documented gap — see schema.ts's Data model notes) — fixed slugs would
+ * documented gap : see schema.ts's Data model notes) : fixed slugs would
  * collide with the previous run's leftovers on an unwiped test DB.
  */
 
@@ -40,7 +40,7 @@ const VOLUME_PATH_RE = /\/storage\/[^/]+$/;
 // Routes reachable with no created entity beyond the throwaway account
 // itself. Admin-only pages (users/settings/system-logs) are included
 // because a throwaway sign-up on an isolated test DB becomes the instance
-// admin (first user — see auth.ts's bootstrap-admin hook).
+// admin (first user : see auth.ts's bootstrap-admin hook).
 const STATIC_ROUTES = [
 	"/",
 	"/services",
@@ -56,7 +56,7 @@ const STATIC_ROUTES = [
 	"/settings",
 	"/users",
 	"/system-logs",
-	// Not "/system-logs/traefik" — that's a +server.ts stream endpoint the
+	// Not "/system-logs/traefik" : that's a +server.ts stream endpoint the
 	// system-logs page itself fetches from, not a page to navigate to.
 ];
 
@@ -73,14 +73,14 @@ const SERVICE_TABS = [
 ];
 
 test("every dashboard page renders without error", async ({ page }) => {
-	// Well beyond the default 180s (set for the deploy-heavy smoke test) —
+	// Well beyond the default 180s (set for the deploy-heavy smoke test) :
 	// this test does no image pulls, but sequentially visiting ~25 routes
 	// plus the setup (sign-up, onboarding, project/service/volume creation)
 	// and cleanup genuinely takes several minutes.
 	test.setTimeout(900_000); // TEMP for QA diagnosis, will revert before finishing
 
 	const errors = collectPageErrors(page);
-	// Set for real right before the crawl starts (see below) — errors from
+	// Set for real right before the crawl starts (see below) : errors from
 	// sign-up/onboarding/entity-creation aren't attributed to any of the
 	// crawled routes.
 	let sinceConsole = 0;
@@ -90,7 +90,7 @@ test("every dashboard page renders without error", async ({ page }) => {
 		const response = await page.goto(path);
 		// Let the page settle (client-side hydration, any onMount fetches)
 		// before checking for late console/page errors. Logs/Terminal keep a
-		// stream open on purpose, so "networkidle" never fires for those —
+		// stream open on purpose, so "networkidle" never fires for those :
 		// don't wait forever on it.
 		await page.waitForLoadState("networkidle").catch(() => undefined);
 
@@ -158,7 +158,7 @@ test("every dashboard page renders without error", async ({ page }) => {
 			await page.getByRole("button", { name: "Create volume" }).click();
 			await expect(page).toHaveURL("/storage");
 			// Unlike the projects/services list, a volume's name isn't itself a
-			// link — the only link on its row is the icon-only "Backup settings"
+			// link : the only link on its row is the icon-only "Backup settings"
 			// button. This is the only volume this run creates, so it's the only
 			// match.
 			await page.getByRole("link", { name: "Backup settings" }).click();
@@ -167,7 +167,7 @@ test("every dashboard page renders without error", async ({ page }) => {
 		});
 
 		// Errors from sign-up/onboarding/entity-creation above are real if they
-		// happen, but they're not attributable to a single crawled route —
+		// happen, but they're not attributable to a single crawled route :
 		// start the per-route accounting fresh from here.
 		sinceConsole = errors.consoleErrors.length;
 		sincePageErr = errors.pageErrors.length;

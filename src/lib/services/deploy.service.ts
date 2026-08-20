@@ -18,7 +18,7 @@ export interface DeployResult {
 /**
  * The full build-or-pull → create → start pipeline for one service,
  * shared by the service Overview page's deploy action, the REST API's
- * deploy endpoint, and the cron redeploy scheduler — single source of
+ * deploy endpoint, and the cron redeploy scheduler : single source of
  * truth so these three trigger points can't drift out of sync.
  */
 export class DeploymentService {

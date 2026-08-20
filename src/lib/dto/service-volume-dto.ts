@@ -14,7 +14,7 @@ export interface NewServiceVolumeInput {
 	volumeId: string;
 }
 
-/** Wraps the `service_volume` join table — a mount of one StorageVolume into one service. */
+/** Wraps the `service_volume` join table : a mount of one StorageVolume into one service. */
 export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 	/** Every mount on a service, plus the underlying volume's name/kind/source for display and for building Docker Binds at deploy time. */
 	static async listForService(serviceId: string): Promise<

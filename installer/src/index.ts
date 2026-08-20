@@ -25,7 +25,7 @@ async function main() {
 	const opts = parseArgs(process.argv.slice(2));
 
 	console.log(
-		"Homerun installer — draft/WIP, see installer/README.md before running against a real box.\n",
+		"Homerun installer : draft/WIP, see installer/README.md before running against a real box.\n",
 	);
 
 	if (!opts.dryRun) {
@@ -48,7 +48,7 @@ async function main() {
 
 	console.log("== 1/6 Docker engine + rootless prerequisites ==");
 	// --dry-run is also how this installer's own logic gets exercised outside
-	// a real Debian/RHEL box (e.g. from a macOS dev machine) — fall back to a
+	// a real Debian/RHEL box (e.g. from a macOS dev machine) : fall back to a
 	// fake apt manager there instead of failing before anything else runs.
 	const pm = opts.dryRun
 		? await detectPackageManager().catch(() => ({
@@ -98,7 +98,7 @@ async function main() {
 		);
 	} else {
 		console.log(
-			`The full stack should be coming up under ${repoDir} — check with:`,
+			`The full stack should be coming up under ${repoDir} : check with:`,
 		);
 		console.log(
 			`  sudo -u ${opts.rootlessUser} env DOCKER_HOST=unix://${dockerSocket} docker compose -f ${repoDir}/compose.yaml ps`,

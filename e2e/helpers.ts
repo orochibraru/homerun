@@ -2,8 +2,8 @@ import type { Page } from "@playwright/test";
 
 /**
  * Shared helpers for e2e specs. Every spec in this suite runs against the
- * real app (real Docker, real DB, real Traefik-labeled containers) — no
- * mocks — per playwright.config.ts, which points webServer at an isolated
+ * real app (real Docker, real DB, real Traefik-labeled containers) : no
+ * mocks : per playwright.config.ts, which points webServer at an isolated
  * NODE_ENV=test instance (see .env.test / DATABASE_URL) so this suite never
  * touches the maintainer's own database or a real dev session.
  *
@@ -12,7 +12,7 @@ import type { Page } from "@playwright/test";
  * rather than every spec reinventing it.
  *
  * NEVER point any of this at the maintainer's own account or a shared
- * instance — every test creates and deletes its own user.
+ * instance : every test creates and deletes its own user.
  */
 
 export interface ThrowawayUser {
@@ -21,7 +21,7 @@ export interface ThrowawayUser {
 	password: string;
 }
 
-// Matches "/", "/auth/sign-up/confirm", or "/onboarding" — the three
+// Matches "/", "/auth/sign-up/confirm", or "/onboarding" : the three
 // possible landing spots right after signUp.email() establishes a session.
 const POST_SIGNUP_URL_RE = /\/(onboarding|auth\/sign-up\/confirm)?$/;
 const SIGN_IN_URL_RE = /\/auth\/sign-in/;
@@ -40,7 +40,7 @@ export function makeThrowawayUser(label: string): ThrowawayUser {
  * Signs up a brand-new throwaway user and lands on the dashboard, skipping
  * email verification when the instance is running in dev mode (no SMTP).
  * On a blank/isolated test DB the first sign-up becomes the instance admin
- * (see auth.ts's bootstrap-admin hook) — that's intentional here, not a
+ * (see auth.ts's bootstrap-admin hook) : that's intentional here, not a
  * side effect to work around.
  */
 export async function signUpThrowawayUser(page: Page, user: ThrowawayUser) {
@@ -52,7 +52,7 @@ export async function signUpThrowawayUser(page: Page, user: ThrowawayUser) {
 	await page.getByRole("button", { name: "Create account" }).click();
 	// signUp.email() establishes a session immediately, so there's a real
 	// race between the sign-up page's own "already logged in" redirect and
-	// its explicit post-signup navigation to /auth/sign-up/confirm — accept
+	// its explicit post-signup navigation to /auth/sign-up/confirm : accept
 	// either landing spot.
 	await page.waitForURL(POST_SIGNUP_URL_RE, { timeout: 10_000 });
 
@@ -80,7 +80,7 @@ export async function signUpThrowawayUser(page: Page, user: ThrowawayUser) {
 /**
  * Clicks straight through the onboarding wizard (Core/Docker/Traefik/Email/
  * Review) and finishes it. Every field pre-fills with the instance's
- * current effective value (DB override falling back to the env default —
+ * current effective value (DB override falling back to the env default :
  * see onboarding/+page.svelte's own comment on this), so accepting the
  * defaults at each step is enough to pass validation; this doesn't attempt
  * to exercise entering different values.
@@ -95,7 +95,7 @@ export async function completeOnboarding(page: Page) {
 }
 
 /**
- * Deletes the currently signed-in throwaway account from /settings — also
+ * Deletes the currently signed-in throwaway account from /settings : also
  * removes any leftover Docker containers/networks via cleanupUserResources.
  * Call this in a `finally` block so a failed test never leaks a user or a
  * running container.
@@ -111,16 +111,16 @@ export async function deleteThrowawayAccount(page: Page, password: string) {
 /**
  * Best-effort version of deleteThrowawayAccount for a `finally` block that
  * may run after signUpThrowawayUser itself failed partway (e.g. mid
- * onboarding) — in that case there's no session to delete, and letting a
+ * onboarding) : in that case there's no session to delete, and letting a
  * cleanup failure throw here would replace the real test failure with a
  * confusing secondary one. Swallows errors (logging them) rather than
  * throwing; a genuine cleanup miss still leaves a throwaway user behind on
- * the (disposable, isolated — see .env.test) test DB, which is a cosmetic
+ * the (disposable, isolated : see .env.test) test DB, which is a cosmetic
  * annoyance there, not a leaked resource on a real instance.
  */
 export async function cleanUpThrowawayAccount(page: Page, password: string) {
 	if (page.url().includes("/auth/sign-in")) {
-		return; // never got a session — nothing to delete
+		return; // never got a session : nothing to delete
 	}
 	try {
 		await deleteThrowawayAccount(page, password);
@@ -141,7 +141,7 @@ export interface BasicServiceInput {
  * Fills and submits the services/new wizard's minimum viable
  * "bring-your-own-image" path and returns to /services. `name`/`slug`/
  * `image`/`tag` live on step 1 ("Basic info"); `containerPort` lives on
- * step 2 ("Networking") — both are hidden (`class:hidden`, not `{#if}`)
+ * step 2 ("Networking") : both are hidden (`class:hidden`, not `{#if}`)
  * rather than unmounted while on the wrong step, but a hidden field can't
  * be `fill()`-ed, so this clicks "Next" between them rather than filling
  * every field up front. Steps 3/4 (Environment/Compute) have no required
@@ -150,7 +150,7 @@ export interface BasicServiceInput {
  *
  * On success the `create` action redirects to `/projects/<projectId>` when
  * `projectId` was passed (back to the project it was created under),
- * otherwise to `/services` — not always the latter.
+ * otherwise to `/services` : not always the latter.
  */
 export async function createBasicService(
 	page: Page,
@@ -162,7 +162,7 @@ export async function createBasicService(
 	);
 	await page.locator("#name").fill(input.name);
 	// The slug field auto-derives from name via an oninput handler, which
-	// Playwright's fill() doesn't reliably trigger — fill it explicitly.
+	// Playwright's fill() doesn't reliably trigger : fill it explicitly.
 	await page.locator("#slug").fill(input.slug);
 	await page.locator("#image").fill(input.image);
 	await page.locator("#tag").fill(input.tag);
@@ -185,7 +185,7 @@ export interface PageErrors {
  * Attaches listeners that record console.error() calls and uncaught
  * client-side exceptions for the rest of this page's life. Attach before
  * navigating, then assert both arrays are empty after the page settles.
- * A fresh instance per page/test — listeners aren't reset between calls.
+ * A fresh instance per page/test : listeners aren't reset between calls.
  */
 export function collectPageErrors(page: Page): PageErrors {
 	const errors: PageErrors = { consoleErrors: [], pageErrors: [] };
@@ -202,7 +202,7 @@ export function collectPageErrors(page: Page): PageErrors {
 
 /**
  * True if the page is showing this app's own SvelteKit error boundary
- * (src/lib/components/error-page.svelte) rather than real content — that
+ * (src/lib/components/error-page.svelte) rather than real content : that
  * component renders the HTTP status as a lone, large numeric heading.
  * Cheap way to catch a route that 404s/500s but doesn't otherwise throw a
  * console/page error worth failing on by itself.

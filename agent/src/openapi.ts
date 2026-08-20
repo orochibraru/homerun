@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { deployInputSchema } from "./schemas";
 
-/** Strip the top-level `$schema` pointer zod's toJSONSchema() adds — not meaningful on a schema embedded inside a bigger OpenAPI document. */
+/** Strip the top-level `$schema` pointer zod's toJSONSchema() adds : not meaningful on a schema embedded inside a bigger OpenAPI document. */
 function toEmbeddedSchema(schema: z.ZodType): Record<string, unknown> {
 	const { $schema: _unused, ...rest } = z.toJSONSchema(schema, {
 		target: "draft-2020-12",
@@ -43,7 +43,7 @@ const deployResultSchema = z.object({
 
 /**
  * Same "one document, hand-registered routes" shape as the main app's
- * `$lib/openapi/build.ts` — kept as a sibling implementation rather than a
+ * `$lib/openapi/build.ts` : kept as a sibling implementation rather than a
  * shared package since the agent has no access to the main app's source
  * tree at runtime (see agent/README.md).
  */
@@ -75,7 +75,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 		},
 		info: {
 			description:
-				"A single Homerun Agent's own HTTP control surface — deploy/start/stop/restart/logs/stats for the one Docker daemon this agent runs on. See agent/README.md.",
+				"A single Homerun Agent's own HTTP control surface : deploy/start/stop/restart/logs/stats for the one Docker daemon this agent runs on. See agent/README.md.",
 			title: "Homerun Agent API",
 			version: "0.1.0",
 		},

@@ -7,7 +7,7 @@ import { config } from "./config";
  * AGENT_TOKEN env var always wins (systemd unit, docker run -e, etc.). With
  * none set, a token is generated once and persisted to `config.tokenFile` so
  * restarting the agent doesn't invalidate every already-registered main-app
- * connection — same "generate once, remember it" shape as this repo's other
+ * connection : same "generate once, remember it" shape as this repo's other
  * secrets, just filesystem-backed instead of DB-backed since this binary has
  * no database of its own.
  */
@@ -35,7 +35,7 @@ export async function resolveToken(): Promise<{
 	return { source: "generated", token };
 }
 
-/** Constant-time-ish compare — avoids the obvious early-exit timing leak of `===` on secrets. */
+/** Constant-time-ish compare : avoids the obvious early-exit timing leak of `===` on secrets. */
 export function tokensMatch(a: string, b: string): boolean {
 	if (a.length !== b.length) {
 		return false;

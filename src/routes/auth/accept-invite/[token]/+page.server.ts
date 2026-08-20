@@ -38,11 +38,11 @@ export const actions = {
 		}
 
 		const { email, role } = invitation.toJSON();
-		// No `headers` here — confirmed against
+		// No `headers` here : confirmed against
 		// node_modules/better-auth/dist/plugins/admin/routes.mjs's createUser:
 		// omitting headers/request context is treated as a trusted server-side
 		// call and skips the admin-role permission check entirely, which is
-		// correct here — the invite token itself (validated, single-use,
+		// correct here : the invite token itself (validated, single-use,
 		// expiring) is the authorization, not an admin session.
 		const result = await auth.api
 			.createUser({

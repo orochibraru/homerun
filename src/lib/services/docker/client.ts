@@ -2,7 +2,7 @@ import Docker from "dockerode";
 import { config } from "$lib/config";
 
 // HMR-safe singleton cache, same pattern as $lib/server/db/lib.ts's
-// Postgres client — avoids leaking a new Docker connection on every
+// Postgres client : avoids leaking a new Docker connection on every
 // Vite reload. Keyed by remote host id ("local" for the default socket),
 // so a remote connection is only opened once and reused.
 const globalForDocker = globalThis as unknown as {
@@ -27,7 +27,7 @@ export interface RemoteHostConnection {
 /**
  * Parses a `remote_host.dockerHost` value ("tcp://host:2376" or
  * "ssh://user@host") into dockerode constructor options. TLS is implied
- * by the presence of ca/cert/key, not by the URL scheme — Docker's own
+ * by the presence of ca/cert/key, not by the URL scheme : Docker's own
  * convention (a bare "tcp://" with certs configured is the same as
  * "https://" to the daemon).
  */
@@ -59,7 +59,7 @@ function parseDockerHost(conn: RemoteHostConnection): Docker.DockerOptions {
  * remoteHostId-less connection object, → the local socket (the only
  * option before remote hosts existed, and still the default for every
  * service). Pass a `RemoteHostConnection` (see RemoteHostDTO) to reach a
- * remote Docker daemon instead — services opt in via `remoteHostId`.
+ * remote Docker daemon instead : services opt in via `remoteHostId`.
  */
 export function getDocker(remote?: RemoteHostConnection | null): Docker {
 	const cache = clientCache();

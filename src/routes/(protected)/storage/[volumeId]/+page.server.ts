@@ -72,7 +72,7 @@ export const actions = {
 		if (backupEnabled && !CronService.parseCronSchedule(backupSchedule ?? "")) {
 			return fail(400, {
 				error:
-					'Invalid schedule — use standard 5-field cron syntax (e.g. "0 3 * * *").',
+					'Invalid schedule : use standard 5-field cron syntax (e.g. "0 3 * * *").',
 			});
 		}
 		if (
@@ -92,7 +92,7 @@ export const actions = {
 			backupPrefix,
 			backupRegion,
 			backupSchedule,
-			// Blank means "leave unchanged" — never overwrite a stored secret
+			// Blank means "leave unchanged" : never overwrite a stored secret
 			// just because the user didn't retype it (same convention as
 			// registryPassword elsewhere).
 			...(backupSecretAccessKey

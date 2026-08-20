@@ -18,7 +18,7 @@
 
 	const { data } = $props();
 
-	// Seeded once from the initial load, then diverges via the poll below —
+	// Seeded once from the initial load, then diverges via the poll below :
 	// untrack() is intentional, not a lint workaround.
 	let systemStats = $state<SystemStats>(untrack(() => data.systemStats));
 
@@ -99,7 +99,7 @@
       <span class="flex-1 text-amber-800 dark:text-amber-300">
         {data.setupIssues.length}
         {data.setupIssues.length === 1 ? "setup issue" : "setup issues"}
-        found — {data.setupIssues[0].label.toLowerCase()}
+        found : {data.setupIssues[0].label.toLowerCase()}
         {data.setupIssues.length > 1 ? ", and more" : ""}.
       </span>
       <span

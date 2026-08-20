@@ -6,7 +6,7 @@
 
 	// Extracted from the Logs tab (services/[serviceId]/logs/+page.svelte) so
 	// the same live-streamed, ANSI-colored log panel can also be embedded
-	// directly in the Overview tab — same "shared chrome" precedent as
+	// directly in the Overview tab : same "shared chrome" precedent as
 	// form-styles.ts, just for a whole panel instead of class strings.
 	const {
 		serviceId,

@@ -16,7 +16,7 @@ export interface SetupCheck {
  * dashboard banner can deep-link straight to (and highlight) the offending
  * field instead of just linking to the page in general. "auth-secret" (env
  * only, no /settings field) and "traefik" (a live container check, not a
- * form input) are deliberately absent — nothing to highlight for either.
+ * form input) are deliberately absent : nothing to highlight for either.
  */
 const SETUP_CHECK_FIELDS: Record<string, string[]> = {
 	"base-domain": ["baseDomain"],
@@ -33,10 +33,10 @@ export class AdminService {
 	 * Whether any account exists at all yet. Drives two things: the very first
 	 * account created (via public sign-up) becomes the instance's admin (see
 	 * auth.ts's databaseHooks), and public sign-up itself locks once this is
-	 * true (see hooks.server.ts) — every account after the first is created by
+	 * true (see hooks.server.ts) : every account after the first is created by
 	 * an admin, from the Users page.
 	 *
-	 * Raw query against `user` rather than a DTO — there's no DTO for
+	 * Raw query against `user` rather than a DTO : there's no DTO for
 	 * better-auth-owned tables, same precedent hooks.server.ts already uses for
 	 * the API-key lookup below.
 	 */
@@ -52,11 +52,11 @@ export class AdminService {
 	 * Lightweight diagnostics for "is this instance actually configured".
 	 * `config` here already reflects DB-backed instance settings merged over
 	 * env defaults (see $lib/config.ts's applyInstanceSettings() and the
-	 * /settings page) — these checks just report the effective value, they
+	 * /settings page) : these checks just report the effective value, they
 	 * don't care which layer it came from. `envVar` is still worth showing:
 	 * it's the env-var equivalent for anyone bootstrapping via docker-compose
 	 * before ever visiting /settings. Still no DNS/SSL-provider automation
-	 * flow — out of scope here, see TODO.md's Onboarding section.
+	 * flow : out of scope here, see TODO.md's Onboarding section.
 	 */
 	static async runSetupChecks(): Promise<SetupCheck[]> {
 		const checks: SetupCheck[] = [];
@@ -65,7 +65,7 @@ export class AdminService {
 			config.baseDomain === "localhost"
 				? {
 						detail:
-							"Deployed services will only be reachable at <slug>.localhost from this machine — set a real domain for public routing (env var below, or the Core section of /settings).",
+							"Deployed services will only be reachable at <slug>.localhost from this machine : set a real domain for public routing (env var below, or the Core section of /settings).",
 						envVar: "BASE_DOMAIN",
 						id: "base-domain",
 						label: "Base domain",
@@ -83,7 +83,7 @@ export class AdminService {
 			config.auth.secret === "default-secret"
 				? {
 						detail:
-							"Using the built-in placeholder auth secret — sessions aren't safe against a compromised install. Generate a real one (e.g. `openssl rand -base64 32`).",
+							"Using the built-in placeholder auth secret : sessions aren't safe against a compromised install. Generate a real one (e.g. `openssl rand -base64 32`).",
 						envVar: "AUTH_SECRET (or BETTER_AUTH_SECRET)",
 						id: "auth-secret",
 						label: "Auth secret",
@@ -101,7 +101,7 @@ export class AdminService {
 			config.auth.origin === "http://localhost:3000"
 				? {
 						detail:
-							"Using the default origin — auth callbacks/redirects may misbehave once this isn't served from localhost:3000 (env var below, or the Core section of /settings).",
+							"Using the default origin : auth callbacks/redirects may misbehave once this isn't served from localhost:3000 (env var below, or the Core section of /settings).",
 						envVar: "ORIGIN",
 						id: "origin",
 						label: "Origin URL",
@@ -128,7 +128,7 @@ export class AdminService {
 					}
 				: {
 						detail:
-							"No running Traefik container found — deployed services won't get public routing/TLS until it's started (see compose.yaml).",
+							"No running Traefik container found : deployed services won't get public routing/TLS until it's started (see compose.yaml).",
 						id: "traefik",
 						label: "Traefik ingress",
 						severity: "warn",
@@ -148,7 +148,7 @@ export class AdminService {
 						severity: "ok",
 					}
 				: {
-						detail: `Couldn't reach the Docker socket at ${config.docker.socketPath} — nothing will deploy until this is fixed (env var below, or the Docker section of /settings).`,
+						detail: `Couldn't reach the Docker socket at ${config.docker.socketPath} : nothing will deploy until this is fixed (env var below, or the Docker section of /settings).`,
 						envVar: "DOCKER_SOCKET_PATH",
 						id: "docker",
 						label: "Docker socket",
@@ -167,7 +167,7 @@ export class AdminService {
 						}
 					: {
 							detail:
-								"SMTP is enabled but one or more of host/port/user/password/from is missing — email verification won't work (env vars below, or the SMTP section of /settings).",
+								"SMTP is enabled but one or more of host/port/user/password/from is missing : email verification won't work (env vars below, or the SMTP section of /settings).",
 							envVar:
 								"SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM",
 							id: "smtp",

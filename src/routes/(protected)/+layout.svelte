@@ -100,7 +100,7 @@
 		},
 	];
 
-	// Users/Settings/System Logs are instance-wide admin controls — hidden
+	// Users/Settings/System Logs are instance-wide admin controls : hidden
 	// from developers, who otherwise get the same dashboard (their own
 	// services/projects, already isolated per-user). Split into their own
 	// nav section (rather than interleaved) so the sidebar visually groups
@@ -148,7 +148,7 @@
 	}
 </script>
 
-<!-- Fills the full viewport — there's no global navbar above this. -->
+<!-- Fills the full viewport : there's no global navbar above this. -->
 <div class="bg-bg flex h-screen overflow-hidden">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
   <aside

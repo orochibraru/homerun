@@ -10,16 +10,16 @@
   import type { Component, Snippet } from "svelte";
 
   interface Props {
-    /** Which step is currently shown — the page toggles its own step panels with this, same pattern services/new uses today. */
+    /** Which step is currently shown : the page toggles its own step panels with this, same pattern services/new uses today. */
     activeStep: number;
-    /** The step panels — the page renders every step's markup here and hides the inactive ones (e.g. class:hidden), so field state survives switching steps. */
+    /** The step panels : the page renders every step's markup here and hides the inactive ones (e.g. class:hidden), so field state survives switching steps. */
     children: Snippet;
-    /** Rendered instead of the "Next" button on the last step — the page's own real submit button (label/spinner are page-specific). */
+    /** Rendered instead of the "Next" button on the last step : the page's own real submit button (label/spinner are page-specific). */
     finish: Snippet;
     /**
      * Validates `step` (the step about to be left). Return true to allow
      * advancing. This is also where the page should mark that step
-     * "attempted" for its own field-error display — nothing should render
+     * "attempted" for its own field-error display : nothing should render
      * an error before the user has actually tried to move past it.
      */
     onNext: (step: number) => boolean;
@@ -34,7 +34,7 @@
     finish,
   }: Props = $props();
 
-  // Furthest step reached after a *successful* onNext — gates which step
+  // Furthest step reached after a *successful* onNext : gates which step
   // buttons are clickable. Grows monotonically: you can always go back,
   // but never jump ahead of a step you haven't actually passed validation
   // on. This, plus onNext's own "mark attempted" contract, is what keeps a
@@ -72,7 +72,7 @@
 </script>
 
 <div class="space-y-6">
-  <!-- ═══ Step indicator — full labeled row at sm+, compact progress bar
+  <!-- ═══ Step indicator : full labeled row at sm+, compact progress bar
        below it. Two separate layouts rather than one that just hides the
        label at small widths: five equal-width pill buttons with nothing
        but a bare number in them (padding and border intact) reads as

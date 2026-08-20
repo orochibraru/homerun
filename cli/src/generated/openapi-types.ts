@@ -16,7 +16,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Create a service
-		 * @description Persists config only — does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it.
+		 * @description Persists config only : does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it.
 		 */
 		post: operations["post_services"];
 		delete?: never;
@@ -58,7 +58,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Deploy a service
-		 * @description Awaits the full pull-or-build → create → start pipeline and returns once it's done — no separate polling endpoint for API clients.
+		 * @description Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients.
 		 */
 		post: operations["post_services__serviceId__deploy"];
 		delete?: never;

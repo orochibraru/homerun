@@ -63,7 +63,7 @@
       <p class="text-text-muted mt-1 text-sm">
         Connect a git hosting account (GitHub, GitLab, self-hosted Gitea,
         Bitbucket) so a git-based service's Source tab can browse your repos
-        instead of pasting a raw URL — no personal access token needed.
+        instead of pasting a raw URL : no personal access token needed.
       </p>
     </div>
     {#if data.isAdmin}
@@ -197,7 +197,7 @@
               </p>
               <p class="text-text-muted mt-0.5 truncate text-xs">
                 {#if connected}
-                  <span class="text-emerald-600">Connected</span> — this account
+                  <span class="text-emerald-600">Connected</span> : this account
                   can browse repos on this provider.
                 {:else}
                   Not connected yet.

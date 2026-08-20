@@ -27,7 +27,7 @@
 			?.name ?? "Choose a remote host…",
 	);
 
-	// Field ids the dashboard's setup-issue banner deep-linked here for —
+	// Field ids the dashboard's setup-issue banner deep-linked here for :
 	// see AdminService.SETUP_CHECK_FIELDS in $lib/services/admin.service.ts.
 	const highlighted = $derived(
 		new Set(
@@ -115,7 +115,7 @@
   <div class="mb-8">
     <h1 class="text-text text-2xl font-bold">Settings</h1>
     <p class="text-text-muted mt-1 text-sm">
-      Instance-wide configuration — stored in the database and applied live, no
+      Instance-wide configuration : stored in the database and applied live, no
       restart needed. Leave a field blank to fall back to its env-var default
       (shown as the placeholder); env vars still work for anyone bootstrapping
       via docker-compose before ever visiting this page.
@@ -166,7 +166,7 @@
             value={data.settings.authOrigin ?? ""}
           />
           <p class="text-text-subtle mt-1.5 text-xs">
-            Display-only today — better-auth's own baseURL still reads the
+            Display-only today : better-auth's own baseURL still reads the
             <code>ORIGIN</code>
             env var directly (not this override), to avoid changing its dev-mode
             request-derived-origin behavior. Set
@@ -185,7 +185,7 @@
           />
           <p class="text-text-subtle mt-1.5 text-xs">
             What Traefik's forwardAuth middleware calls to gatekeep a "Require
-            login" service — must be reachable from inside the Traefik
+            login" service : must be reachable from inside the Traefik
             container.
           </p>
         </div>
@@ -207,7 +207,7 @@
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Docker</h2>
         <p class="text-text-muted text-xs">
-          The default local connection — separate from the per-service "Deploy
+          The default local connection : separate from the per-service "Deploy
           target" picker on Remote Hosts.
         </p>
       </div>
@@ -252,10 +252,10 @@
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Autoscaling</h2>
         <p class="text-text-muted text-xs">
-          "GCP Cloud Run"-style load shedding — when this host crosses a
+          "GCP Cloud Run"-style load shedding : when this host crosses a
           resource threshold, one autoscale-eligible service (opt in from its
           Compute tab) gets migrated onto the overflow remote host below.
-          This moves the service, it doesn't run a second replica of it —
+          This moves the service, it doesn't run a second replica of it :
           off by default, and inert unless both enabled here and opted into
           per-service.
         </p>
@@ -305,7 +305,7 @@
           <p class={label}>Overflow remote host</p>
           {#if data.remoteHosts.length === 0}
             <p class="text-text-subtle text-xs">
-              No remote hosts registered yet — add one on the Remote Hosts
+              No remote hosts registered yet : add one on the Remote Hosts
               page first.
             </p>
           {:else}
@@ -376,12 +376,12 @@
             id="traefikDynamicConfigDir"
             name="traefikDynamicConfigDir"
             placeholder={data.envDefaults.traefikDynamicConfigDir ??
-              "unset — custom SSL is a no-op"}
+              "unset : custom SSL is a no-op"}
             type="text"
             value={data.settings.traefikDynamicConfigDir ?? ""}
           />
           <p class="text-text-subtle mt-1.5 text-xs">
-            Must match the path bind-mounted into the Traefik container — see
+            Must match the path bind-mounted into the Traefik container : see
             compose.yaml's commented-out example. Unset means per-service custom
             SSL certs are stored but never written anywhere.
           </p>
@@ -491,7 +491,7 @@
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">OAuth Providers</h2>
         <p class="text-text-muted text-xs">
-          Any generic OIDC provider — used both for signing into Homerun itself
+          Any generic OIDC provider : used both for signing into Homerun itself
           and for gating a service with "Require login" (Networking tab). Saving
           here rebuilds the auth backend live, no restart needed.
         </p>
@@ -601,7 +601,7 @@
             </div>
             <!-- Hidden mirrors of the two checkboxes above, always present
                  (unlike a real checkbox, which drops out of FormData when
-                 unchecked) — keeps every oauth*[] field positionally
+                 unchecked) : keeps every oauth*[] field positionally
                  aligned across rows regardless of which boxes are checked. -->
             <input
               name="oauthEnabled"

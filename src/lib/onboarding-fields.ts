@@ -1,11 +1,11 @@
 /**
- * Which step a given onboarding field lives on — shared between the client
+ * Which step a given onboarding field lives on : shared between the client
  * wizard (jumping to the first invalid step, both on a blocked client-side
  * "Next"/submit and after a server fail()) and the server action (mapping
- * a zod field-error back to a step). Deliberately not under $lib/server/ —
+ * a zod field-error back to a step). Deliberately not under $lib/server/ :
  * the onboarding page imports this directly, and anything under
  * $lib/server/ is illegal to import from client-bundled code (even for a
- * plain object, not just server logic) — see
+ * plain object, not just server logic) : see
  * $lib/server/validation/onboarding.ts for the zod schema itself, which is
  * genuinely server-only and only used from the onboarding +page.server.ts
  * action.

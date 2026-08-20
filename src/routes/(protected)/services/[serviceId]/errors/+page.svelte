@@ -100,7 +100,7 @@
 
 <!--
   App-level warn/error logs attributed to this service (see schema.ts's
-  `appLog` docstring for how the attribution works) — not just deployment
+  `appLog` docstring for how the attribution works) : not just deployment
   failures, a lightweight Sentry-adjacent view of "things this service's
   own code logged as wrong" (a failed Docker call, a rejected reconcile,
   etc.), independent of whether a deploy was even in flight when it happened.

@@ -73,7 +73,7 @@ export type ServiceUpdateInput = Partial<
 >;
 
 /**
- * Wraps the `service` table — every route that touches a service goes
+ * Wraps the `service` table : every route that touches a service goes
  * through here instead of writing its own Drizzle query. Ownership checks
  * (`userId` match) are baked into `get`/`list`, matching the existing
  * `ownedService` convention: never trust a route param alone.
@@ -111,7 +111,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 
 	/**
 	 * Same as `list`, plus each service's project name (for the "Ungrouped"
-	 * bucket the services list groups by) — a dedicated query rather than
+	 * bucket the services list groups by) : a dedicated query rather than
 	 * bolting a join onto `list`, since the two callers want different shapes.
 	 */
 	static async listWithProjectNames(
@@ -129,7 +129,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		}));
 	}
 
-	/** Every service (across all users) with cron redeploys turned on — for the scheduler tick, which isn't scoped to one user. */
+	/** Every service (across all users) with cron redeploys turned on : for the scheduler tick, which isn't scoped to one user. */
 	static async listCronEnabled(): Promise<ServiceDTO[]> {
 		const rows = await db
 			.select()
@@ -138,7 +138,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return rows.map((row) => new ServiceDTO(row));
 	}
 
-	/** Every autoscale-eligible service (across all users) currently on the local host — for CronService's autoscale tick, which isn't scoped to one user. */
+	/** Every autoscale-eligible service (across all users) currently on the local host : for CronService's autoscale tick, which isn't scoped to one user. */
 	static async listAutoscaleEligibleOnLocalHost(): Promise<ServiceDTO[]> {
 		const rows = await db
 			.select()

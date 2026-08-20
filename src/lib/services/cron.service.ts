@@ -12,13 +12,13 @@ const logger = new Logger("Cron");
 const TICK_MS = 60_000;
 
 /**
- * Minimal standard 5-field cron ("min hour day month weekday") matcher —
+ * Minimal standard 5-field cron ("min hour day month weekday") matcher :
  * no external dependency, deliberately: this app stays dependency-light
  * (see e.g. no AWS SDK for storage, no cron package here) and a redeploy
  * scheduler only needs minute-resolution matching, not a full spec.
  *
  * Supports a wildcard, a literal number, "a-b" ranges, "a,b,c" lists, and
- * step values (asterisk, slash, N) — combinable per field (e.g.
+ * step values (asterisk, slash, N) : combinable per field (e.g.
  * "0,30 9-17 * * 1-5"). Evaluated against the server's local time; no
  * timezone field.
  */
@@ -106,7 +106,7 @@ function sameMinute(a: Date, b: Date): boolean {
 	);
 }
 
-// Survive Vite HMR the same way the db singleton does (db/lib.ts) — without
+// Survive Vite HMR the same way the db singleton does (db/lib.ts) : without
 // these, every hot reload of a module in this import chain would start a
 // second interval, double-firing redeploys/backups. Kept as two distinct
 // keys even though both schedulers now live in one file, so one starting
@@ -127,7 +127,7 @@ function isServiceDueNow(svc: ServiceDTO, now: Date): boolean {
 		return false;
 	}
 	// Guards against a double-fire within the same due minute if the
-	// interval ever jitters (e.g. two ticks landing 59s apart) — the cron
+	// interval ever jitters (e.g. two ticks landing 59s apart) : the cron
 	// spec is minute-resolution, so "already ran this minute" is a
 	// legitimate reason to skip, not just bookkeeping for the UI.
 	return !(svc.cronLastRunAt && sameMinute(svc.cronLastRunAt, now));
@@ -195,19 +195,19 @@ async function backupTick(): Promise<void> {
 
 /**
  * Migrates one autoscale-eligible service off the local host onto
- * `instanceSettings.autoscaleOverflowRemoteHostId` — the "GCP Cloud Run
+ * `instanceSettings.autoscaleOverflowRemoteHostId` : the "GCP Cloud Run
  * like" load-shedding behavior: local host over threshold + a service opted
  * in (Compute tab) = move it, don't spin up a second replica (this app's
- * data model is one container per service, not N — see the Network mode
+ * data model is one container per service, not N : see the Network mode
  * section's own precedent for what's realistic to build without a real
  * rearchitecture). Explicitly stops/removes the *old* local container
- * before deploying the new one on the overflow host — `deployService`'s own
+ * before deploying the new one on the overflow host : `deployService`'s own
  * "replace previous container" logic (`findServiceContainer`) only looks on
  * whichever daemon it's pointed at, so it would never find (and thus never
  * clean up) a container left behind on a *different* host.
  *
  * Untested against a real second host from this session (no second Docker
- * daemon available to migrate a live service across and verify) — composed
+ * daemon available to migrate a live service across and verify) : composed
  * entirely from already-exercised primitives instead (RemoteHostDTO's own
  * ownership-scoped connectionFor, DockerService.removeContainer against a
  * remote connection, DeploymentService.deployService) rather than new Docker
@@ -223,7 +223,7 @@ async function migrateToOverflow(
 	);
 
 	// The overflow host must be owned by the same user as the service being
-	// migrated — RemoteHostDTO.connectionFor() is ownership-scoped like
+	// migrated : RemoteHostDTO.connectionFor() is ownership-scoped like
 	// every other DTO lookup, so a host configured by a different account
 	// makes this a safe no-op (logged) rather than a cross-account leak.
 	const newHost = await RemoteHostDTO.get(overflowRemoteHostId, svc.userId);
@@ -236,7 +236,7 @@ async function migrateToOverflow(
 
 	if (svc.containerId) {
 		try {
-			// No `remote` arg — this service's containerId is still on the
+			// No `remote` arg : this service's containerId is still on the
 			// local host at this point, since remoteHostId hasn't been
 			// switched yet.
 			await DockerService.removeContainer(svc.containerId, { force: true });
@@ -286,7 +286,7 @@ async function autoscaleTick(): Promise<void> {
 		return;
 	}
 
-	// One migration per tick — re-checks the threshold on the next tick
+	// One migration per tick : re-checks the threshold on the next tick
 	// rather than potentially moving several services off the local host
 	// at once for a single reading.
 	await migrateToOverflow(candidates[0], autoscaleOverflowRemoteHostId);
@@ -312,7 +312,7 @@ export class CronService {
 		return result as ParsedCron;
 	}
 
-	/** Whether the given schedule is due at the given date (minute resolution — seconds are ignored). */
+	/** Whether the given schedule is due at the given date (minute resolution : seconds are ignored). */
 	static cronMatches(schedule: string, date: Date): boolean {
 		const parsed = CronService.parseCronSchedule(schedule);
 		if (!parsed) {
@@ -327,7 +327,7 @@ export class CronService {
 		);
 	}
 
-	/** Starts the once-a-minute cron redeploy check. Idempotent — safe to call on every dev-server HMR reload. */
+	/** Starts the once-a-minute cron redeploy check. Idempotent : safe to call on every dev-server HMR reload. */
 	static startCronScheduler(): void {
 		if (globalForCron.__cron_interval) {
 			return;
@@ -338,7 +338,7 @@ export class CronService {
 		}, TICK_MS);
 	}
 
-	/** Starts the once-a-minute scheduled-backup check. Idempotent — safe to call on every dev-server HMR reload. */
+	/** Starts the once-a-minute scheduled-backup check. Idempotent : safe to call on every dev-server HMR reload. */
 	static startBackupScheduler(): void {
 		if (globalForBackup.__backup_interval) {
 			return;
@@ -350,10 +350,10 @@ export class CronService {
 	}
 
 	/**
-	 * Starts the once-a-minute autoscale check. Idempotent — safe to call on
+	 * Starts the once-a-minute autoscale check. Idempotent : safe to call on
 	 * every dev-server HMR reload. A no-op every tick unless
 	 * instanceSettings.autoscaleEnabled is on *and* an overflow remote host
-	 * is configured (Settings' Autoscaling section) — same opt-in-and-inert-
+	 * is configured (Settings' Autoscaling section) : same opt-in-and-inert-
 	 * by-default posture as the other two schedulers here.
 	 */
 	static startAutoscaleScheduler(): void {

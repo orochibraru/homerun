@@ -8,7 +8,7 @@ import { config } from "$lib/config";
  * eventually hitting "too many clients" in PostgreSQL.
  *
  * Uses Bun's built-in `SQL` Postgres client (via drizzle-orm/bun-sql) rather
- * than the `pg` package — keeps this app's dependency-light posture (no new
+ * than the `pg` package : keeps this app's dependency-light posture (no new
  * npm dependency for the DB driver) and matches its "Bun runtime" identity.
  */
 const globalForDb = globalThis as unknown as {

@@ -7,7 +7,7 @@ async function main() {
 
 	await ensureNetwork().catch((error) => {
 		console.error(
-			`[homerun-agent] couldn't ensure "${config.dockerNetworkName}" network exists — is Docker reachable at ${config.dockerSocketPath}?`,
+			`[homerun-agent] couldn't ensure "${config.dockerNetworkName}" network exists : is Docker reachable at ${config.dockerSocketPath}?`,
 		);
 		console.error(error);
 		process.exit(1);

@@ -23,7 +23,7 @@ export interface RegistryAuth {
 
 /**
  * Container name this app gives its containers. Includes a random suffix
- * so a redeploy never collides on "name already in use" — even if the
+ * so a redeploy never collides on "name already in use" : even if the
  * previous container's removal (below) silently failed to fully complete.
  * The *previous* container for a service is found by its
  * `homerun.service.id` label, not by name, since names are no longer
@@ -35,7 +35,7 @@ function containerName(slug: string, projectSlug?: string | null): string {
 	return `homerun-${prefix}${slug}-${suffix}`;
 }
 
-/** The currently-running (or last) container for a service, if any — found by label, not name. */
+/** The currently-running (or last) container for a service, if any : found by label, not name. */
 async function findServiceContainer(
 	serviceId: string,
 	remote?: RemoteHostConnection | null,
@@ -93,7 +93,7 @@ export async function pullImage(
 	onProgress?.(`Pulling ${ref}...`);
 	const stream = await docker.pull(ref, auth ? { authconfig: auth } : {});
 
-	// Docker emits one progress event per byte-range update per layer —
+	// Docker emits one progress event per byte-range update per layer :
 	// far too chatty to log a line for each. Only emit a line when a given
 	// layer's status actually changes ("Downloading" → "Pull complete" etc).
 	const lastStatusById = new Map<string, string>();
@@ -127,7 +127,7 @@ export interface VolumeMountParams {
 	containerPath: string;
 	readOnly: boolean;
 	// A bind-mount host path ("/mnt/data/foo") or a Docker-managed named
-	// volume name — see StorageVolume in the schema, same field either way.
+	// volume name : see StorageVolume in the schema, same field either way.
 	source: string;
 }
 
@@ -138,33 +138,33 @@ export interface CreateContainerParams {
 	containerPort: number;
 	cpuLimit?: string | null;
 	// Optional second hostname routed to this service (DNS must already
-	// point at this host — the app doesn't manage that). No effect when
+	// point at this host : the app doesn't manage that). No effect when
 	// dnsResolvable is false.
 	customDomain?: string | null;
-	// When false, the container gets no Traefik labels at all — no public
+	// When false, the container gets no Traefik labels at all : no public
 	// <slug>.<baseDomain>, subnet-only reachability. Defaults to true.
 	dnsResolvable?: boolean;
 	envVars: Record<string, string>;
 	image: string;
 	memoryLimitMb?: number | null;
-	// "bridge" (default) | "host" — shares the host's network namespace
+	// "bridge" (default) | "host" : shares the host's network namespace
 	// directly instead of joining the shared/project Docker networks, for
 	// apps that need it (mDNS/SSDP discovery, e.g. Home Assistant). Docker
 	// doesn't allow combining host mode with any other network attachment,
 	// so when this is "host": no shared-network alias, no project-network
 	// join, no Traefik labels regardless of dnsResolvable (there's no
 	// container-specific IP/network for Traefik's docker provider to route
-	// to) — the container is reachable only directly on the host's own
+	// to) : the container is reachable only directly on the host's own
 	// network interfaces, on whatever port(s) it binds to itself.
 	networkMode?: "bridge" | "host";
 	// When set, the container also joins this project's dedicated network
-	// (see docker/networks.ts) — lets sibling services in the same project
+	// (see docker/networks.ts) : lets sibling services in the same project
 	// reach it, in addition to the shared Traefik network below. No effect
 	// when networkMode is "host" (see above).
 	projectId?: string | null;
-	// "tcp" (default) | "udp" | "both" — which protocol(s) containerPort is
+	// "tcp" (default) | "udp" | "both" : which protocol(s) containerPort is
 	// declared under (Docker's ExposedPorts). Doesn't publish/map anything by
-	// itself either way — see the Networking tab's own "no host port
+	// itself either way : see the Networking tab's own "no host port
 	// publishing by design" stance; matters for real host-visible reachability
 	// only in combination with networkMode: "host" above.
 	portProtocol?: "tcp" | "udp" | "both";
@@ -172,10 +172,10 @@ export interface CreateContainerParams {
 	// belongs to a project (e.g. "<projectSlug>-<slug>.<baseDomain>").
 	projectSlug?: string | null;
 	// When set, this container is created on a remote Docker daemon instead
-	// of the local socket — see docker/client.ts's getDocker(). Note: the
+	// of the local socket : see docker/client.ts's getDocker(). Note: the
 	// shared/project Docker networks and Traefik itself all live on the
 	// *local* host, so a remote-hosted service isn't reachable through the
-	// normal internal-network or Traefik paths — only directly, if you
+	// normal internal-network or Traefik paths : only directly, if you
 	// publish a port yourself. Effectively an isolated remote workload
 	// today, not (yet) a fully integrated second node.
 	remote?: RemoteHostConnection | null;
@@ -188,9 +188,9 @@ export interface CreateContainerParams {
 
 /**
  * Creates and starts the container for a service, replacing any
- * previous container for the same service (a redeploy — see
+ * previous container for the same service (a redeploy : see
  * findServiceContainer above). Attaches to the shared Traefik network
- * under a DNS alias equal to the service's slug — no host port
+ * under a DNS alias equal to the service's slug : no host port
  * publishing needed, Traefik reaches it over that network, and other
  * services can reach it at `http://<slug>:<containerPort>` regardless of
  * the container's own (randomized) name.
@@ -217,7 +217,7 @@ export async function createAndStartContainer(
 			}
 			await existing.remove({ force: true });
 		} catch {
-			// Already gone / couldn't be removed cleanly — proceed anyway, the
+			// Already gone / couldn't be removed cleanly : proceed anyway, the
 			// random name suffix means the new container won't collide with it.
 		}
 	}
@@ -230,9 +230,9 @@ export async function createAndStartContainer(
 		params.restartPolicy === "no" ? "" : params.restartPolicy;
 
 	// Docker's Binds syntax covers both a host bind-mount path and a
-	// Docker-managed named volume with the same "source:target[:ro]" form —
+	// Docker-managed named volume with the same "source:target[:ro]" form :
 	// it tells them apart by whether source looks like a path. Bind-mount
-	// sources only make sense for the local host — a remote deploy with
+	// sources only make sense for the local host : a remote deploy with
 	// volumes attached would try to bind a path on the *remote* machine.
 	const binds = (params.volumes ?? []).map(
 		(v) => `${v.source}:${v.containerPath}${v.readOnly ? ":ro" : ""}`,
@@ -260,7 +260,7 @@ export async function createAndStartContainer(
 			NanoCpus: params.cpuLimit
 				? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
 				: undefined,
-			// Host mode shares the host's network namespace directly — Docker
+			// Host mode shares the host's network namespace directly : Docker
 			// doesn't allow combining it with any other network attachment
 			// (see CreateContainerParams.networkMode), so it wins over
 			// everything below regardless of remote/local. Otherwise: the
@@ -277,7 +277,7 @@ export async function createAndStartContainer(
 		},
 		Image: `${params.image}:${params.tag}`,
 		// Host-mode containers never get Traefik labels regardless of
-		// dnsResolvable — there's no container-specific IP/network for
+		// dnsResolvable : there's no container-specific IP/network for
 		// Traefik's docker provider to route to in host mode, only the
 		// host's own interfaces (see CreateContainerParams.networkMode).
 		Labels: buildContainerLabels({
@@ -292,7 +292,7 @@ export async function createAndStartContainer(
 		// Alias the container as its slug on the shared network, so other
 		// services can reach it at a stable hostname even though the
 		// container's own name carries a random per-deploy suffix. Only
-		// meaningful on the local host in bridge mode — see NetworkMode above.
+		// meaningful on the local host in bridge mode : see NetworkMode above.
 		NetworkingConfig:
 			isHostNetwork || isRemote
 				? undefined
@@ -326,7 +326,7 @@ export async function createAndStartContainer(
 			);
 		} catch (err) {
 			// The container is already up on the shared network and reachable
-			// via Traefik — a failed project-network join shouldn't fail the
+			// via Traefik : a failed project-network join shouldn't fail the
 			// whole deploy, just log it as degraded connectivity.
 			logger.warn(
 				`Could not join project network: service=${params.serviceId} project=${params.projectId}`,
@@ -340,11 +340,11 @@ export async function createAndStartContainer(
 			`Container on host network: service=${params.serviceId} port=${params.containerPort}`,
 		);
 		onProgress?.(
-			`Running on the host network — reachable directly on this machine's own port ${params.containerPort}, not through Traefik.`,
+			`Running on the host network : reachable directly on this machine's own port ${params.containerPort}, not through Traefik.`,
 		);
 	} else if (isRemote) {
 		onProgress?.(
-			"Deployed to remote host — not on the shared network, no Traefik routing (see remote host docs).",
+			"Deployed to remote host : not on the shared network, no Traefik routing (see remote host docs).",
 		);
 	} else {
 		logger.info(
@@ -413,7 +413,7 @@ export async function inspectStatus(
 		}
 		return "stopped";
 	} catch {
-		// Container doesn't exist (e.g. removed out-of-band) — treat as failed
+		// Container doesn't exist (e.g. removed out-of-band) : treat as failed
 		// so it's visibly wrong in the UI rather than silently stale.
 		return "failed";
 	}
@@ -422,7 +422,7 @@ export async function inspectStatus(
 /** Streams a container's combined stdout/stderr as a web ReadableStream. */
 export async function streamLogs(
 	containerId: string,
-	// follow is always true — this function only supports live-tailing
+	// follow is always true : this function only supports live-tailing
 	// (dockerode's `follow: false` shape resolves to a Buffer, not a
 	// stream, which doesn't fit this function's return type).
 	opts?: { tail?: number; follow?: true },

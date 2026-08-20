@@ -6,7 +6,7 @@ import { inspectStatus } from "./containers.ts";
 
 /**
  * Syncs one service's `currentStatus` with the live Docker state of its
- * container. Called from page loads (poll-on-visit) — no background
+ * container. Called from page loads (poll-on-visit) : no background
  * worker or Docker events subscriber for v1.
  */
 export async function syncServiceStatus(
@@ -38,7 +38,7 @@ export async function syncServiceStatus(
 	return status;
 }
 
-/** Syncs every one of a user's services in parallel. Returns nothing — callers re-query the DB after. */
+/** Syncs every one of a user's services in parallel. Returns nothing : callers re-query the DB after. */
 export async function syncAllServiceStatuses(
 	serviceIds: string[],
 	userId: string,

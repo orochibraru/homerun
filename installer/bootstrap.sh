@@ -4,12 +4,12 @@
 #   curl -fsSL https://<host>/install.sh | bash -s -- --repo=https://github.com/you/homerun.git
 #
 # There's no prebuilt-binary release feed yet (no CI publishing dist/
-# artifacts anywhere) — this bootstraps Bun if it's missing, then clones the
+# artifacts anywhere) : this bootstraps Bun if it's missing, then clones the
 # repo and runs the real installer (installer/src/index.ts) via `bun run`,
 # which builds/installs the Homerun Agent (or the full stack, --mode=full)
 # from that same checkout. Once release infra exists, this can be swapped
 # for "download the right prebuilt installer/homerun-install-<arch> binary
-# and exec it" instead — see installer/README.md.
+# and exec it" instead : see installer/README.md.
 set -euo pipefail
 
 REPO_URL="${HOMERUN_REPO_URL:-}"
@@ -25,7 +25,7 @@ if [ -z "$REPO_URL" ]; then
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
-	echo "error: run as root (sudo bash -s -- ...) — the installer creates a system user and installs packages." >&2
+	echo "error: run as root (sudo bash -s -- ...) : the installer creates a system user and installs packages." >&2
 	exit 1
 fi
 

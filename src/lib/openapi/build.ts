@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { routes } from "./registry";
 
-/** zod's toJSONSchema() emits a top-level `$schema` pointer meant for a standalone document — an embedded OpenAPI schema object shouldn't carry one. */
+/** zod's toJSONSchema() emits a top-level `$schema` pointer meant for a standalone document : an embedded OpenAPI schema object shouldn't carry one. */
 function toEmbeddedSchema(schema: z.ZodType): Record<string, unknown> {
 	const { $schema: _unused, ...rest } = z.toJSONSchema(schema, {
 		target: "draft-2020-12",
@@ -12,7 +12,7 @@ function toEmbeddedSchema(schema: z.ZodType): Record<string, unknown> {
 /**
  * Builds the OpenAPI 3.1 document served at GET /api/v1/openapi.json.
  * Request bodies come straight from the same zod schemas that validate the
- * request at runtime (`$lib/server/validation/api.ts`, via `registry.ts`) —
+ * request at runtime (`$lib/server/validation/api.ts`, via `registry.ts`) :
  * response shapes are hand-mirrored (see schemas.ts's docstring for why).
  */
 export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
@@ -83,7 +83,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 		},
 		info: {
 			description:
-				"Homerun's REST API — a thin JSON wrapper over the DTO layer, meant for a future CLI (see the `cli/` sub-project) and any other external client. Requests are the same zod schemas that validate them server-side; every route also requires a cookie session or an `x-api-key`/`Authorization: Bearer` API key (see hooks.server.ts).",
+				"Homerun's REST API : a thin JSON wrapper over the DTO layer, meant for a future CLI (see the `cli/` sub-project) and any other external client. Requests are the same zod schemas that validate them server-side; every route also requires a cookie session or an `x-api-key`/`Authorization: Bearer` API key (see hooks.server.ts).",
 			title: "Homerun API",
 			version: "1.0.0",
 		},

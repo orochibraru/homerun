@@ -15,7 +15,7 @@ export interface TraefikInfo {
  * Locates the Traefik container this app's `compose.yaml` bootstraps.
  *
  * This is a DELIBERATE, narrow exception to the "only touch containers
- * this app created" rule (see labels.ts) — Traefik is core infrastructure
+ * this app created" rule (see labels.ts) : Traefik is core infrastructure
  * this app depends on but doesn't manage the lifecycle of by default.
  * Matched by image name, since compose project naming isn't guaranteed
  * stable across setups (no-compose / standalone Traefik is a documented
@@ -36,7 +36,7 @@ export async function findTraefikContainer(): Promise<TraefikInfo | null> {
 }
 
 /**
- * Restarts the Traefik container in place — same image, same config, just
+ * Restarts the Traefik container in place : same image, same config, just
  * a process restart. Low-risk; use this for "Traefik seems stuck" without
  * reaching for a full update.
  */
@@ -56,7 +56,7 @@ export interface TraefikUpdateResult {
 
 /**
  * Pulls the latest image for whatever tag Traefik is *currently* running
- * (read off the live container, e.g. "traefik:v3.1" — this never changes
+ * (read off the live container, e.g. "traefik:v3.1" : this never changes
  * which tag is tracked) and, only if that pull actually produced a new
  * image id, recreates the container from its own already-running
  * Config/HostConfig/network attachments with just the image swapped in.
@@ -64,12 +64,12 @@ export interface TraefikUpdateResult {
  * This is the same narrow exception `findTraefikContainer` documents,
  * extended to a mutating operation: it deliberately never invents new
  * command-line flags or mounts (see custom-ssl.ts's "this app never
- * modifies the live Traefik container's command/mounts itself" stance) —
+ * modifies the live Traefik container's command/mounts itself" stance) :
  * everything it recreates with is read back from `inspect()` on the
  * container that's already running, byte-for-byte, only the image digest
  * changes. There's a brief routing gap while the old container is removed
  * and the new one starts, and no automatic rollback if the new container
- * fails to start (nothing to roll back to — the old one is already gone).
+ * fails to start (nothing to roll back to : the old one is already gone).
  */
 export async function updateTraefikContainer(): Promise<TraefikUpdateResult> {
 	const docker = getDocker();
@@ -100,7 +100,7 @@ export async function updateTraefikContainer(): Promise<TraefikUpdateResult> {
 	const wasRunning = info.State.Running;
 
 	// Only preserve the fields that matter for reattaching to the same
-	// network(s) under the same alias(es) — not the read-only inspect-only
+	// network(s) under the same alias(es) : not the read-only inspect-only
 	// fields (NetworkID, EndpointID, Gateway, IPAddress, ...) that come back
 	// alongside them, which the daemon assigns fresh on create anyway.
 	const endpointsConfig = Object.fromEntries(
@@ -111,7 +111,7 @@ export async function updateTraefikContainer(): Promise<TraefikUpdateResult> {
 	);
 
 	await container.stop().catch(() => {
-		// Already stopped — fine, remove() below still applies.
+		// Already stopped : fine, remove() below still applies.
 	});
 	await container.remove();
 

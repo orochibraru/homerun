@@ -39,7 +39,7 @@ export const actions = {
 			return fail(500, {
 				deploymentId: result.deploymentId,
 				error:
-					"Deploy failed — check the deployment history below for details.",
+					"Deploy failed : check the deployment history below for details.",
 			});
 		}
 

@@ -51,7 +51,7 @@ export const SERVICE_STATUS_CONFIG: Record<
 	},
 };
 
-// Keyed by the plain string stored in template.icon — same pattern as
+// Keyed by the plain string stored in template.icon : same pattern as
 // SERVICE_STATUS_CONFIG, just for the template gallery.
 export const TEMPLATE_ICONS: Record<string, typeof Database> = {
 	activity: Activity,

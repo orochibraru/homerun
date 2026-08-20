@@ -14,7 +14,7 @@ export interface InvitationCreateInput {
 }
 
 /**
- * A pending admin-sent invite (Users page's "Send invite" action) — see
+ * A pending admin-sent invite (Users page's "Send invite" action) : see
  * schema.ts's `invitation` table docstring. Unlike `user`, this table isn't
  * better-auth-owned, so it gets a normal DTO.
  */
@@ -42,7 +42,7 @@ export class InvitationDTO extends BaseDTO<Invitation> {
 		return new InvitationDTO(row);
 	}
 
-	/** Only an unaccepted, unexpired invite — the accept-invite page treats anything else as invalid. */
+	/** Only an unaccepted, unexpired invite : the accept-invite page treats anything else as invalid. */
 	static async getByToken(token: string): Promise<InvitationDTO | null> {
 		const [row] = await db
 			.select()
