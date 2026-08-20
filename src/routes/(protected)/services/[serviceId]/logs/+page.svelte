@@ -27,7 +27,9 @@
 
     try {
       const res = await fetch(
-        resolve("/services/[serviceId]/logs", { serviceId: svc.id })
+        resolve("/(protected)/services/[serviceId]/logs", {
+          serviceId: svc.id,
+        })
       );
       if (!(res.ok && res.body)) {
         errored = true;
@@ -90,15 +92,15 @@
         </span>
       {/if}
     </div>
-    <Button
+    <button
+      class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-muted transition-all hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
       disabled={!svc.containerId}
       onclick={reconnect}
-      size="sm"
-      variant="ghost"
+      type="button"
     >
       <RefreshCw class="size-3.5" />
       Reconnect
-    </Button>
+    </button>
   </div>
 
   <div

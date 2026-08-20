@@ -5,6 +5,7 @@
     Terminal as TerminalIcon,
   } from "@lucide/svelte";
   import { onDestroy, onMount, tick } from "svelte";
+  import { toast } from "svelte-sonner";
   import { resolve } from "$app/paths";
   import { title } from "$lib/store/title";
 
@@ -42,7 +43,9 @@
 
     try {
       const res = await fetch(
-        resolve("/services/[serviceId]/terminal/open", { serviceId: svc.id }),
+        resolve("/(protected)/services/[serviceId]/terminal/open", {
+          serviceId: svc.id,
+        }),
         { method: "POST" }
       );
       if (!res.ok) {
@@ -54,11 +57,19 @@
       sessionId = openedSessionId;
       connecting = false;
 
+      if (!sessionId) {
+        toast.error("Invalid terminal session");
+        throw new Error("No session ID found!");
+      }
+
       const streamRes = await fetch(
-        resolve("/services/[serviceId]/terminal/[sessionId]/stream", {
-          serviceId: svc.id,
-          sessionId,
-        })
+        resolve(
+          "/(protected)/services/[serviceId]/terminal/[sessionId]/stream",
+          {
+            serviceId: svc.id,
+            sessionId,
+          }
+        )
       );
       if (!(streamRes.ok && streamRes.body)) {
         errored = "Couldn't connect to the session output.";
@@ -104,10 +115,13 @@
     reader?.cancel();
     if (sessionId) {
       fetch(
-        resolve("/services/[serviceId]/terminal/[sessionId]/close", {
-          serviceId: svc.id,
-          sessionId,
-        }),
+        resolve(
+          "/(protected)/services/[serviceId]/terminal/[sessionId]/close",
+          {
+            serviceId: svc.id,
+            sessionId,
+          }
+        ),
         { method: "POST" }
       ).catch(() => {
         // Best-effort — the idle reaper will clean it up regardless.
@@ -123,7 +137,7 @@
     const toSend = `${command}\n`;
     command = "";
     await fetch(
-      resolve("/services/[serviceId]/terminal/[sessionId]/input", {
+      resolve("/(protected)/services/[serviceId]/terminal/[sessionId]/input", {
         serviceId: svc.id,
         sessionId,
       }),

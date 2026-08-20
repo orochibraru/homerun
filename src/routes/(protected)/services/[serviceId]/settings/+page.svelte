@@ -61,18 +61,18 @@
   const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
   let submitting = $state(false);
-  let showRegistry = $state(!!svc.registryUsername);
+  let showRegistry = $derived(!!svc.registryUsername);
   let showDeleteConfirm = $state(false);
   let deleting = $state(false);
 
-  let buildSource = $state<"image" | "git">(
+  let buildSource = $derived<"image" | "git">(
     (values.buildSource as "image" | "git") ?? "image"
   );
-  let image = $state(values.image);
-  let tag = $state(values.tag);
-  let registryUrl = $state(values.registryUrl);
-  let gitUrl = $state(values.gitUrl);
-  let gitRef = $state(values.gitRef);
+  let image = $derived(values.image);
+  let tag = $derived(values.tag);
+  let registryUrl = $derived(values.registryUrl);
+  let gitUrl = $derived(values.gitUrl);
+  let gitRef = $derived(values.gitRef);
   let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
   let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -82,18 +82,18 @@
     ["on-failure", "On failure"],
     ["no", "Never"],
   ];
-  let restartPolicy = $state(values.restartPolicy);
+  let restartPolicy = $derived(values.restartPolicy);
   const restartPolicyLabel = $derived(
     restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
       "Unless stopped"
   );
 
-  let projectId = $state(svc.projectId ?? "");
+  let projectId = $derived(svc.projectId ?? "");
   const projectLabel = $derived(
     data.projects.find((p) => p.id === projectId)?.name ?? "Ungrouped"
   );
 
-  let remoteHostId = $state(svc.remoteHostId ?? "");
+  let remoteHostId = $derived(svc.remoteHostId ?? "");
   const remoteHostLabel = $derived(
     data.remoteHosts.find((h) => h.id === remoteHostId)?.name ?? "This host"
   );
@@ -152,7 +152,11 @@
               action: {
                 label: "Redeploy",
                 onClick: () =>
-                  goto(resolve("/services/[serviceId]", { serviceId: svc.id })),
+                  goto(
+                    resolve("/(protected)/services/[serviceId]", {
+                      serviceId: svc.id,
+                    }),
+                  ),
               },
               description: "Changes take effect on the next deploy.",
             });

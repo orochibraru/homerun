@@ -13,7 +13,7 @@ import { config } from "$lib/config";
 
 export type LogFormats = "console" | "json";
 
-export const LOG_LEVELS = {
+export const logLevels = {
   DEBUG: "debug",
   ERROR: "error",
   INFO: "info",
@@ -21,7 +21,7 @@ export const LOG_LEVELS = {
   WARN: "warn",
 } as const;
 
-export type LogLevel = (typeof LOG_LEVELS)[keyof typeof LOG_LEVELS];
+export type LogLevel = (typeof logLevels)[keyof typeof logLevels];
 
 export interface HttpLog {
   duration: number;
@@ -48,14 +48,14 @@ export class Logger {
     this.prettyPrefix = magenta(`[${this.prefix}]`);
     this.logFormat = config.logFormat;
     if (dev && !building) {
-      this.logLevel = LOG_LEVELS.DEBUG;
+      this.logLevel = logLevels.DEBUG;
     } else if (
       config.logFormat === "console" &&
-      !Object.values(LOG_LEVELS).includes(config.logLevel as LogLevel)
+      !Object.values(logLevels).includes(config.logLevel as LogLevel)
     ) {
       throw new Error(
         `Invalid log level: ${config.logLevel}. Valid levels are: ${Object.values(
-          LOG_LEVELS
+          logLevels
         ).join(", ")}`
       );
     } else {
@@ -75,15 +75,15 @@ export class Logger {
     if (this.logFormat === "console") {
       const colorFn = (str: string) => {
         switch (level) {
-          case LOG_LEVELS.DEBUG:
+          case logLevels.DEBUG:
             return cyan(str);
-          case LOG_LEVELS.INFO:
+          case logLevels.INFO:
             return blue(str);
-          case LOG_LEVELS.WARN:
+          case logLevels.WARN:
             return yellow(str);
-          case LOG_LEVELS.ERROR:
+          case logLevels.ERROR:
             return red(str);
-          case LOG_LEVELS.TRACE:
+          case logLevels.TRACE:
             return white(str);
           default:
             return str;
@@ -169,11 +169,11 @@ export class Logger {
    */
   info(input: unknown, ...optionalParams: unknown[]) {
     const acceptedLogLevels = [
-      LOG_LEVELS.INFO,
-      LOG_LEVELS.WARN,
-      LOG_LEVELS.ERROR,
-      LOG_LEVELS.DEBUG,
-      LOG_LEVELS.TRACE,
+      logLevels.INFO,
+      logLevels.WARN,
+      logLevels.ERROR,
+      logLevels.DEBUG,
+      logLevels.TRACE,
     ];
     if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
       return;
@@ -181,7 +181,7 @@ export class Logger {
 
     if (this.logFormat === "console") {
       return console.log(
-        blue(`[LEVEL::${LOG_LEVELS.INFO.toUpperCase()}] `),
+        blue(`[LEVEL::${logLevels.INFO.toUpperCase()}] `),
         this.prettyPrefix,
         input,
         ...optionalParams
@@ -190,7 +190,7 @@ export class Logger {
 
     return console.log({
       input,
-      level: LOG_LEVELS.INFO,
+      level: logLevels.INFO,
       scope: this.prefix,
       ...optionalParams,
     });
@@ -205,11 +205,11 @@ export class Logger {
    */
   warn(input: unknown, ...optionalParams: unknown[]) {
     const acceptedLogLevels = [
-      LOG_LEVELS.WARN,
-      LOG_LEVELS.INFO,
-      LOG_LEVELS.ERROR,
-      LOG_LEVELS.DEBUG,
-      LOG_LEVELS.TRACE,
+      logLevels.WARN,
+      logLevels.INFO,
+      logLevels.ERROR,
+      logLevels.DEBUG,
+      logLevels.TRACE,
     ];
     if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
       return;
@@ -217,7 +217,7 @@ export class Logger {
 
     if (this.logFormat === "console") {
       return console.log(
-        yellow(`[LEVEL::${LOG_LEVELS.WARN.toUpperCase()}] `),
+        yellow(`[LEVEL::${logLevels.WARN.toUpperCase()}] `),
         this.prettyPrefix,
         input,
         ...optionalParams
@@ -226,7 +226,7 @@ export class Logger {
 
     return console.log({
       input,
-      level: LOG_LEVELS.WARN,
+      level: logLevels.WARN,
       scope: this.prefix,
       ...optionalParams,
     });
@@ -242,11 +242,11 @@ export class Logger {
   // biome-ignore lint/suspicious/noExplicitAny: This is a logger
   error(err: any, ...optionalParams: unknown[]) {
     const acceptedLogLevels = [
-      LOG_LEVELS.ERROR,
-      LOG_LEVELS.INFO,
-      LOG_LEVELS.WARN,
-      LOG_LEVELS.DEBUG,
-      LOG_LEVELS.TRACE,
+      logLevels.ERROR,
+      logLevels.INFO,
+      logLevels.WARN,
+      logLevels.DEBUG,
+      logLevels.TRACE,
     ];
     if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
       return;
@@ -254,7 +254,7 @@ export class Logger {
 
     if (this.logFormat === "console") {
       return console.error(
-        red(`[LEVEL::${LOG_LEVELS.ERROR.toUpperCase()}]`),
+        red(`[LEVEL::${logLevels.ERROR.toUpperCase()}]`),
         this.prettyPrefix,
         err,
         ...optionalParams
@@ -262,7 +262,7 @@ export class Logger {
     }
 
     return console.error({
-      level: LOG_LEVELS.ERROR,
+      level: logLevels.ERROR,
       message: err,
       scope: this.prefix,
       ...optionalParams,
@@ -277,14 +277,15 @@ export class Logger {
    * Otherwise, it will be logged as a JSON object with the level set to 'debug'.
    */
   debug(input: unknown, ...optionalParams: unknown[]) {
-    const acceptedLogLevels = [LOG_LEVELS.DEBUG, LOG_LEVELS.TRACE];
-    if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
+    const acceptedLogLevels = [logLevels.DEBUG, logLevels.TRACE];
+    // @ts-expect-error Completely normal we're catching this behaviour
+    if (!acceptedLogLevels.includes(this.logLevel)) {
       return;
     }
 
     if (this.logFormat === "console") {
       return console.log(
-        cyan(`[LEVEL::${LOG_LEVELS.DEBUG.toUpperCase()}]`),
+        cyan(`[LEVEL::${logLevels.DEBUG.toUpperCase()}]`),
         this.prettyPrefix,
         input,
         ...optionalParams
@@ -293,7 +294,7 @@ export class Logger {
 
     return console.log({
       input,
-      level: LOG_LEVELS.DEBUG,
+      level: logLevels.DEBUG,
       scope: this.prefix,
       ...optionalParams,
     });
@@ -308,8 +309,9 @@ export class Logger {
    */
 
   trace(input: unknown, ...optionalParams: unknown[]) {
-    const acceptedLogLevels = [LOG_LEVELS.TRACE];
-    if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
+    const acceptedLogLevels = [logLevels.TRACE];
+    // @ts-expect-error Completely normal we're catching this behaviour
+    if (!acceptedLogLevels.includes(this.logLevel)) {
       return;
     }
 
@@ -317,7 +319,7 @@ export class Logger {
       console.log();
       return console.log(
         this.prettyPrefix,
-        white(`[LEVEL::${LOG_LEVELS.TRACE.toUpperCase()}]`),
+        white(`[LEVEL::${logLevels.TRACE.toUpperCase()}]`),
         input,
         ...optionalParams
       );
@@ -325,7 +327,7 @@ export class Logger {
 
     return console.log({
       input,
-      level: LOG_LEVELS.TRACE,
+      level: logLevels.TRACE,
       scope: this.prefix,
       ...optionalParams,
     });

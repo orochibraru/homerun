@@ -49,11 +49,11 @@ export async function deployService(
   await svc.update({ currentStatus: "pulling" });
 
   try {
-    let digest: string | undefined;
+    let digest: string | null = "";
     let { image, tag } = svc;
 
     const remote = await RemoteHostDTO.connectionFor(svc, userId);
-    // Volumes are host-local — a bind-mount source on this host has no
+    // Volumes are host-local, a bind-mount source on this host has no
     // meaning on a remote daemon, so skip attaching them there rather
     // than silently create an empty/wrong mount on the remote side.
     const mounts = remote ? [] : await ServiceVolumeDTO.listForService(svc.id);
@@ -62,7 +62,7 @@ export async function deployService(
       if (!svc.gitUrl) {
         throw new Error("No git repository URL configured.");
       }
-      // A fresh tag per build — same "never reuse a name across deploys"
+      // A fresh tag per build, same "never reuse a name across deploys"
       // precedent as container names (service.ts's containerName()), so
       // a build failure never leaves a stale image masquerading as current.
       image = `localrun-build-${svc.slug}`;
@@ -82,7 +82,7 @@ export async function deployService(
       if (!result.success) {
         throw new Error(result.error ?? "Build failed.");
       }
-      // Persist the resolved tag immediately — createAndStartContainer
+      // Persist the resolved tag immediately, createAndStartContainer
       // below, and any future redeploy that reads svc.image/tag before
       // this function returns, must see the image that actually exists.
       await svc.update({ image, tag });
@@ -137,6 +137,7 @@ export async function deployService(
       currentStatus: "running",
       desiredState: "running",
     });
+
     await dep.update({
       containerId,
       finishedAt: new Date(),

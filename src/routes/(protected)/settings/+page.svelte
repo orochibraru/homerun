@@ -58,7 +58,7 @@
     };
   }
 
-  let oauthRows = $state<OauthRow[]>(
+  let oauthRows = $derived<OauthRow[]>(
     data.settings.oauthProviders.length > 0
       ? data.settings.oauthProviders.map(toRow)
       : []
@@ -276,7 +276,8 @@
             class="font-mono"
             id="traefikDynamicConfigDir"
             name="traefikDynamicConfigDir"
-            placeholder={data.envDefaults.traefikDynamicConfigDir ?? "unset — custom SSL is a no-op"}
+            placeholder={data.envDefaults.traefikDynamicConfigDir ??
+              "unset — custom SSL is a no-op"}
             type="text"
             value={data.settings.traefikDynamicConfigDir ?? ""}
           />
@@ -353,7 +354,9 @@
               class={highlightClass("smtpPassword")}
               id="smtpPassword"
               name="smtpPassword"
-              placeholder={data.settings.smtpPasswordEnc ? "Leave blank to keep current" : "Password"}
+              placeholder={data.settings.smtpPasswordEnc
+                ? "Leave blank to keep current"
+                : "Password"}
               type="password"
             />
           </div>
@@ -447,7 +450,9 @@
                 <Input
                   id="oauthClientSecret-{i}"
                   name="oauthClientSecret"
-                  placeholder={row.hasSecret ? "Leave blank to keep current" : "Client secret"}
+                  placeholder={row.hasSecret
+                    ? "Leave blank to keep current"
+                    : "Client secret"}
                   type="password"
                   bind:value={row.clientSecret}
                 />

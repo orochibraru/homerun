@@ -81,7 +81,7 @@ export const POST = async ({ request, locals }) => {
     cpuLimit: input.cpuLimit || null,
     dnsResolvable: input.dnsResolvable,
     envVars: input.envVars,
-    image: input.image,
+    image: input.image ?? "",
     memoryLimitMb: input.memoryLimitMb ?? null,
     name: input.name,
     projectId,
@@ -92,7 +92,7 @@ export const POST = async ({ request, locals }) => {
     registryUsername: input.registryUsername || null,
     restartPolicy: input.restartPolicy,
     slug: input.slug,
-    tag: input.tag,
+    tag: input.tag ?? "",
     userId: locals.user.id,
   });
 

@@ -44,9 +44,7 @@
   import { MediaQuery } from "svelte/reactivity";
   import { enhance } from "$app/forms";
   import { Button, buttonVariants } from "$lib/components/ui/button";
-  // biome-ignore lint/performance/noNamespaceImport: shadcn-svelte's compound-component pattern (Dialog.Root/.Content/.Header/...) needs the whole namespace.
-  import * as Dialog from "$lib/components/ui/dialog/index";
-  // biome-ignore lint/performance/noNamespaceImport: same as Dialog above.
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
   import * as Drawer from "$lib/components/ui/drawer/index";
   import { cn } from "$lib/utils";
 
@@ -132,7 +130,8 @@
       </fieldset>
     </form>
   {:else}
-    <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: submit-on-Enter for the non-form (no <form> element) variant of this dialog — no semantic element covers "arbitrary content container that submits on Enter". -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: custom dialog -->
     <fieldset
       class="flex flex-col gap-4"
       disabled={loading}

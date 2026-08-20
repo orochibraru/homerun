@@ -57,10 +57,13 @@
   ): Promise<string | undefined> {
     try {
       const res = await fetch(
-        resolve("/services/[serviceId]/deployments/[deploymentId]/progress", {
-          deploymentId,
-          serviceId: svc.id,
-        })
+        resolve(
+          "/(protected)/services/[serviceId]/deployments/[deploymentId]/progress",
+          {
+            deploymentId,
+            serviceId: svc.id,
+          }
+        )
       );
       if (res.ok) {
         const body = (await res.json()) as { log: string; status: string };
