@@ -1,0 +1,46 @@
+name: Binaries
+description: Builds the agent/cli/installer standalone binaries, one arch per matrix leg, natively on a runner of that arch
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Binaries
+    # Same shape as docker.yaml's build job : native per-arch self-hosted
+    # runners, not a single host cross-compiling both targets (that was the
+    # actual bug this workflow replaces).
+    runs-on: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      # Unlike code_quality/release's installs, this one can't use
+      # --ignore-scripts : docker-modem -> ssh2 -> cpu-features has a real
+      # node-gyp postinstall build producing cpufeatures.node, and skipping
+      # it left Bun's --compile bundler unable to resolve that require() when
+      # building the agent binary (dockerode's SSH remote-host support pulls
+      # this chain in).
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build binaries
+        run: bun run scripts/build-packages.ts ${{ matrix.arch }}
+
+      - name: Upload binaries
+        uses: orochibraru/upload-artifact@v8
+        with:
+          name: binaries-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 1

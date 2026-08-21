@@ -8,6 +8,8 @@ concurrency:
 
 env:
   TZ: Europe/Paris
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CI: true
 
 permissions:
   contents: read
@@ -17,6 +19,12 @@ jobs:
   code_quality:
     name: Code Quality
     uses: ./.github/workflows/code_quality.yaml
+
+  binaries:
+    name: Binaries
+    uses: ./.github/workflows/binaries.yaml
+    needs:
+      - code_quality
 
   build:
     name: Docker Build
@@ -30,3 +38,20 @@ jobs:
       registry_username: orochibraru
     secrets:
       registry_password: ${{ secrets.PACKAGES_TOKEN }}
+
+  gate:
+    name: CI Gate
+    if: always()
+    needs: [code_quality, binaries, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          results=("${{ needs.code_quality.result }}" "${{ needs.binaries.result }}" "${{ needs.build.result }}")
+          for result in "${results[@]}"; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "::error::One or more jobs failed or were cancelled"
+              exit 1
+            fi
+          done
+          echo "All checks passed (skipped jobs are OK)"
