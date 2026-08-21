@@ -72,11 +72,18 @@
 		};
 	}
 
-	let oauthRows = $derived<OauthRow[]>(
-		data.settings.oauthProviders.length > 0
-			? data.settings.oauthProviders.map(toRow)
-			: [],
-	);
+	// $state, not $derived: this array is pushed/spliced into directly below
+	// (addOauthRow/removeOauthRow) and its rows are bound two-way via
+	// bind:value — a $derived value is read-only, so mutating it doesn't
+	// stick (it's still driven by its source expression), which is why
+	// "Add provider" previously did nothing observable. Seeded once at
+	// component init; re-synced below whenever `data` actually changes
+	// (a real save, or navigating here again) rather than on every
+	// keystroke, so in-progress edits aren't clobbered mid-typing.
+	let oauthRows = $state<OauthRow[]>(data.settings.oauthProviders.map(toRow));
+	$effect(() => {
+		oauthRows = data.settings.oauthProviders.map(toRow);
+	});
 
 	function addOauthRow() {
 		oauthRows.push({

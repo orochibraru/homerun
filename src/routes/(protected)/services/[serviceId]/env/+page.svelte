@@ -17,14 +17,24 @@
 		key: string;
 		value: string;
 	}
-	let envRows = $derived<EnvRow[]>(
-		Object.entries(svc.envVars ?? {}).length > 0
-			? Object.entries(svc.envVars ?? {}).map(([key, value]) => ({
-					key,
-					value,
-				}))
-			: [{ key: "", value: "" }],
-	);
+	function envRowsFromService(): EnvRow[] {
+		const entries = Object.entries(svc.envVars ?? {}).map(([key, value]) => ({
+			key,
+			value,
+		}));
+		return entries.length > 0 ? entries : [{ key: "", value: "" }];
+	}
+
+	// $state, not $derived: pushed/spliced into directly below
+	// (addRow/removeRow) — a $derived value is read-only, so mutating it
+	// doesn't reliably stick. Seeded once at init; re-synced whenever `svc`
+	// changes (a saved env-var update reloads the page via use:enhance's
+	// default invalidateAll, and the layout's own status-sync can also
+	// refresh `data.service` on revisit).
+	let envRows = $state<EnvRow[]>(envRowsFromService());
+	$effect(() => {
+		envRows = envRowsFromService();
+	});
 	let submitting = $state(false);
 
 	function addRow() {

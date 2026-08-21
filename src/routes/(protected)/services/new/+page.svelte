@@ -151,17 +151,26 @@
 		key: string;
 		value: string;
 	}
-	const templateEnvRows = $derived(
-		data.template
+	function envRowsFromTemplate(): EnvRow[] {
+		const entries = data.template
 			? Object.entries(data.template.envVars ?? {}).map(([key, value]) => ({
 					key,
 					value,
 				}))
-			: [],
-	);
-	let envRows = $derived<EnvRow[]>(
-		templateEnvRows.length > 0 ? templateEnvRows : [{ key: "", value: "" }],
-	);
+			: [];
+		return entries.length > 0 ? entries : [{ key: "", value: "" }];
+	}
+
+	// $state, not $derived: pushed/spliced into directly below
+	// (addEnvRow/removeEnvRow) — a $derived value is read-only, so mutating
+	// it doesn't reliably stick (see the same fix in settings/+page.svelte
+	// for the OAuth-providers form this pattern was originally copied from).
+	// Seeded once at init; re-synced if `data.template` changes (picking a
+	// different template mid-form via the template-context query param).
+	let envRows = $state<EnvRow[]>(envRowsFromTemplate());
+	$effect(() => {
+		envRows = envRowsFromTemplate();
+	});
 
 	function addEnvRow() {
 		envRows.push({ key: "", value: "" });

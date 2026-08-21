@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		BookOpen,
 		ChevronRight,
 		FolderKanban,
 		GitBranch,
@@ -76,6 +77,13 @@
 			href: resolve("/git-providers"),
 			icon: GitBranch,
 			label: "Git Providers",
+		},
+		{
+			adminOnly: false,
+			exact: false,
+			href: resolve("/api-docs"),
+			icon: BookOpen,
+			label: "API Docs",
 		},
 		{
 			adminOnly: true,

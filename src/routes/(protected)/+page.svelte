@@ -26,7 +26,7 @@
 		title.set("Dashboard");
 
 		const interval = setInterval(async () => {
-			const res = await fetch(resolve("/system-stats"));
+			const res = await fetch(resolve("/api/v1/system-stats"));
 			if (res.ok) {
 				systemStats = await res.json();
 			}

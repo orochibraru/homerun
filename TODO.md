@@ -1,24 +1,141 @@
 # TODO
 
-- [x] Migrate classes using standard methods to real classes, perfect example is src/lib/services/docker.service.ts. Instead of importing methods it should have a BaseDockerService that's extended to other classes like DockerNetwork, DockerImage, DockerTerminal etc... and all merge in the DockerService class. Same for all other classes that import standard methods, the goal of this app is to use real OOP. Need to migrate other services to classes with OOP like the src/lib/services/cron.service.ts service. Note in the Claude repo's settings that everything should be oop
-- [ ] If we don't already, we need to use Docker Swarm
-- [ ] In the UI we need a page dedicated to have a swagger UI showing the openapi
-- [ ] We can't register an oauth provider.
-- [ ] Build the CLI against the openapi server using openapi-fetch
-- [ ] Some routes like src/routes/(protected)/system-stats should be in the API, not just there standing in the routes dir where only pages should be.
-- [ ] Having git providers is nice but we should then be able to:
-    - [ ] List repositories so users to have to paste in a URL. The user needs to be able to choose from either a configured git provider (auto list repos so they can choose one) or just paste in a URL
-    - [ ] Support remote hosts as build servers to prevent overloading the main server when building
-    - [ ] Build cache with a registry: add a new page (show in sidebar) to support docker registries we'll use for caching
-- [ ] On the UI side we need to add color to find what we need to easily.
-- [ ] Still on the UI subject we need to have reusable components for listing entities in two ways: cards or list
-- [ ] For SSL, we need to store a new settings: the user's email for ACME cert generation. We should also support custom certs.
-- [ ] We need to support notifications. A bell on the header to view them, then any event like a new deployment, an auto update, a start, a stop, a new service, deploy failures, app runtime failures should be notified
-- [ ] We need a new page to support S3 destinations for storage (for backups mostly)
-- [ ] We need a cron scheduler page
-- [ ] We need a dedicated page for backups to configure them and view the logs to see at which time they ran and if they succeded. Any scheduled backup should appear on the cron page
-- [ ] Since we're adding a lot of new pages we need to have submenus in the menu and proper categorization
-- [ ] We need to setup release automation with semantic release to start versioning the app, for now 0.0.1 version we'll move slow
-- [ ] We need a better readme that showcases the features and prints a curl command for the setup. The command should be in the latest release comments and the installer (and homerun agent) in each release artifact
-- [ ] We need a docs website (ideally in sveltekit as well)
-- [ ]
+Open follow-up items, grouped by area. Checked items are done; see CLAUDE.md for
+the architectural detail behind anything already built.
+
+## Architecture
+
+- [x] **Migrate static-method service classes to real OOP.** Reference example:
+      `src/lib/services/docker.service.ts` : instead of importing loose functions, use
+      a `BaseDockerService` extended/mixed into per-concern classes (`DockerNetwork`,
+      `DockerImage`, `DockerTerminal`, etc.), merged into one `DockerService`. Apply
+      the same treatment to every other service that currently just imports standard
+      methods : `src/lib/services/cron.service.ts` was the other flagged example.
+      Goal: real OOP throughout, not static barrels. (Noted in the repo's Claude
+      settings as a standing convention : see CLAUDE.md's OOP section.)
+
+## Orchestration
+
+- [ ] Evaluate whether we need Docker Swarm (currently single-host, local socket
+      only : confirm if/how this fits before building toward it). **Not touched
+      this pass** — this is a real architecture decision, not a mechanical task:
+      Swarm would mean rethinking the single-host/local-socket assumption this
+      whole app is built on (every DTO, the deploy pipeline, Traefik's docker
+      provider config), and would also partially compete with the Homerun
+      Agent primitive already built (`agent/`, see below) as "the" answer to
+      multi-host. Needs a real design pass/your call on direction before code,
+      not something to guess at unsupervised.
+
+## API & Docs
+
+- [x] Add a UI page with a Swagger/OpenAPI UI rendering `/api/v1/openapi.json`. —
+      new `(protected)/api-docs/` page (own nav item), `swagger-ui-dist` as a real
+      npm dependency (not a CDN script — self-hosted app, docs shouldn't need
+      outbound internet), dynamically imported client-side only (SSR would crash
+      on `window`/`document` otherwise). See CLAUDE.md's "API Docs page" section
+      for what's verified (server-render checked live; no browser/e2e harness
+      exists in this repo anymore to verify the client-side widget itself — see
+      that section for why).
+- [x] Move page-only routes that are actually API endpoints into `src/routes/api/v1/`
+      : e.g. `src/routes/(protected)/system-stats` shouldn't live under the pages tree. —
+      moved to `api/v1/system-stats/`, dashboard's poll updated, added to the
+      OpenAPI registry, verified live (old path 404s, new path 401s-when-unauth
+      the same as every other API route).
+- [x] Build the CLI against the OpenAPI server using `openapi-fetch`. — already
+      done in an earlier pass (`cli/`, see CLAUDE.md's "Homerun CLI" section) ;
+      this item was re-added to this list before that was known/visible here.
+      Regenerated `cli/src/generated/openapi-types.ts` this pass too, since the
+      system-stats move above changed the API surface it's typed against.
+
+## Auth
+
+- [x] Fix OAuth provider registration : it currently doesn't work
+      ("We can't register an oauth provider"). — **real, tested bug, found and
+      fixed**: the Settings page's OAuth Providers row list (and, it turns out,
+      two other forms with the identical shape — `services/new`'s env-var rows
+      and the service Env Vars tab) declared their editable array with
+      `$derived(...)` and then mutated it directly via `.push()`/`.splice()` — a
+      `$derived` value is computed from its dependencies, not a mutable store,
+      so "Add provider" did nothing observable. Fixed all three the same way:
+      `$state` seeded once, resynced via `$effect` only when the underlying data
+      actually changes (not every keystroke). `templates/new/+page.svelte`'s
+      already-correct `$state` version of the same pattern was the proof this
+      fix is right, not a guess — see CLAUDE.md's "The `$derived` + push/splice
+      anti-pattern" section.
+
+## Git providers & builds
+
+- [ ] Let users pick a repo instead of pasting a URL: list repositories from a
+      configured git provider, with "paste a URL" as a fallback for when no provider
+      is configured.
+- [ ] Support remote hosts as dedicated build servers, so builds don't load the
+      main server.
+- [ ] Add build-cache support via a Docker registry : new sidebar page to
+      configure registries used for caching.
+
+## UI / UX
+
+- [ ] Add color coding throughout the UI so things are easier to visually locate.
+- [ ] Build reusable components for listing entities two ways: card view and
+      list view.
+- [ ] Add submenus / proper categorization to the sidebar nav : needed once the
+      page count below grows.
+
+## SSL / Certificates
+
+- [ ] Add an instance setting for the ACME account email (needed for cert
+      generation), alongside the existing custom-cert support.
+
+## Notifications
+
+- [ ] Add a notification system: a bell icon in the header with a feed of
+      events : new deployment, auto-update, start, stop, new service, deploy
+      failures, app runtime failures.
+
+## Storage & backups
+
+- [ ] Add a page to configure S3 destinations for storage (mainly for backups).
+- [ ] Add a dedicated backups page: configure per-volume backups and view a
+      run log (when they ran, success/failure). Scheduled backups should also
+      surface on the cron page below.
+
+## Scheduling
+
+- [ ] Add a cron scheduler page (surfacing cron-redeploy, backup, and autoscale
+      scheduler activity in one place).
+
+## Release & documentation
+
+- [x] Set up release automation with semantic-release to start versioning the
+      app (starting at 0.0.1, moving slowly). — `.releaserc.json` +
+      `scripts/bump-version.ts`/`scripts/build-release-binaries.ts` + a new
+      `release` job in `.github/workflows/publish.yaml`, conventional-commit
+      driven (this repo's commits already use `feat:`/`fix:`/`chore:`). Uses
+      `@saithodev/semantic-release-gitea`, not the official GitHub plugin —
+      this repo's real remote is a self-hosted Gitea, not GitHub, even though
+      workflows live under `.github/workflows/`. Attaches all six
+      agent/installer/cli Linux binaries (x64+arm64) as release assets,
+      directly covering the "installer (and Homerun Agent) in each release
+      artifact" half of the item below. See CLAUDE.md's "Release automation"
+      section for exactly what's verified (both scripts run for real locally;
+      `semantic-release --dry-run` confirmed the whole config/plugin chain
+      resolves and reaches the real Gitea API before failing on a
+      deliberately-fake token) vs. not (an actual CI release run, and whether
+      the reused `PACKAGES_TOKEN` has release-API scope, not just registry-push).
+- [ ] Rewrite the README to showcase features and print a ready-to-run curl
+      setup command. That command should live in the latest release's notes, with
+      the installer and Homerun Agent attached as artifacts on each release. —
+      **partially unblocked**: the release job above now produces the artifacts
+      and could append notes with the curl command, but wiring the actual
+      curl-command-into-release-notes step, and the README rewrite itself,
+      wasn't done this pass — do this after confirming the release job actually
+      produces a real release once, so the README's claims are true rather than
+      aspirational.
+- [ ] Build a docs website (ideally SvelteKit, matching the main app's stack). —
+      not started; a whole separate project, out of scope for this pass
+      alongside everything else above.
+
+## Environment variables
+
+- [ ] Support pasting a `.env` file into the Environment field, auto-populating
+      one env var row per line.

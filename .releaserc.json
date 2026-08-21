@@ -1,0 +1,62 @@
+{
+	"branches": ["main"],
+	"plugins": [
+		["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
+		[
+			"@semantic-release/release-notes-generator",
+			{ "preset": "conventionalcommits" }
+		],
+		["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
+		[
+			"@semantic-release/exec",
+			{
+				"prepareCmd": "bun scripts/bump-version.ts ${nextRelease.version} && bun scripts/build-release-binaries.ts"
+			}
+		],
+		[
+			"@semantic-release/git",
+			{
+				"assets": [
+					"package.json",
+					"agent/package.json",
+					"installer/package.json",
+					"cli/package.json",
+					"CHANGELOG.md"
+				],
+				"message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+			}
+		],
+		[
+			"@saithodev/semantic-release-gitea",
+			{
+				"assets": [
+					{
+						"label": "homerun-agent (linux/x64)",
+						"path": "agent/dist/homerun-agent-linux-x64"
+					},
+					{
+						"label": "homerun-agent (linux/arm64)",
+						"path": "agent/dist/homerun-agent-linux-arm64"
+					},
+					{
+						"label": "homerun-install (linux/x64)",
+						"path": "installer/dist/homerun-install-linux-x64"
+					},
+					{
+						"label": "homerun-install (linux/arm64)",
+						"path": "installer/dist/homerun-install-linux-arm64"
+					},
+					{
+						"label": "homerun CLI (linux/x64)",
+						"path": "cli/dist/homerun-linux-x64"
+					},
+					{
+						"label": "homerun CLI (linux/arm64)",
+						"path": "cli/dist/homerun-linux-arm64"
+					}
+				]
+			}
+		]
+	],
+	"tagFormat": "v${version}"
+}
