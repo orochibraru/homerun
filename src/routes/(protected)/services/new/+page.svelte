@@ -162,7 +162,7 @@
 	}
 
 	// $state, not $derived: pushed/spliced into directly below
-	// (addEnvRow/removeEnvRow) — a $derived value is read-only, so mutating
+	// (addEnvRow/removeEnvRow), a $derived value is read-only, so mutating
 	// it doesn't reliably stick (see the same fix in settings/+page.svelte
 	// for the OAuth-providers form this pattern was originally copied from).
 	// Seeded once at init; re-synced if `data.template` changes (picking a
@@ -214,19 +214,23 @@
     {#each STEPS as step, i}
       {@const StepIcon = step.icon}
       <button
-        class="flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all {stepButtonClass(
+        class="
+          flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all {stepButtonClass(
           i,
-        )}"
+          )}
+        "
         onclick={() => {
           currentStep = i;
         }}
         type="button"
       >
         <div
-          class="flex size-5 shrink-0 items-center justify-center rounded-full text-xs {i <=
-          currentStep
+          class="
+            flex size-5 shrink-0 items-center justify-center rounded-full text-xs {i <=
+            currentStep
             ? 'bg-accent text-white'
-            : 'bg-surface-2 text-text-subtle'}"
+            : 'bg-surface-2 text-text-subtle'}
+          "
         >
           {#if i < currentStep}
             <Check class="size-3" />
@@ -234,9 +238,9 @@
             {i + 1}
           {/if}
         </div>
-        <span class="hidden sm:inline"
-          ><StepIcon class="mr-1 inline size-3.5" />{step.label}</span
-        >
+        <span class="hidden sm:inline"><StepIcon
+            class="mr-1 inline size-3.5"
+          />{step.label}</span>
       </button>
     {/each}
   </div>
@@ -271,18 +275,14 @@
     {/if}
 
     {#if data.template}
-      <div
-        class="bg-accent/10 text-accent rounded-xl px-4 py-3 text-sm font-medium"
-      >
+      <div class="bg-accent/10 text-accent rounded-xl px-4 py-3 text-sm font-medium">
         Starting from the {data.template.name} template : review everything
         below (especially any placeholder passwords) before deploying.
       </div>
     {/if}
 
     {#if errorMessages.length > 0}
-      <div
-        class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
-      >
+      <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
         <p class="font-semibold">Couldn't create the service:</p>
         <ul class="mt-1 ml-4 list-disc">
           {#each errorMessages as msg}
@@ -298,9 +298,7 @@
       class:hidden={currentStep !== 0}
     >
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div
-          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-        >
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <Server class="size-4" />
         </div>
         <div>
@@ -345,9 +343,9 @@
           />
           <p class="mt-1 text-xs text-text-subtle">
             Routed at
-            <span class="text-accent"
-              >{slug || "your-slug"}.{data.baseDomain}</span
-            >
+            <span class="text-accent">{slug || "your-slug"}.{
+                data.baseDomain
+              }</span>
           </p>
           {#if errors?.slug}
             <p class={errorClass}>{errors.slug[0]}</p>
@@ -358,10 +356,12 @@
           <div class={label}>Deploy from</div>
           <div class="flex gap-2">
             <button
-              class="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
-              'image'
+              class="
+                flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+                'image'
                 ? 'border-accent bg-accent-light text-accent'
-                : 'border-border text-text-muted hover:bg-surface-2'}"
+                : 'border-border text-text-muted hover:bg-surface-2'}
+              "
               onclick={() => {
                 buildSource = "image";
               }}
@@ -371,10 +371,12 @@
               Docker image
             </button>
             <button
-              class="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
-              'git'
+              class="
+                flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+                'git'
                 ? 'border-accent bg-accent-light text-accent'
-                : 'border-border text-text-muted hover:bg-surface-2'}"
+                : 'border-border text-text-muted hover:bg-surface-2'}
+              "
               onclick={() => {
                 buildSource = "git";
               }}
@@ -420,9 +422,7 @@
           </div>
 
           {#if imageCheck?.checked && !imageCheck.exists}
-            <div
-              class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
-            >
+            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
               <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
               <span>
                 <strong>{image}:{tag}</strong>
@@ -467,8 +467,7 @@
             </div>
             <div>
               <label class={label} for="gitDockerfilePath"
-                >Dockerfile path</label
-              >
+              >Dockerfile path</label>
               <Input
                 id="gitDockerfilePath"
                 name="gitDockerfilePath"
@@ -506,9 +505,7 @@
         }}
         variant="ghost"
       >
-        <div
-          class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400"
-        >
+        <div class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
           <Lock class="size-4" />
         </div>
         <div class="flex-1 text-left">
@@ -518,9 +515,11 @@
           </p>
         </div>
         <ChevronDown
-          class="size-4 text-text-muted transition-transform {showRegistry
+          class="
+            size-4 text-text-muted transition-transform {showRegistry
             ? 'rotate-180'
-            : ''}"
+            : ''}
+          "
         />
       </Button>
 
@@ -568,9 +567,7 @@
       class:hidden={currentStep !== 1}
     >
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div
-          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-        >
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <Network class="size-4" />
         </div>
         <div>
@@ -668,9 +665,7 @@
       class:hidden={currentStep !== 3}
     >
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div
-          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-        >
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <Cpu class="size-4" />
         </div>
         <h2 class="text-sm font-semibold text-text">Compute</h2>

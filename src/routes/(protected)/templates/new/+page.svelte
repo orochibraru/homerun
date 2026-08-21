@@ -78,9 +78,7 @@
   >
     <section class="rounded-2xl border border-border bg-surface">
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div
-          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-        >
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <LayoutGrid class="size-4" />
         </div>
         <h2 class="text-sm font-semibold text-text">Basics</h2>

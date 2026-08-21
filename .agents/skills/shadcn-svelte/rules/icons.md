@@ -12,8 +12,8 @@ Add `data-icon="inline-start"` (prefix) or `data-icon="inline-end"` (suffix) to 
 
 ```svelte
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import SearchIcon from "@lucide/svelte/icons/search";
+import { Button } from "$lib/components/ui/button";
+import SearchIcon from "@lucide/svelte/icons/search";
 </script>
 
 <Button>
@@ -26,9 +26,9 @@ Add `data-icon="inline-start"` (prefix) or `data-icon="inline-end"` (suffix) to 
 
 ```svelte
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import SearchIcon from "@lucide/svelte/icons/search";
-  import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+import { Button } from "$lib/components/ui/button";
+import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+import SearchIcon from "@lucide/svelte/icons/search";
 </script>
 
 <Button>
@@ -46,14 +46,14 @@ Add `data-icon="inline-start"` (prefix) or `data-icon="inline-end"` (suffix) to 
 
 ## No sizing classes on icons inside components
 
-Components handle icon sizing via CSS. Don't add `size-4`, `w-4 h-4`, or other sizing classes to icons inside `<Button>`, `DropdownMenu.Item`, `Alert.Root`, `Sidebar.*`, or other shadcn-svelte components — unless the user explicitly asks for custom icon sizes.
+Components handle icon sizing via CSS. Don't add `size-4`, `w-4 h-4`, or other sizing classes to icons inside `<Button>`, `DropdownMenu.Item`, `Alert.Root`, `Sidebar.*`, or other shadcn-svelte components, unless the user explicitly asks for custom icon sizes.
 
 **Incorrect:**
 
 ```svelte
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import SearchIcon from "@lucide/svelte/icons/search";
+import { Button } from "$lib/components/ui/button";
+import SearchIcon from "@lucide/svelte/icons/search";
 </script>
 
 <Button>
@@ -66,8 +66,8 @@ Components handle icon sizing via CSS. Don't add `size-4`, `w-4 h-4`, or other s
 
 ```svelte
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import SearchIcon from "@lucide/svelte/icons/search";
+import { Button } from "$lib/components/ui/button";
+import SearchIcon from "@lucide/svelte/icons/search";
 </script>
 
 <Button>
@@ -76,7 +76,7 @@ Components handle icon sizing via CSS. Don't add `size-4`, `w-4 h-4`, or other s
 </Button>
 ```
 
-The same applies to icons inside `DropdownMenu.Item`, sidebar items, and other menu rows — no extra sizing classes on the icon component.
+The same applies to icons inside `DropdownMenu.Item`, sidebar items, and other menu rows, no extra sizing classes on the icon component.
 
 ---
 
@@ -87,7 +87,7 @@ Use a component reference, not a string key to a lookup map.
 **Incorrect:**
 
 ```svelte
-<!-- String key lookup — avoid -->
+<!-- String key lookup, avoid -->
 <DynamicIcon name="check" />
 ```
 
@@ -95,10 +95,10 @@ Use a component reference, not a string key to a lookup map.
 
 ```svelte
 <script lang="ts">
-  import type { Component } from "svelte";
-  import CheckIcon from "@lucide/svelte/icons/check";
+import CheckIcon from "@lucide/svelte/icons/check";
+import type { Component } from "svelte";
 
-  let { Icon }: { Icon: Component } = $props();
+let { Icon }: { Icon: Component } = $props();
 </script>
 
 <Icon />

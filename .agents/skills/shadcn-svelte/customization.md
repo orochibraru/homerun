@@ -19,7 +19,7 @@ Components reference semantic CSS variable tokens. Change the variables to chang
 
 1. CSS variables defined in `:root` (light) and `.dark` (dark mode).
 2. Tailwind maps them to utilities: `bg-primary`, `text-muted-foreground`, etc.
-3. Components use these utilities — changing a variable changes all components that reference it.
+3. Components use these utilities, changing a variable changes all components that reference it.
 
 ---
 
@@ -49,12 +49,12 @@ Colors use OKLCH: `--primary: oklch(0.205 0 0)` where values are lightness (0–
 
 ## Dark Mode
 
-Class-based toggle via `.dark` on the root element. In SvelteKit, use [mode-watcher](https://github.com/svecosystem/mode-watcher) (see [Dark mode — Svelte](https://shadcn-svelte.com/docs/dark-mode/svelte)):
+Class-based toggle via `.dark` on the root element. In SvelteKit, use [mode-watcher](https://github.com/svecosystem/mode-watcher) (see [Dark mode, Svelte](https://shadcn-svelte.com/docs/dark-mode/svelte)):
 
 ```svelte
 <script lang="ts">
-  import { ModeWatcher } from "mode-watcher";
-  let { children } = $props();
+import { ModeWatcher } from "mode-watcher";
+let { children } = $props();
 </script>
 
 <ModeWatcher />
@@ -141,7 +141,7 @@ Prefer these approaches in order:
 
 ```svelte
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
+import { Button } from "$lib/components/ui/button";
 </script>
 
 <Button variant="outline" size="sm">Click</Button>
@@ -151,7 +151,7 @@ Prefer these approaches in order:
 
 ```svelte
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card";
+import * as Card from "$lib/components/ui/card";
 </script>
 
 <Card.Root class="mx-auto max-w-md">
@@ -174,9 +174,9 @@ Compose shadcn-svelte primitives into higher-level `.svelte` files:
 
 ```svelte
 <script lang="ts">
-  import * as AlertDialog from "$lib/components/ui/alert-dialog";
-  let { title, description, onConfirm, children } = $props();
-  let open = $state(false);
+import * as AlertDialog from "$lib/components/ui/alert-dialog";
+let { title, description, onConfirm, children } = $props();
+let open = $state(false);
 </script>
 
 <AlertDialog.Root bind:open>
@@ -194,8 +194,8 @@ Compose shadcn-svelte primitives into higher-level `.svelte` files:
         onclick={() => {
           onConfirm?.();
           open = false;
-        }}>Confirm</AlertDialog.Action
-      >
+        }}
+      >Confirm</AlertDialog.Action>
     </AlertDialog.Footer>
   </AlertDialog.Content>
 </AlertDialog.Root>

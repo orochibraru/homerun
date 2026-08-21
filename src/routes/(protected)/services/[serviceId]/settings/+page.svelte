@@ -74,9 +74,7 @@
 <div class="space-y-6">
   <section class="border-border bg-surface rounded-2xl border">
     <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-      <div
-        class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-      >
+      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Settings class="size-4" />
       </div>
       <div>
@@ -155,8 +153,8 @@
           class="text-accent underline"
           href={resolve("/(protected)/services/[serviceId]/networking", {
             serviceId: svc.id,
-          })}>Networking</a
-        >
+          })}
+        >Networking</a>
         tab.
       </p>
 
@@ -184,8 +182,8 @@
           class="text-accent underline"
           href={resolve("/(protected)/services/[serviceId]/compute", {
             serviceId: svc.id,
-          })}>Compute</a
-        >
+          })}
+        >Compute</a>
         tab.
       </p>
 
@@ -207,9 +205,7 @@
   <section class="border-border bg-surface rounded-2xl border">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
-        <div
-          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-        >
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <FolderKanban class="size-4" />
         </div>
         <div>
@@ -223,15 +219,14 @@
         action="?/moveProject"
         class="flex w-75 items-center gap-2"
         method="POST"
-        use:enhance={() =>
-          async ({ result, update }) => {
-            if (result.type === "success") {
-              toast.success("Moved.");
-            } else {
-              toast.error("Couldn't move the service.");
-            }
-            await update();
-          }}
+        use:enhance={() => async ({ result, update }) => {
+          if (result.type === "success") {
+            toast.success("Moved.");
+          } else {
+            toast.error("Couldn't move the service.");
+          }
+          await update();
+        }}
       >
         <SelectRoot name="projectId" type="single" bind:value={projectId}>
           <SelectTrigger class="w-full">
@@ -253,9 +248,7 @@
   <section class="border-border bg-surface rounded-2xl border">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
-        <div
-          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-        >
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <Server class="size-4" />
         </div>
         <div>
@@ -271,15 +264,14 @@
         action="?/moveRemoteHost"
         class="flex w-75 items-center gap-2"
         method="POST"
-        use:enhance={() =>
-          async ({ result, update }) => {
-            if (result.type === "success") {
-              toast.success("Saved.");
-            } else {
-              toast.error("Couldn't change the deploy target.");
-            }
-            await update();
-          }}
+        use:enhance={() => async ({ result, update }) => {
+          if (result.type === "success") {
+            toast.success("Saved.");
+          } else {
+            toast.error("Couldn't change the deploy target.");
+          }
+          await update();
+        }}
       >
         <SelectRoot name="remoteHostId" type="single" bind:value={remoteHostId}>
           <SelectTrigger class="w-full">
@@ -301,9 +293,7 @@
   <section class="border-border bg-surface rounded-2xl border">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
-        <div
-          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-        >
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <LayoutGrid class="size-4" />
         </div>
         <div>
@@ -316,15 +306,14 @@
       <form
         action="?/saveAsTemplate"
         method="POST"
-        use:enhance={() =>
-          async ({ result, update }) => {
-            if (result.type === "success") {
-              toast.success("Saved as a template.");
-            } else {
-              toast.error("Couldn't save the template.");
-            }
-            await update();
-          }}
+        use:enhance={() => async ({ result, update }) => {
+          if (result.type === "success") {
+            toast.success("Saved as a template.");
+          } else {
+            toast.error("Couldn't save the template.");
+          }
+          await update();
+        }}
       >
         <Button class="shrink-0" type="submit" variant="outline">
           Save as template
@@ -336,9 +325,7 @@
   <!-- ═══ Auto-redeploy (cron) ═══ -->
   <section class="border-border bg-surface rounded-2xl border p-5">
     <div class="mb-4 flex items-center gap-3">
-      <div
-        class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-      >
+      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Clock class="size-4" />
       </div>
       <div>
@@ -355,15 +342,14 @@
       action="?/updateCron"
       class="space-y-3"
       method="POST"
-      use:enhance={() =>
-        async ({ result, update }) => {
-          if (result.type === "success") {
-            toast.success("Saved.");
-          } else if (result.type === "failure") {
-            toast.error("Check the schedule for errors.");
-          }
-          await update();
-        }}
+      use:enhance={() => async ({ result, update }) => {
+        if (result.type === "success") {
+          toast.success("Saved.");
+        } else if (result.type === "failure") {
+          toast.error("Check the schedule for errors.");
+        }
+        await update();
+      }}
     >
       {#if form?.cronError}
         <p class={errorClass}>{form.cronError}</p>
@@ -399,15 +385,9 @@
   </section>
 
   <!-- ═══ Danger zone ═══ -->
-  <section
-    class="bg-surface rounded-2xl border border-red-200 dark:border-red-900/40"
-  >
-    <div
-      class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
-    >
-      <div
-        class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600"
-      >
+  <section class="bg-surface rounded-2xl border border-red-200 dark:border-red-900/40">
+    <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
+      <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <TriangleAlertIcon class="size-4" />
       </div>
       <div>
@@ -452,9 +432,7 @@
             };
           }}
         >
-          <div
-            class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
-          >
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
             <p class="font-semibold">Delete "{svc.name}"?</p>
             <p class="mt-1">
               Its container will be stopped and removed. This can't be undone.

@@ -26,7 +26,7 @@
 	}
 
 	// $state, not $derived: pushed/spliced into directly below
-	// (addRow/removeRow) — a $derived value is read-only, so mutating it
+	// (addRow/removeRow), a $derived value is read-only, so mutating it
 	// doesn't reliably stick. Seeded once at init; re-synced whenever `svc`
 	// changes (a saved env-var update reloads the page via use:enhance's
 	// default invalidateAll, and the layout's own status-sync can also
@@ -51,9 +51,7 @@
 
 <section class="rounded-2xl border border-border bg-surface">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-    <div
-      class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-    >
+    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <SlidersHorizontal class="size-4" />
     </div>
     <div>

@@ -101,7 +101,9 @@ export class AutoscaleScheduler extends BaseScheduler {
 		const candidates = await ServiceDTO.listAutoscaleEligibleOnLocalHost();
 		if (candidates.length === 0) {
 			this.logger.warn(
-				`Host over threshold (cpu=${stats.cpuPercent.toFixed(1)}% mem=${memPercent.toFixed(1)}%) but no autoscale-eligible service to migrate.`,
+				`Host over threshold (cpu=${stats.cpuPercent.toFixed(1)}% mem=${memPercent.toFixed(
+					1,
+				)}%) but no autoscale-eligible service to migrate.`,
 			);
 			return;
 		}

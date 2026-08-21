@@ -6,7 +6,7 @@ const TICK_MS = 60_000;
 // this, every hot reload of a module in a scheduler's import chain would
 // start a second interval, double-firing redeploys/backups/migrations.
 // Keyed per subclass (see start() below) rather than one module-level flag
-// per scheduler, so one starting never short-circuits another — same
+// per scheduler, so one starting never short-circuits another, same
 // property the old three separate globalForCron/globalForBackup/
 // globalForAutoscale guards had, just expressed as one shared registry now
 // that each scheduler is its own class instead of a function in one file.
@@ -23,7 +23,7 @@ function intervalRegistry(): Map<string, ReturnType<typeof setInterval>> {
 
 /**
  * Shared 60s-tick-with-HMR-safe-guard boilerplate every scheduler in this
- * app needs (cron redeploy, S3 backup, autoscale migration — see the
+ * app needs (cron redeploy, S3 backup, autoscale migration, see the
  * sibling files in this directory). A subclass just implements `tick()`
  * and a human-readable `label` for its log lines; `start()`, the interval,
  * and the double-start guard are all inherited, not reimplemented per

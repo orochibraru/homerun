@@ -7,8 +7,8 @@ See [customization.md](../customization.md) for theming, CSS variables, and addi
 - Semantic colors
 - Built-in variants first
 - class for layout only
-- No space-x-_ / space-y-_
-- Prefer size-_ over w-_ h-\* when equal
+- No space-x-_/ space-y-_
+- Prefer size-_over w-_ h-\* when equal
 - Prefer truncate shorthand
 - No manual dark: color overrides
 - Use cn() for conditional classes
@@ -38,7 +38,7 @@ See [customization.md](../customization.md) for theming, CSS variables, and addi
 
 ## No raw color values for status/state indicators
 
-For positive, negative, or status indicators, use Badge variants, semantic tokens like `text-destructive`, or define custom CSS variables — don't reach for raw Tailwind colors.
+For positive, negative, or status indicators, use Badge variants, semantic tokens like `text-destructive`, or define custom CSS variables, don't reach for raw Tailwind colors.
 
 **Incorrect:**
 
@@ -52,7 +52,7 @@ For positive, negative, or status indicators, use Badge variants, semantic token
 
 ```svelte
 <script lang="ts">
-  import { Badge } from "$lib/components/ui/badge";
+import { Badge } from "$lib/components/ui/badge";
 </script>
 
 <Badge variant="secondary">+20.1%</Badge>
@@ -70,19 +70,18 @@ If you need a success/positive color that doesn't exist as a semantic token, use
 
 ```svelte
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
+import { Button } from "$lib/components/ui/button";
 </script>
 
 <Button class="border-input hover:bg-accent border bg-transparent"
-  >Click me</Button
->
+>Click me</Button>
 ```
 
 **Correct:**
 
 ```svelte
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
+import { Button } from "$lib/components/ui/button";
 </script>
 
 <Button variant="outline">Click me</Button>
@@ -98,7 +97,7 @@ Use `class` for layout (e.g. `max-w-md`, `mx-auto`, `mt-4`), **not** for overrid
 
 ```svelte
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card";
+import * as Card from "$lib/components/ui/card";
 </script>
 
 <Card.Root class="bg-blue-100 font-bold text-blue-900">
@@ -110,7 +109,7 @@ Use `class` for layout (e.g. `max-w-md`, `mx-auto`, `mt-4`), **not** for overrid
 
 ```svelte
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card";
+import * as Card from "$lib/components/ui/card";
 </script>
 
 <Card.Root class="mx-auto max-w-md">
@@ -120,20 +119,20 @@ Use `class` for layout (e.g. `max-w-md`, `mx-auto`, `mt-4`), **not** for overrid
 
 To customize a component's appearance, prefer these approaches in order:
 
-1. **Built-in variants** — `variant="outline"`, `variant="destructive"`, etc.
-2. **Semantic color tokens** — `bg-primary`, `text-muted-foreground`.
-3. **CSS variables** — define custom colors in the global CSS file (see [customization.md](../customization.md)).
+1. **Built-in variants**, `variant="outline"`, `variant="destructive"`, etc.
+2. **Semantic color tokens**, `bg-primary`, `text-muted-foreground`.
+3. **CSS variables**, define custom colors in the global CSS file (see [customization.md](../customization.md)).
 
 ---
 
-## No space-x-_ / space-y-_
+## No space-x-_/ space-y-_
 
 Use `gap-*` instead. `space-y-4` → `flex flex-col gap-4`. `space-x-2` → `flex gap-2`.
 
 ```svelte
 <script lang="ts">
-  import { Input } from "$lib/components/ui/input";
-  import { Button } from "$lib/components/ui/button";
+import { Button } from "$lib/components/ui/button";
+import { Input } from "$lib/components/ui/input";
 </script>
 
 <div class="flex flex-col gap-4">
@@ -145,7 +144,7 @@ Use `gap-*` instead. `space-y-4` → `flex flex-col gap-4`. `space-x-2` → `fle
 
 ---
 
-## Prefer size-_ over w-_ h-\* when equal
+## Prefer size-_over w-_ h-\* when equal
 
 `size-10` not `w-10 h-10`. Applies to icons, avatars, skeletons, etc.
 
@@ -159,7 +158,7 @@ Use `gap-*` instead. `space-y-4` → `flex flex-col gap-4`. `space-x-2` → `fle
 
 ## No manual dark: color overrides
 
-Use semantic tokens — they handle light/dark via CSS variables. `bg-background text-foreground` not `bg-white dark:bg-gray-950`.
+Use semantic tokens, they handle light/dark via CSS variables. `bg-background text-foreground` not `bg-white dark:bg-gray-950`.
 
 ---
 

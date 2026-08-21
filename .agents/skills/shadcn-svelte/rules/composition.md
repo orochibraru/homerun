@@ -26,7 +26,7 @@ Never render items directly inside the content container.
 
 ```svelte
 <script lang="ts">
-  import * as Select from "$lib/components/ui/select";
+import * as Select from "$lib/components/ui/select";
 </script>
 
 <Select.Content>
@@ -39,7 +39,7 @@ Never render items directly inside the content container.
 
 ```svelte
 <script lang="ts">
-  import * as Select from "$lib/components/ui/select";
+import * as Select from "$lib/components/ui/select";
 </script>
 
 <Select.Content>
@@ -66,7 +66,7 @@ This applies to all group-based components:
 
 ```svelte
 <script lang="ts">
-  import * as Alert from "$lib/components/ui/alert";
+import * as Alert from "$lib/components/ui/alert";
 </script>
 
 <Alert.Root>
@@ -81,18 +81,17 @@ This applies to all group-based components:
 
 ```svelte
 <script lang="ts">
-  import * as Empty from "$lib/components/ui/empty";
-  import { Button } from "$lib/components/ui/button";
-  import FolderIcon from "@lucide/svelte/icons/folder";
+import { Button } from "$lib/components/ui/button";
+import * as Empty from "$lib/components/ui/empty";
+import FolderIcon from "@lucide/svelte/icons/folder";
 </script>
 
 <Empty.Root>
   <Empty.Header>
     <Empty.Media variant="icon"><FolderIcon /></Empty.Media>
     <Empty.Title>No projects yet</Empty.Title>
-    <Empty.Description
-      >Get started by creating a new project.</Empty.Description
-    >
+    <Empty.Description>Get started by creating a new
+      project.</Empty.Description>
   </Empty.Header>
   <Empty.Content>
     <Button>Create Project</Button>
@@ -106,7 +105,7 @@ This applies to all group-based components:
 
 ```svelte
 <script lang="ts">
-  import { toast } from "svelte-sonner";
+import { toast } from "svelte-sonner";
 </script>
 ```
 
@@ -141,7 +140,7 @@ Mount the `Toaster` from your UI folder once in the app layout (see [Sonner](htt
 
 ```svelte
 <script lang="ts">
-  import * as Dialog from "$lib/components/ui/dialog";
+import * as Dialog from "$lib/components/ui/dialog";
 </script>
 
 <Dialog.Content>
@@ -157,12 +156,12 @@ Mount the `Toaster` from your UI folder once in the app layout (see [Sonner](htt
 
 ## Card structure
 
-Use full composition — don't dump everything into `Card.Content`:
+Use full composition, don't dump everything into `Card.Content`:
 
 ```svelte
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card";
-  import { Button } from "$lib/components/ui/button";
+import { Button } from "$lib/components/ui/button";
+import * as Card from "$lib/components/ui/card";
 </script>
 
 <Card.Root>
@@ -185,8 +184,8 @@ Compose with `Spinner` inside `Button` + `disabled`:
 
 ```svelte
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button";
-  import { Spinner } from "$lib/components/ui/spinner";
+import { Button } from "$lib/components/ui/button";
+import { Spinner } from "$lib/components/ui/spinner";
 </script>
 
 <Button disabled>
@@ -199,12 +198,12 @@ Compose with `Spinner` inside `Button` + `disabled`:
 
 ## Tabs.Trigger must be inside Tabs.List
 
-Never render `Tabs.Trigger` directly inside `Tabs.Root` — always wrap in `Tabs.List`:
+Never render `Tabs.Trigger` directly inside `Tabs.Root`, always wrap in `Tabs.List`:
 
 ```svelte
 <script lang="ts">
-  import * as Tabs from "$lib/components/ui/tabs";
-  let tab = $state("account");
+import * as Tabs from "$lib/components/ui/tabs";
+let tab = $state("account");
 </script>
 
 <Tabs.Root bind:value={tab}>
@@ -224,7 +223,7 @@ Always include `Avatar.Fallback` for when the image fails to load:
 
 ```svelte
 <script lang="ts">
-  import * as Avatar from "$lib/components/ui/avatar";
+import * as Avatar from "$lib/components/ui/avatar";
 </script>
 
 <Avatar.Root>

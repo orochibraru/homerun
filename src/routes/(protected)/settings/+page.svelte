@@ -76,7 +76,7 @@
 
 	// $state, not $derived: this array is pushed/spliced into directly below
 	// (addOauthRow/removeOauthRow) and its rows are bound two-way via
-	// bind:value — a $derived value is read-only, so mutating it doesn't
+	// bind:value, a $derived value is read-only, so mutating it doesn't
 	// stick (it's still driven by its source expression), which is why
 	// "Add provider" previously did nothing observable. Seeded once at
 	// component init; re-synced below whenever `data` actually changes
@@ -241,8 +241,7 @@
         </div>
         <div>
           <label class={label} for="dockerNetworkName"
-            >Shared network name</label
-          >
+          >Shared network name</label>
           <Input
             class="font-mono"
             id="dockerNetworkName"
@@ -265,9 +264,9 @@
         <p class="text-text-muted text-xs">
           "GCP Cloud Run"-style load shedding : when this host crosses a
           resource threshold, one autoscale-eligible service (opt in from its
-          Compute tab) gets migrated onto the overflow remote host below.
-          This moves the service, it doesn't run a second replica of it :
-          off by default, and inert unless both enabled here and opted into
+          Compute tab) gets migrated onto the overflow remote host below. This
+          moves the service, it doesn't run a second replica of it : off by
+          default, and inert unless both enabled here and opted into
           per-service.
         </p>
       </div>
@@ -316,8 +315,8 @@
           <p class={label}>Overflow remote host</p>
           {#if data.remoteHosts.length === 0}
             <p class="text-text-subtle text-xs">
-              No remote hosts registered yet : add one on the Remote Hosts
-              page first.
+              No remote hosts registered yet : add one on the Remote Hosts page
+              first.
             </p>
           {:else}
             <SelectRoot
@@ -380,14 +379,13 @@
         </div>
         <div>
           <label class={label} for="traefikDynamicConfigDir"
-            >Dynamic config directory</label
-          >
+          >Dynamic config directory</label>
           <Input
             class="font-mono"
             id="traefikDynamicConfigDir"
             name="traefikDynamicConfigDir"
-            placeholder={data.envDefaults.traefikDynamicConfigDir ??
-              "unset : custom SSL is a no-op"}
+            placeholder={data.envDefaults.traefikDynamicConfigDir
+            ?? "unset : custom SSL is a no-op"}
             type="text"
             value={data.settings.traefikDynamicConfigDir ?? ""}
           />
@@ -465,8 +463,8 @@
               id="smtpPassword"
               name="smtpPassword"
               placeholder={data.settings.smtpPasswordEnc
-                ? "Leave blank to keep current"
-                : "Password"}
+              ? "Leave blank to keep current"
+              : "Password"}
               type="password"
             />
           </div>
@@ -518,9 +516,9 @@
             <div class="flex items-center justify-between">
               <div class="text-text-muted flex items-center gap-2">
                 <KeyRound class="size-4" />
-                <span class="text-xs font-medium tracking-wide uppercase"
-                  >Provider {i + 1}</span
-                >
+                <span
+                  class="text-xs font-medium tracking-wide uppercase"
+                >Provider {i + 1}</span>
               </div>
               <Button
                 aria-label="Remove provider"
@@ -555,22 +553,20 @@
               </div>
               <div>
                 <label class={label} for="oauthClientSecret-{i}"
-                  >Client secret</label
-                >
+                >Client secret</label>
                 <Input
                   id="oauthClientSecret-{i}"
                   name="oauthClientSecret"
                   placeholder={row.hasSecret
-                    ? "Leave blank to keep current"
-                    : "Client secret"}
+                  ? "Leave blank to keep current"
+                  : "Client secret"}
                   type="password"
                   bind:value={row.clientSecret}
                 />
               </div>
               <div>
                 <label class={label} for="oauthDiscoveryUrl-{i}"
-                  >Discovery URL</label
-                >
+                >Discovery URL</label>
                 <Input
                   class="font-mono"
                   id="oauthDiscoveryUrl-{i}"
@@ -582,8 +578,7 @@
               </div>
               <div class="sm:col-span-2">
                 <label class={label} for="oauthScopes-{i}"
-                  >Scopes (comma-separated)</label
-                >
+                >Scopes (comma-separated)</label>
                 <Input
                   class="font-mono"
                   id="oauthScopes-{i}"

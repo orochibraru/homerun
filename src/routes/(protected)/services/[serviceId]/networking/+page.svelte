@@ -62,9 +62,7 @@
   <!-- ═══ DNS / public routing ═══ -->
   <section class="border-border bg-surface rounded-2xl border p-5">
     <div class="mb-4 flex items-center gap-3">
-      <div
-        class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-      >
+      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Globe class="size-4" />
       </div>
       <div>
@@ -131,8 +129,8 @@
             name="authRequired"
           />
           <p class="mt-1.5 text-xs text-red-500">
-            ⚠ In its current form this blocks <em>everyone</em>, including you :
-            there's no login page mounted on this app's own hostname to
+            ⚠ In its current form this blocks <em>everyone</em>, including you
+            : there's no login page mounted on this app's own hostname to
             authenticate against. Treat it as a hard "make this unreachable from
             the public internet" switch (defense-in-depth, or temporarily
             pulling something offline), not as a working per-app login wall yet.
@@ -167,9 +165,7 @@
   <!-- ═══ SSL ═══ -->
   <section class="border-border bg-surface rounded-2xl border p-5">
     <div class="mb-4 flex items-center gap-3">
-      <div
-        class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-      >
+      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <ShieldCheck class="size-4" />
       </div>
       <div>
@@ -221,8 +217,8 @@
             id="customSslCert"
             name="customSslCert"
             placeholder={svc.customSslCertEnc
-              ? "Unchanged"
-              : "-----BEGIN CERTIFICATE-----"}
+            ? "Unchanged"
+            : "-----BEGIN CERTIFICATE-----"}
             rows={4}
           />
         </div>
@@ -233,8 +229,8 @@
             id="customSslKey"
             name="customSslKey"
             placeholder={svc.customSslKeyEnc
-              ? "Unchanged"
-              : "-----BEGIN PRIVATE KEY-----"}
+            ? "Unchanged"
+            : "-----BEGIN PRIVATE KEY-----"}
             rows={4}
           />
         </div>
@@ -266,23 +262,20 @@
   <!-- ═══ Network ═══ -->
   <section class="border-border bg-surface rounded-2xl border p-5">
     <div class="mb-4 flex items-center gap-3">
-      <div
-        class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-      >
+      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Network class="size-4" />
       </div>
       <div>
         <p class="text-text text-sm font-medium">Network</p>
         <p class="text-text-muted text-xs">
           {#if networkMode === "host"}
-            Runs on the host's own network : reachable directly on this
-            machine at its own port, not through Traefik or the shared
-            network.
+            Runs on the host's own network : reachable directly on this machine
+            at its own port, not through Traefik or the shared network.
           {:else if svc.containerId}
             Reachable from other services at
-            <span class="text-text-subtle font-mono"
-              >{svc.slug}:{svc.containerPort}</span
-            >.
+            <span class="text-text-subtle font-mono">{svc.slug}:{
+                svc.containerPort
+              }</span>.
           {:else}
             Container port
             <span class="text-text-subtle font-mono">{svc.containerPort}</span>
@@ -315,10 +308,12 @@
         <div class={label}>Network mode</div>
         <div class="grid grid-cols-2 gap-3">
           <button
-            class="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
-            'bridge'
+            class="
+              flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
+              'bridge'
               ? 'border-accent bg-accent-light text-accent'
-              : 'border-border text-text-muted hover:bg-surface-2'}"
+              : 'border-border text-text-muted hover:bg-surface-2'}
+            "
             onclick={() => {
               networkMode = "bridge";
             }}
@@ -327,10 +322,12 @@
             Bridge (default)
           </button>
           <button
-            class="flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
-            'host'
+            class="
+              flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
+              'host'
               ? 'border-accent bg-accent-light text-accent'
-              : 'border-border text-text-muted hover:bg-surface-2'}"
+              : 'border-border text-text-muted hover:bg-surface-2'}
+            "
             onclick={() => {
               networkMode = "host";
             }}
@@ -344,12 +341,12 @@
           {#if networkMode === "host"}
             Shares this machine's network namespace directly : for apps that
             need real host-network access (mDNS/SSDP discovery, e.g. Home
-            Assistant). No shared/project network, no Traefik routing, no
-            public DNS route regardless of the setting below.
+            Assistant). No shared/project network, no Traefik routing, no public
+            DNS route regardless of the setting below.
           {:else}
             Joins the shared Traefik network (plus its project's network, if
-            any) : the normal mode for anything that doesn't specifically
-            need host networking.
+            any) : the normal mode for anything that doesn't specifically need
+            host networking.
           {/if}
         </p>
       </div>
@@ -376,7 +373,11 @@
         </div>
         <div>
           <label class={label} for="portProtocol">Protocol</label>
-          <SelectRoot name="portProtocol" type="single" bind:value={portProtocol}>
+          <SelectRoot
+            name="portProtocol"
+            type="single"
+            bind:value={portProtocol}
+          >
             <SelectTrigger class="w-full" id="portProtocol">
               {portProtocolLabel}
             </SelectTrigger>

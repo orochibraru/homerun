@@ -45,8 +45,8 @@
           });
         } else if (result.type === "failure") {
           toast.error(
-            (result.data as { error?: string })?.error ??
-              "Check the form for errors.",
+            (result.data as { error?: string })?.error
+              ?? "Check the form for errors.",
           );
         }
         await update();

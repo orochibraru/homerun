@@ -9,7 +9,7 @@
 // extending BaseDockerService, and all of them merge into one class here
 // via the TS mixin pattern (each file exports a `SomethingMixin(Base)`
 // function). `DockerService` is the single instantiated singleton of that
-// merged class — every route/DTO imports this same instance and calls
+// merged class, every route/DTO imports this same instance and calls
 // real inherited instance methods on it (`DockerService.pullImage(...)`),
 // not static delegates to loose functions.
 

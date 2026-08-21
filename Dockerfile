@@ -54,7 +54,8 @@ RUN chown -R bun:bun /app/data
 
 VOLUME /app/data
 
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD wget --no-verbose --tries=1 --spider http://0.0.0.0:3000/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://0.0.0.0:3000/api/health || exit 1
 
 USER bun
 

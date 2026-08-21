@@ -9,4 +9,4 @@ import { buildOpenApiDocument } from "../src/lib/openapi/build";
 // is dead code.
 const doc = buildOpenApiDocument("http://localhost:3000");
 await Bun.write("openapi.json", JSON.stringify(doc, null, "\t"));
-console.log("Wrote openapi.json");  
+console.log("Wrote openapi.json");

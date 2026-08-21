@@ -144,9 +144,7 @@
     </p>
   </div>
 
-  <div
-    class="border-border bg-surface-2 text-text-muted mb-6 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs"
-  >
+  <div class="border-border bg-surface-2 text-text-muted mb-6 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs">
     <Info class="mt-0.5 size-3.5 shrink-0" />
     <p>
       Local Run's own server isn't containerized : it runs directly on the host,
@@ -157,14 +155,14 @@
   </div>
 
   <section class="border-border bg-surface rounded-2xl border">
-    <div
-      class="border-border flex items-center justify-between gap-3 border-b px-5 py-4"
-    >
+    <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
       <div class="flex items-center gap-2">
         <Terminal class="text-text-muted size-4" />
         <h2 class="text-text text-sm font-semibold">Traefik</h2>
         {#if data.traefik}
-          <code class="bg-surface-2 text-text-muted rounded px-1.5 py-0.5 text-[11px]">
+          <code
+            class="bg-surface-2 text-text-muted rounded px-1.5 py-0.5 text-[11px]"
+          >
             {data.traefik.image}
           </code>
         {/if}
@@ -253,7 +251,7 @@
   onConfirm={confirmPending}
   title={confirmKind === "restart" ? "Restart Traefik?" : "Update Traefik?"}
   description={confirmKind === "restart"
-    ? "Every deployed service routed through it will be briefly unreachable while it comes back up."
-    : "If a newer image is available, this stops and recreates the container in place (same config, new image) : brief downtime for every routed service, and no automatic rollback if the new container fails to start."}
+  ? "Every deployed service routed through it will be briefly unreachable while it comes back up."
+  : "If a newer image is available, this stops and recreates the container in place (same config, new image) : brief downtime for every routed service, and no automatic rollback if the new container fails to start."}
   confirmLabel={confirmKind === "restart" ? "Restart" : "Update"}
 />

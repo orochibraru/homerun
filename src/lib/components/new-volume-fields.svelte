@@ -31,21 +31,37 @@
   <p class={label}>Type</p>
   <div class="grid grid-cols-2 gap-3">
     <label
-      class="flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition-all {kind ===
-      'volume'
+      class="
+        flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition-all {kind ===
+        'volume'
         ? 'border-accent bg-accent-light text-accent'
-        : 'border-border text-text-muted'}"
+        : 'border-border text-text-muted'}
+      "
     >
-      <input class="sr-only" name="kind" type="radio" value="volume" bind:group={kind}>
+      <input
+        class="sr-only"
+        name="kind"
+        type="radio"
+        value="volume"
+        bind:group={kind}
+      >
       Docker volume
     </label>
     <label
-      class="flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition-all {kind ===
-      'bind'
+      class="
+        flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition-all {kind ===
+        'bind'
         ? 'border-accent bg-accent-light text-accent'
-        : 'border-border text-text-muted'}"
+        : 'border-border text-text-muted'}
+      "
     >
-      <input class="sr-only" name="kind" type="radio" value="bind" bind:group={kind}>
+      <input
+        class="sr-only"
+        name="kind"
+        type="radio"
+        value="bind"
+        bind:group={kind}
+      >
       Host path
     </label>
   </div>
@@ -66,8 +82,8 @@
   />
   <p class="text-text-subtle mt-1 text-xs">
     {#if kind === "bind"}
-      An absolute directory on this host : created automatically if it
-      doesn't exist.
+      An absolute directory on this host : created automatically if it doesn't
+      exist.
     {:else}
       A Docker-managed named volume : created automatically on first use.
     {/if}

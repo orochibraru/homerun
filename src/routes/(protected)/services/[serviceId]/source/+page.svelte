@@ -111,7 +111,9 @@
 		dockerfileCheck = null;
 		try {
 			const res = await fetch(
-				`/api/v1/git-providers/${browseProviderId}/dockerfile?repo=${encodeURIComponent(fullName)}&ref=${encodeURIComponent(repo.defaultBranch)}`,
+				`/api/v1/git-providers/${browseProviderId}/dockerfile?repo=${encodeURIComponent(
+					fullName,
+				)}&ref=${encodeURIComponent(repo.defaultBranch)}`,
 			);
 			if (res.ok) {
 				const body = (await res.json()) as { exists: boolean };
@@ -149,9 +151,7 @@
 
 <section class="border-border bg-surface rounded-2xl border">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-    <div
-      class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-    >
+    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <Container class="size-4" />
     </div>
     <div>
@@ -195,10 +195,12 @@
       <div class={label}>Deploy from</div>
       <div class="flex gap-2">
         <button
-          class="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
-          'image'
+          class="
+            flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+            'image'
             ? 'border-accent bg-accent-light text-accent'
-            : 'border-border text-text-muted hover:bg-surface-2'}"
+            : 'border-border text-text-muted hover:bg-surface-2'}
+          "
           onclick={() => {
             buildSource = "image";
           }}
@@ -207,10 +209,12 @@
           Docker image
         </button>
         <button
-          class="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
-          'git'
+          class="
+            flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+            'git'
             ? 'border-accent bg-accent-light text-accent'
-            : 'border-border text-text-muted hover:bg-surface-2'}"
+            : 'border-border text-text-muted hover:bg-surface-2'}
+          "
           onclick={() => {
             buildSource = "git";
           }}
@@ -222,8 +226,8 @@
       </div>
       <input name="buildSource" type="hidden" value={buildSource}>
       <p class="text-text-subtle mt-1.5 text-xs">
-        Switching this doesn't redeploy by itself : save, then redeploy from
-        the Overview tab.
+        Switching this doesn't redeploy by itself : save, then redeploy from the
+        Overview tab.
       </p>
     </div>
 
@@ -258,9 +262,7 @@
       </div>
 
       {#if imageCheck?.checked && !imageCheck.exists}
-        <div
-          class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
-        >
+        <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
           <TriangleAlertIcon class="mt-0.5 size-3.5 shrink-0" />
           <span>
             <strong>{image}:{tag}</strong>
@@ -306,20 +308,24 @@
             >
               <option value="">Select a repo…</option>
               {#each repos as repo (repo.fullName)}
-                <option value={repo.fullName}
-                  >{repo.fullName}{repo.private ? " (private)" : ""}</option
-                >
+                <option value={repo.fullName}>
+                  {repo.fullName}{repo.private ? " (private)" : ""}
+                </option>
               {/each}
             </select>
             {#if dockerfileCheck?.checked}
               <p
-                class="mt-2 text-xs {dockerfileCheck.exists
+                class="
+                  mt-2 text-xs {dockerfileCheck.exists
                   ? 'text-emerald-600'
-                  : 'text-amber-600'}"
+                  : 'text-amber-600'}
+                "
               >
-                {dockerfileCheck.exists
+                {
+                  dockerfileCheck.exists
                   ? "✓ Dockerfile found at the repo root."
-                  : "⚠ No Dockerfile found at the repo root on this branch : the build will fail unless one exists at the path you set below."}
+                  : "⚠ No Dockerfile found at the repo root on this branch : the build will fail unless one exists at the path you set below."
+                }
               </p>
             {/if}
           {/if}
@@ -390,9 +396,11 @@
           Private registry
         </span>
         <ChevronDown
-          class="text-text-muted size-4 transition-transform {showRegistry
+          class="
+            text-text-muted size-4 transition-transform {showRegistry
             ? 'rotate-180'
-            : ''}"
+            : ''}
+          "
         />
       </Button>
       {#if showRegistry}

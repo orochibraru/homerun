@@ -1,0 +1,8 @@
+{
+	"config": {
+		"default": true,
+		"MD013": true
+	},
+	"fix": true,
+	"ignores": ["node_modules", "dist"]
+}

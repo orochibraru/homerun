@@ -40,18 +40,14 @@
   </div>
 
   {#if vol.kind !== "bind"}
-    <div
-      class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
-    >
+    <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
       Only bind-mount volumes can be backed up right now : this is a
       Docker-managed named volume.
     </div>
   {:else}
     <section class="rounded-2xl border border-border bg-surface p-5">
       <div class="mb-4 flex items-center gap-3">
-        <div
-          class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-        >
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <CloudUpload class="size-4" />
         </div>
         <div>
@@ -97,8 +93,7 @@
 
         <div>
           <label class={label} for="backupSchedule"
-            >Schedule (cron syntax)</label
-          >
+          >Schedule (cron syntax)</label>
           <Input
             class="font-mono"
             id="backupSchedule"
@@ -141,8 +136,7 @@
           </div>
           <div>
             <label class={label} for="backupPrefix"
-              >Key prefix (optional)</label
-            >
+            >Key prefix (optional)</label>
             <Input
               id="backupPrefix"
               name="backupPrefix"
@@ -162,8 +156,7 @@
           </div>
           <div>
             <label class={label} for="backupSecretAccessKey"
-              >Secret access key</label
-            >
+            >Secret access key</label>
             <Input
               id="backupSecretAccessKey"
               name="backupSecretAccessKey"

@@ -14,9 +14,7 @@
 </script>
 
 {#if data.service.currentStatus === "failed"}
-  <div
-    class="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
-  >
+  <div class="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
     <AlertTriangle class="mt-0.5 size-4 shrink-0" />
     <div>
       <p class="font-medium">This service's container is currently down.</p>
@@ -27,8 +25,7 @@
           href={resolve("/(protected)/services/[serviceId]/logs", {
             serviceId: data.service.id,
           })}
-          >Logs</a
-        >
+        >Logs</a>
         tab for the crash output.
       </p>
     </div>
@@ -42,8 +39,7 @@
       Failed deployments
       {#if data.failedDeployments.length > 0}
         <span class="text-text-muted ml-1 text-xs font-normal"
-          >({data.failedDeployments.length})</span
-        >
+        >({data.failedDeployments.length})</span>
       {/if}
     </h2>
   </div>
@@ -59,8 +55,7 @@
           <button
             class="flex w-full items-center gap-4 px-5 py-3 text-left"
             onclick={() => {
-              expandedDeploymentId =
-                expandedDeploymentId === dep.id ? null : dep.id;
+              expandedDeploymentId = expandedDeploymentId === dep.id ? null : dep.id;
             }}
             type="button"
           >
@@ -76,17 +71,17 @@
             </div>
             {#if dep.log}
               <ChevronDown
-                class="text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
-                dep.id
+                class="
+                  text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
+                  dep.id
                   ? 'rotate-180'
-                  : ''}"
+                  : ''}
+                "
               />
             {/if}
           </button>
           {#if expandedDeploymentId === dep.id && dep.log}
-            <div
-              class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
-            >
+            <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
               {#each dep.log.split("\n").filter(Boolean) as line, i (i)}
                 <AnsiLine {line} />
               {/each}
@@ -112,8 +107,7 @@
       Application errors
       {#if data.appLogs.length > 0}
         <span class="text-text-muted ml-1 text-xs font-normal"
-          >({data.appLogs.length})</span
-        >
+        >({data.appLogs.length})</span>
       {/if}
     </h2>
   </div>
@@ -130,19 +124,27 @@
         <div class="px-5 py-3">
           <div class="flex items-center gap-2">
             <span
-              class="rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase {log.level ===
-              'error'
+              class="
+                rounded px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase {log.level ===
+                'error'
                 ? 'bg-red-500/10 text-red-500'
-                : 'bg-yellow-500/10 text-yellow-600'}"
+                : 'bg-yellow-500/10 text-yellow-600'}
+              "
             >
               {log.level}
             </span>
             {#if log.scope}
-              <span class="text-text-muted text-xs font-medium">{log.scope}</span>
+              <span class="text-text-muted text-xs font-medium">{
+                log.scope
+              }</span>
             {/if}
-            <span class="text-text-subtle text-xs">{timeAgo(log.createdAt)}</span>
+            <span class="text-text-subtle text-xs">{
+              timeAgo(log.createdAt)
+            }</span>
           </div>
-          <p class="text-text mt-1 font-mono text-xs break-all">{log.message}</p>
+          <p class="text-text mt-1 font-mono text-xs break-all">
+            {log.message}
+          </p>
         </div>
       {/each}
     </div>

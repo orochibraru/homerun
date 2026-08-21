@@ -84,9 +84,7 @@
 </script>
 
 <section class="border-border bg-surface rounded-2xl border">
-  <div
-    class="border-border flex items-center justify-between gap-3 border-b px-5 py-4"
-  >
+  <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
     <div class="flex items-center gap-2">
       <Terminal class="text-text-muted size-4" />
       <h2 class="text-text text-sm font-semibold">Logs</h2>

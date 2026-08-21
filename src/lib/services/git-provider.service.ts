@@ -385,7 +385,9 @@ class GitProviderServiceClass {
 					url = `${api}/repos/${repoFullName}/contents/Dockerfile?ref=${encodeURIComponent(ref)}`;
 					break;
 				case "gitlab":
-					url = `${api}/projects/${encodeURIComponent(repoFullName)}/repository/files/Dockerfile?ref=${encodeURIComponent(ref)}`;
+					url = `${api}/projects/${encodeURIComponent(repoFullName)}/repository/files/Dockerfile?ref=${encodeURIComponent(
+						ref,
+					)}`;
 					break;
 				case "bitbucket":
 					url = `${api}/repositories/${repoFullName}/src/${encodeURIComponent(ref)}/Dockerfile`;

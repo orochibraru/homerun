@@ -135,9 +135,7 @@
 
   <!-- ═══ Services ═══ -->
   {#if data.services.length === 0}
-    <div
-      class="mb-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center"
-    >
+    <div class="mb-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center">
       <Server class="mb-3 size-8 text-text-muted opacity-40" />
       <p class="text-sm font-medium text-text-muted">
         No services in this project yet
@@ -163,9 +161,7 @@
           class="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
           href="{resolve('/services')}/{svc.id}"
         >
-          <div
-            class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl"
-          >
+          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <Server class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
@@ -185,15 +181,9 @@
   {/if}
 
   <!-- ═══ Danger zone ═══ -->
-  <section
-    class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40"
-  >
-    <div
-      class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
-    >
-      <div
-        class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600"
-      >
+  <section class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40">
+    <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
+      <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <AlertTriangle class="size-4" />
       </div>
       <div>
@@ -235,9 +225,7 @@
             };
           }}
         >
-          <div
-            class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
-          >
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
             <p class="font-semibold">
               Delete "{proj.name}" and all {data.services.length}
               {data.services.length === 1 ? "service" : "services"}

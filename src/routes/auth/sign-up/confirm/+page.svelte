@@ -68,18 +68,12 @@
 	}
 </script>
 
-<div
-  class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-bg px-4"
->
+<div class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-bg px-4">
   <div class="w-full max-w-lg">
     <!-- ── Main card ──────────────────────────────────────────────── -->
-    <div
-      class="rounded-2xl border border-border bg-surface p-8 text-center shadow-sm"
-    >
+    <div class="rounded-2xl border border-border bg-surface p-8 text-center shadow-sm">
       <!-- Icon -->
-      <div
-        class="bg-accent/10 ring-accent/5 mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl ring-8"
-      >
+      <div class="bg-accent/10 ring-accent/5 mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl ring-8">
         <Mail class="text-accent size-8" />
       </div>
 
@@ -94,7 +88,11 @@
 
       <!-- Steps -->
       <ol class="mt-6 space-y-2 text-left">
-        {#each ["Open the email from Homerun", 'Click the "Confirm email" button', "You'll be signed in automatically"] as step, i}
+        {#each [
+          "Open the email from Homerun",
+          "Click the \"Confirm email\" button",
+          "You'll be signed in automatically",
+        ] as step, i}
           <li class="flex items-start gap-3 text-sm text-text-muted">
             <span
               class="bg-accent/10 text-accent mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
@@ -125,9 +123,7 @@
       <!-- Resend -->
       <div class="mt-4">
         {#if resent}
-          <p
-            class="flex items-center justify-center gap-1.5 text-sm text-green-600"
-          >
+          <p class="flex items-center justify-center gap-1.5 text-sm text-green-600">
             <CircleCheckIcon class="size-4" />
             Email sent! Check your spam folder if you don't see it.
           </p>
@@ -164,12 +160,8 @@
 
     <!-- ── Dev-only bypass ─────────────────────────────────────────── -->
     {#if data.isDev}
-      <div
-        class="mt-4 overflow-hidden rounded-2xl border border-amber-300/40 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-950/20"
-      >
-        <div
-          class="flex items-start gap-3 border-b border-amber-200/60 px-4 py-3 dark:border-amber-800/30"
-        >
+      <div class="mt-4 overflow-hidden rounded-2xl border border-amber-300/40 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-950/20">
+        <div class="flex items-start gap-3 border-b border-amber-200/60 px-4 py-3 dark:border-amber-800/30">
           <TriangleAlert
             class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
           />

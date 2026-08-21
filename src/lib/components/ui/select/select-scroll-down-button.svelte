@@ -11,7 +11,10 @@
 </script>
 
 <SelectPrimitive.ScrollDownButton
-  class={cn("z-10 flex cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4 bottom-0 w-full", className)}
+  class={cn(
+    "z-10 flex cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4 bottom-0 w-full",
+    className,
+  )}
   data-slot="select-scroll-down-button"
   bind:ref
   {...restProps}

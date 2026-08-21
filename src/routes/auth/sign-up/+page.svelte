@@ -79,9 +79,7 @@
 
 <div class="flex min-h-[calc(100vh-4rem)]">
   <!-- ── Right panel ──────────────────────────────────────────────── -->
-  <div
-    class="flex flex-1 flex-col items-center justify-center bg-bg px-6 py-10 sm:px-10"
-  >
+  <div class="flex flex-1 flex-col items-center justify-center bg-bg px-6 py-10 sm:px-10">
     <!-- Mobile-only logo -->
     <div class="mb-8 text-center lg:hidden">
       <a
@@ -181,16 +179,19 @@
               <div class="flex gap-1">
                 {#each [1, 2, 3, 4] as level}
                   <div
-                    class="h-1 flex-1 rounded-full transition-all duration-300
-										{level <= passwordStrength ? strengthMeta.bar : 'bg-[var(--color-surface-3)]'}"
-                  ></div>
+                    class="
+                      h-1 flex-1 rounded-full transition-all duration-300
+                      {level <= passwordStrength ? strengthMeta.bar : 'bg-[var(--color-surface-3)]'}
+                    "
+                  >
+                  </div>
                 {/each}
               </div>
               <p class="mt-1 text-xs text-text-muted">
                 Password strength:
-                <span class="font-medium {strengthMeta.text}"
-                  >{strengthMeta.label}</span
-                >
+                <span class="font-medium {strengthMeta.text}">{
+                  strengthMeta.label
+                }</span>
               </p>
             </div>
           {/if}

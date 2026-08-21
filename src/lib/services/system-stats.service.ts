@@ -86,9 +86,9 @@ class SystemStatsServiceClass {
 	// os.cpus() returns cumulative counters since boot : CPU% needs a delta
 	// between two samples. Real instance state (rather than the module-scope
 	// `let` this used to be) : the singleton this class is exported as below
-	// lives for the app's lifetime, so behavior is identical — repeated
+	// lives for the app's lifetime, so behavior is identical, repeated
 	// calls (e.g. a polling dashboard) diff against the previous call
-	// instead of each blocking for a fresh sample window — this is just the
+	// instead of each blocking for a fresh sample window, this is just the
 	// OOP-correct place for that state to live.
 	#lastCpuSample: CpuSample | null = null;
 

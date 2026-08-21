@@ -14,7 +14,7 @@ class UserServiceClass {
 	/**
 	 * Stops/removes a user's actual Docker containers and networks and deletes
 	 * their app-owned rows (deployments/services/projects/storage volumes)
-	 *before* the user row itself goes away. Postgres enforces the schema's
+	 * before* the user row itself goes away. Postgres enforces the schema's
 	 * `onDelete: "cascade"`/`"set null"` FK constraints for real (unlike the
 	 * previous SQLite setup, where `PRAGMA foreign_keys` was intentionally
 	 * left off and cascade was decorative) : so this explicit cleanup is

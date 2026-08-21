@@ -36,16 +36,13 @@
 
 <section class="border-border bg-surface rounded-2xl border">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-    <div
-      class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-    >
+    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <Cpu class="size-4" />
     </div>
     <div>
       <h2 class="text-text text-sm font-semibold">Compute</h2>
       <p class="text-text-muted text-xs">
-        Resource limits and autoscaling. Changes take effect on the next
-        deploy.
+        Resource limits and autoscaling. Changes take effect on the next deploy.
       </p>
     </div>
   </div>

@@ -21,9 +21,7 @@
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
-  <div
-    class="flex flex-1 flex-col items-center justify-center bg-bg px-6 py-10 sm:px-10"
-  >
+  <div class="flex flex-1 flex-col items-center justify-center bg-bg px-6 py-10 sm:px-10">
     <div class="mb-8 text-center">
       <a
         class="inline-flex items-center gap-1.5 text-xl font-bold"
@@ -152,10 +150,10 @@
 
           <button
             class="bg-accent shadow-accent/30 hover:bg-accent-dark mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={submitting ||
-              !name ||
-              password.length < 12 ||
-              password !== confirm}
+            disabled={submitting
+            || !name
+            || password.length < 12
+            || password !== confirm}
             type="submit"
           >
             {#if submitting}
