@@ -64,3 +64,8 @@
 
 - [ ] I don't see the point of having a separate package.json file in installer
       and agent since they're ultimately compiled as binaries. Clean this up.
+- [ ] Publish a Docker image for the Homerun Agent (own `Dockerfile` +
+      `.github/workflows` job, same shape as the main app's `docker.yaml`), so
+      `agent/README.md`'s "already running Docker your own way" install path
+      doesn't dead-end at "prebuilt binary or build from source" for someone
+      who'd rather run it as a container.

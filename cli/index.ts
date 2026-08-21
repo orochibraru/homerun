@@ -8,6 +8,8 @@ import {
 } from "./commands";
 import { login, logout } from "./login";
 import { fail } from "./output";
+import { update } from "./update";
+import { CLI_VERSION } from "./version";
 
 function printHelp(): void {
 	console.log(`
@@ -17,6 +19,7 @@ homerun : CLI for the Homerun REST API (openapi-fetch, typed against
 Usage:
   homerun login [--base-url <url>]
   homerun logout
+  homerun update
   homerun services list [--json]
   homerun services get <id>
   homerun services deploy <id>
@@ -25,6 +28,7 @@ Usage:
   homerun services restart <id>
   homerun projects list [--json]
   homerun templates list [--json]
+  homerun --version
 
 Auth/target: run \`homerun login\` once (stores your instance URL and a
 CLI-scoped API key in ~/.config/homerun/config.json), or override per-call
@@ -46,6 +50,9 @@ function parseArgv(argv: string[]): { positionals: string[]; json: boolean } {
 			i += 1; // consume the flag's value, handled separately by resolveConfig
 		} else if (arg === "--help" || arg === "-h") {
 			printHelp();
+			process.exit(0);
+		} else if (arg === "--version" || arg === "-v") {
+			console.log(`v${CLI_VERSION}`);
 			process.exit(0);
 		} else if (!arg.startsWith("--")) {
 			positionals.push(arg);
@@ -69,6 +76,9 @@ async function main() {
 	}
 	if (resource === "logout") {
 		return logout();
+	}
+	if (resource === "update") {
+		return update();
 	}
 
 	const config = resolveConfig(argv);

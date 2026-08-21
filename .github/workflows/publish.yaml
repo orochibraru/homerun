@@ -79,3 +79,31 @@ jobs:
           GITEA_URL: https://git.ombrage.space
 
         run: bun run release
+
+      - name: Check for new release tag
+        id: released
+        run: |
+          git fetch --tags origin main
+          git checkout main
+          git reset --hard origin/main
+          TAG="$(git describe --tags --exact-match HEAD 2>/dev/null || true)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: steps.released.outputs.tag != ''
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Container registry
+        if: steps.released.outputs.tag != ''
+        uses: docker/login-action@v4
+        with:
+          registry: git.ombrage.space
+          username: orochibraru
+          password: ${{ secrets.PACKAGES_TOKEN }}
+
+      - name: Tag latest image with release version
+        if: steps.released.outputs.tag != ''
+        run: |
+          docker buildx imagetools create \
+            -t git.ombrage.space/orochibraru/homerun:${{ steps.released.outputs.tag }} \
+            git.ombrage.space/orochibraru/homerun:latest

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { deployInputSchema } from "./schemas";
+import { AGENT_VERSION } from "./version";
 
 /** Strip the top-level `$schema` pointer zod's toJSONSchema() adds : not meaningful on a schema embedded inside a bigger OpenAPI document. */
 function toEmbeddedSchema(schema: z.ZodType): Record<string, unknown> {
@@ -77,7 +78,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 			description:
 				"A single Homerun Agent's own HTTP control surface : deploy/start/stop/restart/logs/stats for the one Docker daemon this agent runs on. See agent/README.md.",
 			title: "Homerun Agent API",
-			version: "0.1.0",
+			version: AGENT_VERSION,
 		},
 		openapi: "3.1.0",
 		paths: {

@@ -57,6 +57,8 @@ bun run scripts/build-packages.ts amd64        # or arm64, same as CI, outputs d
 ```bash
 homerun login [--base-url <url>]
 homerun logout
+homerun update
+homerun --version
 homerun services list [--json]
 homerun services get <id>
 homerun services deploy <id>
@@ -68,9 +70,19 @@ homerun templates list [--json]
 ```
 
 `list` without `--json` prints a plain text table; every other command prints
-the raw JSON response. There's no `create`/`update`/`delete` yet, out of scope
-for this first pass, straightforward to add the same way (`commands.ts` already
-has the `unwrap()` helper every command uses).
+the raw JSON response. There's no resource `create`/`update`/`delete` yet
+(`homerun update` below is the CLI self-updater, unrelated), out of scope for
+this first pass, straightforward to add the same way (`commands.ts` already has
+the `unwrap()` helper every command uses).
+
+`homerun update` self-updates the installed binary in place: it checks the
+latest Gitea release, downloads the `homerun-cli-<arch>` asset for your
+architecture (same one `install.sh` installs), and replaces the running binary
+(`sudo`'d automatically if the install directory isn't writable by your user,
+same as `install.sh`). Linux-only, same as installation itself, and only works
+on the compiled binary, not `bun run cli/index.ts` (there's nothing to replace
+when running from source, `git pull` instead). `homerun --version` (or `-v`)
+just prints the current version, no network call.
 
 ## Regenerating the types
 
@@ -106,3 +118,10 @@ approval page). Reasoned through and typechecked against the real auth stack
 `createUser` call is, see CLAUDE.md's User roles section), but not driven
 end-to-end by hand yet, verify a real `homerun login` round trip against a
 running instance before relying on it.
+
+`homerun update`: verified the compiled-vs-source detection (`process.execPath`
+basename) and the version read (embedded `package.json` import, confirmed the
+compiled binary reports the correct root `package.json` version) locally. **Not
+verified**: an actual download-and-replace against a real Gitea release, that
+needs a published release tag to point at and wasn't attempted from this
+session.

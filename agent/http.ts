@@ -13,8 +13,7 @@ import { buildOpenApiDocument } from "./openapi";
 import { deployInputSchema } from "./schemas";
 import { getSystemStats } from "./stats";
 import { tokensMatch } from "./token";
-
-const VERSION = "0.1.0";
+import { AGENT_VERSION } from "./version";
 
 function json(body: unknown, init?: ResponseInit): Response {
 	return new Response(JSON.stringify(body), {
@@ -36,7 +35,7 @@ export function createHandler(token: string) {
 		const path = url.pathname;
 
 		if (path === "/v1/health" && req.method === "GET") {
-			return json({ status: "ok", version: VERSION });
+			return json({ status: "ok", version: AGENT_VERSION });
 		}
 
 		// Same "public, doesn't expose data" stance as the main app's
