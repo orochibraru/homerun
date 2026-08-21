@@ -40,7 +40,7 @@
 		[
 			"@semantic-release/exec",
 			{
-				"prepareCmd": "bun scripts/bump-version.ts ${nextRelease.version}"
+				"prepareCmd": "bun scripts/bump-version.ts ${nextRelease.version} && bun run prettier --write CHANGELOG.md"
 			}
 		],
 		[
