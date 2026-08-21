@@ -5,30 +5,36 @@
 			"@semantic-release/commit-analyzer",
 			{
 				"preset": "conventionalcommits",
-				"releaseRules": [{ "breaking": true, "release": "minor" }]
+				"releaseRules": [
+					{
+						"breaking": true,
+						"release": "patch"
+					}
+				]
 			}
 		],
 		[
 			"@semantic-release/release-notes-generator",
-			{ "preset": "conventionalcommits" }
+			{
+				"preset": "conventionalcommits"
+			}
 		],
-		["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
+		[
+			"@semantic-release/changelog",
+			{
+				"changelogFile": "CHANGELOG.md"
+			}
+		],
 		[
 			"@semantic-release/exec",
 			{
-				"prepareCmd": "bun scripts/bump-version.ts ${nextRelease.version} && bun scripts/build-release-binaries.ts"
+				"prepareCmd": "bun scripts/bump-version.ts ${nextRelease.version}"
 			}
 		],
 		[
 			"@semantic-release/git",
 			{
-				"assets": [
-					"package.json",
-					"agent/package.json",
-					"installer/package.json",
-					"cli/package.json",
-					"CHANGELOG.md"
-				],
+				"assets": ["CHANGELOG.md"],
 				"message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
 			}
 		],
@@ -37,28 +43,28 @@
 			{
 				"assets": [
 					{
-						"label": "homerun-agent (linux/x64)",
-						"path": "agent/dist/homerun-agent-linux-x64"
+						"label": "homerun-agent (linux/amd64)",
+						"path": "dist/homerun-agent-amd64"
 					},
 					{
 						"label": "homerun-agent (linux/arm64)",
-						"path": "agent/dist/homerun-agent-linux-arm64"
+						"path": "dist/homerun-agent-arm64"
 					},
 					{
-						"label": "homerun-install (linux/x64)",
-						"path": "installer/dist/homerun-install-linux-x64"
+						"label": "homerun-install (linux/amd64)",
+						"path": "dist/homerun-installer-amd64"
 					},
 					{
 						"label": "homerun-install (linux/arm64)",
-						"path": "installer/dist/homerun-install-linux-arm64"
+						"path": "dist/homerun-installer-arm64"
 					},
 					{
-						"label": "homerun CLI (linux/x64)",
-						"path": "cli/dist/homerun-linux-x64"
+						"label": "homerun CLI (linux/amd64)",
+						"path": "dist/homerun-cli-amd64"
 					},
 					{
 						"label": "homerun CLI (linux/arm64)",
-						"path": "cli/dist/homerun-linux-arm64"
+						"path": "dist/homerun-cli-arm64"
 					}
 				]
 			}

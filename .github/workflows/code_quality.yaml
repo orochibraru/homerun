@@ -16,37 +16,8 @@ env:
   CI: true
 
 jobs:
-  # ===========================================
-  # TypeScript: Lint, Format, Build : always runs
-  # ===========================================
-  ts-build-check:
+  checks:
     name: TypeScript Build & Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Setup Node.js for tooling
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      - name: Build Webapp
-        run: bun run build
-
-      - name: Type check Webapp
-        run: bun run check
-
-      - name: Lint
-        run: bun run lint
-
-  ts-lint-test:
-    name: TypeScript Lint & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -65,34 +36,27 @@ jobs:
       - name: Generate SvelteKit types
         run: |
           echo "Generating SvelteKit types..."
-          if bunx svelte-kit sync; then
+          if bun run svelte-kit sync; then
               echo "SvelteKit types generated successfully."
           else
               echo "Failed to generate SvelteKit types."
               exit 1
           fi
 
-      - name: Linting
-        run: bun run check
+      - name: Lint
+        run: bun run lint
 
-  # agent/, installer/, cli/ are separate tsconfig projects (no SvelteKit) —
-  # not covered by `bun run check` above, so typechecked here instead.
-  sub-projects-type-check:
-    name: Sub-projects Type Check (agent/installer/cli)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        dir: [agent, installer, cli]
-    steps:
-      - uses: actions/checkout@v6
+      - name: Type check Webapp
+        run: bun run svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --tsgo
 
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
+      - name: Type check Agent
+        run: bun run check:agent
 
-      - name: Install dependencies
-        working-directory: ${{ matrix.dir }}
-        run: bun install --frozen-lockfile
+      - name: Type check CLI
+        run: bun run check:cli
 
-      - name: Type check
-        working-directory: ${{ matrix.dir }}
-        run: bunx tsc --noEmit -p tsconfig.json
+      - name: Type check Installer
+        run: bun run check:installer
+
+      - name: Build Webapp
+        run: bun run build:app

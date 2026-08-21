@@ -10,6 +10,9 @@ permissions:
 
 env:
   IMAGE: git.ombrage.space/orochibraru/homerun
+  TZ: Europe/Paris
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CI: true
 
 jobs:
   tag:
