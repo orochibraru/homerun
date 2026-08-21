@@ -4,62 +4,59 @@ Homerun needs three things at runtime: a Docker socket to manage containers, a
 Postgres database, and Traefik for routing/TLS. Pick whichever install path
 fits.
 
+Both options below run entirely from prebuilt release binaries and Docker
+images, neither needs Bun, `git`, or a source checkout on the target host. Want
+to run this from source instead (to develop on it)? See
+[CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## Option A, the one-liner (fresh Linux server)
 
 ```sh
 curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \
-  | sudo bash -s -- --repo=https://git.ombrage.space/orochibraru/homerun.git --mode=full
+  | sudo bash -s -- --mode=full
 ```
 
-This bootstraps Bun (if missing), clones the repo, and runs the real installer
-(`installer/src/index.ts`), which:
+This downloads the prebuilt `homerun-installer-<arch>` release binary for your
+host's architecture and runs it, which:
 
 1. Installs Docker Engine plus the host prerequisites for **rootless** Docker.
 2. Creates a dedicated system user (`homerun` by default) and installs rootless
    Docker under that account, nothing this app deploys runs as root.
 3. Creates the `homerun-network` Docker network.
-4. Runs `docker compose up -d` against this repo's own
-   [`compose.yaml`](../compose.yaml) under that rootless daemon, Traefik,
-   Postgres, and the app itself.
+4. Writes a standalone compose file and runs `docker compose up -d` against it
+   under that rootless daemon: Traefik, Postgres, and the app itself, all pulled
+   from published images.
 
 Run `--mode=agent` instead of `--mode=full` if you only want this box to run the
 [Homerun Agent](remote-hosts-and-agent.md#homerun-agent) as a remote
 build/deploy target for a different Homerun instance, not the full app. Add
-`--dry-run` to print every command without running anything, and see
+`--dry-run` to print every command without running anything, `--version=vX.Y.Z`
+to pin a release instead of the latest one, and see
 [`installer/README.md`](../installer/README.md) for the rest of the flags
-(`--ref=`, `--user=`, `--port=`).
+(`--user=`, `--port=`).
 
 > The installer's mutating steps (package install, rootless Docker setup,
 > systemd units) are new, verify the result on your own box before relying on it
 > for anything that matters. `--dry-run` first is a good habit.
 
-## Option B, Docker Compose, from source
+## Option B, Docker Compose
 
-For local development, or if you'd rather run the app directly on the host
-instead of the installer's rootless setup:
+Already have Docker set up the way you want it (rootful is fine here) and just
+want the stack? [`compose.prod.yaml`](../compose.prod.yaml) runs Traefik +
+Postgres + the app itself, all pulled from published images, no installer, no
+rootless setup, no source checkout:
 
 ```sh
-git clone https://git.ombrage.space/orochibraru/homerun.git && cd homerun
-bun install
+curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/compose.prod.yaml
+curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/.env.example
+mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum, see configuration.md
 docker network create homerun-network
-docker compose up -d          # Traefik + Postgres
-cp .env.example .env          # see configuration.md, or just edit env vars below directly
-bun run db:generate
-bun run dev                   # or: bun run build && bun run start
+docker compose -f compose.prod.yaml up -d
 ```
 
-`compose.yaml` only runs Traefik and Postgres, the app itself runs directly on
-the host (`bun run dev`/`bun run start`), not in a container, so it can reach
-`/var/run/docker.sock` without extra socket-forwarding. See the comments at the
-top of [`compose.yaml`](../compose.yaml) for the no-compose fallback (standalone
-`docker network create` + `docker run`).
-
-A prebuilt image of the app itself is also published on every push to `main`
-(`git.ombrage.space/orochibraru/homerun:latest`, see the
-[`Dockerfile`](../Dockerfile)) if you'd rather run the app in a container too,
-you'll need to give that container access to the host's Docker socket
-(`-v /var/run/docker.sock:/var/run/docker.sock`) and put it on `homerun-network`
-yourself, since `compose.yaml` doesn't wire this up for you yet.
+See the comments at the top of that file, and
+[`compose.yaml`](../compose.yaml)'s (the dev-only variant, no `app` service) for
+the no-compose fallback if you'd rather run each container by hand.
 
 ## First boot
 

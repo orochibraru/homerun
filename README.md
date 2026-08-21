@@ -15,33 +15,39 @@ babysit.
 
 ## Quick start
 
+Two ways to run it, both entirely from prebuilt release binaries and Docker
+images, no Bun, no `git`, no source checkout needed for either.
+
 **Fresh Linux server, one command.** Installs Docker (rootless), the
-`homerun-network`, and runs the full stack via this repo's own `compose.yaml`:
+`homerun-network`, and brings up Traefik + Postgres + the app itself, all pulled
+from published images:
 
 ```sh
 curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \
-  | sudo bash -s -- --repo=https://git.ombrage.space/orochibraru/homerun.git --mode=full
+  | sudo bash -s -- --mode=full
 ```
 
 Prefer to see every command before it runs? Add `--dry-run`. Full flag reference
 and what the installer actually does:
 [`installer/README.md`](installer/README.md).
 
-**From source, for development:**
+**Already running Docker your own way?** Grab
+[`compose.prod.yaml`](compose.prod.yaml) instead, same three services, no
+rootless setup, no installer:
 
 ```sh
-git clone https://git.ombrage.space/orochibraru/homerun.git && cd homerun
-bun install
+curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/compose.prod.yaml
+curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/.env.example
+mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum
 docker network create homerun-network
-docker compose up -d        # Traefik + Postgres
-bun run db:generate && bun run dev
+docker compose -f compose.prod.yaml up -d
 ```
 
-Open `http://localhost:5173`, create the first account (it becomes admin
+Open `http://localhost:3000`, create the first account (it becomes admin
 automatically), and the onboarding wizard walks through base domain / Docker /
-Traefik / email setup. Full walkthrough, including env vars and a
-container-image deploy of the app itself:
-[`docs/getting-started.md`](docs/getting-started.md).
+Traefik / email setup. Full walkthrough, including every env var:
+[`docs/getting-started.md`](docs/getting-started.md). Want to run this from
+source to develop on it? [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Why Homerun
 

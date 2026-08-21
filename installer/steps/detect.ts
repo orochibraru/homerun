@@ -38,7 +38,7 @@ export function requireRoot(): void {
 	}
 }
 
-/** "amd64"/"arm64" — matches this repo's own release-asset naming (`scripts/build-packages.ts`'s `homerun-<pkg>-<arch>` filenames), not Node's "x64"/"arm64" `process.arch` values. */
+/** "amd64"/"arm64": matches this repo's own release-asset naming (`scripts/build-packages.ts`'s `homerun-<pkg>-<arch>` filenames), not Node's "x64"/"arm64" `process.arch` values. */
 export function arch(): "amd64" | "arm64" {
 	if (process.arch === "arm64") {
 		return "arm64";

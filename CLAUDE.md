@@ -1034,11 +1034,11 @@ Containers attach to the external `homerun-network` Docker network
 (`docker network create homerun-network` once) rather than publishing host
 ports, true for the default `networkMode: "bridge"`; see Network mode below for
 the `"host"` exception. The root `compose.yaml` bootstraps Traefik and Postgres
-for **local dev** only — it deliberately has no `app` service, since dev runs
-the app directly on the host (`bun run dev`/`bun run start`) so its own logs
-aren't viewable in-app (see `system-logs/` above). The app itself _is_
-containerized for production use (`Dockerfile`, built/pushed by
-`.github/workflows/docker.yaml` — see Release automation below): the installer's
+for **local dev** only: it deliberately has no `app` service, since dev runs the
+app directly on the host (`bun run dev`/`bun run start`) so its own logs aren't
+viewable in-app (see `system-logs/` above). The app itself _is_ containerized
+for production use (`Dockerfile`, built/pushed by
+`.github/workflows/docker.yaml`; see Release automation below): the installer's
 `--mode=full` generates its own separate compose file that adds that image as an
 `app` service (see `installer/` below), rather than this dev compose file
 gaining one.
@@ -1436,11 +1436,11 @@ section is the pointer.
   git); `--mode=agent` downloads the matching `homerun-agent-<arch>` release
   binary straight to `/usr/local/bin/homerun-agent`; `--mode=full` writes a
   standalone `compose.yaml` (`installer/steps/full-stack.ts`, distinct from the
-  root dev `compose.yaml` — see Docker integration above) pulling the published
+  root dev `compose.yaml`; see Docker integration above) pulling the published
   `git.ombrage.space/orochibraru/homerun` app image alongside Traefik/Postgres,
   then `docker compose pull && ...up -d`. `installer/steps/release.ts` is the
   one place both artifact kinds (release binaries vs. the Docker image) resolve
-  from — `--version=` (a Gitea release tag, default `latest`) picks which
+  from: `--version=` (a Gitea release tag, default `latest`) picks which
   release's binaries to fetch, but doesn't pin the app image the same way:
   `docker.yaml` tags images by commit SHA + `latest` only, there's no `:vX.Y.Z`
   image tag, a real asymmetry in this repo's release pipeline documented in that

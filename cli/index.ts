@@ -6,6 +6,7 @@ import {
 	servicesList,
 	templatesList,
 } from "./commands";
+import { login, logout } from "./login";
 import { fail } from "./output";
 
 function printHelp(): void {
@@ -14,6 +15,8 @@ homerun : CLI for the Homerun REST API (openapi-fetch, typed against
 /api/v1/openapi.json : see cli/README.md).
 
 Usage:
+  homerun login [--base-url <url>]
+  homerun logout
   homerun services list [--json]
   homerun services get <id>
   homerun services deploy <id>
@@ -23,7 +26,9 @@ Usage:
   homerun projects list [--json]
   homerun templates list [--json]
 
-Auth/target (flag or env var):
+Auth/target: run \`homerun login\` once (stores your instance URL and a
+CLI-scoped API key in ~/.config/homerun/config.json), or override per-call
+with a flag or env var:
   --base-url <url>    or HOMERUN_BASE_URL
   --api-key <key>     or HOMERUN_API_KEY
 `);
@@ -59,7 +64,17 @@ async function main() {
 	const { positionals, json } = parseArgv(argv);
 	const [resource, action, id] = positionals;
 
+	if (resource === "login") {
+		return login(argv);
+	}
+	if (resource === "logout") {
+		return logout();
+	}
+
 	const config = resolveConfig(argv);
+	if (!config) {
+		fail("Not logged in. Run `homerun login` to get started.");
+	}
 	const client = makeClient(config);
 
 	if (resource === "services") {

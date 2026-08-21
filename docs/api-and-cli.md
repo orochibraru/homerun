@@ -38,15 +38,18 @@ its types are generated straight from a running instance's real
 `/api/v1/openapi.json`, so the client is checked against the actual API shape,
 not a hand-maintained guess.
 
-Every release publishes a compiled `homerun-cli-<arch>` binary (linux/amd64 +
-linux/arm64) — that's the normal way to get it, no Bun/build step needed:
+Install it with one command: it detects your arch, downloads the matching
+release binary, and drops it at `/usr/local/bin/homerun` (Linux only, no
+Bun/build step needed):
 
 ```sh
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/releases/latest/download/homerun-cli-amd64 -o homerun
-chmod +x homerun
+curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/cli/install.sh | bash
+```
+
+```sh
 HOMERUN_BASE_URL=https://your-instance.example.com \
 HOMERUN_API_KEY=<a key from your profile page> \
-./homerun services list
+homerun services list
 ```
 
 Or, working on the CLI itself, from the repo root:

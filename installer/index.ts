@@ -83,13 +83,13 @@ async function main() {
 	} else {
 		const composePath = `/home/${opts.rootlessUser}/homerun/compose.yaml`;
 		console.log(
-			`The full stack should be coming up under ${composePath} — check with:`,
+			`The full stack should be coming up under ${composePath}, check with:`,
 		);
 		console.log(
 			`  sudo -u ${opts.rootlessUser} env DOCKER_HOST=unix://${dockerSocket} docker compose -f ${composePath} ps`,
 		);
 		console.log(
-			`If it's not up yet, it's most likely waiting on AUTH_SECRET — set it (and the other vars you want) in ${composePath.replace(
+			`If it's not up yet, it's most likely waiting on AUTH_SECRET: set it (and the other vars you want) in ${composePath.replace(
 				"compose.yaml",
 				".env",
 			)}, then re-run \`docker compose -f ${composePath} up -d\` as ${opts.rootlessUser}.`,
