@@ -107,7 +107,8 @@ the architectural detail behind anything already built.
 ## Release & documentation
 
 - [x] Set up release automation with semantic-release to start versioning the
-      app (starting at 0.0.1, moving slowly). — `.releaserc.json` +
+      app (starting at 0.1.0-alpha.1, moving slowly — see the note below about
+      the accidental first v1.0.0 release). — `.releaserc.json` +
       `scripts/bump-version.ts`/`scripts/build-release-binaries.ts` + a new
       `release` job in `.github/workflows/publish.yaml`, conventional-commit
       driven (this repo's commits already use `feat:`/`fix:`/`chore:`). Uses
@@ -122,6 +123,16 @@ the architectural detail behind anything already built.
       resolves and reaches the real Gitea API before failing on a
       deliberately-fake token) vs. not (an actual CI release run, and whether
       the reused `PACKAGES_TOKEN` has release-API scope, not just registry-push).
+      **Real, corrected mistake**: the first real CI run published `v1.0.0` —
+      semantic-release always ships the very first release as `1.0.0`
+      regardless of commit types, that's not something `branches`/commit
+      config controls. Fixed by deleting that Gitea release + tag by hand
+      (`tea releases delete`), resetting all four `package.json` versions to
+      `0.1.0-alpha.1`, seeding a matching `v0.1.0-alpha.1` git tag as the new
+      baseline, and marking `main` itself as a `prerelease: "alpha"` branch in
+      `.releaserc.json` so every release going forward tags as
+      `0.1.0-alpha.N`/`0.2.0-alpha.N`/etc. until a deliberate decision to cut
+      a stable release.
 - [ ] Rewrite the README to showcase features and print a ready-to-run curl
       setup command. That command should live in the latest release's notes, with
       the installer and Homerun Agent attached as artifacts on each release. —
