@@ -33,7 +33,7 @@
 		"auth": "^1.7.1",
 		"bits-ui": "^2.16.3",
 		"clsx": "^2.1.1",
-		"conventional-changelog-conventionalcommits": "^10.4.0",
+		"conventional-changelog-conventionalcommits": "^8.0.0",
 		"drizzle-kit": "^0.31.10",
 		"husky": "^9.1.7",
 		"mode-watcher": "^1.1.0",
@@ -60,7 +60,7 @@
 	"scripts": {
 		"auth:db:generate": "auth generate",
 		"build": "vite build",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
 		"component:add": "shadcn-svelte add",
 		"db:generate": "drizzle-kit generate",
 		"dev": "vite dev",

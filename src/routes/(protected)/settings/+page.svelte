@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { KeyRound, Plus, Trash2 } from "@lucide/svelte";
 	import type { SubmitFunction } from "@sveltejs/kit";
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { page } from "$app/state";
@@ -19,8 +19,10 @@
 
 	const { data, form } = $props();
 
+	// Seeded once from the initial load : untrack() is intentional, not a
+	// lint workaround (same pattern as the dashboard's systemStats seed).
 	let autoscaleOverflowRemoteHostId = $state(
-		data.settings.autoscaleOverflowRemoteHostId ?? "",
+		untrack(() => data.settings.autoscaleOverflowRemoteHostId ?? ""),
 	);
 	const autoscaleOverflowRemoteHostLabel = $derived(
 		data.remoteHosts.find((h) => h.id === autoscaleOverflowRemoteHostId)
@@ -80,7 +82,9 @@
 	// component init; re-synced below whenever `data` actually changes
 	// (a real save, or navigating here again) rather than on every
 	// keystroke, so in-progress edits aren't clobbered mid-typing.
-	let oauthRows = $state<OauthRow[]>(data.settings.oauthProviders.map(toRow));
+	let oauthRows = $state<OauthRow[]>(
+		untrack(() => data.settings.oauthProviders.map(toRow)),
+	);
 	$effect(() => {
 		oauthRows = data.settings.oauthProviders.map(toRow);
 	});

@@ -28,3 +28,44 @@ fi
 
 echo "✨ Files formatted by Biome"
 # biome end
+
+# quality-gate
+# Hard gate: zero type errors, zero type-check warnings, zero lint errors,
+# across the whole repo — not just staged files (bun run check/lint already
+# scope to the full src/ tree regardless, so partial-file checking would be
+# a false sense of safety). See CLAUDE.md's "Commands" section for why this
+# exists and what counts as a violation.
+echo ""
+echo "Running full-repo lint + type check..."
+
+LINT_EXIT_CODE=0
+bun run lint || LINT_EXIT_CODE=$?
+if [ $LINT_EXIT_CODE -ne 0 ]; then
+  echo "❌ bun run lint found errors — fix them before committing."
+  exit $LINT_EXIT_CODE
+fi
+
+CHECK_EXIT_CODE=0
+bun run check || CHECK_EXIT_CODE=$?
+if [ $CHECK_EXIT_CODE -ne 0 ]; then
+  echo "❌ bun run check found type errors or warnings — fix them before committing."
+  exit $CHECK_EXIT_CODE
+fi
+
+# agent/, installer/, cli/ are separate tsconfig projects (no SvelteKit,
+# not covered by the check above) — only typecheck the ones with a staged
+# file, so an unrelated commit doesn't pay for all three every time.
+for dir in agent installer cli; do
+  if echo "$STAGED_FILES" | grep -q "^$dir/"; then
+    echo "Type-checking $dir/ (staged files touch it)..."
+    (cd "$dir" && bunx tsc --noEmit -p tsconfig.json)
+    SUB_EXIT_CODE=$?
+    if [ $SUB_EXIT_CODE -ne 0 ]; then
+      echo "❌ $dir/ has type errors — fix them before committing."
+      exit $SUB_EXIT_CODE
+    fi
+  fi
+done
+
+echo "✨ Lint + type check clean"
+# quality-gate end
