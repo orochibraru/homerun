@@ -1,3 +1,16 @@
+## [0.3.2](https://git.ombrage.space/orochibraru/homerun/compare/v0.3.1...v0.3.2) (2026-08-21)
+
+### Bug Fixes
+
+- cli
+  ([be0c839](https://git.ombrage.space/orochibraru/homerun/commit/be0c839c81831bc03b9f58feaee93ef42079b310))
+- format
+  ([0dacdac](https://git.ombrage.space/orochibraru/homerun/commit/0dacdac55caeb82194ded204e1349008fda42252))
+- prettier on changelog
+  ([11aff9a](https://git.ombrage.space/orochibraru/homerun/commit/11aff9adb83ecf95825d994b43a4cd83add8dd2f))
+- release conf
+  ([8da3b9b](https://git.ombrage.space/orochibraru/homerun/commit/8da3b9bd8bd2d0f386d5d39043155b573bf8d419))
+
 ## [0.3.1](https://git.ombrage.space/orochibraru/homerun/compare/v0.3.0...v0.3.1) (2026-08-21)
 
 ### Features
