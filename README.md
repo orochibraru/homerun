@@ -1,32 +1,83 @@
 # Homerun
 
-A self-hosted, single-user PaaS for deploying Docker containers with a click-config form — a minimal Dokploy/Cloud-Run alternative. Point at an image, fill in env vars/port/resources, deploy — Traefik auto-routes it to `<slug>.<baseDomain>` with TLS.
+**A self-hosted, single-user PaaS for deploying Docker containers with a click-config form** — a minimal Dokploy / Cloud Run alternative for your own hardware.
 
-Single host, local Docker socket only. No multi-node orchestration. No git/Dockerfile build pipeline — bring-your-own-image.
+Point at an image (or a git repo), fill in env vars / port / resources, hit deploy — Traefik routes it to `<slug>.yourdomain.com` with TLS, automatically. Single host, local Docker socket, no Kubernetes, no multi-node orchestration to babysit.
 
-## Stack
+> **Status: alpha (`0.1.0-alpha`).** Actively developed, running on real hardware, but still finding its shape — see [`docs/faq-and-limitations.md`](docs/faq-and-limitations.md) for what's solid and what isn't yet.
 
-SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over Postgres (via Bun's built-in `SQL` client), Tailwind v4 + shadcn-svelte, dockerode.
+## Quick start
+
+**Fresh Linux server, one command.** Installs Docker (rootless), the `homerun-network`, and runs the full stack via this repo's own `compose.yaml`:
+
+```sh
+curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \
+  | sudo bash -s -- --repo=https://git.ombrage.space/orochibraru/homerun.git --mode=full
+```
+
+Prefer to see every command before it runs? Add `--dry-run`. Full flag reference and what the installer actually does: [`installer/README.md`](installer/README.md).
+
+**From source, for development:**
+
+```sh
+git clone https://git.ombrage.space/orochibraru/homerun.git && cd homerun
+bun install
+docker network create homerun-network
+docker compose up -d        # Traefik + Postgres
+bun run db:generate && bun run dev
+```
+
+Open `http://localhost:5173`, create the first account (it becomes admin automatically), and the onboarding wizard walks through base domain / Docker / Traefik / email setup. Full walkthrough, including env vars and a container-image deploy of the app itself: [`docs/getting-started.md`](docs/getting-started.md).
+
+## Why Homerun
+
+Dokploy, Coolify, and friends are great — but most of them assume you'll eventually want multi-node, or ship a lot of surface area a homelab doesn't need. Homerun is deliberately narrow: **one host, one Docker socket, one user (plus invited developers), Traefik does the routing.** If that's your actual setup, there's less to configure and less to go wrong.
 
 ## Features
 
-- **Services** — deploy any image, manage env vars, resource limits, restart policy, private registry auth
-- **Live deploy progress** — pull/create/start steps streamed to the UI while deploying, resumes correctly on page reload mid-deploy
-- **Deployment history** — every deploy recorded with status, image digest, and its full progress log
-- **Projects** — group services together; each project gets its own Docker network so member services can reach each other by slug (`http://<slug>:<port>`), in addition to the shared Traefik network
-- **Templates** — one-click deploy for common services (Redis, Postgres, MySQL, MongoDB, Adminer, Uptime Kuma, n8n, Vaultwarden), plus save any service's config as a reusable custom template
-- **Storage volumes** — define local Docker-managed volumes or host bind-mount paths once, mount them into one or more services from each service's Volumes tab
-- **Live log streaming** — tail a running container's stdout/stderr from the browser
-- **Account/service isolation** — every container is labeled `homerun.managed=true`; the app never touches a container it didn't create
+- **Services** — deploy from a Docker image *or* build from a git repo's Dockerfile (any git-clone-able HTTPS URL, including a self-hosted Gitea); env vars, CPU/memory limits, restart policy, private registry auth
+- **Live deploy progress** — pull/build/create/start streamed to the UI in real time, resumes correctly if you reload mid-deploy
+- **Deployment history** — every attempt recorded with status, image digest, and its full log
+- **Projects** — group services under one Docker network so they reach each other by slug (`http://api:8080`), independent of the shared Traefik network
+- **Templates** — one-click deploys for common services (Redis, Postgres, MySQL, MongoDB, Adminer, Uptime Kuma, n8n, Vaultwarden), plus save any service's config as your own reusable template
+- **Storage volumes** — define bind-mount paths or Docker-managed volumes once, mount into one or more services
+- **Live log streaming & a web terminal** — tail stdout/stderr or open an interactive shell into a running container, all from the browser
+- **Custom domains & SSL** — a second hostname per service, plus bring-your-own cert/key for domains outside Traefik's automatic ACME coverage
+- **Remote hosts** — point a service at another Docker daemon (`tcp://`/`ssh://`, or the lightweight [Homerun Agent](agent/README.md)) instead of the local socket
+- **Autoscale-by-migration** — when the local host crosses a CPU/memory threshold, automatically move one opted-in service to a designated overflow host
+- **Scheduled redeploys & S3 backups** — cron-style auto-redeploy per service, cron-style bind-mount volume backups to any S3-compatible endpoint
+- **REST API, OpenAPI docs, and a CLI** — everything above is also a typed JSON API (`/api/v1`), with a live Swagger UI and a proper [`homerun` CLI](cli/README.md) built against the generated OpenAPI types
+- **Users, roles & invites** — admin/developer roles, email or direct-create invites, optional OAuth/OIDC login
+- **Per-service auth gate & account isolation** — optionally require a Homerun login to reach a deployed service; every container is labeled `homerun.managed=true` so this app never touches anything it didn't create
 
-## Commands
+See [`docs/`](docs/) for the full breakdown of every feature above, or [`CLAUDE.md`](CLAUDE.md) for architecture-level detail if you're contributing.
 
-```
+## Stack
+
+SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over Postgres, Tailwind v4 + shadcn-svelte, dockerode.
+
+## Documentation
+
+Start at [`docs/README.md`](docs/README.md) for guides on installing, configuring, deploying services, remote hosts, backups, the API/CLI, and known limitations.
+
+## Sub-projects
+
+Three standalone Bun/TypeScript tools ship alongside the main app, each its own `package.json`/binary:
+
+- [`agent/`](agent/README.md) — a small token-authenticated HTTP server for driving a *remote* host's Docker daemon
+- [`installer/`](installer/README.md) — the one-liner installer used above (Docker + rootless setup + the agent or full stack)
+- [`cli/`](cli/README.md) — a typed CLI (`homerun services deploy <id>`, etc.) against the REST API
+
+## Development
+
+```sh
 bun run dev              # vite dev
 bun run build            # vite build
-bun run start            # bun run ./build/index.js
-bun run db:generate      # drizzle-kit generate — regenerate migrations from schema.ts
-docker compose up -d     # bootstraps Traefik + Postgres — both required
+bun run start             # bun run ./build/index.js — serve the built app
+bun run check            # svelte-kit sync && svelte-check — the real gate, must be clean
+bun run lint              # biome check .
+bun run db:generate       # drizzle-kit generate — regenerate migrations from schema.ts
+docker compose up -d      # bootstraps Traefik + Postgres — both required, no fallback
 ```
 
-See `CLAUDE.md` for architecture details and conventions for contributors (human or AI).
+No test framework is set up in this repo. See [`CLAUDE.md`](CLAUDE.md) for full architecture, conventions, and what's genuinely verified vs. still a draft — required reading before contributing, human or AI.

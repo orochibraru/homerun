@@ -18,15 +18,7 @@ the architectural detail behind anything already built.
 
 ## Orchestration
 
-- [ ] Evaluate whether we need Docker Swarm (currently single-host, local socket
-      only : confirm if/how this fits before building toward it). **Not touched
-      this pass** — this is a real architecture decision, not a mechanical task:
-      Swarm would mean rethinking the single-host/local-socket assumption this
-      whole app is built on (every DTO, the deploy pipeline, Traefik's docker
-      provider config), and would also partially compete with the Homerun
-      Agent primitive already built (`agent/`, see below) as "the" answer to
-      multi-host. Needs a real design pass/your call on direction before code,
-      not something to guess at unsupervised.
+- [ ] Convert to using docker swarm with docker stack deploy, easier to scale, easier to manage.
 
 ## API & Docs
 
@@ -135,9 +127,22 @@ the architectural detail behind anything already built.
       `.releaserc.json` so every release going forward tags as
       `0.1.0-alpha.N`/`0.2.0-alpha.N`/etc. until a deliberate decision to cut
       a stable release.
-- [ ] Rewrite the README to showcase features and print a ready-to-run curl
-      setup command.
-- [ ] Build a docs website. Create MD file or event mdx in a "docs" directory at the root of the repo and we'll build some pages from there later. The goal for now is to have docs in the repo.
+- [x] Rewrite the README to showcase features and print a ready-to-run curl
+      setup command. — full rewrite: a "Why Homerun" pitch, the installer
+      one-liner (real repo URL, `--mode=full`) as the headline quick-start
+      plus a from-source/compose path underneath, the full feature list
+      pulled from CLAUDE.md's architecture sections, and pointers to the new
+      `docs/` tree and the three sub-projects. Also added `.env.example` at
+      the repo root (wasn't checked in before — every var cross-referenced
+      against `src/lib/config.ts`, `.gitignore` already allow-listed it).
+- [x] Build a docs website. Create MD file or event mdx in a "docs" directory at the root of the repo and we'll build some pages from there later. The goal for now is to have docs in the repo. — `docs/` added: an index plus
+      nine guides (getting started, configuration, services, projects &
+      templates, storage & backups, remote hosts & the Homerun Agent, users
+      & access, API & CLI, FAQ & limitations) — user/operator-facing, a step
+      down in density from CLAUDE.md, which stays the contributor-facing
+      counterpart. No site generator wired up yet, per the item's own scope
+      cut — plain Markdown, readable straight from the repo or a Gitea/GitHub
+      file browser.
 
 ## Environment variables
 
