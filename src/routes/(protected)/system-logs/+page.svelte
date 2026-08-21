@@ -126,7 +126,9 @@
 		} else if (form.action === "updateTraefik") {
 			updating = false;
 			if (form.success) {
-				toast[form.updated ? "success" : "info"](form.message);
+				toast[form.updated ? "success" : "info"](
+					form.message ?? "Traefik updated.",
+				);
 			} else {
 				toast.error(form.error ?? "Couldn't update Traefik.");
 			}

@@ -7,7 +7,7 @@
 		Lock,
 		TriangleAlertIcon,
 	} from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
@@ -59,7 +59,12 @@
 	// gitUrl/gitRef below rather than requiring a pasted URL, and checks for
 	// a Dockerfile at the picked ref so there's a heads-up before deploying
 	// fails on a repo that doesn't have one.
-	let browseProviderId = $state(data.connectedGitProviders[0]?.id ?? "");
+	// Seeded once from the initial load, then diverges as the user picks a
+	// different provider : untrack() is intentional, not a lint workaround
+	// (same pattern as the dashboard's systemStats seed).
+	let browseProviderId = $state(
+		untrack(() => data.connectedGitProviders[0]?.id ?? ""),
+	);
 	let repos = $state<
 		Array<{
 			cloneUrl: string;

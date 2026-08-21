@@ -74,3 +74,25 @@ jobs:
 
       - name: Linting
         run: bun run check
+
+  # agent/, installer/, cli/ are separate tsconfig projects (no SvelteKit) —
+  # not covered by `bun run check` above, so typechecked here instead.
+  sub-projects-type-check:
+    name: Sub-projects Type Check (agent/installer/cli)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [agent, installer, cli]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.dir }}
+        run: bun install --frozen-lockfile
+
+      - name: Type check
+        working-directory: ${{ matrix.dir }}
+        run: bunx tsc --noEmit -p tsconfig.json
