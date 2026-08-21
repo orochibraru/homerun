@@ -79,6 +79,8 @@
 		"component:add": "shadcn-svelte add",
 		"db:generate": "drizzle-kit generate",
 		"dev": "vite dev",
+		"format:md": "bun run prettier --write \"**/*.md\"",
+		"format:md:check": "bun run prettier --write \"**/*.md\"",
 		"gen": "svelte-kit sync && bun run scripts/generate-openapi.ts && openapi-typescript ./openapi.json -o cli/generated/openapi-types.ts",
 		"lint": "biome check",
 		"lint:fix": "biome check --write --unsafe",

@@ -33,7 +33,8 @@ Always use `Field.FieldGroup` + `Field.Field`, never raw `div` with `space-y-*`:
 </Field.FieldGroup>
 ```
 
-Use `Field` with `orientation="horizontal"` for settings pages. Use `Field.FieldLabel` with `class="sr-only"` for visually hidden labels.
+Use `Field` with `orientation="horizontal"` for settings pages. Use
+`Field.FieldLabel` with `class="sr-only"` for visually hidden labels.
 
 **Choosing form controls:**
 
@@ -82,7 +83,8 @@ import * as InputGroup from "$lib/components/ui/input-group";
 
 ## Buttons inside inputs use InputGroup.Root + InputGroup.Addon
 
-Never place a `Button` directly inside or adjacent to an `Input` with custom positioning.
+Never place a `Button` directly inside or adjacent to an `Input` with custom
+positioning.
 
 **Incorrect:**
 
@@ -183,7 +185,8 @@ import * as ToggleGroup from "$lib/components/ui/toggle-group";
 
 ## Field.FieldSet + Field.FieldLegend for grouping related fields
 
-Use `Field.FieldSet` + `Field.FieldLegend` for related checkboxes, radios, or switches, not `div` with a heading:
+Use `Field.FieldSet` + `Field.FieldLegend` for related checkboxes, radios, or
+switches, not `div` with a heading:
 
 ```svelte
 <script lang="ts">
@@ -208,7 +211,8 @@ import * as Field from "$lib/components/ui/field";
 
 ## Field validation and disabled states
 
-Both attributes are needed, `data-invalid`/`data-disabled` styles the field (label, description), while `aria-invalid`/`disabled` styles the control.
+Both attributes are needed, `data-invalid`/`data-disabled` styles the field
+(label, description), while `aria-invalid`/`disabled` styles the control.
 
 ```svelte
 <script lang="ts">
@@ -230,4 +234,5 @@ import { Input } from "$lib/components/ui/input";
 </Field.Field>
 ```
 
-Works for all controls: `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroupItem`, `Switch`, `Slider`, `NativeSelect`, `InputOTP`.
+Works for all controls: `Input`, `Textarea`, `Select`, `Checkbox`,
+`RadioGroupItem`, `Switch`, `Slider`, `NativeSelect`, `InputOTP`.

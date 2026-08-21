@@ -2,4 +2,5 @@
 
 ### Features
 
-- docs & release tag ([c99933d](https://git.ombrage.space/orochibraru/homerun/commit/c99933d85f3532a11ff4d502e98e9f7e4c0c649c))
+- docs & release tag
+  ([c99933d](https://git.ombrage.space/orochibraru/homerun/commit/c99933d85f3532a11ff4d502e98e9f7e4c0c649c))

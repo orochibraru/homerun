@@ -16,7 +16,30 @@ env:
   CI: true
 
 jobs:
-  checks:
+  markdown:
+    name: Markdown Lint & Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node.js for tooling
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Check markdown linting
+        run: bun run lint:md
+
+      - name: Check markdown formatting
+        run: bun run format:md:check
+
+  ts:
     name: TypeScript Build & Check
     runs-on: ubuntu-latest
     steps:
@@ -47,7 +70,9 @@ jobs:
         run: bun run lint
 
       - name: Type check Webapp
-        run: bun run svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --tsgo
+        run:
+          bun run svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+          --tsgo
 
       - name: Type check Agent
         run: bun run check:agent

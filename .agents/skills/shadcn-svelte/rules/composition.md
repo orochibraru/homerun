@@ -117,7 +117,8 @@ toast("File deleted.", {
 });
 ```
 
-Mount the `Toaster` from your UI folder once in the app layout (see [Sonner](https://shadcn-svelte.com/docs/components/sonner)).
+Mount the `Toaster` from your UI folder once in the app layout (see
+[Sonner](https://shadcn-svelte.com/docs/components/sonner)).
 
 ---
 
@@ -136,7 +137,8 @@ Mount the `Toaster` from your UI folder once in the app layout (see [Sonner](htt
 
 ## Dialog, Sheet, and Drawer always need a Title
 
-`Dialog.Title`, `Sheet.Title`, `Drawer.Title` are required for accessibility. Use `class="sr-only"` if visually hidden.
+`Dialog.Title`, `Sheet.Title`, `Drawer.Title` are required for accessibility.
+Use `class="sr-only"` if visually hidden.
 
 ```svelte
 <script lang="ts">
@@ -198,7 +200,8 @@ import { Spinner } from "$lib/components/ui/spinner";
 
 ## Tabs.Trigger must be inside Tabs.List
 
-Never render `Tabs.Trigger` directly inside `Tabs.Root`, always wrap in `Tabs.List`:
+Never render `Tabs.Trigger` directly inside `Tabs.Root`, always wrap in
+`Tabs.List`:
 
 ```svelte
 <script lang="ts">
