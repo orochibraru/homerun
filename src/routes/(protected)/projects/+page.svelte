@@ -25,9 +25,7 @@
   </div>
 
   {#if data.projects.length === 0}
-    <div
-      class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center"
-    >
+    <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center">
       <FolderKanban class="mb-3 size-10 text-text-muted opacity-40" />
       <p class="text-sm font-medium text-text-muted">No projects yet</p>
       <p class="mt-1 text-xs text-text-subtle mb-3">
@@ -45,9 +43,7 @@
           class="rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
           href="{resolve('/projects')}/{proj.id}"
         >
-          <div
-            class="bg-accent/10 text-accent mb-3 flex size-10 items-center justify-center rounded-xl"
-          >
+          <div class="bg-accent/10 text-accent mb-3 flex size-10 items-center justify-center rounded-xl">
             <FolderKanban class="size-5" />
           </div>
           <p class="truncate font-semibold text-text">

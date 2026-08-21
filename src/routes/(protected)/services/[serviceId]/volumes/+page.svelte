@@ -33,9 +33,7 @@
 
 <section class="border-border bg-surface rounded-2xl border">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-    <div
-      class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg"
-    >
+    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <HardDrive class="size-4" />
     </div>
     <div>
@@ -56,8 +54,7 @@
               {mount.volumeName}
               {#if mount.readOnly}
                 <span class="text-text-subtle text-xs font-normal"
-                  >(read-only)</span
-                >
+                >(read-only)</span>
               {/if}
             </p>
             <p class="text-text-muted truncate font-mono text-xs">
@@ -67,13 +64,12 @@
           <form
             action="?/detachVolume"
             method="POST"
-            use:enhance={() =>
-              async ({ result, update }) => {
-                if (result.type === "failure") {
-                  toast.error("Couldn't remove the mount.");
-                }
-                await update();
-              }}
+            use:enhance={() => async ({ result, update }) => {
+              if (result.type === "failure") {
+                toast.error("Couldn't remove the mount.");
+              }
+              await update();
+            }}
           >
             <input name="mountId" type="hidden" value={mount.id}>
             <Button size="icon-sm" title="Remove" type="submit" variant="ghost">
@@ -105,13 +101,12 @@
         action="?/attachVolume"
         class="flex flex-wrap items-end gap-3"
         method="POST"
-        use:enhance={() =>
-          async ({ result, update }) => {
-            if (result.type === "failure") {
-              toast.error("Couldn't mount the volume.");
-            }
-            await update();
-          }}
+        use:enhance={() => async ({ result, update }) => {
+          if (result.type === "failure") {
+            toast.error("Couldn't mount the volume.");
+          }
+          await update();
+        }}
       >
         <div class="flex-1">
           <div class="mb-1.5 flex items-center justify-between">
@@ -130,8 +125,10 @@
           </div>
           <SelectRoot name="volumeId" type="single" bind:value={volumeId}>
             <SelectTrigger class="w-full" id="volumeId">
-              {data.volumes.find((v) => v.id === volumeId)?.name ??
-                "Select a volume"}
+              {
+                data.volumes.find((v) => v.id === volumeId)?.name
+                ?? "Select a volume"
+              }
             </SelectTrigger>
             <SelectContent>
               {#each data.volumes as vol (vol.id)}
@@ -179,8 +176,8 @@
     <Dialog.Header>
       <Dialog.Title>New volume</Dialog.Title>
       <Dialog.Description>
-        A local storage source : mount it into this service right after, no
-        need to leave the page.
+        A local storage source : mount it into this service right after, no need
+        to leave the page.
       </Dialog.Description>
     </Dialog.Header>
 
@@ -194,9 +191,8 @@
         return async ({ result }) => {
           creatingVolume = false;
           if (result.type === "failure") {
-            createError =
-              (result.data?.error as string | undefined) ??
-              "Check the form for errors.";
+            createError = (result.data?.error as string | undefined)
+              ?? "Check the form for errors.";
             return;
           }
           if (result.type === "success") {
@@ -212,9 +208,7 @@
       }}
     >
       {#if createError}
-        <div
-          class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
-        >
+        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
           {createError}
         </div>
       {/if}

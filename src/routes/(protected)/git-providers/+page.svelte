@@ -82,9 +82,9 @@
     <div class="border-border bg-surface mb-6 rounded-2xl border p-5">
       <p class="text-text-subtle mb-4 text-xs">
         Register an OAuth App on the provider's own site first (its
-        developer/application settings), then paste the client ID/secret
-        here. The callback URL to give it is shown once you've added the
-        provider below.
+        developer/application settings), then paste the client ID/secret here.
+        The callback URL to give it is shown once you've added the provider
+        below.
       </p>
       {#if form?.error}
         <p class="mb-4 text-sm text-red-500">{form.error}</p>
@@ -149,7 +149,13 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class={label} for="clientId">Client ID</label>
-            <input class={input} id="clientId" name="clientId" required type="text">
+            <input
+              class={input}
+              id="clientId"
+              name="clientId"
+              required
+              type="text"
+            >
           </div>
           <div>
             <label class={label} for="clientSecret">Client secret</label>
@@ -181,19 +187,18 @@
         {@const connected = data.connectedProviderIds.includes(provider.id)}
         <div class="border-border bg-surface rounded-2xl border p-5">
           <div class="flex items-center gap-4">
-            <div
-              class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl"
-            >
+            <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
               <GitBranch class="size-5" />
             </div>
             <div class="min-w-0 flex-1">
               <p class="text-text truncate text-sm font-semibold">
                 {provider.name}
                 <span class="text-text-subtle ml-1 text-xs font-normal"
-                  >({provider.kind}{provider.baseUrl
+                >({provider.kind}{
+                    provider.baseUrl
                     ? ` · ${provider.baseUrl}`
-                    : ""})</span
-                >
+                    : ""
+                  })</span>
               </p>
               <p class="text-text-muted mt-0.5 truncate text-xs">
                 {#if connected}
@@ -208,16 +213,20 @@
               <form
                 action="?/disconnect"
                 method="POST"
-                use:enhance={() =>
-                  async ({ result, update }) => {
-                    if (result.type === "success") {
-                      toast.success("Disconnected.");
-                    }
-                    await update();
-                  }}
+                use:enhance={() => async ({ result, update }) => {
+                  if (result.type === "success") {
+                    toast.success("Disconnected.");
+                  }
+                  await update();
+                }}
               >
                 <input name="providerId" type="hidden" value={provider.id}>
-                <Button size="icon-sm" title="Disconnect" type="submit" variant="ghost">
+                <Button
+                  size="icon-sm"
+                  title="Disconnect"
+                  type="submit"
+                  variant="ghost"
+                >
                   <Unlink class="size-4" />
                 </Button>
               </form>
@@ -249,9 +258,11 @@
           </div>
           {#if data.isAdmin && !connected}
             <p class="border-border text-text-subtle mt-3 border-t pt-3 font-mono text-xs">
-              Callback URL for this provider's OAuth App: {callbackUrlFor(
-                provider.id,
-              )}
+              Callback URL for this provider's OAuth App: {
+                callbackUrlFor(
+                  provider.id,
+                )
+              }
             </p>
           {/if}
         </div>

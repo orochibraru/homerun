@@ -1,44 +1,62 @@
 #!/usr/bin/env bash
 # The "single curl command" entry point:
 #
-#   curl -fsSL https://<host>/install.sh | bash -s -- --repo=https://github.com/you/homerun.git
+#   curl -fsSL https://<host>/install.sh | sudo bash -s -- [--version=vX.Y.Z] [installer flags...]
 #
-# There's no prebuilt-binary release feed yet (no CI publishing dist/
-# artifacts anywhere) : this bootstraps Bun if it's missing, then clones the
-# repo and runs the real installer (installer/src/index.ts) via `bun run`,
-# which builds/installs the Homerun Agent (or the full stack, --mode=full)
-# from that same checkout. Once release infra exists, this can be swapped
-# for "download the right prebuilt installer/homerun-install-<arch> binary
-# and exec it" instead : see installer/README.md.
+# Every release publishes prebuilt agent/cli/installer binaries for
+# linux/amd64 + linux/arm64 as Gitea release assets on this repo
+# (.github/workflows/binaries.yaml + .releaserc.json), and pushes the app
+# itself as a Docker image (.github/workflows/docker.yaml). This script just
+# downloads the matching homerun-installer-<arch> binary and execs it :
+# no Bun, no git, nothing built from source anywhere on the target host. See
+# installer/README.md.
 set -euo pipefail
 
-REPO_URL="${HOMERUN_REPO_URL:-}"
+GITEA_HOST="git.ombrage.space"
+GITEA_REPO="orochibraru/homerun"
+VERSION="latest"
+
 for arg in "$@"; do
 	case "$arg" in
-		--repo=*) REPO_URL="${arg#--repo=}" ;;
+		--version=*) VERSION="${arg#--version=}" ;;
 	esac
 done
-
-if [ -z "$REPO_URL" ]; then
-	echo "error: --repo=<git url> is required (or set HOMERUN_REPO_URL)." >&2
-	exit 1
-fi
 
 if [ "$(id -u)" -ne 0 ]; then
 	echo "error: run as root (sudo bash -s -- ...) : the installer creates a system user and installs packages." >&2
 	exit 1
 fi
 
-if ! command -v bun >/dev/null 2>&1; then
-	echo "Bun not found, installing it first..."
-	curl -fsSL https://bun.sh/install | bash
-	export PATH="$HOME/.bun/bin:$PATH"
+case "$(uname -s)" in
+	Linux) ;;
+	*)
+		echo "error: this installs a Linux server (systemd + rootless Docker). Run it on the target server itself, not your workstation." >&2
+		exit 1
+		;;
+esac
+
+case "$(uname -m)" in
+	x86_64 | amd64) ARCH="amd64" ;;
+	aarch64 | arm64) ARCH="arm64" ;;
+	*)
+		echo "error: unsupported architecture $(uname -m) : release binaries only cover linux/amd64 and linux/arm64." >&2
+		exit 1
+		;;
+esac
+
+if [ "$VERSION" = "latest" ]; then
+	DOWNLOAD_URL="https://${GITEA_HOST}/${GITEA_REPO}/releases/latest/download/homerun-installer-${ARCH}"
+else
+	DOWNLOAD_URL="https://${GITEA_HOST}/${GITEA_REPO}/releases/download/${VERSION}/homerun-installer-${ARCH}"
 fi
 
-WORKDIR="$(mktemp -d)"
-trap 'rm -rf "$WORKDIR"' EXIT
+BIN="$(mktemp)"
+trap 'rm -f "$BIN"' EXIT
 
-git clone --depth 1 "$REPO_URL" "$WORKDIR/homerun"
-cd "$WORKDIR/homerun/installer"
-bun install
-exec bun run src/index.ts "$@"
+echo "Downloading homerun-installer-${ARCH} (${VERSION}) from ${GITEA_HOST}/${GITEA_REPO}..."
+curl -fsSL "$DOWNLOAD_URL" -o "$BIN"
+chmod +x "$BIN"
+
+# All original args (including --version=, which the installer itself also
+# reads to pick a matching agent binary / app image) are forwarded as-is.
+exec "$BIN" "$@"

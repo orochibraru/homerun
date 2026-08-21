@@ -175,9 +175,7 @@
 	════════════════════════════════════════════════════════════ -->
   <section class="rounded-2xl border border-border bg-surface">
     <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-      <div
-        class="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400"
-      >
+      <div class="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
         <UserCircle class="size-4" />
       </div>
       <div>
@@ -199,9 +197,7 @@
               src={accountImage}
             >
           {:else}
-            <div
-              class="bg-accent flex size-16 items-center justify-center rounded-2xl text-xl font-bold text-white"
-            >
+            <div class="bg-accent flex size-16 items-center justify-center rounded-2xl text-xl font-bold text-white">
               {initials}
             </div>
           {/if}
@@ -247,9 +243,7 @@
         <label class="mb-1.5 block text-sm font-medium text-text" for="email">
           Email
         </label>
-        <div
-          class="flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-2.5"
-        >
+        <div class="flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-2.5">
           <span class="flex-1 text-sm text-text-muted">
             {user?.email ?? "—"}
           </span>
@@ -292,9 +286,7 @@
 	════════════════════════════════════════════════════════════ -->
   <section class="rounded-2xl border border-border bg-surface">
     <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-      <div
-        class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400"
-      >
+      <div class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
         <KeyRound class="size-4" />
       </div>
       <div>
@@ -379,18 +371,21 @@
             <div class="flex gap-1">
               {#each [1, 2, 3, 4] as level}
                 <div
-                  class="h-1 flex-1 rounded-full transition-all duration-300 {level <=
-                  passwordStrength
+                  class="
+                    h-1 flex-1 rounded-full transition-all duration-300 {level <=
+                    passwordStrength
                     ? strengthMeta.bar
-                    : 'bg-[var(--color-surface-3)]'}"
-                ></div>
+                    : 'bg-[var(--color-surface-3)]'}
+                  "
+                >
+                </div>
               {/each}
             </div>
             <p class="mt-1 text-xs text-text-muted">
               Strength:
-              <span class="font-medium {strengthMeta.text}"
-                >{strengthMeta.label}</span
-              >
+              <span class="font-medium {strengthMeta.text}">{
+                strengthMeta.label
+              }</span>
             </p>
           </div>
         {/if}
@@ -441,10 +436,10 @@
 
       <div class="flex justify-end">
         <Button
-          disabled={passwordLoading ||
-            !currentPassword ||
-            !newPassword ||
-            !confirmPassword}
+          disabled={passwordLoading
+          || !currentPassword
+          || !newPassword
+          || !confirmPassword}
           type="submit"
         >
           {#if passwordLoading}
@@ -462,15 +457,9 @@
   <!-- ═══════════════════════════════════════════════════════════
 	     DANGER ZONE
 	════════════════════════════════════════════════════════════ -->
-  <section
-    class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40"
-  >
-    <div
-      class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30"
-    >
-      <div
-        class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600"
-      >
+  <section class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40">
+    <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
+      <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <AlertTriangle class="size-4" />
       </div>
       <div>
@@ -505,9 +494,7 @@
         </div>
       {:else}
         <form class="space-y-4" onsubmit={deleteAccount}>
-          <div
-            class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
-          >
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
             <p class="font-semibold">Are you absolutely sure?</p>
             <p class="mt-1">
               Enter your current password to confirm deletion. All data will be

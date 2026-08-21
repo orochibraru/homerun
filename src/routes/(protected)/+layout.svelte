@@ -159,25 +159,23 @@
 <!-- Fills the full viewport : there's no global navbar above this. -->
 <div class="bg-bg flex h-screen overflow-hidden">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
-  <aside
-    class="border-border bg-surface hidden w-60 shrink-0 flex-col border-r md:flex"
-  >
+  <aside class="border-border bg-surface hidden w-60 shrink-0 flex-col border-r md:flex">
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto p-3 pt-4">
       <p class="px-2 text-xl font-bold">Homerun</p>
-      <p
-        class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
-      >
+      <p class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
         Navigation
       </p>
       {#each mainNavItems as item}
         {@const active = isActive(item.href, item.exact)}
         {@const NavIcon = item.icon}
         <a
-          class="mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-						{active
+          class="
+            mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+            {active
             ? 'bg-accent-light text-accent'
-            : 'text-text-muted hover:bg-surface-2 hover:text-text'}"
+            : 'text-text-muted hover:bg-surface-2 hover:text-text'}
+          "
           href={item.href}
         >
           <NavIcon class="size-4 shrink-0" />
@@ -189,19 +187,19 @@
       {/each}
 
       {#if adminNavItems.length > 0}
-        <p
-          class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
-        >
+        <p class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
           Administration
         </p>
         {#each adminNavItems as item}
           {@const active = isActive(item.href, item.exact)}
           {@const NavIcon = item.icon}
           <a
-            class="mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-						{active
+            class="
+              mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+              {active
               ? 'bg-accent-light text-accent'
-              : 'text-text-muted hover:bg-surface-2 hover:text-text'}"
+              : 'text-text-muted hover:bg-surface-2 hover:text-text'}
+            "
             href={item.href}
           >
             <NavIcon class="size-4 shrink-0" />
@@ -227,9 +225,7 @@
             src={data.user.image}
           >
         {:else}
-          <div
-            class="bg-accent flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-          >
+          <div class="bg-accent flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white">
             {userInitial}
           </div>
         {/if}
@@ -262,26 +258,27 @@
         sidebarOpen = false;
       }}
       type="button"
-    ></button>
+    >
+    </button>
 
     <div
       class="border-border bg-surface fixed top-0 left-0 z-50 flex h-screen w-72 flex-col border-r shadow-2xl md:hidden"
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
       <nav class="flex-1 overflow-y-auto p-3 pt-4">
-        <p
-          class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
-        >
+        <p class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
           Navigation
         </p>
         {#each mainNavItems as item}
           {@const active = isActive(item.href, item.exact)}
           {@const MobileNavIcon = item.icon}
           <a
-            class="mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-							{active
+            class="
+              mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+              {active
               ? 'bg-accent-light text-accent'
-              : 'text-text-muted hover:bg-surface-2 hover:text-text'}"
+              : 'text-text-muted hover:bg-surface-2 hover:text-text'}
+            "
             href={item.href}
             onclick={() => {
               sidebarOpen = false;
@@ -293,19 +290,19 @@
         {/each}
 
         {#if adminNavItems.length > 0}
-          <p
-            class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase"
-          >
+          <p class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
             Administration
           </p>
           {#each adminNavItems as item}
             {@const active = isActive(item.href, item.exact)}
             {@const MobileNavIcon = item.icon}
             <a
-              class="mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-							{active
+              class="
+                mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+                {active
                 ? 'bg-accent-light text-accent'
-                : 'text-text-muted hover:bg-surface-2 hover:text-text'}"
+                : 'text-text-muted hover:bg-surface-2 hover:text-text'}
+              "
               href={item.href}
               onclick={() => {
                 sidebarOpen = false;
@@ -327,9 +324,7 @@
               src={data.user.image}
             >
           {:else}
-            <div
-              class="bg-accent flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-            >
+            <div class="bg-accent flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white">
               {userInitial}
             </div>
           {/if}
@@ -357,9 +352,7 @@
   <!-- ── Main content ───────────────────────────────────────────── -->
   <div class="flex flex-1 flex-col overflow-hidden">
     <!-- Mobile-only bar: hamburger + page title -->
-    <div
-      class="border-border bg-surface flex h-12 shrink-0 items-center gap-3 border-b px-4 md:hidden"
-    >
+    <div class="border-border bg-surface flex h-12 shrink-0 items-center gap-3 border-b px-4 md:hidden">
       <Button
         aria-label="Toggle sidebar"
         onclick={() => {

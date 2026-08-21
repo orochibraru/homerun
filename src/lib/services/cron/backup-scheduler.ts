@@ -7,7 +7,7 @@ import { cronMatches, sameMinute } from "./cron-expression.ts";
  * Opt-in, per-volume S3 backup scheduler (`storage/[volumeId]`'s
  * `backupEnabled` + `backupSchedule`). Mirrors CronRedeployScheduler's
  * shape exactly (same due-check / double-fire-guard pattern) but operates
- * on `StorageVolumeDTO` instead of `ServiceDTO` — independent scheduler,
+ * on `StorageVolumeDTO` instead of `ServiceDTO`, independent scheduler,
  * not shared code, since the two DTOs don't otherwise relate.
  */
 export class BackupScheduler extends BaseScheduler {

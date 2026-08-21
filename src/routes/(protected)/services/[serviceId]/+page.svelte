@@ -201,9 +201,7 @@
 </div>
 
 {#if pendingAction === "deploy" && progressLines.length > 0}
-  <div
-    class="mb-6 h-48 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
-  >
+  <div class="mb-6 h-48 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
     {#each progressLines as line, i (i)}
       <AnsiLine {line} />
     {/each}
@@ -211,9 +209,7 @@
 {/if}
 
 {#if !svc.containerId}
-  <div
-    class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm"
-  >
+  <div class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm">
     This service hasn't been deployed yet : click <strong>Deploy</strong> to
     pull
     <span class="text-text font-mono">{svc.image}:{svc.tag}</span>
@@ -259,8 +255,7 @@
           <button
             class="flex w-full items-center gap-4 px-5 py-3 text-left"
             onclick={() => {
-              expandedDeploymentId =
-                expandedDeploymentId === dep.id ? null : dep.id;
+              expandedDeploymentId = expandedDeploymentId === dep.id ? null : dep.id;
             }}
             type="button"
           >
@@ -281,17 +276,17 @@
             </div>
             {#if dep.log}
               <ChevronDown
-                class="text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
-                dep.id
+                class="
+                  text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
+                  dep.id
                   ? 'rotate-180'
-                  : ''}"
+                  : ''}
+                "
               />
             {/if}
           </button>
           {#if expandedDeploymentId === dep.id && dep.log}
-            <div
-              class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
-            >
+            <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
               {#each dep.log.split("\n").filter(Boolean) as line, i (i)}
                 <AnsiLine {line} />
               {/each}

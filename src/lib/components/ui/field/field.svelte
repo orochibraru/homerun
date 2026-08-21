@@ -24,18 +24,18 @@
 </script>
 
 <script lang="ts">
-  import type { HTMLAttributes } from "svelte/elements";
-  import { cn, type WithElementRef } from "$lib/utils.js";
+import { cn, type WithElementRef } from "$lib/utils.js";
+import type { HTMLAttributes } from "svelte/elements";
 
-  let {
-    ref = $bindable(null),
-    class: className,
-    orientation = "vertical",
-    children,
-    ...restProps
-  }: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
-    orientation?: FieldOrientation;
-  } = $props();
+let {
+  ref = $bindable(null),
+  class: className,
+  orientation = "vertical",
+  children,
+  ...restProps
+}: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
+  orientation?: FieldOrientation;
+} = $props();
 </script>
 
 <!-- biome-ignore lint/a11y/useSemanticElements: shadcn component-->

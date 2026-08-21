@@ -1,5 +1,5 @@
 // CronService : facade over the three independent 60s-tick schedulers this
-// app runs (cron redeploy, S3 backup, autoscale migration — see
+// app runs (cron redeploy, S3 backup, autoscale migration, see
 // services/cron/*) plus the standalone cron-expression parser two route
 // files use for schedule validation.
 //
@@ -9,7 +9,7 @@
 // docker.service.ts / the OOP convention note in CLAUDE.md). Unlike
 // DockerService's concerns, these three schedulers don't call into each
 // other, so composition (not the mixin-merge pattern DockerService uses)
-// is the natural fit — a static method here just delegates one call into
+// is the natural fit, a static method here just delegates one call into
 // the composed instance it owns.
 
 import { AutoscaleScheduler } from "./cron/autoscale-scheduler.ts";

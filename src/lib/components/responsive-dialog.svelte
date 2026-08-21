@@ -40,36 +40,36 @@
 </script>
 
 <script lang="ts">
-  import type { Snippet } from "svelte";
-  import { MediaQuery } from "svelte/reactivity";
-  import { enhance } from "$app/forms";
-  import { Button, buttonVariants } from "$lib/components/ui/button";
-  import * as Dialog from "$lib/components/ui/dialog/index.js";
-  import * as Drawer from "$lib/components/ui/drawer/index";
-  import { cn } from "$lib/utils";
+import { enhance } from "$app/forms";
+import { Button, buttonVariants } from "$lib/components/ui/button";
+import * as Dialog from "$lib/components/ui/dialog/index.js";
+import * as Drawer from "$lib/components/ui/drawer/index";
+import { cn } from "$lib/utils";
+import type { Snippet } from "svelte";
+import { MediaQuery } from "svelte/reactivity";
 
-  let {
-    open = $bindable(false),
-    loading = $bindable(false),
-    title,
-    description,
-    size = "md",
-    contentClass,
-    submitLabel = "Submit",
-    loadingLabel = "Loading...",
-    submitVariant = "default",
-    submitDisabled = false,
-    onsubmit,
-    form,
-    children,
-    footer,
-  }: ResponsiveDialogProps & {
-    children: Snippet;
-    /** Optional custom footer snippet. If provided, replaces default buttons. */
-    footer?: Snippet;
-  } = $props();
+let {
+  open = $bindable(false),
+  loading = $bindable(false),
+  title,
+  description,
+  size = "md",
+  contentClass,
+  submitLabel = "Submit",
+  loadingLabel = "Loading...",
+  submitVariant = "default",
+  submitDisabled = false,
+  onsubmit,
+  form,
+  children,
+  footer,
+}: ResponsiveDialogProps & {
+  children: Snippet;
+  /** Optional custom footer snippet. If provided, replaces default buttons. */
+  footer?: Snippet;
+} = $props();
 
-  const isDesktop = new MediaQuery("(min-width: 768px)");
+const isDesktop = new MediaQuery("(min-width: 768px)");
 </script>
 
 {#snippet footerButtons()}

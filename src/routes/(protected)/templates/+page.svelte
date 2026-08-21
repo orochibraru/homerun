@@ -13,12 +13,8 @@
 
 {#snippet card(tmpl: (typeof data.builtins)[number])}
   {@const Icon = templateIcon(tmpl.icon)}
-  <div
-    class="rounded-2xl border flex flex-col justify-between gap-2 h-full border-border bg-surface p-5 transition-shadow hover:shadow-md"
-  >
-    <div
-      class="bg-accent/10 text-accent flex size-10 items-center justify-center rounded-xl"
-    >
+  <div class="rounded-2xl border flex flex-col justify-between gap-2 h-full border-border bg-surface p-5 transition-shadow hover:shadow-md">
+    <div class="bg-accent/10 text-accent flex size-10 items-center justify-center rounded-xl">
       <Icon class="size-5" />
     </div>
     <p class="font-semibold text-text">{tmpl.name}</p>
@@ -56,9 +52,7 @@
   </div>
 
   <div class="mb-8">
-    <h2
-      class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
-    >
+    <h2 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase">
       Built-in
     </h2>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -69,15 +63,11 @@
   </div>
 
   <div>
-    <h2
-      class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
-    >
+    <h2 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase">
       My Templates
     </h2>
     {#if data.mine.length === 0}
-      <div
-        class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center"
-      >
+      <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center">
         <LayoutGrid class="mb-3 size-8 text-text-muted opacity-40" />
         <p class="text-sm font-medium text-text-muted">
           No custom templates yet

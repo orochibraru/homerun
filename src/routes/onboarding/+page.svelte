@@ -294,9 +294,7 @@
     </div>
 
     {#if data.authSecretIsDefault}
-      <div
-        class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
-      >
+      <div class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
         <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
         <span>
           Still using the built-in placeholder auth secret : this can't be fixed
@@ -389,8 +387,7 @@
             </div>
             <div>
               <label class={label} for="dockerNetworkName"
-                >Shared network name</label
-              >
+              >Shared network name</label>
               <input
                 class="{input} font-mono"
                 id="dockerNetworkName"
@@ -424,8 +421,7 @@
             </div>
             <div>
               <label class={label} for="traefikCertResolver"
-                >Cert resolver</label
-              >
+              >Cert resolver</label>
               <input
                 class={input}
                 id="traefikCertResolver"
@@ -439,8 +435,7 @@
             </div>
             <div>
               <label class={label} for="traefikDynamicConfigDir"
-                >Dynamic config directory (optional)</label
-              >
+              >Dynamic config directory (optional)</label>
               <input
                 class="{input} font-mono"
                 id="traefikDynamicConfigDir"
@@ -512,8 +507,8 @@
                     id="smtpPassword"
                     name="smtpPassword"
                     placeholder={settings?.smtpPasswordEnc
-                      ? "Leave blank to keep current"
-                      : "Password"}
+                    ? "Leave blank to keep current"
+                    : "Password"}
                     type="password"
                     bind:value={smtpPassword}
                   >

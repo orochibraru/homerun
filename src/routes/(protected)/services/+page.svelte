@@ -93,9 +93,7 @@
   </div>
 
   {#if data.services.length === 0}
-    <div
-      class="border-border flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center"
-    >
+    <div class="border-border flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
       <Server class="text-text-muted mb-3 size-10 opacity-40" />
       <p class="text-text-muted text-sm font-medium">No services yet</p>
       <p class="text-text-subtle mt-1 text-xs">
@@ -122,24 +120,18 @@
       {#each groups as [label, services] (label)}
         <div>
           {#if groups.length > 1}
-            <h2
-              class="text-text-subtle mb-3 text-xs font-semibold tracking-widest uppercase"
-            >
+            <h2 class="text-text-subtle mb-3 text-xs font-semibold tracking-widest uppercase">
               {label}
             </h2>
           {/if}
           <div class="space-y-3">
             {#each services as svc (svc.id)}
-              <div
-                class="border-border bg-surface flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 transition-shadow hover:shadow-md"
-              >
+              <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 transition-shadow hover:shadow-md">
                 <a
                   class="flex min-w-0 flex-1 items-center gap-4"
                   href="{resolve('/services')}/{svc.id}"
                 >
-                  <div
-                    class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl"
-                  >
+                  <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
                     <Server class="size-5" />
                   </div>
                   <div class="min-w-0">
@@ -189,8 +181,8 @@
                         disabled={pending[svc.id] || !svc.containerId}
                         size="icon-sm"
                         title={svc.containerId
-                          ? "Start"
-                          : "Deploy first from the service page"}
+                        ? "Start"
+                        : "Deploy first from the service page"}
                         type="submit"
                         variant="ghost"
                       >

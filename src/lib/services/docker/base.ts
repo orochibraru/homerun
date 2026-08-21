@@ -16,7 +16,7 @@ export type { RemoteHostConnection } from "./client.ts";
  * same as when this was a static `DockerService.getDocker` delegate.
  * Not `abstract` : TS's mixin pattern requires a concrete (instantiable)
  * base constructor type, and this class is never instantiated on its
- * own anyway — only ever as the bottom of the merge chain in
+ * own anyway, only ever as the bottom of the merge chain in
  * docker.service.ts.
  */
 export class BaseDockerService {
@@ -33,7 +33,7 @@ export class BaseDockerService {
  * `docker.service.ts` composes the full chain and instantiates it once.
  *
  * `...args: any[]` (rather than `unknown[]`) is TypeScript's own required
- * shape for a mixin's base constructor type — not a real escape hatch,
+ * shape for a mixin's base constructor type, not a real escape hatch,
  * every concern class here still declares a no-arg (or explicit
  * zero-param) constructor, this is purely what the mixin pattern's type
  * constraint demands.

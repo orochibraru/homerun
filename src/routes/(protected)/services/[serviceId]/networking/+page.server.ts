@@ -80,7 +80,9 @@ export const actions = {
 		await DockerService.syncCustomSslConfig(svc);
 
 		logger.info(
-			`Networking updated: service=${svc.id} domain=${customDomain ?? "none"} authRequired=${authRequired} user=${locals.user.id}`,
+			`Networking updated: service=${svc.id} domain=${
+				customDomain ?? "none"
+			} authRequired=${authRequired} user=${locals.user.id}`,
 		);
 		return { success: true };
 	},

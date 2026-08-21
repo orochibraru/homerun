@@ -54,18 +54,18 @@
 </script>
 
 <script lang="ts">
-  let {
-    class: className,
-    variant = "default",
-    size = "default",
-    ref = $bindable(null),
-    href,
-    type = "button",
-    disabled,
-    loading,
-    children,
-    ...restProps
-  }: ButtonProps = $props();
+let {
+  class: className,
+  variant = "default",
+  size = "default",
+  ref = $bindable(null),
+  href,
+  type = "button",
+  disabled,
+  loading,
+  children,
+  ...restProps
+}: ButtonProps = $props();
 </script>
 
 {#if href}

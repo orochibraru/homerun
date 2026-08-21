@@ -14,9 +14,7 @@
 	} = $props();
 </script>
 
-<div
-  class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center"
->
+<div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center">
   <Icon class="mb-3 size-10 text-text-muted opacity-40" />
   <p class="text-sm font-medium text-text-muted">{title}</p>
   {#if subtitle}

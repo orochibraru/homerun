@@ -341,7 +341,9 @@ export function DockerContainerMixin<
 			onProgress?.("Starting container...");
 			await container.start();
 			logger.info(
-				`Container created and started: ${name} (${container.id})${isRemote ? ` on remote host=${params.remote?.id}` : ""}`,
+				`Container created and started: ${name} (${container.id})${
+					isRemote ? ` on remote host=${params.remote?.id}` : ""
+				}`,
 			);
 
 			if (params.projectId && !isRemote && !isHostNetwork) {

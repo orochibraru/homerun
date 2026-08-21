@@ -54,12 +54,8 @@
   {:else}
     <div class="space-y-3">
       {#each data.volumes as vol (vol.id)}
-        <div
-          class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5"
-        >
-          <div
-            class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl"
-          >
+        <div class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5">
+          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <HardDrive class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
@@ -76,9 +72,7 @@
               </p>
             {/if}
             {#if vol.backupEnabled}
-              <p
-                class="mt-0.5 flex items-center gap-1 text-xs text-emerald-600"
-              >
+              <p class="mt-0.5 flex items-center gap-1 text-xs text-emerald-600">
                 <CloudUpload class="size-3" />
                 auto-backup on
               </p>
@@ -97,13 +91,12 @@
           <form
             action="?/delete"
             method="POST"
-            use:enhance={() =>
-              async ({ result, update }) => {
-                if (result.type === "failure") {
-                  toast.error("Couldn't delete the volume.");
-                }
-                await update();
-              }}
+            use:enhance={() => async ({ result, update }) => {
+              if (result.type === "failure") {
+                toast.error("Couldn't delete the volume.");
+              }
+              await update();
+            }}
           >
             <input name="volumeId" type="hidden" value={vol.id} />
             <Button

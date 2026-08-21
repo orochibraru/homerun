@@ -151,9 +151,7 @@
 </script>
 
 <section class="rounded-2xl border border-border bg-surface">
-  <div
-    class="flex items-center justify-between gap-3 border-b border-border px-5 py-4"
-  >
+  <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
     <div class="flex items-center gap-2">
       <TerminalIcon class="size-4 text-text-muted" />
       <h2 class="text-sm font-semibold text-text">Terminal</h2>
@@ -166,9 +164,7 @@
     </div>
   </div>
 
-  <div
-    class="flex items-start gap-2.5 border-b border-border bg-amber-50 px-5 py-3 text-xs text-amber-800 dark:bg-amber-950/20 dark:text-amber-300"
-  >
+  <div class="flex items-start gap-2.5 border-b border-border bg-amber-50 px-5 py-3 text-xs text-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
     <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
     <p>
       Runs <code>/bin/sh</code> inside this service's live container, with

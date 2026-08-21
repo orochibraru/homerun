@@ -48,11 +48,11 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Nest children between opening and closing tags instead of passing as props
 - Don't define components inside other components
 - Use semantic HTML and ARIA attributes for accessibility:
-  - Provide meaningful alt text for images
-  - Use proper heading hierarchy
-  - Add labels for form inputs
-  - Include keyboard event handlers alongside mouse events
-  - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
+    - Provide meaningful alt text for images
+    - Use proper heading hierarchy
+    - Add labels for form inputs
+    - Include keyboard event handlers alongside mouse events
+    - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
 
 ### Error Handling & Debugging
 

@@ -66,9 +66,7 @@
     }}
   >
     {#if form?.error}
-      <div
-        class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400"
-      >
+      <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
         {form.error}
       </div>
     {/if}

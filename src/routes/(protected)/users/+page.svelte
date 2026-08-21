@@ -83,10 +83,12 @@
     <div class="border-border bg-surface mb-6 rounded-2xl border p-5">
       <div class="mb-4 flex gap-2">
         <button
-          class="flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-all {addMode ===
-          'direct'
+          class="
+            flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-all {addMode ===
+            'direct'
             ? 'border-accent bg-accent-light text-accent'
-            : 'border-border text-text-muted hover:bg-surface-2'}"
+            : 'border-border text-text-muted hover:bg-surface-2'}
+          "
           onclick={() => {
             addMode = "direct";
           }}
@@ -95,10 +97,12 @@
           Direct create
         </button>
         <button
-          class="flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 {addMode ===
-          'invite'
+          class="
+            flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 {addMode ===
+            'invite'
             ? 'border-accent bg-accent-light text-accent'
-            : 'border-border text-text-muted hover:bg-surface-2'}"
+            : 'border-border text-text-muted hover:bg-surface-2'}
+          "
           disabled={!data.smtpEnabled}
           onclick={() => {
             addMode = "invite";
@@ -227,9 +231,7 @@
 
   <div class="space-y-3">
     {#each data.users as u (u.id)}
-      <div
-        class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4"
-      >
+      <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4">
         <div class="min-w-0">
           <p class="text-text truncate text-sm font-medium">
             {u.name}
@@ -284,9 +286,7 @@
       <h2 class="text-text mb-3 text-sm font-semibold">Pending invitations</h2>
       <div class="space-y-3">
         {#each data.invites as inv (inv.id)}
-          <div
-            class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed p-4"
-          >
+          <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed p-4">
             <div class="min-w-0">
               <p class="text-text truncate text-sm font-medium">
                 {inv.email}

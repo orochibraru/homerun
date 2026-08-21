@@ -1,87 +1,19 @@
 import type { StepRunner } from "../exec";
-import { commandExists } from "../exec";
+import { downloadReleaseBinary } from "./release";
 
-const BUN_INSTALL_SCRIPT = "https://bun.sh/install";
-
-/** No prebuilt-binary release feed exists yet (see installer/README.md) : every install builds the agent from source, same as a developer would. */
-export async function ensureBunInstalled(
+/** Downloads the prebuilt `homerun-agent-<arch>` release binary and installs it system-wide. No source, no Bun on the target host, see `release.ts`. */
+export async function installAgentBinary(
 	run: StepRunner,
-	username: string,
-): Promise<void> {
-	const has = await run.runOk(["bash", "-lc", "command -v bun"], {
-		as: username,
-	});
-	if (has) {
-		return;
-	}
-	await run.run(["bash", "-c", `curl -fsSL ${BUN_INSTALL_SCRIPT} | bash`], {
-		as: username,
-		env: { HOME: `/home/${username}` },
-	});
-}
-
-export async function cloneRepo(
-	run: StepRunner,
-	username: string,
-	repoUrl: string,
-	repoRef: string,
-	dest: string,
-): Promise<void> {
-	if (!repoUrl) {
-		throw new Error(
-			"--repo=<git url> is required (or set HOMERUN_REPO_URL) : see --help.",
-		);
-	}
-	const alreadyCloned = await run.runOk(["test", "-d", `${dest}/.git`], {
-		as: username,
-	});
-	if (alreadyCloned) {
-		await run.run(
-			["git", "-C", dest, "fetch", "--depth", "1", "origin", repoRef],
-			{
-				as: username,
-			},
-		);
-		await run.run(["git", "-C", dest, "checkout", repoRef], { as: username });
-		return;
-	}
-	await run.run(
-		[
-			"git",
-			"clone",
-			"--depth",
-			"1",
-			"--branch",
-			repoRef,
-			"--single-branch",
-			repoUrl,
-			dest,
-		],
-		{ as: username },
-	);
-}
-
-/** Builds agent/ from the cloned checkout and installs the compiled binary system-wide. */
-export async function buildAndInstallAgent(
-	run: StepRunner,
-	username: string,
-	repoDir: string,
+	version: string,
+	arch: "amd64" | "arm64",
 ): Promise<string> {
-	const bunBin = `/home/${username}/.bun/bin/bun`;
-	const bunPath = (await commandExists("bun")) ? "bun" : bunBin;
-
-	await run.run([bunPath, "install"], {
-		as: username,
-		cwd: `${repoDir}/agent`,
-	});
-	await run.run([bunPath, "run", "build"], {
-		as: username,
-		cwd: `${repoDir}/agent`,
-	});
-
 	const binaryPath = "/usr/local/bin/homerun-agent";
-	await run.run(["cp", `${repoDir}/agent/dist/homerun-agent`, binaryPath]);
-	await run.run(["chmod", "+x", binaryPath]);
+	await downloadReleaseBinary(
+		run,
+		version,
+		`homerun-agent-${arch}`,
+		binaryPath,
+	);
 	return binaryPath;
 }
 

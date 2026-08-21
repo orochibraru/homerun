@@ -136,9 +136,9 @@
     {/if}
     {#if svc.containerId}
       · internal:
-      <span class="text-text-subtle font-mono"
-        >{svc.slug}:{svc.containerPort}</span
-      >
+      <span class="text-text-subtle font-mono">{svc.slug}:{
+          svc.containerPort
+        }</span>
     {/if}
   </p>
 
@@ -148,10 +148,12 @@
       {@const active = isActive(tab.href, tab.exact)}
       {@const TabIcon = tab.icon}
       <a
-        class="flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-all duration-200
-					{active
+        class="
+          flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-all duration-200
+          {active
           ? 'border-accent text-accent'
-          : 'border-transparent text-text-muted hover:text-text'}"
+          : 'border-transparent text-text-muted hover:text-text'}
+        "
         href={tab.href}
       >
         <TabIcon class="size-4" />
