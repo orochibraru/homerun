@@ -2,7 +2,8 @@
 
 ### Features
 
-* cli auth improvements ([586e328](https://git.ombrage.space/orochibraru/homerun/commit/586e3285cf6374ebcd47615eb475e665bb707b03))
+- cli auth improvements
+  ([586e328](https://git.ombrage.space/orochibraru/homerun/commit/586e3285cf6374ebcd47615eb475e665bb707b03))
 
 ## [0.3.0](https://git.ombrage.space/orochibraru/homerun/compare/v0.2.0...v0.3.0) (2026-08-21)
 
