@@ -1,8 +1,26 @@
 import { config } from "./config";
 import { createHandler, ensureNetwork } from "./http";
 import { resolveToken } from "./token";
+import { AGENT_VERSION } from "./version";
 
 async function main() {
+	const arg = process.argv[2];
+	if (arg === "--version" || arg === "-v") {
+		console.log(`v${AGENT_VERSION}`);
+		return;
+	}
+	if (arg === "--help" || arg === "-h") {
+		console.log(`
+homerun-agent : token-authenticated HTTP control surface for a remote host's
+Docker daemon. See agent/README.md.
+
+Usage:
+  homerun-agent            Start the agent (reads its config from env vars)
+  homerun-agent --version  Print the version and exit
+`);
+		return;
+	}
+
 	const { token, source } = await resolveToken();
 
 	await ensureNetwork().catch((error) => {

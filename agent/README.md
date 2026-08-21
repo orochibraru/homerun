@@ -13,12 +13,44 @@ main app for how it plugs in, and its own "draft, not finished" caveats.
 
 ## Running it
 
+Three ways, roughly in order of how little you want to think about it. None of
+them need Bun or a source checkout on the target host.
+
+**Via the installer (recommended for a fresh host).** Sets up rootless Docker
+too, not just the agent itself, see
+[`installer/README.md`](../installer/README.md):
+
 ```bash
-bun install
-bun run dev          # bun --watch, talks to /var/run/docker.sock by default
+curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \
+  | sudo bash -s -- --mode=agent
 ```
 
-Or compiled to a standalone binary (no Bun runtime needed on the target host):
+**Already have Docker set up your own way?** Grab the prebuilt binary directly
+from this repo's Gitea releases (Linux amd64/arm64 only, same coverage as the
+CLI's binaries, see `scripts/build-packages.ts`):
+
+```bash
+curl -fsSL https://git.ombrage.space/orochibraru/homerun/releases/latest/download/homerun-agent-amd64 -o homerun-agent
+chmod +x homerun-agent
+./homerun-agent
+```
+
+(`-arm64` instead of `-amd64` on an arm64 host.) There's no published Docker
+image for the agent yet, that's tracked in the repo root's `TODO.md`, the binary
+above is the only non-source option for now.
+
+On first boot with no `AGENT_TOKEN` set, it generates one and prints it, copy
+that (plus this host's reachable `http://host:7420`) into the main Homerun
+instance's Remote Hosts page.
+
+**Working on the agent itself, or want to run it from source:**
+
+```bash
+bun install                  # from the repo root, agent/ has no package.json of its own
+bun run agent/index.ts       # or `bun --watch agent/index.ts` for autoreload
+```
+
+Compiling it to a standalone binary yourself, rather than using a release one:
 
 ```bash
 bun run build                # host platform
@@ -26,10 +58,6 @@ bun run build:linux-x64      # cross-compile for a typical VPS
 bun run build:linux-arm64
 ./dist/homerun-agent
 ```
-
-On first boot with no `AGENT_TOKEN` set, it generates one and prints it, copy
-that (plus this host's reachable `http://host:7420`) into the main Homerun
-instance's Remote Hosts page.
 
 ## Env vars
 
