@@ -116,3 +116,21 @@ export const deployResultResponse = z.object({
 export const okResponse = z.object({ ok: z.boolean() });
 
 export const successResponse = z.object({ success: z.boolean() });
+
+export const systemStatsResponse = z.object({
+	cpuPercent: z.number(),
+	diskPercent: z.number().nullable(),
+	diskTotalMb: z.number().nullable(),
+	diskUsedMb: z.number().nullable(),
+	gpu: z
+		.object({
+			memTotalMb: z.number(),
+			memUsedMb: z.number(),
+			name: z.string(),
+			utilizationPercent: z.number(),
+		})
+		.nullable(),
+	memPercent: z.number(),
+	memTotalMb: z.number(),
+	memUsedMb: z.number(),
+});

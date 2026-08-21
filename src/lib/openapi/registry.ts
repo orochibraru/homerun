@@ -10,6 +10,7 @@ import {
 	projectResponse,
 	serviceResponse,
 	successResponse,
+	systemStatsResponse,
 	templateResponse,
 } from "./schemas";
 
@@ -224,5 +225,18 @@ export const routes: RouteDef[] = [
 		},
 		summary: "List templates usable by the caller",
 		tags: ["Templates"],
+	},
+	{
+		method: "get",
+		path: "/system-stats",
+		responses: {
+			200: {
+				description: "Host CPU/RAM/disk/GPU stats",
+				schema: systemStatsResponse,
+			},
+			401: unauthorized,
+		},
+		summary: "Host resource stats",
+		tags: ["Meta"],
 	},
 ];
