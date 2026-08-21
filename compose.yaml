@@ -1,11 +1,18 @@
-# Traefik + Postgres bootstrap for Homerun.
+# Traefik + Postgres bootstrap for local Homerun DEVELOPMENT.
 #
-# This app itself is NOT containerized yet : run it directly on the host
-# (`bun run dev` / `bun run start`) with DOCKER_NETWORK_NAME=homerun-network
-# and access to /var/run/docker.sock. Traefik auto-discovers containers this
-# app creates via Docker labels (see src/lib/services/docker/labels.ts) : no
-# control-plane push needed. Postgres is required : there's no SQLite
-# fallback (see CLAUDE.md's "SQLite → Postgres conversion" note).
+# This file deliberately has no `app` service : for development the app
+# runs directly on the host (`bun run dev` / `bun run start`, see
+# CONTRIBUTING.md) with DOCKER_NETWORK_NAME=homerun-network and access to
+# /var/run/docker.sock, not in a container. Traefik auto-discovers
+# containers this app creates via Docker labels (see
+# src/lib/services/docker/labels.ts) : no control-plane push needed.
+# Postgres is required : there's no SQLite fallback (see CLAUDE.md's
+# "SQLite → Postgres conversion" note).
+#
+# Not doing local dev? See compose.prod.yaml instead, it adds the app
+# itself as a third service, pulled from the published Docker image, for a
+# plain `docker compose up -d` production install with no source checkout
+# at all.
 #
 # No-compose fallback: `docker network create homerun-network`, then run
 # Traefik standalone with the same command flags as below, and Postgres

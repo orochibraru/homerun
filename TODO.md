@@ -5,6 +5,8 @@
 - [ ] Add native Newt tunnel integration for Pangolion support and domain
       mapping
 - [ ] Add Cloudflare integration for domain mapping
+- [ ] Add tabs to the user's profile page so they can view: "Personal
+      Information", "Security (password)", "Sessions", "Authorized Clients"
 
 ## Orchestration
 

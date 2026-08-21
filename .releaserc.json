@@ -9,6 +9,18 @@
 					{
 						"breaking": true,
 						"release": "patch"
+					},
+					{
+						"release": "patch",
+						"type": "feat"
+					},
+					{
+						"release": "patch",
+						"type": "docs"
+					},
+					{
+						"release": "patch",
+						"type": "refactor"
 					}
 				]
 			}

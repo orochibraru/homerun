@@ -38,3 +38,10 @@ disagrees with the running app, the app is right. Please open an issue (or a PR)
 against whichever page is stale. [`../CLAUDE.md`](../CLAUDE.md) is the denser,
 implementation-level counterpart to this directory, aimed at contributors rather
 than operators.
+
+## Running from source instead
+
+Everything above is written for someone _operating_ an already-running instance.
+If you want to check out the code, run a dev server, and change things, see
+[`../CONTRIBUTING.md`](../CONTRIBUTING.md) instead, none of the install paths in
+Getting Started need Bun, `git`, or a source checkout.

@@ -1,4 +1,5 @@
 import createClient from "openapi-fetch";
+import { readStoredConfig } from "./config";
 import type { paths } from "./generated/openapi-types";
 
 export interface ClientConfig {
@@ -6,7 +7,15 @@ export interface ClientConfig {
 	apiKey: string;
 }
 
-export function resolveConfig(argv: string[]): ClientConfig {
+/**
+ * Resolves in order: `--base-url`/`--api-key` flags, then
+ * `HOMERUN_BASE_URL`/`HOMERUN_API_KEY` env vars, then the config file
+ * `homerun login` writes (see config.ts). Returns `null` rather than
+ * throwing when either piece is still missing : the caller (index.ts)
+ * treats that as "not logged in" and points at `homerun login`, rather
+ * than surfacing a raw error.
+ */
+export function resolveConfig(argv: string[]): ClientConfig | null {
 	let baseUrl = process.env.HOMERUN_BASE_URL ?? "";
 	let apiKey = process.env.HOMERUN_API_KEY ?? "";
 
@@ -18,13 +27,14 @@ export function resolveConfig(argv: string[]): ClientConfig {
 		}
 	}
 
-	if (!baseUrl) {
-		throw new Error(
-			"Missing base URL : pass --base-url or set HOMERUN_BASE_URL.",
-		);
+	if (!baseUrl || !apiKey) {
+		const stored = readStoredConfig();
+		baseUrl = baseUrl || stored?.baseUrl || "";
+		apiKey = apiKey || stored?.apiKey || "";
 	}
-	if (!apiKey) {
-		throw new Error("Missing API key : pass --api-key or set HOMERUN_API_KEY.");
+
+	if (!baseUrl || !apiKey) {
+		return null;
 	}
 	return { apiKey, baseUrl: baseUrl.replace(/\/$/, "") };
 }
