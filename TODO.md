@@ -148,3 +148,7 @@ the architectural detail behind anything already built.
 
 - [ ] Support pasting a `.env` file into the Environment field, auto-populating
       one env var row per line.
+
+## Chore
+
+- [ ] I don't see the point of having a separate package.json file in installer and agent since they're ultimately compiled as binaries. Clean this up.
