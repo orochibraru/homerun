@@ -13,6 +13,8 @@ the architectural detail behind anything already built.
       methods : `src/lib/services/cron.service.ts` was the other flagged example.
       Goal: real OOP throughout, not static barrels. (Noted in the repo's Claude
       settings as a standing convention : see CLAUDE.md's OOP section.)
+- [ ] Add native Newt tunnel integration for Pangolion support and domain mapping
+- [ ] Add Cloudflare integration for domain mapping
 
 ## Orchestration
 
