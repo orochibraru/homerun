@@ -136,17 +136,8 @@ the architectural detail behind anything already built.
       `0.1.0-alpha.N`/`0.2.0-alpha.N`/etc. until a deliberate decision to cut
       a stable release.
 - [ ] Rewrite the README to showcase features and print a ready-to-run curl
-      setup command. That command should live in the latest release's notes, with
-      the installer and Homerun Agent attached as artifacts on each release. —
-      **partially unblocked**: the release job above now produces the artifacts
-      and could append notes with the curl command, but wiring the actual
-      curl-command-into-release-notes step, and the README rewrite itself,
-      wasn't done this pass — do this after confirming the release job actually
-      produces a real release once, so the README's claims are true rather than
-      aspirational.
-- [ ] Build a docs website (ideally SvelteKit, matching the main app's stack). —
-      not started; a whole separate project, out of scope for this pass
-      alongside everything else above.
+      setup command.
+- [ ] Build a docs website. Create MD file or event mdx in a "docs" directory at the root of the repo and we'll build some pages from there later. The goal for now is to have docs in the repo.
 
 ## Environment variables
 
