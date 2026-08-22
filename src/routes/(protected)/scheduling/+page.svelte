@@ -91,7 +91,7 @@
                 </p>
                 <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
                   {vol.backupSchedule}
-                  · {vol.backupBucket}
+                  · {vol.destinationName}
                 </p>
               </div>
               <p class="text-text-subtle shrink-0 text-xs">

@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { BackupRunDTO } from "$lib/dto/backup-run-dto";
+import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { S3BackupService } from "$lib/services/s3-backup.service";
@@ -9,17 +10,24 @@ const logger = new Logger("Backups");
 
 export const load = async ({ parent }) => {
 	const { user } = await parent();
-	const [volumes, runs] = await Promise.all([
+	const [volumes, runs, destinations] = await Promise.all([
 		StorageVolumeDTO.list(user.id),
 		BackupRunDTO.listForUser(user.id),
+		S3DestinationDTO.list(user.id),
 	]);
+	const destinationNames = new Map(destinations.map((d) => [d.id, d.name]));
 
 	return {
 		runs: runs.map(({ run, volumeName }) => ({
 			...run.toJSON(),
 			volumeName,
 		})),
-		volumes: volumes.map((v) => v.toJSON()),
+		volumes: volumes.map((v) => ({
+			destinationName: v.s3DestinationId
+				? (destinationNames.get(v.s3DestinationId) ?? "unknown destination")
+				: "no destination",
+			...v.toJSON(),
+		})),
 	};
 };
 

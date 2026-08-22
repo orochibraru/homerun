@@ -1,8 +1,10 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
+import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
@@ -53,14 +55,16 @@ export const load = async ({ url, parent }) => {
 	const template = templateId
 		? await TemplateDTO.usable(templateId, user.id)
 		: null;
-	const [settings, connections] = await Promise.all([
+	const [settings, connections, cacheRegistries] = await Promise.all([
 		InstanceSettingsDTO.get(),
 		GitConnectionDTO.listForUser(user.id),
+		BuildCacheRegistryDTO.list(user.id),
 	]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
 		baseDomain: config.baseDomain,
+		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
 		// Only providers this user has actually connected : see the Git
 		// Providers page for connecting one. Same shape as the service
 		// Source tab's own "Browse repos" picker, which this form mirrors.
@@ -109,6 +113,8 @@ export const actions = {
 
 		const svc = await ServiceDTO.create({
 			authRequired: input.authRequired,
+			buildCacheRegistryId:
+				input.buildSource === "git" ? input.buildCacheRegistryId || null : null,
 			buildSource: input.buildSource,
 			containerPort: input.containerPort,
 			cpuLimit: input.cpuLimit || null,
@@ -131,6 +137,12 @@ export const actions = {
 		logger.info(
 			`Service created: service=${svc.id} slug=${input.slug} source=${input.buildSource} user=${locals.user.id}`,
 		);
+		NotificationDTO.notify({
+			message: `"${svc.name}" was created.`,
+			serviceId: svc.id,
+			type: "service_created",
+			userId: locals.user.id,
+		});
 
 		redirect(
 			303,

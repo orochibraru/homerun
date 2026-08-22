@@ -120,18 +120,8 @@ async function putObject(
 /** S3-compatible backup destination : the only BackupService implementation today. */
 class S3BackupServiceClass extends BackupService {
 	async backupVolume(volume: StorageVolumeDTO): Promise<BackupResult> {
-		return this.runBackup(volume, (v, key, body, secretAccessKey) =>
-			putObject(
-				{
-					accessKeyId: v.backupAccessKeyId as string,
-					bucket: v.backupBucket as string,
-					endpoint: v.backupEndpoint as string,
-					region: v.backupRegion as string,
-					secretAccessKey,
-				},
-				key,
-				body,
-			),
+		return this.runBackup(volume, (_v, key, body, destination) =>
+			putObject(destination, key, body),
 		);
 	}
 }

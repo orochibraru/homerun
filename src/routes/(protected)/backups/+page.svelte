@@ -42,12 +42,17 @@
 </script>
 
 <div class="p-6 md:p-8">
-  <div class="mb-8">
-    <h1 class="text-text text-2xl font-bold">Backups</h1>
-    <p class="text-text-muted mt-1 text-sm">
-      Per-volume S3 backups and their run history. Configure a volume's
-      destination and schedule from its own page.
-    </p>
+  <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-text text-2xl font-bold">Backups</h1>
+      <p class="text-text-muted mt-1 text-sm">
+        Per-volume S3 backups and their run history. Configure a volume's
+        destination and schedule from its own page.
+      </p>
+    </div>
+    <Button href={resolve("/s3-destinations")} variant="outline">
+      Manage S3 destinations
+    </Button>
   </div>
 
   <!-- ═══ Configured volumes ═══ -->
@@ -78,7 +83,7 @@
               </a>
               <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
                 {vol.backupSchedule}
-                · {vol.backupBucket}
+                · {vol.destinationName}
               </p>
               <p class="text-text-subtle mt-0.5 text-xs">
                 last run: {formatDate(vol.backupLastRunAt)}

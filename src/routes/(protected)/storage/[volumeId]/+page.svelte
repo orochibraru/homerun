@@ -6,13 +6,19 @@
 		CloudUpload,
 		XCircle,
 	} from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
@@ -26,6 +32,11 @@
 
 	let submitting = $state(false);
 	let backingUp = $state(false);
+	let s3DestinationId = $state(untrack(() => vol.s3DestinationId ?? ""));
+	const destinationLabel = $derived(
+		data.destinations.find((d) => d.id === s3DestinationId)?.name ??
+			"Pick a destination…",
+	);
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
@@ -112,33 +123,29 @@
 
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
-            <label class={label} for="backupEndpoint">Endpoint</label>
-            <Input
-              id="backupEndpoint"
-              name="backupEndpoint"
-              placeholder="https://s3.us-east-1.amazonaws.com"
-              type="text"
-              value={vol.backupEndpoint ?? ""}
-            />
-          </div>
-          <div>
-            <label class={label} for="backupBucket">Bucket</label>
-            <Input
-              id="backupBucket"
-              name="backupBucket"
-              type="text"
-              value={vol.backupBucket ?? ""}
-            />
-          </div>
-          <div>
-            <label class={label} for="backupRegion">Region</label>
-            <Input
-              id="backupRegion"
-              name="backupRegion"
-              placeholder="us-east-1"
-              type="text"
-              value={vol.backupRegion ?? ""}
-            />
+            <label class={label} for="s3DestinationId">S3 destination</label>
+            {#if data.destinations.length === 0}
+              <p class="text-xs text-text-muted">
+                No destinations configured yet.
+                <a class="text-accent underline" href={resolve("/s3-destinations")}>
+                  Add one
+                </a>
+                first.
+              </p>
+            {:else}
+              <SelectRoot
+                name="s3DestinationId"
+                type="single"
+                bind:value={s3DestinationId}
+              >
+                <SelectTrigger id="s3DestinationId">{destinationLabel}</SelectTrigger>
+                <SelectContent>
+                  {#each data.destinations as dest (dest.id)}
+                    <SelectItem label={dest.name} value={dest.id} />
+                  {/each}
+                </SelectContent>
+              </SelectRoot>
+            {/if}
           </div>
           <div>
             <label class={label} for="backupPrefix"
@@ -149,25 +156,6 @@
               placeholder="backups/my-app"
               type="text"
               value={vol.backupPrefix ?? ""}
-            />
-          </div>
-          <div>
-            <label class={label} for="backupAccessKeyId">Access key ID</label>
-            <Input
-              id="backupAccessKeyId"
-              name="backupAccessKeyId"
-              type="text"
-              value={vol.backupAccessKeyId ?? ""}
-            />
-          </div>
-          <div>
-            <label class={label} for="backupSecretAccessKey"
-            >Secret access key</label>
-            <Input
-              id="backupSecretAccessKey"
-              name="backupSecretAccessKey"
-              placeholder={vol.backupAccessKeyId ? "Unchanged" : ""}
-              type="password"
             />
           </div>
         </div>
@@ -200,7 +188,7 @@
       }}
     >
       <Button
-        disabled={backingUp || !vol.backupEndpoint}
+        disabled={backingUp || !vol.s3DestinationId}
         type="submit"
         variant="outline"
       >

@@ -1,4 +1,6 @@
+import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
@@ -26,6 +28,7 @@ class DeploymentServiceClass {
 		svc: ServiceDTO,
 		userId: string,
 		clientDeploymentId?: string | null,
+		trigger: "manual" | "cron" = "manual",
 	): Promise<DeployResult> {
 		const isGitBuild = svc.buildSource === "git";
 		logger.info(
@@ -66,9 +69,20 @@ class DeploymentServiceClass {
 				image = `homerun-build-${svc.slug}`;
 				tag = Date.now().toString(36);
 
+				const cacheRegistryRow = svc.buildCacheRegistryId
+					? await BuildCacheRegistryDTO.get(svc.buildCacheRegistryId, userId)
+					: null;
+
 				const result = await DockerService.buildFromGit(
 					{
 						buildContext: svc.gitBuildContext,
+						cacheRegistry: cacheRegistryRow
+							? {
+									password: cacheRegistryRow.decryptPassword(),
+									registryUrl: cacheRegistryRow.registryUrl,
+									username: cacheRegistryRow.username,
+								}
+							: null,
 						dockerfilePath: svc.gitDockerfilePath,
 						gitRef: svc.gitRef,
 						gitUrl: svc.gitUrl,
@@ -147,6 +161,15 @@ class DeploymentServiceClass {
 			logger.info(
 				`Deploy succeeded: service=${svc.id} container=${containerId} deployment=${dep.id}`,
 			);
+			NotificationDTO.notify({
+				message:
+					trigger === "cron"
+						? `"${svc.name}" was auto-redeployed.`
+						: `"${svc.name}" deployed successfully.`,
+				serviceId: svc.id,
+				type: trigger === "cron" ? "auto_redeploy" : "deploy_success",
+				userId,
+			});
 
 			return { containerId, deploymentId: dep.id, success: true };
 		} catch (err) {
@@ -161,6 +184,12 @@ class DeploymentServiceClass {
 				`Deploy failed: service=${svc.id} deployment=${dep.id}`,
 				err,
 			);
+			NotificationDTO.notify({
+				message: `"${svc.name}" failed to deploy: ${errorMessage}`,
+				serviceId: svc.id,
+				type: "deploy_failure",
+				userId,
+			});
 			return { deploymentId: dep.id, error: errorMessage, success: false };
 		}
 	}

@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
@@ -11,13 +12,15 @@ const logger = new Logger("Services");
 
 export const load = async ({ parent }) => {
 	const { user } = await parent();
-	const [settings, connections] = await Promise.all([
+	const [settings, connections, cacheRegistries] = await Promise.all([
 		InstanceSettingsDTO.get(),
 		GitConnectionDTO.listForUser(user.id),
+		BuildCacheRegistryDTO.list(user.id),
 	]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
+		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
 		// Only providers this user has actually connected : see the Git
 		// Providers page for connecting one.
 		connectedGitProviders: connections
@@ -52,6 +55,9 @@ export const actions = {
 		const isGitBuild = input.buildSource === "git";
 
 		await svc.update({
+			buildCacheRegistryId: isGitBuild
+				? input.buildCacheRegistryId || null
+				: null,
 			buildSource: input.buildSource,
 			registryUrl: input.registryUrl || null,
 			registryUsername: input.registryUsername || null,

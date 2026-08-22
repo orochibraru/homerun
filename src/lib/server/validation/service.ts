@@ -29,6 +29,7 @@ const baseServiceSchema = z.object({
 	// "image" (bring-your-own, the default) | "git" (clone + build a
 	// Dockerfile) : cross-checked against the other git*/image fields below,
 	// since which of those is required depends on this.
+	buildCacheRegistryId: z.string().optional(),
 	buildSource: z.enum(["image", "git"]).default("image"),
 	containerPort: z.coerce
 		.number({ error: "Container port is required." })
@@ -141,6 +142,7 @@ export type UpdatePortsInput = z.infer<typeof updatePortsSchema>;
 // credential unchanged", not "clear it" (see source/+page.server.ts).
 export const updateSourceSchema = baseServiceSchema
 	.pick({
+		buildCacheRegistryId: true,
 		buildSource: true,
 		gitBuildContext: true,
 		gitDockerfilePath: true,

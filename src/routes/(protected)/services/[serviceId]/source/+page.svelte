@@ -14,6 +14,12 @@
 	import { resolve } from "$app/paths";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
 
@@ -27,6 +33,7 @@
 
 	const values = $derived(
 		(form?.values as Record<string, string> | undefined) ?? {
+			buildCacheRegistryId: svc.buildCacheRegistryId ?? "",
 			buildSource: svc.buildSource,
 			gitBuildContext: svc.gitBuildContext ?? "",
 			gitDockerfilePath: svc.gitDockerfilePath ?? "",
@@ -37,6 +44,11 @@
 			registryUsername: svc.registryUsername ?? "",
 			tag: svc.tag,
 		},
+	);
+	let buildCacheRegistryId = $derived(values.buildCacheRegistryId ?? "");
+	const buildCacheRegistryLabel = $derived(
+		data.buildCacheRegistries.find((r) => r.id === buildCacheRegistryId)
+			?.name ?? "No cache",
 	);
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
@@ -380,6 +392,36 @@
           type="text"
           value={values.gitBuildContext}
         />
+      </div>
+      <div>
+        <label class={label} for="buildCacheRegistryId">
+          Build cache registry
+        </label>
+        {#if data.buildCacheRegistries.length === 0}
+          <p class="text-xs text-text-muted">
+            No registries configured.
+            <a class="text-accent underline" href={resolve("/build-cache-registries")}>
+              Add one
+            </a>
+            to speed up rebuilds by reusing unchanged layers.
+          </p>
+        {:else}
+          <SelectRoot
+            name="buildCacheRegistryId"
+            type="single"
+            bind:value={buildCacheRegistryId}
+          >
+            <SelectTrigger id="buildCacheRegistryId">
+              {buildCacheRegistryLabel}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem label="No cache" value="" />
+              {#each data.buildCacheRegistries as reg (reg.id)}
+                <SelectItem label={reg.name} value={reg.id} />
+              {/each}
+            </SelectContent>
+          </SelectRoot>
+        {/if}
       </div>
     {/if}
 

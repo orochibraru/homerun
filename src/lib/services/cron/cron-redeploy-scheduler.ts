@@ -32,7 +32,7 @@ export class CronRedeployScheduler extends BaseScheduler {
 
 		// Fire-and-forget the actual deploy: one service's failure shouldn't
 		// block the others, and the tick itself only needs to record intent.
-		DeploymentService.deployService(svc, svc.userId)
+		DeploymentService.deployService(svc, svc.userId, undefined, "cron")
 			.then((result) => {
 				if (!result.success) {
 					this.logger.error(

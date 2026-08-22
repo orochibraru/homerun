@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { BackupRunDTO } from "$lib/dto/backup-run-dto";
+import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
-import { decryptSecret } from "./secrets.ts";
 
 const logger = new Logger("Backup");
 const execFileAsync = promisify(execFile);
@@ -15,19 +15,27 @@ export interface BackupResult {
 	success: boolean;
 }
 
+export interface ResolvedS3Destination {
+	accessKeyId: string;
+	bucket: string;
+	endpoint: string;
+	region: string;
+	secretAccessKey: string;
+}
+
 /**
  * Base class for backing up a storage volume to some destination. Owns the
- * generic tar-then-upload pipeline (validate config, decrypt the stored
- * secret, tar the source directory, log/return the result) : a concrete
- * subclass only supplies the "put these bytes at this key" transport, via
- * `upload()`. S3BackupService is the only implementation today; a future
- * non-S3 destination would extend this the same way.
+ * generic tar-then-upload pipeline (validate config, resolve+decrypt the
+ * named destination, tar the source directory, log/return the result) : a
+ * concrete subclass only supplies the "put these bytes at this key"
+ * transport, via `upload()`. S3BackupService is the only implementation
+ * today; a future non-S3 destination would extend this the same way.
  */
 export abstract class BackupService {
 	/**
 	 * Backs up one storage volume, delegating the "put these bytes at this
-	 * key" transport to `upload` (the decrypted destination secret is
-	 * passed through so the subclass never has to decrypt it itself).
+	 * key" transport to `upload` (the resolved+decrypted destination is
+	 * passed through so the subclass never has to look it up itself).
 	 *
 	 * Bind-mount sources only for v1 : `source` is a real host directory, so
 	 * it can be tar'd directly. A Docker-managed named volume's content isn't
@@ -42,7 +50,7 @@ export abstract class BackupService {
 			volume: StorageVolumeDTO,
 			key: string,
 			body: Uint8Array,
-			secretAccessKey: string,
+			destination: ResolvedS3Destination,
 		) => Promise<void>,
 	): Promise<BackupResult> {
 		// One row per attempt (scheduled or manual), finalized below on every
@@ -67,7 +75,7 @@ export abstract class BackupService {
 			volume: StorageVolumeDTO,
 			key: string,
 			body: Uint8Array,
-			secretAccessKey: string,
+			destination: ResolvedS3Destination,
 		) => Promise<void>,
 	): Promise<BackupResult> {
 		if (volume.kind !== "bind") {
@@ -76,25 +84,33 @@ export abstract class BackupService {
 				success: false,
 			};
 		}
-		if (
-			!(
-				volume.backupEndpoint &&
-				volume.backupBucket &&
-				volume.backupRegion &&
-				volume.backupAccessKeyId &&
-				volume.backupSecretAccessKeyEnc
-			)
-		) {
+		if (!volume.s3DestinationId) {
 			return {
-				error: "Backup destination isn't fully configured.",
+				error: "No S3 destination picked for this volume.",
 				success: false,
 			};
 		}
 
-		const secretAccessKey = decryptSecret(volume.backupSecretAccessKeyEnc);
-		if (!secretAccessKey) {
+		const destinationRow = await S3DestinationDTO.get(
+			volume.s3DestinationId,
+			volume.userId,
+		);
+		if (!destinationRow) {
 			return {
-				error: "Couldn't decrypt the stored secret key.",
+				error: "The picked S3 destination no longer exists.",
+				success: false,
+			};
+		}
+		const destination: ResolvedS3Destination = {
+			accessKeyId: destinationRow.accessKeyId,
+			bucket: destinationRow.bucket,
+			endpoint: destinationRow.endpoint,
+			region: destinationRow.region,
+			secretAccessKey: destinationRow.decryptSecretAccessKey(),
+		};
+		if (!destination.secretAccessKey) {
+			return {
+				error: "Couldn't decrypt the destination's stored secret key.",
 				success: false,
 			};
 		}
@@ -112,7 +128,7 @@ export abstract class BackupService {
 			const prefix = volume.backupPrefix ? `${volume.backupPrefix}/` : "";
 			const key = `${prefix}${volume.name}-${timestamp}.tar.gz`;
 
-			await upload(volume, key, stdout, secretAccessKey);
+			await upload(volume, key, stdout, destination);
 
 			logger.info(
 				`Backup uploaded: volume=${volume.id} key=${key} bytes=${stdout.length}`,

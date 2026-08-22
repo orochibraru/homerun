@@ -20,7 +20,7 @@
       provider is configured.
 - [ ] Support remote hosts as dedicated build servers, so builds don't load the
       main server.
-- [ ] Add build-cache support via a Docker registry : new sidebar page to
+- [x] Add build-cache support via a Docker registry : new sidebar page to
       configure registries used for caching.
 
 ## UI / UX
@@ -38,13 +38,13 @@
 
 ## Notifications
 
-- [ ] Add a notification system: a bell icon in the header with a feed of events
+- [x] Add a notification system: a bell icon in the header with a feed of events
       : new deployment, auto-update, start, stop, new service, deploy failures,
       app runtime failures.
 
 ## Storage & backups
 
-- [ ] Add a page to configure S3 destinations for storage (mainly for backups).
+- [x] Add a page to configure S3 destinations for storage (mainly for backups).
 - [x] Add a dedicated backups page: configure per-volume backups and view a run
       log (when they ran, success/failure). Scheduled backups should also
       surface on the cron page below.

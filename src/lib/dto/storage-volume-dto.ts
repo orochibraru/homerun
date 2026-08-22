@@ -14,15 +14,11 @@ export interface NewStorageVolumeInput {
 export type StorageVolumeUpdateInput = Partial<
 	Pick<
 		StorageVolume,
-		| "backupAccessKeyId"
-		| "backupBucket"
 		| "backupEnabled"
-		| "backupEndpoint"
 		| "backupLastRunAt"
 		| "backupPrefix"
-		| "backupRegion"
 		| "backupSchedule"
-		| "backupSecretAccessKeyEnc"
+		| "s3DestinationId"
 	>
 >;
 
@@ -61,20 +57,16 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 	static async create(input: NewStorageVolumeInput): Promise<StorageVolumeDTO> {
 		const now = new Date();
 		const row: StorageVolume = {
-			backupAccessKeyId: null,
-			backupBucket: null,
 			backupEnabled: false,
-			backupEndpoint: null,
 			backupLastRunAt: null,
 			backupPrefix: null,
-			backupRegion: null,
 			backupSchedule: null,
-			backupSecretAccessKeyEnc: null,
 			createdAt: now,
 			description: input.description ?? null,
 			id: crypto.randomUUID(),
 			kind: input.kind,
 			name: input.name,
+			s3DestinationId: null,
 			source: input.source,
 			updatedAt: now,
 			userId: input.userId,
@@ -120,22 +112,10 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 	get backupLastRunAt(): Date | null {
 		return this.row.backupLastRunAt;
 	}
-	get backupEndpoint(): string | null {
-		return this.row.backupEndpoint;
-	}
-	get backupBucket(): string | null {
-		return this.row.backupBucket;
-	}
-	get backupRegion(): string | null {
-		return this.row.backupRegion;
-	}
-	get backupAccessKeyId(): string | null {
-		return this.row.backupAccessKeyId;
-	}
-	get backupSecretAccessKeyEnc(): string | null {
-		return this.row.backupSecretAccessKeyEnc;
-	}
 	get backupPrefix(): string | null {
 		return this.row.backupPrefix;
+	}
+	get s3DestinationId(): string | null {
+		return this.row.s3DestinationId;
 	}
 }

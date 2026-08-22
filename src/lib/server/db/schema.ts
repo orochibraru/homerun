@@ -203,6 +203,37 @@ export const remoteHost = pgTable(
 	(table) => [index("remoteHost_userId_idx").on(table.userId)],
 );
 
+// A named Docker registry used as a *build cache* for git-based builds (see
+// docker/git-build.ts), not a deploy target : buildFromGit pulls
+// `<registryUrl>/<cacheRepository>:cache-<slug>` as a `--cache-from` source
+// before building and pushes the fresh layers back after, so a repeat build
+// of the same service reuses unchanged layers instead of rebuilding from
+// scratch. Picked per-service on the Source tab (git mode only), same
+// "reusable named profile, not duplicated per-service creds" shape as
+// s3Destination.
+export const buildCacheRegistry = pgTable(
+	"build_cache_registry",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
+		passwordEnc: text("password_enc").notNull(),
+		// "registry.example.com" or "ghcr.io" : no scheme, matches how
+		// dockerode's authconfig.serveraddress and image ref prefixes are
+		// both written.
+		registryUrl: text("registry_url").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		username: text("username").notNull(),
+	},
+	(table) => [index("buildCacheRegistry_userId_idx").on(table.userId)],
+);
+
 // Singleton row (id is always "default") holding DB overrides for
 // instance-level config that otherwise defaults from env vars (see
 // $lib/config.ts's envDefaults + applyInstanceSettings()). Every column is
@@ -371,6 +402,13 @@ export const service = pgTable(
 		// host is over its configured resource threshold. No effect unless
 		// autoscaling is also enabled instance-wide.
 		autoscaleEligible: boolean("autoscale_eligible").default(false).notNull(),
+		// Registry to use as a git-build layer cache (git mode only, see
+		// docker/git-build.ts) : null means no cache-from/cache-to, every
+		// build is from scratch, same as before this existed.
+		buildCacheRegistryId: text("build_cache_registry_id").references(
+			() => buildCacheRegistry.id,
+			{ onDelete: "set null" },
+		),
 		// "image" (bring-your-own, the original/default) | "git" (clone +
 		// build a Dockerfile locally : see $lib/services/docker/git-build.ts).
 		// When "git", `image`/`tag` are overwritten after each successful
@@ -512,24 +550,47 @@ export const deployment = pgTable(
 	],
 );
 
+// A named, reusable S3-compatible backup destination (bucket/endpoint/region
+// + credentials), configured once on the S3 Destinations page and picked by
+// id from any number of volumes, instead of every volume duplicating its own
+// copy of the same bucket/keys (the old shape : see storageVolume's
+// s3DestinationId below).
+export const s3Destination = pgTable(
+	"s3_destination",
+	{
+		accessKeyId: text("access_key_id").notNull(),
+		bucket: text("bucket").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		// S3-compatible endpoint, e.g. "https://s3.us-east-1.amazonaws.com" or
+		// a self-hosted MinIO URL.
+		endpoint: text("endpoint").notNull(),
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		region: text("region").notNull(),
+		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
+		secretAccessKeyEnc: text("secret_access_key_enc").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("s3Destination_userId_idx").on(table.userId)],
+);
+
 export const storageVolume = pgTable(
 	"storage_volume",
 	{
-		backupAccessKeyId: text("backup_access_key_id"),
 		// Cron expression for scheduled backups, evaluated by the same
 		// scheduler tick as service redeploys : see $lib/services/cron.service.ts.
-		backupBucket: text("backup_bucket"),
-		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
 		backupEnabled: boolean("backup_enabled").default(false).notNull(),
-		// S3-compatible endpoint, e.g. "https://s3.us-east-1.amazonaws.com" or
-		// a self-hosted MinIO URL. Bind-mount sources only for now : Docker
-		// named volumes aren't backed up yet (see backup.ts).
-		backupEndpoint: text("backup_endpoint"),
 		backupLastRunAt: timestamp("backup_last_run_at", { mode: "date" }),
+		// Object key prefix within the destination's bucket, e.g.
+		// "backups/my-app" : per-volume, even when several volumes share one
+		// destination.
 		backupPrefix: text("backup_prefix"),
-		backupRegion: text("backup_region"),
 		backupSchedule: text("backup_schedule"),
-		backupSecretAccessKeyEnc: text("backup_secret_access_key_enc"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
 		id: text("id").primaryKey(),
@@ -540,6 +601,10 @@ export const storageVolume = pgTable(
 		// "bind" | "volume"
 		kind: text("kind").notNull(),
 		name: text("name").notNull(),
+		s3DestinationId: text("s3_destination_id").references(
+			() => s3Destination.id,
+			{ onDelete: "set null" },
+		),
 		source: text("source").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
@@ -625,6 +690,44 @@ export const appLog = pgTable(
 	(table) => [
 		index("appLog_createdAt_idx").on(table.createdAt),
 		index("appLog_serviceId_idx").on(table.serviceId),
+	],
+);
+
+// The bell-icon feed's backing rows : one per user-facing lifecycle event
+// (new deployment, cron auto-redeploy, start/stop, deploy failure, new
+// service). Separate from appLog above : appLog is app-internal warn/error
+// logging (the Errors tab), this is a curated, user-scoped notification
+// feed, written explicitly at each event site rather than derived from logs.
+export const notification = pgTable(
+	"notification",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		message: text("message").notNull(),
+		readAt: timestamp("read_at", { mode: "date" }),
+		serviceId: text("service_id").references(() => service.id, {
+			onDelete: "cascade",
+		}),
+		type: text("type")
+			.$type<
+				| "deploy_success"
+				| "deploy_failure"
+				| "service_created"
+				| "service_started"
+				| "service_stopped"
+				| "auto_redeploy"
+				| "app_runtime_error"
+			>()
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("notification_userId_createdAt_idx").on(
+			table.userId,
+			table.createdAt,
+		),
 	],
 );
 
@@ -733,10 +836,13 @@ export type Service = typeof service.$inferSelect;
 export type Deployment = typeof deployment.$inferSelect;
 export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
+export type S3Destination = typeof s3Destination.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
 export type BackupRun = typeof backupRun.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
+export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
+export type Notification = typeof notification.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type InvitationBase = typeof invitation.$inferSelect;
 export type InvitationRefactored = Omit<InvitationBase, "role">;

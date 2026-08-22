@@ -81,6 +81,11 @@
 	let gitRef = $derived(values?.gitRef ?? "main");
 	let gitDockerfilePath = $derived(values?.gitDockerfilePath ?? "");
 	let gitBuildContext = $derived(values?.gitBuildContext ?? "");
+	let buildCacheRegistryId = $derived(values?.buildCacheRegistryId ?? "");
+	const buildCacheRegistryLabel = $derived(
+		data.buildCacheRegistries.find((r) => r.id === buildCacheRegistryId)
+			?.name ?? "No cache",
+	);
 	let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
 	let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -620,6 +625,36 @@
               type="text"
               bind:value={gitBuildContext}
             />
+          </div>
+          <div>
+            <label class={label} for="buildCacheRegistryId">
+              Build cache registry
+            </label>
+            {#if data.buildCacheRegistries.length === 0}
+              <p class="text-xs text-text-muted">
+                No registries configured.
+                <a class="text-accent underline" href={resolve("/build-cache-registries")}>
+                  Add one
+                </a>
+                to speed up rebuilds by reusing unchanged layers.
+              </p>
+            {:else}
+              <SelectRoot
+                name="buildCacheRegistryId"
+                type="single"
+                bind:value={buildCacheRegistryId}
+              >
+                <SelectTrigger id="buildCacheRegistryId">
+                  {buildCacheRegistryLabel}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem label="No cache" value="" />
+                  {#each data.buildCacheRegistries as reg (reg.id)}
+                    <SelectItem label={reg.name} value={reg.id} />
+                  {/each}
+                </SelectContent>
+              </SelectRoot>
+            {/if}
           </div>
         {/if}
       </div>

@@ -1,11 +1,11 @@
 import { error, fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { BackupRunDTO } from "$lib/dto/backup-run-dto";
+import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { CronService } from "$lib/services/cron.service";
 import { S3BackupService } from "$lib/services/s3-backup.service";
-import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("Storage");
 
@@ -15,8 +15,12 @@ export const load = async ({ params, parent }) => {
 	if (!volume) {
 		error(404, "Volume not found");
 	}
-	const runs = await BackupRunDTO.listForVolume(volume.id);
+	const [runs, destinations] = await Promise.all([
+		BackupRunDTO.listForVolume(volume.id),
+		S3DestinationDTO.list(user.id),
+	]);
 	return {
+		destinations: destinations.map((d) => d.toJSON()),
 		runs: runs.map((r) => r.toJSON()),
 		volume: volume.toJSON(),
 	};
@@ -55,17 +59,8 @@ export const actions = {
 		const backupEnabled = formData.get("backupEnabled") === "on";
 		const backupSchedule =
 			(formData.get("backupSchedule") as string | null)?.trim() || null;
-		const backupEndpoint =
-			(formData.get("backupEndpoint") as string | null)?.trim() || null;
-		const backupBucket =
-			(formData.get("backupBucket") as string | null)?.trim() || null;
-		const backupRegion =
-			(formData.get("backupRegion") as string | null)?.trim() || null;
-		const backupAccessKeyId =
-			(formData.get("backupAccessKeyId") as string | null)?.trim() || null;
-		const backupSecretAccessKey = (
-			formData.get("backupSecretAccessKey") as string | null
-		)?.trim();
+		const s3DestinationId =
+			(formData.get("s3DestinationId") as string | null)?.trim() || null;
 		const backupPrefix =
 			(formData.get("backupPrefix") as string | null)?.trim() || null;
 
@@ -80,29 +75,21 @@ export const actions = {
 					'Invalid schedule : use standard 5-field cron syntax (e.g. "0 3 * * *").',
 			});
 		}
+		if (backupEnabled && !s3DestinationId) {
+			return fail(400, { error: "Pick an S3 destination." });
+		}
 		if (
-			backupEnabled &&
-			!(backupEndpoint && backupBucket && backupRegion && backupAccessKeyId)
+			s3DestinationId &&
+			!(await S3DestinationDTO.get(s3DestinationId, locals.user.id))
 		) {
-			return fail(400, {
-				error: "Endpoint, bucket, region, and access key are all required.",
-			});
+			return fail(400, { error: "That S3 destination wasn't found." });
 		}
 
 		await volume.update({
-			backupAccessKeyId,
-			backupBucket,
 			backupEnabled,
-			backupEndpoint,
 			backupPrefix,
-			backupRegion,
 			backupSchedule,
-			// Blank means "leave unchanged" : never overwrite a stored secret
-			// just because the user didn't retype it (same convention as
-			// registryPassword elsewhere).
-			...(backupSecretAccessKey
-				? { backupSecretAccessKeyEnc: encryptSecret(backupSecretAccessKey) }
-				: {}),
+			s3DestinationId,
 		});
 
 		logger.info(
