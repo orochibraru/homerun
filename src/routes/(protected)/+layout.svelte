@@ -4,6 +4,8 @@
 		CalendarClock,
 		ChevronRight,
 		CloudUpload,
+		Container,
+		Database,
 		FolderKanban,
 		GitBranch,
 		HardDrive,
@@ -24,6 +26,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { signOut } from "$lib/auth-client";
+	import NotificationBell from "$lib/components/notification-bell.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 
 	const { data, children } = $props();
@@ -88,6 +91,14 @@
 			adminOnly: false,
 			category: "Infrastructure",
 			exact: false,
+			href: resolve("/s3-destinations"),
+			icon: Database,
+			label: "S3 Destinations",
+		},
+		{
+			adminOnly: false,
+			category: "Infrastructure",
+			exact: false,
 			href: resolve("/remote-hosts"),
 			icon: Network,
 			label: "Remote Hosts",
@@ -107,6 +118,14 @@
 			href: resolve("/git-providers"),
 			icon: GitBranch,
 			label: "Git Providers",
+		},
+		{
+			adminOnly: false,
+			category: "Integrations",
+			exact: false,
+			href: resolve("/build-cache-registries"),
+			icon: Container,
+			label: "Build Cache",
 		},
 		{
 			adminOnly: false,
@@ -243,7 +262,13 @@
   <aside class="border-border bg-surface hidden w-60 shrink-0 flex-col border-r md:flex">
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto p-3 pt-4">
-      <p class="mb-2 px-2 text-xl font-bold">Homerun</p>
+      <div class="mb-2 flex items-center justify-between px-2">
+        <p class="text-xl font-bold">Homerun</p>
+        <NotificationBell
+          notifications={data.notifications}
+          unreadCount={data.unreadCount}
+        />
+      </div>
       {@render navGroups(mainNavGroups)}
       {@render navGroups(adminNavGroups)}
     </nav>
@@ -362,9 +387,13 @@
           <Menu class="size-5" />
         {/if}
       </Button>
-      <span class="text-text text-sm font-medium">
+      <span class="text-text flex-1 text-sm font-medium">
         {mobileTitle}
       </span>
+      <NotificationBell
+        notifications={data.notifications}
+        unreadCount={data.unreadCount}
+      />
     </div>
 
     <!-- Page content -->

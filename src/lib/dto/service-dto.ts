@@ -7,6 +7,7 @@ import { BaseDTO } from "./base-dto";
 export interface NewServiceInput {
 	authRequired?: boolean;
 	autoscaleEligible?: boolean;
+	buildCacheRegistryId?: string | null;
 	buildSource?: "image" | "git";
 	containerPort: number;
 	cpuLimit?: string | null;
@@ -38,6 +39,7 @@ export type ServiceUpdateInput = Partial<
 		Service,
 		| "authRequired"
 		| "autoscaleEligible"
+		| "buildCacheRegistryId"
 		| "buildSource"
 		| "containerId"
 		| "containerPort"
@@ -187,6 +189,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		const row: Service = {
 			authRequired: input.authRequired ?? false,
 			autoscaleEligible: input.autoscaleEligible ?? false,
+			buildCacheRegistryId: input.buildCacheRegistryId ?? null,
 			buildSource: input.buildSource ?? "image",
 			containerId: null,
 			containerPort: input.containerPort,
@@ -331,6 +334,9 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get gitDockerfilePath(): string | null {
 		return this.row.gitDockerfilePath;
+	}
+	get buildCacheRegistryId(): string | null {
+		return this.row.buildCacheRegistryId;
 	}
 	get remoteHostId(): string | null {
 		return this.row.remoteHostId;

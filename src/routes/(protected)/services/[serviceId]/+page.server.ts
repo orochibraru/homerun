@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { NotificationDTO } from "$lib/dto/notification-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
@@ -80,6 +81,12 @@ export const actions = {
 		await DockerService.startContainer(svc.containerId, remote);
 		await svc.update({ desiredState: "running" });
 		logger.info(`Service started: service=${svc.id} user=${locals.user.id}`);
+		NotificationDTO.notify({
+			message: `"${svc.name}" was started.`,
+			serviceId: svc.id,
+			type: "service_started",
+			userId: locals.user.id,
+		});
 		return { success: true };
 	},
 
@@ -99,6 +106,12 @@ export const actions = {
 		await DockerService.stopContainer(svc.containerId, remote);
 		await svc.update({ desiredState: "stopped" });
 		logger.info(`Service stopped: service=${svc.id} user=${locals.user.id}`);
+		NotificationDTO.notify({
+			message: `"${svc.name}" was stopped.`,
+			serviceId: svc.id,
+			type: "service_stopped",
+			userId: locals.user.id,
+		});
 		return { success: true };
 	},
 };

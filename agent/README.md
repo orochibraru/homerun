@@ -72,10 +72,8 @@ bun run agent/index.ts       # or `bun --watch agent/index.ts` for autoreload
 Compiling it to a standalone binary yourself, rather than using a release one:
 
 ```bash
-bun run build                # host platform
-bun run build:linux-x64      # cross-compile for a typical VPS
-bun run build:linux-arm64
-./dist/homerun-agent
+bun run build:packages       # builds cli/installer/agent binaries for both arches
+./dist/homerun-agent-amd64   # or -arm64
 ```
 
 ## Env vars
