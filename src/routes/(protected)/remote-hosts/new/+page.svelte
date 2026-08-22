@@ -5,6 +5,7 @@
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import CheckBox from "$lib/components/check-box.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -77,6 +78,14 @@
         (uses the system's own SSH agent : no key field here).
       </p>
     </div>
+
+    <CheckBox
+      checked={false}
+      helperText="Lets this host be picked as a git-based service's build server (Source tab), separate from being picked as a deploy target."
+      id="isBuildServer"
+      label="Available as a build server"
+      name="isBuildServer"
+    />
 
     <Button
       class="h-auto p-0"

@@ -4,7 +4,7 @@
 
 - [ ] Add native Newt tunnel integration for Pangolion support and domain
       mapping
-- [ ] Add Cloudflare integration for domain mapping
+- [x] Add Cloudflare integration for domain mapping
 - [x] Add tabs to the user's profile page so they can view: "Personal
       Information", "Security (password)", "Sessions", "Authorized Clients"
 
@@ -18,16 +18,16 @@
 - [x] Let users pick a repo instead of pasting a URL: list repositories from a
       configured git provider, with "paste a URL" as a fallback for when no
       provider is configured.
-- [ ] Support remote hosts as dedicated build servers, so builds don't load the
+- [x] Support remote hosts as dedicated build servers, so builds don't load the
       main server.
 - [x] Add build-cache support via a Docker registry : new sidebar page to
       configure registries used for caching.
 
 ## UI / UX
 
-- [ ] Add color coding throughout the UI so things are easier to visually
+- [x] Add color coding throughout the UI so things are easier to visually
       locate.
-- [ ] Build reusable components for listing entities two ways: card view and
+- [x] Build reusable components for listing entities two ways: card view and
       list view.
 - [x] Add submenus / proper categorization to the sidebar nav.
 

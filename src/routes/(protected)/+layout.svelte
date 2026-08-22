@@ -166,6 +166,43 @@
 		items: (typeof allNavItems)[number][];
 	}
 
+	// Color-codes each nav category (TODO.md's "color coding throughout the
+	// UI so things are easier to visually locate") : a category is a visual
+	// grouping, not just a text label, its icons/active-state pick up a
+	// distinct accent instead of every item sharing the one generic
+	// `accent` color. Literal Tailwind classes (not template-built) : JIT
+	// needs the full class string present in source to include it.
+	const categoryColors: Record<
+		string,
+		{ activeBg: string; activeText: string; dot: string; icon: string }
+	> = {
+		Administration: {
+			activeBg: "bg-red-500/10",
+			activeText: "text-red-600 dark:text-red-400",
+			dot: "bg-red-500",
+			icon: "text-red-500",
+		},
+		Infrastructure: {
+			activeBg: "bg-emerald-500/10",
+			activeText: "text-emerald-600 dark:text-emerald-400",
+			dot: "bg-emerald-500",
+			icon: "text-emerald-500",
+		},
+		Integrations: {
+			activeBg: "bg-violet-500/10",
+			activeText: "text-violet-600 dark:text-violet-400",
+			dot: "bg-violet-500",
+			icon: "text-violet-500",
+		},
+		Workspace: {
+			activeBg: "bg-accent-light",
+			activeText: "text-accent",
+			dot: "bg-accent",
+			icon: "text-accent",
+		},
+	};
+	const fallbackColor = categoryColors.Workspace;
+
 	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
 	function groupByCategory(items: typeof allNavItems): NavGroup[] {
 		const groups: NavGroup[] = [];
@@ -230,7 +267,9 @@
 
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
   {#each groups as group (group.heading)}
-    <p class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
+    {@const color = categoryColors[group.heading] ?? fallbackColor}
+    <p class="mt-4 mb-2 flex items-center gap-1.5 px-3 text-[0.65rem] font-semibold tracking-widest text-text-muted uppercase">
+      <span class="size-1.5 rounded-full {color.dot}"></span>
       {group.heading}
     </p>
     {#each group.items as item (item.href)}
@@ -240,13 +279,13 @@
         class="
           mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
           {active
-          ? 'bg-accent-light text-accent'
+          ? `${color.activeBg} ${color.activeText}`
           : 'text-text-muted hover:bg-surface-2 hover:text-text'}
         "
         href={item.href}
         onclick={onNavigate}
       >
-        <NavIcon class="size-4 shrink-0" />
+        <NavIcon class="size-4 shrink-0 {active ? '' : color.icon + ' opacity-70'}" />
         {item.label}
         {#if active}
           <ChevronRight class="ml-auto size-3.5 opacity-60" />

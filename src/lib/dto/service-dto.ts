@@ -8,6 +8,7 @@ export interface NewServiceInput {
 	authRequired?: boolean;
 	autoscaleEligible?: boolean;
 	buildCacheRegistryId?: string | null;
+	buildServerRemoteHostId?: string | null;
 	buildSource?: "image" | "git";
 	containerPort: number;
 	cpuLimit?: string | null;
@@ -40,6 +41,7 @@ export type ServiceUpdateInput = Partial<
 		| "authRequired"
 		| "autoscaleEligible"
 		| "buildCacheRegistryId"
+		| "buildServerRemoteHostId"
 		| "buildSource"
 		| "containerId"
 		| "containerPort"
@@ -190,6 +192,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			authRequired: input.authRequired ?? false,
 			autoscaleEligible: input.autoscaleEligible ?? false,
 			buildCacheRegistryId: input.buildCacheRegistryId ?? null,
+			buildServerRemoteHostId: input.buildServerRemoteHostId ?? null,
 			buildSource: input.buildSource ?? "image",
 			containerId: null,
 			containerPort: input.containerPort,
@@ -337,6 +340,9 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get buildCacheRegistryId(): string | null {
 		return this.row.buildCacheRegistryId;
+	}
+	get buildServerRemoteHostId(): string | null {
+		return this.row.buildServerRemoteHostId;
 	}
 	get remoteHostId(): string | null {
 		return this.row.remoteHostId;

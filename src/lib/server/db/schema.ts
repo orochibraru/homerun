@@ -187,6 +187,11 @@ export const remoteHost = pgTable(
 		// (remoteHostId: null on a service), not a row in this table.
 		dockerHost: text("docker_host").notNull(),
 		id: text("id").primaryKey(),
+		// Opt-in : whether this host can be picked as a service's *build
+		// server* (Source tab, git mode), separate from being picked as a
+		// deploy target. Off by default, same "background/cross-cutting
+		// capability defaults inert" posture as autoscaleEligible.
+		isBuildServer: boolean("is_build_server").default(false).notNull(),
 		name: text("name").notNull(),
 		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc
 		// : only set when dockerHost uses TLS-secured tcp://.
@@ -268,6 +273,16 @@ export const instanceSettings = pgTable("instance_settings", {
 		"autoscale_overflow_remote_host_id",
 	).references(() => remoteHost.id, { onDelete: "set null" }),
 	baseDomain: text("base_domain"),
+	// Cloudflare API token (Zone:DNS:Edit scope) + the zone id `baseDomain`
+	// lives in : when both are set, a deployed service with `dnsResolvable`
+	// gets its `<slug>.<baseDomain>` hostname auto-created/updated as a
+	// CNAME record pointing at `baseDomain` itself (see
+	// $lib/services/cloudflare.service.ts), instead of the admin adding one
+	// by hand for every new service. Unset (the default) : no-op, same
+	// "background automation defaults inert" posture as autoscaling/backups.
+	// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
+	cloudflareApiTokenEnc: text("cloudflare_api_token_enc"),
+	cloudflareZoneId: text("cloudflare_zone_id"),
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	dockerNetworkName: text("docker_network_name"),
 	dockerSocketPath: text("docker_socket_path"),
@@ -407,6 +422,19 @@ export const service = pgTable(
 		// build is from scratch, same as before this existed.
 		buildCacheRegistryId: text("build_cache_registry_id").references(
 			() => buildCacheRegistry.id,
+			{ onDelete: "set null" },
+		),
+		// A remote host (must have isBuildServer=true) to run the git-build
+		// step on instead of the deploy target (null : build on whatever
+		// daemon deployService would build on anyway, remoteHostId or local,
+		// same as before this existed). When set to a host *different* from
+		// the deploy target, the built image only exists on the build
+		// server's own daemon, so deployService requires buildCacheRegistryId
+		// too in that case : it pushes the final image there and pulls it on
+		// the deploy target before starting the container. See
+		// deploy.service.ts.
+		buildServerRemoteHostId: text("build_server_remote_host_id").references(
+			() => remoteHost.id,
 			{ onDelete: "set null" },
 		),
 		// "image" (bring-your-own, the original/default) | "git" (clone +

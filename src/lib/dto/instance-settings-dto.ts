@@ -39,6 +39,12 @@ export interface InstanceSettingsAutoscaleInput {
 	autoscaleOverflowRemoteHostId: string | null;
 }
 
+export interface InstanceSettingsCloudflareInput {
+	cloudflareZoneId: string | null;
+	/** Blank/undefined means "keep the currently stored token". */
+	cloudflareApiToken?: string;
+}
+
 export interface InstanceSettingsSmtpInput {
 	smtpEnabled: boolean | null;
 	smtpFrom: string | null;
@@ -131,6 +137,8 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			autoscaleMemoryThresholdPercent: 80,
 			autoscaleOverflowRemoteHostId: null,
 			baseDomain: null,
+			cloudflareApiTokenEnc: null,
+			cloudflareZoneId: null,
 			createdAt: now,
 			dockerNetworkName: null,
 			dockerSocketPath: null,
@@ -187,6 +195,36 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	async updateTraefik(input: InstanceSettingsTraefikInput): Promise<void> {
 		await this.persist(input);
+	}
+
+	get cloudflareZoneId(): string | null {
+		return this.row.cloudflareZoneId;
+	}
+
+	/** Whether both the token and zone id are set : CloudflareService treats anything less as "feature off". */
+	get cloudflareConfigured(): boolean {
+		return !!(this.row.cloudflareApiTokenEnc && this.row.cloudflareZoneId);
+	}
+
+	/** Decrypted API token, for CloudflareService's own HTTP calls only : never exposed to a `load` return value. */
+	decryptCloudflareApiToken(): string | null {
+		return this.row.cloudflareApiTokenEnc
+			? decryptSecret(this.row.cloudflareApiTokenEnc)
+			: null;
+	}
+
+	async updateCloudflare(
+		input: InstanceSettingsCloudflareInput,
+	): Promise<void> {
+		const { cloudflareApiToken, ...rest } = input;
+		await this.persist({
+			...rest,
+			// Blank token field means "leave unchanged" : same convention as
+			// smtpPassword/registryPassword elsewhere.
+			...(cloudflareApiToken
+				? { cloudflareApiTokenEnc: encryptSecret(cloudflareApiToken) }
+				: {}),
+		});
 	}
 
 	async updateSmtp(input: InstanceSettingsSmtpInput): Promise<void> {

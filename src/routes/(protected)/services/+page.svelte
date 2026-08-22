@@ -13,6 +13,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import EntityListView from "$lib/components/entity-list-view.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
@@ -116,6 +117,123 @@
       </div>
     </div>
   {:else}
+    {#snippet actions(svc: (typeof data.services)[number])}
+      <div class="flex shrink-0 items-center gap-1.5">
+        {#if svc.desiredState === "running"}
+          <form action="?/stop" method="POST" use:enhance={withPending(svc.id)}>
+            <input name="serviceId" type="hidden" value={svc.id}>
+            <Button
+              disabled={pending[svc.id]}
+              size="icon-sm"
+              title="Stop"
+              type="submit"
+              variant="ghost"
+            >
+              {#if pending[svc.id]}
+                <Spinner />
+              {:else}
+                <Square class="size-4" />
+              {/if}
+            </Button>
+          </form>
+        {:else}
+          <form action="?/start" method="POST" use:enhance={withPending(svc.id)}>
+            <input name="serviceId" type="hidden" value={svc.id}>
+            <Button
+              disabled={pending[svc.id] || !svc.containerId}
+              size="icon-sm"
+              title={svc.containerId
+              ? "Start"
+              : "Deploy first from the service page"}
+              type="submit"
+              variant="ghost"
+            >
+              {#if pending[svc.id]}
+                <Spinner />
+              {:else}
+                <Play class="size-4" />
+              {/if}
+            </Button>
+          </form>
+        {/if}
+
+        <form action="?/restart" method="POST" use:enhance={withPending(svc.id)}>
+          <input name="serviceId" type="hidden" value={svc.id}>
+          <Button
+            disabled={pending[svc.id] || !svc.containerId}
+            size="icon-sm"
+            title="Restart"
+            type="submit"
+            variant="ghost"
+          >
+            <RotateCw class="size-4" />
+          </Button>
+        </form>
+
+        <form action="?/delete" method="POST" use:enhance={withPending(svc.id)}>
+          <input name="serviceId" type="hidden" value={svc.id}>
+          <Button
+            class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+            disabled={pending[svc.id]}
+            onclick={(e) => requestDelete(e, svc.name)}
+            size="icon-sm"
+            title="Delete"
+            type="button"
+            variant="ghost"
+          >
+            <Trash2 class="size-4" />
+          </Button>
+        </form>
+      </div>
+    {/snippet}
+
+    {#snippet row(svc: (typeof data.services)[number])}
+      <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 transition-shadow hover:shadow-md">
+        <a
+          class="flex min-w-0 flex-1 items-center gap-4"
+          href="{resolve('/services')}/{svc.id}"
+        >
+          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+            <Server class="size-5" />
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <p class="text-text truncate text-sm font-semibold">
+                {svc.name}
+              </p>
+              <StatusBadge status={svc.currentStatus} />
+            </div>
+            <p class="text-text-muted mt-0.5 truncate text-xs">
+              {svc.image}:{svc.tag}
+              · {svc.slug}.{data.baseDomain}
+            </p>
+          </div>
+        </a>
+        {@render actions(svc)}
+      </div>
+    {/snippet}
+
+    {#snippet card(svc: (typeof data.services)[number])}
+      <div class="border-border bg-surface flex flex-col gap-3 rounded-2xl border p-5 transition-shadow hover:shadow-md">
+        <a class="flex min-w-0 items-center gap-3" href="{resolve('/services')}/{svc.id}">
+          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+            <Server class="size-5" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-text truncate text-sm font-semibold">{svc.name}</p>
+            <p class="text-text-muted truncate text-xs">
+              {svc.slug}.{data.baseDomain}
+            </p>
+          </div>
+        </a>
+        <p class="text-text-muted truncate text-xs">{svc.image}:{svc.tag}</p>
+        <div class="flex items-center justify-between gap-2">
+          <StatusBadge status={svc.currentStatus} />
+          {@render actions(svc)}
+        </div>
+      </div>
+    {/snippet}
+
     <div class="space-y-8">
       {#each groups as [label, services] (label)}
         <div>
@@ -124,116 +242,13 @@
               {label}
             </h2>
           {/if}
-          <div class="space-y-3">
-            {#each services as svc (svc.id)}
-              <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 transition-shadow hover:shadow-md">
-                <a
-                  class="flex min-w-0 flex-1 items-center gap-4"
-                  href="{resolve('/services')}/{svc.id}"
-                >
-                  <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-                    <Server class="size-5" />
-                  </div>
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                      <p class="text-text truncate text-sm font-semibold">
-                        {svc.name}
-                      </p>
-                      <StatusBadge status={svc.currentStatus} />
-                    </div>
-                    <p class="text-text-muted mt-0.5 truncate text-xs">
-                      {svc.image}:{svc.tag}
-                      · {svc.slug}.{data.baseDomain}
-                    </p>
-                  </div>
-                </a>
-
-                <div class="flex shrink-0 items-center gap-1.5">
-                  {#if svc.desiredState === "running"}
-                    <form
-                      action="?/stop"
-                      method="POST"
-                      use:enhance={withPending(svc.id)}
-                    >
-                      <input name="serviceId" type="hidden" value={svc.id}>
-                      <Button
-                        disabled={pending[svc.id]}
-                        size="icon-sm"
-                        title="Stop"
-                        type="submit"
-                        variant="ghost"
-                      >
-                        {#if pending[svc.id]}
-                          <Spinner />
-                        {:else}
-                          <Square class="size-4" />
-                        {/if}
-                      </Button>
-                    </form>
-                  {:else}
-                    <form
-                      action="?/start"
-                      method="POST"
-                      use:enhance={withPending(svc.id)}
-                    >
-                      <input name="serviceId" type="hidden" value={svc.id}>
-                      <Button
-                        disabled={pending[svc.id] || !svc.containerId}
-                        size="icon-sm"
-                        title={svc.containerId
-                        ? "Start"
-                        : "Deploy first from the service page"}
-                        type="submit"
-                        variant="ghost"
-                      >
-                        {#if pending[svc.id]}
-                          <Spinner />
-                        {:else}
-                          <Play class="size-4" />
-                        {/if}
-                      </Button>
-                    </form>
-                  {/if}
-
-                  <form
-                    action="?/restart"
-                    method="POST"
-                    use:enhance={withPending(svc.id)}
-                  >
-                    <input name="serviceId" type="hidden" value={svc.id}>
-                    <Button
-                      disabled={pending[svc.id] || !svc.containerId}
-                      size="icon-sm"
-                      title="Restart"
-                      type="submit"
-                      variant="ghost"
-                    >
-                      <RotateCw class="size-4" />
-                    </Button>
-                  </form>
-
-                  <form
-                    action="?/delete"
-                    method="POST"
-                    use:enhance={withPending(svc.id)}
-                  >
-                    <input name="serviceId" type="hidden" value={svc.id}>
-                    <Button
-                      class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                      disabled={pending[svc.id]}
-                      onclick={(e) => requestDelete(e, svc.name)}
-                      size="icon-sm"
-                      title="Delete"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <Trash2 class="size-4" />
-                    </Button>
-                  </form>
-                </div>
-              </div>
-            {/each}
-          </div>
+          <EntityListView
+            {card}
+            getKey={(svc) => svc.id}
+            items={services}
+            {row}
+            viewKey="services"
+          />
         </div>
       {/each}
     </div>

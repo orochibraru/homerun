@@ -6,6 +6,7 @@
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import EntityListView from "$lib/components/entity-list-view.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
 
@@ -52,67 +53,103 @@
       {/snippet}
     </EmptyState>
   {:else}
-    <div class="space-y-3">
-      {#each data.volumes as vol (vol.id)}
-        <div class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5">
+    {#snippet volActions(vol: (typeof data.volumes)[number])}
+      <Button
+        href={resolve("/(protected)/storage/[volumeId]", {
+          volumeId: vol.id,
+        })}
+        size="icon-sm"
+        title="Backup settings"
+        variant="ghost"
+      >
+        <CloudUpload class="size-4" />
+      </Button>
+      <form
+        action="?/delete"
+        method="POST"
+        use:enhance={() => async ({ result, update }) => {
+          if (result.type === "failure") {
+            toast.error("Couldn't delete the volume.");
+          }
+          await update();
+        }}
+      >
+        <input name="volumeId" type="hidden" value={vol.id} />
+        <Button
+          class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+          onclick={(e) => requestDelete(e, vol.name)}
+          size="icon-sm"
+          title="Delete"
+          type="button"
+          variant="ghost"
+        >
+          <Trash2 class="size-4" />
+        </Button>
+      </form>
+    {/snippet}
+
+    {#snippet row(vol: (typeof data.volumes)[number])}
+      <div class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5">
+        <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <HardDrive class="size-5" />
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-text truncate text-sm font-semibold">
+            {vol.name}
+          </p>
+          <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+            {vol.kind === "bind" ? "bind" : "volume"}
+            · {vol.source}
+          </p>
+          {#if vol.description}
+            <p class="text-text-subtle mt-0.5 truncate text-xs">
+              {vol.description}
+            </p>
+          {/if}
+          {#if vol.backupEnabled}
+            <p class="mt-0.5 flex items-center gap-1 text-xs text-emerald-600">
+              <CloudUpload class="size-3" />
+              auto-backup on
+            </p>
+          {/if}
+        </div>
+        {@render volActions(vol)}
+      </div>
+    {/snippet}
+
+    {#snippet card(vol: (typeof data.volumes)[number])}
+      <div class="border-border bg-surface flex flex-col gap-3 rounded-2xl border p-5">
+        <div class="flex items-center gap-3">
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <HardDrive class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
-            <p class="text-text truncate text-sm font-semibold">
-              {vol.name}
-            </p>
-            <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+            <p class="text-text truncate text-sm font-semibold">{vol.name}</p>
+            <p class="text-text-muted truncate font-mono text-xs">
               {vol.kind === "bind" ? "bind" : "volume"}
               · {vol.source}
             </p>
-            {#if vol.description}
-              <p class="text-text-subtle mt-0.5 truncate text-xs">
-                {vol.description}
-              </p>
-            {/if}
-            {#if vol.backupEnabled}
-              <p class="mt-0.5 flex items-center gap-1 text-xs text-emerald-600">
-                <CloudUpload class="size-3" />
-                auto-backup on
-              </p>
-            {/if}
           </div>
-          <Button
-            href={resolve("/(protected)/storage/[volumeId]", {
-              volumeId: vol.id,
-            })}
-            size="icon-sm"
-            title="Backup settings"
-            variant="ghost"
-          >
-            <CloudUpload class="size-4" />
-          </Button>
-          <form
-            action="?/delete"
-            method="POST"
-            use:enhance={() => async ({ result, update }) => {
-              if (result.type === "failure") {
-                toast.error("Couldn't delete the volume.");
-              }
-              await update();
-            }}
-          >
-            <input name="volumeId" type="hidden" value={vol.id} />
-            <Button
-              class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-              onclick={(e) => requestDelete(e, vol.name)}
-              size="icon-sm"
-              title="Delete"
-              type="button"
-              variant="ghost"
-            >
-              <Trash2 class="size-4" />
-            </Button>
-          </form>
         </div>
-      {/each}
-    </div>
+        {#if vol.backupEnabled}
+          <p class="flex items-center gap-1 text-xs text-emerald-600">
+            <CloudUpload class="size-3" />
+            auto-backup on
+          </p>
+        {/if}
+        <div class="flex items-center justify-end gap-1">
+          {@render volActions(vol)}
+        </div>
+      </div>
+    {/snippet}
+
+    <EntityListView
+      {card}
+      getKey={(vol) => vol.id}
+      items={data.volumes}
+      {row}
+      viewKey="storage"
+    />
   {/if}
 </div>
 

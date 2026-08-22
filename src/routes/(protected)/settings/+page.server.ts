@@ -8,6 +8,7 @@ import {
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { rebuildAuth } from "$lib/services/auth";
+import { CloudflareService } from "$lib/services/cloudflare.service";
 
 const logger = new Logger("InstanceSettings");
 
@@ -77,6 +78,34 @@ function applyAndRebuild(settings: InstanceSettingsDTO) {
 }
 
 export const actions = {
+	testCloudflare: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const zoneId = (formData.get("cloudflareZoneId") as string | null)?.trim();
+		const tokenInput = (
+			formData.get("cloudflareApiToken") as string | null
+		)?.trim();
+		if (!zoneId) {
+			return fail(400, { error: "Enter a zone id first." });
+		}
+		// Blank token field with an already-stored one : test against the
+		// stored token, same "blank means unchanged" convention the save
+		// action uses, so re-testing doesn't require retyping the secret.
+		const settings = await InstanceSettingsDTO.get();
+		const token = tokenInput || settings.decryptCloudflareApiToken();
+		if (!token) {
+			return fail(400, { error: "Enter an API token first." });
+		}
+		const result = await CloudflareService.verifyZoneAccess(token, zoneId);
+		if (!result.success) {
+			return fail(400, {
+				error: `Couldn't verify zone access: ${result.error}`,
+			});
+		}
+		return { cloudflareTestOk: true, success: true };
+	},
 	updateAutoscale: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
@@ -117,6 +146,22 @@ export const actions = {
 		});
 		logger.info(`Autoscale settings updated: user=${locals.user.id}`);
 		return { savedSection: "autoscale", success: true };
+	},
+
+	updateCloudflare: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateCloudflare({
+			cloudflareApiToken:
+				(formData.get("cloudflareApiToken") as string | null)?.trim() ||
+				undefined,
+			cloudflareZoneId: nullableText(formData, "cloudflareZoneId"),
+		});
+		logger.info(`Cloudflare instance settings updated: user=${locals.user.id}`);
+		return { savedSection: "cloudflare", success: true };
 	},
 	updateCore: async ({ request, locals }) => {
 		if (!locals.user) {

@@ -1,3 +1,4 @@
+import { config } from "$lib/config";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
@@ -6,6 +7,7 @@ import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { Logger } from "$lib/logger";
+import { CloudflareService } from "./cloudflare.service.ts";
 import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("Deploy");
@@ -73,6 +75,27 @@ class DeploymentServiceClass {
 					? await BuildCacheRegistryDTO.get(svc.buildCacheRegistryId, userId)
 					: null;
 
+				// A dedicated build server (Source tab, git mode) different from
+				// the deploy target : the build happens on that daemon instead,
+				// then (see below, after a successful build) gets published
+				// through the cache registry and pulled back onto the deploy
+				// target, since the two daemons don't share an image store.
+				const buildServerId = svc.buildServerRemoteHostId;
+				const crossHostBuild = !!(
+					buildServerId && buildServerId !== svc.remoteHostId
+				);
+				if (crossHostBuild && !cacheRegistryRow) {
+					throw new Error(
+						"A build server different from the deploy target needs a build cache registry configured, to publish the built image through.",
+					);
+				}
+				const buildRemote = buildServerId
+					? await RemoteHostDTO.connectionFor(
+							{ remoteHostId: buildServerId },
+							userId,
+						)
+					: remote;
+
 				const result = await DockerService.buildFromGit(
 					{
 						buildContext: svc.gitBuildContext,
@@ -86,7 +109,7 @@ class DeploymentServiceClass {
 						dockerfilePath: svc.gitDockerfilePath,
 						gitRef: svc.gitRef,
 						gitUrl: svc.gitUrl,
-						remote,
+						remote: buildRemote,
 						tag: `${image}:${tag}`,
 					},
 					(line) => dep.appendLog(line),
@@ -94,6 +117,40 @@ class DeploymentServiceClass {
 				if (!result.success) {
 					throw new Error(result.error ?? "Build failed.");
 				}
+
+				if (crossHostBuild && cacheRegistryRow) {
+					const publishedImage = `${cacheRegistryRow.registryUrl}/${image}`;
+					const auth = {
+						password: cacheRegistryRow.decryptPassword(),
+						serveraddress: cacheRegistryRow.registryUrl,
+						username: cacheRegistryRow.username,
+					};
+					await dep.appendLog(
+						`Publishing built image to ${cacheRegistryRow.registryUrl}...`,
+					);
+					await DockerService.pushImage(
+						`${image}:${tag}`,
+						`${publishedImage}:${tag}`,
+						auth,
+						buildRemote,
+					);
+					await dep.appendLog(
+						"Pulling published image onto the deploy target...",
+					);
+					await DockerService.pullImage(
+						publishedImage,
+						tag,
+						auth,
+						(line) => dep.appendLog(line),
+						remote,
+					);
+					// The deploy target now has the *published* ref locally, not
+					// the bare local build tag (that only exists on the build
+					// server's own daemon) : createAndStartContainer below must
+					// run this one.
+					image = publishedImage;
+				}
+
 				// Persist the resolved tag immediately, createAndStartContainer
 				// below, and any future redeploy that reads svc.image/tag before
 				// this function returns, must see the image that actually exists.
@@ -161,6 +218,23 @@ class DeploymentServiceClass {
 			logger.info(
 				`Deploy succeeded: service=${svc.id} container=${containerId} deployment=${dep.id}`,
 			);
+
+			// Auto-DNS (Cloudflare) : only meaningful for a service actually
+			// routed through this host's own Traefik (shared network + DNS-
+			// resolvable), a remote-hosted service has no Traefik routing at
+			// all (see docker/labels.ts), so there's no hostname to point
+			// anywhere. Fire-and-forget, best-effort : see
+			// CloudflareService.syncDnsRecord's own docstring.
+			if (svc.dnsResolvable && !remote) {
+				const hostname = `${project?.slug ? `${project.slug}-${svc.slug}` : svc.slug}.${config.baseDomain}`;
+				CloudflareService.syncDnsRecord(hostname, config.baseDomain).catch(
+					() => {
+						// Never throws (see its own docstring), this catch is just
+						// defense in depth.
+					},
+				);
+			}
+
 			NotificationDTO.notify({
 				message:
 					trigger === "cron"

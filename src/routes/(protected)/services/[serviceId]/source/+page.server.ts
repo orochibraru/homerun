@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { updateSourceSchema } from "$lib/server/validation/service";
@@ -12,15 +13,18 @@ const logger = new Logger("Services");
 
 export const load = async ({ parent }) => {
 	const { user } = await parent();
-	const [settings, connections, cacheRegistries] = await Promise.all([
-		InstanceSettingsDTO.get(),
-		GitConnectionDTO.listForUser(user.id),
-		BuildCacheRegistryDTO.list(user.id),
-	]);
+	const [settings, connections, cacheRegistries, buildServers] =
+		await Promise.all([
+			InstanceSettingsDTO.get(),
+			GitConnectionDTO.listForUser(user.id),
+			BuildCacheRegistryDTO.list(user.id),
+			RemoteHostDTO.listBuildServers(user.id),
+		]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
+		buildServers: buildServers.map((r) => r.toJSON()),
 		// Only providers this user has actually connected : see the Git
 		// Providers page for connecting one.
 		connectedGitProviders: connections
@@ -53,11 +57,30 @@ export const actions = {
 		}
 		const input = result.data;
 		const isGitBuild = input.buildSource === "git";
+		const buildServerRemoteHostId = isGitBuild
+			? input.buildServerRemoteHostId || null
+			: null;
+		const buildCacheRegistryId = isGitBuild
+			? input.buildCacheRegistryId || null
+			: null;
+		if (
+			buildServerRemoteHostId &&
+			buildServerRemoteHostId !== svc.remoteHostId &&
+			!buildCacheRegistryId
+		) {
+			return fail(400, {
+				errors: {
+					buildCacheRegistryId: [
+						"A build server different from the deploy target needs a build cache registry, to publish the built image through.",
+					],
+				},
+				values: Object.fromEntries(formData),
+			});
+		}
 
 		await svc.update({
-			buildCacheRegistryId: isGitBuild
-				? input.buildCacheRegistryId || null
-				: null,
+			buildCacheRegistryId,
+			buildServerRemoteHostId,
 			buildSource: input.buildSource,
 			registryUrl: input.registryUrl || null,
 			registryUsername: input.registryUsername || null,

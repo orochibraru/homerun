@@ -34,6 +34,7 @@
 	const values = $derived(
 		(form?.values as Record<string, string> | undefined) ?? {
 			buildCacheRegistryId: svc.buildCacheRegistryId ?? "",
+			buildServerRemoteHostId: svc.buildServerRemoteHostId ?? "",
 			buildSource: svc.buildSource,
 			gitBuildContext: svc.gitBuildContext ?? "",
 			gitDockerfilePath: svc.gitDockerfilePath ?? "",
@@ -49,6 +50,11 @@
 	const buildCacheRegistryLabel = $derived(
 		data.buildCacheRegistries.find((r) => r.id === buildCacheRegistryId)
 			?.name ?? "No cache",
+	);
+	let buildServerRemoteHostId = $derived(values.buildServerRemoteHostId ?? "");
+	const buildServerLabel = $derived(
+		data.buildServers.find((r) => r.id === buildServerRemoteHostId)?.name ??
+			"Build on deploy target",
 	);
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
@@ -421,6 +427,41 @@
               {/each}
             </SelectContent>
           </SelectRoot>
+        {/if}
+      </div>
+      <div>
+        <label class={label} for="buildServerRemoteHostId">
+          Build server
+        </label>
+        {#if data.buildServers.length === 0}
+          <p class="text-xs text-text-muted">
+            No build servers configured.
+            <a class="text-accent underline" href={resolve("/remote-hosts")}>
+              Mark a remote host
+            </a>
+            as one to build there instead of the deploy target.
+          </p>
+        {:else}
+          <SelectRoot
+            name="buildServerRemoteHostId"
+            type="single"
+            bind:value={buildServerRemoteHostId}
+          >
+            <SelectTrigger id="buildServerRemoteHostId">
+              {buildServerLabel}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem label="Build on deploy target" value="" />
+              {#each data.buildServers as host (host.id)}
+                <SelectItem label={host.name} value={host.id} />
+              {/each}
+            </SelectContent>
+          </SelectRoot>
+          <p class="text-text-subtle mt-1.5 text-xs">
+            If different from this service's deploy target, a build cache
+            registry above is required : the built image gets published
+            there and pulled back onto the deploy target.
+          </p>
         {/if}
       </div>
     {/if}

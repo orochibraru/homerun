@@ -1,11 +1,13 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { config } from "$lib/config";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
 import { updateGeneralSchema } from "$lib/server/validation/service";
+import { CloudflareService } from "$lib/services/cloudflare.service";
 import { CronService } from "$lib/services/cron.service";
 import { DockerService } from "$lib/services/docker.service";
 
@@ -45,6 +47,16 @@ export const actions = {
 			} catch {
 				// Container may already be gone proceed with deleting the record.
 			}
+		}
+		if (svc.dnsResolvable && !svc.remoteHostId) {
+			const project = svc.projectId
+				? await ProjectDTO.get(svc.projectId, locals.user.id)
+				: null;
+			const hostname = `${project?.slug ? `${project.slug}-${svc.slug}` : svc.slug}.${config.baseDomain}`;
+			CloudflareService.deleteDnsRecord(hostname).catch(() => {
+				// Never throws (see its own docstring), this catch is just
+				// defense in depth.
+			});
 		}
 		await svc.delete();
 		logger.info(`Service deleted: service=${svc.id} user=${locals.user.id}`);
