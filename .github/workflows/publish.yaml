@@ -32,6 +32,7 @@ jobs:
       image_name: orochibraru/homerun
       registry_name: git.ombrage.space
       registry_username: orochibraru
+      bake_target: app
     secrets:
       registry_password: ${{ secrets.PACKAGES_TOKEN }}
 
@@ -45,7 +46,7 @@ jobs:
       image_name: orochibraru/homerun-agent
       registry_name: git.ombrage.space
       registry_username: orochibraru
-      bake_file: ./agent/docker-bake.hcl
+      bake_target: agent
     secrets:
       registry_password: ${{ secrets.PACKAGES_TOKEN }}
 
