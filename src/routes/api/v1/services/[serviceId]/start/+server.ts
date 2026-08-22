@@ -10,22 +10,35 @@ export const POST = async ({ params, locals }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
-	if (!svc) {
+	const service = await ServiceDTO.get(params.serviceId, locals.user.id);
+	if (!service) {
 		return json({ error: "Not found" }, { status: 404 });
 	}
-	if (!svc.containerId) {
+
+	if (service.swarmServiceId) {
+		await DockerService.scaleSwarmService(
+			service.swarmServiceId,
+			service.replicas || 1,
+		);
+		await service.update({ desiredState: "running" });
+		logger.info(
+			`Swarm service started via API: service=${service.id} user=${locals.user.id}`,
+		);
+		return json({ success: true });
+	}
+
+	if (!service.containerId) {
 		return json(
 			{ error: "This service hasn't been deployed yet." },
 			{ status: 400 },
 		);
 	}
 
-	const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-	await DockerService.startContainer(svc.containerId, remote);
-	await svc.update({ desiredState: "running" });
+	const remote = await RemoteHostDTO.connectionFor(service, locals.user.id);
+	await DockerService.startContainer(service.containerId, remote);
+	await service.update({ desiredState: "running" });
 	logger.info(
-		`Service started via API: service=${svc.id} user=${locals.user.id}`,
+		`Service started via API: service=${service.id} user=${locals.user.id}`,
 	);
 	return json({ success: true });
 };

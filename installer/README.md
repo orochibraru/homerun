@@ -70,6 +70,50 @@ an insecure default. Put it (and anything else you want to override,
 `.env` file next to that `compose.yaml`, then
 `docker compose -f compose.yaml up -d` as the rootless user.
 
+## Joining a host to a swarm (`swarm-join.sh`)
+
+Separate one-off script, not part of the TypeScript installer above : joins this
+host to an existing Docker Swarm as a worker (on its own rootless Docker daemon)
+and installs the Homerun Agent as a `systemd --user` unit against that same
+daemon. This is what makes a remote box usable once the main instance's
+Settings > Orchestration is switched to `"swarm"` (see
+`$lib/services/docker/swarm.ts`) : a swarm-mode service only schedules onto
+nodes that are actually members of the swarm, plain Remote Hosts (a
+separately-reachable Docker daemon) don't automatically become that.
+
+Get the join token and manager address from the swarm manager itself first:
+
+```bash
+docker swarm join-token worker
+```
+
+Then, on the node you want to add:
+
+```bash
+curl -fsSL https://<wherever swarm-join.sh is hosted>/swarm-join.sh | sudo bash -s -- \
+  --token <SWMTKN-...> --manager <manager-ip>:2377
+```
+
+Same "no hosted copy exists yet" caveat as `bootstrap.sh` above applies :
+download `installer/swarm-join.sh` directly and run it with `sudo bash` until
+it's hosted somewhere. `--user=` (default `homerun`) and `--version=` (agent
+binary release tag, default `latest`) are both optional, same meaning as the
+main installer's flags.
+
+Deliberately a standalone bash script, not a mode of the TypeScript installer :
+a narrower job (join + agent only, no `homerun-network`/compose-stack setup)
+that doesn't need `StepRunner`'s dry-run machinery to stay readable. Mirrors
+`steps/rootless-docker.ts` and `steps/agent.ts`'s exact command sequences by
+hand so the two don't drift.
+
+**Not verified against a real second host or a real swarm** (same "couldn't be
+checked against something real in this environment" caveat as the rest of this
+installer, see below) : `bash -n` syntax-checked and `shellcheck`-clean, and
+every individual command mirrors a step already dry-run-verified in the main
+installer, but the actual `docker swarm join` handshake and the resulting
+Homerun deploy onto that node haven't been run end-to-end. Verify by hand
+against a real disposable second box before relying on it.
+
 ## Building the installer itself to a binary
 
 There's no separate `installer/package.json`: `agent/`, `cli/`, and `installer/`

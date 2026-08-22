@@ -10,22 +10,32 @@ export const POST = async ({ params, locals }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
-	if (!svc) {
+	const service = await ServiceDTO.get(params.serviceId, locals.user.id);
+	if (!service) {
 		return json({ error: "Not found" }, { status: 404 });
 	}
-	if (!svc.containerId) {
+
+	if (service.swarmServiceId) {
+		await DockerService.scaleSwarmService(service.swarmServiceId, 0);
+		await service.update({ desiredState: "stopped" });
+		logger.info(
+			`Swarm service stopped via API: service=${service.id} user=${locals.user.id}`,
+		);
+		return json({ success: true });
+	}
+
+	if (!service.containerId) {
 		return json(
 			{ error: "This service hasn't been deployed yet." },
 			{ status: 400 },
 		);
 	}
 
-	const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-	await DockerService.stopContainer(svc.containerId, remote);
-	await svc.update({ desiredState: "stopped" });
+	const remote = await RemoteHostDTO.connectionFor(service, locals.user.id);
+	await DockerService.stopContainer(service.containerId, remote);
+	await service.update({ desiredState: "stopped" });
 	logger.info(
-		`Service stopped via API: service=${svc.id} user=${locals.user.id}`,
+		`Service stopped via API: service=${service.id} user=${locals.user.id}`,
 	);
 	return json({ success: true });
 };

@@ -176,7 +176,7 @@
     </p>
   </div>
 
-  {#if !svc.containerId || svc.currentStatus !== "running"}
+  {#if (!svc.containerId && !svc.swarmServiceId) || svc.currentStatus !== "running"}
     <div class="flex flex-col items-center justify-center py-16 text-center">
       <p class="text-sm font-medium text-text-muted">
         This service isn't running.

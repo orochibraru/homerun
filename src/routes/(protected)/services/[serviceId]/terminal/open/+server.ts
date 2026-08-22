@@ -13,18 +13,32 @@ export const POST = async ({ params, locals }) => {
 	if (!svc) {
 		return json({ error: "Not found" }, { status: 404 });
 	}
-	if (!svc.containerId || svc.currentStatus !== "running") {
+	if (svc.currentStatus !== "running") {
 		return json({ error: "This service isn't running." }, { status: 400 });
 	}
 
+	// Swarm mode : `docker exec` is always container-level, there's no
+	// service-level exec, so resolve the live task's actual container id
+	// first (see docker/swarm.ts). Standalone mode already has the
+	// container id directly on the row.
+	const containerId = svc.swarmServiceId
+		? await DockerService.getRunningTaskContainerId(svc.swarmServiceId)
+		: svc.containerId;
+	if (!containerId) {
+		return json(
+			{ error: "No running container found for this service." },
+			{ status: 400 },
+		);
+	}
+
 	const sessionId = await DockerService.openTerminalSession({
-		containerId: svc.containerId,
+		containerId,
 		serviceId: svc.id,
 		userId: locals.user.id,
 	});
 
 	logger.info(
-		`Terminal session opened: service=${svc.id} container=${svc.containerId} session=${sessionId} user=${locals.user.id}`,
+		`Terminal session opened: service=${svc.id} container=${containerId} session=${sessionId} user=${locals.user.id}`,
 	);
 
 	return json({ sessionId });

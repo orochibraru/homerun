@@ -134,7 +134,7 @@
     {:else}
       <span class="text-text-subtle">not publicly routed</span>
     {/if}
-    {#if svc.containerId}
+    {#if svc.containerId || svc.swarmServiceId}
       · internal:
       <span class="text-text-subtle font-mono">{svc.slug}:{
           svc.containerPort

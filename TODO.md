@@ -10,8 +10,10 @@
 
 ## Orchestration
 
-- [ ] Convert to using docker swarm with docker stack deploy, easier to scale,
-      easier to manage.
+- [x] Convert to using docker swarm with docker stack deploy, easier to scale,
+      easier to manage. (Opt-in orchestration mode, see notes : deploy/start/
+      stop/restart/status/scale done and verified against a real local swarm;
+      Terminal exec, remote hosts, and REST API not yet wired to it.)
 
 ## Git providers & builds
 

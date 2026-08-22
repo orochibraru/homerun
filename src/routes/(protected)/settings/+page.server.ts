@@ -261,6 +261,22 @@ export const actions = {
 		);
 		return { savedSection: "oauth", success: true };
 	},
+	updateOrchestration: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const mode = formData.get("orchestrationMode") as string | null;
+		if (mode !== "standalone" && mode !== "swarm") {
+			return fail(400, { error: "Invalid orchestration mode." });
+		}
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateOrchestrationMode(mode);
+		logger.info(
+			`Orchestration mode updated: mode=${mode} user=${locals.user.id}`,
+		);
+		return { savedSection: "orchestration", success: true };
+	},
 
 	updateSmtp: async ({ request, locals }) => {
 		if (!locals.user) {
