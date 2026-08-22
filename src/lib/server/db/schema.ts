@@ -275,6 +275,7 @@ export const instanceSettings = pgTable("instance_settings", {
 	smtpPort: integer("smtp_port"),
 	smtpSecure: boolean("smtp_secure"),
 	smtpUser: text("smtp_user"),
+	traefikAcmeEmail: text("traefik_acme_email"),
 	traefikCertResolver: text("traefik_cert_resolver"),
 	traefikDynamicConfigDir: text("traefik_dynamic_config_dir"),
 	traefikEntrypoint: text("traefik_entrypoint"),
@@ -573,6 +574,30 @@ export const serviceVolume = pgTable(
 	],
 );
 
+// One row per backup attempt (scheduled or manual "Run now"), the run log
+// backing the dedicated Backups page : `storage_volume.backupLastRunAt`
+// alone only ever remembered the *last* timestamp, not whether it succeeded
+// or a history to look back at. Inserted/finalized from
+// BackupService.runBackup() (the one place both the scheduler and the
+// manual action funnel through), not duplicated at each call site.
+export const backupRun = pgTable(
+	"backup_run",
+	{
+		error: text("error"),
+		finishedAt: timestamp("finished_at", { mode: "date" }),
+		id: text("id").primaryKey(),
+		sizeBytes: integer("size_bytes"),
+		startedAt: timestamp("started_at", { mode: "date" }).notNull(),
+		// null while the run is still in progress (startedAt set, finishedAt
+		// not yet), true/false once finalized.
+		success: boolean("success"),
+		volumeId: text("volume_id")
+			.notNull()
+			.references(() => storageVolume.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("backupRun_volumeId_idx").on(table.volumeId)],
+);
+
 // Persisted warn/error-level application log entries, captured by
 // $lib/logger.ts's Logger.warn()/error() (best-effort, never blocks the
 // caller) so the per-service Errors tab can show app-level failures
@@ -709,6 +734,7 @@ export type Deployment = typeof deployment.$inferSelect;
 export type InstanceSettings = typeof instanceSettings.$inferSelect;
 export type StorageVolume = typeof storageVolume.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
+export type BackupRun = typeof backupRun.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;

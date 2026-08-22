@@ -20,6 +20,11 @@ on:
         required: true
         description: "Docker registry username"
         type: string
+      bake_file:
+        required: false
+        default: "./docker-bake.hcl"
+        description: "Path to the docker-bake.hcl file to build from"
+        type: string
     secrets:
       registry_password:
         required: true
@@ -57,8 +62,8 @@ jobs:
         id: platforms
         run: |
           touch .env
-          docker buildx bake image-all --print
-          echo "matrix=$(docker buildx bake image-all --print | jq -cr '.target."image-all".platforms')" >>${GITHUB_OUTPUT}
+          docker buildx bake -f "${{ inputs.bake_file }}" image-all --print
+          echo "matrix=$(docker buildx bake -f "${{ inputs.bake_file }}" image-all --print | jq -cr '.target."image-all".platforms')" >>${GITHUB_OUTPUT}
 
       - name: Show matrix
         run: |
@@ -125,7 +130,7 @@ jobs:
         uses: docker/bake-action@v7
         with:
           files: |
-            ./docker-bake.hcl
+            ${{ inputs.bake_file }}
             cwd://${{ runner.temp }}/bake-meta.json
           targets: image
           set: |

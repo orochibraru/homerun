@@ -1,7 +1,9 @@
 <script lang="ts">
 	import {
 		BookOpen,
+		CalendarClock,
 		ChevronRight,
+		CloudUpload,
 		FolderKanban,
 		GitBranch,
 		HardDrive,
@@ -28,9 +30,15 @@
 
 	let sidebarOpen = $state(false);
 
+	// `category` groups the sidebar into labeled sections rather than one
+	// flat list : order here is the render order, both for categories and
+	// for items within one. Admin-only items keep their own separate
+	// "Administration" section regardless of category (see below), same
+	// "your stuff" vs. "instance administration" split as before.
 	const allNavItems = [
 		{
 			adminOnly: false,
+			category: "Workspace",
 			exact: true,
 			href: resolve("/"),
 			icon: LayoutDashboard,
@@ -38,6 +46,7 @@
 		},
 		{
 			adminOnly: false,
+			category: "Workspace",
 			exact: false,
 			href: resolve("/services"),
 			icon: Server,
@@ -45,6 +54,7 @@
 		},
 		{
 			adminOnly: false,
+			category: "Workspace",
 			exact: false,
 			href: resolve("/projects"),
 			icon: FolderKanban,
@@ -52,6 +62,7 @@
 		},
 		{
 			adminOnly: false,
+			category: "Workspace",
 			exact: false,
 			href: resolve("/templates"),
 			icon: LayoutGrid,
@@ -59,6 +70,7 @@
 		},
 		{
 			adminOnly: false,
+			category: "Infrastructure",
 			exact: false,
 			href: resolve("/storage"),
 			icon: HardDrive,
@@ -66,6 +78,15 @@
 		},
 		{
 			adminOnly: false,
+			category: "Infrastructure",
+			exact: false,
+			href: resolve("/backups"),
+			icon: CloudUpload,
+			label: "Backups",
+		},
+		{
+			adminOnly: false,
+			category: "Infrastructure",
 			exact: false,
 			href: resolve("/remote-hosts"),
 			icon: Network,
@@ -73,6 +94,15 @@
 		},
 		{
 			adminOnly: false,
+			category: "Infrastructure",
+			exact: false,
+			href: resolve("/scheduling"),
+			icon: CalendarClock,
+			label: "Scheduling",
+		},
+		{
+			adminOnly: false,
+			category: "Integrations",
 			exact: false,
 			href: resolve("/git-providers"),
 			icon: GitBranch,
@@ -80,6 +110,7 @@
 		},
 		{
 			adminOnly: false,
+			category: "Integrations",
 			exact: false,
 			href: resolve("/api-docs"),
 			icon: BookOpen,
@@ -87,6 +118,7 @@
 		},
 		{
 			adminOnly: true,
+			category: "Administration",
 			exact: false,
 			href: resolve("/users"),
 			icon: Users,
@@ -94,6 +126,7 @@
 		},
 		{
 			adminOnly: true,
+			category: "Administration",
 			exact: false,
 			href: resolve("/settings"),
 			icon: Settings,
@@ -101,6 +134,7 @@
 		},
 		{
 			adminOnly: true,
+			category: "Administration",
 			exact: false,
 			href: resolve("/system-logs"),
 			icon: ScrollText,
@@ -108,15 +142,34 @@
 		},
 	];
 
+	interface NavGroup {
+		heading: string;
+		items: (typeof allNavItems)[number][];
+	}
+
+	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
+	function groupByCategory(items: typeof allNavItems): NavGroup[] {
+		const groups: NavGroup[] = [];
+		for (const item of items) {
+			let group = groups.find((g) => g.heading === item.category);
+			if (!group) {
+				group = { heading: item.category, items: [] };
+				groups.push(group);
+			}
+			group.items.push(item);
+		}
+		return groups;
+	}
+
 	// Users/Settings/System Logs are instance-wide admin controls : hidden
 	// from developers, who otherwise get the same dashboard (their own
-	// services/projects, already isolated per-user). Split into their own
-	// nav section (rather than interleaved) so the sidebar visually groups
-	// "your stuff" from "instance administration".
-	const mainNavItems = $derived(allNavItems.filter((item) => !item.adminOnly));
-	const adminNavItems = $derived(
+	// services/projects, already isolated per-user).
+	const mainNavGroups = $derived(
+		groupByCategory(allNavItems.filter((item) => !item.adminOnly)),
+	);
+	const adminNavGroups = $derived(
 		data.user?.role === "admin"
-			? allNavItems.filter((item) => item.adminOnly)
+			? groupByCategory(allNavItems.filter((item) => item.adminOnly))
 			: [],
 	);
 
@@ -156,60 +209,43 @@
 	}
 </script>
 
+{#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
+  {#each groups as group (group.heading)}
+    <p class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
+      {group.heading}
+    </p>
+    {#each group.items as item (item.href)}
+      {@const active = isActive(item.href, item.exact)}
+      {@const NavIcon = item.icon}
+      <a
+        class="
+          mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+          {active
+          ? 'bg-accent-light text-accent'
+          : 'text-text-muted hover:bg-surface-2 hover:text-text'}
+        "
+        href={item.href}
+        onclick={onNavigate}
+      >
+        <NavIcon class="size-4 shrink-0" />
+        {item.label}
+        {#if active}
+          <ChevronRight class="ml-auto size-3.5 opacity-60" />
+        {/if}
+      </a>
+    {/each}
+  {/each}
+{/snippet}
+
 <!-- Fills the full viewport : there's no global navbar above this. -->
 <div class="bg-bg flex h-screen overflow-hidden">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
   <aside class="border-border bg-surface hidden w-60 shrink-0 flex-col border-r md:flex">
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto p-3 pt-4">
-      <p class="px-2 text-xl font-bold">Homerun</p>
-      <p class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
-        Navigation
-      </p>
-      {#each mainNavItems as item}
-        {@const active = isActive(item.href, item.exact)}
-        {@const NavIcon = item.icon}
-        <a
-          class="
-            mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-            {active
-            ? 'bg-accent-light text-accent'
-            : 'text-text-muted hover:bg-surface-2 hover:text-text'}
-          "
-          href={item.href}
-        >
-          <NavIcon class="size-4 shrink-0" />
-          {item.label}
-          {#if active}
-            <ChevronRight class="ml-auto size-3.5 opacity-60" />
-          {/if}
-        </a>
-      {/each}
-
-      {#if adminNavItems.length > 0}
-        <p class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
-          Administration
-        </p>
-        {#each adminNavItems as item}
-          {@const active = isActive(item.href, item.exact)}
-          {@const NavIcon = item.icon}
-          <a
-            class="
-              mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-              {active
-              ? 'bg-accent-light text-accent'
-              : 'text-text-muted hover:bg-surface-2 hover:text-text'}
-            "
-            href={item.href}
-          >
-            <NavIcon class="size-4 shrink-0" />
-            {item.label}
-            {#if active}
-              <ChevronRight class="ml-auto size-3.5 opacity-60" />
-            {/if}
-          </a>
-        {/each}
-      {/if}
+      <p class="mb-2 px-2 text-xl font-bold">Homerun</p>
+      {@render navGroups(mainNavGroups)}
+      {@render navGroups(adminNavGroups)}
     </nav>
 
     <!-- User section -->
@@ -266,53 +302,12 @@
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
       <nav class="flex-1 overflow-y-auto p-3 pt-4">
-        <p class="text-text-muted mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
-          Navigation
-        </p>
-        {#each mainNavItems as item}
-          {@const active = isActive(item.href, item.exact)}
-          {@const MobileNavIcon = item.icon}
-          <a
-            class="
-              mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-              {active
-              ? 'bg-accent-light text-accent'
-              : 'text-text-muted hover:bg-surface-2 hover:text-text'}
-            "
-            href={item.href}
-            onclick={() => {
-              sidebarOpen = false;
-            }}
-          >
-            <MobileNavIcon class="size-4 shrink-0" />
-            {item.label}
-          </a>
-        {/each}
-
-        {#if adminNavItems.length > 0}
-          <p class="text-text-muted mt-4 mb-2 px-3 text-[0.65rem] font-semibold tracking-widest uppercase">
-            Administration
-          </p>
-          {#each adminNavItems as item}
-            {@const active = isActive(item.href, item.exact)}
-            {@const MobileNavIcon = item.icon}
-            <a
-              class="
-                mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
-                {active
-                ? 'bg-accent-light text-accent'
-                : 'text-text-muted hover:bg-surface-2 hover:text-text'}
-              "
-              href={item.href}
-              onclick={() => {
-                sidebarOpen = false;
-              }}
-            >
-              <MobileNavIcon class="size-4 shrink-0" />
-              {item.label}
-            </a>
-          {/each}
-        {/if}
+        {@render navGroups(mainNavGroups, () => {
+          sidebarOpen = false;
+        })}
+        {@render navGroups(adminNavGroups, () => {
+          sidebarOpen = false;
+        })}
       </nav>
 
       <div class="border-border border-t p-3">

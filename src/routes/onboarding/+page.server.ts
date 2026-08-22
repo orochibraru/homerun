@@ -71,6 +71,10 @@ export const actions = {
 			dockerSocketPath: input.dockerSocketPath,
 		});
 		await settings.updateTraefik({
+			// Not part of this wizard (advanced/rarely-changed, editable later on
+			// /settings) : preserve whatever it's currently set to, same as
+			// authCheckUrl above.
+			traefikAcmeEmail: settings.toJSON().traefikAcmeEmail,
 			traefikCertResolver: input.traefikCertResolver,
 			traefikDynamicConfigDir: blankToNull(input.traefikDynamicConfigDir),
 			traefikEntrypoint: input.traefikEntrypoint,

@@ -13,7 +13,7 @@ main app for how it plugs in, and its own "draft, not finished" caveats.
 
 ## Running it
 
-Three ways, roughly in order of how little you want to think about it. None of
+Four ways, roughly in order of how little you want to think about it. None of
 them need Bun or a source checkout on the target host.
 
 **Via the installer (recommended for a fresh host).** Sets up rootless Docker
@@ -25,9 +25,30 @@ curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/install
   | sudo bash -s -- --mode=agent
 ```
 
-**Already have Docker set up your own way?** Grab the prebuilt binary directly
-from this repo's Gitea releases (Linux amd64/arm64 only, same coverage as the
-CLI's binaries, see `scripts/build-packages.ts`):
+**Already running Docker your own way?** Run the published image
+(`git.ombrage.space/orochibraru/homerun-agent`, `linux/amd64` + `linux/arm64`,
+built from [`agent/Dockerfile`](./Dockerfile) via the root `docker-bake.hcl`
+convention, see [`agent/docker-bake.hcl`](./docker-bake.hcl)), mounting the
+Docker socket the same way any Docker-managing container does:
+
+```bash
+docker run -d --name homerun-agent --restart unless-stopped \
+  -p 7420:7420 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v homerun-agent-token:/root/.homerun-agent \
+  git.ombrage.space/orochibraru/homerun-agent:latest
+```
+
+(The second volume persists the generated token across container restarts, same
+as `tokenFile` does for a bare-binary install; set `AGENT_TOKEN` explicitly via
+`-e` instead if you'd rather pin it yourself. Point
+`-v /run/user/<uid>/docker.sock:/var/run/docker.sock` plus
+`-e DOCKER_SOCKET_PATH=/var/run/docker.sock` at a rootless daemon instead of the
+default system one.)
+
+**Grab the prebuilt binary directly** from this repo's Gitea releases (Linux
+amd64/arm64 only, same coverage as the CLI's binaries, see
+`scripts/build-packages.ts`):
 
 ```bash
 curl -fsSL https://git.ombrage.space/orochibraru/homerun/releases/latest/download/homerun-agent-amd64 -o homerun-agent
@@ -35,9 +56,7 @@ chmod +x homerun-agent
 ./homerun-agent
 ```
 
-(`-arm64` instead of `-amd64` on an arm64 host.) There's no published Docker
-image for the agent yet, that's tracked in the repo root's `TODO.md`, the binary
-above is the only non-source option for now.
+(`-arm64` instead of `-amd64` on an arm64 host.)
 
 On first boot with no `AGENT_TOKEN` set, it generates one and prints it, copy
 that (plus this host's reachable `http://host:7420`) into the main Homerun

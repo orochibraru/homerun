@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { decryptSecret } from "./secrets.ts";
@@ -10,6 +11,7 @@ const execFileAsync = promisify(execFile);
 export interface BackupResult {
 	error?: string;
 	key?: string;
+	sizeBytes?: number;
 	success: boolean;
 }
 
@@ -35,6 +37,31 @@ export abstract class BackupService {
 	 * an oversight.
 	 */
 	protected async runBackup(
+		volume: StorageVolumeDTO,
+		upload: (
+			volume: StorageVolumeDTO,
+			key: string,
+			body: Uint8Array,
+			secretAccessKey: string,
+		) => Promise<void>,
+	): Promise<BackupResult> {
+		// One row per attempt (scheduled or manual), finalized below on every
+		// return path : the run log the dedicated Backups page reads, see
+		// BackupRunDTO. Recorded here rather than at each caller
+		// (BackupScheduler, the storage/[volumeId] "Run now" action) so every
+		// backup path gets a log entry for free, including validation
+		// failures below, not just upload attempts.
+		const run = await BackupRunDTO.create(volume.id);
+		const result = await this.attemptBackup(volume, upload);
+		await run.finish(
+			result.success
+				? { sizeBytes: result.sizeBytes, success: true }
+				: { error: result.error, success: false },
+		);
+		return result;
+	}
+
+	private async attemptBackup(
 		volume: StorageVolumeDTO,
 		upload: (
 			volume: StorageVolumeDTO,
@@ -90,7 +117,7 @@ export abstract class BackupService {
 			logger.info(
 				`Backup uploaded: volume=${volume.id} key=${key} bytes=${stdout.length}`,
 			);
-			return { key, success: true };
+			return { key, sizeBytes: stdout.length, success: true };
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			logger.error(`Backup failed: volume=${volume.id}`, err);

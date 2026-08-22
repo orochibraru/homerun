@@ -26,6 +26,7 @@ export interface InstanceSettingsDockerInput {
 }
 
 export interface InstanceSettingsTraefikInput {
+	traefikAcmeEmail: string | null;
 	traefikCertResolver: string | null;
 	traefikDynamicConfigDir: string | null;
 	traefikEntrypoint: string | null;
@@ -96,6 +97,7 @@ export interface InstanceSettingsOverride {
 	smtpPort?: number | null;
 	smtpSecure?: boolean | null;
 	smtpUser?: string | null;
+	traefikAcmeEmail?: string | null;
 	traefikCertResolver?: string | null;
 	traefikDynamicConfigDir?: string | null;
 	traefikEntrypoint?: string | null;
@@ -143,6 +145,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			smtpPort: null,
 			smtpSecure: null,
 			smtpUser: null,
+			traefikAcmeEmail: null,
 			traefikCertResolver: null,
 			traefikDynamicConfigDir: null,
 			traefikEntrypoint: null,
@@ -274,6 +277,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			smtpPort: this.row.smtpPort,
 			smtpSecure: this.row.smtpSecure,
 			smtpUser: this.row.smtpUser,
+			traefikAcmeEmail: this.row.traefikAcmeEmail,
 			traefikCertResolver: this.row.traefikCertResolver,
 			traefikDynamicConfigDir: this.row.traefikDynamicConfigDir,
 			traefikEntrypoint: this.row.traefikEntrypoint,

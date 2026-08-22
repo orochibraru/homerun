@@ -3,9 +3,11 @@
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
+	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
 
 	const { data } = $props();
@@ -46,6 +48,10 @@
 		if (envRows.length === 0) {
 			envRows.push({ key: "", value: "" });
 		}
+	}
+
+	function importRows(imported: ParsedEnvVar[]) {
+		envRows = mergeEnvRows(envRows, imported, (row) => row);
 	}
 </script>
 
@@ -109,10 +115,13 @@
       </div>
     {/each}
 
-    <Button class="mt-1 h-auto p-0" onclick={addRow} variant="link">
-      <Plus class="size-3.5" />
-      Add variable
-    </Button>
+    <div class="mt-1 flex items-center gap-4">
+      <Button class="h-auto p-0" onclick={addRow} variant="link">
+        <Plus class="size-3.5" />
+        Add variable
+      </Button>
+      <EnvPasteButton onImport={importRows} />
+    </div>
 
     <div class="flex justify-end pt-2">
       <Button disabled={submitting} type="submit">

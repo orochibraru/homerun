@@ -347,8 +347,8 @@
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Traefik</h2>
         <p class="text-text-muted text-xs">
-          Entrypoint, cert resolver, and the custom-SSL dynamic-config
-          directory.
+          Entrypoint, cert resolver, ACME account email, and the custom-SSL
+          dynamic-config directory.
         </p>
       </div>
       <form
@@ -357,6 +357,27 @@
         method="POST"
         use:enhance={submitToast("Traefik settings")}
       >
+        <div>
+          <label class={label} for="traefikAcmeEmail">ACME account email</label>
+          <Input
+            id="traefikAcmeEmail"
+            name="traefikAcmeEmail"
+            placeholder={data.envDefaults.traefikAcmeEmail ?? "admin@example.com"}
+            type="email"
+            value={data.settings.traefikAcmeEmail ?? ""}
+          />
+          <p class="text-text-subtle mt-1.5 text-xs">
+            The contact email Traefik registers with Let's Encrypt when
+            generating certificates. This is informational only : it's
+            recorded here for reference and validated as a real email, but
+            saving it doesn't push it to the running Traefik container.
+            Traefik reads it from the <code class="font-mono">ACME_EMAIL</code>
+            env var at container startup (compose.yaml's
+            <code class="font-mono">--certificatesresolvers.letsencrypt.acme.email</code>
+            flag), so set it there and recreate the Traefik container for a
+            change to actually take effect.
+          </p>
+        </div>
         <div>
           <label class={label} for="traefikEntrypoint">Entrypoint</label>
           <Input

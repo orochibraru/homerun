@@ -61,6 +61,15 @@ export const configSchema = z.object({
 		user: z.string().optional(),
 	}),
 	traefik: z.object({
+		// The contact email Traefik's ACME resolver registers with Let's
+		// Encrypt (compose.yaml's `--certificatesresolvers.letsencrypt.acme.email`
+		// flag, sourced from the ACME_EMAIL env var). Purely informational
+		// from this app's side, same "never touches the live Traefik
+		// container's own config" boundary as dynamicConfigDir below : that
+		// flag is a startup arg, changing it here doesn't push it to the
+		// running container, it just keeps the value documented/validated in
+		// one place instead of only living in an untracked .env file.
+		acmeEmail: z.string().optional(),
 		certResolver: z.string().default("letsencrypt"),
 		// Where custom SSL cert/key files + per-domain dynamic-config YAML
 		// get written (see docker/custom-ssl.ts) : unset by default, which
@@ -93,6 +102,7 @@ export interface InstanceSettingsOverride {
 	smtpPort?: number | null;
 	smtpSecure?: boolean | null;
 	smtpUser?: string | null;
+	traefikAcmeEmail?: string | null;
 	traefikCertResolver?: string | null;
 	traefikDynamicConfigDir?: string | null;
 	traefikEntrypoint?: string | null;
@@ -137,6 +147,7 @@ export const parseConfig = (): AppConfig => {
 			user: Bun.env.SMTP_USER,
 		},
 		traefik: {
+			acmeEmail: Bun.env.ACME_EMAIL,
 			certResolver: Bun.env.TRAEFIK_CERT_RESOLVER,
 			dynamicConfigDir: Bun.env.TRAEFIK_DYNAMIC_CONFIG_DIR,
 			entrypoint: Bun.env.TRAEFIK_ENTRYPOINT,
@@ -164,6 +175,7 @@ export function envDefaultsForDisplay() {
 		smtpPort: envDefaults.smtp.port ?? null,
 		smtpSecure: envDefaults.smtp.secure ?? false,
 		smtpUser: envDefaults.smtp.user ?? null,
+		traefikAcmeEmail: envDefaults.traefik.acmeEmail ?? null,
 		traefikCertResolver: envDefaults.traefik.certResolver,
 		traefikDynamicConfigDir: envDefaults.traefik.dynamicConfigDir ?? null,
 		traefikEntrypoint: envDefaults.traefik.entrypoint,
@@ -229,6 +241,8 @@ export function applyInstanceSettings(
 	config.smtp.port = override.smtpPort ?? envDefaults.smtp.port;
 	config.smtp.secure = override.smtpSecure ?? envDefaults.smtp.secure;
 	config.smtp.user = override.smtpUser ?? envDefaults.smtp.user;
+	config.traefik.acmeEmail =
+		override.traefikAcmeEmail ?? envDefaults.traefik.acmeEmail;
 	config.traefik.certResolver =
 		override.traefikCertResolver ?? envDefaults.traefik.certResolver;
 	config.traefik.dynamicConfigDir =

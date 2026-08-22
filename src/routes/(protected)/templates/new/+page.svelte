@@ -4,11 +4,13 @@
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
 
 	const { form } = $props();
@@ -50,6 +52,10 @@
 		if (envRows.length === 0) {
 			envRows.push({ key: "", value: "" });
 		}
+	}
+
+	function importEnvRows(imported: ParsedEnvVar[]) {
+		envRows = mergeEnvRows(envRows, imported, (row) => row);
 	}
 </script>
 
@@ -210,10 +216,13 @@
             </Button>
           </div>
         {/each}
-        <Button class="mt-1 h-auto p-0" onclick={addEnvRow} variant="link">
-          <Plus class="size-3.5" />
-          Add variable
-        </Button>
+        <div class="mt-1 flex items-center gap-4">
+          <Button class="h-auto p-0" onclick={addEnvRow} variant="link">
+            <Plus class="size-3.5" />
+            Add variable
+          </Button>
+          <EnvPasteButton onImport={importEnvRows} />
+        </div>
       </div>
     </section>
 

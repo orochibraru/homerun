@@ -28,6 +28,20 @@
 			"tag": "0003_unique_human_robot",
 			"version": "7",
 			"when": 1787253592651
+		},
+		{
+			"breakpoints": true,
+			"idx": 4,
+			"tag": "0004_naive_ted_forrester",
+			"version": "7",
+			"when": 1787398252396
+		},
+		{
+			"breakpoints": true,
+			"idx": 5,
+			"tag": "0005_freezing_speedball",
+			"version": "7",
+			"when": 1787399574442
 		}
 	],
 	"version": "7"

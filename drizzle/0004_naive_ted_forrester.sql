@@ -1,0 +1,1 @@
+ALTER TABLE "instance_settings" ADD COLUMN "traefik_acme_email" text;
