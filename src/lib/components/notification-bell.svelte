@@ -3,6 +3,7 @@
 	import { invalidateAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { timeAgo } from "$lib/formatting";
 
 	interface NotificationItem {
@@ -38,38 +39,27 @@
 	}
 </script>
 
-<div class="relative">
-  <Button
-    aria-label="Notifications"
-    onclick={() => {
-      open = !open;
-    }}
-    size="icon-sm"
-    variant="ghost"
-  >
-    <Bell class="size-4" />
-  </Button>
-  {#if unreadCount > 0}
-    <span
-      class="bg-accent text-bg absolute top-0.5 right-0.5 flex size-3.5 items-center justify-center rounded-full text-[0.6rem] font-bold"
-    >
-      {unreadCount > 9 ? "9+" : unreadCount}
-    </span>
-  {/if}
-</div>
+<Popover.Root bind:open>
+  <div class="relative">
+    <Popover.Trigger>
+      {#snippet child({ props })}
+        <Button {...props} aria-label="Notifications" size="icon-sm" variant="ghost">
+          <Bell class="size-4" />
+        </Button>
+      {/snippet}
+    </Popover.Trigger>
+    {#if unreadCount > 0}
+      <span
+        class="bg-accent text-bg pointer-events-none absolute top-0.5 right-0.5 flex size-3.5 items-center justify-center rounded-full text-[0.6rem] font-bold"
+      >
+        {unreadCount > 9 ? "9+" : unreadCount}
+      </span>
+    {/if}
+  </div>
 
-{#if open}
-  <button
-    aria-label="Close notifications"
-    class="fixed inset-0 z-40"
-    onclick={() => {
-      open = false;
-    }}
-    type="button"
-  >
-  </button>
-  <div
-    class="border-border bg-surface absolute top-full right-0 z-50 mt-1 max-h-96 w-80 overflow-y-auto rounded-2xl border shadow-xl"
+  <Popover.Content
+    align="end"
+    class="max-h-96 w-80 gap-0 overflow-y-auto rounded-2xl p-0"
   >
     <div class="border-border flex items-center justify-between border-b px-4 py-3">
       <p class="text-text text-sm font-semibold">Notifications</p>
@@ -115,5 +105,5 @@
         {/each}
       </div>
     {/if}
-  </div>
-{/if}
+  </Popover.Content>
+</Popover.Root>

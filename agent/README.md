@@ -27,9 +27,9 @@ curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/install
 
 **Already running Docker your own way?** Run the published image
 (`git.ombrage.space/orochibraru/homerun-agent`, `linux/amd64` + `linux/arm64`,
-built from [`agent/Dockerfile`](./Dockerfile) via the root `docker-bake.hcl`
-convention, see [`agent/docker-bake.hcl`](./docker-bake.hcl)), mounting the
-Docker socket the same way any Docker-managing container does:
+built from [`agent/Dockerfile`](./Dockerfile) via the `agent` target in the root
+[`docker-bake.hcl`](../docker-bake.hcl)), mounting the Docker socket the same
+way any Docker-managing container does:
 
 ```bash
 docker run -d --name homerun-agent --restart unless-stopped \

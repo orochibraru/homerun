@@ -11,7 +11,6 @@
 		HardDrive,
 		LayoutDashboard,
 		LayoutGrid,
-		LogOut,
 		Menu,
 		Network,
 		ScrollText,
@@ -21,13 +20,12 @@
 		X,
 	} from "@lucide/svelte";
 	import { fly } from "svelte/transition";
-	import { toast } from "svelte-sonner";
-	import { goto, invalidateAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import { signOut } from "$lib/auth-client";
 	import NotificationBell from "$lib/components/notification-bell.svelte";
+	import ProfileMenu from "$lib/components/profile-menu.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { title } from "$lib/store/title";
 
 	const { data, children } = $props();
 
@@ -229,39 +227,11 @@
 			: [],
 	);
 
-	const userInitial = $derived(data.user?.name?.[0]?.toUpperCase() ?? "?");
-
 	function isActive(href: string, exact: boolean): boolean {
 		if (exact) {
 			return page.url.pathname === href;
 		}
 		return page.url.pathname.startsWith(href);
-	}
-
-	/** Derive a human-readable title from the current pathname for mobile */
-	const mobileTitle = $derived.by(() => {
-		const p = page.url.pathname;
-		if (p.includes("/profile")) {
-			return "Profile";
-		}
-		if (p.includes("/services")) {
-			return "Services";
-		}
-		return "Dashboard";
-	});
-
-	async function signOutCallback() {
-		sidebarOpen = false;
-		await signOut();
-		await invalidateAll();
-	}
-
-	function handleSignOut() {
-		return toast.promise(signOutCallback, {
-			error: (e) => (e instanceof Error ? e.message : "Failed to sign you out"),
-			loading: "Signing you out",
-			success: "Signed you out successfully",
-		});
 	}
 </script>
 
@@ -301,52 +271,10 @@
   <aside class="border-border bg-surface hidden w-60 shrink-0 flex-col border-r md:flex">
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto p-3 pt-4">
-      <div class="mb-2 flex items-center justify-between px-2">
-        <p class="text-xl font-bold">Homerun</p>
-        <NotificationBell
-          notifications={data.notifications}
-          unreadCount={data.unreadCount}
-        />
-      </div>
+      <p class="mb-2 px-2 text-xl font-bold">Homerun</p>
       {@render navGroups(mainNavGroups)}
       {@render navGroups(adminNavGroups)}
     </nav>
-
-    <!-- User section -->
-    <div class="border-border border-t p-3">
-      <a
-        class="hover:bg-muted flex items-center gap-3 rounded-xl p-2 transition-colors"
-        href={resolve("/profile")}
-      >
-        {#if data.user?.image}
-          <img
-            alt={data.user.name}
-            class="ring-border size-8 rounded-full object-cover ring-1"
-            src={data.user.image}
-          >
-        {:else}
-          <div class="bg-accent flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white">
-            {userInitial}
-          </div>
-        {/if}
-        <div class="min-w-0 flex-1">
-          <p class="text-text truncate text-xs font-semibold">
-            {data.user?.name}
-          </p>
-          <p class="text-text-muted truncate text-[0.7rem]">
-            {data.user?.email}
-          </p>
-        </div>
-      </a>
-      <Button
-        class="mt-1 w-full justify-start gap-2.5 text-xs text-red-500 hover:bg-red-500/10 hover:text-red-500"
-        onclick={handleSignOut}
-        variant="ghost"
-      >
-        <LogOut class="size-3.5" />
-        Sign out
-      </Button>
-    </div>
   </aside>
 
   <!-- ── Mobile sidebar overlay ────────────────────────────────── -->
@@ -373,47 +301,18 @@
           sidebarOpen = false;
         })}
       </nav>
-
-      <div class="border-border border-t p-3">
-        <div class="flex items-center gap-3 rounded-xl p-2">
-          {#if data.user?.image}
-            <img
-              alt={data.user.name}
-              class="size-8 rounded-full object-cover"
-              src={data.user.image}
-            >
-          {:else}
-            <div class="bg-accent flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white">
-              {userInitial}
-            </div>
-          {/if}
-          <div class="min-w-0 flex-1">
-            <p class="text-text truncate text-xs font-semibold">
-              {data.user?.name}
-            </p>
-            <p class="text-text-muted truncate text-[0.7rem]">
-              {data.user?.email}
-            </p>
-          </div>
-        </div>
-        <button
-          class="mt-1 flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-red-500 transition-all duration-200 hover:bg-red-500/10"
-          onclick={handleSignOut}
-          type="button"
-        >
-          <LogOut class="size-3.5" />
-          Sign out
-        </button>
-      </div>
     </div>
   {/if}
 
   <!-- ── Main content ───────────────────────────────────────────── -->
   <div class="flex flex-1 flex-col overflow-hidden">
-    <!-- Mobile-only bar: hamburger + page title -->
-    <div class="border-border bg-surface flex h-12 shrink-0 items-center gap-3 border-b px-4 md:hidden">
+    <!-- Sticky header, every page, both breakpoints : hamburger (mobile
+         only) + page title on the left, notifications + account menu on
+         the right. -->
+    <header class="border-border bg-surface sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b px-4 md:px-6">
       <Button
         aria-label="Toggle sidebar"
+        class="md:hidden"
         onclick={() => {
           sidebarOpen = !sidebarOpen;
         }}
@@ -426,14 +325,15 @@
           <Menu class="size-5" />
         {/if}
       </Button>
-      <span class="text-text flex-1 text-sm font-medium">
-        {mobileTitle}
+      <span class="text-text flex-1 truncate text-sm font-semibold md:text-base">
+        {$title || "Dashboard"}
       </span>
       <NotificationBell
         notifications={data.notifications}
         unreadCount={data.unreadCount}
       />
-    </div>
+      <ProfileMenu user={data.user} />
+    </header>
 
     <!-- Page content -->
     <main class="flex-1 overflow-y-auto">

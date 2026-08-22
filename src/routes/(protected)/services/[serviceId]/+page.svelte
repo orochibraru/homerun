@@ -77,6 +77,16 @@
 		}
 	}
 
+	// Polling starts client-side (see deployEnhance below) before the
+	// deploy action's own POST has even reached the server, so the very
+	// first tick(s) almost always race ahead of DeploymentDTO.create() and
+	// come back 404 ("not found yet"), not just an occasional dropped
+	// request. A missing status must be retried like any other missed
+	// tick, not treated as "done" : only an explicit terminal status (not
+	// in IN_FLIGHT_STATUSES) actually stops the loop. Capped so a
+	// genuinely broken connection doesn't poll forever.
+	const MAX_CONSECUTIVE_MISSES = 30;
+
 	/**
 	 * Polls until the deployment reaches a terminal status, then clears
 	 * pendingAction itself : this is the single mechanism for both a live
@@ -88,11 +98,16 @@
 		pollGeneration += 1;
 		const myGeneration = pollGeneration;
 		let status = await fetchProgress(deploymentId);
-		while (
-			myGeneration === pollGeneration &&
-			status &&
-			IN_FLIGHT_STATUSES.has(status)
-		) {
+		let misses = 0;
+		while (myGeneration === pollGeneration) {
+			if (status) {
+				misses = 0;
+				if (!IN_FLIGHT_STATUSES.has(status)) {
+					break;
+				}
+			} else if (++misses >= MAX_CONSECUTIVE_MISSES) {
+				break;
+			}
 			await new Promise((r) => setTimeout(r, 1000));
 			if (myGeneration !== pollGeneration) {
 				return;
