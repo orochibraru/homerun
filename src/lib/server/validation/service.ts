@@ -30,6 +30,7 @@ const baseServiceSchema = z.object({
 	// Dockerfile) : cross-checked against the other git*/image fields below,
 	// since which of those is required depends on this.
 	buildCacheRegistryId: z.string().optional(),
+	buildServerRemoteHostId: z.string().optional(),
 	buildSource: z.enum(["image", "git"]).default("image"),
 	containerPort: z.coerce
 		.number({ error: "Container port is required." })
@@ -143,6 +144,7 @@ export type UpdatePortsInput = z.infer<typeof updatePortsSchema>;
 export const updateSourceSchema = baseServiceSchema
 	.pick({
 		buildCacheRegistryId: true,
+		buildServerRemoteHostId: true,
 		buildSource: true,
 		gitBuildContext: true,
 		gitDockerfilePath: true,

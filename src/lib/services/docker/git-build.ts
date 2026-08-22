@@ -6,9 +6,20 @@ import { promisify } from "node:util";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
+import type { RegistryAuth } from "./containers.ts";
 
 const logger = new Logger("GitBuild");
 const execFileAsync = promisify(execFile);
+
+/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pushImage. */
+interface RequiresContainerMixin {
+	pushImage(
+		localRef: string,
+		targetRef: string,
+		auth?: RegistryAuth,
+		remote?: RemoteHostConnection | null,
+	): Promise<void>;
+}
 
 export interface BuildCacheRegistryConfig {
 	password: string;
@@ -43,7 +54,7 @@ export interface GitBuildResult {
 
 /** Git-clone-then-Dockerfile-build, tagging the result for the normal deploy pipeline to run like any other image. */
 export function DockerGitBuildMixin<
-	TBase extends Constructor<BaseDockerService>,
+	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {
 	return class DockerGitBuildService extends Base {
 		/**
@@ -171,11 +182,14 @@ export function DockerGitBuildMixin<
 
 				if (cacheRef) {
 					onProgress?.(`Pushing build cache ${cacheRef}...`);
-					await this.pushBuildCache(
-						docker,
+					// this.pushImage : DockerContainerMixin is lower in the chain
+					// than this mixin (see docker.service.ts's merge order), so
+					// it's a real inherited method here, not a separate helper.
+					await this.pushImage(
 						params.tag,
 						cacheRef,
 						cacheAuth,
+						params.remote,
 					).catch((err) => {
 						// Best-effort : the deploy already succeeded, a failed
 						// cache push just means the next build starts fresh.
@@ -197,41 +211,5 @@ export function DockerGitBuildMixin<
 				});
 			}
 		}
-
-		/** Tags the just-built image under `cacheRef` and pushes it, so the next build of this service can pull it as a `--cache-from` source. */
-		private async pushBuildCache(
-			docker: ReturnType<BaseDockerService["getDocker"]>,
-			builtTag: string,
-			cacheRef: string,
-			auth:
-				| { password: string; serveraddress: string; username: string }
-				| undefined,
-		): Promise<void> {
-			const [repo, tag] = splitRef(cacheRef);
-			await docker.getImage(builtTag).tag({ repo, tag });
-			const pushStream = await docker
-				.getImage(`${repo}:${tag}`)
-				.push({ authconfig: auth, tag });
-			await new Promise<void>((res, reject) => {
-				docker.modem.followProgress(
-					pushStream,
-					(err: Error | null) => (err ? reject(err) : res()),
-					() => {},
-				);
-			});
-			logger.info(`Build cache pushed: ${cacheRef}`);
-		}
 	};
-}
-
-/** Splits "registry.example.com/name:tag" into ["registry.example.com/name", "tag"]. */
-function splitRef(ref: string): [string, string] {
-	const lastColon = ref.lastIndexOf(":");
-	const lastSlash = ref.lastIndexOf("/");
-	// A colon before the last slash is a registry port (e.g. "host:5000/name"),
-	// not a tag separator.
-	if (lastColon === -1 || lastColon < lastSlash) {
-		return [ref, "latest"];
-	}
-	return [ref.slice(0, lastColon), ref.slice(lastColon + 1)];
 }

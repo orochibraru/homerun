@@ -77,6 +77,21 @@ function persistLog(
 			// Logging must never throw : if the DB isn't up yet (e.g. very
 			// early boot) or the write fails, just drop it.
 		});
+
+	// Bell-icon "app runtime failures" feed item : error-level only, and
+	// only when attributable to a service. Skips the "Deploy" scope, that
+	// pipeline already fires its own richer deploy_success/deploy_failure
+	// notification (deploy.service.ts) for the same underlying event, this
+	// would otherwise double up on every deploy failure.
+	if (level === "error" && serviceId && scope !== "Deploy") {
+		import("$lib/dto/notification-dto")
+			.then(({ NotificationDTO }) =>
+				NotificationDTO.notifyServiceError(serviceId, message),
+			)
+			.catch(() => {
+				// Same "never throws" posture as the app_log write above.
+			});
+	}
 }
 
 export type LogFormats = "console" | "json";

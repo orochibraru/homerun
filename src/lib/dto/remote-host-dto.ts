@@ -7,6 +7,7 @@ import { BaseDTO } from "./base-dto";
 
 export interface NewRemoteHostInput {
 	dockerHost: string;
+	isBuildServer?: boolean;
 	name: string;
 	tlsCaEnc?: string | null;
 	tlsCertEnc?: string | null;
@@ -17,7 +18,12 @@ export interface NewRemoteHostInput {
 export type RemoteHostUpdateInput = Partial<
 	Pick<
 		RemoteHost,
-		"dockerHost" | "name" | "tlsCaEnc" | "tlsCertEnc" | "tlsKeyEnc"
+		| "dockerHost"
+		| "isBuildServer"
+		| "name"
+		| "tlsCaEnc"
+		| "tlsCertEnc"
+		| "tlsKeyEnc"
 	>
 >;
 
@@ -41,12 +47,25 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		return rows.map((row) => new RemoteHostDTO(row));
 	}
 
+	/** Hosts opted in as a dedicated build server (Source tab's "Build server" picker), for this user. */
+	static async listBuildServers(userId: string): Promise<RemoteHostDTO[]> {
+		const rows = await db
+			.select()
+			.from(remoteHost)
+			.where(
+				and(eq(remoteHost.userId, userId), eq(remoteHost.isBuildServer, true)),
+			)
+			.orderBy(desc(remoteHost.createdAt));
+		return rows.map((row) => new RemoteHostDTO(row));
+	}
+
 	static async create(input: NewRemoteHostInput): Promise<RemoteHostDTO> {
 		const now = new Date();
 		const row: RemoteHost = {
 			createdAt: now,
 			dockerHost: input.dockerHost,
 			id: crypto.randomUUID(),
+			isBuildServer: input.isBuildServer ?? false,
 			name: input.name,
 			tlsCaEnc: input.tlsCaEnc ?? null,
 			tlsCertEnc: input.tlsCertEnc ?? null,
@@ -91,6 +110,9 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 	get dockerHost(): string {
 		return this.row.dockerHost;
 	}
+	get isBuildServer(): boolean {
+		return this.row.isBuildServer;
+	}
 
 	/**
 	 * The connection to use for a service's docker operations : undefined
@@ -98,7 +120,10 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 	 * decrypted remote connection otherwise. Every lifecycle action
 	 * (start/stop/restart/logs/deploy) should route through this rather
 	 * than assuming the local Docker socket, so remote-hosted services
-	 * actually get reached on their own daemon.
+	 * actually get reached on their own daemon. Also used to resolve a
+	 * service's *build server* connection (deploy.service.ts), keyed by
+	 * `buildServerRemoteHostId` instead of `remoteHostId` : same shape,
+	 * either field works since both are just "a remoteHostId or null".
 	 */
 	static async connectionFor(
 		svc: { remoteHostId: string | null },

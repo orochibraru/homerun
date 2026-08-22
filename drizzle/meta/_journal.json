@@ -70,6 +70,20 @@
 			"tag": "0009_rare_white_queen",
 			"version": "7",
 			"when": 1787404182206
+		},
+		{
+			"breakpoints": true,
+			"idx": 10,
+			"tag": "0010_modern_titanium_man",
+			"version": "7",
+			"when": 1787405605358
+		},
+		{
+			"breakpoints": true,
+			"idx": 11,
+			"tag": "0011_lush_killmonger",
+			"version": "7",
+			"when": 1787406342029
 		}
 	],
 	"version": "7"

@@ -1,0 +1,3 @@
+ALTER TABLE "remote_host" ADD COLUMN "is_build_server" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "service" ADD COLUMN "build_server_remote_host_id" text;--> statement-breakpoint
+ALTER TABLE "service" ADD CONSTRAINT "service_build_server_remote_host_id_remote_host_id_fk" FOREIGN KEY ("build_server_remote_host_id") REFERENCES "public"."remote_host"("id") ON DELETE set null ON UPDATE no action;

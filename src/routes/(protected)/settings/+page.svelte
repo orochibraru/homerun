@@ -422,6 +422,71 @@
       </form>
     </section>
 
+    <!-- ═══ Cloudflare ═══ -->
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">Cloudflare</h2>
+        <p class="text-text-muted text-xs">
+          Auto-creates a DNS record for every deployed service's
+          <code>&lt;slug&gt;.{data.settings.baseDomain
+          ?? data.envDefaults.baseDomain}</code>
+          hostname. Unset : no-op, add records by hand as before.
+        </p>
+      </div>
+      <form
+        action="?/updateCloudflare"
+        class="space-y-4 p-5"
+        method="POST"
+        use:enhance={() => async ({ result, update }) => {
+          if (result.type === "success") {
+            toast.success(
+              (result.data as { cloudflareTestOk?: boolean })?.cloudflareTestOk
+              ? "Zone access verified."
+              : "Cloudflare settings saved.",
+            );
+          } else if (result.type === "failure") {
+            toast.error(
+              (result.data as { error?: string })?.error
+              ?? "Check the form for errors.",
+            );
+          }
+          await update();
+        }}
+      >
+        <div>
+          <label class={label} for="cloudflareZoneId">Zone ID</label>
+          <Input
+            class="font-mono"
+            id="cloudflareZoneId"
+            name="cloudflareZoneId"
+            type="text"
+            value={data.settings.cloudflareZoneId ?? ""}
+          />
+          <p class="text-text-subtle mt-1.5 text-xs">
+            The zone your base domain lives in, found on that domain's
+            Cloudflare dashboard overview page.
+          </p>
+        </div>
+        <div>
+          <label class={label} for="cloudflareApiToken">API token</label>
+          <Input
+            id="cloudflareApiToken"
+            name="cloudflareApiToken"
+            placeholder={data.settings.cloudflareZoneId
+            ? "Unchanged"
+            : "Zone:DNS:Edit scope"}
+            type="password"
+          />
+        </div>
+        <div class="flex justify-end gap-2">
+          <Button formaction="?/testCloudflare" type="submit" variant="outline">
+            Test connection
+          </Button>
+          <Button type="submit">Save</Button>
+        </div>
+      </form>
+    </section>
+
     <!-- ═══ SMTP ═══ -->
     <section class="border-border bg-surface rounded-2xl border">
       <div class="border-border border-b px-5 py-4">

@@ -212,6 +212,42 @@ export function DockerContainerMixin<
 		}
 
 		/**
+		 * Tags a local image under `targetRef` and pushes it, for moving a
+		 * just-built image off the daemon it was built on (a build server,
+		 * see docker/git-build.ts and deploy.service.ts's cross-host build
+		 * path) : the caller pulls `targetRef` back on whichever daemon
+		 * actually needs to run it, via `pullImage` above.
+		 */
+		async pushImage(
+			localRef: string,
+			targetRef: string,
+			auth?: RegistryAuth,
+			remote?: RemoteHostConnection | null,
+		): Promise<void> {
+			const docker = this.getDocker(remote);
+			const lastColon = targetRef.lastIndexOf(":");
+			const lastSlash = targetRef.lastIndexOf("/");
+			const [repo, tag] =
+				lastColon === -1 || lastColon < lastSlash
+					? [targetRef, "latest"]
+					: [targetRef.slice(0, lastColon), targetRef.slice(lastColon + 1)];
+
+			await docker.getImage(localRef).tag({ repo, tag });
+			logger.info(`Pushing image: ${repo}:${tag}`);
+			const stream = await docker
+				.getImage(`${repo}:${tag}`)
+				.push({ authconfig: auth, tag });
+			await new Promise<void>((resolvePromise, reject) => {
+				docker.modem.followProgress(
+					stream,
+					(err: Error | null) => (err ? reject(err) : resolvePromise()),
+					() => {},
+				);
+			});
+			logger.info(`Pushed image: ${repo}:${tag}`);
+		}
+
+		/**
 		 * Creates and starts the container for a service, replacing any
 		 * previous container for the same service (a redeploy : see
 		 * #findServiceContainer above). Attaches to the shared Traefik

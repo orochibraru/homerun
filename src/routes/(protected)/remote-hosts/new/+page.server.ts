@@ -19,6 +19,7 @@ export const actions = {
 		const tlsCa = (formData.get("tlsCa") as string | null)?.trim();
 		const tlsCert = (formData.get("tlsCert") as string | null)?.trim();
 		const tlsKey = (formData.get("tlsKey") as string | null)?.trim();
+		const isBuildServer = formData.get("isBuildServer") === "on";
 
 		if (!name) {
 			return fail(400, { error: "Name is required." });
@@ -40,6 +41,7 @@ export const actions = {
 
 		const host = await RemoteHostDTO.create({
 			dockerHost,
+			isBuildServer,
 			name,
 			tlsCaEnc: tlsCa ? encryptSecret(tlsCa) : null,
 			tlsCertEnc: tlsCert ? encryptSecret(tlsCert) : null,
