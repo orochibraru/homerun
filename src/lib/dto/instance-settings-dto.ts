@@ -146,6 +146,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			id: SINGLETON_ID,
 			oauthProviders: [],
 			onboardingCompletedAt: null,
+			orchestrationMode: null,
 			smtpEnabled: null,
 			smtpFrom: null,
 			smtpHost: null,
@@ -195,6 +196,15 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	async updateTraefik(input: InstanceSettingsTraefikInput): Promise<void> {
 		await this.persist(input);
+	}
+
+	/** "standalone" (default, null means the same thing) | "swarm". */
+	get orchestrationMode(): "standalone" | "swarm" {
+		return this.row.orchestrationMode ?? "standalone";
+	}
+
+	async updateOrchestrationMode(mode: "standalone" | "swarm"): Promise<void> {
+		await this.persist({ orchestrationMode: mode });
 	}
 
 	get cloudflareZoneId(): string | null {

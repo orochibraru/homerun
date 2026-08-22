@@ -60,6 +60,9 @@ const baseServiceSchema = z.object({
 	registryPassword: z.string().optional(),
 	registryUrl: z.string().optional(),
 	registryUsername: z.string().optional(),
+	// Swarm mode only (instanceSettings.orchestrationMode) : ignored entirely
+	// in standalone mode.
+	replicas: optionalNumber(z.coerce.number().int().min(0).max(50)),
 	restartPolicy: z
 		.enum(["no", "always", "on-failure", "unless-stopped"])
 		.default("unless-stopped"),
@@ -123,6 +126,7 @@ export const updateComputeSchema = baseServiceSchema.pick({
 	autoscaleEligible: true,
 	cpuLimit: true,
 	memoryLimitMb: true,
+	replicas: true,
 });
 export type UpdateComputeInput = z.infer<typeof updateComputeSchema>;
 

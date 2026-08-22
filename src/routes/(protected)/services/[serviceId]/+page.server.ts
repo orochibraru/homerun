@@ -55,6 +55,13 @@ export const actions = {
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
+		if (svc.swarmServiceId) {
+			await DockerService.restartSwarmService(svc.swarmServiceId);
+			logger.info(
+				`Swarm service restarted: service=${svc.id} user=${locals.user.id}`,
+			);
+			return { success: true };
+		}
 		if (!svc.containerId) {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
@@ -72,6 +79,23 @@ export const actions = {
 		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
+		}
+		if (svc.swarmServiceId) {
+			await DockerService.scaleSwarmService(
+				svc.swarmServiceId,
+				svc.replicas || 1,
+			);
+			await svc.update({ desiredState: "running" });
+			logger.info(
+				`Swarm service started: service=${svc.id} user=${locals.user.id}`,
+			);
+			NotificationDTO.notify({
+				message: `"${svc.name}" was started.`,
+				serviceId: svc.id,
+				type: "service_started",
+				userId: locals.user.id,
+			});
+			return { success: true };
 		}
 		if (!svc.containerId) {
 			return fail(400, { error: "This service hasn't been deployed yet." });
@@ -97,6 +121,20 @@ export const actions = {
 		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
+		}
+		if (svc.swarmServiceId) {
+			await DockerService.scaleSwarmService(svc.swarmServiceId, 0);
+			await svc.update({ desiredState: "stopped" });
+			logger.info(
+				`Swarm service stopped: service=${svc.id} user=${locals.user.id}`,
+			);
+			NotificationDTO.notify({
+				message: `"${svc.name}" was stopped.`,
+				serviceId: svc.id,
+				type: "service_stopped",
+				userId: locals.user.id,
+			});
+			return { success: true };
 		}
 		if (!svc.containerId) {
 			return fail(400, { error: "This service hasn't been deployed yet." });

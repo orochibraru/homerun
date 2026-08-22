@@ -29,19 +29,23 @@ import { DockerCustomSslMixin } from "./docker/custom-ssl.ts";
 import { DockerGitBuildMixin } from "./docker/git-build.ts";
 import { DockerNetworkMixin } from "./docker/networks.ts";
 import { DockerReconcileMixin } from "./docker/reconcile.ts";
+import { DockerSwarmMixin } from "./docker/swarm.ts";
 import { DockerTerminalMixin } from "./docker/terminal.ts";
 
 // Merge order matters only where one concern calls another's methods via
 // `this` : networks before containers (createAndStartContainer calls
-// connectToProjectNetwork), containers before reconcile (syncServiceStatus
-// calls inspectStatus). The rest have no cross-concern dependency, so
-// their position in the chain is arbitrary.
+// connectToProjectNetwork), containers before swarm (createAndStartSwarmService
+// calls this.pullImage), containers+swarm before reconcile (syncServiceStatus
+// calls both this.inspectStatus and this.inspectSwarmServiceStatus). The
+// rest have no cross-concern dependency, so their position is arbitrary.
 class DockerServiceClass extends DockerTerminalMixin(
 	DockerCoreServicesMixin(
 		DockerCustomSslMixin(
 			DockerGitBuildMixin(
 				DockerReconcileMixin(
-					DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+					DockerSwarmMixin(
+						DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+					),
 				),
 			),
 		),

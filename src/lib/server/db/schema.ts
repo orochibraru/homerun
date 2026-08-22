@@ -314,6 +314,15 @@ export const instanceSettings = pgTable("instance_settings", {
 	onboardingCompletedAt: timestamp("onboarding_completed_at", {
 		mode: "date",
 	}),
+	// "standalone" (default, dockerode createContainer, one container per
+	// service, this app's original model) | "swarm" (dockerode
+	// createService against a Docker Swarm : replicas, rolling force-update
+	// restarts, overlay networking). Opt-in, off by default : same
+	// "background automation defaults inert" posture as autoscaling. The
+	// host's own daemon must already be swarm-active (`docker swarm init`,
+	// the admin's own one-time step, this app never runs that itself) before
+	// switching this on. See $lib/services/docker/swarm.ts.
+	orchestrationMode: text("orchestration_mode").$type<"standalone" | "swarm">(),
 	smtpEnabled: boolean("smtp_enabled"),
 	smtpFrom: text("smtp_from"),
 	smtpHost: text("smtp_host"),
@@ -527,10 +536,21 @@ export const service = pgTable(
 		remoteHostId: text("remote_host_id").references(() => remoteHost.id, {
 			onDelete: "set null",
 		}),
+		// Desired replica count, swarm-mode only (instanceSettings.orchestrationMode
+		// = "swarm") : ignored entirely in standalone mode, always 1 container.
+		// Editable on the Compute tab.
+		replicas: integer("replicas").default(1).notNull(),
 		// no | always | on-failure | unless-stopped
 		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
 		// subdomain: <slug>.<baseDomain>
 		slug: text("slug").notNull().unique(),
+		// Swarm mode's equivalent of `containerId` : the Docker Swarm service
+		// id backing this Homerun service, when deployed under
+		// orchestrationMode="swarm". `containerId` stays null in that case
+		// (there's no single container, dockerode's Task API resolves the
+		// live container id per-task when one's needed, e.g. the Terminal
+		// tab : see docker/swarm.ts).
+		swarmServiceId: text("swarm_service_id"),
 		tag: text("tag").default("latest").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())

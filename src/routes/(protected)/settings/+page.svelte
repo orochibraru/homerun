@@ -28,6 +28,9 @@
 		data.remoteHosts.find((h) => h.id === autoscaleOverflowRemoteHostId)
 			?.name ?? "Choose a remote host…",
 	);
+	let orchestrationMode = $state(
+		untrack(() => data.settings.orchestrationMode ?? "standalone"),
+	);
 
 	// Field ids the dashboard's setup-issue banner deep-linked here for :
 	// see AdminService.SETUP_CHECK_FIELDS in $lib/services/admin.service.ts.
@@ -250,6 +253,52 @@
             type="text"
             value={data.settings.dockerNetworkName ?? ""}
           />
+        </div>
+        <div class="flex justify-end">
+          <Button type="submit">Save</Button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ═══ Orchestration ═══ -->
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">Orchestration</h2>
+        <p class="text-text-muted text-xs">
+          "Standalone" is a single container per service (this app's original
+          model). "Swarm" deploys every service as a replicated, self-healing
+          Docker Swarm service instead : scale via the Replicas field on a
+          service's Compute tab, restarts are rolling force-updates. Requires
+          this host's own Docker daemon to already be swarm-active (<code
+          >docker swarm init</code
+          >, your own one-time step, this app never runs that itself) and
+          Traefik configured with <code
+          >--providers.docker.swarmMode=true</code
+          >. Remote Hosts aren't part of the swarm cluster : a swarm-mode
+          service can only deploy locally.
+        </p>
+      </div>
+      <form
+        action="?/updateOrchestration"
+        class="space-y-4 p-5"
+        method="POST"
+        use:enhance={submitToast("Orchestration settings")}
+      >
+        <div>
+          <label class={label} for="orchestrationMode">Mode</label>
+          <SelectRoot
+            name="orchestrationMode"
+            type="single"
+            bind:value={orchestrationMode}
+          >
+            <SelectTrigger id="orchestrationMode">
+              {orchestrationMode === "swarm" ? "Swarm" : "Standalone"}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem label="Standalone" value="standalone" />
+              <SelectItem label="Swarm" value="swarm" />
+            </SelectContent>
+          </SelectRoot>
         </div>
         <div class="flex justify-end">
           <Button type="submit">Save</Button>

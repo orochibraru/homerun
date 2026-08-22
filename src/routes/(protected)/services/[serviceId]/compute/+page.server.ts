@@ -14,6 +14,7 @@ export const load = async () => {
 		// anything yet (instance-wide autoscaling off, or no overflow host
 		// configured) : full config lives on Settings' Autoscaling section.
 		autoscale: settings.autoscale,
+		orchestrationMode: settings.orchestrationMode,
 	};
 };
 
@@ -41,6 +42,7 @@ export const actions = {
 			autoscaleEligible: input.autoscaleEligible,
 			cpuLimit: input.cpuLimit || null,
 			memoryLimitMb: input.memoryLimitMb ?? null,
+			replicas: input.replicas ?? 1,
 		});
 
 		logger.info(

@@ -1,6 +1,7 @@
 import { config } from "$lib/config";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
@@ -175,48 +176,92 @@ class DeploymentServiceClass {
 				? await ProjectDTO.get(svc.projectId, userId)
 				: null;
 
-			const { containerId } = await DockerService.createAndStartContainer(
-				{
-					authRequired: svc.authRequired,
-					containerPort: svc.containerPort,
-					cpuLimit: svc.cpuLimit,
-					customDomain: svc.customDomain,
-					dnsResolvable: svc.dnsResolvable,
-					envVars: svc.envVars ?? {},
-					image,
-					memoryLimitMb: svc.memoryLimitMb,
-					networkMode: svc.networkMode,
-					portProtocol: svc.portProtocol,
-					projectId: svc.projectId,
-					projectSlug: project?.slug,
-					remote,
-					restartPolicy: svc.restartPolicy,
-					serviceId: svc.id,
-					slug: svc.slug,
-					tag,
-					volumes: mounts.map((m) => ({
-						containerPath: m.mount.toJSON().containerPath,
-						readOnly: m.mount.toJSON().readOnly,
-						source: m.volumeSource,
-					})),
-				},
-				(line) => dep.appendLog(line),
-			);
+			const instanceSettings = await InstanceSettingsDTO.get();
+			const swarmMode = instanceSettings.orchestrationMode === "swarm";
+			if (swarmMode && remote) {
+				throw new Error(
+					"Swarm mode services can only be deployed locally : Remote Hosts (a separate Docker daemon) aren't part of this instance's swarm cluster. Clear the deploy target first.",
+				);
+			}
+
+			let containerId: string | undefined;
+			let swarmServiceId: string | undefined;
+
+			if (swarmMode) {
+				const auth = DockerService.buildAuthConfig(svc);
+				const result = await DockerService.createAndStartSwarmService(
+					{
+						auth,
+						authRequired: svc.authRequired,
+						containerPort: svc.containerPort,
+						cpuLimit: svc.cpuLimit,
+						customDomain: svc.customDomain,
+						dnsResolvable: svc.dnsResolvable,
+						envVars: svc.envVars ?? {},
+						image,
+						memoryLimitMb: svc.memoryLimitMb,
+						portProtocol: svc.portProtocol,
+						projectSlug: project?.slug,
+						replicas: svc.replicas,
+						restartPolicy: svc.restartPolicy,
+						serviceId: svc.id,
+						slug: svc.slug,
+						tag,
+						volumes: mounts.map((m) => ({
+							containerPath: m.mount.toJSON().containerPath,
+							readOnly: m.mount.toJSON().readOnly,
+							source: m.volumeSource,
+						})),
+					},
+					(line) => dep.appendLog(line),
+				);
+				swarmServiceId = result.swarmServiceId;
+			} else {
+				const result = await DockerService.createAndStartContainer(
+					{
+						authRequired: svc.authRequired,
+						containerPort: svc.containerPort,
+						cpuLimit: svc.cpuLimit,
+						customDomain: svc.customDomain,
+						dnsResolvable: svc.dnsResolvable,
+						envVars: svc.envVars ?? {},
+						image,
+						memoryLimitMb: svc.memoryLimitMb,
+						networkMode: svc.networkMode,
+						portProtocol: svc.portProtocol,
+						projectId: svc.projectId,
+						projectSlug: project?.slug,
+						remote,
+						restartPolicy: svc.restartPolicy,
+						serviceId: svc.id,
+						slug: svc.slug,
+						tag,
+						volumes: mounts.map((m) => ({
+							containerPath: m.mount.toJSON().containerPath,
+							readOnly: m.mount.toJSON().readOnly,
+							source: m.volumeSource,
+						})),
+					},
+					(line) => dep.appendLog(line),
+				);
+				containerId = result.containerId;
+			}
 
 			await svc.update({
-				containerId,
+				containerId: containerId ?? null,
 				currentStatus: "running",
 				desiredState: "running",
+				swarmServiceId: swarmServiceId ?? null,
 			});
 
 			await dep.update({
-				containerId,
+				containerId: containerId ?? swarmServiceId,
 				finishedAt: new Date(),
 				imageDigest: digest,
 				status: "running",
 			});
 			logger.info(
-				`Deploy succeeded: service=${svc.id} container=${containerId} deployment=${dep.id}`,
+				`Deploy succeeded: service=${svc.id} container=${containerId ?? swarmServiceId} deployment=${dep.id}`,
 			);
 
 			// Auto-DNS (Cloudflare) : only meaningful for a service actually

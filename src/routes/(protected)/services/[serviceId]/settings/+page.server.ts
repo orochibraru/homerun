@@ -36,7 +36,13 @@ export const actions = {
 			return fail(404, { error: "Service not found." });
 		}
 
-		if (svc.containerId) {
+		if (svc.swarmServiceId) {
+			try {
+				await DockerService.removeSwarmService(svc.swarmServiceId);
+			} catch {
+				// Service may already be gone on the swarm : proceed regardless.
+			}
+		} else if (svc.containerId) {
 			try {
 				const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
 				await DockerService.removeContainer(

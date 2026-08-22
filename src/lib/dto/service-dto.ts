@@ -28,6 +28,7 @@ export interface NewServiceInput {
 	registryUrl?: string | null;
 	registryUsername?: string | null;
 	remoteHostId?: string | null;
+	replicas?: number;
 	restartPolicy: string;
 	slug: string;
 	tag: string;
@@ -70,8 +71,10 @@ export type ServiceUpdateInput = Partial<
 		| "registryUrl"
 		| "registryUsername"
 		| "remoteHostId"
+		| "replicas"
 		| "restartPolicy"
 		| "slug"
+		| "swarmServiceId"
 		| "tag"
 	>
 >;
@@ -223,8 +226,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 			registryUrl: input.registryUrl ?? null,
 			registryUsername: input.registryUsername ?? null,
 			remoteHostId: input.remoteHostId ?? null,
+			replicas: input.replicas ?? 1,
 			restartPolicy: input.restartPolicy,
 			slug: input.slug,
+			swarmServiceId: null,
 			tag: input.tag,
 			updatedAt: now,
 			userId: input.userId,
@@ -346,6 +351,12 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get remoteHostId(): string | null {
 		return this.row.remoteHostId;
+	}
+	get replicas(): number {
+		return this.row.replicas;
+	}
+	get swarmServiceId(): string | null {
+		return this.row.swarmServiceId;
 	}
 	get networkMode(): Service["networkMode"] {
 		return this.row.networkMode;

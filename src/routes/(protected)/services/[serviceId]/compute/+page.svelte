@@ -22,6 +22,7 @@
 		(form?.values as Record<string, string> | undefined) ?? {
 			cpuLimit: svc.cpuLimit ?? "",
 			memoryLimitMb: svc.memoryLimitMb ? String(svc.memoryLimitMb) : "",
+			replicas: String(svc.replicas ?? 1),
 		},
 	);
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
@@ -95,6 +96,25 @@
         {/if}
       </div>
     </div>
+
+    {#if data.orchestrationMode === "swarm"}
+      <div>
+        <label class={label} for="replicas">Replicas</label>
+        <Input
+          id="replicas"
+          min="0"
+          name="replicas"
+          type="number"
+          value={values.replicas}
+        />
+        <p class="mt-1.5 text-xs text-text-subtle">
+          Swarm mode only. 0 : same as stopping the service.
+        </p>
+        {#if errors?.replicas}
+          <p class={errorClass}>{errors.replicas[0]}</p>
+        {/if}
+      </div>
+    {/if}
 
     <div class="border-border border-t pt-4">
       <CheckBox
