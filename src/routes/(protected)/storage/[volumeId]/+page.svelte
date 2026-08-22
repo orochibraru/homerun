@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { ArrowLeft, Check, CloudUpload } from "@lucide/svelte";
+	import {
+		ArrowLeft,
+		Check,
+		CheckCircle2,
+		CloudUpload,
+		XCircle,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
@@ -207,5 +213,50 @@
         {/if}
       </Button>
     </form>
+
+    {#if data.runs.length > 0}
+      <section class="rounded-2xl border border-border bg-surface">
+        <div class="border-b border-border px-5 py-4">
+          <h2 class="text-sm font-semibold text-text">Run log</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border text-left text-xs uppercase text-text-muted">
+                <th class="px-5 py-3 font-medium">Started</th>
+                <th class="px-5 py-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each data.runs as run (run.id)}
+                <tr class="border-b border-border/60 last:border-0">
+                  <td class="px-5 py-3 text-text-muted">
+                    {new Date(run.startedAt).toLocaleString()}
+                  </td>
+                  <td class="px-5 py-3">
+                    {#if run.success === null}
+                      <span class="text-xs text-text-muted">Running</span>
+                    {:else if run.success}
+                      <span class="flex items-center gap-1 text-xs text-emerald-600">
+                        <CheckCircle2 class="size-3.5" />
+                        Success
+                      </span>
+                    {:else}
+                      <span
+                        class="flex items-center gap-1 text-xs text-red-500"
+                        title={run.error ?? ""}
+                      >
+                        <XCircle class="size-3.5" />
+                        Failed
+                      </span>
+                    {/if}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {/if}
   {/if}
 </div>

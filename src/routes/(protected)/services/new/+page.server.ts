@@ -1,6 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
+import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
+import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
@@ -51,9 +53,24 @@ export const load = async ({ url, parent }) => {
 	const template = templateId
 		? await TemplateDTO.usable(templateId, user.id)
 		: null;
+	const [settings, connections] = await Promise.all([
+		InstanceSettingsDTO.get(),
+		GitConnectionDTO.listForUser(user.id),
+	]);
+	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
 		baseDomain: config.baseDomain,
+		// Only providers this user has actually connected : see the Git
+		// Providers page for connecting one. Same shape as the service
+		// Source tab's own "Browse repos" picker, which this form mirrors.
+		connectedGitProviders: connections
+			.filter((c) => providersById.has(c.providerId))
+			.map((c) => ({
+				id: c.providerId,
+				name: providersById.get(c.providerId)?.name ?? c.providerKind,
+				providerUsername: c.providerUsername,
+			})),
 		projectId: project,
 		template: template?.toJSON() ?? null,
 	};

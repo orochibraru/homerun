@@ -1,0 +1,51 @@
+import { fail, redirect } from "@sveltejs/kit";
+import { resolve } from "$app/paths";
+import { BackupRunDTO } from "$lib/dto/backup-run-dto";
+import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { Logger } from "$lib/logger";
+import { S3BackupService } from "$lib/services/s3-backup.service";
+
+const logger = new Logger("Backups");
+
+export const load = async ({ parent }) => {
+	const { user } = await parent();
+	const [volumes, runs] = await Promise.all([
+		StorageVolumeDTO.list(user.id),
+		BackupRunDTO.listForUser(user.id),
+	]);
+
+	return {
+		runs: runs.map(({ run, volumeName }) => ({
+			...run.toJSON(),
+			volumeName,
+		})),
+		volumes: volumes.map((v) => v.toJSON()),
+	};
+};
+
+export const actions = {
+	run: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const volumeId = (formData.get("volumeId") as string | null)?.trim();
+		if (!volumeId) {
+			return fail(400, { error: "Missing volume id." });
+		}
+
+		const volume = await StorageVolumeDTO.get(volumeId, locals.user.id);
+		if (!volume) {
+			return fail(404, { error: "Volume not found." });
+		}
+
+		const result = await S3BackupService.backupVolume(volume);
+		await volume.update({ backupLastRunAt: new Date() });
+
+		if (!result.success) {
+			return fail(500, { error: result.error ?? "Backup failed." });
+		}
+		logger.info(`Manual backup run: volume=${volume.id} key=${result.key}`);
+		return { success: true };
+	},
+};

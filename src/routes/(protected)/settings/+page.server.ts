@@ -244,8 +244,18 @@ export const actions = {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		const formData = await request.formData();
+		const traefikAcmeEmail = nullableText(formData, "traefikAcmeEmail");
+		if (
+			traefikAcmeEmail &&
+			!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(traefikAcmeEmail)
+		) {
+			return fail(400, {
+				error: "ACME account email isn't a valid email address.",
+			});
+		}
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateTraefik({
+			traefikAcmeEmail,
 			traefikCertResolver: nullableText(formData, "traefikCertResolver"),
 			traefikDynamicConfigDir: nullableText(
 				formData,

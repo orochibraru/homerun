@@ -1,5 +1,6 @@
 import { error, fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { CronService } from "$lib/services/cron.service";
@@ -14,7 +15,11 @@ export const load = async ({ params, parent }) => {
 	if (!volume) {
 		error(404, "Volume not found");
 	}
-	return { volume: volume.toJSON() };
+	const runs = await BackupRunDTO.listForVolume(volume.id);
+	return {
+		runs: runs.map((r) => r.toJSON()),
+		volume: volume.toJSON(),
+	};
 };
 
 export const actions = {

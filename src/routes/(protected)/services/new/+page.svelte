@@ -14,11 +14,12 @@
 		SlidersHorizontal,
 		Trash2,
 	} from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
+	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -28,6 +29,7 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
 
 	const { data, form } = $props();
@@ -81,6 +83,73 @@
 	let gitBuildContext = $derived(values?.gitBuildContext ?? "");
 	let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
 	let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
+
+	// "Browse repos" : same picker as the service Source tab, only shown
+	// when the user has at least one connected git provider. Picking a repo
+	// autofills gitUrl/gitRef above rather than requiring a pasted URL, and
+	// checks for a Dockerfile at the picked ref so there's a heads-up before
+	// deploying fails on a repo that doesn't have one.
+	let browseProviderId = $state(
+		untrack(() => data.connectedGitProviders[0]?.id ?? ""),
+	);
+	let repos = $state<
+		Array<{
+			cloneUrl: string;
+			defaultBranch: string;
+			fullName: string;
+			private: boolean;
+		}>
+	>([]);
+	let loadingRepos = $state(false);
+	let selectedRepo = $state("");
+	let dockerfileCheck = $state<{ checked: boolean; exists: boolean } | null>(
+		null,
+	);
+
+	async function loadRepos() {
+		if (!browseProviderId) {
+			return;
+		}
+		loadingRepos = true;
+		repos = [];
+		try {
+			const res = await fetch(
+				`/api/v1/git-providers/${browseProviderId}/repos`,
+			);
+			if (res.ok) {
+				const body = (await res.json()) as { repos: typeof repos };
+				repos = body.repos;
+			} else {
+				toast.error("Couldn't list repos for that provider.");
+			}
+		} finally {
+			loadingRepos = false;
+		}
+	}
+
+	async function pickRepo(fullName: string) {
+		selectedRepo = fullName;
+		const repo = repos.find((r) => r.fullName === fullName);
+		if (!repo) {
+			return;
+		}
+		gitUrl = repo.cloneUrl;
+		gitRef = repo.defaultBranch;
+		dockerfileCheck = null;
+		try {
+			const res = await fetch(
+				`/api/v1/git-providers/${browseProviderId}/dockerfile?repo=${encodeURIComponent(
+					fullName,
+				)}&ref=${encodeURIComponent(repo.defaultBranch)}`,
+			);
+			if (res.ok) {
+				const body = (await res.json()) as { exists: boolean };
+				dockerfileCheck = { checked: true, exists: body.exists };
+			}
+		} catch {
+			// Best-effort : not finding out doesn't block picking the repo.
+		}
+	}
 
 	let containerPort = $derived(
 		values?.containerPort ?? String(data.template?.containerPort ?? ""),
@@ -181,6 +250,10 @@
 		if (envRows.length === 0) {
 			envRows.push({ key: "", value: "" });
 		}
+	}
+
+	function importEnvRows(imported: ParsedEnvVar[]) {
+		envRows = mergeEnvRows(envRows, imported, (row) => row);
 	}
 
 	function goNext() {
@@ -432,6 +505,65 @@
             </div>
           {/if}
         {:else}
+          {#if data.connectedGitProviders.length > 0}
+            <div class="rounded-xl border border-border p-4">
+              <p class={label}>Browse repos</p>
+              <div class="flex flex-wrap gap-2">
+                {#if data.connectedGitProviders.length > 1}
+                  <select
+                    bind:value={browseProviderId}
+                    class="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                  >
+                    {#each data.connectedGitProviders as p (p.id)}
+                      <option value={p.id}>{p.name} ({p.providerUsername})</option>
+                    {/each}
+                  </select>
+                {/if}
+                <Button
+                  disabled={loadingRepos}
+                  onclick={loadRepos}
+                  type="button"
+                  variant="outline"
+                >
+                  {#if loadingRepos}
+                    <Spinner />
+                  {:else}
+                    <GitBranch class="size-4" />
+                  {/if}
+                  List repos
+                </Button>
+              </div>
+              {#if repos.length > 0}
+                <select
+                  bind:value={selectedRepo}
+                  class="mt-3 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                  onchange={(e) => pickRepo(e.currentTarget.value)}
+                >
+                  <option value="">Select a repo…</option>
+                  {#each repos as repo (repo.fullName)}
+                    <option value={repo.fullName}>
+                      {repo.fullName}{repo.private ? " (private)" : ""}
+                    </option>
+                  {/each}
+                </select>
+                {#if dockerfileCheck?.checked}
+                  <p
+                    class="
+                      mt-2 text-xs {dockerfileCheck.exists
+                      ? 'text-emerald-600'
+                      : 'text-amber-600'}
+                    "
+                  >
+                    {
+                      dockerfileCheck.exists
+                      ? "✓ Dockerfile found at the repo root."
+                      : "⚠ No Dockerfile found at the repo root on this branch : the build will fail unless one exists at the path you set below."
+                    }
+                  </p>
+                {/if}
+              {/if}
+            </div>
+          {/if}
           <div>
             <label class={label} for="gitUrl">
               Repository URL <span class="text-red-500">*</span>
@@ -652,10 +784,13 @@
           </div>
         {/each}
 
-        <Button class="mt-1 h-auto p-0" onclick={addEnvRow} variant="link">
-          <Plus class="size-3.5" />
-          Add variable
-        </Button>
+        <div class="mt-1 flex items-center gap-4">
+          <Button class="h-auto p-0" onclick={addEnvRow} variant="link">
+            <Plus class="size-3.5" />
+            Add variable
+          </Button>
+          <EnvPasteButton onImport={importEnvRows} />
+        </div>
       </div>
     </section>
 
