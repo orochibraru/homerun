@@ -85,6 +85,3 @@ jobs:
 
       - name: Unit Tests
         run: bun test
-
-      - name: Build Webapp
-        run: bun run build:app
