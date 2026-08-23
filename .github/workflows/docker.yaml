@@ -84,7 +84,7 @@ jobs:
       - name: Upload meta bake definition
         uses: orochibraru/upload-artifact@v8
         with:
-          name: bake-meta
+          name: bake-meta-${{ inputs.bake_target }}
           path: ${{ runner.temp }}/bake-meta.json
           if-no-files-found: error
           retention-days: 1
@@ -109,7 +109,7 @@ jobs:
       - name: Download meta bake definition
         uses: orochibraru/download-artifact@v8
         with:
-          name: bake-meta
+          name: bake-meta-${{ inputs.bake_target }}
           path: ${{ runner.temp }}
 
       - name: Set up Docker Buildx
@@ -146,7 +146,7 @@ jobs:
       - name: Upload digest
         uses: orochibraru/upload-artifact@v8
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ inputs.bake_target }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -164,14 +164,14 @@ jobs:
       - name: Download meta bake definition
         uses: orochibraru/download-artifact@v8
         with:
-          name: bake-meta
+          name: bake-meta-${{ inputs.bake_target }}
           path: ${{ runner.temp }}
 
       - name: Download digests
         uses: orochibraru/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-*
+          pattern: digests-${{ inputs.bake_target }}-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
