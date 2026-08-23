@@ -33,12 +33,98 @@ docker compose up -d     # bootstraps Traefik + Postgres (see compose.yaml), req
 bun run release          # semantic-release, normally CI-only (.github/workflows/publish.yaml), see Release automation below
 ```
 
-No test framework is set up in this repo.
+```bash
+bun run test              # bun test tests, unit tests for agent/installer/cli (see below), the SvelteKit app itself still has none
+bun run test:agent        # bun test tests/agent
+bun run test:cli          # bun test tests/cli
+bun run test:installer    # bun test tests/installer
+```
 
 `agent/`, `installer/`, and `cli/` are separate standalone Bun/TypeScript
-sub-projects (their own `package.json`/`bun install`/`bun run build`), not part
-of the SvelteKit app above, see "Homerun Agent + installer" and "Homerun CLI"
-below for what they are.
+sub-projects (their own `tsconfig.json`, checked via the root `check:agent`/
+`check:cli`/`check:installer` scripts and compiled via
+`scripts/build-packages.ts`, **not** their own `package.json`/`bun install`,
+they share the root one), not part of the SvelteKit app above, see "Homerun
+Agent + installer" and "Homerun CLI" below for what they are.
+
+### Unit tests (`tests/`)
+
+Bun's native test runner (`bun:test`), covering `agent/`, `installer/`, and
+`cli/`, the SvelteKit app itself has no test coverage yet beyond a
+`tests/app/svelte-loader.ts` Svelte-compiling preload helper staged for future
+component tests. Tests live under a root `tests/<package>/` tree, **not** next
+to the source files they cover (`tests/agent/token.test.ts` tests
+`agent/token.ts`, etc.), mirroring `tests/app/`'s existing layout rather than
+giving each standalone sub-project its own `tests/` folder.
+
+**Module mocks are process-global, not per-file**, `bun:test`'s
+`mock.module(specifier, factory)` replaces that specifier's registry entry for
+the rest of the whole `bun test` run (every file shares one module registry),
+and it does so retroactively : code that already imported the real module before
+the mock call still sees the new value, since named imports are live bindings
+onto the same object `mock.module` mutates in place. Two test files that
+`mock.module` the _same_ specifier with different fakes will collide regardless
+of which order they happen to run in (there's no reliable "restore after this
+file" boundary the way there is per-`describe`/`it`). Two patterns avoid this:
+
+- **A plain mutable singleton** (`agent/config.ts`'s `config` object) : save the
+  fields you're about to override, mutate them directly, restore in `afterEach`.
+  No module registry involved at all.
+- **A handful of named functions on an otherwise-real module**
+  (`agent/docker.ts`'s functions, as faked out for `http.test.ts`;
+  `cli/output.ts`'s `fail`) :
+  `spyOn(moduleNamespace, "fnName").mockImplementation(...)`, restored via
+  `mock.restore()` in `afterEach`. This only patches the specific functions
+  used, so it doesn't collide with another file needing the _real_
+  implementation of the same module (`docker.test.ts` needs the real
+  `agent/docker.ts`, backed by a mocked `dockerode`, at the same time
+  `http.test.ts` fakes `agent/docker.ts`'s functions out from under
+  `agent/http.ts` : `mock.module("../../agent/docker", ...)` in one file would
+  have broken the other regardless of run order, `spyOn` doesn't).
+
+`mock.module` wholesale (replacing an entire module) is still the right tool
+when nothing else in the suite touches that specifier at all, `docker.test.ts`
+mocks `dockerode` itself this way since agent/docker.ts is the only importer of
+it in this whole repo.
+
+**`cli/config.ts` resolves its config file path from `os.homedir()` once, at
+module load**, and `os.homedir()` itself is fixed for the life of the process
+(reads the real OS environment at process start, verified : changing
+`process.env.HOME` mid-run does _not_ change what it returns on Bun 1.4.0), so
+an ordinary per-file `mock.module("node:os", ...)` can't reliably help either
+(same "process-global, whoever imports first wins" problem as above).
+`tests/support/homedir-preload.ts`, loaded via `bunfig.toml`'s `[test].preload`
+(guaranteed to run before _any_ test file's own imports, once, for the whole
+run), mocks `node:os`'s `homedir()` to a fresh scratch directory while passing
+every other export through unchanged (`agent/stats.ts`'s real
+`cpus()`/`totalmem()` usage still works). This is what actually keeps
+`tests/cli/`'s config/client/login tests off a real developer's
+`~/.config/homerun/config.json` : a completely bare `bun test`, no wrapper
+script or env var needed, already lands in the scratch directory. Every test
+file that touches `cli/config.ts` (directly or via
+`cli/client.ts`/`cli/login.ts`) still guards against this invariant ever
+breaking (`if (!homedir().startsWith(tmpdir())) throw ...`) rather than silently
+writing to a real developer's config if the preload entry is ever removed.
+
+**Coverage** is on by default for every `bun test` run (`bunfig.toml`'s
+`[test].coverage = true`, `coverageReporter = ["text", "lcov"]`,
+`coveragePathIgnorePatterns` scoped away from `tests/**` and
+`cli/generated/**`), reporting only on whatever files the tests that actually
+ran touched (scoping to one package via `bun run test:agent` shows just that
+package, not a 0%-everywhere table for the rest of the repo). No
+`coverageThreshold` is enforced yet, this suite is new; add one once coverage
+has stabilized if regression protection is wanted.
+
+**Real, tested finding from writing these tests**:
+`Bun.write(path, data, { mode: 0o600 })`'s `mode` option is silently a no-op on
+Bun 1.4.0, the file still lands as whatever the umask produces (0644 under the
+common 022 umask), verified directly. `agent/token.ts`'s persisted agent token,
+a full-access API credential, was affected by exactly this : it landed
+group/other-readable on a shared host despite the code explicitly asking
+for 0600. Fixed by calling `node:fs/promises`'s `chmod()` explicitly after
+`Bun.write` (verified : `node:fs`'s own `mode` option, unlike Bun's, is
+honored). If a future change writes another secret to disk via `Bun.write`,
+don't trust its `mode` option either, `chmod` afterward.
 
 **`bun run check` now works and is a hard gate, zero errors, zero warnings,
 across the whole repo, after every change.** This used to be documented as

@@ -83,5 +83,8 @@ jobs:
       - name: Type check Installer
         run: bun run check:installer
 
+      - name: Unit Tests
+        run: bun test
+
       - name: Build Webapp
         run: bun run build:app

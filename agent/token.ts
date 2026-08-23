@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { chmod, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { config } from "./config";
 
@@ -31,7 +31,13 @@ export async function resolveToken(): Promise<{
 		crypto.randomUUID().replaceAll("-", "") +
 		crypto.randomUUID().replaceAll("-", "");
 	await mkdir(dirname(config.tokenFile), { recursive: true });
-	await Bun.write(config.tokenFile, token, { mode: 0o600 });
+	// Bun.write's own `mode` option is a no-op as of Bun 1.4.0 (verified : the
+	// file lands as 0644 under the default umask despite passing 0o600 here),
+	// so the permission has to be set explicitly afterward instead. This
+	// matters : the persisted value is a full-access API credential, silently
+	// world/group-readable on a shared host would be a real leak.
+	await Bun.write(config.tokenFile, token);
+	await chmod(config.tokenFile, 0o600);
 	return { source: "generated", token };
 }
 

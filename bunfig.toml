@@ -1,2 +1,18 @@
 [run]
 bun = true
+
+[test]
+# Tell Bun to load this plugin before your tests run
+# homedir-preload.ts keeps cli/config.ts's on-disk config file (and anything
+# else that reads os.homedir()) pointed at a scratch directory for the whole
+# run, see tests/README.md and the preload script's own comment for why this
+# has to happen here rather than per test file.
+preload = ["./tests/app/svelte-loader.ts", "./tests/support/homedir-preload.ts"]
+
+# Every `bun test` run reports coverage for whatever source files it actually
+# touches (agent/installer/cli today ; the SvelteKit app has no tests yet) --
+# no threshold enforced yet, this repo's test suite is brand new, see
+# tests/README.md.
+coverage = true
+coverageReporter = ["text", "lcov"]
+coveragePathIgnorePatterns = ["tests/**", "cli/generated/**"]

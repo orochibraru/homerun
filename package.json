@@ -92,7 +92,11 @@
 		"prepare": "husky",
 		"preview": "vite preview",
 		"release": "semantic-release",
-		"start": "bun run ./build/index.js"
+		"start": "bun run ./build/index.js",
+		"test": "bun test tests",
+		"test:agent": "bun test tests/agent",
+		"test:cli": "bun test tests/cli",
+		"test:installer": "bun test tests/installer"
 	},
 	"type": "module",
 	"version": "0.3.2"
