@@ -536,6 +536,112 @@
       </form>
     </section>
 
+    <!-- ═══ Pangolin ═══ -->
+    <section class="border-border bg-surface rounded-2xl border">
+      <div class="border-border border-b px-5 py-4">
+        <h2 class="text-text text-sm font-semibold">Pangolin</h2>
+        <p class="text-text-muted text-xs">
+          Alternative to Cloudflare above, for instances fronted by a
+          self-hosted <a
+            class="text-primary underline"
+            href="https://api.pangolin.net/v1/docs/"
+            rel="noreferrer"
+            target="_blank"
+          >Pangolin</a> tunnel instead of a DNS provider. Auto-creates a
+          Resource + Target for every deployed service's hostname, routed
+          through the site below. Unset : no-op, wire routes up by hand as
+          before.
+        </p>
+      </div>
+      <form
+        action="?/updatePangolin"
+        class="space-y-4 p-5"
+        method="POST"
+        use:enhance={() => async ({ result, update }) => {
+          if (result.type === "success") {
+            toast.success(
+              (result.data as { pangolinTestOk?: boolean })?.pangolinTestOk
+              ? "Org access verified."
+              : "Pangolin settings saved.",
+            );
+          } else if (result.type === "failure") {
+            toast.error(
+              (result.data as { error?: string })?.error
+              ?? "Check the form for errors.",
+            );
+          }
+          await update();
+        }}
+      >
+        <div>
+          <label class={label} for="pangolinApiBaseUrl">API base URL</label>
+          <Input
+            class="font-mono"
+            id="pangolinApiBaseUrl"
+            name="pangolinApiBaseUrl"
+            placeholder="https://pangolin.example.com/api/v1"
+            type="text"
+            value={data.settings.pangolinApiBaseUrl ?? ""}
+          />
+        </div>
+        <div>
+          <label class={label} for="pangolinOrgId">Org ID</label>
+          <Input
+            class="font-mono"
+            id="pangolinOrgId"
+            name="pangolinOrgId"
+            type="text"
+            value={data.settings.pangolinOrgId ?? ""}
+          />
+        </div>
+        <div>
+          <label class={label} for="pangolinMainSiteName">Site name</label>
+          <Input
+            class="font-mono"
+            id="pangolinMainSiteName"
+            name="pangolinMainSiteName"
+            type="text"
+            value={data.settings.pangolinMainSiteName ?? ""}
+          />
+          <p class="text-text-subtle mt-1.5 text-xs">
+            The Pangolin site (tunnel agent) whose host runs this instance's
+            own Traefik. Must already exist in Pangolin.
+          </p>
+        </div>
+        <div>
+          <label class={label} for="pangolinTargetPort">Target port</label>
+          <Input
+            id="pangolinTargetPort"
+            name="pangolinTargetPort"
+            placeholder="80"
+            type="number"
+            value={data.settings.pangolinTargetPort ?? ""}
+          />
+          <p class="text-text-subtle mt-1.5 text-xs">
+            The local port on that site's host a Resource's Target forwards
+            to. Unset defaults to 80 (this instance's own Traefik entrypoint,
+            HTTP-only : Pangolin terminates the public TLS connection
+            itself).
+          </p>
+        </div>
+        <div>
+          <label class={label} for="pangolinApiToken">API token</label>
+          <Input
+            id="pangolinApiToken"
+            name="pangolinApiToken"
+            placeholder={data.settings.pangolinOrgId ? "Unchanged" : ""}
+            type="password"
+          />
+        </div>
+        <div class="flex justify-end gap-2">
+          <Button formaction="?/testPangolin" type="submit" variant="outline">
+            Test connection
+          </Button>
+          <Button type="submit">Save</Button>
+        </div>
+      </form>
+    </section>
+
     <!-- ═══ SMTP ═══ -->
     <section class="border-border bg-surface rounded-2xl border">
       <div class="border-border border-b px-5 py-4">

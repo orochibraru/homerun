@@ -10,6 +10,7 @@ import { updateGeneralSchema } from "$lib/server/validation/service";
 import { CloudflareService } from "$lib/services/cloudflare.service";
 import { CronService } from "$lib/services/cron.service";
 import { DockerService } from "$lib/services/docker.service";
+import { PangolinService } from "$lib/services/pangolin.service";
 
 const logger = new Logger("Services");
 
@@ -60,6 +61,10 @@ export const actions = {
 				: null;
 			const hostname = `${project?.slug ? `${project.slug}-${svc.slug}` : svc.slug}.${config.baseDomain}`;
 			CloudflareService.deleteDnsRecord(hostname).catch(() => {
+				// Never throws (see its own docstring), this catch is just
+				// defense in depth.
+			});
+			PangolinService.deleteDnsRecord(hostname).catch(() => {
 				// Never throws (see its own docstring), this catch is just
 				// defense in depth.
 			});
