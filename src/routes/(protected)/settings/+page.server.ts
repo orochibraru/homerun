@@ -9,6 +9,7 @@ import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { rebuildAuth } from "$lib/services/auth";
 import { CloudflareService } from "$lib/services/cloudflare.service";
+import { PangolinService } from "$lib/services/pangolin.service";
 
 const logger = new Logger("InstanceSettings");
 
@@ -105,6 +106,41 @@ export const actions = {
 			});
 		}
 		return { cloudflareTestOk: true, success: true };
+	},
+	testPangolin: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const baseUrl = (
+			formData.get("pangolinApiBaseUrl") as string | null
+		)?.trim();
+		const orgId = (formData.get("pangolinOrgId") as string | null)?.trim();
+		const tokenInput = (
+			formData.get("pangolinApiToken") as string | null
+		)?.trim();
+		if (!(baseUrl && orgId)) {
+			return fail(400, { error: "Enter an API base URL and org id first." });
+		}
+		// Blank token field with an already-stored one : test against the
+		// stored token, same "blank means unchanged" convention the save
+		// action uses, so re-testing doesn't require retyping the secret.
+		const settings = await InstanceSettingsDTO.get();
+		const token = tokenInput || settings.decryptPangolinApiToken();
+		if (!token) {
+			return fail(400, { error: "Enter an API token first." });
+		}
+		const result = await PangolinService.verifyConnection(
+			baseUrl,
+			token,
+			orgId,
+		);
+		if (!result.success) {
+			return fail(400, {
+				error: `Couldn't verify org access: ${result.error}`,
+			});
+		}
+		return { pangolinTestOk: true, success: true };
 	},
 	updateAutoscale: async ({ request, locals }) => {
 		if (!locals.user) {
@@ -276,6 +312,29 @@ export const actions = {
 			`Orchestration mode updated: mode=${mode} user=${locals.user.id}`,
 		);
 		return { savedSection: "orchestration", success: true };
+	},
+
+	updatePangolin: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const portRaw = (
+			formData.get("pangolinTargetPort") as string | null
+		)?.trim();
+		const port = portRaw ? Number.parseInt(portRaw, 10) : null;
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updatePangolin({
+			pangolinApiBaseUrl: nullableText(formData, "pangolinApiBaseUrl"),
+			pangolinApiToken:
+				(formData.get("pangolinApiToken") as string | null)?.trim() ||
+				undefined,
+			pangolinMainSiteName: nullableText(formData, "pangolinMainSiteName"),
+			pangolinOrgId: nullableText(formData, "pangolinOrgId"),
+			pangolinTargetPort: Number.isFinite(port) ? port : null,
+		});
+		logger.info(`Pangolin instance settings updated: user=${locals.user.id}`);
+		return { savedSection: "pangolin", success: true };
 	},
 
 	updateSmtp: async ({ request, locals }) => {

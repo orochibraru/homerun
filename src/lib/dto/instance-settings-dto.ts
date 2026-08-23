@@ -45,6 +45,15 @@ export interface InstanceSettingsCloudflareInput {
 	cloudflareApiToken?: string;
 }
 
+export interface InstanceSettingsPangolinInput {
+	pangolinApiBaseUrl: string | null;
+	/** Blank/undefined means "keep the currently stored token". */
+	pangolinApiToken?: string;
+	pangolinMainSiteName: string | null;
+	pangolinOrgId: string | null;
+	pangolinTargetPort: number | null;
+}
+
 export interface InstanceSettingsSmtpInput {
 	smtpEnabled: boolean | null;
 	smtpFrom: string | null;
@@ -147,6 +156,11 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			oauthProviders: [],
 			onboardingCompletedAt: null,
 			orchestrationMode: null,
+			pangolinApiBaseUrl: null,
+			pangolinApiTokenEnc: null,
+			pangolinMainSiteName: null,
+			pangolinOrgId: null,
+			pangolinTargetPort: null,
 			smtpEnabled: null,
 			smtpFrom: null,
 			smtpHost: null,
@@ -233,6 +247,51 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			// smtpPassword/registryPassword elsewhere.
 			...(cloudflareApiToken
 				? { cloudflareApiTokenEnc: encryptSecret(cloudflareApiToken) }
+				: {}),
+		});
+	}
+
+	get pangolinApiBaseUrl(): string | null {
+		return this.row.pangolinApiBaseUrl;
+	}
+
+	get pangolinOrgId(): string | null {
+		return this.row.pangolinOrgId;
+	}
+
+	get pangolinMainSiteName(): string | null {
+		return this.row.pangolinMainSiteName;
+	}
+
+	get pangolinTargetPort(): number {
+		return this.row.pangolinTargetPort ?? 80;
+	}
+
+	/** Whether every field PangolinService needs is set : anything less treats the integration as "feature off". */
+	get pangolinConfigured(): boolean {
+		return !!(
+			this.row.pangolinApiTokenEnc &&
+			this.row.pangolinApiBaseUrl &&
+			this.row.pangolinOrgId &&
+			this.row.pangolinMainSiteName
+		);
+	}
+
+	/** Decrypted API token, for PangolinService's own HTTP calls only : never exposed to a `load` return value. */
+	decryptPangolinApiToken(): string | null {
+		return this.row.pangolinApiTokenEnc
+			? decryptSecret(this.row.pangolinApiTokenEnc)
+			: null;
+	}
+
+	async updatePangolin(input: InstanceSettingsPangolinInput): Promise<void> {
+		const { pangolinApiToken, ...rest } = input;
+		await this.persist({
+			...rest,
+			// Blank token field means "leave unchanged" : same convention as
+			// cloudflareApiToken/smtpPassword/registryPassword elsewhere.
+			...(pangolinApiToken
+				? { pangolinApiTokenEnc: encryptSecret(pangolinApiToken) }
 				: {}),
 		});
 	}

@@ -10,6 +10,7 @@ import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { Logger } from "$lib/logger";
 import { CloudflareService } from "./cloudflare.service.ts";
 import { DockerService } from "./docker.service.ts";
+import { PangolinService } from "./pangolin.service.ts";
 
 const logger = new Logger("Deploy");
 
@@ -264,12 +265,13 @@ class DeploymentServiceClass {
 				`Deploy succeeded: service=${svc.id} container=${containerId ?? swarmServiceId} deployment=${dep.id}`,
 			);
 
-			// Auto-DNS (Cloudflare) : only meaningful for a service actually
-			// routed through this host's own Traefik (shared network + DNS-
-			// resolvable), a remote-hosted service has no Traefik routing at
-			// all (see docker/labels.ts), so there's no hostname to point
-			// anywhere. Fire-and-forget, best-effort : see
-			// CloudflareService.syncDnsRecord's own docstring.
+			// Auto-DNS (Cloudflare and/or Pangolin) : only meaningful for a
+			// service actually routed through this host's own Traefik (shared
+			// network + DNS-resolvable), a remote-hosted service has no
+			// Traefik routing at all (see docker/labels.ts), so there's no
+			// hostname to point anywhere. Fire-and-forget, best-effort, both
+			// independent : see CloudflareService.syncDnsRecord's and
+			// PangolinService.syncDnsRecord's own docstrings.
 			if (svc.dnsResolvable && !remote) {
 				const hostname = `${project?.slug ? `${project.slug}-${svc.slug}` : svc.slug}.${config.baseDomain}`;
 				CloudflareService.syncDnsRecord(hostname, config.baseDomain).catch(
@@ -278,6 +280,10 @@ class DeploymentServiceClass {
 						// defense in depth.
 					},
 				);
+				PangolinService.syncDnsRecord(hostname).catch(() => {
+					// Never throws (see its own docstring), this catch is just
+					// defense in depth.
+				});
 			}
 
 			NotificationDTO.notify({

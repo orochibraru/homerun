@@ -323,6 +323,34 @@ export const instanceSettings = pgTable("instance_settings", {
 	// the admin's own one-time step, this app never runs that itself) before
 	// switching this on. See $lib/services/docker/swarm.ts.
 	orchestrationMode: text("orchestration_mode").$type<"standalone" | "swarm">(),
+	// Self-hosted Pangolin (https://api.pangolin.net/v1/docs/, a tunnel/
+	// reverse-proxy manager, not a plain DNS API) : an alternative to the
+	// Cloudflare integration above for instances that front themselves with
+	// Pangolin instead of a DNS provider Traefik can ACME against directly.
+	// When all four are set, a deployed service with `dnsResolvable` gets a
+	// Pangolin Resource (subdomain under one of the org's registered Pangolin
+	// domains) + a Target auto-created, pointing at this host's own Traefik
+	// entrypoint through pangolinMainSiteName's tunnel, instead of the admin
+	// wiring one up by hand for every service (see
+	// $lib/services/pangolin.service.ts). Unset (the default) : no-op, same
+	// "background automation defaults inert" posture as Cloudflare/
+	// autoscaling/backups. Both integrations can be configured at once, each
+	// runs independently in the deploy pipeline.
+	pangolinApiBaseUrl: text("pangolin_api_base_url"),
+	// AES-256-GCM ciphertext, same scheme as cloudflareApiTokenEnc.
+	pangolinApiTokenEnc: text("pangolin_api_token_enc"),
+	// The Pangolin "site" (tunnel agent) a created Resource's Target routes
+	// to : must already exist in Pangolin, matched by name, this app never
+	// creates a site itself.
+	pangolinMainSiteName: text("pangolin_main_site_name"),
+	pangolinOrgId: text("pangolin_org_id"),
+	// Local port a Resource's Target forwards to on pangolinMainSiteName's
+	// host, null defaults to 80 (this app's own Traefik entrypoint, assumed
+	// to be running on the same host as the Pangolin site agent, HTTP-only :
+	// Pangolin terminates the public TLS connection itself, same "DNS/edge
+	// layer owns TLS, Traefik doesn't need to" posture as the Cloudflare
+	// integration's plain, unproxied CNAME).
+	pangolinTargetPort: integer("pangolin_target_port"),
 	smtpEnabled: boolean("smtp_enabled"),
 	smtpFrom: text("smtp_from"),
 	smtpHost: text("smtp_host"),
