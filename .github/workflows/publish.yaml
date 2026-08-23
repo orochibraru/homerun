@@ -22,13 +22,54 @@ jobs:
     name: Code Quality
     uses: ./.github/workflows/code_quality.yaml
 
+  version:
+    name: Compute Release Version
+    runs-on: ubuntu-latest
+    needs:
+      - code_quality
+    outputs:
+      tag: ${{ steps.compute.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node.js for semantic-release
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Dry-run release to compute the next version
+        id: compute
+        env:
+          GITEA_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+          GITEA_URL: https://git.ombrage.space
+        run: |
+          output="$(bunx semantic-release --dry-run 2>&1)" || true
+          echo "$output"
+          version="$(echo "$output" | grep -oE 'release version is [0-9]+\.[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -n1)"
+          if [ -n "$version" ]; then
+            echo "This push will release v$version, tagging images accordingly."
+            echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          else
+            echo "No release-worthy commits, falling back to the commit SHA for image tags."
+            echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Docker Build
     uses: ./.github/workflows/docker.yaml
     needs:
       - code_quality
+      - version
     with:
-      image_tag: ${{ github.sha }}
+      image_tag: ${{ needs.version.outputs.tag }}
       image_name: orochibraru/homerun
       registry_name: git.ombrage.space
       registry_username: orochibraru
@@ -41,8 +82,9 @@ jobs:
     uses: ./.github/workflows/docker.yaml
     needs:
       - code_quality
+      - version
     with:
-      image_tag: ${{ github.sha }}
+      image_tag: ${{ needs.version.outputs.tag }}
       image_name: orochibraru/homerun-agent
       registry_name: git.ombrage.space
       registry_username: orochibraru
@@ -61,6 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - code_quality
+      - version
       - build
       - build_agent
       - binaries
@@ -95,38 +138,3 @@ jobs:
           GITEA_URL: https://git.ombrage.space
 
         run: bun run release
-
-      - name: Check for new release tag
-        id: released
-        run: |
-          git fetch --tags origin main
-          git checkout main
-          git reset --hard origin/main
-          TAG="$(git describe --tags --exact-match HEAD 2>/dev/null || true)"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        if: steps.released.outputs.tag != ''
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to Container registry
-        if: steps.released.outputs.tag != ''
-        uses: docker/login-action@v4
-        with:
-          registry: git.ombrage.space
-          username: orochibraru
-          password: ${{ secrets.PACKAGES_TOKEN }}
-
-      - name: Tag latest image with release version
-        if: steps.released.outputs.tag != ''
-        run: |
-          docker buildx imagetools create \
-            -t git.ombrage.space/orochibraru/homerun:${{ steps.released.outputs.tag }} \
-            git.ombrage.space/orochibraru/homerun:latest
-
-      - name: Tag latest agent image with release version
-        if: steps.released.outputs.tag != ''
-        run: |
-          docker buildx imagetools create \
-            -t git.ombrage.space/orochibraru/homerun-agent:${{ steps.released.outputs.tag }} \
-            git.ombrage.space/orochibraru/homerun-agent:latest

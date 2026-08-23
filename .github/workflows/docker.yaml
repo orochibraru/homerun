@@ -61,8 +61,8 @@ jobs:
         id: platforms
         run: |
           touch .env
-          docker buildx bake -f ./docker-bake.hcl "${{ inputs.bake_target }}-all" --print
-          echo "matrix=$(docker buildx bake -f ./docker-bake.hcl "${{ inputs.bake_target }}-all" --print | jq -cr '.target."${{ inputs.bake_target }}-all".platforms')" >>${GITHUB_OUTPUT}
+          docker buildx bake -f ./docker-bake.hcl "${{ inputs.bake_target }}" --print
+          echo "matrix=$(docker buildx bake -f ./docker-bake.hcl "${{ inputs.bake_target }}" --print | jq -cr '.target."${{ inputs.bake_target }}".platforms')" >>${GITHUB_OUTPUT}
 
       - name: Show matrix
         run: |
