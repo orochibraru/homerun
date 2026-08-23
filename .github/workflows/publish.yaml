@@ -29,6 +29,7 @@ jobs:
       - code_quality
     outputs:
       tag: ${{ steps.compute.outputs.tag }}
+      version: ${{ steps.compute.outputs.version }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -55,11 +56,13 @@ jobs:
           echo "$output"
           version="$(echo "$output" | grep -oE 'release version is [0-9]+\.[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -n1)"
           if [ -n "$version" ]; then
-            echo "This push will release v$version, tagging images accordingly."
+            echo "This push will release v$version, tagging images and binaries accordingly."
             echo "tag=v$version" >> "$GITHUB_OUTPUT"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
           else
-            echo "No release-worthy commits, falling back to the commit SHA for image tags."
+            echo "No release-worthy commits, falling back to the commit SHA for image tags; binaries keep the last released version."
             echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
           fi
 
   build:
@@ -97,6 +100,9 @@ jobs:
     uses: ./.github/workflows/binaries.yaml
     needs:
       - code_quality
+      - version
+    with:
+      version: ${{ needs.version.outputs.version }}
 
   release:
     name: Release
