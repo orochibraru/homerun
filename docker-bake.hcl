@@ -17,6 +17,13 @@ target "base" {
   }
 }
 
+// cache-from/cache-to below are the single-platform default (a plain local
+// `docker buildx bake app`, no matrix, nothing to collide with). CI's build
+// job builds each platform in its own matrix job and overrides both of these
+// per-platform (scope suffixed with PLATFORM_PAIR, see docker.yaml's bake-action
+// `set:` block), two concurrent jobs writing mode=max to the *same* gha scope
+// otherwise race the GitHub Actions cache API and one fails with
+// "failed to reserve cache".
 target "app" {
   inherits   = ["base"]
   dockerfile = "./Dockerfile"

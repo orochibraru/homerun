@@ -136,6 +136,8 @@ jobs:
             *.tags=${{ env.IMAGE }}
             *.platform=${{ matrix.platform }}
             *.output=type=image,push-by-digest=true,name-canonical=true,push=true
+            ${{ inputs.bake_target }}.cache-from=type=gha,scope=${{ inputs.bake_target }}-${{ env.PLATFORM_PAIR }}
+            ${{ inputs.bake_target }}.cache-to=type=gha,mode=max,scope=${{ inputs.bake_target }}-${{ env.PLATFORM_PAIR }}
 
       - name: Export digest
         run: |
