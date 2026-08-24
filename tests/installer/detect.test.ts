@@ -1,42 +1,37 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import * as exec from "../../installer/exec";
-import {
-	arch,
-	detectPackageManager,
-	requireLinux,
-	requireRoot,
-} from "../../installer/steps/detect";
+import { Detector } from "../../installer/steps/detect";
 
-describe("arch", () => {
+describe("Detector.arch", () => {
 	test("matches this repo's release-asset naming, derived from process.arch", () => {
-		expect(arch()).toBe(process.arch === "arm64" ? "arm64" : "amd64");
+		expect(Detector.arch()).toBe(process.arch === "arm64" ? "arm64" : "amd64");
 	});
 });
 
-describe("requireLinux", () => {
+describe("Detector.requireLinux", () => {
 	test("throws off-Linux, is a no-op on Linux", () => {
 		if (process.platform === "linux") {
-			expect(() => requireLinux()).not.toThrow();
+			expect(() => Detector.requireLinux()).not.toThrow();
 		} else {
-			expect(() => requireLinux()).toThrow(
+			expect(() => Detector.requireLinux()).toThrow(
 				new RegExp(`refusing to run on ${process.platform}`),
 			);
 		}
 	});
 });
 
-describe("requireRoot", () => {
+describe("Detector.requireRoot", () => {
 	test("throws when not running as uid 0, is a no-op as root", () => {
 		const uid = process.getuid?.();
 		if (uid === 0) {
-			expect(() => requireRoot()).not.toThrow();
+			expect(() => Detector.requireRoot()).not.toThrow();
 		} else {
-			expect(() => requireRoot()).toThrow(/needs root/);
+			expect(() => Detector.requireRoot()).toThrow(/needs root/);
 		}
 	});
 });
 
-describe("detectPackageManager", () => {
+describe("Detector.detectPackageManager", () => {
 	afterEach(() => {
 		mock.restore();
 	});
@@ -45,7 +40,7 @@ describe("detectPackageManager", () => {
 		spyOn(exec, "commandExists").mockImplementation(
 			async (cmd: string) => cmd === "apt-get",
 		);
-		expect(await detectPackageManager()).toEqual({
+		expect(await Detector.detectPackageManager()).toEqual({
 			install: ["apt-get", "install", "-y"],
 			kind: "apt",
 		});
@@ -55,7 +50,7 @@ describe("detectPackageManager", () => {
 		spyOn(exec, "commandExists").mockImplementation(
 			async (cmd: string) => cmd === "dnf",
 		);
-		expect(await detectPackageManager()).toEqual({
+		expect(await Detector.detectPackageManager()).toEqual({
 			install: ["dnf", "install", "-y"],
 			kind: "dnf",
 		});
@@ -65,7 +60,7 @@ describe("detectPackageManager", () => {
 		spyOn(exec, "commandExists").mockImplementation(
 			async (cmd: string) => cmd === "yum",
 		);
-		expect(await detectPackageManager()).toEqual({
+		expect(await Detector.detectPackageManager()).toEqual({
 			install: ["yum", "install", "-y"],
 			kind: "yum",
 		});
@@ -73,7 +68,7 @@ describe("detectPackageManager", () => {
 
 	test("throws a clear error when none are found", async () => {
 		spyOn(exec, "commandExists").mockImplementation(async () => false);
-		await expect(detectPackageManager()).rejects.toThrow(
+		await expect(Detector.detectPackageManager()).rejects.toThrow(
 			/No supported package manager found/,
 		);
 	});

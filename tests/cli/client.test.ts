@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { homedir, tmpdir } from "node:os";
-import { makeClient, resolveConfig } from "../../cli/client";
-import {
-	clearStoredConfig,
-	configPath,
-	writeStoredConfig,
-} from "../../cli/config";
+import { ClientFactory } from "../../cli/client";
+import { ConfigStore } from "../../cli/config";
 
 // See tests/cli/config.test.ts : resolveConfig() falls back to the on-disk
 // config, so this file needs the same mocked-homedir guarantee (see
@@ -13,7 +9,7 @@ import {
 if (!homedir().startsWith(tmpdir())) {
 	throw new Error(
 		"os.homedir() isn't mocked to a scratch directory : refusing to risk " +
-			`touching the real ${configPath()}. Check bunfig.toml's ` +
+			`touching the real ${ConfigStore.configPath()}. Check bunfig.toml's ` +
 			"[test].preload.",
 	);
 }
@@ -26,7 +22,7 @@ beforeEach(() => {
 	for (const k of ENV_KEYS) {
 		delete process.env[k];
 	}
-	clearStoredConfig();
+	ConfigStore.clearStoredConfig();
 });
 
 afterEach(() => {
@@ -37,29 +33,29 @@ afterEach(() => {
 			process.env[k] = savedEnv[k];
 		}
 	}
-	clearStoredConfig();
+	ConfigStore.clearStoredConfig();
 });
 
-describe("resolveConfig", () => {
+describe("ClientFactory.resolveConfig", () => {
 	test("returns null when nothing is configured anywhere", () => {
-		expect(resolveConfig([])).toBeNull();
+		expect(ClientFactory.resolveConfig([])).toBeNull();
 	});
 
 	test("reads from env vars", () => {
 		process.env.HOMERUN_BASE_URL = "https://env.example.com";
 		process.env.HOMERUN_API_KEY = "env-key";
-		expect(resolveConfig([])).toEqual({
+		expect(ClientFactory.resolveConfig([])).toEqual({
 			apiKey: "env-key",
 			baseUrl: "https://env.example.com",
 		});
 	});
 
 	test("falls back to the stored config file", () => {
-		writeStoredConfig({
+		ConfigStore.writeStoredConfig({
 			apiKey: "stored-key",
 			baseUrl: "https://stored.example.com",
 		});
-		expect(resolveConfig([])).toEqual({
+		expect(ClientFactory.resolveConfig([])).toEqual({
 			apiKey: "stored-key",
 			baseUrl: "https://stored.example.com",
 		});
@@ -69,7 +65,7 @@ describe("resolveConfig", () => {
 		process.env.HOMERUN_BASE_URL = "https://env.example.com";
 		process.env.HOMERUN_API_KEY = "env-key";
 		expect(
-			resolveConfig([
+			ClientFactory.resolveConfig([
 				"--base-url",
 				"https://flag.example.com",
 				"--api-key",
@@ -79,12 +75,12 @@ describe("resolveConfig", () => {
 	});
 
 	test("env vars win over the stored config file", () => {
-		writeStoredConfig({
+		ConfigStore.writeStoredConfig({
 			apiKey: "stored-key",
 			baseUrl: "https://stored.example.com",
 		});
 		process.env.HOMERUN_API_KEY = "env-key";
-		expect(resolveConfig([])).toEqual({
+		expect(ClientFactory.resolveConfig([])).toEqual({
 			apiKey: "env-key",
 			baseUrl: "https://stored.example.com",
 		});
@@ -93,18 +89,20 @@ describe("resolveConfig", () => {
 	test("strips a trailing slash from the base URL", () => {
 		process.env.HOMERUN_BASE_URL = "https://env.example.com/";
 		process.env.HOMERUN_API_KEY = "env-key";
-		expect(resolveConfig([])?.baseUrl).toBe("https://env.example.com");
+		expect(ClientFactory.resolveConfig([])?.baseUrl).toBe(
+			"https://env.example.com",
+		);
 	});
 
 	test("returns null when only one of baseUrl/apiKey is available", () => {
 		process.env.HOMERUN_BASE_URL = "https://env.example.com";
-		expect(resolveConfig([])).toBeNull();
+		expect(ClientFactory.resolveConfig([])).toBeNull();
 	});
 });
 
-describe("makeClient", () => {
+describe("ClientFactory.makeClient", () => {
 	test("builds an openapi-fetch client pointed at /api/v1 with the x-api-key header", () => {
-		const client = makeClient({
+		const client = ClientFactory.makeClient({
 			apiKey: "my-key",
 			baseUrl: "https://h.example.com",
 		});

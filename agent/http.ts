@@ -1,17 +1,8 @@
-import {
-	deploy,
-	ensureNetwork,
-	inspectStatus,
-	listManagedContainers,
-	removeContainer,
-	restartContainer,
-	startContainer,
-	stopContainer,
-	streamLogs,
-} from "./docker";
-import { buildOpenApiDocument } from "./openapi";
+import type { BunRequest } from "bun";
+import { DockerService } from "./docker";
+import { OpenApiBuilder } from "./openapi";
 import { deployInputSchema } from "./schemas";
-import { getSystemStats } from "./stats";
+import { SystemStatsService } from "./stats";
 import { tokensMatch } from "./token";
 import { AGENT_VERSION } from "./version";
 
@@ -22,95 +13,135 @@ function json(body: unknown, init?: ResponseInit): Response {
 	});
 }
 
-/** Every route below /v1 requires this : health is deliberately the only unauthenticated route, so a monitor/load balancer can probe liveness without holding the token. */
-function checkAuth(req: Request, token: string): boolean {
-	const header = req.headers.get("authorization") ?? "";
-	const presented = header.startsWith("Bearer ") ? header.slice(7) : "";
-	return presented.length > 0 && tokensMatch(presented, token);
-}
+type RouteHandler<Path extends string> = (
+	req: BunRequest<Path>,
+) => Response | Promise<Response>;
 
-export function createHandler(token: string) {
-	return async function handle(req: Request): Promise<Response> {
-		const url = new URL(req.url);
-		const path = url.pathname;
+/**
+ * Real instance state (the bearer token every request has to present),
+ * routed through instance methods instead of a factory closure : `routes` is
+ * a getter built fresh from `this`, and `#authed` closes over `this.token`,
+ * so `Bun.serve({ routes: server.routes, fetch: server.notFound })` keeps
+ * working without any `.bind(server)` at the call site.
+ */
+export class AgentHttpServer {
+	constructor(private readonly token: string) {}
 
-		if (path === "/v1/health" && req.method === "GET") {
-			return json({ status: "ok", version: AGENT_VERSION });
-		}
-
-		// Same "public, doesn't expose data" stance as the main app's
-		// /api/v1/openapi.json : the spec describes shapes, not data.
-		if (path === "/v1/openapi.json" && req.method === "GET") {
-			return json(buildOpenApiDocument(url.origin));
-		}
-
-		if (!checkAuth(req, token)) {
-			return json({ error: "Unauthorized" }, { status: 401 });
-		}
-
-		try {
-			if (path === "/v1/stats" && req.method === "GET") {
-				return json(await getSystemStats());
-			}
-
-			if (path === "/v1/containers" && req.method === "GET") {
-				return json(await listManagedContainers());
-			}
-
-			if (path === "/v1/deploy" && req.method === "POST") {
-				const body = await req.json().catch(() => null);
-				const parsed = deployInputSchema.safeParse(body);
-				if (!parsed.success) {
-					return json(
-						{ error: "Invalid request body", issues: parsed.error.issues },
-						{ status: 400 },
+	/**
+	 * Bun's native route table (`Bun.serve({ routes })`), method-keyed per
+	 * path with `:param` segments parsed for us, instead of the manual
+	 * `path === ...`/regex matching this used to do by hand. `/v1/health` and
+	 * `/v1/openapi.json` are the only unauthenticated routes (same "spec
+	 * describes shapes, not data" stance as the main app's, and health has to
+	 * stay open so a monitor/load balancer can probe liveness without holding
+	 * the token); every other route is wrapped in `#authed`, which also
+	 * centralizes the try/catch → 500 behavior the old switch had inline.
+	 */
+	get routes() {
+		return {
+			"/v1/containers": {
+				GET: this.#authed(async () =>
+					json(await DockerService.listManagedContainers()),
+				),
+			},
+			"/v1/containers/:id": {
+				DELETE: this.#authed<"/v1/containers/:id">(async (req) => {
+					await DockerService.removeContainer(
+						decodeURIComponent(req.params.id),
 					);
-				}
-				const result = await deploy(parsed.data);
-				return json(result);
-			}
-
-			const containerMatch = path.match(
-				/^\/v1\/containers\/([^/]+)(\/(start|stop|restart|logs))?$/,
-			);
-			if (containerMatch) {
-				const id = decodeURIComponent(containerMatch[1]);
-				const action = containerMatch[3];
-
-				if (!action && req.method === "GET") {
-					return json(await inspectStatus(id));
-				}
-				if (!action && req.method === "DELETE") {
-					await removeContainer(id);
 					return json({ ok: true });
-				}
-				if (action === "start" && req.method === "POST") {
-					await startContainer(id);
-					return json({ ok: true });
-				}
-				if (action === "stop" && req.method === "POST") {
-					await stopContainer(id);
-					return json({ ok: true });
-				}
-				if (action === "restart" && req.method === "POST") {
-					await restartContainer(id);
-					return json({ ok: true });
-				}
-				if (action === "logs" && req.method === "GET") {
-					const follow = url.searchParams.get("follow") === "true";
-					const stream = await streamLogs(id, follow);
+				}),
+				GET: this.#authed<"/v1/containers/:id">(async (req) =>
+					json(
+						await DockerService.inspectStatus(
+							decodeURIComponent(req.params.id),
+						),
+					),
+				),
+			},
+			"/v1/containers/:id/logs": {
+				GET: this.#authed<"/v1/containers/:id/logs">(async (req) => {
+					const follow = new URL(req.url).searchParams.get("follow") === "true";
+					const stream = await DockerService.streamLogs(
+						decodeURIComponent(req.params.id),
+						follow,
+					);
 					return new Response(stream, {
 						headers: { "content-type": "application/octet-stream" },
 					});
-				}
+				}),
+			},
+			"/v1/containers/:id/restart": {
+				POST: this.#authed<"/v1/containers/:id/restart">(async (req) => {
+					await DockerService.restartContainer(
+						decodeURIComponent(req.params.id),
+					);
+					return json({ ok: true });
+				}),
+			},
+			"/v1/containers/:id/start": {
+				POST: this.#authed<"/v1/containers/:id/start">(async (req) => {
+					await DockerService.startContainer(decodeURIComponent(req.params.id));
+					return json({ ok: true });
+				}),
+			},
+			"/v1/containers/:id/stop": {
+				POST: this.#authed<"/v1/containers/:id/stop">(async (req) => {
+					await DockerService.stopContainer(decodeURIComponent(req.params.id));
+					return json({ ok: true });
+				}),
+			},
+			"/v1/deploy": {
+				POST: this.#authed(async (req) => {
+					const body = await req.json().catch(() => null);
+					const parsed = deployInputSchema.safeParse(body);
+					if (!parsed.success) {
+						return json(
+							{ error: "Invalid request body", issues: parsed.error.issues },
+							{ status: 400 },
+						);
+					}
+					return json(await DockerService.deploy(parsed.data));
+				}),
+			},
+			"/v1/health": {
+				GET: () => json({ status: "ok", version: AGENT_VERSION }),
+			},
+			"/v1/openapi.json": {
+				GET: (req: BunRequest) =>
+					json(OpenApiBuilder.buildDocument(new URL(req.url).origin)),
+			},
+			"/v1/stats": {
+				GET: this.#authed(async () =>
+					json(await SystemStatsService.getSystemStats()),
+				),
+			},
+		};
+	}
+
+	/** Fallback for any request Bun's router couldn't match against `routes` above. */
+	notFound = (): Response => json({ error: "Not found" }, { status: 404 });
+
+	/** Wraps a route handler with the bearer-token check and the shared error → 500 JSON translation every authenticated route needs. */
+	#authed<Path extends string>(
+		handler: RouteHandler<Path>,
+	): RouteHandler<Path> {
+		return async (req) => {
+			if (!this.#checkAuth(req)) {
+				return json({ error: "Unauthorized" }, { status: 401 });
 			}
+			try {
+				return await handler(req);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				return json({ error: message }, { status: 500 });
+			}
+		};
+	}
 
-			return json({ error: "Not found" }, { status: 404 });
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			return json({ error: message }, { status: 500 });
-		}
-	};
+	#checkAuth(req: Request): boolean {
+		const header = req.headers.get("authorization") ?? "";
+		const presented = header.startsWith("Bearer ") ? header.slice(7) : "";
+		return presented.length > 0 && tokensMatch(presented, this.token);
+	}
 }
-
-export { ensureNetwork };

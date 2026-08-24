@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { buildOpenApiDocument } from "../../agent/openapi";
+import { OpenApiBuilder } from "../../agent/openapi";
 import { AGENT_VERSION } from "../../agent/version";
 
-describe("buildOpenApiDocument", () => {
-	const doc = buildOpenApiDocument("https://agent.example.com") as {
+describe("OpenApiBuilder.buildDocument", () => {
+	const doc = OpenApiBuilder.buildDocument("https://agent.example.com") as {
 		components: { securitySchemes: Record<string, unknown> };
 		info: { version: string };
 		openapi: string;

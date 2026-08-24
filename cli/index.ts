@@ -1,14 +1,8 @@
-import { makeClient, resolveConfig } from "./client";
-import {
-	projectsList,
-	serviceAction,
-	serviceGet,
-	servicesList,
-	templatesList,
-} from "./commands";
-import { login, logout } from "./login";
-import { fail } from "./output";
-import { update } from "./update";
+import { ClientFactory } from "./client";
+import { Commands } from "./commands";
+import { LoginFlow } from "./login";
+import { Output } from "./output";
+import { UpdateService } from "./update";
 import { CLI_VERSION } from "./version";
 
 function printHelp(): void {
@@ -47,7 +41,7 @@ function parseArgv(argv: string[]): { positionals: string[]; json: boolean } {
 		if (arg === "--json") {
 			json = true;
 		} else if (arg === "--base-url" || arg === "--api-key") {
-			i += 1; // consume the flag's value, handled separately by resolveConfig
+			i += 1; // consume the flag's value, handled separately by ClientFactory.resolveConfig
 		} else if (arg === "--help" || arg === "-h") {
 			printHelp();
 			process.exit(0);
@@ -72,27 +66,31 @@ async function main() {
 	const [resource, action, id] = positionals;
 
 	if (resource === "login") {
-		return login(argv);
+		return LoginFlow.login(argv);
 	}
 	if (resource === "logout") {
-		return logout();
+		return LoginFlow.logout();
 	}
 	if (resource === "update") {
-		return update();
+		return UpdateService.update();
 	}
 
-	const config = resolveConfig(argv);
+	const config = ClientFactory.resolveConfig(argv);
 	if (!config) {
-		fail("Not logged in. Run `homerun login` to get started.");
+		// `return` (not just a bare statement) : an `Output.fail(...)` method
+		// call, unlike a plain `fail()` function call, isn't recognized by
+		// TS's control-flow analysis as making the rest of this block
+		// unreachable, so `config` wouldn't otherwise narrow to non-null below.
+		return Output.fail("Not logged in. Run `homerun login` to get started.");
 	}
-	const client = makeClient(config);
+	const client = ClientFactory.makeClient(config);
 
 	if (resource === "services") {
 		if (action === "list") {
-			return servicesList(client, json);
+			return Commands.servicesList(client, json);
 		}
 		if (action === "get" && id) {
-			return serviceGet(client, id, json);
+			return Commands.serviceGet(client, id, json);
 		}
 		if (
 			(action === "deploy" ||
@@ -101,22 +99,22 @@ async function main() {
 				action === "restart") &&
 			id
 		) {
-			return serviceAction(client, action, id);
+			return Commands.serviceAction(client, action, id);
 		}
 	}
 
 	if (resource === "projects" && action === "list") {
-		return projectsList(client, json);
+		return Commands.projectsList(client, json);
 	}
 
 	if (resource === "templates" && action === "list") {
-		return templatesList(client, json);
+		return Commands.templatesList(client, json);
 	}
 
 	printHelp();
-	fail(`Unknown command: ${argv.join(" ")}`);
+	Output.fail(`Unknown command: ${argv.join(" ")}`);
 }
 
 main().catch((error) => {
-	fail(error instanceof Error ? error.message : String(error));
+	Output.fail(error instanceof Error ? error.message : String(error));
 });

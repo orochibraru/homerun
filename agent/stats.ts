@@ -28,23 +28,6 @@ interface CpuSample {
 	total: number;
 }
 
-let lastCpuSample: CpuSample | null = null;
-
-function sampleCpu(): CpuSample {
-	let idle = 0;
-	let total = 0;
-	for (const cpu of os.cpus()) {
-		idle += cpu.times.idle;
-		total +=
-			cpu.times.user +
-			cpu.times.nice +
-			cpu.times.sys +
-			cpu.times.idle +
-			cpu.times.irq;
-	}
-	return { idle, total };
-}
-
 function run(cmd: string, args: string[]): Promise<string | null> {
 	return new Promise((resolve) => {
 		try {
@@ -61,80 +44,115 @@ function run(cmd: string, args: string[]): Promise<string | null> {
 	});
 }
 
-async function diskStats(): Promise<{
-	totalMb: number;
-	usedMb: number;
-	percent: number;
-} | null> {
-	const out = await run("df", ["-Pk", "."]);
-	if (!out) {
-		return null;
+/**
+ * The CPU% delta sample is real instance state, not a module-scope `let` :
+ * same win as the main app's `SystemStatsService`, whose own CLAUDE.md note
+ * calls out this exact field as the clearest example of an awkward
+ * module-level `let` becoming a proper private instance field once there's
+ * an instance to hang it off.
+ */
+class AgentSystemStatsService {
+	#lastCpuSample: CpuSample | null = null;
+
+	async getSystemStats(): Promise<SystemStats> {
+		const sample = this.#sampleCpu();
+		let cpuPercent = 0;
+		if (this.#lastCpuSample) {
+			const idleDelta = sample.idle - this.#lastCpuSample.idle;
+			const totalDelta = sample.total - this.#lastCpuSample.total;
+			cpuPercent =
+				totalDelta > 0 ? Math.round(100 * (1 - idleDelta / totalDelta)) : 0;
+		}
+		this.#lastCpuSample = sample;
+
+		const memTotalMb = Math.round(os.totalmem() / 1024 / 1024);
+		const memFreeMb = Math.round(os.freemem() / 1024 / 1024);
+		const memUsedMb = memTotalMb - memFreeMb;
+
+		const [disk, gpu] = await Promise.all([
+			this.#diskStats(),
+			this.#gpuStats(),
+		]);
+
+		return {
+			cpuPercent: Math.min(100, Math.max(0, cpuPercent)),
+			diskPercent: disk?.percent ?? null,
+			diskTotalMb: disk?.totalMb ?? null,
+			diskUsedMb: disk?.usedMb ?? null,
+			gpu,
+			memPercent:
+				memTotalMb > 0 ? Math.round((memUsedMb / memTotalMb) * 100) : 0,
+			memTotalMb,
+			memUsedMb,
+		};
 	}
-	const line = out.trim().split("\n").at(-1);
-	const parts = line?.trim().split(/\s+/);
-	if (!parts || parts.length < 5) {
-		return null;
+
+	#sampleCpu(): CpuSample {
+		let idle = 0;
+		let total = 0;
+		for (const cpu of os.cpus()) {
+			idle += cpu.times.idle;
+			total +=
+				cpu.times.user +
+				cpu.times.nice +
+				cpu.times.sys +
+				cpu.times.idle +
+				cpu.times.irq;
+		}
+		return { idle, total };
 	}
-	const totalKb = Number.parseInt(parts[1], 10);
-	const usedKb = Number.parseInt(parts[2], 10);
-	if (!(Number.isFinite(totalKb) && Number.isFinite(usedKb)) || totalKb === 0) {
-		return null;
+
+	async #diskStats(): Promise<{
+		totalMb: number;
+		usedMb: number;
+		percent: number;
+	} | null> {
+		const out = await run("df", ["-Pk", "."]);
+		if (!out) {
+			return null;
+		}
+		const line = out.trim().split("\n").at(-1);
+		const parts = line?.trim().split(/\s+/);
+		if (!parts || parts.length < 5) {
+			return null;
+		}
+		const totalKb = Number.parseInt(parts[1], 10);
+		const usedKb = Number.parseInt(parts[2], 10);
+		if (
+			!(Number.isFinite(totalKb) && Number.isFinite(usedKb)) ||
+			totalKb === 0
+		) {
+			return null;
+		}
+		return {
+			percent: Math.round((usedKb / totalKb) * 100),
+			totalMb: Math.round(totalKb / 1024),
+			usedMb: Math.round(usedKb / 1024),
+		};
 	}
-	return {
-		percent: Math.round((usedKb / totalKb) * 100),
-		totalMb: Math.round(totalKb / 1024),
-		usedMb: Math.round(usedKb / 1024),
-	};
+
+	async #gpuStats(): Promise<SystemStats["gpu"]> {
+		const out = await run("nvidia-smi", [
+			"--query-gpu=name,memory.total,memory.used,utilization.gpu",
+			"--format=csv,noheader,nounits",
+		]);
+		if (!out) {
+			return null;
+		}
+		const [name, memTotal, memUsed, util] = out
+			.trim()
+			.split(",")
+			.map((s) => s.trim());
+		if (!name) {
+			return null;
+		}
+		return {
+			memTotalMb: Number.parseInt(memTotal, 10) || 0,
+			memUsedMb: Number.parseInt(memUsed, 10) || 0,
+			name,
+			utilizationPercent: Number.parseInt(util, 10) || 0,
+		};
+	}
 }
 
-async function gpuStats(): Promise<SystemStats["gpu"]> {
-	const out = await run("nvidia-smi", [
-		"--query-gpu=name,memory.total,memory.used,utilization.gpu",
-		"--format=csv,noheader,nounits",
-	]);
-	if (!out) {
-		return null;
-	}
-	const [name, memTotal, memUsed, util] = out
-		.trim()
-		.split(",")
-		.map((s) => s.trim());
-	if (!name) {
-		return null;
-	}
-	return {
-		memTotalMb: Number.parseInt(memTotal, 10) || 0,
-		memUsedMb: Number.parseInt(memUsed, 10) || 0,
-		name,
-		utilizationPercent: Number.parseInt(util, 10) || 0,
-	};
-}
-
-export async function getSystemStats(): Promise<SystemStats> {
-	const sample = sampleCpu();
-	let cpuPercent = 0;
-	if (lastCpuSample) {
-		const idleDelta = sample.idle - lastCpuSample.idle;
-		const totalDelta = sample.total - lastCpuSample.total;
-		cpuPercent =
-			totalDelta > 0 ? Math.round(100 * (1 - idleDelta / totalDelta)) : 0;
-	}
-	lastCpuSample = sample;
-
-	const memTotalMb = Math.round(os.totalmem() / 1024 / 1024);
-	const memFreeMb = Math.round(os.freemem() / 1024 / 1024);
-	const memUsedMb = memTotalMb - memFreeMb;
-
-	const [disk, gpu] = await Promise.all([diskStats(), gpuStats()]);
-
-	return {
-		cpuPercent: Math.min(100, Math.max(0, cpuPercent)),
-		diskPercent: disk?.percent ?? null,
-		diskTotalMb: disk?.totalMb ?? null,
-		diskUsedMb: disk?.usedMb ?? null,
-		gpu,
-		memPercent: memTotalMb > 0 ? Math.round((memUsedMb / memTotalMb) * 100) : 0,
-		memTotalMb,
-		memUsedMb,
-	};
-}
+export const SystemStatsService = new AgentSystemStatsService();

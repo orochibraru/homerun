@@ -1,15 +1,11 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { StepRunner } from "../../installer/exec";
-import {
-	agentSystemdUnit,
-	installAgentBinary,
-	installAgentSystemdUnit,
-} from "../../installer/steps/agent";
-import * as release from "../../installer/steps/release";
+import { AgentInstaller } from "../../installer/steps/agent";
+import { ReleaseAssets } from "../../installer/steps/release";
 
-describe("agentSystemdUnit", () => {
+describe("AgentInstaller.agentSystemdUnit", () => {
 	test("renders a systemd --user unit wired to the given binary/socket/port/token file", () => {
-		const unit = agentSystemdUnit({
+		const unit = AgentInstaller.agentSystemdUnit({
 			binaryPath: "/usr/local/bin/homerun-agent",
 			dockerSocket: "/run/user/1000/docker.sock",
 			port: 7420,
@@ -29,18 +25,23 @@ describe("agentSystemdUnit", () => {
 	});
 });
 
-describe("installAgentBinary", () => {
+describe("AgentInstaller.installAgentBinary", () => {
 	afterEach(() => {
 		mock.restore();
 	});
 
 	test("downloads the arch-specific binary to /usr/local/bin/homerun-agent", async () => {
-		const download = spyOn(release, "downloadReleaseBinary").mockImplementation(
-			async () => undefined,
-		);
+		const download = spyOn(
+			ReleaseAssets,
+			"downloadReleaseBinary",
+		).mockImplementation(async () => undefined);
 		const runner = {} as StepRunner;
 
-		const path = await installAgentBinary(runner, "v1.2.3", "arm64");
+		const path = await AgentInstaller.installAgentBinary(
+			runner,
+			"v1.2.3",
+			"arm64",
+		);
 
 		expect(path).toBe("/usr/local/bin/homerun-agent");
 		expect(download).toHaveBeenCalledWith(
@@ -52,7 +53,7 @@ describe("installAgentBinary", () => {
 	});
 });
 
-describe("installAgentSystemdUnit", () => {
+describe("AgentInstaller.installAgentSystemdUnit", () => {
 	test("writes the unit, chowns it, and enables it via systemctl --user", async () => {
 		const run = mock(async (cmd: string[]) => {
 			if (cmd[0] === "id" && cmd[1] === "-u") {
@@ -63,7 +64,7 @@ describe("installAgentSystemdUnit", () => {
 		const writeFile = mock(async () => undefined);
 		const runner = { run, writeFile } as unknown as StepRunner;
 
-		await installAgentSystemdUnit(
+		await AgentInstaller.installAgentSystemdUnit(
 			runner,
 			"homerun",
 			"/run/user/1000/docker.sock",

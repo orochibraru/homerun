@@ -97,7 +97,7 @@ class FakeDocker {
 // tests/README.md) : nothing else in the test suite touches this specifier.
 mock.module("dockerode", () => ({ default: FakeDocker }));
 
-const docker = await import("../../agent/docker");
+const { DockerService } = await import("../../agent/docker");
 // Real config, read (not mocked) : assertions below compare against
 // whatever agent/config.ts actually resolves in this environment rather
 // than hardcoding "homerun-network", keeping this file config-mock-free.
@@ -113,7 +113,7 @@ function fakeDocker(): FakeDocker {
 	// reset its mocks between tests instead of expecting a fresh instance.
 	if (FakeDocker.instances.length === 0) {
 		// Trigger the singleton's creation deterministically.
-		docker.getDocker();
+		DockerService.getDocker();
 	}
 	return FakeDocker.instances[0];
 }
@@ -135,8 +135,8 @@ beforeEach(() => {
 
 describe("getDocker", () => {
 	test("returns the same singleton across calls", () => {
-		const a = docker.getDocker();
-		const b = docker.getDocker();
+		const a = DockerService.getDocker();
+		const b = DockerService.getDocker();
 		expect(a).toBe(b);
 	});
 });
@@ -148,7 +148,7 @@ describe("ensureNetwork", () => {
 			{ Name: realConfig.dockerNetworkName },
 		]);
 
-		await docker.ensureNetwork();
+		await DockerService.ensureNetwork();
 
 		expect(d.createNetwork).not.toHaveBeenCalled();
 	});
@@ -157,7 +157,7 @@ describe("ensureNetwork", () => {
 		const d = fakeDocker();
 		d.listNetworks.mockResolvedValueOnce([]);
 
-		await docker.ensureNetwork();
+		await DockerService.ensureNetwork();
 
 		expect(d.createNetwork).toHaveBeenCalledWith({
 			CheckDuplicate: true,
@@ -170,17 +170,19 @@ describe("findServiceContainer / listManagedContainers", () => {
 	test("findServiceContainer returns the first match, or null", async () => {
 		const d = fakeDocker();
 		d.listContainers.mockResolvedValueOnce([{ Id: "abc" }]);
-		expect(await docker.findServiceContainer("svc-1")).toEqual({ Id: "abc" });
+		expect(await DockerService.findServiceContainer("svc-1")).toEqual({
+			Id: "abc",
+		});
 
 		d.listContainers.mockResolvedValueOnce([]);
-		expect(await docker.findServiceContainer("svc-2")).toBeNull();
+		expect(await DockerService.findServiceContainer("svc-2")).toBeNull();
 	});
 
 	test("listManagedContainers filters on the managed label", async () => {
 		const d = fakeDocker();
 		d.listContainers.mockResolvedValueOnce([{ Id: "x" }, { Id: "y" }]);
 
-		const result = await docker.listManagedContainers();
+		const result = await DockerService.listManagedContainers();
 
 		expect(result).toEqual([{ Id: "x" }, { Id: "y" }]);
 		const [args] = d.listContainers.mock.calls.at(-1) as [{ filters: string }];
@@ -215,7 +217,7 @@ describe("deploy", () => {
 		const created = makeFakeContainer("new-container-id");
 		d.nextCreatedContainer = created;
 
-		const result = await docker.deploy(baseDeployInput());
+		const result = await DockerService.deploy(baseDeployInput());
 
 		expect(d.pull.mock.calls[0][0]).toBe("nginx:latest");
 		const oldContainer = d.containers.get("old-container-id");
@@ -237,7 +239,7 @@ describe("deploy", () => {
 		const d = fakeDocker();
 		d.listContainers.mockResolvedValueOnce([]);
 
-		const result = await docker.deploy(baseDeployInput());
+		const result = await DockerService.deploy(baseDeployInput());
 
 		expect(
 			result.log.some((l) => l.includes("Removing previous container")),
@@ -248,7 +250,7 @@ describe("deploy", () => {
 		const d = fakeDocker();
 		d.listContainers.mockResolvedValueOnce([]);
 
-		await docker.deploy(baseDeployInput());
+		await DockerService.deploy(baseDeployInput());
 
 		const [opts] = d.createContainer.mock.calls.at(-1) as [
 			Record<string, unknown>,
@@ -275,7 +277,7 @@ describe("deploy", () => {
 		const d = fakeDocker();
 		d.listContainers.mockResolvedValueOnce([]);
 
-		await docker.deploy({ ...baseDeployInput(), portProtocol: "both" });
+		await DockerService.deploy({ ...baseDeployInput(), portProtocol: "both" });
 
 		const [opts] = d.createContainer.mock.calls.at(-1) as [
 			Record<string, unknown>,
@@ -287,7 +289,7 @@ describe("deploy", () => {
 		const d = fakeDocker();
 		d.listContainers.mockResolvedValueOnce([]);
 
-		await docker.deploy({ ...baseDeployInput(), containerPort: null });
+		await DockerService.deploy({ ...baseDeployInput(), containerPort: null });
 
 		const [opts] = d.createContainer.mock.calls.at(-1) as [
 			Record<string, unknown>,
@@ -299,7 +301,7 @@ describe("deploy", () => {
 		const d = fakeDocker();
 		d.listContainers.mockResolvedValueOnce([]);
 
-		await docker.deploy({
+		await DockerService.deploy({
 			...baseDeployInput(),
 			cpuLimit: 1.5,
 			memoryLimitMb: 512,
@@ -317,7 +319,7 @@ describe("deploy", () => {
 		const d = fakeDocker();
 		d.listContainers.mockResolvedValueOnce([]);
 
-		await docker.deploy({ ...baseDeployInput(), networkMode: "host" });
+		await DockerService.deploy({ ...baseDeployInput(), networkMode: "host" });
 
 		const [opts] = d.createContainer.mock.calls.at(-1) as [
 			Record<string, unknown>,
@@ -332,26 +334,28 @@ describe("deploy", () => {
 		d.listContainers.mockResolvedValueOnce([]);
 		d.pullError = new Error("pull boom");
 
-		await expect(docker.deploy(baseDeployInput())).rejects.toThrow("pull boom");
+		await expect(DockerService.deploy(baseDeployInput())).rejects.toThrow(
+			"pull boom",
+		);
 	});
 });
 
 describe("container lifecycle helpers", () => {
 	test("startContainer starts the right container", async () => {
 		const d = fakeDocker();
-		await docker.startContainer("abc");
+		await DockerService.startContainer("abc");
 		expect(d.containers.get("abc")?.start).toHaveBeenCalled();
 	});
 
 	test("stopContainer stops with a 10s grace period", async () => {
 		const d = fakeDocker();
-		await docker.stopContainer("abc");
+		await DockerService.stopContainer("abc");
 		expect(d.containers.get("abc")?.stop).toHaveBeenCalledWith({ t: 10 });
 	});
 
 	test("restartContainer restarts with a 10s grace period", async () => {
 		const d = fakeDocker();
-		await docker.restartContainer("abc");
+		await DockerService.restartContainer("abc");
 		expect(d.containers.get("abc")?.restart).toHaveBeenCalledWith({ t: 10 });
 	});
 
@@ -361,7 +365,7 @@ describe("container lifecycle helpers", () => {
 		c.stop.mockRejectedValueOnce(new Error("already stopped"));
 		d.containers.set("abc", c);
 
-		await docker.removeContainer("abc");
+		await DockerService.removeContainer("abc");
 
 		expect(c.stop).toHaveBeenCalledWith({ t: 10 });
 		expect(c.remove).toHaveBeenCalledWith({ force: true });
@@ -376,7 +380,7 @@ describe("container lifecycle helpers", () => {
 		});
 		d.containers.set("abc", c);
 
-		expect(await docker.inspectStatus("abc")).toEqual({
+		expect(await DockerService.inspectStatus("abc")).toEqual({
 			id: "abc",
 			state: "running",
 			status: "running",
@@ -392,7 +396,7 @@ describe("container lifecycle helpers", () => {
 		});
 		d.containers.set("abc", c);
 
-		expect(await docker.inspectStatus("abc")).toEqual({
+		expect(await DockerService.inspectStatus("abc")).toEqual({
 			id: "abc",
 			state: "exited",
 			status: "exited",
@@ -407,7 +411,7 @@ describe("streamLogs", () => {
 		c.logs.mockResolvedValueOnce(Buffer.from("hello logs"));
 		d.containers.set("abc", c);
 
-		const stream = await docker.streamLogs("abc", false);
+		const stream = await DockerService.streamLogs("abc", false);
 		const text = await new Response(stream).text();
 
 		expect(text).toBe("hello logs");
@@ -429,7 +433,7 @@ describe("streamLogs", () => {
 		c.logs.mockResolvedValueOnce(fakeDuplex);
 		d.containers.set("abc", c);
 
-		const stream = await docker.streamLogs("abc", true);
+		const stream = await DockerService.streamLogs("abc", true);
 		const reader = stream.getReader();
 
 		fakeDuplex.emit("data", Buffer.from("chunk-1"));
@@ -454,7 +458,7 @@ describe("streamLogs", () => {
 		c.logs.mockResolvedValueOnce(fakeDuplex);
 		d.containers.set("abc", c);
 
-		const stream = await docker.streamLogs("abc", true);
+		const stream = await DockerService.streamLogs("abc", true);
 		const reader = stream.getReader();
 
 		fakeDuplex.emit("error", new Error("stream boom"));

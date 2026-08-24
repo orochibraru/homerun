@@ -1,6 +1,7 @@
 import { config } from "./config";
-import { createHandler, ensureNetwork } from "./http";
-import { resolveToken } from "./token";
+import { DockerService } from "./docker";
+import { AgentHttpServer } from "./http";
+import { TokenManager } from "./token";
 import { AGENT_VERSION } from "./version";
 
 async function main() {
@@ -21,9 +22,9 @@ Usage:
 		return;
 	}
 
-	const { token, source } = await resolveToken();
+	const { token, source } = await TokenManager.resolveToken();
 
-	await ensureNetwork().catch((error) => {
+	await DockerService.ensureNetwork().catch((error) => {
 		console.error(
 			`[homerun-agent] couldn't ensure "${config.dockerNetworkName}" network exists : is Docker reachable at ${config.dockerSocketPath}?`,
 		);
@@ -31,9 +32,11 @@ Usage:
 		process.exit(1);
 	});
 
+	const server = new AgentHttpServer(token);
 	Bun.serve({
-		fetch: createHandler(token),
+		fetch: server.notFound,
 		port: config.port,
+		routes: server.routes,
 	});
 
 	console.log("");
