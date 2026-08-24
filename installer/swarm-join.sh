@@ -31,8 +31,8 @@
 # don't drift on how rootless Docker / the agent unit get set up.
 set -euo pipefail
 
-GITEA_HOST="git.ombrage.space"
-GITEA_REPO="orochibraru/homerun"
+GIT_HOST="git.ombrage.space"
+GIT_REPO="orochibraru/homerun"
 VERSION="latest"
 ROOTLESS_USER="homerun"
 JOIN_TOKEN=""
@@ -83,9 +83,9 @@ case "$(uname -m)" in
 esac
 
 if [ "$VERSION" = "latest" ]; then
-	AGENT_URL="https://${GITEA_HOST}/${GITEA_REPO}/releases/latest/download/homerun-agent-${ARCH}"
+	AGENT_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-agent-${ARCH}"
 else
-	AGENT_URL="https://${GITEA_HOST}/${GITEA_REPO}/releases/download/${VERSION}/homerun-agent-${ARCH}"
+	AGENT_URL="https://${GIT_HOST}/${GIT_REPO}/releases/download/${VERSION}/homerun-agent-${ARCH}"
 fi
 
 echo "==> Installing prerequisites"

@@ -54,11 +54,11 @@ simply by mounting it into more than one service.
 ## Networking
 
 - **Container port, protocol, network mode**, `bridge` (default, joins the
-  shared `homerun-network` plus the service's project network if any) or `host`
-  (shares the host's network namespace directly, for apps needing real
-  host-network access like mDNS/SSDP discovery). Homerun never publishes/maps a
-  host port either way; a bridge-mode service is reachable only via its Traefik
-  subdomain, a host-mode service only directly on the host's own port.
+  shared `homerun` plus the service's project network if any) or `host` (shares
+  the host's network namespace directly, for apps needing real host-network
+  access like mDNS/SSDP discovery). Homerun never publishes/maps a host port
+  either way; a bridge-mode service is reachable only via its Traefik subdomain,
+  a host-mode service only directly on the host's own port.
 - **DNS-resolvable**, whether Traefik gets discovery labels at all. Forced off
   automatically in host mode (there's no per-container IP for Traefik's Docker
   provider to route to).

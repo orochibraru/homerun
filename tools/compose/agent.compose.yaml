@@ -1,0 +1,32 @@
+services:
+  agent:
+    restart: unless-stopped
+    # Docker's own default is 10s before SIGKILL, far shorter than the
+    # agent's own graceful-shutdown window (AGENT_SHUTDOWN_TIMEOUT, 120s
+    # default, see agent/index.ts) : a `/v1/deploy` pull or `/v1/build`
+    # clone+build in progress needs real time to finish, not get cut by
+    # `docker stop` before the agent's own grace period even starts.
+    stop_grace_period: 125s
+    ports:
+      - "7420:7420"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - agent_data:/app/data
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
+      DOCKER_NETWORK_NAME: homerun
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 5s
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://0.0.0.0:7420/v1/health",
+        ]
+      timeout: 30s

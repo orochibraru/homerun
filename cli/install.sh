@@ -9,8 +9,8 @@
 # nothing built from source. Same pattern as installer/bootstrap.sh.
 set -euo pipefail
 
-GITEA_HOST="git.ombrage.space"
-GITEA_REPO="orochibraru/homerun"
+GIT_HOST="git.ombrage.space"
+GIT_REPO="orochibraru/homerun"
 VERSION="latest"
 INSTALL_DIR="${HOMERUN_INSTALL_DIR:-/usr/local/bin}"
 
@@ -43,15 +43,15 @@ case "$(uname -m)" in
 esac
 
 if [ "$VERSION" = "latest" ]; then
-	DOWNLOAD_URL="https://${GITEA_HOST}/${GITEA_REPO}/releases/latest/download/homerun-cli-${ARCH}"
+	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-cli-${ARCH}"
 else
-	DOWNLOAD_URL="https://${GITEA_HOST}/${GITEA_REPO}/releases/download/${VERSION}/homerun-cli-${ARCH}"
+	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/download/${VERSION}/homerun-cli-${ARCH}"
 fi
 
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 
-echo "Downloading homerun-cli-${ARCH} (${VERSION}) from ${GITEA_HOST}/${GITEA_REPO}..."
+echo "Downloading homerun-cli-${ARCH} (${VERSION}) from ${GIT_HOST}/${GIT_REPO}..."
 curl -fsSL "$DOWNLOAD_URL" -o "$TMP"
 chmod +x "$TMP"
 

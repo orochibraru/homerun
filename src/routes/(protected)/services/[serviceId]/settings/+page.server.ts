@@ -11,6 +11,7 @@ import { CloudflareService } from "$lib/services/cloudflare.service";
 import { CronService } from "$lib/services/cron.service";
 import { DockerService } from "$lib/services/docker.service";
 import { PangolinService } from "$lib/services/pangolin.service";
+import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Services");
 
@@ -18,7 +19,9 @@ export const load = async ({ parent }) => {
 	const { user } = await parent();
 	const [projects, remoteHosts] = await Promise.all([
 		ProjectDTO.list(user.id),
-		RemoteHostDTO.list(user.id),
+		// Deploy-target picker below : docker and agent hosts alike, see
+		// RemoteHostDTO.listDeployTargets.
+		RemoteHostDTO.listDeployTargets(user.id),
 	]);
 
 	return {
@@ -45,11 +48,10 @@ export const actions = {
 			}
 		} else if (svc.containerId) {
 			try {
-				const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-				await DockerService.removeContainer(
+				await ServiceLifecycleService.remove(
 					svc.containerId,
-					{ force: true },
-					remote,
+					svc.remoteHostId,
+					locals.user.id,
 				);
 			} catch {
 				// Container may already be gone proceed with deleting the record.
@@ -116,6 +118,10 @@ export const actions = {
 
 		// Empty selection means "this host" : otherwise confirm the target
 		// host is actually the user's own, never trust the form value alone.
+		// Both kinds (docker and agent) are real deploy targets, see
+		// RemoteHostDTO.resolveTarget/deploy.service.ts : the "docker only"
+		// rejection here was a stale leftover from before that integration,
+		// real, tested-in-review bug this replaced.
 		let remoteHostId: string | null = null;
 		if (rawHostId) {
 			const host = await RemoteHostDTO.get(rawHostId, locals.user.id);

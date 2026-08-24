@@ -2,11 +2,11 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { DockerService } from "$lib/services/docker.service";
+import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Services");
 
@@ -37,10 +37,15 @@ export const actions = {
 			clientDeploymentId,
 		);
 		if (!result.success) {
+			// The actual reason, not a generic "check history" pointer : real,
+			// tested-in-review gap this replaced, a deploy that fails before
+			// any progress line gets appended (e.g. an unreachable agent, see
+			// deploy.service.ts's catch block) left the deployment history's
+			// own log empty, so "check the deployment history below" was
+			// pointing at a blank panel with nothing in it.
 			return fail(500, {
 				deploymentId: result.deploymentId,
-				error:
-					"Deploy failed : check the deployment history below for details.",
+				error: result.error ?? "Deploy failed.",
 			});
 		}
 
@@ -66,8 +71,11 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await DockerService.restartContainer(svc.containerId, remote);
+		await ServiceLifecycleService.restart(
+			svc.containerId,
+			svc.remoteHostId,
+			locals.user.id,
+		);
 		logger.info(`Service restarted: service=${svc.id} user=${locals.user.id}`);
 		return { success: true };
 	},
@@ -101,8 +109,11 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await DockerService.startContainer(svc.containerId, remote);
+		await ServiceLifecycleService.start(
+			svc.containerId,
+			svc.remoteHostId,
+			locals.user.id,
+		);
 		await svc.update({ desiredState: "running" });
 		logger.info(`Service started: service=${svc.id} user=${locals.user.id}`);
 		NotificationDTO.notify({
@@ -140,8 +151,11 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await DockerService.stopContainer(svc.containerId, remote);
+		await ServiceLifecycleService.stop(
+			svc.containerId,
+			svc.remoteHostId,
+			locals.user.id,
+		);
 		await svc.update({ desiredState: "stopped" });
 		logger.info(`Service stopped: service=${svc.id} user=${locals.user.id}`);
 		NotificationDTO.notify({

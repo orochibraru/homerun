@@ -7,16 +7,29 @@ import { describe, expect, test } from "bun:test";
 import { config } from "../../agent/config";
 
 describe("agent config defaults", () => {
-	test("dockerNetworkName defaults to homerun-network", () => {
+	test("dockerNetworkName defaults to homerun", () => {
 		expect(config.dockerNetworkName).toBe(
-			process.env.HOMERUN_NETWORK_NAME ?? "homerun-network",
+			process.env.HOMERUN_NETWORK_NAME ?? "homerun",
 		);
 	});
 
-	test("dockerSocketPath defaults to the standard Docker socket", () => {
-		expect(config.dockerSocketPath).toBe(
-			process.env.DOCKER_SOCKET_PATH ?? "/var/run/docker.sock",
-		);
+	test("dockerSocketPath honors an explicit DOCKER_SOCKET_PATH, or else auto-detects one", () => {
+		// An explicit value always wins outright (see
+		// AgentConfig.detectDockerSocketPath's docstring) : deterministic to
+		// assert everywhere. Without one, the actual value is genuinely
+		// environment-dependent (DOCKER_HOST, the active `docker context`,
+		// which of a handful of common socket paths exists on *this*
+		// machine), so this only asserts detection produced *something*
+		// real rather than pinning one specific path : a hardcoded
+		// "/var/run/docker.sock" expectation here would itself be exactly
+		// the bug this detection replaced, false on any machine using a
+		// different Docker context (verified live : this failed on a real
+		// OrbStack dev machine before the fix).
+		if (process.env.DOCKER_SOCKET_PATH) {
+			expect(config.dockerSocketPath).toBe(process.env.DOCKER_SOCKET_PATH);
+		} else {
+			expect(config.dockerSocketPath.length).toBeGreaterThan(0);
+		}
 	});
 
 	test("explicitToken defaults to null when AGENT_TOKEN is unset", () => {

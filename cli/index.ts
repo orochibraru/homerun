@@ -1,3 +1,4 @@
+import { Command } from "commander";
 import { ClientFactory } from "./client";
 import { Commands } from "./commands";
 import { LoginFlow } from "./login";
@@ -5,116 +6,133 @@ import { Output } from "./output";
 import { UpdateService } from "./update";
 import { CLI_VERSION } from "./version";
 
-function printHelp(): void {
-	console.log(`
-homerun : CLI for the Homerun REST API (openapi-fetch, typed against
-/api/v1/openapi.json : see cli/README.md).
-
-Usage:
-  homerun login [--base-url <url>]
-  homerun logout
-  homerun update
-  homerun services list [--json]
-  homerun services get <id>
-  homerun services deploy <id>
-  homerun services start <id>
-  homerun services stop <id>
-  homerun services restart <id>
-  homerun projects list [--json]
-  homerun templates list [--json]
-  homerun --version
-
-Auth/target: run \`homerun login\` once (stores your instance URL and a
-CLI-scoped API key in ~/.config/homerun/config.json), or override per-call
-with a flag or env var:
-  --base-url <url>    or HOMERUN_BASE_URL
-  --api-key <key>     or HOMERUN_API_KEY
-`);
+interface GlobalOptions {
+	baseUrl?: string;
+	apiKey?: string;
 }
 
-/** Splits argv into positionals (resource/action/id) vs the handful of known flags : small and fixed enough that a real parser library isn't worth pulling in, same instinct as installer/'s hand-rolled options.ts. */
-function parseArgv(argv: string[]): { positionals: string[]; json: boolean } {
-	const positionals: string[] = [];
-	let json = false;
-	for (let i = 0; i < argv.length; i += 1) {
-		const arg = argv[i];
-		if (arg === "--json") {
-			json = true;
-		} else if (arg === "--base-url" || arg === "--api-key") {
-			i += 1; // consume the flag's value, handled separately by ClientFactory.resolveConfig
-		} else if (arg === "--help" || arg === "-h") {
-			printHelp();
-			process.exit(0);
-		} else if (arg === "--version" || arg === "-v") {
-			console.log(`v${CLI_VERSION}`);
-			process.exit(0);
-		} else if (!arg.startsWith("--")) {
-			positionals.push(arg);
-		}
-	}
-	return { json, positionals };
+interface ListOptions {
+	json?: boolean;
 }
 
-async function main() {
-	const argv = process.argv.slice(2);
-	if (argv.length === 0) {
-		printHelp();
-		return;
-	}
-
-	const { positionals, json } = parseArgv(argv);
-	const [resource, action, id] = positionals;
-
-	if (resource === "login") {
-		return LoginFlow.login(argv);
-	}
-	if (resource === "logout") {
-		return LoginFlow.logout();
-	}
-	if (resource === "update") {
-		return UpdateService.update();
-	}
-
-	const config = ClientFactory.resolveConfig(argv);
+/**
+ * Resolves the API client from the root program's already-parsed
+ * `--base-url`/`--api-key` (see `program.opts()` below), same "not logged in"
+ * fallback the old hand-rolled `index.ts` had : `Output.fail(...)` (not a
+ * plain `fail()` function) isn't recognized by TS's control-flow analysis as
+ * making the rest of a caller unreachable, so every call site here still
+ * needs its own `return` in front of it.
+ */
+function requireClient(): ReturnType<typeof ClientFactory.makeClient> {
+	const config = ClientFactory.resolveConfig(program.opts<GlobalOptions>());
 	if (!config) {
-		// `return` (not just a bare statement) : an `Output.fail(...)` method
-		// call, unlike a plain `fail()` function call, isn't recognized by
-		// TS's control-flow analysis as making the rest of this block
-		// unreachable, so `config` wouldn't otherwise narrow to non-null below.
 		return Output.fail("Not logged in. Run `homerun login` to get started.");
 	}
-	const client = ClientFactory.makeClient(config);
-
-	if (resource === "services") {
-		if (action === "list") {
-			return Commands.servicesList(client, json);
-		}
-		if (action === "get" && id) {
-			return Commands.serviceGet(client, id, json);
-		}
-		if (
-			(action === "deploy" ||
-				action === "start" ||
-				action === "stop" ||
-				action === "restart") &&
-			id
-		) {
-			return Commands.serviceAction(client, action, id);
-		}
-	}
-
-	if (resource === "projects" && action === "list") {
-		return Commands.projectsList(client, json);
-	}
-
-	if (resource === "templates" && action === "list") {
-		return Commands.templatesList(client, json);
-	}
-
-	printHelp();
-	Output.fail(`Unknown command: ${argv.join(" ")}`);
+	return ClientFactory.makeClient(config);
 }
 
-main().catch((error) => {
+const program = new Command();
+
+program
+	.name("homerun")
+	.description(
+		"CLI for the Homerun REST API (openapi-fetch, typed against /api/v1/openapi.json : see cli/README.md).",
+	)
+	.version(CLI_VERSION, "-v, --version")
+	.option(
+		"--base-url <url>",
+		"instance URL, overrides the saved login (or HOMERUN_BASE_URL)",
+	)
+	.option(
+		"--api-key <key>",
+		"API key, overrides the saved login (or HOMERUN_API_KEY)",
+	)
+	.addHelpText(
+		"after",
+		`
+Auth/target: run \`homerun login\` once (stores your instance URL and a
+CLI-scoped API key in ~/.config/homerun/config.json), or override per-call
+with --base-url/--api-key above or their HOMERUN_BASE_URL/HOMERUN_API_KEY
+env var equivalents.`,
+	);
+
+program
+	.command("login")
+	.description("log in via a device-code flow and save the resulting API key")
+	.action(async () => {
+		const { baseUrl } = program.opts<GlobalOptions>();
+		await LoginFlow.login(baseUrl);
+	});
+
+program
+	.command("logout")
+	.description("clear the saved login")
+	.action(() => {
+		LoginFlow.logout();
+	});
+
+program
+	.command("update")
+	.description("self-update the installed binary to the latest release")
+	.action(async () => {
+		await UpdateService.update();
+	});
+
+const services = program.command("services").description("manage services");
+
+services
+	.command("list")
+	.description("list services")
+	.option("--json", "print raw JSON instead of a table")
+	.action(async (options: ListOptions) => {
+		await Commands.servicesList(requireClient(), options.json ?? false);
+	});
+
+services
+	.command("get <id>")
+	.description("get a service by id")
+	.action(async (id: string) => {
+		await Commands.serviceGet(requireClient(), id);
+	});
+
+for (const action of ["deploy", "start", "stop", "restart"] as const) {
+	services
+		.command(`${action} <id>`)
+		.description(`${action} a service`)
+		.action(async (id: string) => {
+			await Commands.serviceAction(requireClient(), action, id);
+		});
+}
+
+const projects = program.command("projects").description("manage projects");
+
+projects
+	.command("list")
+	.description("list projects")
+	.option("--json", "print raw JSON instead of a table")
+	.action(async (options: ListOptions) => {
+		await Commands.projectsList(requireClient(), options.json ?? false);
+	});
+
+const templates = program.command("templates").description("manage templates");
+
+templates
+	.command("list")
+	.description("list templates")
+	.option("--json", "print raw JSON instead of a table")
+	.action(async (options: ListOptions) => {
+		await Commands.templatesList(requireClient(), options.json ?? false);
+	});
+
+// No subcommand at all : commander itself only prints help on an unknown or
+// missing *required* argument, not on a bare `homerun`, so this matches the
+// old hand-rolled index.ts's "no args -> print help, exit 0" behavior
+// explicitly rather than leaving a silent no-op.
+if (process.argv.length <= 2) {
+	program.outputHelp();
+	process.exit(0);
+}
+
+program.parseAsync(process.argv).catch((error: unknown) => {
 	Output.fail(error instanceof Error ? error.message : String(error));
 });

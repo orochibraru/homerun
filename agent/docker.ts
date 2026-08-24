@@ -1,8 +1,15 @@
+import { execFile } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import Docker from "dockerode";
 import { config } from "./config";
-import type { DeployInput } from "./schemas";
+import type { BuildInput, DeployInput } from "./schemas";
 
 export type { DeployInput };
+
+const execFileAsync = promisify(execFile);
 
 /** Same convention as the main app's docker/labels.ts : kept identical on purpose so both sides read the same way. */
 export const MANAGED_LABEL = "homerun.managed";
@@ -16,8 +23,23 @@ export interface DeployResult {
 	log: string[];
 }
 
+/**
+ * Every operation's progress lines used to only ever accumulate into the
+ * array/callback the HTTP response eventually returns, never printed
+ * anywhere : a deploy or build in progress was completely invisible from
+ * the agent's own console/journal, real gap this closes (see the same
+ * prefix convention `console.log`s in `index.ts`'s boot banner use).
+ */
+function logLine(prefix: string, line: string): void {
+	console.log(`[${prefix}] ${line}`);
+}
+
 export interface ContainerStatus {
 	id: string;
+	// The container's exit code when it isn't running, null while running :
+	// the main app's own ContainerStatus enum needs this to tell a clean
+	// stop apart from a crash (see agent-client.service.ts's inspectStatus).
+	exitCode: number | null;
 	state: string;
 	status: string;
 }
@@ -81,13 +103,22 @@ class AgentDockerService {
 	async deploy(input: DeployInput): Promise<DeployResult> {
 		const d = this.getDocker();
 		const log: string[] = [];
+		const prefix = `deploy ${input.slug}`;
+		const push = (line: string) => {
+			log.push(line);
+			logLine(prefix, line);
+		};
 
-		log.push(`Pulling ${input.image}:${input.tag}...`);
-		await this.#pullImage(input.image, input.tag, input.registryAuth, log);
+		if (input.skipPull) {
+			push(`Using local image ${input.image}:${input.tag} (just built).`);
+		} else {
+			push(`Pulling ${input.image}:${input.tag}...`);
+			await this.#pullImage(input.image, input.tag, input.registryAuth, push);
+		}
 
 		const previous = await this.findServiceContainer(input.serviceId);
 		if (previous) {
-			log.push(`Removing previous container ${previous.Id.slice(0, 12)}...`);
+			push(`Removing previous container ${previous.Id.slice(0, 12)}...`);
 			const c = d.getContainer(previous.Id);
 			await c.stop({ t: 10 }).catch(() => undefined);
 			await c.remove({ force: true }).catch(() => undefined);
@@ -96,7 +127,7 @@ class AgentDockerService {
 		const isHost = input.networkMode === "host";
 		const name = `homerun-agent-${input.slug}-${crypto.randomUUID().slice(0, 8)}`;
 
-		log.push(`Creating ${name}...`);
+		push(`Creating ${name}...`);
 		const container = await d.createContainer({
 			Env: input.envVars.map((e) => `${e.key}=${e.value}`),
 			ExposedPorts: input.containerPort
@@ -134,31 +165,36 @@ class AgentDockerService {
 		});
 
 		await container.start();
-		log.push(`Started ${container.id.slice(0, 12)}.`);
+		push(`Started ${container.id.slice(0, 12)}.`);
 		return { containerId: container.id, log };
 	}
 
 	async startContainer(id: string): Promise<void> {
 		await this.getDocker().getContainer(id).start();
+		logLine("containers", `Started ${id.slice(0, 12)}.`);
 	}
 
 	async stopContainer(id: string): Promise<void> {
 		await this.getDocker().getContainer(id).stop({ t: 10 });
+		logLine("containers", `Stopped ${id.slice(0, 12)}.`);
 	}
 
 	async restartContainer(id: string): Promise<void> {
 		await this.getDocker().getContainer(id).restart({ t: 10 });
+		logLine("containers", `Restarted ${id.slice(0, 12)}.`);
 	}
 
 	async removeContainer(id: string): Promise<void> {
 		const c = this.getDocker().getContainer(id);
 		await c.stop({ t: 10 }).catch(() => undefined);
 		await c.remove({ force: true });
+		logLine("containers", `Removed ${id.slice(0, 12)}.`);
 	}
 
 	async inspectStatus(id: string): Promise<ContainerStatus> {
 		const info = await this.getDocker().getContainer(id).inspect();
 		return {
+			exitCode: info.State.Running ? null : info.State.ExitCode,
 			id: info.Id,
 			state: info.State.Status,
 			status: info.State.Running ? "running" : info.State.Status,
@@ -196,18 +232,165 @@ class AgentDockerService {
 			stdout: true,
 			tail: 200,
 		});
+		// Real, tested-in-review finding : the stream ending naturally (the
+		// container's own `end` event, e.g. it stopped) and `cancel()` being
+		// invoked by Bun's own Response-body cleanup can both fire for the
+		// same request (verified live : a real "GET .../logs" that already
+		// returned 200 still triggered `cancel()` afterward). Destroying the
+		// underlying duplex socket a second time throws deep in Bun's
+		// Node-compat socket layer ("Invalid state: Reader released",
+		// node:net's closeSocketHandle) : uncaught, since it happens inside
+		// a stream-teardown callback with nothing above it to catch it,
+		// which crashed the whole agent process, not just this one request.
+		// `ended` skips the redundant destroy, and the try/catch is defense
+		// in depth against any other ordering this Bun-runtime quirk can hit
+		// (matches this app's own precedent for a load-bearing but
+		// undocumented Bun socket behavior, see the main app's Terminal
+		// feature).
+		let ended = false;
 		return new ReadableStream<Uint8Array>({
 			cancel() {
-				// @ts-expect-error : dockerode's stream is a duplex; destroy exists at runtime even if not in its types.
-				dockerStream.destroy?.();
+				if (ended) {
+					return;
+				}
+				try {
+					// @ts-expect-error : dockerode's stream is a duplex; destroy exists at runtime even if not in its types.
+					dockerStream.destroy?.();
+				} catch (err) {
+					console.warn(
+						`[containers] Couldn't cleanly cancel a log stream for ${id.slice(0, 12)}`,
+						err,
+					);
+				}
 			},
 			start(controller) {
 				dockerStream.on("data", (chunk: Buffer) =>
 					controller.enqueue(new Uint8Array(chunk)),
 				);
-				dockerStream.on("end", () => controller.close());
-				dockerStream.on("error", (err: Error) => controller.error(err));
+				dockerStream.on("end", () => {
+					ended = true;
+					controller.close();
+				});
+				dockerStream.on("error", (err: Error) => {
+					ended = true;
+					controller.error(err);
+				});
 			},
+		});
+	}
+
+	/**
+	 * Clones a git repo at a ref and builds its Dockerfile into a local
+	 * image tagged `input.tag`, optionally pushing it to a registry
+	 * afterward : see `buildInputSchema`'s docstring for the full picture
+	 * (why no cache-from pull, when `push` matters). Mirrors the main app's
+	 * `docker/git-build.ts`'s `buildFromGit`, this is a from-scratch,
+	 * self-contained implementation (the agent has no access to the main
+	 * app's source tree, same "keep the two in sync by hand" precedent as
+	 * `deploy()`/`createAndStartContainer` already document).
+	 */
+	async buildFromGit(
+		input: BuildInput,
+		onProgress?: (line: string) => void,
+	): Promise<{ error?: string; success: boolean }> {
+		const ref = input.gitRef || "main";
+		const dir = await mkdtemp(join(tmpdir(), "homerun-agent-build-"));
+		const d = this.getDocker();
+		// Always logs to this process's own console, regardless of whether a
+		// caller passed onProgress (http.ts's /v1/build route currently
+		// doesn't, since the response has no log field to collect one into,
+		// unlike deploy()) : a build in progress was otherwise completely
+		// invisible from the agent's own console/journal, same gap deploy()
+		// had, see logLine's own docstring.
+		const prefix = `build ${input.tag}`;
+		const push = (line: string) => {
+			logLine(prefix, line);
+			onProgress?.(line);
+		};
+
+		try {
+			push(`Cloning ${input.gitUrl} (${ref})...`);
+			await execFileAsync("git", [
+				"clone",
+				"--depth",
+				"1",
+				"--branch",
+				ref,
+				"--single-branch",
+				input.gitUrl,
+				dir,
+			]);
+
+			const contextDir = input.buildContext
+				? join(dir, input.buildContext)
+				: dir;
+			const dockerfile = input.dockerfilePath || "Dockerfile";
+
+			push(`Building ${dockerfile}...`);
+			const stream = await d.buildImage(
+				{ context: contextDir, src: ["."] },
+				{ dockerfile, rm: true, t: input.tag },
+			);
+
+			await new Promise<void>((resolvePromise, reject) => {
+				let lastStatus = "";
+				d.modem.followProgress(
+					stream,
+					(err: Error | null) => (err ? reject(err) : resolvePromise()),
+					(event: { stream?: string; error?: string }) => {
+						if (event.error) {
+							reject(new Error(event.error));
+							return;
+						}
+						const text = event.stream?.trim();
+						if (text && text !== lastStatus) {
+							lastStatus = text;
+							push(text);
+						}
+					},
+				);
+			});
+
+			if (input.push) {
+				push(`Pushing to ${input.push.tag}...`);
+				await this.#pushImage(input.tag, input.push);
+			}
+
+			return { success: true };
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			return { error: message, success: false };
+		} finally {
+			await rm(dir, { force: true, recursive: true }).catch(() => {
+				// Best-effort cleanup, same as the main app's own buildFromGit.
+			});
+		}
+	}
+
+	/** Same repo/tag splitting and tag-then-push shape as the main app's `docker/containers.ts`'s `pushImage`, kept in sync by hand (see `buildFromGit`'s docstring). */
+	async #pushImage(
+		localTag: string,
+		push: NonNullable<BuildInput["push"]>,
+	): Promise<void> {
+		const d = this.getDocker();
+		const lastColon = push.tag.lastIndexOf(":");
+		const lastSlash = push.tag.lastIndexOf("/");
+		const [repo, tag] =
+			lastColon === -1 || lastColon < lastSlash
+				? [push.tag, "latest"]
+				: [push.tag.slice(0, lastColon), push.tag.slice(lastColon + 1)];
+
+		await d.getImage(localTag).tag({ repo, tag });
+		const authconfig = {
+			password: push.password,
+			serveraddress: push.registryUrl,
+			username: push.username,
+		};
+		const stream = await d.getImage(`${repo}:${tag}`).push({ authconfig, tag });
+		await new Promise<void>((resolvePromise, reject) => {
+			d.modem.followProgress(stream, (err: Error | null) =>
+				err ? reject(err) : resolvePromise(),
+			);
 		});
 	}
 
@@ -224,7 +407,7 @@ class AgentDockerService {
 		image: string,
 		tag: string,
 		auth?: DeployInput["registryAuth"] | null,
-		log?: string[],
+		onLine?: (line: string) => void,
 	): Promise<void> {
 		const d = this.getDocker();
 		const ref = `${image}:${tag}`;
@@ -244,7 +427,7 @@ class AgentDockerService {
 							: event.status;
 						if (line && line !== lastStatus) {
 							lastStatus = line;
-							log?.push(line);
+							onLine?.(line);
 						}
 					},
 				);

@@ -23,13 +23,13 @@ class CliCommands {
 		);
 	}
 
-	async serviceGet(client: Client, id: string, json: boolean): Promise<void> {
+	async serviceGet(client: Client, id: string): Promise<void> {
 		const svc = await this.#unwrap(
 			client.GET("/services/{serviceId}", {
 				params: { path: { serviceId: id } },
 			}),
 		);
-		Output.printJson(json ? svc : svc);
+		Output.printJson(svc);
 	}
 
 	async serviceAction(

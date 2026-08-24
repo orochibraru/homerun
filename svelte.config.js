@@ -1,4 +1,4 @@
-import adapter from "svelte-adapter-bun";
+import adapter from "./tools/adapter/index.ts";
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {

@@ -32,12 +32,7 @@ describe("NetworkSetup.ensureHomerunNetwork", () => {
 
 		const calls = (runner.run as ReturnType<typeof mock>).mock.calls;
 		expect(calls).toHaveLength(1);
-		expect(calls[0][0]).toEqual([
-			"docker",
-			"network",
-			"inspect",
-			"homerun-network",
-		]);
+		expect(calls[0][0]).toEqual(["docker", "network", "inspect", "homerun"]);
 	});
 
 	test("creates the network when inspect fails", async () => {
@@ -51,12 +46,7 @@ describe("NetworkSetup.ensureHomerunNetwork", () => {
 
 		const calls = (runner.run as ReturnType<typeof mock>).mock.calls;
 		expect(calls).toHaveLength(2);
-		expect(calls[1][0]).toEqual([
-			"docker",
-			"network",
-			"create",
-			"homerun-network",
-		]);
+		expect(calls[1][0]).toEqual(["docker", "network", "create", "homerun"]);
 	});
 
 	test("passes DOCKER_HOST and HOME derived from the socket/username", async () => {

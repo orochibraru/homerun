@@ -46,7 +46,7 @@ async function main() {
 		opts.rootlessUser,
 	);
 
-	console.log("\n== 4/5 homerun-network ==");
+	console.log("\n== 4/5 homerun ==");
 	await NetworkSetup.ensureHomerunNetwork(run, opts.rootlessUser, dockerSocket);
 
 	console.log("\n== 5/5 Install ==");

@@ -10,8 +10,8 @@ scaffold for the SvelteKit app itself (a Svelte-compiling preload helper for
 future component tests, wired in via `bunfig.toml`'s `[test].preload`); it
 predates and is unrelated to the `agent`/`installer`/`cli` suites below.
 
-Run everything: `bun run test`. Scoped: `bun run test:agent`,
-`bun run test:installer`, `bun run test:cli`.
+Run everything: `bun test`. Scoped: `bun test:agent`, `bun test:installer`,
+`bun test:cli`.
 
 ## Module mocks are process-global, not per-file
 
@@ -104,10 +104,10 @@ developer's stored API key.
 scoped away from `tests/**` and `cli/generated/**` (generated OpenAPI types,
 never meant to be exercised directly) via `coveragePathIgnorePatterns`. Coverage
 only reports on files actually loaded by the tests that ran, so scoping to one
-package (`bun run test:agent`) only shows that package's files, not a
-0%-everywhere table for the rest of the repo. No `coverageThreshold` is set yet
-— this suite is brand new, enforcing a threshold is a reasonable follow-up once
-coverage has stabilized, not a day-one requirement.
+package (`bun test:agent`) only shows that package's files, not a 0%-everywhere
+table for the rest of the repo. No `coverageThreshold` is set yet — this suite
+is brand new, enforcing a threshold is a reasonable follow-up once coverage has
+stabilized, not a day-one requirement.
 
 ## Fakes over mocking libraries
 

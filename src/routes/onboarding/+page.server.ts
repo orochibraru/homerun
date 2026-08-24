@@ -7,6 +7,7 @@ import {
 } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
 import { onboardingSchema } from "$lib/server/validation/onboarding";
 import { rebuildAuth } from "$lib/services/auth";
 
@@ -56,6 +57,22 @@ export const actions = {
 		}
 		const input = parsed.data;
 
+		const baseDomain = normalizeBaseDomain(input.baseDomain);
+		if (!baseDomain) {
+			return fail(400, {
+				errors: {
+					baseDomain: [
+						'Base domain must be a bare hostname, like "example.com" or "app.example.local" : no "https://", path, or trailing slash.',
+					],
+				},
+				values: Object.fromEntries(formData),
+			});
+		}
+		// Origin isn't a separate field, same derivation as
+		// settings/+page.server.ts's updateCore action : base domain plus the
+		// "Use HTTPS" checkbox, so this wizard only ever asks for one domain.
+		const authOrigin = `${input.useHttps ? "https" : "http"}://${baseDomain}`;
+
 		const settings = await InstanceSettingsDTO.get();
 		// authCheckUrl isn't part of this wizard (advanced/rarely-changed,
 		// editable later on /settings) : preserve whatever it's currently set
@@ -63,12 +80,12 @@ export const actions = {
 		await settings.updateCore({
 			authCheckUrl: settings.toJSON().authCheckUrl,
 			authCrossSubdomainCookies: input.authCrossSubdomainCookies,
-			authOrigin: input.authOrigin,
-			baseDomain: input.baseDomain,
+			authOrigin,
+			baseDomain,
 		});
 		await settings.updateDocker({
-			dockerNetworkName: input.dockerNetworkName,
-			dockerSocketPath: input.dockerSocketPath,
+			dockerNetworkName: blankToNull(input.dockerNetworkName),
+			dockerSocketPath: blankToNull(input.dockerSocketPath),
 		});
 		await settings.updateTraefik({
 			// Not part of this wizard (advanced/rarely-changed, editable later on

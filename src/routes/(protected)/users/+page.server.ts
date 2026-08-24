@@ -87,7 +87,12 @@ export const actions = {
 
 		const result = await auth.api
 			.createUser({
-				body: { email, name, password, role },
+				// emailVerified: true, same as accept-invite/+page.server.ts's
+				// createUser call : an admin creating this account already
+				// vouches for the email address, and there's no working
+				// verify-then-unlock flow for it to fall into otherwise (see
+				// sign-in/+page.svelte's comment on the dead-end that used to be).
+				body: { data: { emailVerified: true }, email, name, password, role },
 				headers: request.headers,
 			})
 			.catch((error: unknown) => ({ error }));

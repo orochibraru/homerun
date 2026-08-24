@@ -66,9 +66,18 @@
 				);
 				return;
 			}
-			// Always land on confirm so the user knows to check their email
-			// (or gets the dev-mode bypass if SMTP isn't configured)
-			goto(resolve("/auth/sign-up/confirm"));
+			// Straight to the dashboard, not /auth/sign-up/confirm : this is
+			// always the bootstrap-admin sign-up (every later account is
+			// admin-direct-create or invite-accept, see hooks.server.ts's
+			// SIGN_UP_PATH block), and the (protected) layout guard sends an
+			// instance that hasn't finished onboarding to /onboarding, which
+			// includes its own Email/SMTP step. Forcing email verification
+			// *before* that was a real chicken-and-egg bug in production : an
+			// admin with no SMTP configured yet (the normal fresh-install
+			// case, since SMTP is one of the things onboarding sets up) had
+			// no way to receive the very email that page waits for, and no
+			// way off it either, dev's bypass button doesn't exist in prod.
+			goto(resolve("/"));
 		} catch {
 			toast.error("An unexpected error occurred. Please try again.");
 		} finally {

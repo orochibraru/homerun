@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { KeyRound, Plus, Trash2 } from "@lucide/svelte";
+	import {
+		Container,
+		Globe,
+		KeyRound,
+		Mail,
+		Network,
+		Plus,
+		Trash2,
+	} from "@lucide/svelte";
 	import type { SubmitFunction } from "@sveltejs/kit";
 	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
@@ -7,6 +15,7 @@
 	import { page } from "$app/state";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
+	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -42,6 +51,63 @@
 	function highlightClass(field: string): string {
 		return highlighted.has(field) ? "ring-2 ring-amber-400" : "";
 	}
+	/** The live setup-check message for a highlighted field, if any : see the load's `fieldIssues`. */
+	function issueFor(field: string): string | undefined {
+		return highlighted.has(field) ? data.fieldIssues[field] : undefined;
+	}
+
+	/** Which tab a given /settings field id lives on : drives the setup-issue banner's deep-link (see AdminService.SETUP_CHECK_FIELDS). */
+	const FIELD_TAB: Record<string, string> = {
+		authCheckUrl: "general",
+		authCrossSubdomainCookies: "general",
+		baseDomain: "general",
+		dockerNetworkName: "docker",
+		dockerSocketPath: "docker",
+		smtpFrom: "email",
+		smtpHost: "email",
+		smtpPassword: "email",
+		smtpPort: "email",
+		smtpUser: "email",
+	};
+
+	// Categorized so the page is actually skimmable instead of one long
+	// scroll of every section : each maps to a real settings group, not an
+	// arbitrary split. Sections stay mounted (toggled via the `hidden`
+	// attribute, not {#if}), same "hide, don't unmount" approach services/
+	// new's step wizard uses, so switching tabs never loses in-progress
+	// field edits or the oauthRows/autoscale $state seeded below.
+	//
+	// `hasWarning` (a small dot next to the tab label, see TabNav) is what
+	// makes a setup issue on a tab you're *not* looking at discoverable at
+	// all : real, tested-in-review gap this fixes, an amber ring around a
+	// field on a hidden tab was previously invisible with nothing pointing
+	// at it, easy to miss entirely once the page moved off one long scroll.
+	const settingsTabs: NavTab[] = $derived(
+		[
+			{ icon: Globe, id: "general", label: "General" },
+			{ icon: Container, id: "docker", label: "Docker" },
+			{ icon: Network, id: "networking", label: "Networking" },
+			{ icon: Mail, id: "email", label: "Email" },
+			{ icon: KeyRound, id: "authentication", label: "Authentication" },
+		].map((tab) => ({
+			...tab,
+			hasWarning: Object.keys(data.fieldIssues).some(
+				(field) => FIELD_TAB[field] === tab.id,
+			),
+		})),
+	);
+
+	let activeTab = $state(
+		untrack(() => {
+			for (const field of highlighted) {
+				const tab = FIELD_TAB[field];
+				if (tab) {
+					return tab;
+				}
+			}
+			return "general";
+		}),
+	);
 
 	onMount(() => {
 		title.set("Settings");
@@ -140,13 +206,24 @@
     <p class="mb-6 text-sm text-red-500">{form.error}</p>
   {/if}
 
+  <TabNav
+    active={activeTab}
+    onSelect={(id) => {
+      activeTab = id;
+    }}
+    tabs={settingsTabs}
+  />
+
   <div class="space-y-6">
     <!-- ═══ Core ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "general"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Core</h2>
         <p class="text-text-muted text-xs">
-          Base domain, origin, and the auth-gate check URL.
+          Base domain and the auth-gate check URL.
         </p>
       </div>
       <form
@@ -166,28 +243,33 @@
             value={data.settings.baseDomain ?? ""}
           />
           <p class="text-text-subtle mt-1.5 text-xs">
-            Deployed services are routed under &lt;slug&gt;.&lt;this&gt;.
+            A bare hostname, e.g. <code class="font-mono">example.com</code>
+            or <code class="font-mono">app.example.local</code> : no
+            <code class="font-mono">https://</code>, path, or trailing slash.
+            Deployed services are routed under &lt;slug&gt;.&lt;this&gt;, and
+            this app's own origin below is derived from it, so this one field
+            is all that's needed.
           </p>
+          {#if issueFor("baseDomain")}
+            <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+              ⚠ {issueFor("baseDomain")}
+            </p>
+          {/if}
         </div>
-        <div>
-          <label class={label} for="authOrigin">Origin URL</label>
-          <Input
-            class={highlightClass("authOrigin")}
-            id="authOrigin"
-            name="authOrigin"
-            placeholder={data.envDefaults.authOrigin}
-            type="text"
-            value={data.settings.authOrigin ?? ""}
-          />
-          <p class="text-text-subtle mt-1.5 text-xs">
-            Display-only today : better-auth's own baseURL still reads the
-            <code>ORIGIN</code>
-            env var directly (not this override), to avoid changing its dev-mode
-            request-derived-origin behavior. Set
-            <code>ORIGIN</code>
-            for anything that actually depends on it.
-          </p>
-        </div>
+        <CheckBox
+          checked={data.settings.authOrigin
+          ? data.settings.authOrigin.startsWith("https://")
+          : true}
+          helperText={`Origin: ${
+            data.settings.authOrigin ??
+            (data.settings.baseDomain
+              ? `https://${data.settings.baseDomain}`
+              : (data.envDefaults.authOrigin ?? "derived per-request until a base domain is set"))
+          }`}
+          id="useHttps"
+          label="Use HTTPS"
+          name="useHttps"
+        />
         <div>
           <label class={label} for="authCheckUrl">Auth-check URL</label>
           <Input
@@ -217,7 +299,10 @@
     </section>
 
     <!-- ═══ Docker ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "docker"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Docker</h2>
         <p class="text-text-muted text-xs">
@@ -241,6 +326,11 @@
             type="text"
             value={data.settings.dockerSocketPath ?? ""}
           />
+          {#if issueFor("dockerSocketPath")}
+            <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+              ⚠ {issueFor("dockerSocketPath")}
+            </p>
+          {/if}
         </div>
         <div>
           <label class={label} for="dockerNetworkName"
@@ -261,7 +351,10 @@
     </section>
 
     <!-- ═══ Orchestration ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "docker"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Orchestration</h2>
         <p class="text-text-muted text-xs">
@@ -307,7 +400,10 @@
     </section>
 
     <!-- ═══ Autoscaling ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "docker"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Autoscaling</h2>
         <p class="text-text-muted text-xs">
@@ -392,7 +488,10 @@
     </section>
 
     <!-- ═══ Traefik ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "networking"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Traefik</h2>
         <p class="text-text-muted text-xs">
@@ -415,15 +514,18 @@
             type="email"
             value={data.settings.traefikAcmeEmail ?? ""}
           />
-          <p class="text-text-subtle mt-1.5 text-xs">
-            The contact email Traefik registers with Let's Encrypt when
-            generating certificates. This is informational only : it's
-            recorded here for reference and validated as a real email, but
-            saving it doesn't push it to the running Traefik container.
-            Traefik reads it from the <code class="font-mono">ACME_EMAIL</code>
+          <p
+            class="mt-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"
+          >
+            <strong>Doesn't take effect by saving here.</strong> The contact
+            email Traefik registers with Let's Encrypt when generating
+            certificates : recorded for reference and validated as a real
+            email, but this app never touches the running Traefik container's
+            own config. Traefik reads it from the
+            <code class="font-mono">ACME_EMAIL</code>
             env var at container startup (compose.yaml's
             <code class="font-mono">--certificatesresolvers.letsencrypt.acme.email</code>
-            flag), so set it there and recreate the Traefik container for a
+            flag) : set it there and recreate the Traefik container for a
             change to actually take effect.
           </p>
         </div>
@@ -472,7 +574,10 @@
     </section>
 
     <!-- ═══ Cloudflare ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "networking"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Cloudflare</h2>
         <p class="text-text-muted text-xs">
@@ -537,7 +642,10 @@
     </section>
 
     <!-- ═══ Pangolin ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "networking"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Pangolin</h2>
         <p class="text-text-muted text-xs">
@@ -643,12 +751,20 @@
     </section>
 
     <!-- ═══ SMTP ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "email"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">Email (SMTP)</h2>
         <p class="text-text-muted text-xs">
           Used for email verification on sign-up.
         </p>
+        {#if issueFor("smtpHost")}
+          <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+            ⚠ {issueFor("smtpHost")}
+          </p>
+        {/if}
       </div>
       <form
         action="?/updateSmtp"
@@ -737,7 +853,10 @@
     </section>
 
     <!-- ═══ OAuth Providers ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section
+      class="border-border bg-surface rounded-2xl border"
+      hidden={activeTab !== "authentication"}
+    >
       <div class="border-border border-b px-5 py-4">
         <h2 class="text-text text-sm font-semibold">OAuth Providers</h2>
         <p class="text-text-muted text-xs">

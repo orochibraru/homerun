@@ -1,10 +1,10 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { DockerService } from "$lib/services/docker.service";
+import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Services");
 
@@ -64,11 +64,10 @@ export const actions = {
 			}
 		} else if (svc.containerId) {
 			try {
-				const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-				await DockerService.removeContainer(
+				await ServiceLifecycleService.remove(
 					svc.containerId,
-					{ force: true },
-					remote,
+					svc.remoteHostId,
+					locals.user.id,
 				);
 			} catch {
 				// Container may already be gone on the host : proceed with
@@ -105,8 +104,11 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await DockerService.restartContainer(svc.containerId, remote);
+		await ServiceLifecycleService.restart(
+			svc.containerId,
+			svc.remoteHostId,
+			locals.user.id,
+		);
 		logger.info(
 			`Service restarted: service=${serviceId} user=${locals.user.id}`,
 		);
@@ -141,8 +143,11 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await DockerService.startContainer(svc.containerId, remote);
+		await ServiceLifecycleService.start(
+			svc.containerId,
+			svc.remoteHostId,
+			locals.user.id,
+		);
 		await svc.update({ desiredState: "running" });
 		logger.info(`Service started: service=${serviceId} user=${locals.user.id}`);
 		return { success: true };
@@ -174,8 +179,11 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-		await DockerService.stopContainer(svc.containerId, remote);
+		await ServiceLifecycleService.stop(
+			svc.containerId,
+			svc.remoteHostId,
+			locals.user.id,
+		);
 		await svc.update({ desiredState: "stopped" });
 		logger.info(`Service stopped: service=${serviceId} user=${locals.user.id}`);
 		return { success: true };

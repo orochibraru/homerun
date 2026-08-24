@@ -100,7 +100,7 @@ mock.module("dockerode", () => ({ default: FakeDocker }));
 const { DockerService } = await import("../../agent/docker");
 // Real config, read (not mocked) : assertions below compare against
 // whatever agent/config.ts actually resolves in this environment rather
-// than hardcoding "homerun-network", keeping this file config-mock-free.
+// than hardcoding "homerun", keeping this file config-mock-free.
 const { config: realConfig } = await import("../../agent/config");
 
 afterAll(() => {
@@ -376,27 +376,29 @@ describe("container lifecycle helpers", () => {
 		const c = makeFakeContainer("abc");
 		c.inspect.mockResolvedValueOnce({
 			Id: "abc",
-			State: { Running: true, Status: "running" },
+			State: { ExitCode: 0, Running: true, Status: "running" },
 		});
 		d.containers.set("abc", c);
 
 		expect(await DockerService.inspectStatus("abc")).toEqual({
+			exitCode: null,
 			id: "abc",
 			state: "running",
 			status: "running",
 		});
 	});
 
-	test("inspectStatus falls back to the raw Status when not running", async () => {
+	test("inspectStatus falls back to the raw Status when not running, reporting the exit code", async () => {
 		const d = fakeDocker();
 		const c = makeFakeContainer("abc");
 		c.inspect.mockResolvedValueOnce({
 			Id: "abc",
-			State: { Running: false, Status: "exited" },
+			State: { ExitCode: 137, Running: false, Status: "exited" },
 		});
 		d.containers.set("abc", c);
 
 		expect(await DockerService.inspectStatus("abc")).toEqual({
+			exitCode: 137,
 			id: "abc",
 			state: "exited",
 			status: "exited",

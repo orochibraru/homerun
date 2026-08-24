@@ -2,7 +2,6 @@
 	import { Eye, EyeOff, Server } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { dev } from "$app/environment";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { signIn, useSession } from "$lib/auth-client";
@@ -32,16 +31,19 @@
 		e.preventDefault();
 		loading = true;
 		try {
-			const { data, error } = await signIn.email({ email, password });
+			const { error } = await signIn.email({ email, password });
 			if (error) {
 				toast.error(error.message ?? "Invalid credentials. Please try again.");
 				return;
 			}
-			// In production, block unverified accounts from accessing the dashboard
-			if (!(data?.user?.emailVerified || dev)) {
-				goto(resolve("/auth/sign-up/confirm"));
-				return;
-			}
+			// Unverified accounts are let through, not dead-ended at
+			// /auth/sign-up/confirm : that page has no way back to the
+			// dashboard in production (see sign-up/+page.svelte's comment),
+			// and the (protected) layout guard never actually enforced
+			// emailVerified server-side either, so this used to block real
+			// users (most of all the very first admin, before they've had a
+			// chance to configure SMTP in onboarding) without providing any
+			// real security.
 			goto(resolve("/"));
 		} catch {
 			toast.error("An unexpected error occurred. Please try again.");

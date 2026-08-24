@@ -15,11 +15,19 @@ import { AdminService } from "./admin.service.ts";
 import { EmailService } from "./email.service.ts";
 import { UserService } from "./user.service.ts";
 
-if (!(process.env.ORIGIN || dev || building)) {
-	throw new Error("ORIGIN environment variable is not set");
-}
-
 const logger = new Logger("Auth");
+
+// Doesn't throw : ORIGIN (or the Core section's Base domain + Use HTTPS on
+// /settings, see config.ts's applyInstanceSettings) can also be supplied
+// from the DB after boot (hooks.server.ts's init() calls rebuildAuth() once
+// instance settings are loaded, before the server accepts requests), so
+// nothing is configured *yet* at this module's own import time isn't
+// actually an error, just worth a heads-up for anyone who hasn't set either.
+if (!(process.env.ORIGIN || dev || building)) {
+	logger.warn(
+		"Neither ORIGIN nor a Base domain (Settings → General) is configured yet : the origin will be derived per-request until one is set.",
+	);
+}
 
 /**
  * Builds the better-auth instance from the current `config` (env defaults
@@ -47,11 +55,31 @@ function buildAuth() {
 				: {}),
 		},
 		basePath: "/api/v1/auth",
-		// Use ORIGIN env-var when explicitly set (production).
-		// In dev ORIGIN is often unset; leaving baseURL undefined makes
-		// svelteKitHandler derive the origin from each incoming request,
-		// which avoids the port-mismatch 404 on /api/v1/auth/*.
-		baseURL: process.env.ORIGIN,
+		// Deliberately never pinned to config.auth.origin (the Core section's
+		// Base domain + Use HTTPS on /settings/onboarding). Real, tested-in-
+		// review bug this replaced: better-auth's svelteKitHandler only
+		// forwards a request to its own handler when the request's origin
+		// matches options.baseURL's origin exactly (confirmed in
+		// node_modules/better-auth/dist/integrations/svelte-kit.mjs's
+		// isAuthPath : `if (_url.origin !== baseURL.origin) return false`) ;
+		// with baseURL pinned, *every* /api/v1/auth/* call from any origin
+		// other than the exact configured one 404s instead of reaching
+		// better-auth at all (SvelteKit's own router has no route for that
+		// path, only better-auth does), including sign-in itself. That's a
+		// real, easy-to-hit lockout : the configured Base domain frequently
+		// doesn't match how the instance is actually being reached yet
+		// (behind a reverse proxy before DNS/TLS are fully wired, a bare IP
+		// or different port during initial setup, etc.), and onboarding
+		// makes Base domain mandatory, so this used to break auth
+		// immediately after finishing it. Leaving baseURL undefined makes
+		// svelteKitHandler derive the origin from each incoming request
+		// instead (same "port-mismatch" reasoning this comment used to give
+		// only for the *unconfigured* case, now applied unconditionally) :
+		// isAuthPath's own baseURL then always has the same origin as the
+		// request by construction, so it can never mismatch. config.auth.origin
+		// has no other consumer in this codebase (grep it), Base domain
+		// itself is still what Traefik routing (config.baseDomain) uses.
+
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
 			schema,

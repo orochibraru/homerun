@@ -19,14 +19,14 @@ see [FAQ & limitations](faq-and-limitations.md)).
 
 ## Real limitations, not oversights
 
-The shared `homerun-network`, per-project networks, and Traefik itself all live
-on the **local** host. A remote-hosted container gets Docker's own default
-`bridge` network instead, no Traefik routing, no `<slug>` DNS alias, no
-project-network membership. It's reachable only however you arrange that
-yourself; there's deliberately no host-port-publishing UI for remote services
-either. **Bind-mount volumes are skipped entirely** on a remote deploy (a local
-path has no meaning on a different machine), Docker-managed volumes still work,
-since Docker resolves those by name against whichever daemon it's pointed at.
+The shared `homerun`, per-project networks, and Traefik itself all live on the
+**local** host. A remote-hosted container gets Docker's own default `bridge`
+network instead, no Traefik routing, no `<slug>` DNS alias, no project-network
+membership. It's reachable only however you arrange that yourself; there's
+deliberately no host-port-publishing UI for remote services either. **Bind-mount
+volumes are skipped entirely** on a remote deploy (a local path has no meaning
+on a different machine), Docker-managed volumes still work, since Docker
+resolves those by name against whichever daemon it's pointed at.
 
 Git-based builds work against a remote host too (the build step streams to
 whichever daemon the client points at), but the `git clone` step itself always

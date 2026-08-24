@@ -13,10 +13,13 @@
 		"types": ["bun-types"]
 	},
 	"include": [
-		"src/**/*.ts",
-		"index.ts",
 		"client.ts",
 		"commands.ts",
-		"output.ts"
+		"config.ts",
+		"index.ts",
+		"login.ts",
+		"output.ts",
+		"update.ts",
+		"version.ts"
 	]
 }

@@ -37,10 +37,17 @@ homerun services list
 
 `--base-url`/`--api-key` flags or the `HOMERUN_BASE_URL`/`HOMERUN_API_KEY` env
 vars override the saved login for a single call, and take precedence over it.
-Running any command with none of the three configured (no flags, no env vars, no
-saved login) prints "Not logged in" and points you at `homerun login` instead of
-a raw error. `--version=vX.Y.Z` (on `install.sh`) pins a specific release
-instead of the latest one.
+They can go before or after the subcommand
+(`homerun --base-url <url> services list` or
+`homerun services list --base-url <url>`, both work). Running any command with
+none of the three configured (no flags, no env vars, no saved login) prints "Not
+logged in" and points you at `homerun login` instead of a raw error.
+`--version=vX.Y.Z` (on `install.sh`) pins a specific release instead of the
+latest one.
+
+Built on [Commander](https://github.com/tj/commander.js), `homerun --help` and
+`homerun <command> --help`/`homerun <group> <command> --help` print full usage
+for any command or subcommand group.
 
 To work on the CLI itself instead of just using it: there's no separate
 `cli/package.json`, `agent/`, `cli/`, and `installer/` all share the repo root's

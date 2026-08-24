@@ -24,7 +24,11 @@ export const GET = async ({ params, locals }) => {
 	}
 
 	return json(
-		{ log: dep.log, status: dep.toJSON().status },
+		{
+			errorMessage: dep.toJSON().errorMessage,
+			log: dep.log,
+			status: dep.toJSON().status,
+		},
 		{ headers: { "Cache-Control": "no-store" } },
 	);
 };

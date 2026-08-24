@@ -17,7 +17,7 @@ dev server) is needed for either of those paths.
 ```sh
 git clone https://git.ombrage.space/orochibraru/homerun.git && cd homerun
 bun install
-docker network create homerun-network
+docker network create homerun
 docker compose up -d          # Traefik + Postgres, see compose.yaml
 cp .env.example .env          # see docs/configuration.md, or edit env vars directly
 bun run db:generate

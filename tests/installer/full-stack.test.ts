@@ -28,7 +28,7 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		expect(content).toContain(
 			"- /run/user/1000/docker.sock:/run/user/1000/docker.sock",
 		);
-		expect(content).toContain("name: homerun-network");
+		expect(content).toContain("name: homerun");
 		expect(content).toContain("AUTH_SECRET");
 
 		expect(run).toHaveBeenCalledWith([

@@ -39,9 +39,7 @@ class CliLoginFlow {
 	 * from *any* already-authenticated browser tab by typing the short code
 	 * shown here, the CLI just polls until that happens.
 	 */
-	async login(argv: string[]): Promise<void> {
-		const flagIndex = argv.indexOf("--base-url");
-		const flagBaseUrl = flagIndex !== -1 ? argv[flagIndex + 1] : undefined;
+	async login(flagBaseUrl?: string): Promise<void> {
 		const existing = ConfigStore.readStoredConfig();
 
 		const rawBaseUrl =

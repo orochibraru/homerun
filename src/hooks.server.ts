@@ -20,18 +20,66 @@ const logger = new Logger("Hooks");
 
 const migrationsFolder = join(cwd(), "drizzle");
 
-export function handleError({ event, error, status }) {
-	if (status !== 404) {
-		logger.error(
-			`Error on ${event.request.method} ${event.url.pathname}`,
-			error,
-		);
-		if (error instanceof Error) {
-			return new Error(error.message);
-		}
-
-		return new Error("An unknown error occured.");
+/**
+ * A Postgres connection refused/timed out while a `load`/action reached the
+ * DB : the common trigger is the app itself having started before Postgres
+ * finished coming up (`docker compose up -d`, or a still-in-progress
+ * migration retry loop, see `waitForDatabase`/`runMigrations` below, both
+ * only gate this *server's* own boot, not a request that reaches it from a
+ * separate, still-starting Postgres container in the same compose stack).
+ * Distinguished so the error page says something actually actionable
+ * ("still starting up, reload in a moment") instead of a raw driver
+ * message like "connect ECONNREFUSED ...".
+ */
+function isDatabaseUnavailableError(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
 	}
+	const code = (error as NodeJS.ErrnoException).code;
+	return (
+		code === "ECONNREFUSED" ||
+		code === "ETIMEDOUT" ||
+		/ECONNREFUSED|ETIMEDOUT/.test(error.message)
+	);
+}
+
+/** Same short random-id convention as hooks.client.ts's makeid(), so a server-side 500 is just as traceable in the logs as a client-side one. */
+function makeErrorId(): string {
+	return crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+}
+
+export function handleError({ event, error, status }) {
+	if (status === 404) {
+		return;
+	}
+	const errorId = makeErrorId();
+	logger.error(
+		`Error on ${event.request.method} ${event.url.pathname} (errorId=${errorId})`,
+		error,
+	);
+
+	// Real, tested-in-review bug this replaced : this used to `return new
+	// Error(...)`, but this function's return value becomes `App.Error`
+	// (app.d.ts), sent to the client as page data, and devalue (SvelteKit's
+	// own load/error-payload serializer) can't stringify a real Error
+	// instance, only a plain object. That crashed with a completely
+	// unrelated-looking "Cannot stringify arbitrary non-POJOs" 500 instead
+	// of the actual error, for *every* uncaught error in this app, not just
+	// a DB-unavailable one, verified live.
+	if (isDatabaseUnavailableError(error)) {
+		return {
+			code: "DATABASE_UNAVAILABLE",
+			errorId,
+			message:
+				"The database isn't reachable yet, it may still be starting up. Wait a few seconds and reload.",
+		};
+	}
+
+	return {
+		errorId,
+		message:
+			error instanceof Error ? error.message : "An unknown error occurred.",
+	};
 }
 
 function sleep(ms: number) {
@@ -154,18 +202,10 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		);
 	}
 
-	// A misconfigured OAuth provider (bad discovery URL, unreachable IdP :
-	// now editable at any time via /settings, not just at deploy time via
-	// env vars) makes better-auth's genericOAuth plugin throw while building
-	// its auth context, which getSession() triggers on *every* request. Left
-	// unguarded that's a full lockout : every page 500s, including /settings
-	// itself, so there'd be no way back in to fix the bad provider. Degrade
-	// to "no session" instead so the rest of the app (and /settings, to fix
-	// the provider) stays reachable.
 	const session = await auth.api
 		.getSession({ headers: event.request.headers })
 		.catch((error) => {
-			logger.error("auth.getSession() failed : treating as signed out", error);
+			logger.debug("auth.getSession() failed : treating as signed out", error);
 			return null;
 		});
 

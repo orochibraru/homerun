@@ -4,6 +4,57 @@ import { AgentHttpServer } from "./http";
 import { TokenManager } from "./token";
 import { AGENT_VERSION } from "./version";
 
+/**
+ * SIGINT/SIGTERM used to have no handler at all here, Bun's default
+ * behavior on either is to terminate the process immediately, which for
+ * this agent specifically risks killing an in-flight `/v1/deploy` (a
+ * `docker pull` partway through) or `/v1/build` (a git clone or `docker
+ * build` partway through) mid-operation : a half-pulled image, a truncated
+ * clone, or a build silently cut off, none of which fail cleanly on the
+ * next attempt the way a fresh request would.
+ *
+ * `server.stop()` (no argument, i.e. `false`) is the actual graceful
+ * variant : Bun stops accepting new connections but lets in-flight
+ * requests finish naturally, only `server.stop(true)` force-closes them.
+ * Bounded by `config.shutdownTimeoutSeconds` so a genuinely stuck request
+ * (an unreachable registry a pull is hanging against, say) can't block
+ * shutdown forever, systemd/docker's own kill-after-timeout would just cut
+ * the process at a moment of its own choosing instead of this one. A
+ * second SIGINT/SIGTERM while already shutting down forces an immediate
+ * exit, the standard "one more Ctrl+C to really stop now" escape hatch.
+ */
+function registerGracefulShutdown(bunServer: ReturnType<typeof Bun.serve>) {
+	let shuttingDown = false;
+
+	async function shutdown(signal: string) {
+		if (shuttingDown) {
+			console.log(
+				`[homerun-agent] received ${signal} again, forcing immediate shutdown.`,
+			);
+			process.exit(1);
+		}
+		shuttingDown = true;
+		console.log(
+			`[homerun-agent] received ${signal}, shutting down gracefully (waiting up to ${config.shutdownTimeoutSeconds}s for any in-flight deploy/build to finish)...`,
+		);
+
+		const forceTimer = setTimeout(() => {
+			console.warn(
+				`[homerun-agent] graceful shutdown exceeded ${config.shutdownTimeoutSeconds}s, forcing.`,
+			);
+			bunServer.stop(true).finally(() => process.exit(1));
+		}, config.shutdownTimeoutSeconds * 1000);
+
+		await bunServer.stop();
+		clearTimeout(forceTimer);
+		console.log("[homerun-agent] shut down cleanly.");
+		process.exit(0);
+	}
+
+	process.on("SIGINT", () => void shutdown("SIGINT"));
+	process.on("SIGTERM", () => void shutdown("SIGTERM"));
+}
+
 async function main() {
 	const arg = process.argv[2];
 	if (arg === "--version" || arg === "-v") {
@@ -33,11 +84,13 @@ Usage:
 	});
 
 	const server = new AgentHttpServer(token);
-	Bun.serve({
+	const bunServer = Bun.serve({
 		fetch: server.notFound,
 		port: config.port,
 		routes: server.routes,
 	});
+
+	registerGracefulShutdown(bunServer);
 
 	console.log("");
 	console.log("  Homerun Agent is running.");
@@ -52,9 +105,8 @@ Usage:
 	if (source !== "env") {
 		console.log("");
 		console.log(`  Agent token:    ${token}`);
-		console.log("  Paste this (plus this host's reachable URL) into the main");
 		console.log(
-			"  Homerun instance's Remote Hosts page → Add Host → Homerun Agent.",
+			"  Keep this token secret : it's a full-access credential for this host's Docker daemon.",
 		);
 	}
 	console.log("");

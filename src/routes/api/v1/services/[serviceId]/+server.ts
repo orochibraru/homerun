@@ -1,10 +1,9 @@
 import { json } from "@sveltejs/kit";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { updateServiceApiBody } from "$lib/server/validation/api";
-import { DockerService } from "$lib/services/docker.service";
 import { encryptSecret } from "$lib/services/secrets";
+import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("API");
 
@@ -62,11 +61,10 @@ export const DELETE = async ({ params, locals }) => {
 
 	if (svc.containerId) {
 		try {
-			const remote = await RemoteHostDTO.connectionFor(svc, locals.user.id);
-			await DockerService.removeContainer(
+			await ServiceLifecycleService.remove(
 				svc.containerId,
-				{ force: true },
-				remote,
+				svc.remoteHostId,
+				locals.user.id,
 			);
 		} catch {
 			// Already gone on the host : proceed with deleting the record.
