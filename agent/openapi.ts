@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deployInputSchema } from "./schemas";
+import { buildInputSchema, deployInputSchema } from "./schemas";
 import { AGENT_VERSION } from "./version";
 
 /** Strip the top-level `$schema` pointer zod's toJSONSchema() adds : not meaningful on a schema embedded inside a bigger OpenAPI document. */
@@ -33,6 +33,7 @@ const statsSchema = z.object({
 	memUsedMb: z.number(),
 });
 const containerStatusSchema = z.object({
+	exitCode: z.number().nullable(),
 	id: z.string(),
 	state: z.string(),
 	status: z.string(),
@@ -40,6 +41,10 @@ const containerStatusSchema = z.object({
 const deployResultSchema = z.object({
 	containerId: z.string(),
 	log: z.array(z.string()),
+});
+const buildResultSchema = z.object({
+	error: z.string().optional(),
+	success: z.boolean(),
 });
 
 /**
@@ -85,6 +90,29 @@ class AgentOpenApiBuilder {
 			},
 			openapi: "3.1.0",
 			paths: {
+				"/v1/build": {
+					post: {
+						description:
+							"Clones a git repo at a ref and builds its Dockerfile into a local image tagged `tag`, optionally pushing it to a registry afterward (see the request schema's own docstring for when that matters).",
+						requestBody: {
+							content: {
+								"application/json": {
+									schema: toEmbeddedSchema(buildInputSchema),
+								},
+							},
+							required: true,
+						},
+						responses: {
+							200: jsonResponse("Build succeeded", buildResultSchema),
+							400: jsonResponse("Invalid request body", errorSchema),
+							401: jsonResponse("Unauthorized", errorSchema),
+							500: jsonResponse("Build failed", buildResultSchema),
+						},
+						security: [{ bearerAuth: [] }],
+						summary: "Build an image from a git repo",
+						tags: ["Deploy"],
+					},
+				},
 				"/v1/containers": {
 					get: {
 						responses: {

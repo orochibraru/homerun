@@ -3,73 +3,59 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    restart: unless-stopped
-    ports:
-      - 3000:3000
+      target: app
+    extends:
+      file: tools/compose/app.compose.yaml
+      service: app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - homerun
 
   agent:
     build:
       context: .
-      dockerfile: ./agent/Dockerfile
-    restart: unless-stopped
-    ports:
-      - 7420:7420
+      dockerfile: ./Dockerfile
+      target: agent
+    extends:
+      file: tools/compose/agent.compose.yaml
+      service: agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - homerun
 
   traefik:
-    image: traefik:v3
-    restart: unless-stopped
-    command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=homerun-network
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      # Opt-in: only needed for custom SSL certificates (see the service
-      # Networking tab and $lib/services/docker/custom-ssl.ts). Uncomment
-      # this line, set TRAEFIK_DYNAMIC_CONFIG_DIR to the same host path
-      # as the bind mount below, and `docker compose up -d` to pick it
-      # up : the app writes cert/key files + per-domain dynamic config
-      # into that directory itself, it does not touch this container.
-      # - --providers.file.directory=/etc/traefik/dynamic
-      # - --providers.file.watch=true
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certs:/letsencrypt
-      # Uncomment alongside the --providers.file.* flags above : must be
-      # the same host path this app's TRAEFIK_DYNAMIC_CONFIG_DIR points at.
-      # - ${TRAEFIK_DYNAMIC_CONFIG_DIR:-./traefik-dynamic}:/etc/traefik/dynamic:ro
+    extends:
+      file: tools/compose/base.compose.yaml
+      service: traefik
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
-      - homerun-network
+      - internal
+      - homerun
 
   postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-homerun}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homerun}
-      POSTGRES_USER: ${POSTGRES_USER:-homerun}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      interval: 5s
-      retries: 5
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homerun}"]
-      timeout: 5s
+    extends:
+      file: tools/compose/base.compose.yaml
+      service: postgres
+    networks:
+      - internal
 
 networks:
-  homerun-network:
-    name: homerun-network
+  homerun:
+    name: homerun
     external: true
+  internal:
+    external: false
 
 volumes:
-  postgres-data: {}
-  traefik-certs: {}
+  postgres_data: {}
+  traefik_certs: {}
+  agent_data: {}
+  app_data: {}

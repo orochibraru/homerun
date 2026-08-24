@@ -63,6 +63,26 @@ export const actions = {
 		const buildCacheRegistryId = isGitBuild
 			? input.buildCacheRegistryId || null
 			: null;
+
+		if (buildServerRemoteHostId) {
+			// Both kinds (docker and agent) are real build servers, see
+			// deploy.service.ts's git-build branch and AgentClientService.build :
+			// real, tested-in-review bug this replaced, a stale "docker only"
+			// leftover from before that integration.
+			const buildServer = await RemoteHostDTO.get(
+				buildServerRemoteHostId,
+				locals.user.id,
+			);
+			if (!buildServer) {
+				return fail(400, {
+					errors: {
+						buildServerRemoteHostId: ["That build server wasn't found."],
+					},
+					values: Object.fromEntries(formData),
+				});
+			}
+		}
+
 		if (
 			buildServerRemoteHostId &&
 			buildServerRemoteHostId !== svc.remoteHostId &&

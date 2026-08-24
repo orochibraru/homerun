@@ -1,8 +1,8 @@
 import { json } from "@sveltejs/kit";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { DockerService } from "$lib/services/docker.service";
+import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("API");
 
@@ -30,8 +30,11 @@ export const POST = async ({ params, locals }) => {
 		);
 	}
 
-	const remote = await RemoteHostDTO.connectionFor(service, locals.user.id);
-	await DockerService.restartContainer(service.containerId, remote);
+	await ServiceLifecycleService.restart(
+		service.containerId,
+		service.remoteHostId,
+		locals.user.id,
+	);
 	logger.info(
 		`Service restarted via API: service=${service.id} user=${locals.user.id}`,
 	);

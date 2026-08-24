@@ -1,10 +1,10 @@
 # Homerun installer
 
 Single-command server setup: Docker Engine, a dedicated **rootless** Docker
-user, the `homerun-network`, and either the Homerun Agent or the full Homerun
-stack (Traefik + Postgres + the app itself), entirely from prebuilt release
-binaries and Docker images. Nothing is built from source, and neither Bun nor
-`git` need to exist on the target host at any point.
+user, the `homerun`, and either the Homerun Agent or the full Homerun stack
+(Traefik + Postgres + the app itself), entirely from prebuilt release binaries
+and Docker images. Nothing is built from source, and neither Bun nor `git` need
+to exist on the target host at any point.
 
 ## The one-liner
 
@@ -42,7 +42,7 @@ sudo ./homerun-installer --mode=full
    session, and starts it as a `systemd --user` service. Every container this
    installer (or the agent it installs) creates runs under this account's
    rootless permissions, never as root.
-4. Creates the `homerun-network` Docker network on that rootless daemon.
+4. Creates the `homerun` Docker network on that rootless daemon.
 5. `--mode=agent` (default): downloads the prebuilt `homerun-agent-<arch>`
    release binary straight to `/usr/local/bin/homerun-agent` and runs it as a
    `systemd --user` unit under the rootless account, pointed at the rootless
@@ -101,8 +101,8 @@ binary release tag, default `latest`) are both optional, same meaning as the
 main installer's flags.
 
 Deliberately a standalone bash script, not a mode of the TypeScript installer :
-a narrower job (join + agent only, no `homerun-network`/compose-stack setup)
-that doesn't need `StepRunner`'s dry-run machinery to stay readable. Mirrors
+a narrower job (join + agent only, no `homerun`/compose-stack setup) that
+doesn't need `StepRunner`'s dry-run machinery to stay readable. Mirrors
 `steps/rootless-docker.ts` and `steps/agent.ts`'s exact command sequences by
 hand so the two don't drift.
 

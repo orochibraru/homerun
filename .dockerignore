@@ -1,0 +1,59 @@
+# Keeps the build context small and cache-friendly for Dockerfile's
+# `COPY . .` steps (app-builder and agent-builder stages both do a full
+# copy, so anything unnecessary here directly slows every image build and
+# needlessly busts layer caching).
+
+# VCS / editor / CI-only config
+.git
+.github
+.husky
+.vscode
+.agents
+.claude
+
+# Dependencies (reinstalled inside the image via bun install)
+node_modules
+**/node_modules
+
+# Build output (rebuilt inside the image; also avoids shipping a stale
+# host-built artifact into the image by accident)
+.svelte-kit
+build
+dist
+coverage
+tmp
+
+# Compiled sub-project binaries / generated CLI types checked out locally
+cli/generated
+
+# Docker/compose files themselves (irrelevant inside the build context)
+compose.yaml
+compose.dev.yaml
+compose.prod.yaml
+docker-bake.hcl
+Dockerfile*
+.dockerignore
+
+# Env / secrets, never bake these into an image layer
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Local data / test artifacts
+*.db
+test-results/
+*.log
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Docs (not needed at build or runtime)
+docs
+README.md
+CONTRIBUTING.md
+CHANGELOG.md
+TODO.md
+AGENTS.md
+CLAUDE.md

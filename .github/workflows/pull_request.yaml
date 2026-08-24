@@ -23,19 +23,28 @@ jobs:
   binaries:
     name: Binaries
     uses: ./.github/workflows/binaries.yaml
-    needs:
-      - code_quality
 
-  build:
-    name: Docker Build
+  build:app:
+    name: Docker Build (App)
     uses: ./.github/workflows/docker.yaml
-    needs:
-      - code_quality
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
       image_name: orochibraru/homerun
       registry_name: git.ombrage.space
       registry_username: orochibraru
+      bake_target: app-ci
+    secrets:
+      registry_password: ${{ secrets.PACKAGES_TOKEN }}
+
+  build:agent:
+    name: Docker Build (Agent)
+    uses: ./.github/workflows/docker.yaml
+    with:
+      image_tag: pr-${{ github.event.pull_request.number }}
+      image_name: orochibraru/homerun-agent
+      registry_name: git.ombrage.space
+      registry_username: orochibraru
+      bake_target: agent-ci
     secrets:
       registry_password: ${{ secrets.PACKAGES_TOKEN }}
 

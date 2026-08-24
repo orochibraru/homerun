@@ -38,13 +38,13 @@ afterEach(() => {
 
 describe("ClientFactory.resolveConfig", () => {
 	test("returns null when nothing is configured anywhere", () => {
-		expect(ClientFactory.resolveConfig([])).toBeNull();
+		expect(ClientFactory.resolveConfig()).toBeNull();
 	});
 
 	test("reads from env vars", () => {
 		process.env.HOMERUN_BASE_URL = "https://env.example.com";
 		process.env.HOMERUN_API_KEY = "env-key";
-		expect(ClientFactory.resolveConfig([])).toEqual({
+		expect(ClientFactory.resolveConfig()).toEqual({
 			apiKey: "env-key",
 			baseUrl: "https://env.example.com",
 		});
@@ -55,7 +55,7 @@ describe("ClientFactory.resolveConfig", () => {
 			apiKey: "stored-key",
 			baseUrl: "https://stored.example.com",
 		});
-		expect(ClientFactory.resolveConfig([])).toEqual({
+		expect(ClientFactory.resolveConfig()).toEqual({
 			apiKey: "stored-key",
 			baseUrl: "https://stored.example.com",
 		});
@@ -65,12 +65,10 @@ describe("ClientFactory.resolveConfig", () => {
 		process.env.HOMERUN_BASE_URL = "https://env.example.com";
 		process.env.HOMERUN_API_KEY = "env-key";
 		expect(
-			ClientFactory.resolveConfig([
-				"--base-url",
-				"https://flag.example.com",
-				"--api-key",
-				"flag-key",
-			]),
+			ClientFactory.resolveConfig({
+				apiKey: "flag-key",
+				baseUrl: "https://flag.example.com",
+			}),
 		).toEqual({ apiKey: "flag-key", baseUrl: "https://flag.example.com" });
 	});
 
@@ -80,7 +78,7 @@ describe("ClientFactory.resolveConfig", () => {
 			baseUrl: "https://stored.example.com",
 		});
 		process.env.HOMERUN_API_KEY = "env-key";
-		expect(ClientFactory.resolveConfig([])).toEqual({
+		expect(ClientFactory.resolveConfig()).toEqual({
 			apiKey: "env-key",
 			baseUrl: "https://stored.example.com",
 		});
@@ -89,14 +87,14 @@ describe("ClientFactory.resolveConfig", () => {
 	test("strips a trailing slash from the base URL", () => {
 		process.env.HOMERUN_BASE_URL = "https://env.example.com/";
 		process.env.HOMERUN_API_KEY = "env-key";
-		expect(ClientFactory.resolveConfig([])?.baseUrl).toBe(
+		expect(ClientFactory.resolveConfig()?.baseUrl).toBe(
 			"https://env.example.com",
 		);
 	});
 
 	test("returns null when only one of baseUrl/apiKey is available", () => {
 		process.env.HOMERUN_BASE_URL = "https://env.example.com";
-		expect(ClientFactory.resolveConfig([])).toBeNull();
+		expect(ClientFactory.resolveConfig()).toBeNull();
 	});
 });
 

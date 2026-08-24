@@ -3,6 +3,7 @@ import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { db } from "$lib/server/db/lib";
 import { service } from "$lib/server/db/schema";
 import type { ContainerStatus } from "$lib/types";
+import { AgentClientService } from "../agent-client.service.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
 
@@ -54,10 +55,20 @@ export function DockerReconcileMixin<
 				return "pending";
 			}
 
-			const remote = row.remoteHostId
-				? await RemoteHostDTO.connectionFor(row, userId)
-				: undefined;
-			const status = await this.inspectStatus(row.containerId, remote);
+			const target = await RemoteHostDTO.resolveTarget(
+				row.remoteHostId,
+				userId,
+			);
+			const status =
+				target.kind === "agent"
+					? await AgentClientService.inspectStatus(
+							target.connection,
+							row.containerId,
+						)
+					: await this.inspectStatus(
+							row.containerId,
+							target.kind === "docker" ? target.connection : undefined,
+						);
 			await db
 				.update(service)
 				.set({ currentStatus: status })

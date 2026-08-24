@@ -1,91 +1,49 @@
-# Standalone production stack: Traefik + Postgres + the app itself, all
-# pulled as published images, nothing here is built from source, and this
-# file needs nothing beyond Docker itself on the host (no git clone, no Bun).
-# This is "Option B" in docs/getting-started.md; if you'd rather have a
-# script handle rootless Docker + a dedicated user too, see the installer
-# one-liner (Option A) instead, installer/steps/full-stack.ts generates a
-# file that mirrors this one, minus git, at install time.
-#
-# For local development (running the app itself via `bun run dev`, not in a
-# container) use the plain compose.yaml next to this file instead, see its
-# own top comment.
-#
-# Quick start:
-#   curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/compose.prod.yaml
-#   curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/.env.example
-#   mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum
-#   docker network create homerun-network
-#   docker compose -f compose.prod.yaml up -d
 services:
   app:
-    image: git.ombrage.space/orochibraru/homerun:${HOMERUN_IMAGE_TAG:-latest}
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
+    image: git.ombrage.space/orochibraru/homerun:${HOMERUN_VERSION:-latest}
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
-      DOCKER_NETWORK_NAME: homerun-network
+      DOCKER_NETWORK_NAME: homerun
       DOCKER_SOCKET_PATH: /var/run/docker.sock
       ORIGIN: ${ORIGIN:-http://localhost:3000}
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}
-    ports:
-      - "3000:3000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - homerun-data:/app/data
+    extends:
+      file: tools/compose/app.compose.yml
+      service: app
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
-      - homerun-network
-      - default
+      - homerun
+      - internal
 
   traefik:
-    image: traefik:v3
-    restart: unless-stopped
-    command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=homerun-network
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certs:/letsencrypt
+    extends:
+      file: tools/compose/base.compose.yaml
+      service: traefik
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
-      - homerun-network
+      - homerun
+      - internal
 
   postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-homerun}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homerun}
-      POSTGRES_USER: ${POSTGRES_USER:-homerun}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      interval: 5s
-      retries: 5
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homerun}"]
-      timeout: 5s
+    extends:
+      file: tools/compose/base.compose.yaml
+      service: postgres
+    networks:
+      - internal
 
 networks:
-  # external: true : same shared resource the app's own Docker layer
-  # attaches deployed containers to directly by name, see compose.yaml's
-  # own comment on this. Create it once with:
-  #   docker network create homerun-network
-  homerun-network:
-    name: homerun-network
+  homerun:
+    name: homerun
     external: true
+  internal:
+    external: false
 
 volumes:
-  postgres-data: {}
-  traefik-certs: {}
-  homerun-data: {}
+  postgres_data: {}
+  traefik_certs: {}
+  homerun_data: {}

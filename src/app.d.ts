@@ -25,7 +25,14 @@ declare global {
 		}
 		// interface PageData {}
 		// interface PageState {}
-		// interface Platform {}
+		// Matches the `platform` object svelte-adapter-bun/templates/handler.ts
+		// passes to server.respond(), request is available via event.request too,
+		// server is the underlying Bun.Server for anything needing raw access to
+		// it (e.g. Bun.Server#requestIP).
+		interface Platform {
+			server: Bun.Server;
+			request: Request;
+		}
 		interface Error {
 			code?: string;
 			errorId?: string;

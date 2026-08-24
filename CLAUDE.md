@@ -34,10 +34,10 @@ bun run release          # semantic-release, normally CI-only (.github/workflows
 ```
 
 ```bash
-bun run test              # bun test tests, unit tests for agent/installer/cli (see below), the SvelteKit app itself still has none
-bun run test:agent        # bun test tests/agent
-bun run test:cli          # bun test tests/cli
-bun run test:installer    # bun test tests/installer
+bun test              # bun test tests, unit tests for agent/installer/cli (see below), the SvelteKit app itself still has none
+bun test:agent        # bun test tests/agent
+bun test:cli          # bun test tests/cli
+bun test:installer    # bun test tests/installer
 ```
 
 `agent/`, `installer/`, and `cli/` are separate standalone Bun/TypeScript
@@ -110,7 +110,7 @@ writing to a real developer's config if the preload entry is ever removed.
 `[test].coverage = true`, `coverageReporter = ["text", "lcov"]`,
 `coveragePathIgnorePatterns` scoped away from `tests/**` and
 `cli/generated/**`), reporting only on whatever files the tests that actually
-ran touched (scoping to one package via `bun run test:agent` shows just that
+ran touched (scoping to one package via `bun test:agent` shows just that
 package, not a 0%-everywhere table for the rest of the repo). No
 `coverageThreshold` is enforced yet, this suite is new; add one once coverage
 has stabilized if regression protection is wanted.
@@ -149,6 +149,29 @@ Biome formats with tabs + double quotes; svelte/vue/astro files have
 have proven frequently stale/phantom in this repo (showing parse errors that
 don't reflect the real file), `bunx biome check <file>` is ground truth, always
 verify against it before trusting an IDE-reported error.
+
+## AI-assisted development (`.claude/agents/`, `.claude/skills/` → `.agents/skills/`)
+
+This repo has Claude Code skills and subagents encoding the workflows below in
+executable detail, not just prose, use them instead of re-deriving the steps by
+hand:
+
+- Skills (invoke directly, or they trigger on a matching request): `check-repo`
+  (the `bun run check`/`bun run lint`/per-subproject-typecheck gate above, as a
+  runnable checklist), `new-dto-route` (schema → DTO → route, with the
+  no-manual-typing/no-raw-Drizzle/toJSON rules below baked in),
+  `new-docker-mixin` (adding a concern to `DockerService`'s mixin chain, with
+  the load-bearing ordering rule), `migration-workflow` (`schema.ts` →
+  `db:generate` → apply, with the NOT-NULL-on-existing-rows gotcha).
+- Subagents (`.claude/agents/*.md`): `repo-gate` (final review gate before
+  calling a change done, scans for this file's own hard rules),
+  `scaffold-feature` (adds a new table+DTO+route end to end), `subproject-sync`
+  (keeps `agent/`'s hand-reimplemented Docker/stats logic in sync with the main
+  app, regenerates `cli/`'s OpenAPI-derived types).
+
+Skill content lives under `.agents/skills/<name>/SKILL.md` with a symlink from
+`.claude/skills/`, matching the existing `shadcn-svelte` skill's layout, keep
+that pattern for any new skill.
 
 ## Conventions (strict, apply to every change)
 
@@ -686,20 +709,20 @@ service), every route/module that touches a service's container calls this
 rather than assuming the local socket; if you add a new lifecycle operation,
 thread it through the same way rather than calling `getDocker()` bare.
 
-**Real architectural limitation, not an oversight**: the shared
-`homerun-network` Docker network, per-project networks, and Traefik itself all
-live on the _local_ host. A remote-hosted container gets Docker's own default
-`bridge` network instead (verified via `docker inspect`'s `NetworkMode`), no
-Traefik routing, no `<slug>:<port>` internal DNS alias, no project-network
-membership. It's genuinely reachable only however you arrange that yourself
-(there's no host-port-publishing UI for this, deliberately, see the Networking
-tab's own "no port mapping by design" stance). Bind-mount volumes are skipped
-entirely on a remote deploy (a local path has no meaning on a different
-machine), `deployService()` passes an empty volume list rather than silently
-creating a wrong mount. Git-based builds work against a remote host too
-(dockerode's `buildImage` streams the tar'd context to whichever daemon the
-client points at), but the `git clone` step itself always happens locally first,
-only the Docker build step runs remotely.
+**Real architectural limitation, not an oversight**: the shared `homerun` Docker
+network, per-project networks, and Traefik itself all live on the _local_ host.
+A remote-hosted container gets Docker's own default `bridge` network instead
+(verified via `docker inspect`'s `NetworkMode`), no Traefik routing, no
+`<slug>:<port>` internal DNS alias, no project-network membership. It's
+genuinely reachable only however you arrange that yourself (there's no
+host-port-publishing UI for this, deliberately, see the Networking tab's own "no
+port mapping by design" stance). Bind-mount volumes are skipped entirely on a
+remote deploy (a local path has no meaning on a different machine),
+`deployService()` passes an empty volume list rather than silently creating a
+wrong mount. Git-based builds work against a remote host too (dockerode's
+`buildImage` streams the tar'd context to whichever daemon the client points
+at), but the `git clone` step itself always happens locally first, only the
+Docker build step runs remotely.
 
 Verified during development against a real second Docker connection, not just
 reasoned about, by running
@@ -1116,12 +1139,12 @@ utility, not Docker-specific, also used by SMTP/OAuth/S3-backup secrets),
 `encryptSecret`/`decryptSecret` for `registryPasswordEnc` and every other `*Enc`
 column, key derived via `scryptSync` from `config.auth.secret`.
 
-Containers attach to the external `homerun-network` Docker network
-(`docker network create homerun-network` once) rather than publishing host
-ports, true for the default `networkMode: "bridge"`; see Network mode below for
-the `"host"` exception. The root `compose.yaml` bootstraps Traefik and Postgres
-for **local dev** only: it deliberately has no `app` service, since dev runs the
-app directly on the host (`bun run dev`/`bun run start`) so its own logs aren't
+Containers attach to the external `homerun` Docker network
+(`docker network create homerun` once) rather than publishing host ports, true
+for the default `networkMode: "bridge"`; see Network mode below for the `"host"`
+exception. The root `compose.yaml` bootstraps Traefik and Postgres for **local
+dev** only: it deliberately has no `app` service, since dev runs the app
+directly on the host (`bun run dev`/`bun run start`) so its own logs aren't
 viewable in-app (see `system-logs/` above). The app itself _is_ containerized
 for production use (`Dockerfile`, built/pushed by
 `.github/workflows/docker.yaml`; see Release automation below): the installer's
@@ -1498,8 +1521,8 @@ section is the pointer.
   validation, so a malformed request would fail deep inside dockerode with a
   confusing error instead of a clean 400; now it's
   `deployInputSchema.safeParse()` first. **Live-verified** against a real local
-  Docker socket: boot + `homerun-network`-equivalent creation, every HTTP
-  endpoint including a real `nginx:alpine`
+  Docker socket: boot + `homerun`-equivalent creation, every HTTP endpoint
+  including a real `nginx:alpine`
   pull→create→start→redeploy-replaces-old→stop/remove round trip, auth rejection
   on a missing/wrong token, the new validation actually rejecting a malformed
   deploy body with a 400, `/v1/openapi.json` being a real parseable OpenAPI 3.1
@@ -1511,40 +1534,39 @@ section is the pointer.
   installs **rootless** Docker for that user via Docker's own documented flow
   (`get.docker.com/rootless` → `dockerd-rootless-setuptool.sh`,
   `loginctl enable-linger` + a `systemd --user` unit so the daemon survives a
-  headless reboot without an active login session), creates the
-  `homerun-network` on that rootless daemon, then installs either just the Agent
-  (`--mode=agent`, default, own `systemd --user` unit) or the full stack
-  (`--mode=full`), all under that same rootless account, never as root.
-  **Binaries and Docker images only, nothing built from source on the target
-  host** (superseding an earlier draft that cloned the repo and ran
-  `bun run build` there): `bootstrap.sh` downloads the
-  `homerun-installer-<arch>` release binary itself and `exec`s it (no Bun, no
-  git); `--mode=agent` downloads the matching `homerun-agent-<arch>` release
-  binary straight to `/usr/local/bin/homerun-agent`; `--mode=full` writes a
-  standalone `compose.yaml` (`installer/steps/full-stack.ts`, distinct from the
-  root dev `compose.yaml`; see Docker integration above) pulling the published
-  `git.ombrage.space/orochibraru/homerun` app image alongside Traefik/Postgres,
-  then `docker compose pull && ...up -d`. `installer/steps/release.ts` is the
-  one place both artifact kinds (release binaries vs. the Docker image) resolve
-  from: `--version=` (a Gitea release tag, default `latest`) picks which
-  release's binaries to fetch, but doesn't pin the app image the same way:
-  `docker.yaml` tags images by commit SHA + `latest` only, there's no `:vX.Y.Z`
-  image tag, a real asymmetry in this repo's release pipeline documented in that
-  file rather than papered over. Every shell-out goes through one `StepRunner`
-  (`installer/exec.ts`) so `--dry-run` (print every command instead of running
-  it) is a single interception point, not scattered per-step conditionals.
-  **Verified**: the full command sequence via `--dry-run` for both modes
-  (including on a non-Linux dev machine, via a dry-run-only
-  package-manager-detection fallback, and including the generated `compose.yaml`
-  content), and that the compiled binary's dry-run output matches running from
-  source. **Not verified, flagged the same way this codebase flags an untested
-  OAuth flow**: none of the real, mutating steps (package install, `useradd`,
-  rootless Docker setup, systemd units, or the downloaded binaries/images
-  actually starting) have run against an actual fresh Linux box in this session,
-  doing so needs a disposable VM/CI runner this environment doesn't have, and
-  running the mutating path against a real machine without one would be
-  irreversible and wasn't attempted. Run it by hand against a real disposable
-  server before trusting the one-liner on anything that matters.
+  headless reboot without an active login session), creates the `homerun` on
+  that rootless daemon, then installs either just the Agent (`--mode=agent`,
+  default, own `systemd --user` unit) or the full stack (`--mode=full`), all
+  under that same rootless account, never as root. **Binaries and Docker images
+  only, nothing built from source on the target host** (superseding an earlier
+  draft that cloned the repo and ran `bun run build` there): `bootstrap.sh`
+  downloads the `homerun-installer-<arch>` release binary itself and `exec`s it
+  (no Bun, no git); `--mode=agent` downloads the matching `homerun-agent-<arch>`
+  release binary straight to `/usr/local/bin/homerun-agent`; `--mode=full`
+  writes a standalone `compose.yaml` (`installer/steps/full-stack.ts`, distinct
+  from the root dev `compose.yaml`; see Docker integration above) pulling the
+  published `git.ombrage.space/orochibraru/homerun` app image alongside
+  Traefik/Postgres, then `docker compose pull && ...up -d`.
+  `installer/steps/release.ts` is the one place both artifact kinds (release
+  binaries vs. the Docker image) resolve from: `--version=` (a Gitea release
+  tag, default `latest`) picks which release's binaries to fetch, but doesn't
+  pin the app image the same way: `docker.yaml` tags images by commit SHA +
+  `latest` only, there's no `:vX.Y.Z` image tag, a real asymmetry in this repo's
+  release pipeline documented in that file rather than papered over. Every
+  shell-out goes through one `StepRunner` (`installer/exec.ts`) so `--dry-run`
+  (print every command instead of running it) is a single interception point,
+  not scattered per-step conditionals. **Verified**: the full command sequence
+  via `--dry-run` for both modes (including on a non-Linux dev machine, via a
+  dry-run-only package-manager-detection fallback, and including the generated
+  `compose.yaml` content), and that the compiled binary's dry-run output matches
+  running from source. **Not verified, flagged the same way this codebase flags
+  an untested OAuth flow**: none of the real, mutating steps (package install,
+  `useradd`, rootless Docker setup, systemd units, or the downloaded
+  binaries/images actually starting) have run against an actual fresh Linux box
+  in this session, doing so needs a disposable VM/CI runner this environment
+  doesn't have, and running the mutating path against a real machine without one
+  would be irreversible and wasn't attempted. Run it by hand against a real
+  disposable server before trusting the one-liner on anything that matters.
 
 ## Planned features (not yet built)
 

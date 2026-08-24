@@ -60,7 +60,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://\${POSTGRES_USER:-homerun}:\${POSTGRES_PASSWORD:-homerun}@postgres:5432/\${POSTGRES_DB:-homerun}
-      DOCKER_NETWORK_NAME: homerun-network
+      DOCKER_NETWORK_NAME: homerun
       DOCKER_SOCKET_PATH: ${dockerSocket}
       ORIGIN: \${HOMERUN_ORIGIN:-http://localhost:3000}
       BASE_DOMAIN: \${HOMERUN_BASE_DOMAIN:-localhost}
@@ -71,7 +71,7 @@ services:
       - ${dockerSocket}:${dockerSocket}
       - homerun-data:/app/data
     networks:
-      - homerun-network
+      - homerun
       - default
 
   traefik:
@@ -80,7 +80,7 @@ services:
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=homerun-network
+      - --providers.docker.network=homerun
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
@@ -94,7 +94,7 @@ services:
       - ${dockerSocket}:${dockerSocket}:ro
       - traefik-certs:/letsencrypt
     networks:
-      - homerun-network
+      - homerun
 
   postgres:
     image: postgres:16-alpine
@@ -112,8 +112,8 @@ services:
       timeout: 5s
 
 networks:
-  homerun-network:
-    name: homerun-network
+  homerun:
+    name: homerun
     external: true
 
 volumes:

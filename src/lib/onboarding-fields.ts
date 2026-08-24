@@ -12,7 +12,6 @@
  */
 export const ONBOARDING_FIELD_STEP: Record<string, number> = {
 	authCrossSubdomainCookies: 0,
-	authOrigin: 0,
 	baseDomain: 0,
 	dockerNetworkName: 1,
 	dockerSocketPath: 1,

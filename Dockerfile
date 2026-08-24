@@ -1,30 +1,50 @@
-FROM oven/bun:1 AS builder
+FROM oven/bun:1-alpine AS deps-base
 
 WORKDIR /app
 
-COPY package.json bun.lock* ./
+COPY package.json bun.lock* /app/
 
-RUN bun install --frozen-lockfile --ignore-scipts
+FROM deps-base AS deps
+
+RUN bun install --frozen-lockfile --ignore-scripts
+
+FROM  deps-base AS prod-deps
+
+RUN bun install --production --frozen-lockfile --ignore-scripts
+
+FROM deps AS app-builder
+
+ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
 
 COPY . .
 
-RUN bun run build
+ARG APP_VERSION
 
-FROM oven/bun:1-alpine AS runner
+ENV APP_VERSION=${APP_VERSION}
 
-RUN apk add --no-cache wget ca-certificates
+COPY --from=deps /app/node_modules /app/node_modules
+
+RUN bun run build:app
+
+FROM oven/bun:1-alpine AS app
+
+
+RUN apk add --no-cache wget ca-certificates su-exec
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-
-COPY --from=builder --chown=bun:bun /app/build ./build
-COPY --from=builder --chown=bun:bun /app/package.json ./
-COPY --from=builder --chown=bun:bun /app/drizzle/ /app/drizzle
-COPY --from=builder --chown=bun:bun /app/drizzle.config.ts /app/drizzle.config.ts
+COPY --from=prod-deps --chown=bun:bun /app/node_modules /app/node_modules
+COPY --from=app-builder --chown=bun:bun /app/build /app/build
+COPY --from=app-builder --chown=bun:bun /app/package.json /app/
+COPY --from=app-builder --chown=bun:bun /app/drizzle/ /app/drizzle
+COPY --from=app-builder --chown=bun:bun /app/drizzle.config.ts /app/drizzle.config.ts
+COPY tools/docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 3000
 
+ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
+ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV BODY_SIZE_LIMIT=Infinity
@@ -40,6 +60,50 @@ VOLUME /app/data
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://0.0.0.0:3000/api/health || exit 1
 
-USER bun
-
+# No USER here, deliberately: entrypoint.sh needs to start as root to fix up
+# Docker-socket group access (see its own header comment for why), then
+# su-exec's into `bun` itself for the actual process, never running the app
+# as root.
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["bun", "run", "/app/build/index.js"]
+
+FROM deps AS agent-builder
+
+ARG APP_VERSION
+
+ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
+ENV APP_VERSION=${APP_VERSION}
+
+WORKDIR /app
+
+RUN apk add --no-cache wget ca-certificates
+
+COPY --from=deps /app/node_modules /app/node_modules
+
+COPY agent /app/agent
+COPY tsconfig.json /app/tsconfig.json
+
+ARG TARGETARCH
+RUN case "$TARGETARCH" in \
+    amd64) BUN_TARGET=bun-linux-x64-musl ;; \
+    arm64) BUN_TARGET=bun-linux-arm64-musl ;; \
+    *) echo "unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    bun build /app/agent/index.ts --compile --target="$BUN_TARGET" --external cpu-features --minify --outfile /out/homerun-agent
+
+FROM alpine:3 AS agent
+
+RUN apk add --no-cache ca-certificates wget libstdc++ libgcc
+
+COPY --from=agent-builder /out/homerun-agent /usr/local/bin/homerun-agent
+
+ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
+ENV PORT=7420
+ENV DOCKER_SOCKET_PATH=/var/run/docker.sock
+
+EXPOSE 7420
+
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://0.0.0.0:7420/v1/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/homerun-agent"]

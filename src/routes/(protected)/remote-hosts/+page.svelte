@@ -65,9 +65,19 @@
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <Server class="size-5" />
           </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-text truncate text-sm font-semibold">
+          <a
+            class="min-w-0 flex-1"
+            href={resolve("/(protected)/remote-hosts/[hostId]", {
+              hostId: host.id,
+            })}
+          >
+            <p class="text-text truncate text-sm font-semibold hover:underline">
               {host.name}
+              {#if host.kind === "agent"}
+                <span class="ml-1.5 rounded-full bg-accent-light px-2 py-0.5 text-[0.65rem] font-semibold text-accent">
+                  Homerun Agent
+                </span>
+              {/if}
               {#if host.isBuildServer}
                 <span class="ml-1.5 rounded-full bg-accent-light px-2 py-0.5 text-[0.65rem] font-semibold text-accent">
                   Build server
@@ -75,9 +85,25 @@
               {/if}
             </p>
             <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
-              {host.dockerHost}
+              {host.kind === "agent" ? host.agentUrl : host.dockerHost}
             </p>
-          </div>
+            {#if host.kind === "agent"}
+              {@const status = data.agentStatuses[host.id]}
+              <p class="mt-0.5 flex items-center gap-1.5 text-xs">
+                {#if status?.reachable}
+                  <span class="inline-block size-1.5 rounded-full bg-green-500"></span>
+                  <span class="text-text-subtle">
+                    Online, agent v{status.version}
+                  </span>
+                {:else}
+                  <span class="inline-block size-1.5 rounded-full bg-red-500"></span>
+                  <span class="text-red-600 dark:text-red-400">
+                    Unreachable{status?.error ? ` : ${status.error}` : ""}
+                  </span>
+                {/if}
+              </p>
+            {/if}
+          </a>
           <form
             action="?/delete"
             method="POST"

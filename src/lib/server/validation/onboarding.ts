@@ -24,10 +24,23 @@ const requiredText = (label: string) =>
 export const onboardingSchema = z
 	.object({
 		authCrossSubdomainCookies: checkbox,
-		authOrigin: requiredText("Origin URL"),
 		baseDomain: requiredText("Base domain"),
-		dockerNetworkName: requiredText("Docker network name"),
-		dockerSocketPath: requiredText("Docker socket path"),
+		// Optional, not required : real, tested-in-review bug this replaced.
+		// Both fields were `requiredText`, pre-filled from the *current*
+		// effective default (envDefaults, see +page.svelte), so finishing
+		// onboarding always persisted a concrete DB override even when the
+		// admin never touched either field, just clicked through with the
+		// pre-filled value. That override then permanently shadows any
+		// future improvement to what the default actually computes (verified
+		// live : $lib/config.ts's docker.socketPath auto-detection landed
+		// after this override already existed in a real dev DB, and kept
+		// silently losing to the stale onboarding-persisted "/var/run/docker.sock"
+		// forever, `override ?? envDefaults` always preferring the override).
+		// Blank now means "no override, use the effective default", same
+		// `nullableText()` convention settings/+page.server.ts's own Docker
+		// section already uses.
+		dockerNetworkName: z.string().optional(),
+		dockerSocketPath: z.string().optional(),
 		smtpEnabled: checkbox,
 		smtpFrom: z.string().optional(),
 		smtpHost: z.string().optional(),
@@ -38,6 +51,10 @@ export const onboardingSchema = z
 		traefikCertResolver: requiredText("Cert resolver"),
 		traefikDynamicConfigDir: z.string().optional(),
 		traefikEntrypoint: requiredText("Entrypoint"),
+		// Origin isn't a separate typed field, same as settings/+page.server.ts's
+		// updateCore action : it's derived from baseDomain plus this checkbox,
+		// so onboarding only ever asks for one domain, not two URLs.
+		useHttps: checkbox,
 	})
 	.superRefine((input, ctx) => {
 		if (!input.smtpEnabled) {

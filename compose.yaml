@@ -1,92 +1,29 @@
-# Traefik + Postgres bootstrap for local Homerun DEVELOPMENT.
-#
-# This file deliberately has no `app` service : for development the app
-# runs directly on the host (`bun run dev` / `bun run start`, see
-# CONTRIBUTING.md) with DOCKER_NETWORK_NAME=homerun-network and access to
-# /var/run/docker.sock, not in a container. Traefik auto-discovers
-# containers this app creates via Docker labels (see
-# src/lib/services/docker/labels.ts) : no control-plane push needed.
-# Postgres is required : there's no SQLite fallback (see CLAUDE.md's
-# "SQLite → Postgres conversion" note).
-#
-# Not doing local dev? See compose.prod.yaml instead, it adds the app
-# itself as a third service, pulled from the published Docker image, for a
-# plain `docker compose up -d` production install with no source checkout
-# at all.
-#
-# No-compose fallback: `docker network create homerun-network`, then run
-# Traefik standalone with the same command flags as below, and Postgres
-# standalone (or point DATABASE_URL at any Postgres you already run).
 services:
   traefik:
-    image: traefik:v3
-    restart: unless-stopped
-    command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=homerun-network
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      # Opt-in: only needed for custom SSL certificates (see the service
-      # Networking tab and $lib/services/docker/custom-ssl.ts). Uncomment
-      # this line, set TRAEFIK_DYNAMIC_CONFIG_DIR to the same host path
-      # as the bind mount below, and `docker compose up -d` to pick it
-      # up : the app writes cert/key files + per-domain dynamic config
-      # into that directory itself, it does not touch this container.
-      # - --providers.file.directory=/etc/traefik/dynamic
-      # - --providers.file.watch=true
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certs:/letsencrypt
-      # Uncomment alongside the --providers.file.* flags above : must be
-      # the same host path this app's TRAEFIK_DYNAMIC_CONFIG_DIR points at.
-      # - ${TRAEFIK_DYNAMIC_CONFIG_DIR:-./traefik-dynamic}:/etc/traefik/dynamic:ro
+    extends:
+      file: tools/compose/base.compose.yaml
+      service: traefik
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
-      - homerun-network
+      - homerun
+      - internal
 
-  # The app's own database : not a deployed service, so it deliberately
-  # doesn't go through the Docker layer above (no homerun.managed label, not
-  # attached to homerun-network, not Traefik-routed). Match DATABASE_URL to
-  # whatever POSTGRES_USER/PASSWORD/DB you set here (defaults line up with
-  # $lib/config.ts's own default, so this works with zero .env changes for
-  # local dev). Published on the host port so `bun run dev` (running
-  # directly on the host, not in this compose file : see the top comment)
-  # can reach it.
   postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-homerun}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homerun}
-      POSTGRES_USER: ${POSTGRES_USER:-homerun}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      interval: 5s
-      retries: 5
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homerun}"]
-      timeout: 5s
+    extends:
+      file: tools/compose/base.compose.yaml
+      service: postgres
+    networks:
+      - internal
 
 networks:
-  # external: true : this network is a shared resource, not compose-owned.
-  # The app's own Docker layer (src/lib/services/docker/containers.ts)
-  # attaches deployed containers to it directly by name, and it must
-  # survive a `docker compose down` without taking those containers'
-  # routing with it.
-  # Create it once with: docker network create homerun-network
-  homerun-network:
-    name: homerun-network
+  homerun:
+    name: homerun
     external: true
+  internal:
+    external: false
 
 volumes:
-  postgres-data: {}
-  traefik-certs: {}
+  postgres_data: {}
+  traefik_certs: {}

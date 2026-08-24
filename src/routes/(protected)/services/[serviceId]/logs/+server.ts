@@ -1,6 +1,6 @@
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { DockerService } from "$lib/services/docker.service";
+import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
@@ -19,10 +19,10 @@ export const GET = async ({ params, locals }) => {
 
 	const stream = svc.swarmServiceId
 		? await DockerService.streamSwarmServiceLogs(svc.swarmServiceId)
-		: await DockerService.streamLogs(
+		: await ServiceLifecycleService.streamLogs(
 				svc.containerId as string,
-				{ follow: true, tail: 200 },
-				await RemoteHostDTO.connectionFor(svc, locals.user.id),
+				svc.remoteHostId,
+				locals.user.id,
 			);
 	return new Response(stream, {
 		headers: {

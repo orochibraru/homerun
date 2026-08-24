@@ -1,5 +1,73 @@
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import Bun from "bun";
 import { z } from "zod";
+
+/**
+ * Only ever called as this schema field's zod `.default(fn)` (i.e. only
+ * when DOCKER_SOCKET_PATH/the DB override are both unset) : an explicit
+ * value always wins outright, this never overrides one. Real user report
+ * this fixes: a bare "/var/run/docker.sock" default doesn't match the
+ * active Docker context on plenty of real setups (OrbStack, Docker
+ * Desktop, Colima on macOS, a non-default context on Linux), so both this
+ * app *and* the standalone agent (see agent/config.ts's parallel copy,
+ * kept in sync by hand, same "no shared runtime between the two"
+ * precedent as agent/docker.ts) silently pointed at a socket that simply
+ * isn't there, with no indication *why* short of reading this file. Same
+ * detection order the `docker` CLI itself effectively uses:
+ *
+ * 1. `DOCKER_HOST=unix://...`, the CLI's own standard override, if set.
+ * 2. `docker context inspect`, the *actual* current context (covers
+ *    OrbStack/Desktop/Colima/a custom context automatically, whatever
+ *    `docker` itself would connect to) : this is genuinely the "default
+ *    docker context" the CLI resolves, not a guess at it.
+ * 3. A handful of common non-default socket locations, checked for
+ *    existence, for the case `docker` itself isn't installed (e.g. inside
+ *    a minimal container that only has the socket bind-mounted in, no CLI
+ *    at all, see agent.compose.yaml).
+ * 4. The original hardcoded default, unchanged as the final fallback : on
+ *    a real Linux server (the common production case, and what the
+ *    installer's rootless setup and every other default in this app
+ *    already assume) this is still usually correct.
+ */
+function detectDockerSocketPath(): string {
+	const dockerHost = Bun.env.DOCKER_HOST;
+	if (dockerHost?.startsWith("unix://")) {
+		return dockerHost.slice("unix://".length);
+	}
+
+	try {
+		const result = Bun.spawnSync([
+			"docker",
+			"context",
+			"inspect",
+			"--format",
+			"{{.Endpoints.docker.Host}}",
+		]);
+		if (result.exitCode === 0) {
+			const host = result.stdout.toString().trim();
+			if (host.startsWith("unix://")) {
+				return host.slice("unix://".length);
+			}
+		}
+	} catch {
+		// `docker` isn't installed/on PATH : fall through to path probing.
+	}
+
+	const candidates = [
+		"/var/run/docker.sock",
+		`${homedir()}/.orbstack/run/docker.sock`,
+		`${homedir()}/.docker/run/docker.sock`,
+		`${homedir()}/.colima/default/docker.sock`,
+	];
+	for (const candidate of candidates) {
+		if (existsSync(candidate)) {
+			return candidate;
+		}
+	}
+
+	return "/var/run/docker.sock";
+}
 
 export const configSchema = z.object({
 	auth: z.object({
@@ -26,7 +94,13 @@ export const configSchema = z.object({
 				}),
 			)
 			.default([]),
-		origin: z.string().default("http://localhost:3000"),
+		// No default on purpose : an explicit env/DB value always wins, but
+		// leaving this undefined lets better-auth derive the origin from each
+		// incoming request instead (see auth.ts's buildAuth()), which is the
+		// right behavior in dev *and* the common single-domain prod case.
+		// Was previously stuck at a "http://localhost:3000" default that
+		// masked whether anything had actually been configured.
+		origin: z.string().optional(),
 		secret: z.string().default("default-secret"),
 	}),
 	// URL Traefik's forwardAuth middleware calls to gatekeep a service with
@@ -45,8 +119,8 @@ export const configSchema = z.object({
 		.string()
 		.default("postgres://homerun:homerun@localhost:5432/homerun"),
 	docker: z.object({
-		networkName: z.string().default("homerun-network"),
-		socketPath: z.string().default("/var/run/docker.sock"),
+		networkName: z.string().default("homerun"),
+		socketPath: z.string().default(detectDockerSocketPath),
 	}),
 	logFormat: z.enum(["console", "json"]).default("console"),
 	logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
@@ -165,7 +239,7 @@ export const parseConfig = (): AppConfig => {
 export function envDefaultsForDisplay() {
 	return {
 		authCheckUrl: envDefaults.authCheckUrl,
-		authOrigin: envDefaults.auth.origin,
+		authOrigin: envDefaults.auth.origin ?? null,
 		baseDomain: envDefaults.baseDomain,
 		dockerNetworkName: envDefaults.docker.networkName,
 		dockerSocketPath: envDefaults.docker.socketPath,

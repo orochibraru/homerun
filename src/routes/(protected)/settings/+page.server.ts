@@ -7,6 +7,8 @@ import {
 } from "$lib/dto/instance-settings-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
+import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
+import { AdminService } from "$lib/services/admin.service";
 import { rebuildAuth } from "$lib/services/auth";
 import { CloudflareService } from "$lib/services/cloudflare.service";
 import { PangolinService } from "$lib/services/pangolin.service";
@@ -61,12 +63,39 @@ export const load = async ({ locals }) => {
 		throw redirect(302, resolve("/"));
 	}
 
-	const [settings, remoteHosts] = await Promise.all([
+	const [settings, remoteHosts, setupChecks] = await Promise.all([
 		InstanceSettingsDTO.get(),
-		RemoteHostDTO.list(locals.user.id),
+		// The autoscale overflow-host picker below : migration just runs the
+		// normal deploy pipeline against a switched remoteHostId (see
+		// autoscale-scheduler.ts's migrateToOverflow), so any deploy target,
+		// docker or agent, is a real candidate.
+		RemoteHostDTO.listDeployTargets(locals.user.id),
+		// Re-run live rather than trusting the dashboard banner's own
+		// highlight=field1,field2 query param to carry a message : a bare
+		// amber ring around a field, with nothing explaining what's actually
+		// wrong with it, was never self-explanatory on its own, and got
+		// meaningfully worse once the page moved to tabs (a highlighted
+		// field on a tab you don't land on has *no* visible signal at all
+		// beyond the ring, which is itself only visible on its own tab).
+		// `fieldIssues` below turns each highlighted field id back into the
+		// check's own message, live, so it can't go stale relative to the
+		// dashboard banner either.
+		AdminService.runSetupChecks(),
 	]);
+
+	const fieldIssues: Record<string, string> = {};
+	for (const check of setupChecks) {
+		if (check.severity === "ok") {
+			continue;
+		}
+		for (const field of AdminService.SETUP_CHECK_FIELDS[check.id] ?? []) {
+			fieldIssues[field] = check.detail;
+		}
+	}
+
 	return {
 		envDefaults: envDefaultsForDisplay(),
+		fieldIssues,
 		remoteHosts: remoteHosts.map((h) => h.toJSON()),
 		settings: settings.toJSON(),
 	};
@@ -160,6 +189,10 @@ export const actions = {
 		);
 
 		if (overflowRemoteHostId) {
+			// Both kinds (docker and agent) are real migration targets, see
+			// autoscale-scheduler.ts's migrateToOverflow : it just runs the
+			// normal deploy pipeline, real, tested-in-review bug this
+			// replaced, a stale "docker only" leftover from before that.
 			const host = await RemoteHostDTO.get(
 				overflowRemoteHostId,
 				locals.user.id,
@@ -204,6 +237,26 @@ export const actions = {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		const formData = await request.formData();
+		const rawBaseDomain = nullableText(formData, "baseDomain");
+		const baseDomain = rawBaseDomain
+			? normalizeBaseDomain(rawBaseDomain)
+			: null;
+		if (rawBaseDomain && !baseDomain) {
+			return fail(400, {
+				error:
+					'Base domain must be a bare hostname, like "example.com" or "app.example.local" : no "https://", path, or trailing slash.',
+				savedSection: "core",
+			});
+		}
+		// Origin isn't a separate field any more (real bug this replaced :
+		// it used to be freeform text that auth.ts's baseURL didn't even
+		// read, see auth.ts's buildAuth()) : it's derived straight from the
+		// base domain plus the "Use HTTPS" checkbox next to it, so setting
+		// one domain is enough.
+		const useHttps = checkbox(formData, "useHttps");
+		const authOrigin = baseDomain
+			? `${useHttps ? "https" : "http"}://${baseDomain}`
+			: null;
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateCore({
 			authCheckUrl: nullableText(formData, "authCheckUrl"),
@@ -211,8 +264,8 @@ export const actions = {
 				formData,
 				"authCrossSubdomainCookies",
 			),
-			authOrigin: nullableText(formData, "authOrigin"),
-			baseDomain: nullableText(formData, "baseDomain"),
+			authOrigin,
+			baseDomain,
 		});
 		applyAndRebuild(settings);
 		logger.info(`Core instance settings updated: user=${locals.user.id}`);

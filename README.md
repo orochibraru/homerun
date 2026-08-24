@@ -18,9 +18,9 @@ babysit.
 Two ways to run it, both entirely from prebuilt release binaries and Docker
 images, no Bun, no `git`, no source checkout needed for either.
 
-**Fresh Linux server, one command.** Installs Docker (rootless), the
-`homerun-network`, and brings up Traefik + Postgres + the app itself, all pulled
-from published images:
+**Fresh Linux server, one command.** Installs Docker (rootless), the `homerun`,
+and brings up Traefik + Postgres + the app itself, all pulled from published
+images:
 
 ```sh
 curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \
@@ -39,7 +39,7 @@ rootless setup, no installer:
 curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/compose.prod.yaml
 curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/.env.example
 mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum
-docker network create homerun-network
+docker network create homerun
 docker compose -f compose.prod.yaml up -d
 ```
 

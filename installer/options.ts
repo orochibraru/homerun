@@ -55,7 +55,7 @@ class InstallerOptionsParser {
 
 	printHelp(): void {
 		console.log(`
-homerun-install : sets up Docker (rootless), the homerun-network, and the
+homerun-install : sets up Docker (rootless), the homerun, and the
 Homerun Agent (or the full stack) on a fresh Linux server, entirely from
 prebuilt release binaries and Docker images, nothing built from source.
 

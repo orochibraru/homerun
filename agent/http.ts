@@ -1,7 +1,7 @@
 import type { BunRequest } from "bun";
 import { DockerService } from "./docker";
 import { OpenApiBuilder } from "./openapi";
-import { deployInputSchema } from "./schemas";
+import { buildInputSchema, deployInputSchema } from "./schemas";
 import { SystemStatsService } from "./stats";
 import { tokensMatch } from "./token";
 import { AGENT_VERSION } from "./version";
@@ -39,6 +39,20 @@ export class AgentHttpServer {
 	 */
 	get routes() {
 		return {
+			"/v1/build": {
+				POST: this.#authed(async (req) => {
+					const body = await req.json().catch(() => null);
+					const parsed = buildInputSchema.safeParse(body);
+					if (!parsed.success) {
+						return json(
+							{ error: "Invalid request body", issues: parsed.error.issues },
+							{ status: 400 },
+						);
+					}
+					const result = await DockerService.buildFromGit(parsed.data);
+					return json(result, { status: result.success ? 200 : 500 });
+				}),
+			},
 			"/v1/containers": {
 				GET: this.#authed(async () =>
 					json(await DockerService.listManagedContainers()),
@@ -122,18 +136,40 @@ export class AgentHttpServer {
 	/** Fallback for any request Bun's router couldn't match against `routes` above. */
 	notFound = (): Response => json({ error: "Not found" }, { status: 404 });
 
-	/** Wraps a route handler with the bearer-token check and the shared error → 500 JSON translation every authenticated route needs. */
+	/**
+	 * Wraps a route handler with the bearer-token check, request logging,
+	 * and the shared error → 500 JSON translation every authenticated route
+	 * needs. Real gap this closes : every one of these routes (deploy,
+	 * build, start/stop/restart, ...) used to print nothing at all to this
+	 * process's own console, so a request that reached the agent and did
+	 * real work (or failed) left zero trace in its own logs, the only
+	 * evidence was whatever the *caller* (the main app) happened to show.
+	 * `/v1/health` deliberately isn't logged here (it doesn't go through
+	 * `#authed` at all) : a monitor/the Remote Hosts page's own live status
+	 * check can poll it every few seconds, which would otherwise drown out
+	 * everything else.
+	 */
 	#authed<Path extends string>(
 		handler: RouteHandler<Path>,
 	): RouteHandler<Path> {
 		return async (req) => {
+			const start = performance.now();
+			const { pathname } = new URL(req.url);
 			if (!this.#checkAuth(req)) {
+				console.log(`[http] ${req.method} ${pathname} - 401`);
 				return json({ error: "Unauthorized" }, { status: 401 });
 			}
 			try {
-				return await handler(req);
+				const res = await handler(req);
+				console.log(
+					`[http] ${req.method} ${pathname} - ${res.status} (${Math.round(performance.now() - start)}ms)`,
+				);
+				return res;
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
+				console.log(
+					`[http] ${req.method} ${pathname} - 500 (${Math.round(performance.now() - start)}ms): ${message}`,
+				);
 				return json({ error: message }, { status: 500 });
 			}
 		};

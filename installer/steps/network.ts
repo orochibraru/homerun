@@ -1,7 +1,7 @@
 import type { StepRunner } from "../exec";
 
 class NetworkSetupService {
-	/** Creates the shared network on the rootless daemon : same name convention as the main app's homerun-network, idempotent (docker network create errors on a duplicate name, so check first). */
+	/** Creates the shared network on the rootless daemon : same name convention as the main app's homerun, idempotent (docker network create errors on a duplicate name, so check first). */
 	async ensureHomerunNetwork(
 		run: StepRunner,
 		username: string,
@@ -12,7 +12,7 @@ class NetworkSetupService {
 			HOME: `/home/${username}`,
 		};
 		const inspected = await run
-			.run(["docker", "network", "inspect", "homerun-network"], {
+			.run(["docker", "network", "inspect", "homerun"], {
 				as: username,
 				env,
 			})
@@ -21,10 +21,10 @@ class NetworkSetupService {
 				() => false,
 			);
 		if (inspected) {
-			console.log("homerun-network already exists, skipping.");
+			console.log("homerun already exists, skipping.");
 			return;
 		}
-		await run.run(["docker", "network", "create", "homerun-network"], {
+		await run.run(["docker", "network", "create", "homerun"], {
 			as: username,
 			env,
 		});

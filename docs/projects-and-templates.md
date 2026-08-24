@@ -4,8 +4,8 @@
 
 A project groups services together and gives them a shared, private Docker
 network, member services can reach each other by plain slug (`http://api:8080`),
-separate from the shared `homerun-network` every service also joins for Traefik
-routing. A project also prefixes its member services' public subdomains:
+separate from the shared `homerun` every service also joins for Traefik routing.
+A project also prefixes its member services' public subdomains:
 `<projectSlug>-<slug>.<baseDomain>`.
 
 Every project gets its network created alongside the project row and removed on

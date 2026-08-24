@@ -47,20 +47,35 @@
 			envDefaults?.baseDomain ??
 			"",
 	);
-	let authOrigin = $derived(
-		(form?.values?.authOrigin as string) ??
-			settings?.authOrigin ??
-			envDefaults?.authOrigin ??
-			"",
+	// Origin isn't a separate typed field, same derivation as the Settings
+	// page's Core section : base domain plus this checkbox, so onboarding
+	// only ever asks for one domain, not two URLs.
+	let useHttps = $derived(
+		settings?.authOrigin ? settings.authOrigin.startsWith("https://") : true,
+	);
+	const originPreview = $derived(
+		`${useHttps ? "https" : "http"}://${baseDomain || "…"}`,
 	);
 	let authCrossSubdomainCookies = $derived(
 		settings?.authCrossSubdomainCookies ?? false,
 	);
 
+	// Deliberately *not* pre-filled from envDefaults, unlike every other
+	// field on this page : real, tested-in-review bug this replaced.
+	// envDefaults.dockerSocketPath is now live-detected (see $lib/config.ts's
+	// detectDockerSocketPath), so pre-filling the bound value with it would
+	// make finishing onboarding persist *that moment's* detected path as a
+	// permanent DB override the instant you click through, even having
+	// never touched the field, silently shadowing any future improvement to
+	// what auto-detection resolves to (verified live in a real dev DB : an
+	// onboarding-persisted stale "/var/run/docker.sock" kept winning over a
+	// newly-fixed detector forever, `override ?? envDefaults` always
+	// preferring the override). Blank stays blank unless a stored DB
+	// override or a just-failed submission's own value says otherwise;
+	// envDefaults only shows as the input's `placeholder` below now.
 	let dockerSocketPath = $derived(
 		(form?.values?.dockerSocketPath as string) ??
 			settings?.dockerSocketPath ??
-			envDefaults?.dockerSocketPath ??
 			"",
 	);
 	let dockerNetworkName = $derived(
@@ -131,10 +146,6 @@
 			: undefined;
 	}
 
-	function isValidUrl(value: string): boolean {
-		return URL.canParse(value);
-	}
-
 	function setStepErrors(fields: string[], next: FieldErrors) {
 		const merged = { ...errors };
 		for (const f of fields) {
@@ -149,23 +160,15 @@
 		if (!baseDomain.trim()) {
 			next.baseDomain = "Base domain is required.";
 		}
-		if (!authOrigin.trim()) {
-			next.authOrigin = "Origin URL is required.";
-		} else if (!isValidUrl(authOrigin)) {
-			next.authOrigin = "Enter a valid URL.";
-		}
 		return next;
 	}
 
+	// Both fields are optional now (blank = use the effective default, see
+	// dockerSocketPath's own comment above), nothing left to validate here :
+	// kept as a function, rather than dropped from STEP_VALIDATORS, so a
+	// future required Docker-step field has an obvious place to land.
 	function validateDocker(): FieldErrors {
-		const next: FieldErrors = {};
-		if (!dockerSocketPath.trim()) {
-			next.dockerSocketPath = "Socket path is required.";
-		}
-		if (!dockerNetworkName.trim()) {
-			next.dockerNetworkName = "Network name is required.";
-		}
-		return next;
+		return {};
 	}
 
 	function validateTraefik(): FieldErrors {
@@ -201,7 +204,7 @@
 
 	// Index-aligned with STEPS (minus the fields-less Review step).
 	const STEP_FIELDS: string[][] = [
-		["baseDomain", "authOrigin"],
+		["baseDomain"],
 		["dockerSocketPath", "dockerNetworkName"],
 		["traefikEntrypoint", "traefikCertResolver"],
 		["smtpHost", "smtpPort", "smtpUser", "smtpFrom"],
@@ -345,19 +348,13 @@
                 <p class={errorClass}>{showError("baseDomain")}</p>
               {/if}
             </div>
-            <div>
-              <label class={label} for="authOrigin">Origin URL</label>
-              <input
-                class={input}
-                id="authOrigin"
-                name="authOrigin"
-                type="text"
-                bind:value={authOrigin}
-              >
-              {#if showError("authOrigin")}
-                <p class={errorClass}>{showError("authOrigin")}</p>
-              {/if}
-            </div>
+            <CheckBox
+              helperText={`Origin: ${originPreview}`}
+              id="useHttps"
+              label="Use HTTPS"
+              name="useHttps"
+              bind:checked={useHttps}
+            />
             <CheckBox
               helperText="Widens the session cookie to every subdomain of the base domain"
               id="authCrossSubdomainCookies"
@@ -378,9 +375,14 @@
                 class="{input} font-mono"
                 id="dockerSocketPath"
                 name="dockerSocketPath"
+                placeholder={envDefaults?.dockerSocketPath}
                 type="text"
                 bind:value={dockerSocketPath}
               >
+              <p class="mt-1.5 text-xs text-text-subtle">
+                Leave blank to keep auto-detecting this (shown above as a
+                placeholder) : only set it here to pin a specific path.
+              </p>
               {#if showError("dockerSocketPath")}
                 <p class={errorClass}>{showError("dockerSocketPath")}</p>
               {/if}
@@ -558,7 +560,7 @@
               <div class="flex justify-between gap-4">
                 <dt class="text-text-muted">Docker socket</dt>
                 <dd class="truncate font-mono text-xs text-text">
-                  {dockerSocketPath || "—"}
+                  {dockerSocketPath || "auto-detected"}
                 </dd>
               </div>
               <div class="flex justify-between gap-4">

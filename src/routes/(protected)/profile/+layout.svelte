@@ -2,32 +2,42 @@
 	import { KeyRound, Lock, ShieldCheck, UserCircle } from "@lucide/svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
 
 	const { children } = $props();
 
-	const tabs = [
+	interface RouteTab extends NavTab {
+		exact: boolean;
+		href: string;
+	}
+
+	const tabs: RouteTab[] = [
 		{
 			exact: true,
 			href: resolve("/profile"),
 			icon: UserCircle,
+			id: "personal-information",
 			label: "Personal Information",
 		},
 		{
 			exact: false,
 			href: resolve("/profile/security"),
 			icon: Lock,
+			id: "security",
 			label: "Security",
 		},
 		{
 			exact: false,
 			href: resolve("/profile/sessions"),
 			icon: ShieldCheck,
+			id: "sessions",
 			label: "Sessions",
 		},
 		{
 			exact: false,
 			href: resolve("/profile/clients"),
 			icon: KeyRound,
+			id: "clients",
 			label: "Authorized Clients",
 		},
 	];
@@ -38,6 +48,10 @@
 		}
 		return page.url.pathname.startsWith(href);
 	}
+
+	const activeTabId = $derived(
+		tabs.find((tab) => isActive(tab.href, tab.exact))?.id ?? "",
+	);
 </script>
 
 <div class="p-6 md:p-8">
@@ -49,24 +63,7 @@
   </div>
 
   <!-- ── Tabs ─────────────────────────────────────────────── -->
-  <div class="mb-6 flex gap-1 overflow-x-auto border-b border-border">
-    {#each tabs as tab (tab.href)}
-      {@const active = isActive(tab.href, tab.exact)}
-      {@const TabIcon = tab.icon}
-      <a
-        class="
-          flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-all duration-200
-          {active
-          ? 'border-accent text-accent'
-          : 'border-transparent text-text-muted hover:text-text'}
-        "
-        href={tab.href}
-      >
-        <TabIcon class="size-4" />
-        {tab.label}
-      </a>
-    {/each}
-  </div>
+  <TabNav active={activeTabId} {tabs} />
 
   {@render children()}
 

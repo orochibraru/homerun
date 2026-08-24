@@ -1,0 +1,36 @@
+services:
+  app:
+    restart: unless-stopped
+    # Docker's own default is 10s before SIGKILL, which is shorter than the
+    # adapter's own graceful-shutdown window (SHUTDOWN_TIMEOUT, 30s default,
+    # see tools/adapter/templates/index.ts) : without this, `docker stop`
+    # would kill the process mid-drain before it ever got the chance to
+    # finish gracefully, real requests (a live log stream, an in-progress
+    # deploy poll) would still get cut regardless of that adapter fix.
+    stop_grace_period: 35s
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - app_data:/app/data
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
+      DOCKER_NETWORK_NAME: homerun
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+      ORIGIN: ${ORIGIN:-http://localhost:3000}
+      BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 5s
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://0.0.0.0:3000/api/health",
+        ]
+      timeout: 30s

@@ -15,6 +15,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import StatusBadge from "$lib/components/status-badge.svelte";
+	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
 
 	const { data, children } = $props();
 
@@ -23,11 +24,17 @@
 		data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug,
 	);
 
-	const tabs = $derived([
+	interface RouteTab extends NavTab {
+		exact: boolean;
+		href: string;
+	}
+
+	const tabs = $derived<RouteTab[]>([
 		{
 			exact: true,
 			href: resolve("/(protected)/services/[serviceId]", { serviceId: svc.id }),
 			icon: LayoutGrid,
+			id: "overview",
 			label: "Overview",
 		},
 		{
@@ -36,6 +43,7 @@
 				serviceId: svc.id,
 			}),
 			icon: Container,
+			id: "source",
 			label: "Source",
 		},
 		{
@@ -44,6 +52,7 @@
 				serviceId: svc.id,
 			}),
 			icon: FileText,
+			id: "logs",
 			label: "Logs",
 		},
 		{
@@ -52,6 +61,7 @@
 				serviceId: svc.id,
 			}),
 			icon: SlidersHorizontal,
+			id: "env",
 			label: "Env Vars",
 		},
 		{
@@ -60,6 +70,7 @@
 				serviceId: svc.id,
 			}),
 			icon: HardDrive,
+			id: "volumes",
 			label: "Volumes",
 		},
 		{
@@ -68,6 +79,7 @@
 				serviceId: svc.id,
 			}),
 			icon: Network,
+			id: "networking",
 			label: "Networking",
 		},
 		{
@@ -76,6 +88,7 @@
 				serviceId: svc.id,
 			}),
 			icon: Cpu,
+			id: "compute",
 			label: "Compute",
 		},
 		{
@@ -84,6 +97,7 @@
 				serviceId: svc.id,
 			}),
 			icon: Terminal,
+			id: "terminal",
 			label: "Terminal",
 		},
 		{
@@ -92,6 +106,7 @@
 				serviceId: svc.id,
 			}),
 			icon: TriangleAlert,
+			id: "errors",
 			label: "Errors",
 		},
 		{
@@ -100,6 +115,7 @@
 				serviceId: svc.id,
 			}),
 			icon: Settings,
+			id: "settings",
 			label: "Settings",
 		},
 	]);
@@ -110,6 +126,10 @@
 		}
 		return page.url.pathname.startsWith(href);
 	}
+
+	const activeTabId = $derived(
+		tabs.find((tab) => isActive(tab.href, tab.exact))?.id ?? "",
+	);
 </script>
 
 <div class="p-6 md:p-8">
@@ -143,24 +163,7 @@
   </p>
 
   <!-- ── Tabs ─────────────────────────────────────────────── -->
-  <div class="border-border mb-6 flex gap-1 border-b">
-    {#each tabs as tab}
-      {@const active = isActive(tab.href, tab.exact)}
-      {@const TabIcon = tab.icon}
-      <a
-        class="
-          flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-all duration-200
-          {active
-          ? 'border-accent text-accent'
-          : 'border-transparent text-text-muted hover:text-text'}
-        "
-        href={tab.href}
-      >
-        <TabIcon class="size-4" />
-        {tab.label}
-      </a>
-    {/each}
-  </div>
+  <TabNav active={activeTabId} {tabs} />
 
   {@render children()}
 </div>

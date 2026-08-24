@@ -264,11 +264,19 @@
         action="?/moveRemoteHost"
         class="flex w-75 items-center gap-2"
         method="POST"
-        use:enhance={() => async ({ result, update }) => {
+        use:enhance={() => async ({
+          result,
+          update,
+        }: {
+          result: { type: string; data?: { error?: string } };
+          update: () => Promise<void>;
+        }) => {
           if (result.type === "success") {
             toast.success("Saved.");
           } else {
-            toast.error("Couldn't change the deploy target.");
+            toast.error(
+              result.data?.error ?? "Couldn't change the deploy target.",
+            );
           }
           await update();
         }}

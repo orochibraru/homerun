@@ -179,19 +179,43 @@ export const project = pgTable(
 export const remoteHost = pgTable(
 	"remote_host",
 	{
+		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc :
+		// only set when kind = "agent". The bearer token this app presents to
+		// the remote Homerun Agent's HTTP API (see agent/README.md).
+		agentTokenEnc: text("agent_token_enc"),
+		// "http://host:7420" or "https://host:7420", the Homerun Agent's own
+		// reachable base URL : only set when kind = "agent". Distinct from
+		// dockerHost, which speaks the raw Docker Engine API directly instead
+		// of going through an agent's HTTP surface.
+		agentUrl: text("agent_url"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// "tcp://host:2376" (optionally TLS-secured with the ca/cert/key
 		// below) or "ssh://user@host" : passed to dockerode's constructor
 		// as-is, parsed by docker/client.ts's getDocker(). Never a bare
 		// "unix://..." : the local socket is always the implicit default
-		// (remoteHostId: null on a service), not a row in this table.
-		dockerHost: text("docker_host").notNull(),
+		// (remoteHostId: null on a service), not a row in this table. Only
+		// set when kind = "docker".
+		dockerHost: text("docker_host"),
 		id: text("id").primaryKey(),
 		// Opt-in : whether this host can be picked as a service's *build
 		// server* (Source tab, git mode), separate from being picked as a
 		// deploy target. Off by default, same "background/cross-cutting
-		// capability defaults inert" posture as autoscaleEligible.
+		// capability defaults inert" posture as autoscaleEligible. Either
+		// kind : a "docker" build server runs a raw dockerode `buildImage()`
+		// (docker/git-build.ts), an "agent" one calls its own `POST /v1/build`
+		// (agent-client.service.ts), see RemoteHostDTO.listBuildServers.
 		isBuildServer: boolean("is_build_server").default(false).notNull(),
+		// "docker" (the original/default, a raw tcp://ssh:// Docker Engine
+		// connection) or "agent" (a registered Homerun Agent, see agent/README.md
+		// : token-authenticated HTTP instead of a raw Docker socket/TLS cert).
+		// Both kinds are real deploy targets and build servers :
+		// RemoteHostDTO.resolveTarget resolves either one into a
+		// `RemoteExecutionTarget`, which deploy.service.ts and
+		// service-lifecycle.service.ts branch on to route through
+		// DockerService (docker) or AgentClientService (agent).
+		kind: text("kind", { enum: ["docker", "agent"] })
+			.default("docker")
+			.notNull(),
 		name: text("name").notNull(),
 		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc
 		// : only set when dockerHost uses TLS-secured tcp://.
@@ -531,7 +555,7 @@ export const service = pgTable(
 		image: text("image").notNull(),
 		memoryLimitMb: integer("memory_limit_mb"),
 		name: text("name").notNull(),
-		// "bridge" (default : the shared homerun-network + project network,
+		// "bridge" (default : the shared homerun + project network,
 		// Traefik-routed) | "host" (shares the host's network namespace
 		// directly, e.g. for mDNS/SSDP-dependent apps like Home Assistant :
 		// no Traefik routing, no internal slug alias, not on any Docker

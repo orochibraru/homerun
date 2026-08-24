@@ -26,6 +26,11 @@
 	// than merges with, the base config's own `exclude` (per the `extends`
 	// docs linked below), so its other entries (node_modules, the
 	// service-worker special-case) are repeated here too, not just dropped.
+	// tools/adapter/ is a standalone Bun/TypeScript sub-project (own
+	// tsconfig.json, checked via `bun run check:adapter`), same reasoning as
+	// the tests/ exclusion below : its templates/*.ts reference bun-types
+	// globals and virtual module specifiers (internal.d.ts) that don't
+	// belong in this app's DOM-flavored svelte-check pass.
 	"exclude": [
 		"node_modules/**",
 		"src/service-worker.js",
@@ -34,7 +39,8 @@
 		"src/service-worker/**/*.ts",
 		"src/service-worker.d.ts",
 		"src/service-worker/**/*.d.ts",
-		"tests"
+		"tests",
+		"tools/adapter"
 	],
 	"extends": "./.svelte-kit/tsconfig.json"
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias

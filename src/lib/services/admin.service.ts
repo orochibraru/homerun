@@ -1,3 +1,4 @@
+import { dev } from "$app/env";
 import { config, isSmtpEnabled } from "$lib/config";
 import { db } from "$lib/server/db/lib";
 import { user as userTable } from "$lib/server/db/schema";
@@ -22,9 +23,12 @@ class AdminServiceClass {
 	 * to highlight for either.
 	 */
 	readonly SETUP_CHECK_FIELDS: Record<string, string[]> = {
+		// "origin" doesn't have its own input any more : it's derived from
+		// baseDomain + the Use HTTPS toggle right next to it (General
+		// section of /settings), so both checks point at the same field.
 		"base-domain": ["baseDomain"],
 		docker: ["dockerSocketPath"],
-		origin: ["authOrigin"],
+		origin: ["baseDomain"],
 		smtp: ["smtpHost", "smtpPort", "smtpUser", "smtpPassword", "smtpFrom"],
 	};
 
@@ -61,7 +65,7 @@ class AdminServiceClass {
 		const checks: SetupCheck[] = [];
 
 		checks.push(
-			config.baseDomain === "localhost"
+			config.baseDomain === "localhost" && !dev
 				? {
 						detail:
 							"Deployed services will only be reachable at <slug>.localhost from this machine : set a real domain for public routing (env var below, or the Core section of /settings).",
@@ -79,7 +83,7 @@ class AdminServiceClass {
 		);
 
 		checks.push(
-			config.auth.secret === "default-secret"
+			config.auth.secret === "default-secret" && !dev
 				? {
 						detail:
 							"Using the built-in placeholder auth secret : sessions aren't safe against a compromised install. Generate a real one (e.g. `openssl rand -base64 32`).",
@@ -97,10 +101,10 @@ class AdminServiceClass {
 		);
 
 		checks.push(
-			config.auth.origin === "http://localhost:3000"
+			!config.auth.origin && !dev
 				? {
 						detail:
-							"Using the default origin : auth callbacks/redirects may misbehave once this isn't served from localhost:3000 (env var below, or the Core section of /settings).",
+							"No origin configured : derived per-request for now, which is fine for a single domain but can misbehave behind a proxy. Set a Base domain (env var below, or the General section of /settings) to pin it.",
 						envVar: "ORIGIN",
 						id: "origin",
 						label: "Origin URL",

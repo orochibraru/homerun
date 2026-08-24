@@ -10,6 +10,7 @@
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
+	import { invalidateAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
@@ -68,7 +69,10 @@
 				),
 			);
 			if (res.ok) {
-				const body = (await res.json()) as { log: string; status: string };
+				const body = (await res.json()) as {
+					log: string;
+					status: string;
+				};
 				progressLines = body.log.split("\n").filter(Boolean);
 				return body.status;
 			}
@@ -144,10 +148,12 @@
 			}) => {
 				if (result.type === "failure" && result.data?.error) {
 					toast.error(result.data.error);
+					await invalidateAll();
 				} else if (result.type === "success") {
 					toast.success("Deployed.");
 				}
 				await update();
+				await invalidateAll();
 			};
 		};
 	}
@@ -155,160 +161,191 @@
 
 <!-- ═══ Actions ═══ -->
 <div class="mb-6 flex flex-wrap gap-2">
-  <form action="?/deploy" method="POST" use:enhance={deployEnhance()}>
-    <Button disabled={pendingAction !== null} type="submit">
-      {#if pendingAction === "deploy"}
-        <Spinner />
-        {svc.containerId ? "Deploying…" : "Deploying…"}
-      {:else}
-        <Rocket class="size-4" />
-        {svc.containerId ? "Redeploy" : "Deploy"}
-      {/if}
-    </Button>
-  </form>
-
-  {#if svc.containerId}
-    {#if svc.desiredState === "running"}
-      <form action="?/stop" method="POST" use:enhance={withPending("stop")}>
-        <Button
-          class="border-red-100 bg-red-600/10 text-red-600 dark:border-red-600"
-          disabled={pendingAction !== null}
-          type="submit"
-          variant="outline"
-        >
-          {#if pendingAction === "stop"}
-            <Spinner />
-          {:else}
-            <Square class="size-4" />
-          {/if}
-          Stop
+    <form action="?/deploy" method="POST" use:enhance={deployEnhance()}>
+        <Button disabled={pendingAction !== null} type="submit">
+            {#if pendingAction === "deploy"}
+                <Spinner />
+                {svc.containerId ? "Deploying…" : "Deploying…"}
+            {:else}
+                <Rocket class="size-4" />
+                {svc.containerId ? "Redeploy" : "Deploy"}
+            {/if}
         </Button>
-      </form>
-    {:else}
-      <form action="?/start" method="POST" use:enhance={withPending("start")}>
-        <Button
-          class="border-green-100 bg-green-600/10 text-green-600 dark:border-green-600"
-          disabled={pendingAction !== null}
-          type="submit"
-          variant="outline"
-        >
-          {#if pendingAction === "start"}
-            <Spinner />
-          {:else}
-            <Play class="size-4" />
-          {/if}
-          Start
-        </Button>
-      </form>
-    {/if}
-
-    <form action="?/restart" method="POST" use:enhance={withPending("restart")}>
-      <Button disabled={pendingAction !== null} type="submit" variant="outline">
-        {#if pendingAction === "restart"}
-          <Spinner />
-        {:else}
-          <RotateCw class="size-4" />
-        {/if}
-        Restart
-      </Button>
     </form>
-  {/if}
+
+    {#if svc.containerId}
+        {#if svc.desiredState === "running"}
+            <form
+                action="?/stop"
+                method="POST"
+                use:enhance={withPending("stop")}
+            >
+                <Button
+                    class="border-red-100 bg-red-600/10 text-red-600 dark:border-red-600"
+                    disabled={pendingAction !== null}
+                    type="submit"
+                    variant="outline"
+                >
+                    {#if pendingAction === "stop"}
+                        <Spinner />
+                    {:else}
+                        <Square class="size-4" />
+                    {/if}
+                    Stop
+                </Button>
+            </form>
+        {:else}
+            <form
+                action="?/start"
+                method="POST"
+                use:enhance={withPending("start")}
+            >
+                <Button
+                    class="border-green-100 bg-green-600/10 text-green-600 dark:border-green-600"
+                    disabled={pendingAction !== null}
+                    type="submit"
+                    variant="outline"
+                >
+                    {#if pendingAction === "start"}
+                        <Spinner />
+                    {:else}
+                        <Play class="size-4" />
+                    {/if}
+                    Start
+                </Button>
+            </form>
+        {/if}
+
+        <form
+            action="?/restart"
+            method="POST"
+            use:enhance={withPending("restart")}
+        >
+            <Button
+                disabled={pendingAction !== null}
+                type="submit"
+                variant="outline"
+            >
+                {#if pendingAction === "restart"}
+                    <Spinner />
+                {:else}
+                    <RotateCw class="size-4" />
+                {/if}
+                Restart
+            </Button>
+        </form>
+    {/if}
 </div>
 
 {#if pendingAction === "deploy" && progressLines.length > 0}
-  <div class="mb-6 h-48 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
-    {#each progressLines as line, i (i)}
-      <AnsiLine {line} />
-    {/each}
-  </div>
+    <div
+        class="mb-6 h-48 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+    >
+        {#each progressLines as line, i (i)}
+            <AnsiLine {line} />
+        {/each}
+    </div>
 {/if}
 
 {#if !svc.containerId}
-  <div class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm">
-    This service hasn't been deployed yet : click <strong>Deploy</strong> to
-    pull
-    <span class="text-text font-mono">{svc.image}:{svc.tag}</span>
-    and start it.
-  </div>
+    <div
+        class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm"
+    >
+        This service hasn't been deployed yet : click <strong>Deploy</strong> to
+        pull
+        <span class="text-text font-mono">{svc.image}:{svc.tag}</span>
+        and start it.
+    </div>
 {:else if pendingAction !== "deploy"}
-  <!-- Live container logs, right on the Overview tab : same panel as the
+    <!-- Live container logs, right on the Overview tab : same panel as the
        Logs tab (see $lib/components/live-log-viewer.svelte), just shorter.
        Hidden mid-deploy since the progress panel above already covers
        live output for that. -->
-  <div class="mb-6">
-    <LiveLogViewer
-      containerId={svc.containerId}
-      heightClass="h-56"
-      serviceId={svc.id}
-    />
-    <a
-      class="text-accent mt-2 inline-block text-xs underline"
-      href={resolve("/(protected)/services/[serviceId]/logs", {
-        serviceId: svc.id,
-      })}
-    >
-      View full logs
-    </a>
-  </div>
+    <div class="mb-6">
+        <LiveLogViewer
+            containerId={svc.containerId}
+            heightClass="h-56"
+            serviceId={svc.id}
+        />
+        <a
+            class="text-accent mt-2 inline-block text-xs underline"
+            href={resolve("/(protected)/services/[serviceId]/logs", {
+                serviceId: svc.id,
+            })}
+        >
+            View full logs
+        </a>
+    </div>
 {/if}
 
 <!-- ═══ Deployment history ═══ -->
 <section class="border-border bg-surface rounded-2xl border">
-  <div class="border-border flex items-center gap-2 border-b px-5 py-4">
-    <Clock class="text-text-muted size-4" />
-    <h2 class="text-text text-sm font-semibold">Deployment history</h2>
-  </div>
+    <div class="border-border flex items-center gap-2 border-b px-5 py-4">
+        <Clock class="text-text-muted size-4" />
+        <h2 class="text-text text-sm font-semibold">Deployment history</h2>
+    </div>
 
-  {#if data.deployments.length === 0}
-    <div class="flex flex-col items-center justify-center py-12 text-center">
-      <p class="text-text-muted text-sm font-medium">No deployments yet</p>
-    </div>
-  {:else}
-    <div class="divide-border divide-y">
-      {#each data.deployments as dep (dep.id)}
-        <div>
-          <button
-            class="flex w-full items-center gap-4 px-5 py-3 text-left"
-            onclick={() => {
-              expandedDeploymentId = expandedDeploymentId === dep.id ? null : dep.id;
-            }}
-            type="button"
-          >
-            <StatusBadge status={dep.status} />
-            <div class="min-w-0 flex-1">
-              <p class="text-text-muted truncate text-xs">
-                {timeAgo(dep.createdAt)}
-                {#if dep.imageDigest}
-                  ·
-                  <span class="font-mono">{dep.imageDigest.slice(0, 19)}</span>
-                {/if}
-              </p>
-              {#if dep.errorMessage}
-                <p class="mt-0.5 truncate text-xs text-red-500">
-                  {dep.errorMessage}
-                </p>
-              {/if}
-            </div>
-            {#if dep.log}
-              <ChevronDown
-                class="
-                  text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
-                  dep.id
-                  ? 'rotate-180'
-                  : ''}
-                "
-              />
-            {/if}
-          </button>
-          {#if expandedDeploymentId === dep.id && dep.log}
-            <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
-              {#each dep.log.split("\n").filter(Boolean) as line, i (i)}
-                <AnsiLine {line} />
-              {/each}
-            </div>
-          {/if}
+    {#if data.deployments.length === 0}
+        <div
+            class="flex flex-col items-center justify-center py-12 text-center"
+        >
+            <p class="text-text-muted text-sm font-medium">
+                No deployments yet
+            </p>
         </div>
-      {/each}
-    </div>
-  {/if}
+    {:else}
+        <div class="divide-border divide-y">
+            {#each data.deployments as dep (dep.id)}
+                <div>
+                    <button
+                        class="flex w-full items-center gap-4 px-5 py-3 text-left"
+                        onclick={() => {
+                            expandedDeploymentId =
+                                expandedDeploymentId === dep.id ? null : dep.id;
+                        }}
+                        type="button"
+                    >
+                        <StatusBadge status={dep.status} />
+                        <div class="min-w-0 flex-1">
+                            <p class="text-text-muted truncate text-xs">
+                                {timeAgo(dep.createdAt)}
+                                {#if dep.imageDigest}
+                                    ·
+                                    <span class="font-mono"
+                                        >{dep.imageDigest.slice(0, 19)}</span
+                                    >
+                                {/if}
+                            </p>
+                            {#if dep.errorMessage}
+                                <p class="mt-0.5 truncate text-xs text-red-500">
+                                    {dep.errorMessage}
+                                </p>
+                            {/if}
+                        </div>
+                        {#if dep.log}
+                            <ChevronDown
+                                class="
+                  text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
+                                dep.id
+                                    ? 'rotate-180'
+                                    : ''}
+                "
+                            />
+                        {/if}
+                    </button>
+                    {#if expandedDeploymentId === dep.id && dep.log}
+                        <div
+                            class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+                        >
+                            {#each dep.log
+                                .split("\n")
+                                .filter(Boolean) as line, i (i)}
+                                <AnsiLine {line} />
+                            {/each}
+                        </div>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+    {/if}
 </section>

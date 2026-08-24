@@ -78,13 +78,14 @@ bun run build:packages       # builds cli/installer/agent binaries for both arch
 
 ## Env vars
 
-| Var                    | Default                  | Meaning                                                                                                                                                                                                                              |
-| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`                 | `7420`                   | HTTP listen port                                                                                                                                                                                                                     |
-| `AGENT_TOKEN`          | _(generated)_            | Bearer token every non-health request must present. Set this explicitly for a reproducible deploy (e.g. via the installer or a systemd unit); otherwise the agent generates one on first boot and persists it to `AGENT_TOKEN_FILE`. |
-| `AGENT_TOKEN_FILE`     | `~/.homerun-agent/token` | Where a generated token is persisted across restarts.                                                                                                                                                                                |
-| `DOCKER_SOCKET_PATH`   | `/var/run/docker.sock`   | Point this at a rootless Docker socket (e.g. `/run/user/<uid>/docker.sock`) when installed via `installer/`'s rootless setup.                                                                                                        |
-| `HOMERUN_NETWORK_NAME` | `homerun-network`        | Created on boot if missing; every deployed container joins it (bridge mode only, host-mode services skip it, same as the main app).                                                                                                  |
+| Var                      | Default                  | Meaning                                                                                                                                                                                                                              |
+| ------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PORT`                   | `7420`                   | HTTP listen port                                                                                                                                                                                                                     |
+| `AGENT_TOKEN`            | _(generated)_            | Bearer token every non-health request must present. Set this explicitly for a reproducible deploy (e.g. via the installer or a systemd unit); otherwise the agent generates one on first boot and persists it to `AGENT_TOKEN_FILE`. |
+| `AGENT_TOKEN_FILE`       | `~/.homerun-agent/token` | Where a generated token is persisted across restarts.                                                                                                                                                                                |
+| `DOCKER_SOCKET_PATH`     | `/var/run/docker.sock`   | Point this at a rootless Docker socket (e.g. `/run/user/<uid>/docker.sock`) when installed via `installer/`'s rootless setup.                                                                                                        |
+| `HOMERUN_NETWORK_NAME`   | `homerun`                | Created on boot if missing; every deployed container joins it (bridge mode only, host-mode services skip it, same as the main app).                                                                                                  |
+| `AGENT_SHUTDOWN_TIMEOUT` | `120`                    | Seconds SIGINT/SIGTERM waits for in-flight requests (a `/v1/deploy` pull or `/v1/build` clone+build in progress) to finish before forcing the shutdown.                                                                              |
 
 ## HTTP surface
 
@@ -97,8 +98,12 @@ Every route below requires `Authorization: Bearer <token>` except `/v1/health`.
 - `GET /v1/containers`, every `homerun.managed=true` container on this host (raw
   dockerode `ContainerInfo[]`).
 - `POST /v1/deploy`, body is a `DeployInput` (see `src/docker.ts`): pulls the
-  image, removes the previous container for that `serviceId` (found by label,
-  not name), creates + starts the new one. Returns `{containerId, log}`.
+  image (unless `skipPull`), removes the previous container for that `serviceId`
+  (found by label, not name), creates + starts the new one. Returns
+  `{containerId, log}`.
+- `POST /v1/build`, body is a `BuildInput` (see `schemas.ts`): clones a git repo
+  at a ref and builds its Dockerfile into a local image, optionally pushing it
+  to a registry afterward. Returns `{success, error?}`.
 - `GET /v1/containers/:id`, `{id, state, status}`.
 - `DELETE /v1/containers/:id`, stop + remove.
 - `POST /v1/containers/:id/{start,stop,restart}`.

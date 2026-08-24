@@ -121,7 +121,7 @@ describe("Commands.serviceGet", () => {
 		const GET = mock(async () => okResponse({ id: "svc-1" }));
 		const client = fakeClient({ GET });
 
-		await Commands.serviceGet(client, "svc-1", true);
+		await Commands.serviceGet(client, "svc-1");
 
 		expect(GET).toHaveBeenCalledWith("/services/{serviceId}", {
 			params: { path: { serviceId: "svc-1" } },

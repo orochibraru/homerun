@@ -22,7 +22,7 @@ host's architecture and runs it, which:
 1. Installs Docker Engine plus the host prerequisites for **rootless** Docker.
 2. Creates a dedicated system user (`homerun` by default) and installs rootless
    Docker under that account, nothing this app deploys runs as root.
-3. Creates the `homerun-network` Docker network.
+3. Creates the `homerun` Docker network.
 4. Writes a standalone compose file and runs `docker compose up -d` against it
    under that rootless daemon: Traefik, Postgres, and the app itself, all pulled
    from published images.
@@ -50,7 +50,7 @@ rootless setup, no source checkout:
 curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/compose.prod.yaml
 curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/.env.example
 mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum, see configuration.md
-docker network create homerun-network
+docker network create homerun
 docker compose -f compose.prod.yaml up -d
 ```
 
