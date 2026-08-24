@@ -1,37 +1,27 @@
 import { StepRunner } from "./exec";
-import { parseArgs } from "./options";
-import { installAgentBinary, installAgentSystemdUnit } from "./steps/agent";
-import {
-	arch,
-	detectPackageManager,
-	requireLinux,
-	requireRoot,
-} from "./steps/detect";
-import { bringUpFullStack } from "./steps/full-stack";
-import { ensureHomerunNetwork } from "./steps/network";
-import {
-	ensureRootlessUser,
-	installDockerEngine,
-	installRootlessDocker,
-	installRootlessPrereqs,
-} from "./steps/rootless-docker";
+import { OptionsParser } from "./options";
+import { AgentInstaller } from "./steps/agent";
+import { Detector } from "./steps/detect";
+import { FullStackInstaller } from "./steps/full-stack";
+import { NetworkSetup } from "./steps/network";
+import { RootlessDockerInstaller } from "./steps/rootless-docker";
 
 async function main() {
-	const opts = parseArgs(process.argv.slice(2));
+	const opts = OptionsParser.parseArgs(process.argv.slice(2));
 
 	console.log(
 		"Homerun installer : draft/WIP, see installer/README.md before running against a real box.\n",
 	);
 
 	if (!opts.dryRun) {
-		requireLinux();
-		requireRoot();
+		Detector.requireLinux();
+		Detector.requireRoot();
 	}
 
 	const run = new StepRunner(opts.dryRun);
 
 	console.log(
-		`Target: mode=${opts.mode} user=${opts.rootlessUser} arch=${arch()} version=${opts.version} dryRun=${opts.dryRun}\n`,
+		`Target: mode=${opts.mode} user=${opts.rootlessUser} arch=${Detector.arch()} version=${opts.version} dryRun=${opts.dryRun}\n`,
 	);
 
 	console.log("== 1/5 Docker engine + rootless prerequisites ==");
@@ -39,34 +29,42 @@ async function main() {
 	// a real Debian/RHEL box (e.g. from a macOS dev machine) : fall back to a
 	// fake apt manager there instead of failing before anything else runs.
 	const pm = opts.dryRun
-		? await detectPackageManager().catch(() => ({
+		? await Detector.detectPackageManager().catch(() => ({
 				install: ["apt-get", "install", "-y"],
 				kind: "apt" as const,
 			}))
-		: await detectPackageManager();
-	await installDockerEngine(run);
-	await installRootlessPrereqs(run, pm);
+		: await Detector.detectPackageManager();
+	await RootlessDockerInstaller.installDockerEngine(run);
+	await RootlessDockerInstaller.installRootlessPrereqs(run, pm);
 
 	console.log("\n== 2/5 Rootless user ==");
-	await ensureRootlessUser(run, opts.rootlessUser);
+	await RootlessDockerInstaller.ensureRootlessUser(run, opts.rootlessUser);
 
 	console.log("\n== 3/5 Rootless Docker daemon ==");
-	const dockerSocket = await installRootlessDocker(run, opts.rootlessUser);
+	const dockerSocket = await RootlessDockerInstaller.installRootlessDocker(
+		run,
+		opts.rootlessUser,
+	);
 
 	console.log("\n== 4/5 homerun-network ==");
-	await ensureHomerunNetwork(run, opts.rootlessUser, dockerSocket);
+	await NetworkSetup.ensureHomerunNetwork(run, opts.rootlessUser, dockerSocket);
 
 	console.log("\n== 5/5 Install ==");
 	if (opts.mode === "agent") {
-		await installAgentBinary(run, opts.version, arch());
-		await installAgentSystemdUnit(
+		await AgentInstaller.installAgentBinary(run, opts.version, Detector.arch());
+		await AgentInstaller.installAgentSystemdUnit(
 			run,
 			opts.rootlessUser,
 			dockerSocket,
 			opts.agentPort,
 		);
 	} else {
-		await bringUpFullStack(run, opts.rootlessUser, opts.version, dockerSocket);
+		await FullStackInstaller.bringUpFullStack(
+			run,
+			opts.rootlessUser,
+			opts.version,
+			dockerSocket,
+		);
 	}
 
 	console.log("\nDone.");

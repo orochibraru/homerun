@@ -1,15 +1,9 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
-import type { makeClient } from "../../cli/client";
-import {
-	projectsList,
-	serviceAction,
-	serviceGet,
-	servicesList,
-	templatesList,
-} from "../../cli/commands";
-import * as output from "../../cli/output";
+import type { ClientFactory } from "../../cli/client";
+import { Commands } from "../../cli/commands";
+import { Output } from "../../cli/output";
 
-type Client = ReturnType<typeof makeClient>;
+type Client = ReturnType<typeof ClientFactory.makeClient>;
 
 class FailCalled extends Error {}
 
@@ -43,13 +37,13 @@ afterEach(() => {
 });
 
 function spyOnOutput() {
-	printJsonSpy = spyOn(output, "printJson").mockImplementation(() => undefined);
-	printTableSpy = spyOn(output, "printTable").mockImplementation(
+	printJsonSpy = spyOn(Output, "printJson").mockImplementation(() => undefined);
+	printTableSpy = spyOn(Output, "printTable").mockImplementation(
 		() => undefined,
 	);
 }
 
-describe("servicesList", () => {
+describe("Commands.servicesList", () => {
 	test("prints JSON when json=true", async () => {
 		spyOnOutput();
 		const GET = mock(async () =>
@@ -66,7 +60,7 @@ describe("servicesList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await servicesList(client, true);
+		await Commands.servicesList(client, true);
 
 		expect(GET).toHaveBeenCalledWith("/services");
 		expect(printJsonSpy).toHaveBeenCalled();
@@ -89,7 +83,7 @@ describe("servicesList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await servicesList(client, false);
+		await Commands.servicesList(client, false);
 
 		expect(printTableSpy).toHaveBeenCalledWith(
 			[
@@ -105,8 +99,8 @@ describe("servicesList", () => {
 		);
 	});
 
-	test("calls fail() with the status and body on an error response", async () => {
-		const failSpy = spyOn(output, "fail").mockImplementation(() => {
+	test("calls Output.fail() with the status and body on an error response", async () => {
+		const failSpy = spyOn(Output, "fail").mockImplementation(() => {
 			throw new FailCalled();
 		});
 		const GET = mock(async () =>
@@ -114,18 +108,20 @@ describe("servicesList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await expect(servicesList(client, true)).rejects.toThrow(FailCalled);
+		await expect(Commands.servicesList(client, true)).rejects.toThrow(
+			FailCalled,
+		);
 		expect(failSpy).toHaveBeenCalledWith('404 Not Found: {"error":"nope"}');
 	});
 });
 
-describe("serviceGet", () => {
+describe("Commands.serviceGet", () => {
 	test("fetches by id and prints JSON", async () => {
 		spyOnOutput();
 		const GET = mock(async () => okResponse({ id: "svc-1" }));
 		const client = fakeClient({ GET });
 
-		await serviceGet(client, "svc-1", true);
+		await Commands.serviceGet(client, "svc-1", true);
 
 		expect(GET).toHaveBeenCalledWith("/services/{serviceId}", {
 			params: { path: { serviceId: "svc-1" } },
@@ -134,7 +130,7 @@ describe("serviceGet", () => {
 	});
 });
 
-describe("serviceAction", () => {
+describe("Commands.serviceAction", () => {
 	test.each(["deploy", "start", "stop", "restart"] as const)(
 		"POSTs to /services/{serviceId}/%s",
 		async (action) => {
@@ -142,7 +138,7 @@ describe("serviceAction", () => {
 			const POST = mock(async () => okResponse({ ok: true }));
 			const client = fakeClient({ POST });
 
-			await serviceAction(client, action, "svc-1");
+			await Commands.serviceAction(client, action, "svc-1");
 
 			expect(POST).toHaveBeenCalledWith(`/services/{serviceId}/${action}`, {
 				params: { path: { serviceId: "svc-1" } },
@@ -152,7 +148,7 @@ describe("serviceAction", () => {
 	);
 });
 
-describe("projectsList", () => {
+describe("Commands.projectsList", () => {
 	test("prints a mapped table when json=false", async () => {
 		spyOnOutput();
 		const GET = mock(async () =>
@@ -160,7 +156,7 @@ describe("projectsList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await projectsList(client, false);
+		await Commands.projectsList(client, false);
 
 		expect(printTableSpy).toHaveBeenCalledWith(
 			[{ id: "p1", name: "Project One", slug: "project-one" }],
@@ -169,7 +165,7 @@ describe("projectsList", () => {
 	});
 });
 
-describe("templatesList", () => {
+describe("Commands.templatesList", () => {
 	test("prints a mapped table combining image:tag when json=false", async () => {
 		spyOnOutput();
 		const GET = mock(async () =>
@@ -177,7 +173,7 @@ describe("templatesList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await templatesList(client, false);
+		await Commands.templatesList(client, false);
 
 		expect(printTableSpy).toHaveBeenCalledWith(
 			[{ id: "t1", image: "redis:7", name: "Redis" }],

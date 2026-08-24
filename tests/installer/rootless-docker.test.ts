@@ -2,12 +2,7 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { StepRunner } from "../../installer/exec";
 import * as exec from "../../installer/exec";
 import type { PackageManager } from "../../installer/steps/detect";
-import {
-	ensureRootlessUser,
-	installDockerEngine,
-	installRootlessDocker,
-	installRootlessPrereqs,
-} from "../../installer/steps/rootless-docker";
+import { RootlessDockerInstaller } from "../../installer/steps/rootless-docker";
 
 function fakeRunner(overrides?: {
 	run?: ReturnType<typeof mock>;
@@ -19,7 +14,7 @@ function fakeRunner(overrides?: {
 	return { run, runOk } as unknown as StepRunner;
 }
 
-describe("installDockerEngine", () => {
+describe("RootlessDockerInstaller.installDockerEngine", () => {
 	afterEach(() => {
 		mock.restore();
 	});
@@ -29,7 +24,7 @@ describe("installDockerEngine", () => {
 		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 		const runner = fakeRunner({ run });
 
-		await installDockerEngine(runner);
+		await RootlessDockerInstaller.installDockerEngine(runner);
 
 		expect(run).not.toHaveBeenCalled();
 	});
@@ -39,7 +34,7 @@ describe("installDockerEngine", () => {
 		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 		const runner = fakeRunner({ run });
 
-		await installDockerEngine(runner);
+		await RootlessDockerInstaller.installDockerEngine(runner);
 
 		expect(run).toHaveBeenCalledWith([
 			"sh",
@@ -49,7 +44,7 @@ describe("installDockerEngine", () => {
 	});
 });
 
-describe("installRootlessPrereqs", () => {
+describe("RootlessDockerInstaller.installRootlessPrereqs", () => {
 	test("installs uidmap/dbus-user-session on apt", async () => {
 		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 		const runner = fakeRunner({ run });
@@ -58,7 +53,7 @@ describe("installRootlessPrereqs", () => {
 			kind: "apt",
 		};
 
-		await installRootlessPrereqs(runner, pm);
+		await RootlessDockerInstaller.installRootlessPrereqs(runner, pm);
 
 		expect(run).toHaveBeenCalledWith([
 			"apt-get",
@@ -77,19 +72,19 @@ describe("installRootlessPrereqs", () => {
 			kind: "dnf",
 		};
 
-		await installRootlessPrereqs(runner, pm);
+		await RootlessDockerInstaller.installRootlessPrereqs(runner, pm);
 
 		expect(run).toHaveBeenCalledWith(["dnf", "install", "-y", "shadow-utils"]);
 	});
 });
 
-describe("ensureRootlessUser", () => {
+describe("RootlessDockerInstaller.ensureRootlessUser", () => {
 	test("reuses the user when `id <user>` succeeds", async () => {
 		const runOk = mock(async () => true);
 		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 		const runner = fakeRunner({ run, runOk });
 
-		await ensureRootlessUser(runner, "homerun");
+		await RootlessDockerInstaller.ensureRootlessUser(runner, "homerun");
 
 		expect(runOk).toHaveBeenCalledWith(["id", "homerun"]);
 		expect(run).not.toHaveBeenCalled();
@@ -100,7 +95,7 @@ describe("ensureRootlessUser", () => {
 		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 		const runner = fakeRunner({ run, runOk });
 
-		await ensureRootlessUser(runner, "homerun");
+		await RootlessDockerInstaller.ensureRootlessUser(runner, "homerun");
 
 		expect(run).toHaveBeenCalledWith([
 			"useradd",
@@ -112,7 +107,7 @@ describe("ensureRootlessUser", () => {
 	});
 });
 
-describe("installRootlessDocker", () => {
+describe("RootlessDockerInstaller.installRootlessDocker", () => {
 	test("enables lingering, installs rootless Docker as the user, and returns its socket path", async () => {
 		const run = mock(async (cmd: string[]) => {
 			if (cmd[0] === "id" && cmd[1] === "-u") {
@@ -122,7 +117,10 @@ describe("installRootlessDocker", () => {
 		});
 		const runner = fakeRunner({ run });
 
-		const socket = await installRootlessDocker(runner, "homerun");
+		const socket = await RootlessDockerInstaller.installRootlessDocker(
+			runner,
+			"homerun",
+		);
 
 		expect(socket).toBe("/run/user/1000/docker.sock");
 		expect(run).toHaveBeenCalledWith(["loginctl", "enable-linger", "homerun"]);
@@ -149,7 +147,10 @@ describe("installRootlessDocker", () => {
 		});
 		const runner = fakeRunner({ run });
 
-		const socket = await installRootlessDocker(runner, "homerun");
+		const socket = await RootlessDockerInstaller.installRootlessDocker(
+			runner,
+			"homerun",
+		);
 
 		expect(socket).toBe("/run/user/<uid>/docker.sock");
 	});

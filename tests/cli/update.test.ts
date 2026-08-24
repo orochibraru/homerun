@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { update } from "../../cli/update";
+import { UpdateService } from "../../cli/update";
 
 /**
- * `update()` is heavily side-effecting past its first guard clauses (real
+ * `UpdateService.update()` is heavily side-effecting past its first guard clauses (real
  * network calls to Gitea, replacing the running binary), so this only
  * exercises the fast, deterministic fail-fast paths that are actually true
  * in every environment this suite runs in : `bun test` always runs via the
@@ -34,7 +34,7 @@ describe("update", () => {
 		}) as never);
 		const fetchSpy = spyOn(globalThis, "fetch");
 
-		await expect(update()).rejects.toThrow(ExitCalled);
+		await expect(UpdateService.update()).rejects.toThrow(ExitCalled);
 
 		expect(fetchSpy).not.toHaveBeenCalled();
 		const message = errorSpy.mock.calls[0]?.[0] as string;

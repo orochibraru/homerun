@@ -23,36 +23,38 @@ const DEFAULTS: Options = {
 	yes: false,
 };
 
-export function parseArgs(argv: string[]): Options {
-	const opts: Options = { ...DEFAULTS };
-	for (const arg of argv) {
-		if (arg === "--dry-run") {
-			opts.dryRun = true;
-		} else if (arg === "--yes" || arg === "-y") {
-			opts.yes = true;
-		} else if (arg === "--mode=full") {
-			opts.mode = "full";
-		} else if (arg === "--mode=agent") {
-			opts.mode = "agent";
-		} else if (arg.startsWith("--user=")) {
-			opts.rootlessUser = arg.slice("--user=".length);
-		} else if (arg.startsWith("--version=")) {
-			opts.version = arg.slice("--version=".length);
-		} else if (arg.startsWith("--port=")) {
-			opts.agentPort = Number.parseInt(arg.slice("--port=".length), 10);
-		} else if (arg === "--help" || arg === "-h") {
-			printHelp();
-			process.exit(0);
-		} else {
-			console.error(`Unknown argument: ${arg} (see --help)`);
-			process.exit(1);
+/** argv parsing, grouped as a class for consistency with the rest of installer/ : neither method carries instance state, both are pure/one-shot over the given argv. */
+class InstallerOptionsParser {
+	parseArgs(argv: string[]): Options {
+		const opts: Options = { ...DEFAULTS };
+		for (const arg of argv) {
+			if (arg === "--dry-run") {
+				opts.dryRun = true;
+			} else if (arg === "--yes" || arg === "-y") {
+				opts.yes = true;
+			} else if (arg === "--mode=full") {
+				opts.mode = "full";
+			} else if (arg === "--mode=agent") {
+				opts.mode = "agent";
+			} else if (arg.startsWith("--user=")) {
+				opts.rootlessUser = arg.slice("--user=".length);
+			} else if (arg.startsWith("--version=")) {
+				opts.version = arg.slice("--version=".length);
+			} else if (arg.startsWith("--port=")) {
+				opts.agentPort = Number.parseInt(arg.slice("--port=".length), 10);
+			} else if (arg === "--help" || arg === "-h") {
+				this.printHelp();
+				process.exit(0);
+			} else {
+				console.error(`Unknown argument: ${arg} (see --help)`);
+				process.exit(1);
+			}
 		}
+		return opts;
 	}
-	return opts;
-}
 
-export function printHelp(): void {
-	console.log(`
+	printHelp(): void {
+		console.log(`
 homerun-install : sets up Docker (rootless), the homerun-network, and the
 Homerun Agent (or the full stack) on a fresh Linux server, entirely from
 prebuilt release binaries and Docker images, nothing built from source.
@@ -71,4 +73,7 @@ Options:
   --dry-run           Print every command instead of running it
   --yes, -y            Skip the confirmation prompt (needed for curl | sh)
 `);
+	}
 }
+
+export const OptionsParser = new InstallerOptionsParser();

@@ -1,35 +1,37 @@
 import type { StepRunner } from "../exec";
-import { downloadReleaseBinary } from "./release";
+import { ReleaseAssets } from "./release";
 
-/** Downloads the prebuilt `homerun-agent-<arch>` release binary and installs it system-wide. No source, no Bun on the target host, see `release.ts`. */
-export async function installAgentBinary(
-	run: StepRunner,
-	version: string,
-	arch: "amd64" | "arm64",
-): Promise<string> {
-	const binaryPath = "/usr/local/bin/homerun-agent";
-	await downloadReleaseBinary(
-		run,
-		version,
-		`homerun-agent-${arch}`,
-		binaryPath,
-	);
-	return binaryPath;
-}
+/** `--mode=agent`'s two steps : fetching the binary and wiring it into a `systemd --user` unit. Grouped as a class for consistency with the rest of installer/steps/. */
+class AgentInstallerService {
+	/** Downloads the prebuilt `homerun-agent-<arch>` release binary and installs it system-wide. No source, no Bun on the target host, see `release.ts`. */
+	async installAgentBinary(
+		run: StepRunner,
+		version: string,
+		arch: "amd64" | "arm64",
+	): Promise<string> {
+		const binaryPath = "/usr/local/bin/homerun-agent";
+		await ReleaseAssets.downloadReleaseBinary(
+			run,
+			version,
+			`homerun-agent-${arch}`,
+			binaryPath,
+		);
+		return binaryPath;
+	}
 
-/**
- * A systemd --user unit (run as the rootless-Docker user, same session the
- * daemon itself lives in) rather than a system-wide unit : keeps the agent
- * process under the same non-root account as the containers it manages,
- * consistent with the "rootless permissions" requirement.
- */
-export function agentSystemdUnit(opts: {
-	binaryPath: string;
-	dockerSocket: string;
-	port: number;
-	tokenFile: string;
-}): string {
-	return `[Unit]
+	/**
+	 * A systemd --user unit (run as the rootless-Docker user, same session the
+	 * daemon itself lives in) rather than a system-wide unit : keeps the agent
+	 * process under the same non-root account as the containers it manages,
+	 * consistent with the "rootless permissions" requirement.
+	 */
+	agentSystemdUnit(opts: {
+		binaryPath: string;
+		dockerSocket: string;
+		port: number;
+		tokenFile: string;
+	}): string {
+		return `[Unit]
 Description=Homerun Agent
 After=docker.service
 Wants=docker.service
@@ -44,45 +46,48 @@ Environment=AGENT_TOKEN_FILE=${opts.tokenFile}
 [Install]
 WantedBy=default.target
 `;
+	}
+
+	async installAgentSystemdUnit(
+		run: StepRunner,
+		username: string,
+		dockerSocket: string,
+		port: number,
+	): Promise<void> {
+		const unitDir = `/home/${username}/.config/systemd/user`;
+		const tokenFile = `/home/${username}/.homerun-agent/token`;
+		const unit = this.agentSystemdUnit({
+			binaryPath: "/usr/local/bin/homerun-agent",
+			dockerSocket,
+			port,
+			tokenFile,
+		});
+
+		await run.run(["mkdir", "-p", unitDir], { as: username });
+		// StepRunner's `run` captures stdout/stderr but has no stdin-piping path,
+		// so the unit file is written directly rather than via a `cat > file`
+		// heredoc : this is a no-op under --dry-run (see writeFile below).
+		await run.writeFile(`${unitDir}/homerun-agent.service`, unit);
+		await run.run(["chown", "-R", `${username}:${username}`, unitDir]);
+
+		const env = {
+			HOME: `/home/${username}`,
+			XDG_RUNTIME_DIR: `/run/user/${await this.#uidOf(run, username)}`,
+		};
+		await run.run(["systemctl", "--user", "daemon-reload"], {
+			as: username,
+			env,
+		});
+		await run.run(["systemctl", "--user", "enable", "--now", "homerun-agent"], {
+			as: username,
+			env,
+		});
+	}
+
+	async #uidOf(run: StepRunner, username: string): Promise<string> {
+		const result = await run.run(["id", "-u", username]);
+		return result.stdout.trim() || "1000";
+	}
 }
 
-export async function installAgentSystemdUnit(
-	run: StepRunner,
-	username: string,
-	dockerSocket: string,
-	port: number,
-): Promise<void> {
-	const unitDir = `/home/${username}/.config/systemd/user`;
-	const tokenFile = `/home/${username}/.homerun-agent/token`;
-	const unit = agentSystemdUnit({
-		binaryPath: "/usr/local/bin/homerun-agent",
-		dockerSocket,
-		port,
-		tokenFile,
-	});
-
-	await run.run(["mkdir", "-p", unitDir], { as: username });
-	// StepRunner's `run` captures stdout/stderr but has no stdin-piping path,
-	// so the unit file is written directly rather than via a `cat > file`
-	// heredoc : this is a no-op under --dry-run (see writeFile below).
-	await run.writeFile(`${unitDir}/homerun-agent.service`, unit);
-	await run.run(["chown", "-R", `${username}:${username}`, unitDir]);
-
-	const env = {
-		HOME: `/home/${username}`,
-		XDG_RUNTIME_DIR: `/run/user/${await uidOf(run, username)}`,
-	};
-	await run.run(["systemctl", "--user", "daemon-reload"], {
-		as: username,
-		env,
-	});
-	await run.run(["systemctl", "--user", "enable", "--now", "homerun-agent"], {
-		as: username,
-		env,
-	});
-}
-
-async function uidOf(run: StepRunner, username: string): Promise<string> {
-	const result = await run.run(["id", "-u", username]);
-	return result.stdout.trim() || "1000";
-}
+export const AgentInstaller = new AgentInstallerService();

@@ -1,14 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { StepRunner } from "../../installer/exec";
-import { bringUpFullStack } from "../../installer/steps/full-stack";
+import { FullStackInstaller } from "../../installer/steps/full-stack";
 
-describe("bringUpFullStack", () => {
+describe("FullStackInstaller.bringUpFullStack", () => {
 	test("writes a compose file wiring in the image and docker socket, then pulls and starts it", async () => {
 		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 		const writeFile = mock(async () => undefined);
 		const runner = { run, writeFile } as unknown as StepRunner;
 
-		const composePath = await bringUpFullStack(
+		const composePath = await FullStackInstaller.bringUpFullStack(
 			runner,
 			"homerun",
 			"v1.2.3",
@@ -47,12 +47,17 @@ describe("bringUpFullStack", () => {
 		);
 	});
 
-	test("resolves 'latest' the same way imageRef does", async () => {
+	test("resolves 'latest' the same way ReleaseAssets.imageRef does", async () => {
 		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 		const writeFile = mock(async () => undefined);
 		const runner = { run, writeFile } as unknown as StepRunner;
 
-		await bringUpFullStack(runner, "homerun", "latest", "/var/run/docker.sock");
+		await FullStackInstaller.bringUpFullStack(
+			runner,
+			"homerun",
+			"latest",
+			"/var/run/docker.sock",
+		);
 
 		const [, content] = writeFile.mock.calls[0] as [string, string];
 		expect(content).toContain(

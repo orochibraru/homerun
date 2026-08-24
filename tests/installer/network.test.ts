@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { StepRunner } from "../../installer/exec";
-import { ensureHomerunNetwork } from "../../installer/steps/network";
+import { NetworkSetup } from "../../installer/steps/network";
 
 /**
  * A plain object shaped like `StepRunner` (TS types are erased at runtime,
@@ -20,11 +20,15 @@ function fakeRunner(opts: { inspectSucceeds: boolean }) {
 	return { run } as unknown as StepRunner;
 }
 
-describe("ensureHomerunNetwork", () => {
+describe("NetworkSetup.ensureHomerunNetwork", () => {
 	test("skips creation when the network already exists", async () => {
 		const runner = fakeRunner({ inspectSucceeds: true });
 
-		await ensureHomerunNetwork(runner, "homerun", "/run/user/1000/docker.sock");
+		await NetworkSetup.ensureHomerunNetwork(
+			runner,
+			"homerun",
+			"/run/user/1000/docker.sock",
+		);
 
 		const calls = (runner.run as ReturnType<typeof mock>).mock.calls;
 		expect(calls).toHaveLength(1);
@@ -39,7 +43,11 @@ describe("ensureHomerunNetwork", () => {
 	test("creates the network when inspect fails", async () => {
 		const runner = fakeRunner({ inspectSucceeds: false });
 
-		await ensureHomerunNetwork(runner, "homerun", "/run/user/1000/docker.sock");
+		await NetworkSetup.ensureHomerunNetwork(
+			runner,
+			"homerun",
+			"/run/user/1000/docker.sock",
+		);
 
 		const calls = (runner.run as ReturnType<typeof mock>).mock.calls;
 		expect(calls).toHaveLength(2);
@@ -54,7 +62,11 @@ describe("ensureHomerunNetwork", () => {
 	test("passes DOCKER_HOST and HOME derived from the socket/username", async () => {
 		const runner = fakeRunner({ inspectSucceeds: true });
 
-		await ensureHomerunNetwork(runner, "alice", "/run/user/1000/docker.sock");
+		await NetworkSetup.ensureHomerunNetwork(
+			runner,
+			"alice",
+			"/run/user/1000/docker.sock",
+		);
 
 		const calls = (runner.run as ReturnType<typeof mock>).mock.calls;
 		expect(calls[0][1]).toMatchObject({

@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { config } from "../../agent/config";
-import { resolveToken, tokensMatch } from "../../agent/token";
+import { TokenManager, tokensMatch } from "../../agent/token";
 
 // `config` is a plain, mutable singleton object (not a module.module target):
 // mocking "../../agent/config" wholesale via mock.module would work *within*
@@ -58,7 +58,7 @@ describe("resolveToken", () => {
 		const tokenFile = join(workDir, "does", "not", "exist", "token");
 		mockConfig({ explicitToken: "my-explicit-token", tokenFile });
 
-		const result = await resolveToken();
+		const result = await TokenManager.resolveToken();
 
 		expect(result).toEqual({ source: "env", token: "my-explicit-token" });
 	});
@@ -69,7 +69,7 @@ describe("resolveToken", () => {
 		await Bun.write(tokenFile, "  persisted-token-value  \n");
 		mockConfig({ explicitToken: null, tokenFile });
 
-		const result = await resolveToken();
+		const result = await TokenManager.resolveToken();
 
 		expect(result).toEqual({
 			source: "persisted",
@@ -82,7 +82,7 @@ describe("resolveToken", () => {
 		const tokenFile = join(workDir, "nested", "dir", "token");
 		mockConfig({ explicitToken: null, tokenFile });
 
-		const result = await resolveToken();
+		const result = await TokenManager.resolveToken();
 
 		expect(result.source).toBe("generated");
 		// Two concatenated randomUUID()s with dashes stripped: 32 + 32 hex chars.
@@ -96,7 +96,7 @@ describe("resolveToken", () => {
 		await Bun.write(tokenFile, "   \n");
 		mockConfig({ explicitToken: null, tokenFile });
 
-		const result = await resolveToken();
+		const result = await TokenManager.resolveToken();
 
 		expect(result.source).toBe("generated");
 		expect(result.token).toMatch(/^[0-9a-f]{64}$/);
@@ -107,7 +107,7 @@ describe("resolveToken", () => {
 		const tokenFile = join(workDir, "token");
 		mockConfig({ explicitToken: null, tokenFile });
 
-		await resolveToken();
+		await TokenManager.resolveToken();
 
 		const { stat } = await import("node:fs/promises");
 		const mode = (await stat(tokenFile)).mode & 0o777;
@@ -119,10 +119,10 @@ describe("resolveToken", () => {
 		const tokenFile = join(workDir, "token");
 		mockConfig({ explicitToken: null, tokenFile });
 
-		const first = await resolveToken();
+		const first = await TokenManager.resolveToken();
 		expect(first.source).toBe("generated");
 
-		const second = await resolveToken();
+		const second = await TokenManager.resolveToken();
 		expect(second).toEqual({ source: "persisted", token: first.token });
 	});
 });
