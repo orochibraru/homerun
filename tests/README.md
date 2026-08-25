@@ -6,16 +6,17 @@
 under `tests/unit/<package>/`, mirroring the source tree —
 `tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`,
 `tests/unit/installer/detect.test.ts` tests
-`packages/installer/steps/detect.ts`, etc. `tests/unit/app/` is a separate,
-pre-existing scaffold for the SvelteKit app itself (a Svelte-compiling Bun
-plugin + happy-dom setup for future component tests), not wired into anything
-real yet.
+`packages/installer/steps/detect.ts`, etc. `tests/unit/app/` is component tests
+for the SvelteKit app itself (a Svelte-compiling Bun plugin + happy-dom setup,
+`@testing-library/svelte`), see its own README.
 
 Run everything: `bun run test` (a bare `bun test` also works — no wrapper
 script, `bunfig.toml`'s `[test].preload` handles the rest). Scoped:
-`bun run test:unit`, `bun run test:unit:agent`, `bun run test:unit:cli`,
-`bun run test:unit:installer`. See `tests/integration/README.md` for the
-separate `tests/integration/` suite.
+`bun run test:unit`, `bun run test:unit:agent`, `bun run test:unit:app`,
+`bun run test:unit:cli`, `bun run test:unit:installer`. See
+`tests/integration/README.md` for the separate `tests/integration/` suite, and
+`tests/e2e/README.md` for the real-browser Playwright suite (its own runner,
+`bun run test:e2e`, not part of `bun run test`'s `bun test` invocation).
 
 ## Mocks are process-global
 

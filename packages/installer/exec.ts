@@ -78,6 +78,18 @@ export class StepRunner {
 		await Bun.write(path, content);
 	}
 
+	/** Appends one line to a file, creating it (and any missing parent content) if it doesn't exist yet : used for secrets that must not be clobbered once generated (see steps/auth-secret.ts). A no-op under --dry-run. */
+	async appendLine(path: string, line: string): Promise<void> {
+		console.log(`${this.dryRun ? "[dry-run]" : "[append]"} ${path} += 1 line`);
+		if (this.dryRun) {
+			return;
+		}
+		const file = Bun.file(path);
+		const existing = (await file.exists()) ? await file.text() : "";
+		const sep = existing && !existing.endsWith("\n") ? "\n" : "";
+		await Bun.write(path, `${existing}${sep}${line}\n`);
+	}
+
 	private log(cmd: string[], opts?: { cwd?: string }): void {
 		const prefix = this.dryRun ? "[dry-run]" : "[run]";
 		const cwd = opts?.cwd ? ` (cwd=${opts.cwd})` : "";

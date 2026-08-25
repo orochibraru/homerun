@@ -102,8 +102,8 @@ process. Tracked here instead, by scenario/endpoint.
 - [x] Bad API key → 401 (not a crash)
 - [x] Foreign/nonexistent resource id → 404, not 403
 
-### Not covered by this suite (deliberately, see tests/app/ instead)
+### Not covered by this suite (deliberately, see tests/unit/app/ and tests/e2e/ instead)
 
 UI/component behavior and anything client-side-interactive : that's
-`tests/app/`'s job (component testing + Playwright E2E), tracked in `TODO.md`,
-not duplicated here.
+`tests/unit/app/`'s job (component tests) and `tests/e2e/`'s (real-browser
+Playwright tests), not duplicated here.
