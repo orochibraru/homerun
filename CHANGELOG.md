@@ -1,3 +1,15 @@
+## [0.3.6](https://git.ombrage.space/orochibraru/homerun/compare/v0.3.5...v0.3.6) (2026-08-25)
+
+### Features
+
+- better linting & precommit
+  ([#8](https://git.ombrage.space/orochibraru/homerun/issues/8))
+  ([a3f3c6e](https://git.ombrage.space/orochibraru/homerun/commit/a3f3c6e5ed68f2065a9aa1830f4aa46395b9f713)),
+  closes [#123](https://git.ombrage.space/orochibraru/homerun/issues/123)
+  [#456](https://git.ombrage.space/orochibraru/homerun/issues/456)
+- e2e tests and docs website
+  ([84eca8b](https://git.ombrage.space/orochibraru/homerun/commit/84eca8bcb01902a8cab2f11ca0e70ad6bfd92235))
+
 ## [0.3.5](https://git.ombrage.space/orochibraru/homerun/compare/v0.3.4...v0.3.5) (2026-08-25)
 
 ### Features
