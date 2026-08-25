@@ -117,7 +117,7 @@ RUN cp openapi.json packages/docs/static/openapi.json
 
 RUN cd packages/docs && ../../node_modules/.bin/svelte-kit sync && ../../node_modules/.bin/vite build
 
-FROM nginx:latest-alpine AS docs
+FROM nginx:alpine AS docs
 
 COPY --from=docs-builder /app/packages/docs/build /usr/share/nginx/html
 
