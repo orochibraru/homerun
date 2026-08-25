@@ -7,6 +7,10 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+# packages/docs-site/ is its own separate SvelteKit build (see package.json's
+# docs-site:* scripts), same output dir names, different subtree.
+packages/docs-site/.svelte-kit
+packages/docs-site/build
 # Compiled binaries from agent/, installer/, cli/ (bun build --compile)
 dist
 

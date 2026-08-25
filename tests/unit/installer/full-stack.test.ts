@@ -8,7 +8,8 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		const writeFile = mock(
 			async (_path: string, _content: string) => undefined,
 		);
-		const runner = { run, writeFile } as unknown as StepRunner;
+		const appendLine = mock(async (_path: string, _line: string) => undefined);
+		const runner = { appendLine, run, writeFile } as unknown as StepRunner;
 
 		const composePath = await FullStackInstaller.bringUpFullStack(
 			runner,
@@ -33,6 +34,11 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		expect(content).toContain("name: homerun");
 		expect(content).toContain("AUTH_SECRET");
 
+		expect(appendLine).toHaveBeenCalledTimes(1);
+		const [envPath, line] = appendLine.mock.calls[0] as [string, string];
+		expect(envPath).toBe("/home/homerun/homerun/.env");
+		expect(line).toMatch(/^AUTH_SECRET=[0-9a-f]{64}$/);
+
 		expect(run).toHaveBeenCalledWith([
 			"chown",
 			"-R",
@@ -54,7 +60,8 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		const writeFile = mock(
 			async (_path: string, _content: string) => undefined,
 		);
-		const runner = { run, writeFile } as unknown as StepRunner;
+		const appendLine = mock(async (_path: string, _line: string) => undefined);
+		const runner = { appendLine, run, writeFile } as unknown as StepRunner;
 
 		await FullStackInstaller.bringUpFullStack(
 			runner,
