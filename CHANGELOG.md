@@ -1,3 +1,12 @@
+## [0.3.5](https://git.ombrage.space/orochibraru/homerun/compare/v0.3.4...v0.3.5) (2026-08-25)
+
+### Features
+
+- tests ([#7](https://git.ombrage.space/orochibraru/homerun/issues/7))
+  ([7bc3aa7](https://git.ombrage.space/orochibraru/homerun/commit/7bc3aa7d2dd7b5ec8058d656c9ac5556850078e3)),
+  closes [#123](https://git.ombrage.space/orochibraru/homerun/issues/123)
+  [#456](https://git.ombrage.space/orochibraru/homerun/issues/456)
+
 ## [0.3.4](https://git.ombrage.space/orochibraru/homerun/compare/v0.3.3...v0.3.4) (2026-08-24)
 
 ### Bug Fixes
