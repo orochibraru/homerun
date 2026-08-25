@@ -1,3 +1,12 @@
+## [0.3.7](https://git.ombrage.space/orochibraru/homerun/compare/v0.3.6...v0.3.7) (2026-08-25)
+
+### Bug Fixes
+
+- dockerfile
+  ([3aa766a](https://git.ombrage.space/orochibraru/homerun/commit/3aa766ae38f35d27bf793776c8138351c88d0576))
+- nginx alpine
+  ([d63647f](https://git.ombrage.space/orochibraru/homerun/commit/d63647fa457f1b8512d0658ae62c0c73381b9c8d))
+
 ## [0.3.6](https://git.ombrage.space/orochibraru/homerun/compare/v0.3.5...v0.3.6) (2026-08-25)
 
 ### Features
