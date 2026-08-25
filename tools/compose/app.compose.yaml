@@ -15,10 +15,6 @@ services:
       - app_data:/app/data
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
-      DOCKER_NETWORK_NAME: homerun
-      DOCKER_SOCKET_PATH: /var/run/docker.sock
-      ORIGIN: ${ORIGIN:-http://localhost:3000}
-      BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}
     healthcheck:
       interval: 30s

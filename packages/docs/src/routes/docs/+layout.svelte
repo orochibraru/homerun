@@ -17,10 +17,17 @@
         <a
           href="/docs/{doc.slug}"
           class="rounded-lg px-3 py-1.5 transition-colors {page.url.pathname === `/docs/${doc.slug}`
-            ? 'bg-[var(--accent-soft)] font-medium text-[var(--accent-strong)]'
-            : 'text-[var(--text-muted)] hover:bg-[var(--bg-card)] hover:text-[var(--text)]'}"
+            ? 'bg-(--accent-soft) font-medium text-(--accent-strong)'
+            : 'text-(--text-muted) hover:bg-(--bg-card) hover:text-(--text)'}"
         >{doc.title}</a>
       {/each}
+      <div class="my-2 border-t border-(--border)"></div>
+      <a
+        href="/docs/api"
+        class="rounded-lg px-3 py-1.5 transition-colors {page.url.pathname === '/docs/api'
+          ? 'bg-(--accent-soft) font-medium text-(--accent-strong)'
+          : 'text-(--text-muted) hover:bg-(--bg-card) hover:text-(--text)'}"
+      >API reference</a>
     </nav>
   </aside>
 

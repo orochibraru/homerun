@@ -6,9 +6,15 @@
 					{
 						"command": "bun run fix --skip=correctness/noUnusedImports",
 						"type": "command"
+					},
+					{
+						"command": "bun run test:unit",
+						"statusMessage": "Running unit tests...",
+						"timeout": 120,
+						"type": "command"
 					}
 				],
-				"matcher": "Write|Edit"
+				"matcher": "Write|Edit|MultiEdit"
 			}
 		]
 	}

@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=./homerun.schema.json
+#
+# Copy to homerun.yaml and adjust. DATABASE_URL/AUTH_SECRET/PORT stay env
+# vars (see .env.example) : everything else lives here, and is live-editable
+# later from /settings too. See docs/configuration.md for details.
+
+baseDomain: localhost
+logLevel: info
+logFormat: console
+
+auth:
+  origin: http://localhost:3000
+  crossSubdomainCookies: false
+
+docker:
+  networkName: homerun
+  # socketPath: /var/run/docker.sock
+
+traefik:
+  entrypoint: websecure
+  certResolver: letsencrypt
+  # dynamicConfigDir: ./traefik-dynamic
+  # acmeEmail: admin@example.com
+
+smtp:
+  enabled: false
+  # host: smtp.example.com
+  # port: 587
+  # secure: false
+  # user:
+  # password:
+  # from:

@@ -51,6 +51,19 @@ jobs:
     secrets:
       registry_password: ${{ secrets.PACKAGES_TOKEN }}
 
+  build:docs:
+    name: Docker Build (Docs)
+    needs: [code_quality]
+    uses: ./.github/workflows/docker.yaml
+    with:
+      image_tag: pr-${{ github.event.pull_request.number }}
+      image_name: orochibraru/homerun-docs
+      registry_name: git.ombrage.space
+      registry_username: orochibraru
+      bake_target: docs-ci
+    secrets:
+      registry_password: ${{ secrets.PACKAGES_TOKEN }}
+
   gate:
     name: CI Gate
     if: always()

@@ -80,7 +80,7 @@
         {#if accountImage}
           <img
             alt={accountName}
-            class="size-16 rounded-2xl object-cover ring-2 ring-[var(--color-border)]"
+            class="size-16 rounded-2xl object-cover ring-2 ring-(--color-border)"
             src={accountImage}
           >
         {:else}

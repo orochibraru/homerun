@@ -10,11 +10,12 @@ removed this repo's previous E2E harness deliberately (see
 harness" section); this rebuilds it from scratch rather than resurrecting
 anything.
 
-Run with `bun run test:e2e` (`bunx playwright test` also works — this suite
-isn't part of `bun run test`'s `bun test` invocation, Playwright is its own
-runner). Requires a reachable Docker daemon, same as `tests/integration/`, for
-the throwaway Postgres container, and a Chromium build
-(`bunx playwright install chromium` if the very first run reports one missing).
+Requires `bun run build:app` run first (this suite doesn't build the app for
+you), a reachable Docker daemon (same as `tests/integration/`, for the throwaway
+Postgres container), and a Chromium build (`bunx playwright install chromium` if
+the first run reports one missing). Run with `bun run test:e2e`
+(`bunx playwright test` also works — not part of `bun run test`'s `bun test`
+invocation, Playwright is its own runner).
 
 ## Why bootstrap runs as a separate Bun child process
 
@@ -26,8 +27,8 @@ plain Node.js, not Bun — verified live: `globalSetup` importing anything from
 since that support code uses `Bun.SQL`/ `Bun.spawn` throughout. Rather than
 rewrite that (already-proven, shared) support code to be Bun-agnostic,
 `support/global-setup.ts` spawns `support/bootstrap-runtime.ts` as a genuine
-`bun run` child process instead — that file does the actual work (start
-Postgres, migrate, `bun run build:app`, spawn the built app), prints one
+`bun run` child process instead — that file does the actual work (check the
+build exists, start Postgres, migrate, spawn the built app), prints one
 `READY <json>` line once the app answers `/api/health`, and stays alive holding
 the container/app process open until `global-setup.ts` sends it `SIGTERM` at
 teardown.
@@ -53,6 +54,14 @@ clean slate, and see `bootstrap.spec.ts`'s own `test.describe.serial` for how to
 depend on ordering _within_ one file explicitly rather than relying on
 Playwright's default (unordered) execution.
 
+## Rate limiting is disabled for this suite
+
+better-auth caps `/sign-in`/`/sign-up` at 3 requests per 10 seconds by default,
+independent of this app's own `rateLimit.max`/`window` config.
+`bootstrap-runtime.ts` sets `HOMERUN_DISABLE_AUTH_RATE_LIMIT=1` on the spawned
+app to avoid tripping it across specs (see `src/lib/services/auth.ts`); never
+set in production.
+
 ## Coverage
 
 - [x] Blank instance → `/` redirects to `/auth/sign-up` (bootstrap-admin
@@ -62,9 +71,11 @@ Playwright's default (unordered) execution.
       first-run wizard, see CLAUDE.md's Onboarding section)
 - [x] Once an account exists, `/auth/sign-up` redirects to `/auth/sign-in`
       instead, for any visitor, not just an already-authenticated one
-- [ ] The onboarding wizard itself (stepper navigation, validation, finishing
-      it) — not yet covered
-- [ ] Sign-in with a real password, sign-out — not yet covered
+- [x] Onboarding wizard: clicking through every step with default values,
+      finishing, and `/onboarding` becoming unreachable afterward
+      (`onboarding.spec.ts`)
+- [x] Sign-in (wrong password rejected, real password succeeds) and sign-out
+      (`sign-in-out.spec.ts`)
 - [ ] Anything past onboarding (service create/deploy, the dashboard proper) —
       not yet covered, and notably needs a reachable Docker socket from _inside_
       the spawned app process for a real deploy, which this suite's bootstrap

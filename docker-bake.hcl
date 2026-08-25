@@ -3,11 +3,11 @@ variable "TAG" {
 }
 
 group "default" {
-  targets = ["app", "agent"]
+  targets = ["app", "agent", "docs"]
 }
 
 group "ci" {
-  targets = ["app-ci", "agent-ci"]
+  targets = ["app-ci", "agent-ci", "docs-ci"]
 }
 
 target "base" {
@@ -40,12 +40,23 @@ target "agent-base" {
   cache-to   = ["type=gha,mode=max,scope=agent"]
 }
 
+target "docs-base" {
+  target = "docs"
+  tags       = ["orochibraru/homerun-docs:latest", "orochibraru/homerun-docs:${TAG}"]
+  cache-from = ["type=gha,scope=docs"]
+  cache-to   = ["type=gha,mode=max,scope=docs"]
+}
+
 target "app" {
   inherits   = ["base", "app-base"]
 }
 
 target "agent" {
   inherits   = ["base", "agent-base"]
+}
+
+target "docs" {
+  inherits   = ["base", "docs-base"]
 }
 
 target "app-ci" {
@@ -56,3 +67,6 @@ target "agent-ci" {
   inherits   = ["ci-base", "agent-base"]
 }
 
+target "docs-ci" {
+  inherits   = ["ci-base", "docs-base"]
+}

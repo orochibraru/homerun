@@ -1,4 +1,4 @@
-name: CI
+name: Code Quality
 on:
   workflow_call:
 
@@ -63,9 +63,13 @@ jobs:
           bun run check:agent
           bun run check:cli
           bun run check:installer
+          bun run check:docs
 
-      - name: Lint
-        run: bun run lint
+      - name: Lint (TS)
+        run: bun run lint:ts
+
+      - name: Lint (Tailwind)
+        run: bun run lint:tailwind
 
   ts-test:
     name: Tests (TS)
@@ -81,6 +85,9 @@ jobs:
 
       - name: Install socat
         run: sudo apt-get update && sudo apt-get install -y socat
+
+      - name: Build app
+        run: bun run build:app
 
       - name: Tests (Unit)
         run:
@@ -100,3 +107,24 @@ jobs:
           path: coverage/
           if-no-files-found: warn
           retention-days: 14
+
+  e2e:
+    name: Tests (E2E)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Build App
+        run: bun run build:app
+
+      - name: Install Playwright's Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Tests (E2E)
+        run: bun run test:e2e
