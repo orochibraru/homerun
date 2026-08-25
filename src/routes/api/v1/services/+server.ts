@@ -41,10 +41,28 @@ export const POST = async ({ request, locals }) => {
 			: null;
 
 	const svc = await ServiceDTO.create({
+		authRequired: input.authRequired,
+		// Real, tested-in-review finding, from this app's own integration
+		// test suite (tests/integration/) : buildSource/gitUrl/gitRef/
+		// gitBuildContext/gitDockerfilePath were validated by
+		// createServiceApiBody but never actually passed to
+		// ServiceDTO.create(), so a git-mode POST /services silently created
+		// an image-mode service instead (buildSource defaulting to "image",
+		// image/tag defaulting to "" since a git-mode request doesn't send
+		// them), which then failed at deploy time trying to pull an empty
+		// image ref (dockerode/the daemon surfaces that as a confusing
+		// "Get \"http:\": http: no Host in request URL" 500, nothing about a
+		// missing image). The REST API and the CLI built on it couldn't
+		// create a git-build service at all before this fix.
+		buildSource: input.buildSource,
 		containerPort: input.containerPort,
 		cpuLimit: input.cpuLimit || null,
 		dnsResolvable: input.dnsResolvable,
 		envVars: input.envVars,
+		gitBuildContext: input.gitBuildContext || null,
+		gitDockerfilePath: input.gitDockerfilePath || null,
+		gitRef: input.gitRef || null,
+		gitUrl: input.gitUrl || null,
 		image: input.image ?? "",
 		memoryLimitMb: input.memoryLimitMb ?? null,
 		name: input.name,

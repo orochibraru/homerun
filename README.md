@@ -83,6 +83,11 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **Autoscale-by-migration**: when the local host crosses a CPU/memory
   threshold, automatically move one opted-in service to a designated overflow
   host
+- **Swarm mode**: opt-in Docker Swarm deploys for real replica scaling and load
+  balancing across one service, instead of the default one-container model
+- **DNS automation**: optional Cloudflare or self-hosted Pangolin integration
+  auto-manages a deployed service's DNS record for you
+- **In-app notifications**: a per-user feed of deploy/service lifecycle events
 - **Scheduled redeploys & S3 backups**: cron-style auto-redeploy per service,
   cron-style bind-mount volume backups to any S3-compatible endpoint
 - **REST API, OpenAPI docs, and a CLI**: everything above is also a typed JSON

@@ -1,4 +1,4 @@
-import adapter from "./tools/adapter/index.ts";
+import adapter from "./packages/adapter/index.ts";
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {

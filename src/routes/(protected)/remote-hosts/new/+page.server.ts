@@ -65,7 +65,7 @@ export const actions = {
 				`Remote host added: host=${host.id} kind=agent agentUrl=${agentUrl} user=${locals.user.id}`,
 			);
 
-			return { success: true };
+			return { hostId: host.id, success: true };
 		}
 
 		const dockerHost =
@@ -104,6 +104,6 @@ export const actions = {
 			`Remote host added: host=${host.id} kind=docker dockerHost=${dockerHost} user=${locals.user.id}`,
 		);
 
-		return { success: true };
+		return { hostId: host.id, success: true };
 	},
 };

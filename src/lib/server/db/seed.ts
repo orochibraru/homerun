@@ -41,7 +41,7 @@ const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		id: "builtin-postgres",
 		image: "postgres",
 		name: "PostgreSQL",
-		tag: "16-alpine",
+		tag: "18-alpine",
 	},
 	{
 		category: "database",

@@ -34,10 +34,12 @@ bun run release          # semantic-release, normally CI-only (.github/workflows
 ```
 
 ```bash
-bun test              # bun test tests, unit tests for agent/installer/cli (see below), the SvelteKit app itself still has none
-bun test:agent        # bun test tests/agent
-bun test:cli          # bun test tests/cli
-bun test:installer    # bun test tests/installer
+bun run test              # bun test --timeout 120000, the whole suite (unit + integration, see below)
+bun run test:unit         # unit tests only (packages/agent, packages/installer, packages/cli)
+bun run test:unit:agent   # scoped to packages/agent
+bun run test:unit:cli     # scoped to packages/cli
+bun run test:unit:installer  # scoped to packages/installer
+bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 ```
 
 `agent/`, `installer/`, and `cli/` are separate standalone Bun/TypeScript
@@ -49,106 +51,87 @@ Agent + installer" and "Homerun CLI" below for what they are.
 
 ### Unit tests (`tests/`)
 
-Bun's native test runner (`bun:test`), covering `agent/`, `installer/`, and
-`cli/`, the SvelteKit app itself has no test coverage yet beyond a
-`tests/app/svelte-loader.ts` Svelte-compiling preload helper staged for future
-component tests. Tests live under a root `tests/<package>/` tree, **not** next
-to the source files they cover (`tests/agent/token.test.ts` tests
-`agent/token.ts`, etc.), mirroring `tests/app/`'s existing layout rather than
-giving each standalone sub-project its own `tests/` folder.
+`bun:test`, run directly by Bun — `bun test --timeout 120000` (every
+`test`/`test:*` script passes `--timeout` explicitly since `bunfig.toml`'s
+`[test].timeout` key is silently unhonored on Bun 1.4.0). Covers
+`packages/agent/`, `packages/installer/`, and `packages/cli/`. Tests live under
+`tests/unit/<package>/`, not next to the source files they cover
+(`tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`, etc.).
+`tests/unit/app/` is a pre-existing scaffold for future SvelteKit component
+tests, not wired in yet.
 
-**Module mocks are process-global, not per-file**, `bun:test`'s
-`mock.module(specifier, factory)` replaces that specifier's registry entry for
-the rest of the whole `bun test` run (every file shares one module registry),
-and it does so retroactively : code that already imported the real module before
-the mock call still sees the new value, since named imports are live bindings
-onto the same object `mock.module` mutates in place. Two test files that
-`mock.module` the _same_ specifier with different fakes will collide regardless
-of which order they happen to run in (there's no reliable "restore after this
-file" boundary the way there is per-`describe`/`it`). Two patterns avoid this:
+Run everything: `bun run test` (bare `bun test` also works, no wrapper script —
+`bunfig.toml`'s `[test].preload` handles the rest). Scoped: `bun run test:unit`,
+`test:unit:agent`, `test:unit:cli`, `test:unit:installer`. `tests/integration/`
+is a separate suite with its own `beforeAll`/`afterAll` (real
+Postgres/Docker/agent, see `tests/integration/README.md`).
 
-- **A plain mutable singleton** (`agent/config.ts`'s `config` object) : save the
-  fields you're about to override, mutate them directly, restore in `afterEach`.
-  No module registry involved at all.
-- **A handful of named functions on an otherwise-real module**
-  (`agent/docker.ts`'s functions, as faked out for `http.test.ts`;
-  `cli/output.ts`'s `fail`) :
-  `spyOn(moduleNamespace, "fnName").mockImplementation(...)`, restored via
-  `mock.restore()` in `afterEach`. This only patches the specific functions
-  used, so it doesn't collide with another file needing the _real_
-  implementation of the same module (`docker.test.ts` needs the real
-  `agent/docker.ts`, backed by a mocked `dockerode`, at the same time
-  `http.test.ts` fakes `agent/docker.ts`'s functions out from under
-  `agent/http.ts` : `mock.module("../../agent/docker", ...)` in one file would
-  have broken the other regardless of run order, `spyOn` doesn't).
+**Vitest was tried and abandoned for this suite.** It fixed the `[test].timeout`
+bug above (real `hookTimeout`/`testTimeout` config) and gave each test file its
+own module registry (no more `mock.module` leaking across files). But
+`coverage.provider: "v8"` crashes under Bun once coverage from more than one
+test file needs merging — `@bcoe/v8-coverage`'s recursive merge throws
+`RangeError: Maximum call stack size exceeded`, reproduced directly, confirmed
+independent of provider (`istanbul` avoided it, `v8` didn't). Given that, plus
+`bun:test` being the simpler/native option, the suite moved back. `mock.module`
+mutating one process-global registry is a real, accepted tradeoff again — see
+`tests/unit/agent/docker.test.ts` (mocks `"dockerode"` wholesale) and
+`tests/unit/agent/http.test.ts` (spies on individual `DockerService` methods via
+`spyOn`, restored with `mock.restore()`), which have to coexist in one process
+without colliding.
 
-`mock.module` wholesale (replacing an entire module) is still the right tool
-when nothing else in the suite touches that specifier at all, `docker.test.ts`
-mocks `dockerode` itself this way since agent/docker.ts is the only importer of
-it in this whole repo.
+`tsconfig.json` excludes `tests/` from `svelte-check` (`check:app`) —
+`bun:test`'s `mock()` return type hits real overload-resolution errors under
+svelte-check's TS resolution that don't occur under `tsc`/`bun test` directly.
+`tests/` is type-checked per-package instead (`check:agent`/`check:cli`/
+`check:installer`, `bun-types`, not svelte-check's DOM-flavored config).
 
-**`cli/config.ts` resolves its config file path from `os.homedir()` once, at
-module load**, and `os.homedir()` itself is fixed for the life of the process
-(reads the real OS environment at process start, verified : changing
-`process.env.HOME` mid-run does _not_ change what it returns on Bun 1.4.0), so
-an ordinary per-file `mock.module("node:os", ...)` can't reliably help either
-(same "process-global, whoever imports first wins" problem as above).
-`tests/support/homedir-preload.ts`, loaded via `bunfig.toml`'s `[test].preload`
-(guaranteed to run before _any_ test file's own imports, once, for the whole
-run), mocks `node:os`'s `homedir()` to a fresh scratch directory while passing
-every other export through unchanged (`agent/stats.ts`'s real
-`cpus()`/`totalmem()` usage still works). This is what actually keeps
-`tests/cli/`'s config/client/login tests off a real developer's
-`~/.config/homerun/config.json` : a completely bare `bun test`, no wrapper
-script or env var needed, already lands in the scratch directory. Every test
-file that touches `cli/config.ts` (directly or via
-`cli/client.ts`/`cli/login.ts`) still guards against this invariant ever
-breaking (`if (!homedir().startsWith(tmpdir())) throw ...`) rather than silently
-writing to a real developer's config if the preload entry is ever removed.
+## `cli/` tests need a mocked `os.homedir()`
 
-**Coverage** is on by default for every `bun test` run (`bunfig.toml`'s
-`[test].coverage = true`, `coverageReporter = ["text", "lcov"]`,
-`coveragePathIgnorePatterns` scoped away from `tests/**` and
-`cli/generated/**`), reporting only on whatever files the tests that actually
-ran touched (scoping to one package via `bun test:agent` shows just that
-package, not a 0%-everywhere table for the rest of the repo). No
-`coverageThreshold` is enforced yet, this suite is new; add one once coverage
-has stabilized if regression protection is wanted.
+`packages/cli/config.ts` resolves its config file path from `os.homedir()` once,
+at module load, and `os.homedir()` is fixed for the life of the process
+(reassigning `process.env.HOME` mid-run doesn't change it, verified on Bun
+1.4.0). `tests/unit/support/homedir-preload.ts`, wired in via `bunfig.toml`'s
+`[test].preload`, mocks `node:os`'s `homedir()` to a scratch directory for the
+whole run via `mock.module`, before any test file's own imports — the one place
+guaranteed to run early enough regardless of which file imports `cli/config.ts`
+first. Every test file that touches `cli/config.ts` still guards against this
+invariant breaking:
 
-**Real, tested finding from writing these tests**:
-`Bun.write(path, data, { mode: 0o600 })`'s `mode` option is silently a no-op on
-Bun 1.4.0, the file still lands as whatever the umask produces (0644 under the
-common 022 umask), verified directly. `agent/token.ts`'s persisted agent token,
-a full-access API credential, was affected by exactly this : it landed
-group/other-readable on a shared host despite the code explicitly asking
-for 0600. Fixed by calling `node:fs/promises`'s `chmod()` explicitly after
-`Bun.write` (verified : `node:fs`'s own `mode` option, unlike Bun's, is
-honored). If a future change writes another secret to disk via `Bun.write`,
-don't trust its `mode` option either, `chmod` afterward.
+```ts
+if (!homedir().startsWith(tmpdir())) {
+  throw new Error(
+    "... refusing to risk touching the real ~/.config/homerun ...",
+  );
+}
+```
 
-**`bun run check` now works and is a hard gate, zero errors, zero warnings,
-across the whole repo, after every change.** This used to be documented as
-broken (a stale `typescript@^7.0.2`/`--tsgo` mismatch), that's since been fixed
-(plain `typescript: ~6`, no `--tsgo`), and the script now runs
-`svelte-check --fail-on-warnings`, so a warning fails the command exactly like
-an error does. **"After every change" means run it after every change, not just
-once at the end of a session, and it means the whole repo, `bun run check`'s own
-scope is already the full `src/` tree regardless of which files you touched, so
-don't rationalize a red result as "unrelated to what I changed" without first
-confirming that by actually reading the failing file.** The three standalone
-sub-projects (`agent/`, `installer/`, `cli/`) aren't covered by this script
-(separate `tsconfig.json`s, no SvelteKit), typecheck each with its own
-`bunx tsc --noEmit -p tsconfig.json` if you touch one. Same bar for
-`bun run lint` (`biome check .`), zero errors. Both are enforced by
-`.husky/pre-commit` (see below) so a violating commit is rejected locally, not
-just caught in CI.
+## Coverage
 
-Biome formats with tabs + double quotes; svelte/vue/astro files have
-`useConst`/`useImportType`/unused-import rules turned off (Svelte 5
-`$state`/`$props` destructuring trips them). Note: the IDE's inline diagnostics
-have proven frequently stale/phantom in this repo (showing parse errors that
-don't reflect the real file), `bunx biome check <file>` is ground truth, always
-verify against it before trusting an IDE-reported error.
+`bunfig.toml`'s `[test].coverage = true` turns on Bun's native coverage for
+every run, scoped away from `tests/**` and `packages/cli/generated/**`. No
+threshold enforced yet.
+
+## Fakes over mocking libraries
+
+Where a function takes a `StepRunner`-shaped collaborator
+(`packages/installer/exec.ts`) or a small client object, tests pass a plain
+object literal with `mock()`-wrapped methods instead of instantiating the real
+class. See `tests/unit/installer/network.test.ts` / `release.test.ts` /
+`full-stack.test.ts` / `agent-step.test.ts`.
+
+## Real bugs this suite caught
+
+- `Bun.write(path, data, { mode: 0o600 })`'s `mode` option is silently a no-op
+  on Bun 1.4.0 — the file lands with whatever the umask produces (0644 under the
+  common 022 umask) regardless of what's passed. `packages/agent/token.ts`'s
+  persisted agent token — a full-access API credential — was affected by exactly
+  this. Fixed by calling `node:fs/promises`'s `chmod()` explicitly after
+  `Bun.write` (`node:fs`'s own `mode` option is honored, verified). If a future
+  change writes another secret to disk via `Bun.write`, `chmod` afterward too.
+- `bunfig.toml`'s `[test].timeout` key is silently not honored by Bun 1.4.0 for
+  `test()` bodies — every `test/test:*` script passes `--timeout 120000` on the
+  CLI instead.
 
 ## AI-assisted development (`.claude/agents/`, `.claude/skills/` → `.agents/skills/`)
 
@@ -167,7 +150,15 @@ hand:
   calling a change done, scans for this file's own hard rules),
   `scaffold-feature` (adds a new table+DTO+route end to end), `subproject-sync`
   (keeps `agent/`'s hand-reimplemented Docker/stats logic in sync with the main
-  app, regenerates `cli/`'s OpenAPI-derived types).
+  app, regenerates `cli/`'s OpenAPI-derived types), `ui-consistency` (flags
+  route markup that reimplements an existing shared component/primitive instead
+  of using it, and visual drift between equivalent pages), `docs-sync` (use
+  PROACTIVELY after a code change that adds/removes/changes a feature, checks
+  this file itself, and `TODO.md`/sub-project READMEs, for exactly the kind of
+  staleness this bullet list itself just had two live examples of:
+  `ui-consistency` missing from here, and three shipped features still marked
+  unbuilt under Planned features below, both fixed in the same session
+  `docs-sync` was added).
 
 Skill content lives under `.agents/skills/<name>/SKILL.md` with a symlink from
 `.claude/skills/`, matching the existing `shadcn-svelte` skill's layout, keep
@@ -216,6 +207,14 @@ that pattern for any new skill.
   real after every change and read what it reports, rather than assuming an
   untouched file's error is pre-existing and therefore not your problem, confirm
   that by actually looking, and fix it either way if it's cheap and unambiguous.
+- **JSDoc comments above every function** (route files' inferred
+  `load`/`actions`/handlers included), a short `/** ... */` block describing
+  what it does, params/return where non-obvious. This one's genuinely useful,
+  keep doing it.
+- **No multiline comment blocks above a change otherwise.** This isn't an
+  enterprise codebase, we iterate fast; a change's rationale lives in the git
+  commit message, not a prose block above the diff. A single one-line comment is
+  fine when the "why" genuinely isn't obvious from the code, skip it otherwise.
 - **Prefer real OOP over a static-only class that just re-exports imported
   functions (or is `static` throughout for no reason beyond habit).** A
   `class Foo { static bar = importedBar; }` barrel (the shape
@@ -762,6 +761,53 @@ correct byte-for-byte content, plus correct removal on clear. **Not verified**:
 Traefik itself picking up the config, since that requires the live container
 change this app deliberately doesn't make.
 
+### DNS automation: Cloudflare and Pangolin (`src/lib/services/cloudflare.service.ts`, `src/lib/services/pangolin.service.ts`)
+
+The DNS-provider automation gap this doc used to list under Planned features is
+closed: two independent, optional integrations, configured on `/settings`, both
+DB-backed on `instance_settings`, both unset by default (inert until
+configured), and both can be turned on simultaneously (they run independently).
+Both are plain classes with static methods that re-read `InstanceSettingsDTO` on
+every call rather than caching, the admin can change credentials mid-session and
+syncs are infrequent (once per deploy), same reasoning as `GitProviderService`.
+Both fire from the same spot, `deploy.service.ts`, right after a successful
+**local** deploy with `dnsResolvable` set, fire-and-forget (`.catch(() => {})`),
+never able to fail the deploy itself, only log+warn on error.
+
+- **`CloudflareService`**: for instances that own DNS on Cloudflare directly.
+  `syncDnsRecord(hostname, target)` upserts a CNAME (`<slug>.<baseDomain>` →
+  `baseDomain`) via the Cloudflare v4 REST API; `deleteDnsRecord(hostname)`
+  removes it on service delete; `verifyZoneAccess(token, zoneId)` backs the
+  Settings page's "Test connection" button. Config: `instanceSettings`'s
+  `cloudflareApiTokenEnc` (AES-256-GCM, same scheme as every other `*Enc`
+  column) + `cloudflareZoneId`.
+- **`PangolinService`**: for instances fronted by a self-hosted
+  [Pangolin](https://github.com/fosrl/pangolin) tunnel/reverse-proxy manager
+  instead of owning DNS directly. `syncDnsRecord(hostname)` creates a Pangolin
+  **Resource** (a subdomain under one of the org's already-registered Pangolin
+  domains matching the hostname) plus a **Target** pointing at this host's own
+  Traefik entrypoint through the configured "main site"'s tunnel;
+  `deleteDnsRecord(hostname)` removes the Resource;
+  `verifyConnection(baseUrl, token, orgId)` backs its own "Test connection"
+  button. Config:
+  `pangolinApiBaseUrl`/`pangolinApiTokenEnc`/`pangolinOrgId`/`pangolinMainSiteName`
+  (all four required to activate) + optional `pangolinTargetPort` (defaults to
+  80, Pangolin terminates public TLS itself). Pangolin's own OpenAPI spec is
+  broken/unusable, so its API shapes (`PangolinDomain`/`PangolinResource`/
+  `PangolinSite`/`PangolinResourceTarget`, envelope `{data, success}`) are
+  hand-typed against its Swagger UI widget, cross-checked against a sibling
+  open-source Dokploy-to-Pangolin bridge project that hit the same issue and
+  took the same approach. Both services use plain hand-rolled `fetch` calls
+  rather than an `openapi-fetch` client, same posture as `GitProviderService`.
+
+**Not live-tested against a real registered account**, same posture as
+`GitProviderService`'s OAuth flow and the autoscaling migration: built carefully
+from each provider's own documented API shapes, but verify the first real sync
+by hand once a zone/token (Cloudflare) or org/site/API key (Pangolin) are
+actually configured. Pangolin's delete path specifically is inferred from REST
+convention rather than confirmed live, the reference project it was modeled on
+is create-only.
+
 ### Schedulers: cron redeploy, S3 backup, autoscale migration (`src/lib/services/cron.service.ts`, `src/lib/services/cron/`)
 
 `CronService` (`cron.service.ts`) is a facade composing one instance each of
@@ -809,7 +855,18 @@ Overview tab's lifecycle actions all assume exactly one container per service).
 What's built instead composes two already-existing primitives, Remote Hosts
 (above) and `SystemStatsService`, into a third: when the local host is over a
 configured resource threshold, one opted-in service gets **migrated**, not
-replicated, onto a designated overflow Remote Host.
+replicated, onto a designated overflow Remote Host. Swarm mode (below) is a
+separate, unrelated feature, real Docker Swarm replicas rather than
+CPU/memory-triggered migration, and `AutoscaleScheduler` doesn't drive it or
+know about `service.replicas`. **Untested interaction, flagged not fixed**:
+`listAutoscaleEligibleOnLocalHost()` doesn't exclude swarm-mode services (it
+only filters on `autoscaleEligible`/`remoteHostId is null`/`desiredState`), so a
+swarm-mode service marked autoscale-eligible could be picked up by a tick and
+handed to `migrateToOverflow()`, which sets `remoteHostId` and calls
+`deployService()`, the same combination Swarm mode's own section above says
+`deployService()` explicitly rejects. Don't mark a swarm-mode service
+autoscale-eligible until this gap is closed (either scheduler-side exclusion or
+turning the deploy-side rejection into a caught, logged no-op here).
 
 Two-level opt-in, same "background automation that touches live containers
 defaults to inert" posture as the cron/backup schedulers:
@@ -990,6 +1047,17 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   service's Errors tab. `AppLogDTO.create()` amortized-prunes the table back to
   the newest 5000 rows on ~2% of writes, rather than adding a third scheduler
   alongside `CronService`'s two.
+- `notification` (`NotificationDTO`), a curated per-user lifecycle event feed
+  (deploy success/failure, service created/started/stopped, auto-redeploy,
+  runtime error), deliberately separate from `app_log` above, see In-app
+  notifications below.
+- `instance_settings.orchestrationMode` (`"standalone"` default | `"swarm"`),
+  plus `service.replicas`/`swarmServiceId`, opt-in Docker Swarm mode, see Swarm
+  mode below.
+- `instance_settings.cloudflareApiTokenEnc`/`cloudflareZoneId` and
+  `pangolinApiBaseUrl`/`pangolinApiTokenEnc`/`pangolinOrgId`/
+  `pangolinMainSiteName`/`pangolinTargetPort`, optional DNS automation, see DNS
+  automation below.
 
 **Postgres enforces the schema's `onDelete: "cascade"`/`"set null"` FK
 constraints for real.** (This app ran on SQLite until the Postgres conversion
@@ -1152,6 +1220,71 @@ for production use (`Dockerfile`, built/pushed by
 `app` service (see `installer/` below), rather than this dev compose file
 gaining one.
 
+### Swarm mode (`instance_settings.orchestrationMode`, `service.replicas`/`swarmServiceId`, `src/lib/services/docker/swarm.ts`)
+
+Instance-wide, opt-in alternative to the single-container-per-service model
+described above: `instanceSettings.orchestrationMode` (`"standalone"` default |
+`"swarm"`, `/settings`) switches every **local** deploy from
+`createAndStartContainer` to `DockerService.createAndStartSwarmService`
+(`DockerSwarmMixin`, `docker/swarm.ts`, chained into the same `DockerService`
+mixin merge as the other concerns, see the ordering note above), creating a real
+Docker Swarm Service (`docker.createService`,
+`Mode: {Replicated: {Replicas: n}}`) instead of a plain container.
+`deploy.service.ts` branches on `orchestrationMode` right alongside its existing
+`buildSource` branch.
+
+- `service.replicas` (int, default 1, edited on the Compute tab, ignored in
+  standalone mode) is the desired replica count.
+- `service.swarmServiceId` is the swarm-mode equivalent of `containerId`;
+  `containerId` stays null for a swarm-mode service, there's no single container
+  to point it at, `DockerSwarmMixin.getRunningTaskContainerId` resolves one
+  specific task's container on demand instead (used by the Terminal tab's exec).
+- Mixin surface: `ensureSwarmNetwork` (idempotent overlay network, the
+  swarm-mode counterpart to `networks.ts`'s per-project bridge networks),
+  `createAndStartSwarmService`, `removeSwarmService`, `scaleSwarmService`
+  (stop/start map to scaling to 0 / back to the configured replica count, rather
+  than a real container stop/start), `restartSwarmService` (bumps `ForceUpdate`
+  to recreate every task), `inspectSwarmServiceStatus` (aggregates task states
+  into the same `ContainerStatus` vocabulary standalone mode uses, so the
+  Overview tab doesn't need a separate rendering path), `streamSwarmServiceLogs`
+  (same `ReadableStream` shape as `containers.ts`'s `streamLogs`).
+  `docker/reconcile.ts`'s `DockerReconcileMixin` checks `service.swarmServiceId`
+  first and calls `inspectSwarmServiceStatus` when present, falling back to the
+  standard container path otherwise. The v1 REST API's `start`/`stop`/`restart`
+  routes (`src/routes/api/v1/services/`) branch the same way, swarm-mode
+  services are controllable via the API, not just the dashboard.
+
+**Prerequisites this app never automates** (same "don't touch infra without the
+admin's own action" boundary as custom SSL's Traefik config): the host's Docker
+daemon must already be swarm-active (`docker swarm init`, done once by the
+admin), and the live Traefik container needs `--providers.docker.swarmMode=true`
+added to its command, a one-time `compose.yaml` edit + restart.
+
+**Real architectural limitation, flagged deliberately, not an oversight**: swarm
+mode is local-manager-only. Remote Hosts (above) doesn't apply the same way
+under swarm, a "remote" node has to actually _join this swarm_ as a worker
+rather than just being a separate standalone Docker daemon, that's a different
+integration than `RemoteHostDTO`'s raw `tcp://`/`ssh://` connection model.
+`deploy.service.ts` explicitly throws rather than silently misbehaving if a
+swarm-mode service's deploy target is a Remote Host. `installer/swarm-join.sh`
+(a standalone bash script, not part of the TypeScript installer's `StepRunner`,
+documented in `installer/README.md`) is the groundwork for this gap: it joins a
+remote box to an existing swarm as a worker on its own rootless Docker daemon
+and installs the Homerun Agent there via `systemd --user`, the same install
+shape `installer/steps/agent.ts` uses locally, hand-mirrored rather than sharing
+the TS installer's dry-run machinery so the two scripts stay in lockstep by
+inspection. Usage:
+`curl -fsSL .../swarm-join.sh | sudo bash -s -- --token <SWMTKN-...> --manager <ip>:2377`
+(token/manager address come from `docker swarm join-token worker` on the
+manager). This is preparatory only, today's Remote Hosts feature still talks to
+a remote daemon directly, not through the Agent's HTTP API, joining a swarm node
+doesn't yet make it a selectable deploy target the way registering a Remote Host
+does. **Not verified against a real second host or a real swarm**:
+syntax-checked (`bash -n`) and `shellcheck`-clean, and every individual command
+mirrors a step already dry-run-verified in the main installer, but the actual
+`docker swarm join` handshake and a real Homerun deploy onto that node haven't
+been run end-to-end, same caveat `bootstrap.sh` itself carries.
+
 ### Network mode (`service.networkMode`, `service.portProtocol`, Networking tab)
 
 Per-service, `"bridge"` (default) or `"host"`, configured in the Networking
@@ -1204,8 +1337,9 @@ socket reachable, SMTP fully configured if enabled), each with a severity and
 the env var that fixes it. Reads `config`, which already reflects any DB-backed
 instance settings merged over the env defaults (see Config and Instance settings
 below), these checks just report the effective value, they don't care which
-layer it came from. There's still no DNS-provider (Cloudflare/Pangolin)
-automation.
+layer it came from. DNS automation (Cloudflare/Pangolin, see below) is separate
+from this check, `runSetupChecks()` doesn't currently flag an unset DNS
+provider, that's an opt-in feature, not a base-instance misconfiguration.
 
 There's no standalone `/setup` page anymore (removed, it duplicated what
 `/settings` already does live). `AdminService.runSetupChecks()` now only backs
@@ -1482,6 +1616,47 @@ start/success/failure of each operation, with entity + user ids for correlation.
 dead/aspirational, don't use it; the per-module `Logger` instance is the real
 pattern.
 
+### In-app notifications (`notification` table, `NotificationDTO`, `notification-bell.svelte`)
+
+A curated, per-user lifecycle event feed, deliberately separate from the
+`app_log`/Errors-tab system above: written explicitly at each event site rather
+than derived from logs, so it stays a short, meaningful list rather than every
+warn/error the app produces. Shown via a bell icon
+(`$lib/components/notification-bell.svelte`, a Popover-based dropdown) in the
+protected layout's header, next to `$lib/components/profile-menu.svelte` (the
+account/sign-out dropdown, pulled out of `+layout.svelte`'s previously-inline
+markup as its own component alongside this feature).
+
+- `notification` table: `id`, `userId` (FK, cascade delete), `serviceId`
+  (nullable FK, cascade delete), `message`, `type` (enum:
+  `deploy_success`/`deploy_failure`/`service_created`/`service_started`/
+  `service_stopped`/`auto_redeploy`/`app_runtime_error`), `createdAt`, `readAt`
+  (nullable, unread until set). Indexed on `(userId, createdAt)`.
+- `NotificationDTO`: `listForUser(userId, limit=30)` (joins in the related
+  service's slug so a feed entry can link straight to it),
+  `unreadCount(userId)`, `markRead`/`markAllRead`, and a fire-and-forget static
+  `notify(input)` helper, never awaited, swallows its own errors, same posture
+  as `Logger.warn`/`.error`'s `AppLogDTO` write, a notification call can't fail
+  the operation it's attached to. `create` amortized-prunes each user back to
+  their newest 200 rows on ~5% of writes, same convention as `AppLogDTO`'s
+  5000-row prune. `notifyServiceError(serviceId, message)` is the one
+  unscoped-by-owner query on this DTO (same precedent as
+  `ServiceDTO.listCronEnabled`), used by `Logger.error` to attribute a runtime
+  error notification without threading a userId through every call site.
+- Call sites: `deploy.service.ts` (deploy success, auto-redeploy, deploy
+  failure), `$lib/logger.ts` (`Logger.error` → `notifyServiceError`),
+  `services/new/+page.server.ts` (service created), the service Overview page's
+  start/stop actions.
+- `(protected)/+layout.server.ts`'s shared `load` fetches the last 20
+  notifications + unread count once, so the bell doesn't need a per-page fetch;
+  `notification-bell.svelte` posts to
+  `notifications/[id]/read`/`notifications/read-all` and calls
+  `invalidateAll()`.
+
+This closes the "in-app lifecycle event feed" half of what Planned features
+below used to list as unbuilt; outbound webhooks (Telegram/Discord/generic HTTP)
+on the same events are still unbuilt, see below.
+
 ### Homerun Agent + installer (`agent/`, `installer/`), draft, not yet wired into the main app
 
 Two standalone Bun/TypeScript sub-projects at the repo root, siblings of `src/`,
@@ -1577,12 +1752,12 @@ re-litigating design decisions.
   gating whether a newly-deployed container receives traffic, blue-green style,
   keep the old container alive/routable until the new one passes, roll back
   (never route to it) if it doesn't.
-- **CLI**: the REST API (`src/routes/api/v1/`) and the DTO layer underneath it
-  are the groundwork, a CLI client itself doesn't exist yet.
 - **Storage**: S3 backup covers bind-mount volumes only (see below), no
   named-volume backup, no restore flow.
 - **Observability**: system stats beyond the dashboard's host-level
-  CPU/RAM/GPU/disk, no per-container `docker stats` view yet.
+  CPU/RAM/GPU/disk, no per-container `docker stats` view yet (swarm mode's
+  `inspectSwarmServiceStatus` aggregates task state, not per-task resource
+  usage, see Swarm mode above).
 - **Security**: per-service auth gating exists (`authRequired`, see below) but
   doesn't have a working login-redirect flow yet, see its own section for the
   real, tested limitation. Custom SSL cert handling exists too (see below) but
@@ -1592,17 +1767,22 @@ re-litigating design decisions.
   credential field, no webhook/auto-deploy-on-push. Remote hosts exist too (see
   below), no host port publishing for remote-hosted services, no
   shared-network/Traefik integration for them, bind-mount volumes are skipped on
-  remote deploys.
+  remote deploys, and (see Swarm mode above) a Remote Host still can't be a
+  swarm-mode deploy target, `installer/swarm-join.sh` is groundwork for this,
+  not the integration itself.
 - **Onboarding**: the forced first-run wizard now exists (`/onboarding`, see
   above), and setup diagnostics feed a highlighted deep-link into `/settings`
-  instead of a standalone page, the larger version (DNS-provider API automation
-  for TLS/DNS ops, e.g. Cloudflare/Pangolin) still isn't built.
+  instead of a standalone page; DNS automation itself now exists (Cloudflare and
+  Pangolin, see above), but the wizard doesn't walk a new admin through
+  configuring either one yet, that's still a manual `/settings` visit after
+  onboarding finishes.
 - **User roles**: admin/developer roles, admin-managed direct-create and email
   invites exist (see User roles & admin-managed accounts above), "developer" is
   a label plus route-gating only, no finer-grained permissions (e.g. no
   per-project access control, no read-only role) built yet.
-- **Notifications / webhooks**: in-app lifecycle event feed; outbound webhooks
-  (Telegram/Discord/generic HTTP) on deploy success/failure.
+- **Notifications / webhooks**: the in-app lifecycle event feed now exists (see
+  In-app notifications above); outbound webhooks (Telegram/Discord/generic HTTP)
+  on the same events are still unbuilt.
 
 `TODO.md` at the repo root tracks open follow-up items separately from this
 intentional-gaps list.

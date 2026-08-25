@@ -1,5 +1,7 @@
 name: Binaries
-description: Builds the agent/cli/installer standalone binaries, one arch per matrix leg, natively on a runner of that arch
+description:
+  Builds the agent/cli/installer standalone binaries, one arch per matrix leg,
+  natively on a runner of that arch
 
 on:
   workflow_call:
@@ -8,7 +10,11 @@ on:
         required: false
         type: string
         default: ""
-        description: "Version to bake into the built binaries (bare X.Y.Z, no leading v, same value cli/agent/version.ts reads from package.json at compile time). Empty means this push isn't releasing, so the binaries build with whatever version is already committed."
+        description:
+          "Version to bake into the built binaries (bare X.Y.Z, no leading v,
+          same value cli/agent/version.ts reads from package.json at compile
+          time). Empty means this push isn't releasing, so the binaries build
+          with whatever version is already committed."
 
 permissions:
   contents: read
@@ -16,9 +22,6 @@ permissions:
 jobs:
   build:
     name: Build Binaries
-    # Same shape as docker.yaml's build job : native per-arch self-hosted
-    # runners, not a single host cross-compiling both targets (that was the
-    # actual bug this workflow replaces).
     runs-on: ${{ matrix.arch }}
     strategy:
       fail-fast: false
@@ -31,21 +34,9 @@ jobs:
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
 
-      # Unlike code_quality/release's installs, this one can't use
-      # --ignore-scripts : docker-modem -> ssh2 -> cpu-features has a real
-      # node-gyp postinstall build producing cpufeatures.node, and skipping
-      # it left Bun's --compile bundler unable to resolve that require() when
-      # building the agent binary (dockerode's SSH remote-host support pulls
-      # this chain in).
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # cli/agent's version.ts both bundle package.json's version in at
-      # compile time (see their own comments), so it has to be the real
-      # about-to-be-released version *before* Bun.build runs, same
-      # bump-version.ts the release job's semantic-release invokes for real
-      # later : this build's own checkout/package.json never gets committed
-      # or pushed, so bumping it here is scoped to this job's own binaries.
       - name: Bump version for this build
         if: inputs.version != ''
         run: bun scripts/bump-version.ts ${{ inputs.version }}

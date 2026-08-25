@@ -25,9 +25,9 @@ if (!nextVersion) {
 
 const packageJsonPaths = [
   "package.json",
-  "agent/package.json",
-  "installer/package.json",
-  "cli/package.json",
+  "packages/agent/package.json",
+  "packages/installer/package.json",
+  "packages/cli/package.json",
 ];
 
 for (const path of packageJsonPaths) {
