@@ -294,7 +294,7 @@
       </div>
       <div class="space-y-2 p-4">
         <a
-          class="hover:border-accent/40 hover:text-accent flex w-full items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-medium text-text transition-all duration-200 hover:bg-[var(--color-accent-light)]"
+          class="hover:border-accent/40 hover:text-accent flex w-full items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-medium text-text transition-all duration-200 hover:bg-(--color-accent-light)"
           href={resolve("/services/new")}
         >
           <div
@@ -313,7 +313,7 @@
 
         {#if data.stats.totalServices > 0}
           <a
-            class="hover:border-accent/40 hover:text-accent flex w-full items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-medium text-text transition-all duration-200 hover:bg-[var(--color-accent-light)]"
+            class="hover:border-accent/40 hover:text-accent flex w-full items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-medium text-text transition-all duration-200 hover:bg-(--color-accent-light)"
             href={resolve("/services")}
           >
             <div

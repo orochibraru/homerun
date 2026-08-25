@@ -14,8 +14,9 @@ top-level-await-plus-signal-handlers script) that, once per run:
 2. Run the real `drizzle/` migrations directly against it
    (`support/migrate.ts`), as an explicit, visible step — separate from (but
    consistent with) the spawned app's own idempotent boot-time migration.
-3. Build the real app (`bun run build:app`) and boot it as a real child process
-   on another random port.
+3. Boot the already-built app (run `bun run build:app` yourself first, this
+   suite doesn't build it for you) as a real child process on another random
+   port.
 4. Spawn a real Homerun Agent and a real second Docker connection (`socat`),
    each on their own random port too.
 5. Bootstrap the first (admin) account, mint a real API key, register both

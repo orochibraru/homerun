@@ -23,16 +23,24 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 			as: "homerun",
 		});
 
-		const [writtenPath, content] = writeFile.mock.calls[0] as [string, string];
-		expect(writtenPath).toBe(composePath);
+		const composeCall = writeFile.mock.calls.find(
+			(call) => call[0] === composePath,
+		) as [string, string];
+		const content = composeCall[1];
 		expect(content).toContain(
 			"image: git.ombrage.space/orochibraru/homerun:v1.2.3",
 		);
 		expect(content).toContain(
 			"- /run/user/1000/docker.sock:/run/user/1000/docker.sock",
 		);
+		expect(content).toContain("./homerun.yaml:/app/homerun.yaml:ro");
 		expect(content).toContain("name: homerun");
 		expect(content).toContain("AUTH_SECRET");
+
+		const configCall = writeFile.mock.calls.find(
+			(call) => call[0] === "/home/homerun/homerun/homerun.yaml",
+		) as [string, string];
+		expect(configCall[1]).toContain("socketPath: /run/user/1000/docker.sock");
 
 		expect(appendLine).toHaveBeenCalledTimes(1);
 		const [envPath, line] = appendLine.mock.calls[0] as [string, string];
@@ -70,8 +78,10 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 			"/var/run/docker.sock",
 		);
 
-		const [, content] = writeFile.mock.calls[0] as [string, string];
-		expect(content).toContain(
+		const composeCall = writeFile.mock.calls.find(
+			(call) => call[0] === "/home/homerun/homerun/compose.yaml",
+		) as [string, string];
+		expect(composeCall[1]).toContain(
 			"image: git.ombrage.space/orochibraru/homerun:latest",
 		);
 	});

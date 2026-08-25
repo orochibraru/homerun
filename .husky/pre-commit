@@ -8,14 +8,69 @@ if [ -z "$STAGED_FILES" ]; then
   exit 0
 fi
 
-bun run gen
-bun run format:md
-bun run lint:fix:md
+BAD_EXIT_CODE=0
+echo "Generating openapi spec"
+bun run gen || BAD_EXIT_CODE=$?
+
+if [ $BAD_EXIT_CODE -ne 0 ]; then
+  echo "Linters found issues that could not be auto-fixed."
+  exit $BAD_EXIT_CODE
+fi
 
 echo "Formatting/linting staged files..."
-# Run formatter, capturing the exit code so we can still re-stage and report
-FORMAT_EXIT_CODE=0
-bun run biome check --write || FORMAT_EXIT_CODE=$?
+
+# Biome has native --staged support (reads git's staged list itself and
+# still honors biome.json's own ignore patterns), no manual file list needed.
+bunx biome check --write --unsafe --staged || BAD_EXIT_CODE=$?
+
+# markdownlint-cli2/prettier/tailwint have no such flag, so build explicit
+# staged-file lists by hand and pass only those, instead of this repo's old
+# "**/*.md" / whole-repo scans.
+MD_FILES=""
+TAILWIND_FILES=""
+while IFS= read -r file; do
+  [ -f "$file" ] || continue
+  case "$file" in
+    *.md) MD_FILES="$MD_FILES$file
+" ;;
+  esac
+  # tailwint's own default scan is **/*.{tsx,jsx,html,vue,svelte,astro,mdx,css},
+  # mirror that extension set so staged-only scoping doesn't change what
+  # would otherwise get linted.
+  case "$file" in
+    *.tsx | *.jsx | *.html | *.vue | *.svelte | *.astro | *.mdx | *.css)
+      TAILWIND_FILES="$TAILWIND_FILES$file
+" ;;
+  esac
+done <<STAGED
+$STAGED_FILES
+STAGED
+
+if [ -n "$MD_FILES" ]; then
+  set --
+  while IFS= read -r f; do
+    [ -n "$f" ] && set -- "$@" "$f"
+  done <<FILES
+$MD_FILES
+FILES
+  bunx prettier --log-level warn --write "$@" || BAD_EXIT_CODE=$?
+  bunx markdownlint-cli2 --fix "$@" || BAD_EXIT_CODE=$?
+fi
+
+if [ -n "$TAILWIND_FILES" ]; then
+  set --
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    # tailwint treats its arguments as globs, escape glob metacharacters so
+    # a literal path (e.g. a SvelteKit "[param]"/"(group)" route folder)
+    # isn't reinterpreted as a character class/group and silently dropped.
+    escaped=$(printf '%s' "$f" | sed -e 's/[][(){}*?!]/\\&/g')
+    set -- "$@" "$escaped"
+  done <<FILES
+$TAILWIND_FILES
+FILES
+  bunx tailwint --fix "$@" || BAD_EXIT_CODE=$?
+fi
 
 # Re-stage files that were already staged
 echo "$STAGED_FILES" | while IFS= read -r file; do
@@ -25,10 +80,10 @@ echo "$STAGED_FILES" | while IFS= read -r file; do
   fi
 done
 
-if [ $FORMAT_EXIT_CODE -ne 0 ]; then
-  echo "Biome found issues that could not be auto-fixed."
-  exit $FORMAT_EXIT_CODE
+if [ $BAD_EXIT_CODE -ne 0 ]; then
+  echo "Linters found issues that could not be auto-fixed."
+  exit $BAD_EXIT_CODE
 fi
 
-echo "✨ Files formatted by Biome"
+echo "✨ Staged files formatted/linted"
 # biome end

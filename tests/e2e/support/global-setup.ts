@@ -1,18 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { ciTimeout } from "../../integration/support/ci";
 
-/**
- * Boots a real app against a real, throwaway Postgres for this suite to
- * drive with a real browser. The actual work (starting Postgres, migrating,
- * building, spawning the app) happens in `bootstrap-runtime.ts`, run here as
- * a genuine `bun run` child process rather than imported directly — see that
- * file's own comment for why (Playwright's test runner itself runs under
- * Node, not Bun, even when launched via `bunx`, and that support code is
- * Bun-only). This process just spawns that child, waits for its `READY`
- * line, and returns a teardown function (Playwright's own documented
- * pattern for a `globalSetup` that needs to clean up after itself) that
- * signals it to shut down.
- */
 export default async function globalSetup(): Promise<() => Promise<void>> {
 	const child = spawn(
 		"bun",

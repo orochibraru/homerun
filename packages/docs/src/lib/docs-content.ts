@@ -4,7 +4,7 @@ import { marked } from "marked";
  * Sources every guide page straight from the repo root's own `docs/*.md`
  * (the plain-Markdown operator docs `docs/README.md` itself describes as
  * "no generated site yet"), rather than a second, separately-maintained copy
- * of the same content living under `packages/docs-site/`. `import.meta.glob`'s
+ * of the same content living under `packages/docs/`. `import.meta.glob`'s
  * `query: "?raw"` reads each file's text at build time, so this only ever
  * reflects whatever's checked in, there's no runtime fetch and nothing here
  * can drift from the source file without a rebuild noticing (a renamed doc

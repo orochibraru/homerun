@@ -1,0 +1,124 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"additionalProperties": false,
+	"properties": {
+		"auth": {
+			"additionalProperties": false,
+			"properties": {
+				"crossSubdomainCookies": {
+					"type": "boolean"
+				},
+				"oauthProviders": {
+					"items": {
+						"additionalProperties": false,
+						"properties": {
+							"clientId": {
+								"type": "string"
+							},
+							"clientSecret": {
+								"type": "string"
+							},
+							"discoveryUrl": {
+								"type": "string"
+							},
+							"enabled": {
+								"type": "boolean"
+							},
+							"name": {
+								"type": "string"
+							},
+							"pkce": {
+								"type": "boolean"
+							},
+							"scopes": {
+								"items": {
+									"type": "string"
+								},
+								"type": "array"
+							}
+						},
+						"required": ["clientId", "clientSecret", "discoveryUrl", "name"],
+						"type": "object"
+					},
+					"type": "array"
+				},
+				"origin": {
+					"type": "string"
+				}
+			},
+			"type": "object"
+		},
+		"authCheckUrl": {
+			"type": "string"
+		},
+		"baseDomain": {
+			"type": "string"
+		},
+		"docker": {
+			"additionalProperties": false,
+			"properties": {
+				"networkName": {
+					"type": "string"
+				},
+				"socketPath": {
+					"type": "string"
+				}
+			},
+			"type": "object"
+		},
+		"logFormat": {
+			"enum": ["console", "json"],
+			"type": "string"
+		},
+		"logLevel": {
+			"enum": ["debug", "info", "warn", "error"],
+			"type": "string"
+		},
+		"smtp": {
+			"additionalProperties": false,
+			"properties": {
+				"enabled": {
+					"type": "boolean"
+				},
+				"from": {
+					"type": "string"
+				},
+				"host": {
+					"type": "string"
+				},
+				"password": {
+					"type": "string"
+				},
+				"port": {
+					"type": "number"
+				},
+				"secure": {
+					"type": "boolean"
+				},
+				"user": {
+					"type": "string"
+				}
+			},
+			"type": "object"
+		},
+		"traefik": {
+			"additionalProperties": false,
+			"properties": {
+				"acmeEmail": {
+					"type": "string"
+				},
+				"certResolver": {
+					"type": "string"
+				},
+				"dynamicConfigDir": {
+					"type": "string"
+				},
+				"entrypoint": {
+					"type": "string"
+				}
+			},
+			"type": "object"
+		}
+	},
+	"type": "object"
+}

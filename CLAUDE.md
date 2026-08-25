@@ -1354,17 +1354,25 @@ have no entry in the map, nothing to highlight for either.
 
 ### Config (`src/lib/config.ts`)
 
-Zod-validated env config. Notable groups: `docker.{socketPath,networkName}`,
-`baseDomain`, `traefik.{entrypoint,certResolver}`, `auth.{origin,secret}`,
-`smtp.*`.
+Zod-validated YAML config, not env vars, except `DATABASE_URL`/`AUTH_SECRET`/
+`PORT`/`CONFIG_FILE` (env-only, needed before the file/DB are reachable).
+`CONFIG_FILE` (default `./homerun.yaml`) points at the YAML file; missing file =
+all defaults, every field optional. `yamlConfigSchema` is the file's own schema
+(exported so `scripts/generate-config-schema.ts` can turn it into
+`homerun.schema.json`, a JSON Schema `homerun.example.yaml` references via a
+`# yaml-language-server: $schema=` comment for editor linting); `configSchema`
+extends it with the env-only fields for the full `AppConfig` type. Notable
+groups: `docker.{socketPath,networkName}`, `baseDomain`,
+`traefik.{entrypoint,certResolver}`, `auth.{origin,secret}`, `smtp.*`. See
+`docs/configuration.md`.
 
 `config.auth.secret` reads `AUTH_SECRET` **falling back to
 `BETTER_AUTH_SECRET`**, don't collapse this to one var without checking both are
 honored.
 
 `config` is a single stable object every other module imports and reads
-properties off live, the env-parsed values are captured once into a private
-`envDefaults`, then `config` starts as a clone of that and is **mutated in
+properties off live, the file+env-parsed values are captured once into a private
+`fileDefaults`, then `config` starts as a clone of that and is **mutated in
 place** (never reassigned) by `applyInstanceSettings(override)`. See Instance
 settings below for who calls that and when.
 

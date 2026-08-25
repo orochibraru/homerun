@@ -27,8 +27,9 @@
 			"!test-results",
 			"!scripts",
 			"!cli/src/generated",
-			"!packages/docs-site/build",
-			"!packages/docs-site/.svelte-kit"
+			"!packages/docs/build",
+			"!packages/docs/.svelte-kit",
+			"!packages/docs/static/openapi.json"
 		]
 	},
 	"formatter": {

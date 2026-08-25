@@ -7,10 +7,13 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
-# packages/docs-site/ is its own separate SvelteKit build (see package.json's
-# docs-site:* scripts), same output dir names, different subtree.
-packages/docs-site/.svelte-kit
-packages/docs-site/build
+# packages/docs/ is its own separate SvelteKit build (see package.json's
+# *:docs scripts), same output dir names, different subtree.
+packages/docs/.svelte-kit
+packages/docs/build
+# Copied in at dev/build time from the repo root's own openapi.json
+# (scripts/docs.ts), not committed, see packages/docs/README.md.
+packages/docs/static/openapi.json
 # Compiled binaries from agent/, installer/, cli/ (bun build --compile)
 dist
 
@@ -23,6 +26,9 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
+
+# Config
+homerun.yaml
 
 # Vite
 vite.config.js.timestamp-*

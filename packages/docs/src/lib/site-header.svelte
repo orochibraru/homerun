@@ -3,12 +3,12 @@
 </script>
 
 <header
-	class="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--bg)]/85 backdrop-blur"
+	class="sticky top-0 z-20 border-b border-(--border) bg-(--bg)/85 backdrop-blur"
 >
   <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
     <a href="/" class="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
       <span
-        class="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-[#4b3bff] text-xs font-bold text-white"
+        class="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-(--accent) to-[#4b3bff] text-xs font-bold text-white"
       >H</span>
       <span>Homerun</span>
     </a>
@@ -16,17 +16,17 @@
     <nav class="flex items-center gap-6 text-sm">
       <a
         href="/#features"
-        class="hidden text-[var(--text-muted)] transition-colors hover:text-[var(--text)] sm:inline"
+        class="hidden text-(--text-muted) transition-colors hover:text-(--text) sm:inline"
       >Features</a>
       <a
         href="/docs/getting-started"
-        class="transition-colors hover:text-[var(--text)] {current === 'docs' ? 'text-[var(--text)]' : 'text-[var(--text-muted)]'}"
+        class="transition-colors hover:text-(--text) {current === 'docs' ? 'text-(--text)' : 'text-(--text-muted)'}"
       >Docs</a>
       <a
         href="https://git.ombrage.space/orochibraru/homerun"
         target="_blank"
         rel="noreferrer"
-        class="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[var(--text-muted)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text)]"
+        class="flex items-center gap-1.5 rounded-full border border-(--border) px-3.5 py-1.5 text-(--text-muted) transition-colors hover:border-(--border-hover) hover:text-(--text)"
       >
         <svg viewBox="0 0 16 16" class="size-3.5 fill-current" aria-hidden="true">
           <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38

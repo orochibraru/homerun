@@ -1,64 +1,67 @@
 # Configuration
 
-Homerun is configured two ways: environment variables (read once at boot), and a
-`/settings` page (admin-only, DB-backed, live, no restart needed). Most settings
-exist in both places; a `null`/unset DB value falls back to the env default. See
-[`.env.example`](../.env.example) at the repo root for a copy-pasteable starting
-point.
+Homerun is configured three ways: a few env vars (read once at boot, needed
+before anything else is reachable), a YAML config file (`homerun.yaml`, read
+once at boot), and a `/settings` page (admin-only, DB-backed, live, no restart
+needed). Most YAML settings are also live-editable from `/settings`; a
+`null`/unset DB value falls back to the file default.
 
-## Env-only (not editable from `/settings`)
+## Env-only
 
-These have to be known before the app can even reach the database, or would be
-circular if they lived in it:
+Have to be known before the app can even reach the database or the config file's
+own docs are useful. See [`.env.example`](../.env.example).
 
-| Var                                                | Default                                             | Meaning                                                                                                                                                                                                                                                                                                                                |
-| -------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                     | `postgres://homerun:homerun@localhost:5432/homerun` | Postgres connection string. Required, there's no SQLite fallback.                                                                                                                                                                                                                                                                      |
-| `PORT`                                             | `3000`                                              | Port the built app listens on (`bun run start`). Not used by `vite dev`, which always uses 5173.                                                                                                                                                                                                                                       |
-| `AUTH_SECRET` (falls back to `BETTER_AUTH_SECRET`) | `default-secret`                                    | Session/cookie signing key, and the key every encrypted column (`registryPasswordEnc`, OAuth client secrets, S3 keys, etc.) derives its encryption key from via `scrypt`. **Change this before running anywhere real**, both names are honored, `BETTER_AUTH_SECRET` because that's what better-auth's own `auth generate` CLI writes. |
-| `LOG_LEVEL`                                        | `info`                                              | `debug` \| `info` \| `warn` \| `error`.                                                                                                                                                                                                                                                                                                |
-| `LOG_FORMAT`                                       | `console`                                           | `console` \| `json`.                                                                                                                                                                                                                                                                                                                   |
+| Var                                                | Default                                             | Meaning                                                                                                                                                    |
+| -------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                     | `postgres://homerun:homerun@localhost:5432/homerun` | Postgres connection string.                                                                                                                                |
+| `PORT`                                             | `3000`                                              | Port the built app listens on.                                                                                                                             |
+| `CONFIG_FILE`                                      | `./homerun.yaml`                                    | Path to the YAML config file below.                                                                                                                        |
+| `AUTH_SECRET` (falls back to `BETTER_AUTH_SECRET`) | `default-secret`                                    | Session/cookie signing key, and the key every encrypted column derives its encryption key from via `scrypt`. **Change this before running anywhere real.** |
 
-## Env defaults, live-editable from `/settings`
+## `homerun.yaml`
 
-Everything else starts from an env var but can be overridden per-instance from
-the dashboard without a restart, a saved change re-merges over the env baseline
-immediately (`applyInstanceSettings()`), so clearing the DB override reverts
-cleanly to the env value rather than going stale.
+Everything else. Copy [`homerun.example.yaml`](../homerun.example.yaml) to
+`homerun.yaml` (see `CONFIG_FILE` above for a different path/name) and adjust.
+The file has a `$schema` comment (`homerun.schema.json`, generated from the same
+zod schema that validates it, `bun run gen`) so an editor with a
+YAML-language-server extension gets linting/autocomplete for free.
 
-| Var                                                                                     | Default                                                | `/settings` section                                                                                                                                    |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `BASE_DOMAIN`                                                                           | `localhost`                                            | Core, the domain deployed services get subdomained under (`<slug>.<baseDomain>`)                                                                       |
-| `ORIGIN`                                                                                | `http://localhost:3000`                                | Core, this app's own public origin                                                                                                                     |
-| `AUTH_CROSS_SUBDOMAIN`                                                                  | `false`                                                | Core, scopes the session cookie to `.baseDomain`; see [Users & access](users-and-access.md) before enabling                                            |
-| `AUTH_CHECK_URL`                                                                        | `http://host.docker.internal:<PORT>/api/v1/auth-check` | Core, where Traefik's forwardAuth middleware checks a gated service's login state                                                                      |
-| `DOCKER_SOCKET_PATH`                                                                    | `/var/run/docker.sock`                                 | Docker                                                                                                                                                 |
-| `DOCKER_NETWORK_NAME`                                                                   | `homerun`                                              | Docker                                                                                                                                                 |
-| `TRAEFIK_ENTRYPOINT`                                                                    | `websecure`                                            | Traefik                                                                                                                                                |
-| `TRAEFIK_CERT_RESOLVER`                                                                 | `letsencrypt`                                          | Traefik                                                                                                                                                |
-| `TRAEFIK_DYNAMIC_CONFIG_DIR`                                                            | _(unset, feature is a no-op until set)_                | Traefik, see [Services: custom domains & SSL](services.md#custom-domains--ssl)                                                                         |
-| `SMTP_ENABLED`                                                                          | `false`                                                | Email                                                                                                                                                  |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_SECURE` / `SMTP_FROM` | _(unset)_                                              | Email, all required together for `SMTP_ENABLED=true` to actually take effect; a partial config is treated as disabled with a warning                   |
-| OAuth providers                                                                         | _(none)_                                               | Configured entirely from `/settings`, not env vars, see [Users & access](users-and-access.md)                                                          |
-| Orchestration mode                                                                      | `standalone`                                           | `/settings` → Orchestration, `standalone` \| `swarm`, see [Services: swarm mode](services.md#swarm-mode)                                               |
-| Cloudflare DNS                                                                          | _(unset, no-op until configured)_                      | `/settings` → DNS, API token + zone ID, see [Services: DNS automation](services.md#dns-automation)                                                     |
-| Pangolin                                                                                | _(unset, no-op until configured)_                      | `/settings` → DNS, base URL + API token + org ID + main site name (+ optional target port), see [Services: DNS automation](services.md#dns-automation) |
+| Key                                                  | Default                                                | `/settings` section                                                                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `baseDomain`                                         | `localhost`                                            | Core, the domain deployed services get subdomained under (`<slug>.<baseDomain>`)                                             |
+| `auth.origin`                                        | _(derived per-request)_                                | Core, this app's own public origin                                                                                           |
+| `auth.crossSubdomainCookies`                         | `false`                                                | Core, scopes the session cookie to `.baseDomain`; see [Users & access](users-and-access.md) before enabling                  |
+| `authCheckUrl`                                       | `http://host.docker.internal:<PORT>/api/v1/auth-check` | Core, where Traefik's forwardAuth middleware checks a gated service's login state                                            |
+| `docker.socketPath`                                  | auto-detected                                          | Docker                                                                                                                       |
+| `docker.networkName`                                 | `homerun`                                              | Docker                                                                                                                       |
+| `traefik.entrypoint`                                 | `websecure`                                            | Traefik                                                                                                                      |
+| `traefik.certResolver`                               | `letsencrypt`                                          | Traefik                                                                                                                      |
+| `traefik.dynamicConfigDir`                           | _(unset, feature is a no-op until set)_                | Traefik, see [Services: custom domains & SSL](services.md#custom-domains--ssl)                                               |
+| `traefik.acmeEmail`                                  | _(unset)_                                              | Traefik, informational mirror only, see below                                                                                |
+| `smtp.enabled`                                       | `false`                                                | Email                                                                                                                        |
+| `smtp.host`/`port`/`user`/`password`/`secure`/`from` | _(unset)_                                              | Email, all required together for `smtp.enabled: true` to take effect; a partial config is treated as disabled with a warning |
+| `auth.oauthProviders`                                | `[]`                                                   | Also editable from `/settings`, see [Users & access](users-and-access.md)                                                    |
+| `logLevel`                                           | `info`                                                 | `debug` \| `info` \| `warn` \| `error`                                                                                       |
+| `logFormat`                                          | `console`                                              | `console` \| `json`                                                                                                          |
 
-OAuth providers, orchestration mode, and both DNS integrations (Cloudflare and
-Pangolin) are settings with **no env-var form at all**, they're added, edited,
-and removed only from `/settings`, the secrets among them (Cloudflare's API
-token, Pangolin's API token) stored encrypted the same way `registryPasswordEnc`
-is, on the singleton `instance_settings` row.
+Orchestration mode and both DNS integrations (Cloudflare and Pangolin) have **no
+file form at all**, they're added, edited, and removed only from `/settings`,
+secrets among them stored encrypted the same way `registryPasswordEnc` is, on
+the singleton `instance_settings` row.
 
 ## Compose-only variables
 
-`compose.yaml` (Traefik + Postgres bootstrap) reads a few of its own, separate
-from anything above:
+`compose.yaml`/`compose.prod.yaml` (Traefik + Postgres bootstrap) read a few of
+their own, separate from anything above, still plain `.env` since compose itself
+has no notion of this app's YAML file:
 
 | Var                                                   | Default                           | Meaning                                                |
 | ----------------------------------------------------- | --------------------------------- | ------------------------------------------------------ |
 | `ACME_EMAIL`                                          | `admin@example.com`               | Let's Encrypt account email for the ACME cert resolver |
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | `homerun` / `homerun` / `homerun` | Must match `DATABASE_URL` above if you change them     |
+
+`compose.prod.yaml` bind-mounts `./homerun.yaml` into the app container at
+`/app/homerun.yaml`, same directory `.env` lives in.
 
 ## First-run wizard vs. `/settings`
 

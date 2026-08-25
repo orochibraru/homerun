@@ -187,7 +187,7 @@
     </div>
   {:else}
     <div
-      class="h-[24rem] overflow-y-auto bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+      class="h-96 overflow-y-auto bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
       bind:this={termEl}
     >
       {#if connecting}

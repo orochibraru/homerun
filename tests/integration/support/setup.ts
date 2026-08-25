@@ -7,9 +7,17 @@
  * before committing to this design (a two-file smoke test, global
  * `beforeAll` fired exactly once, before the first file's own tests; a
  * same-file `beforeAll` fired *after* it, same run). This is what makes
- * `bun test` alone — no wrapper script, no --preload flag, no explicit
- * `bun run build:app` first — run the *entire* suite (agent/cli/installer
- * *and* integration) end to end.
+ * `bun test` alone — no wrapper script, no --preload flag — run the *entire*
+ * suite (agent/cli/installer *and* integration) end to end.
+ *
+ * Building the app is a separate, explicit operation, not something this
+ * setup does for you: run `bun run build:app` yourself before this suite
+ * (see `assertAppIsBuilt` below, which just checks `build/index.js` exists
+ * and fails fast with that instruction if not). This used to run
+ * `bun run build:app` inline here on every invocation, which meant every
+ * local re-run of this suite paid a full rebuild even when nothing under
+ * `src/` had changed, and any build failure surfaced as a confusing
+ * integration-test failure rather than its own build step.
  *
  * Every port (this throwaway Postgres container, the spawned app, the
  * spawned agent, the socat proxy) is resolved fresh each run (port.ts) —
@@ -38,6 +46,8 @@
  * instead of a bare timeout message.
  */
 import { afterAll, beforeAll } from "bun:test";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { config as agentConfig } from "../../../packages/agent/config";
 import { bootstrapAdmin } from "./bootstrap";
 import { ciTimeout, dumpDockerDiagnostics, stepLog } from "./ci";
@@ -77,6 +87,23 @@ function wantsIntegrationTests(): boolean {
 	return process.env.HOMERUN_SKIP_INTEGRATION_SETUP !== "1";
 }
 
+/**
+ * Building the app is a separate, explicit operation now (see this file's
+ * own top comment for why), not something this setup does inline any more :
+ * this just checks the build output that `spawnApp` (server.ts) actually
+ * runs (`bun run ./build/index.js`) exists yet, and fails fast with a clear
+ * instruction rather than letting `spawnApp` time out with a confusing
+ * "app never became healthy" message when it doesn't.
+ */
+function assertAppIsBuilt(): void {
+	const entry = join(process.cwd(), "build/index.js");
+	if (!existsSync(entry)) {
+		throw new Error(
+			`${entry} doesn't exist : run \`bun run build:app\` first, this suite no longer builds the app for you.`,
+		);
+	}
+}
+
 if (wantsIntegrationTests()) {
 	let pg: PgContainer | undefined;
 	const stopFns: Array<() => Promise<void>> = [];
@@ -85,23 +112,13 @@ if (wantsIntegrationTests()) {
 	beforeAll(
 		async () => {
 			try {
+				assertAppIsBuilt();
+
 				stepLog("Starting a fresh, random-port Postgres container...");
 				pg = await startPostgresContainer();
 
 				stepLog("Running migrations...");
 				await runMigrations(pg.databaseUrl);
-
-				stepLog("Building the app (bun run build:app)...");
-				const build = Bun.spawnSync(["bun", "run", "build:app"], {
-					cwd: process.cwd(),
-					stderr: "inherit",
-					stdout: "ignore",
-				});
-				if (!build.success) {
-					throw new Error(
-						`bun run build:app failed (exit code ${build.exitCode}) — see its stderr above.`,
-					);
-				}
 
 				stepLog("Starting socat proxy (second Docker connection)...");
 				const socatPort = getFreePort();
@@ -167,10 +184,11 @@ if (wantsIntegrationTests()) {
 			// bounds `test()` bodies, not beforeAll/afterAll hooks, which bun
 			// defaults to a *separate* 5-second timeout regardless. Without the
 			// explicit second argument below, this whole setup (Postgres +
-			// migrate + build:app + agent + socat + bootstrap) got SIGTERM'd
-			// mid-`bun run build:app` at exactly 5000ms, every run, silently
-			// eating the real error underneath a generic "hook timed out"
-			// message until this was traced down.
+			// migrate + agent + socat + bootstrap, `build:app` included back
+			// when this ran it inline, see this file's own top comment) got
+			// SIGTERM'd at exactly 5000ms, every run, silently eating the real
+			// error underneath a generic "hook timed out" message until this
+			// was traced down.
 		},
 		ciTimeout(120_000, 300_000),
 	);

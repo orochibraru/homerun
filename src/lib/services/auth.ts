@@ -187,7 +187,20 @@ function buildAuth() {
 			}),
 		],
 		rateLimit: {
-			enabled: !dev, // Disable rate limiting in development for easier testing
+			// Disabled in dev for easier testing, and also when
+			// HOMERUN_DISABLE_AUTH_RATE_LIMIT=1 : real, tested finding building
+			// tests/e2e/'s own sign-in/sign-out coverage — better-auth's rate
+			// limiter has an undocumented-in-config default "special rule" (see
+			// its own rate-limiter/index.mjs's getDefaultSpecialRules) capping
+			// any "/sign-in"/"/sign-up"-prefixed path at 3 requests per 10
+			// seconds, well below this `max`/`window`, and unaffected by them.
+			// A handful of E2E specs signing in/up against a real production
+			// build (`dev` is false there, same as a real deployment) tripped it
+			// immediately. `HOMERUN_DISABLE_AUTH_RATE_LIMIT` is set only by
+			// tests/e2e/support/bootstrap-runtime.ts's spawned app, never in
+			// production, same "test-only env escape hatch" shape as
+			// HOMERUN_SKIP_INTEGRATION_SETUP elsewhere in this repo.
+			enabled: !dev && process.env.HOMERUN_DISABLE_AUTH_RATE_LIMIT !== "1",
 			max: 100, // limit each IP to 100 requests per window
 			window: 15 * 60 * 1000, // 15 minutes
 		},
