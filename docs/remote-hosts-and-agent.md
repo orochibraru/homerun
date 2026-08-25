@@ -35,12 +35,14 @@ happens locally first.
 ## Autoscaling / load-based migration
 
 **This is scoped-down "Cloud Run-like" load shedding, not elastic replica
-autoscaling**, Homerun has no concept of running more than one container per
-service, so it can't spin up N replicas and load-balance across them. What it
+autoscaling.** Real replica scaling now exists as a separate feature, see
+[Services: swarm mode](services.md#swarm-mode), but this scheduler doesn't drive
+it and isn't swarm-aware: don't mark a swarm-mode service autoscale-eligible,
+migrating one to a remote host isn't supported (see below). What autoscaling
 does instead: when the local host crosses a configured resource threshold,
-**migrate** one opted-in service onto a designated overflow remote host
-(stop/remove the local container, deploy fresh on the remote one), not replicate
-it.
+**migrate** one opted-in standalone-mode service onto a designated overflow
+remote host (stop/remove the local container, deploy fresh on the remote one),
+not replicate it.
 
 Two-level opt-in, both required:
 
@@ -87,3 +89,18 @@ multi-host control-plane rearchitecture points at; see
 either the Agent or the full stack, this is what `docs/getting-started.md`'s
 one-liner runs. See [`installer/README.md`](../installer/README.md) for flags
 and what's verified.
+
+A separate script, `installer/swarm-join.sh`, joins a box to an **existing**
+Docker Swarm as a worker (on its own rootless Docker daemon) and installs the
+Homerun Agent there, groundwork for [swarm mode](services.md#swarm-mode)
+eventually supporting remote nodes, not a way to point a service at that host
+today. Run it with the join token/manager address from
+`docker swarm join-token worker` on your manager:
+
+```sh
+curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/swarm-join.sh \
+  | sudo bash -s -- --token <SWMTKN-...> --manager <ip>:2377
+```
+
+Not yet run against a real second host, same "verify on your own box first"
+caveat as the main installer.

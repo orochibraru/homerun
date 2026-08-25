@@ -65,6 +65,22 @@ simply by mounting it into more than one service.
 - **Custom domain**, an optional second hostname (in addition to the automatic
   `<slug>.<baseDomain>` one), routed to the same backend.
 
+### DNS automation
+
+If your instance's DNS is on Cloudflare, or you front it with a self-hosted
+[Pangolin](https://github.com/fosrl/pangolin) tunnel instead, configure one (or
+both) from `/settings` → DNS and Homerun keeps DNS in sync on its own for any
+service with **DNS-resolvable** on: a deploy creates/updates the record (a
+Cloudflare CNAME, or a Pangolin Resource + Target), deleting the service removes
+it. Both are best-effort and fire only after a successful deploy to the
+**local** host, a DNS sync failure never fails the deploy itself, it just logs a
+warning. Neither is required, this is purely a convenience over pointing DNS at
+your instance yourself.
+
+> Both integrations are new and haven't been exercised against a real
+> Cloudflare/Pangolin account yet, verify the first real sync by hand once
+> you've configured one. See [FAQ & limitations](faq-and-limitations.md).
+
 ### Custom domains & SSL
 
 A custom domain outside your instance's own base domain can't use Traefik's
@@ -93,7 +109,34 @@ CPU and memory limits on the Compute tab, applied as real Docker resource limits
 on the next deploy. The same tab has the **autoscale-eligible** opt-in toggle,
 see
 [Remote hosts: autoscaling](remote-hosts-and-agent.md#autoscaling--load-based-migration)
-for what that actually does (migration, not replica scaling).
+for what that actually does (migration, not replica scaling, unrelated to swarm
+mode below). Don't combine the two, autoscale-eligible isn't currently
+swarm-aware and can end up trying to migrate a swarm-mode service to a remote
+host, which swarm mode doesn't support (see below).
+
+## Swarm mode
+
+Instance-wide, opt-in (`/settings` → Orchestration → `swarm`), an alternative to
+the default one-container-per-service model: once enabled, every **local**
+deploy creates a real Docker Swarm Service instead of a plain container, and the
+Compute tab gets a **replicas** field (default 1) controlling how many copies
+Docker runs and load-balances across via its own routing mesh. Start/ stop map
+to scaling to 0/back up rather than a real container stop/start, and restart
+force-updates every task (recreating them) instead of restarting one container.
+
+Requires the host's own Docker daemon to already be swarm-active
+(`docker swarm init`, a one-time step Homerun doesn't do for you) and the live
+Traefik container to have `--providers.docker.swarmMode=true` added to its
+command, another one-time `compose.yaml` edit + restart, same "admin does the
+one-time infra change" pattern as custom SSL's `TRAEFIK_DYNAMIC_CONFIG_DIR`.
+
+**Local-manager-only for now**: a [remote host](remote-hosts-and-agent.md) has
+to actually join the swarm as a worker, which is a different thing than just
+being a registered `tcp://`/`ssh://` Docker daemon, so a swarm-mode service
+can't currently target a Remote Host, deploying one there is rejected outright.
+`installer/swarm-join.sh` (see [`installer/README.md`](../installer/README.md))
+joins a box to an existing swarm as a worker and installs the Homerun Agent on
+it, groundwork for closing this gap, not the integration itself yet.
 
 ## Logs
 
@@ -121,6 +164,14 @@ A per-service Errors tab surfaces both failed deployments and a live "container
 currently down" banner, plus an "Application errors" section, persisted
 warn/error-level app log lines that mention this service, a lightweight view of
 app-level failures alongside deploy failures.
+
+## Notifications
+
+A bell icon in the header shows a per-user feed of lifecycle events, deploy
+success/failure, service created/started/stopped, auto-redeploy fired, and
+runtime errors, distinct from the Errors tab's persisted app-log view (this is a
+short, curated list, not everything logged). Click a notification to jump to its
+service, or mark all read from the dropdown.
 
 ## Settings
 

@@ -40,7 +40,7 @@ for (const packageName of packages) {
         console.log(`  ==> ${target.name}...`);
         try {
             const res = await Bun.build({
-                entrypoints: [`./${packageName}/index.ts`],
+                entrypoints: [`./packages/${packageName}/index.ts`],
                 metafile: true,
                 compile: {
                     target: target.target,

@@ -80,8 +80,17 @@ RUN apk add --no-cache wget ca-certificates
 
 COPY --from=deps /app/node_modules /app/node_modules
 
-COPY agent /app/agent
+# Preserves the same relative depth as the real source tree
+# (packages/agent/version.ts lives two directories under the repo root, and
+# imports "../../package.json" from there to read the app's real version at
+# build time, no separate agent/package.json to duplicate/drift it, see
+# that file's own comment) rather than flattening to /app/agent : real,
+# CI-observed finding, a flattened COPY to /app/agent (one level, not two)
+# left version.ts's relative import resolving to a path that doesn't exist
+# in the image, failing this whole build stage.
+COPY packages/agent /app/packages/agent
 COPY tsconfig.json /app/tsconfig.json
+COPY package.json /app/package.json
 
 ARG TARGETARCH
 RUN case "$TARGETARCH" in \
@@ -89,7 +98,7 @@ RUN case "$TARGETARCH" in \
     arm64) BUN_TARGET=bun-linux-arm64-musl ;; \
     *) echo "unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
     esac; \
-    bun build /app/agent/index.ts --compile --target="$BUN_TARGET" --external cpu-features --minify --outfile /out/homerun-agent
+    bun build /app/packages/agent/index.ts --compile --target="$BUN_TARGET" --external cpu-features --minify --outfile /out/homerun-agent
 
 FROM alpine:3 AS agent
 

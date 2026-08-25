@@ -22,10 +22,12 @@ jobs:
 
   binaries:
     name: Binaries
+    needs: [code_quality]
     uses: ./.github/workflows/binaries.yaml
 
   build:app:
     name: Docker Build (App)
+    needs: [code_quality]
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
@@ -38,6 +40,7 @@ jobs:
 
   build:agent:
     name: Docker Build (Agent)
+    needs: [code_quality]
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}

@@ -10,15 +10,19 @@ you'd mind losing, and keep backups (see
 
 ## Does it support multiple hosts / Kubernetes-style orchestration?
 
-Not really, by design, see the README's "Why Homerun".
-[Remote hosts](remote-hosts-and-agent.md) let one instance deploy _individual_
-services onto other machines, and
+Not a Kubernetes-equivalent control plane, no, that's still by design, see the
+README's "Why Homerun". [Remote hosts](remote-hosts-and-agent.md) let one
+instance deploy _individual_ services onto other machines, and
 [autoscaling](remote-hosts-and-agent.md#autoscaling--load-based-migration) can
-migrate one service off an overloaded host, but there's no replica scaling, no
-load balancing across multiple containers of the same service, and no plan to
-become a Swarm/Kubernetes-equivalent control plane. `service.containerId` is a
-single column throughout this codebase; that's a real architectural choice, not
-a gap waiting to be filled incidentally.
+migrate one service off an overloaded host. There **is** now real replica
+scaling and load balancing for a single service, opt-in Docker
+[Swarm mode](services.md#swarm-mode), but it's local-manager-only today: a
+remote machine has to actually join the swarm as a worker
+(`installer/swarm-join.sh`), which isn't the same as registering it as a Remote
+Host, so multi-host swarm scaling isn't wired up end-to-end yet either.
+`service.containerId` still being a single column is what standalone mode (the
+default) is built around; swarm mode is the separate, newer path around that
+limitation for services that opt in.
 
 ## Known, real limitations (not hypothetical)
 
@@ -42,7 +46,14 @@ a gap waiting to be filled incidentally.
 - **The installer**'s mutating steps (package install, rootless Docker setup,
   systemd units) haven't been run against a real fresh box in CI, verify by
   hand, ideally with `--dry-run` first, before trusting the one-liner on a
-  machine that matters.
+  machine that matters. `installer/swarm-join.sh` carries the same caveat.
+- **Swarm mode** is local-manager-only, see
+  [above](#does-it-support-multiple-hosts--kubernetes-style-orchestration), and
+  isn't autoscale-aware, don't combine `autoscaleEligible` with a swarm-mode
+  service.
+- **Cloudflare and Pangolin DNS automation** are new and haven't been exercised
+  against a real account yet, verify the first sync by hand once you've
+  configured one. See [Services: DNS automation](services.md#dns-automation).
 
 ## Planned, not yet built
 
@@ -50,10 +61,13 @@ a gap waiting to be filled incidentally.
   a new deploy passes a health check, roll back if it doesn't.
 - **Per-container resource stats**, `docker stats`-style observability beyond
   the host-level dashboard numbers.
-- **Notifications / webhooks**, an in-app event feed, and outbound webhooks
-  (Discord/Telegram/generic HTTP) on deploy success/failure.
-- **DNS-provider automation**, Cloudflare/Pangolin-style automated DNS+TLS setup
-  during onboarding.
+- **Outbound webhooks**, Discord/Telegram/generic HTTP notifications on deploy
+  success/failure. The in-app notification feed (the bell icon) already exists,
+  see [Services: Notifications](services.md#notifications).
+- **DNS automation during onboarding**, Cloudflare and Pangolin sync now exist
+  (see [Services: DNS automation](services.md#dns-automation)), but the
+  onboarding wizard doesn't walk a new admin through configuring either one,
+  that's still a manual `/settings` visit afterward.
 - **Finer-grained permissions**, today "developer" is a role label plus
   route-gating only, not a real permissions system.
 

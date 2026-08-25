@@ -16,6 +16,7 @@
 			"!**/*.css",
 			"!vite.config.ts",
 			"!build",
+			"!coverage",
 			"!data",
 			"!dist",
 			"!.vercel",

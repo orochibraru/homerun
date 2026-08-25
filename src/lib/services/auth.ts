@@ -151,7 +151,22 @@ function buildAuth() {
 				disableDefaultReference: true,
 				path: "/openapi",
 			}),
-			apiKey(),
+			// Real, tested-in-review finding, from actually driving the REST
+			// API hard enough (this app's own new integration test suite,
+			// tests/integration/) to hit it : apiKey()'s own default rate
+			// limit, unset here before, is 10 requests per *24 hours* per key
+			// (node_modules/@better-auth/api-key's own default). Every
+			// api-key-authenticated request (hooks.server.ts's authHandler
+			// calls verifyApiKey() for each one) counts against it, so the
+			// REST API, the CLI built on it, and any dashboard-side polling
+			// using a key would all get silently 401'd (hooks.server.ts
+			// treats a rate-limited verifyApiKey() result identically to an
+			// actually-invalid key) after just 10 calls, not a deliberate
+			// choice anywhere in this app's own design. 300/minute is
+			// generous for legitimate CLI/dashboard use while still keeping
+			// *some* abuse protection, rather than removing rate limiting
+			// outright.
+			apiKey({ rateLimit: { maxRequests: 300, timeWindow: 60_000 } }),
 			passkey(),
 			// "developer" is the sane fallback default : every real creation
 			// path (admin-direct-create, invite-accept) always passes an

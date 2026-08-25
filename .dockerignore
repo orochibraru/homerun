@@ -24,7 +24,7 @@ coverage
 tmp
 
 # Compiled sub-project binaries / generated CLI types checked out locally
-cli/generated
+packages/cli/generated
 
 # Docker/compose files themselves (irrelevant inside the build context)
 compose.yaml
