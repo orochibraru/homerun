@@ -60,7 +60,7 @@
         >
             Deploy containers to
             <span
-                class="bg-linear-to-r from-(--accent-strong) to-[#c8b8ff] bg-clip-text text-transparent"
+                class="bg-linear-to-r from-(--accent-strong) to-(--accent-end) bg-clip-text text-transparent"
                 >your own server</span
             >, not someone else's cloud.
         </h1>
