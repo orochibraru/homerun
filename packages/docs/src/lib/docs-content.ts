@@ -16,10 +16,36 @@ const rawDocs = import.meta.glob("../../../../docs/*.md", {
 	query: "?raw",
 }) as Record<string, string>;
 
+export interface TocEntry {
+	id: string;
+	text: string;
+	depth: 2 | 3;
+}
+
 export interface DocPage {
 	slug: string;
 	title: string;
 	html: string;
+	toc: TocEntry[];
+}
+
+/**
+ * Pulls the "On this page" outline straight out of the rendered HTML rather
+ * than the markdown tokens, so it can't disagree with the actual heading
+ * `id`s `makeRenderer()` below assigns (including its duplicate-id
+ * suffixing). h2/h3 only, h1 is the page title and a page's own h4+ is rare
+ * and would clutter a short sidebar list.
+ */
+function extractToc(html: string): TocEntry[] {
+	const entries: TocEntry[] = [];
+	const headingRe = /<h([23]) id="([^"]+)">(.*?)<\/h\1>/g;
+	for (const match of html.matchAll(headingRe)) {
+		const depth = Number(match[1]) as 2 | 3;
+		const id = match[2] ?? "";
+		const text = (match[3] ?? "").replace(/<[^>]+>/g, "");
+		entries.push({ depth, id, text });
+	}
+	return entries;
 }
 
 /**
@@ -162,13 +188,15 @@ function makeRenderer() {
 const pages: DocPage[] = Object.entries(rawDocs)
 	.map(([path, markdown]) => {
 		const slug = slugFromPath(path);
+		const html = marked.parse(markdown, {
+			async: false,
+			renderer: makeRenderer(),
+		}) as string;
 		return {
-			html: marked.parse(markdown, {
-				async: false,
-				renderer: makeRenderer(),
-			}) as string,
+			html,
 			slug,
 			title: titleFromMarkdown(markdown, slug),
+			toc: extractToc(html),
 		};
 	})
 	.filter((page) => page.slug !== "README");

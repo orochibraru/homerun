@@ -8,6 +8,21 @@
 			name="description"
 			content="Homerun: a self-hosted, single-user PaaS for deploying Docker containers with a click-config form."
 		/>
+		<script>
+			// Applies a saved theme override before first paint, so a visitor
+			// who picked "light" or "dark" via the header toggle doesn't see a
+			// flash of the system-preference theme first. No stored value =
+			// no attribute set = app.css's prefers-color-scheme media query
+			// alone decides, which is the "based on device" default.
+			(() => {
+				try {
+					const theme = localStorage.getItem("theme");
+					if (theme === "light" || theme === "dark") {
+						document.documentElement.setAttribute("data-theme", theme);
+					}
+				} catch {}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

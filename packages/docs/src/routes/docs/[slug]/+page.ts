@@ -11,5 +11,10 @@ export const load = ({ params }) => {
 	if (!doc) {
 		error(404, "Doc page not found");
 	}
-	return { doc };
+	const index = docPages.indexOf(doc);
+	return {
+		doc,
+		next: docPages[index + 1],
+		prev: docPages[index - 1],
+	};
 };

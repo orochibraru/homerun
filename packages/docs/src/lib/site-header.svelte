@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ThemeToggle from "$lib/theme-toggle.svelte";
+
 	const { current }: { current?: "home" | "docs" } = $props();
 </script>
 
@@ -39,6 +41,7 @@
         </svg>
         Source
       </a>
+      <ThemeToggle />
     </nav>
   </div>
 </header>
