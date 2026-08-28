@@ -7,3 +7,8 @@ install docker on their server themselves then run the containers? Would mean
 the init methods starts the db containers and traefik itself. Would be nice for
 updating. Maybe a bit of both? Small installer that just installs docker,
 creates dirs, permissions and starts the main container which does the rest?
+
+## Linking apps
+
+- Ability to link apps, like a database to a webservice. Meaning we need a new
+  feature as well: service types (web app, db, more?)
