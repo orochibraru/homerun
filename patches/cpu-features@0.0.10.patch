@@ -1,0 +1,32 @@
+diff --git a/node_modules/cpu-features/.bun-tag-1352994c5b2e732e b/.bun-tag-1352994c5b2e732e
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/lib/index.js b/lib/index.js
+index bc3cff250a56822c36fb8d1d7021ffea286ad4a3..17fcc106e129714c505ec8c3a8f202c503eb06c2 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -1,5 +1,22 @@
+ 'use strict';
+ 
+-const binding = require('../build/Release/cpufeatures.node');
++// Patched (see patches/). The upstream file is a bare
++// top-level `require('../build/Release/cpufeatures.node')`. `bun build
++// --compile` (used by @orochibraru/svelte-smol to produce build/server) tries
++// to statically resolve that path and hard-fails when the optional native
++// addon was never built (`bun install --ignore-scripts` in the Docker build).
++// ssh2 only ever calls this as a best-effort optimisation inside its own
++// try/catch, so degrade to an empty CPU-info map instead of breaking the
++// bundle. The aliased `req` keeps the require dynamic so the bundler leaves
++// it as a runtime lookup.
++const req = require;
+ 
+-module.exports = binding.getCPUInfo;
++let getCPUInfo;
++try {
++  const binding = req('../build/Release/cpufeatures.node');
++  getCPUInfo = binding.getCPUInfo;
++} catch {
++  getCPUInfo = () => ({});
++}
++
++module.exports = getCPUInfo;
