@@ -3,14 +3,11 @@ FROM oven/bun:1-alpine AS deps-base
 WORKDIR /app
 
 COPY package.json bun.lock* /app/
+COPY patches /app/patches
 
 FROM deps-base AS deps
 
 RUN bun install --frozen-lockfile --ignore-scripts
-
-FROM  deps-base AS prod-deps
-
-RUN bun install --production --frozen-lockfile --ignore-scripts
 
 FROM deps AS app-builder
 
@@ -26,18 +23,20 @@ COPY --from=deps /app/node_modules /app/node_modules
 
 RUN bun run build:app
 
+# The svelte-smol adapter compiles the app to a single standalone binary
+# (`build/server`) that bundles every JS dependency, so the runtime image
+# needs no `node_modules` and no Bun runtime to serve. It stays on
+# `oven/bun:1-alpine` only because the binary is musl-linked (compiled on the
+# Alpine builder above) and entrypoint.sh relies on this image's baked-in
+# `bun` user plus `su-exec` / busybox `addgroup`.
 FROM oven/bun:1-alpine AS app
 
-
-RUN apk add --no-cache wget ca-certificates su-exec
+RUN apk add --no-cache ca-certificates su-exec
 
 WORKDIR /app
 
-COPY --from=prod-deps --chown=bun:bun /app/node_modules /app/node_modules
 COPY --from=app-builder --chown=bun:bun /app/build /app/build
-COPY --from=app-builder --chown=bun:bun /app/package.json /app/
 COPY --from=app-builder --chown=bun:bun /app/drizzle/ /app/drizzle
-COPY --from=app-builder --chown=bun:bun /app/drizzle.config.ts /app/drizzle.config.ts
 COPY tools/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
@@ -58,10 +57,10 @@ RUN chown -R bun:bun /app/data
 VOLUME /app/data
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://0.0.0.0:3000/api/health || exit 1
+    CMD ["/app/build/healthcheck"]
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["bun", "run", "/app/build/index.js"]
+CMD ["/app/build/server"]
 
 FROM deps AS agent-builder
 
