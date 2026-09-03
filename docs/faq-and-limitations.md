@@ -41,19 +41,11 @@ limitation for services that opt in.
   and have no webhook/auto-deploy-on-push yet.
 - **S3 backups** cover bind-mount volumes only (no Docker-managed volumes), and
   there's no restore flow, upload only.
-- **The Homerun Agent** (`packages/agent/`) is wired into the main app now:
-  `/remote-hosts` can register a host as `kind: "agent"` (URL + bearer token,
-  verified live at save time against the agent's own API) instead of a raw
-  `tcp://`/`ssh://` Docker connection, and deploy/start/stop/restart/logs/build
-  all route through it the same way a `kind: "docker"` host does. This
-  integration doesn't carry a documented "verified against a real second host"
-  note the way most other features on this page do, treat it as built but not
-  confirmed live-tested until you've tried it yourself.
-- **The installer**'s mutating steps (package install, rootless Docker setup,
-  systemd units) haven't been run against a real fresh box in CI, verify by
-  hand, ideally with `--dry-run` first, before trusting the one-liner on a
-  machine that matters. `packages/installer/swarm-join.sh` carries the same
-  caveat.
+- **`packages/installer/swarm-join.sh`** (joining a remote box to an existing
+  swarm) hasn't been run against a real second host or a real swarm yet, unlike
+  the rest of the installer, which has (`--mode=agent`/`--mode=full`, see
+  [`packages/installer/README.md`](../packages/installer/README.md)). Verify by
+  hand before relying on it.
 - **Swarm mode** is local-manager-only, see
   [above](#does-it-support-multiple-hosts--kubernetes-style-orchestration), and
   isn't autoscale-aware, don't combine `autoscaleEligible` with a swarm-mode

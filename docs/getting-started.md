@@ -36,8 +36,13 @@ to pin a release instead of the latest one, and see
 of the flags (`--user=`, `--port=`).
 
 > The installer's mutating steps (package install, rootless Docker setup,
-> systemd units) are new, verify the result on your own box before relying on it
-> for anything that matters. `--dry-run` first is a good habit.
+> systemd units) are verified live for both `--mode=agent` and `--mode=full`
+> against real disposable VMs, see
+> [`packages/installer/README.md`](../packages/installer/README.md) for what was
+> checked (and the real bugs that run found and fixed). `--dry-run` first is
+> still a good habit on a box that matters, and
+> `packages/installer/swarm-join.sh` specifically hasn't had the same
+> real-hardware pass yet.
 
 ## Option B, Docker Compose
 
