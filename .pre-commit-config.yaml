@@ -1,0 +1,41 @@
+# Run by prek (https://github.com/j178/prek), a drop-in pre-commit runner.
+# Install the hook once with `prek install`; `bun install` does it for you.
+repos:
+  - repo: local
+    hooks:
+      # Runs first: openapi.json, the CLI's generated types and the config JSON
+      # schema are derived from source that may itself be part of this commit.
+      - id: gen
+        name: regenerate openapi spec + derived types
+        entry: bun run gen
+        language: system
+        pass_filenames: false
+        files: ^(src/lib/openapi/|src/lib/server/validation/|src/lib/config\.ts$|scripts/generate-)
+
+      - id: biome
+        name: biome check --write --unsafe
+        entry: bunx biome check --write --unsafe --no-errors-on-unmatched
+        language: system
+        files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html)$
+
+      - id: prettier-md
+        name: prettier (markdown)
+        entry: bunx prettier --log-level warn --write
+        language: system
+        types: [markdown]
+
+      - id: markdownlint
+        name: markdownlint-cli2 --fix
+        entry: bunx markdownlint-cli2 --fix
+        language: system
+        types: [markdown]
+
+      # tailwint discards explicit file arguments (verified: any path/glob form
+      # reports "0 files scanned"), so it always scans the whole repo. Only the
+      # decision to run it at all is staged-scoped.
+      - id: tailwint
+        name: tailwint --fix
+        entry: bunx tailwint --fix
+        language: system
+        pass_filenames: false
+        files: \.(tsx|jsx|html|vue|svelte|astro|mdx|css)$
