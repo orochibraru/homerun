@@ -98,7 +98,6 @@
 		"dev:agent": "bun run --hot packages/agent/index.ts",
 		"dev:docs": "bun run scripts/docs.ts dev",
 		"format:md": "bun run prettier --log-level warn --write \"**/*.md\"",
-		"format:md:check": "bun run prettier --log-level warn --write \"**/*.md\"",
 		"gen": "svelte-kit sync && bun run scripts/generate-openapi.ts && openapi-typescript ./openapi.json -o packages/cli/generated/openapi-types.ts && bunx biome check --write packages/cli/generated/openapi-types.ts && bun run scripts/generate-config-schema.ts",
 		"lint": "bun run --parallel lint:ts lint:md lint:tailwind",
 		"lint:fix": "bun run --parallel lint:fix:md lint:fix:tailwind && bun run lint:fix:ts",

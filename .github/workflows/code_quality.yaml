@@ -13,8 +13,8 @@ env:
   NO_COLOR: "1"
 
 jobs:
-  markdown:
-    name: Linting / Formatting (MD)
+  lint:
+    name: Linting / Formatting / Type checking
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -22,54 +22,18 @@ jobs:
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
 
+      # The hooks shell out to the repo's own tooling (bun run gen, bunx
+      # biome/prettier/markdownlint/tailwint), so deps have to exist first.
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Check markdown linting
-        run: bun run lint:md
-
-      - name: Check markdown formatting
-        run: bun run format:md:check
-
-  ts-check:
-    name: Linting / Formatting (TS)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      - name: Generate SvelteKit types
-        run: |
-          echo "Generating SvelteKit types..."
-          if bun run svelte-kit sync; then
-              echo "SvelteKit types generated successfully."
-          else
-              echo "Failed to generate SvelteKit types."
-              exit 1
-          fi
-
-      - name: Type check Webapp
-        run:
-          bun run svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
-          --tsgo
-
-      - name: Type check Packages
-        run: |
-          bun run check:agent
-          bun run check:cli
-          bun run check:installer
-          bun run check:docs
-
-      - name: Lint (TS)
-        run: bun run lint:ts
-
-      - name: Lint (Tailwind)
-        run: bun run lint:tailwind
+      # Same .pre-commit-config.yaml the local pre-commit hook runs: actionlint,
+      # biome, prettier + markdownlint on markdown, tailwint, a regen of the
+      # derived openapi/CLI-types/config-schema files, and svelte-check/tsc over
+      # the app and every sub-project. The fixer hooks autofix in place, so CI
+      # fails on any file one of them had to modify, with the diff printed.
+      - name: Run prek
+        uses: j178/prek-action@v3.0.0
 
   ts-test:
     name: Tests (TS)
