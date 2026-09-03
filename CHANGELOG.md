@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/orochibraru/homerun/compare/v1.0.1...v1.0.2) (2026-09-03)
+
+### Bug Fixes
+
+- ui
+  ([38f6c29](https://github.com/orochibraru/homerun/commit/38f6c29e0f7da9ff2834ffa98d0466f5cc4d6e6f))
+
 ## [1.0.1](https://github.com/orochibraru/homerun/compare/v1.0.0...v1.0.1) (2026-09-03)
 
 ### Features
