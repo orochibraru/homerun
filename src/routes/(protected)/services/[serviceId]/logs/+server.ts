@@ -1,8 +1,10 @@
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { allowLongRequest } from "$lib/server/long-request";
 import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
-export const GET = async ({ params, locals }) => {
+export const GET = async ({ params, locals, platform }) => {
+	allowLongRequest(platform);
 	if (!locals.user) {
 		return new Response("Unauthorized", { status: 401 });
 	}

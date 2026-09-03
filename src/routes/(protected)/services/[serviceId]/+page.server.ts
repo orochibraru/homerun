@@ -4,6 +4,7 @@ import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
+import { allowLongRequest } from "$lib/server/long-request";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
@@ -17,7 +18,8 @@ export const load = async ({ params }) => {
 };
 
 export const actions = {
-	deploy: async ({ params, locals, request }) => {
+	deploy: async ({ params, locals, platform, request }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -52,7 +54,8 @@ export const actions = {
 		return { deploymentId: result.deploymentId, success: true };
 	},
 
-	restart: async ({ params, locals }) => {
+	restart: async ({ params, locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -125,7 +128,8 @@ export const actions = {
 		return { success: true };
 	},
 
-	stop: async ({ params, locals }) => {
+	stop: async ({ params, locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}

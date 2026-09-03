@@ -1,6 +1,8 @@
+import { allowLongRequest } from "$lib/server/long-request";
 import { DockerService } from "$lib/services/docker.service";
 
-export const GET = ({ params, locals }) => {
+export const GET = ({ params, locals, platform }) => {
+	allowLongRequest(platform);
 	if (!locals.user) {
 		return new Response("Unauthorized", { status: 401 });
 	}

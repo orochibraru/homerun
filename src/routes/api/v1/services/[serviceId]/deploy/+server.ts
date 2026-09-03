@@ -1,8 +1,10 @@
 import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { allowLongRequest } from "$lib/server/long-request";
 import { DeploymentService } from "$lib/services/deploy.service";
 
-export const POST = async ({ params, locals }) => {
+export const POST = async ({ params, locals, platform }) => {
+	allowLongRequest(platform);
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
