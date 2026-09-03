@@ -117,6 +117,25 @@ if (!homedir().startsWith(tmpdir())) {
 every run, scoped away from `tests/**` and `packages/cli/generated/**`. No
 threshold enforced yet.
 
+## Retries (`bunfig.toml`'s `[test].retry`)
+
+`retry = 2` retries a failing test up to 2x (3 attempts total) before it's
+reported failed, to absorb transient CI flakiness (real Postgres/Docker in
+`tests/integration/`). Unit and integration are the only suites this governs,
+`test:e2e` is Playwright and `e2e:multipass` is its own script, neither reads
+`bunfig.toml`. `beforeEach`/`afterEach` **do** re-run around each retry attempt
+(verified, only `beforeAll`/`afterAll` stay once-per-file), so a test that
+cleans up per-test gets a genuinely fresh attempt rather than inheriting the
+failed one's leftovers.
+
+`[test].rerunEach` (run every test file N times, to surface a flake rather than
+hide one) is the opposite policy and **cannot be combined with `retry`**, Bun
+1.4.0 hard-errors (`"retry" cannot be used with "rerunEach"`) when both are set,
+whether both are in this file or split across the file and a CLI flag. Running
+it therefore needs a separate config file (`bun test --config=<file>`, which
+replaces `bunfig.toml` rather than merging with it), which is why there's no
+rerun policy checked in here.
+
 ## Fakes over mocking libraries
 
 Where a function takes a `StepRunner`-shaped collaborator
@@ -137,6 +156,11 @@ class. See `tests/unit/installer/network.test.ts` / `release.test.ts` /
 - `bunfig.toml`'s `[test].timeout` key is silently not honored by Bun 1.4.0 for
   `test()` bodies — every `test/test:*` script passes `--timeout 120000` on the
   CLI instead.
+- `[test].retry` genuinely is honored (verified: a test failing on attempts 1-2
+  and passing on 3 reports as 1 pass under `retry = 3`, no CLI flag needed), but
+  `[test].rerunEach`'s config key is camelCase only, the CLI flag's own spelling
+  (`rerun-each`, kebab-case) is silently ignored as a bunfig key, same failure
+  mode as `[test].timeout` above just for a different key. See Retries below.
 - Bun's `Bun.serve()` `idleTimeout` (10s by default, and what
   `@orochibraru/svelte-smol` ships) kills a request that's still _being
   handled_, not just an idle socket, and only on Linux — so
