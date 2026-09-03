@@ -1,3 +1,17 @@
+## [1.0.1](https://github.com/orochibraru/homerun/compare/v1.0.0...v1.0.1) (2026-09-03)
+
+### Features
+
+- more prek hooks, prettier docs, fixed docs links
+  ([51ef41e](https://github.com/orochibraru/homerun/commit/51ef41e4b44ec81881c0ebf792dd919d0f730700))
+
+### Bug Fixes
+
+- prek
+  ([9845f6e](https://github.com/orochibraru/homerun/commit/9845f6e9347ae391275af75e45ca965287d6c1e6))
+- tests
+  ([67a3175](https://github.com/orochibraru/homerun/commit/67a317521cffea732fe4fb37865b6c58879238d1))
+
 ## 1.0.0 (2026-09-03)
 
 ### Features
