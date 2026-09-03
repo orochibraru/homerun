@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-
+import process from "node:process";
 // Real, unmocked agent/config.ts : must be the first thing in the agent/
 // test suite to touch this module (alphabetically, this file runs before
 // token.test.ts, which mocks "../../packages/agent/config" and restores it

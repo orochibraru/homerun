@@ -309,7 +309,7 @@ export class PangolinService {
 				message?: string;
 				success: boolean;
 			};
-			if (!res.ok || !body.success) {
+			if (!(res.ok && body.success)) {
 				return {
 					error: body.message ?? `HTTP ${res.status}`,
 					success: false,

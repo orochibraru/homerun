@@ -1,3 +1,4 @@
+import process from "node:process";
 import { Command } from "commander";
 import { ClientFactory } from "./client";
 import { Commands } from "./commands";

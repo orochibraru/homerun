@@ -30,12 +30,13 @@
  *    same "warn, don't block" posture the image-existence checker elsewhere
  *    in this app uses.
  */
-import { existsSync, mkdirSync, writeFileSync, copyFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import process from "node:process";
 
 const mode = process.argv[2];
 if (mode !== "dev" && mode !== "build" && mode !== "check") {
-	console.error(`Usage: bun run scripts/docs.ts <dev|build|check>`);
+	console.error("Usage: bun run scripts/docs.ts <dev|build|check>");
 	process.exit(1);
 }
 
@@ -60,16 +61,27 @@ if (existsSync(rootOpenapi)) {
 const bin = (name: string) => join(repoRoot, "node_modules/.bin", name);
 
 const commands: Record<typeof mode, string[][]> = {
-	build: [[bin("svelte-kit"), "sync"], [bin("vite"), "build"]],
+	build: [
+		[bin("svelte-kit"), "sync"],
+		[bin("vite"), "build"],
+	],
 	check: [
 		[bin("svelte-kit"), "sync"],
-		[bin("svelte-check"), "--tsconfig", "./tsconfig.json", "--fail-on-warnings"],
+		[
+			bin("svelte-check"),
+			"--tsconfig",
+			"./tsconfig.json",
+			"--fail-on-warnings",
+		],
 	],
 	dev: [[bin("vite"), "dev"]],
 };
 
 for (const cmd of commands[mode]) {
-	const proc = Bun.spawnSync(cmd, { cwd: docsDir, stdio: ["inherit", "inherit", "inherit"] });
+	const proc = Bun.spawnSync(cmd, {
+		cwd: docsDir,
+		stdio: ["inherit", "inherit", "inherit"],
+	});
 	if (!proc.success) {
 		process.exit(proc.exitCode ?? 1);
 	}

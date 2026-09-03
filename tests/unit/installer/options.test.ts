@@ -7,6 +7,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
+import process from "node:process";
 import { OptionsParser } from "../../../packages/installer/options";
 
 describe("OptionsParser.parseArgs", () => {

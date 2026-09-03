@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import pkg from "../../../package.json";
+import pkg from "../../../package.json" with { type: "json" };
 import { AGENT_VERSION } from "../../../packages/agent/version";
 
 describe("AGENT_VERSION", () => {

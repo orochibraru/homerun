@@ -9,12 +9,12 @@ const logger = new Logger("Swarm");
 
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pullImage. */
 interface RequiresContainerMixin {
-	pullImage(
+	pullImage: (
 		image: string,
 		tag: string,
 		auth?: unknown,
 		onProgress?: (line: string) => void,
-	): Promise<{ digest: string | null }>;
+	) => Promise<{ digest: string | null }>;
 }
 
 export interface CreateSwarmServiceParams {
@@ -40,7 +40,7 @@ export interface CreateSwarmServiceParams {
 /**
  * Docker Swarm equivalent of docker/containers.ts, for services deployed
  * under `instanceSettings.orchestrationMode === "swarm"` : a dockerode
- * *Service* (replicated, self-healing, scalable) instead of a single
+ *Service* (replicated, self-healing, scalable) instead of a single
  * container. Deliberately local-only for v1 : this app's Remote Hosts
  * feature (an arbitrary separate Docker daemon) doesn't apply the same way
  * under swarm, a "remote" node has to actually join *this* swarm as a

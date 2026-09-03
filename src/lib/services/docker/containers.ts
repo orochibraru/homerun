@@ -91,11 +91,11 @@ export interface CreateContainerParams {
 
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the network mixin's connectToProjectNetwork. */
 interface RequiresNetworkMixin {
-	connectToProjectNetwork(
+	connectToProjectNetwork: (
 		containerId: string,
 		projectId: string,
 		alias: string,
-	): Promise<void>;
+	) => Promise<void>;
 }
 
 /**

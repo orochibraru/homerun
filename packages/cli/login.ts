@@ -1,3 +1,4 @@
+import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import { ConfigStore } from "./config";
 import { Output } from "./output";
@@ -52,27 +53,17 @@ class CliLoginFlow {
 
 		const startRes = await fetch(`${baseUrl}/api/v1/auth/cli/device`, {
 			method: "POST",
-		}).catch((error) => {
-			return Output.fail(
+		}).catch((error) =>
+			Output.fail(
 				`Couldn't reach ${baseUrl}: ${error instanceof Error ? error.message : String(error)}`,
-			);
-		});
+			),
+		);
 		if (!startRes.ok) {
 			Output.fail(
 				`Couldn't start login: ${startRes.status} ${startRes.statusText}`,
 			);
 		}
 		const start = (await startRes.json()) as DeviceStart;
-
-		console.log(
-			"\nTo finish logging in, open this URL and enter the code below:\n",
-		);
-		console.log(`  ${start.verificationUri}`);
-		console.log(`\n  Code: ${start.userCode}\n`);
-		console.log(
-			`(or open ${start.verificationUriComplete} to skip typing it)\n`,
-		);
-		console.log("Waiting for approval...");
 
 		const deadline = Date.now() + start.expiresIn * 1000;
 		while (Date.now() < deadline) {
@@ -99,8 +90,6 @@ class CliLoginFlow {
 			}
 			if (result.status === "approved" && result.apiKey) {
 				ConfigStore.writeStoredConfig({ apiKey: result.apiKey, baseUrl });
-				console.log(`\nLogged in to ${baseUrl}.`);
-				console.log(`Config saved to ${ConfigStore.configPath()}.`);
 				return;
 			}
 		}
@@ -111,11 +100,9 @@ class CliLoginFlow {
 	logout(): void {
 		const existing = ConfigStore.readStoredConfig();
 		if (!existing) {
-			console.log("Not logged in.");
 			return;
 		}
 		ConfigStore.clearStoredConfig();
-		console.log(`Logged out of ${existing.baseUrl}.`);
 	}
 }
 

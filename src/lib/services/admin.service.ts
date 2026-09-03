@@ -101,7 +101,7 @@ class AdminServiceClass {
 		);
 
 		checks.push(
-			!config.auth.origin && !dev
+			!(config.auth.origin || dev)
 				? {
 						detail:
 							"No origin configured : derived per-request for now, which is fine for a single domain but can misbehave behind a proxy. Set a Base domain (env var below, or the General section of /settings) to pin it.",

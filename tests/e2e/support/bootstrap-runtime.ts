@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import process from "node:process";
 import { runMigrations } from "../../integration/support/migrate";
 import { startPostgresContainer } from "../../integration/support/postgres-container";
 import { spawnApp } from "../../integration/support/server";
@@ -43,11 +44,8 @@ async function main(): Promise<void> {
 			process.exit(0);
 		})();
 	});
-
-	console.log(`READY ${JSON.stringify({ baseUrl: E2E_BASE_URL })}`);
 }
 
-main().catch((err) => {
-	console.error(err);
+main().catch((_err) => {
 	process.exit(1);
 });

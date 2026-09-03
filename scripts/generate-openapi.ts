@@ -30,10 +30,7 @@ function sortKeysDeep(value: unknown): unknown {
 }
 
 const doc = buildOpenApiDocument("http://localhost:3000");
-await Bun.write(
-	"openapi.json",
-	JSON.stringify(sortKeysDeep(doc), null, "\t"),
-);
+await Bun.write("openapi.json", JSON.stringify(sortKeysDeep(doc), null, "\t"));
 
 // Key order alone isn't enough to satisfy biome's own JSON formatter (it
 // also collapses short arrays like `"enum": ["a", "b"]` onto one line,

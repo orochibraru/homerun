@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
+import process from "node:process";
 
 /**
  * Env config for the standalone agent. Deliberately tiny and dependency-free

@@ -55,7 +55,7 @@ export const actions = {
 		const clientSecret =
 			(formData.get("clientSecret") as string | null)?.trim() ?? "";
 
-		if (!kind || !VALID_KINDS.includes(kind as GitProviderKind)) {
+		if (!(kind && VALID_KINDS.includes(kind as GitProviderKind))) {
 			return fail(400, { error: "Choose a provider." });
 		}
 		if (!name) {

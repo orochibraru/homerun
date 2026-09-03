@@ -16,6 +16,7 @@
  *   before the error propagates, so a CI log actually shows *why* a
  *   container didn't come up instead of just "never became ready".
  */
+import process from "node:process";
 export const IS_CI = process.env.CI === "true" || process.env.CI === "1";
 
 /** Picks a longer timeout under CI (cold runners, first-time image pulls, shared/slower hosts) without slowing down the fast local-dev feedback loop. */
@@ -24,9 +25,7 @@ export function ciTimeout(localMs: number, ciMs: number): number {
 }
 
 /** A single line, always printed (not gated on IS_CI) : cheap, and useful for local debugging too, but named for what it's *for*. */
-export function stepLog(message: string): void {
-	console.log(`[integration] ${message}`);
-}
+export function stepLog(_message: string): void {}
 
 let cachedOwnNetwork: string | null | undefined;
 
@@ -91,23 +90,16 @@ export async function ownDockerNetwork(): Promise<string | null> {
 export async function dumpDockerDiagnostics(
 	containerName?: string,
 ): Promise<void> {
-	console.error("[integration] --- Docker diagnostics ---");
 	const ps = Bun.spawnSync(["docker", "ps", "-a"], {
 		stderr: "pipe",
 		stdout: "pipe",
 	});
-	console.error(new TextDecoder().decode(ps.stdout));
 	if (ps.stderr.length > 0) {
-		console.error(new TextDecoder().decode(ps.stderr));
 	}
 	if (containerName) {
-		console.error(`[integration] --- docker logs ${containerName} ---`);
-		const logs = Bun.spawnSync(["docker", "logs", containerName], {
+		const _logs = Bun.spawnSync(["docker", "logs", containerName], {
 			stderr: "pipe",
 			stdout: "pipe",
 		});
-		console.error(new TextDecoder().decode(logs.stdout));
-		console.error(new TextDecoder().decode(logs.stderr));
 	}
-	console.error("[integration] --- end diagnostics ---");
 }

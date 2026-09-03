@@ -6,6 +6,4 @@ import { buildOpenApiDocument } from "$lib/openapi/build";
  * data, only shapes, same as any other API's published OpenAPI document.
  * Every documented route still enforces its own auth independently.
  */
-export const GET = async ({ url }) => {
-	return json(buildOpenApiDocument(url.origin));
-};
+export const GET = async ({ url }) => json(buildOpenApiDocument(url.origin));

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { homedir, tmpdir } from "node:os";
+import process from "node:process";
 import { ClientFactory } from "../../../packages/cli/client";
 import { ConfigStore } from "../../../packages/cli/config";
 

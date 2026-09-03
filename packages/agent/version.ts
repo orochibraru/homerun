@@ -5,6 +5,6 @@
 // string that drifts (http.ts's health check and openapi.ts's spec both
 // used to hardcode "0.1.0", already stale against the real 0.2.0 release,
 // exactly the drift this avoids).
-import pkg from "../../package.json";
+import pkg from "../../package.json" with { type: "json" };
 
 export const AGENT_VERSION: string = pkg.version;

@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import process from "node:process";
 import { ciTimeout } from "../../integration/support/ci";
 
 export default async function globalSetup(): Promise<() => Promise<void>> {

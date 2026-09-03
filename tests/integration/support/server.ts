@@ -1,3 +1,4 @@
+import process from "node:process";
 import { ciTimeout } from "./ci";
 
 export interface SpawnedApp {

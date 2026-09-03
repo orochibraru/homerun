@@ -53,7 +53,7 @@ describe("deployInputSchema", () => {
 
 	test("defaults envVars to an empty array when omitted", () => {
 		const input: Record<string, unknown> = validDeployInput();
-		delete input.envVars;
+		input.envVars = undefined;
 		const result = deployInputSchema.safeParse(input);
 		expect(result.success).toBe(true);
 		expect(result.success && result.data.envVars).toEqual([]);
@@ -61,7 +61,7 @@ describe("deployInputSchema", () => {
 
 	test("registryAuth may be omitted entirely", () => {
 		const input: Record<string, unknown> = validDeployInput();
-		delete input.registryAuth;
+		input.registryAuth = undefined;
 		expect(deployInputSchema.safeParse(input).success).toBe(true);
 	});
 

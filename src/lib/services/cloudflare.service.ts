@@ -175,7 +175,7 @@ export class CloudflareService {
 				result?: { name: string };
 				success: boolean;
 			};
-			if (!res.ok || !body.success) {
+			if (!(res.ok && body.success)) {
 				return {
 					error: body.errors?.[0]?.message ?? `HTTP ${res.status}`,
 					success: false,

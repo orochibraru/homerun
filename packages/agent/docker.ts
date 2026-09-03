@@ -30,9 +30,7 @@ export interface DeployResult {
  * the agent's own console/journal, real gap this closes (see the same
  * prefix convention `console.log`s in `index.ts`'s boot banner use).
  */
-function logLine(prefix: string, line: string): void {
-	console.log(`[${prefix}] ${line}`);
-}
+function logLine(_prefix: string, _line: string): void {}
 
 export interface ContainerStatus {
 	id: string;
@@ -256,12 +254,7 @@ class AgentDockerService {
 				try {
 					// @ts-expect-error : dockerode's stream is a duplex; destroy exists at runtime even if not in its types.
 					dockerStream.destroy?.();
-				} catch (err) {
-					console.warn(
-						`[containers] Couldn't cleanly cancel a log stream for ${id.slice(0, 12)}`,
-						err,
-					);
-				}
+				} catch {}
 			},
 			start(controller) {
 				dockerStream.on("data", (chunk: Buffer) =>

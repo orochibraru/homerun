@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import process from "node:process";
 import Bun from "bun";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
@@ -298,9 +299,6 @@ export function isSmtpEnabled(): boolean {
 		config.smtp?.from;
 
 	if (enabledInConfig && !configuredProperly) {
-		console.warn(
-			"SMTP is enabled in configuration but missing required fields. Email verification will not work.",
-		);
 		return false;
 	}
 

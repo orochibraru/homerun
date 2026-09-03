@@ -48,6 +48,7 @@
 import { afterAll, beforeAll } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import process from "node:process";
 import { config as agentConfig } from "../../../packages/agent/config";
 import { bootstrapAdmin } from "./bootstrap";
 import { ciTimeout, dumpDockerDiagnostics, stepLog } from "./ci";
@@ -197,13 +198,9 @@ if (wantsIntegrationTests()) {
 		async () => {
 			stepLog("Tearing down...");
 			for (const stop of stopFns.reverse()) {
-				await stop().catch((err) => {
-					console.warn("[integration] Cleanup step failed", err);
-				});
+				await stop().catch((_err) => {});
 			}
-			await pg?.stop().catch((err) => {
-				console.warn("[integration] Postgres container cleanup failed", err);
-			});
+			await pg?.stop().catch((_err) => {});
 		},
 		ciTimeout(30_000, 60_000),
 	);
