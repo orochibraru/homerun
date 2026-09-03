@@ -40,6 +40,7 @@ bun run test:unit:agent   # scoped to packages/agent
 bun run test:unit:cli     # scoped to packages/cli
 bun run test:unit:installer  # scoped to packages/installer
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
+bun run e2e:multipass     # scripts/e2e-multipass.ts, real-infra installer/agent/CLI e2e, see below, not wired into CI
 ```
 
 `packages/agent/`, `packages/installer/`, and `packages/cli/` are separate
@@ -143,6 +144,14 @@ class. See `tests/unit/installer/network.test.ts` / `release.test.ts` /
   macOS dev machine. Caught by `tests/integration/`, root-caused by reproducing
   it in `oven/bun:1.4.0`. See Long-running requests and Bun's idle timeout
   below.
+
+This section is scoped to what `tests/` itself caught; a sibling finding from
+the same "Bun's own APIs quietly diverge from `node:fs`" family, but caught by
+manual live installer testing rather than this suite, lives in
+`packages/installer/steps/rootless-docker.ts`'s own doc comment instead:
+`Bun.file(path).exists()` can return `true` for a `/proc` pseudo-file while
+`.text()` silently returns `""`, `node:fs/promises`' `readFile` reads it
+correctly. See Homerun Agent + installer below.
 
 ## AI-assisted development (`.claude/agents/`, `.claude/skills/` → `.agents/skills/`)
 
@@ -352,9 +361,11 @@ to refactor unrelated pages.
 `src/routes/(protected)/` is a route group living at `/` itself (not
 `/dashboard`), its `+layout.server.ts` is the single auth guard, redirecting to
 `/auth/sign-in` (or `/auth/sign-up` on a blank instance) when signed out,
-**and** the single onboarding guard (see Onboarding below), both directions live
-in that one `load`. There is no public marketing page. `src/routes/auth/**` is
-the only unauthenticated surface.
+**and** one half of the onboarding guard, redirecting to `/onboarding` when the
+instance hasn't finished it (see Onboarding below for the other half,
+`src/routes/onboarding/` is its own top-level route, not nested under
+`(protected)/`, with its own reverse-direction `load`). There is no public
+marketing page. `src/routes/auth/**` is the only unauthenticated surface.
 
 Top-level sections (sidebar nav): **Overview** (dashboard stats + recent
 deployments), **Services**, **Projects**, **Templates**, **Storage**, **Remote
@@ -562,6 +573,20 @@ maintainer's real one) drove every command against a real Docker daemon,
 pull→create→start)/`start`/`stop`/`restart`, plus the 401-on-bad-key path, all
 through the typed `openapi-fetch` client, and the compiled binary behaves
 identically to running from source.
+
+`homerun login`'s device-code flow is now verified live too (previously flagged
+as untested, closed in a later session): a real compiled CLI binary, installed
+via `packages/cli/install.sh` inside a Linux Docker container, ran
+`homerun login --base-url <real installer-provisioned instance>`, printed a real
+user code, was approved via the real `/cli-auth` approval-page form action as
+the real signed-in admin, and picked up a real API key, saved to
+`~/.config/homerun/config.json` at mode `0600`. This run is also what surfaced
+and fixed a real routing bug in `src/hooks.server.ts`:
+`POST /api/v1/auth/cli/{device,token}` weren't in `authHandler`'s
+`customAuthPaths` allowlist, so both 404'd before ever reaching their real
+SvelteKit route files, swallowed by better-auth's own catch-all handler for
+anything under its `/api/v1/auth` basePath. Fixed by adding both paths alongside
+the pre-existing `/api/v1/auth/providers` entry.
 
 ### API Docs page (`(protected)/api-docs/`)
 
@@ -815,6 +840,18 @@ proxy in front of the same daemon, standing in for a truly separate remote host)
 and deploying a real service through it end-to-end: real container created,
 `docker inspect` confirmed `NetworkMode: bridge` (not the shared network), and
 start/stop both round-tripped through the proxied connection successfully.
+
+**The `"agent"` kind has its own, separately verified live test, against an
+actually-separate second host, not a proxy in front of the same daemon**: two
+real disposable Multipass Ubuntu 24.04 VMs, one running the Homerun Agent
+(`packages/installer/bootstrap.sh --mode=agent`), the other running the full app
+stack (`--mode=full`). The full-stack VM's dashboard registered the agent VM as
+a real `remote_host` row (`kind: "agent"`, token verified live via
+`AgentClientService.verifyToken`), then a real `nginx:alpine` service was
+created and deployed through it; `docker ps` on the agent VM confirmed the
+container actually landed there, and stop/start both round-tripped through the
+agent successfully. See Homerun Agent + installer below for the installer bugs
+this same session's testing found and fixed.
 
 ### Custom SSL certificates (`src/lib/services/docker/custom-ssl.ts`)
 
@@ -1664,32 +1701,37 @@ out of `(protected)/+layout.svelte`'s sidebar for non-admins).
 
 A signed-in user whose instance hasn't finished onboarding is forced to
 `/onboarding` and can't reach anything else; `/onboarding` itself is unreachable
-once it's done. Both directions are gated from the single
-`(protected)/+layout.server.ts` `load` (same function that redirects signed-out
-visitors to sign-in/sign-up, see Routing above), right after the `locals.user`
-check. Onboarding is a property of the singleton `instance_settings` row (see
-Instance settings above), not per-user, so once the bootstrap admin finishes it,
-later developer accounts never see the wizard, that falls out naturally from the
-flag living on the instance, not the account. Edge case: an admin _could_ create
-another account before finishing onboarding themselves,
-`/onboarding/+page.server.ts`'s own `load` checks `locals.isAdmin` and shows a
-non-admin a "an admin needs to finish setting up this instance" holding message
-instead of the real wizard rather than handing them instance-wide config
-controls.
+once it's done. **`src/routes/onboarding/` is its own top-level route, not
+nested under `(protected)/`** (it predates that route group's current shape,
+this doc previously said otherwise, see below), so the two directions are two
+separate `load`s rather than one shared check: `(protected)/+layout.server.ts`
+redirects into `/onboarding` when `!settings.onboardingComplete` (right after
+its own `locals.user` check, same function that redirects signed-out visitors to
+sign-in/sign-up, see Routing above), and `onboarding/+layout.server.ts`
+redirects back out to `/` when `settings.onboardingComplete` is already true,
+both reading the same `InstanceSettingsDTO.onboardingComplete` getter
+(`onboardingCompletedAt !== null`). Onboarding is a property of the singleton
+`instance_settings` row (see Instance settings above), not per-user, so once the
+bootstrap admin finishes it, later developer accounts never see the wizard, that
+falls out naturally from the flag living on the instance, not the account. Edge
+case: an admin _could_ create another account before finishing onboarding
+themselves, `/onboarding/+page.server.ts`'s own `load` checks `locals.isAdmin`
+and shows a non-admin a "an admin needs to finish setting up this instance"
+holding message instead of the real wizard rather than handing them
+instance-wide config controls.
 
-**Real, tested-in-review finding**: the two-directional check originally
-compared `url.pathname === resolve("/onboarding")` (`resolve` from `$app/paths`)
-and always evaluated false, this app's `resolve()` returns a _relative_ path
-(`"./onboarding"`), not an absolute one, matching every
-`redirect(302, resolve(...))` call in this codebase actually sending a relative
-`Location` header (that's fine for a redirect the browser follows, but useless
-for an equality check against `url.pathname`, which is always absolute).
-Verified live: caused an infinite redirect loop landing back on `/onboarding`
-itself. Fixed by comparing `route.id` (from the `load` event) against the
-route's canonical id instead, `"/(protected)/onboarding"`, confirmed live, which
-doesn't have this problem since it's the router's own absolute identifier, not a
-derived URL string. If a future gate needs a "is this the current route" check,
-use `route.id`, not a `resolve()` comparison.
+**Doc correction**: this section previously described both directions as gated
+from a single `(protected)/+layout.server.ts` load comparing `route.id` against
+`"/(protected)/onboarding"`, following an earlier fix for a real
+`url.pathname`-vs-`resolve()` bug (`resolve("/onboarding")` returns the relative
+`"./onboarding"` in this app, not an absolute path, so an `===` check against
+`url.pathname` always evaluated false and infinite-redirect-looped). That fix
+and its `route.id` mechanism are gone now that `onboarding/` moved out from
+under `(protected)/` into its own top-level route with its own reverse-direction
+`load`; there is no `route.id` comparison anywhere in this codebase today. The
+underlying gotcha (`resolve()` here returns a relative path, not useful for a
+`url.pathname` equality check) is still real and still worth knowing if a future
+gate needs one, just not implemented this way anymore.
 
 `/onboarding/+page.svelte` is a 5-step wizard (Core / Docker / Traefik / Email /
 Review) built on the new reusable `$lib/components/stepper.svelte`, extracted
@@ -1842,11 +1884,19 @@ app's own runtime).
   (URL + token, verified live via `AgentClientService.verifyToken` before the
   row is saved) all exist; `deploy.service.ts` and
   `service-lifecycle.service.ts` branch on `RemoteHostDTO.resolveTarget()`'s
-  `kind` to route through `DockerService` or `AgentClientService`. This main-app
-  integration doesn't carry a documented "verified live" note the way the agent
-  binary's own endpoints do below, treat it as built but unconfirmed against a
-  real second host until verified by hand. `POST /v1/deploy` mirrors the main
-  app's own pull→remove-previous-by-label→create→start shape
+  `kind` to route through `DockerService` or `AgentClientService`. **This
+  main-app integration is now verified live against a real, actually-separate
+  second host**, not just the agent binary's own endpoints in isolation: two
+  real disposable Multipass Ubuntu 24.04 VMs (one `--mode=agent`, one
+  `--mode=full`), the `--mode=full` VM's dashboard registered the `--mode=agent`
+  VM as a real `agent`-kind `remote_host` row (token verified live via
+  `AgentClientService.verifyToken`), then a real `nginx:alpine` service was
+  created and deployed through it, `docker ps` on the agent VM confirmed the
+  container landed there, and stop/start both round-tripped through the agent
+  successfully. See Remote hosts above for how this compares to the existing
+  `socat`-proxy `"docker"`-kind verification (that one's a proxy in front of the
+  _same_ daemon; this one is a genuinely separate host). `POST /v1/deploy`
+  mirrors the main app's own pull→remove-previous-by-label→create→start shape
   (`findServiceContainer` by `homerun.service.id` label, a fresh randomized
   container name every deploy, same conventions as `docker/containers.ts`) but
   is a from-scratch, self-contained implementation, the agent has no access to
@@ -1900,15 +1950,42 @@ app's own runtime).
   full command sequence via `--dry-run` for both modes (including on a non-Linux
   dev machine, via a dry-run-only package-manager-detection fallback, and
   including the generated `compose.yaml` content), and that the compiled
-  binary's dry-run output matches running from source. **Not verified, flagged
-  the same way this codebase flags an untested OAuth flow**: none of the real,
-  mutating steps (package install, `useradd`, rootless Docker setup, systemd
-  units, or the downloaded binaries/images actually starting) have run against
-  an actual fresh Linux box in this session, doing so needs a disposable VM/CI
-  runner this environment doesn't have, and running the mutating path against a
-  real machine without one would be irreversible and wasn't attempted. Run it by
-  hand against a real disposable server before trusting the one-liner on
-  anything that matters.
+  binary's dry-run output matches running from source.
+
+  **The real, mutating steps are now verified too**, against two real disposable
+  Multipass Ubuntu 24.04 VMs (superseding this section's earlier "needs a
+  disposable VM/CI runner this environment doesn't have" note): `--mode=agent`
+  end to end (real `apt`/Docker Engine install, real rootless Docker setup, real
+  `systemd --user` unit, the Agent actually running and reachable over the
+  network, health endpoint + OpenAPI both responding from outside the VM), and
+  `--mode=full` end to end on a second VM (real rootless Docker, real
+  `docker compose pull && ...up -d` bringing up Traefik, Postgres, and the real
+  published `docker.io/orochibraru/homerun` app image, all healthy, dashboard
+  reachable from outside the VM). See `packages/installer/README.md` for the
+  full verification notes and the real bugs this run found and fixed
+  (AppArmor-restricted unprivileged user namespaces on Ubuntu 24.04, an
+  RootlessKit privileged-port restriction blocking Traefik's 80/443, an unquoted
+  YAML scalar in the generated compose file, a postgres-18 volume-mount-path
+  mismatch, and a missing `ORIGIN` env var, all now fixed in
+  `packages/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts`).
+  **Still not verified**: `packages/installer/swarm-join.sh` (see Swarm mode
+  above), this session's VM testing didn't touch it, it remains untested against
+  a real second host or a real swarm, same caveat as before.
+
+  This whole run is reproducible, not a one-off: `scripts/e2e-multipass.ts`
+  (`bun run e2e:multipass`) automates exactly this, builds the
+  installer/agent/CLI binaries from local source (not a published release, so it
+  catches a regression before it ships), launches two disposable Multipass VMs,
+  runs the real installer binary on each (`--mode=agent` / `--mode=full`), signs
+  up + onboards the bootstrap admin over the real HTTP API, registers the agent
+  VM as a Remote Host and deploys/stops/starts a real service through it, then
+  drives a real `homerun login` device-code round trip plus every documented CLI
+  command from a throwaway Docker container, tearing everything down after
+  (`--keep` to leave it running, `--skip-build` to reuse a previous build).
+  Deliberately **not** wired into any GitHub Actions workflow, this repo's CI
+  runners have no nested virtualization for Multipass, it's a local-only tool to
+  run by hand before cutting a release or after touching installer/agent/CLI
+  code.
 
 ## Planned features (not yet built)
 

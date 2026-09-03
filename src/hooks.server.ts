@@ -177,8 +177,24 @@ export const init = async () => {
 	CronService.startAutoscaleScheduler();
 };
 
-/** Paths under the auth basePath that are handled by SvelteKit, not better-auth */
-const customAuthPaths = new Set(["/api/v1/auth/providers"]);
+/**
+ * Paths under the auth basePath that are handled by SvelteKit, not
+ * better-auth. Real, tested-live finding: `/api/v1/auth/cli/device` and
+ * `/api/v1/auth/cli/token` (the CLI's `homerun login` device-code flow,
+ * $lib/services/cli-auth.service.ts) were never added here, so every
+ * request to either one was silently swallowed by better-auth's own
+ * handler (any path starting with the auth basePath goes to
+ * `auth.handler()` unless it's in this set, see svelteKitHandler's
+ * `isAuthPath` in node_modules/better-auth/dist/integrations/svelte-kit.mjs)
+ * and 404'd before ever reaching the real SvelteKit route files — verified
+ * live, a real `homerun login` against a real running instance failed
+ * immediately with "Couldn't start login: 404 Not Found" before this fix.
+ */
+const customAuthPaths = new Set([
+	"/api/v1/auth/providers",
+	"/api/v1/auth/cli/device",
+	"/api/v1/auth/cli/token",
+]);
 
 /**
  * better-auth's real email/password sign-up endpoint (confirmed against

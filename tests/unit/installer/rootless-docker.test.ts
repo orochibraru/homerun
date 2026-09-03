@@ -7,11 +7,20 @@ import { RootlessDockerInstaller } from "../../../packages/installer/steps/rootl
 function fakeRunner(overrides?: {
 	run?: ReturnType<typeof mock>;
 	runOk?: ReturnType<typeof mock>;
+	writeFile?: ReturnType<typeof mock>;
 }) {
 	const run =
 		overrides?.run ?? mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 	const runOk = overrides?.runOk ?? mock(async () => true);
-	return { run, runOk } as unknown as StepRunner;
+	// #allowRootlessUserns (installRootlessDocker's real first step, see
+	// rootless-docker.ts) writes an AppArmor profile whenever the *real* host
+	// this test runs on restricts unprivileged user namespaces, GitHub
+	// Actions' own Ubuntu runners included : this fake needs to support that
+	// call regardless of which host runs the suite, not just on a Mac dev
+	// machine where /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+	// doesn't exist and the call never happens.
+	const writeFile = overrides?.writeFile ?? mock(async () => {});
+	return { run, runOk, writeFile } as unknown as StepRunner;
 }
 
 describe("RootlessDockerInstaller.installDockerEngine", () => {

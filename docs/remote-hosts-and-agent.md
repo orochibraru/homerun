@@ -87,9 +87,12 @@ prebuilt binary, or the installer below).
 **Wired into the main app**: registering an agent-kind Remote Host and picking
 it as a service's deploy target (or build server) routes deploy/start/stop/
 restart/logs through this agent's HTTP API instead of a raw Docker connection.
-This main-app integration doesn't carry the same "verified against a real second
-host" confirmation the agent binary's own endpoints do, see
-[FAQ & limitations](faq-and-limitations.md).
+Verified live against a real, actually-separate second host (not just the agent
+binary's own endpoints in isolation): two disposable VMs, one running
+`--mode=agent`, the other running `--mode=full`, the full-stack VM's dashboard
+registered the agent VM as a Remote Host and deployed a real service through it,
+confirmed landing on the agent VM by `docker ps`, with stop/start round-tripping
+successfully too.
 
 ## Installer
 
@@ -113,5 +116,9 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/i
   | sudo bash -s -- --token <SWMTKN-...> --manager <ip>:2377
 ```
 
-Not yet run against a real second host, same "verify on your own box first"
-caveat as the main installer.
+Unlike the main installer's `--mode=agent`/`--mode=full` (now verified live
+against real disposable VMs, see
+[`packages/installer/README.md`](../packages/installer/README.md)),
+`swarm-join.sh` itself hasn't been run against a real second host or a real
+swarm yet, same "verify on your own box first" caveat, just not yet closed the
+way the rest of the installer's mutating steps were.
