@@ -28,14 +28,14 @@ interface CloudflareWriteResponse {
  * real registered account" posture as the git-provider OAuth integration :
  * verify the first real sync by hand once a zone/token is configured.
  *
- * Deliberately a plain class with static methods reading instance settings
- * itself on every call (not a singleton instance holding cached config) :
+ * Deliberately re-reads instance settings itself on every call rather than
+ * caching them on the instance :
  * the token/zone can change on /settings mid-session, and DNS syncs are
  * infrequent (once per deploy), so there's no meaningful state worth
  * caching here.
  */
-export class CloudflareService {
-	private static async request<T>(
+class CloudflareServiceClass {
+	private async request<T>(
 		token: string,
 		path: string,
 		init?: RequestInit,
@@ -55,12 +55,12 @@ export class CloudflareService {
 		return body;
 	}
 
-	private static async findRecordId(
+	private async findRecordId(
 		token: string,
 		zoneId: string,
 		hostname: string,
 	): Promise<string | null> {
-		const res = await CloudflareService.request<CloudflareListResponse>(
+		const res = await this.request<CloudflareListResponse>(
 			token,
 			`/zones/${zoneId}/dns_records?type=CNAME&name=${encodeURIComponent(hostname)}`,
 		);
@@ -75,7 +75,7 @@ export class CloudflareService {
 	 * on any failure, a missed DNS sync isn't worth failing a deploy over,
 	 * the admin can always add the record by hand.
 	 */
-	static async syncDnsRecord(hostname: string, target: string): Promise<void> {
+	async syncDnsRecord(hostname: string, target: string): Promise<void> {
 		const settings = await InstanceSettingsDTO.get();
 		if (!settings.cloudflareConfigured) {
 			return;
@@ -87,11 +87,7 @@ export class CloudflareService {
 		}
 
 		try {
-			const existingId = await CloudflareService.findRecordId(
-				token,
-				zoneId,
-				hostname,
-			);
+			const existingId = await this.findRecordId(token, zoneId, hostname);
 			const body = JSON.stringify({
 				content: target,
 				name: hostname,
@@ -100,12 +96,12 @@ export class CloudflareService {
 				type: "CNAME",
 			});
 			const result = existingId
-				? await CloudflareService.request<CloudflareWriteResponse>(
+				? await this.request<CloudflareWriteResponse>(
 						token,
 						`/zones/${zoneId}/dns_records/${existingId}`,
 						{ body, method: "PUT" },
 					)
-				: await CloudflareService.request<CloudflareWriteResponse>(
+				: await this.request<CloudflareWriteResponse>(
 						token,
 						`/zones/${zoneId}/dns_records`,
 						{ body, method: "POST" },
@@ -124,7 +120,7 @@ export class CloudflareService {
 	}
 
 	/** Best-effort removal, same non-throwing posture as syncDnsRecord : called when a service with a Cloudflare-managed hostname is deleted. */
-	static async deleteDnsRecord(hostname: string): Promise<void> {
+	async deleteDnsRecord(hostname: string): Promise<void> {
 		const settings = await InstanceSettingsDTO.get();
 		if (!settings.cloudflareConfigured) {
 			return;
@@ -136,19 +132,13 @@ export class CloudflareService {
 		}
 
 		try {
-			const existingId = await CloudflareService.findRecordId(
-				token,
-				zoneId,
-				hostname,
-			);
+			const existingId = await this.findRecordId(token, zoneId, hostname);
 			if (!existingId) {
 				return;
 			}
-			await CloudflareService.request(
-				token,
-				`/zones/${zoneId}/dns_records/${existingId}`,
-				{ method: "DELETE" },
-			);
+			await this.request(token, `/zones/${zoneId}/dns_records/${existingId}`, {
+				method: "DELETE",
+			});
 			logger.info(`DNS record removed: ${hostname}`);
 		} catch (err) {
 			logger.warn(`Couldn't remove DNS record for ${hostname}`, {
@@ -162,7 +152,7 @@ export class CloudflareService {
 	 * connection" button : confirms the token can actually read the
 	 * configured zone, rather than only validating it was non-blank.
 	 */
-	static async verifyZoneAccess(
+	async verifyZoneAccess(
 		token: string,
 		zoneId: string,
 	): Promise<{ error?: string; success: boolean }> {
@@ -171,7 +161,7 @@ export class CloudflareService {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 			const body = (await res.json()) as {
-				errors: Array<{ message: string }>;
+				errors?: Array<{ message: string } | undefined>;
 				result?: { name: string };
 				success: boolean;
 			};
@@ -190,3 +180,5 @@ export class CloudflareService {
 		}
 	}
 }
+
+export const CloudflareService = new CloudflareServiceClass();

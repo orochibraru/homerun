@@ -5,8 +5,8 @@ repo, fill in a form, deploy: Traefik routes it to `<slug>.yourdomain.com` with
 TLS. Single host, local Docker socket, no multi-node orchestration.
 
 This directory is plain Markdown for now: no generated site yet (see
-[`../TODO.md`](../TODO.md)). Read it straight from the repo, or on your
-Gitea/GitHub remote's file browser.
+[`../TODO.md`](../TODO.md)). Read it straight from the repo, or on your GitHub
+remote's file browser.
 
 ## Guides
 

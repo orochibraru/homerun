@@ -62,7 +62,7 @@
 	let showRegistry = $derived(!!svc.registryUsername);
 
 	let buildSource = $derived<"image" | "git">(
-		(values.buildSource as "image" | "git") ?? "image",
+		(values.buildSource as "image" | "git" | undefined) ?? "image",
 	);
 	let image = $derived(values.image);
 	let tag = $derived(values.tag);

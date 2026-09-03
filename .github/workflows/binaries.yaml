@@ -1,7 +1,6 @@
 name: Binaries
-description:
-  Builds the agent/cli/installer standalone binaries, one arch per matrix leg,
-  natively on a runner of that arch
+# Builds the agent/cli/installer standalone binaries, one arch per matrix leg,
+# natively on a GitHub-hosted runner of that arch.
 
 on:
   workflow_call:
@@ -22,11 +21,15 @@ permissions:
 jobs:
   build:
     name: Build Binaries
-    runs-on: ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v6

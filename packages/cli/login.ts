@@ -41,16 +41,36 @@ class CliLoginFlow {
 	 * shown here, the CLI just polls until that happens.
 	 */
 	async login(flagBaseUrl?: string): Promise<void> {
-		const existing = ConfigStore.readStoredConfig();
+		const baseUrl = await this.#resolveBaseUrl(flagBaseUrl);
+		const start = await this.#startDeviceAuth(baseUrl);
 
+		console.log(
+			"\nTo finish logging in, open this URL and enter the code below:\n",
+		);
+		console.log(`  ${start.verificationUri}`);
+		console.log(`\n  Code: ${start.userCode}\n`);
+		console.log(
+			`(or open ${start.verificationUriComplete} to skip typing it)\n`,
+		);
+		console.log("Waiting for approval...");
+
+		await this.#pollForApproval(baseUrl, start);
+	}
+
+	/** The instance URL, from `--url`, the stored config, or an interactive prompt, with any trailing slash stripped. */
+	async #resolveBaseUrl(flagBaseUrl?: string): Promise<string> {
+		const existing = ConfigStore.readStoredConfig();
 		const rawBaseUrl =
 			flagBaseUrl ??
 			(await question("Homerun instance URL", existing?.baseUrl ?? ""));
 		if (!rawBaseUrl) {
 			Output.fail("A base URL is required (e.g. https://homerun.example.com).");
 		}
-		const baseUrl = rawBaseUrl.replace(/\/$/, "");
+		return rawBaseUrl.replace(/\/$/, "");
+	}
 
+	/** Opens the device-authorization request, returning the codes the human needs to approve it. */
+	async #startDeviceAuth(baseUrl: string): Promise<DeviceStart> {
 		const startRes = await fetch(`${baseUrl}/api/v1/auth/cli/device`, {
 			method: "POST",
 		}).catch((error) =>
@@ -63,10 +83,14 @@ class CliLoginFlow {
 				`Couldn't start login: ${startRes.status} ${startRes.statusText}`,
 			);
 		}
-		const start = (await startRes.json()) as DeviceStart;
+		return (await startRes.json()) as DeviceStart;
+	}
 
+	/** Polls until the request is approved (storing the key), rejected, or the deadline passes. */
+	async #pollForApproval(baseUrl: string, start: DeviceStart): Promise<void> {
 		const deadline = Date.now() + start.expiresIn * 1000;
 		while (Date.now() < deadline) {
+			// biome-ignore lint/performance/noAwaitInLoops: device-flow polling is sequential by definition
 			await sleep(start.interval * 1000);
 
 			const pollRes = await fetch(`${baseUrl}/api/v1/auth/cli/token`, {
@@ -79,9 +103,6 @@ class CliLoginFlow {
 			}
 			const result = (await pollRes.json()) as PollResult;
 
-			if (result.status === "pending") {
-				continue;
-			}
 			if (result.status === "denied") {
 				Output.fail("Login request was denied.");
 			}
@@ -90,6 +111,8 @@ class CliLoginFlow {
 			}
 			if (result.status === "approved" && result.apiKey) {
 				ConfigStore.writeStoredConfig({ apiKey: result.apiKey, baseUrl });
+				console.log(`\nLogged in to ${baseUrl}.`);
+				console.log(`Config saved to ${ConfigStore.configPath()}.`);
 				return;
 			}
 		}
@@ -100,9 +123,11 @@ class CliLoginFlow {
 	logout(): void {
 		const existing = ConfigStore.readStoredConfig();
 		if (!existing) {
+			console.log("Not logged in.");
 			return;
 		}
 		ConfigStore.clearStoredConfig();
+		console.log(`Logged out of ${existing.baseUrl}.`);
 	}
 }
 

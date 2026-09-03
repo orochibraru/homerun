@@ -53,6 +53,7 @@ export interface GitBuildResult {
 }
 
 /** Git-clone-then-Dockerfile-build, tagging the result for the normal deploy pipeline to run like any other image. */
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerGitBuildMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {
@@ -65,6 +66,109 @@ export function DockerGitBuildMixin<
 		 * precedent as `tar`/`df`/`nvidia-smi` elsewhere in this app) rather
 		 * than a git library dependency.
 		 */
+		/** Shallow-clones the repo at `ref` into `dir`. A bare commit SHA doesn't work : branches and tags only. */
+		async #cloneRepo(
+			params: GitBuildParams,
+			ref: string,
+			dir: string,
+			onProgress?: (line: string) => void,
+		): Promise<void> {
+			onProgress?.(`Cloning ${params.gitUrl} (${ref})...`);
+			await execFileAsync("git", [
+				"clone",
+				"--depth",
+				"1",
+				"--branch",
+				ref,
+				"--single-branch",
+				params.gitUrl,
+				dir,
+			]);
+			logger.info(`Cloned: ${params.gitUrl}#${ref} -> ${dir}`);
+		}
+
+		/** Best-effort cache warm-up : no cache yet (first build) or a briefly unreachable registry never fails the build. */
+		async #pullBuildCache(
+			docker: ReturnType<BaseDockerService["getDocker"]>,
+			cacheRef: string,
+			cacheAuth: RegistryAuth | undefined,
+			onProgress?: (line: string) => void,
+		): Promise<void> {
+			onProgress?.(`Pulling build cache ${cacheRef}...`);
+			try {
+				const pullStream: NodeJS.ReadableStream = await docker.pull(
+					cacheRef,
+					cacheAuth ? { authconfig: cacheAuth } : {},
+				);
+				await new Promise<void>((res) => {
+					docker.modem.followProgress(pullStream, () => res());
+				});
+			} catch (err) {
+				logger.warn(`No build cache pulled for ${cacheRef}`, {
+					error: err instanceof Error ? err.message : String(err),
+				});
+			}
+		}
+
+		/** Runs the image build itself, forwarding only changed output lines to `onProgress`. */
+		async #runBuild(
+			params: GitBuildParams,
+			dir: string,
+			cacheRef: string | null,
+			onProgress?: (line: string) => void,
+		): Promise<void> {
+			const docker = this.getDocker(params.remote);
+			const contextDir = params.buildContext
+				? join(dir, params.buildContext)
+				: dir;
+			const dockerfile = params.dockerfilePath || "Dockerfile";
+
+			onProgress?.(`Building ${dockerfile}...`);
+			const stream = await docker.buildImage(
+				{ context: contextDir, src: ["."] },
+				{
+					dockerfile,
+					rm: true,
+					t: params.tag,
+					// The classic (non-BuildKit) build API this app uses wants
+					// cachefrom as a JSON-encoded array string, despite
+					// @types/dockerode typing it as a plain string : verified
+					// live, a bare string 400s with "error reading cache-from:
+					// invalid character ... looking for beginning of value"
+					// (the daemon tries to JSON-parse it). No
+					// BUILDKIT_INLINE_CACHE buildarg : that's a BuildKit-only
+					// concept, the classic builder just warns "not consumed"
+					// and ignores it, real cache reuse here comes from the
+					// cachefrom image's layers alone (verified live : a repeat
+					// build showed "Using cache" for every step).
+					...(cacheRef ? { cachefrom: JSON.stringify([cacheRef]) } : {}),
+				},
+			);
+
+			await new Promise<void>((resolvePromise, reject) => {
+				let lastStatus = "";
+				docker.modem.followProgress(
+					stream,
+					(err: Error | null) => (err ? reject(err) : resolvePromise()),
+					(event: { stream?: string; error?: string }) => {
+						if (event.error) {
+							reject(new Error(event.error));
+							return;
+						}
+						const text = event.stream?.trim();
+						// Docker build output is far chattier than a pull's
+						// layer events : only forward lines that actually
+						// changed, same "status change, not byte-tick"
+						// filtering as pullImage.
+						if (text && text !== lastStatus) {
+							lastStatus = text;
+							onProgress?.(text);
+						}
+					},
+				);
+			});
+		}
+
 		async buildFromGit(
 			params: GitBuildParams,
 			onProgress?: (line: string) => void,
@@ -90,94 +194,13 @@ export function DockerGitBuildMixin<
 				: undefined;
 
 			try {
-				onProgress?.(`Cloning ${params.gitUrl} (${ref})...`);
-				await execFileAsync("git", [
-					"clone",
-					"--depth",
-					"1",
-					"--branch",
-					ref,
-					"--single-branch",
-					params.gitUrl,
-					dir,
-				]);
-				logger.info(`Cloned: ${params.gitUrl}#${ref} -> ${dir}`);
+				await this.#cloneRepo(params, ref, dir, onProgress);
 
 				if (cacheRef) {
-					onProgress?.(`Pulling build cache ${cacheRef}...`);
-					try {
-						const pullStream: NodeJS.ReadableStream = await docker.pull(
-							cacheRef,
-							cacheAuth ? { authconfig: cacheAuth } : {},
-						);
-						await new Promise<void>((res) => {
-							docker.modem.followProgress(pullStream, () => res());
-						});
-					} catch (err) {
-						// No cache yet (first build) or the registry's briefly
-						// unreachable : never fails the build over this.
-						logger.warn(`No build cache pulled for ${cacheRef}`, {
-							error: err instanceof Error ? err.message : String(err),
-						});
-					}
+					await this.#pullBuildCache(docker, cacheRef, cacheAuth, onProgress);
 				}
 
-				const contextDir = params.buildContext
-					? join(dir, params.buildContext)
-					: dir;
-				const dockerfile = params.dockerfilePath || "Dockerfile";
-
-				onProgress?.(`Building ${dockerfile}...`);
-				const stream = await docker.buildImage(
-					{ context: contextDir, src: ["."] },
-					{
-						dockerfile,
-						rm: true,
-						t: params.tag,
-						// The classic (non-BuildKit) build API this app uses wants
-						// cachefrom as a JSON-encoded array string, despite
-						// @types/dockerode typing it as a plain string : verified
-						// live, a bare string 400s with "error reading cache-from:
-						// invalid character ... looking for beginning of value"
-						// (the daemon tries to JSON-parse it). No
-						// BUILDKIT_INLINE_CACHE buildarg : that's a BuildKit-only
-						// concept, the classic builder just warns "not consumed"
-						// and ignores it, real cache reuse here comes from the
-						// cachefrom image's layers alone (verified live : a repeat
-						// build showed "Using cache" for every step).
-						...(cacheRef ? { cachefrom: JSON.stringify([cacheRef]) } : {}),
-					},
-				);
-
-				await new Promise<void>((resolve, reject) => {
-					let lastStatus = "";
-					docker.modem.followProgress(
-						stream,
-						(err: Error | null) => {
-							if (err) {
-								reject(err);
-							} else {
-								resolve();
-							}
-						},
-						(event: { stream?: string; error?: string }) => {
-							if (event.error) {
-								reject(new Error(event.error));
-								return;
-							}
-							const text = event.stream?.trim();
-							// Docker build output is far chattier than a pull's
-							// layer events : only forward lines that actually
-							// changed, same "status change, not byte-tick"
-							// filtering as pullImage.
-							if (text && text !== lastStatus) {
-								lastStatus = text;
-								onProgress?.(text);
-							}
-						},
-					);
-				});
-
+				await this.#runBuild(params, dir, cacheRef, onProgress);
 				logger.info(`Build succeeded: tag=${params.tag}`);
 
 				if (cacheRef) {

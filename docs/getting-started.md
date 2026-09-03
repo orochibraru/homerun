@@ -12,7 +12,7 @@ to run this from source instead (to develop on it)? See
 ## Option A, the one-liner (fresh Linux server)
 
 ```sh
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
   | sudo bash -s -- --mode=full
 ```
 
@@ -47,8 +47,8 @@ Postgres + the app itself, all pulled from published images, no installer, no
 rootless setup, no source checkout:
 
 ```sh
-curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/compose.prod.yaml
-curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/.env.example
+curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/compose.prod.yaml
+curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/.env.example
 mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum, see configuration.md
 docker network create homerun
 docker compose -f compose.prod.yaml up -d

@@ -44,8 +44,11 @@ async function main(): Promise<void> {
 			process.exit(0);
 		})();
 	});
+
+	console.log(`READY ${JSON.stringify({ baseUrl: E2E_BASE_URL })}`);
 }
 
-main().catch((_err) => {
+main().catch((err) => {
+	console.error(err);
 	process.exit(1);
 });

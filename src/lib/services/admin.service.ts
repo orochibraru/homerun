@@ -62,125 +62,138 @@ class AdminServiceClass {
 	 * flow : out of scope here, see TODO.md's Onboarding section.
 	 */
 	async runSetupChecks(): Promise<SetupCheck[]> {
-		const checks: SetupCheck[] = [];
+		const checks: SetupCheck[] = [
+			this.#baseDomainCheck(),
+			this.#authSecretCheck(),
+			this.#originCheck(),
+			await this.#traefikCheck(),
+			await this.#dockerCheck(),
+		];
 
-		checks.push(
-			config.baseDomain === "localhost" && !dev
-				? {
-						detail:
-							"Deployed services will only be reachable at <slug>.localhost from this machine : set a real domain for public routing (env var below, or the Core section of /settings).",
-						envVar: "BASE_DOMAIN",
-						id: "base-domain",
-						label: "Base domain",
-						severity: "warn",
-					}
-				: {
-						detail: `Services are routed under <slug>.${config.baseDomain}.`,
-						id: "base-domain",
-						label: "Base domain",
-						severity: "ok",
-					},
-		);
+		if (config.smtp.enabled) {
+			checks.push(this.#smtpCheck());
+		}
 
-		checks.push(
-			config.auth.secret === "default-secret" && !dev
-				? {
-						detail:
-							"Using the built-in placeholder auth secret : sessions aren't safe against a compromised install. Generate a real one (e.g. `openssl rand -base64 32`).",
-						envVar: "AUTH_SECRET (or BETTER_AUTH_SECRET)",
-						id: "auth-secret",
-						label: "Auth secret",
-						severity: "danger",
-					}
-				: {
-						detail: "A non-default auth secret is set.",
-						id: "auth-secret",
-						label: "Auth secret",
-						severity: "ok",
-					},
-		);
+		return checks;
+	}
 
-		checks.push(
-			!(config.auth.origin || dev)
-				? {
-						detail:
-							"No origin configured : derived per-request for now, which is fine for a single domain but can misbehave behind a proxy. Set a Base domain (env var below, or the General section of /settings) to pin it.",
-						envVar: "ORIGIN",
-						id: "origin",
-						label: "Origin URL",
-						severity: "warn",
-					}
-				: {
-						detail: `Origin set to ${config.auth.origin}.`,
-						id: "origin",
-						label: "Origin URL",
-						severity: "ok",
-					},
-		);
+	#baseDomainCheck(): SetupCheck {
+		if (config.baseDomain === "localhost" && !dev) {
+			return {
+				detail:
+					"Deployed services will only be reachable at <slug>.localhost from this machine : set a real domain for public routing (env var below, or the Core section of /settings).",
+				envVar: "BASE_DOMAIN",
+				id: "base-domain",
+				label: "Base domain",
+				severity: "warn",
+			};
+		}
+		return {
+			detail: `Services are routed under <slug>.${config.baseDomain}.`,
+			id: "base-domain",
+			label: "Base domain",
+			severity: "ok",
+		};
+	}
 
+	#authSecretCheck(): SetupCheck {
+		if (config.auth.secret === "default-secret" && !dev) {
+			return {
+				detail:
+					"Using the built-in placeholder auth secret : sessions aren't safe against a compromised install. Generate a real one (e.g. `openssl rand -base64 32`).",
+				envVar: "AUTH_SECRET (or BETTER_AUTH_SECRET)",
+				id: "auth-secret",
+				label: "Auth secret",
+				severity: "danger",
+			};
+		}
+		return {
+			detail: "A non-default auth secret is set.",
+			id: "auth-secret",
+			label: "Auth secret",
+			severity: "ok",
+		};
+	}
+
+	#originCheck(): SetupCheck {
+		if (config.auth.origin || dev) {
+			return {
+				detail: `Origin set to ${config.auth.origin}.`,
+				id: "origin",
+				label: "Origin URL",
+				severity: "ok",
+			};
+		}
+		return {
+			detail:
+				"No origin configured : derived per-request for now, which is fine for a single domain but can misbehave behind a proxy. Set a Base domain (env var below, or the General section of /settings) to pin it.",
+			envVar: "ORIGIN",
+			id: "origin",
+			label: "Origin URL",
+			severity: "warn",
+		};
+	}
+
+	async #traefikCheck(): Promise<SetupCheck> {
 		const traefik = await DockerService.findTraefikContainer().catch(
 			() => null,
 		);
-		checks.push(
-			traefik
-				? {
-						detail: `Found running as ${traefik.name}.`,
-						id: "traefik",
-						label: "Traefik ingress",
-						severity: "ok",
-					}
-				: {
-						detail:
-							"No running Traefik container found : deployed services won't get public routing/TLS until it's started (see compose.yaml).",
-						id: "traefik",
-						label: "Traefik ingress",
-						severity: "warn",
-					},
-		);
+		if (traefik) {
+			return {
+				detail: `Found running as ${traefik.name}.`,
+				id: "traefik",
+				label: "Traefik ingress",
+				severity: "ok",
+			};
+		}
+		return {
+			detail:
+				"No running Traefik container found : deployed services won't get public routing/TLS until it's started (see compose.yaml).",
+			id: "traefik",
+			label: "Traefik ingress",
+			severity: "warn",
+		};
+	}
 
+	async #dockerCheck(): Promise<SetupCheck> {
 		const dockerOk = await DockerService.getDocker()
 			.ping()
 			.then(() => true)
 			.catch(() => false);
-		checks.push(
-			dockerOk
-				? {
-						detail: "Connected.",
-						id: "docker",
-						label: "Docker socket",
-						severity: "ok",
-					}
-				: {
-						detail: `Couldn't reach the Docker socket at ${config.docker.socketPath} : nothing will deploy until this is fixed (env var below, or the Docker section of /settings).`,
-						envVar: "DOCKER_SOCKET_PATH",
-						id: "docker",
-						label: "Docker socket",
-						severity: "danger",
-					},
-		);
-
-		if (config.smtp.enabled) {
-			checks.push(
-				isSmtpEnabled()
-					? {
-							detail: `Configured via ${config.smtp.host}.`,
-							id: "smtp",
-							label: "Email (SMTP)",
-							severity: "ok",
-						}
-					: {
-							detail:
-								"SMTP is enabled but one or more of host/port/user/password/from is missing : email verification won't work (env vars below, or the SMTP section of /settings).",
-							envVar:
-								"SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM",
-							id: "smtp",
-							label: "Email (SMTP)",
-							severity: "danger",
-						},
-			);
+		if (dockerOk) {
+			return {
+				detail: "Connected.",
+				id: "docker",
+				label: "Docker socket",
+				severity: "ok",
+			};
 		}
+		return {
+			detail: `Couldn't reach the Docker socket at ${config.docker.socketPath} : nothing will deploy until this is fixed (env var below, or the Docker section of /settings).`,
+			envVar: "DOCKER_SOCKET_PATH",
+			id: "docker",
+			label: "Docker socket",
+			severity: "danger",
+		};
+	}
 
-		return checks;
+	#smtpCheck(): SetupCheck {
+		if (isSmtpEnabled()) {
+			return {
+				detail: `Configured via ${config.smtp.host}.`,
+				id: "smtp",
+				label: "Email (SMTP)",
+				severity: "ok",
+			};
+		}
+		return {
+			detail:
+				"SMTP is enabled but one or more of host/port/user/password/from is missing : email verification won't work (env vars below, or the SMTP section of /settings).",
+			envVar: "SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM",
+			id: "smtp",
+			label: "Email (SMTP)",
+			severity: "danger",
+		};
 	}
 }
 

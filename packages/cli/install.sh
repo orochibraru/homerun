@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The "single curl command" way to install the homerun CLI:
 #
-#   curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/cli/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/cli/install.sh | bash
 #
 # Detects OS/arch, downloads the matching prebuilt homerun-cli-<arch> release
 # binary (Linux amd64/arm64 only, see below), and installs it as
@@ -9,7 +9,7 @@
 # nothing built from source. Same pattern as installer/bootstrap.sh.
 set -euo pipefail
 
-GIT_HOST="git.ombrage.space"
+GIT_HOST="github.com"
 GIT_REPO="orochibraru/homerun"
 VERSION="latest"
 INSTALL_DIR="${HOMERUN_INSTALL_DIR:-/usr/local/bin}"

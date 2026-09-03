@@ -21,13 +21,13 @@ too, not just the agent itself, see
 [`installer/README.md`](../installer/README.md):
 
 ```bash
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
   | sudo bash -s -- --mode=agent
 ```
 
 **Already running Docker your own way?** Run the published image
-(`git.ombrage.space/orochibraru/homerun-agent`, `linux/amd64` + `linux/arm64`,
-built from [`agent/Dockerfile`](./Dockerfile) via the `agent` target in the root
+(`docker.io/orochibraru/homerun-agent`, `linux/amd64` + `linux/arm64`, built
+from [`agent/Dockerfile`](./Dockerfile) via the `agent` target in the root
 [`docker-bake.hcl`](../docker-bake.hcl)), mounting the Docker socket the same
 way any Docker-managing container does:
 
@@ -36,7 +36,7 @@ docker run -d --name homerun-agent --restart unless-stopped \
   -p 7420:7420 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v homerun-agent-token:/root/.homerun-agent \
-  git.ombrage.space/orochibraru/homerun-agent:latest
+  docker.io/orochibraru/homerun-agent:latest
 ```
 
 (The second volume persists the generated token across container restarts, same
@@ -46,12 +46,12 @@ as `tokenFile` does for a bare-binary install; set `AGENT_TOKEN` explicitly via
 `-e DOCKER_SOCKET_PATH=/var/run/docker.sock` at a rootless daemon instead of the
 default system one.)
 
-**Grab the prebuilt binary directly** from this repo's Gitea releases (Linux
+**Grab the prebuilt binary directly** from this repo's GitHub releases (Linux
 amd64/arm64 only, same coverage as the CLI's binaries, see
 `scripts/build-packages.ts`):
 
 ```bash
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/releases/latest/download/homerun-agent-amd64 -o homerun-agent
+curl -fsSL https://github.com/orochibraru/homerun/releases/latest/download/homerun-agent-amd64 -o homerun-agent
 chmod +x homerun-agent
 ./homerun-agent
 ```

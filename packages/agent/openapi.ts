@@ -56,6 +56,7 @@ const buildResultSchema = z.object({
  * though `buildDocument` itself is a pure transform (baseUrl in, doc out).
  */
 class AgentOpenApiBuilder {
+	// biome-ignore lint/complexity/noExcessiveLinesPerFunction: one OpenAPI document literal, not branching logic
 	buildDocument(baseUrl: string): Record<string, unknown> {
 		const jsonResponse = (
 			description: string,

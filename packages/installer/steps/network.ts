@@ -21,6 +21,7 @@ class NetworkSetupService {
 				() => false,
 			);
 		if (inspected) {
+			console.log("homerun already exists, skipping.");
 			return;
 		}
 		await run.run(["docker", "network", "create", "homerun"], {

@@ -6,13 +6,13 @@
     <div class="flex gap-5">
       <a href="/docs/getting-started" class="hover:text-(--text-muted)">Docs</a>
       <a
-        href="https://git.ombrage.space/orochibraru/homerun"
+        href="https://github.com/orochibraru/homerun"
         target="_blank"
         rel="noreferrer"
         class="hover:text-(--text-muted)"
       >Source</a>
       <a
-        href="https://git.ombrage.space/orochibraru/homerun/raw/branch/main/CHANGELOG.md"
+        href="https://raw.githubusercontent.com/orochibraru/homerun/main/CHANGELOG.md"
         target="_blank"
         rel="noreferrer"
         class="hover:text-(--text-muted)"

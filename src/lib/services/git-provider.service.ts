@@ -23,6 +23,13 @@ export interface ExchangedToken {
 	refreshToken: string | null;
 }
 
+/** The raw token-endpoint result, before it's turned into an ExchangedToken. */
+interface TokenGrant {
+	accessToken: string;
+	expiresIn: number | null;
+	refreshToken: string | null;
+}
+
 interface ProviderEndpoints {
 	api: string;
 	authorize: string;
@@ -163,81 +170,109 @@ class GitProviderServiceClass {
 		code: string,
 		redirectUri: string,
 	): Promise<ExchangedToken> {
+		const grant =
+			provider.kind === "bitbucket"
+				? await this.exchangeBitbucketCode(provider, code)
+				: await this.exchangeStandardCode(provider, code, redirectUri);
+
+		const providerUsername = await this.fetchUsername(
+			provider,
+			grant.accessToken,
+		);
+
+		return {
+			accessToken: grant.accessToken,
+			expiresAt: grant.expiresIn
+				? new Date(Date.now() + grant.expiresIn * 1000)
+				: null,
+			providerUsername,
+			refreshToken: grant.refreshToken,
+		};
+	}
+
+	/**
+	 * Bitbucket authenticates the token request itself via HTTP Basic
+	 * (client_id:client_secret), not as body params like the others.
+	 */
+	private async exchangeBitbucketCode(
+		provider: GitProviderConfig,
+		code: string,
+	): Promise<TokenGrant> {
+		const { token: tokenUrl } = endpoints(provider);
+		const clientSecret = decryptSecret(provider.clientSecretEnc) ?? "";
+		const basic = Buffer.from(`${provider.clientId}:${clientSecret}`).toString(
+			"base64",
+		);
+
+		const res = await fetch(tokenUrl, {
+			body: new URLSearchParams({ code, grant_type: "authorization_code" }),
+			headers: {
+				Authorization: `Basic ${basic}`,
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			method: "POST",
+		});
+		if (!res.ok) {
+			throw new Error(
+				`Token exchange failed: ${res.status} ${await res.text()}`,
+			);
+		}
+		const body = (await res.json()) as {
+			access_token: string;
+			expires_in?: number;
+			refresh_token?: string;
+		};
+		return {
+			accessToken: body.access_token,
+			expiresIn: body.expires_in ?? null,
+			refreshToken: body.refresh_token ?? null,
+		};
+	}
+
+	/** The plain OAuth2 authorization-code exchange every non-Bitbucket provider uses. */
+	private async exchangeStandardCode(
+		provider: GitProviderConfig,
+		code: string,
+		redirectUri: string,
+	): Promise<TokenGrant> {
 		const { token: tokenUrl } = endpoints(provider);
 		const clientSecret = decryptSecret(provider.clientSecretEnc) ?? "";
 
-		let accessToken: string;
-		let refreshToken: string | null = null;
-		let expiresIn: number | null = null;
-
-		if (provider.kind === "bitbucket") {
-			// Bitbucket authenticates the token request itself via HTTP Basic
-			// (client_id:client_secret), not as body params like the others.
-			const res = await fetch(tokenUrl, {
-				body: new URLSearchParams({ code, grant_type: "authorization_code" }),
-				headers: {
-					Authorization: `Basic ${Buffer.from(`${provider.clientId}:${clientSecret}`).toString("base64")}`,
-					"Content-Type": "application/x-www-form-urlencoded",
-				},
-				method: "POST",
-			});
-			if (!res.ok) {
-				throw new Error(
-					`Token exchange failed: ${res.status} ${await res.text()}`,
-				);
-			}
-			const body = (await res.json()) as {
-				access_token: string;
-				expires_in?: number;
-				refresh_token?: string;
-			};
-			accessToken = body.access_token;
-			refreshToken = body.refresh_token ?? null;
-			expiresIn = body.expires_in ?? null;
-		} else {
-			const res = await fetch(tokenUrl, {
-				body: new URLSearchParams({
-					client_id: provider.clientId,
-					client_secret: clientSecret,
-					code,
-					grant_type: "authorization_code",
-					redirect_uri: redirectUri,
-				}),
-				headers: {
-					Accept: "application/json",
-					"Content-Type": "application/x-www-form-urlencoded",
-				},
-				method: "POST",
-			});
-			if (!res.ok) {
-				throw new Error(
-					`Token exchange failed: ${res.status} ${await res.text()}`,
-				);
-			}
-			const body = (await res.json()) as {
-				access_token?: string;
-				error?: string;
-				error_description?: string;
-				expires_in?: number;
-				refresh_token?: string;
-			};
-			if (!body.access_token) {
-				throw new Error(
-					`Token exchange failed: ${body.error ?? "no access_token"} ${body.error_description ?? ""}`,
-				);
-			}
-			accessToken = body.access_token;
-			refreshToken = body.refresh_token ?? null;
-			expiresIn = body.expires_in ?? null;
+		const res = await fetch(tokenUrl, {
+			body: new URLSearchParams({
+				client_id: provider.clientId,
+				client_secret: clientSecret,
+				code,
+				grant_type: "authorization_code",
+				redirect_uri: redirectUri,
+			}),
+			headers: {
+				Accept: "application/json",
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			method: "POST",
+		});
+		if (!res.ok) {
+			throw new Error(
+				`Token exchange failed: ${res.status} ${await res.text()}`,
+			);
 		}
-
-		const providerUsername = await this.fetchUsername(provider, accessToken);
-
+		const body = (await res.json()) as {
+			access_token?: string;
+			error?: string;
+			error_description?: string;
+			expires_in?: number;
+			refresh_token?: string;
+		};
+		if (!body.access_token) {
+			throw new Error(
+				`Token exchange failed: ${body.error ?? "no access_token"} ${body.error_description ?? ""}`,
+			);
+		}
 		return {
-			accessToken,
-			expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
-			providerUsername,
-			refreshToken,
+			accessToken: body.access_token,
+			expiresIn: body.expires_in ?? null,
+			refreshToken: body.refresh_token ?? null,
 		};
 	}
 

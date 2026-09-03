@@ -15,7 +15,7 @@ dev server) is needed for either of those paths.
 ## Setup
 
 ```sh
-git clone https://git.ombrage.space/orochibraru/homerun.git && cd homerun
+git clone https://github.com/orochibraru/homerun.git && cd homerun
 bun install
 docker network create homerun
 docker compose up -d          # Traefik + Postgres, see compose.yaml
@@ -85,4 +85,4 @@ style nit, it changes what actually ships.
 
 Don't run `bun run release` yourself; it's CI-only, triggered on push to `main`.
 See CLAUDE.md's "Release automation" section for what it does (binaries for
-`agent`/`installer`/`cli`, the Docker image, the Gitea release).
+`agent`/`installer`/`cli`, the Docker image, the GitHub release).

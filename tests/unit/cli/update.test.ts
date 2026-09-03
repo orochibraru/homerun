@@ -4,7 +4,7 @@ import { UpdateService } from "../../../packages/cli/update";
 
 /**
  * `UpdateService.update()` is heavily side-effecting past its first guard clauses (real
- * network calls to Gitea, replacing the running binary), so this only
+ * network calls to GitHub, replacing the running binary), so this only
  * exercises the fast, deterministic fail-fast paths that are actually true
  * in every environment this suite runs in : `bun test` always runs via the
  * `bun` runtime itself (never a `bun build --compile`d binary).

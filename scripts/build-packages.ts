@@ -34,8 +34,8 @@ const targets = requestedArch
 	? allTargets.filter((t) => t.name === requestedArch)
 	: allTargets;
 const totalBuilds = packages.length * targets.length;
-const results = [];
-const errors = [];
+const results: Awaited<ReturnType<typeof Bun.build>>[] = [];
+const errors: unknown[] = [];
 
 for (const packageName of packages) {
 	console.log(`Building ${packageName}...`);

@@ -116,25 +116,23 @@ class CliAuthServiceClass {
 	}
 
 	async approve(userCode: string, userId: string): Promise<boolean> {
-		this.#prune();
-		const normalized = userCode.trim().toUpperCase();
-		for (const entry of devices()) {
-			const [, value] = entry;
-			if (value.userCode !== normalized || value.status !== "pending") {
-				continue;
-			}
-			const created = await auth.api.createApiKey({
-				body: {
-					name: "CLI login",
-					userId,
-				},
-			});
-			value.apiKey = created.key;
-			value.status = "approved";
-			logger.info("CLI device auth approved", { userCode: normalized, userId });
-			return true;
+		const entry = this.findByUserCode(userCode);
+		if (!entry) {
+			return false;
 		}
-		return false;
+		const created = await auth.api.createApiKey({
+			body: {
+				name: "CLI login",
+				userId,
+			},
+		});
+		entry.apiKey = created.key;
+		entry.status = "approved";
+		logger.info("CLI device auth approved", {
+			userCode: entry.userCode,
+			userId,
+		});
+		return true;
 	}
 
 	deny(userCode: string): boolean {

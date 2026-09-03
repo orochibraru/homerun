@@ -1,7 +1,7 @@
 /**
  * CI mode : this repo's own `.github/workflows/code_quality.yaml` sets
- * `CI: true` as a job-wide env var (Gitea Actions, same convention GitHub
- * Actions uses). Used for two things, both born from a real CI failure
+ * `CI: true` as a job-wide env var (GitHub Actions also sets it on its own).
+ * Used for two things, both born from a real CI failure
  * this replaced (the throwaway Postgres container never became ready
  * within the local-dev-tuned 30s timeout on a cold CI runner, which then
  * cascaded into every other integration test failing with a generic
@@ -25,13 +25,15 @@ export function ciTimeout(localMs: number, ciMs: number): number {
 }
 
 /** A single line, always printed (not gated on IS_CI) : cheap, and useful for local debugging too, but named for what it's *for*. */
-export function stepLog(_message: string): void {}
+export function stepLog(message: string): void {
+	console.log(`[integration] ${message}`);
+}
 
 let cachedOwnNetwork: string | null | undefined;
 
 /**
- * Real, CI-observed finding : this repo's own CI runner (self-hosted Gitea
- * Actions, `dind`-labeled) runs each job's steps *inside a container*
+ * Real, CI-observed finding, from this repo's self-hosted-Gitea-Actions era :
+ * that runner (`dind`-labeled) ran each job's steps *inside a container*
  * (`docker exec` into a per-job "runner" container), and a plain
  * `docker run` issued from inside that container — like
  * `startPostgresContainer` below — lands its new container as a *sibling*
@@ -47,7 +49,11 @@ let cachedOwnNetwork: string | null | undefined;
  * default `bridge` network) instead of relying on host-port publishing.
  * Returns `null` when not running in a container, or when running in one
  * but its own network couldn't be determined (falls back to the
- * host-port-publish behavior either way).
+ * host-port-publish behavior either way). GitHub-hosted runners execute
+ * steps directly on the VM, not in a container, so post-migration this
+ * detection simply finds no `/.dockerenv` and takes that host-port path ;
+ * it's kept because it's the correct behavior for any container-based
+ * runner and costs nothing when there isn't one.
  */
 export async function ownDockerNetwork(): Promise<string | null> {
 	if (cachedOwnNetwork !== undefined) {
@@ -90,16 +96,23 @@ export async function ownDockerNetwork(): Promise<string | null> {
 export async function dumpDockerDiagnostics(
 	containerName?: string,
 ): Promise<void> {
+	console.error("[integration] --- Docker diagnostics ---");
 	const ps = Bun.spawnSync(["docker", "ps", "-a"], {
 		stderr: "pipe",
 		stdout: "pipe",
 	});
+	console.error(new TextDecoder().decode(ps.stdout));
 	if (ps.stderr.length > 0) {
+		console.error(new TextDecoder().decode(ps.stderr));
 	}
 	if (containerName) {
-		const _logs = Bun.spawnSync(["docker", "logs", containerName], {
+		console.error(`[integration] --- docker logs ${containerName} ---`);
+		const logs = Bun.spawnSync(["docker", "logs", containerName], {
 			stderr: "pipe",
 			stdout: "pipe",
 		});
+		console.error(new TextDecoder().decode(logs.stdout));
+		console.error(new TextDecoder().decode(logs.stderr));
 	}
+	console.error("[integration] --- end diagnostics ---");
 }

@@ -42,11 +42,11 @@
 	let submittingPorts = $state(false);
 
 	let networkMode = $derived<"bridge" | "host">(
-		(portsValues.networkMode as "bridge" | "host") ?? "bridge",
+		(portsValues.networkMode as "bridge" | "host" | undefined) ?? "bridge",
 	);
 
 	let portProtocol = $derived<"tcp" | "udp" | "both">(
-		(portsValues.portProtocol as "tcp" | "udp" | "both") ?? "tcp",
+		(portsValues.portProtocol as "tcp" | "udp" | "both" | undefined) ?? "tcp",
 	);
 	const portProtocolOptions: [string, string][] = [
 		["tcp", "TCP"],

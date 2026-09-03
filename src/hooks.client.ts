@@ -15,6 +15,10 @@ function makeid(length: number) {
 export const handleError: HandleClientError = ({ error, event, message }) => {
 	const errorId = makeid(24);
 
+	// Client-side: Logger pulls in $lib/config, which is server-only (node:fs/node:os/Bun).
+	// biome-ignore lint/suspicious/noConsole: no logger available in the browser
+	console.error("An error occurred on the client side:", error, event, message);
+
 	if (dev) {
 		if (error instanceof Error) {
 			return {

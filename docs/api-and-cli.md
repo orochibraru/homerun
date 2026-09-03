@@ -43,7 +43,7 @@ release binary, and drops it at `/usr/local/bin/homerun` (Linux only, no
 Bun/build step needed):
 
 ```sh
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/cli/install.sh | bash
 ```
 
 ```sh

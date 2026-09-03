@@ -28,21 +28,21 @@ target "ci-base" {
 
 target "app-base" {
   target = "app"
-  tags       = ["orochibraru/homerun:latest", "orochibraru/homerun:${TAG}"]
+  tags       = ["docker.io/orochibraru/homerun:latest", "docker.io/orochibraru/homerun:${TAG}"]
   cache-from = ["type=gha,scope=app"]
   cache-to   = ["type=gha,mode=max,scope=app"]
 }
 
 target "agent-base" {
   target = "agent"
-  tags       = ["orochibraru/homerun-agent:latest", "orochibraru/homerun-agent:${TAG}"]
+  tags       = ["docker.io/orochibraru/homerun-agent:latest", "docker.io/orochibraru/homerun-agent:${TAG}"]
   cache-from = ["type=gha,scope=agent"]
   cache-to   = ["type=gha,mode=max,scope=agent"]
 }
 
 target "docs-base" {
   target = "docs"
-  tags       = ["orochibraru/homerun-docs:latest", "orochibraru/homerun-docs:${TAG}"]
+  tags       = ["docker.io/orochibraru/homerun-docs:latest", "docker.io/orochibraru/homerun-docs:${TAG}"]
   cache-from = ["type=gha,scope=docs"]
   cache-to   = ["type=gha,mode=max,scope=docs"]
 }

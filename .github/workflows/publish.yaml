@@ -21,6 +21,7 @@ jobs:
   code_quality:
     name: Code Quality
     uses: ./.github/workflows/code_quality.yaml
+    secrets: inherit
 
   version:
     name: Compute Release Version
@@ -47,10 +48,9 @@ jobs:
       - name: Dry-run release to compute the next version
         id: compute
         env:
-          GITEA_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
-          GITEA_URL: https://git.ombrage.space
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          output="$(bunx semantic-release --dry-run 2>&1)" || true
+          output="$(bun run semantic-release --dry-run 2>&1)" || true
           echo "$output"
           version="$(echo "$output" | grep -oE 'release version is [0-9]+\.[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -n1)"
           if [ -n "$version" ]; then
@@ -63,7 +63,7 @@ jobs:
             echo "version=" >> "$GITHUB_OUTPUT"
           fi
 
-  build:app:
+  build-app:
     name: Docker Build (App)
     uses: ./.github/workflows/docker.yaml
     needs:
@@ -72,13 +72,13 @@ jobs:
     with:
       image_tag: ${{ needs.version.outputs.tag }}
       image_name: orochibraru/homerun
-      registry_name: git.ombrage.space
+      registry_name: docker.io
       registry_username: orochibraru
       bake_target: app-ci
     secrets:
-      registry_password: ${{ secrets.PACKAGES_TOKEN }}
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-  build:agent:
+  build-agent:
     name: Docker Build (Agent)
     uses: ./.github/workflows/docker.yaml
     needs:
@@ -87,13 +87,13 @@ jobs:
     with:
       image_tag: ${{ needs.version.outputs.tag }}
       image_name: orochibraru/homerun-agent
-      registry_name: git.ombrage.space
+      registry_name: docker.io
       registry_username: orochibraru
       bake_target: agent-ci
     secrets:
-      registry_password: ${{ secrets.PACKAGES_TOKEN }}
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-  build:docs:
+  build-docs:
     name: Docker Build (Docs)
     uses: ./.github/workflows/docker.yaml
     needs:
@@ -102,11 +102,11 @@ jobs:
     with:
       image_tag: ${{ needs.version.outputs.tag }}
       image_name: orochibraru/homerun-docs
-      registry_name: git.ombrage.space
+      registry_name: docker.io
       registry_username: orochibraru
       bake_target: docs-ci
     secrets:
-      registry_password: ${{ secrets.PACKAGES_TOKEN }}
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
   binaries:
     name: Binaries
@@ -123,16 +123,25 @@ jobs:
     needs:
       - code_quality
       - version
-      - build:app
-      - build:agent
-      - build:docs
+      - build-app
+      - build-agent
+      - build-docs
       - binaries
     permissions:
       contents: write
+      issues: write
+      pull-requests: write
     steps:
+      # RELEASE_TOKEN (a fine-grained PAT scoped to just this repo, Contents +
+      # Issues + Pull requests: write) is required, not the default
+      # GITHUB_TOKEN: the `main` ruleset blocks direct pushes from anyone but
+      # a repo admin, and the default token's actor (github-actions[bot]) isn't
+      # on the bypass list. Used both for git's push auth here and as GH_TOKEN
+      # below for @semantic-release/github's API calls.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
@@ -154,7 +163,5 @@ jobs:
 
       - name: Release
         env:
-          GITEA_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
-          GITEA_URL: https://git.ombrage.space
-
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: bun run release

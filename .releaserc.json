@@ -51,7 +51,7 @@
 			}
 		],
 		[
-			"@saithodev/semantic-release-gitea",
+			"@semantic-release/github",
 			{
 				"assets": [
 					{

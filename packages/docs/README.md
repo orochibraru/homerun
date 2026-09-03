@@ -11,7 +11,7 @@ the root `package.json`/`bun install` the same way `packages/agent`/
 
 `docs/README.md` itself used to say "no generated site yet" — this is that site.
 It's a companion to, not a replacement for, `docs/`: those files stay the source
-of truth (plain Markdown, readable straight from the repo or a Gitea/GitHub file
+of truth (plain Markdown, readable straight from the repo or GitHub's own file
 browser with zero setup); this site renders the exact same files through
 `src/lib/docs-content.ts`'s `import.meta.glob` at build time, so there's never a
 second, separately-maintained copy to let drift.
@@ -53,7 +53,7 @@ file's own comment for the full detail:
   - Rewrites relative links: another guide (`slug.md`, optionally `#hash`)
     becomes `/docs/slug`; anything else relative (`../TODO.md`,
     `../compose.prod.yaml`, `installer/README.md`, …) becomes a link to that
-    file in the repo's own Gitea browser instead, since this site doesn't
+    file in the repo's own GitHub browser instead, since this site doesn't
     publish every file in the repo, only the guides.
 - `docs/README.md`'s own numbered guide list is the reading order mirrored into
   `ORDER` (and the sidebar nav) — not alphabetical.

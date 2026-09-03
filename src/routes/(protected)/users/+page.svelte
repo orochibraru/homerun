@@ -40,7 +40,7 @@
 					showAddForm = false;
 				} else if (result.type === "failure") {
 					toast.error(
-						(result.data as { error?: string })?.error ??
+						(result.data as { error?: string } | undefined)?.error ??
 							"Something went wrong.",
 					);
 				}

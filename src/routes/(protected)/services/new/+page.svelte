@@ -60,10 +60,10 @@
 	let currentStep = $state(0);
 
 	let name = $derived(
-		(form?.values?.name as string) ?? data.template?.name ?? "",
+		(form?.values?.name as string | undefined) ?? data.template?.name ?? "",
 	);
 	let slug = $derived(
-		(form?.values?.slug as string) ??
+		(form?.values?.slug as string | undefined) ??
 			(data.template ? slugify(data.template.name) : ""),
 	);
 	let slugTouched = $state(false);
@@ -71,7 +71,7 @@
 	let showRegistry = $derived(!!values?.registryUsername);
 
 	let buildSource = $derived<"image" | "git">(
-		(values?.buildSource as "image" | "git") ?? "image",
+		(values?.buildSource as "image" | "git" | undefined) ?? "image",
 	);
 	let image = $derived(values?.image ?? data.template?.image ?? "");
 	let tag = $derived(values?.tag ?? data.template?.tag ?? "latest");
@@ -333,7 +333,7 @@
         submitting = false;
         if (result.type === "failure") {
           const first: string = result.data?.errors
-            ? ((Object.values(result.data.errors).flat()[0] as string) ?? "")
+            ? ((Object.values(result.data.errors).flat()[0] as string | undefined) ?? "")
             : "";
           toast.error(first ?? "Check the form for errors.");
           // The failing field could be on any step : jump back to the

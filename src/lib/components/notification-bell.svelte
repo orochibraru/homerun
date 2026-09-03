@@ -34,7 +34,7 @@
 	function onItemClick(n: NotificationItem) {
 		open = false;
 		if (!n.readAt) {
-			markRead(n.id);
+			void markRead(n.id);
 		}
 	}
 </script>

@@ -11,11 +11,11 @@ checked against the actual API shape, not a hand-maintained guess.
 ## Installing it
 
 ```bash
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/cli/install.sh | bash
 ```
 
 `install.sh` (Linux only, see the script's own comment for why) detects your
-arch, downloads the matching `homerun-cli-<arch>` release binary (a Gitea
+arch, downloads the matching `homerun-cli-<arch>` release binary (a GitHub
 release asset on this repo), and installs it as `/usr/local/bin/homerun`,
 `sudo`'d automatically if that directory isn't writable by your user. From
 there:
@@ -83,7 +83,7 @@ this first pass, straightforward to add the same way (`commands.ts` already has
 the `unwrap()` helper every command uses).
 
 `homerun update` self-updates the installed binary in place: it checks the
-latest Gitea release, downloads the `homerun-cli-<arch>` asset for your
+latest GitHub release, downloads the `homerun-cli-<arch>` asset for your
 architecture (same one `install.sh` installs), and replaces the running binary
 (`sudo`'d automatically if the install directory isn't writable by your user,
 same as `install.sh`). Linux-only, same as installation itself, and only works
@@ -129,6 +129,6 @@ running instance before relying on it.
 `homerun update`: verified the compiled-vs-source detection (`process.execPath`
 basename) and the version read (embedded `package.json` import, confirmed the
 compiled binary reports the correct root `package.json` version) locally. **Not
-verified**: an actual download-and-replace against a real Gitea release, that
+verified**: an actual download-and-replace against a real GitHub release, that
 needs a published release tag to point at and wasn't attempted from this
 session.

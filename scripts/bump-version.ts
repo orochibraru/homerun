@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+import process from "node:process";
+
 /**
  * Called by semantic-release's @semantic-release/exec `prepareCmd`
  * (`.releaserc.json`) with the next version as argv[0], e.g.
@@ -16,8 +18,6 @@
  * posture (the cron matcher, the SigV4 client) better than fighting a tool
  * built for a different use case.
  */
-
-import process from "node:process";
 
 const nextVersion = process.argv[2];
 if (!nextVersion) {

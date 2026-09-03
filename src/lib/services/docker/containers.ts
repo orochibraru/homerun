@@ -26,6 +26,14 @@ export interface PullProgressEvent {
 	status: string;
 }
 
+export interface PullImageParams {
+	image: string;
+	tag: string;
+	auth?: RegistryAuth;
+	onProgress?: (line: string) => void;
+	remote?: RemoteHostConnection | null;
+}
+
 export interface VolumeMountParams {
 	containerPath: string;
 	readOnly: boolean;
@@ -105,6 +113,7 @@ interface RequiresNetworkMixin {
  * the merge chain : createAndStartContainer calls
  * `this.connectToProjectNetwork`.
  */
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerContainerMixin<
 	TBase extends Constructor<BaseDockerService & RequiresNetworkMixin>,
 >(Base: TBase) {
@@ -165,12 +174,9 @@ export function DockerContainerMixin<
 
 		/** Pulls `image:tag`, optionally authenticating against a private registry. */
 		async pullImage(
-			image: string,
-			tag: string,
-			auth?: RegistryAuth,
-			onProgress?: (line: string) => void,
-			remote?: RemoteHostConnection | null,
+			params: PullImageParams,
 		): Promise<{ digest: string | null }> {
+			const { image, tag, auth, onProgress, remote } = params;
 			const docker = this.getDocker(remote);
 			const ref = `${image}:${tag}`;
 
@@ -241,7 +247,8 @@ export function DockerContainerMixin<
 				docker.modem.followProgress(
 					stream,
 					(err: Error | null) => (err ? reject(err) : resolvePromise()),
-					() => {},
+					// Per-layer push progress isn't surfaced anywhere : only completion matters here.
+					() => undefined,
 				);
 			});
 			logger.info(`Pushed image: ${repo}:${tag}`);
@@ -256,43 +263,54 @@ export function DockerContainerMixin<
 		 * other services can reach it at `http://<slug>:<containerPort>`
 		 * regardless of the container's own (randomized) name.
 		 */
-		async createAndStartContainer(
+		/**
+		 * Removes any previous container for this service (a redeploy), found
+		 * by its service-id label rather than by name (see #containerName).
+		 */
+		async #removePreviousContainer(
 			params: CreateContainerParams,
 			onProgress?: (line: string) => void,
-		): Promise<{ containerId: string }> {
-			const docker = this.getDocker(params.remote);
-			const name = this.#containerName(params.slug, params.projectSlug);
-
-			// Replace any previous container for this service (redeploy),
-			// found by its service-id label rather than by name (see
-			// #containerName above).
+		): Promise<void> {
 			const existingInfo = await this.#findServiceContainer(
 				params.serviceId,
 				params.remote,
 			);
-			if (existingInfo) {
-				onProgress?.("Replacing previous container...");
-				try {
-					const existing = docker.getContainer(existingInfo.Id);
-					if (existingInfo.State === "running") {
-						await existing.stop();
-					}
-					await existing.remove({ force: true });
-				} catch {
-					// Already gone / couldn't be removed cleanly : proceed anyway,
-					// the random name suffix means the new container won't
-					// collide with it.
-				}
+			if (!existingInfo) {
+				return;
 			}
 
-			onProgress?.("Creating container...");
+			onProgress?.("Replacing previous container...");
+			try {
+				const existing = this.getDocker(params.remote).getContainer(
+					existingInfo.Id,
+				);
+				if (existingInfo.State === "running") {
+					await existing.stop();
+				}
+				await existing.remove({ force: true });
+			} catch {
+				// Already gone / couldn't be removed cleanly : proceed anyway,
+				// the random name suffix means the new container won't
+				// collide with it.
+			}
+		}
 
-			// "no" is our restart-policy value (matches docker-compose
-			// convention for the dropdown); the Docker Engine API itself wants
-			// "" for that.
-			const restartPolicyName =
-				params.restartPolicy === "no" ? "" : params.restartPolicy;
+		/**
+		 * Host mode shares the host's network namespace directly : Docker
+		 * doesn't allow combining it with any other network attachment (see
+		 * CreateContainerParams.networkMode), so it wins over everything else.
+		 * Otherwise the shared network only exists on the local host, so a
+		 * remote daemon gets Docker's own default bridge instead (no Traefik
+		 * routing, no internal service-discovery alias).
+		 */
+		#networkModeFor(params: CreateContainerParams): string | undefined {
+			if (params.networkMode === "host") {
+				return "host";
+			}
+			return params.remote ? undefined : config.docker.networkName;
+		}
 
+		#hostConfigFor(params: CreateContainerParams) {
 			// Docker's Binds syntax covers both a host bind-mount path and a
 			// Docker-managed named volume with the same "source:target[:ro]"
 			// form : it tells them apart by whether source looks like a path.
@@ -303,43 +321,39 @@ export function DockerContainerMixin<
 				(v) => `${v.source}:${v.containerPath}${v.readOnly ? ":ro" : ""}`,
 			);
 
-			const isRemote = !!params.remote;
+			return {
+				Binds: binds.length > 0 ? binds : undefined,
+				Memory: params.memoryLimitMb
+					? params.memoryLimitMb * 1024 * 1024
+					: undefined,
+				NanoCpus: params.cpuLimit
+					? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
+					: undefined,
+				NetworkMode: this.#networkModeFor(params),
+				// "no" is our restart-policy value (matches docker-compose
+				// convention for the dropdown); the Docker Engine API itself
+				// wants "" for that.
+				RestartPolicy: {
+					Name: params.restartPolicy === "no" ? "" : params.restartPolicy,
+				},
+			};
+		}
+
+		#createContainerOptions(params: CreateContainerParams, name: string) {
 			const isHostNetwork = params.networkMode === "host";
 			const protocols =
 				params.portProtocol === "both"
 					? (["tcp", "udp"] as const)
 					: [params.portProtocol ?? "tcp"];
 
-			const container = await docker.createContainer({
+			return {
 				Env: Object.entries(params.envVars).map(
 					([key, value]) => `${key}=${value}`,
 				),
 				ExposedPorts: Object.fromEntries(
 					protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
 				),
-				HostConfig: {
-					Binds: binds.length > 0 ? binds : undefined,
-					Memory: params.memoryLimitMb
-						? params.memoryLimitMb * 1024 * 1024
-						: undefined,
-					NanoCpus: params.cpuLimit
-						? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
-						: undefined,
-					// Host mode shares the host's network namespace directly :
-					// Docker doesn't allow combining it with any other network
-					// attachment (see CreateContainerParams.networkMode), so it
-					// wins over everything below regardless of remote/local.
-					// Otherwise: the shared network only exists on the local
-					// host, so a remote daemon gets Docker's own default bridge
-					// instead (no Traefik routing, no internal service-discovery
-					// alias; see CreateContainerParams.remote).
-					NetworkMode: isHostNetwork
-						? "host"
-						: isRemote
-							? undefined
-							: config.docker.networkName,
-					RestartPolicy: { Name: restartPolicyName },
-				},
+				HostConfig: this.#hostConfigFor(params),
 				Image: `${params.image}:${params.tag}`,
 				// Host-mode containers never get Traefik labels regardless of
 				// dnsResolvable : there's no container-specific IP/network for
@@ -358,9 +372,9 @@ export function DockerContainerMixin<
 				// other services can reach it at a stable hostname even though
 				// the container's own name carries a random per-deploy suffix.
 				// Only meaningful on the local host in bridge mode : see
-				// NetworkMode above.
+				// #networkModeFor.
 				NetworkingConfig:
-					isHostNetwork || isRemote
+					isHostNetwork || params.remote
 						? undefined
 						: {
 								EndpointsConfig: {
@@ -372,57 +386,86 @@ export function DockerContainerMixin<
 				// keeps the v1 log viewer simple (no demux of Docker's
 				// multiplexed stdout/stderr frames needed).
 				Tty: true,
-			});
+			};
+		}
 
-			onProgress?.("Starting container...");
-			await container.start();
-			logger.info(
-				`Container created and started: ${name} (${container.id})${
-					isRemote ? ` on remote host=${params.remote?.id}` : ""
-				}`,
-			);
-
-			if (params.projectId && !isRemote && !isHostNetwork) {
-				try {
-					await this.connectToProjectNetwork(
-						container.id,
-						params.projectId,
-						params.slug,
-					);
-					logger.info(
-						`Joined project network: service=${params.serviceId} project=${params.projectId}`,
-					);
-				} catch (err) {
-					// The container is already up on the shared network and
-					// reachable via Traefik : a failed project-network join
-					// shouldn't fail the whole deploy, just log it as degraded
-					// connectivity.
-					logger.warn(
-						`Could not join project network: service=${params.serviceId} project=${params.projectId}`,
-						err,
-					);
-				}
+		/** Best-effort project-network join : a failure is degraded connectivity, not a failed deploy. */
+		async #joinProjectNetwork(
+			containerId: string,
+			params: CreateContainerParams,
+		): Promise<void> {
+			if (!params.projectId || params.remote || params.networkMode === "host") {
+				return;
 			}
+			try {
+				await this.connectToProjectNetwork(
+					containerId,
+					params.projectId,
+					params.slug,
+				);
+				logger.info(
+					`Joined project network: service=${params.serviceId} project=${params.projectId}`,
+				);
+			} catch (err) {
+				logger.warn(
+					`Could not join project network: service=${params.serviceId} project=${params.projectId}`,
+					err,
+				);
+			}
+		}
 
-			if (isHostNetwork) {
+		/** Tells the operator where the new container is actually reachable, which differs per network mode. */
+		#reportReachability(
+			params: CreateContainerParams,
+			onProgress?: (line: string) => void,
+		): void {
+			if (params.networkMode === "host") {
 				logger.info(
 					`Container on host network: service=${params.serviceId} port=${params.containerPort}`,
 				);
 				onProgress?.(
 					`Running on the host network : reachable directly on this machine's own port ${params.containerPort}, not through Traefik.`,
 				);
-			} else if (isRemote) {
+				return;
+			}
+			if (params.remote) {
 				onProgress?.(
 					"Deployed to remote host : not on the shared network, no Traefik routing (see remote host docs).",
 				);
-			} else {
-				logger.info(
-					`Reachable internally at ${params.slug}:${params.containerPort} (service=${params.serviceId})`,
-				);
-				onProgress?.(
-					`Reachable at ${params.slug}:${params.containerPort} from other services.`,
-				);
+				return;
 			}
+			logger.info(
+				`Reachable internally at ${params.slug}:${params.containerPort} (service=${params.serviceId})`,
+			);
+			onProgress?.(
+				`Reachable at ${params.slug}:${params.containerPort} from other services.`,
+			);
+		}
+
+		async createAndStartContainer(
+			params: CreateContainerParams,
+			onProgress?: (line: string) => void,
+		): Promise<{ containerId: string }> {
+			const docker = this.getDocker(params.remote);
+			const name = this.#containerName(params.slug, params.projectSlug);
+
+			await this.#removePreviousContainer(params, onProgress);
+
+			onProgress?.("Creating container...");
+			const container = await docker.createContainer(
+				this.#createContainerOptions(params, name),
+			);
+
+			onProgress?.("Starting container...");
+			await container.start();
+			logger.info(
+				`Container created and started: ${name} (${container.id})${
+					params.remote ? ` on remote host=${params.remote.id}` : ""
+				}`,
+			);
+
+			await this.#joinProjectNetwork(container.id, params);
+			this.#reportReachability(params, onProgress);
 
 			return { containerId: container.id };
 		}
