@@ -12,8 +12,9 @@
  *
  * Building the app is a separate, explicit operation, not something this
  * setup does for you: run `bun run build:app` yourself before this suite
- * (see `assertAppIsBuilt` below, which just checks `build/index.js` exists
- * and fails fast with that instruction if not). This used to run
+ * (see `assertAppIsBuilt` in ./server.ts, which just checks the compiled
+ * `build/server` exists and fails fast with that instruction if not, and is
+ * shared with tests/e2e's own bootstrap). This used to run
  * `bun run build:app` inline here on every invocation, which meant every
  * local re-run of this suite paid a full rebuild even when nothing under
  * `src/` had changed, and any build failure surfaced as a confusing
@@ -46,8 +47,6 @@
  * instead of a bare timeout message.
  */
 import { afterAll, beforeAll } from "bun:test";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import process from "node:process";
 import { config as agentConfig } from "../../../packages/agent/config";
 import { bootstrapAdmin } from "./bootstrap";
@@ -62,7 +61,7 @@ import {
 	registerAgentRemoteHost,
 	registerDockerRemoteHost,
 } from "./remote-hosts";
-import { spawnApp } from "./server";
+import { assertAppIsBuilt, spawnApp } from "./server";
 
 export interface IntegrationContext {
 	agentRemoteHostId: string;
@@ -86,23 +85,6 @@ const globalForIntegration = globalThis as unknown as {
  */
 function wantsIntegrationTests(): boolean {
 	return process.env.HOMERUN_SKIP_INTEGRATION_SETUP !== "1";
-}
-
-/**
- * Building the app is a separate, explicit operation now (see this file's
- * own top comment for why), not something this setup does inline any more :
- * this just checks the build output that `spawnApp` (server.ts) actually
- * runs (`bun run ./build/index.js`) exists yet, and fails fast with a clear
- * instruction rather than letting `spawnApp` time out with a confusing
- * "app never became healthy" message when it doesn't.
- */
-function assertAppIsBuilt(): void {
-	const entry = join(process.cwd(), "build/index.js");
-	if (!existsSync(entry)) {
-		throw new Error(
-			`${entry} doesn't exist : run \`bun run build:app\` first, this suite no longer builds the app for you.`,
-		);
-	}
 }
 
 if (wantsIntegrationTests()) {

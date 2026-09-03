@@ -23,7 +23,7 @@ dependency needed), Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
 ```bash
 bun run dev              # vite dev
 bun run build            # vite build
-bun run start             # bun run ./build/index.js (serve the built app)
+bun run start             # ./build/server (the binary @orochibraru/svelte-smol compiles, serve the built app)
 bun run check            # svelte-kit sync && svelte-check --fail-on-warnings, the real gate, see note below
 bun run lint             # biome check ., rustywind is a listed dependency but not currently wired into any script (real drift exists, see note below if you're about to fix that)
 bun run lint:fix         # biome check . --write --unsafe

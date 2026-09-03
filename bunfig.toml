@@ -11,5 +11,9 @@ preload = [
 # Global test timeout only (whole suite), individal test timeout should be set via cli with --timeout
 timeout = 120_000
 
+# Playwright specs (tests/e2e/**) match bun test's own *.spec.ts discovery but
+# must only ever run under `playwright test` (bun run test:e2e).
+pathIgnorePatterns = ["**/tests/e2e/**"]
+
 coverage = true
 coveragePathIgnorePatterns = ["tests/**", "packages/cli/generated/**"]

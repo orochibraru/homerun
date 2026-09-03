@@ -1,20 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import process from "node:process";
 import { runMigrations } from "../../integration/support/migrate";
 import { startPostgresContainer } from "../../integration/support/postgres-container";
-import { spawnApp } from "../../integration/support/server";
+import { assertAppIsBuilt, spawnApp } from "../../integration/support/server";
 import { E2E_BASE_URL, E2E_PORT } from "./config";
-
-function assertAppIsBuilt(): void {
-	const entry = join(process.cwd(), "build/index.js");
-	if (!existsSync(entry)) {
-		throw new Error(
-			`${entry} doesn't exist : run \`bun run build:app\` first, this suite no longer builds the app for you.`,
-		);
-	}
-}
 
 async function main(): Promise<void> {
 	assertAppIsBuilt();

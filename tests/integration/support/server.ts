@@ -1,5 +1,25 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import process from "node:process";
 import { ciTimeout } from "./ci";
+
+/** The built app's entry point : `@orochibraru/svelte-smol` compiles a single `build/server` binary, the same one `bun run start` runs. */
+export const APP_ENTRY = "./build/server";
+
+/**
+ * Fails fast with a clear instruction when the app hasn't been built yet,
+ * rather than letting `spawnApp` below time out with a confusing "app never
+ * became healthy" message. Building is a separate, explicit operation
+ * (`bun run build:app`), neither suite does it for you.
+ */
+export function assertAppIsBuilt(): void {
+	const entry = join(process.cwd(), APP_ENTRY);
+	if (!existsSync(entry)) {
+		throw new Error(
+			`${entry} doesn't exist : run \`bun run build:app\` first, this suite no longer builds the app for you.`,
+		);
+	}
+}
 
 export interface SpawnedApp {
 	proc: ReturnType<typeof Bun.spawn>;
@@ -15,7 +35,7 @@ export interface SpawnAppOptions {
 }
 
 export async function spawnApp(options: SpawnAppOptions): Promise<SpawnedApp> {
-	const proc = Bun.spawn(["bun", "run", "./build/index.js"], {
+	const proc = Bun.spawn([APP_ENTRY], {
 		cwd: process.cwd(),
 		env: {
 			...process.env,

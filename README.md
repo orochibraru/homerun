@@ -13,42 +13,6 @@ babysit.
 > its shape: see [`docs/faq-and-limitations.md`](docs/faq-and-limitations.md)
 > for what's solid and what isn't yet.
 
-## Quick start
-
-Two ways to run it, both entirely from prebuilt release binaries and Docker
-images, no Bun, no `git`, no source checkout needed for either.
-
-**Fresh Linux server, one command.** Installs Docker (rootless), the `homerun`,
-and brings up Traefik + Postgres + the app itself, all pulled from published
-images:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
-  | sudo bash -s -- --mode=full
-```
-
-Prefer to see every command before it runs? Add `--dry-run`. Full flag reference
-and what the installer actually does:
-[`installer/README.md`](installer/README.md).
-
-**Already running Docker your own way?** Grab
-[`compose.prod.yaml`](compose.prod.yaml) instead, same three services, no
-rootless setup, no installer:
-
-```sh
-curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/compose.prod.yaml
-curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/.env.example
-mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum
-docker network create homerun
-docker compose -f compose.prod.yaml up -d
-```
-
-Open `http://localhost:3000`, create the first account (it becomes admin
-automatically), and the onboarding wizard walks through base domain / Docker /
-Traefik / email setup. Full walkthrough, including every env var:
-[`docs/getting-started.md`](docs/getting-started.md). Want to run this from
-source to develop on it? [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
 ## Why Homerun
 
 Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
@@ -99,23 +63,18 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   login to reach a deployed service; every container is labeled
   `homerun.managed=true` so this app never touches anything it didn't create
 
-See [`docs/`](docs/) for the full breakdown of every feature above, or
-[`CLAUDE.md`](CLAUDE.md) for architecture-level detail if you're contributing.
-
 ## Documentation
 
-Start at [`docs/README.md`](docs/README.md) for guides on installing,
-configuring, deploying services, remote hosts, backups, the API/CLI, and known
-limitations.
+See [the website](https://homerun.orochibraru.com)
 
 ## Sub-projects
 
 Three standalone Bun/TypeScript tools ship alongside the main app, each its own
 `package.json`/binary:
 
-- [`agent/`](agent/README.md): a small token-authenticated HTTP server for
-  driving a _remote_ host's Docker daemon
-- [`installer/`](installer/README.md): the one-liner installer used above
-  (Docker + rootless setup + the agent or full stack)
-- [`cli/`](cli/README.md): a typed CLI (`homerun services deploy <id>`, etc.)
-  against the REST API
+- [`packages/agent/`](packages/agent/README.md): a small token-authenticated
+  HTTP server for driving a _remote_ host's Docker daemon
+- [`packages/installer/`](packages/installer/README.md): the one-liner installer
+  used above (Docker + rootless setup + the agent or full stack)
+- [`packages/cli/`](packages/cli/README.md): a typed CLI
+  (`homerun services deploy <id>`, etc.) against the REST API
