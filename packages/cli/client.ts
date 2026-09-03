@@ -1,3 +1,4 @@
+import process from "node:process";
 import createClient from "openapi-fetch";
 import { ConfigStore } from "./config";
 import type { paths } from "./generated/openapi-types";
@@ -24,13 +25,13 @@ class CliClientFactory {
 		let baseUrl = overrides.baseUrl || process.env.HOMERUN_BASE_URL || "";
 		let apiKey = overrides.apiKey || process.env.HOMERUN_API_KEY || "";
 
-		if (!baseUrl || !apiKey) {
+		if (!(baseUrl && apiKey)) {
 			const stored = ConfigStore.readStoredConfig();
 			baseUrl = baseUrl || stored?.baseUrl || "";
 			apiKey = apiKey || stored?.apiKey || "";
 		}
 
-		if (!baseUrl || !apiKey) {
+		if (!(baseUrl && apiKey)) {
 			return null;
 		}
 		return { apiKey, baseUrl: baseUrl.replace(/\/$/, "") };

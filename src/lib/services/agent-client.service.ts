@@ -231,7 +231,7 @@ class AgentClientServiceClass {
 		const response = await fetch(url, {
 			headers: { authorization: `Bearer ${connection.token}` },
 		});
-		if (!response.ok || !response.body) {
+		if (!(response.ok && response.body)) {
 			throw new Error(
 				`Agent returned ${response.status} while streaming logs.`,
 			);
@@ -256,7 +256,7 @@ class AgentClientServiceClass {
 				},
 				method,
 				signal: AbortSignal.timeout(
-					body !== undefined ? 15 * 60 * 1000 : 15000,
+					body !== undefined ? 15 * 60 * 1000 : 15_000,
 				),
 			});
 		} catch (error) {

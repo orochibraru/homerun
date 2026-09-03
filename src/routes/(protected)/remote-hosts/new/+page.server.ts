@@ -28,7 +28,7 @@ export const actions = {
 			const agentToken =
 				(formData.get("agentToken") as string | null)?.trim() ?? "";
 
-			if (!agentUrl || !agentToken) {
+			if (!(agentUrl && agentToken)) {
 				return fail(400, {
 					error: "Agent URL and token are required.",
 				});

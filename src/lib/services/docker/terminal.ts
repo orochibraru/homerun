@@ -66,7 +66,7 @@ export function DockerTerminalMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
 	return class DockerTerminalService extends Base {
-		#sessions = new Map<string, TerminalSession>();
+		readonly #sessions = new Map<string, TerminalSession>();
 
 		// biome-ignore lint/suspicious/noExplicitAny: TS's mixin pattern requires this exact constructor shape
 		constructor(...args: any[]) {

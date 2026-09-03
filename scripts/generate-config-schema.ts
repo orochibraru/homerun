@@ -1,5 +1,5 @@
-import { yamlConfigSchema } from "../src/lib/config";
 import { z } from "zod";
+import { yamlConfigSchema } from "../src/lib/config";
 
 function sortKeysDeep(value: unknown): unknown {
 	if (Array.isArray(value)) {

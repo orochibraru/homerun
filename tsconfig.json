@@ -12,20 +12,6 @@
 		"strict": true,
 		"types": ["bun-types"]
 	},
-	// The generated .svelte-kit/tsconfig.json unconditionally `include`s
-	// "../tests/**/*.ts" (SvelteKit always sweeps a conventional tests/
-	// directory in, regardless of whether it's actually used for Svelte
-	// component tests). This repo's tests/ holds bun:test suites for
-	// agent/installer/cli (see tests/README.md), each already type-checked
-	// under its own package's tsconfig.json (bun run check:agent/cli/
-	// installer) with bun-types, not this app's svelte-check/DOM-flavored
-	// one : letting svelte-check also sweep them in was a real, confirmed
-	// regression (mismatched overload errors from bun:test's mock() under
-	// svelte-check's TS resolution), breaking the `bun run check` hard gate.
-	// An `exclude` here (rather than trimming `include`) replaces, rather
-	// than merges with, the base config's own `exclude` (per the `extends`
-	// docs linked below), so its other entries (node_modules, the
-	// service-worker special-case) are repeated here too, not just dropped.
 	"exclude": [
 		"node_modules/**",
 		"src/service-worker.js",
@@ -37,9 +23,4 @@
 		"tests"
 	],
 	"extends": "./.svelte-kit/tsconfig.json"
-	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
-	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
-	//
-	// To make changes to top-level options such as include and exclude, we recommend extending
-	// the generated config; see https://svelte.dev/docs/kit/configuration#typescript
 }

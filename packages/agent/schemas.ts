@@ -55,7 +55,7 @@ export type DeployInput = z.infer<typeof deployInputSchema>;
  * there's nothing to pull back in. `push`, when present, publishes the
  * built image to a registry afterward (a build-cache-registry in the main
  * app's terms) : required whenever this build's result has to reach a
- * *different* daemon than the one that built it (a different deploy
+ *different* daemon than the one that built it (a different deploy
  * target), since two daemons never share an image store; omitted entirely
  * when the build and deploy targets are this same agent, the deploy step
  * just references the local tag directly (see `deployInputSchema`'s

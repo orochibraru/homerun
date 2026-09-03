@@ -13,12 +13,12 @@ const execFileAsync = promisify(execFile);
 
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pushImage. */
 interface RequiresContainerMixin {
-	pushImage(
+	pushImage: (
 		localRef: string,
 		targetRef: string,
 		auth?: RegistryAuth,
 		remote?: RemoteHostConnection | null,
-	): Promise<void>;
+	) => Promise<void>;
 }
 
 export interface BuildCacheRegistryConfig {

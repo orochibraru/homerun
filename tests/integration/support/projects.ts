@@ -29,9 +29,9 @@ export async function deleteProject(
 
 /** Mirrors ServiceCleanup's shape (support/cleanup.ts) for the one other resource type this suite creates that leaves a real Docker artifact behind. */
 export class ProjectCleanup {
-	#origin: string;
-	#apiKey: string;
-	#ids = new Set<string>();
+	readonly #origin: string;
+	readonly #apiKey: string;
+	readonly #ids = new Set<string>();
 
 	constructor(origin: string, apiKey: string) {
 		this.#origin = origin;

@@ -4,6 +4,6 @@
 // bumps it, tags are `v<version>`, see .releaserc.json's tagFormat) and
 // scripts/build-packages.ts bundles this in at compile time for the
 // standalone binary, no runtime file read needed.
-import pkg from "../../package.json";
+import pkg from "../../package.json" with { type: "json" };
 
 export const CLI_VERSION: string = pkg.version;

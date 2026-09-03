@@ -17,26 +17,28 @@
  * built for a different use case.
  */
 
+import process from "node:process";
+
 const nextVersion = process.argv[2];
 if (!nextVersion) {
-  console.error("Usage: bun scripts/bump-version.ts <version>");
-  process.exit(1);
+	console.error("Usage: bun scripts/bump-version.ts <version>");
+	process.exit(1);
 }
 
 const packageJsonPaths = [
-  "package.json",
-  "packages/agent/package.json",
-  "packages/installer/package.json",
-  "packages/cli/package.json",
+	"package.json",
+	"packages/agent/package.json",
+	"packages/installer/package.json",
+	"packages/cli/package.json",
 ];
 
 for (const path of packageJsonPaths) {
-  const file = Bun.file(path);
-  if (!(await file.exists())) {
-    continue;
-  }
-  const pkg = await file.json();
-  pkg.version = nextVersion;
-  await Bun.write(path, `${JSON.stringify(pkg, null, "\t")}\n`);
-  console.log(`Bumped ${path} to ${nextVersion}`);
+	const file = Bun.file(path);
+	if (!(await file.exists())) {
+		continue;
+	}
+	const pkg = await file.json();
+	pkg.version = nextVersion;
+	await Bun.write(path, `${JSON.stringify(pkg, null, "\t")}\n`);
+	console.log(`Bumped ${path} to ${nextVersion}`);
 }

@@ -9,8 +9,8 @@ import type { ApiClient } from "./client";
  * homerun.managed=true".
  */
 export class ServiceCleanup {
-	#client: ApiClient;
-	#ids = new Set<string>();
+	readonly #client: ApiClient;
+	readonly #ids = new Set<string>();
 
 	constructor(client: ApiClient) {
 		this.#client = client;

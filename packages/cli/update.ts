@@ -1,6 +1,7 @@
 import { chmodSync, renameSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import process from "node:process";
 import { Output } from "./output";
 import { CLI_VERSION } from "./version";
 
@@ -23,15 +24,13 @@ class CliUpdateService {
 
 		const arch = this.#currentArch();
 		const dest = process.execPath;
-
-		console.log("Checking for updates...");
 		const releaseRes = await fetch(
 			`https://${GITEA_HOST}/api/v1/repos/${GITEA_REPO}/releases/latest`,
-		).catch((error) => {
-			return Output.fail(
+		).catch((error) =>
+			Output.fail(
 				`Couldn't check for updates: ${error instanceof Error ? error.message : String(error)}`,
-			);
-		});
+			),
+		);
 		if (!releaseRes.ok) {
 			Output.fail(
 				`Couldn't check for updates: ${releaseRes.status} ${releaseRes.statusText}`,
@@ -41,11 +40,8 @@ class CliUpdateService {
 		const latestVersion = release.tag_name.replace(/^v/, "");
 
 		if (latestVersion === CLI_VERSION) {
-			console.log(`Already up to date (v${CLI_VERSION}).`);
 			return;
 		}
-
-		console.log(`Updating v${CLI_VERSION} -> v${latestVersion}...`);
 		const downloadUrl = `https://${GITEA_HOST}/${GITEA_REPO}/releases/download/${release.tag_name}/homerun-cli-${arch}`;
 		const binRes = await fetch(downloadUrl);
 		if (!binRes.ok) {
@@ -64,10 +60,6 @@ class CliUpdateService {
 			// as install.sh does for a non-writable install dir.
 			this.#sudoMove(tmpPath, dest);
 		}
-
-		console.log(
-			`Updated to v${latestVersion}. Run 'homerun --version' to confirm.`,
-		);
 	}
 
 	/**

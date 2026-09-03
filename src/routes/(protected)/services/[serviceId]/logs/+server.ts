@@ -11,7 +11,7 @@ export const GET = async ({ params, locals }) => {
 	if (!svc) {
 		return new Response("Not found", { status: 404 });
 	}
-	if (!svc.containerId && !svc.swarmServiceId) {
+	if (!(svc.containerId || svc.swarmServiceId)) {
 		return new Response("This service hasn't been deployed yet.", {
 			status: 400,
 		});

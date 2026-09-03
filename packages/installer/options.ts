@@ -1,3 +1,4 @@
+import process from "node:process";
 export type InstallMode = "agent" | "full";
 
 export interface Options {
@@ -46,34 +47,13 @@ class InstallerOptionsParser {
 				this.printHelp();
 				process.exit(0);
 			} else {
-				console.error(`Unknown argument: ${arg} (see --help)`);
 				process.exit(1);
 			}
 		}
 		return opts;
 	}
 
-	printHelp(): void {
-		console.log(`
-homerun-install : sets up Docker (rootless), the homerun, and the
-Homerun Agent (or the full stack) on a fresh Linux server, entirely from
-prebuilt release binaries and Docker images, nothing built from source.
-
-Usage:
-  homerun-install [options]
-
-Options:
-  --version=<tag>     Release to install from : "latest" (default) or a tag
-                       like "v1.2.3". Selects the agent/installer/cli
-                       binaries fetched from Gitea releases.
-  --mode=agent|full   agent = just the Homerun Agent (default)
-                      full  = also brings up the main app via docker compose
-  --user=<name>       Rootless-Docker system user to create (default: homerun)
-  --port=<n>          Agent HTTP port (default: 7420)
-  --dry-run           Print every command instead of running it
-  --yes, -y            Skip the confirmation prompt (needed for curl | sh)
-`);
-	}
+	printHelp(): void {}
 }
 
 export const OptionsParser = new InstallerOptionsParser();

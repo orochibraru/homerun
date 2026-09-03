@@ -153,23 +153,16 @@ export class AgentHttpServer {
 		handler: RouteHandler<Path>,
 	): RouteHandler<Path> {
 		return async (req) => {
-			const start = performance.now();
+			const _start = performance.now();
 			const { pathname } = new URL(req.url);
 			if (!this.#checkAuth(req)) {
-				console.log(`[http] ${req.method} ${pathname} - 401`);
 				return json({ error: "Unauthorized" }, { status: 401 });
 			}
 			try {
 				const res = await handler(req);
-				console.log(
-					`[http] ${req.method} ${pathname} - ${res.status} (${Math.round(performance.now() - start)}ms)`,
-				);
 				return res;
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				console.log(
-					`[http] ${req.method} ${pathname} - 500 (${Math.round(performance.now() - start)}ms): ${message}`,
-				);
 				return json({ error: message }, { status: 500 });
 			}
 		};

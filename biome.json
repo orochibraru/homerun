@@ -3,37 +3,23 @@
 	"assist": {
 		"actions": {
 			"source": {
-				"organizeImports": "on",
-				"useSortedKeys": "on"
+				"organizeImports": "on"
 			}
+		},
+		"enabled": true
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
 		}
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": [
-			"**",
-			"!node_modules",
-			"!**/*.css",
-			"!vite.config.ts",
-			"!build",
-			"!coverage",
-			"!data",
-			"!dist",
-			"!.vercel",
-			"!test-results",
-			"!node_modules",
-			"!.svelte-kit/*",
-			"!.svelte-kit",
-			"!test-results",
-			"!scripts",
-			"!cli/src/generated",
-			"!packages/docs/build",
-			"!packages/docs/.svelte-kit",
-			"!packages/docs/static/openapi.json"
-		]
+		"includes": ["**", "!src/lib/nuvio/nuvio-public-api.json"]
 	},
 	"formatter": {
-		"enabled": true
+		"enabled": true,
+		"indentStyle": "tab"
 	},
 	"html": {
 		"formatter": {
@@ -41,7 +27,6 @@
 		}
 	},
 	"javascript": {
-		"experimentalEmbeddedSnippetsEnabled": true,
 		"formatter": {
 			"quoteStyle": "double"
 		}
@@ -50,31 +35,90 @@
 		"enabled": true,
 		"rules": {
 			"complexity": {
-				"noStaticOnlyClass": "off"
+				"noExcessiveCognitiveComplexity": "error",
+				"noExcessiveLinesPerFunction": {
+					"level": "error",
+					"options": {
+						"maxLines": 80
+					}
+				},
+				"noImplicitCoercions": "off",
+				"noRedundantDefaultExport": "off",
+				"noVoid": "off",
+				"useMaxParams": "error"
+			},
+			"correctness": {
+				"noNodejsModules": "off",
+				"noUnresolvedImports": "off",
+				"noUnusedImports": "warn",
+				"useImportExtensions": "off",
+				"useQwikValidLexicalScope": "off"
 			},
 			"nursery": {
-				"useSortedClasses": "info"
+				"noFloatingPromises": "error",
+				"noMisusedPromises": "error",
+				"recommended": true,
+				"useExplicitType": "off",
+				"useSortedClasses": "error"
 			},
 			"performance": {
-				"noNamespaceImport": "off"
+				"noAwaitInLoops": "error",
+				"noBarrelFile": "off",
+				"noNamespaceImport": "off",
+				"noReExportAll": "off",
+				"useTopLevelRegex": "off"
 			},
-			"preset": "recommended",
+			"preset": "all",
+			"security": {
+				"noSecrets": "off"
+			},
 			"style": {
-				"noInferrableTypes": "error",
-				"noParameterAssign": "error",
-				"noUnusedTemplateLiteral": "error",
-				"noUselessElse": "error",
-				"useAsConstAssertion": "error",
+				"noContinue": "off",
+				"noDefaultExport": "off",
+				"noExcessiveClassesPerFile": "off",
+				"noExcessiveLinesPerFile": {
+					"level": "error",
+					"options": {
+						"maxLines": 680
+					}
+				},
+				"noExportedImports": "off",
+				"noHexColors": "off",
+				"noImplicitBoolean": "off",
+				"noIncrementDecrement": "off",
+				"noMagicNumbers": "off",
+				"noNamespace": "off",
+				"noNegationElse": "off",
+				"noNestedTernary": "off",
+				"noParameterProperties": "off",
+				"noProcessEnv": "off",
+				"noTernary": "off",
+				"useAtIndex": "off",
 				"useBlockStatements": "error",
-				"useConst": "error",
-				"useDefaultParameterLast": "error",
-				"useEnumInitializers": "error",
-				"useNumberNamespace": "error",
-				"useSelfClosingElements": "error",
-				"useSingleVarDeclarator": "error"
+				"useComponentExportOnlyModules": "off",
+				"useConsistentArrayType": "off",
+				"useConsistentMemberAccessibility": "off",
+				"useConsistentTypeDefinitions": "error",
+				"useDestructuring": "off",
+				"useErrorCause": "off",
+				"useExplicitLengthCheck": "off",
+				"useExportsLast": "off",
+				"useGlobalThis": "off",
+				"useNamingConvention": "off",
+				"useSingleVarDeclarator": "off"
 			},
 			"suspicious": {
-				"noExplicitAny": "error"
+				"noBitwiseOperators": "off",
+				"noConsole": "error",
+				"noEmptyBlockStatements": "error",
+				"noEqualsToNull": "off",
+				"noImportCycles": "off",
+				"noReactSpecificProps": "off",
+				"noReturnAssign": "off",
+				"noShadow": "off",
+				"noUnnecessaryConditions": "error",
+				"useAwait": "error",
+				"useStaticResponseMethods": "off"
 			}
 		}
 	},
@@ -95,27 +139,33 @@
 			}
 		},
 		{
-			"includes": ["**/app.d.ts"],
-			"linter": {
-				"rules": {
-					"style": {
-						"noNamespace": "off"
-					}
-				}
-			}
-		},
-		{
 			"includes": [
-				"src/lib/components/ui/**/index.ts",
-				"src/lib/server/db/index.ts"
+				"**/*.test.ts",
+				"e2e/**",
+				"scripts/**",
+				"**/*.config.ts",
+				"**/*.config.js"
 			],
 			"linter": {
 				"rules": {
+					"complexity": {
+						"noExcessiveCognitiveComplexity": "off",
+						"noExcessiveLinesPerFunction": "off"
+					},
 					"performance": {
-						"noBarrelFile": "off"
+						"noAwaitInLoops": "off"
 					},
 					"style": {
-						"noExportedImports": "off"
+						"noExcessiveLinesPerFile": "off",
+						"noIncrementDecrement": "off",
+						"noNonNullAssertion": "off"
+					},
+					"suspicious": {
+						"noConsole": "off",
+						"noEmptyBlockStatements": "off",
+						"noExplicitAny": "off",
+						"noSkippedTests": "off",
+						"useAwait": "off"
 					}
 				}
 			}
@@ -123,7 +173,7 @@
 	],
 	"vcs": {
 		"clientKind": "git",
-		"enabled": false,
-		"useIgnoreFile": false
+		"enabled": true,
+		"useIgnoreFile": true
 	}
 }

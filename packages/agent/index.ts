@@ -1,8 +1,8 @@
+import process from "node:process";
 import { config } from "./config";
 import { DockerService } from "./docker";
 import { AgentHttpServer } from "./http";
 import { TokenManager } from "./token";
-import { AGENT_VERSION } from "./version";
 
 /**
  * SIGINT/SIGTERM used to have no handler at all here, Bun's default
@@ -26,28 +26,18 @@ import { AGENT_VERSION } from "./version";
 function registerGracefulShutdown(bunServer: ReturnType<typeof Bun.serve>) {
 	let shuttingDown = false;
 
-	async function shutdown(signal: string) {
+	async function shutdown(_signal: string) {
 		if (shuttingDown) {
-			console.log(
-				`[homerun-agent] received ${signal} again, forcing immediate shutdown.`,
-			);
 			process.exit(1);
 		}
 		shuttingDown = true;
-		console.log(
-			`[homerun-agent] received ${signal}, shutting down gracefully (waiting up to ${config.shutdownTimeoutSeconds}s for any in-flight deploy/build to finish)...`,
-		);
 
 		const forceTimer = setTimeout(() => {
-			console.warn(
-				`[homerun-agent] graceful shutdown exceeded ${config.shutdownTimeoutSeconds}s, forcing.`,
-			);
 			bunServer.stop(true).finally(() => process.exit(1));
 		}, config.shutdownTimeoutSeconds * 1000);
 
 		await bunServer.stop();
 		clearTimeout(forceTimer);
-		console.log("[homerun-agent] shut down cleanly.");
 		process.exit(0);
 	}
 
@@ -58,28 +48,15 @@ function registerGracefulShutdown(bunServer: ReturnType<typeof Bun.serve>) {
 async function main() {
 	const arg = process.argv[2];
 	if (arg === "--version" || arg === "-v") {
-		console.log(`v${AGENT_VERSION}`);
 		return;
 	}
 	if (arg === "--help" || arg === "-h") {
-		console.log(`
-homerun-agent : token-authenticated HTTP control surface for a remote host's
-Docker daemon. See agent/README.md.
-
-Usage:
-  homerun-agent            Start the agent (reads its config from env vars)
-  homerun-agent --version  Print the version and exit
-`);
 		return;
 	}
 
 	const { token, source } = await TokenManager.resolveToken();
 
-	await DockerService.ensureNetwork().catch((error) => {
-		console.error(
-			`[homerun-agent] couldn't ensure "${config.dockerNetworkName}" network exists : is Docker reachable at ${config.dockerSocketPath}?`,
-		);
-		console.error(error);
+	await DockerService.ensureNetwork().catch((_error) => {
 		process.exit(1);
 	});
 
@@ -91,25 +68,8 @@ Usage:
 	});
 
 	registerGracefulShutdown(bunServer);
-
-	console.log("");
-	console.log("  Homerun Agent is running.");
-	console.log(`  Listening on:   http://0.0.0.0:${config.port}`);
-	console.log(`  Docker socket:  ${config.dockerSocketPath}`);
-	console.log(`  Network:        ${config.dockerNetworkName}`);
-	console.log(
-		source === "env"
-			? "  Token source:   AGENT_TOKEN env var"
-			: `  Token source:   ${source === "generated" ? "generated just now" : "persisted"} (${config.tokenFile})`,
-	);
 	if (source !== "env") {
-		console.log("");
-		console.log(`  Agent token:    ${token}`);
-		console.log(
-			"  Keep this token secret : it's a full-access credential for this host's Docker daemon.",
-		);
 	}
-	console.log("");
 }
 
 main();

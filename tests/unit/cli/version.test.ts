@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import pkg from "../../../package.json";
+import pkg from "../../../package.json" with { type: "json" };
 import { CLI_VERSION } from "../../../packages/cli/version";
 
 describe("CLI_VERSION", () => {

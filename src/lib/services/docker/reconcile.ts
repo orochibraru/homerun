@@ -9,11 +9,13 @@ import type { RemoteHostConnection } from "./client.ts";
 
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's inspectStatus, the swarm mixin's inspectSwarmServiceStatus. */
 interface RequiresContainerAndSwarmMixin {
-	inspectStatus(
+	inspectStatus: (
 		containerId: string,
 		remote?: RemoteHostConnection | null,
-	): Promise<ContainerStatus>;
-	inspectSwarmServiceStatus(swarmServiceId: string): Promise<ContainerStatus>;
+	) => Promise<ContainerStatus>;
+	inspectSwarmServiceStatus: (
+		swarmServiceId: string,
+	) => Promise<ContainerStatus>;
 }
 
 /**

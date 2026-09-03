@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
+import process from "node:process";
 import { UpdateService } from "../../../packages/cli/update";
 
 /**

@@ -1,3 +1,4 @@
+import process from "node:process";
 import { ciTimeout } from "./ci";
 
 /** Captures a spawned process's stdout+stderr into one buffer as it runs, so a readiness failure can show *why* (same pattern server.ts's spawnApp already uses for the app itself). */
