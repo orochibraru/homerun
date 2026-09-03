@@ -4,6 +4,12 @@
 
 - [ ] Docker cleanup methods via UI (docker prune for system (all), image,
       container...)
+- [ ] Since we already build & tag docker images in PRs, it's safe to assume
+      that the last built image is healthy which means we're re-building one for
+      nothing in the main CI when merged. We could just re-tag it. On top of
+      this we should definitely have both a workflow that deletes the PR image
+      when a PR is closed as well as a periodic docker registry cleanup for
+      dangling images from PRs if the cleanup jobs ever fail.
 
 ## Large
 

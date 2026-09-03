@@ -11,6 +11,9 @@ preload = [
 # Global test timeout only (whole suite), individual test timeout should be set via cli with --timeout
 timeout = 120_000
 
+# Retries a failing test up to 2x (3 attempts total) before reporting it failed, to absorb transient CI flakiness (real Postgres/Docker in tests/integration/). beforeEach/afterEach re-run around each attempt, only beforeAll/afterAll stay once-per-file. Mutually exclusive with `rerunEach`, Bun 1.4.0 refuses to start if both are set, here or split across this file and a CLI flag.
+retry = 2
+
 # Playwright specs (tests/e2e/**) match bun test's own *.spec.ts discovery but
 # must only ever run under `playwright test` (bun run test:e2e).
 pathIgnorePatterns = ["**/tests/e2e/**"]
