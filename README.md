@@ -42,8 +42,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **Custom domains & SSL**: a second hostname per service, plus bring-your-own
   cert/key for domains outside Traefik's automatic ACME coverage
 - **Remote hosts**: point a service at another Docker daemon (`tcp://`/`ssh://`,
-  or the lightweight [Homerun Agent](agent/README.md)) instead of the local
-  socket
+  or the lightweight [Homerun Agent](packages/agent/README.md)) instead of the
+  local socket
 - **Autoscale-by-migration**: when the local host crosses a CPU/memory
   threshold, automatically move one opted-in service to a designated overflow
   host
@@ -56,7 +56,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   cron-style bind-mount volume backups to any S3-compatible endpoint
 - **REST API, OpenAPI docs, and a CLI**: everything above is also a typed JSON
   API (`/api/v1`), with a live Swagger UI and a proper
-  [`homerun` CLI](cli/README.md) built against the generated OpenAPI types
+  [`homerun` CLI](packages/cli/README.md) built against the generated OpenAPI
+  types
 - **Users, roles & invites**: admin/developer roles, email or direct-create
   invites, optional OAuth/OIDC login
 - **Per-service auth gate & account isolation**: optionally require a Homerun
@@ -69,8 +70,9 @@ See [the website](https://homerun.orochibraru.com)
 
 ## Sub-projects
 
-Three standalone Bun/TypeScript tools ship alongside the main app, each its own
-`package.json`/binary:
+Four standalone Bun/TypeScript tools live under `packages/` alongside the main
+app (sharing the root `package.json`/`bun install`, each compiling to its own
+binary or build output):
 
 - [`packages/agent/`](packages/agent/README.md): a small token-authenticated
   HTTP server for driving a _remote_ host's Docker daemon
@@ -78,3 +80,6 @@ Three standalone Bun/TypeScript tools ship alongside the main app, each its own
   used above (Docker + rootless setup + the agent or full stack)
 - [`packages/cli/`](packages/cli/README.md): a typed CLI
   (`homerun services deploy <id>`, etc.) against the REST API
+- [`packages/docs/`](packages/docs/README.md): the static docs site rendering
+  this repo's `docs/*.md` guides (what's deployed at
+  [the website](https://homerun.orochibraru.com))

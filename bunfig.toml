@@ -8,7 +8,7 @@ preload = [
     "./tests/integration/support/setup.ts",
 ]
 
-# Global test timeout only (whole suite), individal test timeout should be set via cli with --timeout
+# Global test timeout only (whole suite), individual test timeout should be set via cli with --timeout
 timeout = 120_000
 
 # Playwright specs (tests/e2e/**) match bun test's own *.spec.ts discovery but

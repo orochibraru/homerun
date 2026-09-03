@@ -42,12 +42,14 @@ bun run test:unit:installer  # scoped to packages/installer
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 ```
 
-`agent/`, `installer/`, and `cli/` are separate standalone Bun/TypeScript
-sub-projects (their own `tsconfig.json`, checked via the root `check:agent`/
-`check:cli`/`check:installer` scripts and compiled via
+`packages/agent/`, `packages/installer/`, and `packages/cli/` are separate
+standalone Bun/TypeScript sub-projects (their own `tsconfig.json`, checked via
+the root `check:agent`/`check:cli`/`check:installer` scripts and compiled via
 `scripts/build-packages.ts`, **not** their own `package.json`/`bun install`,
 they share the root one), not part of the SvelteKit app above, see "Homerun
-Agent + installer" and "Homerun CLI" below for what they are.
+Agent + installer" and "Homerun CLI" below for what they are. `packages/docs/`
+is a fourth sub-project under `packages/`, a generated docs site, see its own
+subsection below.
 
 ### Unit tests (`tests/`)
 
@@ -88,7 +90,7 @@ svelte-check's TS resolution that don't occur under `tsc`/`bun test` directly.
 `tests/` is type-checked per-package instead (`check:agent`/`check:cli`/
 `check:installer`, `bun-types`, not svelte-check's DOM-flavored config).
 
-## `cli/` tests need a mocked `os.homedir()`
+## `packages/cli/` tests need a mocked `os.homedir()`
 
 `packages/cli/config.ts` resolves its config file path from `os.homedir()` once,
 at module load, and `os.homedir()` is fixed for the life of the process
@@ -96,9 +98,9 @@ at module load, and `os.homedir()` is fixed for the life of the process
 1.4.0). `tests/unit/support/homedir-preload.ts`, wired in via `bunfig.toml`'s
 `[test].preload`, mocks `node:os`'s `homedir()` to a scratch directory for the
 whole run via `mock.module`, before any test file's own imports — the one place
-guaranteed to run early enough regardless of which file imports `cli/config.ts`
-first. Every test file that touches `cli/config.ts` still guards against this
-invariant breaking:
+guaranteed to run early enough regardless of which file imports
+`packages/cli/config.ts` first. Every test file that touches
+`packages/cli/config.ts` still guards against this invariant breaking:
 
 ```ts
 if (!homedir().startsWith(tmpdir())) {
@@ -158,16 +160,16 @@ hand:
 - Subagents (`.claude/agents/*.md`): `repo-gate` (final review gate before
   calling a change done, scans for this file's own hard rules),
   `scaffold-feature` (adds a new table+DTO+route end to end), `subproject-sync`
-  (keeps `agent/`'s hand-reimplemented Docker/stats logic in sync with the main
-  app, regenerates `cli/`'s OpenAPI-derived types), `ui-consistency` (flags
-  route markup that reimplements an existing shared component/primitive instead
-  of using it, and visual drift between equivalent pages), `docs-sync` (use
-  PROACTIVELY after a code change that adds/removes/changes a feature, checks
-  this file itself, and `TODO.md`/sub-project READMEs, for exactly the kind of
-  staleness this bullet list itself just had two live examples of:
-  `ui-consistency` missing from here, and three shipped features still marked
-  unbuilt under Planned features below, both fixed in the same session
-  `docs-sync` was added).
+  (keeps `packages/agent/`'s hand-reimplemented Docker/stats logic in sync with
+  the main app, regenerates `packages/cli/`'s OpenAPI-derived types),
+  `ui-consistency` (flags route markup that reimplements an existing shared
+  component/primitive instead of using it, and visual drift between equivalent
+  pages), `docs-sync` (use PROACTIVELY after a code change that
+  adds/removes/changes a feature, checks this file itself, and
+  `TODO.md`/sub-project READMEs, for exactly the kind of staleness this bullet
+  list itself just had two live examples of: `ui-consistency` missing from here,
+  and three shipped features still marked unbuilt under Planned features below,
+  both fixed in the same session `docs-sync` was added).
 
 Skill content lives under `.agents/skills/<name>/SKILL.md` with a symlink from
 `.claude/skills/`, matching the existing `shadcn-svelte` skill's layout, keep
@@ -451,7 +453,7 @@ dashboard's own `fetch` calls and external API-key clients alike.
   Serves the OpenAPI 3.1 document built by `$lib/openapi/build.ts`, see below.
 
 This is deliberately a thin JSON wrapper over the DTO layer, not a new
-abstraction, the `cli/` sub-project talks to this (see below).
+abstraction, the `packages/cli/` sub-project talks to this (see below).
 
 ### Long-running requests and Bun's idle timeout (`$lib/server/long-request.ts`)
 
@@ -531,25 +533,27 @@ fighting the resolution issue.
 
 **Verified live**: the served document is a real, valid OpenAPI 3.1 spec, parsed
 successfully by `openapi-typescript` (not just eyeballed), used to generate the
-actual types `cli/` is built against (see below), and driven end-to-end through
-a real account/API key against a real Docker daemon (see `cli/README.md`'s
-verification notes).
+actual types `packages/cli/` is built against (see below), and driven end-to-end
+through a real account/API key against a real Docker daemon (see
+`packages/cli/README.md`'s verification notes).
 
-### Homerun CLI (`cli/`)
+### Homerun CLI (`packages/cli/`)
 
-A standalone Bun/TypeScript sub-project (own `package.json`, compiles to a
-binary via `bun build --compile`, same shape as `agent/`/`installer/` below), a
-typed CLI built on [`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/)
-against the spec above. `cli/src/generated/openapi-types.ts` is generated by
-`openapi-typescript` straight from a running instance's real
-`/api/v1/openapi.json` (`bun run generate`, checked in as a snapshot, regenerate
-after any REST API route change or it silently goes stale, `openapi-fetch`
-itself has no way to detect a stale-spec mismatch at compile time). Auth is
-`x-api-key`/`--api-key`, same header the REST API's own hooks check first for a
-non-cookie caller. Commands: `services {list,get,deploy,start,stop,restart}`,
-`projects list`, `templates list`, no `create`/`update`/`delete` yet,
-straightforward to add the same way. See `cli/README.md` for the full command
-reference and what's verified.
+A standalone Bun/TypeScript sub-project under `packages/` (compiles to a binary
+via `bun build --compile`, same shape as `packages/agent/`/`packages/installer/`
+below, sharing the root `package.json`/`bun install` rather than having its
+own), a typed CLI built on
+[`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) against the spec above.
+`packages/cli/generated/openapi-types.ts` is generated by `openapi-typescript`
+straight from a running instance's real `/api/v1/openapi.json`
+(`bun run generate`, checked in as a snapshot, regenerate after any REST API
+route change or it silently goes stale, `openapi-fetch` itself has no way to
+detect a stale-spec mismatch at compile time). Auth is `x-api-key`/`--api-key`,
+same header the REST API's own hooks check first for a non-cookie caller.
+Commands: `services {list,get,deploy,start,stop,restart}`, `projects list`,
+`templates list`, no `create`/`update`/`delete` yet, straightforward to add the
+same way. See `packages/cli/README.md` for the full command reference and what's
+verified.
 
 **Verified live, full round trip**, not just typechecked: a throwaway account +
 real API key (against an isolated `homerun_test` database, never the
@@ -615,18 +619,19 @@ already follow `feat:`/`fix:`/`chore:`, no new discipline required). Runs as a
 new `release` job in `.github/workflows/publish.yaml`, alongside the existing
 `code_quality`/`build` jobs, on every push to `main`; a non-releasable push
 (docs/chore-only) is a no-op, not a failure. One version number covers the whole
-repo, the root app plus `agent/`/`installer`/`cli`'s own `package.json`s all get
-bumped together by `scripts/bump-version.ts` (an `@semantic-release/exec`
-`prepareCmd`, not `@semantic-release/npm`, this repo has no npm package to
-publish, and `npm`'s plugin still wants registry-shaped config even with
-`npmPublish: false`; a small script fits this codebase's existing "hand-roll a
-small thing rather than fight a mismatched tool" posture better, same instinct
-as the cron matcher/SigV4 client). `scripts/build-release-binaries.ts`
-cross-compiles all six `agent`/`installer`/`cli` Linux binaries (x64 + arm64,
-each sub-project's own `build:linux-x64`/`build:linux-arm64` scripts) so
-`.releaserc.json`'s release-assets step has something to attach, directly
-serving the "installer (and homerun agent) in each release artifact" TODO item,
-with the CLI's own binary added the same way for consistency.
+repo, the root app plus `packages/agent`/`packages/installer`/`packages/cli`'s
+own `package.json`s all get bumped together by `scripts/bump-version.ts` (an
+`@semantic-release/exec` `prepareCmd`, not `@semantic-release/npm`, this repo
+has no npm package to publish, and `npm`'s plugin still wants registry-shaped
+config even with `npmPublish: false`; a small script fits this codebase's
+existing "hand-roll a small thing rather than fight a mismatched tool" posture
+better, same instinct as the cron matcher/SigV4 client).
+`scripts/build-release-binaries.ts` cross-compiles all six
+`agent`/`installer`/`cli` Linux binaries (x64 + arm64, each sub-project's own
+`build:linux-x64`/`build:linux-arm64` scripts) so `.releaserc.json`'s
+release-assets step has something to attach, directly serving the "installer
+(and homerun agent) in each release artifact" TODO item, with the CLI's own
+binary added the same way for consistency.
 
 **Uses `@semantic-release/github`**, the official plugin: this repo is hosted on
 GitHub (`github.com/orochibraru/homerun`) and runs on GitHub Actions. It
@@ -758,21 +763,35 @@ verify the first real connect by hand once an OAuth App exists.
 
 A service normally deploys to the local Docker socket
 (`config.docker.socketPath`), that's still the default
-(`service.remoteHostId: null`). Registering a remote host (Remote Hosts page:
-name + `tcp://host:port` [+ optional TLS client cert] or `ssh://user@host`) and
-picking it as a service's "Deploy target" (Settings tab) routes every Docker
+(`service.remoteHostId: null`). Registering a remote host (Remote Hosts page)
+and picking it as a service's "Deploy target" (Settings tab) routes every Docker
 operation for that service, deploy, start/stop/restart, logs, status-sync,
-account-deletion cleanup, at that daemon instead.
+account-deletion cleanup, at that daemon instead. Two connection kinds
+(`remote_host.kind`, chosen on the "new host" form's connection-type toggle),
+both real deploy targets and (opt-in per host, `isBuildServer`) build servers:
+
+- `"docker"` (the original/default): name + `tcp://host:port` [+ optional TLS
+  client cert] or `ssh://user@host`, a raw Docker Engine connection.
+- `"agent"`: name + `agentUrl`/`agentTokenEnc`, a registered Homerun Agent (see
+  below) instead, token-authenticated HTTP rather than exposing the daemon
+  itself, verified live against the agent (`AgentClientService.verifyToken`)
+  before the row is saved.
 
 `services/docker/client.ts`'s `getDocker(remote?: RemoteHostConnection)`
 (exposed as `DockerService.getDocker`, see Docker integration below) caches one
 dockerode client per host (keyed by remote host id, `"local"` for the default)
-in the same HMR-safe `globalThis` pattern as the db singleton.
-`RemoteHostDTO.connectionFor(svc, userId)` is the one place that turns a service
-into the connection object `getDocker()` wants (returns `undefined` for a local
-service), every route/module that touches a service's container calls this
-rather than assuming the local socket; if you add a new lifecycle operation,
-thread it through the same way rather than calling `getDocker()` bare.
+in the same HMR-safe `globalThis` pattern as the db singleton, for `"docker"`
+hosts. `RemoteHostDTO.connectionFor(svc, userId)` is the one place that turns a
+service into the connection object `getDocker()` wants (returns `undefined` for
+a local **or** agent-backed service, neither has a dockerode-reachable daemon),
+for any docker-only operation that can't meaningfully run against an agent.
+`RemoteHostDTO.resolveTarget(hostId, userId)` is the newer, kind-aware
+equivalent (`RemoteExecutionTarget`, `{kind: "local"}` /
+`{kind: "docker", connection}` / `{kind: "agent", connection}`), used by
+`deploy.service.ts` and `service-lifecycle.service.ts` to branch between
+`DockerService` and `AgentClientService`; a new lifecycle operation that should
+work against an agent-backed host too should resolve through this rather than
+`connectionFor`.
 
 **Real architectural limitation, not an oversight**: the shared `homerun` Docker
 network, per-project networks, and Traefik itself all live on the _local_ host.
@@ -1283,8 +1302,8 @@ viewable in-app (see `system-logs/` above). The app itself _is_ containerized
 for production use (`Dockerfile`, built/pushed by
 `.github/workflows/docker.yaml`; see Release automation below): the installer's
 `--mode=full` generates its own separate compose file that adds that image as an
-`app` service (see `installer/` below), rather than this dev compose file
-gaining one.
+`app` service (see `packages/installer/` below), rather than this dev compose
+file gaining one.
 
 ### Swarm mode (`instance_settings.orchestrationMode`, `service.replicas`/`swarmServiceId`, `src/lib/services/docker/swarm.ts`)
 
@@ -1332,24 +1351,27 @@ under swarm, a "remote" node has to actually _join this swarm_ as a worker
 rather than just being a separate standalone Docker daemon, that's a different
 integration than `RemoteHostDTO`'s raw `tcp://`/`ssh://` connection model.
 `deploy.service.ts` explicitly throws rather than silently misbehaving if a
-swarm-mode service's deploy target is a Remote Host. `installer/swarm-join.sh`
-(a standalone bash script, not part of the TypeScript installer's `StepRunner`,
-documented in `installer/README.md`) is the groundwork for this gap: it joins a
+swarm-mode service's deploy target is a Remote Host.
+`packages/installer/swarm-join.sh` (a standalone bash script, not part of the
+TypeScript installer's `StepRunner`, documented in
+`packages/installer/README.md`) is the groundwork for this gap: it joins a
 remote box to an existing swarm as a worker on its own rootless Docker daemon
 and installs the Homerun Agent there via `systemd --user`, the same install
-shape `installer/steps/agent.ts` uses locally, hand-mirrored rather than sharing
-the TS installer's dry-run machinery so the two scripts stay in lockstep by
-inspection. Usage:
+shape `packages/installer/steps/agent.ts` uses locally, hand-mirrored rather
+than sharing the TS installer's dry-run machinery so the two scripts stay in
+lockstep by inspection. Usage:
 `curl -fsSL .../swarm-join.sh | sudo bash -s -- --token <SWMTKN-...> --manager <ip>:2377`
 (token/manager address come from `docker swarm join-token worker` on the
-manager). This is preparatory only, today's Remote Hosts feature still talks to
-a remote daemon directly, not through the Agent's HTTP API, joining a swarm node
-doesn't yet make it a selectable deploy target the way registering a Remote Host
-does. **Not verified against a real second host or a real swarm**:
-syntax-checked (`bash -n`) and `shellcheck`-clean, and every individual command
-mirrors a step already dry-run-verified in the main installer, but the actual
-`docker swarm join` handshake and a real Homerun deploy onto that node haven't
-been run end-to-end, same caveat `bootstrap.sh` itself carries.
+manager). This is preparatory only: joining a swarm node this way doesn't by
+itself make it a selectable deploy target, that still needs registering it
+separately as a Remote Host (`kind: "agent"`, see Remote hosts above), and even
+then a swarm-joined node isn't the same thing as this app's own swarm-mode
+deploys (above), which are local-manager-only regardless. **Not verified against
+a real second host or a real swarm**: syntax-checked (`bash -n`) and
+`shellcheck`-clean, and every individual command mirrors a step already
+dry-run-verified in the main installer, but the actual `docker swarm join`
+handshake and a real Homerun deploy onto that node haven't been run end-to-end,
+same caveat `bootstrap.sh` itself carries.
 
 ### Network mode (`service.networkMode`, `service.portProtocol`, Networking tab)
 
@@ -1731,44 +1753,60 @@ This closes the "in-app lifecycle event feed" half of what Planned features
 below used to list as unbuilt; outbound webhooks (Telegram/Discord/generic HTTP)
 on the same events are still unbuilt, see below.
 
-### Homerun Agent + installer (`agent/`, `installer/`), draft, not yet wired into the main app
+### Homerun Agent + installer (`packages/agent/`, `packages/installer/`)
 
-Two standalone Bun/TypeScript sub-projects at the repo root, siblings of `src/`,
-each its own `package.json`/`tsconfig.json`/`node_modules` and **not** part of
-the SvelteKit build, both compile to a native binary via `bun build --compile`.
-Neither is referenced by any code under `src/` yet; this is groundwork, not an
-integrated feature. See each folder's own README for the full detail; this
-section is the pointer.
+Two standalone Bun/TypeScript sub-projects under `packages/`, siblings of
+`src/`, each its own `tsconfig.json` (**not** its own `package.json`/
+`node_modules`, they share the root install, same as every other `packages/*`
+sub-project, see the Commands section above) and **not** part of the SvelteKit
+build, both compile to a native binary via `bun build --compile`. See each
+folder's own README for the full detail; this section is the pointer.
+`packages/docs/` is a fourth, unrelated sub-project under `packages/` (the
+generated docs site, see its own subsection near the end of this document), not
+part of the Agent/installer/CLI trio described here.
 
-- **`agent/`**, the **Homerun Agent**: a small token-authenticated HTTP server
-  (`GET /v1/health` and `GET /v1/openapi.json` unauthenticated, the latter for
-  the same "spec describes shapes, not data" reason the main app's is public;
-  every other route needs `Authorization: Bearer <token>`) meant to run on a
-  _remote_ host's own Docker daemon, exposing
+**No longer just a standalone primitive**: the Agent is now a real, selectable
+Remote Hosts connection kind (`remote_host.kind: "agent"`,
+`$lib/services/agent-client.service.ts`'s `AgentClientService`, see Remote hosts
+above for the wiring). The installer stays standalone tooling (it's not imported
+by `src/` and isn't meant to be, it drives a target machine's shell, not this
+app's own runtime).
+
+- **`packages/agent/`**, the **Homerun Agent**: a small token-authenticated HTTP
+  server (`GET /v1/health` and `GET /v1/openapi.json` unauthenticated, the
+  latter for the same "spec describes shapes, not data" reason the main app's is
+  public; every other route needs `Authorization: Bearer <token>`) meant to run
+  on a _remote_ host's own Docker daemon, exposing
   deploy/start/stop/restart/logs/stats over plain HTTP. This is the alternative
   to registering a Remote Host by raw `tcp://`/`ssh://` Docker socket (see
   Remote hosts above), instead of exposing the daemon itself, the remote host
   runs this agent and the main app only ever talks HTTP-plus-bearer-token to it.
-  It's the primitive the Autoscaling section below's "Homerun Agents"
-  control-plane rearchitecture note pointed at as future work; this session
-  built the standalone primitive only, not the main-app integration (no
-  `remote_host.kind`/`agentUrl` schema column, no `AgentClientService`, no
-  Remote Hosts UI, no `DeploymentService` branch to route through it yet).
-  `POST /v1/deploy` mirrors the main app's own
-  pull→remove-previous-by-label→create→start shape (`findServiceContainer` by
-  `homerun.service.id` label, a fresh randomized container name every deploy,
-  same conventions as `docker/containers.ts`) but is a from-scratch,
-  self-contained implementation, the agent has no access to the main app's
-  source tree at runtime, so `agent/src/docker.ts` and `agent/src/stats.ts`
-  intentionally re-implement (not import) the equivalent logic from
-  `docker/containers.ts` and `SystemStatsService`; keep the two in sync by hand
-  if one changes. `agent/src/schemas.ts` holds a zod schema for the deploy body
-  (`agent/src/openapi.ts` generates the agent's own OpenAPI 3.1 doc from it,
-  same "one schema, two purposes" approach as the main app's, see OpenAPI
-  above), **this replaced a real bug**: `/v1/deploy` previously did
-  `(await req.json()) as DeployInput`, an unchecked cast with zero runtime
-  validation, so a malformed request would fail deep inside dockerode with a
-  confusing error instead of a clean 400; now it's
+  **Wired into the main app**: `remote_host.kind` (`"docker"` | `"agent"`) +
+  `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
+  (`$lib/services/agent-client.service.ts`, a thin HTTP client mirroring
+  `DockerService`'s deploy/start/stop/restart/inspectStatus/streamLogs surface
+  plus `build`), and the Remote Hosts "new host" form's connection-type toggle
+  (URL + token, verified live via `AgentClientService.verifyToken` before the
+  row is saved) all exist; `deploy.service.ts` and
+  `service-lifecycle.service.ts` branch on `RemoteHostDTO.resolveTarget()`'s
+  `kind` to route through `DockerService` or `AgentClientService`. This main-app
+  integration doesn't carry a documented "verified live" note the way the agent
+  binary's own endpoints do below, treat it as built but unconfirmed against a
+  real second host until verified by hand. `POST /v1/deploy` mirrors the main
+  app's own pull→remove-previous-by-label→create→start shape
+  (`findServiceContainer` by `homerun.service.id` label, a fresh randomized
+  container name every deploy, same conventions as `docker/containers.ts`) but
+  is a from-scratch, self-contained implementation, the agent has no access to
+  the main app's source tree at runtime, so `packages/agent/docker.ts` and
+  `packages/agent/stats.ts` intentionally re-implement (not import) the
+  equivalent logic from `docker/containers.ts` and `SystemStatsService`; keep
+  the two in sync by hand if one changes. `packages/agent/schemas.ts` holds a
+  zod schema for the deploy body (`packages/agent/openapi.ts` generates the
+  agent's own OpenAPI 3.1 doc from it, same "one schema, two purposes" approach
+  as the main app's, see OpenAPI above), **this replaced a real bug**:
+  `/v1/deploy` previously did `(await req.json()) as DeployInput`, an unchecked
+  cast with zero runtime validation, so a malformed request would fail deep
+  inside dockerode with a confusing error instead of a clean 400; now it's
   `deployInputSchema.safeParse()` first. **Live-verified** against a real local
   Docker socket: boot + `homerun`-equivalent creation, every HTTP endpoint
   including a real `nginx:alpine`
@@ -1776,9 +1814,10 @@ section is the pointer.
   on a missing/wrong token, the new validation actually rejecting a malformed
   deploy body with a 400, `/v1/openapi.json` being a real parseable OpenAPI 3.1
   doc, and the compiled binary behaving identically to `bun run dev`.
-- **`installer/`**, a single-binary installer (`installer/index.ts`) meant to be
-  the target of a `curl | bash` one-liner (`installer/bootstrap.sh`) on a fresh
-  Linux server: installs Docker Engine + rootless prerequisites
+- **`packages/installer/`**, a single-binary installer
+  (`packages/installer/index.ts`) meant to be the target of a `curl | bash`
+  one-liner (`packages/installer/bootstrap.sh`) on a fresh Linux server:
+  installs Docker Engine + rootless prerequisites
   (`uidmap`/`dbus-user-session`), creates a dedicated non-root system user,
   installs **rootless** Docker for that user via Docker's own documented flow
   (`get.docker.com/rootless` → `dockerd-rootless-setuptool.sh`,
@@ -1792,30 +1831,31 @@ section is the pointer.
   downloads the `homerun-installer-<arch>` release binary itself and `exec`s it
   (no Bun, no git); `--mode=agent` downloads the matching `homerun-agent-<arch>`
   release binary straight to `/usr/local/bin/homerun-agent`; `--mode=full`
-  writes a standalone `compose.yaml` (`installer/steps/full-stack.ts`, distinct
-  from the root dev `compose.yaml`; see Docker integration above) pulling the
-  published `docker.io/orochibraru/homerun` app image alongside
+  writes a standalone `compose.yaml` (`packages/installer/steps/full-stack.ts`,
+  distinct from the root dev `compose.yaml`; see Docker integration above)
+  pulling the published `docker.io/orochibraru/homerun` app image alongside
   Traefik/Postgres, then `docker compose pull && ...up -d`.
-  `installer/steps/release.ts` is the one place both artifact kinds (release
-  binaries vs. the Docker image) resolve from: `--version=` (a GitHub release
-  tag, default `latest`) picks which release's binaries to fetch, but doesn't
-  pin the app image the same way: `docker.yaml` tags images by commit SHA +
-  `latest` only, there's no `:vX.Y.Z` image tag, a real asymmetry in this repo's
-  release pipeline documented in that file rather than papered over. Every
-  shell-out goes through one `StepRunner` (`installer/exec.ts`) so `--dry-run`
-  (print every command instead of running it) is a single interception point,
-  not scattered per-step conditionals. **Verified**: the full command sequence
-  via `--dry-run` for both modes (including on a non-Linux dev machine, via a
-  dry-run-only package-manager-detection fallback, and including the generated
-  `compose.yaml` content), and that the compiled binary's dry-run output matches
-  running from source. **Not verified, flagged the same way this codebase flags
-  an untested OAuth flow**: none of the real, mutating steps (package install,
-  `useradd`, rootless Docker setup, systemd units, or the downloaded
-  binaries/images actually starting) have run against an actual fresh Linux box
-  in this session, doing so needs a disposable VM/CI runner this environment
-  doesn't have, and running the mutating path against a real machine without one
-  would be irreversible and wasn't attempted. Run it by hand against a real
-  disposable server before trusting the one-liner on anything that matters.
+  `packages/installer/steps/release.ts` is the one place both artifact kinds
+  (release binaries vs. the Docker image) resolve from: `--version=` (a GitHub
+  release tag, default `latest`) picks which release's binaries to fetch, but
+  doesn't pin the app image the same way: `docker.yaml` tags images by commit
+  SHA + `latest` only, there's no `:vX.Y.Z` image tag, a real asymmetry in this
+  repo's release pipeline documented in that file rather than papered over.
+  Every shell-out goes through one `StepRunner` (`packages/installer/exec.ts`)
+  so `--dry-run` (print every command instead of running it) is a single
+  interception point, not scattered per-step conditionals. **Verified**: the
+  full command sequence via `--dry-run` for both modes (including on a non-Linux
+  dev machine, via a dry-run-only package-manager-detection fallback, and
+  including the generated `compose.yaml` content), and that the compiled
+  binary's dry-run output matches running from source. **Not verified, flagged
+  the same way this codebase flags an untested OAuth flow**: none of the real,
+  mutating steps (package install, `useradd`, rootless Docker setup, systemd
+  units, or the downloaded binaries/images actually starting) have run against
+  an actual fresh Linux box in this session, doing so needs a disposable VM/CI
+  runner this environment doesn't have, and running the mutating path against a
+  real machine without one would be irreversible and wasn't attempted. Run it by
+  hand against a real disposable server before trusting the one-liner on
+  anything that matters.
 
 ## Planned features (not yet built)
 
@@ -1842,8 +1882,8 @@ re-litigating design decisions.
   below), no host port publishing for remote-hosted services, no
   shared-network/Traefik integration for them, bind-mount volumes are skipped on
   remote deploys, and (see Swarm mode above) a Remote Host still can't be a
-  swarm-mode deploy target, `installer/swarm-join.sh` is groundwork for this,
-  not the integration itself.
+  swarm-mode deploy target, `packages/installer/swarm-join.sh` is groundwork for
+  this, not the integration itself.
 - **Onboarding**: the forced first-run wizard now exists (`/onboarding`, see
   above), and setup diagnostics feed a highlighted deep-link into `/settings`
   instead of a standalone page; DNS automation itself now exists (Cloudflare and

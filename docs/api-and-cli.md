@@ -32,7 +32,7 @@ request.
 
 ## CLI
 
-A typed CLI (`cli/`) built on
+A typed CLI (`packages/cli/`) built on
 [`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) against the spec above:
 its types are generated straight from a running instance's real
 `/api/v1/openapi.json`, so the client is checked against the actual API shape,
@@ -53,9 +53,9 @@ homerun services list
 ```
 
 Or, working on the CLI itself, from the repo root:
-`bun install && bun run cli/index.ts services list`
+`bun install && bun run packages/cli/index.ts services list`
 (`bun run scripts/build-packages.ts <amd64|arm64>` compiles it the same way CI
-does). See [`cli/README.md`](../packages/cli/README.md).
+does). See [`packages/cli/README.md`](../packages/cli/README.md).
 
 ```bash
 homerun services list [--json]
@@ -69,5 +69,5 @@ homerun templates list [--json]
 ```
 
 No `create`/`update`/`delete` yet. See
-[`cli/README.md`](../packages/cli/README.md) for the full reference, including
-how to regenerate the generated types after an API change.
+[`packages/cli/README.md`](../packages/cli/README.md) for the full reference,
+including how to regenerate the generated types after an API change.

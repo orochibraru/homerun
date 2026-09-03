@@ -1,0 +1,13 @@
+[files]
+extend-exclude = [
+  # semantic-release-generated, full of commit-hash substrings (e.g. the "ba"
+  # inside "2ba0da5") that read as typos with no prose to actually fix.
+  "CHANGELOG.md",
+  # A Google-Fonts-style `unicode-range` codepoint list (e.g. "U+0100-02BA"),
+  # not prose.
+  "src/routes/layout.css",
+]
+
+[default.extend-words]
+# A real word, just not in typos' dictionary under this spelling.
+unparseable = "unparseable"
