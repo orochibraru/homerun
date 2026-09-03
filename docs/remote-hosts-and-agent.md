@@ -74,8 +74,8 @@ bun run dev              # talks to /var/run/docker.sock by default
 Or compiled to a standalone binary (no Bun runtime needed on the target host):
 `bun run build:linux-x64` / `build:linux-arm64`. On first boot with no
 `AGENT_TOKEN` set, it generates one and prints it, see
-[`agent/README.md`](../agent/README.md) for the full env var and HTTP surface
-reference.
+[`agent/README.md`](../packages/agent/README.md) for the full env var and HTTP
+surface reference.
 
 **This is a draft**, a working standalone primitive, but not yet wired into the
 main app (no schema column, no client service, no Remote Hosts UI support for
@@ -87,8 +87,8 @@ multi-host control-plane rearchitecture points at; see
 
 `installer/` automates standing up a fresh Linux box with rootless Docker plus
 either the Agent or the full stack, this is what `docs/getting-started.md`'s
-one-liner runs. See [`installer/README.md`](../installer/README.md) for flags
-and what's verified.
+one-liner runs. See [`installer/README.md`](../packages/installer/README.md) for
+flags and what's verified.
 
 A separate script, `installer/swarm-join.sh`, joins a box to an **existing**
 Docker Swarm as a worker (on its own rootless Docker daemon) and installs the

@@ -32,8 +32,8 @@ Run `--mode=agent` instead of `--mode=full` if you only want this box to run the
 build/deploy target for a different Homerun instance, not the full app. Add
 `--dry-run` to print every command without running anything, `--version=vX.Y.Z`
 to pin a release instead of the latest one, and see
-[`installer/README.md`](../installer/README.md) for the rest of the flags
-(`--user=`, `--port=`).
+[`installer/README.md`](../packages/installer/README.md) for the rest of the
+flags (`--user=`, `--port=`).
 
 > The installer's mutating steps (package install, rootless Docker setup,
 > systemd units) are new, verify the result on your own box before relying on it
