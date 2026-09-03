@@ -66,10 +66,18 @@ below), `--yes`/`-y` (no confirmation prompt, needed for a non-interactive
 
 `--mode=full` needs `AUTH_SECRET` set before the app container will start: the
 generated `compose.yaml` fails closed on a missing one rather than booting with
-an insecure default. Put it (and anything else you want to override,
-`POSTGRES_PASSWORD`, `HOMERUN_BASE_DOMAIN`, `HOMERUN_ORIGIN`, `ACME_EMAIL`) in a
-`.env` file next to that `compose.yaml`, then
-`docker compose -f compose.yaml up -d` as the rootless user.
+an insecure default (the installer itself generates this automatically into
+`.env`, this only matters if running the compose file standalone, outside the
+installer). Put it (and anything else you want to override, `POSTGRES_PASSWORD`,
+`ORIGIN`, `ACME_EMAIL`) in a `.env` file next to that `compose.yaml`, then
+`docker compose -f compose.yaml up -d` as the rootless user. `ORIGIN` matters
+once you're reachable at a real domain, not just the install-time default of
+`http://localhost:3000`, real, tested-live finding: without it, absolute URLs
+this app constructs (e.g. the CLI login flow's own approval link) silently fall
+back to `localhost` regardless of where the instance is actually reachable, see
+`steps/full-stack.ts`'s own docstring. Base domain itself isn't `.env`-driven,
+it's set on first boot by the onboarding wizard (or by hand afterward in
+`homerun.yaml` next to `compose.yaml`, or on `/settings`).
 
 ## Joining a host to a swarm (`swarm-join.sh`)
 
@@ -140,18 +148,71 @@ command line, for both `--mode=agent` and `--mode=full`, including the generated
 compiled binary (`bun run build` → `./dist/homerun-install`) produce identical
 dry-run output.
 
-**Not verified, this is the one part of this feature that couldn't be checked
-against something real**, same caveat as this codebase's Git Providers OAuth
-flow: nothing in this session ran the real, mutating steps (package install,
-`useradd`, rootless Docker setup, systemd units, or the downloaded
-binaries/images actually starting) against an actual fresh Linux box, doing so
-needs a disposable VM/CI runner this environment doesn't have. Built carefully
-from Docker's own documented rootless-install steps and this repo's own release
-artifacts rather than invented from scratch, but **run this by hand against a
-real disposable server once, before trusting the one-liner on anything that
-matters.** Particular things worth double-checking on that first real run: the
-`XDG_RUNTIME_DIR`/`DOCKER_HOST` env threading through `sudo -u` (env_reset can
-be subtle across distros), that `loginctl enable-linger` actually persists the
-rootless daemon across a reboot, and that the generated `compose.yaml`'s
-docker-socket bind mount (the rootless socket path, not `/var/run/docker.sock`)
-actually lets the `app` container reach the daemon it's meant to manage.
+**The real, mutating steps are now verified too**, against two real disposable
+Multipass Ubuntu 24.04 VMs (superseding this section's earlier "needs a
+disposable VM/CI runner this environment doesn't have" note):
+
+- `--mode=agent` end to end on one VM: real `apt`/Docker Engine install, real
+  rootless Docker setup, real `systemd --user` unit, and the Agent actually
+  running and reachable over the network afterward (its health endpoint and
+  OpenAPI doc both responded correctly from outside the VM).
+- `--mode=full` end to end on a second VM: real rootless Docker, real
+  `docker compose pull && ...up -d` bringing up Traefik + Postgres + the real
+  published `docker.io/orochibraru/homerun` app image, all reporting healthy,
+  dashboard reachable from outside the VM on port 3000.
+- The two VMs together, closing a gap the main repo's `CLAUDE.md` (Remote hosts
+  section) used to flag: the `--mode=full` VM's dashboard registered the
+  `--mode=agent` VM as a real `agent`-kind Remote Host, token-verified live,
+  then deployed a real `nginx:alpine` service through it, confirmed via
+  `docker ps` that the container landed on the agent VM (not locally), and
+  round-tripped stop/start through the agent successfully.
+
+This run found and fixed five real bugs, all in
+`packages/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts` (see
+each file's own doc comments for the full detail):
+
+1. Ubuntu 23.10+ (including 24.04) restricts unprivileged user namespaces by
+   default, which broke `dockerd-rootless-setuptool.sh` outright
+   (`rootlesskit: fork/exec /proc/self/exe: permission denied`). Fixed by
+   writing the AppArmor profile Docker's own rootless installer suggests before
+   attempting the rootless install.
+2. Reading that same sysctl via `Bun.file(path).exists()`/`.text()` silently
+   returned `""` instead of the real value — `/proc` pseudo-files report a
+   0-byte size via `stat`, which appears to fool Bun's file reader, while
+   `node:fs/promises`' `readFile` reads them correctly. Fixed by switching to
+   `readFile`. Same class of Bun-vs-`node:fs` quirk as the already-documented
+   `Bun.write` mode-option bug in the root `CLAUDE.md`.
+3. Rootless Docker's port driver can't bind ports below 1024 by default (a
+   Linux/rootless constraint, not a Docker bug), so Traefik's `80:80`/`443:443`
+   publish failed with a permission error and `--mode=full` could never actually
+   bring the stack up. Fixed via Docker's own documented fix, lowering
+   `net.ipv4.ip_unprivileged_port_start`.
+4. The generated `compose.yaml`'s `AUTH_SECRET` default-value error message
+   contained an unquoted " : ", which `docker compose`'s YAML parser reads as a
+   nested mapping key, not plain text, and failed to parse the file at all.
+   Fixed by quoting the whole `${...}` expression.
+5. The postgres service's volume mount used the pre-18 path
+   (`/var/lib/postgresql/data`); the `postgres:18-alpine` image refuses to start
+   against that path and wants a mount at the `/var/lib/postgresql` parent
+   instead. Fixed to match, and to match this repo's own root
+   `tools/compose/base.compose.yaml`, which already had this right.
+6. The generated compose file never set `ORIGIN` for the app container, so
+   absolute URLs it constructs (e.g. the CLI login flow's own approval link)
+   silently fell back to `http://localhost:3000` regardless of the instance's
+   real reachable address. Fixed by adding an overridable `ORIGIN` default, see
+   the Flags section above.
+
+**Still not verified**: `swarm-join.sh` (see its own section above), this VM
+testing round didn't touch it. Particular things worth double-checking on a
+future real run: the `XDG_RUNTIME_DIR`/`DOCKER_HOST` env threading through
+`sudo -u` (env_reset can be subtle across distros), and that
+`loginctl enable-linger` actually persists the rootless daemon across a real
+reboot (not exercised this round, the VMs weren't rebooted).
+
+This whole run is scripted and reproducible, not a one-off: from the repo root,
+`bun run e2e:multipass` (`scripts/e2e-multipass.ts`) builds these binaries from
+local source, launches two disposable Multipass VMs, runs both modes for real,
+and drives the Remote Host + CLI checks above end to end, tearing down after
+(`--keep` to leave the VMs up for inspection, `--skip-build` to reuse a previous
+build). Requires Multipass + Docker locally; deliberately not run in CI (no
+nested virtualization there).

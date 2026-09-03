@@ -118,13 +118,27 @@ readable error, not a crash).
 The compiled binary (`bun run build` → `./dist/homerun`) was also smoke-tested
 and behaves identically to running from source.
 
-**Not yet live-tested**: `homerun login`'s device-code flow (server side:
+**Verified live**: `homerun login`'s device-code flow (server side:
 `CliAuthService`, `POST /api/v1/auth/cli/{device,token}`, the `/cli-auth`
-approval page). Reasoned through and typechecked against the real auth stack
-(`auth.api.createApiKey` called the same trusted-server way `accept-invite`'s
-`createUser` call is, see CLAUDE.md's User roles section), but not driven
-end-to-end by hand yet, verify a real `homerun login` round trip against a
-running instance before relying on it.
+approval page). A real compiled CLI binary (installed via this README's own
+`install.sh`, inside a Linux Docker container) ran
+`homerun login --base-url <real installer-provisioned instance>`, printed a real
+user code, was approved via the real `/cli-auth` approval-page form action as
+the real signed-in admin, and picked up a freshly-issued real API key, saved to
+`~/.config/homerun/config.json` at mode `0600`. Every other command above
+(`services list/get/deploy/stop/start/restart`, `projects list`,
+`templates list`, the 401-on-bad-key path, `homerun logout`) was re-verified
+against this same real installer-provisioned instance in the same pass. This run
+is also what caught a real bug: `POST /api/v1/auth/cli/{device,token}` weren't
+in `src/hooks.server.ts`'s `customAuthPaths` allowlist, so both 404'd before
+ever reaching their SvelteKit route files (swallowed by better-auth's own
+catch-all for anything under its `/api/v1/auth` basePath), now fixed, see
+CLAUDE.md's Homerun CLI section. This run is reproducible via
+`bun run e2e:multipass` (`scripts/e2e-multipass.ts` in the repo root), which
+provisions a real installer-built instance in a disposable Multipass VM and
+drives this exact CLI flow (login + every command) against it from a throwaway
+Docker container, alongside the installer/agent checks documented in
+`packages/installer/README.md`.
 
 `homerun update`: verified the compiled-vs-source detection (`process.execPath`
 basename) and the version read (embedded `package.json` import, confirmed the

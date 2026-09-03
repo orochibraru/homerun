@@ -2,8 +2,8 @@
 
 ## Medium
 
-- [ ] Use Multipass to test (full run, e2E) the installer and agent. Use docker
-      to test the CLI. All against a real instance, all e2e
+- [ ] Docker cleanup methods via UI (docker prune for system (all), image,
+      container...)
 
 ## Large
 

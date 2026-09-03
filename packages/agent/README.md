@@ -115,7 +115,14 @@ Every route below requires `Authorization: Bearer <token>` except `/v1/health`.
 Verified live in development against a real local Docker socket: boot + network
 creation, every endpoint above (including a real `nginx:alpine` pull → create →
 start → redeploy-replaces-old → stop/remove round trip), and the compiled binary
-running standalone with the same behavior as `bun run dev`. **Not verified**:
-running under a genuinely separate/remote host, under rootless Docker
-specifically (the installer's rootless setup is new and untested end-to-end, see
-`packages/installer/README.md`), or long-running under a real systemd unit.
+running standalone with the same behavior as `bun run dev`.
+
+**Also now verified**, against a real disposable Multipass Ubuntu 24.04 VM
+provisioned by `packages/installer/bootstrap.sh --mode=agent` (see
+`packages/installer/README.md` for that run's own findings): running under
+rootless Docker specifically, long-running under a real `systemd --user` unit,
+reachable over the network from outside the VM (health endpoint + OpenAPI doc
+both responded correctly), and, as a genuinely separate/remote host from a
+second VM's perspective, registered as a real `agent`-kind Remote Host and
+deploying a real service onto it (confirmed via `docker ps` that the container
+landed there, plus a working stop/start round trip).

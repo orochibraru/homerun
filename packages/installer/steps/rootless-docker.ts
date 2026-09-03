@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import type { StepRunner } from "../exec";
 import { commandExists } from "../exec";
 import type { PackageManager } from "./detect";
@@ -67,6 +68,7 @@ class RootlessDockerInstallerService {
 		username: string,
 	): Promise<string> {
 		await run.run(["loginctl", "enable-linger", username]);
+		await this.#allowRootlessUserns(run, username);
 
 		const uidResult = await run.run(["id", "-u", username]);
 		const uid = uidResult.stdout.trim() || "<uid>";
@@ -86,6 +88,60 @@ class RootlessDockerInstallerService {
 		});
 
 		return `${xdgRuntimeDir}/docker.sock`;
+	}
+
+	/**
+	 * Real, tested-live finding (a real disposable Multipass Ubuntu 24.04 VM,
+	 * `--mode=agent`): Ubuntu 23.10+ restricts unprivileged user namespaces by
+	 * default (`kernel.apparmor_restrict_unprivileged_userns=1`), which breaks
+	 * rootlesskit's own `fork/exec /proc/self/exe` with a bare "permission
+	 * denied", failing `dockerd-rootless-setuptool.sh` outright before this
+	 * fix existed. The profile below is Docker's own rootless installer's
+	 * suggested fix (also Ubuntu's documented workaround, see
+	 * https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces),
+	 * scoped to just this one binary path rather than disabling the
+	 * restriction kernel-wide. A no-op on any host where the sysctl file
+	 * doesn't exist at all (older Ubuntu, Debian, non-apt distros) or isn't
+	 * set to restrict.
+	 *
+	 * Second real, tested-live finding on top of the first: this reads the
+	 * sysctl via `node:fs/promises`' `readFile`, not `Bun.file(path).text()`.
+	 * `/proc` entries report a 0-byte size via `stat` (confirmed:
+	 * `ls -la` shows `0` for this exact file even though `cat` prints `1`),
+	 * and `Bun.file(...).exists()` returns `true` for it but `.text()`
+	 * silently returns `""` instead of the real content, verified live with a
+	 * standalone compiled binary on the same VM. Node's `readFile` reads it
+	 * correctly. Same class of Bun-vs-node:fs quirk as `Bun.write`'s silently
+	 * ignored `mode` option (see root CLAUDE.md's "Real bugs this suite
+	 * caught") : prefer `node:fs` over `Bun.file`/`Bun.write` for anything
+	 * that isn't a plain regular file.
+	 */
+	async #allowRootlessUserns(run: StepRunner, username: string): Promise<void> {
+		const sysctlPath = "/proc/sys/kernel/apparmor_restrict_unprivileged_userns";
+		let sysctlValue: string;
+		try {
+			sysctlValue = await readFile(sysctlPath, "utf8");
+		} catch {
+			return;
+		}
+		if (sysctlValue.trim() !== "1") {
+			return;
+		}
+
+		const profilePath = `/etc/apparmor.d/home.${username}.bin.rootlesskit`;
+		await run.writeFile(
+			profilePath,
+			`abi <abi/4.0>,
+include <tunables/global>
+
+/home/${username}/bin/rootlesskit flags=(unconfined) {
+  userns,
+
+  include if exists <local/home.${username}.bin.rootlesskit>
+}
+`,
+		);
+		await run.runOk(["systemctl", "restart", "apparmor.service"]);
 	}
 }
 
