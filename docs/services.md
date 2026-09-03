@@ -134,9 +134,10 @@ one-time infra change" pattern as custom SSL's `TRAEFIK_DYNAMIC_CONFIG_DIR`.
 to actually join the swarm as a worker, which is a different thing than just
 being a registered `tcp://`/`ssh://` Docker daemon, so a swarm-mode service
 can't currently target a Remote Host, deploying one there is rejected outright.
-`installer/swarm-join.sh` (see [`installer/README.md`](../installer/README.md))
-joins a box to an existing swarm as a worker and installs the Homerun Agent on
-it, groundwork for closing this gap, not the integration itself yet.
+`installer/swarm-join.sh` (see
+[`installer/README.md`](../packages/installer/README.md)) joins a box to an
+existing swarm as a worker and installs the Homerun Agent on it, groundwork for
+closing this gap, not the integration itself yet.
 
 ## Logs
 

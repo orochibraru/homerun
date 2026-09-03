@@ -55,7 +55,7 @@ homerun services list
 Or, working on the CLI itself, from the repo root:
 `bun install && bun run cli/index.ts services list`
 (`bun run scripts/build-packages.ts <amd64|arm64>` compiles it the same way CI
-does). See [`cli/README.md`](../cli/README.md).
+does). See [`cli/README.md`](../packages/cli/README.md).
 
 ```bash
 homerun services list [--json]
@@ -68,6 +68,6 @@ homerun projects list [--json]
 homerun templates list [--json]
 ```
 
-No `create`/`update`/`delete` yet. See [`cli/README.md`](../cli/README.md) for
-the full reference, including how to regenerate the generated types after an API
-change.
+No `create`/`update`/`delete` yet. See
+[`cli/README.md`](../packages/cli/README.md) for the full reference, including
+how to regenerate the generated types after an API change.
