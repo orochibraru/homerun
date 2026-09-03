@@ -42,10 +42,7 @@ afterEach(async () => {
 
 /** Strips a bundler-added `?query` suffix (Bun/Vite-style cache-busting import params) before reading the file back off disk. */
 function bareFilePath(path: string): string {
-	return path.substring(
-		0,
-		path.includes("?") ? path.indexOf("?") : path.length,
-	);
+	return path.slice(0, path.includes("?") ? path.indexOf("?") : path.length);
 }
 
 plugin({

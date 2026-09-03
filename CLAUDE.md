@@ -583,28 +583,49 @@ each sub-project's own `build:linux-x64`/`build:linux-arm64` scripts) so
 serving the "installer (and homerun agent) in each release artifact" TODO item,
 with the CLI's own binary added the same way for consistency.
 
-**Uses `@saithodev/semantic-release-gitea`, not the official
-`@semantic-release/github` plugin**, this repo's actual git remote is a
-self-hosted Gitea (`git.ombrage.space`, the same host `docker.yaml` already
-pushes container images to), not GitHub, even though workflows live under
-`.github/workflows/` (Gitea Actions consumes that same directory/format). The
-release job's `GITEA_TOKEN` env var currently reuses the existing
-`PACKAGES_TOKEN` secret.
+**Uses `@semantic-release/github`**, the official plugin: this repo is hosted on
+GitHub (`github.com/orochibraru/homerun`) and runs on GitHub Actions. It
+previously lived on a self-hosted Gitea and used
+`@saithodev/semantic-release-gitea`; that migration is done, so don't
+reintroduce Gitea-specific release/CI config.
 
-**Verified as far as possible without real repo write access**:
-`scripts/bump-version.ts` and `scripts/build-release-binaries.ts` were both run
-for real locally (version bumped across all four `package.json`s and reverted,
-all six binaries actually cross-compiled successfully);
-`bunx semantic-release --dry-run --no-ci` was run against the real repo and got
-all the way through plugin loading, branch/repo detection, and the local
-git-push permission check before failing at the Gitea token-verification step on
-a deliberately-fake token, confirming the config wiring itself (right plugin,
-right repo, right API URL) is sound, which is the most that's checkable without
-a real Gitea API token. **Not verified**: an actual release running end-to-end
-in CI (creating a real tag/release/GitHub-Actions-equivalent-Gitea-Actions-run),
-and specifically whether `PACKAGES_TOKEN`'s scopes cover the Gitea _release_ API
-rather than just registry push, if release creation 403s in practice, mint a
-dedicated token with repo write access instead of reusing that one.
+**Container images go to Docker Hub, not GHCR**, deliberately:
+`docker.io/orochibraru/homerun{,-agent,-docs}`. That's the one piece of the
+pipeline that does _not_ follow the code host, so `docker.yaml`'s login takes a
+real Docker Hub credential (`secrets.DOCKER_REGISTRY_PASSWORD`, an access token;
+the Docker Hub username is the plain `registry_username` input, since it isn't
+secret) rather than the built-in `GITHUB_TOKEN`.
+
+**The release job needs `secrets.RELEASE_TOKEN`, not `GITHUB_TOKEN`**: a
+fine-grained PAT scoped to this repo (Contents + Issues + Pull requests: write).
+`@semantic-release/git` pushes the version bump straight to `main`, and a `main`
+ruleset blocks pushes from anyone but a repo admin, which `github-actions[bot]`
+isn't. It's threaded in twice, as `actions/checkout`'s `token` (git push auth)
+and as the `GH_TOKEN` env var (`@semantic-release/github`'s API calls). The
+`version` job's dry run takes it too, unlike the sibling `nuvio-web` repo this
+CI shape is shared with: here that job's output also feeds the `binaries` job's
+baked version, so it has to actually resolve rather than silently falling back
+to a commit SHA.
+
+**Job ids use `-`, never `:`** (`build-app`, not `build:app`). GitHub rejects a
+colon in a job id outright and refuses to run the whole workflow file; the
+Gitea-era config had `build:app` and got away with it.
+
+**Fork PRs build but never push.** `docker.yaml` takes a `push` input (default
+true); `pull_request.yaml` passes
+`github.event.pull_request.head.repo.full_name == github.repository`, so a
+same-repo PR still publishes its `pr-<n>` tag while a fork's build switches its
+bake output to `type=cacheonly` and skips the registry login, the digest upload,
+and the whole `merge` job. GitHub withholds secrets from fork PRs, so the login
+there could only ever fail; this way the build is still a real gate (and still
+warms the layer cache) without needing a credential. `secrets.registry_password`
+is `required: false` for the same reason.
+
+**Not verified**: an actual release running end-to-end on GitHub Actions
+(creating a real tag/release and pushing the version bump back to `main`). The
+earlier Gitea-era verification of `scripts/bump-version.ts` and
+`scripts/build-release-binaries.ts` still stands (both were run for real
+locally, all six binaries cross-compiled), since neither is host-specific.
 
 ### Shared deploy pipeline (`src/lib/services/deploy.service.ts`)
 
@@ -1728,10 +1749,10 @@ section is the pointer.
   release binary straight to `/usr/local/bin/homerun-agent`; `--mode=full`
   writes a standalone `compose.yaml` (`installer/steps/full-stack.ts`, distinct
   from the root dev `compose.yaml`; see Docker integration above) pulling the
-  published `git.ombrage.space/orochibraru/homerun` app image alongside
+  published `docker.io/orochibraru/homerun` app image alongside
   Traefik/Postgres, then `docker compose pull && ...up -d`.
   `installer/steps/release.ts` is the one place both artifact kinds (release
-  binaries vs. the Docker image) resolve from: `--version=` (a Gitea release
+  binaries vs. the Docker image) resolve from: `--version=` (a GitHub release
   tag, default `latest`) picks which release's binaries to fetch, but doesn't
   pin the app image the same way: `docker.yaml` tags images by commit SHA +
   `latest` only, there's no `:vX.Y.Z` image tag, a real asymmetry in this repo's

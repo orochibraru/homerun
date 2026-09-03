@@ -25,7 +25,7 @@
         class="transition-colors hover:text-(--text) {current === 'docs' ? 'text-(--text)' : 'text-(--text-muted)'}"
       >Docs</a>
       <a
-        href="https://git.ombrage.space/orochibraru/homerun"
+        href="https://github.com/orochibraru/homerun"
         target="_blank"
         rel="noreferrer"
         class="flex items-center gap-1.5 rounded-full border border-(--border) px-3.5 py-1.5 text-(--text-muted) transition-colors hover:border-(--border-hover) hover:text-(--text)"

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import process, { cwd } from "node:process";
-import type { Handle } from "@sveltejs/kit";
+import type { Handle, RequestEvent } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 import { eq } from "drizzle-orm";
@@ -94,6 +94,7 @@ async function waitForDatabase() {
 		try {
 			// Reset connection before each attempt to avoid stale connections
 			if (i > 0) {
+				// biome-ignore lint/performance/noAwaitInLoops: retry backoff: each attempt must follow the previous one
 				await resetDb();
 			}
 			// getDb() alone doesn't prove connectivity : drizzle-orm/bun-sql's
@@ -132,6 +133,7 @@ async function runMigrations() {
 			// migrate() became an *unhandled* promise rejection outside this
 			// try/catch, which crashes the whole process instead of being
 			// caught and retried below.
+			// biome-ignore lint/performance/noAwaitInLoops: retry loop: one migrate attempt at a time
 			await migrate(db, {
 				migrationsFolder,
 			});
@@ -188,18 +190,75 @@ const customAuthPaths = new Set(["/api/v1/auth/providers"]);
  */
 const SIGN_UP_PATH = "/api/v1/auth/sign-up/email";
 
+/** Blocks public self-service sign-up once any account exists : the endpoint itself, so it can't be curled around. */
+async function signUpClosedResponse(
+	event: RequestEvent,
+): Promise<Response | null> {
+	const isSignUp =
+		event.request.method === "POST" && event.url.pathname === SIGN_UP_PATH;
+	if (!(isSignUp && (await AdminService.hasAnyUser()))) {
+		return null;
+	}
+	return new Response(
+		JSON.stringify({
+			message: "Sign-up is closed : an admin account already exists.",
+		}),
+		{ headers: { "content-type": "application/json" }, status: 403 },
+	);
+}
+
+/** The raw API key from `x-api-key` or `Authorization: Bearer`, or null when neither is present. */
+function readApiKey(event: RequestEvent): string | null {
+	const authHeader = event.request.headers.get("authorization");
+	return (
+		event.request.headers.get("x-api-key") ??
+		(authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null)
+	);
+}
+
+/**
+ * API-key fallback for a request with no cookie session : populates
+ * `locals.user` on success, and returns a 401 response when a key was sent
+ * but doesn't verify. Returns null when there's nothing to do.
+ */
+async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
+	const rawKey = readApiKey(event);
+	if (!rawKey) {
+		return null;
+	}
+
+	const result = await auth.api
+		.verifyApiKey({ body: { key: rawKey } })
+		.catch(() => null);
+
+	if (!(result?.valid && result.key)) {
+		logger.warn("Invalid API key authentication attempt", { key: rawKey });
+		return new Response(JSON.stringify({ error: "Unauthorized" }), {
+			status: 401,
+		});
+	}
+
+	// Look the owning user up directly by the key's referenceId rather
+	// than going through getSession's API-key session-mocking (that
+	// path is gated behind enableSessionForAPIKeys, which better-auth's
+	// own docs warn against enabling in production : see api-key
+	// plugin's types.d.ts).
+	const [apiKeyUser] = await appDb
+		.select()
+		.from(userTable)
+		.where(eq(userTable.id, result.key.referenceId))
+		.limit(1);
+
+	if (apiKeyUser) {
+		event.locals.user = apiKeyUser;
+	}
+	return null;
+}
+
 const authHandler: Handle = async ({ event, resolve }) => {
-	if (
-		event.request.method === "POST" &&
-		event.url.pathname === SIGN_UP_PATH &&
-		(await AdminService.hasAnyUser())
-	) {
-		return new Response(
-			JSON.stringify({
-				message: "Sign-up is closed : an admin account already exists.",
-			}),
-			{ headers: { "content-type": "application/json" }, status: 403 },
-		);
+	const signUpClosed = await signUpClosedResponse(event);
+	if (signUpClosed) {
+		return signUpClosed;
 	}
 
 	const session = await auth.api
@@ -214,42 +273,9 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
 	} else {
-		// Fallback: try API key authentication
-		// Accepts either `x-api-key: <key>` or `Authorization: Bearer <key>`
-		const authHeader = event.request.headers.get("authorization");
-		const rawKey =
-			event.request.headers.get("x-api-key") ??
-			(authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
-
-		if (rawKey) {
-			const result = await auth.api
-				.verifyApiKey({ body: { key: rawKey } })
-				.catch(() => null);
-
-			if (!(result?.valid && result.key)) {
-				logger.warn("Invalid API key authentication attempt", {
-					key: rawKey,
-				});
-
-				return new Response(JSON.stringify({ error: "Unauthorized" }), {
-					status: 401,
-				});
-			}
-
-			// Look the owning user up directly by the key's referenceId rather
-			// than going through getSession's API-key session-mocking (that
-			// path is gated behind enableSessionForAPIKeys, which better-auth's
-			// own docs warn against enabling in production : see api-key
-			// plugin's types.d.ts).
-			const [apiKeyUser] = await appDb
-				.select()
-				.from(userTable)
-				.where(eq(userTable.id, result.key.referenceId))
-				.limit(1);
-
-			if (apiKeyUser) {
-				event.locals.user = apiKeyUser;
-			}
+		const rejected = await applyApiKeyAuth(event);
+		if (rejected) {
+			return rejected;
 		}
 	}
 

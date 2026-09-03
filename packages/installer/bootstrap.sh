@@ -4,7 +4,7 @@
 #   curl -fsSL https://<host>/install.sh | sudo bash -s -- [--version=vX.Y.Z] [installer flags...]
 #
 # Every release publishes prebuilt agent/cli/installer binaries for
-# linux/amd64 + linux/arm64 as Gitea release assets on this repo
+# linux/amd64 + linux/arm64 as GitHub release assets on this repo
 # (.github/workflows/binaries.yaml + .releaserc.json), and pushes the app
 # itself as a Docker image (.github/workflows/docker.yaml). This script just
 # downloads the matching homerun-installer-<arch> binary and execs it :
@@ -12,7 +12,7 @@
 # installer/README.md.
 set -euo pipefail
 
-GIT_HOST="git.ombrage.space"
+GIT_HOST="github.com"
 GIT_REPO="orochibraru/homerun"
 VERSION="latest"
 

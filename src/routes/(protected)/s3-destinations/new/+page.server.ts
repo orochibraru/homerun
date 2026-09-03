@@ -26,9 +26,7 @@ export const actions = {
 		) {
 			return fail(400, { error: "Every field is required." });
 		}
-		try {
-			new URL(endpoint);
-		} catch {
+		if (!URL.canParse(endpoint)) {
 			return fail(400, { error: "Endpoint must be a full URL." });
 		}
 

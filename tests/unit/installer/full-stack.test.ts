@@ -27,9 +27,7 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 			(call) => call[0] === composePath,
 		) as [string, string];
 		const content = composeCall[1];
-		expect(content).toContain(
-			"image: git.ombrage.space/orochibraru/homerun:v1.2.3",
-		);
+		expect(content).toContain("image: docker.io/orochibraru/homerun:v1.2.3");
 		expect(content).toContain(
 			"- /run/user/1000/docker.sock:/run/user/1000/docker.sock",
 		);
@@ -82,7 +80,7 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 			(call) => call[0] === "/home/homerun/homerun/compose.yaml",
 		) as [string, string];
 		expect(composeCall[1]).toContain(
-			"image: git.ombrage.space/orochibraru/homerun:latest",
+			"image: docker.io/orochibraru/homerun:latest",
 		);
 	});
 });

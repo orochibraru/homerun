@@ -39,6 +39,7 @@ if (!(process.env.ORIGIN || dev || building)) {
  * destructuring it at import time, the new instance is picked up
  * immediately everywhere without a process restart.
  */
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: one betterAuth() configuration object literal, not branching logic
 function buildAuth() {
 	return betterAuth({
 		advanced: {

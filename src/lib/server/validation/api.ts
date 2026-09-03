@@ -46,6 +46,9 @@ export const createServiceApiBody = z
 		path: ["image"],
 	});
 
+/** The validated JSON body of `POST /api/v1/services`. */
+export type CreateServiceApiInput = z.infer<typeof createServiceApiBody>;
+
 export const updateServiceApiBody = z.object({
 	authRequired: z.boolean().optional(),
 	buildSource: z.enum(["image", "git"]).optional(),

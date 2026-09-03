@@ -14,6 +14,7 @@ class RootlessDockerInstallerService {
 	 */
 	async installDockerEngine(run: StepRunner): Promise<void> {
 		if (await commandExists("docker")) {
+			console.log("Docker already installed, skipping engine install.");
 			return;
 		}
 		await run.run(["sh", "-c", "curl -fsSL https://get.docker.com | sh"]);
@@ -33,6 +34,7 @@ class RootlessDockerInstallerService {
 	async ensureRootlessUser(run: StepRunner, username: string): Promise<void> {
 		const exists = await run.runOk(["id", username]);
 		if (exists) {
+			console.log(`User "${username}" already exists, reusing it.`);
 			return;
 		}
 		await run.run([

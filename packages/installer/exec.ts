@@ -1,9 +1,9 @@
+import process from "node:process";
 /**
  * Every shell-out in this installer goes through here : same "shell out to a
  * well-known CLI" precedent the main app uses for git/tar/df/nvidia-smi, just
  * centralized so --dry-run has exactly one place to intercept.
  */
-import process from "node:process";
 export interface ExecResult {
 	code: number;
 	stdout: string;
@@ -70,6 +70,9 @@ export class StepRunner {
 
 	/** Writes a file's content directly (systemd units, etc.) : a no-op under --dry-run, just logged like everything else. */
 	async writeFile(path: string, content: string): Promise<void> {
+		console.log(
+			`${this.dryRun ? "[dry-run]" : "[write]"} ${path} (${content.length} bytes)`,
+		);
 		if (this.dryRun) {
 			return;
 		}
@@ -78,6 +81,7 @@ export class StepRunner {
 
 	/** Appends one line to a file, creating it (and any missing parent content) if it doesn't exist yet : used for secrets that must not be clobbered once generated (see steps/auth-secret.ts). A no-op under --dry-run. */
 	async appendLine(path: string, line: string): Promise<void> {
+		console.log(`${this.dryRun ? "[dry-run]" : "[append]"} ${path} += 1 line`);
 		if (this.dryRun) {
 			return;
 		}
@@ -87,9 +91,10 @@ export class StepRunner {
 		await Bun.write(path, `${existing}${sep}${line}\n`);
 	}
 
-	private log(_cmd: string[], opts?: { cwd?: string }): void {
-		const _prefix = this.dryRun ? "[dry-run]" : "[run]";
-		const _cwd = opts?.cwd ? ` (cwd=${opts.cwd})` : "";
+	private log(cmd: string[], opts?: { cwd?: string }): void {
+		const prefix = this.dryRun ? "[dry-run]" : "[run]";
+		const cwd = opts?.cwd ? ` (cwd=${opts.cwd})` : "";
+		console.log(`${prefix} ${cmd.join(" ")}${cwd}`);
 	}
 }
 

@@ -72,46 +72,71 @@ interface SgrState {
 	underline: boolean;
 }
 
+/** Plain SGR attribute codes : each just mutates one or more flags on the running state. */
+const SGR_ATTRIBUTE: Record<number, (state: SgrState) => void> = {
+	0: (state) => {
+		state.bold = false;
+		state.dim = false;
+		state.italic = false;
+		state.underline = false;
+		state.fg = undefined;
+		state.bg = undefined;
+	},
+	1: (state) => {
+		state.bold = true;
+	},
+	2: (state) => {
+		state.dim = true;
+	},
+	3: (state) => {
+		state.italic = true;
+	},
+	4: (state) => {
+		state.underline = true;
+	},
+	22: (state) => {
+		state.bold = false;
+		state.dim = false;
+	},
+	23: (state) => {
+		state.italic = false;
+	},
+	24: (state) => {
+		state.underline = false;
+	},
+	39: (state) => {
+		state.fg = undefined;
+	},
+	49: (state) => {
+		state.bg = undefined;
+	},
+};
+
+/**
+ * How many trailing params an extended-color code (38/48) consumes, so they
+ * don't get misread as separate SGR codes. The actual color isn't rendered
+ * (see the module docstring), only skipped over.
+ */
+function extendedColorSpan(codes: number[], index: number): number {
+	const mode = codes[index + 1];
+	if (mode === 5) {
+		return 2; // 38;5;n
+	}
+	if (mode === 2) {
+		return 4; // 38;2;r;g;b
+	}
+	return 0;
+}
+
 function applyCodes(state: SgrState, codes: number[]): void {
 	let i = 0;
 	while (i < codes.length) {
 		const code = codes[i];
-		if (code === 0) {
-			state.bold = false;
-			state.dim = false;
-			state.italic = false;
-			state.underline = false;
-			state.fg = undefined;
-			state.bg = undefined;
-		} else if (code === 1) {
-			state.bold = true;
-		} else if (code === 2) {
-			state.dim = true;
-		} else if (code === 3) {
-			state.italic = true;
-		} else if (code === 4) {
-			state.underline = true;
-		} else if (code === 22) {
-			state.bold = false;
-			state.dim = false;
-		} else if (code === 23) {
-			state.italic = false;
-		} else if (code === 24) {
-			state.underline = false;
-		} else if (code === 39) {
-			state.fg = undefined;
-		} else if (code === 49) {
-			state.bg = undefined;
+		const attribute = SGR_ATTRIBUTE[code];
+		if (attribute) {
+			attribute(state);
 		} else if (code === 38 || code === 48) {
-			// Extended color (256-color or truecolor) : consume its trailing
-			// params so they don't get misread as separate SGR codes, but
-			// don't attempt to render the actual color (see module docstring).
-			const mode = codes[i + 1];
-			if (mode === 5) {
-				i += 2; // 38;5;n
-			} else if (mode === 2) {
-				i += 4; // 38;2;r;g;b
-			}
+			i += extendedColorSpan(codes, i);
 		} else if (code in FG_COLOR_CLASS) {
 			state.fg = FG_COLOR_CLASS[code];
 		} else if (code in BG_COLOR_CLASS) {

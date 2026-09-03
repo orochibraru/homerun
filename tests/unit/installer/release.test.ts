@@ -5,13 +5,13 @@ import { ReleaseAssets } from "../../../packages/installer/steps/release";
 describe("ReleaseAssets.releaseAssetUrl", () => {
 	test("'latest' resolves to the latest-release download path", () => {
 		expect(ReleaseAssets.releaseAssetUrl("latest", "homerun-agent-amd64")).toBe(
-			"https://git.ombrage.space/orochibraru/homerun/releases/latest/download/homerun-agent-amd64",
+			"https://github.com/orochibraru/homerun/releases/latest/download/homerun-agent-amd64",
 		);
 	});
 
 	test("a specific tag pins to that release", () => {
 		expect(ReleaseAssets.releaseAssetUrl("v1.2.3", "homerun-cli-arm64")).toBe(
-			"https://git.ombrage.space/orochibraru/homerun/releases/download/v1.2.3/homerun-cli-arm64",
+			"https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-cli-arm64",
 		);
 	});
 });
@@ -19,7 +19,7 @@ describe("ReleaseAssets.releaseAssetUrl", () => {
 describe("ReleaseAssets.imageRef", () => {
 	test("'latest' maps to the :latest image tag", () => {
 		expect(ReleaseAssets.imageRef("latest")).toBe(
-			"git.ombrage.space/orochibraru/homerun:latest",
+			"docker.io/orochibraru/homerun:latest",
 		);
 	});
 
@@ -27,7 +27,7 @@ describe("ReleaseAssets.imageRef", () => {
 		// Real asymmetry documented in release.ts : there's no :vX.Y.Z image
 		// tag actually published, this only reflects what the caller asked for.
 		expect(ReleaseAssets.imageRef("v1.2.3")).toBe(
-			"git.ombrage.space/orochibraru/homerun:v1.2.3",
+			"docker.io/orochibraru/homerun:v1.2.3",
 		);
 	});
 });
@@ -52,7 +52,7 @@ describe("ReleaseAssets.downloadReleaseBinary", () => {
 		expect(run.mock.calls[0][0]).toEqual([
 			"curl",
 			"-fsSL",
-			"https://git.ombrage.space/orochibraru/homerun/releases/download/v1.2.3/homerun-agent-arm64",
+			"https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-agent-arm64",
 			"-o",
 			"/usr/local/bin/homerun-agent",
 		]);

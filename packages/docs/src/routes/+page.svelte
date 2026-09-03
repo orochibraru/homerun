@@ -3,7 +3,7 @@
 	import SiteHeader from "$lib/site-header.svelte";
 
 	const oneLiner =
-		"curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \\\n  | sudo bash -s -- --mode=full";
+		"curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \\\n  | sudo bash -s -- --mode=full";
 
 	const features: Array<{ title: string; body: string }> = [
 		{
@@ -83,7 +83,7 @@
                 >Get started</a
             >
             <a
-                href="https://git.ombrage.space/orochibraru/homerun"
+                href="https://github.com/orochibraru/homerun"
                 target="_blank"
                 rel="noreferrer"
                 class="rounded-full border border-(--border) px-6 py-2.5 text-sm font-semibold transition-colors hover:border-(--border-hover)"

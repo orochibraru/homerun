@@ -2,23 +2,22 @@ import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
 import type { BaseDockerService, Constructor } from "./base.ts";
-import type { VolumeMountParams } from "./containers.ts";
+import type {
+	PullImageParams,
+	RegistryAuth,
+	VolumeMountParams,
+} from "./containers.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
 
 const logger = new Logger("Swarm");
 
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pullImage. */
 interface RequiresContainerMixin {
-	pullImage: (
-		image: string,
-		tag: string,
-		auth?: unknown,
-		onProgress?: (line: string) => void,
-	) => Promise<{ digest: string | null }>;
+	pullImage: (params: PullImageParams) => Promise<{ digest: string | null }>;
 }
 
 export interface CreateSwarmServiceParams {
-	auth?: unknown;
+	auth?: RegistryAuth;
 	authRequired?: boolean;
 	containerPort: number;
 	cpuLimit?: string | null;
@@ -56,6 +55,7 @@ export interface CreateSwarmServiceParams {
  * discover these services : a compose.yaml change the admin makes once,
  * same pattern as the custom-SSL dynamic-config-dir opt-in.
  */
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerSwarmMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {
@@ -79,6 +79,63 @@ export function DockerSwarmMixin<
 		}
 
 		/** Pulls the image, then creates (or replaces) the swarm service backing one Homerun service. */
+		/**
+		 * Best-effort pre-pull : same "warn, don't block" posture as a bad
+		 * image ref elsewhere, createService still surfaces a real error if
+		 * the daemon genuinely can't pull the image itself.
+		 */
+		async #prePullImage(
+			params: CreateSwarmServiceParams,
+			onProgress?: (line: string) => void,
+		): Promise<void> {
+			try {
+				await this.pullImage({
+					auth: params.auth,
+					image: params.image,
+					onProgress,
+					tag: params.tag,
+				});
+			} catch (err) {
+				logger.warn(
+					`Pull before service create failed for ${params.image}:${params.tag}`,
+					err,
+				);
+			}
+		}
+
+		#taskTemplateFor(params: CreateSwarmServiceParams) {
+			return {
+				ContainerSpec: {
+					Env: Object.entries(params.envVars).map(([k, v]) => `${k}=${v}`),
+					Image: `${params.image}:${params.tag}`,
+					Labels: {
+						[SERVICE_ID_LABEL]: params.serviceId,
+						"homerun.managed": "true",
+					},
+					Mounts: (params.volumes ?? []).map((v) => ({
+						ReadOnly: v.readOnly ?? false,
+						Source: v.source,
+						Target: v.containerPath,
+						Type: "bind" as const,
+					})),
+				},
+				Networks: [{ Target: config.docker.networkName }],
+				Resources: {
+					Limits: {
+						MemoryBytes: params.memoryLimitMb
+							? params.memoryLimitMb * 1024 * 1024
+							: undefined,
+						NanoCPUs: params.cpuLimit
+							? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
+							: undefined,
+					},
+				},
+				RestartPolicy: {
+					Condition: params.restartPolicy === "no" ? "none" : "any",
+				},
+			};
+		}
+
 		async createAndStartSwarmService(
 			params: CreateSwarmServiceParams,
 			onProgress?: (line: string) => void,
@@ -92,77 +149,28 @@ export function DockerSwarmMixin<
 				await docker.getService(existing.ID).remove();
 			}
 
-			const ref = `${params.image}:${params.tag}`;
-			try {
-				await this.pullImage(params.image, params.tag, params.auth, onProgress);
-			} catch (err) {
-				// Same "warn, don't block" posture as a bad image ref elsewhere :
-				// createService below will still surface a real error if the
-				// image genuinely can't be pulled by the daemon itself.
-				logger.warn(`Pull before service create failed for ${ref}`, err);
-			}
-
-			const labels = buildContainerLabels({
-				authRequired: params.authRequired,
-				containerPort: params.containerPort,
-				customDomain: params.customDomain,
-				dnsResolvable: params.dnsResolvable,
-				projectSlug: params.projectSlug,
-				serviceId: params.serviceId,
-				slug: params.slug,
-			});
-
-			const envArray = Object.entries(params.envVars).map(
-				([k, v]) => `${k}=${v}`,
-			);
-			const protocols: Array<"tcp" | "udp"> =
-				params.portProtocol === "both"
-					? ["tcp", "udp"]
-					: [params.portProtocol === "udp" ? "udp" : "tcp"];
+			await this.#prePullImage(params, onProgress);
 
 			onProgress?.("Creating swarm service...");
+			// Swarm has no per-service EXPOSE equivalent to declare protocols
+			// the way standalone containers do, and no port is published
+			// either way (matching the rest of this app's "no host port
+			// publishing by design" stance), so params.portProtocol isn't
+			// attached to anything dockerode's swarm API accepts here.
 			const created = await docker.createService({
-				Labels: labels,
+				Labels: buildContainerLabels({
+					authRequired: params.authRequired,
+					containerPort: params.containerPort,
+					customDomain: params.customDomain,
+					dnsResolvable: params.dnsResolvable,
+					projectSlug: params.projectSlug,
+					serviceId: params.serviceId,
+					slug: params.slug,
+				}),
 				Mode: { Replicated: { Replicas: params.replicas } },
 				Name: this.#swarmServiceName(params.slug, params.projectSlug),
-				TaskTemplate: {
-					ContainerSpec: {
-						Env: envArray,
-						Image: ref,
-						Labels: {
-							[SERVICE_ID_LABEL]: params.serviceId,
-							"homerun.managed": "true",
-						},
-						Mounts: (params.volumes ?? []).map((v) => ({
-							ReadOnly: v.readOnly ?? false,
-							Source: v.source,
-							Target: v.containerPath,
-							Type: "bind" as const,
-						})),
-					},
-					Networks: [{ Target: config.docker.networkName }],
-					Resources: {
-						Limits: {
-							MemoryBytes: params.memoryLimitMb
-								? params.memoryLimitMb * 1024 * 1024
-								: undefined,
-							NanoCPUs: params.cpuLimit
-								? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
-								: undefined,
-						},
-					},
-					RestartPolicy: {
-						Condition: params.restartPolicy === "no" ? "none" : "any",
-					},
-				},
-				// Swarm has no per-service EXPOSE equivalent to declare
-				// protocols the way standalone containers do (no port is
-				// published either way, matching the rest of this app's "no
-				// host port publishing by design" stance) : protocols is
-				// computed above for parity/documentation but not attached to
-				// anything dockerode's swarm API accepts here.
+				TaskTemplate: this.#taskTemplateFor(params),
 			});
-			void protocols;
 
 			logger.info(
 				`Swarm service created: id=${created.id ?? created.ID} service=${params.serviceId}`,

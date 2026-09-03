@@ -111,7 +111,7 @@ class AgentClientServiceClass {
 	}
 
 	/** POST /v1/deploy : pull (unless skipPull)/create/start, same shape as DockerService.createAndStartContainer + pullImage combined, just server-side on the agent. */
-	async deploy(
+	deploy(
 		connection: AgentConnection,
 		params: AgentDeployParams,
 	): Promise<AgentDeployResult> {
@@ -136,7 +136,7 @@ class AgentClientServiceClass {
 	}
 
 	/** POST /v1/build : clone + docker build on the agent itself, see agent/schemas.ts's buildInputSchema for the `push` tradeoff. No live progress streaming (same as `deploy`, a single JSON response once it's done, not an SSE/chunked stream). */
-	async build(
+	build(
 		connection: AgentConnection,
 		params: AgentBuildParams,
 	): Promise<AgentBuildResult> {

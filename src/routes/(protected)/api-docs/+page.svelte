@@ -11,7 +11,7 @@
 		// Dynamically imported client-side only, swagger-ui-bundle touches
 		// `window`/`document` at call time, which would crash SvelteKit's SSR
 		// pass if imported at module scope.
-		(async () => {
+		void (async () => {
 			const { default: SwaggerUIBundle } = await import(
 				"swagger-ui-dist/swagger-ui-bundle.js"
 			);

@@ -20,7 +20,9 @@
 					if (theme === "light" || theme === "dark") {
 						document.documentElement.setAttribute("data-theme", theme);
 					}
-				} catch {}
+				} catch {
+					// localStorage unreadable (private mode) : fall through to the system default.
+				}
 			})();
 		</script>
 		%sveltekit.head%

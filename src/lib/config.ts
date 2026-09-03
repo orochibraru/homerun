@@ -299,6 +299,11 @@ export function isSmtpEnabled(): boolean {
 		config.smtp?.from;
 
 	if (enabledInConfig && !configuredProperly) {
+		// config.ts is a leaf module by design (see CLAUDE.md) : importing $lib/logger here would cycle, since Logger imports config.
+		// biome-ignore lint/suspicious/noConsole: no logger reachable from this module
+		console.warn(
+			"SMTP is enabled in configuration but missing required fields. Email verification will not work.",
+		);
 		return false;
 	}
 
@@ -327,18 +332,36 @@ export const config: AppConfig = structuredClone(fileDefaults);
 export function applyInstanceSettings(
 	override: InstanceSettingsOverride = {},
 ): void {
+	applyCoreOverride(override);
+	applyAuthOverride(override);
+	applyDockerOverride(override);
+	applySmtpOverride(override);
+	applyTraefikOverride(override);
+}
+
+/** Instance-wide addressing : the base domain and the forwardAuth check URL. */
+function applyCoreOverride(override: InstanceSettingsOverride): void {
 	config.authCheckUrl = override.authCheckUrl ?? fileDefaults.authCheckUrl;
 	config.baseDomain = override.baseDomain ?? fileDefaults.baseDomain;
+}
+
+function applyAuthOverride(override: InstanceSettingsOverride): void {
 	config.auth.crossSubdomainCookies =
 		override.authCrossSubdomainCookies ??
 		fileDefaults.auth.crossSubdomainCookies;
 	config.auth.oauthProviders =
 		override.oauthProviders ?? fileDefaults.auth.oauthProviders;
 	config.auth.origin = override.authOrigin ?? fileDefaults.auth.origin;
+}
+
+function applyDockerOverride(override: InstanceSettingsOverride): void {
 	config.docker.networkName =
 		override.dockerNetworkName ?? fileDefaults.docker.networkName;
 	config.docker.socketPath =
 		override.dockerSocketPath ?? fileDefaults.docker.socketPath;
+}
+
+function applySmtpOverride(override: InstanceSettingsOverride): void {
 	config.smtp.enabled = override.smtpEnabled ?? fileDefaults.smtp.enabled;
 	config.smtp.from = override.smtpFrom ?? fileDefaults.smtp.from;
 	config.smtp.host = override.smtpHost ?? fileDefaults.smtp.host;
@@ -346,6 +369,9 @@ export function applyInstanceSettings(
 	config.smtp.port = override.smtpPort ?? fileDefaults.smtp.port;
 	config.smtp.secure = override.smtpSecure ?? fileDefaults.smtp.secure;
 	config.smtp.user = override.smtpUser ?? fileDefaults.smtp.user;
+}
+
+function applyTraefikOverride(override: InstanceSettingsOverride): void {
 	config.traefik.acmeEmail =
 		override.traefikAcmeEmail ?? fileDefaults.traefik.acmeEmail;
 	config.traefik.certResolver =

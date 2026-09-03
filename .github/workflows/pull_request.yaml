@@ -19,60 +19,64 @@ jobs:
   code_quality:
     name: Code Quality
     uses: ./.github/workflows/code_quality.yaml
+    secrets: inherit
 
   binaries:
     name: Binaries
     needs: [code_quality]
     uses: ./.github/workflows/binaries.yaml
 
-  build:app:
+  build-app:
     name: Docker Build (App)
     needs: [code_quality]
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
+      push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
       image_name: orochibraru/homerun
-      registry_name: git.ombrage.space
+      registry_name: docker.io
       registry_username: orochibraru
       bake_target: app-ci
     secrets:
-      registry_password: ${{ secrets.PACKAGES_TOKEN }}
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-  build:agent:
+  build-agent:
     name: Docker Build (Agent)
     needs: [code_quality]
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
+      push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
       image_name: orochibraru/homerun-agent
-      registry_name: git.ombrage.space
+      registry_name: docker.io
       registry_username: orochibraru
       bake_target: agent-ci
     secrets:
-      registry_password: ${{ secrets.PACKAGES_TOKEN }}
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-  build:docs:
+  build-docs:
     name: Docker Build (Docs)
     needs: [code_quality]
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
+      push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
       image_name: orochibraru/homerun-docs
-      registry_name: git.ombrage.space
+      registry_name: docker.io
       registry_username: orochibraru
       bake_target: docs-ci
     secrets:
-      registry_password: ${{ secrets.PACKAGES_TOKEN }}
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
   gate:
     name: CI Gate
     if: always()
-    needs: [code_quality, binaries, build]
+    needs: [code_quality, binaries, build-app, build-agent, build-docs]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |
-          results=("${{ needs.code_quality.result }}" "${{ needs.binaries.result }}" "${{ needs.build.result }}")
+          results=("${{ needs.code_quality.result }}" "${{ needs.binaries.result }}" "${{ needs.build-app.result }}" "${{ needs.build-agent.result }}" "${{ needs.build-docs.result }}")
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               echo "::error::One or more jobs failed or were cancelled"

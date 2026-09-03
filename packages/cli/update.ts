@@ -5,8 +5,9 @@ import process from "node:process";
 import { Output } from "./output";
 import { CLI_VERSION } from "./version";
 
-const GITEA_HOST = "git.ombrage.space";
-const GITEA_REPO = "orochibraru/homerun";
+const GITHUB_HOST = "github.com";
+const GITHUB_API = "api.github.com";
+const GITHUB_REPO = "orochibraru/homerun";
 
 /** Self-update logic for the compiled binary, grouped as a class for consistency with the rest of cli/ : none of the private helpers carry instance state, this is a one-shot CLI flow like `CliLoginFlow`. */
 class CliUpdateService {
@@ -24,8 +25,10 @@ class CliUpdateService {
 
 		const arch = this.#currentArch();
 		const dest = process.execPath;
+
+		console.log("Checking for updates...");
 		const releaseRes = await fetch(
-			`https://${GITEA_HOST}/api/v1/repos/${GITEA_REPO}/releases/latest`,
+			`https://${GITHUB_API}/repos/${GITHUB_REPO}/releases/latest`,
 		).catch((error) =>
 			Output.fail(
 				`Couldn't check for updates: ${error instanceof Error ? error.message : String(error)}`,
@@ -40,9 +43,12 @@ class CliUpdateService {
 		const latestVersion = release.tag_name.replace(/^v/, "");
 
 		if (latestVersion === CLI_VERSION) {
+			console.log(`Already up to date (v${CLI_VERSION}).`);
 			return;
 		}
-		const downloadUrl = `https://${GITEA_HOST}/${GITEA_REPO}/releases/download/${release.tag_name}/homerun-cli-${arch}`;
+
+		console.log(`Updating v${CLI_VERSION} -> v${latestVersion}...`);
+		const downloadUrl = `https://${GITHUB_HOST}/${GITHUB_REPO}/releases/download/${release.tag_name}/homerun-cli-${arch}`;
 		const binRes = await fetch(downloadUrl);
 		if (!binRes.ok) {
 			Output.fail(`Download failed: ${binRes.status} ${binRes.statusText}`);
@@ -60,6 +66,10 @@ class CliUpdateService {
 			// as install.sh does for a non-writable install dir.
 			this.#sudoMove(tmpPath, dest);
 		}
+
+		console.log(
+			`Updated to v${latestVersion}. Run 'homerun --version' to confirm.`,
+		);
 	}
 
 	/**

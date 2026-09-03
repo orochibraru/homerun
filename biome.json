@@ -29,7 +29,8 @@
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
-		}
+		},
+		"globals": ["Bun"]
 	},
 	"linter": {
 		"enabled": true,
@@ -129,7 +130,11 @@
 				"rules": {
 					"correctness": {
 						"noUnusedImports": "off",
-						"noUnusedVariables": "off"
+						"noUnusedVariables": "off",
+						"useHookAtTopLevel": "off"
+					},
+					"suspicious": {
+						"noEmptySource": "off"
 					},
 					"style": {
 						"useConst": "off",
@@ -140,8 +145,7 @@
 		},
 		{
 			"includes": [
-				"**/*.test.ts",
-				"e2e/**",
+				"tests/**",
 				"scripts/**",
 				"**/*.config.ts",
 				"**/*.config.js"
@@ -166,6 +170,50 @@
 						"noExplicitAny": "off",
 						"noSkippedTests": "off",
 						"useAwait": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"packages/agent/**",
+				"packages/cli/**",
+				"packages/installer/**"
+			],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/lib/logger.ts"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["packages/cli/generated/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noExcessiveLinesPerFile": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/lib/server/db/schema.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noExcessiveLinesPerFile": "off"
 					}
 				}
 			}

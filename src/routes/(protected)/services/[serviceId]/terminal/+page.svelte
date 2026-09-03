@@ -87,6 +87,7 @@
 			lines = [""];
 
 			while (!cancelled) {
+				// biome-ignore lint/performance/noAwaitInLoops: stream reads are inherently sequential
 				const { done, value } = await reader.read();
 				if (done) {
 					break;

@@ -112,6 +112,7 @@
 			} else if (++misses >= MAX_CONSECUTIVE_MISSES) {
 				break;
 			}
+			// biome-ignore lint/performance/noAwaitInLoops: progress polling is sequential by definition
 			await new Promise((r) => setTimeout(r, 1000));
 			if (myGeneration !== pollGeneration) {
 				return;
@@ -127,7 +128,7 @@
 		const [latest] = data.deployments;
 		if (latest && IN_FLIGHT_STATUSES.has(svc.currentStatus)) {
 			pendingAction = "deploy";
-			pollProgress(latest.id);
+			void pollProgress(latest.id);
 		}
 	});
 
@@ -137,7 +138,7 @@
 			progressLines = [];
 			const deploymentId = crypto.randomUUID();
 			formData.set("deploymentId", deploymentId);
-			pollProgress(deploymentId);
+			void pollProgress(deploymentId);
 
 			return async ({
 				result,

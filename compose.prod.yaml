@@ -1,6 +1,6 @@
 services:
   app:
-    image: git.ombrage.space/orochibraru/homerun:${HOMERUN_VERSION:-latest}
+    image: docker.io/orochibraru/homerun:${HOMERUN_VERSION:-latest}
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}

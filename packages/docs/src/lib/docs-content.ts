@@ -86,13 +86,12 @@ const knownSlugs = new Set(
 		.filter((slug) => slug !== "README"),
 );
 
-const REPO_BROWSE_URL =
-	"https://git.ombrage.space/orochibraru/homerun/src/branch/main";
+const REPO_BROWSE_URL = "https://github.com/orochibraru/homerun/blob/main";
 
 /**
  * The source markdown links the way it reads naturally from inside the repo
  * (`../TODO.md`, `services.md#some-heading`, `../compose.prod.yaml`) —
- * correct for GitHub/Gitea's own file browser, but this site doesn't publish
+ * correct for GitHub's own file browser, but this site doesn't publish
  * every file in the repo, only the guide pages under `docs/`, so a plain
  * relative link would 404 the static build's own prerender crawl (verified
  * live: that's exactly what happened before this rewrite existed). Every
@@ -119,7 +118,7 @@ function rewriteRelativeLink(href: string): string {
  * a word char/space/hyphen, then replace *each* space with a hyphen without
  * collapsing runs of them) — matched deliberately, not simplified, because
  * the source markdown's `#anchor` links were hand-written against GitHub/
- * Gitea's actual rendering : "Custom domains & SSL" slugs to
+ * GitHub's actual rendering : "Custom domains & SSL" slugs to
  * `custom-domains--ssl` (the dropped `&` leaves a double space, and two
  * spaces become two hyphens), verified live, collapsing runs of whitespace
  * first (the more "obvious" implementation) produces `custom-domains-ssl`
@@ -136,7 +135,7 @@ function slugifyHeading(text: string): string {
 /**
  * Builds one heading renderer per doc page (a fresh `usedIds` `Set` each
  * time), so `#some-heading` links inside the source markdown — written by
- * hand against GitHub/Gitea's own auto-generated heading ids — resolve to a
+ * hand against GitHub's own auto-generated heading ids — resolve to a
  * real element on this site too : marked doesn't add `id`s to headings on
  * its own (unlike GitHub's renderer), verified live, `handleMissingId`
  * caught exactly this the first time a page linked to another page's anchor.

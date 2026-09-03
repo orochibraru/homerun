@@ -189,17 +189,45 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return !!row;
 	}
 
-	static async create(input: NewServiceInput): Promise<ServiceDTO> {
-		const now = new Date();
-		const row: Service = {
-			authRequired: input.authRequired ?? false,
-			autoscaleEligible: input.autoscaleEligible ?? false,
+	/** Where the image comes from : registry coordinates plus the git-build fields, all optional with a default. */
+	static #buildColumns(input: NewServiceInput) {
+		return {
 			buildCacheRegistryId: input.buildCacheRegistryId ?? null,
 			buildServerRemoteHostId: input.buildServerRemoteHostId ?? null,
 			buildSource: input.buildSource ?? "image",
+			gitBuildContext: input.gitBuildContext ?? null,
+			gitDockerfilePath: input.gitDockerfilePath ?? null,
+			gitRef: input.gitRef ?? null,
+			gitUrl: input.gitUrl ?? null,
+			registryPasswordEnc: input.registryPasswordEnc ?? null,
+			registryUrl: input.registryUrl ?? null,
+			registryUsername: input.registryUsername ?? null,
+		} satisfies Partial<Service>;
+	}
+
+	/** How the container runs : placement, networking, resource limits, all optional with a default. */
+	static #runtimeColumns(input: NewServiceInput) {
+		return {
+			authRequired: input.authRequired ?? false,
+			autoscaleEligible: input.autoscaleEligible ?? false,
+			cpuLimit: input.cpuLimit ?? null,
+			dnsResolvable: input.dnsResolvable ?? true,
+			memoryLimitMb: input.memoryLimitMb ?? null,
+			networkMode: input.networkMode ?? "bridge",
+			portProtocol: input.portProtocol ?? "tcp",
+			projectId: input.projectId ?? null,
+			remoteHostId: input.remoteHostId ?? null,
+			replicas: input.replicas ?? 1,
+		} satisfies Partial<Service>;
+	}
+
+	static async create(input: NewServiceInput): Promise<ServiceDTO> {
+		const now = new Date();
+		const row: Service = {
+			...ServiceDTO.#buildColumns(input),
+			...ServiceDTO.#runtimeColumns(input),
 			containerId: null,
 			containerPort: input.containerPort,
-			cpuLimit: input.cpuLimit ?? null,
 			createdAt: now,
 			cronEnabled: false,
 			cronLastRunAt: null,
@@ -209,24 +237,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 			customSslCertEnc: null,
 			customSslKeyEnc: null,
 			desiredState: "stopped",
-			dnsResolvable: input.dnsResolvable ?? true,
 			envVars: input.envVars,
-			gitBuildContext: input.gitBuildContext ?? null,
-			gitDockerfilePath: input.gitDockerfilePath ?? null,
-			gitRef: input.gitRef ?? null,
-			gitUrl: input.gitUrl ?? null,
 			id: crypto.randomUUID(),
 			image: input.image,
-			memoryLimitMb: input.memoryLimitMb ?? null,
 			name: input.name,
-			networkMode: input.networkMode ?? "bridge",
-			portProtocol: input.portProtocol ?? "tcp",
-			projectId: input.projectId ?? null,
-			registryPasswordEnc: input.registryPasswordEnc ?? null,
-			registryUrl: input.registryUrl ?? null,
-			registryUsername: input.registryUsername ?? null,
-			remoteHostId: input.remoteHostId ?? null,
-			replicas: input.replicas ?? 1,
 			restartPolicy: input.restartPolicy,
 			slug: input.slug,
 			swarmServiceId: null,

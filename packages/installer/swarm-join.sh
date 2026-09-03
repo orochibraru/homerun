@@ -31,7 +31,7 @@
 # don't drift on how rootless Docker / the agent unit get set up.
 set -euo pipefail
 
-GIT_HOST="git.ombrage.space"
+GIT_HOST="github.com"
 GIT_REPO="orochibraru/homerun"
 VERSION="latest"
 ROOTLESS_USER="homerun"

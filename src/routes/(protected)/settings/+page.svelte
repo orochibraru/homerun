@@ -182,7 +182,7 @@
 					toast.success(`${sectionLabel} saved.`);
 				} else if (result.type === "failure") {
 					toast.error(
-						(result.data as { error?: string })?.error ??
+						(result.data as { error?: string } | undefined)?.error ??
 							"Check the form for errors.",
 					);
 				}

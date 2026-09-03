@@ -9,22 +9,23 @@ to exist on the target host at any point.
 ## The one-liner
 
 ```bash
-curl -fsSL https://<wherever bootstrap.sh is hosted>/install.sh | sudo bash -s -- --mode=full
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
+  | sudo bash -s -- --mode=full
 ```
 
 `bootstrap.sh` is the actual entry point a `curl | bash` points at, it downloads
 the `homerun-installer-<arch>` binary for the target host's architecture from
-this repo's latest Gitea release and `exec`s it directly. Pin a specific release
-instead of the newest one with `--version=vX.Y.Z` (forwarded through to the
-installer binary itself, which also uses it to pick the matching
+this repo's latest GitHub release and `exec`s it directly. Pin a specific
+release instead of the newest one with `--version=vX.Y.Z` (forwarded through to
+the installer binary itself, which also uses it to pick the matching
 `homerun-agent-<arch>` binary, see below).
 
-**No hosted copy of `bootstrap.sh` exists yet**, host it somewhere reachable (a
-gist, Gitea raw, your own site) before the one-liner above is real, or download
-the release binary directly and run it:
+The one-liner serves `bootstrap.sh` straight from this repo on
+`raw.githubusercontent.com`, so it only works while the repo is public. If it
+isn't, download the release binary directly and run it instead:
 
 ```bash
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/releases/latest/download/homerun-installer-amd64 -o homerun-installer
+curl -fsSL https://github.com/orochibraru/homerun/releases/latest/download/homerun-installer-amd64 -o homerun-installer
 chmod +x homerun-installer
 sudo ./homerun-installer --mode=full
 ```
@@ -48,8 +49,8 @@ sudo ./homerun-installer --mode=full
    `systemd --user` unit under the rootless account, pointed at the rootless
    socket. `--mode=full`: instead writes a standalone `compose.yaml` under
    `/home/<user>/homerun/` (Traefik + Postgres + the published
-   `git.ombrage.space/orochibraru/homerun` app image, see `steps/full-stack.ts`)
-   and runs `docker compose pull && ...up -d` against it under that same
+   `docker.io/orochibraru/homerun` app image, see `steps/full-stack.ts`) and
+   runs `docker compose pull && ...up -d` against it under that same
    account/daemon. Either way, every artifact involved is something CI already
    published (see Release automation in the root `CLAUDE.md`), this installer's
    own job is wiring rootless Docker up and pulling the right thing into it, not
@@ -127,7 +128,7 @@ bun run scripts/build-packages.ts amd64   # or arm64, cross-compiles all three (
 
 Output lands in `dist/homerun-installer-<arch>` (plus the agent/cli binaries
 alongside it). CI does exactly this for every release
-(`.github/workflows/binaries.yaml` + `.releaserc.json`'s Gitea-release assets):
+(`.github/workflows/binaries.yaml` + `.releaserc.json`'s GitHub-release assets):
 building locally is only for iterating on the installer itself.
 
 ## What's verified vs. not

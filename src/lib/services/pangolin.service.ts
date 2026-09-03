@@ -55,13 +55,13 @@ interface PangolinEnvelope<T> {
  * `fetch` matches this codebase's existing CloudflareService/git-provider
  * posture and avoids adding it for one caller.
  *
- * Deliberately a plain class with static methods reading instance settings
- * itself on every call, same reasoning as CloudflareService : the token/org/
+ * Deliberately re-reads instance settings itself on every call rather than
+ * caching them on the instance, same reasoning as CloudflareService : the token/org/
  * site can change on /settings mid-session, and syncs are infrequent (once
  * per deploy), so there's no meaningful state worth caching here.
  */
-export class PangolinService {
-	private static async request<T>(
+class PangolinServiceClass {
+	private async request<T>(
 		baseUrl: string,
 		token: string,
 		path: string,
@@ -82,85 +82,93 @@ export class PangolinService {
 		return body;
 	}
 
-	private static async listDomains(
+	private async listDomains(
 		baseUrl: string,
 		token: string,
 		orgId: string,
 	): Promise<PangolinDomain[]> {
-		const res = await PangolinService.request<
+		const res = await this.request<
 			PangolinEnvelope<{ domains: PangolinDomain[] }>
 		>(baseUrl, token, `/org/${orgId}/domains`);
 		return res.data.domains;
 	}
 
-	private static async listResources(
+	private async listResources(
 		baseUrl: string,
 		token: string,
 		orgId: string,
 	): Promise<PangolinResource[]> {
-		const res = await PangolinService.request<
+		const res = await this.request<
 			PangolinEnvelope<{ resources: PangolinResource[] }>
 		>(baseUrl, token, `/org/${orgId}/resources`);
 		return res.data.resources;
 	}
 
-	private static async findMainSite(
+	private async findMainSite(
 		baseUrl: string,
 		token: string,
 		orgId: string,
 		mainSiteName: string,
 	): Promise<PangolinSite | null> {
-		const res = await PangolinService.request<
-			PangolinEnvelope<{ sites: PangolinSite[] }>
-		>(baseUrl, token, `/org/${orgId}/sites`);
+		const res = await this.request<PangolinEnvelope<{ sites: PangolinSite[] }>>(
+			baseUrl,
+			token,
+			`/org/${orgId}/sites`,
+		);
 		return res.data.sites.find((s) => s.name === mainSiteName) ?? null;
 	}
 
-	private static async createResource(
+	private async createResource(
 		baseUrl: string,
 		token: string,
 		orgId: string,
 		params: { domainId: string; name: string; subdomain: string },
 	): Promise<PangolinResource> {
-		const res = await PangolinService.request<
-			PangolinEnvelope<PangolinResource>
-		>(baseUrl, token, `/org/${orgId}/resource`, {
-			body: JSON.stringify({
-				domainId: params.domainId,
-				http: true,
-				name: params.name,
-				postAuthPath: "/",
-				protocol: "tcp",
-				stickySession: true,
-				subdomain: params.subdomain,
-			}),
-			method: "PUT",
-		});
+		const res = await this.request<PangolinEnvelope<PangolinResource>>(
+			baseUrl,
+			token,
+			`/org/${orgId}/resource`,
+			{
+				body: JSON.stringify({
+					domainId: params.domainId,
+					http: true,
+					name: params.name,
+					postAuthPath: "/",
+					protocol: "tcp",
+					stickySession: true,
+					subdomain: params.subdomain,
+				}),
+				method: "PUT",
+			},
+		);
 		return res.data;
 	}
 
-	private static async createResourceTarget(
+	private async createResourceTarget(
 		baseUrl: string,
 		token: string,
 		params: { port: number; resourceId: string; siteId: string },
 	): Promise<PangolinResourceTarget> {
-		const res = await PangolinService.request<
-			PangolinEnvelope<PangolinResourceTarget>
-		>(baseUrl, token, `/resource/${params.resourceId}/target`, {
-			body: JSON.stringify({
-				enabled: true,
-				ip: "localhost",
-				method: "http",
-				port: params.port,
-				siteId: params.siteId,
-			}),
-			method: "PUT",
-		});
+		const res = await this.request<PangolinEnvelope<PangolinResourceTarget>>(
+			baseUrl,
+			token,
+			`/resource/${params.resourceId}/target`,
+			{
+				body: JSON.stringify({
+					enabled: true,
+					ip: "localhost",
+					method: "http",
+					port: params.port,
+					siteId: params.siteId,
+				}),
+				method: "PUT",
+			},
+		);
 		return res.data;
 	}
 
 	/** Finds the Pangolin domain (and the subdomain prefix within it) that `hostname` belongs to, or null if no registered domain matches. */
-	private static matchDomain(
+	private matchDomain(
 		hostname: string,
 		domains: PangolinDomain[],
 	): { domain: PangolinDomain; subdomain: string } | null {
@@ -183,7 +191,7 @@ export class PangolinService {
 	 * logs and returns on any failure, a missed routing sync isn't worth
 	 * failing a deploy over, the admin can always wire it up by hand.
 	 */
-	static async syncDnsRecord(hostname: string): Promise<void> {
+	async syncDnsRecord(hostname: string): Promise<void> {
 		const settings = await InstanceSettingsDTO.get();
 		if (!settings.pangolinConfigured) {
 			return;
@@ -197,17 +205,13 @@ export class PangolinService {
 		}
 
 		try {
-			const resources = await PangolinService.listResources(
-				baseUrl,
-				token,
-				orgId,
-			);
+			const resources = await this.listResources(baseUrl, token, orgId);
 			if (resources.some((r) => r.fullDomain === hostname)) {
 				return;
 			}
 
-			const domains = await PangolinService.listDomains(baseUrl, token, orgId);
-			const match = PangolinService.matchDomain(hostname, domains);
+			const domains = await this.listDomains(baseUrl, token, orgId);
+			const match = this.matchDomain(hostname, domains);
 			if (!match) {
 				logger.warn(
 					`No registered Pangolin domain matches ${hostname}, skipping`,
@@ -215,7 +219,7 @@ export class PangolinService {
 				return;
 			}
 
-			const mainSite = await PangolinService.findMainSite(
+			const mainSite = await this.findMainSite(
 				baseUrl,
 				token,
 				orgId,
@@ -226,17 +230,12 @@ export class PangolinService {
 				return;
 			}
 
-			const resource = await PangolinService.createResource(
-				baseUrl,
-				token,
-				orgId,
-				{
-					domainId: match.domain.domainId,
-					name: match.subdomain || hostname,
-					subdomain: match.subdomain,
-				},
-			);
-			await PangolinService.createResourceTarget(baseUrl, token, {
+			const resource = await this.createResource(baseUrl, token, orgId, {
+				domainId: match.domain.domainId,
+				name: match.subdomain || hostname,
+				subdomain: match.subdomain,
+			});
+			await this.createResourceTarget(baseUrl, token, {
 				port: settings.pangolinTargetPort,
 				resourceId: resource.resourceId,
 				siteId: mainSite.siteId,
@@ -250,7 +249,7 @@ export class PangolinService {
 	}
 
 	/** Best-effort removal, same non-throwing posture as syncDnsRecord : called when a service with a Pangolin-managed hostname is deleted. */
-	static async deleteDnsRecord(hostname: string): Promise<void> {
+	async deleteDnsRecord(hostname: string): Promise<void> {
 		const settings = await InstanceSettingsDTO.get();
 		if (!settings.pangolinConfigured) {
 			return;
@@ -263,11 +262,7 @@ export class PangolinService {
 		}
 
 		try {
-			const resources = await PangolinService.listResources(
-				baseUrl,
-				token,
-				orgId,
-			);
+			const resources = await this.listResources(baseUrl, token, orgId);
 			const existing = resources.find((r) => r.fullDomain === hostname);
 			if (!existing) {
 				return;
@@ -276,12 +271,9 @@ export class PangolinService {
 			// reference project is create-only, it never deletes a resource),
 			// not confirmed against a real instance, same caveat as the rest of
 			// this file.
-			await PangolinService.request(
-				baseUrl,
-				token,
-				`/resource/${existing.resourceId}`,
-				{ method: "DELETE" },
-			);
+			await this.request(baseUrl, token, `/resource/${existing.resourceId}`, {
+				method: "DELETE",
+			});
 			logger.info(`Pangolin resource removed: ${hostname}`);
 		} catch (err) {
 			logger.warn(`Couldn't remove Pangolin resource for ${hostname}`, {
@@ -295,7 +287,7 @@ export class PangolinService {
 	 * connection" button : confirms the token can actually list the
 	 * configured org's sites, rather than only validating it was non-blank.
 	 */
-	static async verifyConnection(
+	async verifyConnection(
 		baseUrl: string,
 		token: string,
 		orgId: string,
@@ -324,3 +316,5 @@ export class PangolinService {
 		}
 	}
 }
+
+export const PangolinService = new PangolinServiceClass();

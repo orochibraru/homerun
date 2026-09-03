@@ -5,7 +5,7 @@ import { CliAuthService } from "$lib/services/cli-auth.service";
 
 const logger = new Logger("CliAuth");
 
-export const load = async ({ url }) => {
+export const load = ({ url }) => {
 	const prefilledCode = url.searchParams.get("code") ?? "";
 	return { prefilledCode };
 };

@@ -198,9 +198,13 @@ if (wantsIntegrationTests()) {
 		async () => {
 			stepLog("Tearing down...");
 			for (const stop of stopFns.reverse()) {
-				await stop().catch((_err) => {});
+				await stop().catch((err) => {
+					console.warn("[integration] Cleanup step failed", err);
+				});
 			}
-			await pg?.stop().catch((_err) => {});
+			await pg?.stop().catch((err) => {
+				console.warn("[integration] Postgres container cleanup failed", err);
+			});
 		},
 		ciTimeout(30_000, 60_000),
 	);

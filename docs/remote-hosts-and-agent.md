@@ -98,7 +98,7 @@ today. Run it with the join token/manager address from
 `docker swarm join-token worker` on your manager:
 
 ```sh
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/swarm-join.sh \
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/swarm-join.sh \
   | sudo bash -s -- --token <SWMTKN-...> --manager <ip>:2377
 ```
 

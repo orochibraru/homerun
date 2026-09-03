@@ -23,7 +23,7 @@ and brings up Traefik + Postgres + the app itself, all pulled from published
 images:
 
 ```sh
-curl -fsSL https://git.ombrage.space/orochibraru/homerun/raw/branch/main/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
   | sudo bash -s -- --mode=full
 ```
 
@@ -36,8 +36,8 @@ and what the installer actually does:
 rootless setup, no installer:
 
 ```sh
-curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/compose.prod.yaml
-curl -fsSLO https://git.ombrage.space/orochibraru/homerun/raw/branch/main/.env.example
+curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/compose.prod.yaml
+curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/.env.example
 mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum
 docker network create homerun
 docker compose -f compose.prod.yaml up -d

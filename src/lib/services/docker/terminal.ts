@@ -62,6 +62,45 @@ export interface OpenSessionParams {
 const HEADER_END = "\r\n\r\n";
 
 /** Interactive web terminal : open/subscribe/write/close a `docker exec` session, plus an idle reaper. */
+/**
+ * Reads past the `101 UPGRADED` header block on the hand-rolled exec socket
+ * before forwarding raw TTY bytes (see the module docstring for why the
+ * upgrade handshake is written by hand rather than via dockerode).
+ */
+function makeUpgradeReader(
+	listeners: Set<(chunk: Uint8Array) => void>,
+): (chunk: Buffer) => void {
+	let headerBuffer = "";
+	let headersParsed = false;
+
+	const emit = (bytes: Uint8Array): void => {
+		for (const listener of listeners) {
+			listener(bytes);
+		}
+	};
+
+	return (chunk: Buffer): void => {
+		if (headersParsed) {
+			emit(new Uint8Array(chunk));
+			return;
+		}
+
+		headerBuffer += chunk.toString("binary");
+		const idx = headerBuffer.indexOf(HEADER_END);
+		if (idx === -1) {
+			return;
+		}
+
+		headersParsed = true;
+		const rest = headerBuffer.slice(idx + HEADER_END.length);
+		headerBuffer = "";
+		if (rest) {
+			emit(new Uint8Array(Buffer.from(rest, "binary")));
+		}
+	};
+}
+
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerTerminalMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
@@ -114,9 +153,8 @@ export function DockerTerminalMixin<
 				startPayload,
 			].join("\r\n");
 
-			let headerBuffer = "";
-			let headersParsed = false;
 			const sessions = this.#sessions;
+			const onData = makeUpgradeReader(listeners);
 
 			const socket = await Bun.connect({
 				socket: {
@@ -124,26 +162,7 @@ export function DockerTerminalMixin<
 						sessions.delete(sessionId);
 					},
 					data(_s, chunk) {
-						if (!headersParsed) {
-							headerBuffer += chunk.toString("binary");
-							const idx = headerBuffer.indexOf(HEADER_END);
-							if (idx === -1) {
-								return;
-							}
-							headersParsed = true;
-							const rest = headerBuffer.slice(idx + HEADER_END.length);
-							headerBuffer = "";
-							if (rest) {
-								const bytes = Buffer.from(rest, "binary");
-								for (const listener of listeners) {
-									listener(new Uint8Array(bytes));
-								}
-							}
-							return;
-						}
-						for (const listener of listeners) {
-							listener(new Uint8Array(chunk));
-						}
+						onData(chunk);
 					},
 					error() {
 						sessions.delete(sessionId);

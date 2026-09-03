@@ -42,7 +42,7 @@
 	const { settings, envDefaults } = $derived(data);
 
 	let baseDomain = $derived(
-		(form?.values?.baseDomain as string) ??
+		(form?.values?.baseDomain as string | undefined) ??
 			settings?.baseDomain ??
 			envDefaults?.baseDomain ??
 			"",
@@ -74,31 +74,31 @@
 	// override or a just-failed submission's own value says otherwise;
 	// envDefaults only shows as the input's `placeholder` below now.
 	let dockerSocketPath = $derived(
-		(form?.values?.dockerSocketPath as string) ??
+		(form?.values?.dockerSocketPath as string | undefined) ??
 			settings?.dockerSocketPath ??
 			"",
 	);
 	let dockerNetworkName = $derived(
-		(form?.values?.dockerNetworkName as string) ??
+		(form?.values?.dockerNetworkName as string | undefined) ??
 			settings?.dockerNetworkName ??
 			envDefaults?.dockerNetworkName ??
 			"",
 	);
 
 	let traefikEntrypoint = $derived(
-		(form?.values?.traefikEntrypoint as string) ??
+		(form?.values?.traefikEntrypoint as string | undefined) ??
 			settings?.traefikEntrypoint ??
 			envDefaults?.traefikEntrypoint ??
 			"",
 	);
 	let traefikCertResolver = $derived(
-		(form?.values?.traefikCertResolver as string) ??
+		(form?.values?.traefikCertResolver as string | undefined) ??
 			settings?.traefikCertResolver ??
 			envDefaults?.traefikCertResolver ??
 			"",
 	);
 	let traefikDynamicConfigDir = $derived(
-		(form?.values?.traefikDynamicConfigDir as string) ??
+		(form?.values?.traefikDynamicConfigDir as string | undefined) ??
 			settings?.traefikDynamicConfigDir ??
 			envDefaults?.traefikDynamicConfigDir ??
 			"",
@@ -108,26 +108,26 @@
 		settings?.smtpEnabled ?? envDefaults?.smtpEnabled ?? false,
 	);
 	let smtpHost = $derived(
-		(form?.values?.smtpHost as string) ??
+		(form?.values?.smtpHost as string | undefined) ??
 			settings?.smtpHost ??
 			envDefaults?.smtpHost ??
 			"",
 	);
 	let smtpPort = $derived(
-		(form?.values?.smtpPort as string) ??
+		(form?.values?.smtpPort as string | undefined) ??
 			settings?.smtpPort?.toString() ??
 			envDefaults?.smtpPort?.toString() ??
 			"",
 	);
 	let smtpUser = $derived(
-		(form?.values?.smtpUser as string) ??
+		(form?.values?.smtpUser as string | undefined) ??
 			settings?.smtpUser ??
 			envDefaults?.smtpUser ??
 			"",
 	);
 	let smtpPassword = $state("");
 	let smtpFrom = $derived(
-		(form?.values?.smtpFrom as string) ??
+		(form?.values?.smtpFrom as string | undefined) ??
 			settings?.smtpFrom ??
 			envDefaults?.smtpFrom ??
 			"",
