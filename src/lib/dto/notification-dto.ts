@@ -116,6 +116,13 @@ export class NotificationDTO extends BaseDTO<Notification> {
 			.where(and(eq(notification.id, id), eq(notification.userId, userId)));
 	}
 
+	/** Removes one notification, scoped to its owner so a user can't delete another user's row. */
+	static async delete(id: string, userId: string): Promise<void> {
+		await db
+			.delete(notification)
+			.where(and(eq(notification.id, id), eq(notification.userId, userId)));
+	}
+
 	/**
 	 * Notifies a service's owner of an app-level error attributed to it
 	 * (Logger.error()'s "app runtime failures" feed item), looked up by

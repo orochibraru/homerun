@@ -172,7 +172,8 @@ A bell icon in the header shows a per-user feed of lifecycle events, deploy
 success/failure, service created/started/stopped, auto-redeploy fired, and
 runtime errors, distinct from the Errors tab's persisted app-log view (this is a
 short, curated list, not everything logged). Click a notification to jump to its
-service, or mark all read from the dropdown.
+service, mark all read from the dropdown, or hover a row and click the `x` to
+delete it.
 
 ## Settings
 

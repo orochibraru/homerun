@@ -1143,6 +1143,11 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   `pangolinApiBaseUrl`/`pangolinApiTokenEnc`/`pangolinOrgId`/
   `pangolinMainSiteName`/`pangolinTargetPort`, optional DNS automation, see DNS
   automation below.
+- `user_preferences` (`UserPreferencesDTO`), one row per user, `userId` itself
+  as the primary key (a genuine 1:1 extension of `user`, not a singleton like
+  `instance_settings`): `theme` (`"light"` | `"dark"` | `"system"` default),
+  `sidebarColorIntensity` (`"colorful"` default | `"accent"`), `accentColor`
+  (nullable hex string). See Appearance preferences below.
 
 **Postgres enforces the schema's `onDelete: "cascade"`/`"set null"` FK
 constraints for real.** (This app ran on SQLite until the Postgres conversion
@@ -1730,15 +1735,17 @@ markup as its own component alongside this feature).
   (nullable, unread until set). Indexed on `(userId, createdAt)`.
 - `NotificationDTO`: `listForUser(userId, limit=30)` (joins in the related
   service's slug so a feed entry can link straight to it),
-  `unreadCount(userId)`, `markRead`/`markAllRead`, and a fire-and-forget static
-  `notify(input)` helper, never awaited, swallows its own errors, same posture
-  as `Logger.warn`/`.error`'s `AppLogDTO` write, a notification call can't fail
-  the operation it's attached to. `create` amortized-prunes each user back to
-  their newest 200 rows on ~5% of writes, same convention as `AppLogDTO`'s
-  5000-row prune. `notifyServiceError(serviceId, message)` is the one
-  unscoped-by-owner query on this DTO (same precedent as
-  `ServiceDTO.listCronEnabled`), used by `Logger.error` to attribute a runtime
-  error notification without threading a userId through every call site.
+  `unreadCount(userId)`, `markRead`/`markAllRead`/`delete(id, userId)` (owner-
+  scoped, backs the bell dropdown's per-row remove button), and a
+  fire-and-forget static `notify(input)` helper, never awaited, swallows its own
+  errors, same posture as `Logger.warn`/`.error`'s `AppLogDTO` write, a
+  notification call can't fail the operation it's attached to. `create`
+  amortized-prunes each user back to their newest 200 rows on ~5% of writes,
+  same convention as `AppLogDTO`'s 5000-row prune.
+  `notifyServiceError(serviceId, message)` is the one unscoped-by-owner query on
+  this DTO (same precedent as `ServiceDTO.listCronEnabled`), used by
+  `Logger.error` to attribute a runtime error notification without threading a
+  userId through every call site.
 - Call sites: `deploy.service.ts` (deploy success, auto-redeploy, deploy
   failure), `$lib/logger.ts` (`Logger.error` → `notifyServiceError`),
   `services/new/+page.server.ts` (service created), the service Overview page's
@@ -1746,12 +1753,58 @@ markup as its own component alongside this feature).
 - `(protected)/+layout.server.ts`'s shared `load` fetches the last 20
   notifications + unread count once, so the bell doesn't need a per-page fetch;
   `notification-bell.svelte` posts to
-  `notifications/[id]/read`/`notifications/read-all` and calls
-  `invalidateAll()`.
+  `notifications/[id]/read`/`notifications/[id]/delete`/`notifications/read-all`
+  and calls `invalidateAll()`.
 
 This closes the "in-app lifecycle event feed" half of what Planned features
 below used to list as unbuilt; outbound webhooks (Telegram/Discord/generic HTTP)
 on the same events are still unbuilt, see below.
+
+### Appearance preferences (`user_preferences` table, `UserPreferencesDTO`, `/profile/appearance`)
+
+Per-account, not instance-wide (contrast `instance_settings`, which every other
+"live-editable config" section in this document is about): a new "Appearance"
+tab on the profile layout (`profile/+layout.svelte`, alongside Personal
+Information/Security/Sessions/Authorized Clients), backed by
+`profile/appearance/+page.server.ts`'s three actions
+(`updateTheme`/`updateSidebar`/`updateAccent`, each validated by its own zod
+schema in `$lib/server/validation/appearance.ts`) calling
+`UserPreferencesDTO.get(userId)`'s `updateTheme`/`updateSidebarColorIntensity`/
+`updateAccentColor`, which share `InstanceSettingsDTO`'s private-`persist()`
+-per-section shape but per-user instead of a singleton row.
+
+- **Theme**: `mode-watcher` (already an installed dependency, mounted in the
+  root `+layout.svelte`) was previously dead code, hardcoded to
+  `<ModeWatcher defaultMode="light" />` with no UI ever exposing a way to change
+  it, despite `layout.css`'s `.dark` rules already being fully built out. Now
+  `<ModeWatcher />` (mode-watcher's own default, `"system"`), and the Appearance
+  page's theme selector calls `setMode()` directly for an instant client-side
+  preview, with the DB save (`updateTheme` action) as the durable, cross-device
+  copy. `(protected)/+layout.svelte`'s `onMount` seeds a browser that has no
+  `mode-watcher-mode` localStorage entry yet (a first visit on a new
+  device/browser) from `data.preferences.theme`, so the account's saved choice
+  follows across devices; a browser that already has its own mode-watcher entry
+  is left alone, that entry owns it from then on. This is additive to, not a
+  replacement for, mode-watcher's own localStorage persistence.
+- **Sidebar color intensity**: `(protected)/+layout.svelte`'s existing
+  `categoryColors` map (Administration=red, Infrastructure=emerald,
+  Integrations=violet, Workspace=accent) is now conditionally bypassed by a
+  `colorful` derived boolean; when `sidebarColorIntensity === "accent"`, every
+  category's `{@const color = ...}` resolves to the shared `fallbackColor`
+  (Workspace's accent entry) instead of its own.
+- **Accent color**: `(protected)/+layout.svelte`'s root wrapper div gets an
+  inline `style` computed from `accentColor` (a `"#rrggbb"` hex string, `null`
+  meaning "use the built-in default") that overrides
+  `--color-accent`/`--color-accent-light`/`--color-accent-glow` for that whole
+  subtree; every `bg-accent`/`text-accent`/etc. Tailwind utility already
+  references those CSS vars rather than a literal value (Tailwind v4's `@theme`
+  block), so no component needs to know about the override. Scoped to
+  `(protected)/` only, not pre-login pages, since this is a dashboard
+  preference, not a site-wide brand color.
+- `(protected)/+layout.server.ts`'s shared `load` (same one that fetches
+  notifications, see above) now also fetches `UserPreferencesDTO.get(...)` and
+  returns `preferences: preferences.toJSON()`, since the sidebar itself, not
+  just the Appearance page, needs it on every protected render.
 
 ### Homerun Agent + installer (`packages/agent/`, `packages/installer/`)
 

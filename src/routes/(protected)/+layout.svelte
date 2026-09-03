@@ -19,6 +19,8 @@
 		Users,
 		X,
 	} from "@lucide/svelte";
+	import { modeStorageKey, setMode } from "mode-watcher";
+	import { onMount } from "svelte";
 	import { fly } from "svelte/transition";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -30,6 +32,23 @@
 	const { data, children } = $props();
 
 	let sidebarOpen = $state(false);
+
+	// Seeds a browser that's never set a device-local theme override (no
+	// mode-watcher localStorage entry yet, e.g. a first visit on a new
+	// device) from the account's own saved preference, so signing in
+	// somewhere new picks up the theme chosen on /profile/appearance instead
+	// of defaulting to "system". A browser that already has its own
+	// mode-watcher entry (set by a past visit here, or by that page itself)
+	// is left alone : mode-watcher's own localStorage persistence owns it
+	// from that point on.
+	onMount(() => {
+		if (
+			data.preferences.theme !== "system" &&
+			!localStorage.getItem(modeStorageKey.current)
+		) {
+			setMode(data.preferences.theme);
+		}
+	});
 
 	// `category` groups the sidebar into labeled sections rather than one
 	// flat list : order here is the render order, both for categories and
@@ -200,6 +219,27 @@
 		},
 	};
 	const fallbackColor = categoryColors.Workspace;
+	// "Single accent color" mode (see /profile/appearance) : every category
+	// collapses to this same shared-accent entry Workspace already used,
+	// rather than each keeping its own distinct color.
+	const colorful = $derived(
+		data.preferences.sidebarColorIntensity === "colorful",
+	);
+
+	// Custom accent color (see /profile/appearance) : overriding these three
+	// CSS vars on this subtree's root cascades into every bg-accent/text-accent/
+	// etc. Tailwind utility beneath it, since Tailwind v4's @theme block makes
+	// them all reference var(--color-accent...) rather than a literal value.
+	const accentStyle = $derived.by(() => {
+		const hex = data.preferences.accentColor;
+		if (!hex) {
+			return "";
+		}
+		const r = Number.parseInt(hex.slice(1, 3), 16);
+		const g = Number.parseInt(hex.slice(3, 5), 16);
+		const b = Number.parseInt(hex.slice(5, 7), 16);
+		return `--color-accent:${hex};--color-accent-light:rgba(${r},${g},${b},0.1);--color-accent-glow:rgba(${r},${g},${b},0.2);`;
+	});
 
 	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
 	function groupByCategory(items: typeof allNavItems): NavGroup[] {
@@ -237,7 +277,7 @@
 
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
   {#each groups as group (group.heading)}
-    {@const color = categoryColors[group.heading] ?? fallbackColor}
+    {@const color = colorful ? (categoryColors[group.heading] ?? fallbackColor) : fallbackColor}
     <p class="mt-4 mb-2 flex items-center gap-1.5 px-3 text-[0.65rem] font-semibold tracking-widest text-text-muted uppercase">
       <span class="size-1.5 rounded-full {color.dot}"></span>
       {group.heading}
@@ -266,7 +306,7 @@
 {/snippet}
 
 <!-- Fills the full viewport : there's no global navbar above this. -->
-<div class="bg-bg flex h-screen overflow-hidden">
+<div class="bg-bg flex h-screen overflow-hidden" style={accentStyle}>
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
   <aside class="border-border bg-surface hidden w-60 shrink-0 flex-col border-r md:flex">
     <!-- Nav links -->

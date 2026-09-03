@@ -30,7 +30,7 @@
   <title>Homerun - {$title ?? "Home"}</title>
 </svelte:head>
 
-<ModeWatcher defaultMode="light" />
+<ModeWatcher />
 <main>
   {@render children()}
 </main>

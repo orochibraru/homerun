@@ -2,6 +2,7 @@ import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
+import { UserPreferencesDTO } from "$lib/dto/user-preferences-dto";
 import { AdminService } from "$lib/services/admin.service";
 
 export const load = async ({ locals }) => {
@@ -22,11 +23,12 @@ export const load = async ({ locals }) => {
 	}
 
 	// Fetched here (the one load every protected page shares) so the bell
-	// icon in the sidebar layout has its feed/count without every page
-	// needing its own fetch.
-	const [notifications, unreadCount] = await Promise.all([
+	// icon and the sidebar's own color/accent styling (see (protected)/+layout.svelte)
+	// have what they need without every page needing its own fetch.
+	const [notifications, unreadCount, preferences] = await Promise.all([
 		NotificationDTO.listForUser(locals.user.id, 20),
 		NotificationDTO.unreadCount(locals.user.id),
+		UserPreferencesDTO.get(locals.user.id),
 	]);
 
 	return {
@@ -35,6 +37,7 @@ export const load = async ({ locals }) => {
 			serviceSlug: n.serviceSlug,
 		})),
 		onboardingDone,
+		preferences: preferences.toJSON(),
 		unreadCount,
 		user: locals.user,
 	};
