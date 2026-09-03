@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
+import { allowLongRequest } from "$lib/server/long-request";
 import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
@@ -41,7 +42,8 @@ export const load = async ({ parent }) => {
 };
 
 export const actions = {
-	delete: async ({ request, locals }) => {
+	delete: async ({ request, locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -79,7 +81,8 @@ export const actions = {
 		return { success: true };
 	},
 
-	restart: async ({ request, locals }) => {
+	restart: async ({ request, locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -153,7 +156,8 @@ export const actions = {
 		return { success: true };
 	},
 
-	stop: async ({ request, locals }) => {
+	stop: async ({ request, locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}

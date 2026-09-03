@@ -1,12 +1,14 @@
 import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
+import { allowLongRequest } from "$lib/server/long-request";
 import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("API");
 
-export const POST = async ({ params, locals }) => {
+export const POST = async ({ params, locals, platform }) => {
+	allowLongRequest(platform);
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}

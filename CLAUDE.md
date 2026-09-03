@@ -57,8 +57,10 @@ Agent + installer" and "Homerun CLI" below for what they are.
 `packages/agent/`, `packages/installer/`, and `packages/cli/`. Tests live under
 `tests/unit/<package>/`, not next to the source files they cover
 (`tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`, etc.).
-`tests/unit/app/` is a pre-existing scaffold for future SvelteKit component
-tests, not wired in yet.
+`tests/unit/app/` covers the SvelteKit app itself, a couple of component tests
+plus plain server modules (`long-request.test.ts`, see Long-running requests
+below); it's the thinnest of the four by far, most of `src/` is still only
+covered by `tests/integration/`.
 
 Run everything: `bun run test` (bare `bun test` also works, no wrapper script —
 `bunfig.toml`'s `[test].preload` handles the rest). Scoped: `bun run test:unit`,
@@ -132,6 +134,13 @@ class. See `tests/unit/installer/network.test.ts` / `release.test.ts` /
 - `bunfig.toml`'s `[test].timeout` key is silently not honored by Bun 1.4.0 for
   `test()` bodies — every `test/test:*` script passes `--timeout 120000` on the
   CLI instead.
+- Bun's `Bun.serve()` `idleTimeout` (10s by default, and what
+  `@orochibraru/svelte-smol` ships) kills a request that's still _being
+  handled_, not just an idle socket, and only on Linux — so
+  `POST /services/<id>/stop` died with `ECONNRESET` in CI while passing on every
+  macOS dev machine. Caught by `tests/integration/`, root-caused by reproducing
+  it in `oven/bun:1.4.0`. See Long-running requests and Bun's idle timeout
+  below.
 
 ## AI-assisted development (`.claude/agents/`, `.claude/skills/` → `.agents/skills/`)
 
@@ -443,6 +452,42 @@ dashboard's own `fetch` calls and external API-key clients alike.
 
 This is deliberately a thin JSON wrapper over the DTO layer, not a new
 abstraction, the `cli/` sub-project talks to this (see below).
+
+### Long-running requests and Bun's idle timeout (`$lib/server/long-request.ts`)
+
+**Real, reproduced finding, not a precaution.** `@orochibraru/svelte-smol`'s
+server passes `idleTimeout` to `Bun.serve()`, defaulting to 10s (env
+`IDLE_TIMEOUT`), and Bun applies that to a request that's still being _handled_,
+not just to a genuinely idle socket: a handler that produces no bytes for longer
+than the window has its connection severed mid-flight, and the caller sees a
+bare `ECONNRESET` instead of a response. A GET is transparently retried by most
+clients so it only ever looks slow; a POST is not, so it just fails.
+
+This bit `POST /api/v1/services/<id>/stop`, which awaits `docker stop`, whose
+own SIGKILL grace period is _also_ 10s, so any container that doesn't exit on
+its stop signal promptly lands the request exactly on the boundary. It surfaced
+as an integration test failing in CI on three of four consecutive runs, always
+that same request, always `ECONNRESET`, and never locally: **macOS doesn't
+enforce this the same way** (verified, a 12s handler returns 200 there), which
+is what made it look like test flakiness. Reproduced deliberately in
+`oven/bun:1.4.0` on Linux: with `idleTimeout: 10`, a 15s POST handler fails with
+`ECONNRESET` at ~12s plus Bun's own
+`warn: Bun.serve() timed out a request after 10 seconds`; at 11s it failed
+sometimes and passed others, which is the flakiness itself.
+
+`allowLongRequest(platform)` (`$lib/server/long-request.ts`) clears the timeout
+for one request via `platform.server.timeout(platform.request, 0)`
+(`App.Platform` was already typed for exactly this in `app.d.ts`). It's a no-op
+under `vite dev`, where `platform` is undefined and the timeout doesn't apply
+anyway. Call it as the _first_ statement of any handler that can legitimately
+outlast the window; it's already wired into the API's
+`deploy`/`stop`/`restart`/`DELETE` handlers, the dashboard actions doing those
+same operations (services list, service Overview, the Settings danger-zone
+delete), and the two long-lived streams that have the same exposure, the Logs
+and Terminal routes — svelte-smol auto-exempts only `text/event-stream`, and
+neither of those is SSE, so a quiet container would otherwise have its stream
+cut at 10s too. `start` is deliberately not wired, it can't reach 10s.
+`tests/unit/app/long-request.test.ts` guards the `0`.
 
 ### OpenAPI (`$lib/openapi/`, `$lib/server/validation/api.ts`)
 

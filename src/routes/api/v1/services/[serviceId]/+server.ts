@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
+import { allowLongRequest } from "$lib/server/long-request";
 import { updateServiceApiBody } from "$lib/server/validation/api";
 import { DockerService } from "$lib/services/docker.service";
 import { encryptSecret } from "$lib/services/secrets";
@@ -66,7 +67,8 @@ export const PATCH = async ({ params, request, locals }) => {
 	return json(svc.toJSON());
 };
 
-export const DELETE = async ({ params, locals }) => {
+export const DELETE = async ({ params, locals, platform }) => {
+	allowLongRequest(platform);
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}

@@ -6,6 +6,7 @@ import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
+import { allowLongRequest } from "$lib/server/long-request";
 import { updateGeneralSchema } from "$lib/server/validation/service";
 import { CloudflareService } from "$lib/services/cloudflare.service";
 import { CronService } from "$lib/services/cron.service";
@@ -31,7 +32,8 @@ export const load = async ({ parent }) => {
 };
 
 export const actions = {
-	delete: async ({ params, locals }) => {
+	delete: async ({ params, locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
