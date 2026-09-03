@@ -2,22 +2,22 @@
 
 ## Medium
 
-- [ ] Docker cleanup methods via UI (docker prune for system (all), image,
+- [ ] [APP] Docker cleanup methods via UI (docker prune for system (all), image,
       container...)
-- [ ] Since we already build & tag docker images in PRs, it's safe to assume
-      that the last built image is healthy which means we're re-building one for
-      nothing in the main CI when merged. We could just re-tag it. On top of
-      this we should definitely have both a workflow that deletes the PR image
-      when a PR is closed as well as a periodic docker registry cleanup for
-      dangling images from PRs if the cleanup jobs ever fail.
+- [ ] [CI/CD] Since we already build & tag docker images in PRs, it's safe to
+      assume that the last built image is healthy which means we're re-building
+      one for nothing in the main CI when merged. We could just re-tag it. On
+      top of this we should definitely have both a workflow that deletes the PR
+      image when a PR is closed as well as a periodic docker registry cleanup
+      for dangling images from PRs if the cleanup jobs ever fail.
 
 ## Large
 
-- [ ] Security scanning?
-- [ ] Terraform/Pulumi providers
-- [ ] Github Actions & Gitlab CI presets to deploy easily (deterministic or not,
-      should be a settings if the user wants latest or only tagged)
-- [ ] Finish building the auth wall for services, includes adding an
+- [ ] [Docker] Security scanning
+- [ ] [SDKs] Terraform/Pulumi providers
+- [ ] [SDKs] Github Actions & Gitlab CI presets to deploy easily (deterministic
+      or not, should be a settings if the user wants latest or only tagged)
+- [ ] [App] Finish building the auth wall for services, includes adding an
       "Authentication" sidebar item & page to configure auth providers. Oauth
       should be prioritized with presets for popular open source choices like
       Pocket ID, Keycloak, Authelia, Logto, Authentik, Zitadel and Kanidm. Users
