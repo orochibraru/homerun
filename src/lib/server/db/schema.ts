@@ -870,6 +870,42 @@ export const gitConnection = pgTable(
 	],
 );
 
+// One row per user, the Appearance tab's backing store (/profile/appearance)
+// : dashboard-only cosmetic preferences, distinct from instanceSettings
+// (instance-wide, admin-only config) above. userId is the primary key itself
+// rather than a separate id + unique index, since this is genuinely a 1:1
+// extension of one user row, same reasoning as a join table's composite key.
+export const userPreferences = pgTable("user_preferences", {
+	// Nullable hex string ("#rrggbb") overriding the built-in --color-accent
+	// CSS var app-wide within (protected)/ : null means "use the built-in
+	// default", see (protected)/+layout.svelte.
+	accentColor: text("accent_color"),
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	// "colorful" (default, today's behavior : each sidebar nav category gets
+	// its own distinct color) | "accent" (every category collapses to the one
+	// shared accent color instead) : see (protected)/+layout.svelte's
+	// categoryColors map.
+	sidebarColorIntensity: text("sidebar_color_intensity")
+		.$type<"colorful" | "accent">()
+		.default("colorful")
+		.notNull(),
+	// "system" (default, off the OS's own light/dark preference) | "light" |
+	// "dark" : applied via the mode-watcher package already mounted in the
+	// root layout (src/routes/+layout.svelte), this table is just its
+	// account-level persistence layer so the choice follows the user across
+	// browsers/devices instead of staying purely in one browser's localStorage.
+	theme: text("theme")
+		.$type<"light" | "dark" | "system">()
+		.default("system")
+		.notNull(),
+	updatedAt: timestamp("updated_at", { mode: "date" })
+		.$onUpdate(() => new Date())
+		.notNull(),
+	userId: text("user_id")
+		.primaryKey()
+		.references(() => user.id, { onDelete: "cascade" }),
+});
+
 // ─── Relations ─────────────────────────────────────────────────────────────
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -944,6 +980,7 @@ export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
 export type Notification = typeof notification.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
+export type UserPreferences = typeof userPreferences.$inferSelect;
 export type InvitationBase = typeof invitation.$inferSelect;
 export type InvitationRefactored = Omit<InvitationBase, "role">;
 export type Invitation = InvitationRefactored & {

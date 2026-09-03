@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Bell, CheckCheck } from "@lucide/svelte";
+	import { Bell, CheckCheck, X } from "@lucide/svelte";
 	import { invalidateAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -28,6 +28,11 @@
 
 	async function markAllRead() {
 		await fetch("/notifications/read-all", { method: "POST" });
+		await invalidateAll();
+	}
+
+	async function deleteNotification(id: string) {
+		await fetch(`/notifications/${id}/delete`, { method: "POST" });
 		await invalidateAll();
 	}
 
@@ -75,33 +80,43 @@
     {:else}
       <div>
         {#each notifications as n (n.id)}
-          {#if n.serviceId}
-            <a
-              class="border-border/60 hover:bg-surface-2 block border-b px-4 py-3 last:border-0 {n.readAt
-              ? ''
-              : 'bg-accent-light/40'}"
-              href="{resolve('/services')}/{n.serviceId}"
-              onclick={() => onItemClick(n)}
-            >
-              <p class="text-text text-xs">{n.message}</p>
-              <p class="text-text-subtle mt-0.5 text-[0.65rem]">
-                {timeAgo(n.createdAt)}
-              </p>
-            </a>
-          {:else}
+          <div
+            class="border-border/60 hover:bg-surface-2 group flex items-start gap-1 border-b last:border-0 {n.readAt
+            ? ''
+            : 'bg-accent-light/40'}"
+          >
+            {#if n.serviceId}
+              <a
+                class="min-w-0 flex-1 px-4 py-3"
+                href="{resolve('/services')}/{n.serviceId}"
+                onclick={() => onItemClick(n)}
+              >
+                <p class="text-text text-xs">{n.message}</p>
+                <p class="text-text-subtle mt-0.5 text-[0.65rem]">
+                  {timeAgo(n.createdAt)}
+                </p>
+              </a>
+            {:else}
+              <button
+                class="min-w-0 flex-1 px-4 py-3 text-left"
+                onclick={() => onItemClick(n)}
+                type="button"
+              >
+                <p class="text-text text-xs">{n.message}</p>
+                <p class="text-text-subtle mt-0.5 text-[0.65rem]">
+                  {timeAgo(n.createdAt)}
+                </p>
+              </button>
+            {/if}
             <button
-              class="border-border/60 hover:bg-surface-2 block w-full border-b px-4 py-3 text-left last:border-0 {n.readAt
-              ? ''
-              : 'bg-accent-light/40'}"
-              onclick={() => onItemClick(n)}
+              aria-label="Delete notification"
+              class="text-text-subtle hover:bg-surface-3 hover:text-text mt-2 mr-2 rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100"
+              onclick={() => deleteNotification(n.id)}
               type="button"
             >
-              <p class="text-text text-xs">{n.message}</p>
-              <p class="text-text-subtle mt-0.5 text-[0.65rem]">
-                {timeAgo(n.createdAt)}
-              </p>
+              <X class="size-3" />
             </button>
-          {/if}
+          </div>
         {/each}
       </div>
     {/if}

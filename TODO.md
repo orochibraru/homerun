@@ -1,16 +1,16 @@
 # TODO
 
+## Medium
+
+- [ ] Use Multipass to test (full run, e2E) the installer and agent. Use docker
+      to test the CLI. All against a real instance, all e2e
+
+## Large
+
+- [ ] Security scanning?
 - [ ] Terraform/Pulumi providers
-- [ ] Github Actions & Gitlab CI presets to deploy easily (deterministic or
-      non-deterministic tags)
-- [ ] Recent deployments on the dashboard should be clickable for quick nav &
-      better ux
-- [ ] Base theme (light/dark/system) off the user's system first. Store theme
-      preferences in account settings. When navigating to account add a tab for
-      appearance and add three sections: theme (choose between light, dark and
-      system), color intensity (should control if the sidebar is colorful or
-      just one accent color) and main color accent.
-- [ ] Ability to delete a notification
+- [ ] Github Actions & Gitlab CI presets to deploy easily (deterministic or not,
+      should be a settings if the user wants latest or only tagged)
 - [ ] Finish building the auth wall for services, includes adding an
       "Authentication" sidebar item & page to configure auth providers. Oauth
       should be prioritized with presets for popular open source choices like

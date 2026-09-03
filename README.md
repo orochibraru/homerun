@@ -63,6 +63,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **Per-service auth gate & account isolation**: optionally require a Homerun
   login to reach a deployed service; every container is labeled
   `homerun.managed=true` so this app never touches anything it didn't create
+- **Appearance**: per-account light/dark/system theme, sidebar color intensity,
+  and a custom accent color, from your profile page
 
 ## Documentation
 

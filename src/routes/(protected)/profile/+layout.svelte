@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { KeyRound, Lock, ShieldCheck, UserCircle } from "@lucide/svelte";
+	import {
+		KeyRound,
+		Lock,
+		Palette,
+		ShieldCheck,
+		UserCircle,
+	} from "@lucide/svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
@@ -39,6 +45,13 @@
 			icon: KeyRound,
 			id: "clients",
 			label: "Authorized Clients",
+		},
+		{
+			exact: false,
+			href: resolve("/profile/appearance"),
+			icon: Palette,
+			id: "appearance",
+			label: "Appearance",
 		},
 	];
 

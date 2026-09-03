@@ -30,7 +30,7 @@ second copy to keep in sync by hand, see
    to a second machine, autoscale-by-migration, the standalone agent and
    installer.
 7. **[Users & access](users-and-access.md)**: roles, invites, OAuth/OIDC login,
-   the per-service auth gate, API keys.
+   the per-service auth gate, API keys, per-account appearance preferences.
 8. **[API & CLI](api-and-cli.md)**: the REST API, the live Swagger UI, and the
    `homerun` CLI.
 9. **[FAQ & limitations](faq-and-limitations.md)**: what's genuinely finished,

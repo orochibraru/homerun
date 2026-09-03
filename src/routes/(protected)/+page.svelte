@@ -267,7 +267,10 @@
       {:else}
         <div class="divide-y divide-border">
           {#each data.recentDeployments as dep}
-            <div class="flex items-center gap-4 px-5 py-3">
+            <a
+              class="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-surface-2"
+              href="{resolve('/services')}/{dep.serviceId}"
+            >
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium text-text">
                   {dep.serviceName ?? "Unknown service"}
@@ -281,7 +284,7 @@
               >
                 {dep.status}
               </span>
-            </div>
+            </a>
           {/each}
         </div>
       {/if}
