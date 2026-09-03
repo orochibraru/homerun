@@ -1,6 +1,11 @@
 # Run by prek (https://github.com/j178/prek), a drop-in pre-commit runner.
 # Install the hook once with `prek install`; `bun install` does it for you.
 repos:
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
   - repo: local
     hooks:
       # Runs first: openapi.json, the CLI's generated types and the config JSON
@@ -39,3 +44,42 @@ repos:
         language: system
         pass_filenames: false
         files: \.(tsx|jsx|html|vue|svelte|astro|mdx|css)$
+
+      # Type checks last, after the fixers have had their turn. Each one is
+      # whole-project by nature (a change in one file can break the types of a
+      # file it imports), so the staged paths only decide whether a project is
+      # worth checking at all, never what gets checked.
+      - id: check-app
+        name: svelte-check (app)
+        entry: bun run check:app
+        language: system
+        pass_filenames: false
+        files: ^(src/|vite\.config\.ts$|tsconfig\.json$)
+
+      - id: check-agent
+        name: tsc (packages/agent)
+        entry: bun run check:agent
+        language: system
+        pass_filenames: false
+        files: ^packages/agent/
+
+      - id: check-cli
+        name: tsc (packages/cli)
+        entry: bun run check:cli
+        language: system
+        pass_filenames: false
+        files: ^packages/cli/
+
+      - id: check-installer
+        name: tsc (packages/installer)
+        entry: bun run check:installer
+        language: system
+        pass_filenames: false
+        files: ^packages/installer/
+
+      - id: check-docs
+        name: svelte-check (packages/docs)
+        entry: bun run check:docs
+        language: system
+        pass_filenames: false
+        files: ^(packages/docs/|scripts/docs\.ts$)
