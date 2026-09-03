@@ -19,7 +19,7 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 
 - Coolify has many bugs and a lot of tech debt
 - Dokploy has started paywalling features that homelab enthusiasts could use at
-  the benefit of fucking enterprise as always
+  the benefit of enterprise.
 
 ## Features
 
