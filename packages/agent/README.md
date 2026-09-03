@@ -7,9 +7,9 @@ logs, host stats, for the main Homerun instance to drive.
 This exists as an alternative to registering a Remote Host by raw
 `tcp://`/`ssh://` Docker socket: instead of exposing (or SSH-tunneling into) the
 daemon itself, the remote host runs this agent and the main app only ever talks
-to it over plain HTTP with a bearer token. It's the foundation piece for real
-multi-host workload placement, see `CLAUDE.md`'s "Homerun Agents" section in the
-main app for how it plugs in, and its own "draft, not finished" caveats.
+to it over plain HTTP with a bearer token. It's wired into the main app as a
+Remote Hosts connection kind (`remote_host.kind: "agent"`), see `CLAUDE.md`'s
+"Homerun Agent + installer" and "Remote hosts" sections for how it plugs in.
 
 ## Running it
 
@@ -18,7 +18,7 @@ them need Bun or a source checkout on the target host.
 
 **Via the installer (recommended for a fresh host).** Sets up rootless Docker
 too, not just the agent itself, see
-[`installer/README.md`](../installer/README.md):
+[`packages/installer/README.md`](../installer/README.md):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
@@ -27,9 +27,9 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/i
 
 **Already running Docker your own way?** Run the published image
 (`docker.io/orochibraru/homerun-agent`, `linux/amd64` + `linux/arm64`, built
-from [`agent/Dockerfile`](./Dockerfile) via the `agent` target in the root
-[`docker-bake.hcl`](../docker-bake.hcl)), mounting the Docker socket the same
-way any Docker-managing container does:
+from the `agent` stage in the root [`Dockerfile`](../../Dockerfile) via the
+`agent` target in the root [`docker-bake.hcl`](../../docker-bake.hcl)), mounting
+the Docker socket the same way any Docker-managing container does:
 
 ```bash
 docker run -d --name homerun-agent --restart unless-stopped \
@@ -65,8 +65,8 @@ instance's Remote Hosts page.
 **Working on the agent itself, or want to run it from source:**
 
 ```bash
-bun install                  # from the repo root, agent/ has no package.json of its own
-bun run agent/index.ts       # or `bun --watch agent/index.ts` for autoreload
+bun install                          # from the repo root, packages/agent/ has no package.json of its own
+bun run packages/agent/index.ts      # or `bun --watch packages/agent/index.ts` for autoreload
 ```
 
 Compiling it to a standalone binary yourself, rather than using a release one:
@@ -83,7 +83,7 @@ bun run build:packages       # builds cli/installer/agent binaries for both arch
 | `PORT`                   | `7420`                   | HTTP listen port                                                                                                                                                                                                                     |
 | `AGENT_TOKEN`            | _(generated)_            | Bearer token every non-health request must present. Set this explicitly for a reproducible deploy (e.g. via the installer or a systemd unit); otherwise the agent generates one on first boot and persists it to `AGENT_TOKEN_FILE`. |
 | `AGENT_TOKEN_FILE`       | `~/.homerun-agent/token` | Where a generated token is persisted across restarts.                                                                                                                                                                                |
-| `DOCKER_SOCKET_PATH`     | `/var/run/docker.sock`   | Point this at a rootless Docker socket (e.g. `/run/user/<uid>/docker.sock`) when installed via `installer/`'s rootless setup.                                                                                                        |
+| `DOCKER_SOCKET_PATH`     | `/var/run/docker.sock`   | Point this at a rootless Docker socket (e.g. `/run/user/<uid>/docker.sock`) when installed via `packages/installer/`'s rootless setup.                                                                                               |
 | `HOMERUN_NETWORK_NAME`   | `homerun`                | Created on boot if missing; every deployed container joins it (bridge mode only, host-mode services skip it, same as the main app).                                                                                                  |
 | `AGENT_SHUTDOWN_TIMEOUT` | `120`                    | Seconds SIGINT/SIGTERM waits for in-flight requests (a `/v1/deploy` pull or `/v1/build` clone+build in progress) to finish before forcing the shutdown.                                                                              |
 
@@ -97,8 +97,8 @@ Every route below requires `Authorization: Bearer <token>` except `/v1/health`.
   `SystemStatsService`.
 - `GET /v1/containers`, every `homerun.managed=true` container on this host (raw
   dockerode `ContainerInfo[]`).
-- `POST /v1/deploy`, body is a `DeployInput` (see `src/docker.ts`): pulls the
-  image (unless `skipPull`), removes the previous container for that `serviceId`
+- `POST /v1/deploy`, body is a `DeployInput` (see `docker.ts`): pulls the image
+  (unless `skipPull`), removes the previous container for that `serviceId`
   (found by label, not name), creates + starts the new one. Returns
   `{containerId, log}`.
 - `POST /v1/build`, body is a `BuildInput` (see `schemas.ts`): clones a git repo
@@ -118,4 +118,4 @@ start → redeploy-replaces-old → stop/remove round trip), and the compiled bi
 running standalone with the same behavior as `bun run dev`. **Not verified**:
 running under a genuinely separate/remote host, under rootless Docker
 specifically (the installer's rootless setup is new and untested end-to-end, see
-`installer/README.md`), or long-running under a real systemd unit.
+`packages/installer/README.md`), or long-running under a real systemd unit.

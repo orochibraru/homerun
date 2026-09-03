@@ -51,8 +51,7 @@ ENV APP_ENV=production
 ENV ORIGIN=http://localhost:3000
 ENV STORAGE_BASE_PATH=/app/data
 
-RUN mkdir -p /app/data
-RUN chown -R bun:bun /app/data
+RUN mkdir -p /app/data && chown -R bun:bun /app/data
 
 VOLUME /app/data
 
@@ -100,7 +99,7 @@ ENV DOCKER_SOCKET_PATH=/var/run/docker.sock
 EXPOSE 7420
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://0.0.0.0:7420/v1/health || exit 1
+    CMD ["sh", "-c", "wget --no-verbose --tries=1 --spider http://0.0.0.0:7420/v1/health || exit 1"]
 
 ENTRYPOINT ["/usr/local/bin/homerun-agent"]
 
@@ -114,7 +113,9 @@ RUN mkdir -p .svelte-kit && echo '{"compilerOptions":{}}' > .svelte-kit/tsconfig
 
 RUN cp openapi.json packages/docs/static/openapi.json
 
-RUN cd packages/docs && ../../node_modules/.bin/svelte-kit sync && ../../node_modules/.bin/vite build
+WORKDIR /app/packages/docs
+
+RUN ../../node_modules/.bin/svelte-kit sync && ../../node_modules/.bin/vite build
 
 FROM nginx:alpine AS docs
 
@@ -125,4 +126,4 @@ COPY packages/docs/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1
+    CMD ["sh", "-c", "wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1"]

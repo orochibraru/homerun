@@ -18,8 +18,8 @@ migrate one service off an overloaded host. There **is** now real replica
 scaling and load balancing for a single service, opt-in Docker
 [Swarm mode](services.md#swarm-mode), but it's local-manager-only today: a
 remote machine has to actually join the swarm as a worker
-(`installer/swarm-join.sh`), which isn't the same as registering it as a Remote
-Host, so multi-host swarm scaling isn't wired up end-to-end yet either.
+(`packages/installer/swarm-join.sh`), which isn't the same as registering it as
+a Remote Host, so multi-host swarm scaling isn't wired up end-to-end yet either.
 `service.containerId` still being a single column is what standalone mode (the
 default) is built around; swarm mode is the separate, newer path around that
 limitation for services that opt in.
@@ -41,12 +41,19 @@ limitation for services that opt in.
   and have no webhook/auto-deploy-on-push yet.
 - **S3 backups** cover bind-mount volumes only (no Docker-managed volumes), and
   there's no restore flow, upload only.
-- **The Homerun Agent** (`agent/`) is a working standalone primitive, not yet
-  wired into the main app's Remote Hosts UI.
+- **The Homerun Agent** (`packages/agent/`) is wired into the main app now:
+  `/remote-hosts` can register a host as `kind: "agent"` (URL + bearer token,
+  verified live at save time against the agent's own API) instead of a raw
+  `tcp://`/`ssh://` Docker connection, and deploy/start/stop/restart/logs/build
+  all route through it the same way a `kind: "docker"` host does. This
+  integration doesn't carry a documented "verified against a real second host"
+  note the way most other features on this page do, treat it as built but not
+  confirmed live-tested until you've tried it yourself.
 - **The installer**'s mutating steps (package install, rootless Docker setup,
   systemd units) haven't been run against a real fresh box in CI, verify by
   hand, ideally with `--dry-run` first, before trusting the one-liner on a
-  machine that matters. `installer/swarm-join.sh` carries the same caveat.
+  machine that matters. `packages/installer/swarm-join.sh` carries the same
+  caveat.
 - **Swarm mode** is local-manager-only, see
   [above](#does-it-support-multiple-hosts--kubernetes-style-orchestration), and
   isn't autoscale-aware, don't combine `autoscaleEligible` with a swarm-mode

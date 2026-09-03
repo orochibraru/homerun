@@ -56,7 +56,7 @@
         </p>
 
         <h1
-            class="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-6xl"
+            class="mx-auto max-w-4xl text-4xl font-bold tracking-tight text-balance sm:text-6xl"
         >
             Deploy containers to
             <span
@@ -91,7 +91,7 @@
             >
         </div>
 
-        <div class="mx-auto mt-14 max-w-2xl text-left">
+        <div class="mx-auto mt-14 max-w-4xl text-left">
             <div
                 class="flex items-center gap-2 rounded-t-lg border border-b-0 border-(--border) bg-(--bg-raised) px-4 py-2.5"
             >
@@ -128,9 +128,7 @@
     </section>
 
     <!-- ── Stack strip ──────────────────────────────────────────────── -->
-    <section
-        class="border-y border-(--border) bg-(--bg-raised) px-6 py-14"
-    >
+    <section class="border-y border-(--border) bg-(--bg-raised) px-6 py-14">
         <div class="mx-auto max-w-4xl text-center">
             <h2 class="text-2xl font-bold tracking-tight">
                 One host. No orchestration to learn.

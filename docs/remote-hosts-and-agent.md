@@ -7,15 +7,20 @@ sync, at a different daemon instead.
 
 ## Registering a remote host
 
-From `/remote-hosts`: a name, plus either
+From `/remote-hosts`: a name, plus a connection type:
 
-- `tcp://host:port` (+ optional TLS client cert for a secured Docker API), or
-- `ssh://user@host`,
+- **Direct Docker connection**: `tcp://host:port` (+ optional TLS client cert
+  for a secured Docker API), or `ssh://user@host`, pointed at the target daemon
+  directly.
+- **Homerun Agent**: a URL + bearer token for a host running the standalone
+  agent binary instead, see [Homerun Agent](#homerun-agent) below. The token is
+  verified live against the agent before the host is saved. This is the
+  lighter-weight alternative that doesn't require exposing the Docker daemon
+  itself.
 
-pointed at the target daemon directly. There is a lighter-weight alternative
-that doesn't require exposing the daemon itself, see
-[Homerun Agent](#homerun-agent) below (not yet wired into the Remote Hosts UI,
-see [FAQ & limitations](faq-and-limitations.md)).
+Either kind is a real, selectable deploy target and (opt-in, per host) build
+server; deploy/start/stop/restart/logs all route through whichever one a host is
+registered as.
 
 ## Real limitations, not oversights
 
@@ -58,44 +63,50 @@ owned by the same account as the migrating service, a mismatch is a safe no-op
 
 ## Homerun Agent
 
-A standalone binary (`agent/`) meant to run on a remote host's own Docker
-daemon, exposing deploy/start/stop/restart/logs/stats over a small
-token-authenticated HTTP API, the alternative to registering a remote host by
-raw `tcp://`/`ssh://` socket. Instead of exposing (or SSH-tunneling into) the
-daemon itself, the remote host runs this agent and the main app talks to it over
-plain HTTP with a bearer token.
+A standalone binary (`packages/agent/`) meant to run on a remote host's own
+Docker daemon, exposing deploy/start/stop/restart/logs/stats (plus building from
+a git repo) over a small token-authenticated HTTP API, the alternative to
+registering a remote host by raw `tcp://`/`ssh://` socket. Instead of exposing
+(or SSH-tunneling into) the daemon itself, the remote host runs this agent and
+the main app talks to it over plain HTTP with a bearer token, this is what the
+"Homerun Agent" connection type on `/remote-hosts` (above) registers.
 
 ```sh
-cd agent
-bun install
-bun run dev              # talks to /var/run/docker.sock by default
+bun install                      # from the repo root, packages/agent/ has no package.json of its own
+bun run packages/agent/index.ts  # talks to /var/run/docker.sock by default
 ```
 
 Or compiled to a standalone binary (no Bun runtime needed on the target host):
-`bun run build:linux-x64` / `build:linux-arm64`. On first boot with no
-`AGENT_TOKEN` set, it generates one and prints it, see
-[`agent/README.md`](../packages/agent/README.md) for the full env var and HTTP
-surface reference.
+`bun run build:packages` (builds the CLI/installer/agent binaries for both
+arches). On first boot with no `AGENT_TOKEN` set, it generates one and prints
+it, copy that plus this host's reachable URL into `/remote-hosts`'s "new host"
+form, see [`packages/agent/README.md`](../packages/agent/README.md) for the full
+env var and HTTP surface reference, plus install options (a Docker image, a
+prebuilt binary, or the installer below).
 
-**This is a draft**, a working standalone primitive, but not yet wired into the
-main app (no schema column, no client service, no Remote Hosts UI support for
-pointing at an agent instead of a raw socket). It's the piece a future
-multi-host control-plane rearchitecture points at; see
+**Wired into the main app**: registering an agent-kind Remote Host and picking
+it as a service's deploy target (or build server) routes deploy/start/stop/
+restart/logs through this agent's HTTP API instead of a raw Docker connection.
+This main-app integration doesn't carry the same "verified against a real second
+host" confirmation the agent binary's own endpoints do, see
 [FAQ & limitations](faq-and-limitations.md).
 
 ## Installer
 
-`installer/` automates standing up a fresh Linux box with rootless Docker plus
-either the Agent or the full stack, this is what `docs/getting-started.md`'s
-one-liner runs. See [`installer/README.md`](../packages/installer/README.md) for
-flags and what's verified.
+`packages/installer/` automates standing up a fresh Linux box with rootless
+Docker plus either the Agent or the full stack, this is what
+`docs/getting-started.md`'s one-liner runs. See
+[`packages/installer/README.md`](../packages/installer/README.md) for flags and
+what's verified.
 
-A separate script, `installer/swarm-join.sh`, joins a box to an **existing**
-Docker Swarm as a worker (on its own rootless Docker daemon) and installs the
-Homerun Agent there, groundwork for [swarm mode](services.md#swarm-mode)
-eventually supporting remote nodes, not a way to point a service at that host
-today. Run it with the join token/manager address from
-`docker swarm join-token worker` on your manager:
+A separate script, `packages/installer/swarm-join.sh`, joins a box to an
+**existing** Docker Swarm as a worker (on its own rootless Docker daemon) and
+installs the Homerun Agent there, groundwork for
+[swarm mode](services.md#swarm-mode) eventually supporting remote nodes. Joining
+the swarm this way doesn't by itself register the box as a Remote Host, you'd
+still add it separately (agent connection type, above) to actually target it.
+Run it with the join token/manager address from `docker swarm join-token worker`
+on your manager:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/swarm-join.sh \

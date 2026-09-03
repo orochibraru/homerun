@@ -96,10 +96,10 @@ curl -fsSL https://<wherever swarm-join.sh is hosted>/swarm-join.sh | sudo bash 
 ```
 
 Same "no hosted copy exists yet" caveat as `bootstrap.sh` above applies :
-download `installer/swarm-join.sh` directly and run it with `sudo bash` until
-it's hosted somewhere. `--user=` (default `homerun`) and `--version=` (agent
-binary release tag, default `latest`) are both optional, same meaning as the
-main installer's flags.
+download `packages/installer/swarm-join.sh` directly and run it with `sudo bash`
+until it's hosted somewhere. `--user=` (default `homerun`) and `--version=`
+(agent binary release tag, default `latest`) are both optional, same meaning as
+the main installer's flags.
 
 Deliberately a standalone bash script, not a mode of the TypeScript installer :
 a narrower job (join + agent only, no `homerun`/compose-stack setup) that
@@ -117,12 +117,13 @@ against a real disposable second box before relying on it.
 
 ## Building the installer itself to a binary
 
-There's no separate `installer/package.json`: `agent/`, `cli/`, and `installer/`
-all share the repo root's `bun install`/`node_modules`. From the repo root:
+There's no separate `packages/installer/package.json`: `packages/agent/`,
+`packages/cli/`, and `packages/installer/` all share the repo root's
+`bun install`/`node_modules`. From the repo root:
 
 ```bash
 bun install
-bun run installer/index.ts --help   # from source
+bun run packages/installer/index.ts --help   # from source
 bun run scripts/build-packages.ts amd64   # or arm64, cross-compiles all three (agent/cli/installer)
 ```
 

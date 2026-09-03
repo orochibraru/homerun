@@ -34,11 +34,14 @@ the onboarding wizard (base domain / Docker / Traefik / email).
 server, closer to how the production Docker image runs it, still directly on the
 host, still against the same `compose.yaml` Postgres/Traefik.
 
-`agent/`, `installer/`, and `cli/` all share this same root
-`bun install`/`node_modules` (no separate per-package installs). Run them
-directly from source with `bun run agent/index.ts`,
-`bun run installer/index.ts --dry-run`, `bun run cli/index.ts services list`,
-etc.
+`packages/agent/`, `packages/installer/`, `packages/cli/`, and `packages/docs/`
+all share this same root `bun install`/`node_modules` (no separate per-package
+installs). Run the first three directly from source with
+`bun run packages/agent/index.ts`,
+`bun run packages/installer/index.ts --dry-run`,
+`bun run packages/cli/index.ts services list`, etc. `packages/docs/` isn't run
+directly the same way, it's built/served via `bun run dev:docs`/`build:docs`
+(see `packages/docs/README.md`).
 
 ## Before every change: the hard gates
 
@@ -58,15 +61,15 @@ bun run lint    # biome check ., zero errors, whole repo
 Run both after _every_ change, not just once at the end. `bun run check`'s scope
 is already the whole `src/` tree regardless of which files you touched, so a red
 result elsewhere in the repo is still your problem to look at, not something to
-wave off as unrelated without actually checking. If you touch `agent/`,
-`installer/`, or `cli/`, also typecheck that sub-project specifically:
-`bun run check:agent` / `check:installer` / `check:cli` (or
+wave off as unrelated without actually checking. If you touch `packages/agent/`,
+`packages/installer/`, or `packages/cli/`, also typecheck that sub-project
+specifically: `bun run check:agent` / `check:installer` / `check:cli` (or
 `bun run check:packages` for all three). They're not covered by the
 SvelteKit-scoped `check:app` half of `bun run check`.
 
-There's no test framework in this repo currently. Verification is running the
-real thing (a dev server, a real Docker daemon) and reading the output, not
-`npm test`.
+`bun run test` runs the real test suite (`bun:test`, unit + integration, see
+`CLAUDE.md`'s "Commands" section for the full breakdown of `test`/`test:*`
+scripts).
 
 ## Conventions
 
@@ -90,4 +93,5 @@ style nit, it changes what actually ships.
 
 Don't run `bun run release` yourself; it's CI-only, triggered on push to `main`.
 See CLAUDE.md's "Release automation" section for what it does (binaries for
-`agent`/`installer`/`cli`, the Docker image, the GitHub release).
+`packages/agent`/`packages/installer`/`packages/cli`, the Docker image, the
+GitHub release).
