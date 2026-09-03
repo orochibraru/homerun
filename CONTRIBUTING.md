@@ -42,8 +42,13 @@ etc.
 
 ## Before every change: the hard gates
 
-These are enforced by `.husky/pre-commit`, not just CI: a violating commit is
-rejected locally.
+These are enforced by a git pre-commit hook, not just CI: a violating commit is
+rejected locally. The hook is run by [prek](https://github.com/j178/prek) from
+`.pre-commit-config.yaml`; install prek (`brew install prek`, or
+`uv tool install prek`), then `bun install` wires the git shim up for you
+(`prepare` runs `prek install`). Hooks autofix in place, so a commit that gets
+rejected for "files were modified by this hook" just needs `git add` and a
+re-commit.
 
 ```sh
 bun run check   # svelte-kit sync && svelte-check --fail-on-warnings, zero errors AND zero warnings, whole repo
