@@ -1,3 +1,17 @@
+## [1.0.3](https://github.com/orochibraru/homerun/compare/v1.0.2...v1.0.3) (2026-09-04)
+
+### Features
+
+- add test run retry policy on ci
+  ([5ae92ce](https://github.com/orochibraru/homerun/commit/5ae92ceb3350d483db439ae8e045eb7d94d877dc))
+
+### Bug Fixes
+
+- conf & docs
+  ([1d33ab3](https://github.com/orochibraru/homerun/commit/1d33ab3b12e6141a2c62ced6d5ae35ea288f281e))
+- rerun flaky tests
+  ([aefdfc2](https://github.com/orochibraru/homerun/commit/aefdfc255a07a3b0b5dc8958f3f09f1cbc458e4b))
+
 ## [1.0.2](https://github.com/orochibraru/homerun/compare/v1.0.1...v1.0.2) (2026-09-03)
 
 ### Bug Fixes
