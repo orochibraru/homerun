@@ -138,7 +138,12 @@ CLAUDE.md's Homerun CLI section. This run is reproducible via
 provisions a real installer-built instance in a disposable Multipass VM and
 drives this exact CLI flow (login + every command) against it from a throwaway
 Docker container, alongside the installer/agent checks documented in
-`packages/installer/README.md`.
+`packages/installer/README.md`. `bun run e2e:multipass:release` does the same
+against the **published** CLI binary, installing it with the `install.sh`
+one-liner exactly as `docs/api-and-cli.md` prints it and then running every
+command that page's own reference block lists (plus its documented
+`HOMERUN_BASE_URL`/`HOMERUN_API_KEY` env-var form), so a documented command that
+no longer exists fails the run.
 
 `homerun update`: verified the compiled-vs-source detection (`process.execPath`
 basename) and the version read (embedded `package.json` import, confirmed the

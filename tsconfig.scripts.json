@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"lib": ["esnext", "DOM"],
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"paths": { "$lib": ["./src/lib"], "$lib/*": ["./src/lib/*"] },
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "esnext",
+		"types": ["bun-types"]
+	},
+	"include": ["scripts/**/*.ts"]
+}

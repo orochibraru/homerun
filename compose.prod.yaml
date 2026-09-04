@@ -1,36 +1,68 @@
 services:
   app:
     image: docker.io/orochibraru/homerun:${HOMERUN_VERSION:-latest}
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
-      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}
-    volumes:
-      - ./homerun.yaml:/app/homerun.yaml:ro
-    extends:
-      file: tools/compose/app.compose.yaml
-      service: app
+    restart: unless-stopped
+    stop_grace_period: 35s
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
+      AUTH_SECRET: "${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}"
+      ORIGIN: ${ORIGIN:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - app_data:/app/data
+      - ./homerun.yaml:/app/homerun.yaml:ro
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 5s
+      test: ["CMD", "/app/build/healthcheck"]
+      timeout: 30s
     networks:
       - homerun
       - internal
 
   traefik:
-    extends:
-      file: tools/compose/base.compose.yaml
-      service: traefik
-    depends_on:
-      postgres:
-        condition: service_healthy
+    image: traefik:v3
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=homerun
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
     networks:
       - homerun
       - internal
 
   postgres:
-    extends:
-      file: tools/compose/base.compose.yaml
-      service: postgres
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-homerun}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homerun}
+      POSTGRES_USER: ${POSTGRES_USER:-homerun}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      interval: 5s
+      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homerun}"]
+      timeout: 5s
     networks:
       - internal
 

@@ -67,6 +67,10 @@ narrow, specific triggers:
 - **DTO queries with no `userId` scoping** — flag unless it's a documented
   legitimate exception (a scheduler tick querying across all users, e.g.
   `listCronEnabled()`/`listAutoscaleEligibleOnLocalHost()`-style methods).
+- **Any comment added by the diff** — this repo allows none, in any code file:
+  no JSDoc/docstrings, no explanatory line comments, no header banners, no prose
+  in YAML/compose/shell files. Flag every added comment line. Comments already
+  present in untouched parts of a file are not a finding.
 - **Secrets written via `Bun.write(..., { mode: 0o600 })`** — this repo found
   that `Bun.write`'s `mode` option is a silent no-op on the Bun version in use;
   a new secret written this way needs an explicit `node:fs/promises` `chmod()`

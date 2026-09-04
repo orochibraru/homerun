@@ -22,25 +22,34 @@ dependency needed), Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
 
 ```bash
 bun run dev              # vite dev
-bun run build            # vite build
-bun run start             # ./build/server (the binary @orochibraru/svelte-smol compiles, serve the built app)
-bun run check            # svelte-kit sync && svelte-check --fail-on-warnings, the real gate, see note below
-bun run lint             # biome check ., rustywind is a listed dependency but not currently wired into any script (real drift exists, see note below if you're about to fix that)
-bun run lint:fix         # biome check . --write --unsafe
+bun run build            # parallel build:app (bun run gen && vite build) + build:packages (scripts/build-packages.ts, the agent/installer/cli binaries)
+bun run start            # ./build/server (the binary @orochibraru/svelte-smol compiles, serve the built app)
+bun run gen              # svelte-kit sync + regenerate openapi.json, packages/cli/generated/openapi-types.ts and homerun.schema.json, runs as part of build:app
+bun run check            # parallel check:app + check:packages, the real gate, see note below
+bun run check:app        # svelte-kit sync && svelte-check --fail-on-warnings --tsgo, the SvelteKit half of the gate
+bun run check:scripts    # tsc over scripts/ (tsconfig.scripts.json), part of check:packages, scripts/ isn't covered by svelte-check's own include list
+bun run lint             # parallel lint:ts (biome check) + lint:md (markdownlint-cli2) + lint:tailwind (tailwint, Tailwind class sorting), rustywind is still a listed dependency but unwired, tailwint superseded it
+bun run lint:fix         # the --write/--fix half of all three
+bun run format:md        # prettier over **/*.md, separate from lint:md's rule checking
 bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts
 bun run component:add    # shadcn-svelte add <name>, installs a UI primitive into src/lib/components/ui/
-docker compose up -d     # bootstraps Traefik + Postgres (see compose.yaml), required, the app has no fallback DB
+bun run dev:agent        # bun run --hot packages/agent/index.ts, the Homerun Agent against the local Docker socket
+bun run dev:docs         # packages/docs/ (the docs site) in dev; build:docs/check:docs are its build/typecheck, all three via scripts/docs.ts
+docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml), required, the app has no fallback DB, see Compose files below
 bun run release          # semantic-release, normally CI-only (.github/workflows/publish.yaml), see Release automation below
 ```
 
 ```bash
-bun run test              # bun test --timeout 120000, the whole suite (unit + integration, see below)
-bun run test:unit         # unit tests only (packages/agent, packages/installer, packages/cli)
+bun run test              # bun test --timeout 120000, the whole bun:test suite (unit + integration, see below), never tests/e2e/ (Playwright, own runner)
+bun run test:unit         # unit tests only (packages/agent, packages/installer, packages/cli, plus tests/unit/app)
 bun run test:unit:agent   # scoped to packages/agent
+bun run test:unit:app     # scoped to tests/unit/app, the SvelteKit app's own unit/component tests
 bun run test:unit:cli     # scoped to packages/cli
 bun run test:unit:installer  # scoped to packages/installer
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
+bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see E2E browser tests below
 bun run e2e:multipass     # scripts/e2e-multipass.ts, real-infra installer/agent/CLI e2e, see below, not wired into CI
+bun run e2e:multipass:release  # scripts/e2e-multipass-release.ts, the same but against the *published* release and the *documented* commands, see below, also not wired into CI (`--only=docs` is the VM-free docs-drift check)
 ```
 
 `packages/agent/`, `packages/installer/`, and `packages/cli/` are separate
@@ -67,9 +76,14 @@ covered by `tests/integration/`.
 
 Run everything: `bun run test` (bare `bun test` also works, no wrapper script —
 `bunfig.toml`'s `[test].preload` handles the rest). Scoped: `bun run test:unit`,
-`test:unit:agent`, `test:unit:cli`, `test:unit:installer`. `tests/integration/`
-is a separate suite with its own `beforeAll`/`afterAll` (real
-Postgres/Docker/agent, see `tests/integration/README.md`).
+`test:unit:agent`, `test:unit:app`, `test:unit:cli`, `test:unit:installer`,
+every one of which also sets `HOMERUN_SKIP_INTEGRATION_SETUP=1` so the preloaded
+integration bootstrap (real Postgres container) doesn't run for a unit-only
+invocation. `tests/integration/` is a separate suite with its own
+`beforeAll`/`afterAll` (real Postgres/Docker/agent, see
+`tests/integration/README.md`), and `tests/e2e/` is a third, Playwright, outside
+`bun test` entirely (see E2E browser tests below). `tests/README.md` is this
+section's counterpart living next to the code.
 
 **Vitest was tried and abandoned for this suite.** It fixed the `[test].timeout`
 bug above (real `hookTimeout`/`testTimeout` config) and gave each test file its
@@ -251,14 +265,13 @@ that pattern for any new skill.
   real after every change and read what it reports, rather than assuming an
   untouched file's error is pre-existing and therefore not your problem, confirm
   that by actually looking, and fix it either way if it's cheap and unambiguous.
-- **JSDoc comments above every function** (route files' inferred
-  `load`/`actions`/handlers included), a short `/** ... */` block describing
-  what it does, params/return where non-obvious. This one's genuinely useful,
-  keep doing it.
-- **No multiline comment blocks above a change otherwise.** This isn't an
-  enterprise codebase, we iterate fast; a change's rationale lives in the git
-  commit message, not a prose block above the diff. A single one-line comment is
-  fine when the "why" genuinely isn't obvious from the code, skip it otherwise.
+- **No comments. Anywhere. In any code file.** No explanatory line comments, no
+  header banners, no prose in YAML/compose/shell files either. A change's
+  rationale belongs in the git commit message, a feature's explanation belongs
+  in `docs/` or this file, and code that needs a comment to be understood needs
+  a better name instead. Existing comments in files you aren't otherwise
+  touching stay put, don't do sweeping comment-deletion passes, just never add
+  one.
 - **Prefer real OOP over a static-only class that just re-exports imported
   functions (or is `static` throughout for no reason beyond habit).** A
   `class Foo { static bar = importedBar; }` barrel (the shape
@@ -355,6 +368,22 @@ yet built).
   material into what `DockerService.getDocker()` wants), and the static
   `connectionFor(svc, userId)` helper every route/module uses instead of calling
   `getDocker()` bare, see Remote hosts below.
+- `s3-destination-dto.ts`, `S3DestinationDTO`:
+  `get`/`list`/`create`/`update`/`delete`, plus `decryptSecretAccessKey()` (for
+  the S3 client only, never a `load` return value), a named, reusable S3 target
+  several volumes can share, see S3 backups below.
+- `backup-run-dto.ts`, `BackupRunDTO`: `create`/`finish`/`listForVolume`/
+  `listForUser` (joins in the volume's name), one row per backup attempt, the
+  history behind `/backups`.
+- `build-cache-registry-dto.ts`, `BuildCacheRegistryDTO`:
+  `get`/`list`/`create`/`delete`, a per-user registry credential a git-build
+  pulls its `--cache-from` image from and pushes fresh layers back to, see
+  Git-based builds below.
+- `git-connection-dto.ts`, `GitConnectionDTO`: one user's OAuth authorization
+  against one configured git provider, see Git provider connections below.
+- `app-log-dto.ts`, `notification-dto.ts`, `user-preferences-dto.ts`,
+  `instance-settings-dto.ts`, `invitation-dto.ts`, each covered by its own
+  section below.
 
 **`toJSON()` before returning from `load`**: DTO instances are server-only;
 SvelteKit serializes `load` return values with devalue, which can't serialize a
@@ -391,9 +420,24 @@ instance hasn't finished it (see Onboarding below for the other half,
 `(protected)/`, with its own reverse-direction `load`). There is no public
 marketing page. `src/routes/auth/**` is the only unauthenticated surface.
 
-Top-level sections (sidebar nav): **Overview** (dashboard stats + recent
-deployments), **Services**, **Projects**, **Templates**, **Storage**, **Remote
-Hosts**, **Users** (admin-only), **Settings** (admin-only), **System Logs**.
+The sidebar nav is grouped into four labeled categories (`category` on each item
+in `(protected)/+layout.svelte`'s nav array, color-coded per category, see
+Appearance preferences below for the per-user "single accent color" override):
+
+- **Workspace**: **Overview** (dashboard stats + recent deployments),
+  **Services**, **Projects**, **Templates**.
+- **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",
+  see S3 backups below), **S3 Destinations** (reusable, named backup targets),
+  **Remote Hosts**, **Scheduling** (one instance-wide view of every cron
+  redeploy, backup schedule, and the autoscale config).
+- **Integrations**: **Git Providers**, **Build Cache** (registry credentials for
+  cross-build cache reuse, see Git-based builds below), **API Docs**.
+- **Administration**: **Users** (admin-only), **Settings** (admin-only),
+  **System Logs**.
+
+Not in the nav but real routes: `/profile/**` (reached from the profile menu,
+see Appearance preferences below), `/notifications/**` (the bell's own
+read/delete endpoints), `/cli-auth` (the CLI device-code approval page).
 `(protected)/+layout.svelte` filters the nav array on
 `data.user.role === "admin"` before rendering, a developer sees everything else
 unchanged (their own services/projects, already isolated per-user by every DTO's
@@ -486,6 +530,11 @@ dashboard's own `fetch` calls and external API-key clients alike.
 - `openapi.json/`, `GET`, public/unauthenticated (the spec describes shapes, not
   data; every documented route still enforces its own auth independently).
   Serves the OpenAPI 3.1 document built by `$lib/openapi/build.ts`, see below.
+
+`GET /api/health` sits outside `v1/` entirely, a one-line unauthenticated
+`new Response("OK")` used as a readiness probe (the compose healthcheck, and
+`tests/e2e/`'s bootstrap waiting for the spawned app), not part of the versioned
+API surface or the OpenAPI document.
 
 This is deliberately a thin JSON wrapper over the DTO layer, not a new
 abstraction, the `packages/cli/` sub-project talks to this (see below).
@@ -580,15 +629,16 @@ below, sharing the root `package.json`/`bun install` rather than having its
 own), a typed CLI built on
 [`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) against the spec above.
 `packages/cli/generated/openapi-types.ts` is generated by `openapi-typescript`
-straight from a running instance's real `/api/v1/openapi.json`
-(`bun run generate`, checked in as a snapshot, regenerate after any REST API
-route change or it silently goes stale, `openapi-fetch` itself has no way to
-detect a stale-spec mismatch at compile time). Auth is `x-api-key`/`--api-key`,
-same header the REST API's own hooks check first for a non-cookie caller.
-Commands: `services {list,get,deploy,start,stop,restart}`, `projects list`,
-`templates list`, no `create`/`update`/`delete` yet, straightforward to add the
-same way. See `packages/cli/README.md` for the full command reference and what's
-verified.
+straight from a running instance's real `/api/v1/openapi.json` (the root
+`bun run gen`, which also regenerates `openapi.json` and `homerun.schema.json`
+and runs as part of `build:app`; checked in as a snapshot, regenerate after any
+REST API route change or it silently goes stale, `openapi-fetch` itself has no
+way to detect a stale-spec mismatch at compile time). Auth is
+`x-api-key`/`--api-key`, same header the REST API's own hooks check first for a
+non-cookie caller. Commands: `services {list,get,deploy,start,stop,restart}`,
+`projects list`, `templates list`, no `create`/`update`/`delete` yet,
+straightforward to add the same way. See `packages/cli/README.md` for the full
+command reference and what's verified.
 
 **Verified live, full round trip**, not just typechecked: a throwaway account +
 real API key (against an isolated `homerun_test` database, never the
@@ -625,23 +675,53 @@ authenticated by the dashboard's own cookie session (Swagger UI makes its own
 says so; a real request there needs a pasted `x-api-key`. **Verified live**: the
 page server-renders 200 (not a crash/error boundary) for a real signed-in user,
 with the expected `swagger-ui` CSS/container markup present, client-side widget
-initialization itself wasn't verified in a real browser (no Playwright/e2e
-harness in this repo currently, see below), just that nothing crashes and the
-wiring (dynamic import location, CSS import, container ref) matches Swagger UI's
-own documented embed pattern.
+initialization itself wasn't verified in a real browser (the Playwright suite
+that now exists, see below, doesn't cover this page), just that nothing crashes
+and the wiring (dynamic import location, CSS import, container ref) matches
+Swagger UI's own documented embed pattern.
 
-**No E2E/browser test harness currently exists in this repo**, `e2e/`,
-`playwright.config.ts`, `.env.test`, and the `qa` subagent were all removed in a
-separate session's `feat: better classes` commit (`87c925d`), alongside the
-earlier OOP refactor. Runtime verification for anything client-side-interactive
-(a button click, a `$state` mutation actually re-rendering) is now done by hand,
-booting a dev server against the isolated `homerun_test` Postgres database
-(never the maintainer's real one, same convention the removed `qa` agent used)
-and driving it with `curl`/direct HTTP calls, which proves a route doesn't 500
-and returns the right shape but can't exercise client-side JS the way a real
-browser would. If a future session wants that coverage back, it needs rebuilding
-from scratch, not un-deleting, treat the removal as deliberate per this repo's
-own "take it as current state" convention.
+### E2E browser tests (`tests/e2e/`, `playwright.config.ts`)
+
+**This repo has a real browser harness again** (an earlier session deleted the
+previous one in `feat: better classes`, `87c925d`, and this document said for a
+while that none existed, that's stale, it was rebuilt from scratch rather than
+un-deleted). Real Playwright driving real Chromium against a real _built_ app
+(`bun run build:app` first, this suite doesn't build for you) backed by a
+throwaway Postgres container, run with `bun run test:e2e`, deliberately outside
+`bun run test`, Playwright is its own runner and `bunfig.toml`'s retry/coverage
+settings don't reach it. See `tests/e2e/README.md` for the full detail; the
+load-bearing parts:
+
+- **`globalSetup` runs under Node, not Bun.** Playwright's CLI has a
+  `#!/usr/bin/env node` shebang, so even `bunx playwright test` runs the config
+  and its `globalSetup` under Node (verified: importing
+  `tests/integration/support` there fails with `Cannot find package 'bun'`, that
+  code uses `Bun.SQL`/`Bun.spawn` throughout). `support/global-setup.ts`
+  therefore spawns `support/bootstrap-runtime.ts` as a genuine `bun run` child
+  process, which starts Postgres, migrates, spawns the built app, prints one
+  `READY <json>` line once `/api/health` answers, and stays alive until it's
+  SIGTERM'd at teardown.
+- **Fixed port, one shared app instance.** Playwright reads `use.baseURL` at
+  config-load time, before a `globalSetup` could resolve a free port the way
+  `tests/integration/` does, so the port is fixed (`support/config.ts`) and
+  `workers: 1`/`fullyParallel: false` share one live app+database across every
+  spec. Don't run this suite twice concurrently on one machine, and create a
+  fresh account per spec file rather than assuming a clean slate (see
+  `bootstrap.spec.ts`'s `test.describe.serial` for depending on order _within_ a
+  file).
+- **Auth rate limiting is disabled for it** (`HOMERUN_DISABLE_AUTH_RATE_LIMIT=1`
+  on the spawned app), see Auth below for the real finding behind that.
+- **`bunfig.toml` excludes it from `bun test`**
+  (`pathIgnorePatterns = ["**/tests/e2e/**"]`), these specs match `bun test`'s
+  own `*.spec.ts` discovery and would otherwise be picked up and fail there.
+
+Covered today: blank-instance bootstrap sign-up landing on `/onboarding`, the
+sign-up→sign-in redirect once an account exists, clicking the whole onboarding
+wizard through to completion, and sign-in/sign-out. Not covered: anything past
+onboarding, a real deploy needs a Docker socket reachable from _inside_ the
+spawned app, which this bootstrap doesn't wire up. Add browser-level cases here;
+don't re-prove API shapes `tests/integration/` already covers directly and
+faster.
 
 ### The `$derived` + push/splice anti-pattern (real, tested bug)
 
@@ -769,6 +849,25 @@ now a repo-browsing UI and OAuth-based private-repo access, see Git provider
 connections below; a private repo can still fall back to a token embedded in the
 URL (`https://TOKEN@host/...`) without connecting a provider at all.
 
+**Build cache and build servers** (`build_cache_registry`,
+`service.buildCacheRegistryId`/`buildServerRemoteHostId`,
+`/build-cache-registries`): a git-mode service can name a registry credential to
+use purely as a layer cache, `git-build.ts` pulls `<registry>/<cache ref>`
+before the build, passes it as `cachefrom`, and pushes the fresh layers back
+afterward. Both directions are best-effort: a missing cache image or a failed
+push logs and continues, it never fails the build. **Real, tested finding**: the
+classic (non-BuildKit) build API this app uses wants `cachefrom` as a
+JSON-encoded _array string_ despite `@types/dockerode` typing it as a plain
+string, a bare string 400s with `error reading cache-from: invalid character`;
+and `BUILDKIT_INLINE_CACHE` is a BuildKit-only concept the classic builder warns
+about and ignores, real reuse comes from the cache image's own layers (verified
+live, a repeat build showed "Using cache" for every step).
+`buildServerRemoteHostId` picks a _different_ host to build on than the one the
+service deploys to (a Remote Host opted in via `isBuildServer`);
+`deploy.service.ts` rejects that combination outright unless a cache registry is
+configured too, since publishing through that registry is the only way the built
+image reaches the deploy target.
+
 ### Git provider connections (`instance_settings.gitProviders`, `git_connection` table, `$lib/services/git-provider.service.ts`, `/git-providers`)
 
 Separate from the git-clone-based builds above, this is what makes the Source
@@ -894,7 +993,9 @@ connections, just applied to Traefik instead). When it _is_ set, it decrypts the
 cert/key and writes three files into that directory: `certs/<slug>.crt`,
 `certs/<slug>.key`, and `<slug>-tls.yml` (a Traefik file-provider dynamic config
 pointing at the other two), or removes all three if the cert's been cleared or
-the domain's changed. `compose.yaml` has the exact commented-out Traefik flags
+the domain's changed. `tools/compose/base.compose.yaml` (the shared Traefik
+definition every root compose file extends, see Compose files below) has the
+exact commented-out Traefik flags
 (`--providers.file.directory`/`--providers.file.watch`) and bind mount to
 uncomment, at the same host path as `TRAEFIK_DYNAMIC_CONFIG_DIR`, a one-time
 `docker compose up -d` the admin runs themselves; Traefik's file provider then
@@ -1097,17 +1198,29 @@ oversight, logging raw TTY bytes verbatim would be noisy and wouldn't cleanly
 map to discrete commands anyway (arrow-key history, tab-completion, etc. all
 flow through the same input channel).
 
-### S3 backups (`src/lib/services/backup.service.ts`, `s3-backup.service.ts`)
+### S3 backups (`src/lib/services/backup.service.ts`, `s3-backup.service.ts`, `/backups`, `/s3-destinations`)
 
-Per-volume, off by default, configured on `storage/[volumeId]`. `BackupService`
-(`backup.service.ts`) is an abstract base holding the generic tar-then-upload
-pipeline (validate config, decrypt the stored secret, tar the volume's `source`
-directory, log/return the result); `S3BackupService extends BackupService`
-(`s3-backup.service.ts`) is the only concrete implementation, a hand-rolled AWS
-Signature V4 client (single-request PUT, no multipart, no SDK dependency,
-verified end-to-end against a local MinIO container during development) that
-works against any S3-compatible endpoint (AWS S3, MinIO, R2, B2, etc.) via
-path-style addressing. `S3BackupService.backupVolume(volume)` is the callable
+Per-volume, off by default. The destination itself is a separate, named,
+reusable row (`s3_destination`, `S3DestinationDTO`, managed on
+`/s3-destinations`) that a volume points at via `storageVolume.s3DestinationId`,
+so several volumes can share one bucket/credential pair; the volume only owns
+`backupEnabled`/`backupSchedule`/`backupPrefix`, edited on `storage/[volumeId]`.
+Every attempt, scheduled or manual, writes a `backup_run` row (`BackupRunDTO`,
+created before the attempt and finalized on every return path, including
+validation failure), and `/backups` is the page over that history, plus a "Run
+now" action per volume, the same one `storage/[volumeId]` offers.
+`BackupService` (`backup.service.ts`) is an abstract base holding the generic
+tar-then-upload pipeline (`runBackup()`: open the run row, validate config,
+resolve+decrypt the named destination, tar the volume's `source` directory,
+finalize the run row, return the result), with a concrete subclass supplying
+only the "put these bytes at this key" transport;
+`S3BackupService extends BackupService` (`s3-backup.service.ts`) is the only
+concrete implementation, a hand-rolled AWS Signature V4 client (single-request
+PUT, no multipart, no SDK dependency, verified end-to-end against a local MinIO
+container during development) that works against any S3-compatible endpoint (AWS
+S3, MinIO, R2, B2, etc.) via path-style addressing.
+`S3BackupService.backupVolume(volume)` (a singleton instance,
+`export const S3BackupService = new S3BackupServiceClass()`) is the callable
 entry point every route/scheduler uses; it PUTs the tarball as
 `<prefix/>volumeName-<timestamp>.tar.gz`. **Bind-mount volumes only**,
 `kind: "volume"` (Docker-managed) is rejected, since its content isn't visible
@@ -1137,7 +1250,12 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   to `remote_host`, `onDelete: "set null"`, see Remote hosts below),
   `customSslCertEnc`/`customSslKeyEnc` (see Custom SSL certificates below),
   `networkMode` (`"bridge"` default | `"host"`) + `portProtocol` (`"tcp"`
-  default | `"udp"` | `"both"`) (see Network mode below).
+  default | `"udp"` | `"both"`) (see Network mode below), `buildCacheRegistryId`
+  (nullable FK to `build_cache_registry`) + `buildServerRemoteHostId` (nullable
+  FK to `remote_host`, build this service's image on a different host than it
+  deploys to; `deploy.service.ts` rejects that combination outright unless a
+  cache registry is also set, since a cross-host build has no other way to hand
+  the built image over), both see Git-based builds below.
 - `remote_host`, a registered non-local Docker daemon: `dockerHost` (`tcp://...`
   or `ssh://...`), optional `tlsCaEnc`/`tlsCertEnc`/`tlsKeyEnc` (AES-256-GCM,
   same scheme as `registryPasswordEnc`). See Remote hosts below.
@@ -1160,9 +1278,25 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `storage_volume`, a named local volume source: `kind` (`"bind"` | `"volume"`),
   `source` (an absolute host path for bind, or a Docker-managed volume name,
   Docker's own `Binds` syntax tells the two apart by whether it looks like a
-  path). `backup*` columns
-  (`backupEnabled`/`backupSchedule`/`backupEndpoint`/`backupBucket`/`backupRegion`/`backupAccessKeyId`/`backupSecretAccessKeyEnc`/`backupPrefix`/`backupLastRunAt`)
-  hold its optional S3 destination, see Backups below.
+  path). Its optional backup config is
+  `backupEnabled`/`backupSchedule`/`backupPrefix`/`backupLastRunAt` plus
+  `s3DestinationId` (nullable FK, `onDelete: "set null"`), the endpoint/bucket/
+  region/credentials themselves live on `s3_destination`, not here, so several
+  volumes can share one target, see S3 backups below.
+- `s3_destination` (`S3DestinationDTO`), a named, reusable S3-compatible target:
+  `name`/`endpoint`/`bucket`/`region`/`accessKeyId`/`secretAccessKeyEnc`
+  (AES-256-GCM, same scheme as `registryPasswordEnc`), owned per user, managed
+  on `/s3-destinations`.
+- `backup_run` (`BackupRunDTO`), one row per backup attempt (scheduled or manual
+  "Run now"): `volumeId`, `startedAt`/`finishedAt`, `success` (null while still
+  running), `sizeBytes`, `error`. Written from `BackupService.runBackup()`, the
+  one place both the scheduler and the manual action funnel through, so every
+  path gets a log entry including validation failures. Backs `/backups`;
+  `storage_volume.backupLastRunAt` alone only ever remembered a timestamp.
+- `build_cache_registry` (`BuildCacheRegistryDTO`), a per-user container
+  registry credential (`registryUrl` with no scheme, `username`, `passwordEnc`)
+  used only as a build cache source/destination, not as a deploy image source,
+  managed on `/build-cache-registries`. See Git-based builds below.
 - `service_volume`, join table: one mount of one `storage_volume` into one
   `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by
   being mounted into more than one service, no separate project-volume concept.
@@ -1361,15 +1495,33 @@ column, key derived via `scryptSync` from `config.auth.secret`.
 Containers attach to the external `homerun` Docker network
 (`docker network create homerun` once) rather than publishing host ports, true
 for the default `networkMode: "bridge"`; see Network mode below for the `"host"`
-exception. The root `compose.yaml` bootstraps Traefik and Postgres for **local
-dev** only: it deliberately has no `app` service, since dev runs the app
-directly on the host (`bun run dev`/`bun run start`) so its own logs aren't
-viewable in-app (see `system-logs/` above). The app itself _is_ containerized
-for production use (`Dockerfile`, built/pushed by
-`.github/workflows/docker.yaml`; see Release automation below): the installer's
-`--mode=full` generates its own separate compose file that adds that image as an
-`app` service (see `packages/installer/` below), rather than this dev compose
-file gaining one.
+exception.
+
+**Compose files.** The actual service definitions live once in
+`tools/compose/{base,app,agent}.compose.yaml` (Traefik + Postgres in `base`, the
+app and Agent in the other two); each root-level file is a thin `extends:`
+composition of those, so Traefik's flags or Postgres's image change in one
+place:
+
+- `compose.yaml`, **local dev**, Traefik + Postgres only. Deliberately no `app`
+  service: dev runs the app directly on the host (`bun run dev`/`bun run start`)
+  so its own logs aren't viewable in-app (see `system-logs/` above). This is
+  what `docker compose up -d` brings up, and what the app assumes exists.
+- `compose.dev.yaml`, the same plus `app` and `agent` built from this repo's own
+  `Dockerfile` (`target: app`/`target: agent`), for exercising the containerized
+  app locally.
+- `compose.prod.yaml`, the operator-facing stack: the published
+  `docker.io/orochibraru/homerun` image alongside Traefik and Postgres.
+  Deliberately **self-contained**, no `extends:`, since someone who `curl`s just
+  this one file down has no `tools/` directory; it's Option B in
+  `docs/getting-started.md`, so a change here has to stay in step with that doc
+  (`bun run e2e:multipass:release --only=docs` checks exactly that).
+
+The app itself _is_ containerized for production use (`Dockerfile`,
+`docker-bake.hcl`, built/pushed by `.github/workflows/docker.yaml`; see Release
+automation below). The installer's `--mode=full` generates its own separate
+compose file on the target host (see `packages/installer/` below) rather than
+reusing any of these.
 
 ### Swarm mode (`instance_settings.orchestrationMode`, `service.replicas`/`swarmServiceId`, `src/lib/services/docker/swarm.ts`)
 
@@ -1409,7 +1561,9 @@ Docker Swarm Service (`docker.createService`,
 admin's own action" boundary as custom SSL's Traefik config): the host's Docker
 daemon must already be swarm-active (`docker swarm init`, done once by the
 admin), and the live Traefik container needs `--providers.docker.swarmMode=true`
-added to its command, a one-time `compose.yaml` edit + restart.
+added to its command, a one-time `tools/compose/base.compose.yaml` edit +
+restart (or its equivalent in whichever compose file is actually running,
+`compose.prod.yaml` is self-contained, see Compose files below).
 
 **Real architectural limitation, flagged deliberately, not an oversight**: swarm
 mode is local-manager-only. Remote Hosts (above) doesn't apply the same way
@@ -1607,6 +1761,18 @@ also DB-editable, see Instance settings above) sets better-auth's
 instead of the exact host, see the per-service auth gate below for why, and its
 documented, tested limitation.
 
+Rate limiting is on outside `vite dev`: 100 requests per IP per 15 minutes
+overall, plus the `apiKey()` plugin's own 300/minute. **Real, tested finding**:
+better-auth also applies an undocumented-in-config "special rule" (its
+`rate-limiter/index.mjs`'s `getDefaultSpecialRules`) capping any
+`/sign-in`/`/sign-up`-prefixed path at 3 requests per 10 seconds, well below
+that `max`/`window` and unaffected by them, which a handful of `tests/e2e/`
+specs signing in and out against a real production build tripped immediately.
+`HOMERUN_DISABLE_AUTH_RATE_LIMIT=1` turns rate limiting off for that reason, set
+only by `tests/e2e/support/bootstrap-runtime.ts`'s spawned app, never in
+production, same test-only-escape-hatch shape as
+`HOMERUN_SKIP_INTEGRATION_SETUP`.
+
 The `betterAuth({...})` call is wrapped in `buildAuth()` rather than assigned
 once to a `const`, `export let auth = buildAuth()`, plus
 `export function rebuildAuth()` which reassigns `auth = buildAuth()`. This is
@@ -1623,11 +1789,13 @@ everywhere without a restart. `rebuildAuth()` is called at the end of
 When enabled (Networking tab), `services/docker/labels.ts` attaches a Traefik
 forwardAuth middleware to the service's router(s) pointing at
 `config.authCheckUrl` (default
-`http://host.docker.internal:<port>/api/v1/auth-check`, since this app isn't
-containerized, Traefik must reach it from inside its own container; the Linux
-case needs `extra_hosts: host-gateway` added to compose.yaml's Traefik service,
-which this app can't do for the user). `/api/v1/auth-check` just checks
-`locals.user` and returns 200/401, so it works with whatever the user
+`http://host.docker.internal:<port>/api/v1/auth-check`, since the app is
+typically reached from inside Traefik's own container; the Linux case needs
+`extra_hosts: host-gateway` on the Traefik service
+(`tools/compose/base.compose.yaml`, or `compose.prod.yaml`'s own copy), which
+this app can't do for the user. When the app itself runs as a container on the
+same compose network, its service name works instead). `/api/v1/auth-check` just
+checks `locals.user` and returns 200/401, so it works with whatever the user
 authenticates into Homerun with, including a configured `genericOAuth`/OIDC
 provider (see auth.ts).
 
@@ -2010,6 +2178,61 @@ app's own runtime).
   runners have no nested virtualization for Multipass, it's a local-only tool to
   run by hand before cutting a release or after touching installer/agent/CLI
   code.
+
+  `scripts/e2e-multipass-release.ts` (`bun run e2e:multipass:release`) is its
+  mirror image, and the two share `scripts/e2e/` (`multipass.ts`, the VM/HTTP
+  machinery both drive; `docs.ts`, the docs command extractor; `release.ts`, the
+  GitHub-release resolver). Where the suite above builds from local source and
+  runs the binaries directly, this one runs **only what's already published,
+  using the commands the docs themselves print**: the one-liners are extracted
+  from `docs/getting-started.md`, `packages/agent/README.md` and
+  `docs/api-and-cli.md` at run time and executed verbatim (`Vm.runScript` writes
+  a documented block to a file and runs it rather than re-typing it), so a
+  renamed flag, a moved `raw.githubusercontent.com` path, or a landing page that
+  disagrees with `docs/getting-started.md` fails the run. Phases are
+  `--only=`/`--skip=` selectable: `docs` (cross-checks every place the same
+  command is documented, asserts each documented URL exists in this checkout
+  _and_ is live, and asserts the GitHub release under test really published all
+  six binaries, no VM needed, seconds to run), `full`, `agent`, `remote`, `cli`,
+  `compose` (`docs/getting-started.md`'s Option B, on rootful Docker). Because
+  it tests what's published, a fix in the working tree isn't reflected until it
+  ships, that's the point, not a gap, `--ref=<branch>` points the documented
+  URLs at a pushed branch when verifying a docs/installer change before merging,
+  and `--version=vX.Y.Z` pins a release instead of `latest`.
+
+### Documentation (`docs/`, `packages/docs/`, `README.md`, `CONTRIBUTING.md`)
+
+Three audiences, three places, keep them apart:
+
+- **`CLAUDE.md`** (this file): everything a future session needs that isn't
+  derivable from the code, including the "real, tested finding" notes. Not
+  user-facing.
+- **`docs/*.md`**: the operator-facing guides (`getting-started`,
+  `configuration`, `services`, `remote-hosts-and-agent`, `storage-and-backups`,
+  `projects-and-templates`, `users-and-access`, `api-and-cli`,
+  `faq-and-limitations`, indexed by `docs/README.md`), plus the root
+  `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These are the
+  source of truth, plain Markdown, readable straight from the repo. The commands
+  they print are **executed verbatim** by `bun run e2e:multipass:release` (see
+  below), so a stale install one-liner is a test failure, not just a doc nit.
+- **`packages/docs/`**: a standalone, fully static SvelteKit site (own
+  `svelte.config.js`/`vite.config.ts`/`tsconfig.json`, `adapter-static`, sharing
+  the root `package.json`/`bun install` like every other `packages/*`
+  sub-project) that renders the landing page, a `/docs/<slug>` page per file
+  under `docs/` (via `import.meta.glob` at build time, never a second copy to
+  keep in sync), and a `/docs/api` Swagger UI page. Published as
+  `docker.io/orochibraru/homerun-docs`.
+
+`bun run dev:docs`/`build:docs`/`check:docs` all go through `scripts/docs.ts`
+rather than plain `vite`/`svelte-check`, for two reasons documented at length in
+that file: it writes a stub `.svelte-kit/tsconfig.json` at the **repo root** (a
+real, tested rolldown-vite bug resolves `packages/docs/tsconfig.json`'s
+`extends` chain against the repo root instead of `packages/docs/`, and fails
+outright if that file doesn't exist, invisible locally the moment
+`bun run dev`/`check:app` has run once, caught for real by a clean Docker
+build), and it copies the checked-in root `openapi.json` into
+`packages/docs/static/` (gitignored, regenerated every dev/build) so the Swagger
+UI page has a spec to serve. `check:docs` is part of `bun run check`.
 
 ## Planned features (not yet built)
 
