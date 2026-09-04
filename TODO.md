@@ -8,9 +8,6 @@
       background and redirect the user to the service page showing them the logs
       and all that would happen if they clicked on "create" and got redirected
       to the page and clicked "deploy" themselves.
-- [ ] [App] For templates details page, let's use the github API to pull in each
-      project's readme, number of stars, latest release, latest code push time
-      ago.
 - [ ] [App] Let's make the UI sexier, slicker a bit less toy a bit more tech. A
       monospace font could help and liquid glass-ish design as well.
 - [ ] [App] Instead of appending a div to a section for confirmation (such as

@@ -4,6 +4,7 @@ import { ProjectDTO } from "$lib/dto/project-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { allowLongRequest } from "$lib/server/long-request";
+import { getGitHubRepoInfo } from "$lib/services/github-repo.service";
 import { quickDeployFromTemplate } from "$lib/services/template-links";
 
 export const load = async ({ params, parent, url }) => {
@@ -21,7 +22,10 @@ export const load = async ({ params, parent, url }) => {
 		? await ProjectDTO.get(rawProjectId, user.id)
 		: null;
 
+	const templateJson = tmpl.toJSON();
+
 	return {
+		github: getGitHubRepoInfo(templateJson.sourceUrl),
 		links: links.map((l) => ({
 			alias: l.link.alias,
 			icon: l.linkedTemplateIcon,
@@ -30,7 +34,7 @@ export const load = async ({ params, parent, url }) => {
 			tag: l.linkedTemplateTag,
 		})),
 		project: project?.toJSON() ?? null,
-		template: tmpl.toJSON(),
+		template: templateJson,
 	};
 };
 

@@ -937,15 +937,54 @@ distinguishable at a glance from its neighbors. `templateIcon()`/
 `TEMPLATE_ICONS` (the old flat category→icon map this replaced) no longer exist.
 
 The gallery (`templates/+page.svelte`) has a search input (matches
-name/description/image, client-side) and a category `<select>` filter, built
-from whatever categories are actually present rather than a hardcoded list. Each
-card links to `templates/[templateId]/`, a details page (`+page.server.ts`
-guards via `TemplateDTO.usable`, same built-in-or-owned rule every
-deploy-from-template path uses) showing the full description, container
-port/CPU/memory/env vars, the source/website links, any linked companion
-templates (below), and a Deploy button carrying `templateId` (and `projectId`
-when arrived at from a project) into `services/new`, the same query-param
-contract the gallery cards used before this page existed.
+name/description/image, client-side) and a category filter built as a right-side
+`Drawer` (`$lib/components/ui/drawer`, vaul-svelte's `direction` prop, not the
+select-dropdown this started as) with toggleable pills, built from whatever
+categories are actually present rather than a hardcoded list. Each card links to
+`templates/[templateId]/`, a details page (`+page.server.ts` guards via
+`TemplateDTO.usable`, same built-in-or-owned rule every deploy-from-template
+path uses) showing the full description, container port/CPU/memory/env vars, the
+source/website links, any linked companion templates (below), and the GitHub
+repo panel/readme (below). Every card and the details page carry two actions
+instead of one: **Quick Deploy** (primary) calls a `quickDeploy` form action
+(`$lib/services/template-links.ts`'s `quickDeployFromTemplate()`, shared by both
+routes) that creates the service straight from the template's defaults
+(name/slug auto-generated via `slugify`) and deploys it immediately, no wizard;
+**Configure** (secondary) is the old single "Deploy" button, renamed since it
+only navigates into `services/new` (carrying `templateId`, and `projectId` when
+arrived at from a project) to let the user tweak first. The gallery's
+`quickDeploy` action returns a plain success object (not a redirect) so
+`use:enhance` can show a `toast.success` with a "View" button instead of yanking
+the user out of the grid mid-browse, letting several templates get
+quick-deployed back to back; the details page's own action still `redirect()`s
+straight to the new service, no grid to lose there.
+
+**GitHub repo enrichment** (`$lib/services/github-repo.service.ts`): when a
+template's `sourceUrl` is a `github.com` URL, the details page's `load` calls
+`getGitHubRepoInfo()`, which resolves owner/repo from the URL and hits
+`api.github.com`'s repo/releases/readme endpoints (unauthenticated, so the usual
+public 60 req/hr-per-IP limit applies) for star count, last-push time, latest
+release tag, and the rendered readme. Returned **without being awaited** in
+`load()`, SvelteKit streams it, so a slow/rate-limited GitHub response doesn't
+block the rest of the page; `+page.svelte` renders it via
+`{#await data.github then repo}`. Every fetch has an 8s `AbortSignal.timeout`
+and the whole thing is wrapped in try/catch, GitHub being slow or down never
+breaks the page, `getGitHubRepoInfo()` just resolves to `null` and the panel/
+readme sections don't render. Results are cached in-memory per `owner/repo` (1h
+TTL, HMR-safe `globalThis` singleton, same pattern as the db client) since every
+viewer of the same template would otherwise re-hit the same three endpoints. The
+readme is rendered with `marked` (already a dependency, used by `packages/docs/`
+for the operator guides) through a custom renderer that resolves relative
+image/link paths against the repo's default branch (`raw.githubusercontent.com`
+for images, a `blob/<branch>/` GitHub URL for links), then run through
+`sanitize-html` (a new dependency, added specifically for this) before being
+sent to the client and rendered via `{@html}`. This sanitization step is
+load-bearing, not decorative: a template's `sourceUrl` is user-settable (a
+developer can save any service as a template with any source URL), so a
+malicious template could point at a repo whose README is crafted to exploit gaps
+in GitHub's own rendering; sanitizing server-side means the client only ever
+receives an already-restricted tag/attribute allowlist, regardless of what
+GitHub returned.
 
 ### Git-based builds (`src/lib/services/docker/git-build.ts`)
 
