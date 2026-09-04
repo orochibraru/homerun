@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/orochibraru/homerun/compare/v1.0.3...v1.0.4) (2026-09-04)
+
+### Features
+
+- docker cleanup
+  ([8cbbae5](https://github.com/orochibraru/homerun/commit/8cbbae590805cc928c3a69a83b732655c7b68269))
+
 ## [1.0.3](https://github.com/orochibraru/homerun/compare/v1.0.2...v1.0.3) (2026-09-04)
 
 ### Features
