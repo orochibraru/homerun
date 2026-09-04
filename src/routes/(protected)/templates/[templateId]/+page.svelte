@@ -5,6 +5,7 @@
 		GitBranch,
 		GlobeIcon,
 		Rocket,
+		SettingsIcon,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
@@ -66,7 +67,8 @@
                             );
                         } else if (result.type === "error") {
                             toast.error(
-                                result.error?.message ?? "Something went wrong.",
+                                result.error?.message ??
+                                    "Something went wrong.",
                             );
                         }
                         await update();
@@ -75,7 +77,11 @@
                 method="POST"
             >
                 {#if data.project}
-                    <input name="projectId" type="hidden" value={data.project.id}>
+                    <input
+                        name="projectId"
+                        type="hidden"
+                        value={data.project.id}
+                    />
                 {/if}
                 <Button disabled={deploying} size="sm" type="submit">
                     {#if deploying}
@@ -88,6 +94,7 @@
                 </Button>
             </form>
             <Button href={configureHref} size="sm" variant="outline">
+                <SettingsIcon class="size-3.5" />
                 Configure
             </Button>
         </div>
