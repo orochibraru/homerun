@@ -61,11 +61,11 @@ export const actions = {
 			return fail(result.status, { error: result.error });
 		}
 
-		redirect(
-			303,
-			result.projectId
+		return {
+			href: result.projectId
 				? `${resolve("/projects")}/${result.projectId}`
 				: `${resolve("/services")}/${result.serviceId}`,
-		);
+			serviceId: result.serviceId,
+		};
 	},
 };

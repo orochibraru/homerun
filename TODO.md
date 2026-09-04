@@ -2,17 +2,21 @@
 
 ## Small
 
-- [ ] When creating a new service and clicking on "Create and Deploy" at the end
-      of a template: making this button a loader until the service deploys is
-      poor ux. Let's instead initiate the deployment sequence in the background
-      and redirect the user to the service page showing them the logs and all
-      that would happen if they clicked on "create" and got redirected to the
-      page and clicked "deploy" themselves.
-- [ ] For templates details page, let's use the github API to pull in each
+- [ ] [App] When creating a new service and clicking on "Create and Deploy" at
+      the end of a template: making this button a loader until the service
+      deploys is poor ux. Let's instead initiate the deployment sequence in the
+      background and redirect the user to the service page showing them the logs
+      and all that would happen if they clicked on "create" and got redirected
+      to the page and clicked "deploy" themselves.
+- [ ] [App] For templates details page, let's use the github API to pull in each
       project's readme, number of stars, latest release, latest code push time
       ago.
-- [ ] Let's make the UI sexier, slicker a bit less toy a bit more tech. A
+- [ ] [App] Let's make the UI sexier, slicker a bit less toy a bit more tech. A
       monospace font could help and liquid glass-ish design as well.
+- [ ] [App] Instead of appending a div to a section for confirmation (such as
+      the confirm button in a danger zone) let's use a real confirmation modal
+      that sticks out with a "type in service name to confirm" to make sure we
+      alert enough the users so they don't destroy their config accidentally
 
 ## Medium
 
@@ -22,7 +26,7 @@
       top of this we should definitely have both a workflow that deletes the PR
       image when a PR is closed as well as a periodic docker registry cleanup
       for dangling images from PRs if the cleanup jobs ever fail.
-- [ ] [APP] When creating a new service add possibility to link it to another
+- [ ] [App] When creating a new service add possibility to link it to another
       even if it's outside of a project. When linking to something like Redis or
       Postgres let's be smart: offer to add an env variable to the main service
       you're configuring with either a JDBC format or each value as a var. Offer
@@ -36,22 +40,22 @@
       no-op without it) as well as deployments (especially at the end of the
       service creation wizard) but also for cron-triggered tasks like backups
       and docker cleanups
-- [ ] For container logs I'm certain we need to use a websocket instead of
+- [ ] [App] For container logs I'm certain we need to use a websocket instead of
       polling. For other tasks I wonder if RPC would be a good choice but seems
       like a trend over a good REST API. Let's evaluate where each is more
       relevant. For example when deploying a service we generally want logging,
       a websocket action could be interesting to provide info in a modal when
-      clicking a deploy button such as "registering configuration",
-      "provisioning container", "checking container health", "routing traffic",
-      "creating volumes" etc...
+      clicking a deploy button such as "pulling image 'image-name'",
+      "registering configuration", "provisioning container", "checking container
+      health", "routing traffic", "creating volumes" etc...
 
 ## Large
 
-- [ ] Instead of loading data all over the place for quick actions from svelte
-      files let's use remote functions. DO NOT use remote function for critical
-      data such as user settings, role, profile, authentication stuff etc.. Only
-      for data that can be loaded asynchronously via Skeleton loaders and
-      {#await} loops in Svelte code.
+- [ ] [App] Instead of loading data all over the place for quick actions from
+      svelte files let's use remote functions. DO NOT use remote function for
+      critical data such as user settings, role, profile, authentication stuff
+      etc.. Only for data that can be loaded asynchronously via Skeleton loaders
+      and {#await} loops in Svelte code.
 - [ ] [Docker] Security scanning
 - [ ] [SDKs] Terraform/Pulumi providers
 - [ ] [SDKs] Github Actions & Gitlab CI presets to deploy easily (deterministic

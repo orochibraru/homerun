@@ -10,6 +10,7 @@
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
+	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button";
@@ -100,7 +101,15 @@
           quickDeploying = tmpl.id;
           return async ({ result, update }) => {
             quickDeploying = null;
-            if (result.type === "failure") {
+            if (result.type === "success") {
+              const href = (result.data as { href?: string } | undefined)
+                ?.href;
+              toast.success(`"${tmpl.name}" deployed.`, {
+                action: href
+                  ? { label: "View", onClick: () => goto(href) }
+                  : undefined,
+              });
+            } else if (result.type === "failure") {
               toast.error(
                 (result.data as { error?: string } | undefined)?.error ??
                   "Couldn't deploy.",
@@ -108,7 +117,7 @@
             } else if (result.type === "error") {
               toast.error(result.error?.message ?? "Something went wrong.");
             }
-            await update();
+            await update({ reset: false });
           };
         }}
       >
