@@ -112,6 +112,20 @@
 			"when": 1788449022873,
 			"tag": "0015_flaky_groot",
 			"breakpoints": true
+		},
+		{
+			"idx": 16,
+			"version": "7",
+			"when": 1788522000042,
+			"tag": "0016_wandering_sinister_six",
+			"breakpoints": true
+		},
+		{
+			"idx": 17,
+			"version": "7",
+			"when": 1788530998727,
+			"tag": "0017_regular_invaders",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

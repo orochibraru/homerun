@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { Check, LayoutGrid, Plus, Trash2 } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { Check, LayoutGrid, Link2, Plus, Trash2 } from "@lucide/svelte";
+	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
+	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
@@ -13,7 +15,7 @@
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
 
-	const { form } = $props();
+	const { data, form } = $props();
 
 	onMount(() => title.set("New Template"));
 
@@ -28,6 +30,13 @@
 		{ label: "Cache", value: "cache" },
 		{ label: "Monitoring", value: "monitoring" },
 		{ label: "Automation", value: "automation" },
+		{ label: "Media", value: "media" },
+		{ label: "Network", value: "network" },
+		{ label: "Dashboard", value: "dashboard" },
+		{ label: "Productivity", value: "productivity" },
+		{ label: "Finance", value: "finance" },
+		{ label: "Analytics", value: "analytics" },
+		{ label: "Development", value: "development" },
 		{ label: "Other", value: "other" },
 	];
 	let category = $derived(values?.category ?? "");
@@ -57,6 +66,22 @@
 	function importEnvRows(imported: ParsedEnvVar[]) {
 		envRows = mergeEnvRows(envRows, imported, (row) => row);
 	}
+
+	let linkEnabled = $state<Record<string, boolean>>(
+		untrack(() =>
+			Object.fromEntries(data.linkableTemplates.map((t) => [t.id, false])),
+		),
+	);
+	let linkAliases = $state<Record<string, string>>({});
+
+	function slugify(value: string): string {
+		return value
+			.toLowerCase()
+			.trim()
+			.replace(/[^a-z0-9-]+/g, "-")
+			.replace(/-+/g, "-")
+			.replace(/^-|-$/g, "");
+	}
 </script>
 
 <div class="mspace-y-6 p-6 md:p-8">
@@ -76,7 +101,10 @@
       return async ({ result, update }) => {
         submitting = false;
         if (result.type === "failure") {
-          toast.error("Check the form for errors.");
+          toast.error(
+            (result.data as { error?: string } | undefined)?.error ??
+              "Check the form for errors.",
+          );
         }
         await update();
       };
@@ -225,6 +253,76 @@
         </div>
       </div>
     </section>
+
+    {#if data.linkableTemplates.length > 0}
+      <section class="rounded-2xl border border-border bg-surface">
+        <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+          <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+            <Link2 class="size-4" />
+          </div>
+          <div>
+            <h2 class="text-sm font-semibold text-text">Linked containers</h2>
+            <p class="text-xs text-text-muted">
+              Check any to deploy them alongside this template automatically,
+              e.g. a database or cache. Each gets an alias (defaults to its
+              name if you don't set one) that's also its internal hostname :
+              reference it in an env var above as
+              <code class="font-mono">{"{{alias}}"}</code> (or, for one of the
+              linked container's own env vars,
+              <code class="font-mono">{"{{alias.ENV_KEY}}"}</code>).
+            </p>
+          </div>
+        </div>
+        <div class="divide-y divide-border">
+          {#each data.linkableTemplates as linkable (linkable.id)}
+            {@const envEntries = Object.entries(linkable.envVars ?? {})}
+            {@const enabled = linkEnabled[linkable.id] ?? false}
+            <div class="flex items-start gap-3 px-5 py-3">
+              <Checkbox
+                class="mt-1"
+                id="linkEnabled-{linkable.id}"
+                bind:checked={linkEnabled[linkable.id]}
+              />
+              <TemplateIcon
+                category={linkable.category}
+                class="mt-0.5 size-6"
+                icon={linkable.icon}
+              />
+              <label
+                class="min-w-0 flex-1 cursor-pointer"
+                for="linkEnabled-{linkable.id}"
+              >
+                <p class="truncate text-sm font-medium text-text">
+                  {linkable.name}
+                </p>
+                <p class="truncate font-mono text-xs text-text-subtle">
+                  {linkable.image}:{linkable.tag} · port {linkable.containerPort}
+                </p>
+                {#if envEntries.length > 0}
+                  <p class="truncate font-mono text-xs text-text-subtle">
+                    {envEntries.map(([k, v]) => `${k}=${v}`).join(", ")}
+                  </p>
+                {/if}
+              </label>
+              <Input
+                class="w-32 shrink-0 font-mono"
+                disabled={!enabled}
+                name="linkAlias.{linkable.id}"
+                placeholder={slugify(linkable.name)}
+                type="text"
+                bind:value={linkAliases[linkable.id]}
+              />
+              <input name="linkTemplateId" type="hidden" value={linkable.id}>
+              <input
+                name="linkEnabled"
+                type="hidden"
+                value={enabled ? "true" : "false"}
+              >
+            </div>
+          {/each}
+        </div>
+      </section>
+    {/if}
 
     <div class="flex justify-end gap-3">
       <Button href={resolve("/templates")} variant="outline">Cancel</Button>

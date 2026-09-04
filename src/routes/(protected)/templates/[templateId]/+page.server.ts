@@ -1,4 +1,4 @@
-import { fail, redirect } from "@sveltejs/kit";
+import { error, fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
@@ -6,54 +6,50 @@ import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { allowLongRequest } from "$lib/server/long-request";
 import { quickDeployFromTemplate } from "$lib/services/template-links";
 
-export const load = async ({ parent, url }) => {
+export const load = async ({ params, parent, url }) => {
 	const { user } = await parent();
 
-	const templates = await TemplateDTO.listForUser(user.id);
-	const links = await Promise.all(
-		templates.map((t) => TemplateLinkDTO.listForTemplate(t.id)),
-	);
-	const linkedNamesById = new Map(
-		templates.map((t, i) => [t.id, links[i].map((l) => l.linkedTemplateName)]),
-	);
+	const tmpl = await TemplateDTO.usable(params.templateId, user.id);
+	if (!tmpl) {
+		error(404, "Template not found");
+	}
+
+	const links = await TemplateLinkDTO.listForTemplate(tmpl.id);
 
 	const rawProjectId = url.searchParams.get("projectId");
 	const project = rawProjectId
 		? await ProjectDTO.get(rawProjectId, user.id)
 		: null;
 
-	const withLinks = (t: TemplateDTO) => ({
-		...t.toJSON(),
-		linkedNames: linkedNamesById.get(t.id) ?? [],
-	});
-
 	return {
-		builtins: templates.filter((t) => t.isBuiltin).map(withLinks),
-		mine: templates.filter((t) => !t.isBuiltin).map(withLinks),
+		links: links.map((l) => ({
+			alias: l.link.alias,
+			icon: l.linkedTemplateIcon,
+			image: l.linkedTemplateImage,
+			name: l.linkedTemplateName,
+			tag: l.linkedTemplateTag,
+		})),
 		project: project?.toJSON() ?? null,
+		template: tmpl.toJSON(),
 	};
 };
 
 export const actions = {
-	quickDeploy: async ({ request, locals, platform }) => {
+	quickDeploy: async ({ params, request, locals, platform }) => {
 		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 
 		const formData = await request.formData();
-		const templateId = formData.get("templateId") as string | null;
 		const rawProjectId = formData.get("projectId") as string | null;
-		if (!templateId) {
-			return fail(400, { error: "Missing template." });
-		}
 		const projectId =
 			rawProjectId && (await ProjectDTO.get(rawProjectId, locals.user.id))
 				? rawProjectId
 				: null;
 
 		const result = await quickDeployFromTemplate(
-			templateId,
+			params.templateId,
 			locals.user.id,
 			projectId,
 		);

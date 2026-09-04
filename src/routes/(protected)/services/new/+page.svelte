@@ -22,6 +22,7 @@
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
+	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -357,9 +358,29 @@
     {/if}
 
     {#if data.template}
+      <input name="templateId" type="hidden" value={data.template.id}>
       <div class="bg-accent/10 text-accent rounded-xl px-4 py-3 text-sm font-medium">
         Starting from the {data.template.name} template : review everything
         below (especially any placeholder passwords) before deploying.
+      </div>
+    {/if}
+
+    {#if data.templateLinks.length > 0}
+      <div class="rounded-xl border border-border bg-surface p-4 text-sm">
+        <p class="font-medium text-text">
+          {data.projectId
+            ? "This will also deploy, alongside this service in the project:"
+            : "This will also deploy, grouped in a new project:"}
+        </p>
+        <ul class="mt-2 space-y-1.5">
+          {#each data.templateLinks as link (link.alias)}
+            <li class="flex items-center gap-2 text-text-muted">
+              <TemplateIcon category={null} class="size-4" icon={link.icon} />
+              {link.name}
+              <span class="text-text-subtle">({link.alias})</span>
+            </li>
+          {/each}
+        </ul>
       </div>
     {/if}
 

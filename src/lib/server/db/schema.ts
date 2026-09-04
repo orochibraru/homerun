@@ -457,12 +457,36 @@ export const template = pgTable(
 			onDelete: "cascade",
 		}),
 		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
+		sourceUrl: text("source_url"),
 		tag: text("tag").default("latest").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
+		websiteUrl: text("website_url"),
 	},
 	(table) => [index("template_ownerId_idx").on(table.ownerId)],
+);
+
+export const templateLink = pgTable(
+	"template_link",
+	{
+		alias: text("alias").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		linkedTemplateId: text("linked_template_id")
+			.notNull()
+			.references(() => template.id, { onDelete: "cascade" }),
+		templateId: text("template_id")
+			.notNull()
+			.references(() => template.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("templateLink_templateId_idx").on(table.templateId),
+		uniqueIndex("templateLink_templateId_alias_uidx").on(
+			table.templateId,
+			table.alias,
+		),
+	],
 );
 
 export const service = pgTable(
@@ -924,8 +948,21 @@ export const projectRelations = relations(project, ({ one, many }) => ({
 	user: one(user, { fields: [project.userId], references: [user.id] }),
 }));
 
-export const templateRelations = relations(template, ({ one }) => ({
+export const templateRelations = relations(template, ({ one, many }) => ({
 	owner: one(user, { fields: [template.ownerId], references: [user.id] }),
+	links: many(templateLink, { relationName: "templateLinks" }),
+}));
+
+export const templateLinkRelations = relations(templateLink, ({ one }) => ({
+	linkedTemplate: one(template, {
+		fields: [templateLink.linkedTemplateId],
+		references: [template.id],
+	}),
+	template: one(template, {
+		fields: [templateLink.templateId],
+		references: [template.id],
+		relationName: "templateLinks",
+	}),
 }));
 
 export const serviceRelations = relations(service, ({ one, many }) => ({
@@ -968,6 +1005,7 @@ export const serviceVolumeRelations = relations(serviceVolume, ({ one }) => ({
 export type UserRole = "user" | "admin";
 export type Project = typeof project.$inferSelect;
 export type Template = typeof template.$inferSelect;
+export type TemplateLink = typeof templateLink.$inferSelect;
 export type Service = typeof service.$inferSelect;
 export type Deployment = typeof deployment.$inferSelect;
 export type InstanceSettings = typeof instanceSettings.$inferSelect;
