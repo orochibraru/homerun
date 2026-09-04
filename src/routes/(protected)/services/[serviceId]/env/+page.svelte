@@ -31,7 +31,7 @@
 	// (addRow/removeRow), a $derived value is read-only, so mutating it
 	// doesn't reliably stick. Seeded once at init; re-synced whenever `svc`
 	// changes (a saved env-var update reloads the page via use:enhance's
-	// default invalidateAll, and the layout's own status-sync can also
+	// default refreshAll, and the layout's own status-sync can also
 	// refresh `data.service` on revisit).
 	let envRows = $state<EnvRow[]>(envRowsFromService());
 	$effect(() => {

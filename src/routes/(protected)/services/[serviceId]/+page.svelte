@@ -10,7 +10,7 @@
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
-	import { invalidateAll } from "$app/navigation";
+	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
@@ -149,12 +149,12 @@
 			}) => {
 				if (result.type === "failure" && result.data?.error) {
 					toast.error(result.data.error);
-					await invalidateAll();
+					await refreshAll();
 				} else if (result.type === "success") {
 					toast.success("Deployed.");
 				}
 				await update();
-				await invalidateAll();
+				await refreshAll();
 			};
 		};
 	}

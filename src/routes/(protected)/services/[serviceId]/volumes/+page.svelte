@@ -3,7 +3,7 @@
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
-	import { invalidateAll } from "$app/navigation";
+	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import NewVolumeFields from "$lib/components/new-volume-fields.svelte";
@@ -198,7 +198,7 @@
           if (result.type === "success") {
             const newId = result.data?.volumeId as string | undefined;
             newVolumeOpen = false;
-            await invalidateAll();
+            await refreshAll();
             if (newId) {
               volumeId = newId;
             }
