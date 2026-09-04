@@ -216,3 +216,15 @@ and drives the Remote Host + CLI checks above end to end, tearing down after
 (`--keep` to leave the VMs up for inspection, `--skip-build` to reuse a previous
 build). Requires Multipass + Docker locally; deliberately not run in CI (no
 nested virtualization there).
+
+`bun run e2e:multipass:release` (`scripts/e2e-multipass-release.ts`) is the
+release-side counterpart: instead of local binaries, it runs the documented
+`curl | sudo bash` one-liners themselves, read straight out of
+`docs/getting-started.md` and `packages/agent/README.md` at run time and
+executed verbatim, against a real published release (asserting first that the
+release actually shipped all six binaries). Use it after cutting a release, or
+after changing anything in those install instructions, and `--only=docs` on its
+own for a fast, VM-free check that every place documenting the same command
+still agrees (that phase also verifies each documented
+`raw.githubusercontent.com` URL exists in the checkout and is live). Same CI
+caveat.

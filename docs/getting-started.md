@@ -54,14 +54,22 @@ rootless setup, no source checkout:
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/compose.prod.yaml
 curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/.env.example
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/homerun.example.yaml -o homerun.yaml
 mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum, see configuration.md
 docker network create homerun
 docker compose -f compose.prod.yaml up -d
 ```
 
-See the comments at the top of that file, and
-[`compose.yaml`](../compose.yaml)'s (the dev-only variant, no `app` service) for
-the no-compose fallback if you'd rather run each container by hand.
+`compose.prod.yaml` is self-contained (it doesn't `extends:` the in-repo
+`tools/compose/*.yaml` fragments `compose.yaml` shares, so a downloaded copy
+works on its own) and bind-mounts the `homerun.yaml` above into the app
+container, hence the third download, see
+[Configuration](configuration.md#compose-only-variables). `AUTH_SECRET` is the
+only value with no default; `ORIGIN` should be set to the scheme+host the
+instance is really reachable at once it has one.
+
+[`compose.yaml`](../compose.yaml) (the dev-only variant, no `app` service) is
+the reference if you'd rather run each container by hand.
 
 ## First boot
 

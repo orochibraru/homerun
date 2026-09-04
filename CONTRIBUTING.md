@@ -71,6 +71,13 @@ SvelteKit-scoped `check:app` half of `bun run check`.
 `CLAUDE.md`'s "Commands" section for the full breakdown of `test`/`test:*`
 scripts).
 
+Two real-infrastructure suites live outside that (Multipass + Docker locally,
+never in CI): `bun run e2e:multipass` drives the installer/agent/CLI built from
+your working tree, and `bun run e2e:multipass:release` drives the published
+release using the commands the docs themselves print. If you touched an install
+instruction, `bun run e2e:multipass:release --only=docs` is the seconds-long,
+VM-free half of the latter.
+
 ## Conventions
 
 The full, detailed set of architectural and style conventions this codebase
