@@ -370,6 +370,10 @@ yet built).
 - `template-dto.ts`, `TemplateDTO`: `usable(id, userId)` (built-in OR owned, for
   deploy-from-template), `owned(id, userId)` (owned only), `listForUser`,
   `create`. Built-ins have `ownerId: null` and are seeded on boot (see below).
+- `template-link-dto.ts`, `TemplateLinkDTO`: `listForTemplate(templateId)`
+  (joined with the linked template's own image/tag/port/envVars/resources, for
+  both display and for actually deploying it), `countForTemplate`, `create`,
+  `remove`. See Template links below.
 - `deployment-dto.ts`, `DeploymentDTO`:
   `get`/`listForService`/`listRecentForUser` (joins in service name/slug, for
   the dashboard)/`create`/`update`/`appendLog(line)` (appends to the live
@@ -849,6 +853,139 @@ decide how to surface failure (a SvelteKit `fail()`, a JSON error body, a
 scheduler log line). Don't reimplement this inline in a new call site; extend
 the shared method instead.
 
+### Template links (`template_link` table, `TemplateLinkDTO`, `$lib/services/template-links.ts`)
+
+A template can link to other templates so deploying it deploys its companions
+too, e.g. a WordPress-shaped template linking to a "MySQL" template, or a worker
+linking to a "Redis" one : `templates/new`'s "Linked containers" section lets a
+template owner check any other _leaf_ template (built-in or their own, shown
+with its image/tag/port/env vars so there's enough to decide by) to link it,
+with an optional alias (defaults to the linked template's own slugified name
+when left blank). Deliberately two levels deep only, not a general DAG :
+`TemplateLinkDTO.create`'s caller (`templates/new/+page.server.ts`) rejects
+linking to a template that itself already has links, so a link's target is
+always a leaf. This keeps env-var token resolution (below) simple, one level of
+substitution, no cycle detection needed.
+
+An env var on the _primary_ template can reference a linked template via
+`{{alias}}` (resolves to the linked service's generated slug, its internal DNS
+hostname on the shared network regardless of project, same
+`http://<slug>:<port>` addressing every service already gets) or
+`{{alias.ENV_KEY}}` (resolves to that linked service's own resolved value for
+that env var, e.g. `{{db.POSTGRES_PASSWORD}}`). Resolution
+(`$lib/services/template-links.ts`'s `resolveLinkTokens`) leaves an unknown
+token untouched rather than stripping it, so a typo'd alias fails loud (visible
+literally in the deployed env var) instead of silently producing an empty value.
+Linked templates' own env vars are used as-is, not further resolved : only the
+primary can reference `{{alias}}` tokens, not link-to-link.
+
+Deploying from a linked template (`services/new`'s `create`/`createAndDeploy`
+actions, via `buildTemplateLinkContext`/`createLinkedServices`) : if the service
+being created has no project yet, one is auto-created (named after it) so the
+whole stack shows up grouped ; each linked service gets a deterministic slug
+(`<primary-slug>-<alias>`, de-duplicated against existing services) and deploys
+from its own template's image/tag/port/envVars/resources, created
+`dnsResolvable: false` by default (a database/cache/worker doesn't usually want
+a public subdomain). `createAndDeploy` deploys every linked service before the
+primary, same "bring up dependencies before dependents" ordering
+`docker compose`'s `depends_on` implies, though nothing here actually waits for
+a linked service to be _healthy_, just created and started.
+
+### Built-in template catalog and gallery (`builtin-templates.ts`, `builtin-templates-apps.ts`, `template-icon.svelte`, `templates/[templateId]/`)
+
+55 built-in templates (up from the original 8), split across two data files
+purely to stay under `noExcessiveLinesPerFile`'s 680-line limit:
+`src/lib/server/db/builtin-templates.ts` (the original 8 infra templates plus
+Media/Network/Dashboard/Productivity/Finance category entries, also exports the
+`BuiltinTemplate`/`BuiltinTemplateLink` interfaces both files use) and
+`src/lib/server/db/builtin-templates-apps.ts` (17 more, Analytics/Monitoring/
+Development/other categories). `src/lib/server/db/seed.ts` is a thin
+orchestrator importing both arrays plus `BUILTIN_TEMPLATE_LINKS` (3 entries:
+WordPress→MySQL, Umami→Postgres, Miniflux→Postgres, wiring the Template links
+feature above into real built-ins) and inserting all of it with
+`onConflictDoNothing()`, same idempotent-seed-on-boot pattern as before. Every
+image was verified real via `docker manifest inspect <image>:<tag>` (fast, no
+full pull) before being added, not just guessed from a project's README.
+
+Every template row (`template.category`/`sourceUrl`/`websiteUrl`, the latter two
+added to `schema.ts` and `TemplateDTO.NewTemplateInput` alongside the
+pre-existing `icon`) can carry a source-code and a website link, shown as
+external-link buttons on the template details page (below); either can be `null`
+(some projects genuinely have no separate marketing site).
+
+**Icons are real bundled app logos, not generic per-category lucide icons.**
+`static/template-icons/` holds 55 downloaded SVG/PNG files (named
+`<id-without-builtin->.{svg,png}`, e.g. `redis.svg`, `ghost.png`), sourced from
+[selfh.st/icons](https://selfh.st/icons/) (the de facto self-hosted-app icon
+set, also used by Homepage/Dashy/Homarr), CC BY 4.0, bundled locally rather than
+hotlinked from its CDN for the same "self-hosted app shouldn't need outbound
+internet to render" reasoning as the Swagger UI docs page (see API Docs page
+below) — attribution credited in the templates gallery's own footer. A
+template's `icon` column holds a bundled filename (`"redis.svg"`) when a real
+logo exists, or `null`/a legacy category string for one that predates this
+(anything without a `.` in it). `$lib/components/template-icon.svelte` is the
+one place that renders a template's icon anywhere in the app (the gallery, the
+details page, template-linking pickers on `templates/new`/`services/new`):
+`icon.includes(".")` picks the bundled `<img>` path (`/template-icons/<icon>`),
+otherwise it falls back to
+`templateCategoryIcon(category)`/`templateCategoryColor(category)`
+(`$lib/constants.ts`, `TEMPLATE_CATEGORY_ICONS`/`TEMPLATE_CATEGORY_COLORS`,
+keyed by the `category` column) — one lucide icon and one accent color per
+category (e.g. media is rose, database is emerald, monitoring is cyan), not a
+flat single fallback color, so an app without an official logo is still visually
+distinguishable at a glance from its neighbors. `templateIcon()`/
+`TEMPLATE_ICONS` (the old flat category→icon map this replaced) no longer exist.
+
+The gallery (`templates/+page.svelte`) has a search input (matches
+name/description/image, client-side) and a category filter built as a right-side
+`Drawer` (`$lib/components/ui/drawer`, vaul-svelte's `direction` prop, not the
+select-dropdown this started as) with toggleable pills, built from whatever
+categories are actually present rather than a hardcoded list. Each card links to
+`templates/[templateId]/`, a details page (`+page.server.ts` guards via
+`TemplateDTO.usable`, same built-in-or-owned rule every deploy-from-template
+path uses) showing the full description, container port/CPU/memory/env vars, the
+source/website links, any linked companion templates (below), and the GitHub
+repo panel/readme (below). Every card and the details page carry two actions
+instead of one: **Quick Deploy** (primary) calls a `quickDeploy` form action
+(`$lib/services/template-links.ts`'s `quickDeployFromTemplate()`, shared by both
+routes) that creates the service straight from the template's defaults
+(name/slug auto-generated via `slugify`) and deploys it immediately, no wizard;
+**Configure** (secondary) is the old single "Deploy" button, renamed since it
+only navigates into `services/new` (carrying `templateId`, and `projectId` when
+arrived at from a project) to let the user tweak first. The gallery's
+`quickDeploy` action returns a plain success object (not a redirect) so
+`use:enhance` can show a `toast.success` with a "View" button instead of yanking
+the user out of the grid mid-browse, letting several templates get
+quick-deployed back to back; the details page's own action still `redirect()`s
+straight to the new service, no grid to lose there.
+
+**GitHub repo enrichment** (`$lib/services/github-repo.service.ts`): when a
+template's `sourceUrl` is a `github.com` URL, the details page's `load` calls
+`getGitHubRepoInfo()`, which resolves owner/repo from the URL and hits
+`api.github.com`'s repo/releases/readme endpoints (unauthenticated, so the usual
+public 60 req/hr-per-IP limit applies) for star count, last-push time, latest
+release tag, and the rendered readme. Returned **without being awaited** in
+`load()`, SvelteKit streams it, so a slow/rate-limited GitHub response doesn't
+block the rest of the page; `+page.svelte` renders it via
+`{#await data.github then repo}`. Every fetch has an 8s `AbortSignal.timeout`
+and the whole thing is wrapped in try/catch, GitHub being slow or down never
+breaks the page, `getGitHubRepoInfo()` just resolves to `null` and the panel/
+readme sections don't render. Results are cached in-memory per `owner/repo` (1h
+TTL, HMR-safe `globalThis` singleton, same pattern as the db client) since every
+viewer of the same template would otherwise re-hit the same three endpoints. The
+readme is rendered with `marked` (already a dependency, used by `packages/docs/`
+for the operator guides) through a custom renderer that resolves relative
+image/link paths against the repo's default branch (`raw.githubusercontent.com`
+for images, a `blob/<branch>/` GitHub URL for links), then run through
+`sanitize-html` (a new dependency, added specifically for this) before being
+sent to the client and rendered via `{@html}`. This sanitization step is
+load-bearing, not decorative: a template's `sourceUrl` is user-settable (a
+developer can save any service as a template with any source URL), so a
+malicious template could point at a repo whose README is crafted to exploit gaps
+in GitHub's own rendering; sanitizing server-side means the client only ever
+receives an already-restricted tag/attribute allowlist, regardless of what
+GitHub returned.
+
 ### Git-based builds (`src/lib/services/docker/git-build.ts`)
 
 A service's `buildSource` is `"image"` (bring-your-own, the default) or `"git"`,
@@ -1303,6 +1440,11 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   treatment eventually (see TODO.md Chores).
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).
+- `template_link`, a template linking to another template (a database, a cache,
+  a worker, whatever) so deploying the first also deploys the second :
+  `templateId` (the "primary"), `linkedTemplateId`, `alias` (unique per
+  `templateId`, used both for display and as the `{{alias}}` token an env var
+  can reference). See Template links below.
 - `storage_volume`, a named local volume source: `kind` (`"bind"` | `"volume"`),
   `source` (an absolute host path for bind, or a Docker-managed volume name,
   Docker's own `Binds` syntax tells the two apart by whether it looks like a

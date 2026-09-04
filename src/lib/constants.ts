@@ -1,13 +1,18 @@
 import {
 	Activity,
 	Box,
+	ChartBar,
 	CheckCircle,
 	Clock,
 	Database,
 	Ghost,
+	LayoutDashboard,
 	Loader2,
-	Lock,
-	Table,
+	Network,
+	NotebookPen,
+	Play,
+	Terminal,
+	Wallet,
 	Workflow,
 	XCircle,
 } from "@lucide/svelte";
@@ -58,18 +63,72 @@ export const SERVICE_STATUS_CONFIG: Record<
 	},
 };
 
-// Keyed by the plain string stored in template.icon : same pattern as
-// SERVICE_STATUS_CONFIG, just for the template gallery.
-export const TEMPLATE_ICONS: Record<string, typeof Database> = {
-	activity: Activity,
+export const TEMPLATE_CATEGORY_ICONS: Record<string, typeof Database> = {
+	analytics: ChartBar,
+	automation: Workflow,
+	cache: Database,
+	dashboard: LayoutDashboard,
 	database: Database,
-	lock: Lock,
-	table: Table,
-	workflow: Workflow,
+	development: Terminal,
+	finance: Wallet,
+	media: Play,
+	monitoring: Activity,
+	network: Network,
+	productivity: NotebookPen,
 };
 
-export function templateIcon(icon: string | null): typeof Database {
-	return (icon && TEMPLATE_ICONS[icon]) || Box;
+export const TEMPLATE_CATEGORY_COLORS: Record<
+	string,
+	{ bg: string; text: string }
+> = {
+	analytics: {
+		bg: "bg-fuchsia-500/10",
+		text: "text-fuchsia-600 dark:text-fuchsia-400",
+	},
+	automation: {
+		bg: "bg-violet-500/10",
+		text: "text-violet-600 dark:text-violet-400",
+	},
+	cache: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400" },
+	dashboard: {
+		bg: "bg-amber-500/10",
+		text: "text-amber-600 dark:text-amber-400",
+	},
+	database: {
+		bg: "bg-emerald-500/10",
+		text: "text-emerald-600 dark:text-emerald-400",
+	},
+	development: {
+		bg: "bg-slate-500/10",
+		text: "text-slate-600 dark:text-slate-400",
+	},
+	finance: { bg: "bg-lime-500/10", text: "text-lime-600 dark:text-lime-400" },
+	media: { bg: "bg-rose-500/10", text: "text-rose-600 dark:text-rose-400" },
+	monitoring: {
+		bg: "bg-cyan-500/10",
+		text: "text-cyan-600 dark:text-cyan-400",
+	},
+	network: { bg: "bg-sky-500/10", text: "text-sky-600 dark:text-sky-400" },
+	productivity: {
+		bg: "bg-indigo-500/10",
+		text: "text-indigo-600 dark:text-indigo-400",
+	},
+};
+
+export function templateCategoryIcon(category: string | null): typeof Database {
+	return (category && TEMPLATE_CATEGORY_ICONS[category]) || Box;
+}
+
+export function templateCategoryColor(category: string | null): {
+	bg: string;
+	text: string;
+} {
+	return (
+		(category && TEMPLATE_CATEGORY_COLORS[category]) || {
+			bg: "bg-accent-light",
+			text: "text-accent",
+		}
+	);
 }
 
 export const GRADIENTS = [

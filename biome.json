@@ -15,7 +15,11 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!src/lib/nuvio/nuvio-public-api.json"]
+		"includes": [
+			"**",
+			"!src/lib/nuvio/nuvio-public-api.json",
+			"!static/template-icons"
+		]
 	},
 	"formatter": {
 		"enabled": true,

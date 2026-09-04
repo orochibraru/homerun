@@ -15,7 +15,9 @@ export interface NewTemplateInput {
 	name: string;
 	ownerId: string;
 	restartPolicy: string;
+	sourceUrl?: string | null;
 	tag: string;
+	websiteUrl?: string | null;
 }
 
 /** Wraps the `template` table : see ServiceDTO for the pattern this follows. */
@@ -71,8 +73,10 @@ export class TemplateDTO extends BaseDTO<Template> {
 			name: input.name,
 			ownerId: input.ownerId,
 			restartPolicy: input.restartPolicy,
+			sourceUrl: input.sourceUrl ?? null,
 			tag: input.tag,
 			updatedAt: now,
+			websiteUrl: input.websiteUrl ?? null,
 		};
 		await db.insert(template).values(row);
 		return new TemplateDTO(row);

@@ -8,6 +8,7 @@ import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
+import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import {
@@ -17,10 +18,15 @@ import {
 } from "$lib/server/validation/service";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { encryptSecret } from "$lib/services/secrets";
+import {
+	buildTemplateLinkContext,
+	createLinkedServices,
+	createProjectForLinkedStack,
+	resolveEnvVarsWithLinks,
+} from "$lib/services/template-links";
 
 const logger = new Logger("Services");
 
-/** Maps the validated form input's image-vs-git fields to what ServiceDTO.create expects : pulled out to keep the create action's complexity in check. */
 function buildSourceFields(input: CreateServiceInput, slug: string) {
 	if (input.buildSource !== "git") {
 		return {
@@ -37,8 +43,6 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 		gitDockerfilePath: input.gitDockerfilePath || null,
 		gitRef: input.gitRef || null,
 		gitUrl: input.gitUrl || null,
-		// No real image/tag until the first build : deployService()
-		// overwrites both with the resolved local tag once it's built.
 		image: `homerun-build-${slug}`,
 		tag: "pending",
 	};
@@ -49,27 +53,23 @@ export const load = async ({ url, parent }) => {
 	const projectId = url.searchParams.get("projectId");
 	const templateId = url.searchParams.get("templateId");
 
-	// Ignore a projectId that isn't actually the user's own project, or a
-	// templateId the user isn't allowed to use, rather than erroring : the
-	// form just falls back to blank/no-project silently safe.
 	const project =
 		projectId && (await ProjectDTO.get(projectId, user.id)) ? projectId : null;
 	const template = templateId
 		? await TemplateDTO.usable(templateId, user.id)
 		: null;
-	const [settings, connections, cacheRegistries] = await Promise.all([
-		InstanceSettingsDTO.get(),
-		GitConnectionDTO.listForUser(user.id),
-		BuildCacheRegistryDTO.list(user.id),
-	]);
+	const [settings, connections, cacheRegistries, templateLinks] =
+		await Promise.all([
+			InstanceSettingsDTO.get(),
+			GitConnectionDTO.listForUser(user.id),
+			BuildCacheRegistryDTO.list(user.id),
+			template ? TemplateLinkDTO.listForTemplate(template.id) : [],
+		]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
 		baseDomain: config.baseDomain,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
-		// Only providers this user has actually connected : see the Git
-		// Providers page for connecting one. Same shape as the service
-		// Source tab's own "Browse repos" picker, which this form mirrors.
 		connectedGitProviders: connections
 			.filter((c) => providersById.has(c.providerId))
 			.map((c) => ({
@@ -79,12 +79,66 @@ export const load = async ({ url, parent }) => {
 			})),
 		projectId: project,
 		template: template?.toJSON() ?? null,
+		templateLinks: templateLinks.map((l) => ({
+			alias: l.link.alias,
+			icon: l.linkedTemplateIcon,
+			name: l.linkedTemplateName,
+		})),
 	};
 };
 
+async function prepareLinkedStack(
+	formData: FormData,
+	userId: string,
+	primary: { name: string; projectId: string | null; slug: string },
+) {
+	const templateId = (formData.get("templateId") as string | null) || null;
+	const template = templateId
+		? await TemplateDTO.usable(templateId, userId)
+		: null;
+	const links = template
+		? await buildTemplateLinkContext(template.id, primary.slug)
+		: [];
+
+	const projectId =
+		links.length > 0 && !primary.projectId
+			? await createProjectForLinkedStack(primary.name, userId)
+			: primary.projectId;
+
+	return { links, projectId };
+}
+
+async function finishLinkedStack(
+	links: Awaited<ReturnType<typeof buildTemplateLinkContext>>,
+	projectId: string | null,
+	userId: string,
+	primaryServiceId: string,
+): Promise<ServiceDTO[]> {
+	if (links.length === 0 || !projectId) {
+		return [];
+	}
+	const linkedServices = await createLinkedServices(links, {
+		projectId,
+		remoteHostId: null,
+		userId,
+	});
+	logger.info(
+		`Linked services created: primary=${primaryServiceId} count=${linkedServices.length} user=${userId}`,
+	);
+	for (const linked of linkedServices) {
+		NotificationDTO.notify({
+			message: `"${linked.name}" was created.`,
+			serviceId: linked.id,
+			type: "service_created",
+			userId,
+		});
+	}
+	return linkedServices;
+}
+
 async function createServiceFromForm(formData: FormData, userId: string) {
 	const rawProjectId = formData.get("projectId") as string | null;
-	const projectId =
+	const initialProjectId =
 		rawProjectId && (await ProjectDTO.get(rawProjectId, userId))
 			? rawProjectId
 			: null;
@@ -111,6 +165,17 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		} as const;
 	}
 
+	const { links, projectId } = await prepareLinkedStack(formData, userId, {
+		name: input.name,
+		projectId: initialProjectId,
+		slug: input.slug,
+	});
+
+	const envVars =
+		links.length > 0
+			? resolveEnvVarsWithLinks(parseEnvVars(formData), links)
+			: parseEnvVars(formData);
+
 	const svc = await ServiceDTO.create({
 		authRequired: input.authRequired,
 		buildCacheRegistryId:
@@ -119,7 +184,7 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		containerPort: input.containerPort,
 		cpuLimit: input.cpuLimit || null,
 		dnsResolvable: input.dnsResolvable,
-		envVars: parseEnvVars(formData),
+		envVars,
 		memoryLimitMb: input.memoryLimitMb ?? null,
 		name: input.name,
 		projectId,
@@ -144,7 +209,14 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		userId,
 	});
 
-	return { projectId, svc } as const;
+	const linkedServices = await finishLinkedStack(
+		links,
+		projectId,
+		userId,
+		svc.id,
+	);
+
+	return { linkedServices, projectId, svc } as const;
 }
 
 export const actions = {
@@ -179,6 +251,19 @@ export const actions = {
 			return result.failure;
 		}
 
+		for (const linked of result.linkedServices) {
+			// biome-ignore lint/performance/noAwaitInLoops: linked services (e.g. a database) should be up before the primary service that depends on them starts
+			const linkedResult = await DeploymentService.deployService(
+				linked,
+				locals.user.id,
+			);
+			if (!linkedResult.success) {
+				return fail(500, {
+					error: `Service created, but deploying "${linked.name}" failed: ${linkedResult.error ?? "unknown error"}. Find it on the Services page to retry.`,
+				});
+			}
+		}
+
 		const deployResult = await DeploymentService.deployService(
 			result.svc,
 			locals.user.id,
@@ -189,6 +274,11 @@ export const actions = {
 			});
 		}
 
-		redirect(303, `${resolve("/services")}/${result.svc.id}`);
+		redirect(
+			303,
+			result.projectId && result.linkedServices.length > 0
+				? `${resolve("/projects")}/${result.projectId}`
+				: `${resolve("/services")}/${result.svc.id}`,
+		);
 	},
 };
