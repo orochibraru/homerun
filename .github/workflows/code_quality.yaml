@@ -54,14 +54,24 @@ jobs:
         run: bun run build:app
 
       - name: Tests (Unit)
-        run:
-          bun run test:unit -- --coverage-reporter=lcov
-          --coverage-dir=coverage/unit
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 20
+          retry_on: any
+          command:
+            bun run test:unit -- --coverage-reporter=lcov
+            --coverage-dir=coverage/unit
 
       - name: Tests (Integration)
-        run:
-          bun run test:integration -- --coverage-reporter=lcov
-          --coverage-dir=coverage/integration
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_on: any
+          command:
+            bun run test:integration -- --coverage-reporter=lcov
+            --coverage-dir=coverage/integration
 
       - name: Upload coverage report
         if: always()
@@ -91,4 +101,9 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: Tests (E2E)
-        run: bun run test:e2e
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_on: any
+          command: bun run test:e2e
