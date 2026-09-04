@@ -39,6 +39,7 @@ export const serviceResponse = z.object({
 		"running",
 		"stopped",
 		"failed",
+		"missing",
 	]),
 	customDomain: z.string().nullable(),
 	// Ciphertext (AES-256-GCM), not plaintext : present because `.toJSON()`

@@ -159,6 +159,7 @@ class AgentOpenApiBuilder {
 						responses: {
 							200: jsonResponse("Status", containerStatusSchema),
 							401: jsonResponse("Unauthorized", errorSchema),
+							404: jsonResponse("Container not found", errorSchema),
 						},
 						security: [{ bearerAuth: [] }],
 						summary: "Inspect a container's status",

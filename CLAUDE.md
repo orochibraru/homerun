@@ -253,6 +253,22 @@ that pattern for any new skill.
   `actions`**, form action submissions don't go through the parent layout's
   `load` at all, so every action keeps its own explicit
   `if (!locals.user) throw redirect(...)` guard.
+- **A page made of tabs gets one real route (and one `+page.svelte` /
+  `+page.server.ts`) per tab, not one big file with a client-side `activeTab`
+  switch.** `services/[serviceId]/` is the reference shape: a `+layout.svelte`
+  owns the tab bar (`TabNav` with `href`-based tabs, see
+  `$lib/components/tab-nav.svelte`) and renders `{@render children()}`; a
+  `+layout.server.ts` holds the shared guard/load every tab needs (a child
+  route's own `load`, if it needs one at all, calls `parent()` rather than
+  re-fetching); the first/default tab is the bare `+page.svelte` at that route's
+  root, every other tab gets its own subfolder. `settings/` (General = bare
+  `+page.svelte`, `docker/`, `networking/`, `email/`, `authentication/`) is the
+  second real example, split from a single 1400-line file for exactly this
+  reason: a client-state tab switch means every tab's fields, `load` data, and
+  actions all live in one file/one request, which stops scaling once a page has
+  more than a couple of tabs. Keep each tab's own `load`/`actions` scoped to
+  what that tab actually needs, don't let a new tab's server logic leak into a
+  file it doesn't belong to.
 - **No raw Drizzle queries in route files.** Every table has a corresponding DTO
   class in `src/lib/dto/` (see below), routes call DTO methods, never
   `db.select()/.insert()/.update()/.delete()` directly.
@@ -433,7 +449,7 @@ Appearance preferences below for the per-user "single accent color" override):
 - **Integrations**: **Git Providers**, **Build Cache** (registry credentials for
   cross-build cache reuse, see Git-based builds below), **API Docs**.
 - **Administration**: **Users** (admin-only), **Settings** (admin-only),
-  **System Logs**.
+  **System Logs**, **Docker Cleanup** (admin-only, see below).
 
 Not in the nav but real routes: `/profile/**` (reached from the profile menu,
 see Appearance preferences below), `/notifications/**` (the bell's own
@@ -452,10 +468,17 @@ of the dashboard banner deep-linking into `/settings`.
   Networking / Environment / Compute, one `<form>` throughout, steps hidden via
   a CSS class rather than `{#if}` so field state survives navigating between
   them); accepts `?projectId=` and/or `?templateId=` query params to pre-fill
-  from a project or template context (does **not** deploy, just persists
-  config). "Deploy from" toggles between a Docker image and a git repo (see
-  Git-based builds below), same toggle repeated on Settings for editing after
-  creation.
+  from a project or template context. "Deploy from" toggles between a Docker
+  image and a git repo (see Git-based builds below), same toggle repeated on the
+  service's own Source tab for editing after creation. Two submit actions share
+  one `createServiceFromForm()` helper (`new/+page.server.ts`) that validates +
+  creates the row: `create` (secondary button, "Create service", persists config
+  only, same as before) and `createAndDeploy` (primary button, "Create and
+  Deploy", calls `allowLongRequest(platform)` then
+  `DeploymentService.deployService()` before redirecting straight to the new
+  service's Overview tab instead of the services/project list). A min-height
+  wrapper around the step content keeps the Next/Back button row's vertical
+  position stable as steps of different heights swap in.
 - `[serviceId]/+layout.server.ts`, ownership guard (id **and** userId must
   match, else 404) + syncs live Docker status on every visit. Tabs: **Overview**
   (deploy/start/stop/restart, live deploy progress panel, deployment history
@@ -481,9 +504,14 @@ of the dashboard banner deep-linking into `/settings`.
   config), **Terminal** (interactive shell into the live container, see below),
   **Errors** (failed deployments + a live "container currently down" banner +
   "Application errors", persisted app-level warn/error `Logger` output
-  attributed to this service, see `app_log`/`AppLogDTO` in Data model below),
-  **Settings** (name/slug/restart-policy, move between projects/remote deploy
-  target, save-as-template, auto-redeploy cron schedule, danger-zone delete,
+  attributed to this service, see `app_log`/`AppLogDTO` in Data model below;
+  plus, when `currentStatus === "missing"`, a distinct banner with a "Resolve"
+  button, `?/resolveOrphan`, calling `ServiceDTO.resolveOrphan()` to clear the
+  stale `containerId`/`swarmServiceId` and put the row back to a clean,
+  never-deployed shape so Deploy works again, see the `"missing"`
+  `ContainerStatus` note under Docker integration below), **Settings**
+  (name/slug/restart-policy, move between projects/remote deploy target,
+  save-as-template, auto-redeploy cron schedule, danger-zone delete,
   image/git/registry, port/network, and cpu/memory/autoscale fields all moved to
   their own tabs, see Source/Networking/Compute above)
 - `[serviceId]/deployments/[deploymentId]/progress/+server.ts`, polled by the
@@ -1396,6 +1424,17 @@ migration; a fresh Postgres database starts empty (migrations +
 `hooks.server.ts`'s `init()` on every boot (idempotent, fixed ids like
 `"builtin-redis"`, `.onConflictDoNothing()`).
 
+**Real, tested finding**: `hooks.server.ts`'s `waitForDatabase()` (retries a
+trivial `select 1` up to 10 times, 2s apart, before `init()` proceeds to
+migrations) used to `throw` once it exhausted its retries. SvelteKit's own
+dev-mode handling of a thrown server `init()` hook doesn't crash the process, it
+silently leaves the server in a broken state where every subsequent request just
+hangs/fails with no useful error, rather than either recovering or exiting
+loudly. Fixed by calling `process.exit(1)` instead once retries are exhausted,
+so an unreachable Postgres at boot fails fast and visibly (a restart loop under
+`docker compose`/systemd, a hard failure locally) instead of leaving a
+half-started server up that looks alive but answers nothing correctly.
+
 ### Docker integration (`src/lib/services/docker.service.ts`, `src/lib/services/docker/`)
 
 `DockerService` (`docker.service.ts`) is a singleton instance
@@ -1467,10 +1506,21 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
     deployment-row bookkeeping. → `DockerService.createAndStartContainer`.
   - `start/stop/restartContainer`, `removeContainer`, `inspectStatus` →
     `ContainerStatus`, `streamLogs` (follow-mode web `ReadableStream`),
-    `buildAuthConfig`, all exposed the same way, `DockerService.<name>`. Docker
-    doesn't strip a container's own ANSI color codes from its stdout, every
-    raw-log-line surface (the Logs tab, deploy progress panel, deployment
-    history, Errors tab) renders each line through
+    `buildAuthConfig`, all exposed the same way, `DockerService.<name>`.
+    `ContainerStatus` (`$lib/types.ts`) has a `"missing"` value alongside
+    pending/pulling/starting/running/stopped/failed, for a container Docker
+    can't find at all (a 404 on `inspect()`, e.g. removed manually outside the
+    app, `docker rm`), distinct from `"failed"` (the container still exists but
+    exited non-zero); `inspectStatus` only returns `"missing"` for a real 404,
+    any other inspect error still falls back to `"failed"` as before. See the
+    Errors tab bullet above for the "Resolve" action
+    (`ServiceDTO.resolveOrphan()`) this status backs, and Remote hosts/Homerun
+    Agent below, `agent-client.service.ts`'s `inspectStatus` and
+    `packages/agent/docker.ts`'s `ContainerNotFoundError` (mapped to a real HTTP
+    404 by `packages/agent/http.ts`) make the same distinction for an
+    agent-backed host. Docker doesn't strip a container's own ANSI color codes
+    from its stdout, every raw-log-line surface (the Logs tab, deploy progress
+    panel, deployment history, Errors tab) renders each line through
     `$lib/components/ansi-line.svelte` (backed by `$lib/ansi.ts`'s
     `parseAnsiLine()`), which splits a line into styled `<span>`s rather than
     using `{@html}`, no injection surface even though the source is a live
@@ -1486,6 +1536,15 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
   only, never lifecycle) lookup of the Traefik container by image-name prefix,
   backing the System Logs page. →
   `DockerService.findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`.
+- `cleanup.ts`, `DockerCleanupMixin`, host-wide (not per-service, deliberately
+  the one mixin that isn't scoped to `homerun.managed=true` containers, see
+  Docker Cleanup below) `docker.df()`-backed preview (`getCleanupPreview()` →
+  `CleanupPreview`) plus
+  `pruneContainers`/`pruneImages(all?)`/`pruneNetworks`/`pruneBuildCache`/
+  `pruneVolumes`/`pruneSystem`, thin wrappers over dockerode's own
+  `prune*`/`pruneBuilder` calls. → `DockerService.getCleanupPreview`/
+  `pruneContainers`/`pruneImages`/`pruneNetworks`/`pruneBuildCache`/
+  `pruneVolumes`/`pruneSystem`.
 
 `src/lib/services/secrets.ts` (not under `docker/`, it's a generic AES-256-GCM
 utility, not Docker-specific, also used by SMTP/OAuth/S3-backup secrets),
@@ -1627,6 +1686,29 @@ verified live: with `NetworkingConfig` correctly omitted, the container comes up
 with `NetworkSettings.Networks: { host: {...} }` and no IP address, as expected
 for real host networking.
 
+### Docker Cleanup (`src/lib/services/docker/cleanup.ts`, `(protected)/docker-cleanup/`)
+
+Admin-only (nav item, Administration category, `adminOnly: true`), host-wide
+Docker housekeeping, `docker system df`/`prune` exposed through the dashboard
+instead of needing shell access to the host. Deliberately **not**
+`homerun.managed=true`-scoped like the rest of `DockerService`, this is the one
+mixin that intentionally looks at (and can delete) containers/images/
+networks/volumes/build cache Homerun didn't create, that's the entire point of a
+cleanup tool.
+
+`docker-cleanup/+page.server.ts`'s `load` calls
+`DockerService.getCleanupPreview()` (`docker.df()` + `listNetworks()`, filtered
+to what's actually reclaimable, unused images, non-running containers,
+unreferenced volumes, unused networks excluding the three Docker defaults and
+whatever's still attached to a container, unused build cache entries) so the
+page shows what a prune would remove before the admin commits to it. Six form
+actions, each a thin call into one `DockerCleanupMixin` method
+(`pruneContainers`/`pruneImages`/`pruneNetworks`/`pruneBuildCache`/
+`pruneVolumes`/`pruneSystem`, `pruneSystem` running the first four in sequence
+and returning one combined summary), every one independently re-checking
+`locals.isAdmin` the same as `load` does. No confirmation-dialog/dry-run step in
+the UI itself, the preview list is the only "are you sure" a prune action gets.
+
 ### System stats (`src/lib/services/system-stats.service.ts`)
 
 `SystemStatsService.getSystemStats()`, host-level (not per-container)
@@ -1655,10 +1737,13 @@ the dashboard's setup-issue banner, which deep-links straight into `/settings`
 with the offending field(s) highlighted: `AdminService.SETUP_CHECK_FIELDS` (same
 file) maps a check's id to the `/settings` field id(s) it corresponds to;
 `(protected)/+page.server.ts` builds a `highlightFields` list from the current
-issues and appends it as `?highlight=a,b,c`; `/settings` reads that param, rings
-the matching fields amber, and scrolls the first one into view on mount. Two
-checks (`auth-secret`, env-only; `traefik`, a live-container check) deliberately
-have no entry in the map, nothing to highlight for either.
+issues and appends it as `?highlight=a,b,c`; `/settings` is now split into one
+route per tab (see the tabs convention above), so its `+layout.server.ts`
+redirects to whichever tab the first highlighted field actually lives on before
+that tab's own page rings the matching fields amber and scrolls the first one
+into view on mount. Two checks (`auth-secret`, env-only; `traefik`, a
+live-container check) deliberately have no entry in the map, nothing to
+highlight for either.
 
 ### Config (`src/lib/config.ts`)
 
@@ -1709,12 +1794,20 @@ returns the plain-value shape `applyInstanceSettings()` merges over
 the very first request, not just after a save), and again at the end of every
 `/settings` action, so a saved change is live immediately, no restart, for every
 section including OAuth (see Auth below for how that one specifically applies
-live).
+live). `/settings` itself is split into one route per tab (bare `+page.svelte` =
+General/Core, `docker/`, `networking/`, `email/`, `authentication/`, see the
+tabs convention under Conventions above), so this apply-plus-rebuild pair is
+pulled into a shared `applyAndRebuild(settings)` helper
+(`$lib/server/validation/instance-settings-form.ts`, alongside `nullableText`/
+`checkbox` form-parsing helpers every tab's actions use), each tab's own action
+calls it rather than duplicating the two calls per file.
 
 `config.ts` deliberately never imports the DTO or `db` itself, `db/lib.ts`
 imports `config.ts` for `databaseUrl`, so `config.ts` has to stay a leaf module
 or the two would form a circular import. The DB-reading glue lives in
-`hooks.server.ts` and `settings/+page.server.ts` instead.
+`hooks.server.ts` and `settings/+layout.server.ts` instead, the latter now
+shared across every tab (fetches `InstanceSettingsDTO.get()` once, plus the
+setup-issue-banner deep-link redirect described below).
 
 **Real, tested finding from building this**: a bad OAuth provider
 (unreachable/invalid discovery URL) isn't just a broken login button,
@@ -1723,17 +1816,18 @@ discovery document while building its auth _context_, which every request
 touching auth goes through, including plain `getSession()` on every page load
 and even email/password sign-in. Saving one unvalidated **locked the whole app
 out**, `/settings` included, with no way back in short of editing the DB
-directly, verified live. Fixed two ways: `settings/+page.server.ts`'s
-`updateOauth` action fetches and validates each provider's discovery document
-(must return 200 with a JSON body containing an `issuer`) _before_ persisting
-anything, rejecting the save with a clear error otherwise, deliberately **not**
-the "warn, don't block" precedent the image-existence checker uses, since the
-failure mode here is total lockout rather than one broken service. And as
-defense in depth against any other cause, `hooks.server.ts`'s `authHandler`
-wraps `auth.api.getSession()` in a `catch` that degrades to "no session" on any
-error rather than letting it 500 every request, so even if auth context
-construction fails for some other reason, the rest of the app (and `/settings`,
-to fix whatever's wrong) stays reachable, just signed out.
+directly, verified live. Fixed two ways:
+`settings/authentication/+page.server.ts`'s `updateOauth` action fetches and
+validates each provider's discovery document (must return 200 with a JSON body
+containing an `issuer`) _before_ persisting anything, rejecting the save with a
+clear error otherwise, deliberately **not** the "warn, don't block" precedent
+the image-existence checker uses, since the failure mode here is total lockout
+rather than one broken service. And as defense in depth against any other cause,
+`hooks.server.ts`'s `authHandler` wraps `auth.api.getSession()` in a `catch`
+that degrades to "no session" on any error rather than letting it 500 every
+request, so even if auth context construction fails for some other reason, the
+rest of the app (and `/settings`, to fix whatever's wrong) stays reachable, just
+signed out.
 
 ### Auth (`src/lib/services/auth.ts`)
 

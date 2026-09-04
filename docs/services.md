@@ -3,8 +3,10 @@
 A **service** is one deployed container. Create one from `Services → New`,
 either standalone or pre-filled from a [project](projects-and-templates.md) or
 [template](projects-and-templates.md#templates) via
-`?projectId=`/`?templateId=`. Creating a service just persists its config, it
-doesn't deploy anything until you hit Deploy on the service's Overview tab.
+`?projectId=`/`?templateId=`. The wizard's primary button, **Create and
+Deploy**, persists the config and immediately deploys it, landing you on the new
+service's Overview tab; **Create service**, the secondary button, just persists
+the config, the same as before, deploy later from the Overview tab yourself.
 
 ## Deploy source: image or git repo
 
@@ -164,7 +166,11 @@ git-mode service you want rebuilt on a schedule rather than manually.
 A per-service Errors tab surfaces both failed deployments and a live "container
 currently down" banner, plus an "Application errors" section, persisted
 warn/error-level app log lines that mention this service, a lightweight view of
-app-level failures alongside deploy failures.
+app-level failures alongside deploy failures. If a service's container was
+removed outside Homerun (e.g. a manual `docker rm`), the tab shows a distinct
+"container is gone" banner with a **Resolve** button instead: click it to clear
+the stale reference so the service goes back to its normal never-deployed state
+and Deploy works again.
 
 ## Notifications
 

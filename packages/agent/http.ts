@@ -1,5 +1,5 @@
 import type { BunRequest } from "bun";
-import { DockerService } from "./docker";
+import { ContainerNotFoundError, DockerService } from "./docker";
 import { OpenApiBuilder } from "./openapi";
 import { buildInputSchema, deployInputSchema } from "./schemas";
 import { SystemStatsService } from "./stats";
@@ -167,10 +167,11 @@ export class AgentHttpServer {
 				return res;
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
+				const status = error instanceof ContainerNotFoundError ? 404 : 500;
 				console.log(
-					`[http] ${req.method} ${pathname} - 500 (${Math.round(performance.now() - start)}ms): ${message}`,
+					`[http] ${req.method} ${pathname} - ${status} (${Math.round(performance.now() - start)}ms): ${message}`,
 				);
-				return json({ error: message }, { status: 500 });
+				return json({ error: message }, { status });
 			}
 		};
 	}

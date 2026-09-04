@@ -7,6 +7,15 @@ export interface AgentConnection {
 	token: string;
 }
 
+class AgentRequestError extends Error {
+	status: number;
+
+	constructor(message: string, status: number) {
+		super(message);
+		this.status = status;
+	}
+}
+
 export interface AgentDeployParams {
 	containerPort: number | null;
 	cpuLimit?: number | null;
@@ -188,7 +197,6 @@ class AgentClientServiceClass {
 		);
 	}
 
-	/** Same "container doesn't exist → failed" and status-collapsing behavior as DockerService.inspectStatus, driven off the agent's raw `state`/`exitCode` fields rather than re-deriving it agent-side (keeps the one enum-mapping decision in one place). */
 	async inspectStatus(
 		connection: AgentConnection,
 		id: string,
@@ -210,8 +218,10 @@ class AgentClientServiceClass {
 				return info.exitCode === 0 ? "stopped" : "failed";
 			}
 			return "stopped";
-		} catch {
-			return "failed";
+		} catch (error) {
+			return error instanceof AgentRequestError && error.status === 404
+				? "missing"
+				: "failed";
 		}
 	}
 
@@ -270,7 +280,7 @@ class AgentClientServiceClass {
 				data && typeof data === "object" && "error" in data
 					? String((data as { error: unknown }).error)
 					: `Agent returned ${response.status}.`;
-			throw new Error(message);
+			throw new AgentRequestError(message, response.status);
 		}
 		return data as T;
 	}

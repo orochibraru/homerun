@@ -257,6 +257,15 @@ export class ServiceDTO extends BaseDTO<Service> {
 		Object.assign(this.row, input);
 	}
 
+	async resolveOrphan(): Promise<void> {
+		await this.update({
+			containerId: null,
+			currentStatus: "pending",
+			desiredState: "stopped",
+			swarmServiceId: null,
+		});
+	}
+
 	async delete(): Promise<void> {
 		await db.delete(service).where(eq(service.id, this.row.id));
 	}

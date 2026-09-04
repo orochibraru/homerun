@@ -345,7 +345,8 @@
 													"starting",
 													"running",
 													"stopped",
-													"failed"
+													"failed",
+													"missing"
 												],
 												"type": "string"
 											},
@@ -802,7 +803,8 @@
 												"starting",
 												"running",
 												"stopped",
-												"failed"
+												"failed",
+												"missing"
 											],
 											"type": "string"
 										},
@@ -1262,7 +1264,8 @@
 												"starting",
 												"running",
 												"stopped",
-												"failed"
+												"failed",
+												"missing"
 											],
 											"type": "string"
 										},
@@ -1795,7 +1798,8 @@
 												"starting",
 												"running",
 												"stopped",
-												"failed"
+												"failed",
+												"missing"
 											],
 											"type": "string"
 										},

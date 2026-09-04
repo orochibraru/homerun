@@ -16,6 +16,7 @@
 		ScrollText,
 		Server,
 		Settings,
+		Trash2,
 		Users,
 		X,
 	} from "@lucide/svelte";
@@ -175,6 +176,14 @@
 			href: resolve("/system-logs"),
 			icon: ScrollText,
 			label: "System Logs",
+		},
+		{
+			adminOnly: true,
+			category: "Administration",
+			exact: false,
+			href: resolve("/docker-cleanup"),
+			icon: Trash2,
+			label: "Docker Cleanup",
 		},
 	];
 
