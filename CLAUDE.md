@@ -1988,7 +1988,7 @@ markup as its own component alongside this feature).
   notifications + unread count once, so the bell doesn't need a per-page fetch;
   `notification-bell.svelte` posts to
   `notifications/[id]/read`/`notifications/[id]/delete`/`notifications/read-all`
-  and calls `invalidateAll()`.
+  and calls `refreshAll()`.
 
 This closes the "in-app lifecycle event feed" half of what Planned features
 below used to list as unbuilt; outbound webhooks (Telegram/Discord/generic HTTP)

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Bell, CheckCheck, X } from "@lucide/svelte";
-	import { invalidateAll } from "$app/navigation";
+	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
@@ -23,17 +23,17 @@
 
 	async function markRead(id: string) {
 		await fetch(`/notifications/${id}/read`, { method: "POST" });
-		await invalidateAll();
+		await refreshAll();
 	}
 
 	async function markAllRead() {
 		await fetch("/notifications/read-all", { method: "POST" });
-		await invalidateAll();
+		await refreshAll();
 	}
 
 	async function deleteNotification(id: string) {
 		await fetch(`/notifications/${id}/delete`, { method: "POST" });
-		await invalidateAll();
+		await refreshAll();
 	}
 
 	function onItemClick(n: NotificationItem) {

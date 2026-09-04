@@ -51,7 +51,7 @@ test.describe
 			await page.getByText("Sign out").click();
 
 			// signOut() itself doesn't navigate (see profile-menu.svelte's own
-			// handleSignOut, just `invalidateAll()`) : the redirect comes from
+			// handleSignOut, just `refreshAll()`) : the redirect comes from
 			// (protected)/+layout.server.ts's own guard re-running and finding no
 			// session, once every active `load` re-runs.
 			await expect(page).toHaveURL(/\/auth\/sign-in$/);

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { LogOut, UserCircle } from "@lucide/svelte";
 	import { toast } from "svelte-sonner";
-	import { goto, invalidateAll } from "$app/navigation";
+	import { goto, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { signOut } from "$lib/auth-client";
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
@@ -18,7 +18,7 @@
 
 	async function signOutCallback() {
 		await signOut();
-		await invalidateAll();
+		await refreshAll();
 	}
 
 	function handleSignOut() {
