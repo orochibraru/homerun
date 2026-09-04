@@ -49,6 +49,9 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   host
 - **Swarm mode**: opt-in Docker Swarm deploys for real replica scaling and load
   balancing across one service, instead of the default one-container model
+- **Docker Cleanup**: admin-only host-wide `docker system df`/prune from the
+  dashboard, unused images/containers/volumes/networks/build cache, with a
+  preview before you prune
 - **DNS automation**: optional Cloudflare or self-hosted Pangolin integration
   auto-manages a deployed service's DNS record for you
 - **In-app notifications**: a per-user feed of deploy/service lifecycle events

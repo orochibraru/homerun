@@ -107,9 +107,9 @@ async function waitForDatabase() {
 			return;
 		} catch (error) {
 			if (i === maxRetries - 1) {
-				logger.error("Database not ready after maximum retries.");
+				logger.error("Database not ready after maximum retries. Exiting.");
 				logger.error(`Last error: ${error}`);
-				throw error;
+				process.exit(1);
 			}
 			const isFirstAttempt = i === 0;
 			if (isFirstAttempt || i % 10 === 0) {

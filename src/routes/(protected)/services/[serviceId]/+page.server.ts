@@ -11,6 +11,14 @@ import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service
 
 const logger = new Logger("Services");
 
+function lifecycleFailure(verb: string, error: unknown) {
+	logger.error(`Failed to ${verb} service`, error);
+	const reason = error instanceof Error ? error.message : "unknown error";
+	return fail(500, {
+		error: `Couldn't ${verb} the service : ${reason}. If its container was removed outside Homerun, resolve it from the Errors tab first.`,
+	});
+}
+
 export const load = async ({ params }) => {
 	const deployments = await DeploymentDTO.listForService(params.serviceId);
 
@@ -74,11 +82,15 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		await ServiceLifecycleService.restart(
-			svc.containerId,
-			svc.remoteHostId,
-			locals.user.id,
-		);
+		try {
+			await ServiceLifecycleService.restart(
+				svc.containerId,
+				svc.remoteHostId,
+				locals.user.id,
+			);
+		} catch (error) {
+			return lifecycleFailure("restart", error);
+		}
 		logger.info(`Service restarted: service=${svc.id} user=${locals.user.id}`);
 		return { success: true };
 	},
@@ -112,11 +124,15 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		await ServiceLifecycleService.start(
-			svc.containerId,
-			svc.remoteHostId,
-			locals.user.id,
-		);
+		try {
+			await ServiceLifecycleService.start(
+				svc.containerId,
+				svc.remoteHostId,
+				locals.user.id,
+			);
+		} catch (error) {
+			return lifecycleFailure("start", error);
+		}
 		await svc.update({ desiredState: "running" });
 		logger.info(`Service started: service=${svc.id} user=${locals.user.id}`);
 		NotificationDTO.notify({
@@ -155,11 +171,15 @@ export const actions = {
 			return fail(400, { error: "This service hasn't been deployed yet." });
 		}
 
-		await ServiceLifecycleService.stop(
-			svc.containerId,
-			svc.remoteHostId,
-			locals.user.id,
-		);
+		try {
+			await ServiceLifecycleService.stop(
+				svc.containerId,
+				svc.remoteHostId,
+				locals.user.id,
+			);
+		} catch (error) {
+			return lifecycleFailure("stop", error);
+		}
 		await svc.update({ desiredState: "stopped" });
 		logger.info(`Service stopped: service=${svc.id} user=${locals.user.id}`);
 		NotificationDTO.notify({

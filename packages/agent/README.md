@@ -104,7 +104,12 @@ Every route below requires `Authorization: Bearer <token>` except `/v1/health`.
 - `POST /v1/build`, body is a `BuildInput` (see `schemas.ts`): clones a git repo
   at a ref and builds its Dockerfile into a local image, optionally pushing it
   to a registry afterward. Returns `{success, error?}`.
-- `GET /v1/containers/:id`, `{id, state, status}`.
+- `GET /v1/containers/:id`, `{id, state, status}`; a container Docker can't find
+  (removed outside the agent) returns a real `404` (`ContainerNotFoundError`,
+  `docker.ts`), not the generic `500` every other unhandled error gets, so
+  `agent-client.service.ts`'s `inspectStatus` on the main app's side can map it
+  to the `"missing"` status distinct from `"failed"`, see `CLAUDE.md`'s Docker
+  integration section.
 - `DELETE /v1/containers/:id`, stop + remove.
 - `POST /v1/containers/:id/{start,stop,restart}`.
 - `GET /v1/containers/:id/logs?follow=true|false`, raw log bytes, streamed when

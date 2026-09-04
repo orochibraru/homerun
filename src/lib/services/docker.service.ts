@@ -14,6 +14,13 @@
 // not static delegates to loose functions.
 
 export type { ContainerStatus } from "$lib/types";
+export type {
+	CleanupCategory,
+	CleanupItem,
+	CleanupPreview,
+	PruneSummary,
+	SystemPruneSummary,
+} from "./docker/cleanup.ts";
 export type { RemoteHostConnection } from "./docker/client.ts";
 export type {
 	CreateContainerParams,
@@ -23,6 +30,7 @@ export type {
 } from "./docker/containers.ts";
 
 import { BaseDockerService } from "./docker/base.ts";
+import { DockerCleanupMixin } from "./docker/cleanup.ts";
 import { DockerContainerMixin } from "./docker/containers.ts";
 import { DockerCoreServicesMixin } from "./docker/core-services.ts";
 import { DockerCustomSslMixin } from "./docker/custom-ssl.ts";
@@ -38,13 +46,15 @@ import { DockerTerminalMixin } from "./docker/terminal.ts";
 // calls this.pullImage), containers+swarm before reconcile (syncServiceStatus
 // calls both this.inspectStatus and this.inspectSwarmServiceStatus). The
 // rest have no cross-concern dependency, so their position is arbitrary.
-class DockerServiceClass extends DockerTerminalMixin(
-	DockerCoreServicesMixin(
-		DockerCustomSslMixin(
-			DockerGitBuildMixin(
-				DockerReconcileMixin(
-					DockerSwarmMixin(
-						DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+class DockerServiceClass extends DockerCleanupMixin(
+	DockerTerminalMixin(
+		DockerCoreServicesMixin(
+			DockerCustomSslMixin(
+				DockerGitBuildMixin(
+					DockerReconcileMixin(
+						DockerSwarmMixin(
+							DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+						),
 					),
 				),
 			),

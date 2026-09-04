@@ -15,6 +15,26 @@ export type { RemoteHostConnection } from "./client.ts";
 
 const logger = new Logger("Docker");
 
+function isNotFoundError(error: unknown): boolean {
+	return (error as { statusCode?: number } | null)?.statusCode === 404;
+}
+
+function containerStateToStatus(state: {
+	ExitCode: number;
+	Status: string;
+}): ContainerStatus {
+	if (state.Status === "running") {
+		return "running";
+	}
+	if (state.Status === "created" || state.Status === "restarting") {
+		return "starting";
+	}
+	if (state.Status === "exited" || state.Status === "dead") {
+		return state.ExitCode === 0 ? "stopped" : "failed";
+	}
+	return "stopped";
+}
+
 export interface RegistryAuth {
 	password: string;
 	serveraddress?: string;
@@ -514,23 +534,9 @@ export function DockerContainerMixin<
 				const info = await this.getDocker(remote)
 					.getContainer(containerId)
 					.inspect();
-				const status = info.State.Status;
-
-				if (status === "running") {
-					return "running";
-				}
-				if (status === "created" || status === "restarting") {
-					return "starting";
-				}
-				if (status === "exited" || status === "dead") {
-					return info.State.ExitCode === 0 ? "stopped" : "failed";
-				}
-				return "stopped";
-			} catch {
-				// Container doesn't exist (e.g. removed out-of-band) : treat as
-				// failed so it's visibly wrong in the UI rather than silently
-				// stale.
-				return "failed";
+				return containerStateToStatus(info.State);
+			} catch (error) {
+				return isNotFoundError(error) ? "missing" : "failed";
 			}
 		}
 

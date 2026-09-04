@@ -10,9 +10,11 @@
 		Lock,
 		Network,
 		Plus,
+		Rocket,
 		Server,
 		SlidersHorizontal,
 		Trash2,
+		X,
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { toast } from "svelte-sonner";
@@ -67,7 +69,7 @@
 			(data.template ? slugify(data.template.name) : ""),
 	);
 	let slugTouched = $state(false);
-	let submitting = $state(false);
+	let submittingAction = $state<"create" | "createAndDeploy" | null>(null);
 	let showRegistry = $derived(!!values?.registryUsername);
 
 	let buildSource = $derived<"image" | "git">(
@@ -328,13 +330,15 @@
     class="space-y-6"
     method="POST"
     use:enhance={() => {
-      submitting = true;
       return async ({ result, update }) => {
-        submitting = false;
+        submittingAction = null;
         if (result.type === "failure") {
-          const first: string = result.data?.errors
-            ? ((Object.values(result.data.errors).flat()[0] as string | undefined) ?? "")
-            : "";
+          const data = result.data as
+            | { error?: string; errors?: Record<string, string[]> }
+            | undefined;
+          const first = data?.errors
+            ? (Object.values(data.errors).flat()[0] as string | undefined)
+            : data?.error;
           toast.error(first ?? "Check the form for errors.");
           // The failing field could be on any step : jump back to the
           // first one so the top error banner and per-field messages are
@@ -370,555 +374,587 @@
       </div>
     {/if}
 
-    <!-- ═══ Step 1: Basic info ═══ -->
-    <section
-      class="rounded-2xl border border-border bg-surface"
-      class:hidden={currentStep !== 0}
-    >
-      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-          <Server class="size-4" />
-        </div>
-        <div>
-          <h2 class="text-sm font-semibold text-text">Basic info</h2>
-          <p class="text-xs text-text-muted">Name it and point at an image.</p>
-        </div>
-      </div>
-
-      <div class="space-y-5 p-5">
-        <div>
-          <label class={label} for="name">
-            Name <span class="text-red-500">*</span>
-          </label>
-          <Input
-            id="name"
-            name="name"
-            oninput={onNameInput}
-            placeholder="My API"
-            required
-            type="text"
-            bind:value={name}
-          />
-          {#if errors?.name}
-            <p class={errorClass}>{errors.name[0]}</p>
-          {/if}
-        </div>
-
-        <div>
-          <label class={label} for="slug">
-            Slug <span class="text-red-500">*</span>
-          </label>
-          <Input
-            id="slug"
-            maxlength={63}
-            name="slug"
-            oninput={onSlugInput}
-            pattern="[a-z0-9\-]+"
-            placeholder="my-api"
-            required
-            type="text"
-            bind:value={slug}
-          />
-          <p class="mt-1 text-xs text-text-subtle">
-            Routed at
-            <span class="text-accent">{slug || "your-slug"}.{
-                data.baseDomain
-              }</span>
-          </p>
-          {#if errors?.slug}
-            <p class={errorClass}>{errors.slug[0]}</p>
-          {/if}
-        </div>
-
-        <div>
-          <div class={label}>Deploy from</div>
-          <div class="flex gap-2">
-            <button
-              class="
-                flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
-                'image'
-                ? 'border-accent bg-accent-light text-accent'
-                : 'border-border text-text-muted hover:bg-surface-2'}
-              "
-              onclick={() => {
-                buildSource = "image";
-              }}
-              type="button"
-            >
+    <div class="flex min-h-136 flex-col gap-6">
+      <div class="flex-1 space-y-6">
+        <!-- ═══ Step 1: Basic info ═══ -->
+        <section
+          class="rounded-2xl border border-border bg-surface"
+          class:hidden={currentStep !== 0}
+        >
+          <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+            <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
               <Server class="size-4" />
-              Docker image
-            </button>
-            <button
-              class="
-                flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
-                'git'
-                ? 'border-accent bg-accent-light text-accent'
-                : 'border-border text-text-muted hover:bg-surface-2'}
-              "
-              onclick={() => {
-                buildSource = "git";
-              }}
-              type="button"
-            >
-              <GitBranch class="size-4" />
-              Git repository
-            </button>
+            </div>
+            <div>
+              <h2 class="text-sm font-semibold text-text">Basic info</h2>
+              <p class="text-xs text-text-muted">Name it and point at an image.</p>
+            </div>
           </div>
-          <input name="buildSource" type="hidden" value={buildSource}>
-        </div>
 
-        {#if buildSource === "image"}
-          <div class="grid grid-cols-3 gap-3">
-            <div class="col-span-2">
-              <label class={label} for="image">
-                Image <span class="text-red-500">*</span>
+          <div class="space-y-5 p-5">
+            <div>
+              <label class={label} for="name">
+                Name <span class="text-red-500">*</span>
               </label>
               <Input
-                id="image"
-                name="image"
-                oninput={scheduleImageCheck}
-                placeholder="ghcr.io/acme/api"
+                id="name"
+                name="name"
+                oninput={onNameInput}
+                placeholder="My API"
                 required
                 type="text"
-                bind:value={image}
+                bind:value={name}
               />
-              {#if errors?.image}
-                <p class={errorClass}>{errors.image[0]}</p>
+              {#if errors?.name}
+                <p class={errorClass}>{errors.name[0]}</p>
               {/if}
             </div>
+
             <div>
-              <label class={label} for="tag">Tag</label>
+              <label class={label} for="slug">
+                Slug <span class="text-red-500">*</span>
+              </label>
               <Input
-                id="tag"
-                name="tag"
-                oninput={scheduleImageCheck}
-                placeholder="latest"
+                id="slug"
+                maxlength={63}
+                name="slug"
+                oninput={onSlugInput}
+                pattern="[a-z0-9\-]+"
+                placeholder="my-api"
+                required
                 type="text"
-                bind:value={tag}
+                bind:value={slug}
               />
+              <p class="mt-1 text-xs text-text-subtle">
+                Routed at
+                <span class="text-accent">{slug || "your-slug"}.{
+                    data.baseDomain
+                  }</span>
+              </p>
+              {#if errors?.slug}
+                <p class={errorClass}>{errors.slug[0]}</p>
+              {/if}
+            </div>
+
+            <div>
+              <div class={label}>Deploy from</div>
+              <div class="flex gap-2">
+                <button
+                  class="
+                    flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+                    'image'
+                    ? 'border-accent bg-accent-light text-accent'
+                    : 'border-border text-text-muted hover:bg-surface-2'}
+                  "
+                  onclick={() => {
+                    buildSource = "image";
+                  }}
+                  type="button"
+                >
+                  <Server class="size-4" />
+                  Docker image
+                </button>
+                <button
+                  class="
+                    flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+                    'git'
+                    ? 'border-accent bg-accent-light text-accent'
+                    : 'border-border text-text-muted hover:bg-surface-2'}
+                  "
+                  onclick={() => {
+                    buildSource = "git";
+                  }}
+                  type="button"
+                >
+                  <GitBranch class="size-4" />
+                  Git repository
+                </button>
+              </div>
+              <input name="buildSource" type="hidden" value={buildSource}>
+            </div>
+
+            {#if buildSource === "image"}
+              <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                  <label class={label} for="image">
+                    Image <span class="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="image"
+                    name="image"
+                    oninput={scheduleImageCheck}
+                    placeholder="ghcr.io/acme/api"
+                    required
+                    type="text"
+                    bind:value={image}
+                  />
+                  {#if errors?.image}
+                    <p class={errorClass}>{errors.image[0]}</p>
+                  {/if}
+                </div>
+                <div>
+                  <label class={label} for="tag">Tag</label>
+                  <Input
+                    id="tag"
+                    name="tag"
+                    oninput={scheduleImageCheck}
+                    placeholder="latest"
+                    type="text"
+                    bind:value={tag}
+                  />
+                </div>
+              </div>
+
+              {#if imageCheck?.checked && !imageCheck.exists}
+                <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
+                  <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    <strong>{image}:{tag}</strong>
+                    wasn't found in its registry. You can still save : this doesn't
+                    block deploying, in case you're still preparing the image.
+                  </span>
+                </div>
+              {/if}
+            {:else}
+              {#if data.connectedGitProviders.length > 0}
+                <div class="rounded-xl border border-border p-4">
+                  <p class={label}>Browse repos</p>
+                  <div class="flex flex-wrap gap-2">
+                    {#if data.connectedGitProviders.length > 1}
+                      <select
+                        bind:value={browseProviderId}
+                        class="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      >
+                        {#each data.connectedGitProviders as p (p.id)}
+                          <option value={p.id}>{p.name} ({p.providerUsername})</option>
+                        {/each}
+                      </select>
+                    {/if}
+                    <Button
+                      disabled={loadingRepos}
+                      onclick={loadRepos}
+                      type="button"
+                      variant="outline"
+                    >
+                      {#if loadingRepos}
+                        <Spinner />
+                      {:else}
+                        <GitBranch class="size-4" />
+                      {/if}
+                      List repos
+                    </Button>
+                  </div>
+                  {#if repos.length > 0}
+                    <select
+                      bind:value={selectedRepo}
+                      class="mt-3 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      onchange={(e) => pickRepo(e.currentTarget.value)}
+                    >
+                      <option value="">Select a repo…</option>
+                      {#each repos as repo (repo.fullName)}
+                        <option value={repo.fullName}>
+                          {repo.fullName}{repo.private ? " (private)" : ""}
+                        </option>
+                      {/each}
+                    </select>
+                    {#if dockerfileCheck?.checked}
+                      <p
+                        class="
+                          mt-2 text-xs {dockerfileCheck.exists
+                          ? 'text-emerald-600'
+                          : 'text-amber-600'}
+                        "
+                      >
+                        {
+                          dockerfileCheck.exists
+                          ? "✓ Dockerfile found at the repo root."
+                          : "⚠ No Dockerfile found at the repo root on this branch : the build will fail unless one exists at the path you set below."
+                        }
+                      </p>
+                    {/if}
+                  {/if}
+                </div>
+              {/if}
+              <div>
+                <label class={label} for="gitUrl">
+                  Repository URL <span class="text-red-500">*</span>
+                </label>
+                <Input
+                  id="gitUrl"
+                  name="gitUrl"
+                  placeholder="https://github.com/acme/api.git"
+                  required
+                  type="text"
+                  bind:value={gitUrl}
+                />
+                <p class="mt-1.5 text-xs text-text-subtle">
+                  Any git-clone-able HTTPS URL : GitHub, GitLab, a self-hosted Gitea
+                  instance, whatever. Private repos: embed a token in the URL
+                  yourself (<code>https://TOKEN@host/...</code>), there's no
+                  separate credential field for this yet.
+                </p>
+                {#if errors?.gitUrl}
+                  <p class={errorClass}>{errors.gitUrl[0]}</p>
+                {/if}
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class={label} for="gitRef">Branch / tag</label>
+                  <Input
+                    id="gitRef"
+                    name="gitRef"
+                    placeholder="main"
+                    type="text"
+                    bind:value={gitRef}
+                  />
+                </div>
+                <div>
+                  <label class={label} for="gitDockerfilePath"
+                  >Dockerfile path</label>
+                  <Input
+                    id="gitDockerfilePath"
+                    name="gitDockerfilePath"
+                    placeholder="Dockerfile"
+                    type="text"
+                    bind:value={gitDockerfilePath}
+                  />
+                </div>
+              </div>
+              <div>
+                <label class={label} for="gitBuildContext">
+                  Build context (subdirectory)
+                </label>
+                <Input
+                  id="gitBuildContext"
+                  name="gitBuildContext"
+                  placeholder="Leave blank for repo root"
+                  type="text"
+                  bind:value={gitBuildContext}
+                />
+              </div>
+              <div>
+                <label class={label} for="buildCacheRegistryId">
+                  Build cache registry
+                </label>
+                {#if data.buildCacheRegistries.length === 0}
+                  <p class="text-xs text-text-muted">
+                    No registries configured.
+                    <a class="text-accent underline" href={resolve("/build-cache-registries")}>
+                      Add one
+                    </a>
+                    to speed up rebuilds by reusing unchanged layers.
+                  </p>
+                {:else}
+                  <SelectRoot
+                    name="buildCacheRegistryId"
+                    type="single"
+                    bind:value={buildCacheRegistryId}
+                  >
+                    <SelectTrigger id="buildCacheRegistryId">
+                      {buildCacheRegistryLabel}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem label="No cache" value="" />
+                      {#each data.buildCacheRegistries as reg (reg.id)}
+                        <SelectItem label={reg.name} value={reg.id} />
+                      {/each}
+                    </SelectContent>
+                  </SelectRoot>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        </section>
+
+        <!-- ═══ Step 1: Private registry (collapsible) ═══ -->
+        <section
+          class="rounded-2xl border border-border bg-surface"
+          class:hidden={currentStep !== 0}
+        >
+          <Button
+            class="h-auto w-full items-center justify-start gap-3 px-5 py-4 font-normal"
+            onclick={() => {
+              showRegistry = !showRegistry;
+            }}
+            variant="ghost"
+          >
+            <div class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
+              <Lock class="size-4" />
+            </div>
+            <div class="flex-1 text-left">
+              <h2 class="text-sm font-semibold text-text">Private registry</h2>
+              <p class="text-xs text-text-muted">
+                Only needed for non-public images.
+              </p>
+            </div>
+            <ChevronDown
+              class="
+                size-4 text-text-muted transition-transform {showRegistry
+                ? 'rotate-180'
+                : ''}
+              "
+            />
+          </Button>
+
+          {#if showRegistry}
+            <div class="space-y-4 border-t border-border p-5">
+              <div>
+                <label class={label} for="registryUrl"> Registry URL </label>
+                <Input
+                  id="registryUrl"
+                  name="registryUrl"
+                  oninput={scheduleImageCheck}
+                  placeholder="ghcr.io (blank = Docker Hub)"
+                  type="text"
+                  bind:value={registryUrl}
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class={label} for="registryUsername"> Username </label>
+                  <Input
+                    id="registryUsername"
+                    name="registryUsername"
+                    type="text"
+                    bind:value={registryUsername}
+                  />
+                </div>
+                <div>
+                  <label class={label} for="registryPassword">
+                    Password / token
+                  </label>
+                  <Input
+                    id="registryPassword"
+                    name="registryPassword"
+                    type="password"
+                  />
+                </div>
+              </div>
+            </div>
+          {/if}
+        </section>
+
+        <!-- ═══ Step 2: Networking ═══ -->
+        <section
+          class="rounded-2xl border border-border bg-surface"
+          class:hidden={currentStep !== 1}
+        >
+          <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+            <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+              <Network class="size-4" />
+            </div>
+            <div>
+              <h2 class="text-sm font-semibold text-text">Networking</h2>
+              <p class="text-xs text-text-muted">
+                The port it listens on, and how it's routed.
+              </p>
             </div>
           </div>
 
-          {#if imageCheck?.checked && !imageCheck.exists}
-            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
-              <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
-              <span>
-                <strong>{image}:{tag}</strong>
-                wasn't found in its registry. You can still save : this doesn't
-                block deploying, in case you're still preparing the image.
-              </span>
-            </div>
-          {/if}
-        {:else}
-          {#if data.connectedGitProviders.length > 0}
-            <div class="rounded-xl border border-border p-4">
-              <p class={label}>Browse repos</p>
-              <div class="flex flex-wrap gap-2">
-                {#if data.connectedGitProviders.length > 1}
-                  <select
-                    bind:value={browseProviderId}
-                    class="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                  >
-                    {#each data.connectedGitProviders as p (p.id)}
-                      <option value={p.id}>{p.name} ({p.providerUsername})</option>
-                    {/each}
-                  </select>
-                {/if}
-                <Button
-                  disabled={loadingRepos}
-                  onclick={loadRepos}
-                  type="button"
-                  variant="outline"
-                >
-                  {#if loadingRepos}
-                    <Spinner />
-                  {:else}
-                    <GitBranch class="size-4" />
-                  {/if}
-                  List repos
-                </Button>
-              </div>
-              {#if repos.length > 0}
-                <select
-                  bind:value={selectedRepo}
-                  class="mt-3 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                  onchange={(e) => pickRepo(e.currentTarget.value)}
-                >
-                  <option value="">Select a repo…</option>
-                  {#each repos as repo (repo.fullName)}
-                    <option value={repo.fullName}>
-                      {repo.fullName}{repo.private ? " (private)" : ""}
-                    </option>
-                  {/each}
-                </select>
-                {#if dockerfileCheck?.checked}
-                  <p
-                    class="
-                      mt-2 text-xs {dockerfileCheck.exists
-                      ? 'text-emerald-600'
-                      : 'text-amber-600'}
-                    "
-                  >
-                    {
-                      dockerfileCheck.exists
-                      ? "✓ Dockerfile found at the repo root."
-                      : "⚠ No Dockerfile found at the repo root on this branch : the build will fail unless one exists at the path you set below."
-                    }
-                  </p>
-                {/if}
+          <div class="space-y-5 p-5">
+            <div>
+              <label class={label} for="containerPort">
+                Container port <span class="text-red-500">*</span>
+              </label>
+              <Input
+                id="containerPort"
+                max="65535"
+                min="1"
+                name="containerPort"
+                placeholder="3000"
+                required={currentStep === 1}
+                type="number"
+                bind:value={containerPort}
+              />
+              <p class="mt-1 text-xs text-text-subtle">
+                The port your app listens on inside the container.
+              </p>
+              {#if errors?.containerPort}
+                <p class={errorClass}>{errors.containerPort[0]}</p>
               {/if}
             </div>
-          {/if}
-          <div>
-            <label class={label} for="gitUrl">
-              Repository URL <span class="text-red-500">*</span>
-            </label>
-            <Input
-              id="gitUrl"
-              name="gitUrl"
-              placeholder="https://github.com/acme/api.git"
-              required
-              type="text"
-              bind:value={gitUrl}
+
+            <CheckBox
+              helperText="Get a public slug.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network. More networking controls (custom domain, auth gate) are on the service's Networking tab after it's created."
+              id="dnsResolvable"
+              label="DNS-resolvable"
+              name="dnsResolvable"
+              bind:checked={dnsResolvable}
             />
-            <p class="mt-1.5 text-xs text-text-subtle">
-              Any git-clone-able HTTPS URL : GitHub, GitLab, a self-hosted Gitea
-              instance, whatever. Private repos: embed a token in the URL
-              yourself (<code>https://TOKEN@host/...</code>), there's no
-              separate credential field for this yet.
+          </div>
+        </section>
+
+        <!-- ═══ Step 3: Environment ═══ -->
+        <section
+          class="rounded-2xl border border-border bg-surface"
+          class:hidden={currentStep !== 2}
+        >
+          <div class="border-b border-border px-5 py-4">
+            <h2 class="text-sm font-semibold text-text">Environment variables</h2>
+            <p class="text-xs text-text-muted">
+              Passed to the container at deploy time.
             </p>
-            {#if errors?.gitUrl}
-              <p class={errorClass}>{errors.gitUrl[0]}</p>
-            {/if}
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class={label} for="gitRef">Branch / tag</label>
-              <Input
-                id="gitRef"
-                name="gitRef"
-                placeholder="main"
-                type="text"
-                bind:value={gitRef}
-              />
+
+          <div class="space-y-2.5 p-5">
+            {#each envRows as row, i}
+              <div class="flex items-center gap-2">
+                <Input
+                  class="font-mono"
+                  name="envKey"
+                  placeholder="KEY"
+                  type="text"
+                  bind:value={row.key}
+                />
+                <Input
+                  class="font-mono"
+                  name="envValue"
+                  placeholder="value"
+                  type="text"
+                  bind:value={row.value}
+                />
+                <Button
+                  aria-label="Remove"
+                  class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                  onclick={() => removeEnvRow(i)}
+                  size="icon-sm"
+                  variant="ghost"
+                >
+                  <Trash2 class="size-4" />
+                </Button>
+              </div>
+            {/each}
+
+            <div class="mt-1 flex items-center gap-4">
+              <Button class="h-auto p-0" onclick={addEnvRow} variant="link">
+                <Plus class="size-3.5" />
+                Add variable
+              </Button>
+              <EnvPasteButton onImport={importEnvRows} />
             </div>
-            <div>
-              <label class={label} for="gitDockerfilePath"
-              >Dockerfile path</label>
-              <Input
-                id="gitDockerfilePath"
-                name="gitDockerfilePath"
-                placeholder="Dockerfile"
-                type="text"
-                bind:value={gitDockerfilePath}
-              />
+          </div>
+        </section>
+
+        <!-- ═══ Step 4: Compute ═══ -->
+        <section
+          class="rounded-2xl border border-border bg-surface"
+          class:hidden={currentStep !== 3}
+        >
+          <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+            <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+              <Cpu class="size-4" />
             </div>
+            <h2 class="text-sm font-semibold text-text">Compute</h2>
           </div>
-          <div>
-            <label class={label} for="gitBuildContext">
-              Build context (subdirectory)
-            </label>
-            <Input
-              id="gitBuildContext"
-              name="gitBuildContext"
-              placeholder="Leave blank for repo root"
-              type="text"
-              bind:value={gitBuildContext}
-            />
-          </div>
-          <div>
-            <label class={label} for="buildCacheRegistryId">
-              Build cache registry
-            </label>
-            {#if data.buildCacheRegistries.length === 0}
-              <p class="text-xs text-text-muted">
-                No registries configured.
-                <a class="text-accent underline" href={resolve("/build-cache-registries")}>
-                  Add one
-                </a>
-                to speed up rebuilds by reusing unchanged layers.
-              </p>
-            {:else}
+          <div class="space-y-5 p-5">
+            <div>
+              <label class={label} for="restartPolicy"> Restart policy </label>
               <SelectRoot
-                name="buildCacheRegistryId"
+                name="restartPolicy"
                 type="single"
-                bind:value={buildCacheRegistryId}
+                bind:value={restartPolicy}
               >
-                <SelectTrigger id="buildCacheRegistryId">
-                  {buildCacheRegistryLabel}
+                <SelectTrigger class="w-full" id="restartPolicy">
+                  {restartPolicyLabel}
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem label="No cache" value="" />
-                  {#each data.buildCacheRegistries as reg (reg.id)}
-                    <SelectItem label={reg.name} value={reg.id} />
+                  {#each restartPolicyOptions as [val, lbl] (val)}
+                    <SelectItem label={lbl} value={val} />
                   {/each}
                 </SelectContent>
               </SelectRoot>
-            {/if}
-          </div>
-        {/if}
-      </div>
-    </section>
-
-    <!-- ═══ Step 1: Private registry (collapsible) ═══ -->
-    <section
-      class="rounded-2xl border border-border bg-surface"
-      class:hidden={currentStep !== 0}
-    >
-      <Button
-        class="h-auto w-full items-center justify-start gap-3 px-5 py-4 font-normal"
-        onclick={() => {
-          showRegistry = !showRegistry;
-        }}
-        variant="ghost"
-      >
-        <div class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
-          <Lock class="size-4" />
-        </div>
-        <div class="flex-1 text-left">
-          <h2 class="text-sm font-semibold text-text">Private registry</h2>
-          <p class="text-xs text-text-muted">
-            Only needed for non-public images.
-          </p>
-        </div>
-        <ChevronDown
-          class="
-            size-4 text-text-muted transition-transform {showRegistry
-            ? 'rotate-180'
-            : ''}
-          "
-        />
-      </Button>
-
-      {#if showRegistry}
-        <div class="space-y-4 border-t border-border p-5">
-          <div>
-            <label class={label} for="registryUrl"> Registry URL </label>
-            <Input
-              id="registryUrl"
-              name="registryUrl"
-              oninput={scheduleImageCheck}
-              placeholder="ghcr.io (blank = Docker Hub)"
-              type="text"
-              bind:value={registryUrl}
-            />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class={label} for="registryUsername"> Username </label>
-              <Input
-                id="registryUsername"
-                name="registryUsername"
-                type="text"
-                bind:value={registryUsername}
-              />
             </div>
-            <div>
-              <label class={label} for="registryPassword">
-                Password / token
-              </label>
-              <Input
-                id="registryPassword"
-                name="registryPassword"
-                type="password"
-              />
-            </div>
-          </div>
-        </div>
-      {/if}
-    </section>
 
-    <!-- ═══ Step 2: Networking ═══ -->
-    <section
-      class="rounded-2xl border border-border bg-surface"
-      class:hidden={currentStep !== 1}
-    >
-      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-          <Network class="size-4" />
-        </div>
-        <div>
-          <h2 class="text-sm font-semibold text-text">Networking</h2>
-          <p class="text-xs text-text-muted">
-            The port it listens on, and how it's routed.
-          </p>
-        </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class={label} for="cpuLimit"> CPU limit </label>
+                <Input
+                  id="cpuLimit"
+                  name="cpuLimit"
+                  placeholder="e.g. 0.5 (cores)"
+                  type="text"
+                  bind:value={cpuLimit}
+                />
+                {#if errors?.cpuLimit}
+                  <p class={errorClass}>{errors.cpuLimit[0]}</p>
+                {/if}
+              </div>
+              <div>
+                <label class={label} for="memoryLimitMb"> Memory limit (MB) </label>
+                <Input
+                  id="memoryLimitMb"
+                  min="1"
+                  name="memoryLimitMb"
+                  placeholder="e.g. 512"
+                  type="number"
+                  bind:value={memoryLimitMb}
+                />
+                {#if errors?.memoryLimitMb}
+                  <p class={errorClass}>{errors.memoryLimitMb[0]}</p>
+                {/if}
+              </div>
+            </div>
+            <p class="text-xs text-text-subtle">Leave blank for unlimited.</p>
+          </div>
+        </section>
       </div>
 
-      <div class="space-y-5 p-5">
+      <!-- ═══ Step nav ═══ -->
+      <div class="flex justify-between gap-3">
         <div>
-          <label class={label} for="containerPort">
-            Container port <span class="text-red-500">*</span>
-          </label>
-          <Input
-            id="containerPort"
-            max="65535"
-            min="1"
-            name="containerPort"
-            placeholder="3000"
-            required={currentStep === 1}
-            type="number"
-            bind:value={containerPort}
-          />
-          <p class="mt-1 text-xs text-text-subtle">
-            The port your app listens on inside the container.
-          </p>
-          {#if errors?.containerPort}
-            <p class={errorClass}>{errors.containerPort[0]}</p>
+          {#if currentStep > 0}
+            <Button onclick={goBack} variant="outline">
+              <ArrowLeft class="size-4" />
+              Back
+            </Button>
           {/if}
         </div>
-
-        <CheckBox
-          helperText="Get a public slug.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network. More networking controls (custom domain, auth gate) are on the service's Networking tab after it's created."
-          id="dnsResolvable"
-          label="DNS-resolvable"
-          name="dnsResolvable"
-          bind:checked={dnsResolvable}
-        />
-      </div>
-    </section>
-
-    <!-- ═══ Step 3: Environment ═══ -->
-    <section
-      class="rounded-2xl border border-border bg-surface"
-      class:hidden={currentStep !== 2}
-    >
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">Environment variables</h2>
-        <p class="text-xs text-text-muted">
-          Passed to the container at deploy time.
-        </p>
-      </div>
-
-      <div class="space-y-2.5 p-5">
-        {#each envRows as row, i}
-          <div class="flex items-center gap-2">
-            <Input
-              class="font-mono"
-              name="envKey"
-              placeholder="KEY"
-              type="text"
-              bind:value={row.key}
-            />
-            <Input
-              class="font-mono"
-              name="envValue"
-              placeholder="value"
-              type="text"
-              bind:value={row.value}
-            />
-            <Button
-              aria-label="Remove"
-              class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
-              onclick={() => removeEnvRow(i)}
-              size="icon-sm"
-              variant="ghost"
-            >
-              <Trash2 class="size-4" />
+        <div class="flex gap-3">
+          <Button href={resolve("/services")} variant="outline">
+            <X class="size-4" />
+            Cancel
+          </Button>
+          {#if currentStep < STEPS.length - 1}
+            <Button onclick={goNext}>
+              Next
+              <ArrowRight class="size-4" />
             </Button>
-          </div>
-        {/each}
-
-        <div class="mt-1 flex items-center gap-4">
-          <Button class="h-auto p-0" onclick={addEnvRow} variant="link">
-            <Plus class="size-3.5" />
-            Add variable
-          </Button>
-          <EnvPasteButton onImport={importEnvRows} />
+          {:else}
+            <Button
+              disabled={submittingAction !== null}
+              formaction="?/create"
+              onclick={() => {
+                submittingAction = "create";
+              }}
+              type="submit"
+              variant="outline"
+            >
+              {#if submittingAction === "create"}
+                <Spinner />
+                Creating…
+              {:else}
+                <Plus class="size-4" />
+                Create service
+              {/if}
+            </Button>
+            <Button
+              disabled={submittingAction !== null}
+              formaction="?/createAndDeploy"
+              onclick={() => {
+                submittingAction = "createAndDeploy";
+              }}
+              type="submit"
+            >
+              {#if submittingAction === "createAndDeploy"}
+                <Spinner />
+                Deploying…
+              {:else}
+                <Rocket class="size-4" />
+                Create and Deploy
+              {/if}
+            </Button>
+          {/if}
         </div>
-      </div>
-    </section>
-
-    <!-- ═══ Step 4: Compute ═══ -->
-    <section
-      class="rounded-2xl border border-border bg-surface"
-      class:hidden={currentStep !== 3}
-    >
-      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-          <Cpu class="size-4" />
-        </div>
-        <h2 class="text-sm font-semibold text-text">Compute</h2>
-      </div>
-      <div class="space-y-5 p-5">
-        <div>
-          <label class={label} for="restartPolicy"> Restart policy </label>
-          <SelectRoot
-            name="restartPolicy"
-            type="single"
-            bind:value={restartPolicy}
-          >
-            <SelectTrigger class="w-full" id="restartPolicy">
-              {restartPolicyLabel}
-            </SelectTrigger>
-            <SelectContent>
-              {#each restartPolicyOptions as [val, lbl] (val)}
-                <SelectItem label={lbl} value={val} />
-              {/each}
-            </SelectContent>
-          </SelectRoot>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class={label} for="cpuLimit"> CPU limit </label>
-            <Input
-              id="cpuLimit"
-              name="cpuLimit"
-              placeholder="e.g. 0.5 (cores)"
-              type="text"
-              bind:value={cpuLimit}
-            />
-            {#if errors?.cpuLimit}
-              <p class={errorClass}>{errors.cpuLimit[0]}</p>
-            {/if}
-          </div>
-          <div>
-            <label class={label} for="memoryLimitMb"> Memory limit (MB) </label>
-            <Input
-              id="memoryLimitMb"
-              min="1"
-              name="memoryLimitMb"
-              placeholder="e.g. 512"
-              type="number"
-              bind:value={memoryLimitMb}
-            />
-            {#if errors?.memoryLimitMb}
-              <p class={errorClass}>{errors.memoryLimitMb[0]}</p>
-            {/if}
-          </div>
-        </div>
-        <p class="text-xs text-text-subtle">Leave blank for unlimited.</p>
-      </div>
-    </section>
-
-    <!-- ═══ Step nav ═══ -->
-    <div class="flex justify-between gap-3">
-      <div>
-        {#if currentStep > 0}
-          <Button onclick={goBack} variant="outline">
-            <ArrowLeft class="size-4" />
-            Back
-          </Button>
-        {/if}
-      </div>
-      <div class="flex gap-3">
-        <Button href={resolve("/services")} variant="outline">Cancel</Button>
-        {#if currentStep < STEPS.length - 1}
-          <Button onclick={goNext}>
-            Next
-            <ArrowRight class="size-4" />
-          </Button>
-        {:else}
-          <Button disabled={submitting} type="submit">
-            {#if submitting}
-              <Spinner />
-              Creating…
-            {:else}
-              Create service
-            {/if}
-          </Button>
-        {/if}
       </div>
     </div>
   </form>

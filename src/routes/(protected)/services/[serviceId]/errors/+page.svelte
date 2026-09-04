@@ -1,16 +1,30 @@
 <script lang="ts">
-	import { AlertTriangle, ChevronDown } from "@lucide/svelte";
+	import { AlertTriangle, ChevronDown, Ghost, Loader2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
+	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
 
-	const { data } = $props();
+	const { data, form } = $props();
 
 	onMount(() => title.set(`${data.service.name} · Errors`));
 
 	let expandedDeploymentId = $state<string | null>(null);
+	let resolving = $state(false);
+
+	$effect(() => {
+		if (!form) {
+			return;
+		}
+		resolving = false;
+		if (!form.success) {
+			toast.error(form.error ?? "Couldn't resolve the orphaned container.");
+		}
+	});
 </script>
 
 {#if data.service.currentStatus === "failed"}
@@ -29,6 +43,31 @@
         tab for the crash output.
       </p>
     </div>
+  </div>
+{:else if data.service.currentStatus === "missing"}
+  <div class="mb-6 flex items-start gap-3 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300">
+    <Ghost class="mt-0.5 size-4 shrink-0" />
+    <div class="flex-1">
+      <p class="font-medium">This service's container is gone.</p>
+      <p class="mt-0.5 text-xs opacity-80">
+        Homerun can't find it on the host anymore, it was likely removed
+        manually (e.g. `docker rm`) rather than through this app. Resolve to
+        clear the stale reference so you can deploy it again.
+      </p>
+    </div>
+    <form action="?/resolveOrphan" method="POST" use:enhance={() => {
+      resolving = true;
+      return async ({ update }) => {
+        await update();
+      };
+    }}>
+      <Button disabled={resolving} size="sm" type="submit" variant="outline">
+        {#if resolving}
+          <Loader2 class="size-3.5 animate-spin" />
+        {/if}
+        Resolve
+      </Button>
+    </form>
   </div>
 {/if}
 

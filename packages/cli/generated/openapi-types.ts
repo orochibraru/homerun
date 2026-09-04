@@ -348,7 +348,8 @@ export interface operations {
 							| "starting"
 							| "running"
 							| "stopped"
-							| "failed";
+							| "failed"
+							| "missing";
 						customDomain: string | null;
 						customSslCertEnc: string | null;
 						customSslKeyEnc: string | null;
@@ -479,7 +480,8 @@ export interface operations {
 							| "starting"
 							| "running"
 							| "stopped"
-							| "failed";
+							| "failed"
+							| "missing";
 						customDomain: string | null;
 						customSslCertEnc: string | null;
 						customSslKeyEnc: string | null;
@@ -599,7 +601,8 @@ export interface operations {
 							| "starting"
 							| "running"
 							| "stopped"
-							| "failed";
+							| "failed"
+							| "missing";
 						customDomain: string | null;
 						customSslCertEnc: string | null;
 						customSslKeyEnc: string | null;
@@ -781,7 +784,8 @@ export interface operations {
 							| "starting"
 							| "running"
 							| "stopped"
-							| "failed";
+							| "failed"
+							| "missing";
 						customDomain: string | null;
 						customSslCertEnc: string | null;
 						customSslKeyEnc: string | null;

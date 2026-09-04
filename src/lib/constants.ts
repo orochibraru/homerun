@@ -4,6 +4,7 @@ import {
 	CheckCircle,
 	Clock,
 	Database,
+	Ghost,
 	Loader2,
 	Lock,
 	Table,
@@ -20,6 +21,12 @@ export const SERVICE_STATUS_CONFIG: Record<
 		class: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 		icon: XCircle,
 		label: "Failed",
+	},
+	missing: {
+		class:
+			"bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+		icon: Ghost,
+		label: "Missing",
 	},
 	pending: {
 		class: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",

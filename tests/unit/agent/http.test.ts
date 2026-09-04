@@ -7,7 +7,10 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
-import { DockerService } from "../../../packages/agent/docker";
+import {
+	ContainerNotFoundError,
+	DockerService,
+} from "../../../packages/agent/docker";
 import { AgentHttpServer } from "../../../packages/agent/http";
 import { SystemStatsService } from "../../../packages/agent/stats";
 import { AGENT_VERSION } from "../../../packages/agent/version";
@@ -330,5 +333,14 @@ describe("routes", () => {
 		const res = await handle(req("/v1/containers/abc", { authed: true }));
 		expect(res.status).toBe(500);
 		expect(await res.json()).toEqual({ error: "inspect boom" });
+	});
+
+	test("a ContainerNotFoundError from inspectStatus surfaces as a 404", async () => {
+		mocks.inspectStatus.mockImplementationOnce(async () => {
+			throw new ContainerNotFoundError("No such container: abc");
+		});
+		const res = await handle(req("/v1/containers/abc", { authed: true }));
+		expect(res.status).toBe(404);
+		expect(await res.json()).toEqual({ error: "No such container: abc" });
 	});
 });

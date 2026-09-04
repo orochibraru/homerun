@@ -34,6 +34,8 @@ function logLine(prefix: string, line: string): void {
 	console.log(`[${prefix}] ${line}`);
 }
 
+export class ContainerNotFoundError extends Error {}
+
 export interface ContainerStatus {
 	id: string;
 	// The container's exit code when it isn't running, null while running :
@@ -192,7 +194,15 @@ class AgentDockerService {
 	}
 
 	async inspectStatus(id: string): Promise<ContainerStatus> {
-		const info = await this.getDocker().getContainer(id).inspect();
+		let info: Awaited<ReturnType<Docker.Container["inspect"]>>;
+		try {
+			info = await this.getDocker().getContainer(id).inspect();
+		} catch (error) {
+			if ((error as { statusCode?: number } | null)?.statusCode === 404) {
+				throw new ContainerNotFoundError(`No such container: ${id}`);
+			}
+			throw error;
+		}
 		return {
 			exitCode: info.State.Running ? null : info.State.ExitCode,
 			id: info.Id,

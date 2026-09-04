@@ -8,4 +8,5 @@ export type ContainerStatus =
 	| "starting"
 	| "running"
 	| "stopped"
-	| "failed";
+	| "failed"
+	| "missing";

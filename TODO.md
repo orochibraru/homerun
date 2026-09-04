@@ -1,9 +1,17 @@
 # TODO
 
+## Small
+
+- [ ] {Needs the feature on line 11 before} Add a huge list of popular
+      self-hosted apps as templates,
+      [use this](https://raw.githubusercontent.com/awesome-selfhosted/awesome-selfhosted/refs/heads/master/README.md)
+      as a source
+
 ## Medium
 
-- [ ] [APP] Docker cleanup methods via UI (docker prune for system (all), image,
-      container...)
+- [ ] [App] A template should be linkable to other containers. Either a
+      Database, A cache service or something else completely (a worker container
+      perhaps)
 - [ ] [CI/CD] Since we already build & tag docker images in PRs, it's safe to
       assume that the last built image is healthy which means we're re-building
       one for nothing in the main CI when merged. We could just re-tag it. On

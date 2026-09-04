@@ -2,9 +2,10 @@
 
 Homerun is configured three ways: a few env vars (read once at boot, needed
 before anything else is reachable), a YAML config file (`homerun.yaml`, read
-once at boot), and a `/settings` page (admin-only, DB-backed, live, no restart
-needed). Most YAML settings are also live-editable from `/settings`; a
-`null`/unset DB value falls back to the file default.
+once at boot), and `/settings` (admin-only, DB-backed, live, no restart needed),
+a set of pages, one per tab (General, Docker, Networking, Email, Authentication)
+rather than one long page. Most YAML settings are also live-editable from
+`/settings`; a `null`/unset DB value falls back to the file default.
 
 ## Env-only
 
@@ -26,28 +27,29 @@ The file has a `$schema` comment (`homerun.schema.json`, generated from the same
 zod schema that validates it, `bun run gen`) so an editor with a
 YAML-language-server extension gets linting/autocomplete for free.
 
-| Key                                                  | Default                                                | `/settings` section                                                                                                          |
+| Key                                                  | Default                                                | `/settings` tab                                                                                                              |
 | ---------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `baseDomain`                                         | `localhost`                                            | Core, the domain deployed services get subdomained under (`<slug>.<baseDomain>`)                                             |
-| `auth.origin`                                        | _(derived per-request)_                                | Core, this app's own public origin                                                                                           |
-| `auth.crossSubdomainCookies`                         | `false`                                                | Core, scopes the session cookie to `.baseDomain`; see [Users & access](users-and-access.md) before enabling                  |
-| `authCheckUrl`                                       | `http://host.docker.internal:<PORT>/api/v1/auth-check` | Core, where Traefik's forwardAuth middleware checks a gated service's login state                                            |
+| `baseDomain`                                         | `localhost`                                            | General, the domain deployed services get subdomained under (`<slug>.<baseDomain>`)                                          |
+| `auth.origin`                                        | _(derived per-request)_                                | General, this app's own public origin                                                                                        |
+| `auth.crossSubdomainCookies`                         | `false`                                                | General, scopes the session cookie to `.baseDomain`; see [Users & access](users-and-access.md) before enabling               |
+| `authCheckUrl`                                       | `http://host.docker.internal:<PORT>/api/v1/auth-check` | General, where Traefik's forwardAuth middleware checks a gated service's login state                                         |
 | `docker.socketPath`                                  | auto-detected                                          | Docker                                                                                                                       |
 | `docker.networkName`                                 | `homerun`                                              | Docker                                                                                                                       |
-| `traefik.entrypoint`                                 | `websecure`                                            | Traefik                                                                                                                      |
-| `traefik.certResolver`                               | `letsencrypt`                                          | Traefik                                                                                                                      |
-| `traefik.dynamicConfigDir`                           | _(unset, feature is a no-op until set)_                | Traefik, see [Services: custom domains & SSL](services.md#custom-domains--ssl)                                               |
-| `traefik.acmeEmail`                                  | _(unset)_                                              | Traefik, informational mirror only, see below                                                                                |
+| `traefik.entrypoint`                                 | `websecure`                                            | Networking                                                                                                                   |
+| `traefik.certResolver`                               | `letsencrypt`                                          | Networking                                                                                                                   |
+| `traefik.dynamicConfigDir`                           | _(unset, feature is a no-op until set)_                | Networking, see [Services: custom domains & SSL](services.md#custom-domains--ssl)                                            |
+| `traefik.acmeEmail`                                  | _(unset)_                                              | Networking, informational mirror only, see below                                                                             |
 | `smtp.enabled`                                       | `false`                                                | Email                                                                                                                        |
 | `smtp.host`/`port`/`user`/`password`/`secure`/`from` | _(unset)_                                              | Email, all required together for `smtp.enabled: true` to take effect; a partial config is treated as disabled with a warning |
-| `auth.oauthProviders`                                | `[]`                                                   | Also editable from `/settings`, see [Users & access](users-and-access.md)                                                    |
+| `auth.oauthProviders`                                | `[]`                                                   | Authentication, see [Users & access](users-and-access.md)                                                                    |
 | `logLevel`                                           | `info`                                                 | `debug` \| `info` \| `warn` \| `error`                                                                                       |
 | `logFormat`                                          | `console`                                              | `console` \| `json`                                                                                                          |
 
-Orchestration mode and both DNS integrations (Cloudflare and Pangolin) have **no
-file form at all**, they're added, edited, and removed only from `/settings`,
-secrets among them stored encrypted the same way `registryPasswordEnc` is, on
-the singleton `instance_settings` row.
+Orchestration mode/autoscaling (Docker tab) and both DNS integrations,
+Cloudflare and Pangolin (Networking tab), have **no file form at all**, they're
+added, edited, and removed only from `/settings`, secrets among them stored
+encrypted the same way `registryPasswordEnc` is, on the singleton
+`instance_settings` row.
 
 ## Compose-only variables
 
@@ -66,10 +68,12 @@ has no notion of this app's YAML file:
 ## First-run wizard vs. `/settings`
 
 The onboarding wizard (see [Getting started](getting-started.md#first-boot))
-sets exactly the Core / Docker / Traefik / Email sections above, once, on a
-fresh instance, it calls the same `InstanceSettingsDTO` methods `/settings`
-does, so there's nothing the wizard does that isn't also reachable (and
-re-editable) from `/settings` afterward.
+sets exactly the Core / Docker / Traefik / Email fields above, once, on a fresh
+instance, across its own Core/Docker/Traefik/Email/Review steps (which predate,
+and aren't the same thing as, the `/settings` General/Docker/
+Networking/Email/Authentication tabs above). It calls the same
+`InstanceSettingsDTO` methods `/settings` does, so there's nothing the wizard
+does that isn't also reachable (and re-editable) from `/settings` afterward.
 
 ## A note on lockout
 
@@ -80,3 +84,13 @@ plain page load. `/settings`' OAuth save action now validates the discovery URL
 before persisting anything, and session lookups degrade to "signed out" instead
 of a hard 500 on any other auth-context failure, but if you're editing
 `instance_settings` by hand (not through `/settings`), keep this in mind.
+
+## Docker Cleanup
+
+`/docker-cleanup` (admin-only) is host-wide Docker housekeeping from the
+dashboard, unlike everything else above it isn't scoped to containers Homerun
+created. It previews what's reclaimable, unused images, stopped containers,
+unreferenced volumes, unused networks, unused build cache, before you prune, and
+lets you prune each category individually or all at once ("Run system prune").
+There's no confirmation dialog beyond the preview itself, review what's listed
+before clicking a prune button.
