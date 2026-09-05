@@ -11,7 +11,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List projects */
+		/**
+		 * List projects
+		 * @description Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.
+		 */
 		get: operations["get_projects"];
 		put?: never;
 		/** Create a project */
@@ -29,7 +32,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List services */
+		/**
+		 * List services
+		 * @description Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.
+		 */
 		get: operations["get_services"];
 		put?: never;
 		/**
@@ -160,7 +166,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List templates usable by the caller */
+		/**
+		 * List templates usable by the caller
+		 * @description Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.
+		 */
 		get: operations["get_templates"];
 		put?: never;
 		post?: never;
@@ -184,7 +193,14 @@ export type $defs = Record<string, never>;
 export interface operations {
 	get_projects: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 100) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -312,7 +328,14 @@ export interface operations {
 	};
 	get_services: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 100) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -1161,7 +1184,14 @@ export interface operations {
 	};
 	get_templates: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 100) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;

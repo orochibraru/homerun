@@ -23,7 +23,37 @@
 	"paths": {
 		"/projects": {
 			"get": {
+				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
 				"operationId": "get_projects",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 100)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
 				"responses": {
 					"200": {
 						"content": {
@@ -114,6 +144,7 @@
 			},
 			"post": {
 				"operationId": "post_projects",
+				"parameters": [],
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -264,7 +295,37 @@
 		},
 		"/services": {
 			"get": {
+				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
 				"operationId": "get_services",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 100)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
 				"responses": {
 					"200": {
 						"content": {
@@ -620,6 +681,7 @@
 			"post": {
 				"description": "Persists config only : does not deploy. Call POST /services/{serviceId}/deploy afterward to actually pull/build and start it.",
 				"operationId": "post_services",
+				"parameters": [],
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -2517,6 +2579,7 @@
 		"/system-stats": {
 			"get": {
 				"operationId": "get_system_stats",
+				"parameters": [],
 				"responses": {
 					"200": {
 						"content": {
@@ -2647,7 +2710,37 @@
 		},
 		"/templates": {
 			"get": {
+				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
 				"operationId": "get_templates",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 100)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
 				"responses": {
 					"200": {
 						"content": {

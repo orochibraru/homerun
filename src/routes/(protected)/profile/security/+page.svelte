@@ -14,6 +14,7 @@
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import * as Dialog from "$lib/components/ui/dialog/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import {
@@ -82,7 +83,7 @@
 	// ──────────────────────────────────────────────────────────────
 	// Delete account
 	// ──────────────────────────────────────────────────────────────
-	let showDeleteConfirm = $state(false);
+	let deleteDialogOpen = $state(false);
 	let deletePassword = $state("");
 	let deleteLoading = $state(false);
 	let showDeletePassword = $state(false);
@@ -99,6 +100,7 @@
 				deletePassword = "";
 				throw new Error(error.message ?? "Could not delete account.");
 			}
+			deleteDialogOpen = false;
 			goto(resolve("/"));
 		} finally {
 			deleteLoading = false;
@@ -298,85 +300,89 @@
     </div>
 
     <div class="p-5">
-      {#if !showDeleteConfirm}
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <p class="text-sm font-medium text-text">Delete account</p>
-            <p class="mt-0.5 text-xs text-text-muted">
-              Permanently removes your account, all your services, and their
-              deployment history. This cannot be undone.
-            </p>
-          </div>
-          <Button
-            class="shrink-0 border-red-300 text-red-600 hover:bg-red-500 hover:text-white dark:border-red-700/60"
-            onclick={() => {
-              showDeleteConfirm = true;
-            }}
-            variant="outline"
-          >
-            Delete account
-          </Button>
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p class="text-text text-sm font-medium">Delete account</p>
+          <p class="text-text-muted mt-0.5 text-xs">
+            Permanently removes your account, all your services, and their
+            deployment history. This cannot be undone.
+          </p>
         </div>
-      {:else}
-        <form class="space-y-4" onsubmit={deleteAccount}>
-          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
-            <p class="font-semibold">Are you absolutely sure?</p>
-            <p class="mt-1">
-              Enter your current password to confirm deletion. All data will be
-              permanently erased.
-            </p>
-          </div>
-
-          <div class="relative">
-            <Input
-              class="pr-11"
-              placeholder="Confirm your password"
-              required
-              type={showDeletePassword ? "text" : "password"}
-              bind:value={deletePassword}
-            />
-            <Button
-              class="absolute top-1/2 right-1.5 -translate-y-1/2"
-              onclick={() => {
-                showDeletePassword = !showDeletePassword;
-              }}
-              size="icon-sm"
-              variant="ghost"
-            >
-              {#if showDeletePassword}
-                <EyeOff class="size-4" />
-              {:else}
-                <Eye class="size-4" />
-              {/if}
-            </Button>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <Button
-              onclick={() => {
-                showDeleteConfirm = false;
-                deletePassword = "";
-              }}
-              variant="outline"
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={deleteLoading || !deletePassword}
-              type="submit"
-              variant="destructive"
-            >
-              {#if deleteLoading}
-                <Spinner />
-                Deleting…
-              {:else}
-                <Trash2 class="size-4" />
-                Yes, delete my account
-              {/if}
-            </Button>
-          </div>
-        </form>
-      {/if}
+        <Button
+          class="shrink-0 border-red-300 text-red-600 hover:bg-red-500 hover:text-white dark:border-red-700/60"
+          onclick={() => {
+            deletePassword = "";
+            deleteDialogOpen = true;
+          }}
+          variant="outline"
+        >
+          <Trash2 class="size-4" />
+          Delete account
+        </Button>
+      </div>
     </div>
   </section>
 </div>
+
+<Dialog.Root bind:open={deleteDialogOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Delete your account</Dialog.Title>
+      <Dialog.Description>
+        This permanently removes your account, every service you own, their
+        containers, and all deployment history. It cannot be undone.
+      </Dialog.Description>
+    </Dialog.Header>
+    <form class="space-y-4" onsubmit={deleteAccount}>
+      <div class="relative">
+        <Input
+          class="pr-11"
+          placeholder="Confirm your password"
+          required
+          type={showDeletePassword ? "text" : "password"}
+          bind:value={deletePassword}
+        />
+        <Button
+          class="absolute top-1/2 right-1.5 -translate-y-1/2"
+          onclick={() => {
+            showDeletePassword = !showDeletePassword;
+          }}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          {#if showDeletePassword}
+            <EyeOff class="size-4" />
+          {:else}
+            <Eye class="size-4" />
+          {/if}
+        </Button>
+      </div>
+      <Dialog.Footer>
+        <Button
+          onclick={() => {
+            deleteDialogOpen = false;
+            deletePassword = "";
+          }}
+          type="button"
+          variant="outline"
+        >
+          Cancel
+        </Button>
+        <Button
+          disabled={deleteLoading || !deletePassword}
+          type="submit"
+          variant="destructive"
+        >
+          {#if deleteLoading}
+            <Spinner />
+            Deleting…
+          {:else}
+            <Trash2 class="size-4" />
+            Delete my account
+          {/if}
+        </Button>
+      </Dialog.Footer>
+    </form>
+  </Dialog.Content>
+</Dialog.Root>

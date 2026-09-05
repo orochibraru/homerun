@@ -1,10 +1,15 @@
-import { count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import type { User } from "$lib/server/db/schema";
 import * as schema from "$lib/server/db/schema";
 import { user as userTable } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
 import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("UserCleanup");
@@ -113,6 +118,38 @@ class UserServiceClass {
 	 */
 	async listUsers(): Promise<User[]> {
 		return await db.select().from(userTable).orderBy(desc(userTable.createdAt));
+	}
+
+	/** One page of `listUsers`, searched/filtered server-side, plus the unpaged total. */
+	async listUsersPaged(query: ListQuery): Promise<PagedResult<User>> {
+		const conditions: SQL[] = [];
+		const search = searchCondition(query.q, [userTable.name, userTable.email]);
+		if (search) {
+			conditions.push(search);
+		}
+		const roles = query.filters.role;
+		if (roles && roles.length > 0) {
+			conditions.push(inArray(userTable.role, roles));
+		}
+		const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [rows, totals] = await Promise.all([
+			db
+				.select()
+				.from(userTable)
+				.where(where)
+				.orderBy(desc(userTable.createdAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(userTable).where(where),
+		]);
+
+		return {
+			items: rows,
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
 	}
 
 	async countAdmins(): Promise<number> {

@@ -8,6 +8,24 @@ Deploy**, persists the config and immediately deploys it, landing you on the new
 service's Overview tab; **Create service**, the secondary button, just persists
 the config, the same as before, deploy later from the Overview tab yourself.
 
+## The services list
+
+`Services` has a search box (matches name, image, and domain) plus Status/
+Project filters, and a list/card view toggle that remembers your choice per
+browser; both the search and filters are applied on the server, so they reach
+every service you own, not just whichever page happens to be on screen. Once you
+have more than a page's worth, a pager at the bottom shows "26–50 of 60" and
+lets you step through the rest. Check one or more services (a "select all"
+scopes to whatever's on the **current page**, paginating or changing the
+search/filters clears your selection) to bring up a bottom bar with bulk
+Start/Stop/Restart/Delete: bulk actions run against every selected service and
+report back which ones succeeded, so one service with no container yet doesn't
+block the rest. Bulk delete, and the single-row delete on this page and the
+danger-zone delete on a service's own Settings tab, all require typing a
+confirmation phrase (the service's name for a single delete, `delete N services`
+for a bulk one) before the button unlocks, an irreversible action gets a real
+"are you sure" rather than a single click.
+
 ## Deploy source: image or git repo
 
 Every service is either:
@@ -222,7 +240,8 @@ delete it.
 
 Name, slug, restart policy, which project the service belongs to, which
 [remote host](remote-hosts-and-agent.md) it deploys to, save-as-template, the
-cron schedule above, and a danger-zone delete.
+cron schedule above, and a danger-zone delete (typed-confirm, see
+[The services list](#the-services-list) above).
 
 ## Next steps
 

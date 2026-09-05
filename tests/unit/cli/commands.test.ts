@@ -17,8 +17,12 @@ function fakeClient(overrides: {
 	} as unknown as Client;
 }
 
-function okResponse<T>(data: T) {
-	return { data, error: undefined, response: { ok: true, status: 200 } };
+function okResponse<T>(data: T, headers: Record<string, string> = {}) {
+	return {
+		data,
+		error: undefined,
+		response: { headers: new Headers(headers), ok: true, status: 200 },
+	};
 }
 
 function errResponse(status: number, statusText: string, error: unknown) {
@@ -60,9 +64,11 @@ describe("Commands.servicesList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await Commands.servicesList(client, true);
+		await Commands.servicesList(client, { json: true });
 
-		expect(GET).toHaveBeenCalledWith("/services");
+		expect(GET).toHaveBeenCalledWith("/services", {
+			params: { query: {} },
+		});
 		expect(printJsonSpy).toHaveBeenCalled();
 		expect(printTableSpy).not.toHaveBeenCalled();
 	});
@@ -83,7 +89,7 @@ describe("Commands.servicesList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await Commands.servicesList(client, false);
+		await Commands.servicesList(client, { json: false });
 
 		expect(printTableSpy).toHaveBeenCalledWith(
 			[
@@ -108,7 +114,7 @@ describe("Commands.servicesList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await expect(Commands.servicesList(client, true)).rejects.toThrow(
+		await expect(Commands.servicesList(client, { json: true })).rejects.toThrow(
 			FailCalled,
 		);
 		expect(failSpy).toHaveBeenCalledWith('404 Not Found: {"error":"nope"}');
@@ -156,7 +162,7 @@ describe("Commands.projectsList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await Commands.projectsList(client, false);
+		await Commands.projectsList(client, { json: false });
 
 		expect(printTableSpy).toHaveBeenCalledWith(
 			[{ id: "p1", name: "Project One", slug: "project-one" }],
@@ -173,7 +179,7 @@ describe("Commands.templatesList", () => {
 		);
 		const client = fakeClient({ GET });
 
-		await Commands.templatesList(client, false);
+		await Commands.templatesList(client, { json: false });
 
 		expect(printTableSpy).toHaveBeenCalledWith(
 			[{ id: "t1", image: "redis:7", name: "Redis" }],

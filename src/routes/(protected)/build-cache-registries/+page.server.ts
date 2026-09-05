@@ -2,13 +2,21 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { Logger } from "$lib/logger";
+import { parseListQuery } from "$lib/server/list-query";
 
 const logger = new Logger("BuildCacheRegistries");
 
-export const load = async ({ parent }) => {
+export const load = async ({ parent, url }) => {
 	const { user } = await parent();
-	const registries = await BuildCacheRegistryDTO.list(user.id);
-	return { registries: registries.map((r) => r.toJSON()) };
+	const query = parseListQuery(url);
+	const paged = await BuildCacheRegistryDTO.listPaged(user.id, query);
+	return {
+		filtered: query.active,
+		page: paged.page,
+		perPage: paged.perPage,
+		registries: paged.items.map((r) => r.toJSON()),
+		total: paged.total,
+	};
 };
 
 export const actions = {

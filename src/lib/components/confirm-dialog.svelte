@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Dialog from "$lib/components/ui/dialog/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
 
 	let {
 		open = $bindable(false),
@@ -8,6 +9,7 @@
 		description,
 		confirmLabel = "Confirm",
 		cancelLabel = "Cancel",
+		confirmPhrase,
 		destructive = true,
 		onConfirm,
 	}: {
@@ -16,11 +18,32 @@
 		description?: string;
 		confirmLabel?: string;
 		cancelLabel?: string;
+		confirmPhrase?: string;
 		// Styles the confirm button red : off for confirmations that aren't
 		// destructive (e.g. "restart Traefik").
 		destructive?: boolean;
 		onConfirm: () => void;
 	} = $props();
+
+	let typed = $state("");
+
+	$effect(() => {
+		if (open) {
+			typed = "";
+		}
+	});
+
+	const blocked = $derived(
+		confirmPhrase !== undefined && typed.trim() !== confirmPhrase,
+	);
+
+	function confirm() {
+		if (blocked) {
+			return;
+		}
+		open = false;
+		onConfirm();
+	}
 </script>
 
 <!--
@@ -40,6 +63,27 @@
         <Dialog.Description>{description}</Dialog.Description>
       {/if}
     </Dialog.Header>
+    {#if confirmPhrase !== undefined}
+      <div class="space-y-2">
+        <p class="text-text-muted text-sm">
+          Type
+          <span class="text-text font-mono font-semibold">{confirmPhrase}</span>
+          to confirm.
+        </p>
+        <Input
+          aria-label="Type {confirmPhrase} to confirm"
+          autocomplete="off"
+          onkeydown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              confirm();
+            }
+          }}
+          placeholder={confirmPhrase}
+          bind:value={typed}
+        />
+      </div>
+    {/if}
     <Dialog.Footer>
       <Button
         onclick={() => {
@@ -51,10 +95,8 @@
         {cancelLabel}
       </Button>
       <Button
-        onclick={() => {
-          open = false;
-          onConfirm();
-        }}
+        disabled={blocked}
+        onclick={confirm}
         type="button"
         variant={destructive ? "destructive" : "default"}
       >

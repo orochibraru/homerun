@@ -5,7 +5,11 @@
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import EntityToolbar, {
+		type FilterGroup,
+	} from "$lib/components/entity-toolbar.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
+	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
@@ -15,6 +19,17 @@
 	const { data, form } = $props();
 
 	onMount(() => title.set("Remote Hosts"));
+
+	const filters: FilterGroup[] = [
+		{
+			key: "kind",
+			label: "Connection",
+			options: [
+				{ label: "Docker socket", value: "docker" },
+				{ label: "Homerun Agent", value: "agent" },
+			],
+		},
+	];
 
 	let showTls = $state(false);
 	let submitting = $state(false);
@@ -47,7 +62,7 @@
     </Button>
   </div>
 
-  {#if data.hosts.length === 0}
+  {#if data.total === 0 && !data.filtered}
     <EmptyState
       icon={Server}
       subtitle="Every service deploys to this host until you add one."
@@ -59,6 +74,13 @@
       </Button>
     </EmptyState>
   {:else}
+    <EntityToolbar {filters} placeholder="Search hosts by name or address…" />
+
+    {#if data.hosts.length === 0}
+      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+        <p class="text-text-muted text-sm">No hosts match your filters.</p>
+      </div>
+    {:else}
     <div class="space-y-3">
       {#each data.hosts as host (host.id)}
         <div class="glass flex items-center gap-4 rounded-2xl p-5">
@@ -128,6 +150,13 @@
         </div>
       {/each}
     </div>
+    <Pagination
+      label="hosts"
+      page={data.page}
+      perPage={data.perPage}
+      total={data.total}
+    />
+    {/if}
   {/if}
 </div>
 

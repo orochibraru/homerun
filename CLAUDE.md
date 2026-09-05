@@ -425,16 +425,19 @@ yet built).
 
 - `service-dto.ts`, `ServiceDTO`:
   `get`/`list`/`listByProject`/`listWithProjectNames` (joins in `project.name`
-  for the grouped services list)/`slugTaken`/`create`/`update`/`delete`.
+  for the grouped services list)/`listWithProjectNamesPaged`/
+  `listFilterFacets`/`slugTaken`/`create`/`update`/`delete`. See Server-side
+  list pagination below for the paged/faceted pair.
 - `project-dto.ts`, `ProjectDTO`:
-  `get`/`list`/`listWithServiceCounts`/`create`/`update`/`delete` (row-only)
-  /`cascadeDelete()` (stops+removes every member container, deletes
-  deployments/services, deletes the project row, then removes the project's
-  Docker network, the real "delete a project" operation, see
+  `get`/`list`/`listWithServiceCounts`/`listWithServiceCountsPaged`/`create`/
+  `update`/`delete` (row-only) /`cascadeDelete()` (stops+removes every member
+  container, deletes deployments/services, deletes the project row, then removes
+  the project's Docker network, the real "delete a project" operation, see
   `projects/[projectId]/+page.server.ts`'s `delete` action).
 - `template-dto.ts`, `TemplateDTO`: `usable(id, userId)` (built-in OR owned, for
   deploy-from-template), `owned(id, userId)` (owned only), `listForUser`,
-  `create`. Built-ins have `ownerId: null` and are seeded on boot (see below).
+  `listPaged(userId, "builtin" | "mine", query)`, `listCategories`, `create`.
+  Built-ins have `ownerId: null` and are seeded on boot (see below).
 - `template-link-dto.ts`, `TemplateLinkDTO`: `listForTemplate(templateId)`
   (joined with the linked template's own image/tag/port/envVars/resources, for
   both display and for actually deploying it), `countForTemplate`, `create`,
@@ -443,27 +446,29 @@ yet built).
   `get`/`listForService`/`listRecentForUser` (joins in service name/slug, for
   the dashboard)/`create`/`update`/`appendLog(line)` (appends to the live
   progress log, see below).
-- `storage-volume-dto.ts`, `StorageVolumeDTO`: `get`/`list`/`create`/`delete`,
-  for the `/storage` page's volume sources.
+- `storage-volume-dto.ts`, `StorageVolumeDTO`:
+  `get`/`list`/`listPaged`/`create`/`delete`, for the `/storage` page's volume
+  sources.
 - `service-volume-dto.ts`, `ServiceVolumeDTO`: `listForService` (joined with the
   volume's name/kind/source), `attach`/`detach`, the mounts of a StorageVolume
   into a service, shown on the service's Volumes tab.
 - `remote-host-dto.ts`, `RemoteHostDTO`:
-  `get`/`list`/`create`/`update`/`delete`, `toConnection()` (decrypts TLS
-  material into what `DockerService.getDocker()` wants), and the static
-  `connectionFor(svc, userId)` helper every route/module uses instead of calling
-  `getDocker()` bare, see Remote hosts below.
+  `get`/`list`/`listPaged`/`create`/`update`/`delete`, `toConnection()`
+  (decrypts TLS material into what `DockerService.getDocker()` wants), and the
+  static `connectionFor(svc, userId)` helper every route/module uses instead of
+  calling `getDocker()` bare, see Remote hosts below.
 - `s3-destination-dto.ts`, `S3DestinationDTO`:
-  `get`/`list`/`create`/`update`/`delete`, plus `decryptSecretAccessKey()` (for
-  the S3 client only, never a `load` return value), a named, reusable S3 target
-  several volumes can share, see S3 backups below.
+  `get`/`list`/`listPaged`/`create`/`update`/`delete`, plus
+  `decryptSecretAccessKey()` (for the S3 client only, never a `load` return
+  value), a named, reusable S3 target several volumes can share, see S3 backups
+  below.
 - `backup-run-dto.ts`, `BackupRunDTO`: `create`/`finish`/`listForVolume`/
-  `listForUser` (joins in the volume's name), one row per backup attempt, the
-  history behind `/backups`.
+  `listForUser`/`listForUserPaged` (joins in the volume's name), one row per
+  backup attempt, the history behind `/backups`.
 - `build-cache-registry-dto.ts`, `BuildCacheRegistryDTO`:
-  `get`/`list`/`create`/`delete`, a per-user registry credential a git-build
-  pulls its `--cache-from` image from and pushes fresh layers back to, see
-  Git-based builds below.
+  `get`/`list`/`listPaged`/`create`/`delete`, a per-user registry credential a
+  git-build pulls its `--cache-from` image from and pushes fresh layers back to,
+  see Git-based builds below.
 - `git-connection-dto.ts`, `GitConnectionDTO`: one user's OAuth authorization
   against one configured git provider, see Git provider connections below.
 - `app-log-dto.ts`, `notification-dto.ts`, `user-preferences-dto.ts`,
@@ -474,6 +479,62 @@ yet built).
 SvelteKit serializes `load` return values with devalue, which can't serialize a
 class instance. Every `load` maps DTOs to plain objects via `.toJSON()` (or
 `.map(d => d.toJSON())`) before returning.
+
+### Server-side list pagination (`$lib/server/list-query.ts`, `$lib/server/api-pagination.ts`)
+
+Every list page, and the three paginated REST endpoints below, share one
+query-parsing layer instead of loading a user's entire table and
+searching/filtering it in memory, which is what every list page (and the
+services list's status-sync loop, see below) used to do, and what a handful of
+history views (`/backups`) silently truncated to their newest N rows instead of
+paging through.
+
+- `list-query.ts`'s `parseListQuery(url, {filterKeys, pageParam, perPage})`
+  turns a request's `URL` into a `ListQuery` (`page`/`perPage`/`limit`/
+  `offset`/`q`/`filters`, plus `active`, true when a search term or any filter
+  is set, what a page uses to tell "you have nothing yet" apart from "nothing
+  matched"). Defaults to 25/page, hard-capped at 100 regardless of what's
+  requested; malformed/negative `page`/`perPage` fall back rather than erroring.
+  `PagedResult<T>` (`{items, page, perPage, total}`) is the shape every paged
+  DTO finder below returns. `searchCondition(q, columns)` builds a
+  case-insensitive `ilike` `or(...)` across the given columns, escaping
+  `%`/`_`/`\` in `q` first. `narrowFilter(values, allowed)` narrows raw URL
+  strings down to a column's enum union, needed because `service.currentStatus`
+  (`$type<ContainerStatus>()`) and `remote_host.kind` (a `text(..., {enum})`
+  column) both reject a bare `string[]` passed to `inArray`.
+- `api-pagination.ts`'s `parseApiListQuery(url)` is the same parser with a
+  100/page default (API callers don't get the dashboard's 25);
+  `jsonPage(items, meta)` wraps `json()` and stamps
+  `x-total-count`/`x-page`/`x-per-page` response headers, see REST API below for
+  why the body itself stays a plain array rather than growing an envelope.
+- Every paged DTO finder does its search/filter/count in SQL, not in memory, the
+  row query and a `count()` query run in one `Promise.all`:
+  `ServiceDTO.listWithProjectNamesPaged` (+ `ServiceDTO.listFilterFacets`, every
+  distinct status/project the user actually has, so the filter pills stay stable
+  no matter which page you're on), `ProjectDTO.listWithServiceCountsPaged`,
+  `TemplateDTO.listPaged(userId, "builtin" | "mine", query)` (+
+  `TemplateDTO.listCategories`), `StorageVolumeDTO.listPaged`,
+  `RemoteHostDTO.listPaged`, `S3DestinationDTO.listPaged`,
+  `BuildCacheRegistryDTO.listPaged`, `BackupRunDTO.listForUserPaged`, and
+  `UserService.listUsersPaged`. The old unpaged finders (`ServiceDTO.list`,
+  `list`/`listForUser`/etc. on the others) stay, for internal callers that need
+  every row regardless of the requesting user's current page: schedulers, Docker
+  Cleanup, cascade-delete.
+- `services/+page.server.ts`'s `load` used to call
+  `DockerService.syncAllServiceStatuses` for every service the user owns on
+  every page load, one Docker `inspect` per service, then re-run the full query.
+  It now syncs only the current page's already-deployed services
+  (`containerId`/`swarmServiceId` set), skips both the sync and the second query
+  entirely when the page has none, and calls `allowLongRequest(platform)` (see
+  Long-running requests below), which it never did before, leaving it exposed to
+  Bun's 10s idle-timeout cut on Linux.
+
+**Verified live** against a seeded Postgres, in a real browser and over the REST
+API/CLI: every list page pages correctly, search and filters reach the whole
+table rather than the loaded page, selection is dropped when the page changes,
+and out-of-range `page`/`perPage` clamp instead of erroring. `/backups` is the
+one worth remembering: it previously capped at the newest 50 runs with nothing
+in the UI saying so.
 
 ### Design system and theming (`src/routes/layout.css`)
 
@@ -528,22 +589,88 @@ Match on whole class tokens, not substrings.
 
 ### Shared UI components (`src/lib/components/`)
 
-Not exhaustive, this app doesn't have (and this session didn't attempt) a full
-componentized design system, just the handful of genuinely-duplicated patterns
-that got pulled out as they were touched: `status-badge.svelte` (pre-existing),
-`empty-state.svelte` (icon/title/subtitle + optional CTA snippet, used on
-Storage and Remote Hosts so far, other list pages still have their empty state
-inlined), `form-styles.ts` (the `inputClass`/`labelClass`/`errorClass` Tailwind
-strings almost every form page redefines identically, imported directly as class
-strings, not a wrapper component, so it doesn't force a markup shape change on
-pages that predate it; wired into Remote Hosts and the service Networking tab so
-far), `stepper.svelte` (the step-indicator-bar-plus-Back/Next chrome and
-unlocked-step gating every multi-step form needs, extracted while building the
-onboarding wizard, see Onboarding below; not yet retrofitted onto
-`services/new`'s own inlined equivalent). If you're touching a page with an
-inline empty-state or the same three class-string literals, prefer wiring in the
-shared version over copy-pasting again, but this is opportunistic, not a mandate
-to refactor unrelated pages.
+Not a full componentized design system, this app still doesn't have one, but a
+real shared list-page toolkit now exists alongside the smaller extracted
+patterns: `status-badge.svelte` (pre-existing), `empty-state.svelte`
+(icon/title/subtitle + optional CTA snippet, used on Storage and Remote Hosts so
+far, other list pages still have their empty state inlined), `form-styles.ts`
+(the `inputClass`/`labelClass`/`errorClass` Tailwind strings almost every form
+page redefines identically, imported directly as class strings, not a wrapper
+component, so it doesn't force a markup shape change on pages that predate it;
+wired into Remote Hosts and the service Networking tab so far), `stepper.svelte`
+(the step-indicator-bar-plus-Back/Next chrome and unlocked-step gating every
+multi-step form needs, extracted while building the onboarding wizard, see
+Onboarding below; not yet retrofitted onto `services/new`'s own inlined
+equivalent). If you're touching a page with an inline empty-state or the same
+three class-string literals, prefer wiring in the shared version over
+copy-pasting again, but this is opportunistic, not a mandate to refactor
+unrelated pages.
+
+**The list-page toolkit**, used by every entity list page (services, projects,
+templates, storage, remote-hosts, s3-destinations, build-cache-registries,
+users, backups):
+
+- `entity-toolbar.svelte` is **URL-driven**, not prop-bound: it reads the
+  current `q` and each filter group's value straight off `page.url.searchParams`
+  and writes changes back with `goto(url, {keepFocus, noScroll, replaceState})`,
+  debounced 300ms for the search box, clearing every page param in `pageParams`
+  (default `["page"]`) on every change so a new search/filter always lands back
+  on page 1. Props are `filters` (`FilterGroup[]`, each
+  `{key, label, options: {label, value}[]}`), `pageParams`, `placeholder`, and a
+  `trailing` snippet slot (where a page renders `ViewModeToggle`); the old
+  bindable `search`/`selected` props and the exported `FilterSelection` type are
+  gone, filtering moved server-side (see Server-side list pagination above), so
+  there's no client state left to bind. `$lib/filtering.ts` (`matchesQuery`/
+  `matchesFilter`) still exists but is no longer used by any list page. Replaced
+  the bespoke search-input-plus-category-`Drawer` that used to be inlined in the
+  templates gallery only (see Built-in template catalog and gallery below);
+  pages without a card view (remote-hosts, s3-destinations,
+  build-cache-registries, users, backups) use it for search/filter alone, with
+  no `trailing` snippet.
+- `pagination.svelte`: Previous/Next plus "26–50 of 60 services" and "Page 2 of
+  3", also URL-driven (`goto()`, same as the toolbar), rendered only when
+  `total > perPage`. Takes `page`/`perPage`/`total` (a page's `PagedResult`, see
+  Server-side list pagination above) plus an optional `pageParam` (default
+  `"page"`) and `label`, so a page with two independent paged lists (the
+  templates gallery's built-in/custom sections) can render two of these against
+  two different params.
+- `view-mode.svelte.ts`'s `ViewMode` class + `view-mode-toggle.svelte`: one
+  page's list/card preference, persisted in `localStorage` under
+  `homerun:view:<key>` (`new ViewMode("services")`, optional 2nd arg is the
+  fallback mode, e.g. `new ViewMode("templates", "card")`). Deliberately its own
+  module rather than living inside `entity-list-view.svelte`, specifically so
+  one page can render several `EntityListView`s sharing a single toggle
+  (services groups its rows by project, one `EntityListView` per group); before
+  this, each group toggled independently, a real pre-existing bug this fixes,
+  not just a refactor.
+- `entity-list-view.svelte` now takes `view: ViewMode` plus an optional
+  `cardGridClass` (defaults to a 3-column grid; templates passes a 4-column
+  one). Its old `viewKey` string prop and its module-block `EntityViewMode`
+  export are gone, that type now lives on `$lib/view-mode.svelte.ts`. Every list
+  page now renders straight from `data` (already one page, already
+  filtered/searched) rather than deriving a client-side `filtered` array, and
+  tells a true empty state apart from a no-match one via
+  `data.total === 0 && !data.filtered`.
+
+`confirm-dialog.svelte` gained an optional `confirmPhrase` prop: when set, the
+dialog renders an input and the confirm button stays disabled until the typed
+text matches the phrase exactly (Enter in the input confirms too). This replaced
+the old "append a confirmation div into the section" pattern (an inline
+`{#if showDeleteConfirm}` toggling a form in place) with a real modal everywhere
+that pattern appeared: the service Settings danger zone and the project detail
+danger zone (typed phrase is the entity's own name), and the services list's own
+per-row delete (service name) and new bulk delete (`delete N services`, see the
+services list bullet below). The profile Security page's account deletion moved
+into a `Dialog` too, but keeps its existing password gate instead of a typed
+phrase, the password already serves that purpose. The remote-host detail page
+already used `ConfirmDialog` before this and needed no change.
+
+**Verified live** in a real browser: the toolkit's search/filter narrowing, one
+`ViewMode` toggle staying in sync across a grouped list that renders several
+`EntityListView`s (services' per-project groups), select-all plus the bulk bar,
+`confirmPhrase` enabling the confirm button only on an exact match, and real
+single and bulk deletes. A bulk action where every service fails surfaces the
+first rejection's message rather than reporting success.
 
 ### Routing: dashboard-only, no public pages
 
@@ -583,7 +710,33 @@ of the dashboard banner deep-linking into `/settings`.
 `src/routes/(protected)/services/`:
 
 - `+page.svelte`, list, grouped by project (with an "Ungrouped" bucket when more
-  than one group exists), inline start/stop/restart/delete actions
+  than one group exists), server-side search/status/project filters and a
+  list/card view toggle (`entity-toolbar.svelte`/`ViewMode`, see Shared UI
+  components above) plus a `<Pagination>` footer (see Server-side list
+  pagination above; `+page.server.ts`'s `load` calls
+  `ServiceDTO.listWithProjectNamesPaged` and `ServiceDTO.listFilterFacets` for
+  the pills, so the filter options stay stable across pages), inline per-row
+  start/stop/restart/delete actions plus a checkbox-driven multi-select
+  (select-all scoped to whatever's on the **current page**, a sticky bottom bar
+  with Start/Stop/Restart/Delete/Clear; paginating or changing the
+  search/filters drops anything selected that's no longer on screen rather than
+  silently submitting it with a bulk action). Both single-row and bulk actions
+  go through four new `ServiceLifecycleService` methods
+  (`startService`/`stopService`/`restartService`/`deleteService`,
+  `service-lifecycle.service.ts`, each taking a `ServiceDTO` and branching on
+  `svc.swarmServiceId` internally) rather than each call site re-deriving that
+  branch; the pre-existing containerId-level `start`/`stop`/`restart`/`remove`
+  methods are unchanged and still used elsewhere (see Remote hosts below).
+  `+page.server.ts`'s single `bulk` action takes repeated `serviceId` fields
+  plus an `op` (from the clicked submit button's own name/value) and runs every
+  resolved service through `Promise.allSettled` (this repo's `noAwaitInLoops`
+  lint rule forbids an await loop), returning `{succeeded, failed, op}` so the
+  toast reports a partial result, or `fail(400)` with the first rejection's
+  message if every one failed. Bulk delete is gated behind `ConfirmDialog`'s
+  typed-phrase confirm (`delete N services`); single-row delete requires typing
+  the service's own name. `load` also now calls `allowLongRequest(platform)` (it
+  didn't before, see Server-side list pagination above for the status-sync fix
+  that came with it and Long-running requests below for why that matters).
 - `new/+page.svelte`, click-config create form, a 4-step wizard (Basic info /
   Networking / Environment / Compute, one `<form>` throughout, steps hidden via
   a CSS class rather than `{#if}` so field state survives navigating between
@@ -669,6 +822,14 @@ dashboard's own `fetch` calls and external API-key clients alike.
   dashboard's own progress-polling UI is unrelated, cookie-session only).
 - `projects/`, `templates/`, read/create, same pattern, thinner (no lifecycle
   actions).
+- `services/`, `projects/`, and `templates/`'s `GET`s are paginated
+  (`parseApiListQuery`/`jsonPage`, see Server-side list pagination above):
+  `page`, `perPage` (default 100, max 100), `q`. The response body is
+  deliberately still a plain JSON array, not an envelope, so an existing client
+  doesn't break; the total row count, current page, and page size come back in
+  `x-total-count`/`x-page`/`x-per-page` response headers instead. `templates/`
+  runs the builtin and mine paged queries in parallel and concatenates their
+  items, with `total` summed across both.
 - `system-stats/`, `GET`, host CPU/RAM/disk/GPU stats
   (`SystemStatsService.getSystemStats()`). Moved here from a bare
   `(protected)/system-stats/+server.ts`, that route lived directly in the pages
@@ -753,7 +914,11 @@ describe a smaller response than the API actually sends.
 `registry.ts` is a hand-maintained array of route definitions
 (method/path/tags/summary/params/request/responses), there's no metadata
 anywhere else in a SvelteKit route file to generate this from automatically.
-Keep it in sync when a route's shape changes.
+Keep it in sync when a route's shape changes. `RouteDef.queryParams` (a
+`ParamDef[]`, same shape as `pathParams`) is what the three paginated list
+routes above use to document `page`/`perPage`/`q` (`registry.ts`'s shared
+`listQueryParams` array); `build.ts` emits both `pathParams` and `queryParams`
+as `in: "path"`/`in: "query"` OpenAPI parameters on the same operation.
 
 **`drizzle-zod` was tried and abandoned** for the response side: it depends on
 `zod/v4`'s subpath export, which resolves fine standalone, but broke under this
@@ -788,13 +953,29 @@ non-cookie caller. Commands: `services {list,get,deploy,start,stop,restart}`,
 straightforward to add the same way. See `packages/cli/README.md` for the full
 command reference and what's verified.
 
+Every `list` command also takes `--page <n>`, `--per-page <n>` (default 100, max
+100, same clamp as the API) and `--search <term>`, threaded through as the same
+`page`/`perPage`/`q` query params the REST API's `GET` list routes accept (see
+REST API and Server-side list pagination above). `commands.ts`'s `ListArgs`
+interface (`json`/`page`/`perPage`/`search`) replaced the old bare
+`json: boolean` parameter every `*List` command took;
+`Output.printPageFooter(response, shown)` reads the `x-total-count`/`x-page`/
+`x-per-page` response headers and prints
+`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.` whenever a
+listing was truncated, silent when the whole set fit, so a partial result can't
+be mistaken for a complete one. Default behavior is unchanged (100/page), so a
+plain `homerun services list` on a normal instance looks exactly as before.
+
 **Verified live, full round trip**, not just typechecked: a throwaway account +
 real API key (against an isolated `homerun_test` database, never the
 maintainer's real one) drove every command against a real Docker daemon,
 `services list`/`get`/`deploy` (a real `nginx:alpine`
 pull→create→start)/`start`/`stop`/`restart`, plus the 401-on-bad-key path, all
 through the typed `openapi-fetch` client, and the compiled binary behaves
-identically to running from source.
+identically to running from source. The pagination flags were verified the same
+way on a 60-service database: the compiled CLI printed the truncation footer for
+`--per-page 10` and `--per-page 10 --page 3`, and `--search svc-58` returned the
+single matching row.
 
 `homerun login`'s device-code flow is now verified live too (previously flagged
 as untested, closed in a later session): a real compiled CLI binary, installed
@@ -1052,11 +1233,20 @@ flat single fallback color, so an app without an official logo is still visually
 distinguishable at a glance from its neighbors. `templateIcon()`/
 `TEMPLATE_ICONS` (the old flat category→icon map this replaced) no longer exist.
 
-The gallery (`templates/+page.svelte`) has a search input (matches
-name/description/image, client-side) and a category filter built as a right-side
-`Drawer` (`$lib/components/ui/drawer`, vaul-svelte's `direction` prop, not the
-select-dropdown this started as) with toggleable pills, built from whatever
-categories are actually present rather than a hardcoded list. Each card links to
+The gallery (`templates/+page.svelte`) uses the shared list-page toolkit (see
+Shared UI components above) for its search (matches name/description/image) and
+category filter (pills built from whatever categories are actually present
+rather than a hardcoded list, `TemplateDTO.listCategories`), plus a list/card
+`ViewModeToggle` (`new ViewMode("templates", "card")`, card is the default here,
+unlike every other list page). This replaced the page's own earlier bespoke
+search-input-plus-`Drawer` implementation (`$lib/components/ui/drawer`,
+vaul-svelte's `direction` prop), now generalized into `entity-toolbar.svelte`
+and shared with every other list page instead of being templates-only. The
+built-in and custom sections paginate **independently**, 24 per page each,
+`TemplateDTO.listPaged(userId, "builtin" | "mine", query)` called twice with two
+separate `ListQuery`s (`pageParam: "bpage"` / `"mpage"`, see Server-side list
+pagination above), one shared search/category toolbar filtering both, two
+`<Pagination>` footers reading their own param. Each card/row links to
 `templates/[templateId]/`, a details page (`+page.server.ts` guards via
 `TemplateDTO.usable`, same built-in-or-owned rule every deploy-from-template
 path uses) showing the full description, container port/CPU/memory/env vars, the

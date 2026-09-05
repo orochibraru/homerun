@@ -4,6 +4,10 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import EntityToolbar, {
+		type FilterGroup,
+	} from "$lib/components/entity-toolbar.svelte";
+	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
@@ -18,6 +22,18 @@
 	);
 
 	let runningVolumeId = $state<string | null>(null);
+
+	const filters: FilterGroup[] = [
+		{
+			key: "outcome",
+			label: "Outcome",
+			options: [
+				{ label: "Success", value: "success" },
+				{ label: "Failed", value: "failed" },
+				{ label: "Running", value: "running" },
+			],
+		},
+	];
 
 	function formatDate(value: Date | string | null): string {
 		if (!value) {
@@ -117,13 +133,20 @@
   <!-- ═══ Run log ═══ -->
   <section>
     <h2 class="eyebrow mb-3">Run log</h2>
-    {#if data.runs.length === 0}
+    {#if data.total === 0 && !data.filtered}
       <EmptyState
         icon={CloudUpload}
         subtitle="Runs (scheduled or manual) will show up here."
         title="No backup runs yet"
       />
     {:else}
+      <EntityToolbar {filters} placeholder="Search runs by volume name…" />
+
+      {#if data.runs.length === 0}
+        <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+          <p class="text-text-muted text-sm">No runs match your filters.</p>
+        </div>
+      {:else}
       <div class="glass overflow-x-auto rounded-2xl">
         <table class="w-full text-sm">
           <thead>
@@ -173,6 +196,13 @@
           </tbody>
         </table>
       </div>
+      <Pagination
+        label="runs"
+        page={data.page}
+        perPage={data.perPage}
+        total={data.total}
+      />
+      {/if}
     {/if}
   </section>
 </div>

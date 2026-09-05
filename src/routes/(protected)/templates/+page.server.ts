@@ -3,33 +3,58 @@ import { resolve } from "$app/paths";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
+import { parseListQuery } from "$lib/server/list-query";
 import { allowLongRequest } from "$lib/server/long-request";
 import { quickDeployFromTemplate } from "$lib/services/template-links";
+
+async function withLinkedNames(templates: TemplateDTO[]) {
+	const links = await Promise.all(
+		templates.map((t) => TemplateLinkDTO.listForTemplate(t.id)),
+	);
+	return templates.map((t, i) => ({
+		...t.toJSON(),
+		linkedNames: links[i].map((l) => l.linkedTemplateName),
+	}));
+}
 
 export const load = async ({ parent, url }) => {
 	const { user } = await parent();
 
-	const templates = await TemplateDTO.listForUser(user.id);
-	const links = await Promise.all(
-		templates.map((t) => TemplateLinkDTO.listForTemplate(t.id)),
-	);
-	const linkedNamesById = new Map(
-		templates.map((t, i) => [t.id, links[i].map((l) => l.linkedTemplateName)]),
-	);
-
-	const rawProjectId = url.searchParams.get("projectId");
-	const project = rawProjectId
-		? await ProjectDTO.get(rawProjectId, user.id)
-		: null;
-
-	const withLinks = (t: TemplateDTO) => ({
-		...t.toJSON(),
-		linkedNames: linkedNamesById.get(t.id) ?? [],
+	const builtinQuery = parseListQuery(url, {
+		filterKeys: ["category"],
+		pageParam: "bpage",
+		perPage: 24,
+	});
+	const mineQuery = parseListQuery(url, {
+		filterKeys: ["category"],
+		pageParam: "mpage",
+		perPage: 24,
 	});
 
+	const rawProjectId = url.searchParams.get("projectId");
+	const [builtins, mine, categories, project] = await Promise.all([
+		TemplateDTO.listPaged(user.id, "builtin", builtinQuery),
+		TemplateDTO.listPaged(user.id, "mine", mineQuery),
+		TemplateDTO.listCategories(user.id),
+		rawProjectId ? ProjectDTO.get(rawProjectId, user.id) : null,
+	]);
+
+	const [builtinItems, mineItems] = await Promise.all([
+		withLinkedNames(builtins.items),
+		withLinkedNames(mine.items),
+	]);
+
 	return {
-		builtins: templates.filter((t) => t.isBuiltin).map(withLinks),
-		mine: templates.filter((t) => !t.isBuiltin).map(withLinks),
+		builtins: builtinItems,
+		filtered: builtinQuery.active,
+		builtinsPage: builtins.page,
+		builtinsPerPage: builtins.perPage,
+		builtinsTotal: builtins.total,
+		categories,
+		mine: mineItems,
+		minePage: mine.page,
+		minePerPage: mine.perPage,
+		mineTotal: mine.total,
 		project: project?.toJSON() ?? null,
 	};
 };

@@ -5,10 +5,14 @@
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import EntityToolbar, {
+		type FilterGroup,
+	} from "$lib/components/entity-toolbar.svelte";
 	import {
 		inputClass as input,
 		labelClass as label,
 	} from "$lib/components/form-styles";
+	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
@@ -22,6 +26,17 @@
 	const roleOptions = [
 		{ label: "Developer", value: "developer" },
 		{ label: "Admin", value: "admin" },
+	];
+
+	const filters: FilterGroup[] = [
+		{
+			key: "role",
+			label: "Role",
+			options: [
+				{ label: "Admin", value: "admin" },
+				{ label: "Developer", value: "developer" },
+			],
+		},
 	];
 
 	let showAddForm = $state(false);
@@ -223,6 +238,13 @@
     </div>
   {/if}
 
+  <EntityToolbar {filters} placeholder="Search users by name or email…" />
+
+  {#if data.users.length === 0}
+    <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <p class="text-text-muted text-sm">No users match your filters.</p>
+    </div>
+  {:else}
   <div class="space-y-3">
     {#each data.users as u (u.id)}
       <div class="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
@@ -274,6 +296,13 @@
       </div>
     {/each}
   </div>
+  <Pagination
+    label="users"
+    page={data.page}
+    perPage={data.perPage}
+    total={data.total}
+  />
+  {/if}
 
   {#if data.invites.length > 0}
     <div class="mt-8">

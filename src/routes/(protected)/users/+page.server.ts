@@ -4,6 +4,7 @@ import { config, isSmtpEnabled } from "$lib/config";
 import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { Logger } from "$lib/logger";
 import type { UserRole } from "$lib/server/db/schema.js";
+import { parseListQuery } from "$lib/server/list-query";
 import { auth } from "$lib/services/auth";
 import { EmailService } from "$lib/services/email.service";
 import { UserService } from "$lib/services/user.service";
@@ -12,21 +13,26 @@ const logger = new Logger("Users");
 
 const roleSet = new Set(["admin", "developer"]);
 
-export const load = async ({ locals }) => {
+export const load = async ({ locals, url }) => {
 	if (!locals.isAdmin) {
 		throw redirect(302, resolve("/"));
 	}
 
+	const query = parseListQuery(url, { filterKeys: ["role"] });
 	const [users, invites] = await Promise.all([
-		UserService.listUsers(),
+		UserService.listUsersPaged(query),
 		InvitationDTO.listPending(),
 	]);
 
 	return {
 		currentUserId: locals.user.id,
+		filtered: query.active,
 		invites: invites.map((i) => i.toJSON()),
+		page: users.page,
+		perPage: users.perPage,
 		smtpEnabled: isSmtpEnabled(),
-		users,
+		total: users.total,
+		users: users.items,
 	};
 };
 

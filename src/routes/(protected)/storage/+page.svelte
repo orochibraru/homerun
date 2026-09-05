@@ -6,13 +6,40 @@
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import EntityListView from "$lib/components/entity-list-view.svelte";
+	import EntityToolbar, {
+		type FilterGroup,
+	} from "$lib/components/entity-toolbar.svelte";
+	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import { ViewMode } from "$lib/view-mode.svelte";
 
 	const { data } = $props();
 
 	onMount(() => title.set("Storage"));
+
+	const view = new ViewMode("storage");
+
+	const filters: FilterGroup[] = [
+		{
+			key: "kind",
+			label: "Kind",
+			options: [
+				{ label: "Bind mount", value: "bind" },
+				{ label: "Docker volume", value: "volume" },
+			],
+		},
+		{
+			key: "backup",
+			label: "Backups",
+			options: [
+				{ label: "Enabled", value: "on" },
+				{ label: "Disabled", value: "off" },
+			],
+		},
+	];
 
 	let deleteDialogOpen = $state(false);
 	let pendingDeleteName = $state("");
@@ -39,7 +66,7 @@
     </Button>
   </div>
 
-  {#if data.volumes.length === 0}
+  {#if data.total === 0 && !data.filtered}
     <EmptyState
       icon={HardDrive}
       subtitle="Create one, then mount it into a service from its Settings tab."
@@ -142,13 +169,32 @@
       </div>
     {/snippet}
 
-    <EntityListView
-      {card}
-      getKey={(vol) => vol.id}
-      items={data.volumes}
-      {row}
-      viewKey="storage"
-    />
+    <EntityToolbar {filters} placeholder="Search volumes by name or source…">
+      {#snippet trailing()}
+        <ViewModeToggle {view} />
+      {/snippet}
+    </EntityToolbar>
+
+    {#if data.volumes.length === 0}
+      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+        <p class="text-text-muted text-sm">No volumes match your filters.</p>
+      </div>
+    {:else}
+      <EntityListView
+        {card}
+        getKey={(vol) => vol.id}
+        items={data.volumes}
+        {row}
+        {view}
+      />
+
+      <Pagination
+        label="volumes"
+        page={data.page}
+        perPage={data.perPage}
+        total={data.total}
+      />
+    {/if}
   {/if}
 </div>
 

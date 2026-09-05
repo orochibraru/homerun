@@ -2,14 +2,22 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import { parseListQuery } from "$lib/server/list-query";
 
 const logger = new Logger("Storage");
 
-export const load = async ({ parent }) => {
+export const load = async ({ parent, url }) => {
 	const { user } = await parent();
-	const volumes = await StorageVolumeDTO.list(user.id);
+	const query = parseListQuery(url, { filterKeys: ["kind", "backup"] });
+	const paged = await StorageVolumeDTO.listPaged(user.id, query);
 
-	return { volumes: volumes.map((v) => v.toJSON()) };
+	return {
+		filtered: query.active,
+		page: paged.page,
+		perPage: paged.perPage,
+		total: paged.total,
+		volumes: paged.items.map((v) => v.toJSON()),
+	};
 };
 
 export const actions = {

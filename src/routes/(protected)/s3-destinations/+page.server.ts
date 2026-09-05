@@ -2,13 +2,21 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { Logger } from "$lib/logger";
+import { parseListQuery } from "$lib/server/list-query";
 
 const logger = new Logger("S3Destinations");
 
-export const load = async ({ parent }) => {
+export const load = async ({ parent, url }) => {
 	const { user } = await parent();
-	const destinations = await S3DestinationDTO.list(user.id);
-	return { destinations: destinations.map((d) => d.toJSON()) };
+	const query = parseListQuery(url);
+	const paged = await S3DestinationDTO.listPaged(user.id, query);
+	return {
+		destinations: paged.items.map((d) => d.toJSON()),
+		filtered: query.active,
+		page: paged.page,
+		perPage: paged.perPage,
+		total: paged.total,
+	};
 };
 
 export const actions = {

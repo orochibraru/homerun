@@ -30,6 +30,11 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   time, resumes correctly if you reload mid-deploy
 - **Deployment history**: every attempt recorded with status, image digest, and
   its full log
+- **Search, filters, pagination & bulk actions**: every list page (services,
+  projects, templates, storage, and more) gets server-side search/filters, a
+  list/card view toggle, and paging once you have more than a screenful;
+  multi-select Start/Stop/Restart/Delete on the services list, with a typed
+  confirmation before anything destructive runs
 - **Projects**: group services under one Docker network so they reach each other
   by slug (`http://api:8080`), independent of the shared Traefik network
 - **Templates**: one-click deploys for common services (Redis, Postgres, MySQL,

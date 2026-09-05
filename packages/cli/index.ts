@@ -1,7 +1,7 @@
 import process from "node:process";
 import { Command } from "commander";
 import { ClientFactory } from "./client";
-import { Commands } from "./commands";
+import { Commands, type ListArgs } from "./commands";
 import { LoginFlow } from "./login";
 import { Output } from "./output";
 import { UpdateService } from "./update";
@@ -14,6 +14,23 @@ interface GlobalOptions {
 
 interface ListOptions {
 	json?: boolean;
+	page?: string;
+	perPage?: string;
+	search?: string;
+}
+
+function positive(raw: string | undefined): number | undefined {
+	const parsed = Number.parseInt(raw ?? "", 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function toListArgs(options: ListOptions): ListArgs {
+	return {
+		json: options.json ?? false,
+		page: positive(options.page),
+		perPage: positive(options.perPage),
+		search: options.search,
+	};
 }
 
 /**
@@ -85,8 +102,11 @@ services
 	.command("list")
 	.description("list services")
 	.option("--json", "print raw JSON instead of a table")
+	.option("--page <n>", "1-based page number (default 1)")
+	.option("--per-page <n>", "items per page (default 100, max 100)")
+	.option("--search <term>", "only rows matching this term")
 	.action(async (options: ListOptions) => {
-		await Commands.servicesList(requireClient(), options.json ?? false);
+		await Commands.servicesList(requireClient(), toListArgs(options));
 	});
 
 services
@@ -111,8 +131,11 @@ projects
 	.command("list")
 	.description("list projects")
 	.option("--json", "print raw JSON instead of a table")
+	.option("--page <n>", "1-based page number (default 1)")
+	.option("--per-page <n>", "items per page (default 100, max 100)")
+	.option("--search <term>", "only rows matching this term")
 	.action(async (options: ListOptions) => {
-		await Commands.projectsList(requireClient(), options.json ?? false);
+		await Commands.projectsList(requireClient(), toListArgs(options));
 	});
 
 const templates = program.command("templates").description("manage templates");
@@ -121,8 +144,11 @@ templates
 	.command("list")
 	.description("list templates")
 	.option("--json", "print raw JSON instead of a table")
+	.option("--page <n>", "1-based page number (default 1)")
+	.option("--per-page <n>", "items per page (default 100, max 100)")
+	.option("--search <term>", "only rows matching this term")
 	.action(async (options: ListOptions) => {
-		await Commands.templatesList(requireClient(), options.json ?? false);
+		await Commands.templatesList(requireClient(), toListArgs(options));
 	});
 
 // No subcommand at all : commander itself only prints help on an unknown or

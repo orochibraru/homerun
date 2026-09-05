@@ -3,11 +3,34 @@ import { Output } from "./output";
 
 type Client = ReturnType<typeof ClientFactory.makeClient>;
 
+export interface ListArgs {
+	json: boolean;
+	page?: number;
+	perPage?: number;
+	search?: string;
+}
+
+function listQuery(args: ListArgs): Record<string, string> {
+	const query: Record<string, string> = {};
+	if (args.page !== undefined) {
+		query.page = String(args.page);
+	}
+	if (args.perPage !== undefined) {
+		query.perPage = String(args.perPage);
+	}
+	if (args.search) {
+		query.q = args.search;
+	}
+	return query;
+}
+
 /** Every command takes the already-built `Client` as an argument rather than owning one itself : this class holds no client of its own, it's grouped for consistency with every other cli/ module, not because it carries state. */
 class CliCommands {
-	async servicesList(client: Client, json: boolean): Promise<void> {
-		const services = await this.#unwrap(client.GET("/services"));
-		if (json) {
+	async servicesList(client: Client, args: ListArgs): Promise<void> {
+		const { data: services, response } = await this.#unwrapWithResponse(
+			client.GET("/services", { params: { query: listQuery(args) } }),
+		);
+		if (args.json) {
 			Output.printJson(services);
 			return;
 		}
@@ -21,6 +44,7 @@ class CliCommands {
 			})),
 			["id", "name", "slug", "status", "image"],
 		);
+		Output.printPageFooter(response, (services as unknown[]).length);
 	}
 
 	async serviceGet(client: Client, id: string): Promise<void> {
@@ -45,9 +69,11 @@ class CliCommands {
 		Output.printJson(result);
 	}
 
-	async projectsList(client: Client, json: boolean): Promise<void> {
-		const projects = await this.#unwrap(client.GET("/projects"));
-		if (json) {
+	async projectsList(client: Client, args: ListArgs): Promise<void> {
+		const { data: projects, response } = await this.#unwrapWithResponse(
+			client.GET("/projects", { params: { query: listQuery(args) } }),
+		);
+		if (args.json) {
 			Output.printJson(projects);
 			return;
 		}
@@ -59,11 +85,14 @@ class CliCommands {
 			})),
 			["id", "name", "slug"],
 		);
+		Output.printPageFooter(response, (projects as unknown[]).length);
 	}
 
-	async templatesList(client: Client, json: boolean): Promise<void> {
-		const templates = await this.#unwrap(client.GET("/templates"));
-		if (json) {
+	async templatesList(client: Client, args: ListArgs): Promise<void> {
+		const { data: templates, response } = await this.#unwrapWithResponse(
+			client.GET("/templates", { params: { query: listQuery(args) } }),
+		);
+		if (args.json) {
 			Output.printJson(templates);
 			return;
 		}
@@ -75,6 +104,19 @@ class CliCommands {
 			})),
 			["id", "name", "image"],
 		);
+		Output.printPageFooter(response, (templates as unknown[]).length);
+	}
+
+	async #unwrapWithResponse<T>(
+		promise: Promise<{ data?: T; error?: unknown; response: Response }>,
+	): Promise<{ data: T; response: Response }> {
+		const { data, error, response } = await promise;
+		if (error !== undefined || !response.ok) {
+			Output.fail(
+				`${response.status} ${response.statusText}: ${JSON.stringify(error ?? {})}`,
+			);
+		}
+		return { data: data as T, response };
 	}
 
 	async #unwrap<T>(

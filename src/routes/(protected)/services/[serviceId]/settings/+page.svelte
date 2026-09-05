@@ -14,6 +14,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -45,7 +46,8 @@
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
 	let submitting = $state(false);
-	let showDeleteConfirm = $state(false);
+	let deleteDialogOpen = $state(false);
+	let deleteForm = $state<HTMLFormElement | null>(null);
 	let deleting = $state(false);
 
 	const restartPolicyOptions: [string, string][] = [
@@ -385,64 +387,55 @@
       </div>
     </div>
     <div class="p-5">
-      {#if !showDeleteConfirm}
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <p class="text-text text-sm font-medium">Delete this service</p>
-          </div>
-          <Button
-            onclick={() => {
-              showDeleteConfirm = true;
-            }}
-            variant="destructive"
-          >
-            Delete service
-          </Button>
+      <form
+        action="?/delete"
+        class="flex flex-wrap items-center justify-between gap-4"
+        method="POST"
+        bind:this={deleteForm}
+        use:enhance={enhanceToast({
+          error: "Couldn't delete the service.",
+          loading: "Deleting the service",
+          onFailure: () => {
+            deleting = false;
+          },
+          onStart: () => {
+            deleting = true;
+          },
+          success: "Service deleted.",
+        })}
+      >
+        <div>
+          <p class="text-text text-sm font-medium">Delete this service</p>
+          <p class="text-text-muted mt-0.5 text-xs">
+            Its container will be stopped and removed. This can't be undone.
+          </p>
         </div>
-      {:else}
-        <form
-          action="?/delete"
-          class="space-y-4"
-          method="POST"
-          use:enhance={enhanceToast({
-            error: "Couldn't delete the service.",
-            loading: "Deleting the service",
-            onFailure: () => {
-              deleting = false;
-            },
-            onStart: () => {
-              deleting = true;
-            },
-            success: "Service deleted.",
-          })}
+        <Button
+          disabled={deleting}
+          onclick={() => {
+            deleteDialogOpen = true;
+          }}
+          type="button"
+          variant="destructive"
         >
-          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
-            <p class="font-semibold">Delete "{svc.name}"?</p>
-            <p class="mt-1">
-              Its container will be stopped and removed. This can't be undone.
-            </p>
-          </div>
-          <div class="flex items-center gap-3">
-            <Button
-              onclick={() => {
-                showDeleteConfirm = false;
-              }}
-              variant="outline"
-            >
-              Cancel
-            </Button>
-            <Button disabled={deleting} type="submit" variant="destructive">
-              {#if deleting}
-                <Spinner />
-                Deleting…
-              {:else}
-                <Trash2Icon class="size-4" />
-                Yes, delete
-              {/if}
-            </Button>
-          </div>
-        </form>
-      {/if}
+          {#if deleting}
+            <Spinner />
+            Deleting…
+          {:else}
+            <Trash2Icon class="size-4" />
+            Delete service
+          {/if}
+        </Button>
+      </form>
     </div>
   </section>
 </div>
+
+<ConfirmDialog
+  bind:open={deleteDialogOpen}
+  confirmLabel="Delete service"
+  confirmPhrase={svc.name}
+  description={`Deleting "${svc.name}" stops and removes its container and erases its deployment history. This can't be undone.`}
+  onConfirm={() => deleteForm?.requestSubmit()}
+  title="Delete service"
+/>

@@ -1,4 +1,5 @@
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
+import type { ServiceDTO } from "$lib/dto/service-dto";
 import type { ContainerStatus } from "$lib/types";
 import { AgentClientService } from "./agent-client.service.ts";
 import { DockerService } from "./docker.service.ts";
@@ -116,6 +117,60 @@ class ServiceLifecycleServiceClass {
 			{ follow: true, tail: 200 },
 			target.kind === "docker" ? target.connection : undefined,
 		);
+	}
+
+	async startService(svc: ServiceDTO, userId: string): Promise<void> {
+		if (svc.swarmServiceId) {
+			await DockerService.scaleSwarmService(
+				svc.swarmServiceId,
+				svc.replicas || 1,
+			);
+		} else {
+			await this.start(this.#requireContainer(svc), svc.remoteHostId, userId);
+		}
+		await svc.update({ desiredState: "running" });
+	}
+
+	async stopService(svc: ServiceDTO, userId: string): Promise<void> {
+		if (svc.swarmServiceId) {
+			await DockerService.scaleSwarmService(svc.swarmServiceId, 0);
+		} else {
+			await this.stop(this.#requireContainer(svc), svc.remoteHostId, userId);
+		}
+		await svc.update({ desiredState: "stopped" });
+	}
+
+	async restartService(svc: ServiceDTO, userId: string): Promise<void> {
+		if (svc.swarmServiceId) {
+			await DockerService.restartSwarmService(svc.swarmServiceId);
+			return;
+		}
+		await this.restart(this.#requireContainer(svc), svc.remoteHostId, userId);
+	}
+
+	async deleteService(svc: ServiceDTO, userId: string): Promise<void> {
+		await this.#detachWorkload(svc, userId);
+		await svc.delete();
+	}
+
+	#requireContainer(svc: ServiceDTO): string {
+		if (!svc.containerId) {
+			throw new Error("This service hasn't been deployed yet.");
+		}
+		return svc.containerId;
+	}
+
+	async #detachWorkload(svc: ServiceDTO, userId: string): Promise<boolean> {
+		try {
+			if (svc.swarmServiceId) {
+				await DockerService.removeSwarmService(svc.swarmServiceId);
+			} else if (svc.containerId) {
+				await this.remove(svc.containerId, svc.remoteHostId, userId);
+			}
+			return true;
+		} catch {
+			return false;
+		}
 	}
 }
 

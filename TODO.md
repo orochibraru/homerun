@@ -2,15 +2,6 @@
 
 ## Small
 
-- [ ] [App] Instead of appending a div to a section for confirmation (such as
-      the confirm button in a danger zone) let's use a real confirmation modal
-      that sticks out with a "type in service name to confirm" to make sure we
-      alert enough the users so they don't destroy their config accidentally
-- [ ] [App] Multi select actions on services
-- [ ] [App] Grid/list layout in services should also be shared with projects &
-      templates
-- [ ] [App] Search & filters for any page that lists entities.
-
 ## Medium
 
 - [ ] [App] "Only bind-mount volumes can be backed up right now : this is a

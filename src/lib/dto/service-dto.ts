@@ -1,6 +1,24 @@
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	inArray,
+	isNull,
+	ne,
+	or,
+	type SQL,
+} from "drizzle-orm";
+import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
 import { db } from "$lib/server/db/lib";
 import { project, type Service, service } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	narrowFilter,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
+import type { ContainerStatus } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
 /** Fields a caller supplies to insert a new service row. */
@@ -134,6 +152,98 @@ export class ServiceDTO extends BaseDTO<Service> {
 			projectName: r.projectName,
 			service: new ServiceDTO(r.row),
 		}));
+	}
+
+	static #listFilters(userId: string, query: ListQuery): SQL | undefined {
+		const conditions: SQL[] = [eq(service.userId, userId)];
+
+		const search = searchCondition(query.q, [
+			service.name,
+			service.slug,
+			service.image,
+			service.tag,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+
+		const statuses = narrowFilter(
+			query.filters.status,
+			Object.keys(SERVICE_STATUS_CONFIG) as ContainerStatus[],
+		);
+		if (statuses.length > 0) {
+			conditions.push(inArray(service.currentStatus, statuses));
+		}
+
+		const projects = query.filters.project;
+		if (projects && projects.length > 0) {
+			const named = projects.filter((p) => p !== UNGROUPED_LABEL);
+			const parts: SQL[] = [];
+			if (named.length > 0) {
+				parts.push(inArray(project.name, named));
+			}
+			if (projects.includes(UNGROUPED_LABEL)) {
+				parts.push(isNull(service.projectId));
+			}
+			const combined = or(...parts);
+			if (combined) {
+				conditions.push(combined);
+			}
+		}
+
+		return and(...conditions);
+	}
+
+	/** One page of `listWithProjectNames`, filtered/searched server-side, plus the unpaged total the pager needs. */
+	static async listWithProjectNamesPaged(
+		userId: string,
+		query: ListQuery,
+	): Promise<PagedResult<{ projectName: string | null; service: ServiceDTO }>> {
+		const where = ServiceDTO.#listFilters(userId, query);
+		const [rows, totals] = await Promise.all([
+			db
+				.select({ projectName: project.name, row: service })
+				.from(service)
+				.leftJoin(project, eq(service.projectId, project.id))
+				.where(where)
+				.orderBy(desc(service.createdAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db
+				.select({ total: count() })
+				.from(service)
+				.leftJoin(project, eq(service.projectId, project.id))
+				.where(where),
+		]);
+		return {
+			items: rows.map((r) => ({
+				projectName: r.projectName,
+				service: new ServiceDTO(r.row),
+			})),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
+	}
+
+	/** Every distinct status/project this user's services actually use, for the list page's filter pills (which must stay stable regardless of the current page). */
+	static async listFilterFacets(
+		userId: string,
+	): Promise<{ projects: string[]; statuses: string[] }> {
+		const rows = await db
+			.selectDistinct({
+				projectName: project.name,
+				status: service.currentStatus,
+			})
+			.from(service)
+			.leftJoin(project, eq(service.projectId, project.id))
+			.where(eq(service.userId, userId));
+		return {
+			projects: [
+				...new Set(rows.map((r) => r.projectName ?? UNGROUPED_LABEL)),
+			].sort(),
+			statuses: [...new Set(rows.map((r) => r.status))].sort(),
+		};
 	}
 
 	/** Every service (across all users) with cron redeploys turned on : for the scheduler tick, which isn't scoped to one user. */

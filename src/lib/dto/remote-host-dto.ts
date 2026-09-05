@@ -1,6 +1,12 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type RemoteHost, remoteHost } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	narrowFilter,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
 import type { AgentConnection } from "$lib/services/agent-client.service";
 import type { RemoteHostConnection } from "$lib/services/docker.service";
 import { decryptSecret } from "$lib/services/secrets";
@@ -64,6 +70,48 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 			.where(eq(remoteHost.userId, userId))
 			.orderBy(desc(remoteHost.createdAt));
 		return rows.map((row) => new RemoteHostDTO(row));
+	}
+
+	/** One page of `list`, searched/filtered server-side, plus the unpaged total. */
+	static async listPaged(
+		userId: string,
+		query: ListQuery,
+	): Promise<PagedResult<RemoteHostDTO>> {
+		const conditions: SQL[] = [eq(remoteHost.userId, userId)];
+		const search = searchCondition(query.q, [
+			remoteHost.name,
+			remoteHost.dockerHost,
+			remoteHost.agentUrl,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+		const kinds = narrowFilter(query.filters.kind, [
+			"docker",
+			"agent",
+		] as const);
+		if (kinds.length > 0) {
+			conditions.push(inArray(remoteHost.kind, kinds));
+		}
+		const where = and(...conditions);
+
+		const [rows, totals] = await Promise.all([
+			db
+				.select()
+				.from(remoteHost)
+				.where(where)
+				.orderBy(desc(remoteHost.createdAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(remoteHost).where(where),
+		]);
+
+		return {
+			items: rows.map((row) => new RemoteHostDTO(row)),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
 	}
 
 	/**

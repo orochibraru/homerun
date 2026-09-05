@@ -40,13 +40,22 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 		paths[route.path][route.method] = {
 			description: route.description,
 			operationId: `${route.method}${route.path.replace(/[/{}-]/g, "_")}`,
-			parameters: route.pathParams?.map((p) => ({
-				description: p.description,
-				in: "path",
-				name: p.name,
-				required: true,
-				schema: { type: "string" },
-			})),
+			parameters: [
+				...(route.pathParams ?? []).map((p) => ({
+					description: p.description,
+					in: "path",
+					name: p.name,
+					required: true,
+					schema: { type: "string" },
+				})),
+				...(route.queryParams ?? []).map((p) => ({
+					description: p.description,
+					in: "query",
+					name: p.name,
+					required: false,
+					schema: { type: "string" },
+				})),
+			],
 			requestBody: route.requestBody
 				? {
 						content: {

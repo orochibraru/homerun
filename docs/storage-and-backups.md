@@ -14,6 +14,11 @@ hood; you just pick a kind and a source when creating one. A volume becomes
 "shared" simply by being mounted into more than one service, there's no separate
 "shared volume" concept to configure.
 
+`/storage` has a search box, Kind and Backups filters, a list/card view toggle,
+and a pager once you have more than a page's worth, same toolkit as the
+[services list](services.md#the-services-list), searched/paginated server-side
+the same way.
+
 ## S3-compatible backups
 
 Configured per-volume on `storage/[volumeId]`, off by default. Homerun tars the
@@ -34,7 +39,11 @@ minute).
 Backups, scheduled or from a "Run now" button, are queued and run in the
 background (see [the job queue](services.md#the-job-queue)), so the button
 returns straight away and the run shows up in the history on `/backups` once it
-starts. A failed backup is retried once.
+starts. A failed backup is retried once. `/backups` itself has a search box
+(matches volume name), an Outcome filter (success/failed/running), and a pager
+over that history, so a long-running instance with hundreds of past runs can
+still page all the way back through them instead of only ever seeing the newest
+handful.
 
 **There's no restore flow yet**, uploads only. Retrieve a backup from your S3
 destination directly (`aws s3 cp`, `rclone`, your provider's console) and

@@ -16,7 +16,7 @@ export interface EnhanceToastOptions extends ToastMessages {
 	onComplete?: () => void | Promise<void>;
 	onFailure?: (data: ActionData) => void;
 	onSettled?: () => void;
-	onSubmit?: (input: { formData: FormData }) => void;
+	onSubmit?: (input: Parameters<SubmitFunction>[0]) => void;
 	onStart?: () => void;
 	onSuccess?: (data: ActionData) => void | Promise<void>;
 	reset?: boolean;

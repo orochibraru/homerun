@@ -1,3 +1,5 @@
+export const UNGROUPED_LABEL = "Ungrouped";
+
 import {
 	Activity,
 	Ban,

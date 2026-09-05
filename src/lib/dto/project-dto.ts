@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, type SQL, sql } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import {
 	deployment,
@@ -6,6 +6,11 @@ import {
 	project,
 	service,
 } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
 import { DockerService } from "$lib/services/docker.service";
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
@@ -59,6 +64,49 @@ export class ProjectDTO extends BaseDTO<Project> {
 			project: new ProjectDTO(r.row),
 			serviceCount: r.serviceCount,
 		}));
+	}
+
+	/** One page of `listWithServiceCounts`, searched server-side, plus the unpaged total. */
+	static async listWithServiceCountsPaged(
+		userId: string,
+		query: ListQuery,
+	): Promise<PagedResult<{ project: ProjectDTO; serviceCount: number }>> {
+		const conditions: SQL[] = [eq(project.userId, userId)];
+		const search = searchCondition(query.q, [
+			project.name,
+			project.slug,
+			project.description,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+		const where = and(...conditions);
+
+		const [rows, totals] = await Promise.all([
+			db
+				.select({
+					row: project,
+					serviceCount: sql<number>`count(${service.id})`,
+				})
+				.from(project)
+				.leftJoin(service, eq(service.projectId, project.id))
+				.where(where)
+				.groupBy(project.id)
+				.orderBy(desc(project.createdAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(project).where(where),
+		]);
+
+		return {
+			items: rows.map((r) => ({
+				project: new ProjectDTO(r.row),
+				serviceCount: r.serviceCount,
+			})),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
 	}
 
 	/** Whether `slug` is already taken by a *different* project (for uniqueness checks on create/update). */

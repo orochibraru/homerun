@@ -334,6 +334,13 @@
     use:enhance={enhanceToast({
       error: "Check the form for errors.",
       loading: "Creating the service",
+      onSubmit: ({ submitter }) => {
+        submittingAction = (submitter as HTMLButtonElement | null)?.formAction.includes(
+          "createAndDeploy",
+        )
+          ? "createAndDeploy"
+          : "create";
+      },
       onFailure: () => {
         // The failing field could be on any step : jump back to the
         // first one so the top error banner and per-field messages are
@@ -938,9 +945,6 @@
             <Button
               disabled={submittingAction !== null}
               formaction="?/create"
-              onclick={() => {
-                submittingAction = "create";
-              }}
               type="submit"
               variant="outline"
             >
@@ -955,9 +959,6 @@
             <Button
               disabled={submittingAction !== null}
               formaction="?/createAndDeploy"
-              onclick={() => {
-                submittingAction = "createAndDeploy";
-              }}
               type="submit"
             >
               {#if submittingAction === "createAndDeploy"}

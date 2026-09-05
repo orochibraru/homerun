@@ -32,9 +32,19 @@ export interface RouteDef {
 	summary: string;
 	description?: string;
 	pathParams?: ParamDef[];
+	queryParams?: ParamDef[];
 	requestBody?: z.ZodType;
 	responses: Record<number, ResponseDef>;
 }
+
+const listQueryParams: ParamDef[] = [
+	{ description: "1-based page number (default 1)", name: "page" },
+	{
+		description: "Items per page (default 100, max 100)",
+		name: "perPage",
+	},
+	{ description: "Case-insensitive search term", name: "q" },
+];
 
 const notFound: ResponseDef = {
 	description: "Not found",
@@ -63,8 +73,11 @@ const badRequest: ResponseDef = {
  */
 export const routes: RouteDef[] = [
 	{
+		description:
+			"Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
 		method: "get",
 		path: "/services",
+		queryParams: listQueryParams,
 		responses: {
 			200: {
 				description: "The caller's services",
@@ -186,8 +199,11 @@ export const routes: RouteDef[] = [
 		tags: ["Services"],
 	},
 	{
+		description:
+			"Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
 		method: "get",
 		path: "/projects",
+		queryParams: listQueryParams,
 		responses: {
 			200: {
 				description: "The caller's projects",
@@ -213,8 +229,11 @@ export const routes: RouteDef[] = [
 		tags: ["Projects"],
 	},
 	{
+		description:
+			"Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
 		method: "get",
 		path: "/templates",
+		queryParams: listQueryParams,
 		responses: {
 			200: {
 				description: "Built-in templates plus the caller's own",

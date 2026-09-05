@@ -1,6 +1,11 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type StorageVolume, storageVolume } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
 import { BaseDTO } from "./base-dto";
 
 export interface NewStorageVolumeInput {
@@ -43,6 +48,49 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 			.where(eq(storageVolume.userId, userId))
 			.orderBy(desc(storageVolume.createdAt));
 		return rows.map((row) => new StorageVolumeDTO(row));
+	}
+
+	/** One page of `list`, searched/filtered server-side, plus the unpaged total. */
+	static async listPaged(
+		userId: string,
+		query: ListQuery,
+	): Promise<PagedResult<StorageVolumeDTO>> {
+		const conditions: SQL[] = [eq(storageVolume.userId, userId)];
+		const search = searchCondition(query.q, [
+			storageVolume.name,
+			storageVolume.source,
+			storageVolume.description,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+		const kinds = query.filters.kind;
+		if (kinds && kinds.length > 0) {
+			conditions.push(inArray(storageVolume.kind, kinds));
+		}
+		const backup = query.filters.backup;
+		if (backup && backup.length === 1) {
+			conditions.push(eq(storageVolume.backupEnabled, backup[0] === "on"));
+		}
+		const where = and(...conditions);
+
+		const [rows, totals] = await Promise.all([
+			db
+				.select()
+				.from(storageVolume)
+				.where(where)
+				.orderBy(desc(storageVolume.createdAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(storageVolume).where(where),
+		]);
+
+		return {
+			items: rows.map((row) => new StorageVolumeDTO(row)),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
 	}
 
 	/** Every volume (across all users) with scheduled backups turned on : for the scheduler tick, same pattern as ServiceDTO.listCronEnabled. */

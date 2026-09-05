@@ -66,21 +66,25 @@ homerun login [--base-url <url>]
 homerun logout
 homerun update
 homerun --version
-homerun services list [--json]
+homerun services list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services get <id>
 homerun services deploy <id>
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
-homerun projects list [--json]
-homerun templates list [--json]
+homerun projects list [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
 
 `list` without `--json` prints a plain text table; every other command prints
-the raw JSON response. There's no resource `create`/`update`/`delete` yet
-(`homerun update` below is the CLI self-updater, unrelated), out of scope for
-this first pass, straightforward to add the same way (`commands.ts` already has
-the `unwrap()` helper every command uses).
+the raw JSON response. Listings are paginated: `--per-page` defaults to 100 (its
+maximum), `--page` selects a page, and `--search <term>` filters server-side.
+When a listing is only part of the total, a trailing line says so
+(`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.`); nothing
+is printed when everything fit on one page. There's no resource
+`create`/`update`/`delete` yet (`homerun update` below is the CLI self-updater,
+unrelated), out of scope for this first pass, straightforward to add the same
+way (`commands.ts` already has the `unwrap()` helper every command uses).
 
 `homerun update` self-updates the installed binary in place: it checks the
 latest GitHub release, downloads the `homerun-cli-<arch>` asset for your
@@ -102,52 +106,3 @@ Re-fetches `/api/v1/openapi.json` from a running instance and regenerates
 main app (`src/routes/api/v1/**`), the checked-in types will silently go stale
 otherwise (`openapi-fetch` itself won't catch a stale-spec mismatch at compile
 time, since it only ever sees whatever `paths` type you hand it).
-
-## What's verified vs. not
-
-**Verified live, full round trip**: the main app's `/api/v1/openapi.json` is a
-real, valid OpenAPI 3.1 document (parsed successfully by `openapi-typescript`,
-not just eyeballed); a throwaway account + real API key (against the isolated
-`homerun_test` database, never the maintainer's real one, see the main repo's qa
-conventions) drove every command in this README against a real Docker daemon:
-`services list`, `get`, `deploy` (real `nginx:alpine` pull+create+start),
-`start`, `stop`, `restart`, all succeeded and returned correctly-typed
-responses. The 401 path was also verified (a bad API key fails cleanly with a
-readable error, not a crash).
-
-The compiled binary (`bun run build` → `./dist/homerun`) was also smoke-tested
-and behaves identically to running from source.
-
-**Verified live**: `homerun login`'s device-code flow (server side:
-`CliAuthService`, `POST /api/v1/auth/cli/{device,token}`, the `/cli-auth`
-approval page). A real compiled CLI binary (installed via this README's own
-`install.sh`, inside a Linux Docker container) ran
-`homerun login --base-url <real installer-provisioned instance>`, printed a real
-user code, was approved via the real `/cli-auth` approval-page form action as
-the real signed-in admin, and picked up a freshly-issued real API key, saved to
-`~/.config/homerun/config.json` at mode `0600`. Every other command above
-(`services list/get/deploy/stop/start/restart`, `projects list`,
-`templates list`, the 401-on-bad-key path, `homerun logout`) was re-verified
-against this same real installer-provisioned instance in the same pass. This run
-is also what caught a real bug: `POST /api/v1/auth/cli/{device,token}` weren't
-in `src/hooks.server.ts`'s `customAuthPaths` allowlist, so both 404'd before
-ever reaching their SvelteKit route files (swallowed by better-auth's own
-catch-all for anything under its `/api/v1/auth` basePath), now fixed, see
-CLAUDE.md's Homerun CLI section. This run is reproducible via
-`bun run e2e:multipass` (`scripts/e2e-multipass.ts` in the repo root), which
-provisions a real installer-built instance in a disposable Multipass VM and
-drives this exact CLI flow (login + every command) against it from a throwaway
-Docker container, alongside the installer/agent checks documented in
-`packages/installer/README.md`. `bun run e2e:multipass:release` does the same
-against the **published** CLI binary, installing it with the `install.sh`
-one-liner exactly as `docs/api-and-cli.md` prints it and then running every
-command that page's own reference block lists (plus its documented
-`HOMERUN_BASE_URL`/`HOMERUN_API_KEY` env-var form), so a documented command that
-no longer exists fails the run.
-
-`homerun update`: verified the compiled-vs-source detection (`process.execPath`
-basename) and the version read (embedded `package.json` import, confirmed the
-compiled binary reports the correct root `package.json` version) locally. **Not
-verified**: an actual download-and-replace against a real GitHub release, that
-needs a published release tag to point at and wasn't attempted from this
-session.

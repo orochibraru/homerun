@@ -22,6 +22,10 @@ Either kind is a real, selectable deploy target and (opt-in, per host) build
 server; deploy/start/stop/restart/logs all route through whichever one a host is
 registered as.
 
+`/remote-hosts` has a search box and a Connection-type filter (Docker
+socket/Homerun Agent) once you have more than a couple registered, plus a pager
+if you have more than a page's worth, searched/paginated server-side.
+
 ## Real limitations, not oversights
 
 The shared `homerun`, per-project networks, and Traefik itself all live on the

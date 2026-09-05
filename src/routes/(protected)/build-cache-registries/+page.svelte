@@ -5,6 +5,8 @@
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import EntityToolbar from "$lib/components/entity-toolbar.svelte";
+	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -40,7 +42,7 @@
     </Button>
   </div>
 
-  {#if data.registries.length === 0}
+  {#if data.total === 0 && !data.filtered}
     <EmptyState
       icon={Container}
       subtitle="Add one, then pick it from a git-based service's Source tab."
@@ -52,6 +54,13 @@
       </Button>
     </EmptyState>
   {:else}
+    <EntityToolbar placeholder="Search registries by name, URL or username…" />
+
+    {#if data.registries.length === 0}
+      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+        <p class="text-text-muted text-sm">No registries match your search.</p>
+      </div>
+    {:else}
     <div class="space-y-3">
       {#each data.registries as reg (reg.id)}
         <div class="glass flex items-center gap-4 rounded-2xl p-5">
@@ -91,6 +100,13 @@
         </div>
       {/each}
     </div>
+    <Pagination
+      label="registries"
+      page={data.page}
+      perPage={data.perPage}
+      total={data.total}
+    />
+    {/if}
   {/if}
 </div>
 

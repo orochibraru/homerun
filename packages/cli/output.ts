@@ -27,6 +27,28 @@ class CliOutput {
 		console.error(`error: ${message}`);
 		process.exit(1);
 	}
+
+	/**
+	 * The list endpoints return one page, with the row count and page size in
+	 * x-total-count/x-per-page : without this a truncated listing looks
+	 * identical to a complete one.
+	 */
+	printPageFooter(response: Response, shown: number): void {
+		const headers = response?.headers;
+		if (!headers) {
+			return;
+		}
+		const total = Number(headers.get("x-total-count"));
+		const page = Number(headers.get("x-page"));
+		const perPage = Number(headers.get("x-per-page"));
+		if (!Number.isFinite(total) || total <= shown || perPage <= 0) {
+			return;
+		}
+		const lastPage = Math.max(1, Math.ceil(total / perPage));
+		console.log(
+			`\nShowing ${shown} of ${total} (page ${page} of ${lastPage}). Use --page/--per-page for the rest.`,
+		);
+	}
 }
 
 export const Output = new CliOutput();

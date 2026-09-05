@@ -4,24 +4,30 @@ import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import { parseListQuery } from "$lib/server/list-query";
 import { enqueueVolumeBackup } from "$lib/services/backup-queue";
 
 const logger = new Logger("Backups");
 
-export const load = async ({ parent }) => {
+export const load = async ({ parent, url }) => {
 	const { user } = await parent();
+	const query = parseListQuery(url, { filterKeys: ["outcome"] });
 	const [volumes, runs, destinations] = await Promise.all([
 		StorageVolumeDTO.list(user.id),
-		BackupRunDTO.listForUser(user.id),
+		BackupRunDTO.listForUserPaged(user.id, query),
 		S3DestinationDTO.list(user.id),
 	]);
 	const destinationNames = new Map(destinations.map((d) => [d.id, d.name]));
 
 	return {
-		runs: runs.map(({ run, volumeName }) => ({
+		filtered: query.active,
+		page: runs.page,
+		perPage: runs.perPage,
+		runs: runs.items.map(({ run, volumeName }) => ({
 			...run.toJSON(),
 			volumeName,
 		})),
+		total: runs.total,
 		volumes: volumes.map((v) => ({
 			destinationName: v.s3DestinationId
 				? (destinationNames.get(v.s3DestinationId) ?? "unknown destination")

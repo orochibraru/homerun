@@ -1,6 +1,20 @@
-import { eq, isNull, or } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	eq,
+	inArray,
+	isNull,
+	or,
+	type SQL,
+} from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type Template, template } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
 import { BaseDTO } from "./base-dto";
 
 export interface NewTemplateInput {
@@ -55,6 +69,62 @@ export class TemplateDTO extends BaseDTO<Template> {
 			.from(template)
 			.where(or(isNull(template.ownerId), eq(template.ownerId, userId)));
 		return rows.map((row) => new TemplateDTO(row));
+	}
+
+	/** One page of either the built-in catalog or this user's own templates, searched/filtered server-side. */
+	static async listPaged(
+		userId: string,
+		kind: "builtin" | "mine",
+		query: ListQuery,
+	): Promise<PagedResult<TemplateDTO>> {
+		const conditions: SQL[] = [
+			kind === "builtin"
+				? isNull(template.ownerId)
+				: eq(template.ownerId, userId),
+		];
+		const search = searchCondition(query.q, [
+			template.name,
+			template.description,
+			template.image,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+		const categories = query.filters.category;
+		if (categories && categories.length > 0) {
+			conditions.push(inArray(template.category, categories));
+		}
+		const where = and(...conditions);
+
+		const [rows, totals] = await Promise.all([
+			db
+				.select()
+				.from(template)
+				.where(where)
+				.orderBy(asc(template.name))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(template).where(where),
+		]);
+
+		return {
+			items: rows.map((row) => new TemplateDTO(row)),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
+	}
+
+	/** Every category present across the built-ins plus this user's own templates, for the gallery's filter pills. */
+	static async listCategories(userId: string): Promise<string[]> {
+		const rows = await db
+			.selectDistinct({ category: template.category })
+			.from(template)
+			.where(or(isNull(template.ownerId), eq(template.ownerId, userId)));
+		return rows
+			.map((r) => r.category)
+			.filter((c): c is string => Boolean(c))
+			.sort();
 	}
 
 	static async create(input: NewTemplateInput): Promise<TemplateDTO> {

@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
+import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
 import {
 	type CreateServiceApiInput,
 	createServiceApiBody,
@@ -10,13 +11,19 @@ import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("API");
 
-export const GET = async ({ locals }) => {
+export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const services = await ServiceDTO.list(locals.user.id);
-	return json(services.map((s) => s.toJSON()));
+	const paged = await ServiceDTO.listWithProjectNamesPaged(
+		locals.user.id,
+		parseApiListQuery(url),
+	);
+	return jsonPage(
+		paged.items.map((r) => r.service.toJSON()),
+		paged,
+	);
 };
 
 /**

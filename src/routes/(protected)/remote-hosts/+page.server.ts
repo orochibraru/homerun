@@ -2,6 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
+import { parseListQuery } from "$lib/server/list-query";
 import { AgentClientService } from "$lib/services/agent-client.service";
 
 const logger = new Logger("RemoteHosts");
@@ -21,7 +22,7 @@ export interface AgentStatus {
  * AgentClientService.checkHealth's own caller at Add-Host-save time.
  */
 async function checkAgentStatuses(
-	hosts: Awaited<ReturnType<typeof RemoteHostDTO.list>>,
+	hosts: RemoteHostDTO[],
 ): Promise<Record<string, AgentStatus>> {
 	const agentHosts = hosts.filter((h) => h.kind === "agent" && h.agentUrl);
 	const entries = await Promise.all(
@@ -46,11 +47,19 @@ async function checkAgentStatuses(
 	return Object.fromEntries(entries);
 }
 
-export const load = async ({ parent }) => {
+export const load = async ({ parent, url }) => {
 	const { user } = await parent();
-	const hosts = await RemoteHostDTO.list(user.id);
-	const agentStatuses = await checkAgentStatuses(hosts);
-	return { agentStatuses, hosts: hosts.map((h) => h.toJSON()) };
+	const query = parseListQuery(url, { filterKeys: ["kind"] });
+	const paged = await RemoteHostDTO.listPaged(user.id, query);
+	const agentStatuses = await checkAgentStatuses(paged.items);
+	return {
+		agentStatuses,
+		filtered: query.active,
+		hosts: paged.items.map((h) => h.toJSON()),
+		page: paged.page,
+		perPage: paged.perPage,
+		total: paged.total,
+	};
 };
 
 export const actions = {

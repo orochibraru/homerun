@@ -13,6 +13,7 @@
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -28,7 +29,8 @@
 
 	let editing = $state(false);
 	let renaming = $state(false);
-	let showDeleteConfirm = $state(false);
+	let deleteDialogOpen = $state(false);
+	let deleteForm = $state<HTMLFormElement | null>(null);
 	let deleting = $state(false);
 </script>
 
@@ -191,64 +193,49 @@
       </div>
     </div>
     <div class="p-5">
-      {#if !showDeleteConfirm}
+      <form
+        action="?/delete"
+        method="POST"
+        bind:this={deleteForm}
+        use:enhance={enhanceToast({
+          error: "Couldn't delete the project.",
+          loading: "Deleting the project",
+          onFailure: () => {
+            deleting = false;
+          },
+          onStart: () => {
+            deleting = true;
+          },
+          success: "Project deleted.",
+        })}
+      >
         <Button
           class="border-red-300 text-red-600 hover:bg-red-500 hover:text-white dark:border-red-700/60"
+          disabled={deleting}
           onclick={() => {
-            showDeleteConfirm = true;
+            deleteDialogOpen = true;
           }}
+          type="button"
           variant="outline"
         >
-          Delete project
+          {#if deleting}
+            <Spinner />
+            Deleting…
+          {:else}
+            <Trash2 class="size-4" />
+            Delete project
+          {/if}
         </Button>
-      {:else}
-        <form
-          action="?/delete"
-          class="space-y-4"
-          method="POST"
-          use:enhance={enhanceToast({
-            error: "Couldn't delete the project.",
-            loading: "Deleting the project",
-            onFailure: () => {
-              deleting = false;
-            },
-            onStart: () => {
-              deleting = true;
-            },
-            success: "Project deleted.",
-          })}
-        >
-          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
-            <p class="font-semibold">
-              Delete "{proj.name}" and all {data.services.length}
-              {data.services.length === 1 ? "service" : "services"}
-              in it?
-            </p>
-            <p class="mt-1">
-              Every container will be stopped and removed. This can't be undone.
-            </p>
-          </div>
-          <div class="flex items-center gap-3">
-            <Button
-              onclick={() => {
-                showDeleteConfirm = false;
-              }}
-              variant="outline"
-            >
-              Cancel
-            </Button>
-            <Button disabled={deleting} type="submit" variant="destructive">
-              {#if deleting}
-                <Spinner />
-                Deleting…
-              {:else}
-                <Trash2 class="size-4" />
-                Yes, delete everything
-              {/if}
-            </Button>
-          </div>
-        </form>
-      {/if}
+      </form>
     </div>
   </section>
 </div>
+
+<ConfirmDialog
+  bind:open={deleteDialogOpen}
+  confirmLabel="Delete everything"
+  confirmPhrase={proj.name}
+  description={`Deleting "${proj.name}" also deletes the ${data.services.length} ${data.services.length === 1 ? "service" : "services"} in it : every container is stopped and removed. This can't be undone.`}
+  onConfirm={() => deleteForm?.requestSubmit()}
+  title="Delete project"
+/>

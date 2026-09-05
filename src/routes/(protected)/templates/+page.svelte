@@ -1,310 +1,254 @@
 <script lang="ts">
-	import {
-		LayoutGrid,
-		ListFilter,
-		Plus,
-		Rocket,
-		Search,
-		SettingsIcon,
-		X,
-	} from "@lucide/svelte";
+	import { LayoutGrid, Plus, Rocket, SettingsIcon } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import EntityListView from "$lib/components/entity-list-view.svelte";
+	import EntityToolbar, {
+		type FilterGroup,
+	} from "$lib/components/entity-toolbar.svelte";
+	import Pagination from "$lib/components/pagination.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button";
-	import {
-		Drawer,
-		DrawerContent,
-		DrawerHeader,
-		DrawerTitle,
-	} from "$lib/components/ui/drawer";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import { ViewMode } from "$lib/view-mode.svelte";
 
 	const { data } = $props();
 
-	let search = $state("");
-	let selectedCategories = $state<string[]>([]);
-	let filtersOpen = $state(false);
-	let quickDeploying = $state<string | null>(null);
-	let lastDeployedHref = $state<string | undefined>(undefined);
+	type Template = (typeof data.builtins)[number];
 
 	onMount(() => title.set("Templates"));
 
-	const categories = $derived(
-		[
-			...new Set(
-				[...data.builtins, ...data.mine]
-					.map((t) => t.category)
-					.filter((c): c is string => !!c),
-			),
-		].sort(),
+	const view = new ViewMode("templates", "card");
+
+	let quickDeploying = $state<string | null>(null);
+	let lastDeployedHref = $state<string | undefined>(undefined);
+
+	const CARD_GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4";
+
+	const filters = $derived<FilterGroup[]>([
+		{
+			key: "category",
+			label: "Category",
+			options: data.categories.map((c) => ({ label: c, value: c })),
+		},
+	]);
+
+	const projectQuery = $derived(
+		data.project ? `?projectId=${data.project.id}` : "",
 	);
 
-	function toggleCategory(c: string) {
-		selectedCategories = selectedCategories.includes(c)
-			? selectedCategories.filter((x) => x !== c)
-			: [...selectedCategories, c];
+	function detailsHref(tmpl: Template): string {
+		return `${resolve("/(protected)/templates/[templateId]", {
+			templateId: tmpl.id,
+		})}${projectQuery}`;
 	}
 
-	function matches(tmpl: (typeof data.builtins)[number]): boolean {
-		if (
-			selectedCategories.length > 0 &&
-			!(tmpl.category && selectedCategories.includes(tmpl.category))
-		) {
-			return false;
-		}
-		if (!search.trim()) {
-			return true;
-		}
-		const q = search.trim().toLowerCase();
-		return (
-			tmpl.name.toLowerCase().includes(q) ||
-			(tmpl.description?.toLowerCase().includes(q) ?? false) ||
-			tmpl.image.toLowerCase().includes(q)
-		);
+	function configureHref(tmpl: Template): string {
+		return `${resolve("/services/new")}?templateId=${tmpl.id}${
+			data.project ? `&projectId=${data.project.id}` : ""
+		}`;
 	}
 
-	const filteredBuiltins = $derived(data.builtins.filter(matches));
-	const filteredMine = $derived(data.mine.filter(matches));
+	function quickDeployEnhance(tmpl: Template) {
+		return enhanceToast({
+			action: {
+				label: "View",
+				onClick: () => goto(lastDeployedHref ?? resolve("/services")),
+			},
+			error: "Couldn't prepare deployment.",
+			loading: `Preparing "${tmpl.name}" for deployment`,
+			onSettled: () => {
+				quickDeploying = null;
+			},
+			onStart: () => {
+				quickDeploying = tmpl.id;
+			},
+			onSuccess: (result) => {
+				lastDeployedHref = (result as { href?: string } | undefined)?.href;
+			},
+			reset: false,
+			success: `"${tmpl.name}" deploying`,
+		});
+	}
 </script>
 
-{#snippet card(tmpl: (typeof data.builtins)[number])}
-    <div
-        class="glass rounded-2xl flex flex-col justify-between gap-2 h-full p-5 transition-shadow hover:shadow-md"
+{#snippet templateActions(tmpl: Template)}
+  <form
+    action="?/quickDeploy"
+    class="flex-1"
+    method="POST"
+    use:enhance={quickDeployEnhance(tmpl)}
+  >
+    <input name="templateId" type="hidden" value={tmpl.id} />
+    {#if data.project}
+      <input name="projectId" type="hidden" value={data.project.id} />
+    {/if}
+    <Button
+      class="w-full"
+      disabled={quickDeploying !== null}
+      size="sm"
+      type="submit"
     >
-        <a
-            class="flex flex-col gap-2"
-            href="{resolve('/(protected)/templates/[templateId]', {
-                templateId: tmpl.id,
-            })}{data.project ? `?projectId=${data.project.id}` : ''}"
-        >
-            <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
-            <p class="font-semibold text-text">{tmpl.name}</p>
-            {#if tmpl.description}
-                <p class="line-clamp-2 text-xs text-text-muted">
-                    {tmpl.description}
-                </p>
-            {/if}
-            <p class="font-mono text-xs text-text-subtle">
-                {tmpl.image}:{tmpl.tag}
-            </p>
-            {#if tmpl.linkedNames && tmpl.linkedNames.length > 0}
-                <p class="text-xs text-accent">
-                    + {tmpl.linkedNames.join(", ")}
-                </p>
-            {/if}
-        </a>
-        <div class="flex gap-2">
-            <form
-                action="?/quickDeploy"
-                class="flex-1"
-                method="POST"
-                use:enhance={enhanceToast({
-                    action: {
-                        label: "View",
-                        onClick: () =>
-                            goto(lastDeployedHref ?? resolve("/services")),
-                    },
-                    error: "Couldn't prepare deployment.",
-                    loading: `Preparing "${tmpl.name}" for deployment`,
-                    onSettled: () => {
-                        quickDeploying = null;
-                    },
-                    onStart: () => {
-                        quickDeploying = tmpl.id;
-                    },
-                    onSuccess: (data) => {
-                        lastDeployedHref = (
-                            data as { href?: string } | undefined
-                        )?.href;
-                    },
-                    reset: false,
-                    success: `"${tmpl.name}" deploying`,
-                })}
-            >
-                <input name="templateId" type="hidden" value={tmpl.id} />
-                {#if data.project}
-                    <input
-                        name="projectId"
-                        type="hidden"
-                        value={data.project.id}
-                    />
-                {/if}
-                <Button
-                    class="w-full"
-                    disabled={quickDeploying !== null}
-                    size="sm"
-                    type="submit"
-                >
-                    {#if quickDeploying === tmpl.id}
-                        <Spinner />
-                        Deploying…
-                    {:else}
-                        <Rocket class="size-3.5" />
-                        Quick Deploy
-                    {/if}
-                </Button>
-            </form>
-            <Button
-                href="{resolve(
-                    '/services/new',
-                )}?templateId={tmpl.id}{data.project
-                    ? `&projectId=${data.project.id}`
-                    : ''}"
-                size="sm"
-                variant="outline"
-            >
-                <SettingsIcon class="size-3.5" />
-                Configure
-            </Button>
-        </div>
+      {#if quickDeploying === tmpl.id}
+        <Spinner />
+        Deploying…
+      {:else}
+        <Rocket class="size-3.5" />
+        Quick Deploy
+      {/if}
+    </Button>
+  </form>
+  <Button href={configureHref(tmpl)} size="sm" variant="outline">
+    <SettingsIcon class="size-3.5" />
+    Configure
+  </Button>
+{/snippet}
+
+{#snippet card(tmpl: Template)}
+  <div class="glass flex h-full flex-col justify-between gap-2 rounded-2xl p-5 transition-shadow hover:shadow-md">
+    <a class="flex flex-col gap-2" href={detailsHref(tmpl)}>
+      <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
+      <p class="text-text font-semibold">{tmpl.name}</p>
+      {#if tmpl.description}
+        <p class="text-text-muted line-clamp-2 text-xs">
+          {tmpl.description}
+        </p>
+      {/if}
+      <p class="text-text-subtle font-mono text-xs">
+        {tmpl.image}:{tmpl.tag}
+      </p>
+      {#if tmpl.linkedNames && tmpl.linkedNames.length > 0}
+        <p class="text-accent text-xs">
+          + {tmpl.linkedNames.join(", ")}
+        </p>
+      {/if}
+    </a>
+    <div class="flex gap-2">
+      {@render templateActions(tmpl)}
     </div>
+  </div>
+{/snippet}
+
+{#snippet row(tmpl: Template)}
+  <div class="glass flex flex-wrap items-center gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md">
+    <a class="flex min-w-0 flex-1 items-center gap-4" href={detailsHref(tmpl)}>
+      <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
+      <div class="min-w-0">
+        <p class="text-text truncate text-sm font-semibold">{tmpl.name}</p>
+        <p class="text-text-subtle truncate font-mono text-xs">
+          {tmpl.image}:{tmpl.tag}
+        </p>
+        {#if tmpl.description}
+          <p class="text-text-muted truncate text-xs">{tmpl.description}</p>
+        {/if}
+      </div>
+    </a>
+    <div class="flex shrink-0 items-center gap-2">
+      {@render templateActions(tmpl)}
+    </div>
+  </div>
 {/snippet}
 
 <div class="p-6 md:p-8">
-    <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h1 class="text-text text-xl font-semibold tracking-tight">
-                Templates
-            </h1>
-            <p class="mt-1 text-sm text-text-muted">
-                One-click configs for common services.
-            </p>
-        </div>
-        <Button href={resolve("/templates/new")} size="sm">
-            <Plus class="size-4" />
-            New Template
-        </Button>
-    </div>
-
-    <div class="mb-8 flex flex-wrap items-center gap-3">
-        <div class="relative flex-1 min-w-52">
-            <Search
-                class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-subtle"
-            />
-            <input
-                bind:value={search}
-                class="w-full rounded-lg glass py-2 pl-9 pr-3 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none"
-                placeholder="Search templates…"
-                type="text"
-            />
-        </div>
-        <Button onclick={() => (filtersOpen = true)} variant="outline">
-            <ListFilter class="size-4" />
-            Filters
-            {#if selectedCategories.length > 0}
-                <span
-                    class="bg-accent text-accent-foreground rounded-full px-1.5 text-xs"
-                >
-                    {selectedCategories.length}
-                </span>
-            {/if}
-        </Button>
-    </div>
-
-    <div class="mb-8">
-        <h2
-            class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
-        >
-            Built-in
-        </h2>
-        {#if filteredBuiltins.length === 0}
-            <p class="text-sm text-text-subtle">No built-in templates match.</p>
-        {:else}
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {#each filteredBuiltins as tmpl (tmpl.id)}
-                    {@render card(tmpl)}
-                {/each}
-            </div>
-        {/if}
-    </div>
-
+  <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-        <h2
-            class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
-        >
-            My Templates
-        </h2>
-        {#if data.mine.length === 0}
-            <div
-                class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center"
-            >
-                <LayoutGrid class="mb-3 size-8 text-text-muted opacity-40" />
-                <p class="text-sm font-medium text-text-muted">
-                    No custom templates yet
-                </p>
-                <p class="mt-1 text-xs text-text-subtle">
-                    Build one from scratch, or save an existing service as a
-                    template from its Settings tab.
-                </p>
-            </div>
-        {:else if filteredMine.length === 0}
-            <p class="text-sm text-text-subtle">No custom templates match.</p>
-        {:else}
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {#each filteredMine as tmpl (tmpl.id)}
-                    {@render card(tmpl)}
-                {/each}
-            </div>
-        {/if}
+      <h1 class="text-text text-xl font-semibold tracking-tight">
+        Templates
+      </h1>
+      <p class="text-text-muted mt-1 text-sm">
+        One-click configs for common services.
+      </p>
     </div>
+    <Button href={resolve("/templates/new")} size="sm">
+      <Plus class="size-4" />
+      New Template
+    </Button>
+  </div>
 
-    <p class="mt-10 text-center text-xs text-text-subtle">
-        App icons by <a
-            class="underline hover:text-text-muted"
-            href="https://selfh.st/icons/"
-            rel="noopener noreferrer"
-            target="_blank">selfh.st/icons</a
-        >, licensed under
-        <a
-            class="underline hover:text-text-muted"
-            href="https://creativecommons.org/licenses/by/4.0/"
-            rel="noopener noreferrer"
-            target="_blank">CC BY 4.0</a
-        >.
-    </p>
+  <EntityToolbar
+    {filters}
+    pageParams={["bpage", "mpage"]}
+    placeholder="Search templates by name or image…"
+  >
+    {#snippet trailing()}
+      <ViewModeToggle {view} />
+    {/snippet}
+  </EntityToolbar>
+
+  <div class="mb-8">
+    <h2 class="eyebrow mb-3">Built-in</h2>
+    {#if data.builtins.length === 0}
+      <p class="text-text-subtle text-sm">No built-in templates match.</p>
+    {:else}
+      <EntityListView
+        {card}
+        cardGridClass={CARD_GRID}
+        getKey={(tmpl) => tmpl.id}
+        items={data.builtins}
+        {row}
+        {view}
+      />
+      <Pagination
+        label="built-in templates"
+        page={data.builtinsPage}
+        pageParam="bpage"
+        perPage={data.builtinsPerPage}
+        total={data.builtinsTotal}
+      />
+    {/if}
+  </div>
+
+  <div>
+    <h2 class="eyebrow mb-3">My Templates</h2>
+    {#if data.mineTotal === 0 && !data.filtered}
+      <div class="border-border flex flex-col items-center justify-center rounded-2xl border border-dashed py-12 text-center">
+        <LayoutGrid class="text-text-muted mb-3 size-8 opacity-40" />
+        <p class="text-text-muted text-sm font-medium">
+          No custom templates yet
+        </p>
+        <p class="text-text-subtle mt-1 text-xs">
+          Build one from scratch, or save an existing service as a template
+          from its Settings tab.
+        </p>
+      </div>
+    {:else if data.mine.length === 0}
+      <p class="text-text-subtle text-sm">No custom templates match.</p>
+    {:else}
+      <EntityListView
+        {card}
+        cardGridClass={CARD_GRID}
+        getKey={(tmpl) => tmpl.id}
+        items={data.mine}
+        {row}
+        {view}
+      />
+      <Pagination
+        label="templates"
+        page={data.minePage}
+        pageParam="mpage"
+        perPage={data.minePerPage}
+        total={data.mineTotal}
+      />
+    {/if}
+  </div>
+
+  <p class="text-text-subtle mt-10 text-center text-xs">
+    App icons by <a
+      class="hover:text-text-muted underline"
+      href="https://selfh.st/icons/"
+      rel="noopener noreferrer"
+      target="_blank">selfh.st/icons</a
+    >, licensed under
+    <a
+      class="hover:text-text-muted underline"
+      href="https://creativecommons.org/licenses/by/4.0/"
+      rel="noopener noreferrer"
+      target="_blank">CC BY 4.0</a
+    >.
+  </p>
 </div>
-
-<Drawer bind:open={filtersOpen} direction="right">
-    <DrawerContent class="flex flex-col">
-        <DrawerHeader class="flex-row items-center justify-between">
-            <DrawerTitle>Filter by category</DrawerTitle>
-            <Button
-                onclick={() => (filtersOpen = false)}
-                size="icon-sm"
-                variant="ghost"
-            >
-                <X class="size-4" />
-            </Button>
-        </DrawerHeader>
-        <div class="flex flex-wrap gap-2 overflow-y-auto px-4 pb-6">
-            {#each categories as c (c)}
-                {@const selected = selectedCategories.includes(c)}
-                <button
-                    class="rounded-full border px-3 py-1.5 text-sm capitalize transition-colors {selected
-                        ? 'border-accent bg-accent text-accent-foreground'
-                        : 'border-border bg-surface text-text-muted hover:bg-surface-2'}"
-                    onclick={() => toggleCategory(c)}
-                    type="button"
-                >
-                    {c}
-                </button>
-            {/each}
-        </div>
-        {#if selectedCategories.length > 0}
-            <div class="border-t border-border px-4 py-3">
-                <Button
-                    onclick={() => (selectedCategories = [])}
-                    size="sm"
-                    variant="outline"
-                >
-                    Clear all
-                </Button>
-            </div>
-        {/if}
-    </DrawerContent>
-</Drawer>

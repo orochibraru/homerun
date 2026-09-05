@@ -1,10 +1,15 @@
-import { desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, isNull, or, type SQL } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import {
 	type BackupRun,
 	backupRun,
 	storageVolume,
 } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
 import { BaseDTO } from "./base-dto";
 
 /** Wraps the `backup_run` table : see ServiceDTO for the pattern this follows. */
@@ -72,5 +77,64 @@ export class BackupRunDTO extends BaseDTO<BackupRun> {
 			run: new BackupRunDTO(r.row),
 			volumeName: r.volumeName,
 		}));
+	}
+
+	/** One page of `listForUser`, searched/filtered server-side, plus the unpaged total : this history grows without bound, so the page can't just load "the newest 50" and filter those client-side. */
+	static async listForUserPaged(
+		userId: string,
+		query: ListQuery,
+	): Promise<PagedResult<{ run: BackupRunDTO; volumeName: string }>> {
+		const conditions: SQL[] = [eq(storageVolume.userId, userId)];
+		const search = searchCondition(query.q, [
+			storageVolume.name,
+			backupRun.error,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+		const outcomes = query.filters.outcome;
+		if (outcomes && outcomes.length > 0) {
+			const parts: SQL[] = [];
+			if (outcomes.includes("running")) {
+				parts.push(isNull(backupRun.success));
+			}
+			if (outcomes.includes("success")) {
+				parts.push(eq(backupRun.success, true));
+			}
+			if (outcomes.includes("failed")) {
+				parts.push(eq(backupRun.success, false));
+			}
+			const combined = or(...parts);
+			if (combined) {
+				conditions.push(combined);
+			}
+		}
+		const where = and(...conditions);
+
+		const [rows, totals] = await Promise.all([
+			db
+				.select({ row: backupRun, volumeName: storageVolume.name })
+				.from(backupRun)
+				.innerJoin(storageVolume, eq(backupRun.volumeId, storageVolume.id))
+				.where(where)
+				.orderBy(desc(backupRun.startedAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db
+				.select({ total: count() })
+				.from(backupRun)
+				.innerJoin(storageVolume, eq(backupRun.volumeId, storageVolume.id))
+				.where(where),
+		]);
+
+		return {
+			items: rows.map((r) => ({
+				run: new BackupRunDTO(r.row),
+				volumeName: r.volumeName,
+			})),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
 	}
 }

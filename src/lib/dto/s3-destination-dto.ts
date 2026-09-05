@@ -1,6 +1,11 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, type SQL } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type S3Destination, s3Destination } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
 import { decryptSecret, encryptSecret } from "$lib/services/secrets";
 import { BaseDTO } from "./base-dto";
 
@@ -42,6 +47,42 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 			.where(eq(s3Destination.userId, userId))
 			.orderBy(desc(s3Destination.createdAt));
 		return rows.map((row) => new S3DestinationDTO(row));
+	}
+
+	/** One page of `list`, searched server-side, plus the unpaged total. */
+	static async listPaged(
+		userId: string,
+		query: ListQuery,
+	): Promise<PagedResult<S3DestinationDTO>> {
+		const conditions: SQL[] = [eq(s3Destination.userId, userId)];
+		const search = searchCondition(query.q, [
+			s3Destination.name,
+			s3Destination.endpoint,
+			s3Destination.bucket,
+			s3Destination.region,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+		const where = and(...conditions);
+
+		const [rows, totals] = await Promise.all([
+			db
+				.select()
+				.from(s3Destination)
+				.where(where)
+				.orderBy(desc(s3Destination.createdAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(s3Destination).where(where),
+		]);
+
+		return {
+			items: rows.map((row) => new S3DestinationDTO(row)),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
 	}
 
 	static async create(input: NewS3DestinationInput): Promise<S3DestinationDTO> {

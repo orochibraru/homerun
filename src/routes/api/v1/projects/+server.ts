@@ -1,16 +1,23 @@
 import { json } from "@sveltejs/kit";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { Logger } from "$lib/logger";
+import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
 import { createProjectApiBody } from "$lib/server/validation/api";
 
 const logger = new Logger("API");
 
-export const GET = async ({ locals }) => {
+export const GET = async ({ locals, url }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const projects = await ProjectDTO.list(locals.user.id);
-	return json(projects.map((p) => p.toJSON()));
+	const paged = await ProjectDTO.listWithServiceCountsPaged(
+		locals.user.id,
+		parseApiListQuery(url),
+	);
+	return jsonPage(
+		paged.items.map((r) => r.project.toJSON()),
+		paged,
+	);
 };
 
 export const POST = async ({ request, locals }) => {

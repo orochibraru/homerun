@@ -21,6 +21,9 @@ created by an admin from `/users`:
 
 An admin can change a user's role or remove them from `/users`, with two guards:
 you can't remove yourself, and you can't demote/remove the last remaining admin.
+`/users` has a search box (name/email) and a Role filter once you have more than
+a couple of accounts, plus a pager once you have more than a page's worth,
+searched/paginated server-side.
 
 ## OAuth / OIDC login
 
