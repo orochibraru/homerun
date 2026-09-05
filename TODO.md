@@ -15,6 +15,7 @@
 - [ ] [App] Multi select actions on services
 - [ ] [App] Grid/list layout in services should also be shared with projects &
       templates
+- [ ] [App] Search & filters for any page that lists entities.
 
 ## Medium
 
