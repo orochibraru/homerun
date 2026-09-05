@@ -1,3 +1,10 @@
+## [1.0.8](https://github.com/orochibraru/homerun/compare/v1.0.7...v1.0.8) (2026-09-05)
+
+### Features
+
+- named volumes backup, compose import, smart service links, cron jobs from ui
+  ([dcf2e4f](https://github.com/orochibraru/homerun/commit/dcf2e4f5d2bf0e6fd3f104449250071e5d4ef23f))
+
 ## [1.0.7](https://github.com/orochibraru/homerun/compare/v1.0.6...v1.0.7) (2026-09-05)
 
 ### Features
