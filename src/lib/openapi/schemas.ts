@@ -22,6 +22,10 @@ export const errorResponse = z.object({
 });
 
 export const serviceResponse = z.object({
+	authAllowedEmails: z.array(z.string()),
+	authAllowedGroups: z.array(z.string()),
+	authAllowedUserIds: z.array(z.string()),
+	authProviders: z.array(z.string()),
 	authRequired: z.boolean(),
 	autoscaleEligible: z.boolean(),
 	buildSource: z.enum(["image", "git"]),

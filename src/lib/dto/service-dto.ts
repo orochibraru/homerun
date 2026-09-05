@@ -57,6 +57,10 @@ export interface NewServiceInput {
 export type ServiceUpdateInput = Partial<
 	Pick<
 		Service,
+		| "authAllowedEmails"
+		| "authAllowedGroups"
+		| "authAllowedUserIds"
+		| "authProviders"
 		| "authRequired"
 		| "autoscaleEligible"
 		| "buildCacheRegistryId"
@@ -109,6 +113,15 @@ export class ServiceDTO extends BaseDTO<Service> {
 			.select()
 			.from(service)
 			.where(and(eq(service.id, id), eq(service.userId, userId)))
+			.limit(1);
+		return row ? new ServiceDTO(row) : null;
+	}
+
+	static async getForGate(id: string): Promise<ServiceDTO | null> {
+		const [row] = await db
+			.select()
+			.from(service)
+			.where(eq(service.id, id))
 			.limit(1);
 		return row ? new ServiceDTO(row) : null;
 	}
@@ -318,6 +331,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 	/** How the container runs : placement, networking, resource limits, all optional with a default. */
 	static #runtimeColumns(input: NewServiceInput) {
 		return {
+			authAllowedEmails: [],
+			authAllowedGroups: [],
+			authAllowedUserIds: [],
+			authProviders: [],
 			authRequired: input.authRequired ?? false,
 			autoscaleEligible: input.autoscaleEligible ?? false,
 			cpuLimit: input.cpuLimit ?? null,
@@ -457,6 +474,18 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get authRequired(): boolean {
 		return this.row.authRequired;
+	}
+	get authProviders(): string[] {
+		return this.row.authProviders;
+	}
+	get authAllowedUserIds(): string[] {
+		return this.row.authAllowedUserIds;
+	}
+	get authAllowedEmails(): string[] {
+		return this.row.authAllowedEmails;
+	}
+	get authAllowedGroups(): string[] {
+		return this.row.authAllowedGroups;
 	}
 	get autoscaleEligible(): boolean {
 		return this.row.autoscaleEligible;

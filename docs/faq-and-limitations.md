@@ -26,10 +26,11 @@ limitation for services that opt in.
 
 ## Known, real limitations (not hypothetical)
 
-- **Per-service auth gate** (`authRequired`) blocks _everyone_, including a
-  signed-in admin, unless `AUTH_CROSS_SUBDOMAIN=true`, and even then it's not
-  fully reliable. See
-  [Users & access](users-and-access.md#per-service-auth-gate).
+- **The per-app login wall** needs **Origin** set under Settings → General
+  (that's where visitors are sent to sign in), and the service has to be
+  redeployed after the wall is turned on or off. Group restrictions depend on
+  your provider actually putting group or role claims in the id token. See
+  [Users & access](users-and-access.md#per-app-login-wall).
 - **Custom SSL certs** require a one-time manual Traefik config change
   (`TRAEFIK_DYNAMIC_CONFIG_DIR` + uncommenting flags in `compose.yaml`), Homerun
   writes the cert files but never touches the live Traefik container itself. See

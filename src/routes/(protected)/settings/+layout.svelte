@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Container, Globe, KeyRound, Mail, Network } from "@lucide/svelte";
+	import { Container, Globe, Mail, Network } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -71,13 +71,6 @@
 				icon: Mail,
 				id: "email",
 				label: "Email",
-			},
-			{
-				exact: false,
-				href: resolve("/settings/authentication"),
-				icon: KeyRound,
-				id: "authentication",
-				label: "Authentication",
 			},
 		].map((tab) => ({
 			...tab,

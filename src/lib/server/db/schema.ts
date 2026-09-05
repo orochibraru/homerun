@@ -492,9 +492,22 @@ export const templateLink = pgTable(
 export const service = pgTable(
 	"service",
 	{
-		// When true, a Traefik forwardAuth middleware gatekeeps this service
-		// behind this app's own login (any provider, including a configured
-		// OIDC one) : see docker/labels.ts and /api/v1/auth-check.
+		authAllowedGroups: jsonb("auth_allowed_groups")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		authAllowedEmails: jsonb("auth_allowed_emails")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		authAllowedUserIds: jsonb("auth_allowed_user_ids")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
+		authProviders: jsonb("auth_providers")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
 		authRequired: boolean("auth_required").default(false).notNull(),
 		// Opt-in, off by default (Compute tab) : whether CronService's
 		// autoscale tick is allowed to migrate this service onto

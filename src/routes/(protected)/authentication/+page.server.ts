@@ -1,9 +1,12 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { oauthMethod } from "$lib/auth-providers";
+import { config, isSmtpEnabled } from "$lib/config";
 import {
 	InstanceSettingsDTO,
 	type OauthProviderInput,
 } from "$lib/dto/instance-settings-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { applyAndRebuild } from "$lib/server/validation/instance-settings-form";
 
@@ -29,6 +32,42 @@ async function validateDiscoveryUrl(url: string): Promise<string | null> {
 	}
 }
 
+export const load = async ({ locals, parent }) => {
+	const { user } = await parent();
+	if (!locals.isAdmin) {
+		throw redirect(302, resolve("/"));
+	}
+
+	const [settings, services] = await Promise.all([
+		InstanceSettingsDTO.get(),
+		ServiceDTO.list(user.id),
+	]);
+
+	const gated = services
+		.filter((svc) => svc.authRequired)
+		.map((svc) => ({
+			id: svc.id,
+			methods: svc.authProviders,
+			name: svc.name,
+			slug: svc.slug,
+		}));
+
+	const settingsRow = settings.toJSON();
+
+	return {
+		callbackBase: config.auth.origin ?? null,
+		gatedServices: gated,
+		settings: settingsRow,
+		smtpEnabled: isSmtpEnabled(),
+		usageByProvider: Object.fromEntries(
+			settingsRow.oauthProviders.map((p) => [
+				p.name,
+				gated.filter((svc) => svc.methods.includes(oauthMethod(p.name))).length,
+			]),
+		),
+	};
+};
+
 export const actions = {
 	updateOauth: async ({ request, locals }) => {
 		if (!locals.user) {
@@ -51,6 +90,11 @@ export const actions = {
 			const name = names[i]?.trim();
 			if (!name) {
 				continue;
+			}
+			if (providers.some((p) => p.name === name)) {
+				return fail(400, {
+					error: `Two providers are both named "${name}". Provider names have to be unique : they're what a service's allowed sign-in methods reference.`,
+				});
 			}
 			const clientId = clientIds[i]?.trim() ?? "";
 			const discoveryUrl = discoveryUrls[i]?.trim() ?? "";

@@ -85,6 +85,11 @@ set in production.
       Resources panel, the notification feed and the Scheduling page's job-queue
       panel each resolving past their skeleton against real data, and a
       mark-read/delete command updating the feed with no page reload
+- [x] The Authentication page (`ui-login-wall.spec.ts`): every OAuth preset
+      offered, and clicking one prefilling a provider row with that product's
+      own discovery-URL template
+- [x] A service's Access section: policy fields only appearing once the login
+      wall is on, and saving it with no sign-in method picked being refused
 - [ ] A real deploy — needs a reachable Docker socket from _inside_ the spawned
       app process, which this suite's bootstrap doesn't currently wire up
       (`tests/integration/`'s own `spawnApp` doesn't either, by design, that

@@ -10,6 +10,8 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
 
+	const { data } = $props();
+
 	let email = $state("");
 	let password = $state("");
 	let loading = $state(false);
@@ -51,6 +53,33 @@
 			loading: "Signing in",
 			success: "Signed in successfully",
 			error: (e) => (e instanceof Error ? e.message : "Couldn't sign you in."),
+		});
+	}
+
+	async function oauthSignInCallback(providerId: string) {
+		loading = true;
+		try {
+			const { error } = await signIn.social({
+				callbackURL: resolve("/"),
+				provider: providerId as never,
+			});
+			if (error) {
+				throw new Error(error.message ?? "Couldn't start that sign-in.");
+			}
+		} catch (err) {
+			loading = false;
+			throw err;
+		}
+	}
+
+	function handleOauthSignIn(providerId: string) {
+		return toast.promise(oauthSignInCallback(providerId), {
+			error: (err) =>
+				err instanceof Error
+					? err.message
+					: `Couldn't sign you in with ${providerId}.`,
+			loading: `Redirecting to ${providerId}`,
+			success: `Redirecting to ${providerId}…`,
 		});
 	}
 </script>
@@ -160,6 +189,26 @@
                     {/if}
                 </Button>
             </form>
+
+            {#if data.oauthProviders.length > 0}
+                <div class="my-6 flex items-center gap-3">
+                    <span class="bg-border h-px flex-1"></span>
+                    <span class="text-text-subtle text-xs uppercase">or</span>
+                    <span class="bg-border h-px flex-1"></span>
+                </div>
+                <div class="space-y-2">
+                    {#each data.oauthProviders as provider (provider)}
+                        <Button
+                            class="w-full"
+                            disabled={loading}
+                            onclick={() => handleOauthSignIn(provider)}
+                            variant="outline"
+                        >
+                            Continue with {provider}
+                        </Button>
+                    {/each}
+                </div>
+            {/if}
 
             <p class="mt-6 text-center text-sm text-text-muted">
                 Don't have an account?

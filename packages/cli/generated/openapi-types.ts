@@ -349,6 +349,10 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
+						authAllowedEmails: string[];
+						authAllowedGroups: string[];
+						authAllowedUserIds: string[];
+						authProviders: string[];
 						authRequired: boolean;
 						autoscaleEligible: boolean;
 						/** @enum {string} */
@@ -481,6 +485,10 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
+						authAllowedEmails: string[];
+						authAllowedGroups: string[];
+						authAllowedUserIds: string[];
+						authProviders: string[];
 						authRequired: boolean;
 						autoscaleEligible: boolean;
 						/** @enum {string} */
@@ -602,6 +610,10 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
+						authAllowedEmails: string[];
+						authAllowedGroups: string[];
+						authAllowedUserIds: string[];
+						authProviders: string[];
 						authRequired: boolean;
 						autoscaleEligible: boolean;
 						/** @enum {string} */
@@ -785,6 +797,10 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
+						authAllowedEmails: string[];
+						authAllowedGroups: string[];
+						authAllowedUserIds: string[];
+						authProviders: string[];
 						authRequired: boolean;
 						autoscaleEligible: boolean;
 						/** @enum {string} */

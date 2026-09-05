@@ -27,11 +27,11 @@ searched/paginated server-side.
 
 ## OAuth / OIDC login
 
-Configured per-provider from `/settings` (not env vars), any OIDC-compatible
-provider via a discovery URL, client ID/secret, and scopes. Applies live once
-saved, no restart. The discovery URL is validated before saving specifically
-because a broken one used to be able to lock the whole instance out (see
-[Configuration](configuration.md#a-note-on-lockout)).
+Configured per-provider from the Authentication page (see below), not env vars:
+any OIDC-compatible provider via a discovery URL, client ID/secret, and scopes.
+Applies live once saved, no restart. The discovery URL is validated before
+saving specifically because a broken one used to be able to lock the whole
+instance out (see [Configuration](configuration.md#a-note-on-lockout)).
 
 ## API keys
 
@@ -55,20 +55,80 @@ A per-account "Appearance" tab on your profile page controls:
 These are personal preferences, not instance-wide settings, each account picks
 its own independently of `/settings`.
 
-## Per-service auth gate
+## Authentication providers
 
-A deployed service can require a Homerun login to reach it at all
-(`authRequired`, the service's Networking tab), Traefik's forwardAuth middleware
-checks the request against this app's own session before letting it through.
+The **Authentication** page (Administration, admin-only) is where sign-in
+methods are configured for the whole instance:
 
-**Real limitation, not hypothetical**: there's no login page mounted on the
-gated subdomain itself, so this blocks _everyone_, including a signed-in admin,
-unless `AUTH_CROSS_SUBDOMAIN=true` widens the session cookie to every subdomain
-of your base domain. Even with that on, a signed-in admin visiting the gated
-subdomain directly has been observed still getting a 401 in testing, not fully
-root-caused. Treat `authRequired` today as a hard "make this unreachable from
-outside" switch, not a finished SSO gate; a real fix needs a login-redirect flow
-for gated subdomains, which isn't built yet.
+- **Built-in authentication** is Homerun's own email and password accounts,
+  managed on the Users page. It's always available for the dashboard.
+- **OAuth / OIDC providers** are any standards-compliant provider. One-click
+  presets fill in the discovery URL shape, scopes and PKCE default for Pocket
+  ID, Keycloak, Authelia, Logto, Authentik, Zitadel and Kanidm; replace the
+  `{placeholders}` with your own hostname and add the client id and secret from
+  the OAuth app you registered there. Any other OIDC provider works from the
+  "Blank" option.
+
+Register `<your-homerun-url>/api/v1/auth/callback/<provider id>` as the redirect
+URI on the provider's side. The Authentication page prints the exact URL once
+**Origin** is set under Settings → General.
+
+Every enabled provider appears as a "Continue with …" button on the Homerun
+sign-in page, and becomes selectable as a per-app sign-in method below. Saving
+takes effect immediately, without a restart.
+
+## Per-app login wall
+
+A deployed service can require a login before anyone reaches it. Turn on
+**Require login to access this app** on the service's **Networking** tab, under
+Access.
+
+**How it works.** Traefik's forwardAuth middleware asks Homerun about every
+request to that hostname. A visitor without a valid session for that app is
+redirected to Homerun's own sign-in screen, signs in there, and is sent back to
+the page they originally asked for. Homerun then sets a session cookie scoped to
+that app's own hostname, so the app stays reachable for eight hours without
+signing in again. Nothing is shared with your other apps: each one gets its own
+cookie, and a cookie issued for one hostname is rejected on any other.
+
+This needs **Origin** set under Settings → General, since that's the URL
+visitors are sent to in order to sign in. Saving the setting is refused with an
+explanation if it isn't set yet. It does **not** need `AUTH_CROSS_SUBDOMAIN`,
+which is unrelated to this flow.
+
+**Sign-in methods.** Nothing is enabled by default: pick at least one of the
+built-in login and your configured OAuth providers. Only the methods you pick
+are offered on that app's login screen, and only an account linked to one of
+them is let through. Turning the wall on with nothing picked is refused, so you
+can't lock yourself out by accident.
+
+**Who's allowed.** Three optional lists narrow access further:
+
+- **Users** — specific Homerun accounts.
+- **Emails** — exact addresses, or `*@example.com` to cover a whole domain.
+- **Groups / roles** — matched against the group and role claims in the id token
+  your OAuth provider issued (`groups`, `roles`, and Keycloak's realm and
+  resource roles). Make sure the provider's scopes actually request them, often
+  by adding a `groups` scope.
+
+Leave all three empty to let any signed-in user through, as long as they used an
+allowed method. Filling any of them narrows access to whoever matches at least
+one entry in that list. Changing any of this takes effect immediately, including
+for people already signed in to that app.
+
+**Redeploy the service** after turning the wall on or off: the middleware is
+attached through the container's Traefik labels, which are written at deploy
+time.
+
+The app itself receives the signed-in identity as `X-Homerun-User`,
+`X-Homerun-Email` and `X-Homerun-Name` request headers, which an app that
+supports proxy-header authentication can consume directly.
+
+**Limits worth knowing.** The wall covers services Traefik routes publicly; a
+service that isn't publicly routed has no router to gate. Access is re-checked
+when the app cookie is issued and whenever the rules change, but deleting a user
+or changing their groups at the provider takes effect at the next sign-in, or
+within the eight-hour cookie lifetime at the latest.
 
 ## Onboarding
 

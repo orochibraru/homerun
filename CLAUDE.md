@@ -73,8 +73,10 @@ subsection below.
 plus the pure modules under `$lib` that are worth pinning down directly
 (`long-request.test.ts`, see Long-running requests below; `queue.test.ts`;
 `toast.test.ts`; `compose-import.test.ts`; `service-link.test.ts`;
-`deploy-phases.test.ts`; `command-parse.test.ts`) : anything that's a real
-transform with no DB or Docker dependency belongs here rather than in
+`deploy-phases.test.ts`; `command-parse.test.ts`; `auth-providers.test.ts`;
+`app-gate.test.ts`, the login wall's token signing/expiry/tampering, its cookie
+parsing, and OIDC group-claim extraction) : anything that's a real transform
+with no DB or Docker dependency belongs here rather than in
 `tests/integration/`, which is still where most of `src/` is exercised.
 
 Run everything: `bun run test` (bare `bun test` also works, no wrapper script —
@@ -289,13 +291,13 @@ that pattern for any new skill.
   route's own `load`, if it needs one at all, calls `parent()` rather than
   re-fetching); the first/default tab is the bare `+page.svelte` at that route's
   root, every other tab gets its own subfolder. `settings/` (General = bare
-  `+page.svelte`, `docker/`, `networking/`, `email/`, `authentication/`) is the
-  second real example, split from a single 1400-line file for exactly this
-  reason: a client-state tab switch means every tab's fields, `load` data, and
-  actions all live in one file/one request, which stops scaling once a page has
-  more than a couple of tabs. Keep each tab's own `load`/`actions` scoped to
-  what that tab actually needs, don't let a new tab's server logic leak into a
-  file it doesn't belong to.
+  `+page.svelte`, `docker/`, `networking/`, `email/`) is the second real
+  example, split from a single 1400-line file for exactly this reason: a
+  client-state tab switch means every tab's fields, `load` data, and actions all
+  live in one file/one request, which stops scaling once a page has more than a
+  couple of tabs. Keep each tab's own `load`/`actions` scoped to what that tab
+  actually needs, don't let a new tab's server logic leak into a file it doesn't
+  belong to.
 - **No raw Drizzle queries in route files.** Every table has a corresponding DTO
   class in `src/lib/dto/` (see below), routes call DTO methods, never
   `db.select()/.insert()/.update()/.delete()` directly.
@@ -719,18 +721,23 @@ Appearance preferences below for the per-user "single accent color" override):
   redeploy, enabled cron job, backup schedule, and the autoscale config).
 - **Integrations**: **Git Providers**, **Build Cache** (registry credentials for
   cross-build cache reuse, see Git-based builds below), **API Docs**.
-- **Administration**: **Users** (admin-only), **Settings** (admin-only),
-  **System Logs**, **Docker Cleanup** (admin-only, see below).
+- **Administration**: **Users** (admin-only), **Authentication** (admin-only,
+  sign-in methods for the instance and the per-app login wall, see
+  Authentication page below), **Settings** (admin-only), **System Logs**,
+  **Docker Cleanup** (admin-only, see below).
 
 Not in the nav but real routes: `/profile/**` (reached from the profile menu,
 see Appearance preferences below), `/cli-auth` (the CLI device-code approval
-page). The bell's own read/delete endpoints used to live at `/notifications/**`
-and are now remote commands instead, see Remote functions below.
-`(protected)/+layout.svelte` filters the nav array on
-`data.user.role === "admin"` before rendering, a developer sees everything else
-unchanged (their own services/projects, already isolated per-user by every DTO's
-`userId` scoping). `/setup` was removed (see Setup diagnostics below) in favor
-of the dashboard banner deep-linking into `/settings`.
+page), `/app-auth` (the sign-in screen a gated app's visitors are redirected to,
+deliberately top-level rather than under `(protected)/` since it has to render
+for signed-out visitors, see Per-app login wall below). The bell's own
+read/delete endpoints used to live at `/notifications/**` and are now remote
+commands instead, see Remote functions below. `(protected)/+layout.svelte`
+filters the nav array on `data.user.role === "admin"` before rendering, a
+developer sees everything else unchanged (their own services/projects, already
+isolated per-user by every DTO's `userId` scoping). `/setup` was removed (see
+Setup diagnostics below) in favor of the dashboard banner deep-linking into
+`/settings`.
 
 `src/routes/(protected)/services/`:
 
@@ -793,11 +800,13 @@ of the dashboard banner deep-linking into `/settings`.
   Overview), **Env Vars**, **Volumes** (mount/unmount StorageVolumes, including
   a "New volume" modal, `$lib/components/new-volume-fields.svelte` shared with
   `/storage/new`, so a volume can be created and mounted without leaving the
-  service), **Networking** (custom domain mapping + the auth-gate toggle; a
-  **Network** section holds container port, protocol (tcp/udp/both), network
-  mode (bridge/host, see below), and DNS-resolvability, `updatePortsSchema`, its
-  own `updatePorts` action, moved off Settings; SSL section is a read-only
-  explainer for the automatic-vs-custom-cert split, host ports are still never
+  service), **Networking** (custom domain mapping; an **Access** section holds
+  the per-app login wall, its allowed sign-in methods and its user/email/group
+  allowlists, `updateAppAuth`, see Per-app login wall below; a **Network**
+  section holds container port, protocol (tcp/udp/both), network mode
+  (bridge/host, see below), and DNS-resolvability, `updatePortsSchema`, its own
+  `updatePorts` action, moved off Settings; SSL section is a read-only explainer
+  for the automatic-vs-custom-cert split, host ports are still never
   _published_/mapped by design even though host network mode now exists, see
   below), **Compute** (cpu/memory limits + the autoscale-eligible opt-in toggle,
   `updateComputeSchema`, its own `updateCompute` action, moved off Settings; see
@@ -1078,13 +1087,15 @@ load-bearing parts:
 Covered today: blank-instance bootstrap sign-up landing on `/onboarding`, the
 sign-up→sign-in redirect once an account exists, clicking the whole onboarding
 wizard through to completion, sign-in/sign-out, the service-creation wizard's
-own submit path, and (`remote-functions.spec.ts`) the remote-query/command
-surfaces, that the dashboard's Host Resources panel, the notification feed and
-the job-queue panel each resolve past their skeleton against real data, and that
-a mark-read/delete command updates the feed with no page reload. Not covered: a
-real deploy needs a Docker socket reachable from _inside_ the spawned app, which
-this bootstrap doesn't wire up. Add browser-level cases here; don't re-prove API
-shapes `tests/integration/` already covers directly and faster.
+own submit path, (`remote-functions.spec.ts`) the remote-query/command surfaces,
+that the dashboard's Host Resources panel, the notification feed and the
+job-queue panel each resolve past their skeleton against real data, and that a
+mark-read/delete command updates the feed with no page reload, and
+(`ui-login-wall.spec.ts`) the Authentication page's presets and the service
+Access section's reveal-and-validate behaviour. Not covered: a real deploy needs
+a Docker socket reachable from _inside_ the spawned app, which this bootstrap
+doesn't wire up. Add browser-level cases here; don't re-prove API shapes
+`tests/integration/` already covers directly and faster.
 
 ### The `$derived` + push/splice anti-pattern (real, tested bug)
 
@@ -2165,9 +2176,9 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   intent) vs `currentStatus` (live reconciled Docker state), `containerId`,
   `projectId` (nullable FK, `onDelete: "set null"`),
   `cronEnabled`/`cronSchedule`/`cronLastRunAt` (opt-in scheduled redeploy, see
-  below), `authRequired` (Traefik forwardAuth gate, see below, ships with a
-  known real limitation, read that section before assuming it works end-to-end),
-  `buildSource` (`"image"` | `"git"`) +
+  below), `authRequired` + `authProviders`/`authAllowedUserIds`/
+  `authAllowedEmails`/`authAllowedGroups` (the per-app login wall and its access
+  policy, see Per-app login wall below), `buildSource` (`"image"` | `"git"`) +
   `gitUrl`/`gitRef`/`gitBuildContext`/`gitDockerfilePath` (see Git-based builds
   below, `image`/`tag` hold the resolved local build tag when `buildSource` is
   `"git"`, not user-editable directly in that mode), `remoteHostId` (nullable FK
@@ -2382,7 +2393,13 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
   (`projectSlug` param, optional). When `customDomain` is set, a second router
   (`<slug>-custom`) is added pointing at the _same_
   `traefik.http.services.<slug>` backend, one loadbalancer config, two hostnames
-  reaching it, not a duplicated service block.
+  reaching it, not a duplicated service block. When `authRequired` is set, a
+  forwardAuth middleware is attached to every router for the service, pointing
+  at `authCheckUrlFor(serviceId)` — `config.authCheckUrl` with a `?service=<id>`
+  query param, so the gate identifies the service from the URL rather than
+  having to resolve `X-Forwarded-Host` back to a slug or custom domain — plus
+  `authResponseHeaders` for `GATE_IDENTITY_HEADERS`. Because these are labels,
+  turning the wall on or off only takes effect on the next deploy.
 - `networks.ts`, `DockerNetworkMixin`, per-project Docker networks.
   `projectNetworkName(projectId)` is deterministic (`homerun-project-<id>`, no
   separate id stored, stays a plain exported pure function).
@@ -2702,13 +2719,16 @@ settings below for who calls that and when.
 Most of `config`, OAuth providers, Docker socket/network defaults, Traefik
 entrypoint/cert-resolver/dynamic-config-dir, SMTP, and core settings (base
 domain, origin, the auth-check URL, cross-subdomain cookies), is now
-live-editable from a `/settings` page, not just env vars. `instance_settings` is
-a **singleton row** (`InstanceSettingsDTO`, id always `"default"`, auto-created
-on first read): every column is nullable, `null` meaning "fall back to the env
-default", a non-null value overriding it. Secrets (`smtpPasswordEnc`, each OAuth
-provider's `clientSecretEnc` inside the `oauthProviders` JSON array) use the
-same AES-256-GCM scheme as `service.registryPasswordEnc`
-(`$lib/services/secrets.ts`, reused as-is).
+live-editable from the dashboard, not just env vars. All of it lives on
+`/settings` except the OAuth providers, which moved to their own top-level
+`/authentication` page (see Authentication page below) — `/settings` therefore
+has four tabs now (General, Docker, Networking, Email), not five.
+`instance_settings` is a **singleton row** (`InstanceSettingsDTO`, id always
+`"default"`, auto-created on first read): every column is nullable, `null`
+meaning "fall back to the env default", a non-null value overriding it. Secrets
+(`smtpPasswordEnc`, each OAuth provider's `clientSecretEnc` inside the
+`oauthProviders` JSON array) use the same AES-256-GCM scheme as
+`service.registryPasswordEnc` (`$lib/services/secrets.ts`, reused as-is).
 
 **Not DB-backed**, `databaseUrl`/`port`/`auth.secret`/`logLevel`/`logFormat`
 stay env-only: `databaseUrl` has to be known before the DB is even reachable,
@@ -2723,9 +2743,9 @@ the very first request, not just after a save), and again at the end of every
 `/settings` action, so a saved change is live immediately, no restart, for every
 section including OAuth (see Auth below for how that one specifically applies
 live). `/settings` itself is split into one route per tab (bare `+page.svelte` =
-General/Core, `docker/`, `networking/`, `email/`, `authentication/`, see the
-tabs convention under Conventions above), so this apply-plus-rebuild pair is
-pulled into a shared `applyAndRebuild(settings)` helper
+General/Core, `docker/`, `networking/`, `email/`, see the tabs convention under
+Conventions above), so this apply-plus-rebuild pair is pulled into a shared
+`applyAndRebuild(settings)` helper
 (`$lib/server/validation/instance-settings-form.ts`, alongside `nullableText`/
 `checkbox` form-parsing helpers every tab's actions use), each tab's own action
 calls it rather than duplicating the two calls per file.
@@ -2806,32 +2826,146 @@ live-bindings mean a reassignment inside `auth.ts` is immediately visible
 everywhere without a restart. `rebuildAuth()` is called at the end of
 `hooks.server.ts`'s `init()` and every `/settings` action.
 
-### Per-service auth gating (`service.authRequired`, `/api/v1/auth-check`)
+### Authentication page (`/authentication`, `$lib/auth-providers.ts`)
 
-When enabled (Networking tab), `services/docker/labels.ts` attaches a Traefik
-forwardAuth middleware to the service's router(s) pointing at
-`config.authCheckUrl` (default
-`http://host.docker.internal:<port>/api/v1/auth-check`, since the app is
-typically reached from inside Traefik's own container; the Linux case needs
-`extra_hosts: host-gateway` on the Traefik service
-(`tools/compose/base.compose.yaml`, or `compose.prod.yaml`'s own copy), which
-this app can't do for the user. When the app itself runs as a container on the
-same compose network, its service name works instead). `/api/v1/auth-check` just
-checks `locals.user` and returns 200/401, so it works with whatever the user
-authenticates into Homerun with, including a configured `genericOAuth`/OIDC
-provider (see auth.ts).
+Admin-only, its own sidebar item under Administration. This is where every
+sign-in method for the instance is configured — it **replaced** the old
+`/settings/authentication` tab (that route is gone; `/settings` is down to four
+tabs), so there's one place editing `instance_settings.oauthProviders` rather
+than two.
 
-**Real, tested limitation, not a hypothetical**: there's no login page mounted
-on a gated service's own subdomain, so this blocks _everyone_, including a
-signed-in admin, unless `AUTH_CROSS_SUBDOMAIN=true`. Even with it enabled,
-during development a signed-in admin visiting the gated subdomain directly still
-got a 401 (verified: the cookie's `Domain` attribute did widen correctly, but
-better-auth's `getSession()` still appears to reject it based on request Host,
-not root-caused, better-auth's internals weren't dug into further). The
-Networking tab's copy says this plainly (bordering on a warning) rather than
-promising working SSO. Treat `authRequired` today as a hard "make this
-unreachable from outside" switch, not a finished login-gated-app feature, a real
-fix needs a login-redirect flow for gated subdomains.
+- **Presets.** `OAUTH_PRESETS` (`$lib/auth-providers.ts`, a pure module, also
+  home to the method-id encoding and the email matcher) carries a discovery-URL
+  template, default scopes and PKCE default for Pocket ID, Keycloak, Authelia,
+  Logto, Authentik, Zitadel and Kanidm. Clicking one appends a prefilled
+  provider row with `{host}`/`{realm}`/`{slug}`/`{clientId}` placeholders left
+  in for the admin to replace; "Blank" is still there for anything else. The
+  templates are the products' own documented discovery paths, which differ more
+  than you'd guess (Logto nests under `/oidc`, Authentik under
+  `/application/o/<slug>`, Kanidm under `/oauth2/openid/<client id>`).
+- The page prints the exact redirect URI to register with the provider
+  (`<origin>/api/v1/auth/callback/<provider id>`), and says so explicitly when
+  `config.auth.origin` isn't set yet rather than printing a broken URL.
+- Provider **names must be unique** and renaming one silently drops it from any
+  service that referenced it as `oauth:<name>`, so the save action rejects
+  duplicates and the UI shows a per-provider "used by N apps" count.
+- A "Protected apps" panel lists services with the wall on, flagging any with no
+  sign-in method picked, and deep-links to each one's Networking tab.
+
+**Enabled providers now actually appear on the dashboard's own sign-in page**
+too, as "Continue with …" buttons. They never did before: providers could be
+configured but nothing rendered a button, and `/api/v1/auth/providers` was in
+`hooks.server.ts`'s `customAuthPaths` allowlist while the route itself didn't
+exist. **In this better-auth version `genericOAuth` registers its providers as
+ordinary social providers** ("used through the standard `signIn.social` and
+`callback/:id` core endpoints — no plugin-specific endpoints needed", from the
+plugin's own types), so the client calls
+`signIn.social({ provider, callbackURL })` and needs no extra client plugin —
+there is no `genericOAuthClient` export in this version to add. `provider` is
+typed as a union of the built-in social providers, so a custom provider id needs
+a cast at that one call site.
+
+### Per-app login wall (`service.authRequired` + policy columns, `/api/v1/auth-check`, `/app-auth`, `$lib/server/app-gate.ts`)
+
+The gap this document used to describe at length — `authRequired` blocked
+_everyone_ because there was no login page on the gated hostname and
+`AUTH_CROSS_SUBDOMAIN` didn't rescue it — is closed. `authRequired` is now a
+real login wall, and `crossSubdomainCookies` is unrelated to it (still a
+supported setting, just not part of this flow).
+
+**The mechanism, and the Traefik behaviour it rests on.** Traefik returns a
+non-2xx forwardAuth response to the client _verbatim_, headers and all. So
+`/api/v1/auth-check` can answer with a `302` **and** a `Set-Cookie`, and because
+the browser sees that response as coming from the gated app's own hostname, the
+cookie lands host-scoped there. That's the whole trick: no cross-subdomain
+cookies, no second Traefik router, no extra container. **Verified directly
+against Traefik v3** before any of this was built (a throwaway auth server and
+backend behind the real dev Traefik): a 302 passes through with its `Location`,
+custom headers and `Set-Cookie` intact; `X-Forwarded-Uri` carries the query
+string; the original request's `Cookie` header reaches the auth server; and
+`authResponseHeaders` injects identity headers into the backend request on a
+2xx. Re-verify these if the middleware is ever reworked, the design has no
+fallback if any of them stops holding.
+
+The round trip, all of it through the one forwardAuth channel:
+
+1. Anonymous request to `app.example.com/page` → auth-check → `302` to
+   `<config.auth.origin>/app-auth?rd=<signed token>`. `rd` carries the original
+   URL, the host and the service id, HMAC-signed with a 10-minute TTL, so it
+   can't be used as an open redirect.
+2. `/app-auth` (its own top-level route, outside `(protected)/` — it has to
+   render for signed-out visitors) resolves the service, and either renders a
+   sign-in screen restricted to that app's allowed methods, or, for an
+   already-signed-in allowed user, `302`s to
+   `app.example.com/__homerun_auth/callback?token=<60s grant>`.
+3. That callback path is itself gated, so it lands back in auth-check, which
+   verifies the grant and answers `302` + `Set-Cookie` for the session cookie
+   (`homerun_app_session`, `HttpOnly`/`SameSite=Lax`/`Secure` over https, **no
+   `Domain`** so it stays host-only, 8h).
+4. The original URL is re-requested, now carrying the cookie → `200`, plus
+   `X-Homerun-User`/`-Email`/`-Name` (declared in the middleware's
+   `authResponseHeaders`) so a proxy-header-aware app gets the identity for
+   free.
+
+`/__homerun_auth/logout` clears the cookie the same way.
+
+**The hot path is DB-free.** The cookie is a self-contained signed token
+(`$lib/server/app-gate.ts`), so a request with a valid one costs an HMAC verify
+plus a 10s-TTL in-memory lookup of the service row
+(`$lib/server/gated-service-cache.ts`, HMR-safe `globalThis` singleton, same
+pattern as the db client). Every proxied request to a gated app goes through
+this, so don't add a query to it.
+
+**Revocation is immediate, and that's load-bearing.** The cookie embeds a
+`policyVersion`, a short HMAC over the service's own auth policy; auth-check
+recomputes it per request and challenges on a mismatch, and saving the policy
+calls `invalidateGatedService()`. Without this, tightening an allowlist would
+have left already-issued cookies working for up to 8 hours — observed for real
+during live testing, which is what prompted adding it. What is _not_ covered:
+deleting a user or changing their groups at the provider only takes effect at
+their next sign-in, or at the 8h cookie expiry.
+
+**Config prerequisite**: `config.auth.origin` must be set, since that's where
+visitors get sent to sign in. `updateAppAuth` refuses to turn the wall on
+without it, and auth-check falls back to an explanatory 500 rather than a
+mystery redirect. **`config.auth.origin` now falls back to the `ORIGIN` env
+var** — it previously read only `homerun.yaml`/`instance_settings`, even though
+`compose.prod.yaml`, the installer's generated stack and the integration harness
+all set `ORIGIN`, and `auth.ts` warned based on `process.env.ORIGIN` while
+`config.auth.origin` never read it.
+
+**Turning the wall on or off requires a redeploy**, since the middleware is
+attached via the container's Traefik labels. Changing the policy on an
+already-gated service does not.
+
+**The policy columns** on `service` (all jsonb, all `[]` by default):
+`authProviders` (allowed sign-in methods, `"password"` for built-in credentials
+or `"oauth:<provider name>"`), plus `authAllowedUserIds`/`authAllowedEmails`/
+`authAllowedGroups`. `$lib/auth-providers.ts` is the pure module owning that
+encoding (and the `*@domain` email matcher, and the preset catalogue);
+`$lib/services/app-access.service.ts` evaluates a decision. **Nothing is
+selected by default and the wall can't be turned on with an empty
+`authProviders`** — that combination would lock out everyone including the
+owner, so it's rejected at save time rather than allowed and warned about.
+
+**"Which method did they use" is answered by linked identity, not by the
+session.** better-auth's `session` table records no provider, so
+`AppAccessService` checks whether the user has an `account` row whose
+`providerId` matches an allowed method (`credential` ↔ `password`). Groups come
+from decoding the claims of that row's stored `idToken` (`groups`, `roles`, and
+Keycloak's `realm_access`/`resource_access` roles — a fixed list, deliberately
+not per-provider config). A stricter session-bound check would need a side table
+written at sign-in and still couldn't classify a pre-existing dashboard session.
+
+**Verified end to end against real infrastructure**, not just reasoned about: a
+real gated `nginx:alpine` container behind the real dev Traefik, driven with
+curl as the browser through every hop — anonymous redirect, the login screen,
+the grant, the host-scoped `Set-Cookie`, the app actually serving, a forged
+cookie refused, logout, the identity headers, and a policy change revoking a
+live cookie. `tests/integration/app-gate.test.ts` covers the same flow against
+the real app (including cross-host cookie rejection and each denial reason), and
+`tests/unit/app/app-gate.test.ts` covers token signing/expiry/tampering and
+claim extraction.
 
 ### User roles & admin-managed accounts (`user.role`, `/users`, `invitation` table)
 
@@ -3275,11 +3409,11 @@ re-litigating design decisions.
   CPU/RAM/GPU/disk, no per-container `docker stats` view yet (swarm mode's
   `inspectSwarmServiceStatus` aggregates task state, not per-task resource
   usage, see Swarm mode above).
-- **Security**: per-service auth gating exists (`authRequired`, see below) but
-  doesn't have a working login-redirect flow yet, see its own section for the
-  real, tested limitation. Custom SSL cert handling exists too (see below) but
-  genuinely requires the admin's own one-time Traefik config change to take
-  effect.
+- **Security**: the per-app login wall is built and works end to end (see
+  Per-app login wall above); what's still missing there is finer-grained
+  revocation than the 8h cookie lifetime for a user deleted or re-grouped at the
+  provider. Custom SSL cert handling exists too (see below) but genuinely
+  requires the admin's own one-time Traefik config change to take effect.
 - **Source integration**: git-based builds exist (see below), no private-repo
   credential field, no webhook/auto-deploy-on-push. Remote hosts exist too (see
   below), no host port publishing for remote-hosted services, no

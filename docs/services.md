@@ -199,15 +199,18 @@ doesn't perform on the live Traefik container itself. Once configured, saving a
 cert writes the cert/key/dynamic-config files into that directory and Traefik's
 file provider picks them up on its own (no restart per certificate).
 
-### Per-service login gate
+### Per-app login wall
 
-`authRequired` puts Traefik's forwardAuth middleware in front of the service, so
-only someone logged into this Homerun instance can reach it. **Known
-limitation**: there's no login page mounted on the gated subdomain itself, so
-this blocks everyone, including a signed-in admin, unless
-`AUTH_CROSS_SUBDOMAIN=true`, and even then it's not fully reliable (see
-[Users & access](users-and-access.md#per-service-auth-gate)). Treat it today as
-a hard "make this unreachable from outside" switch, not a finished SSO gate.
+The Networking tab's **Access** section puts a login wall in front of the
+service. An anonymous visitor is redirected to this instance's own sign-in
+screen, and sent back to the page they asked for once they're through. Pick
+which sign-in methods that app accepts (built-in login, and any OAuth provider
+configured on the Authentication page), and optionally restrict access to
+specific users, email addresses or provider groups. Redeploy the service after
+changing whether the wall is on, since the middleware is attached through the
+container's Traefik labels. Full detail, including what the app receives about
+the signed-in visitor, is in
+[Users & access](users-and-access.md#per-app-login-wall).
 
 ## Compute
 

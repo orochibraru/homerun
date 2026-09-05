@@ -113,6 +113,25 @@ process. Tracked here instead, by scenario/endpoint.
 - [ ] `PATCH /services/{id}` field-by-field coverage (only `remoteHostId` is
       exercised so far)
 
+### Per-app login wall (`app-gate.test.ts`)
+
+- [x] Unknown service id, and a service with the wall off, are handled without
+      leaking anything
+- [x] Turning the wall on with no sign-in method picked is refused
+- [x] An anonymous visitor gets a 302 to `/app-auth`, not a 401
+- [x] A forged or absent gate cookie is challenged rather than trusted
+- [x] `/app-auth` mints a grant for an allowed user and bounces to the callback
+- [x] The callback sets a host-scoped (`Domain`-less), `HttpOnly`, `Secure`
+      cookie and returns the visitor to the original deep-linked URL
+- [x] A cookie minted for one host is rejected on another
+- [x] Each denial reason: user allowlist, email allowlist (exact and
+      `*@domain`), and group claims
+- [x] Tightening the policy revokes an already-issued cookie immediately
+- [x] A malformed redirect token is refused rather than followed
+- [ ] The Traefik half of the loop (that a non-2xx forwardAuth response with a
+      `Set-Cookie` reaches the browser verbatim) — verified by hand against a
+      real Traefik, not automated here: this suite spawns no Traefik
+
 ### REST API surface
 
 - [x] `POST /services`, `GET /services/{id}`, `PATCH /services/{id}`
