@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/orochibraru/homerun/compare/v1.0.4...v1.0.5) (2026-09-05)
+
+### Bug Fixes
+
+- use service containers in ci
+  ([0f92067](https://github.com/orochibraru/homerun/commit/0f92067d7f66bb6d0383f7e57989aa0cfc8247a0))
+
 ## [1.0.4](https://github.com/orochibraru/homerun/compare/v1.0.3...v1.0.4) (2026-09-04)
 
 ### Features
