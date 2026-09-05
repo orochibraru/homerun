@@ -1,8 +1,6 @@
 <script lang="ts">
-	import type { SubmitFunction } from "@sveltejs/kit";
 	import { setMode } from "mode-watcher";
 	import { onMount, untrack } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import {
@@ -12,6 +10,7 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import { title } from "$lib/store/title.js";
+	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -55,28 +54,13 @@
 	};
 
 	onMount(() => title.set("Appearance"));
-
-	function submitToast(sectionLabel: string): SubmitFunction {
-		return () =>
-			async ({ result, update }) => {
-				if (result.type === "success") {
-					toast.success(`${sectionLabel} saved.`);
-				} else if (result.type === "failure") {
-					toast.error(
-						(result.data as { error?: string } | undefined)?.error ??
-							"Check the form for errors.",
-					);
-				}
-				await update();
-			};
-	}
 </script>
 
 <div class="space-y-6">
     <!-- ═══ Theme ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section class="glass rounded-2xl">
         <div class="border-border border-b px-5 py-4">
-            <h2 class="text-text text-sm font-semibold">Theme</h2>
+            <h2 class="eyebrow">Theme</h2>
             <p class="text-text-muted text-xs">
                 "Match system" follows your OS's own light/dark setting and
                 updates live if it changes.
@@ -86,7 +70,7 @@
             action="?/updateTheme"
             class="space-y-4 p-5"
             method="POST"
-            use:enhance={submitToast("Theme")}
+            use:enhance={saveToast("Theme")}
         >
             <SelectRoot
                 name="theme"
@@ -110,9 +94,9 @@
     </section>
 
     <!-- ═══ Sidebar color intensity ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section class="glass rounded-2xl">
         <div class="border-border border-b px-5 py-4">
-            <h2 class="text-text text-sm font-semibold">
+            <h2 class="eyebrow">
                 Sidebar color intensity
             </h2>
             <p class="text-text-muted text-xs">
@@ -125,7 +109,7 @@
             action="?/updateSidebar"
             class="space-y-4 p-5"
             method="POST"
-            use:enhance={submitToast("Sidebar color intensity")}
+            use:enhance={saveToast("Sidebar color intensity")}
         >
             <SelectRoot
                 name="sidebarColorIntensity"
@@ -147,9 +131,9 @@
     </section>
 
     <!-- ═══ Main color accent ═══ -->
-    <section class="border-border bg-surface rounded-2xl border">
+    <section class="glass rounded-2xl">
         <div class="border-border border-b px-5 py-4">
-            <h2 class="text-text text-sm font-semibold">Main color accent</h2>
+            <h2 class="eyebrow">Main color accent</h2>
             <p class="text-text-muted text-xs">
                 Used for buttons, links, and highlighted state throughout the
                 dashboard.
@@ -159,7 +143,7 @@
             action="?/updateAccent"
             class="space-y-4 p-5"
             method="POST"
-            use:enhance={submitToast("Accent color")}
+            use:enhance={saveToast("Accent color")}
         >
             <div class="flex flex-wrap items-center gap-2.5">
                 {#each PRESET_ACCENTS as preset (preset)}

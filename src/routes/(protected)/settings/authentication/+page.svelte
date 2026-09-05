@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { KeyRound, Plus, Trash2 } from "@lucide/svelte";
-	import type { SubmitFunction } from "@sveltejs/kit";
 	import { untrack } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -58,26 +57,11 @@
 	function removeOauthRow(i: number) {
 		oauthRows.splice(i, 1);
 	}
-
-	function submitToast(sectionLabel: string): SubmitFunction {
-		return () =>
-			async ({ result, update }) => {
-				if (result.type === "success") {
-					toast.success(`${sectionLabel} saved.`);
-				} else if (result.type === "failure") {
-					toast.error(
-						(result.data as { error?: string } | undefined)?.error ??
-							"Check the form for errors.",
-					);
-				}
-				await update();
-			};
-	}
 </script>
 
-<section class="border-border bg-surface rounded-2xl border">
+<section class="glass rounded-2xl">
   <div class="border-border border-b px-5 py-4">
-    <h2 class="text-text text-sm font-semibold">OAuth Providers</h2>
+    <h2 class="eyebrow">OAuth Providers</h2>
     <p class="text-text-muted text-xs">
       Any generic OIDC provider : used both for signing into Homerun itself
       and for gating a service with "Require login" (Networking tab). Saving
@@ -88,7 +72,7 @@
     action="?/updateOauth"
     class="space-y-4 p-5"
     method="POST"
-    use:enhance={submitToast("OAuth providers")}
+    use:enhance={saveToast("OAuth providers")}
   >
     {#each oauthRows as row, i (i)}
       <div class="border-border space-y-3 rounded-xl border p-4">

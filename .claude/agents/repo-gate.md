@@ -7,9 +7,10 @@ description:
   errors/0 warnings, whole src/ tree) and bun run lint (biome, 0 errors), plus
   per-subproject typechecks for agent/, installer/, cli/ if touched, and scans
   the diff for violations of this repo's hard rules (manual typing in route
-  files, raw Drizzle in routes, $derived push/splice, nested (protected) loads
-  re-checking !locals.user, static-barrel classes, unscoped DTO queries).
-  Reports findings; does not silently fix them unless asked.
+  files, raw Drizzle in routes, $derived push/splice, bare toast.success/error
+  on async actions, nested (protected) loads re-checking !locals.user,
+  static-barrel classes, unscoped DTO queries). Reports findings; does not
+  silently fix them unless asked.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
@@ -67,6 +68,19 @@ narrow, specific triggers:
 - **DTO queries with no `userId` scoping** — flag unless it's a documented
   legitimate exception (a scheduler tick querying across all users, e.g.
   `listCronEnabled()`/`listAutoscaleEligibleOnLocalHost()`-style methods).
+- **A bare `toast.success`/`toast.error` reporting an async operation** — this
+  repo reports every async user action with `toast.promise`, so the user sees a
+  `loading` state and the failure path is forced to restore UI state (a real
+  bug: sign-in's inputs stayed disabled and its password field uncleared after a
+  wrong password). A client-side handler splits into an inner
+  `async <name>Callback()` that throws on failure plus an outer
+  `toast.promise(...)` wrapper (see `auth/sign-in/+page.svelte`); a
+  `use:enhance` form uses `enhanceToast({...})` (or `saveToast(...)`) from
+  `$lib/toast.ts`, with pending-state resets in its `onSettled` hook. Only three
+  exceptions: a synchronous result with nothing to await (a clipboard copy,
+  `env-paste-button.svelte`'s parse), a background load that renders its own
+  inline spinner (`loadRepos()`), and a long-lived stream reporting through an
+  inline banner (the Terminal tab).
 - **Any comment added by the diff** — this repo allows none, in any code file:
   no JSDoc/docstrings, no explanatory line comments, no header banners, no prose
   in YAML/compose/shell files. Flag every added comment line. Comments already

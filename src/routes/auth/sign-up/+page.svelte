@@ -13,6 +13,7 @@
 		getPasswordStrengthMeta,
 	} from "$lib/formatting";
 	import { title } from "$lib/store/title";
+	import { toastError } from "$lib/toast";
 
 	const session = useSession();
 
@@ -47,24 +48,21 @@
 	const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
 
 	// ── Submit ─────────────────────────────────────────────────────────
-	async function handleSignUp(e: SubmitEvent) {
+	async function signUpCallback(e: SubmitEvent) {
 		e.preventDefault();
 		if (password.length < 12) {
-			toast.error("Password must be at least 12 characters.");
-			return;
+			throw new Error("Password must be at least 12 characters.");
 		}
 		if (password !== confirm) {
-			toast.error("Passwords do not match.");
-			return;
+			throw new Error("Passwords do not match.");
 		}
 		loading = true;
 		try {
 			const { error } = await signUp.email({ email, name, password });
 			if (error) {
-				toast.error(
+				throw new Error(
 					error.message ?? "Could not create account. Please try again.",
 				);
-				return;
 			}
 			// Straight to the dashboard, not /auth/sign-up/confirm : this is
 			// always the bootstrap-admin sign-up (every later account is
@@ -78,11 +76,18 @@
 			// no way to receive the very email that page waits for, and no
 			// way off it either, dev's bypass button doesn't exist in prod.
 			goto(resolve("/"));
-		} catch {
-			toast.error("An unexpected error occurred. Please try again.");
-		} finally {
+		} catch (error) {
 			loading = false;
+			throw error;
 		}
+	}
+
+	function handleSignUp(e: SubmitEvent) {
+		return toast.promise(signUpCallback(e), {
+			error: (error) => toastError(error, "Couldn't create your account."),
+			loading: "Creating your account",
+			success: "Account created",
+		});
 	}
 </script>
 
@@ -106,7 +111,7 @@
     <div class="w-full max-w-md">
       <!-- Header -->
       <div class="mb-8">
-        <h2 class="text-2xl font-bold text-text">Create your admin account</h2>
+        <h2 class="text-text text-2xl font-semibold tracking-tight">Create your admin account</h2>
         <p class="mt-1 text-sm text-text-muted">
           This is the first account on this instance, so it becomes the admin.
           Additional accounts are created from the Users page afterward.

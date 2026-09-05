@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Check } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -9,6 +8,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { form } = $props();
 
@@ -44,7 +44,7 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-xl font-bold text-text">New Project</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">New Project</h1>
     <p class="mt-0.5 text-sm text-text-muted">
       Group related services together.
     </p>
@@ -52,18 +52,19 @@
 
   <form
     action="?/create"
-    class="space-y-5 rounded-2xl border border-border bg-surface p-5"
+    class="space-y-5 rounded-2xl glass p-5"
     method="POST"
-    use:enhance={() => {
-      submitting = true;
-      return async ({ result, update }) => {
+    use:enhance={enhanceToast({
+      error: "Check the form for errors.",
+      loading: "Creating the project",
+      onSettled: () => {
         submitting = false;
-        if (result.type === "failure") {
-          toast.error("Check the form for errors.");
-        }
-        await update();
-      };
-    }}
+      },
+      onStart: () => {
+        submitting = true;
+      },
+      success: "Project created.",
+    })}
   >
     {#if form?.error}
       <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">

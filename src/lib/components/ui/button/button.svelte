@@ -28,16 +28,17 @@
 				xs: "h-6 gap-1 in-data-[slot=button-group]:rounded-md rounded-[min(var(--radius-md),8px)] px-2 text-xs has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
 			},
 			variant: {
-				default: "bg-primary text-primary-foreground hover:bg-primary/80",
+				default:
+					"bg-accent text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.22),0_1px_2px_rgba(0,0,0,0.16)] hover:brightness-110 hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.28),0_0_0_4px_var(--color-accent-light),0_1px_2px_rgba(0,0,0,0.16)]",
 				destructive:
 					"bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 dark:hover:bg-destructive/30",
 				ghost:
-					"hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-				link: "text-primary underline-offset-4 hover:underline",
+					"text-text-muted hover:bg-surface-2 hover:text-text aria-expanded:bg-surface-2 aria-expanded:text-text",
+				link: "text-accent underline-offset-4 hover:underline",
 				outline:
-					"border-border bg-background shadow-xs hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+					"border-border bg-surface-2 text-text shadow-[inset_0_1px_0_0_var(--glass-highlight)] backdrop-blur-md hover:border-border-light hover:bg-surface-3 aria-expanded:bg-surface-3",
 				secondary:
-					"bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+					"bg-surface-2 text-text shadow-[inset_0_1px_0_0_var(--glass-highlight)] backdrop-blur-md hover:bg-surface-3 aria-expanded:bg-surface-3",
 			},
 		},
 	});

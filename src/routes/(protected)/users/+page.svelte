@@ -13,6 +13,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -31,21 +32,20 @@
 	);
 	let submitting = $state(false);
 
-	function submitToast(successMessage: string): SubmitFunction {
-		return () =>
-			async ({ result, update }) => {
+	function submitToast(loading: string, success: string): SubmitFunction {
+		return enhanceToast({
+			loading,
+			onSettled: () => {
 				submitting = false;
-				if (result.type === "success") {
-					toast.success(successMessage);
-					showAddForm = false;
-				} else if (result.type === "failure") {
-					toast.error(
-						(result.data as { error?: string } | undefined)?.error ??
-							"Something went wrong.",
-					);
-				}
-				await update();
-			};
+			},
+			onStart: () => {
+				submitting = true;
+			},
+			onSuccess: () => {
+				showAddForm = false;
+			},
+			success,
+		});
 	}
 
 	let removeDialogOpen = $state(false);
@@ -62,7 +62,7 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-2xl font-bold">Users</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Users</h1>
       <p class="text-text-muted mt-1 text-sm">
         Admin and developer accounts for this instance. Public sign-up is closed
         once the first account exists : every account after that is created
@@ -80,7 +80,7 @@
   </div>
 
   {#if showAddForm}
-    <div class="border-border bg-surface mb-6 rounded-2xl border p-5">
+    <div class="glass mb-6 rounded-2xl p-5">
       <div class="mb-4 flex gap-2">
         <button
           class="
@@ -128,10 +128,7 @@
           action="?/createDirect"
           class="space-y-4"
           method="POST"
-          use:enhance={async () => {
-            submitting = true;
-            await submitToast("User created.");
-          }}
+          use:enhance={submitToast("Creating user", "User created.")}
         >
           <div>
             <label class={label} for="name">Name</label>
@@ -189,10 +186,7 @@
           action="?/invite"
           class="space-y-4"
           method="POST"
-          use:enhance={async () => {
-            submitting = true;
-            await submitToast("Invite sent.");
-          }}
+          use:enhance={submitToast("Sending invite", "Invite sent.")}
         >
           <div>
             <label class={label} for="inviteName">Name</label>
@@ -231,7 +225,7 @@
 
   <div class="space-y-3">
     {#each data.users as u (u.id)}
-      <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4">
+      <div class="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
         <div class="min-w-0">
           <p class="text-text truncate text-sm font-medium">
             {u.name}
@@ -245,7 +239,7 @@
           <form
             action="?/setRole"
             method="POST"
-            use:enhance={submitToast("Role updated.")}
+            use:enhance={submitToast("Updating role", "Role updated.")}
           >
             <input name="userId" type="hidden" value={u.id} />
             <select
@@ -261,7 +255,7 @@
           <form
             action="?/removeUser"
             method="POST"
-            use:enhance={submitToast("User removed.")}
+            use:enhance={submitToast("Removing user", "User removed.")}
           >
             <input name="userId" type="hidden" value={u.id} />
             <Button
@@ -283,7 +277,7 @@
 
   {#if data.invites.length > 0}
     <div class="mt-8">
-      <h2 class="text-text mb-3 text-sm font-semibold">Pending invitations</h2>
+      <h2 class="eyebrow mb-3">Pending invitations</h2>
       <div class="space-y-3">
         {#each data.invites as inv (inv.id)}
           <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed p-4">
@@ -299,7 +293,7 @@
             <form
               action="?/cancelInvite"
               method="POST"
-              use:enhance={submitToast("Invite canceled.")}
+              use:enhance={submitToast("Canceling invite", "Invite canceled.")}
             >
               <input name="id" type="hidden" value={inv.id} />
               <Button

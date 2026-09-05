@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -8,6 +7,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { form } = $props();
 
@@ -18,7 +18,7 @@
 
 <div class="p-6 md:p-8">
     <div class="mb-8">
-        <h1 class="text-2xl font-bold text-text">Add a build cache registry</h1>
+        <h1 class="text-text text-xl font-semibold tracking-tight">Add a build cache registry</h1>
         <p class="mt-1 text-sm text-text-muted">
             Any Docker registry you can push to (a self-hosted registry, GHCR,
             Docker Hub). Only used to cache build layers, never as a deploy
@@ -28,26 +28,23 @@
 
     <form
         action="?/create"
-        class="mb-6 space-y-4 rounded-2xl border border-border bg-surface p-5"
+        class="mb-6 space-y-4 rounded-2xl glass p-5"
         method="POST"
-        use:enhance={() => {
+        use:enhance={enhanceToast({
+          error: "Check the form for errors.",
+          loading: "Adding the registry",
+          onSettled: () => {
+            submitting = false;
+          },
+          onStart: () => {
             submitting = true;
-            return async ({ result, update }) => {
-                submitting = false;
-                if (result.type === "success") {
-                    toast.success("Registry added.");
-                    await goto(resolve("/build-cache-registries"), {
-                        invalidateAll: true,
-                    });
-                } else if (result.type === "failure") {
-                    toast.error(
-                        (result.data as { error?: string })?.error ??
-                            "Check the form for errors.",
-                    );
-                }
-                await update();
-            };
-        }}
+          },
+          onSuccess: () =>
+            goto(resolve("/build-cache-registries"), {
+              invalidateAll: true,
+            }),
+          success: "Registry added.",
+        })}
     >
         {#if form?.error}
             <p class="text-sm text-red-500">{form.error}</p>

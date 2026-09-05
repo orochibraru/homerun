@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { CloudUpload, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -27,7 +27,7 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-2xl font-bold">S3 Destinations</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">S3 Destinations</h1>
       <p class="text-text-muted mt-1 text-sm">
         Reusable S3-compatible backup destinations. Pick one from any volume's
         page instead of retyping the same bucket/keys everywhere.
@@ -53,7 +53,7 @@
   {:else}
     <div class="space-y-3">
       {#each data.destinations as dest (dest.id)}
-        <div class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5">
+        <div class="glass flex items-center gap-4 rounded-2xl p-5">
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <CloudUpload class="size-5" />
           </div>
@@ -70,14 +70,11 @@
           <form
             action="?/delete"
             method="POST"
-            use:enhance={() => async ({ result, update }) => {
-              if (result.type === "failure") {
-                toast.error(
-                  "Couldn't delete : make sure no volume still uses it.",
-                );
-              }
-              await update();
-            }}
+            use:enhance={enhanceToast({
+              error: "Couldn't delete : make sure no volume still uses it.",
+              loading: "Deleting the destination",
+              success: "Destination deleted.",
+            })}
           >
             <input name="destinationId" type="hidden" value={dest.id}>
             <Button

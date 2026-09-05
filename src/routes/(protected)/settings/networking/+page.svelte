@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 </script>
 
 <div class="space-y-6">
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="border-border border-b px-5 py-4">
-      <h2 class="text-text text-sm font-semibold">Traefik</h2>
+      <h2 class="eyebrow">Traefik</h2>
       <p class="text-text-muted text-xs">
         Entrypoint, cert resolver, ACME account email, and the custom-SSL
         dynamic-config directory.
@@ -21,17 +21,11 @@
       action="?/updateTraefik"
       class="space-y-4 p-5"
       method="POST"
-      use:enhance={() => async ({ result, update }) => {
-        if (result.type === "success") {
-          toast.success("Traefik settings saved.");
-        } else if (result.type === "failure") {
-          toast.error(
-            (result.data as { error?: string })?.error
-            ?? "Check the form for errors.",
-          );
-        }
-        await update();
-      }}
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving Traefik settings",
+        success: "Traefik settings saved.",
+      })}
     >
       <div>
         <label class={label} for="traefikAcmeEmail">ACME account email</label>
@@ -101,9 +95,9 @@
     </form>
   </section>
 
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="border-border border-b px-5 py-4">
-      <h2 class="text-text text-sm font-semibold">Cloudflare</h2>
+      <h2 class="eyebrow">Cloudflare</h2>
       <p class="text-text-muted text-xs">
         Auto-creates a DNS record for every deployed service's
         <code>&lt;slug&gt;.{data.settings.baseDomain
@@ -115,21 +109,14 @@
       action="?/updateCloudflare"
       class="space-y-4 p-5"
       method="POST"
-      use:enhance={() => async ({ result, update }) => {
-        if (result.type === "success") {
-          toast.success(
-            (result.data as { cloudflareTestOk?: boolean })?.cloudflareTestOk
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving Cloudflare settings",
+        success: (data) =>
+          data?.cloudflareTestOk
             ? "Zone access verified."
             : "Cloudflare settings saved.",
-          );
-        } else if (result.type === "failure") {
-          toast.error(
-            (result.data as { error?: string })?.error
-            ?? "Check the form for errors.",
-          );
-        }
-        await update();
-      }}
+      })}
     >
       <div>
         <label class={label} for="cloudflareZoneId">Zone ID</label>
@@ -165,9 +152,9 @@
     </form>
   </section>
 
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="border-border border-b px-5 py-4">
-      <h2 class="text-text text-sm font-semibold">Pangolin</h2>
+      <h2 class="eyebrow">Pangolin</h2>
       <p class="text-text-muted text-xs">
         Alternative to Cloudflare above, for instances fronted by a
         self-hosted <a
@@ -185,21 +172,14 @@
       action="?/updatePangolin"
       class="space-y-4 p-5"
       method="POST"
-      use:enhance={() => async ({ result, update }) => {
-        if (result.type === "success") {
-          toast.success(
-            (result.data as { pangolinTestOk?: boolean })?.pangolinTestOk
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving Pangolin settings",
+        success: (data) =>
+          data?.pangolinTestOk
             ? "Org access verified."
             : "Pangolin settings saved.",
-          );
-        } else if (result.type === "failure") {
-          toast.error(
-            (result.data as { error?: string })?.error
-            ?? "Check the form for errors.",
-          );
-        }
-        await update();
-      }}
+      })}
     >
       <div>
         <label class={label} for="pangolinApiBaseUrl">API base URL</label>

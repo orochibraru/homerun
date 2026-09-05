@@ -5,7 +5,6 @@
 		Terminal as TerminalIcon,
 	} from "@lucide/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { resolve } from "$app/paths";
 	import { title } from "$lib/store/title";
 
@@ -58,8 +57,8 @@
 			connecting = false;
 
 			if (!sessionId) {
-				toast.error("Invalid terminal session");
-				throw new Error("No session ID found!");
+				errored = "Couldn't open a session.";
+				return;
 			}
 
 			const streamRes = await fetch(
@@ -151,11 +150,11 @@
 	}
 </script>
 
-<section class="rounded-2xl border border-border bg-surface">
+<section class="rounded-2xl glass">
   <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
     <div class="flex items-center gap-2">
       <TerminalIcon class="size-4 text-text-muted" />
-      <h2 class="text-sm font-semibold text-text">Terminal</h2>
+      <h2 class="eyebrow">Terminal</h2>
       {#if sessionId && !errored}
         <span class="flex items-center gap-1 text-xs text-green-600">
           <span class="size-1.5 rounded-full bg-green-500"></span>

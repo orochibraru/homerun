@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { GitBranch, Link2, Plus, Trash2, Unlink } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
@@ -18,6 +17,7 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -59,7 +59,7 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-2xl font-bold">Git Providers</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Git Providers</h1>
       <p class="text-text-muted mt-1 text-sm">
         Connect a git hosting account (GitHub, GitLab, self-hosted Gitea,
         Bitbucket) so a git-based service's Source tab can browse your repos
@@ -79,7 +79,7 @@
   </div>
 
   {#if data.isAdmin && showAddForm}
-    <div class="border-border bg-surface mb-6 rounded-2xl border p-5">
+    <div class="glass mb-6 rounded-2xl p-5">
       <p class="text-text-subtle mb-4 text-xs">
         Register an OAuth App on the provider's own site first (its
         developer/application settings), then paste the client ID/secret here.
@@ -93,19 +93,20 @@
         action="?/addProvider"
         class="space-y-4"
         method="POST"
-        use:enhance={() => {
-          submitting = true;
-          return async ({ result, update }) => {
+        use:enhance={enhanceToast({
+          error: "Check the form for errors.",
+          loading: "Adding the provider",
+          onSettled: () => {
             submitting = false;
-            if (result.type === "success") {
-              showAddForm = false;
-              toast.success("Provider added.");
-            } else if (result.type === "failure") {
-              toast.error("Check the form for errors.");
-            }
-            await update();
-          };
-        }}
+          },
+          onStart: () => {
+            submitting = true;
+          },
+          onSuccess: () => {
+            showAddForm = false;
+          },
+          success: "Provider added.",
+        })}
       >
         <div>
           <p class={label}>Provider</p>
@@ -185,7 +186,7 @@
     <div class="space-y-3">
       {#each data.providers as provider (provider.id)}
         {@const connected = data.connectedProviderIds.includes(provider.id)}
-        <div class="border-border bg-surface rounded-2xl border p-5">
+        <div class="glass rounded-2xl p-5">
           <div class="flex items-center gap-4">
             <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
               <GitBranch class="size-5" />
@@ -213,12 +214,11 @@
               <form
                 action="?/disconnect"
                 method="POST"
-                use:enhance={() => async ({ result, update }) => {
-                  if (result.type === "success") {
-                    toast.success("Disconnected.");
-                  }
-                  await update();
-                }}
+                use:enhance={enhanceToast({
+                  error: "Couldn't disconnect.",
+                  loading: "Disconnecting",
+                  success: "Disconnected.",
+                })}
               >
                 <input name="providerId" type="hidden" value={provider.id}>
                 <Button

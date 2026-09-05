@@ -9,13 +9,13 @@
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import type { CleanupItem } from "$lib/services/docker.service";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -125,18 +125,6 @@
 		const r = result as { itemsDeleted: number; spaceReclaimedBytes: number };
 		return `Removed ${r.itemsDeleted} item(s), reclaimed ${formatBytes(r.spaceReclaimedBytes)}.`;
 	}
-
-	$effect(() => {
-		if (!form) {
-			return;
-		}
-		pendingAction = null;
-		if (form.success) {
-			toast.success(describeResult(form.result));
-		} else {
-			toast.error(form.error ?? "Docker cleanup action failed.");
-		}
-	});
 </script>
 
 {#snippet itemList(items: CleanupItem[], dimUnlessTagged = false)}
@@ -167,7 +155,7 @@
 
 <div class="p-6 md:p-8">
   <div class="mb-6">
-    <h1 class="text-text text-2xl font-bold">Docker Cleanup</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">Docker Cleanup</h1>
     <p class="text-text-muted mt-1 text-sm">
       Reclaims disk space from unused Docker resources on this host. These
       actions apply to the whole host, not just what Homerun manages.
@@ -175,45 +163,45 @@
   </div>
 
   <div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
-    <div class="border-border bg-surface rounded-2xl border p-4">
-      <p class="text-text-muted text-xs">Images</p>
-      <p class="text-text mt-1 text-xl font-semibold">
+    <div class="glass rounded-2xl p-4">
+      <p class="eyebrow">Images</p>
+      <p class="tech text-text mt-1 text-xl font-semibold">
         {data.preview.images.totalCount}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
         {formatBytes(sumSize(data.preview.images.items))} reclaimable
       </p>
     </div>
-    <div class="border-border bg-surface rounded-2xl border p-4">
-      <p class="text-text-muted text-xs">Containers</p>
-      <p class="text-text mt-1 text-xl font-semibold">
+    <div class="glass rounded-2xl p-4">
+      <p class="eyebrow">Containers</p>
+      <p class="tech text-text mt-1 text-xl font-semibold">
         {data.preview.containers.totalCount}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
         {data.preview.containers.items.length} stopped
       </p>
     </div>
-    <div class="border-border bg-surface rounded-2xl border p-4">
-      <p class="text-text-muted text-xs">Networks</p>
-      <p class="text-text mt-1 text-xl font-semibold">
+    <div class="glass rounded-2xl p-4">
+      <p class="eyebrow">Networks</p>
+      <p class="tech text-text mt-1 text-xl font-semibold">
         {data.preview.networks.totalCount}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
         {data.preview.networks.items.length} unused
       </p>
     </div>
-    <div class="border-border bg-surface rounded-2xl border p-4">
-      <p class="text-text-muted text-xs">Volumes</p>
-      <p class="text-text mt-1 text-xl font-semibold">
+    <div class="glass rounded-2xl p-4">
+      <p class="eyebrow">Volumes</p>
+      <p class="tech text-text mt-1 text-xl font-semibold">
         {data.preview.volumes.totalCount}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
         {data.preview.volumes.items.length} unused
       </p>
     </div>
-    <div class="border-border bg-surface rounded-2xl border p-4">
-      <p class="text-text-muted text-xs">Build cache</p>
-      <p class="text-text mt-1 text-xl font-semibold">
+    <div class="glass rounded-2xl p-4">
+      <p class="eyebrow">Build cache</p>
+      <p class="tech text-text mt-1 text-xl font-semibold">
         {formatBytes(data.preview.buildCache.totalSizeBytes ?? 0)}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
@@ -222,19 +210,32 @@
     </div>
   </div>
 
-  <section class="border-border bg-surface mb-6 rounded-2xl border">
+  <section class="glass mb-6 rounded-2xl">
     <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
       <div class="flex items-center gap-2">
         <Eraser class="text-text-muted size-4" />
         <div>
-          <h2 class="text-text text-sm font-semibold">Quick cleanup</h2>
+          <h2 class="eyebrow">Quick cleanup</h2>
           <p class="text-text-muted text-xs">
             Stopped containers, dangling images, unused networks, and build
             cache. Same set as `docker system prune`.
           </p>
         </div>
       </div>
-      <form action="?/pruneSystem" method="POST" use:enhance>
+      <form action="?/pruneSystem" method="POST"
+      use:enhance={enhanceToast({
+        error: "Docker cleanup action failed.",
+        loading: "Running cleanup",
+        onSettled: () => {
+          pendingAction = null;
+        },
+        onStart: () => {
+          pendingAction = "pruneSystem";
+        },
+        success: (data) =>
+          describeResult((data as { result?: unknown } | undefined)?.result),
+      })}
+      >
         <Button
           disabled={pendingAction !== null}
           onclick={(e) => requestConfirm("pruneSystem", e)}
@@ -252,13 +253,26 @@
   </section>
 
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-    <section class="border-border bg-surface rounded-2xl border">
+    <section class="glass rounded-2xl">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <Boxes class="text-text-muted size-4" />
-          <h2 class="text-text text-sm font-semibold">Containers</h2>
+          <h2 class="eyebrow">Containers</h2>
         </div>
-        <form action="?/pruneContainers" method="POST" use:enhance>
+        <form action="?/pruneContainers" method="POST"
+      use:enhance={enhanceToast({
+        error: "Docker cleanup action failed.",
+        loading: "Running cleanup",
+        onSettled: () => {
+          pendingAction = null;
+        },
+        onStart: () => {
+          pendingAction = "pruneContainers";
+        },
+        success: (data) =>
+          describeResult((data as { result?: unknown } | undefined)?.result),
+      })}
+      >
           <Button
             disabled={pendingAction !== null}
             onclick={(e) => requestConfirm("pruneContainers", e)}
@@ -278,12 +292,25 @@
       </div>
     </section>
 
-    <section class="border-border bg-surface rounded-2xl border">
-      <form action="?/pruneImages" method="POST" use:enhance>
+    <section class="glass rounded-2xl">
+      <form action="?/pruneImages" method="POST"
+      use:enhance={enhanceToast({
+        error: "Docker cleanup action failed.",
+        loading: "Running cleanup",
+        onSettled: () => {
+          pendingAction = null;
+        },
+        onStart: () => {
+          pendingAction = "pruneImages";
+        },
+        success: (data) =>
+          describeResult((data as { result?: unknown } | undefined)?.result),
+      })}
+      >
         <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
           <div class="flex items-center gap-2">
             <Layers class="text-text-muted size-4" />
-            <h2 class="text-text text-sm font-semibold">Images</h2>
+            <h2 class="eyebrow">Images</h2>
           </div>
           <Button
             disabled={pendingAction !== null}
@@ -311,13 +338,26 @@
       </form>
     </section>
 
-    <section class="border-border bg-surface rounded-2xl border">
+    <section class="glass rounded-2xl">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <NetworkIcon class="text-text-muted size-4" />
-          <h2 class="text-text text-sm font-semibold">Networks</h2>
+          <h2 class="eyebrow">Networks</h2>
         </div>
-        <form action="?/pruneNetworks" method="POST" use:enhance>
+        <form action="?/pruneNetworks" method="POST"
+      use:enhance={enhanceToast({
+        error: "Docker cleanup action failed.",
+        loading: "Running cleanup",
+        onSettled: () => {
+          pendingAction = null;
+        },
+        onStart: () => {
+          pendingAction = "pruneNetworks";
+        },
+        success: (data) =>
+          describeResult((data as { result?: unknown } | undefined)?.result),
+      })}
+      >
           <Button
             disabled={pendingAction !== null}
             onclick={(e) => requestConfirm("pruneNetworks", e)}
@@ -337,13 +377,26 @@
       </div>
     </section>
 
-    <section class="border-border bg-surface rounded-2xl border">
+    <section class="glass rounded-2xl">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <HardDrive class="text-text-muted size-4" />
-          <h2 class="text-text text-sm font-semibold">Build cache</h2>
+          <h2 class="eyebrow">Build cache</h2>
         </div>
-        <form action="?/pruneBuildCache" method="POST" use:enhance>
+        <form action="?/pruneBuildCache" method="POST"
+      use:enhance={enhanceToast({
+        error: "Docker cleanup action failed.",
+        loading: "Running cleanup",
+        onSettled: () => {
+          pendingAction = null;
+        },
+        onStart: () => {
+          pendingAction = "pruneBuildCache";
+        },
+        success: (data) =>
+          describeResult((data as { result?: unknown } | undefined)?.result),
+      })}
+      >
           <Button
             disabled={pendingAction !== null}
             onclick={(e) => requestConfirm("pruneBuildCache", e)}
@@ -377,7 +430,20 @@
           Can permanently delete data. Not included in Quick cleanup.
         </p>
       </div>
-      <form action="?/pruneVolumes" class="ml-auto" method="POST" use:enhance>
+      <form action="?/pruneVolumes" class="ml-auto" method="POST"
+      use:enhance={enhanceToast({
+        error: "Docker cleanup action failed.",
+        loading: "Running cleanup",
+        onSettled: () => {
+          pendingAction = null;
+        },
+        onStart: () => {
+          pendingAction = "pruneVolumes";
+        },
+        success: (data) =>
+          describeResult((data as { result?: unknown } | undefined)?.result),
+      })}
+      >
         <Button
           disabled={pendingAction !== null}
           onclick={(e) => requestConfirm("pruneVolumes", e)}

@@ -281,6 +281,47 @@ that pattern for any new skill.
   real after every change and read what it reports, rather than assuming an
   untouched file's error is pre-existing and therefore not your problem, confirm
   that by actually looking, and fix it either way if it's cheap and unambiguous.
+- **Every async user action is reported with `toast.promise`, never a bare
+  `toast.success`/`toast.error`.** A promise toast is the only shape that
+  narrates the whole operation (`loading` → `success`/`error`) instead of only
+  its outcome, and it forces the failure path to be written, which is what was
+  actually broken before: the sign-in form's inputs stayed disabled after a
+  wrong password and the password field was never cleared, because the `catch`
+  branch toasted and returned without restoring state. The two shapes:
+  - **A client-side async handler** (a `fetch`, a better-auth client call) gets
+    split in two: an inner `async <name>Callback()` that does the work, throws
+    an `Error` on failure, and resets its own UI state (`loading = false`,
+    clearing a password field) in a `catch` before rethrowing; and a thin outer
+    `handle<Name>()` that returns
+    `toast.promise(<name>Callback(...), { error, loading, success })`, with
+    `error` a function mapping the thrown error to a message via
+    `toastError(error, "<fallback>")`. `src/routes/auth/sign-in/+page.svelte`
+    and `$lib/components/profile-menu.svelte` are the reference implementations.
+    Validate inside the callback and `throw` there too, rather than toasting
+    early and returning, so there's one path in and one path out.
+  - **A `use:enhance` form** uses `enhanceToast({...})` from `$lib/toast.ts`,
+    which bridges enhance's callback shape onto a real promise. It takes
+    `loading`/`success`/`error` (where `success` may be a `(data) => string`
+    reading the action's returned data), optional sonner `action`/`description`,
+    `reset` (forwarded to `update()`), and the lifecycle hooks
+    `onStart`/`onSubmit` (pre-submit, receives the `FormData`, for things like
+    stamping a client-generated deployment id)
+    /`onSettled`/`onSuccess`/`onFailure` (both receive the action's data)
+    /`onComplete` (runs _after_ `update()`, for a trailing `refreshAll()`).
+    `saveToast("<Section> settings")` is the shorthand for the settings-style
+    "save this section" form. Put pending-state resets in `onSettled`, not in a
+    hand-written callback. `enhanceToast` already extracts a failure's message
+    from either `data.error` or the first entry of this repo's zod-shaped
+    `data.errors` field map, so a route never needs to dig that out itself.
+    `tests/unit/app/toast.test.ts` covers that extraction and the hook order.
+- **The exceptions are narrow and all of them are non-mutating or instant**: a
+  synchronous result with nothing to await (`env-paste-button.svelte`'s parse, a
+  clipboard copy), and a background _load_ that already renders its own inline
+  spinner rather than blocking on user intent (`loadRepos()` on the new-service
+  and Source tabs). A long-lived stream is a third: the Terminal tab reports
+  failures through its own `errored` banner, since a promise that only settles
+  when the connection ends can't drive a toast. Anything that mutates state on
+  the server gets a promise toast.
 - **No comments. Anywhere. In any code file.** No explanatory line comments, no
   header banners, no prose in YAML/compose/shell files either. A change's
   rationale belongs in the git commit message, a feature's explanation belongs
@@ -409,6 +450,57 @@ yet built).
 SvelteKit serializes `load` return values with devalue, which can't serialize a
 class instance. Every `load` maps DTOs to plain objects via `.toJSON()` (or
 `.map(d => d.toJSON())`) before returning.
+
+### Design system and theming (`src/routes/layout.css`)
+
+One file owns the whole visual language : the palette, the radius scale, the
+fonts, and the four custom Tailwind v4 `@utility` definitions every surface is
+built from. Nothing under `src/routes`/`src/lib` should hardcode a hex value or
+a blur/shadow stack, route it through a token here instead.
+
+- **Two typefaces.** `--font-sans` is Inter (self-hosted `@font-face` blocks
+  pointing at `static/fonts/`, plus the `@fontsource-variable/inter` import);
+  `--font-mono` is **JetBrains Mono** (`@fontsource-variable/jetbrains-mono`,
+  bundled, no CDN, same "a self-hosted app shouldn't need outbound internet to
+  render" reasoning as the Swagger UI docs page). Mono is not decorative : it
+  carries every machine-readable string, image refs (`redis:alpine`), slugs and
+  hostnames, image digests, metrics, status badges, and section labels, which is
+  most of what makes this read as infrastructure tooling rather than a generic
+  dashboard.
+- **`glass`** is the panel/card treatment : translucent `--color-surface`, a
+  `backdrop-filter` blur+saturate, a hairline border, a top inner highlight, and
+  a soft drop shadow, plus a `--glass-sheen` specular gradient over the top 45%.
+  That sheen is load-bearing, not decoration : without it a translucent panel on
+  a near-black ground reads as a flat tinted rectangle rather than as glass.
+  **`glass-strong`** is the same for elements that overlap scrolling content and
+  therefore need more opacity to stay readable (the sidebar, the sticky header,
+  the mobile drawer). **`glass-interactive`** adds the hover lift.
+- **`tech`** is `--font-mono` + `tabular-nums`, for any number that updates live
+  (the dashboard's 5s stats poll) so digits don't reflow as they change.
+  **`eyebrow`** is the small uppercase mono section label used for every panel
+  title and sidebar category heading.
+- **The ambient backdrop** (`body::before`/`::after`) is what the glass actually
+  samples : three off-screen radial color pools plus a faint 44px engineering
+  grid, both `position: fixed` so they stay put while content scrolls. **Any
+  full-height wrapper inside `(protected)/` must not paint an opaque
+  background** or it covers this and every glass surface flattens out ; the
+  layout's root div is deliberately transparent for exactly this reason.
+- **The radius scale was deliberately tightened** : `--radius` is `0.5rem` (from
+  `0.625rem`) and the multiplier curve is flatter, so `rounded-2xl` resolves to
+  `0.75rem` rather than the old `1.125rem`. Card corners are the single biggest
+  "toy vs. tool" tell, don't loosen them back up.
+- Both themes are real and both are checked : light is `:root`, dark is `.dark`
+  (driven by `mode-watcher`, see Appearance preferences below). Every token that
+  differs between them is redefined in both blocks, a color defined only in one
+  is a bug.
+
+**Sweeping this file's tokens is how a global visual change is made**, not a
+per-route pass : the redesign that introduced this section changed ~40 route
+files, but almost all of that was one mechanical substitution
+(`border border-border bg-surface` → `glass`). **A real bug came out of doing
+that with a `\b`-anchored regex**: `bg-surface\b` matches inside `bg-surface-2`,
+silently producing a bogus `glass-2` class that Tailwind emits nothing for.
+Match on whole class tokens, not substrings.
 
 ### Shared UI components (`src/lib/components/`)
 

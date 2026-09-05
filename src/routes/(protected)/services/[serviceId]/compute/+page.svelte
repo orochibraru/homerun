@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Check, Cpu } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
@@ -9,6 +8,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);
@@ -35,13 +35,13 @@
 	);
 </script>
 
-<section class="border-border bg-surface rounded-2xl border">
+<section class="glass rounded-2xl">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <Cpu class="size-4" />
     </div>
     <div>
-      <h2 class="text-text text-sm font-semibold">Compute</h2>
+      <h2 class="eyebrow">Compute</h2>
       <p class="text-text-muted text-xs">
         Resource limits and autoscaling. Changes take effect on the next deploy.
       </p>
@@ -52,20 +52,17 @@
     action="?/updateCompute"
     class="space-y-5 p-5"
     method="POST"
-    use:enhance={() => {
-      submitting = true;
-      return async ({ result, update }) => {
+    use:enhance={enhanceToast({
+      error: "Check the form for errors.",
+      loading: "Saving compute settings",
+      onSettled: () => {
         submitting = false;
-        if (result.type === "success") {
-          toast.success("Saved.", {
-            description: "Changes take effect on the next deploy.",
-          });
-        } else if (result.type === "failure") {
-          toast.error("Check the form for errors.");
-        }
-        await update();
-      };
-    }}
+      },
+      onStart: () => {
+        submitting = true;
+      },
+      success: "Saved.",
+    })}
   >
     <div class="grid grid-cols-2 gap-3">
       <div>

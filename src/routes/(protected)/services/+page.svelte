@@ -9,7 +9,6 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
@@ -18,6 +17,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -49,23 +49,37 @@
 	// only that row's buttons show a spinner/disable.
 	let pending = $state<Record<string, boolean>>({});
 
-	function withPending(serviceId: string) {
-		return () => {
-			pending[serviceId] = true;
-			return async ({
-				result,
-				update,
-			}: {
-				result: { type: string; data?: { error?: string } };
-				update: () => Promise<void>;
-			}) => {
+	type ServiceAction = "delete" | "restart" | "start" | "stop";
+
+	const SERVICE_ACTION_LABELS: Record<
+		ServiceAction,
+		{ done: string; progressive: string; verb: string }
+	> = {
+		delete: { done: "deleted", progressive: "Deleting", verb: "delete" },
+		restart: { done: "restarted", progressive: "Restarting", verb: "restart" },
+		start: { done: "started", progressive: "Starting", verb: "start" },
+		stop: { done: "stopped", progressive: "Stopping", verb: "stop" },
+	};
+
+	function serviceName(serviceId: string): string {
+		return (
+			data.services.find((svc) => svc.id === serviceId)?.name ?? "the service"
+		);
+	}
+
+	function withPending(serviceId: string, action: ServiceAction) {
+		const label = SERVICE_ACTION_LABELS[action];
+		return enhanceToast({
+			error: `Couldn't ${label.verb} ${serviceName(serviceId)}.`,
+			loading: `${label.progressive} ${serviceName(serviceId)}`,
+			onSettled: () => {
 				pending[serviceId] = false;
-				if (result.type === "failure" && result.data?.error) {
-					toast.error(result.data.error);
-				}
-				await update();
-			};
-		};
+			},
+			onStart: () => {
+				pending[serviceId] = true;
+			},
+			success: `${serviceName(serviceId)} ${label.done}.`,
+		});
 	}
 
 	let deleteDialogOpen = $state(false);
@@ -82,7 +96,7 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-2xl font-bold">Services</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Services</h1>
       <p class="text-text-muted mt-1 text-sm">
         Containers deployed to this server.
       </p>
@@ -120,7 +134,7 @@
     {#snippet actions(svc: (typeof data.services)[number])}
       <div class="flex shrink-0 items-center gap-1.5">
         {#if svc.desiredState === "running"}
-          <form action="?/stop" method="POST" use:enhance={withPending(svc.id)}>
+          <form action="?/stop" method="POST" use:enhance={withPending(svc.id, "stop")}>
             <input name="serviceId" type="hidden" value={svc.id}>
             <Button
               disabled={pending[svc.id]}
@@ -137,7 +151,7 @@
             </Button>
           </form>
         {:else}
-          <form action="?/start" method="POST" use:enhance={withPending(svc.id)}>
+          <form action="?/start" method="POST" use:enhance={withPending(svc.id, "start")}>
             <input name="serviceId" type="hidden" value={svc.id}>
             <Button
               disabled={pending[svc.id] || !svc.containerId}
@@ -157,7 +171,7 @@
           </form>
         {/if}
 
-        <form action="?/restart" method="POST" use:enhance={withPending(svc.id)}>
+        <form action="?/restart" method="POST" use:enhance={withPending(svc.id, "restart")}>
           <input name="serviceId" type="hidden" value={svc.id}>
           <Button
             disabled={pending[svc.id] || !svc.containerId}
@@ -170,7 +184,7 @@
           </Button>
         </form>
 
-        <form action="?/delete" method="POST" use:enhance={withPending(svc.id)}>
+        <form action="?/delete" method="POST" use:enhance={withPending(svc.id, "delete")}>
           <input name="serviceId" type="hidden" value={svc.id}>
           <Button
             class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
@@ -188,7 +202,7 @@
     {/snippet}
 
     {#snippet row(svc: (typeof data.services)[number])}
-      <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 transition-shadow hover:shadow-md">
+      <div class="glass flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md">
         <a
           class="flex min-w-0 flex-1 items-center gap-4"
           href="{resolve('/services')}/{svc.id}"
@@ -203,7 +217,7 @@
               </p>
               <StatusBadge status={svc.currentStatus} />
             </div>
-            <p class="text-text-muted mt-0.5 truncate text-xs">
+            <p class="text-text-subtle mt-0.5 truncate font-mono text-xs">
               {svc.image}:{svc.tag}
               · {svc.slug}.{data.baseDomain}
             </p>
@@ -214,19 +228,19 @@
     {/snippet}
 
     {#snippet card(svc: (typeof data.services)[number])}
-      <div class="border-border bg-surface flex flex-col gap-3 rounded-2xl border p-5 transition-shadow hover:shadow-md">
+      <div class="glass glass-interactive flex flex-col gap-3 rounded-2xl p-5">
         <a class="flex min-w-0 items-center gap-3" href="{resolve('/services')}/{svc.id}">
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <Server class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
             <p class="text-text truncate text-sm font-semibold">{svc.name}</p>
-            <p class="text-text-muted truncate text-xs">
+            <p class="text-text-subtle truncate font-mono text-xs">
               {svc.slug}.{data.baseDomain}
             </p>
           </div>
         </a>
-        <p class="text-text-muted truncate text-xs">{svc.image}:{svc.tag}</p>
+        <p class="text-text-subtle truncate font-mono text-xs">{svc.image}:{svc.tag}</p>
         <div class="flex items-center justify-between gap-2">
           <StatusBadge status={svc.currentStatus} />
           {@render actions(svc)}
@@ -238,7 +252,7 @@
       {#each groups as [label, services] (label)}
         <div>
           {#if groups.length > 1}
-            <h2 class="text-text-subtle mb-3 text-xs font-semibold tracking-widest uppercase">
+            <h2 class="eyebrow mb-3">
               {label}
             </h2>
           {/if}

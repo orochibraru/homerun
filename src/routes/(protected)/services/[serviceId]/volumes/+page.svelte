@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { HardDrive, Plus, X } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -18,6 +17,7 @@
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	let volumeId = $state("");
 
@@ -31,13 +31,13 @@
 	let createError = $state<string | null>(null);
 </script>
 
-<section class="border-border bg-surface rounded-2xl border">
+<section class="glass rounded-2xl">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <HardDrive class="size-4" />
     </div>
     <div>
-      <h2 class="text-text text-sm font-semibold">Volumes</h2>
+      <h2 class="eyebrow">Volumes</h2>
       <p class="text-text-muted text-xs">
         Mount a storage volume into the container. Takes effect on the next
         deploy.
@@ -64,12 +64,11 @@
           <form
             action="?/detachVolume"
             method="POST"
-            use:enhance={() => async ({ result, update }) => {
-              if (result.type === "failure") {
-                toast.error("Couldn't remove the mount.");
-              }
-              await update();
-            }}
+            use:enhance={enhanceToast({
+              error: "Couldn't remove the mount.",
+              loading: "Removing the mount",
+              success: "Mount removed.",
+            })}
           >
             <input name="mountId" type="hidden" value={mount.id}>
             <Button size="icon-sm" title="Remove" type="submit" variant="ghost">
@@ -101,12 +100,11 @@
         action="?/attachVolume"
         class="flex flex-wrap items-end gap-3"
         method="POST"
-        use:enhance={() => async ({ result, update }) => {
-          if (result.type === "failure") {
-            toast.error("Couldn't mount the volume.");
-          }
-          await update();
-        }}
+        use:enhance={enhanceToast({
+          error: "Couldn't mount the volume.",
+          loading: "Mounting the volume",
+          success: "Volume mounted.",
+        })}
       >
         <div class="flex-1">
           <div class="mb-1.5 flex items-center justify-between">
@@ -185,27 +183,15 @@
       action="?/createVolume"
       class="space-y-5"
       method="POST"
-      use:enhance={() => {
-        creatingVolume = true;
-        createError = null;
-        return async ({ result }) => {
-          creatingVolume = false;
-          if (result.type === "failure") {
-            createError = (result.data?.error as string | undefined)
-              ?? "Check the form for errors.";
-            return;
-          }
-          if (result.type === "success") {
-            const newId = result.data?.volumeId as string | undefined;
-            newVolumeOpen = false;
-            await refreshAll();
-            if (newId) {
-              volumeId = newId;
-            }
-            toast.success("Volume created : select it above to mount it.");
-          }
-        };
-      }}
+      use:enhance={enhanceToast({
+        error: "Couldn't create the volume.",
+        loading: "Creating the volume",
+        onSuccess: () => {
+          newVolumeOpen = false;
+          return refreshAll();
+        },
+        success: "Volume created : select it above to mount it.",
+      })}
     >
       {#if createError}
         <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">

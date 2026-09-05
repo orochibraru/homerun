@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { ChevronDown, ChevronLeft, Server, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -12,6 +11,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -37,7 +37,7 @@
       <Server class="size-5" />
     </div>
     <div class="min-w-0">
-      <h1 class="truncate text-xl font-bold text-text">{data.host.name}</h1>
+      <h1 class="truncate text-text text-xl font-semibold tracking-tight">{data.host.name}</h1>
       <p class="text-sm text-text-muted">
         {data.host.kind === "agent" ? "Homerun Agent" : "Direct Docker connection"}
       </p>
@@ -45,7 +45,7 @@
   </div>
 
   {#if data.host.kind === "agent"}
-    <div class="mb-6 flex items-center gap-2 rounded-xl border border-border bg-surface p-4 text-sm">
+    <div class="mb-6 flex items-center gap-2 rounded-xl glass p-4 text-sm">
       {#if data.agentStatus?.reachable}
         <span class="inline-block size-2 rounded-full bg-green-500"></span>
         <span class="text-text">Online</span>
@@ -60,24 +60,20 @@
   {/if}
 
   <form
-    class="mb-6 space-y-4 rounded-2xl border border-border bg-surface p-5"
+    class="mb-6 space-y-4 rounded-2xl glass p-5"
     action="?/update"
     method="POST"
-    use:enhance={() => {
-      submitting = true;
-      return async ({ result, update }) => {
+    use:enhance={enhanceToast({
+      error: "Check the form for errors.",
+      loading: "Saving the host",
+      onSettled: () => {
         submitting = false;
-        if (result.type === "success") {
-          toast.success("Remote host updated.");
-        } else if (result.type === "failure") {
-          toast.error(
-            (result.data as { error?: string })?.error
-              ?? "Check the form for errors.",
-          );
-        }
-        await update();
-      };
-    }}
+      },
+      onStart: () => {
+        submitting = true;
+      },
+      success: "Remote host updated.",
+    })}
   >
     {#if form?.error}
       <p class="text-sm text-red-500">{form.error}</p>
@@ -201,7 +197,7 @@
   </form>
 
   <div class="rounded-2xl border border-red-500/30 bg-red-500/5 p-5">
-    <h2 class="text-sm font-semibold text-text">Danger zone</h2>
+    <h2 class="eyebrow">Danger zone</h2>
     <p class="mt-1 text-xs text-text-muted">
       Services deployed to this host keep running there : they just won't be
       manageable from here anymore.
@@ -211,14 +207,11 @@
       action="?/delete"
       method="POST"
       bind:this={deleteForm}
-      use:enhance={() => async ({ result }) => {
-        if (result.type === "failure") {
-          toast.error("Couldn't delete the host.");
-        } else if (result.type === "redirect") {
-          toast.success("Remote host deleted.");
-          await goto(result.location);
-        }
-      }}
+      use:enhance={enhanceToast({
+        error: "Couldn't delete the host.",
+        loading: "Deleting the host",
+        success: "Remote host deleted.",
+      })}
     >
       <Button
         onclick={() => {

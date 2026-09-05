@@ -1,7 +1,5 @@
 <script lang="ts">
-	import type { SubmitFunction } from "@sveltejs/kit";
 	import { onMount, untrack } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { page } from "$app/state";
 	import CheckBox from "$lib/components/check-box.svelte";
@@ -14,6 +12,7 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
+	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -48,27 +47,12 @@
 	let orchestrationMode = $state(
 		untrack(() => data.settings.orchestrationMode ?? "standalone"),
 	);
-
-	function submitToast(sectionLabel: string): SubmitFunction {
-		return () =>
-			async ({ result, update }) => {
-				if (result.type === "success") {
-					toast.success(`${sectionLabel} saved.`);
-				} else if (result.type === "failure") {
-					toast.error(
-						(result.data as { error?: string } | undefined)?.error ??
-							"Check the form for errors.",
-					);
-				}
-				await update();
-			};
-	}
 </script>
 
 <div class="space-y-6">
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="border-border border-b px-5 py-4">
-      <h2 class="text-text text-sm font-semibold">Docker</h2>
+      <h2 class="eyebrow">Docker</h2>
       <p class="text-text-muted text-xs">
         The default local connection : separate from the per-service "Deploy
         target" picker on Remote Hosts.
@@ -78,7 +62,7 @@
       action="?/updateDocker"
       class="space-y-4 p-5"
       method="POST"
-      use:enhance={submitToast("Docker settings")}
+      use:enhance={saveToast("Docker settings")}
     >
       <div>
         <label class={label} for="dockerSocketPath">Socket path</label>
@@ -114,9 +98,9 @@
     </form>
   </section>
 
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="border-border border-b px-5 py-4">
-      <h2 class="text-text text-sm font-semibold">Orchestration</h2>
+      <h2 class="eyebrow">Orchestration</h2>
       <p class="text-text-muted text-xs">
         "Standalone" is a single container per service (this app's original
         model). "Swarm" deploys every service as a replicated, self-healing
@@ -135,7 +119,7 @@
       action="?/updateOrchestration"
       class="space-y-4 p-5"
       method="POST"
-      use:enhance={submitToast("Orchestration settings")}
+      use:enhance={saveToast("Orchestration settings")}
     >
       <div>
         <label class={label} for="orchestrationMode">Mode</label>
@@ -159,9 +143,9 @@
     </form>
   </section>
 
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="border-border border-b px-5 py-4">
-      <h2 class="text-text text-sm font-semibold">Autoscaling</h2>
+      <h2 class="eyebrow">Autoscaling</h2>
       <p class="text-text-muted text-xs">
         "GCP Cloud Run"-style load shedding : when this host crosses a
         resource threshold, one autoscale-eligible service (opt in from its
@@ -175,7 +159,7 @@
       action="?/updateAutoscale"
       class="space-y-4 p-5"
       method="POST"
-      use:enhance={submitToast("Autoscaling settings")}
+      use:enhance={saveToast("Autoscaling settings")}
     >
       <CheckBox
         checked={data.settings.autoscaleEnabled}

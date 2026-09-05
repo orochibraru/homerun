@@ -9,7 +9,6 @@
 	} from "@lucide/svelte";
 	import type { ActionResult } from "@sveltejs/kit";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import {
@@ -20,6 +19,7 @@
 	import Stepper, { type StepperStep } from "$lib/components/stepper.svelte";
 	import { ONBOARDING_FIELD_STEP } from "$lib/onboarding-fields";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -256,30 +256,13 @@
 			activeStep = ONBOARDING_FIELD_STEP[firstField] ?? 0;
 		}
 	}
-
-	async function handleSubmitResult(
-		result: ActionResult,
-		update: () => Promise<void>,
-	) {
-		submitting = false;
-		if (result.type === "failure") {
-			applyServerErrors(
-				(result.data as { errors?: Record<string, string[]> } | undefined)
-					?.errors,
-			);
-			toast.error("Check the form for errors.");
-		} else if (result.type === "error") {
-			toast.error(result.error?.message ?? "Something went wrong.");
-		}
-		await update();
-	}
 </script>
 
 {#if data.waitingForAdmin}
   <div class="flex min-h-screen items-center justify-center p-6">
     <div class="text-center">
       <TriangleAlert class="mx-auto mb-4 size-8 text-amber-500" />
-      <h1 class="text-lg font-semibold text-text">Almost there</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Almost there</h1>
       <p class="mt-2 text-sm text-text-muted">
         An admin needs to finish setting up this instance before you can
         continue. Check back shortly.
@@ -289,7 +272,7 @@
 {:else}
   <div class="mx-auto space-y-6 p-6 md:p-10">
     <div>
-      <h1 class="text-xl font-bold text-text">Set up Homerun</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Set up Homerun</h1>
       <p class="mt-0.5 text-sm text-text-muted">
         A few instance-wide settings before the dashboard unlocks : every field
         below is also editable later from Settings.
@@ -311,25 +294,28 @@
     <form
       action="?/finish"
       method="POST"
-      use:enhance={({ cancel }) => {
-        if (!validateAll()) {
-          const [firstField] = Object.keys(errors);
-          activeStep = firstField
-            ? (ONBOARDING_FIELD_STEP[firstField] ?? 0)
-            : 0;
-          toast.error("Check the form for errors.");
-          cancel();
-          return;
-        }
-        submitting = true;
-        return ({ result, update }) => handleSubmitResult(result, update);
-      }}
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving your setup",
+        onFailure: (data) => {
+          applyServerErrors(
+            (data as { errors?: Record<string, string[]> } | undefined)?.errors,
+          );
+        },
+        onSettled: () => {
+          submitting = false;
+        },
+        onStart: () => {
+          submitting = true;
+        },
+        success: "Setup complete.",
+      })}
     >
       <Stepper onNext={validateStep} steps={STEPS} bind:activeStep>
         {#snippet children()}
           <!-- ═══ Step 1: Core ═══ -->
           <section
-            class="space-y-4 rounded-2xl border border-border bg-surface p-5"
+            class="space-y-4 rounded-2xl glass p-5"
             class:hidden={activeStep !== 0}
           >
             <div>
@@ -366,7 +352,7 @@
 
           <!-- ═══ Step 2: Docker ═══ -->
           <section
-            class="space-y-4 rounded-2xl border border-border bg-surface p-5"
+            class="space-y-4 rounded-2xl glass p-5"
             class:hidden={activeStep !== 1}
           >
             <div>
@@ -405,7 +391,7 @@
 
           <!-- ═══ Step 3: Traefik ═══ -->
           <section
-            class="space-y-4 rounded-2xl border border-border bg-surface p-5"
+            class="space-y-4 rounded-2xl glass p-5"
             class:hidden={activeStep !== 2}
           >
             <div>
@@ -451,7 +437,7 @@
 
           <!-- ═══ Step 4: Email ═══ -->
           <section
-            class="space-y-4 rounded-2xl border border-border bg-surface p-5"
+            class="space-y-4 rounded-2xl glass p-5"
             class:hidden={activeStep !== 3}
           >
             <CheckBox
@@ -548,10 +534,10 @@
 
           <!-- ═══ Step 5: Review ═══ -->
           <section
-            class="space-y-3 rounded-2xl border border-border bg-surface p-5"
+            class="space-y-3 rounded-2xl glass p-5"
             class:hidden={activeStep !== 4}
           >
-            <h2 class="text-sm font-semibold text-text">Ready to go</h2>
+            <h2 class="eyebrow">Ready to go</h2>
             <dl class="space-y-1.5 text-sm">
               <div class="flex justify-between gap-4">
                 <dt class="text-text-muted">Base domain</dt>

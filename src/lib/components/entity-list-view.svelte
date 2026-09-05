@@ -45,7 +45,7 @@
 </script>
 
 <div class="mb-3 flex justify-end">
-  <div class="border-border bg-surface inline-flex rounded-lg border p-0.5">
+  <div class="glass inline-flex rounded-lg p-0.5">
     <Button
       aria-label="List view"
       class="h-auto px-2 py-1 {mode === 'list' ? 'bg-surface-2' : ''}"

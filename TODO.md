@@ -8,8 +8,6 @@
       background and redirect the user to the service page showing them the logs
       and all that would happen if they clicked on "create" and got redirected
       to the page and clicked "deploy" themselves.
-- [ ] [App] Let's make the UI sexier, slicker a bit less toy a bit more tech. A
-      monospace font could help and liquid glass-ish design as well.
 - [ ] [App] Instead of appending a div to a section for confirmation (such as
       the confirm button in a danger zone) let's use a real confirmation modal
       that sticks out with a "type in service name to confirm" to make sure we
@@ -17,12 +15,10 @@
 
 ## Medium
 
-- [ ] [CI/CD] Since we already build & tag docker images in PRs, it's safe to
-      assume that the last built image is healthy which means we're re-building
-      one for nothing in the main CI when merged. We could just re-tag it. On
-      top of this we should definitely have both a workflow that deletes the PR
-      image when a PR is closed as well as a periodic docker registry cleanup
-      for dangling images from PRs if the cleanup jobs ever fail.
+- [ ] [CI/CD] Integration tests always fail in CI unless we restart manually.
+      This is caused by us starting our own containers within the job instead of
+      using the CI service containers. We need to refactor to use those if in CI
+      mode (CI=true)
 - [ ] [App] When creating a new service add possibility to link it to another
       even if it's outside of a project. When linking to something like Redis or
       Postgres let's be smart: offer to add an env variable to the main service

@@ -69,7 +69,7 @@
 
 <div class="p-6 md:p-8">
   <div class="mb-6">
-    <h1 class="text-xl font-bold text-text">Settings</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">Settings</h1>
     <p class="mt-0.5 text-sm text-text-muted">
       Manage your profile and account preferences.
     </p>

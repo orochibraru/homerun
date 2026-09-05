@@ -10,7 +10,6 @@
 		TriangleAlertIcon,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -26,6 +25,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);
@@ -72,13 +72,13 @@
 </script>
 
 <div class="space-y-6">
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="border-border flex items-center gap-3 border-b px-5 py-4">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Settings class="size-4" />
       </div>
       <div>
-        <h2 class="text-text text-sm font-semibold">Service settings</h2>
+        <h2 class="eyebrow">Service settings</h2>
         <p class="text-text-muted text-xs">
           Changes take effect on the next deploy.
         </p>
@@ -89,30 +89,27 @@
       action="?/update"
       class="space-y-5 p-5"
       method="POST"
-      use:enhance={() => {
-        submitting = true;
-        return async ({ result, update }) => {
+      use:enhance={enhanceToast({
+        action: {
+          label: "Redeploy",
+          onClick: () =>
+            goto(
+              resolve("/(protected)/services/[serviceId]", {
+                serviceId: svc.id,
+              }),
+            ),
+        },
+        description: "Changes take effect on the next deploy.",
+        error: "Check the form for errors.",
+        loading: "Saving the service",
+        onSettled: () => {
           submitting = false;
-          if (result.type === "success") {
-            toast.success("Saved.", {
-              action: {
-                label: "Redeploy",
-                onClick: () =>
-                  goto(
-                    resolve("/(protected)/services/[serviceId]", {
-                      serviceId: svc.id,
-                    }),
-                  ),
-              },
-              description: "Changes take effect on the next deploy.",
-            });
-          }
-          if (result.type === "failure") {
-            toast.error("Check the form for errors.");
-          }
-          await update();
-        };
-      }}
+        },
+        onStart: () => {
+          submitting = true;
+        },
+        success: "Saved.",
+      })}
     >
       <div>
         <label class={label} for="name">
@@ -202,7 +199,7 @@
   </section>
 
   <!-- ═══ Project ═══ -->
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -219,14 +216,11 @@
         action="?/moveProject"
         class="flex w-75 items-center gap-2"
         method="POST"
-        use:enhance={() => async ({ result, update }) => {
-          if (result.type === "success") {
-            toast.success("Moved.");
-          } else {
-            toast.error("Couldn't move the service.");
-          }
-          await update();
-        }}
+        use:enhance={enhanceToast({
+          error: "Couldn't move the service.",
+          loading: "Moving the service",
+          success: "Moved.",
+        })}
       >
         <SelectRoot name="projectId" type="single" bind:value={projectId}>
           <SelectTrigger class="w-full">
@@ -245,7 +239,7 @@
   </section>
 
   <!-- ═══ Deploy target (remote host) ═══ -->
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -264,22 +258,11 @@
         action="?/moveRemoteHost"
         class="flex w-75 items-center gap-2"
         method="POST"
-        use:enhance={() => async ({
-          result,
-          update,
-        }: {
-          result: { type: string; data?: { error?: string } };
-          update: () => Promise<void>;
-        }) => {
-          if (result.type === "success") {
-            toast.success("Saved.");
-          } else {
-            toast.error(
-              result.data?.error ?? "Couldn't change the deploy target.",
-            );
-          }
-          await update();
-        }}
+        use:enhance={enhanceToast({
+          error: "Couldn't change the deploy target.",
+          loading: "Saving the deploy target",
+          success: "Saved.",
+        })}
       >
         <SelectRoot name="remoteHostId" type="single" bind:value={remoteHostId}>
           <SelectTrigger class="w-full">
@@ -298,7 +281,7 @@
   </section>
 
   <!-- ═══ Save as template ═══ -->
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -314,14 +297,11 @@
       <form
         action="?/saveAsTemplate"
         method="POST"
-        use:enhance={() => async ({ result, update }) => {
-          if (result.type === "success") {
-            toast.success("Saved as a template.");
-          } else {
-            toast.error("Couldn't save the template.");
-          }
-          await update();
-        }}
+        use:enhance={enhanceToast({
+          error: "Couldn't save the template.",
+          loading: "Saving as a template",
+          success: "Saved as a template.",
+        })}
       >
         <Button class="shrink-0" type="submit" variant="outline">
           Save as template
@@ -331,7 +311,7 @@
   </section>
 
   <!-- ═══ Auto-redeploy (cron) ═══ -->
-  <section class="border-border bg-surface rounded-2xl border p-5">
+  <section class="glass rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Clock class="size-4" />
@@ -350,14 +330,11 @@
       action="?/updateCron"
       class="space-y-3"
       method="POST"
-      use:enhance={() => async ({ result, update }) => {
-        if (result.type === "success") {
-          toast.success("Saved.");
-        } else if (result.type === "failure") {
-          toast.error("Check the schedule for errors.");
-        }
-        await update();
-      }}
+      use:enhance={enhanceToast({
+        error: "Check the schedule for errors.",
+        loading: "Saving the schedule",
+        success: "Saved.",
+      })}
     >
       {#if form?.cronError}
         <p class={errorClass}>{form.cronError}</p>
@@ -427,18 +404,17 @@
           action="?/delete"
           class="space-y-4"
           method="POST"
-          use:enhance={() => {
-            deleting = true;
-            return ({ result }) => {
-              if (result.type === "redirect") {
-                toast.success("Service deleted.");
-                goto(result.location);
-              } else {
-                deleting = false;
-                toast.error("Couldn't delete the service.");
-              }
-            };
-          }}
+          use:enhance={enhanceToast({
+            error: "Couldn't delete the service.",
+            loading: "Deleting the service",
+            onFailure: () => {
+              deleting = false;
+            },
+            onStart: () => {
+              deleting = true;
+            },
+            success: "Service deleted.",
+          })}
         >
           <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
             <p class="font-semibold">Delete "{svc.name}"?</p>

@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { AlertTriangle, ChevronDown, Ghost, Loader2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -15,16 +15,6 @@
 
 	let expandedDeploymentId = $state<string | null>(null);
 	let resolving = $state(false);
-
-	$effect(() => {
-		if (!form) {
-			return;
-		}
-		resolving = false;
-		if (!form.success) {
-			toast.error(form.error ?? "Couldn't resolve the orphaned container.");
-		}
-	});
 </script>
 
 {#if data.service.currentStatus === "failed"}
@@ -55,12 +45,21 @@
         clear the stale reference so you can deploy it again.
       </p>
     </div>
-    <form action="?/resolveOrphan" method="POST" use:enhance={() => {
-      resolving = true;
-      return async ({ update }) => {
-        await update();
-      };
-    }}>
+    <form
+      action="?/resolveOrphan"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't resolve the orphaned container.",
+        loading: "Resolving the container",
+        onSettled: () => {
+          resolving = false;
+        },
+        onStart: () => {
+          resolving = true;
+        },
+        success: "Container reference cleared.",
+      })}
+    >
       <Button disabled={resolving} size="sm" type="submit" variant="outline">
         {#if resolving}
           <Loader2 class="size-3.5 animate-spin" />
@@ -71,10 +70,10 @@
   </div>
 {/if}
 
-<section class="border-border bg-surface rounded-2xl border">
+<section class="glass rounded-2xl">
   <div class="border-border flex items-center gap-2 border-b px-5 py-4">
     <AlertTriangle class="text-text-muted size-4" />
-    <h2 class="text-text text-sm font-semibold">
+    <h2 class="eyebrow">
       Failed deployments
       {#if data.failedDeployments.length > 0}
         <span class="text-text-muted ml-1 text-xs font-normal"
@@ -139,10 +138,10 @@
   own code logged as wrong" (a failed Docker call, a rejected reconcile,
   etc.), independent of whether a deploy was even in flight when it happened.
 -->
-<section class="border-border bg-surface mt-6 rounded-2xl border">
+<section class="glass mt-6 rounded-2xl">
   <div class="border-border flex items-center gap-2 border-b px-5 py-4">
     <AlertTriangle class="text-text-muted size-4" />
-    <h2 class="text-text text-sm font-semibold">
+    <h2 class="eyebrow">
       Application errors
       {#if data.appLogs.length > 0}
         <span class="text-text-muted ml-1 text-xs font-normal"

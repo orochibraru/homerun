@@ -8,13 +8,13 @@
 		Wrench,
 	} from "@lucide/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -112,34 +112,11 @@
 		cancelled = false;
 		void connect();
 	}
-
-	$effect(() => {
-		if (!form) {
-			return;
-		}
-		if (form.action === "restartTraefik") {
-			restarting = false;
-			if (form.success) {
-				toast.success("Traefik restarted.");
-			} else {
-				toast.error(form.error ?? "Couldn't restart Traefik.");
-			}
-		} else if (form.action === "updateTraefik") {
-			updating = false;
-			if (form.success) {
-				toast[form.updated ? "success" : "info"](
-					form.message ?? "Traefik updated.",
-				);
-			} else {
-				toast.error(form.error ?? "Couldn't update Traefik.");
-			}
-		}
-	});
 </script>
 
 <div class="p-6 md:p-8">
   <div class="mb-6">
-    <h1 class="text-text text-2xl font-bold">System Logs</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">System Logs</h1>
     <p class="text-text-muted mt-1 text-sm">
       Logs from core infrastructure this app depends on.
     </p>
@@ -155,11 +132,11 @@
     </p>
   </div>
 
-  <section class="border-border bg-surface rounded-2xl border">
+  <section class="glass rounded-2xl">
     <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
       <div class="flex items-center gap-2">
         <Terminal class="text-text-muted size-4" />
-        <h2 class="text-text text-sm font-semibold">Traefik</h2>
+        <h2 class="eyebrow">Traefik</h2>
         {#if data.traefik}
           <code
             class="bg-surface-2 text-text-muted rounded px-1.5 py-0.5 text-[11px]"
@@ -176,7 +153,21 @@
       </div>
       <div class="flex items-center gap-2">
         {#if data.traefik && data.user.role === "admin"}
-          <form action="?/restartTraefik" method="POST" use:enhance>
+          <form
+            action="?/restartTraefik"
+            method="POST"
+            use:enhance={enhanceToast({
+              error: "Couldn't restart Traefik.",
+              loading: "Restarting Traefik",
+              onSettled: () => {
+                restarting = false;
+              },
+              onStart: () => {
+                restarting = true;
+              },
+              success: "Traefik restarted.",
+            })}
+          >
             <Button
               disabled={restarting || updating}
               onclick={requestRestart}
@@ -192,7 +183,23 @@
               Restart
             </Button>
           </form>
-          <form action="?/updateTraefik" method="POST" use:enhance>
+          <form
+            action="?/updateTraefik"
+            method="POST"
+            use:enhance={enhanceToast({
+              error: "Couldn't update Traefik.",
+              loading: "Updating Traefik",
+              onSettled: () => {
+                updating = false;
+              },
+              onStart: () => {
+                updating = true;
+              },
+              success: (data) =>
+                (data as { message?: string } | undefined)?.message ??
+                "Traefik updated.",
+            })}
+          >
             <Button
               disabled={restarting || updating}
               onclick={requestUpdate}

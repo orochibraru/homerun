@@ -13,7 +13,7 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-text">Projects</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Projects</h1>
       <p class="mt-1 text-sm text-text-muted">
         Group related services together.
       </p>
@@ -40,7 +40,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each data.projects as proj (proj.id)}
         <a
-          class="rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
+          class="rounded-2xl glass p-5 transition-shadow hover:shadow-md"
           href="{resolve('/projects')}/{proj.id}"
         >
           <div class="bg-accent/10 text-accent mb-3 flex size-10 items-center justify-center rounded-xl">

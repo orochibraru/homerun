@@ -9,7 +9,6 @@
 		X,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -23,6 +22,7 @@
 	} from "$lib/components/ui/drawer";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -30,6 +30,7 @@
 	let selectedCategories = $state<string[]>([]);
 	let filtersOpen = $state(false);
 	let quickDeploying = $state<string | null>(null);
+	let lastDeployedHref = $state<string | undefined>(undefined);
 
 	onMount(() => title.set("Templates"));
 
@@ -73,7 +74,7 @@
 
 {#snippet card(tmpl: (typeof data.builtins)[number])}
     <div
-        class="rounded-2xl border flex flex-col justify-between gap-2 h-full border-border bg-surface p-5 transition-shadow hover:shadow-md"
+        class="glass rounded-2xl flex flex-col justify-between gap-2 h-full p-5 transition-shadow hover:shadow-md"
     >
         <a
             class="flex flex-col gap-2"
@@ -102,36 +103,26 @@
                 action="?/quickDeploy"
                 class="flex-1"
                 method="POST"
-                use:enhance={() => {
-                    quickDeploying = tmpl.id;
-                    return async ({ result, update }) => {
+                use:enhance={enhanceToast({
+                    action: {
+                        label: "View",
+                        onClick: () =>
+                            goto(lastDeployedHref ?? resolve("/services")),
+                    },
+                    error: "Couldn't deploy.",
+                    loading: `Deploying "${tmpl.name}"`,
+                    onSettled: () => {
                         quickDeploying = null;
-                        if (result.type === "success") {
-                            const href = (
-                                result.data as { href?: string } | undefined
-                            )?.href;
-                            toast.success(`"${tmpl.name}" deployed.`, {
-                                action: href
-                                    ? {
-                                          label: "View",
-                                          onClick: () => goto(href),
-                                      }
-                                    : undefined,
-                            });
-                        } else if (result.type === "failure") {
-                            toast.error(
-                                (result.data as { error?: string } | undefined)
-                                    ?.error ?? "Couldn't deploy.",
-                            );
-                        } else if (result.type === "error") {
-                            toast.error(
-                                result.error?.message ??
-                                    "Something went wrong.",
-                            );
-                        }
-                        await update({ reset: false });
-                    };
-                }}
+                    },
+                    onStart: () => {
+                        quickDeploying = tmpl.id;
+                    },
+                    onSuccess: (data) => {
+                        lastDeployedHref = (data as { href?: string } | undefined)?.href;
+                    },
+                    reset: false,
+                    success: `"${tmpl.name}" deployed.`,
+                })}
             >
                 <input name="templateId" type="hidden" value={tmpl.id} />
                 {#if data.project}
@@ -175,7 +166,7 @@
 <div class="p-6 md:p-8">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-text">Templates</h1>
+            <h1 class="text-text text-xl font-semibold tracking-tight">Templates</h1>
             <p class="mt-1 text-sm text-text-muted">
                 One-click configs for common services.
             </p>
@@ -193,7 +184,7 @@
             />
             <input
                 bind:value={search}
-                class="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none"
+                class="w-full rounded-lg glass py-2 pl-9 pr-3 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none"
                 placeholder="Search templates…"
                 type="text"
             />

@@ -10,7 +10,6 @@
 		Trash2,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -20,6 +19,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const proj = $derived(data.project);
@@ -44,7 +44,7 @@
   {#if !editing}
     <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-text">
+        <h1 class="text-text text-xl font-semibold tracking-tight">
           {proj.name}
         </h1>
         {#if proj.description}
@@ -79,19 +79,13 @@
   {:else}
     <form
       action="?/rename"
-      class="mb-8 space-y-4 rounded-2xl border border-border bg-surface p-5"
+      class="mb-8 space-y-4 rounded-2xl glass p-5"
       method="POST"
-      use:enhance={() => {
-        renaming = true;
-        return async ({ result, update }) => {
-          renaming = false;
-          if (result.type === "success") {
-            editing = false;
-            toast.success("Saved.");
-          }
-          await update();
-        };
-      }}
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving the project",
+        success: "Saved.",
+      })}
     >
       {#if form?.error}
         <p class="text-sm text-red-500">{form.error}</p>
@@ -158,7 +152,7 @@
     <div class="mb-8 space-y-3">
       {#each data.services as svc (svc.id)}
         <a
-          class="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
+          class="flex items-center gap-4 rounded-2xl glass p-5 transition-shadow hover:shadow-md"
           href="{resolve('/services')}/{svc.id}"
         >
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
@@ -212,18 +206,17 @@
           action="?/delete"
           class="space-y-4"
           method="POST"
-          use:enhance={() => {
-            deleting = true;
-            return ({ result }) => {
-              if (result.type === "redirect") {
-                toast.success("Project deleted.");
-                goto(result.location);
-              } else {
-                deleting = false;
-                toast.error("Couldn't delete the project.");
-              }
-            };
-          }}
+          use:enhance={enhanceToast({
+            error: "Couldn't delete the project.",
+            loading: "Deleting the project",
+            onFailure: () => {
+              deleting = false;
+            },
+            onStart: () => {
+              deleting = true;
+            },
+            success: "Project deleted.",
+          })}
         >
           <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
             <p class="font-semibold">

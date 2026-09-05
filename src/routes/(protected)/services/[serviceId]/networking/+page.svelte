@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Check, Globe, Network, ShieldCheck } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
@@ -17,6 +16,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);
@@ -60,7 +60,7 @@
 
 <div class="space-y-6">
   <!-- ═══ DNS / public routing ═══ -->
-  <section class="border-border bg-surface rounded-2xl border p-5">
+  <section class="glass rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Globe class="size-4" />
@@ -87,18 +87,17 @@
         action="?/updateNetworking"
         class="space-y-3"
         method="POST"
-        use:enhance={() => {
-          submitting = true;
-          return async ({ result, update }) => {
+        use:enhance={enhanceToast({
+          error: "Check the domain and try again.",
+          loading: "Saving the domain",
+          onSettled: () => {
             submitting = false;
-            if (result.type === "success") {
-              toast.success("Saved.");
-            } else if (result.type === "failure") {
-              toast.error("Check the domain and try again.");
-            }
-            await update();
-          };
-        }}
+          },
+          onStart: () => {
+            submitting = true;
+          },
+          success: "Saved.",
+        })}
       >
         {#if form?.error}
           <p class="text-xs text-red-500">{form.error}</p>
@@ -163,7 +162,7 @@
   </section>
 
   <!-- ═══ SSL ═══ -->
-  <section class="border-border bg-surface rounded-2xl border p-5">
+  <section class="glass rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <ShieldCheck class="size-4" />
@@ -188,18 +187,17 @@
         action="?/updateNetworking"
         class="border-border space-y-3 border-t pt-4"
         method="POST"
-        use:enhance={() => {
-          submitting = true;
-          return async ({ result, update }) => {
+        use:enhance={enhanceToast({
+          error: "Check the certificate and try again.",
+          loading: "Saving the certificate",
+          onSettled: () => {
             submitting = false;
-            if (result.type === "success") {
-              toast.success("Saved.");
-            } else if (result.type === "failure") {
-              toast.error("Check the certificate and try again.");
-            }
-            await update();
-          };
-        }}
+          },
+          onStart: () => {
+            submitting = true;
+          },
+          success: "Saved.",
+        })}
       >
         <p class="text-text-muted text-xs">
           A custom certificate for <strong>{svc.customDomain}</strong> : since
@@ -260,7 +258,7 @@
   </section>
 
   <!-- ═══ Network ═══ -->
-  <section class="border-border bg-surface rounded-2xl border p-5">
+  <section class="glass rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Network class="size-4" />
@@ -289,20 +287,17 @@
       action="?/updatePorts"
       class="space-y-4"
       method="POST"
-      use:enhance={() => {
-        submittingPorts = true;
-        return async ({ result, update }) => {
-          submittingPorts = false;
-          if (result.type === "success") {
-            toast.success("Saved.", {
-              description: "Changes take effect on the next deploy.",
-            });
-          } else if (result.type === "failure") {
-            toast.error("Check the form for errors.");
-          }
-          await update();
-        };
-      }}
+      use:enhance={enhanceToast({
+        error: "Check the form for errors.",
+        loading: "Saving network settings",
+        onSettled: () => {
+          submitting = false;
+        },
+        onStart: () => {
+          submitting = true;
+        },
+        success: "Saved.",
+      })}
     >
       <div>
         <div class={label}>Network mode</div>

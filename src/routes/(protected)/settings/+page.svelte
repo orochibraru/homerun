@@ -1,12 +1,11 @@
 <script lang="ts">
-	import type { SubmitFunction } from "@sveltejs/kit";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { page } from "$app/state";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -21,26 +20,11 @@
 	function issueFor(field: string): string | undefined {
 		return highlighted.has(field) ? data.fieldIssues[field] : undefined;
 	}
-
-	function submitToast(sectionLabel: string): SubmitFunction {
-		return () =>
-			async ({ result, update }) => {
-				if (result.type === "success") {
-					toast.success(`${sectionLabel} saved.`);
-				} else if (result.type === "failure") {
-					toast.error(
-						(result.data as { error?: string } | undefined)?.error ??
-							"Check the form for errors.",
-					);
-				}
-				await update();
-			};
-	}
 </script>
 
-<section class="border-border bg-surface rounded-2xl border">
+<section class="glass rounded-2xl">
   <div class="border-border border-b px-5 py-4">
-    <h2 class="text-text text-sm font-semibold">Core</h2>
+    <h2 class="eyebrow">Core</h2>
     <p class="text-text-muted text-xs">
       Base domain and the auth-gate check URL.
     </p>
@@ -49,7 +33,7 @@
     action="?/updateCore"
     class="space-y-4 p-5"
     method="POST"
-    use:enhance={submitToast("Core settings")}
+    use:enhance={saveToast("Core settings")}
   >
     <div>
       <label class={label} for="baseDomain">Base domain</label>

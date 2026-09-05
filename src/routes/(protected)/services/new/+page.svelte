@@ -34,6 +34,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -284,7 +285,7 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-xl font-bold text-text">Deploy a Service</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">Deploy a Service</h1>
     <p class="mt-0.5 text-sm text-text-muted">
       Point at an image, fill in the config, deploy.
     </p>
@@ -330,28 +331,21 @@
     action="?/create"
     class="space-y-6"
     method="POST"
-    use:enhance={() => {
-      return async ({ result, update }) => {
+    use:enhance={enhanceToast({
+      error: "Check the form for errors.",
+      loading: "Creating the service",
+      onFailure: () => {
+        // The failing field could be on any step : jump back to the
+        // first one so the top error banner and per-field messages are
+        // actually visible, not stranded behind whatever step the user
+        // happened to be on when they hit Create.
+        currentStep = 0;
+      },
+      onSettled: () => {
         submittingAction = null;
-        if (result.type === "failure") {
-          const data = result.data as
-            | { error?: string; errors?: Record<string, string[]> }
-            | undefined;
-          const first = data?.errors
-            ? (Object.values(data.errors).flat()[0] as string | undefined)
-            : data?.error;
-          toast.error(first ?? "Check the form for errors.");
-          // The failing field could be on any step : jump back to the
-          // first one so the top error banner and per-field messages are
-          // actually visible, not stranded behind whatever step the user
-          // happened to be on when they hit Create.
-          currentStep = 0;
-        } else if (result.type === "error") {
-          toast.error(result.error?.message ?? "Something went wrong.");
-        }
-        await update();
-      };
-    }}
+      },
+      success: "Service created.",
+    })}
   >
     {#if data.projectId}
       <input name="projectId" type="hidden" value={data.projectId}>
@@ -366,7 +360,7 @@
     {/if}
 
     {#if data.templateLinks.length > 0}
-      <div class="rounded-xl border border-border bg-surface p-4 text-sm">
+      <div class="rounded-xl glass p-4 text-sm">
         <p class="font-medium text-text">
           {data.projectId
             ? "This will also deploy, alongside this service in the project:"
@@ -399,7 +393,7 @@
       <div class="flex-1 space-y-6">
         <!-- ═══ Step 1: Basic info ═══ -->
         <section
-          class="rounded-2xl border border-border bg-surface"
+          class="rounded-2xl glass"
           class:hidden={currentStep !== 0}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -407,7 +401,7 @@
               <Server class="size-4" />
             </div>
             <div>
-              <h2 class="text-sm font-semibold text-text">Basic info</h2>
+              <h2 class="eyebrow">Basic info</h2>
               <p class="text-xs text-text-muted">Name it and point at an image.</p>
             </div>
           </div>
@@ -544,7 +538,7 @@
                     {#if data.connectedGitProviders.length > 1}
                       <select
                         bind:value={browseProviderId}
-                        class="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        class="rounded-lg glass px-3 py-2 text-sm"
                       >
                         {#each data.connectedGitProviders as p (p.id)}
                           <option value={p.id}>{p.name} ({p.providerUsername})</option>
@@ -568,7 +562,7 @@
                   {#if repos.length > 0}
                     <select
                       bind:value={selectedRepo}
-                      class="mt-3 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      class="mt-3 w-full rounded-lg glass px-3 py-2 text-sm"
                       onchange={(e) => pickRepo(e.currentTarget.value)}
                     >
                       <option value="">Select a repo…</option>
@@ -689,7 +683,7 @@
 
         <!-- ═══ Step 1: Private registry (collapsible) ═══ -->
         <section
-          class="rounded-2xl border border-border bg-surface"
+          class="rounded-2xl glass"
           class:hidden={currentStep !== 0}
         >
           <Button
@@ -703,7 +697,7 @@
               <Lock class="size-4" />
             </div>
             <div class="flex-1 text-left">
-              <h2 class="text-sm font-semibold text-text">Private registry</h2>
+              <h2 class="eyebrow">Private registry</h2>
               <p class="text-xs text-text-muted">
                 Only needed for non-public images.
               </p>
@@ -757,7 +751,7 @@
 
         <!-- ═══ Step 2: Networking ═══ -->
         <section
-          class="rounded-2xl border border-border bg-surface"
+          class="rounded-2xl glass"
           class:hidden={currentStep !== 1}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -765,7 +759,7 @@
               <Network class="size-4" />
             </div>
             <div>
-              <h2 class="text-sm font-semibold text-text">Networking</h2>
+              <h2 class="eyebrow">Networking</h2>
               <p class="text-xs text-text-muted">
                 The port it listens on, and how it's routed.
               </p>
@@ -807,11 +801,11 @@
 
         <!-- ═══ Step 3: Environment ═══ -->
         <section
-          class="rounded-2xl border border-border bg-surface"
+          class="rounded-2xl glass"
           class:hidden={currentStep !== 2}
         >
           <div class="border-b border-border px-5 py-4">
-            <h2 class="text-sm font-semibold text-text">Environment variables</h2>
+            <h2 class="eyebrow">Environment variables</h2>
             <p class="text-xs text-text-muted">
               Passed to the container at deploy time.
             </p>
@@ -858,14 +852,14 @@
 
         <!-- ═══ Step 4: Compute ═══ -->
         <section
-          class="rounded-2xl border border-border bg-surface"
+          class="rounded-2xl glass"
           class:hidden={currentStep !== 3}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
             <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
               <Cpu class="size-4" />
             </div>
-            <h2 class="text-sm font-semibold text-text">Compute</h2>
+            <h2 class="eyebrow">Compute</h2>
           </div>
           <div class="space-y-5 p-5">
             <div>

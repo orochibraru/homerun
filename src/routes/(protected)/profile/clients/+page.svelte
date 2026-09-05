@@ -9,6 +9,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -63,13 +64,13 @@
     </div>
   {/if}
 
-  <section class="rounded-2xl border border-border bg-surface">
+  <section class="rounded-2xl glass">
     <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div class="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
         <KeyRound class="size-4" />
       </div>
       <div>
-        <h2 class="text-sm font-semibold text-text">Authorized Clients</h2>
+        <h2 class="eyebrow">Authorized Clients</h2>
         <p class="text-xs text-text-muted">
           API keys for the Homerun CLI or your own scripts. Same
           <code>x-api-key</code>
@@ -83,17 +84,18 @@
         action="?/create"
         class="flex items-end gap-2"
         method="POST"
-        use:enhance={() => {
-          creating = true;
-          return async ({ result, update }) => {
+        use:enhance={enhanceToast({
+          error: "Couldn't create the key.",
+          loading: "Creating the key",
+          onSettled: () => {
             creating = false;
-            if (result.type === "failure") {
-              toast.error("Couldn't create the key.");
-            }
-            await update();
             newKeyName = "";
-          };
-        }}
+          },
+          onStart: () => {
+            creating = true;
+          },
+          success: "Key created.",
+        })}
       >
         <div class="flex-1">
           <label class="mb-1.5 block text-sm font-medium text-text" for="name">
@@ -152,14 +154,11 @@
               <form
                 action="?/revoke"
                 method="POST"
-                use:enhance={() => async ({ result, update }) => {
-                  if (result.type === "failure") {
-                    toast.error("Couldn't revoke that key.");
-                  } else {
-                    toast.success("Key revoked.");
-                  }
-                  await update();
-                }}
+                use:enhance={enhanceToast({
+                  error: "Couldn't revoke that key.",
+                  loading: "Revoking the key",
+                  success: "Key revoked.",
+                })}
               >
                 <input name="keyId" type="hidden" value={key.id}>
                 <Button

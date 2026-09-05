@@ -8,7 +8,6 @@
 		Square,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -19,6 +18,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -31,25 +31,28 @@
 	let pollGeneration = 0;
 	let expandedDeploymentId = $state<string | null>(null);
 
+	const ACTION_LABELS: Record<
+		string,
+		{ done: string; progressive: string; verb: string }
+	> = {
+		restart: { done: "restarted", progressive: "Restarting", verb: "restart" },
+		start: { done: "started", progressive: "Starting", verb: "start" },
+		stop: { done: "stopped", progressive: "Stopping", verb: "stop" },
+	};
+
 	function withPending(action: string) {
-		return () => {
-			pendingAction = action;
-			return async ({
-				result,
-				update,
-			}: {
-				result: { type: string; data?: { error?: string } };
-				update: () => Promise<void>;
-			}) => {
+		const label = ACTION_LABELS[action];
+		return enhanceToast({
+			error: `Couldn't ${label.verb} ${svc.name}.`,
+			loading: `${label.progressive} ${svc.name}`,
+			onSettled: () => {
 				pendingAction = null;
-				if (result.type === "failure" && result.data?.error) {
-					toast.error(result.data.error);
-				} else if (result.type === "success") {
-					toast.success("Done.");
-				}
-				await update();
-			};
-		};
+			},
+			onStart: () => {
+				pendingAction = action;
+			},
+			success: `${svc.name} ${label.done}.`,
+		});
 	}
 
 	const IN_FLIGHT_STATUSES = new Set(["pending", "pulling", "starting"]);
@@ -133,30 +136,21 @@
 	});
 
 	function deployEnhance() {
-		return ({ formData }: { formData: FormData }) => {
-			pendingAction = "deploy";
-			progressLines = [];
-			const deploymentId = crypto.randomUUID();
-			formData.set("deploymentId", deploymentId);
-			void pollProgress(deploymentId);
-
-			return async ({
-				result,
-				update,
-			}: {
-				result: { type: string; data?: { error?: string } };
-				update: () => Promise<void>;
-			}) => {
-				if (result.type === "failure" && result.data?.error) {
-					toast.error(result.data.error);
-					await refreshAll();
-				} else if (result.type === "success") {
-					toast.success("Deployed.");
-				}
-				await update();
-				await refreshAll();
-			};
-		};
+		return enhanceToast({
+			error: `Couldn't deploy ${svc.name}.`,
+			loading: `Deploying ${svc.name}`,
+			onComplete: () => refreshAll(),
+			onStart: () => {
+				pendingAction = "deploy";
+				progressLines = [];
+			},
+			onSubmit: ({ formData }) => {
+				const deploymentId = crypto.randomUUID();
+				formData.set("deploymentId", deploymentId);
+				void pollProgress(deploymentId);
+			},
+			success: `${svc.name} deployed.`,
+		});
 	}
 </script>
 
@@ -280,10 +274,10 @@
 {/if}
 
 <!-- ═══ Deployment history ═══ -->
-<section class="border-border bg-surface rounded-2xl border">
+<section class="glass rounded-2xl">
     <div class="border-border flex items-center gap-2 border-b px-5 py-4">
         <Clock class="text-text-muted size-4" />
-        <h2 class="text-text text-sm font-semibold">Deployment history</h2>
+        <h2 class="eyebrow">Deployment history</h2>
     </div>
 
     {#if data.deployments.length === 0}

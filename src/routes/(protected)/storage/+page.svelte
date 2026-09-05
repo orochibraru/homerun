@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { CloudUpload, HardDrive, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
@@ -9,6 +8,7 @@
 	import EntityListView from "$lib/components/entity-list-view.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -28,7 +28,7 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-2xl font-bold">Storage</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Storage</h1>
       <p class="text-text-muted mt-1 text-sm">
         Local volume sources services can mount for persistent or shared data.
       </p>
@@ -67,12 +67,11 @@
       <form
         action="?/delete"
         method="POST"
-        use:enhance={() => async ({ result, update }) => {
-          if (result.type === "failure") {
-            toast.error("Couldn't delete the volume.");
-          }
-          await update();
-        }}
+        use:enhance={enhanceToast({
+          error: "Couldn't delete the volume.",
+          loading: "Deleting the volume",
+          success: "Volume deleted.",
+        })}
       >
         <input name="volumeId" type="hidden" value={vol.id} />
         <Button
@@ -89,7 +88,7 @@
     {/snippet}
 
     {#snippet row(vol: (typeof data.volumes)[number])}
-      <div class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5">
+      <div class="glass flex items-center gap-4 rounded-2xl p-5">
         <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
           <HardDrive class="size-5" />
         </div>
@@ -118,7 +117,7 @@
     {/snippet}
 
     {#snippet card(vol: (typeof data.volumes)[number])}
-      <div class="border-border bg-surface flex flex-col gap-3 rounded-2xl border p-5">
+      <div class="glass flex flex-col gap-3 rounded-2xl p-5">
         <div class="flex items-center gap-3">
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <HardDrive class="size-5" />

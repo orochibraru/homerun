@@ -7,6 +7,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { toastError } from "$lib/toast";
 
 	// Access layout-injected data via the session / parent
 	const session = authClient.useSession();
@@ -30,11 +31,10 @@
 		}
 	});
 
-	async function saveAccount(e: SubmitEvent) {
+	async function saveAccountCallback(e: SubmitEvent) {
 		e.preventDefault();
 		if (!accountName.trim()) {
-			toast.error("Display name cannot be empty.");
-			return;
+			throw new Error("Display name cannot be empty.");
 		}
 		accountLoading = true;
 		try {
@@ -43,15 +43,19 @@
 				name: accountName.trim(),
 			});
 			if (error) {
-				toast.error(error.message ?? "Could not update account.");
-			} else {
-				toast.success("Account updated.");
+				throw new Error(error.message ?? "Could not update account.");
 			}
-		} catch {
-			toast.error("An unexpected error occurred.");
 		} finally {
 			accountLoading = false;
 		}
+	}
+
+	function saveAccount(e: SubmitEvent) {
+		return toast.promise(saveAccountCallback(e), {
+			error: (error) => toastError(error, "Could not update account."),
+			loading: "Saving your account",
+			success: "Account updated.",
+		});
 	}
 
 	// Derived initials for avatar preview
@@ -60,13 +64,13 @@
 	);
 </script>
 
-<section class="rounded-2xl border border-border bg-surface">
+<section class="rounded-2xl glass">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
     <div class="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
       <UserCircle class="size-4" />
     </div>
     <div>
-      <h2 class="text-sm font-semibold text-text">Account</h2>
+      <h2 class="eyebrow">Account</h2>
       <p class="text-xs text-text-muted">
         Your display name and avatar shown across the platform.
       </p>

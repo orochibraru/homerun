@@ -27,135 +27,149 @@
 
 	onMount(() => title.set("Sign In"));
 
-	async function handleSignIn(e: SubmitEvent) {
+	async function signIncallback(e: SubmitEvent) {
 		e.preventDefault();
 		loading = true;
 		try {
 			const { error } = await signIn.email({ email, password });
 			if (error) {
-				toast.error(error.message ?? "Invalid credentials. Please try again.");
-				return;
+				password = "";
+				throw new Error(
+					error.message ?? "Invalid credentials. Please try again.",
+				);
 			}
-			// Unverified accounts are let through, not dead-ended at
-			// /auth/sign-up/confirm : that page has no way back to the
-			// dashboard in production (see sign-up/+page.svelte's comment),
-			// and the (protected) layout guard never actually enforced
-			// emailVerified server-side either, so this used to block real
-			// users (most of all the very first admin, before they've had a
-			// chance to configure SMTP in onboarding) without providing any
-			// real security.
 			goto(resolve("/"));
-		} catch {
-			toast.error("An unexpected error occurred. Please try again.");
+		} catch (e) {
+			password = "";
 			loading = false;
+			throw e;
 		}
+	}
+
+	function handleSignIn(e: SubmitEvent) {
+		return toast.promise(signIncallback(e), {
+			loading: "Signing in",
+			success: "Signed in successfully",
+			error: (e) => (e instanceof Error ? e.message : "Couldn't sign you in."),
+		});
 	}
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
-  <!-- ── Right panel ──────────────────────────────────────────────── -->
-  <div class="flex flex-1 flex-col items-center justify-center bg-bg px-6 py-10 sm:px-10">
-    <!-- Mobile-only logo -->
-    <div class="mb-8 text-center lg:hidden">
-      <a
-        class="inline-flex items-center gap-1.5 text-xl font-bold"
-        href={resolve("/")}
-      >
-        <Server class="text-accent size-5" />
-        <span class="text-text">Local</span><span class="text-accent">Run</span>
-      </a>
-      <p class="text-text-muted mt-1 text-sm">
-        Deploy containers to your own server.
-      </p>
-    </div>
-
-    <div class="w-full max-w-md">
-      <!-- Header -->
-      <div class="mb-8">
-        <h2 class="text-text text-2xl font-bold">Welcome back</h2>
-        <p class="text-text-muted mt-1 text-sm">
-          Sign in to manage your services.
-        </p>
-      </div>
-
-      <form class="space-y-5" novalidate onsubmit={handleSignIn}>
-        <!-- Email -->
-        <div>
-          <label class="text-text mb-1.5 block text-sm font-medium" for="email">
-            Email
-          </label>
-          <Input
-            autocomplete="email"
-            disabled={loading}
-            id="email"
-            placeholder="you@example.com"
-            required
-            type="email"
-            bind:value={email}
-          />
-        </div>
-
-        <!-- Password -->
-        <div>
-          <div class="mb-1.5 flex items-center justify-between">
-            <label class="text-text text-sm font-medium" for="password">
-              Password
-            </label>
-          </div>
-          <div class="relative">
-            <Input
-              autocomplete="current-password"
-              class="pr-12"
-              disabled={loading}
-              id="password"
-              placeholder="••••••••••••"
-              required
-              type={showPassword ? "text" : "password"}
-              bind:value={password}
-            />
-            <Button
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              class="absolute top-1/2 right-1.5 -translate-y-1/2"
-              onclick={() => {
-                showPassword = !showPassword;
-              }}
-              size="icon-sm"
-              variant="ghost"
+    <div
+        class="flex flex-1 flex-col items-center justify-center bg-bg px-6 py-10 sm:px-10"
+    >
+        <!-- Mobile-only logo -->
+        <div class="mb-8 text-center lg:hidden">
+            <a
+                class="inline-flex items-center gap-1.5 text-xl font-bold"
+                href={resolve("/")}
             >
-              {#if showPassword}
-                <EyeOff class="size-4" />
-              {:else}
-                <Eye class="size-4" />
-              {/if}
-            </Button>
-          </div>
+                <Server class="text-accent size-5" />
+                <span class="text-text">Local</span><span class="text-accent"
+                    >Run</span
+                >
+            </a>
+            <p class="text-text-muted mt-1 text-sm">
+                Deploy containers to your own server.
+            </p>
         </div>
 
-        <!-- Submit -->
-        <Button
-          class="mt-2 w-full"
-          disabled={loading || !email || !password}
-          type="submit"
-        >
-          {#if loading}
-            <Spinner />
-            Signing in…
-          {:else}
-            Sign in
-            <span class="opacity-70">→</span>
-          {/if}
-        </Button>
-      </form>
+        <div class="w-full max-w-md">
+            <!-- Header -->
+            <div class="mb-8">
+                <h2 class="text-text text-2xl font-semibold tracking-tight">Welcome back</h2>
+                <p class="text-text-muted mt-1 text-sm">
+                    Sign in to manage your services.
+                </p>
+            </div>
 
-      <p class="mt-6 text-center text-sm text-text-muted">
-        Don't have an account?
-        <a
-          class="text-accent font-medium hover:underline"
-          href={resolve("/auth/sign-up")}
-        >
-          Create one free
-        </a>
-      </p>
+            <form class="space-y-5" novalidate onsubmit={handleSignIn}>
+                <!-- Email -->
+                <div>
+                    <label
+                        class="text-text mb-1.5 block text-sm font-medium"
+                        for="email"
+                    >
+                        Email
+                    </label>
+                    <Input
+                        autocomplete="email"
+                        disabled={loading}
+                        id="email"
+                        placeholder="you@example.com"
+                        required
+                        type="email"
+                        bind:value={email}
+                    />
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <div class="mb-1.5 flex items-center justify-between">
+                        <label
+                            class="text-text text-sm font-medium"
+                            for="password"
+                        >
+                            Password
+                        </label>
+                    </div>
+                    <div class="relative">
+                        <Input
+                            autocomplete="current-password"
+                            class="pr-12"
+                            disabled={loading}
+                            id="password"
+                            placeholder="••••••••••••"
+                            required
+                            type={showPassword ? "text" : "password"}
+                            bind:value={password}
+                        />
+                        <Button
+                            aria-label={showPassword
+                                ? "Hide password"
+                                : "Show password"}
+                            class="absolute top-1/2 right-1.5 -translate-y-1/2"
+                            onclick={() => {
+                                showPassword = !showPassword;
+                            }}
+                            size="icon-sm"
+                            variant="ghost"
+                        >
+                            {#if showPassword}
+                                <EyeOff class="size-4" />
+                            {:else}
+                                <Eye class="size-4" />
+                            {/if}
+                        </Button>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <Button
+                    class="mt-2 w-full"
+                    disabled={loading || !email || !password}
+                    type="submit"
+                >
+                    {#if loading}
+                        <Spinner />
+                        Signing in…
+                    {:else}
+                        Sign in
+                        <span class="opacity-70">→</span>
+                    {/if}
+                </Button>
+            </form>
+
+            <p class="mt-6 text-center text-sm text-text-muted">
+                Don't have an account?
+                <a
+                    class="text-accent font-medium hover:underline"
+                    href={resolve("/auth/sign-up")}
+                >
+                    Create one free
+                </a>
+            </p>
+        </div>
     </div>
-  </div>
 </div>

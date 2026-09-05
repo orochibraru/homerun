@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { LogOut, Monitor, ShieldCheck, TriangleAlert } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -15,13 +15,13 @@
 	}
 </script>
 
-<section class="rounded-2xl border border-border bg-surface">
+<section class="rounded-2xl glass">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
     <div class="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
       <ShieldCheck class="size-4" />
     </div>
     <div>
-      <h2 class="text-sm font-semibold text-text">Sessions</h2>
+      <h2 class="eyebrow">Sessions</h2>
       <p class="text-xs text-text-muted">
         Every device currently signed in to your account. Revoking one signs
         that device out immediately.
@@ -66,14 +66,11 @@
               <form
                 action="?/revoke"
                 method="POST"
-                use:enhance={() => async ({ result, update }) => {
-                  if (result.type === "failure") {
-                    toast.error("Couldn't revoke that session.");
-                  } else if (result.type === "success") {
-                    toast.success("Session revoked.");
-                  }
-                  await update();
-                }}
+                use:enhance={enhanceToast({
+                  error: "Couldn't revoke that session.",
+                  loading: "Revoking the session",
+                  success: "Session revoked.",
+                })}
               >
                 <input name="sessionId" type="hidden" value={s.id}>
                 <Button

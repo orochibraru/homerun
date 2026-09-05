@@ -101,7 +101,7 @@
 
 <div class="p-6 md:p-8">
   <div class="mb-8">
-    <h1 class="text-text text-2xl font-bold">Settings</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">Settings</h1>
     <p class="text-text-muted mt-1 text-sm">
       Instance-wide configuration : stored in the database and applied live, no
       restart needed. Leave a field blank to fall back to its env-var default

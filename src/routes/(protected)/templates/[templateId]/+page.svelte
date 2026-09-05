@@ -11,7 +11,6 @@
 		Tag,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
@@ -19,6 +18,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 	const tmpl = $derived(data.template);
@@ -51,7 +51,7 @@
                 icon={tmpl.icon}
             />
             <div>
-                <h1 class="text-2xl font-bold text-text">{tmpl.name}</h1>
+                <h1 class="text-text text-xl font-semibold tracking-tight">{tmpl.name}</h1>
                 <p class="font-mono text-sm text-text-muted">
                     {tmpl.image}:{tmpl.tag}
                 </p>
@@ -60,24 +60,17 @@
         <div class="flex gap-2">
             <form
                 action="?/quickDeploy"
-                use:enhance={() => {
-                    deploying = true;
-                    return async ({ result, update }) => {
+                use:enhance={enhanceToast({
+                    error: "Couldn't deploy.",
+                    loading: `Deploying "${tmpl.name}"`,
+                    onSettled: () => {
                         deploying = false;
-                        if (result.type === "failure") {
-                            toast.error(
-                                (result.data as { error?: string } | undefined)
-                                    ?.error ?? "Couldn't deploy.",
-                            );
-                        } else if (result.type === "error") {
-                            toast.error(
-                                result.error?.message ??
-                                    "Something went wrong.",
-                            );
-                        }
-                        await update();
-                    };
-                }}
+                    },
+                    onStart: () => {
+                        deploying = true;
+                    },
+                    success: `"${tmpl.name}" deployed.`,
+                })}
                 method="POST"
             >
                 {#if data.project}
@@ -112,7 +105,7 @@
         <div class="flex flex-wrap gap-3">
             {#if tmpl.sourceUrl}
                 <a
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text hover:bg-surface-2"
+                    class="inline-flex items-center gap-1.5 rounded-lg glass px-3 py-1.5 text-sm text-text hover:bg-surface-2"
                     href={tmpl.sourceUrl}
                     rel="noopener noreferrer"
                     target="_blank"
@@ -124,7 +117,7 @@
             {/if}
             {#if tmpl.websiteUrl}
                 <a
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text hover:bg-surface-2"
+                    class="inline-flex items-center gap-1.5 rounded-lg glass px-3 py-1.5 text-sm text-text hover:bg-surface-2"
                     href={tmpl.websiteUrl}
                     rel="noopener noreferrer"
                     target="_blank"
@@ -138,7 +131,7 @@
     {/if}
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="rounded-2xl border border-border bg-surface p-5">
+        <div class="rounded-2xl glass p-5">
             <h2
                 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
             >
@@ -173,7 +166,7 @@
         </div>
 
         {#if Object.keys(tmpl.envVars ?? {}).length > 0}
-            <div class="rounded-2xl border border-border bg-surface p-5">
+            <div class="rounded-2xl glass p-5">
                 <h2
                     class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
                 >
@@ -194,7 +187,7 @@
     </div>
 
     {#if data.links.length > 0}
-        <div class="rounded-2xl border border-border bg-surface p-5">
+        <div class="rounded-2xl glass p-5">
             <h2
                 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
             >
@@ -229,8 +222,8 @@
     {#if tmpl.sourceUrl}
         {#await data.github then repo}
             {#if repo}
-                <div class="rounded-2xl border border-border bg-surface p-5">
-                    <h2 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase">
+                <div class="rounded-2xl glass p-5">
+                    <h2 class="eyebrow mb-3">
                         Repository
                     </h2>
                     <div class="flex flex-wrap gap-6 text-sm">
@@ -259,8 +252,8 @@
                 </div>
 
                 {#if repo.readmeHtml}
-                    <div class="rounded-2xl border border-border bg-surface p-6">
-                        <h2 class="mb-4 text-xs font-semibold tracking-widest text-text-subtle uppercase">
+                    <div class="rounded-2xl glass p-6">
+                        <h2 class="eyebrow mb-3">
                             Readme
                         </h2>
                         <div class="readme max-w-none text-sm text-text">

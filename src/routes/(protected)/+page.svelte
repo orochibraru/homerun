@@ -74,10 +74,11 @@
   <!-- Page header -->
   <div class="mb-8 flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-text">
-        Welcome back, {data.user?.name?.split(" ")[0]} 👋
+      <p class="eyebrow mb-1.5">Overview</p>
+      <h1 class="text-text text-xl font-semibold tracking-tight">
+        Welcome back, {data.user?.name?.split(" ")[0]}
       </h1>
-      <p class="mt-1 text-sm text-text-muted">
+      <p class="text-text-muted mt-1 text-sm">
         Here's an overview of your deployed services.
       </p>
     </div>
@@ -114,17 +115,17 @@
     {#each statCards as card}
       {@const StatIcon = card.icon}
       <div
-        class="rounded-2xl border border-border bg-surface p-5 transition-shadow hover:shadow-md"
+        class="rounded-2xl glass p-5 transition-shadow hover:shadow-md"
       >
         <div class="mb-3 flex items-start justify-between">
           <div class="rounded-xl p-2.5 {card.color} {card.dark}">
             <StatIcon class="size-5" />
           </div>
         </div>
-        <p class="text-2xl font-bold text-text">
+        <p class="tech text-text text-3xl font-semibold">
           {card.value}
         </p>
-        <p class="mt-0.5 text-xs font-medium text-text-muted">
+        <p class="eyebrow mt-1">
           {card.label}
         </p>
       </div>
@@ -132,8 +133,8 @@
   </div>
 
   <!-- ── System stats ─────────────────────────────────────────── -->
-  <div class="mb-8 rounded-2xl border border-border bg-surface p-5">
-    <h2 class="mb-4 text-sm font-semibold text-text">Host Resources</h2>
+  <div class="mb-8 rounded-2xl glass p-5">
+    <h2 class="eyebrow mb-4">Host Resources</h2>
     <div class="grid gap-5 sm:grid-cols-3">
       <div>
         <div class="mb-1.5 flex items-center justify-between text-xs">
@@ -141,7 +142,7 @@
             <Cpu class="size-3.5" />
             CPU
           </span>
-          <span class="font-mono text-text-subtle"
+          <span class="tech text-text-subtle"
             >{systemStats.cpuPercent.toFixed(0)}%</span
           >
         </div>
@@ -161,7 +162,7 @@
             <MemoryStick class="size-3.5" />
             RAM
           </span>
-          <span class="font-mono text-text-subtle">
+          <span class="tech text-text-subtle">
             {(systemStats.memUsedMb / 1024).toFixed(1)}
             /
             {(systemStats.memTotalMb / 1024).toFixed(1)}
@@ -184,7 +185,7 @@
             <HardDrive class="size-3.5" />
             Disk
           </span>
-          <span class="font-mono text-text-subtle">
+          <span class="tech text-text-subtle">
             {#if systemStats.diskUsedGb !== null && systemStats.diskTotalGb !== null}
               {systemStats.diskUsedGb.toFixed(0)}
               /
@@ -215,7 +216,7 @@
           <span class="font-medium text-text-muted"
             >GPU · {systemStats.gpu.name}</span
           >
-          <span class="font-mono text-text-subtle">
+          <span class="tech text-text-subtle">
             {systemStats.gpu.utilizationPercent}% ·
             {(systemStats.gpu.memUsedMb / 1024).toFixed(1)}
             /
@@ -238,13 +239,13 @@
   <!-- ── Bottom grid ───────────────────────────────────────────── -->
   <div class="grid gap-6 lg:grid-cols-3">
     <!-- Recent deployments (2/3 width on lg) -->
-    <div class="rounded-2xl border border-border bg-surface lg:col-span-2">
+    <div class="rounded-2xl glass lg:col-span-2">
       <div
         class="flex items-center justify-between border-b border-border px-5 py-4"
       >
         <div class="flex items-center gap-2">
           <Clock class="size-4 text-text-muted" />
-          <h2 class="text-sm font-semibold text-text">Recent Deployments</h2>
+          <h2 class="eyebrow">Recent Deployments</h2>
         </div>
         <a
           class="text-accent flex items-center gap-1 text-xs font-medium hover:underline"
@@ -280,7 +281,7 @@
                 </p>
               </div>
               <span
-                class="rounded-full bg-surface-2 px-2.5 py-0.5 text-[0.65rem] font-semibold text-text-muted capitalize"
+                class="border-border bg-surface-2 text-text-muted rounded-md border px-2 py-0.5 font-mono text-[0.65rem] tracking-wider uppercase"
               >
                 {dep.status}
               </span>
@@ -291,9 +292,9 @@
     </div>
 
     <!-- Quick actions (1/3 width on lg) -->
-    <div class="rounded-2xl border border-border bg-surface">
+    <div class="rounded-2xl glass">
       <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">Quick Actions</h2>
+        <h2 class="eyebrow">Quick Actions</h2>
       </div>
       <div class="space-y-2 p-4">
         <a

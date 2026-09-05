@@ -10,8 +10,9 @@
  * copy-pasted everywhere.
  */
 export const inputClass =
-	"w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-subtle transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+	"w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text placeholder:text-text-subtle transition-all duration-200 focus:border-accent/50 focus:bg-surface focus:outline-none focus:ring-4 focus:ring-(--color-accent-light)";
 
-export const labelClass = "block mb-1.5 text-sm font-medium text-text";
+export const labelClass =
+	"block mb-1.5 text-xs font-medium text-text-muted tracking-wide";
 
-export const errorClass = "mt-1.5 text-xs text-red-500";
+export const errorClass = "mt-1.5 font-mono text-xs text-red-500";

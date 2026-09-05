@@ -25,17 +25,17 @@
 		$props();
 </script>
 
-<div class="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+<div class="border-border mb-6 flex gap-1 overflow-x-auto border-b">
   {#each tabs as tab (tab.id)}
     {@const isActive = tab.id === active}
     {@const TabIcon = tab.icon}
     {#if tab.href}
       <a
         class="
-          flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-200
+          relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-all duration-200
           {isActive
-          ? 'border-accent text-accent'
-          : 'border-transparent text-text-muted hover:text-text'}
+          ? 'border-accent text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]'
+          : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
         "
         href={tab.href}
       >
@@ -51,10 +51,10 @@
     {:else}
       <button
         class="
-          flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-200
+          relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-all duration-200
           {isActive
-          ? 'border-accent text-accent'
-          : 'border-transparent text-text-muted hover:text-text'}
+          ? 'border-accent text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]'
+          : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
         "
         onclick={() => onSelect?.(tab.id)}
         type="button"

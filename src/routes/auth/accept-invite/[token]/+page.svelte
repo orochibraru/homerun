@@ -17,7 +17,7 @@
 	let submitting = $state(false);
 
 	const inputClass =
-		"w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
+		"w-full rounded-xl glass px-4 py-3 text-sm text-text placeholder-[var(--color-text-subtle)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]";
 </script>
 
 <div class="flex min-h-[calc(100vh-4rem)]">
@@ -35,7 +35,7 @@
     <div class="w-full max-w-md">
       {#if data.invalid}
         <div class="text-center">
-          <h2 class="text-2xl font-bold text-text">Invite not found</h2>
+          <h2 class="text-text text-2xl font-semibold tracking-tight">Invite not found</h2>
           <p class="mt-2 text-sm text-text-muted">
             This invite link is invalid, expired, or has already been used. Ask
             whoever invited you for a new one.
@@ -49,7 +49,7 @@
         </div>
       {:else}
         <div class="mb-8">
-          <h2 class="text-2xl font-bold text-text">Set up your account</h2>
+          <h2 class="text-text text-2xl font-semibold tracking-tight">Set up your account</h2>
           <p class="mt-1 text-sm text-text-muted">
             Invited as <strong>{data.email}</strong> ({data.role}).
           </p>

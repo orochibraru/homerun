@@ -22,6 +22,7 @@
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);
@@ -167,13 +168,13 @@
 	});
 </script>
 
-<section class="border-border bg-surface rounded-2xl border">
+<section class="glass rounded-2xl">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <Container class="size-4" />
     </div>
     <div>
-      <h2 class="text-text text-sm font-semibold">Source</h2>
+      <h2 class="eyebrow">Source</h2>
       <p class="text-text-muted text-xs">
         What gets deployed. Changes take effect on the next deploy.
       </p>
@@ -184,30 +185,27 @@
     action="?/updateSource"
     class="space-y-5 p-5"
     method="POST"
-    use:enhance={() => {
-      submitting = true;
-      return async ({ result, update }) => {
+    use:enhance={enhanceToast({
+      action: {
+        label: "Redeploy",
+        onClick: () =>
+          goto(
+            resolve("/(protected)/services/[serviceId]", {
+              serviceId: svc.id,
+            }),
+          ),
+      },
+      description: "Changes take effect on the next deploy.",
+      error: "Check the form for errors.",
+      loading: "Saving the source",
+      onSettled: () => {
         submitting = false;
-        if (result.type === "success") {
-          toast.success("Saved.", {
-            action: {
-              label: "Redeploy",
-              onClick: () =>
-                goto(
-                  resolve("/(protected)/services/[serviceId]", {
-                    serviceId: svc.id,
-                  }),
-                ),
-            },
-            description: "Changes take effect on the next deploy.",
-          });
-        }
-        if (result.type === "failure") {
-          toast.error("Check the form for errors.");
-        }
-        await update();
-      };
-    }}
+      },
+      onStart: () => {
+        submitting = true;
+      },
+      success: "Saved.",
+    })}
   >
     <div>
       <div class={label}>Deploy from</div>
@@ -297,7 +295,7 @@
             {#if data.connectedGitProviders.length > 1}
               <select
                 bind:value={browseProviderId}
-                class="border-border bg-surface rounded-lg border px-3 py-2 text-sm"
+                class="glass rounded-lg px-3 py-2 text-sm"
               >
                 {#each data.connectedGitProviders as p (p.id)}
                   <option value={p.id}>{p.name} ({p.providerUsername})</option>
@@ -321,7 +319,7 @@
           {#if repos.length > 0}
             <select
               bind:value={selectedRepo}
-              class="border-border bg-surface mt-3 w-full rounded-lg border px-3 py-2 text-sm"
+              class="glass mt-3 w-full rounded-lg px-3 py-2 text-sm"
               onchange={(e) => pickRepo(e.currentTarget.value)}
             >
               <option value="">Select a repo…</option>

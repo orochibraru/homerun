@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Check, LayoutGrid, Link2, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
@@ -14,6 +13,7 @@
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -86,7 +86,7 @@
 
 <div class="mspace-y-6 p-6 md:p-8">
   <div class="mb-3">
-    <h1 class="text-xl font-bold text-text">New Template</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">New Template</h1>
     <p class="text-sm text-text-muted">
       A reusable config you can deploy from again later.
     </p>
@@ -96,26 +96,24 @@
     action="?/create"
     class="space-y-6"
     method="POST"
-    use:enhance={() => {
-      submitting = true;
-      return async ({ result, update }) => {
+    use:enhance={enhanceToast({
+      error: "Check the form for errors.",
+      loading: "Creating the template",
+      onSettled: () => {
         submitting = false;
-        if (result.type === "failure") {
-          toast.error(
-            (result.data as { error?: string } | undefined)?.error ??
-              "Check the form for errors.",
-          );
-        }
-        await update();
-      };
-    }}
+      },
+      onStart: () => {
+        submitting = true;
+      },
+      success: "Template created.",
+    })}
   >
-    <section class="rounded-2xl border border-border bg-surface">
+    <section class="rounded-2xl glass">
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <LayoutGrid class="size-4" />
         </div>
-        <h2 class="text-sm font-semibold text-text">Basics</h2>
+        <h2 class="eyebrow">Basics</h2>
       </div>
 
       <div class="space-y-5 p-5">
@@ -212,9 +210,9 @@
       </div>
     </section>
 
-    <section class="rounded-2xl border border-border bg-surface">
+    <section class="rounded-2xl glass">
       <div class="border-b border-border px-5 py-4">
-        <h2 class="text-sm font-semibold text-text">Environment variables</h2>
+        <h2 class="eyebrow">Environment variables</h2>
       </div>
       <div class="space-y-2.5 p-5">
         {#each envRows as row, i}
@@ -255,13 +253,13 @@
     </section>
 
     {#if data.linkableTemplates.length > 0}
-      <section class="rounded-2xl border border-border bg-surface">
+      <section class="rounded-2xl glass">
         <div class="flex items-center gap-3 border-b border-border px-5 py-4">
           <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
             <Link2 class="size-4" />
           </div>
           <div>
-            <h2 class="text-sm font-semibold text-text">Linked containers</h2>
+            <h2 class="eyebrow">Linked containers</h2>
             <p class="text-xs text-text-muted">
               Check any to deploy them alongside this template automatically,
               e.g. a database or cache. Each gets an alias (defaults to its

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Check, Plus, SlidersHorizontal, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -9,6 +8,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 	const svc = $derived(data.service);
@@ -55,13 +55,13 @@
 	}
 </script>
 
-<section class="rounded-2xl border border-border bg-surface">
+<section class="rounded-2xl glass">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <SlidersHorizontal class="size-4" />
     </div>
     <div>
-      <h2 class="text-sm font-semibold text-text">Environment variables</h2>
+      <h2 class="eyebrow">Environment variables</h2>
       <p class="text-xs text-text-muted">
         Changes take effect on the next deploy : hit Redeploy on Overview after
         saving.
@@ -73,19 +73,17 @@
     action="?/update"
     class="space-y-2.5 p-5"
     method="POST"
-    use:enhance={() => {
-      submitting = true;
-      return async ({ result, update }) => {
+    use:enhance={enhanceToast({
+      error: "Couldn't save.",
+      loading: "Saving environment variables",
+      onSettled: () => {
         submitting = false;
-        if (result.type === "success") {
-          toast.success("Saved.");
-        }
-        if (result.type === "failure") {
-          toast.error("Couldn't save.");
-        }
-        await update();
-      };
-    }}
+      },
+      onStart: () => {
+        submitting = true;
+      },
+      success: "Saved.",
+    })}
   >
     {#each envRows as row, i}
       <div class="flex items-center gap-2">

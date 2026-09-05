@@ -27,7 +27,7 @@
       <KeyRound class="text-text-muted size-5" />
     </div>
     <div>
-      <h1 class="text-text text-xl font-bold">Authorize CLI</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Authorize CLI</h1>
       <p class="text-text-muted text-sm">
         Confirm the code shown by <code>homerun login</code> on your machine.
       </p>
@@ -40,7 +40,7 @@
       automatically.
     </div>
   {:else if form?.denied}
-    <div class="rounded-xl border border-border bg-surface p-4 text-sm text-text-muted">
+    <div class="rounded-xl glass p-4 text-sm text-text-muted">
       Login request denied.
     </div>
   {:else}

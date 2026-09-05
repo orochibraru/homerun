@@ -14,11 +14,13 @@
 	} = $props();
 </script>
 
-<div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center">
-  <Icon class="mb-3 size-10 text-text-muted opacity-40" />
-  <p class="text-sm font-medium text-text-muted">{title}</p>
+<div class="border-border/70 flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
+  <div class="glass mb-4 flex size-12 items-center justify-center rounded-xl">
+    <Icon class="text-text-subtle size-5" />
+  </div>
+  <p class="text-text text-sm font-medium">{title}</p>
   {#if subtitle}
-    <p class="mt-1 text-xs text-text-subtle">{subtitle}</p>
+    <p class="text-text-subtle mt-1 text-xs">{subtitle}</p>
   {/if}
   {#if children}
     <div class="mt-5">

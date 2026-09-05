@@ -41,7 +41,7 @@
 >
   <textarea
     bind:value={text}
-    class="h-48 w-full resize-none rounded-lg border border-border bg-surface p-3 font-mono text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
+    class="h-48 w-full resize-none rounded-lg glass p-3 font-mono text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
     placeholder={"DATABASE_URL=postgres://...\nAPI_KEY=secret"}
   ></textarea>
 </ResponsiveDialog>

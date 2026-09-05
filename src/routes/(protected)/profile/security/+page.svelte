@@ -21,6 +21,7 @@
 		getPasswordStrengthMeta,
 	} from "$lib/formatting";
 	import { title } from "$lib/store/title";
+	import { toastError } from "$lib/toast";
 
 	onMount(() => title.set("Security"));
 
@@ -43,15 +44,13 @@
 	});
 	const strengthMeta = $derived(getPasswordStrengthMeta(passwordStrength));
 
-	async function changePassword(e: SubmitEvent) {
+	async function changePasswordCallback(e: SubmitEvent) {
 		e.preventDefault();
 		if (newPassword.length < 12) {
-			toast.error("New password must be at least 12 characters.");
-			return;
+			throw new Error("New password must be at least 12 characters.");
 		}
 		if (newPassword !== confirmPassword) {
-			toast.error("Passwords do not match.");
-			return;
+			throw new Error("Passwords do not match.");
 		}
 		passwordLoading = true;
 		try {
@@ -61,18 +60,23 @@
 				revokeOtherSessions: true,
 			});
 			if (error) {
-				toast.error(error.message ?? "Could not change password.");
-			} else {
-				toast.success("Password changed. Other sessions have been signed out.");
 				currentPassword = "";
-				newPassword = "";
-				confirmPassword = "";
+				throw new Error(error.message ?? "Could not change password.");
 			}
-		} catch {
-			toast.error("An unexpected error occurred.");
+			currentPassword = "";
+			newPassword = "";
+			confirmPassword = "";
 		} finally {
 			passwordLoading = false;
 		}
+	}
+
+	function changePassword(e: SubmitEvent) {
+		return toast.promise(changePasswordCallback(e), {
+			error: (error) => toastError(error, "Could not change password."),
+			loading: "Changing your password",
+			success: "Password changed. Other sessions have been signed out.",
+		});
 	}
 
 	// ──────────────────────────────────────────────────────────────
@@ -83,7 +87,7 @@
 	let deleteLoading = $state(false);
 	let showDeletePassword = $state(false);
 
-	async function deleteAccount(e: SubmitEvent) {
+	async function deleteAccountCallback(e: SubmitEvent) {
 		e.preventDefault();
 		deleteLoading = true;
 		try {
@@ -92,16 +96,21 @@
 				password: deletePassword,
 			});
 			if (error) {
-				toast.error(error.message ?? "Could not delete account.");
-			} else {
-				toast.success("Account deleted.");
-				goto(resolve("/"));
+				deletePassword = "";
+				throw new Error(error.message ?? "Could not delete account.");
 			}
-		} catch {
-			toast.error("An unexpected error occurred.");
+			goto(resolve("/"));
 		} finally {
 			deleteLoading = false;
 		}
+	}
+
+	function deleteAccount(e: SubmitEvent) {
+		return toast.promise(deleteAccountCallback(e), {
+			error: (error) => toastError(error, "Could not delete account."),
+			loading: "Deleting your account",
+			success: "Account deleted.",
+		});
 	}
 </script>
 
@@ -109,13 +118,13 @@
   <!-- ═══════════════════════════════════════════════════════════
        PASSWORD
        ════════════════════════════════════════════════════════════ -->
-  <section class="rounded-2xl border border-border bg-surface">
+  <section class="rounded-2xl glass">
     <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
         <KeyRound class="size-4" />
       </div>
       <div>
-        <h2 class="text-sm font-semibold text-text">Password</h2>
+        <h2 class="eyebrow">Password</h2>
         <p class="text-xs text-text-muted">
           Change your password. All other sessions will be signed out.
         </p>

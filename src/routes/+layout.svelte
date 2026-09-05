@@ -27,11 +27,11 @@
 </script>
 
 <svelte:head>
-  <title>Homerun - {$title ?? "Home"}</title>
+    <title>Homerun - {$title ?? "Home"}</title>
 </svelte:head>
 
 <ModeWatcher />
 <main>
-  {@render children()}
+    {@render children()}
 </main>
-<Toaster closeButton position="top-center" richColors />
+<Toaster closeButton position="bottom-right" richColors />

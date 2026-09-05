@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -8,6 +7,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { form } = $props();
 
@@ -18,7 +18,7 @@
 
 <div class="p-6 md:p-8">
     <div class="mb-8">
-        <h1 class="text-2xl font-bold text-text">Add an S3 destination</h1>
+        <h1 class="text-text text-xl font-semibold tracking-tight">Add an S3 destination</h1>
         <p class="mt-1 text-sm text-text-muted">
             Any S3-compatible bucket (AWS S3, MinIO, R2, Backblaze B2). Pick it
             from any volume's backup config once it's added here.
@@ -27,26 +27,23 @@
 
     <form
         action="?/create"
-        class="mb-6 space-y-4 rounded-2xl border border-border bg-surface p-5"
+        class="mb-6 space-y-4 rounded-2xl glass p-5"
         method="POST"
-        use:enhance={() => {
+        use:enhance={enhanceToast({
+          error: "Check the form for errors.",
+          loading: "Adding the destination",
+          onSettled: () => {
+            submitting = false;
+          },
+          onStart: () => {
             submitting = true;
-            return async ({ result, update }) => {
-                submitting = false;
-                if (result.type === "success") {
-                    toast.success("Destination added.");
-                    await goto(resolve("/s3-destinations"), {
-                        invalidateAll: true,
-                    });
-                } else if (result.type === "failure") {
-                    toast.error(
-                        (result.data as { error?: string })?.error ??
-                            "Check the form for errors.",
-                    );
-                }
-                await update();
-            };
-        }}
+          },
+          onSuccess: () =>
+            goto(resolve("/s3-destinations"), {
+              invalidateAll: true,
+            }),
+          success: "Destination added.",
+        })}
     >
         {#if form?.error}
             <p class="text-sm text-red-500">{form.error}</p>

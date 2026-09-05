@@ -19,7 +19,7 @@
 
 <div class="p-6 md:p-8">
   <div class="mb-8">
-    <h1 class="text-text text-2xl font-bold">Scheduling</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">Scheduling</h1>
     <p class="text-text-muted mt-1 text-sm">
       Cron redeploys, backups, and autoscale activity across every service and
       volume, in one place.
@@ -31,7 +31,7 @@
     <section>
       <div class="mb-3 flex items-center gap-2">
         <RefreshCw class="text-accent size-4" />
-        <h2 class="text-text text-sm font-semibold">Cron redeploys</h2>
+        <h2 class="eyebrow">Cron redeploys</h2>
       </div>
       {#if data.cronServices.length === 0}
         <EmptyState
@@ -43,7 +43,7 @@
         <div class="space-y-2.5">
           {#each data.cronServices as { projectName, service } (service.id)}
             <a
-              class="border-border bg-surface hover:border-accent/40 flex items-center gap-4 rounded-2xl border p-4 transition-colors"
+              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
               href="{resolve('/services')}/{service.id}/settings"
             >
               <div class="min-w-0 flex-1">
@@ -70,7 +70,7 @@
     <section>
       <div class="mb-3 flex items-center gap-2">
         <CloudUpload class="text-accent size-4" />
-        <h2 class="text-text text-sm font-semibold">Backups</h2>
+        <h2 class="eyebrow">Backups</h2>
       </div>
       {#if data.backupVolumes.length === 0}
         <EmptyState
@@ -82,7 +82,7 @@
         <div class="space-y-2.5">
           {#each data.backupVolumes as vol (vol.id)}
             <a
-              class="border-border bg-surface hover:border-accent/40 flex items-center gap-4 rounded-2xl border p-4 transition-colors"
+              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
               href="{resolve('/storage')}/{vol.id}"
             >
               <div class="min-w-0 flex-1">
@@ -108,7 +108,7 @@
       <section>
         <div class="mb-3 flex items-center gap-2">
           <Gauge class="text-accent size-4" />
-          <h2 class="text-text text-sm font-semibold">Autoscaling</h2>
+          <h2 class="eyebrow">Autoscaling</h2>
         </div>
         {#if !data.autoscale?.autoscaleEnabled}
           <EmptyState
@@ -133,7 +133,7 @@
             <div class="space-y-2.5">
               {#each data.autoscaleServices as { hostName, projectName, service } (service.id)}
                 <a
-                  class="border-border bg-surface hover:border-accent/40 flex items-center gap-4 rounded-2xl border p-4 transition-colors"
+                  class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
                   href="{resolve('/services')}/{service.id}/compute"
                 >
                   <div class="min-w-0 flex-1">

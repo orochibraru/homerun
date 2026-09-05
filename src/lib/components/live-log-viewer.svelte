@@ -84,11 +84,11 @@
 	}
 </script>
 
-<section class="border-border bg-surface rounded-2xl border">
+<section class="glass rounded-2xl">
   <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
     <div class="flex items-center gap-2">
       <Terminal class="text-text-muted size-4" />
-      <h2 class="text-text text-sm font-semibold">Logs</h2>
+      <h2 class="eyebrow">Logs</h2>
       {#if connected}
         <span class="flex items-center gap-1 text-xs text-green-600">
           <span class="size-1.5 rounded-full bg-green-500"></span>

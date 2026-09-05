@@ -15,6 +15,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { toastError } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -25,7 +26,7 @@
 	let checking = $state(false);
 
 	// ── Resend verification email ──────────────────────────────────────
-	async function resendEmail() {
+	async function resendEmailCallback() {
 		resending = true;
 		resent = false;
 		try {
@@ -34,32 +35,45 @@
 				email: data.email,
 			});
 			resent = true;
-			toast.success("Verification email sent! Check your inbox.");
-		} catch {
-			toast.error("Could not resend the email. Please try again.");
 		} finally {
 			resending = false;
 		}
 	}
 
+	function resendEmail() {
+		return toast.promise(resendEmailCallback(), {
+			error: (error) =>
+				toastError(error, "Could not resend the email. Please try again."),
+			loading: "Sending the verification email",
+			success: "Verification email sent! Check your inbox.",
+		});
+	}
+
 	// ── Poll / manual check ────────────────────────────────────────────
-	async function checkVerification() {
+	async function checkVerificationCallback() {
 		checking = true;
 		try {
 			// Re-fetch the session; if email is now verified the server
 			// will redirect away from this page on the next full load.
 			const session = await authClient.getSession();
-			if (session.data?.user?.emailVerified) {
-				toast.success("Email verified! Taking you to your dashboard…");
-				goto(resolve("/"));
-			} else {
-				toast.info("Not verified yet : check your inbox and click the link.");
+			if (!session.data?.user?.emailVerified) {
+				throw new Error(
+					"Not verified yet : check your inbox and click the link.",
+				);
 			}
-		} catch {
-			toast.error("Could not check verification status.");
+			goto(resolve("/"));
 		} finally {
 			checking = false;
 		}
+	}
+
+	function checkVerification() {
+		return toast.promise(checkVerificationCallback(), {
+			error: (error) =>
+				toastError(error, "Could not check verification status."),
+			loading: "Checking verification status",
+			success: "Email verified! Taking you to your dashboard…",
+		});
 	}
 
 	// ── Dev bypass ─────────────────────────────────────────────────────
@@ -71,14 +85,14 @@
 <div class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-bg px-4">
   <div class="w-full max-w-lg">
     <!-- ── Main card ──────────────────────────────────────────────── -->
-    <div class="rounded-2xl border border-border bg-surface p-8 text-center shadow-sm">
+    <div class="rounded-2xl glass p-8 text-center shadow-sm">
       <!-- Icon -->
       <div class="bg-accent/10 ring-accent/5 mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl ring-8">
         <Mail class="text-accent size-8" />
       </div>
 
       <!-- Heading -->
-      <h1 class="text-2xl font-bold text-text">Check your inbox</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Check your inbox</h1>
       <p class="mt-3 text-sm leading-relaxed text-text-muted">
         We sent a confirmation link to
         <strong class="font-semibold text-text">{data.email}</strong>.

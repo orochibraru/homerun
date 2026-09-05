@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { ChevronDown } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -12,6 +11,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -25,7 +25,7 @@
 <div class="p-6 md:p-8">
     <div class="mb-8 flex items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-text">Add a new remote host</h1>
+            <h1 class="text-text text-xl font-semibold tracking-tight">Add a new remote host</h1>
             <p class="mt-1 text-sm text-text-muted">
                 Fill in the form below to add a remote docker host.
             </p>
@@ -34,26 +34,23 @@
 
     <form
         action="?/create"
-        class="mb-6 space-y-4 rounded-2xl border border-border bg-surface p-5"
+        class="mb-6 space-y-4 rounded-2xl glass p-5"
         method="POST"
-        use:enhance={() => {
+        use:enhance={enhanceToast({
+          error: "Check the form for errors.",
+          loading: "Adding the host",
+          onSettled: () => {
+            submitting = false;
+          },
+          onStart: () => {
             submitting = true;
-            return async ({ result, update }) => {
-                submitting = false;
-                if (result.type === "success") {
-                    toast.success("Remote host added.");
-                    await goto(resolve("/remote-hosts"), {
-                        invalidateAll: true,
-                    });
-                } else if (result.type === "failure") {
-                    toast.error(
-                        (result.data as { error?: string })?.error ??
-                            "Check the form for errors.",
-                    );
-                }
-                await update();
-            };
-        }}
+          },
+          onSuccess: () =>
+            goto(resolve("/remote-hosts"), {
+              invalidateAll: true,
+            }),
+          success: "Remote host added.",
+        })}
     >
         {#if form?.error}
             <p class="text-sm text-red-500">{form.error}</p>

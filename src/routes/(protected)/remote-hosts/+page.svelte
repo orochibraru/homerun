@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { ChevronDown, Plus, PlusIcon, Server, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
@@ -11,6 +10,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -33,7 +33,7 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-2xl font-bold">Remote Hosts</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Remote Hosts</h1>
       <p class="text-text-muted mt-1 text-sm">
         Other Docker daemons a service can be deployed to instead of this host.
         A remote-hosted service isn't on the shared network or routed through
@@ -61,7 +61,7 @@
   {:else}
     <div class="space-y-3">
       {#each data.hosts as host (host.id)}
-        <div class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5">
+        <div class="glass flex items-center gap-4 rounded-2xl p-5">
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <Server class="size-5" />
           </div>
@@ -107,12 +107,11 @@
           <form
             action="?/delete"
             method="POST"
-            use:enhance={() => async ({ result, update }) => {
-              if (result.type === "failure") {
-                toast.error("Couldn't delete the host.");
-              }
-              await update();
-            }}
+            use:enhance={enhanceToast({
+              error: "Couldn't delete the host.",
+              loading: "Deleting the host",
+              success: "Host deleted.",
+            })}
           >
             <input name="hostId" type="hidden" value={host.id}>
             <Button

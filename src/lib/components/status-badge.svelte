@@ -8,7 +8,7 @@
 </script>
 
 <span
-  class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold {meta.class}"
+  class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-mono text-[0.65rem] font-medium tracking-wider uppercase {meta.class}"
 >
   {#if status === "pulling" || status === "starting"}
     <meta.icon class="size-3 animate-spin" />

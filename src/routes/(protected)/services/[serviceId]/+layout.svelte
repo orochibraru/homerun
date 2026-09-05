@@ -143,7 +143,7 @@
 
   <!-- ── Hero ─────────────────────────────────────────────── -->
   <div class="mb-6 flex flex-wrap items-center gap-3">
-    <h1 class="text-text text-2xl font-bold">{svc.name}</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">{svc.name}</h1>
     <StatusBadge status={svc.currentStatus} />
   </div>
   <p class="text-text-muted -mt-4 mb-6 text-sm">

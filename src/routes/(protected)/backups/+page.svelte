@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { CheckCircle2, CloudUpload, Play, XCircle } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -44,7 +44,7 @@
 <div class="p-6 md:p-8">
   <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
     <div>
-      <h1 class="text-text text-2xl font-bold">Backups</h1>
+      <h1 class="text-text text-xl font-semibold tracking-tight">Backups</h1>
       <p class="text-text-muted mt-1 text-sm">
         Per-volume S3 backups and their run history. Configure a volume's
         destination and schedule from its own page.
@@ -57,7 +57,7 @@
 
   <!-- ═══ Configured volumes ═══ -->
   <section class="mb-8">
-    <h2 class="text-text mb-3 text-sm font-semibold">Backup-enabled volumes</h2>
+    <h2 class="eyebrow mb-3">Backup-enabled volumes</h2>
     {#if backupEnabledVolumes.length === 0}
       <EmptyState
         icon={CloudUpload}
@@ -73,7 +73,7 @@
     {:else}
       <div class="space-y-2.5">
         {#each backupEnabledVolumes as vol (vol.id)}
-          <div class="border-border bg-surface flex items-center gap-4 rounded-2xl border p-4">
+          <div class="glass flex items-center gap-4 rounded-2xl p-4">
             <div class="min-w-0 flex-1">
               <a
                 class="text-text hover:text-accent truncate text-sm font-semibold"
@@ -92,18 +92,11 @@
             <form
               action="?/run"
               method="POST"
-              use:enhance={() => {
-                runningVolumeId = vol.id;
-                return async ({ result, update }) => {
-                  runningVolumeId = null;
-                  if (result.type === "failure") {
-                    toast.error("Backup failed.");
-                  } else if (result.type === "success") {
-                    toast.success("Backup completed.");
-                  }
-                  await update();
-                };
-              }}
+              use:enhance={enhanceToast({
+                error: "Backup failed.",
+                loading: "Running the backup",
+                success: "Backup completed.",
+              })}
             >
               <input name="volumeId" type="hidden" value={vol.id}>
               <Button disabled={runningVolumeId === vol.id} type="submit" variant="outline">
@@ -123,7 +116,7 @@
 
   <!-- ═══ Run log ═══ -->
   <section>
-    <h2 class="text-text mb-3 text-sm font-semibold">Run log</h2>
+    <h2 class="eyebrow mb-3">Run log</h2>
     {#if data.runs.length === 0}
       <EmptyState
         icon={CloudUpload}
@@ -131,7 +124,7 @@
         title="No backup runs yet"
       />
     {:else}
-      <div class="border-border bg-surface overflow-x-auto rounded-2xl border">
+      <div class="glass overflow-x-auto rounded-2xl">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-border text-text-muted border-b text-left text-xs uppercase">

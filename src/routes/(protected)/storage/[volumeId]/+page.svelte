@@ -7,7 +7,6 @@
 		XCircle,
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
@@ -22,6 +21,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const vol = $derived(data.volume);
@@ -49,7 +49,7 @@
   </a>
 
   <div>
-    <h1 class="text-2xl font-bold text-text">{vol.name}</h1>
+    <h1 class="text-text text-xl font-semibold tracking-tight">{vol.name}</h1>
     <p class="mt-1 font-mono text-sm text-text-muted">
       {vol.kind}
       · {vol.source}
@@ -62,7 +62,7 @@
       Docker-managed named volume.
     </div>
   {:else}
-    <section class="rounded-2xl border border-border bg-surface p-5">
+    <section class="rounded-2xl glass p-5">
       <div class="mb-4 flex items-center gap-3">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <CloudUpload class="size-4" />
@@ -83,18 +83,17 @@
         action="?/updateBackup"
         class="space-y-3"
         method="POST"
-        use:enhance={() => {
-          submitting = true;
-          return async ({ result, update }) => {
+        use:enhance={enhanceToast({
+          error: "Check the form for errors.",
+          loading: "Saving the volume",
+          onSettled: () => {
             submitting = false;
-            if (result.type === "success") {
-              toast.success("Saved.");
-            } else if (result.type === "failure") {
-              toast.error("Check the form for errors.");
-            }
-            await update();
-          };
-        }}
+          },
+          onStart: () => {
+            submitting = true;
+          },
+          success: "Saved.",
+        })}
       >
         {#if form?.error}
           <p class="text-xs text-red-500">{form.error}</p>
@@ -174,18 +173,11 @@
     <form
       action="?/backupNow"
       method="POST"
-      use:enhance={() => {
-        backingUp = true;
-        return async ({ result, update }) => {
-          backingUp = false;
-          if (result.type === "success") {
-            toast.success("Backup uploaded.");
-          } else {
-            toast.error("Backup failed : check the volume's config.");
-          }
-          await update();
-        };
-      }}
+      use:enhance={enhanceToast({
+        error: "Backup failed : check the volume's config.",
+        loading: "Uploading the backup",
+        success: "Backup uploaded.",
+      })}
     >
       <Button
         disabled={backingUp || !vol.s3DestinationId}
@@ -203,9 +195,9 @@
     </form>
 
     {#if data.runs.length > 0}
-      <section class="rounded-2xl border border-border bg-surface">
+      <section class="rounded-2xl glass">
         <div class="border-b border-border px-5 py-4">
-          <h2 class="text-sm font-semibold text-text">Run log</h2>
+          <h2 class="eyebrow">Run log</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
