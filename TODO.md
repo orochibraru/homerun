@@ -2,12 +2,6 @@
 
 ## Small
 
-- [ ] [App] When creating a new service and clicking on "Create and Deploy" at
-      the end of a template: making this button a loader until the service
-      deploys is poor ux. Let's instead initiate the deployment sequence in the
-      background and redirect the user to the service page showing them the logs
-      and all that would happen if they clicked on "create" and got redirected
-      to the page and clicked "deploy" themselves.
 - [ ] [App] Instead of appending a div to a section for confirmation (such as
       the confirm button in a danger zone) let's use a real confirmation modal
       that sticks out with a "type in service name to confirm" to make sure we
@@ -19,11 +13,11 @@
 
 ## Medium
 
-- [ ] "Only bind-mount volumes can be backed up right now : this is a
+- [ ] [App] "Only bind-mount volumes can be backed up right now : this is a
       Docker-managed named volume." ==> Add support for backuping docker-managed
       named volumes
-- [ ] Add a "Paste compose file" feature which parses a docker compose config
-      file into homerun services, volumes, networks etc..
+- [ ] [App] Add a "Paste compose file" feature which parses a docker compose
+      config file into homerun services, volumes, networks etc..
 - [ ] [App] When creating a new service add possibility to link it to another
       even if it's outside of a project. When linking to something like Redis or
       Postgres let's be smart: offer to add an env variable to the main service
