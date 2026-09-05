@@ -3,6 +3,7 @@
 		BookOpen,
 		CalendarClock,
 		ChevronRight,
+		Clock,
 		CloudUpload,
 		Container,
 		Database,
@@ -88,6 +89,14 @@
 			href: resolve("/templates"),
 			icon: LayoutGrid,
 			label: "Templates",
+		},
+		{
+			adminOnly: false,
+			category: "Workspace",
+			exact: false,
+			href: resolve("/cron-jobs"),
+			icon: Clock,
+			label: "Cron Jobs",
 		},
 		{
 			adminOnly: false,

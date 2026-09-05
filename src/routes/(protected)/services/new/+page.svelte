@@ -22,6 +22,7 @@
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
+	import ServiceLinkPicker from "$lib/components/service-link-picker.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -847,12 +848,16 @@
               </div>
             {/each}
 
-            <div class="mt-1 flex items-center gap-4">
+            <div class="mt-1 flex flex-wrap items-center gap-4">
               <Button class="h-auto p-0" onclick={addEnvRow} variant="link">
                 <Plus class="size-3.5" />
                 Add variable
               </Button>
               <EnvPasteButton onImport={importEnvRows} />
+              <ServiceLinkPicker
+                onImport={importEnvRows}
+                services={data.linkableServices}
+              />
             </div>
           </div>
         </section>

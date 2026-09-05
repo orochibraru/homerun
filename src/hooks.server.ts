@@ -177,6 +177,7 @@ export const init = async () => {
 
 	CronService.startCronScheduler();
 	CronService.startBackupScheduler();
+	CronService.startCronJobScheduler();
 	CronService.startAutoscaleScheduler();
 };
 

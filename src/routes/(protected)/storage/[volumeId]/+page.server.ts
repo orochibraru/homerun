@@ -60,11 +60,6 @@ export const actions = {
 		const backupPrefix =
 			(formData.get("backupPrefix") as string | null)?.trim() || null;
 
-		if (volume.kind !== "bind" && backupEnabled) {
-			return fail(400, {
-				error: "Only bind-mount volumes can be backed up right now.",
-			});
-		}
 		if (backupEnabled && !CronService.parseCronSchedule(backupSchedule ?? "")) {
 			return fail(400, {
 				error:

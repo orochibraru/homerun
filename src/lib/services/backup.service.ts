@@ -4,9 +4,14 @@ import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("Backup");
 const execFileAsync = promisify(execFile);
+
+const ARCHIVE_HELPER_IMAGE = "alpine";
+const ARCHIVE_HELPER_TAG = "3";
+const ARCHIVE_MOUNT_PATH = "/homerun-backup-source";
 
 export interface BackupResult {
 	error?: string;
@@ -37,12 +42,11 @@ export abstract class BackupService {
 	 * key" transport to `upload` (the resolved+decrypted destination is
 	 * passed through so the subclass never has to look it up itself).
 	 *
-	 * Bind-mount sources only for v1 : `source` is a real host directory, so
-	 * it can be tar'd directly. A Docker-managed named volume's content isn't
-	 * visible on the host filesystem the same way (would need a short-lived
-	 * helper container to read it out), so `kind: "volume"` is rejected here
-	 * rather than silently doing nothing; that's a documented follow-up, not
-	 * an oversight.
+	 * Both volume kinds are supported : a bind mount's `source` is a real
+	 * host directory, tar'd directly; a Docker-managed named volume isn't
+	 * visible on the host filesystem the same way, so it's mounted read-only
+	 * into a short-lived helper container that tars it to stdout instead
+	 * (see DockerService.runOneOff).
 	 */
 	protected async runBackup(
 		volume: StorageVolumeDTO,
@@ -78,12 +82,6 @@ export abstract class BackupService {
 			destination: ResolvedS3Destination,
 		) => Promise<void>,
 	): Promise<BackupResult> {
-		if (volume.kind !== "bind") {
-			return {
-				error: "Only bind-mount volumes can be backed up right now.",
-				success: false,
-			};
-		}
 		if (!volume.s3DestinationId) {
 			return {
 				error: "No S3 destination picked for this volume.",
@@ -116,28 +114,55 @@ export abstract class BackupService {
 		}
 
 		try {
-			// Tar the source directory in memory (gzip'd) : fine at the scale a
-			// single-PUT, no-multipart uploader supports anyway.
-			const { stdout } = await execFileAsync(
-				"tar",
-				["-czf", "-", "-C", volume.source, "."],
-				{ encoding: "buffer", maxBuffer: 1024 * 1024 * 1024 },
-			);
+			const archive = await this.archive(volume);
 
 			const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 			const prefix = volume.backupPrefix ? `${volume.backupPrefix}/` : "";
 			const key = `${prefix}${volume.name}-${timestamp}.tar.gz`;
 
-			await upload(volume, key, stdout, destination);
+			await upload(volume, key, archive, destination);
 
 			logger.info(
-				`Backup uploaded: volume=${volume.id} key=${key} bytes=${stdout.length}`,
+				`Backup uploaded: volume=${volume.id} key=${key} bytes=${archive.length}`,
 			);
-			return { key, sizeBytes: stdout.length, success: true };
+			return { key, sizeBytes: archive.length, success: true };
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			logger.error(`Backup failed: volume=${volume.id}`, err);
 			return { error: message, success: false };
 		}
+	}
+
+	private archive(volume: StorageVolumeDTO): Promise<Buffer> {
+		return volume.kind === "bind"
+			? this.archiveHostPath(volume.source)
+			: this.archiveNamedVolume(volume.source);
+	}
+
+	private async archiveHostPath(source: string): Promise<Buffer> {
+		const { stdout } = await execFileAsync(
+			"tar",
+			["-czf", "-", "-C", source, "."],
+			{ encoding: "buffer", maxBuffer: 1024 * 1024 * 1024 },
+		);
+		return stdout;
+	}
+
+	private async archiveNamedVolume(name: string): Promise<Buffer> {
+		const result = await DockerService.runOneOff({
+			binds: [`${name}:${ARCHIVE_MOUNT_PATH}:ro`],
+			cmd: ["tar", "-czf", "-", "-C", ARCHIVE_MOUNT_PATH, "."],
+			image: ARCHIVE_HELPER_IMAGE,
+			tag: ARCHIVE_HELPER_TAG,
+		});
+		if (result.exitCode !== 0) {
+			const detail = result.stderr.toString("utf8").trim();
+			throw new Error(
+				`Couldn't read the named volume "${name}" (exit ${result.exitCode})${
+					detail ? `: ${detail}` : "."
+				}`,
+			);
+		}
+		return result.stdout;
 	}
 }

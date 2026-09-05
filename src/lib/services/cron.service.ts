@@ -19,6 +19,7 @@ import {
 	type ParsedCron,
 	parseCronSchedule,
 } from "./cron/cron-expression.ts";
+import { CronJobScheduler } from "./cron/cron-job-scheduler.ts";
 import { CronRedeployScheduler } from "./cron/cron-redeploy-scheduler.ts";
 
 export type { ParsedCron } from "./cron/cron-expression.ts";
@@ -27,6 +28,7 @@ class CronServiceClass {
 	private readonly redeployScheduler = new CronRedeployScheduler();
 	private readonly backupScheduler = new BackupScheduler();
 	private readonly autoscaleScheduler = new AutoscaleScheduler();
+	private readonly cronJobScheduler = new CronJobScheduler();
 
 	/** Parses a 5-field cron expression, or null if it's malformed. */
 	parseCronSchedule(schedule: string): ParsedCron | null {
@@ -46,6 +48,11 @@ class CronServiceClass {
 	/** Starts the once-a-minute scheduled-backup check. Idempotent : safe to call on every dev-server HMR reload. */
 	startBackupScheduler(): void {
 		this.backupScheduler.start();
+	}
+
+	/** Starts the once-a-minute user-defined cron job check. Idempotent : safe to call on every dev-server HMR reload. */
+	startCronJobScheduler(): void {
+		this.cronJobScheduler.start();
 	}
 
 	/**

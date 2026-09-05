@@ -28,6 +28,10 @@ export type {
 	RegistryAuth,
 	VolumeMountParams,
 } from "./docker/containers.ts";
+export type {
+	OneOffRunParams,
+	OneOffRunResult,
+} from "./docker/one-off.ts";
 
 import { BaseDockerService } from "./docker/base.ts";
 import { DockerCleanupMixin } from "./docker/cleanup.ts";
@@ -36,6 +40,7 @@ import { DockerCoreServicesMixin } from "./docker/core-services.ts";
 import { DockerCustomSslMixin } from "./docker/custom-ssl.ts";
 import { DockerGitBuildMixin } from "./docker/git-build.ts";
 import { DockerNetworkMixin } from "./docker/networks.ts";
+import { DockerOneOffMixin } from "./docker/one-off.ts";
 import { DockerReconcileMixin } from "./docker/reconcile.ts";
 import { DockerSwarmMixin } from "./docker/swarm.ts";
 import { DockerTerminalMixin } from "./docker/terminal.ts";
@@ -43,17 +48,20 @@ import { DockerTerminalMixin } from "./docker/terminal.ts";
 // Merge order matters only where one concern calls another's methods via
 // `this` : networks before containers (createAndStartContainer calls
 // connectToProjectNetwork), containers before swarm (createAndStartSwarmService
-// calls this.pullImage), containers+swarm before reconcile (syncServiceStatus
+// calls this.pullImage), containers before one-off (runOneOff calls
+// this.pullImage), containers+swarm before reconcile (syncServiceStatus
 // calls both this.inspectStatus and this.inspectSwarmServiceStatus). The
 // rest have no cross-concern dependency, so their position is arbitrary.
 class DockerServiceClass extends DockerCleanupMixin(
-	DockerTerminalMixin(
-		DockerCoreServicesMixin(
-			DockerCustomSslMixin(
-				DockerGitBuildMixin(
-					DockerReconcileMixin(
-						DockerSwarmMixin(
-							DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+	DockerOneOffMixin(
+		DockerTerminalMixin(
+			DockerCoreServicesMixin(
+				DockerCustomSslMixin(
+					DockerGitBuildMixin(
+						DockerReconcileMixin(
+							DockerSwarmMixin(
+								DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+							),
 						),
 					),
 				),

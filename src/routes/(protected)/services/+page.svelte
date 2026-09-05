@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		FileUp,
 		LayoutGridIcon,
 		Play,
 		Plus,
@@ -198,10 +199,20 @@
         Containers deployed to this server.
       </p>
     </div>
-    <Button href={resolve("/services/new")} size="sm">
-      <Plus class="size-4" />
-      Deploy a Service
-    </Button>
+    <div class="flex items-center gap-2">
+      <Button
+        href={resolve("/services/import")}
+        size="sm"
+        variant="outline"
+      >
+        <FileUp class="size-4" />
+        Import compose
+      </Button>
+      <Button href={resolve("/services/new")} size="sm">
+        <Plus class="size-4" />
+        Deploy a Service
+      </Button>
+    </div>
   </div>
 
   {#if data.total === 0 && !data.filtered}

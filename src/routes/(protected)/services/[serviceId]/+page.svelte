@@ -1,13 +1,16 @@
 <script lang="ts">
 	import {
+		CheckCircle2,
 		ChevronDown,
+		Circle,
 		Clock,
 		Play,
 		Rocket,
 		RotateCw,
 		Square,
+		XCircle,
 	} from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -16,6 +19,7 @@
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { deployPhaseStates } from "$lib/deploy-phases";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -28,6 +32,8 @@
 
 	let pendingAction = $state<string | null>(null);
 	let progressLines = $state<string[]>([]);
+	let progressStatus = $state("pending");
+	let progressSource: EventSource | null = null;
 	let pollGeneration = 0;
 	let expandedDeploymentId = $state<string | null>(null);
 
@@ -77,6 +83,7 @@
 					status: string;
 				};
 				progressLines = body.log.split("\n").filter(Boolean);
+				progressStatus = body.status;
 				return body.status;
 			}
 		} catch {
@@ -139,6 +146,57 @@
 		}
 	}
 
+	function closeProgressSource() {
+		progressSource?.close();
+		progressSource = null;
+	}
+
+	/**
+	 * Live deploy progress over server-sent events : the server pushes each
+	 * new log line and status transition instead of the client asking once a
+	 * second. Falls back to pollProgress above if the stream can't be held
+	 * open (a buffering proxy, a dropped connection mid-deploy).
+	 */
+	function watchProgress(deploymentId: string) {
+		pollGeneration += 1;
+		closeProgressSource();
+
+		const source = new EventSource(
+			resolve(
+				"/(protected)/services/[serviceId]/deployments/[deploymentId]/events",
+				{ deploymentId, serviceId: svc.id },
+			),
+		);
+		progressSource = source;
+		let lastStatus = "";
+
+		source.addEventListener("progress", (event) => {
+			const body = JSON.parse((event as MessageEvent).data) as {
+				log: string;
+				status: string;
+			};
+			progressLines = body.log.split("\n").filter(Boolean);
+			progressStatus = body.status;
+			if (body.status !== lastStatus) {
+				lastStatus = body.status;
+				void refreshAll();
+			}
+		});
+
+		source.addEventListener("done", () => {
+			closeProgressSource();
+			pendingAction = null;
+			void refreshAll();
+		});
+
+		source.onerror = () => {
+			closeProgressSource();
+			void pollProgress(deploymentId);
+		};
+	}
+
+	onDestroy(closeProgressSource);
+
 	onMount(() => {
 		const [latest] = data.deployments;
 		if (!latest) {
@@ -149,7 +207,7 @@
 			IN_FLIGHT_STATUSES.has(svc.currentStatus)
 		) {
 			pendingAction = "deploy";
-			void pollProgress(latest.id);
+			watchProgress(latest.id);
 		}
 	});
 
@@ -162,16 +220,17 @@
 			onStart: () => {
 				pendingAction = "deploy";
 				progressLines = [];
+				progressStatus = "pending";
 			},
 			onSubmit: ({ formData }) => {
 				submittedDeploymentId = crypto.randomUUID();
 				formData.set("deploymentId", submittedDeploymentId);
-				void pollProgress(submittedDeploymentId);
+				watchProgress(submittedDeploymentId);
 			},
 			onSuccess: (data) => {
 				const actual = data?.deploymentId;
 				if (typeof actual === "string" && actual !== submittedDeploymentId) {
-					void pollProgress(actual);
+					watchProgress(actual);
 				}
 			},
 			success: `${svc.name} is queued for deploy.`,
@@ -258,16 +317,37 @@
 </div>
 
 {#if pendingAction === "deploy"}
-    <div
-        class="mb-6 h-48 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
-    >
-        {#if progressLines.length === 0}
-            <span class="text-zinc-500">Waiting for the deploy to start…</span>
-        {:else}
-            {#each progressLines as line, i (i)}
-                <AnsiLine {line} />
+    <div class="glass mb-6 rounded-2xl">
+        <ul class="border-border grid gap-2 border-b px-5 py-4 sm:grid-cols-3">
+            {#each deployPhaseStates(progressLines.join("\n"), progressStatus) as { phase, state } (phase.id)}
+                <li class="flex items-center gap-2 text-xs">
+                    {#if state === "done"}
+                        <CheckCircle2 class="size-3.5 shrink-0 text-emerald-500" />
+                        <span class="text-text">{phase.label}</span>
+                    {:else if state === "active"}
+                        <Spinner class="size-3.5 shrink-0" />
+                        <span class="text-text font-medium">{phase.label}</span>
+                    {:else if state === "failed"}
+                        <XCircle class="size-3.5 shrink-0 text-red-500" />
+                        <span class="text-red-500">{phase.label}</span>
+                    {:else}
+                        <Circle class="text-text-subtle size-3.5 shrink-0" />
+                        <span class="text-text-subtle">{phase.label}</span>
+                    {/if}
+                </li>
             {/each}
-        {/if}
+        </ul>
+        <div
+            class="h-48 overflow-y-auto rounded-b-2xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+        >
+            {#if progressLines.length === 0}
+                <span class="text-zinc-500">Waiting for the deploy to start…</span>
+            {:else}
+                {#each progressLines as line, i (i)}
+                    <AnsiLine {line} />
+                {/each}
+            {/if}
+        </div>
     </div>
 {/if}
 

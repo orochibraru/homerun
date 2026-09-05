@@ -1,4 +1,5 @@
 import { config } from "$lib/config";
+import { phaseLine } from "$lib/deploy-phases";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
@@ -530,6 +531,7 @@ class DeploymentServiceClass {
 			imageDigest: digest,
 			status: "running",
 		});
+		await dep.appendLog(phaseLine("ready"));
 		logger.info(
 			`Deploy succeeded: service=${svc.id} container=${containerId ?? swarmServiceId} deployment=${dep.id}`,
 		);
@@ -601,6 +603,17 @@ class DeploymentServiceClass {
 		});
 	}
 
+	async #resolveSwarmMode(deployTarget: DeployTarget): Promise<boolean> {
+		const instanceSettings = await InstanceSettingsDTO.get();
+		const swarmMode = instanceSettings.orchestrationMode === "swarm";
+		if (swarmMode && deployTarget.kind !== "local") {
+			throw new Error(
+				"Swarm mode services can only be deployed locally : Remote Hosts (a separate Docker daemon, or a Homerun Agent) aren't part of this instance's swarm cluster. Clear the deploy target first.",
+			);
+		}
+		return swarmMode;
+	}
+
 	async deployService(
 		svc: ServiceDTO,
 		userId: string,
@@ -631,6 +644,7 @@ class DeploymentServiceClass {
 		await svc.update({ currentStatus: "pulling" });
 
 		try {
+			await dep.appendLog(phaseLine("config"));
 			const deployTarget = await RemoteHostDTO.resolveTarget(
 				svc.remoteHostId,
 				userId,
@@ -640,11 +654,13 @@ class DeploymentServiceClass {
 			// Volumes are host-local, a bind-mount source on this host has no
 			// meaning on a remote daemon (docker *or* agent), so skip attaching
 			// them there rather than silently create an empty/wrong mount.
+			await dep.appendLog(phaseLine("volumes"));
 			const mounts =
 				deployTarget.kind === "local"
 					? await ServiceVolumeDTO.listForService(svc.id)
 					: [];
 
+			await dep.appendLog(phaseLine("image"));
 			const { digest, image, skipAgentPull, tag } =
 				await this.#resolveImage(ctx);
 
@@ -654,14 +670,9 @@ class DeploymentServiceClass {
 				? await ProjectDTO.get(svc.projectId, userId)
 				: null;
 
-			const instanceSettings = await InstanceSettingsDTO.get();
-			const swarmMode = instanceSettings.orchestrationMode === "swarm";
-			if (swarmMode && deployTarget.kind !== "local") {
-				throw new Error(
-					"Swarm mode services can only be deployed locally : Remote Hosts (a separate Docker daemon, or a Homerun Agent) aren't part of this instance's swarm cluster. Clear the deploy target first.",
-				);
-			}
+			const swarmMode = await this.#resolveSwarmMode(deployTarget);
 
+			await dep.appendLog(phaseLine("container"));
 			const ids = await this.#startWorkload({
 				dep,
 				deployTarget,
@@ -674,6 +685,7 @@ class DeploymentServiceClass {
 				tag,
 			});
 
+			await dep.appendLog(phaseLine("network"));
 			await this.#recordSuccess(ctx, ids, digest, project);
 
 			NotificationDTO.notify({

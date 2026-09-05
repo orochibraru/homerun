@@ -4,29 +4,22 @@
 
 ## Medium
 
-- [ ] [App] "Only bind-mount volumes can be backed up right now : this is a
-      Docker-managed named volume." ==> Add support for backuping docker-managed
-      named volumes
-- [ ] [App] Add a "Paste compose file" feature which parses a docker compose
-      config file into homerun services, volumes, networks etc..
-- [ ] [App] When creating a new service add possibility to link it to another
-      even if it's outside of a project. When linking to something like Redis or
-      Postgres let's be smart: offer to add an env variable to the main service
-      you're configuring with either a JDBC format or each value as a var. Offer
-      a default name such as (POSTGRES_URL) or (REDIS_URL) when the user selects
-      JDBC format but don't force them to use it let them rename it to whatever
-      they want. In the other scenario where they don't want JDBC apply the same
-      logic, they should have vars such as (DB_USER) or (POSTGRES_USER) etc
-      etc..
-- [ ] [App] For container logs I'm certain we need to use a websocket instead of
-      polling. For other tasks I wonder if RPC would be a good choice but seems
-      like a trend over a good REST API. Let's evaluate where each is more
-      relevant. For example when deploying a service we generally want logging,
-      a websocket action could be interesting to provide info in a modal when
-      clicking a deploy button such as "pulling image 'image-name'",
-      "registering configuration", "provisioning container", "checking container
-      health", "routing traffic", "creating volumes" etc...
-- [ ] [App] Ability to create a cron job from UI (via docker image or host exec)
+- [ ] [App] No restore flow for S3 backups (upload only) : retrieving a tarball
+      and unpacking it back into a bind mount or a named volume is still manual.
+- [ ] [App] Compose import ignores `build:` : a compose service built from a
+      local Dockerfile is imported as a service that then needs its Source tab
+      pointed at a git repo by hand.
+- [ ] [App] Cron jobs run on the local Docker daemon only : `runOneOff` takes a
+      remote connection but nothing passes one, so an image job can't be
+      targeted at a Remote Host, and a run's output is only visible after it
+      finishes (no live tail).
+- [ ] [App] Revisit WebSockets once SvelteKit ships a route-level WebSocket API
+      (2.70 has none, and `@orochibraru/svelte-smol` already forwards a
+      `server.websocket()` to `Bun.serve` if one ever appears). Deploy progress
+      is server-sent events and container logs are a streamed response today,
+      both one-way pushes; the only genuinely bidirectional surface, the web
+      terminal, still hand-rolls chunked HTTP plus a raw `Bun.connect()` hijack
+      and would be the first thing worth moving.
 
 ## Large
 

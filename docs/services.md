@@ -49,11 +49,45 @@ There's no webhook / auto-deploy-on-push yet, redeploy a git-mode service the
 same way as an image-mode one: manually, or via its own cron schedule (below)
 for `:latest`-tracking-equivalent auto-rebuilds.
 
+## Importing a compose file
+
+**Import compose** on the services list takes a `docker-compose.yaml` pasted
+straight in and turns it into Homerun rows. Parsing happens on the server and
+nothing is created until you confirm: the preview lists every service it found
+with the image, port, protocol, network mode, env var count and volume mounts it
+resolved, plus a warning for anything it had to drop.
+
+What maps across: `image`, `environment` (both the map and the `KEY=VALUE` list
+form), `ports`/`expose` (the container side, the host side is dropped, Homerun
+routes through Traefik instead), `restart`, `volumes` (named volumes and
+absolute bind mounts, in both the short `src:dst:ro` and long `type:/source:`
+forms), `depends_on`, `network_mode: host`, `container_name`, and
+`deploy.resources.limits.cpus`/`memory`.
+
+What comes back as a warning instead of being applied: `build:` (import it, then
+point the service's Source tab at a git repository), `command`, `entrypoint`,
+`healthcheck`, `env_file`, `labels`, capabilities, devices, `privileged`,
+secrets/configs, relative bind mounts (Homerun needs an absolute host path), and
+anonymous volumes.
+
+Every named volume and absolute bind mount becomes a
+[storage volume](storage-and-backups.md) (reusing an existing one when the
+source matches) and is mounted into the service at its declared path. A service
+that published a host port gets a public `<slug>.<domain>` route; one that only
+`expose`d a port stays internal. You can drop individual services from the
+import, put the stack in a new or existing project, and optionally deploy
+everything straight away, in `depends_on` order.
+
 ## Deploying
 
-The Overview tab has Deploy/Start/Stop/Restart plus a live progress panel,
-pull-or-build, create, start steps stream in as they happen, and the panel
-resumes correctly if you reload the page mid-deploy. Below it, deployment
+The Overview tab has Deploy/Start/Stop/Restart plus a live progress panel. The
+panel shows six phases, resolving configuration, preparing volumes, fetching
+image, provisioning container, routing traffic, ready, ticking off as they
+complete, with the raw build/pull output streaming underneath. Progress arrives
+over server-sent events (the server pushes each new line and status change; if
+that stream can't be held open, the panel falls back to polling), and it resumes
+correctly if you reload the page mid-deploy, or if the deploy was started
+somewhere else entirely (a template quick-deploy, cron). Below it, deployment
 history lists every attempt with status, image digest, and an expandable full
 log.
 
@@ -98,6 +132,23 @@ Plain key/value rows on the Env Vars tab, stored as-is (not encrypted, don't put
 a raw plaintext secret you'd mind leaking in the DB dump into an env var if you
 can avoid it; registry passwords and similar have their own encrypted fields
 instead).
+
+**Link a service** in the new-service wizard's Environment step fills those rows
+in for you from a service you already run, in any project or none: pick it, and
+Homerun recognises what it is from its image (PostgreSQL, MySQL/MariaDB,
+MongoDB, Redis/Valkey, RabbitMQ, or a plain HTTP service) and reads the
+credentials off its own env vars. You then choose the shape you want:
+
+- **Connection URL**, e.g. `POSTGRES_URL=postgres://app:secret@db:5432/app`.
+- **JDBC URL** (relational engines only), e.g.
+  `jdbc:postgresql://db:5432/app?user=app&password=secret`.
+- **One variable per value**, e.g. `DB_HOST`, `DB_PORT`, `DB_USER`,
+  `DB_PASSWORD`, `DB_DB`.
+
+The suggested variable name (or prefix) is a default, not a rule, rename it to
+whatever your app expects before adding it. The host in every generated value is
+the linked service's slug, which is how services already reach each other on the
+shared network, so this works across projects and needs no extra networking.
 
 ## Volumes
 
@@ -197,9 +248,11 @@ groundwork for closing this gap, not the integration itself yet.
 ## Logs
 
 The Logs tab live-streams a running container's stdout/stderr straight from the
-browser (chunked HTTP, not a WebSocket). The same viewer is embedded on the
-Overview tab once a service has deployed at least once, so recent output is
-visible without switching tabs.
+browser: the server pushes each line as the container writes it over a long-
+lived HTTP response, no polling and no WebSocket (SvelteKit 2 has no WebSocket
+route API; nothing here needs a client-to-server socket anyway). The same viewer
+is embedded on the Overview tab once a service has deployed at least once, so
+recent output is visible without switching tabs.
 
 ## Terminal
 
@@ -215,6 +268,25 @@ standard 5-field cron schedule. Useful for an image tracking `:latest`, or a
 git-mode service you want rebuilt on a schedule rather than manually. A due
 schedule queues a deploy like any other trigger, so a redeploy that's still
 waiting its turn is never queued twice.
+
+## Cron jobs
+
+**Cron Jobs** in the sidebar is the other half of scheduling: a task on a
+schedule that isn't tied to a service. Each job runs one of two ways:
+
+- **Container**: an image (plus optional tag, command override, env vars, and
+  private-registry credentials) run as a throwaway container. Homerun pulls the
+  image if it's missing, runs it to completion, keeps its stdout/stderr, and
+  removes the container.
+- **Host command**: a shell command run through `/bin/sh -c` where Homerun
+  itself runs. **Admin-only**, since it inherits the app's own privileges.
+
+Give it a 5-field cron schedule, a timeout (default 900s, the job is killed past
+it), and turn the schedule on or off without deleting the job. Runs go through
+the same [job queue](#the-job-queue) as deploys and backups, so **Run now**
+returns immediately and one job never runs twice concurrently. Each run's exit
+code and captured output are kept on the job's page, and enabled jobs also show
+up on the Scheduling page next to cron redeploys and backups.
 
 ## Errors
 

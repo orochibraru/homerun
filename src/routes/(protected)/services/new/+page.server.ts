@@ -57,18 +57,27 @@ export const load = async ({ url, parent }) => {
 	const template = templateId
 		? await TemplateDTO.usable(templateId, user.id)
 		: null;
-	const [settings, connections, cacheRegistries, templateLinks] =
+	const [settings, connections, cacheRegistries, templateLinks, existing] =
 		await Promise.all([
 			InstanceSettingsDTO.get(),
 			GitConnectionDTO.listForUser(user.id),
 			BuildCacheRegistryDTO.list(user.id),
 			template ? TemplateLinkDTO.listForTemplate(template.id) : [],
+			ServiceDTO.list(user.id),
 		]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
 		baseDomain: config.baseDomain,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
+		linkableServices: existing.map((svc) => ({
+			containerPort: svc.containerPort,
+			envVars: svc.envVars ?? {},
+			id: svc.id,
+			image: svc.image,
+			name: svc.name,
+			slug: svc.slug,
+		})),
 		connectedGitProviders: connections
 			.filter((c) => providersById.has(c.providerId))
 			.map((c) => ({

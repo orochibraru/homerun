@@ -19,13 +19,15 @@ second copy to keep in sync by hand, see
    Compose, or from source), first boot, the onboarding wizard.
 2. **[Configuration](configuration.md)**: every environment variable, and which
    ones are also live-editable from `/settings`.
-3. **[Services](services.md)**: deploying from an image or a git repo, the job
-   queue behind every deploy, env vars, volumes, networking, compute limits,
-   cron redeploy, logs, and the web terminal.
+3. **[Services](services.md)**: deploying from an image or a git repo, importing
+   a compose file, the job queue behind every deploy, env vars, linking one
+   service to another, volumes, networking, compute limits, cron redeploy, cron
+   jobs, logs, and the web terminal.
 4. **[Projects & templates](projects-and-templates.md)**: grouping services on a
    shared network, one-click templates, and saving your own.
 5. **[Storage & backups](storage-and-backups.md)**: bind-mount and
-   Docker-managed volumes, mounting them into services, S3-compatible backups.
+   Docker-managed volumes, mounting them into services, S3-compatible backups of
+   either kind.
 6. **[Remote hosts & the Homerun Agent](remote-hosts-and-agent.md)**: deploying
    to a second machine, autoscale-by-migration, the standalone agent and
    installer.

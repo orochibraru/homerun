@@ -787,6 +787,66 @@ export const backupRun = pgTable(
 	(table) => [index("backupRun_volumeId_idx").on(table.volumeId)],
 );
 
+// A user-defined scheduled task, run either as a throwaway container
+// (kind "image", see DockerService.runOneOff) or as a shell command on the
+// host the app itself runs on (kind "exec", admin-only : it inherits this
+// process's own privileges). Independent of service.cronSchedule, which
+// redeploys an existing service rather than running a task.
+export const cronJob = pgTable(
+	"cron_job",
+	{
+		// Shell command for kind "exec"; an optional command override for
+		// kind "image" (blank : the image's own entrypoint/command).
+		command: text("command"),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		description: text("description"),
+		enabled: boolean("enabled").default(false).notNull(),
+		envVars: jsonb("env_vars").$type<Record<string, string>>().default({}),
+		id: text("id").primaryKey(),
+		image: text("image"),
+		// "image" | "exec"
+		kind: text("kind").$type<"image" | "exec">().notNull(),
+		lastRunAt: timestamp("last_run_at", { mode: "date" }),
+		name: text("name").notNull(),
+		// AES-256-GCM ciphertext : see $lib/services/secrets.
+		registryPasswordEnc: text("registry_password_enc"),
+		registryUrl: text("registry_url"),
+		registryUsername: text("registry_username"),
+		// Standard 5-field cron expression, evaluated in the server's local
+		// time by the same matcher every other schedule in this app uses.
+		schedule: text("schedule").notNull(),
+		tag: text("tag").default("latest"),
+		timeoutSeconds: integer("timeout_seconds").default(900).notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("cronJob_userId_idx").on(table.userId)],
+);
+
+// One row per cron job attempt (scheduled or manual "Run now"), including
+// the command's own output : same shape as backupRun, plus what it printed.
+export const cronJobRun = pgTable(
+	"cron_job_run",
+	{
+		cronJobId: text("cron_job_id")
+			.notNull()
+			.references(() => cronJob.id, { onDelete: "cascade" }),
+		error: text("error"),
+		exitCode: integer("exit_code"),
+		finishedAt: timestamp("finished_at", { mode: "date" }),
+		id: text("id").primaryKey(),
+		output: text("output").default(""),
+		startedAt: timestamp("started_at", { mode: "date" }).notNull(),
+		// null while the run is still in progress, true/false once finalized.
+		success: boolean("success"),
+	},
+	(table) => [index("cronJobRun_cronJobId_idx").on(table.cronJobId)],
+);
+
 // Persisted warn/error-level application log entries, captured by
 // $lib/logger.ts's Logger.warn()/error() (best-effort, never blocks the
 // caller) so the per-service Errors tab can show app-level failures
@@ -1050,6 +1110,8 @@ export type StorageVolume = typeof storageVolume.$inferSelect;
 export type S3Destination = typeof s3Destination.$inferSelect;
 export type ServiceVolume = typeof serviceVolume.$inferSelect;
 export type BackupRun = typeof backupRun.$inferSelect;
+export type CronJob = typeof cronJob.$inferSelect;
+export type CronJobRun = typeof cronJobRun.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;

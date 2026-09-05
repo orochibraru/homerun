@@ -27,9 +27,12 @@ any S3-compatible endpoint, AWS S3, MinIO, R2, Backblaze B2, etc., via a
 hand-rolled Signature V4 client (path-style addressing, single-request PUT, no
 multipart).
 
-**Bind-mount volumes only.** A Docker-managed volume's contents aren't visible
-on the host filesystem the same way, so it's rejected, backing those up would
-need a short-lived helper container to read the data out, which isn't built yet.
+**Both volume kinds are backed up.** A bind mount's contents are tarred straight
+off the host filesystem. A Docker-managed volume's contents aren't visible
+there, so Homerun mounts it read-only into a short-lived `alpine` helper
+container that tars it to stdout instead, that container is removed as soon as
+it exits, and a failure to read the volume fails the run with the helper's own
+stderr attached.
 
 Set a cron schedule alongside the S3 destination to back up automatically; the
 scheduler mirrors the [scheduled-redeploy](services.md#scheduled-redeploy) shape
@@ -46,8 +49,9 @@ still page all the way back through them instead of only ever seeing the newest
 handful.
 
 **There's no restore flow yet**, uploads only. Retrieve a backup from your S3
-destination directly (`aws s3 cp`, `rclone`, your provider's console) and
-restore it into the bind-mount path by hand.
+destination directly (`aws s3 cp`, `rclone`, your provider's console) and unpack
+it into the bind-mount path (or into a named volume, through a helper container
+of your own) by hand.
 
 ## Next steps
 

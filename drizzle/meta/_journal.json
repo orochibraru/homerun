@@ -133,6 +133,13 @@
 			"when": 1788605438275,
 			"tag": "0018_ancient_goblin_queen",
 			"breakpoints": true
+		},
+		{
+			"idx": 19,
+			"version": "7",
+			"when": 1788618716794,
+			"tag": "0019_messy_dorian_gray",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

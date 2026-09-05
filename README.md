@@ -42,6 +42,12 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   config as your own reusable template
 - **Storage volumes**: define bind-mount paths or Docker-managed volumes once,
   mount into one or more services
+- **Compose import**: paste a `docker-compose.yaml` and turn its services,
+  volumes and dependency order into Homerun rows, with an up-front preview of
+  everything that doesn't map across
+- **Smart service links**: point a new service at an existing Postgres, MySQL,
+  Redis, Mongo or RabbitMQ and get the connection URL (or JDBC URL, or one
+  variable per value) filled in for you, with names you can rename
 - **Live log streaming & a web terminal**: tail stdout/stderr or open an
   interactive shell into a running container, all from the browser
 - **Custom domains & SSL**: a second hostname per service, plus bring-your-own
@@ -60,8 +66,10 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **DNS automation**: optional Cloudflare or self-hosted Pangolin integration
   auto-manages a deployed service's DNS record for you
 - **In-app notifications**: a per-user feed of deploy/service lifecycle events
-- **Scheduled redeploys & S3 backups**: cron-style auto-redeploy per service,
-  cron-style bind-mount volume backups to any S3-compatible endpoint
+- **Scheduled redeploys, cron jobs & S3 backups**: cron-style auto-redeploy per
+  service, standalone cron jobs (a throwaway container, or an admin-only host
+  command) with their own run history, and cron-style volume backups, bind
+  mounts and Docker-managed volumes alike, to any S3-compatible endpoint
 - **REST API, OpenAPI docs, and a CLI**: everything above is also a typed JSON
   API (`/api/v1`), with a live Swagger UI and a proper
   [`homerun` CLI](packages/cli/README.md) built against the generated OpenAPI

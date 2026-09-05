@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CloudUpload, Gauge, RefreshCw } from "@lucide/svelte";
+	import { Clock, CloudUpload, Gauge, RefreshCw } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import EmptyState from "$lib/components/empty-state.svelte";
@@ -22,8 +22,8 @@
   <div class="mb-8">
     <h1 class="text-text text-xl font-semibold tracking-tight">Scheduling</h1>
     <p class="text-text-muted mt-1 text-sm">
-      The job queue plus cron redeploys, backups, and autoscale activity
-      across every service and volume, in one place.
+      The job queue plus cron redeploys, cron jobs, backups, and autoscale
+      activity across every service and volume, in one place.
     </p>
   </div>
 
@@ -63,6 +63,43 @@
               </div>
               <p class="text-text-subtle shrink-0 text-xs">
                 last run: {formatDate(service.cronLastRunAt)}
+              </p>
+            </a>
+          {/each}
+        </div>
+      {/if}
+    </section>
+
+    <!-- ═══ Cron jobs ═══ -->
+    <section>
+      <div class="mb-3 flex items-center gap-2">
+        <Clock class="text-accent size-4" />
+        <h2 class="eyebrow">Cron jobs</h2>
+      </div>
+      {#if data.cronJobs.length === 0}
+        <EmptyState
+          icon={Clock}
+          subtitle="Create one from the Cron Jobs page to run a container or a host command on a schedule."
+          title="No cron jobs are enabled"
+        />
+      {:else}
+        <div class="space-y-2.5">
+          {#each data.cronJobs as job (job.id)}
+            <a
+              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
+              href="{resolve('/cron-jobs')}/{job.id}"
+            >
+              <div class="min-w-0 flex-1">
+                <p class="text-text truncate text-sm font-semibold">
+                  {job.name}
+                </p>
+                <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+                  {job.schedule}
+                  · {job.kind === "exec" ? "host command" : `${job.image}:${job.tag}`}
+                </p>
+              </div>
+              <p class="text-text-subtle shrink-0 text-xs">
+                last run: {formatDate(job.lastRunAt)}
               </p>
             </a>
           {/each}

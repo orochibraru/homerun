@@ -1,8 +1,10 @@
+import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import type { JobDTO } from "$lib/dto/job-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import type { JobType } from "$lib/types";
+import { CronJobService } from "../cron-job.service.ts";
 import { DeploymentService } from "../deploy.service.ts";
 import {
 	DockerService,
@@ -12,6 +14,7 @@ import {
 import { S3BackupService } from "../s3-backup.service.ts";
 import {
 	backupJobPayload,
+	cronJobPayload,
 	type DockerCleanupAction,
 	deployJobPayload,
 	dockerCleanupJobPayload,
@@ -63,6 +66,20 @@ async function runBackup(entry: JobDTO): Promise<JobResult> {
 	return { key: result.key ?? null, sizeBytes: result.sizeBytes ?? null };
 }
 
+async function runCronJob(entry: JobDTO): Promise<JobResult> {
+	const { cronJobId, userId } = cronJobPayload.parse(entry.payload);
+	const job = await CronJobDTO.get(cronJobId, userId);
+	if (!job) {
+		throw new Error("The cron job was deleted before it ran.");
+	}
+
+	const outcome = await CronJobService.runJob(job);
+	if (!outcome.success) {
+		throw new Error(outcome.error ?? "The cron job failed.");
+	}
+	return { exitCode: outcome.exitCode };
+}
+
 function cleanupRunner(
 	action: DockerCleanupAction,
 	all: boolean,
@@ -90,6 +107,7 @@ async function runDockerCleanup(entry: JobDTO): Promise<JobResult> {
 
 export const jobHandlers: Record<JobType, JobHandler> = {
 	backup: runBackup,
+	cron_job: runCronJob,
 	deploy: runDeploy,
 	docker_cleanup: runDockerCleanup,
 };

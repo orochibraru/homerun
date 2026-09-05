@@ -70,9 +70,12 @@ subsection below.
 `tests/unit/<package>/`, not next to the source files they cover
 (`tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`, etc.).
 `tests/unit/app/` covers the SvelteKit app itself, a couple of component tests
-plus plain server modules (`long-request.test.ts`, see Long-running requests
-below); it's the thinnest of the four by far, most of `src/` is still only
-covered by `tests/integration/`.
+plus the pure modules under `$lib` that are worth pinning down directly
+(`long-request.test.ts`, see Long-running requests below; `queue.test.ts`;
+`toast.test.ts`; `compose-import.test.ts`; `service-link.test.ts`;
+`deploy-phases.test.ts`; `command-parse.test.ts`) : anything that's a real
+transform with no DB or Docker dependency belongs here rather than in
+`tests/integration/`, which is still where most of `src/` is exercised.
 
 Run everything: `bun run test` (bare `bun test` also works, no wrapper script —
 `bunfig.toml`'s `[test].preload` handles the rest). Scoped: `bun run test:unit`,
@@ -465,6 +468,12 @@ yet built).
 - `backup-run-dto.ts`, `BackupRunDTO`: `create`/`finish`/`listForVolume`/
   `listForUser`/`listForUserPaged` (joins in the volume's name), one row per
   backup attempt, the history behind `/backups`.
+- `cron-job-dto.ts`, `CronJobDTO`: `get`/`list`/`listPaged`/`listEnabled`
+  (unscoped by user, for the scheduler tick, same precedent as
+  `ServiceDTO.listCronEnabled`)/`create`/`update`/ `delete`, and
+  `cron-job-run-dto.ts`, `CronJobRunDTO`:
+  `create`/`finish`/`listForJob`/`listForUser` (joins in the job's name), one
+  row per cron job attempt with its captured output. See Cron jobs below.
 - `build-cache-registry-dto.ts`, `BuildCacheRegistryDTO`:
   `get`/`list`/`listPaged`/`create`/`delete`, a per-user registry credential a
   git-build pulls its `--cache-from` image from and pushes fresh layers back to,
@@ -688,11 +697,12 @@ in `(protected)/+layout.svelte`'s nav array, color-coded per category, see
 Appearance preferences below for the per-user "single accent color" override):
 
 - **Workspace**: **Overview** (dashboard stats + recent deployments),
-  **Services**, **Projects**, **Templates**.
+  **Services**, **Projects**, **Templates**, **Cron Jobs** (user-defined
+  scheduled tasks, see Cron jobs below).
 - **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",
   see S3 backups below), **S3 Destinations** (reusable, named backup targets),
   **Remote Hosts**, **Scheduling** (one instance-wide view of every cron
-  redeploy, backup schedule, and the autoscale config).
+  redeploy, enabled cron job, backup schedule, and the autoscale config).
 - **Integrations**: **Git Providers**, **Build Cache** (registry credentials for
   cross-build cache reuse, see Git-based builds below), **API Docs**.
 - **Administration**: **Users** (admin-only), **Settings** (admin-only),
@@ -737,6 +747,9 @@ of the dashboard banner deep-linking into `/settings`.
   the service's own name. `load` also now calls `allowLongRequest(platform)` (it
   didn't before, see Server-side list pagination above for the status-sync fix
   that came with it and Long-running requests below for why that matters).
+- `import/+page.svelte`, paste a compose file, preview what it maps onto, then
+  create (and optionally deploy) the stack : see Compose import below. Reached
+  from the "Import compose" button next to "Deploy a Service" on the list.
 - `new/+page.svelte`, click-config create form, a 4-step wizard (Basic info /
   Networking / Environment / Compute, one `<form>` throughout, steps hidden via
   a CSS class rather than `{#if}` so field state survives navigating between
@@ -787,15 +800,18 @@ of the dashboard banner deep-linking into `/settings`.
   save-as-template, auto-redeploy cron schedule, danger-zone delete,
   image/git/registry, port/network, and cpu/memory/autoscale fields all moved to
   their own tabs, see Source/Networking/Compute above)
-- `[serviceId]/deployments/[deploymentId]/progress/+server.ts`, polled by the
-  Overview tab while a deploy is in flight; returns `{log, status}` JSON. The
-  client pre-generates the deployment id itself (`crypto.randomUUID()`, set on
-  the form via `formData.set("deploymentId", ...)` in `use:enhance`'s pre-submit
-  callback) so it can start polling _before_ the deploy request even resolves.
-  Polling is status-driven (stops once the deployment reaches a terminal
-  status), which is also what makes resuming the progress view after a
-  mid-deploy page reload work, `onMount` checks `svc.currentStatus` and resumes
-  polling the latest deployment if it's still in-flight.
+- `[serviceId]/deployments/[deploymentId]/events/+server.ts`, the SSE stream the
+  Overview tab listens on while a deploy is in flight (see Live progress below),
+  and `.../progress/+server.ts`, the older `{log, status}` JSON endpoint, now
+  the client's fallback when the stream can't be held open. The client
+  pre-generates the deployment id itself (`crypto.randomUUID()`, set on the form
+  via `formData.set("deploymentId", ...)` in `use:enhance`'s pre-submit
+  callback) so it can start listening _before_ the deploy request even resolves,
+  which is why the stream waits for the row instead of 404ing. Both are
+  status-driven (they end once the deployment reaches a terminal status), which
+  is also what makes resuming the progress view after a mid-deploy page reload
+  work, `onMount` checks the latest deployment's status and `svc.currentStatus`
+  and reattaches if either is still in-flight.
 
 `src/routes/(protected)/projects/`, `templates/`, `storage/` mirror this pattern
 (list + `new/` create route + `[id]` detail where applicable). `system-logs/`
@@ -1149,6 +1165,188 @@ know which path produced the image. Returns
 decide how to surface failure (a SvelteKit `fail()`, a JSON error body, a
 scheduler log line). Don't reimplement this inline in a new call site; extend
 the shared method instead.
+
+### Compose import (`$lib/compose-import.ts`, `$lib/services/compose-import.service.ts`, `(protected)/services/import/`)
+
+Paste a `docker-compose.yaml`, get Homerun rows. Two halves, deliberately split:
+`$lib/compose-import.ts` is a **pure parser** (the `yaml` package, no DB, no
+Docker) turning compose text into a `ComposeImportPlan`
+(`services: ComposeServiceDraft[]`, plus file-level `warnings`/`networkNames`/
+`volumeNames`), covered directly by `tests/unit/app/compose-import.test.ts`;
+`compose-import.service.ts` is the row-creating half (`ComposeImportService`, a
+plain instance singleton) that turns a plan into `ProjectDTO`/`ServiceDTO`/
+`StorageVolumeDTO`/`ServiceVolumeDTO` rows. The route
+(`services/import/+page.server.ts`) has a `preview` action (parse, return the
+plan) and an `import` action that **re-parses the pasted text server-side**
+rather than trusting a plan round-tripped through the client.
+
+What maps: `image` (split via `splitImageRef`, which handles a registry port and
+strips a digest), `environment` in both the map and `KEY=VALUE` list forms,
+`ports`/`expose` (the _container_ side; `parsePortEntry` handles
+`"8080:80/udp"`, `"127.0.0.1:8080:80"`, a bare number, and the long
+`{target, protocol}` form), `restart` (`on-failure:3` → `on-failure`), `volumes`
+(short and long syntax), `depends_on`, `network_mode: host`, `container_name`,
+`deploy.resources.limits.cpus`/`memory` (and the legacy `cpus`/`mem_limit`).
+Everything else is a **warning on the preview, not a silent drop**: `build:`,
+`command`, `entrypoint`, `healthcheck`, `env_file`, `labels`, capabilities,
+devices, `privileged`, secrets/configs, top-level extra networks, relative bind
+mounts (Homerun needs an absolute host path), anonymous volumes, and the host
+side of every port mapping.
+
+Two mapping decisions worth not re-litigating: **`dnsResolvable` is true only
+when the compose service published a host port** (`ports:`), false when it only
+`expose`d one, which is the closest honest translation of "this one was meant to
+be reachable from outside"; and **one compose file maps onto one Homerun
+project**, since a project already _is_ a Docker network here, so a file's own
+multiple `networks:` can't be reproduced and says so in a warning.
+
+`orderByDependencies` topologically sorts the drafts (falling back to file order
+on a cycle rather than throwing), which is what makes "Import and deploy" queue
+the stack in `depends_on` order : the last service is passed to
+`DeploymentService.enqueueStackDeploy` as the primary and the rest as its
+dependency chain, reusing the template-links machinery rather than a second
+ordering implementation. Storage volumes are de-duplicated against the user's
+existing ones by `(kind, source)`, so importing two files that share a named
+volume mounts the same row twice instead of creating a duplicate.
+
+### Smart service links on create (`$lib/service-link.ts`, `service-link-picker.svelte`)
+
+The Environment step of `services/new` has a "Link a service" picker next to
+"Paste .env": pick any service the user already owns (**regardless of project**,
+which is the whole point : every bridge-mode service is on the shared network
+and reachable at `<slug>:<port>` anyway, so linking is purely about generating
+the env vars, there's no networking to set up) and it writes connection env rows
+into the existing key/value editor.
+
+`$lib/service-link.ts` is a pure, tested module
+(`tests/unit/app/service-link.test.ts`), no DB or Docker:
+`detectLinkEngine(image)` matches the image ref against a small table (postgres
+incl. timescale/postgis, mysql/percona, mariadb, mongo, redis/valkey/dragonfly,
+rabbitmq, else `generic`), `credentialsFor` reads that engine's own conventional
+env vars off the linked service's stored `envVars`
+(`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`, `MYSQL_*`/`MARIADB_*`
+including the root-password fallback, `MONGO_INITDB_*`, `REDIS_PASSWORD`,
+`RABBITMQ_DEFAULT_USER`/`_PASS`), and
+`buildLinkEnv({format, prefix, target, urlKey})` produces the rows. Three
+formats: `"url"` (a URI, `postgres://user:pass@slug:5432/db`), `"jdbc"`
+(relational engines only, credentials as query params, `supportsJdbc` on the
+engine gates the option), and `"vars"`
+(`<PREFIX>_HOST`/`_PORT`/`_USER`/`_PASSWORD`/`_DB`, only emitting the ones that
+exist). Every key name is a **default, not a rule**: the picker exposes the URL
+variable name and the variable prefix as editable inputs
+(`defaultUrlKey`/`defaultVarPrefix`, e.g. `POSTGRES_URL` / `POSTGRES`, or
+`<SLUG>_URL` / `<SLUG>` for a generic service), which is what the TODO item
+asked for. Values are URL-encoded, so a password with a space or an `@` survives
+the round trip.
+
+The picker merges into `envRows` through the same `mergeEnvRows` helper
+`EnvPasteButton` uses, so an existing key is overwritten in place rather than
+duplicated. It's a preview-then-add dialog, not an async mutation, which is why
+it's one of the documented `toast.success` exceptions rather than a promise
+toast.
+
+### Live progress: SSE, streams, and why not WebSockets
+
+**This stack has no WebSocket route API.** SvelteKit 2.70 (the latest stable,
+checked) has no `socket`/upgrade export for `+server.ts`, and grep confirms the
+string "websocket" doesn't appear anywhere in the installed `@sveltejs/kit`;
+`@orochibraru/svelte-smol` is ready for one (`getHandler()` forwards a
+`server.websocket()` to `Bun.serve`, printing "WebSocket: disabled" when the
+framework doesn't provide one), so the gap is SvelteKit's, not the adapter's.
+Kit 3.0.0-next exists but adopting a `next` major for this isn't worth it. So
+the transport ladder here is, in order of preference:
+
+- **A `ReadableStream` response** for one-way server→client byte streams that
+  aren't event-shaped : container logs (`services/[serviceId]/logs/+server.ts`)
+  and the terminal's output channel. Already push-based, **not polling**,
+  despite what TODO.md assumed.
+- **Server-sent events** for one-way server→client _event_ streams : deploy
+  progress (below). `text/event-stream` is the one content type
+  `@orochibraru/svelte-smol` auto-exempts from Bun's `idleTimeout`, so an SSE
+  route needs no `allowLongRequest()` call, which is a real advantage over a
+  bare chunked stream here.
+- **Chunked HTTP both ways** where a client→server channel is genuinely needed :
+  only the web terminal, which already does this (`terminal/[sessionId]/input`),
+  and which needed its own raw `Bun.connect()` hijack anyway (see Web terminal).
+- **Plain REST/form actions** for everything else. There's no RPC layer and
+  nothing here wants one : the REST API is the CLI's contract and the OpenAPI
+  document's source of truth, and a second, differently-shaped call surface
+  would double the maintenance for no capability gain. SvelteKit's own remote
+  functions are the "RPC" this codebase would reach for first if it wanted one,
+  and that's already tracked as its own TODO item.
+
+**Deploy progress is SSE** (`$lib/server/deploy-progress-stream.ts`, served by
+`services/[serviceId]/deployments/[deploymentId]/events/+server.ts`), replacing
+the Overview tab's 1s `fetch` poll. The server-side loop still reads the
+`deployment` row on an interval, but only _pushes_ when the serialized snapshot
+actually changes, so a client sees a new line the moment it lands instead of up
+to a second later, over one connection instead of one request per second. Two
+details are load-bearing: the stream **waits for the deployment row to appear**
+(up to 60s) instead of 404ing, because the Overview tab starts listening before
+its own deploy POST has been handled and an `EventSource` treats an HTTP error
+as fatal and never reconnects; and the client's `onerror` **falls back to the
+old polling loop** (`pollProgress`, still there, still the resilient path)
+rather than leaving the panel stuck, for a buffering proxy or a dropped
+connection. The JSON `progress/+server.ts` endpoint stays for exactly that
+fallback.
+
+**Deploy phases** (`$lib/deploy-phases.ts`) give that panel structure instead of
+a raw log tail: `deployService` appends a marker line (`phaseLine(id)`, rendered
+`▸ Fetching image`) as it enters each of `config`/`volumes`/`image`/`container`/
+`network`/`ready`, and `deployPhaseStates(log, status)` derives per-phase
+`done`/`active`/`failed`/`pending` from the last marker in the log plus the
+deployment's status. The markers are ordinary log lines, so the deployment
+history's raw-log panel keeps working untouched and nothing else in the pipeline
+had to learn about phases. There is deliberately **no "checking container
+health" phase**: health-gated rollout isn't built (see Planned features), and a
+phase that always passes instantly would be a lie.
+
+### Cron jobs (`cron_job`/`cron_job_run` tables, `CronJobDTO`, `$lib/services/cron-job.service.ts`, `/cron-jobs`)
+
+A user-defined scheduled task that isn't tied to a service, unlike
+`service.cronSchedule` (which redeploys an existing service). Two kinds:
+
+- **`kind: "image"`** runs a throwaway container via `DockerService.runOneOff`
+  (see the one-off mixin under Docker integration): image + tag, an optional
+  command override, env vars, and optional private-registry credentials
+  (`registryPasswordEnc`, same AES-256-GCM scheme as everything else). The
+  command override is parsed by `$lib/command-parse.ts`'s `parseCommand`, a
+  small pure tokenizer (quotes group, backslash escapes, and a leading `[` is
+  taken as Docker-style JSON exec form), tested in
+  `tests/unit/app/command-parse.test.ts`.
+- **`kind: "exec"`** runs `/bin/sh -c <command>` where the app itself runs, via
+  `execFile` with a real `timeout`. **Admin-only, enforced in
+  `$lib/server/cron-job-form.ts`** (shared by both the create and edit actions,
+  so neither can skip it) rather than only hidden in the UI : it inherits this
+  process's own privileges. That's the same class of power the Docker socket
+  already gives any user of this app, but it's a different blast radius (the
+  app's own filesystem/credentials), hence the gate.
+
+`CronJobService.runJob(job)` is the single entry point both the scheduler and
+the manual "Run now" funnel through, and it writes one `cron_job_run` row per
+attempt on every path including a thrown runner, same shape as
+`BackupService.runBackup`. A run keeps `exitCode`, `success`, `error`, and the
+captured stdout+stderr (`CronJobRunDTO.finish` keeps the **last** 64k characters
+rather than the first, since a failure's useful output is at the end).
+
+Wiring follows the existing patterns exactly rather than inventing anything:
+`JobType` gains `"cron_job"` (`$lib/types.ts` + `JOB_TYPE_LABELS`), with its own
+zod payload (`queue/payloads.ts`) and handler (`queue/handlers.ts`), an
+`enqueueCronJobRun` helper (`cron-job-queue.ts`, mirroring `backup-queue.ts`)
+keyed `cron_job:<id>` for both dedupe and lock so one job never runs twice
+concurrently, and a fourth `BaseScheduler` subclass
+(`cron/cron-job-scheduler.ts`, composed into `CronService` and started from
+`hooks.server.ts`) with the same due-check plus same-minute double-fire guard as
+the redeploy and backup schedulers. Routes are the usual list/new/detail trio
+(`/cron-jobs`, `new/`, `[cronJobId]/`) sharing one form component
+(`$lib/components/cron-job-fields.svelte`) and one server-side parser
+(`$lib/server/cron-job-form.ts`); enabled jobs also render on the Scheduling
+page next to cron redeploys and backups.
+
+**Not remote-host aware**: an image job always runs on the local daemon
+(`runOneOff` takes a `remote` param, but nothing sets it here yet). **No per-run
+streaming either**: output is captured and shown once the run finishes, which is
+why a long-running job's page shows a spinner rather than a live tail.
 
 ### Template links (`template_link` table, `TemplateLinkDTO`, `$lib/services/template-links.ts`)
 
@@ -1529,12 +1727,12 @@ is create-only.
 ### Job queue and worker (`job` table, `JobDTO`, `$lib/services/queue.service.ts`, `$lib/services/queue/`)
 
 Every long-running, side-effecting operation in this app, deploys (including git
-builds), volume backups, and host-wide Docker cleanups, goes through one
-DB-backed queue drained by one in-process worker, instead of running inline in
-whichever request or scheduler tick happened to trigger it. That's what makes
-"five pushes in a minute" collapse into one build, what stops two deploys of the
-same service racing each other, and what keeps a `docker prune` from sweeping
-layers out from under a running build.
+builds), volume backups, user-defined cron jobs, and host-wide Docker cleanups,
+goes through one DB-backed queue drained by one in-process worker, instead of
+running inline in whichever request or scheduler tick happened to trigger it.
+That's what makes "five pushes in a minute" collapse into one build, what stops
+two deploys of the same service racing each other, and what keeps a
+`docker prune` from sweeping layers out from under a running build.
 
 - **`job` table / `JobDTO`** (`src/lib/dto/job-dto.ts`) is the queue itself.
   Beyond the obvious (`type`, `payload` jsonb, `status`, `attempts`/
@@ -1589,14 +1787,15 @@ layers out from under a running build.
   succeed/retry/permanently-fail decision without an interval.
 - **`$lib/services/queue/handlers.ts`** maps a `JobType` to its handler
   (`deploy` → `DeploymentService.deployService`, `backup` →
-  `S3BackupService.backupVolume`, `docker_cleanup` → the matching
-  `DockerService.prune*`), each parsing its own payload through a zod schema in
-  `queue/payloads.ts` rather than casting : a payload written by an older
-  version of the app fails as a clean job error instead of deep inside
-  dockerode. Throwing is how a handler reports failure. Kept in its own module
-  so `QueueService` stays importable from `deploy.service.ts` without an import
-  cycle (`handlers` → `deploy.service` → `queue.service`, and `worker` →
-  `handlers`, so `hooks.server.ts` imports the worker directly).
+  `S3BackupService.backupVolume`, `cron_job` → `CronJobService.runJob`,
+  `docker_cleanup` → the matching `DockerService.prune*`), each parsing its own
+  payload through a zod schema in `queue/payloads.ts` rather than casting : a
+  payload written by an older version of the app fails as a clean job error
+  instead of deep inside dockerode. Throwing is how a handler reports failure.
+  Kept in its own module so `QueueService` stays importable from
+  `deploy.service.ts` without an import cycle (`handlers` → `deploy.service` →
+  `queue.service`, and `worker` → `handlers`, so `hooks.server.ts` imports the
+  worker directly).
 
 **What changed at each trigger point.** `DeploymentService.deployService()` is
 unchanged as the actual pipeline and is still the single source of truth; what
@@ -1673,21 +1872,22 @@ passing unchanged through the queue, and the policy layer by
 ### Schedulers: cron redeploy, S3 backup, autoscale migration (`src/lib/services/cron.service.ts`, `src/lib/services/cron/`)
 
 `CronService` (`cron.service.ts`) is a facade composing one instance each of
-three independent scheduler classes under `services/cron/`,
-`CronRedeployScheduler`, `BackupScheduler`, `AutoscaleScheduler`, every one
-extending `BaseScheduler` (`cron/base-scheduler.ts`), which owns the shared "60s
-`setInterval`, HMR-safe via a `globalThis`-backed registry keyed per subclass
-(same pattern as the db singleton in `db/lib.ts`), idempotent `start()`"
-boilerplate; a subclass only implements its own `tick()` plus a short `label`
-for its log lines.
-`CronService.startCronScheduler()`/`startBackupScheduler()`/`startAutoscaleScheduler()`
-(all called from `hooks.server.ts`'s `init()`) just call `.start()` on the
-composed instance, unlike `DockerService` (see Docker integration above), these
-three schedulers never call into each other, so plain composition is the fit
-here, not the mixin-merge pattern. `cron/cron-expression.ts` holds the small
-dependency-free 5-field cron matcher (wildcard/number/range/list/step, minute
-resolution, server-local time, no external cron package, matching this app's
-generally dependency-light posture) as plain exported functions
+four independent scheduler classes under `services/cron/`,
+`CronRedeployScheduler`, `BackupScheduler`, `CronJobScheduler` (see Cron jobs
+above), `AutoscaleScheduler`, every one extending `BaseScheduler`
+(`cron/base-scheduler.ts`), which owns the shared "60s `setInterval`, HMR-safe
+via a `globalThis`-backed registry keyed per subclass (same pattern as the db
+singleton in `db/lib.ts`), idempotent `start()`" boilerplate; a subclass only
+implements its own `tick()` plus a short `label` for its log lines.
+`CronService.startCronScheduler()`/`startBackupScheduler()`/
+`startCronJobScheduler()`/`startAutoscaleScheduler()` (all called from
+`hooks.server.ts`'s `init()`) just call `.start()` on the composed instance,
+unlike `DockerService` (see Docker integration above), these schedulers never
+call into each other, so plain composition is the fit here, not the mixin-merge
+pattern. `cron/cron-expression.ts` holds the small dependency-free 5-field cron
+matcher (wildcard/number/range/list/step, minute resolution, server-local time,
+no external cron package, matching this app's generally dependency-light
+posture) as plain exported functions
 (`parseCronSchedule`/`cronMatches`/`sameMinute`), pure and stateless, so it
 stays outside the class hierarchy, same "pure transform doesn't need an
 instance" precedent as `docker/labels.ts`;
@@ -1837,14 +2037,20 @@ S3, MinIO, R2, B2, etc.) via path-style addressing.
 `S3BackupService.backupVolume(volume)` (a singleton instance,
 `export const S3BackupService = new S3BackupServiceClass()`) is the callable
 entry point every route/scheduler uses; it PUTs the tarball as
-`<prefix/>volumeName-<timestamp>.tar.gz`. **Bind-mount volumes only**,
-`kind: "volume"` (Docker-managed) is rejected, since its content isn't visible
-on the host filesystem the same way; would need a short-lived helper container
-to read it out (not built). `BackupScheduler`
-(`services/cron/backup-scheduler.ts`) mirrors `CronRedeployScheduler` exactly
-(same 60s-tick / `BaseScheduler` / `cronMatches` / last-run double-fire-guard
-shape, see the scheduler section above), the two are independent classes, not
-shared code, since they operate on different DTOs. No restore flow, upload-only.
+`<prefix/>volumeName-<timestamp>.tar.gz`. **Both volume kinds are supported**:
+`kind: "bind"` is tar'd straight off the host (`execFile("tar", ...)`), and
+`kind: "volume"` (Docker-managed, whose content isn't visible on the host
+filesystem the same way) is mounted read-only into a throwaway `alpine:3`
+container that tars it to stdout, via `DockerService.runOneOff` (see the one-off
+mixin under Docker integration below). Both paths produce the same bytes, so
+only `BackupService`'s private `archive()` branches, `attemptBackup` and every
+caller are kind-agnostic. A non-zero exit from the helper fails the run with the
+helper's own stderr attached, rather than uploading a truncated/empty tarball.
+`BackupScheduler` (`services/cron/backup-scheduler.ts`) mirrors
+`CronRedeployScheduler` exactly (same 60s-tick / `BaseScheduler` / `cronMatches`
+/ last-run double-fire-guard shape, see the scheduler section above), the two
+are independent classes, not shared code, since they operate on different DTOs.
+No restore flow, upload-only.
 
 ### Data model (`src/lib/server/db/schema.ts`)
 
@@ -1913,6 +2119,17 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   one place both the scheduler and the manual action funnel through, so every
   path gets a log entry including validation failures. Backs `/backups`;
   `storage_volume.backupLastRunAt` alone only ever remembered a timestamp.
+- `cron_job` (`CronJobDTO`), a user-defined scheduled task, independent of
+  `service.cronSchedule`: `name`/`description`/`schedule` (5-field cron)/
+  `enabled` (off by default), `kind` (`"image"` | `"exec"`), `image`/`tag`/
+  `command` (a shell command for `"exec"`, an optional override for `"image"`),
+  `envVars` (JSON), `registryUrl`/`registryUsername`/`registryPasswordEnc`
+  (AES-256-GCM, same scheme as `service.registryPasswordEnc`), `timeoutSeconds`
+  (default 900), `lastRunAt`. See Cron jobs above.
+- `cron_job_run` (`CronJobRunDTO`), one row per cron job attempt (scheduled or
+  manual "Run now"): `startedAt`/`finishedAt`, `success` (null while running),
+  `exitCode`, `output` (stdout+stderr, last 64k characters), `error`. Same shape
+  as `backup_run`, plus what the command printed.
 - `build_cache_registry` (`BuildCacheRegistryDTO`), a per-user container
   registry credential (`registryUrl` with no scheme, `username`, `passwordEnc`)
   used only as a build cache source/destination, not as a deploy image source,
@@ -2044,7 +2261,8 @@ instantiates once. A concern that calls another's method does it via real
 inheritance (`this.inspectStatus(...)`), which is also why the chain has a
 load-bearing order: networks before containers (`createAndStartContainer` calls
 `this.connectToProjectNetwork`), containers before reconcile
-(`syncServiceStatus` calls `this.inspectStatus`), see the ordering comment in
+(`syncServiceStatus` calls `this.inspectStatus`), containers before one-off
+(`runOneOff` calls `this.pullImage`), see the ordering comment in
 `docker.service.ts` before reordering the chain.
 
 - `client.ts`, HMR-safe `dockerode` singleton, socket path from config; not a
@@ -2137,6 +2355,21 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
   `prune*`/`pruneBuilder` calls. → `DockerService.getCleanupPreview`/
   `pruneContainers`/`pruneImages`/`pruneNetworks`/`pruneBuildCache`/
   `pruneVolumes`/`pruneSystem`.
+- `one-off.ts`, `DockerOneOffMixin`, `runOneOff(params)`: pull-if-missing,
+  create, start, wait, collect stdout/stderr, remove, for the two places that
+  need a container as a _tool_ rather than as a service (reading a
+  Docker-managed named volume out for a backup, see S3 backups above; running a
+  user-defined cron job's image, see Cron jobs below). Needs the container mixin
+  ahead of it in the chain (`this.pullImage`). **`Tty` is deliberately false
+  here**, unlike `createAndStartContainer`, so Docker's own stream framing keeps
+  stdout and stderr apart : a caller reading a binary tarball off stdout must
+  not get stderr interleaved into it, which is exactly what a TTY container
+  would do. `timeoutMs` kills the container rather than leaving it running, and
+  the result carries `timedOut` so the caller can say so; the container is
+  removed in a `finally` either way. The attached socket is `destroy()`ed
+  explicitly once the run finishes : without that it stays open and keeps Bun's
+  event loop alive, leaking one connection per run in a long-lived server. →
+  `DockerService.runOneOff`.
 
 `src/lib/services/secrets.ts` (not under `docker/`, it's a generic AES-256-GCM
 utility, not Docker-specific, also used by SMTP/OAuth/S3-backup secrets),
@@ -2929,8 +3162,9 @@ re-litigating design decisions.
   gating whether a newly-deployed container receives traffic, blue-green style,
   keep the old container alive/routable until the new one passes, roll back
   (never route to it) if it doesn't.
-- **Storage**: S3 backup covers bind-mount volumes only (see below), no
-  named-volume backup, no restore flow.
+- **Storage**: S3 backup now covers both volume kinds (a Docker-managed named
+  volume is read out through a throwaway helper container, see S3 backups
+  above), but there's still no restore flow, upload only.
 - **Observability**: system stats beyond the dashboard's host-level
   CPU/RAM/GPU/disk, no per-container `docker stats` view yet (swarm mode's
   `inspectSwarmServiceStatus` aggregates task state, not per-task resource

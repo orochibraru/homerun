@@ -39,8 +39,9 @@ limitation for services that opt in.
   [Remote hosts](remote-hosts-and-agent.md#real-limitations-not-oversights).
 - **Git-based builds** clone by branch/tag only, a bare commit SHA doesn't work,
   and have no webhook/auto-deploy-on-push yet.
-- **S3 backups** cover bind-mount volumes only (no Docker-managed volumes), and
-  there's no restore flow, upload only.
+- **S3 backups** cover both volume kinds now (a Docker-managed volume is read
+  out through a short-lived helper container), but there's still no restore
+  flow, upload only.
 - **`packages/installer/swarm-join.sh`** (joining a remote box to an existing
   swarm) hasn't been run against a real second host or a real swarm yet, unlike
   the rest of the installer, which has (`--mode=agent`/`--mode=full`, see
@@ -53,6 +54,19 @@ limitation for services that opt in.
 - **Cloudflare and Pangolin DNS automation** are new and haven't been exercised
   against a real account yet, verify the first sync by hand once you've
   configured one. See [Services: DNS automation](services.md#dns-automation).
+- **Compose import** maps what Homerun has an equivalent for and tells you what
+  it dropped, it is not a compose runtime: `build:`, `command:`, healthchecks,
+  capabilities, `env_file`, secrets/configs and host port publishing all come
+  back as warnings on the preview rather than being applied. See
+  [Services: importing a compose file](services.md#importing-a-compose-file).
+- **Host command cron jobs** run with this app's own privileges (as root inside
+  the app container, on the app's own filesystem, not the host's, when Homerun
+  itself runs in a container). They're admin-only for that reason. See
+  [Services: cron jobs](services.md#cron-jobs).
+- **Live progress uses server-sent events, not WebSockets.** SvelteKit 2 has no
+  WebSocket route API, so deploy progress and container logs are one-way server
+  push over HTTP instead. Nothing in the dashboard needs a client-to-server
+  socket today; the web terminal, which does, uses its own chunked-HTTP channel.
 
 ## Planned, not yet built
 

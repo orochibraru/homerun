@@ -18,4 +18,4 @@ export type JobStatus =
 	| "failed"
 	| "cancelled";
 
-export type JobType = "backup" | "deploy" | "docker_cleanup";
+export type JobType = "backup" | "cron_job" | "deploy" | "docker_cleanup";

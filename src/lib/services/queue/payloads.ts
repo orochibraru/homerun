@@ -7,6 +7,11 @@ export const deployJobPayload = z.object({
 	userId: z.string(),
 });
 
+export const cronJobPayload = z.object({
+	cronJobId: z.string(),
+	userId: z.string(),
+});
+
 export const backupJobPayload = z.object({
 	userId: z.string(),
 	volumeId: z.string(),

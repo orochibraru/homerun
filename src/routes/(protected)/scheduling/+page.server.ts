@@ -1,3 +1,4 @@
+import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { JobDTO } from "$lib/dto/job-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
@@ -16,6 +17,7 @@ export const load = async ({ parent, locals }) => {
 		settings,
 		activeJobs,
 		recentJobs,
+		cronJobs,
 	] = await Promise.all([
 		ServiceDTO.listWithProjectNames(user.id),
 		StorageVolumeDTO.list(user.id),
@@ -27,6 +29,7 @@ export const load = async ({ parent, locals }) => {
 		locals.isAdmin ? InstanceSettingsDTO.get() : null,
 		JobDTO.listActive(user.id),
 		JobDTO.listRecent(user.id),
+		CronJobDTO.list(user.id),
 	]);
 
 	const remoteHostNames = new Map(remoteHosts.map((h) => [h.id, h.name]));
@@ -71,6 +74,7 @@ export const load = async ({ parent, locals }) => {
 			: null,
 		autoscaleServices,
 		backupVolumes,
+		cronJobs: cronJobs.filter((j) => j.enabled).map((j) => j.toJSON()),
 		cronServices,
 		isAdmin: locals.isAdmin,
 		recentJobs: recentJobs.map(({ job: entry }) => entry.toJSON()),
