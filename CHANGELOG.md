@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/orochibraru/homerun/compare/v1.0.6...v1.0.7) (2026-09-05)
+
+### Features
+
+- filters & pagination
+  ([04fef9b](https://github.com/orochibraru/homerun/commit/04fef9b590645a33e15fa15b1c9925fbf60f73a1))
+
 ## [1.0.6](https://github.com/orochibraru/homerun/compare/v1.0.5...v1.0.6) (2026-09-05)
 
 ### Features
