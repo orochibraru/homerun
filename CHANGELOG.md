@@ -1,3 +1,10 @@
+## [1.0.9](https://github.com/orochibraru/homerun/compare/v1.0.8...v1.0.9) (2026-09-05)
+
+### Features
+
+- remote functions
+  ([1eae07e](https://github.com/orochibraru/homerun/commit/1eae07ef9f3a6b690c61c6bdeac95b3964aef0d9))
+
 ## [1.0.8](https://github.com/orochibraru/homerun/compare/v1.0.7...v1.0.8) (2026-09-05)
 
 ### Features
