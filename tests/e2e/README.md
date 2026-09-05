@@ -1,7 +1,7 @@
 # E2E tests
 
 Real Playwright tests driving a real Chromium browser against a real, built
-Homerun instance backed by a real, throwaway Postgres container — the one
+Homerun instance backed by a real, throwaway Postgres database — the one
 genuinely client-side-interactive gap neither `tests/unit/` (bun:test, no
 browser) nor `tests/integration/` (real HTTP/`fetch`, no browser, see that
 suite's own README's "Not covered by this suite") exercises. A prior session
@@ -11,11 +11,14 @@ harness" section); this rebuilds it from scratch rather than resurrecting
 anything.
 
 Requires `bun run build:app` run first (this suite doesn't build the app for
-you), a reachable Docker daemon (same as `tests/integration/`, for the throwaway
-Postgres container), and a Chromium build (`bunx playwright install chromium` if
-the first run reports one missing). Run with `bun run test:e2e`
-(`bunx playwright test` also works — not part of `bun run test`'s `bun test`
-invocation, Playwright is its own runner).
+you), a Postgres to run against, and a Chromium build
+(`bunx playwright install chromium` if the first run reports one missing).
+Postgres comes from `tests/integration/support/postgres.ts`, shared with that
+suite: a CI service container when `HOMERUN_TEST_POSTGRES_URL` is set (each run
+gets its own freshly-created database on it), otherwise a throwaway container
+this suite starts on the local Docker daemon. See that suite's README for the
+split. Run with `bun run test:e2e` (`bunx playwright test` also works — not part
+of `bun run test`'s `bun test` invocation, Playwright is its own runner).
 
 ## Why bootstrap runs as a separate Bun child process
 
@@ -47,7 +50,7 @@ suite twice concurrently on the same machine.
 
 `workers: 1`, `fullyParallel: false` — every spec file in this suite runs
 against the _same_ spawned app/database, not an isolated instance per file or
-per test, since spinning up a fresh Postgres container per spec would slow this
+per test, since resolving a fresh Postgres database per spec would slow this
 down considerably for little benefit here. Write specs with that in mind: create
 a fresh account (or otherwise-unique data) per spec file rather than assuming a
 clean slate, and see `bootstrap.spec.ts`'s own `test.describe.serial` for how to

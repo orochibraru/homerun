@@ -55,7 +55,7 @@ import { AGENT_TOKEN, TEST_AUTH_SECRET, TEST_BASE_DOMAIN } from "./config";
 import { createGitBuildFixture } from "./git-fixture";
 import { runMigrations } from "./migrate";
 import { getFreePort } from "./port";
-import { type PgContainer, startPostgresContainer } from "./postgres-container";
+import { startTestPostgres, type TestPostgres } from "./postgres";
 import { spawnAgent, startSocatProxy } from "./processes";
 import {
 	registerAgentRemoteHost,
@@ -88,7 +88,7 @@ function wantsIntegrationTests(): boolean {
 }
 
 if (wantsIntegrationTests()) {
-	let pg: PgContainer | undefined;
+	let pg: TestPostgres | undefined;
 	const stopFns: Array<() => Promise<void>> = [];
 	const rawProcs: ReturnType<typeof Bun.spawn>[] = [];
 
@@ -97,8 +97,8 @@ if (wantsIntegrationTests()) {
 			try {
 				assertAppIsBuilt();
 
-				stepLog("Starting a fresh, random-port Postgres container...");
-				pg = await startPostgresContainer();
+				stepLog("Resolving a fresh test database...");
+				pg = await startTestPostgres();
 
 				stepLog("Running migrations...");
 				await runMigrations(pg.databaseUrl);
@@ -202,7 +202,7 @@ if (wantsIntegrationTests()) {
 		// pg.stop() is async (awaits `docker stop`) : this handler can't await
 		// anything before exiting, so this fires the same command
 		// synchronously instead, best-effort.
-		if (pg) {
+		if (pg?.containerName) {
 			Bun.spawnSync(["docker", "kill", pg.containerName], {
 				stderr: "ignore",
 				stdout: "ignore",

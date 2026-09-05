@@ -1,14 +1,14 @@
 import { randomBytes } from "node:crypto";
 import process from "node:process";
 import { runMigrations } from "../../integration/support/migrate";
-import { startPostgresContainer } from "../../integration/support/postgres-container";
+import { startTestPostgres } from "../../integration/support/postgres";
 import { assertAppIsBuilt, spawnApp } from "../../integration/support/server";
 import { E2E_BASE_URL, E2E_PORT } from "./config";
 
 async function main(): Promise<void> {
 	assertAppIsBuilt();
 
-	const pg = await startPostgresContainer();
+	const pg = await startTestPostgres();
 	await runMigrations(pg.databaseUrl);
 
 	process.env.HOMERUN_DISABLE_AUTH_RATE_LIMIT = "1";

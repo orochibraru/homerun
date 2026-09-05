@@ -7,10 +7,12 @@ wrapper script. `tests/integration/support/setup.ts` is wired in natively via
 hooks (bun:test's own run-wide-fixture mechanism, not a bespoke
 top-level-await-plus-signal-handlers script) that, once per run:
 
-1. Start a fresh, throwaway `postgres:18-alpine` container on a random host port
-   (`support/postgres-container.ts`) — not a shared/fixed-port dev instance, so
-   two runs of this suite (two terminals, two CI jobs, a local run next to CI)
-   never collide.
+1. Resolve a fresh, empty Postgres database (`support/postgres.ts`) — from a CI
+   service container when `HOMERUN_TEST_POSTGRES_URL` is set, otherwise by
+   starting a throwaway `postgres:18-alpine` container on a random host port
+   (`support/postgres-container.ts`). Either way it's a database no other run
+   shares, so two runs of this suite (two terminals, two CI jobs, a local run
+   next to CI) never collide. See Postgres: service container vs. our own below.
 2. Run the real `drizzle/` migrations directly against it
    (`support/migrate.ts`), as an explicit, visible step — separate from (but
    consistent with) the spawned app's own idempotent boot-time migration.
@@ -28,11 +30,35 @@ this when the current `bun test` invocation actually includes an integration
 test file (an argv check in setup.ts) : `bun test tests/agent` (and
 `test:agent`/`test:cli`/`test:installer`) skip it entirely and stay fast.
 Requires a reachable Docker daemon and `socat` on `PATH` (`brew install socat` /
-`apt-get install -y socat`) ; wired into CI as-is,
-`.github/workflows/code_quality.yaml`'s `ts` job needs no `services:` block for
-Postgres any more (the suite manages its own container directly against the
-runner's own Docker daemon), just the `socat` install step and the same
-`bun run test` the fast suites already ran.
+`apt-get install -y socat`) — the deploy tests create real containers, so a
+Docker daemon is needed regardless of where Postgres comes from.
+
+## Postgres: service container vs. our own
+
+`support/postgres.ts` is the one entry point both this suite and `tests/e2e/`
+call, and it picks between two paths on a single signal,
+`HOMERUN_TEST_POSTGRES_URL`:
+
+- **Set** (what `.github/workflows/code_quality.yaml` does for both its
+  `ts-test` and `e2e` jobs, pointing at a job-level `services: postgres:`
+  container): connect to that server and `create database` a uniquely-named
+  per-run database on it, dropped again (`with (force)`) in teardown. Nothing is
+  `docker run` from inside the job, so the runner owns the container's lifecycle
+  and gates the job's steps on its own `pg_isready` health check instead of us
+  racing an inline `docker pull` against our own readiness budget — the exact
+  failure mode `support/postgres-container.ts`'s own comments document. A fresh
+  database name per run is what makes the workflow's `nick-fields/retry`
+  re-attempts meaningful: attempt 2 gets a genuinely empty database on the same
+  still-running service container, rather than inheriting attempt 1's
+  already-bootstrapped admin account.
+- **Unset** (local dev, the default): the previous behavior, a throwaway
+  `postgres:18-alpine` container on a random host port, torn down after the run.
+  Nothing to set up beyond a running Docker daemon.
+
+Pointing `HOMERUN_TEST_POSTGRES_URL` at any reachable Postgres works locally too
+(e.g. the `docker compose up -d` dev instance) — the per-run database is created
+and dropped on it, the server itself is never touched. The URL is the
+maintenance connection, so the role it names needs `CREATEDB`.
 
 **Real, previously-undiscovered production bugs found purely by building and
 running this suite** (not test-harness artifacts — all three were fixed at the

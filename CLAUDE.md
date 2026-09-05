@@ -85,6 +85,30 @@ invocation. `tests/integration/` is a separate suite with its own
 `bun test` entirely (see E2E browser tests below). `tests/README.md` is this
 section's counterpart living next to the code.
 
+**Where Postgres comes from, `HOMERUN_TEST_POSTGRES_URL`.**
+`tests/integration/support/postgres.ts`'s `startTestPostgres()` is the one entry
+point both `tests/integration/` and `tests/e2e/` resolve their database through,
+and it branches on that env var alone: **set** (CI, where
+`.github/workflows/code_quality.yaml`'s `ts-test` and `e2e` jobs each declare a
+job-level `services: postgres:` container) means connect to that server and
+`create database` a uniquely-named per-run database on it, dropped
+`with (force)` in teardown; **unset** (local dev, the default) means the
+original behavior, a throwaway `postgres:18-alpine` container this suite
+`docker run`s itself on a random host port (`support/postgres-container.ts`,
+still the fallback, not dead code). Two reasons for the CI half, both about the
+job no longer racing its own container: the runner pulls the service image and
+gates every step behind its `pg_isready` health check before our code runs at
+all (the inline `docker pull` eating the readiness budget on a cold runner is a
+real, previously-observed CI failure documented in `postgres-container.ts`), and
+a fresh database name per run is what makes the workflow's `nick-fields/retry`
+re-attempts meaningful — attempt 2 gets an empty database on the same
+still-running service container instead of inheriting attempt 1's
+already-bootstrapped admin account. The deploy tests still need a real Docker
+daemon either way; only Postgres moved. Verified live, both paths: the full
+integration suite and the full Playwright suite each pass against a stand-in
+service container (twice back to back, the retry case, no leaked databases) and
+against the local `docker run` fallback.
+
 **Vitest was tried and abandoned for this suite.** It fixed the `[test].timeout`
 bug above (real `hookTimeout`/`testTimeout` config) and gave each test file its
 own module registry (no more `mock.module` leaking across files). But

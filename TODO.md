@@ -15,10 +15,6 @@
 
 ## Medium
 
-- [ ] [CI/CD] Integration tests always fail in CI unless we restart manually.
-      This is caused by us starting our own containers within the job instead of
-      using the CI service containers. We need to refactor to use those if in CI
-      mode (CI=true)
 - [ ] [App] When creating a new service add possibility to link it to another
       even if it's outside of a project. When linking to something like Redis or
       Postgres let's be smart: offer to add an env variable to the main service
