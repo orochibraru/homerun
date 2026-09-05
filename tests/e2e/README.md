@@ -79,12 +79,16 @@ set in production.
       (`onboarding.spec.ts`)
 - [x] Sign-in (wrong password rejected, real password succeeds) and sign-out
       (`sign-in-out.spec.ts`)
-- [ ] Anything past onboarding (service create/deploy, the dashboard proper) —
-      not yet covered, and notably needs a reachable Docker socket from _inside_
-      the spawned app process for a real deploy, which this suite's bootstrap
-      doesn't currently wire up (`tests/integration/`'s own `spawnApp` doesn't
-      either, by design, that suite drives the API directly rather than through
-      a browser)
+- [x] The service-creation wizard's own submit path, both the success redirect
+      and a validation failure returning to step 1 (`service-wizard.spec.ts`)
+- [x] Remote functions (`remote-functions.spec.ts`): the dashboard's Host
+      Resources panel, the notification feed and the Scheduling page's job-queue
+      panel each resolving past their skeleton against real data, and a
+      mark-read/delete command updating the feed with no page reload
+- [ ] A real deploy — needs a reachable Docker socket from _inside_ the spawned
+      app process, which this suite's bootstrap doesn't currently wire up
+      (`tests/integration/`'s own `spawnApp` doesn't either, by design, that
+      suite drives the API directly rather than through a browser)
 
 Extend `bootstrap.spec.ts` or add new files here rather than duplicating
 `tests/integration/`'s own API-level coverage — this suite's job is specifically

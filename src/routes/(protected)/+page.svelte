@@ -3,54 +3,21 @@
 		AlertTriangle,
 		ArrowRight,
 		Clock,
-		Cpu,
-		HardDrive,
-		MemoryStick,
 		Plus,
 		Server,
 	} from "@lucide/svelte";
-	import { onMount, untrack } from "svelte";
+	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
+	import HostResources from "$lib/components/host-resources.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import { timeAgo } from "$lib/formatting";
-	import type { SystemStats } from "$lib/services/system-stats.service";
 	import { title } from "$lib/store/title";
 
 	const { data } = $props();
 
-	// Seeded once from the initial load, then diverges via the poll below :
-	// untrack() is intentional, not a lint workaround.
-	let systemStats = $state<SystemStats>(untrack(() => data.systemStats));
-
 	onMount(() => {
 		title.set("Dashboard");
-
-		const interval = setInterval(async () => {
-			const res = await fetch(resolve("/api/v1/system-stats"));
-			if (res.ok) {
-				systemStats = await res.json();
-			}
-		}, 5000);
-
-		return () => clearInterval(interval);
 	});
-
-	function pct(used: number, total: number): number {
-		if (total <= 0) {
-			return 0;
-		}
-		return Math.max(0, Math.min(100, (used / total) * 100));
-	}
-
-	function barColor(percent: number): string {
-		if (percent >= 90) {
-			return "bg-red-500";
-		}
-		if (percent >= 70) {
-			return "bg-amber-500";
-		}
-		return "bg-accent";
-	}
 
 	const statCards = $derived([
 		{
@@ -132,109 +99,7 @@
     {/each}
   </div>
 
-  <!-- ── System stats ─────────────────────────────────────────── -->
-  <div class="mb-8 rounded-2xl glass p-5">
-    <h2 class="eyebrow mb-4">Host Resources</h2>
-    <div class="grid gap-5 sm:grid-cols-3">
-      <div>
-        <div class="mb-1.5 flex items-center justify-between text-xs">
-          <span class="flex items-center gap-1.5 font-medium text-text-muted">
-            <Cpu class="size-3.5" />
-            CPU
-          </span>
-          <span class="tech text-text-subtle"
-            >{systemStats.cpuPercent.toFixed(0)}%</span
-          >
-        </div>
-        <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
-          <div
-            class="h-full rounded-full transition-all duration-500 {barColor(
-              systemStats.cpuPercent,
-            )}"
-            style="width: {systemStats.cpuPercent}%"
-          ></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="mb-1.5 flex items-center justify-between text-xs">
-          <span class="flex items-center gap-1.5 font-medium text-text-muted">
-            <MemoryStick class="size-3.5" />
-            RAM
-          </span>
-          <span class="tech text-text-subtle">
-            {(systemStats.memUsedMb / 1024).toFixed(1)}
-            /
-            {(systemStats.memTotalMb / 1024).toFixed(1)}
-            GB
-          </span>
-        </div>
-        <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
-          <div
-            class="h-full rounded-full transition-all duration-500 {barColor(
-              pct(systemStats.memUsedMb, systemStats.memTotalMb),
-            )}"
-            style="width: {pct(systemStats.memUsedMb, systemStats.memTotalMb)}%"
-          ></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="mb-1.5 flex items-center justify-between text-xs">
-          <span class="flex items-center gap-1.5 font-medium text-text-muted">
-            <HardDrive class="size-3.5" />
-            Disk
-          </span>
-          <span class="tech text-text-subtle">
-            {#if systemStats.diskUsedGb !== null && systemStats.diskTotalGb !== null}
-              {systemStats.diskUsedGb.toFixed(0)}
-              /
-              {systemStats.diskTotalGb.toFixed(0)}
-              GB
-            {:else}
-              unavailable
-            {/if}
-          </span>
-        </div>
-        <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
-          <div
-            class="h-full rounded-full transition-all duration-500 {barColor(
-              pct(systemStats.diskUsedGb ?? 0, systemStats.diskTotalGb ?? 0),
-            )}"
-            style="width: {pct(
-              systemStats.diskUsedGb ?? 0,
-              systemStats.diskTotalGb ?? 0,
-            )}%"
-          ></div>
-        </div>
-      </div>
-    </div>
-
-    {#if systemStats.gpu}
-      <div class="mt-5 border-t border-border pt-4">
-        <div class="mb-1.5 flex items-center justify-between text-xs">
-          <span class="font-medium text-text-muted"
-            >GPU · {systemStats.gpu.name}</span
-          >
-          <span class="tech text-text-subtle">
-            {systemStats.gpu.utilizationPercent}% ·
-            {(systemStats.gpu.memUsedMb / 1024).toFixed(1)}
-            /
-            {(systemStats.gpu.memTotalMb / 1024).toFixed(1)}
-            GB
-          </span>
-        </div>
-        <div class="h-1.5 overflow-hidden rounded-full bg-surface-2">
-          <div
-            class="h-full rounded-full transition-all duration-500 {barColor(
-              systemStats.gpu.utilizationPercent,
-            )}"
-            style="width: {systemStats.gpu.utilizationPercent}%"
-          ></div>
-        </div>
-      </div>
-    {/if}
-  </div>
+  <HostResources />
 
   <!-- ── Bottom grid ───────────────────────────────────────────── -->
   <div class="grid gap-6 lg:grid-cols-3">

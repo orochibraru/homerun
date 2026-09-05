@@ -24,6 +24,7 @@ export default defineConfig({
 				instrumentation: {
 					server: true,
 				},
+				remoteFunctions: true,
 			},
 		}),
 	],

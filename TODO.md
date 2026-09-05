@@ -13,21 +13,9 @@
       remote connection but nothing passes one, so an image job can't be
       targeted at a Remote Host, and a run's output is only visible after it
       finishes (no live tail).
-- [ ] [App] Revisit WebSockets once SvelteKit ships a route-level WebSocket API
-      (2.70 has none, and `@orochibraru/svelte-smol` already forwards a
-      `server.websocket()` to `Bun.serve` if one ever appears). Deploy progress
-      is server-sent events and container logs are a streamed response today,
-      both one-way pushes; the only genuinely bidirectional surface, the web
-      terminal, still hand-rolls chunked HTTP plus a raw `Bun.connect()` hijack
-      and would be the first thing worth moving.
 
 ## Large
 
-- [ ] [App] Instead of loading data all over the place for quick actions from
-      svelte files let's use remote functions. DO NOT use remote function for
-      critical data such as user settings, role, profile, authentication stuff
-      etc.. Only for data that can be loaded asynchronously via Skeleton loaders
-      and {#await} loops in Svelte code.
 - [ ] [Docker] Security scanning
 - [ ] [SDKs] Terraform/Pulumi providers
 - [ ] [SDKs] Github Actions & Gitlab CI presets to deploy easily (deterministic

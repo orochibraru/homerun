@@ -1,20 +1,17 @@
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { AdminService } from "$lib/services/admin.service";
-import { SystemStatsService } from "$lib/services/system-stats.service";
 
 export const load = async ({ parent }) => {
 	// (protected)/+layout.server.ts already redirects unauthenticated users
 	// before this load runs : parent() gives the already-guaranteed user.
 	const { user } = await parent();
 
-	const [services, recentDeployments, systemStats, setupChecks] =
-		await Promise.all([
-			ServiceDTO.list(user.id),
-			DeploymentDTO.listRecentForUser(user.id),
-			SystemStatsService.getSystemStats(),
-			AdminService.runSetupChecks(),
-		]);
+	const [services, recentDeployments, setupChecks] = await Promise.all([
+		ServiceDTO.list(user.id),
+		DeploymentDTO.listRecentForUser(user.id),
+		AdminService.runSetupChecks(),
+	]);
 
 	const setupIssues = setupChecks.filter((c) => c.severity !== "ok");
 
@@ -37,6 +34,5 @@ export const load = async ({ parent }) => {
 			running: services.filter((s) => s.currentStatus === "running").length,
 			totalServices: services.length,
 		},
-		systemStats,
 	};
 };

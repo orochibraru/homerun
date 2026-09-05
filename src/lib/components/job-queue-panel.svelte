@@ -1,37 +1,28 @@
 <script lang="ts">
 	import { ListChecks } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { refreshAll } from "$app/navigation";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import { JOB_STATUS_CONFIG, JOB_TYPE_LABELS } from "$lib/constants";
-	import type { JobStatus, JobType } from "$lib/types";
-
-	export interface QueuedJob {
-		attempts: number;
-		error: string | null;
-		finishedAt: Date | string | null;
-		id: string;
-		maxAttempts: number;
-		status: JobStatus;
-		title: string;
-		type: JobType;
-	}
-
-	const { active, recent }: { active: QueuedJob[]; recent: QueuedJob[] } =
-		$props();
+	import { getJobQueue, type QueuedJob } from "$lib/remote/jobs.remote";
 
 	const POLL_MS = 3000;
 
+	const queue = getJobQueue();
+
+	const active = $derived(queue.current?.active ?? []);
+	const recent = $derived(queue.current?.recent ?? []);
+
 	onMount(() => {
 		const timer = setInterval(() => {
-			if (active.length > 0) {
-				void refreshAll();
+			if (queue.current?.active.length) {
+				void queue.refresh();
 			}
 		}, POLL_MS);
 		return () => clearInterval(timer);
 	});
 
-	function formatFinished(value: Date | string | null): string {
+	function formatFinished(value: Date | null): string {
 		return value ? new Date(value).toLocaleString() : "";
 	}
 </script>
@@ -79,7 +70,19 @@
     one job per service at a time, and a host-wide cleanup runs alone.
   </p>
 
-  {#if active.length === 0 && recent.length === 0}
+  {#if !queue.ready}
+    <div class="space-y-2.5">
+      {#each [0, 1] as placeholder (placeholder)}
+        <div class="glass flex items-center gap-4 rounded-2xl p-4">
+          <div class="min-w-0 flex-1 space-y-1.5">
+            <Skeleton class="h-4 w-48" />
+            <Skeleton class="h-3 w-32" />
+          </div>
+          <Skeleton class="h-5 w-20" />
+        </div>
+      {/each}
+    </div>
+  {:else if active.length === 0 && recent.length === 0}
     <EmptyState
       icon={ListChecks}
       subtitle="Deploys, backups and cleanups show up here while they run."

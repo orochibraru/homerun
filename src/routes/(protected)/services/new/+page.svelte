@@ -1,6 +1,5 @@
 <script lang="ts">
 	import {
-		AlertTriangle,
 		ArrowLeft,
 		ArrowRight,
 		Check,
@@ -16,12 +15,13 @@
 		Trash2,
 		X,
 	} from "@lucide/svelte";
-	import { onMount, untrack } from "svelte";
-	import { toast } from "svelte-sonner";
+	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
+	import GitRepoPicker from "$lib/components/git-repo-picker.svelte";
+	import ImageCheckWarning from "$lib/components/image-check-warning.svelte";
 	import ServiceLinkPicker from "$lib/components/service-link-picker.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -41,7 +41,6 @@
 
 	onMount(() => {
 		title.set("Deploy a Service");
-		scheduleImageCheck();
 	});
 
 	const label = "block mb-1.5 text-sm font-medium text-text";
@@ -91,75 +90,6 @@
 		data.buildCacheRegistries.find((r) => r.id === buildCacheRegistryId)
 			?.name ?? "No cache",
 	);
-	let imageCheck = $state<{ checked: boolean; exists: boolean } | null>(null);
-	let imageCheckTimer: ReturnType<typeof setTimeout> | undefined;
-
-	// "Browse repos" : same picker as the service Source tab, only shown
-	// when the user has at least one connected git provider. Picking a repo
-	// autofills gitUrl/gitRef above rather than requiring a pasted URL, and
-	// checks for a Dockerfile at the picked ref so there's a heads-up before
-	// deploying fails on a repo that doesn't have one.
-	let browseProviderId = $state(
-		untrack(() => data.connectedGitProviders[0]?.id ?? ""),
-	);
-	let repos = $state<
-		Array<{
-			cloneUrl: string;
-			defaultBranch: string;
-			fullName: string;
-			private: boolean;
-		}>
-	>([]);
-	let loadingRepos = $state(false);
-	let selectedRepo = $state("");
-	let dockerfileCheck = $state<{ checked: boolean; exists: boolean } | null>(
-		null,
-	);
-
-	async function loadRepos() {
-		if (!browseProviderId) {
-			return;
-		}
-		loadingRepos = true;
-		repos = [];
-		try {
-			const res = await fetch(
-				`/api/v1/git-providers/${browseProviderId}/repos`,
-			);
-			if (res.ok) {
-				const body = (await res.json()) as { repos: typeof repos };
-				repos = body.repos;
-			} else {
-				toast.error("Couldn't list repos for that provider.");
-			}
-		} finally {
-			loadingRepos = false;
-		}
-	}
-
-	async function pickRepo(fullName: string) {
-		selectedRepo = fullName;
-		const repo = repos.find((r) => r.fullName === fullName);
-		if (!repo) {
-			return;
-		}
-		gitUrl = repo.cloneUrl;
-		gitRef = repo.defaultBranch;
-		dockerfileCheck = null;
-		try {
-			const res = await fetch(
-				`/api/v1/git-providers/${browseProviderId}/dockerfile?repo=${encodeURIComponent(
-					fullName,
-				)}&ref=${encodeURIComponent(repo.defaultBranch)}`,
-			);
-			if (res.ok) {
-				const body = (await res.json()) as { exists: boolean };
-				dockerfileCheck = { checked: true, exists: body.exists };
-			}
-		} catch {
-			// Best-effort : not finding out doesn't block picking the repo.
-		}
-	}
 
 	let containerPort = $derived(
 		values?.containerPort ?? String(data.template?.containerPort ?? ""),
@@ -185,26 +115,6 @@
 		restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
 			"Unless stopped",
 	);
-
-	function scheduleImageCheck() {
-		clearTimeout(imageCheckTimer);
-		if (!image.trim()) {
-			imageCheck = null;
-			return;
-		}
-		imageCheckTimer = setTimeout(async () => {
-			try {
-				const res = await fetch(resolve("/services/check-image"), {
-					body: JSON.stringify({ image, registryUrl, tag }),
-					headers: { "Content-Type": "application/json" },
-					method: "POST",
-				});
-				imageCheck = res.ok ? await res.json() : null;
-			} catch {
-				imageCheck = null;
-			}
-		}, 600);
-	}
 
 	function slugify(value: string): string {
 		return value
@@ -505,7 +415,6 @@
                   <Input
                     id="image"
                     name="image"
-                    oninput={scheduleImageCheck}
                     placeholder="ghcr.io/acme/api"
                     required
                     type="text"
@@ -520,7 +429,6 @@
                   <Input
                     id="tag"
                     name="tag"
-                    oninput={scheduleImageCheck}
                     placeholder="latest"
                     type="text"
                     bind:value={tag}
@@ -528,75 +436,17 @@
                 </div>
               </div>
 
-              {#if imageCheck?.checked && !imageCheck.exists}
-                <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
-                  <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
-                  <span>
-                    <strong>{image}:{tag}</strong>
-                    wasn't found in its registry. You can still save : this doesn't
-                    block deploying, in case you're still preparing the image.
-                  </span>
-                </div>
-              {/if}
+              <ImageCheckWarning {image} {registryUrl} {registryUsername} {tag} />
             {:else}
               {#if data.connectedGitProviders.length > 0}
-                <div class="rounded-xl border border-border p-4">
-                  <p class={label}>Browse repos</p>
-                  <div class="flex flex-wrap gap-2">
-                    {#if data.connectedGitProviders.length > 1}
-                      <select
-                        bind:value={browseProviderId}
-                        class="rounded-lg glass px-3 py-2 text-sm"
-                      >
-                        {#each data.connectedGitProviders as p (p.id)}
-                          <option value={p.id}>{p.name} ({p.providerUsername})</option>
-                        {/each}
-                      </select>
-                    {/if}
-                    <Button
-                      disabled={loadingRepos}
-                      onclick={loadRepos}
-                      type="button"
-                      variant="outline"
-                    >
-                      {#if loadingRepos}
-                        <Spinner />
-                      {:else}
-                        <GitBranch class="size-4" />
-                      {/if}
-                      List repos
-                    </Button>
-                  </div>
-                  {#if repos.length > 0}
-                    <select
-                      bind:value={selectedRepo}
-                      class="mt-3 w-full rounded-lg glass px-3 py-2 text-sm"
-                      onchange={(e) => pickRepo(e.currentTarget.value)}
-                    >
-                      <option value="">Select a repo…</option>
-                      {#each repos as repo (repo.fullName)}
-                        <option value={repo.fullName}>
-                          {repo.fullName}{repo.private ? " (private)" : ""}
-                        </option>
-                      {/each}
-                    </select>
-                    {#if dockerfileCheck?.checked}
-                      <p
-                        class="
-                          mt-2 text-xs {dockerfileCheck.exists
-                          ? 'text-emerald-600'
-                          : 'text-amber-600'}
-                        "
-                      >
-                        {
-                          dockerfileCheck.exists
-                          ? "✓ Dockerfile found at the repo root."
-                          : "⚠ No Dockerfile found at the repo root on this branch : the build will fail unless one exists at the path you set below."
-                        }
-                      </p>
-                    {/if}
-                  {/if}
-                </div>
+                <GitRepoPicker
+                  labelClass={label}
+                  onpick={(repo) => {
+                    gitUrl = repo.cloneUrl;
+                    gitRef = repo.defaultBranch;
+                  }}
+                  providers={data.connectedGitProviders}
+                />
               {/if}
               <div>
                 <label class={label} for="gitUrl">
@@ -726,7 +576,6 @@
                 <Input
                   id="registryUrl"
                   name="registryUrl"
-                  oninput={scheduleImageCheck}
                   placeholder="ghcr.io (blank = Docker Hub)"
                   type="text"
                   bind:value={registryUrl}

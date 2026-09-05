@@ -392,10 +392,7 @@
       <span class="text-text flex-1 truncate font-mono text-sm font-medium tracking-tight">
         {$title || "Dashboard"}
       </span>
-      <NotificationBell
-        notifications={data.notifications}
-        unreadCount={data.unreadCount}
-      />
+      <NotificationBell />
       <ProfileMenu user={data.user} />
     </header>
 

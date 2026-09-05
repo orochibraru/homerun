@@ -1,6 +1,5 @@
 import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { JobDTO } from "$lib/dto/job-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
@@ -15,8 +14,6 @@ export const load = async ({ parent, locals }) => {
 		remoteHosts,
 		destinations,
 		settings,
-		activeJobs,
-		recentJobs,
 		cronJobs,
 	] = await Promise.all([
 		ServiceDTO.listWithProjectNames(user.id),
@@ -27,8 +24,6 @@ export const load = async ({ parent, locals }) => {
 		// own admin-only gate); a developer's own cron/backup rows are still
 		// theirs to see regardless, unlike autoscale which is instance config.
 		locals.isAdmin ? InstanceSettingsDTO.get() : null,
-		JobDTO.listActive(user.id),
-		JobDTO.listRecent(user.id),
 		CronJobDTO.list(user.id),
 	]);
 
@@ -61,7 +56,6 @@ export const load = async ({ parent, locals }) => {
 		}));
 
 	return {
-		activeJobs: activeJobs.map((entry) => entry.toJSON()),
 		autoscale: settings
 			? {
 					...settings.autoscale,
@@ -77,6 +71,5 @@ export const load = async ({ parent, locals }) => {
 		cronJobs: cronJobs.filter((j) => j.enabled).map((j) => j.toJSON()),
 		cronServices,
 		isAdmin: locals.isAdmin,
-		recentJobs: recentJobs.map(({ job: entry }) => entry.toJSON()),
 	};
 };

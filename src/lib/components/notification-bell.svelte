@@ -1,45 +1,29 @@
 <script lang="ts">
 	import { Bell, CheckCheck, X } from "@lucide/svelte";
-	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { timeAgo } from "$lib/formatting";
+	import {
+		deleteNotification,
+		getNotifications,
+		markAllNotificationsRead,
+		markNotificationRead,
+		type NotificationFeedItem,
+	} from "$lib/remote/notifications.remote";
 
-	interface NotificationItem {
-		createdAt: Date | string;
-		id: string;
-		message: string;
-		readAt: Date | string | null;
-		serviceId: string | null;
-	}
-
-	const {
-		notifications,
-		unreadCount,
-	}: { notifications: NotificationItem[]; unreadCount: number } = $props();
+	const feed = getNotifications();
 
 	let open = $state(false);
 
-	async function markRead(id: string) {
-		await fetch(`/notifications/${id}/read`, { method: "POST" });
-		await refreshAll();
-	}
+	const notifications = $derived(feed.current?.items ?? []);
+	const unreadCount = $derived(feed.current?.unreadCount ?? 0);
 
-	async function markAllRead() {
-		await fetch("/notifications/read-all", { method: "POST" });
-		await refreshAll();
-	}
-
-	async function deleteNotification(id: string) {
-		await fetch(`/notifications/${id}/delete`, { method: "POST" });
-		await refreshAll();
-	}
-
-	function onItemClick(n: NotificationItem) {
+	function onItemClick(n: NotificationFeedItem) {
 		open = false;
 		if (!n.readAt) {
-			void markRead(n.id);
+			void markNotificationRead(n.id);
 		}
 	}
 </script>
@@ -69,13 +53,22 @@
     <div class="border-border flex items-center justify-between border-b px-4 py-3">
       <p class="text-text text-sm font-semibold">Notifications</p>
       {#if unreadCount > 0}
-        <Button class="h-auto p-0 text-xs" onclick={markAllRead} variant="link">
+        <Button class="h-auto p-0 text-xs" onclick={() => markAllNotificationsRead()} variant="link">
           <CheckCheck class="size-3.5" />
           Mark all read
         </Button>
       {/if}
     </div>
-    {#if notifications.length === 0}
+    {#if !feed.ready}
+      <div class="space-y-3 p-4">
+        {#each [0, 1, 2] as row (row)}
+          <div class="space-y-1.5">
+            <Skeleton class="h-3 w-full" />
+            <Skeleton class="h-2.5 w-20" />
+          </div>
+        {/each}
+      </div>
+    {:else if notifications.length === 0}
       <p class="text-text-muted p-4 text-center text-sm">No notifications yet.</p>
     {:else}
       <div>

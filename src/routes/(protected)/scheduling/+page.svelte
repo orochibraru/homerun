@@ -29,7 +29,7 @@
 
   <div class="space-y-8">
     <!-- ═══ Job queue ═══ -->
-    <JobQueuePanel active={data.activeJobs} recent={data.recentJobs} />
+    <JobQueuePanel />
 
     <!-- ═══ Cron redeploys ═══ -->
     <section>

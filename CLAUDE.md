@@ -344,11 +344,13 @@ that pattern for any new skill.
 - **The exceptions are narrow and all of them are non-mutating or instant**: a
   synchronous result with nothing to await (`env-paste-button.svelte`'s parse, a
   clipboard copy), and a background _load_ that already renders its own inline
-  spinner rather than blocking on user intent (`loadRepos()` on the new-service
-  and Source tabs). A long-lived stream is a third: the Terminal tab reports
-  failures through its own `errored` banner, since a promise that only settles
-  when the connection ends can't drive a toast. Anything that mutates state on
-  the server gets a promise toast.
+  spinner or skeleton rather than blocking on user intent, which today means
+  every remote query (see Remote functions below): the repo picker, the
+  image-exists check, the dashboard's Host Resources panel, the job queue and
+  the notification feed all report failure inline. A long-lived stream is a
+  third: the Terminal tab reports failures through its own `errored` banner,
+  since a promise that only settles when the connection ends can't drive a
+  toast. Anything that mutates state on the server gets a promise toast.
 - **No comments. Anywhere. In any code file.** No explanatory line comments, no
   header banners, no prose in YAML/compose/shell files either. A change's
   rationale belongs in the git commit message, a feature's explanation belongs
@@ -610,10 +612,22 @@ wired into Remote Hosts and the service Networking tab so far), `stepper.svelte`
 (the step-indicator-bar-plus-Back/Next chrome and unlocked-step gating every
 multi-step form needs, extracted while building the onboarding wizard, see
 Onboarding below; not yet retrofitted onto `services/new`'s own inlined
-equivalent). If you're touching a page with an inline empty-state or the same
-three class-string literals, prefer wiring in the shared version over
+equivalent), and `skeleton.svelte` (one pulsing placeholder block, sized by a
+`class` prop, the pending branch every remote-query-backed panel renders, see
+Remote functions below). If you're touching a page with an inline empty-state or
+the same three class-string literals, prefer wiring in the shared version over
 copy-pasting again, but this is opportunistic, not a mandate to refactor
 unrelated pages.
+
+**Self-loading components**, the ones that fetch their own data through a remote
+query rather than taking it as a prop off a route's `load` (see Remote functions
+below), so a page that wants one just renders it: `host-resources.svelte` (the
+dashboard's Host Resources panel, own 5s poll), `job-queue-panel.svelte`
+(Scheduling's job queue, own 3s poll), `notification-bell.svelte` (the header's
+feed, plus its own mutations), `git-repo-picker.svelte` (the "Browse repos"
+picker, shared by `services/new` and the service Source tab, calls back with the
+picked repo), and `image-check-warning.svelte` (the debounced "this image wasn't
+found in its registry" warning, shared by the same two pages).
 
 **The list-page toolkit**, used by every entity list page (services, projects,
 templates, storage, remote-hosts, s3-destinations, build-cache-registries,
@@ -709,8 +723,9 @@ Appearance preferences below for the per-user "single accent color" override):
   **System Logs**, **Docker Cleanup** (admin-only, see below).
 
 Not in the nav but real routes: `/profile/**` (reached from the profile menu,
-see Appearance preferences below), `/notifications/**` (the bell's own
-read/delete endpoints), `/cli-auth` (the CLI device-code approval page).
+see Appearance preferences below), `/cli-auth` (the CLI device-code approval
+page). The bell's own read/delete endpoints used to live at `/notifications/**`
+and are now remote commands instead, see Remote functions below.
 `(protected)/+layout.svelte` filters the nav array on
 `data.user.role === "admin"` before rendering, a developer sees everything else
 unchanged (their own services/projects, already isolated per-user by every DTO's
@@ -1062,11 +1077,14 @@ load-bearing parts:
 
 Covered today: blank-instance bootstrap sign-up landing on `/onboarding`, the
 sign-up→sign-in redirect once an account exists, clicking the whole onboarding
-wizard through to completion, and sign-in/sign-out. Not covered: anything past
-onboarding, a real deploy needs a Docker socket reachable from _inside_ the
-spawned app, which this bootstrap doesn't wire up. Add browser-level cases here;
-don't re-prove API shapes `tests/integration/` already covers directly and
-faster.
+wizard through to completion, sign-in/sign-out, the service-creation wizard's
+own submit path, and (`remote-functions.spec.ts`) the remote-query/command
+surfaces, that the dashboard's Host Resources panel, the notification feed and
+the job-queue panel each resolve past their skeleton against real data, and that
+a mark-read/delete command updates the feed with no page reload. Not covered: a
+real deploy needs a Docker socket reachable from _inside_ the spawned app, which
+this bootstrap doesn't wire up. Add browser-level cases here; don't re-prove API
+shapes `tests/integration/` already covers directly and faster.
 
 ### The `$derived` + push/splice anti-pattern (real, tested bug)
 
@@ -1268,12 +1286,16 @@ the transport ladder here is, in order of preference:
 - **Chunked HTTP both ways** where a client→server channel is genuinely needed :
   only the web terminal, which already does this (`terminal/[sessionId]/input`),
   and which needed its own raw `Bun.connect()` hijack anyway (see Web terminal).
-- **Plain REST/form actions** for everything else. There's no RPC layer and
-  nothing here wants one : the REST API is the CLI's contract and the OpenAPI
-  document's source of truth, and a second, differently-shaped call surface
-  would double the maintenance for no capability gain. SvelteKit's own remote
-  functions are the "RPC" this codebase would reach for first if it wanted one,
-  and that's already tracked as its own TODO item.
+- **A remote `query`/`command`** (see Remote functions below) for any
+  dashboard-only request/response call that isn't a stream : a panel that loads
+  behind a skeleton, a poll, a small mutation the bell or a picker fires. This
+  is what replaced the hand-written `fetch` + internal `+server.ts` pairs those
+  surfaces used to need.
+- **Plain REST/form actions** for everything else. The REST API stays the CLI's
+  contract and the OpenAPI document's source of truth, and remote functions
+  deliberately don't touch it : they're an internal dashboard transport, not a
+  second public API. A form that mutates real state still goes through a form
+  action with `enhanceToast`, not a command.
 
 **Deploy progress is SSE** (`$lib/server/deploy-progress-stream.ts`, served by
 `services/[serviceId]/deployments/[deploymentId]/events/+server.ts`), replacing
@@ -1300,6 +1322,84 @@ history's raw-log panel keeps working untouched and nothing else in the pipeline
 had to learn about phases. There is deliberately **no "checking container
 health" phase**: health-gated rollout isn't built (see Planned features), and a
 phase that always passes instantly would be a lie.
+
+### Remote functions (`src/lib/remote/*.remote.ts`, `$lib/server/remote-auth.ts`)
+
+SvelteKit's remote functions are enabled
+(`kit.experimental.remoteFunctions: true`, set inline in `vite.config.ts`, which
+is where this repo's whole Kit config lives, there is no `svelte.config.js`).
+They're the transport for dashboard data that a page doesn't need in order to
+render : a panel that can come in behind a skeleton, a poll, a picker's
+on-demand lookup, and the small mutations those surfaces fire. Every one lives
+in `src/lib/remote/`, and Svelte's `compilerOptions.experimental.async` is
+deliberately **not** enabled, nothing here needs `await` in a template.
+
+**What is and isn't allowed to move here.** Anything a page's own correctness
+depends on stays in `load` : the signed-in user, their role/`isAdmin`, their
+appearance preferences, instance settings, and every entity list a route
+renders. What moved is only data whose absence for a few hundred milliseconds is
+a skeleton rather than a broken page. Concretely:
+
+- `system-stats.remote.ts`, `getSystemStats` : the dashboard's Host Resources
+  panel, which used to be fetched in the dashboard's `load` (blocking the whole
+  page on a `df` + `nvidia-smi` shell-out) _and_ re-fetched every 5s from
+  `/api/v1/system-stats`. `$lib/components/host-resources.svelte` owns the query
+  and the poll now. The REST route stays : it's in the OpenAPI document and is a
+  public API surface, unrelated to the dashboard's own rendering.
+- `notifications.remote.ts`, `getNotifications` + the
+  `markNotificationRead`/`markAllNotificationsRead`/`deleteNotification`
+  commands : the bell's feed. It used to be fetched in
+  `(protected)/+layout.server.ts` (so **every** protected page load paid for 20
+  notifications plus an unread count, whether or not anyone opened the bell) and
+  mutated through three one-line `+server.ts` routes each followed by a
+  `refreshAll()`, which re-ran every `load` on the page. Each command now calls
+  `getNotifications().refresh()` on the server, so the updated feed rides back
+  on the mutation's own response.
+- `jobs.remote.ts`, `getJobQueue` : the Scheduling page's job-queue panel. Its
+  3s poll used to be a `refreshAll()`, re-running that page's entire (large)
+  `load` every tick to update one panel.
+- `git-repos.remote.ts`, `listProviderRepos`/`hasDockerfile`, and
+  `image-check.remote.ts`, `checkImage` : the git repo picker and the
+  image-exists warning, both of which were duplicated verbatim between
+  `services/new` and the service Source tab. They're now one shared component
+  each (`git-repo-picker.svelte`, `image-check-warning.svelte`) over one shared
+  query.
+
+**Auth is not inherited.** A remote function is its own endpoint : the
+`(protected)` layout's `load` guard never runs for one, exactly like a
+`+server.ts` route. Every query/command starts with `requireUser()`
+(`$lib/server/remote-auth.ts`), which reads `getRequestEvent().locals.user` and
+`error(401)`s otherwise. `hooks.server.ts` populates `locals` for these requests
+the same as any other, so cookie sessions and API keys both work. Anything
+admin-only would need its own `locals.isAdmin` check on top, same as an
+admin-only route's `load`.
+
+**Arguments are validated, not cast.** A query/command taking an argument passes
+a zod schema as its first parameter (`query(z.string(), ...)`), the same "one
+schema, real runtime validation" posture as the REST API's own
+`$lib/server/validation/api.ts`. Don't reach for `"unchecked"`.
+
+**Two consumption patterns, and the difference matters.** A `RemoteQuery` is a
+promise, but it's a _stable_ object : `{#await someQuery}` renders once and will
+**not** re-render when `refresh()` lands, because the awaited expression never
+changes identity. So:
+
+- A query that refreshes in place (a poll, a command's single-flight update) is
+  read through its reactive accessors, `query.ready`/`query.current`/
+  `query.error`, with the pending branch rendering
+  `$lib/components/skeleton.svelte`. `host-resources.svelte`,
+  `job-queue-panel.svelte` and `notification-bell.svelte` are the reference
+  shapes.
+- A one-shot, user-triggered lookup assigns a fresh promise to `$state` and
+  `{#await}`s that, which is what makes the block re-run per invocation.
+  `git-repo-picker.svelte` (a "List repos" click, then a Dockerfile check for
+  the picked repo) is the reference shape.
+
+**A background load through a remote query is still one of the documented
+`toast.promise` exceptions** (see Conventions above) : it renders its own inline
+spinner/skeleton and reports failure inline, it doesn't narrate itself through a
+toast. Mutations that a user deliberately submits still belong in a form action
+with `enhanceToast`, not a command.
 
 ### Cron jobs (`cron_job`/`cron_job_run` tables, `CronJobDTO`, `$lib/services/cron-job.service.ts`, `/cron-jobs`)
 
@@ -1562,11 +1662,12 @@ than a DB-backed state table, nothing to clean up, verified purely from the
 value itself. The OAuth round-trip lives under
 `/api/v1/git-providers/[providerId]/{connect,callback}` (outside `(protected)/`
 for the same reason the REST API is, a provider's own redirect can't carry
-cookies through a page-load auth guard the same way); `repos`/`dockerfile`
-endpoints back the Source tab's picker, listing the connected account's repos
-and checking for a `Dockerfile` at a given ref via each provider's own REST API
-(`listRepos`/`hasDockerfile`, both branch per-kind the same way `endpoints()`
-does).
+cookies through a page-load auth guard the same way). The Source tab's repo
+picker (`$lib/components/git-repo-picker.svelte`) lists the connected account's
+repos and checks for a `Dockerfile` at a given ref through
+`$lib/remote/git-repos.remote.ts`, not a `+server.ts` route, see Remote
+functions below; both go through `GitProviderService.listRepos`/`hasDockerfile`,
+which branch per-kind the same way `endpoints()` does.
 
 **Not live-tested against a real registered OAuth App**, unlike everything else
 in this document's "real, tested" notes, this one couldn't be verified
@@ -1851,8 +1952,10 @@ retried. Finished rows are amortized-pruned after 7 days on ~2% of inserts, the
 same convention as `AppLogDTO`/`NotificationDTO`.
 
 **Visibility** is the Scheduling page's new "Job queue" section
-(`$lib/components/job-queue-panel.svelte`, running/queued plus the last 15
-finished, refreshing itself every 3s while anything is active).
+(`$lib/components/job-queue-panel.svelte`, which loads itself through
+`$lib/remote/jobs.remote.ts` rather than taking props off that page's `load`,
+running/queued plus the last 15 finished, refreshing itself every 3s while
+anything is active).
 
 **Verified against real Postgres**, not just reasoned about : a throwaway
 database driven through `JobDTO` directly covered dedupe/coalescing, the lock
@@ -2903,11 +3006,14 @@ markup as its own component alongside this feature).
   failure), `$lib/logger.ts` (`Logger.error` → `notifyServiceError`),
   `services/new/+page.server.ts` (service created), the service Overview page's
   start/stop actions.
-- `(protected)/+layout.server.ts`'s shared `load` fetches the last 20
-  notifications + unread count once, so the bell doesn't need a per-page fetch;
-  `notification-bell.svelte` posts to
-  `notifications/[id]/read`/`notifications/[id]/delete`/`notifications/read-all`
-  and calls `refreshAll()`.
+- `notification-bell.svelte` owns its own data end to end through
+  `$lib/remote/notifications.remote.ts` (see Remote functions above) : one query
+  for the feed plus unread count, and one command per
+  mark-read/mark-all-read/delete, each refreshing that query server-side so the
+  new feed comes back on the mutation's own response. It takes no props. This
+  replaced fetching the feed in `(protected)/+layout.server.ts` (paid for on
+  every protected page load, opened bell or not) and three one-line `+server.ts`
+  routes each followed by a full-page `refreshAll()`.
 
 This closes the "in-app lifecycle event feed" half of what Planned features
 below used to list as unbuilt; outbound webhooks (Telegram/Discord/generic HTTP)
