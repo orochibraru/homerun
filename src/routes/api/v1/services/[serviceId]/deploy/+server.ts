@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { allowLongRequest } from "$lib/server/long-request";
 import { DeploymentService } from "$lib/services/deploy.service";
+import { QueueService } from "$lib/services/queue.service";
 
 export const POST = async ({ params, locals, platform }) => {
 	allowLongRequest(platform);
@@ -13,15 +14,20 @@ export const POST = async ({ params, locals, platform }) => {
 		return json({ error: "Not found" }, { status: 404 });
 	}
 
-	// Already orchestration-mode-agnostic : deployService() itself branches
-	// on instanceSettings.orchestrationMode (standalone container vs. swarm
-	// service), see deploy.service.ts.
-	const result = await DeploymentService.deployService(service, locals.user.id);
-	if (!result.success) {
+	const { deploymentId, jobId } = await DeploymentService.enqueueDeploy({
+		svc: service,
+		userId: locals.user.id,
+	});
+	const finished = await QueueService.wait(jobId);
+	if (finished.status !== "succeeded") {
 		return json(
-			{ deploymentId: result.deploymentId, error: result.error },
+			{ deploymentId, error: finished.error ?? "Deploy failed." },
 			{ status: 500 },
 		);
 	}
-	return json(result);
+	return json({
+		containerId: (finished.result?.containerId as string | null) ?? undefined,
+		deploymentId,
+		success: true,
+	});
 };

@@ -962,7 +962,7 @@
             >
               {#if submittingAction === "createAndDeploy"}
                 <Spinner />
-                Deploying…
+                Creating…
               {:else}
                 <Rocket class="size-4" />
                 Create and Deploy

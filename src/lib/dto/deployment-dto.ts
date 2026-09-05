@@ -21,6 +21,7 @@ export type DeploymentUpdateInput = Partial<
 		| "finishedAt"
 		| "imageDigest"
 		| "log"
+		| "startedAt"
 		| "status"
 	>
 >;

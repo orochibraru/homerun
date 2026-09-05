@@ -26,8 +26,7 @@ export const load = async ({ params }) => {
 };
 
 export const actions = {
-	deploy: async ({ params, locals, platform, request }) => {
-		allowLongRequest(platform);
+	deploy: async ({ params, locals, request }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -41,25 +40,13 @@ export const actions = {
 		const formData = await request.formData();
 		const clientDeploymentId = formData.get("deploymentId") as string | null;
 
-		const result = await DeploymentService.deployService(
-			svc,
-			locals.user.id,
+		const { deploymentId } = await DeploymentService.enqueueDeploy({
 			clientDeploymentId,
-		);
-		if (!result.success) {
-			// The actual reason, not a generic "check history" pointer : real,
-			// tested-in-review gap this replaced, a deploy that fails before
-			// any progress line gets appended (e.g. an unreachable agent, see
-			// deploy.service.ts's catch block) left the deployment history's
-			// own log empty, so "check the deployment history below" was
-			// pointing at a blank panel with nothing in it.
-			return fail(500, {
-				deploymentId: result.deploymentId,
-				error: result.error ?? "Deploy failed.",
-			});
-		}
+			svc,
+			userId: locals.user.id,
+		});
 
-		return { deploymentId: result.deploymentId, success: true };
+		return { deploymentId, success: true };
 	},
 
 	restart: async ({ params, locals, platform }) => {

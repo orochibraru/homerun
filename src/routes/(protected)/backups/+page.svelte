@@ -93,9 +93,9 @@
               action="?/run"
               method="POST"
               use:enhance={enhanceToast({
-                error: "Backup failed.",
-                loading: "Running the backup",
-                success: "Backup completed.",
+                error: "Couldn't queue the backup.",
+                loading: "Queueing the backup",
+                success: "Backup queued : it shows up below once it starts.",
               })}
             >
               <input name="volumeId" type="hidden" value={vol.id}>

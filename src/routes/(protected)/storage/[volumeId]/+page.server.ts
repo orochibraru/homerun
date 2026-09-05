@@ -4,8 +4,8 @@ import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import { enqueueVolumeBackup } from "$lib/services/backup-queue";
 import { CronService } from "$lib/services/cron.service";
-import { S3BackupService } from "$lib/services/s3-backup.service";
 
 const logger = new Logger("Storage");
 
@@ -36,14 +36,10 @@ export const actions = {
 			return fail(404, { error: "Volume not found." });
 		}
 
-		const result = await S3BackupService.backupVolume(volume);
 		await volume.update({ backupLastRunAt: new Date() });
-
-		if (!result.success) {
-			return fail(500, { error: result.error ?? "Backup failed." });
-		}
-		logger.info(`Manual backup run: volume=${volume.id} key=${result.key}`);
-		return { backupKey: result.key, backupSuccess: true };
+		const entry = await enqueueVolumeBackup(volume);
+		logger.info(`Manual backup queued: volume=${volume.id} job=${entry.id}`);
+		return { backupSuccess: true };
 	},
 
 	updateBackup: async ({ request, params, locals }) => {

@@ -12,6 +12,8 @@ import { AgentClientService } from "./agent-client.service.ts";
 import { CloudflareService } from "./cloudflare.service.ts";
 import { DockerService, type RemoteHostConnection } from "./docker.service.ts";
 import { PangolinService } from "./pangolin.service.ts";
+import { deployJobPayload } from "./queue/payloads.ts";
+import { QueueService } from "./queue.service.ts";
 
 const logger = new Logger("Deploy");
 
@@ -101,6 +103,19 @@ function toVolumeParams(mounts: ServiceMounts) {
 		readOnly: m.mount.toJSON().readOnly,
 		source: m.volumeSource,
 	}));
+}
+
+export interface EnqueueDeployInput {
+	clientDeploymentId?: string | null;
+	dependsOnJobId?: string | null;
+	svc: ServiceDTO;
+	trigger?: "cron" | "manual";
+	userId: string;
+}
+
+export interface EnqueueDeployResult {
+	deploymentId: string;
+	jobId: string;
 }
 
 export interface DeployResult {
@@ -522,6 +537,70 @@ class DeploymentServiceClass {
 		syncAutoDns(svc, project, deployTarget);
 	}
 
+	async enqueueDeploy(input: EnqueueDeployInput): Promise<EnqueueDeployResult> {
+		const { svc, userId } = input;
+		const dep = await DeploymentDTO.create({
+			id: input.clientDeploymentId || undefined,
+			serviceId: svc.id,
+			status: "pending",
+			userId,
+		});
+		await svc.update({ currentStatus: "pending" });
+
+		const entry = await QueueService.enqueue({
+			dedupeKey: `deploy:${svc.id}`,
+			dependsOnJobId: input.dependsOnJobId ?? null,
+			lockKey: `service:${svc.id}`,
+			payload: {
+				deploymentId: dep.id,
+				serviceId: svc.id,
+				trigger: input.trigger ?? "manual",
+				userId,
+			},
+			serviceId: svc.id,
+			title: `Deploy ${svc.name}`,
+			type: "deploy",
+			userId,
+		});
+
+		const coalesced = deployJobPayload.parse(entry.payload).deploymentId;
+		if (coalesced !== dep.id) {
+			await dep.update({
+				errorMessage:
+					"Superseded by a deploy that was already queued for this service.",
+				finishedAt: new Date(),
+				status: "stopped",
+			});
+			logger.info(
+				`Deploy coalesced into queued job: service=${svc.id} job=${entry.id}`,
+			);
+		}
+
+		return { deploymentId: coalesced, jobId: entry.id };
+	}
+
+	async enqueueStackDeploy(
+		primary: ServiceDTO,
+		linked: ServiceDTO[],
+		userId: string,
+	): Promise<EnqueueDeployResult> {
+		let dependsOnJobId: string | null = null;
+		for (const svc of linked) {
+			// biome-ignore lint/performance/noAwaitInLoops: each linked service's job id is the next one's dependency, so the chain is built in order
+			const enqueued = await this.enqueueDeploy({
+				dependsOnJobId,
+				svc,
+				userId,
+			});
+			dependsOnJobId = enqueued.jobId;
+		}
+		return await this.enqueueDeploy({
+			dependsOnJobId,
+			svc: primary,
+			userId,
+		});
+	}
+
 	async deployService(
 		svc: ServiceDTO,
 		userId: string,
@@ -537,12 +616,18 @@ class DeploymentServiceClass {
 			} user=${userId}`,
 		);
 
-		const dep = await DeploymentDTO.create({
-			id: clientDeploymentId || undefined,
-			serviceId: svc.id,
-			status: "pulling",
-			userId,
-		});
+		const existing = clientDeploymentId
+			? await DeploymentDTO.get(clientDeploymentId)
+			: null;
+		const dep =
+			existing ??
+			(await DeploymentDTO.create({
+				id: clientDeploymentId || undefined,
+				serviceId: svc.id,
+				status: "pulling",
+				userId,
+			}));
+		await dep.update({ startedAt: new Date(), status: "pulling" });
 		await svc.update({ currentStatus: "pulling" });
 
 		try {

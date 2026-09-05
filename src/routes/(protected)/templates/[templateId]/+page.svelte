@@ -51,7 +51,9 @@
                 icon={tmpl.icon}
             />
             <div>
-                <h1 class="text-text text-xl font-semibold tracking-tight">{tmpl.name}</h1>
+                <h1 class="text-text text-xl font-semibold tracking-tight">
+                    {tmpl.name}
+                </h1>
                 <p class="font-mono text-sm text-text-muted">
                     {tmpl.image}:{tmpl.tag}
                 </p>
@@ -61,15 +63,15 @@
             <form
                 action="?/quickDeploy"
                 use:enhance={enhanceToast({
-                    error: "Couldn't deploy.",
-                    loading: `Deploying "${tmpl.name}"`,
+                    error: "Couldn't prepare deployment.",
+                    loading: `Preparing "${tmpl.name}" for deployment`,
                     onSettled: () => {
                         deploying = false;
                     },
                     onStart: () => {
                         deploying = true;
                     },
-                    success: `"${tmpl.name}" deployed.`,
+                    success: `"${tmpl.name}" deploying.`,
                 })}
                 method="POST"
             >
@@ -223,24 +225,28 @@
         {#await data.github then repo}
             {#if repo}
                 <div class="rounded-2xl glass p-5">
-                    <h2 class="eyebrow mb-3">
-                        Repository
-                    </h2>
+                    <h2 class="eyebrow mb-3">Repository</h2>
                     <div class="flex flex-wrap gap-6 text-sm">
                         {#if repo.stars !== null}
-                            <div class="flex items-center gap-1.5 text-text-muted">
+                            <div
+                                class="flex items-center gap-1.5 text-text-muted"
+                            >
                                 <Star class="size-3.5" />
                                 {repo.stars.toLocaleString()} stars
                             </div>
                         {/if}
                         {#if repo.pushedAt}
-                            <div class="flex items-center gap-1.5 text-text-muted">
+                            <div
+                                class="flex items-center gap-1.5 text-text-muted"
+                            >
                                 <GitCommitHorizontal class="size-3.5" />
                                 Pushed {timeAgo(repo.pushedAt)}
                             </div>
                         {/if}
                         {#if repo.latestReleaseTag}
-                            <div class="flex items-center gap-1.5 text-text-muted">
+                            <div
+                                class="flex items-center gap-1.5 text-text-muted"
+                            >
                                 <Tag class="size-3.5" />
                                 {repo.latestReleaseTag}
                                 {#if repo.latestReleasePublishedAt}
@@ -253,9 +259,7 @@
 
                 {#if repo.readmeHtml}
                     <div class="rounded-2xl glass p-6">
-                        <h2 class="eyebrow mb-3">
-                            Readme
-                        </h2>
+                        <h2 class="eyebrow mb-3">Readme</h2>
                         <div class="readme max-w-none text-sm text-text">
                             {@html repo.readmeHtml}
                         </div>
@@ -267,61 +271,61 @@
 </div>
 
 <style>
-  .readme :global(h1),
-  .readme :global(h2),
-  .readme :global(h3) {
-    margin-top: 1.5em;
-    margin-bottom: 0.5em;
-    font-weight: 600;
-  }
-  .readme :global(p),
-  .readme :global(ul),
-  .readme :global(ol),
-  .readme :global(pre),
-  .readme :global(blockquote),
-  .readme :global(table) {
-    margin-bottom: 1em;
-  }
-  .readme :global(ul),
-  .readme :global(ol) {
-    padding-left: 1.5em;
-  }
-  .readme :global(code) {
-    background: var(--color-surface-2);
-    border-radius: 0.25em;
-    padding: 0.15em 0.4em;
-    font-size: 0.85em;
-  }
-  .readme :global(pre) {
-    background: var(--color-surface-2);
-    border-radius: 0.5em;
-    padding: 1em;
-    overflow-x: auto;
-  }
-  .readme :global(pre code) {
-    background: none;
-    padding: 0;
-  }
-  .readme :global(img) {
-    max-width: 100%;
-  }
-  .readme :global(a) {
-    color: var(--color-accent);
-    text-decoration: underline;
-  }
-  .readme :global(blockquote) {
-    border-left: 3px solid var(--color-border);
-    padding-left: 1em;
-    color: var(--color-text-muted);
-  }
-  .readme :global(table) {
-    border-collapse: collapse;
-    width: 100%;
-  }
-  .readme :global(th),
-  .readme :global(td) {
-    border: 1px solid var(--color-border);
-    padding: 0.5em 0.75em;
-    text-align: left;
-  }
+    .readme :global(h1),
+    .readme :global(h2),
+    .readme :global(h3) {
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+        font-weight: 600;
+    }
+    .readme :global(p),
+    .readme :global(ul),
+    .readme :global(ol),
+    .readme :global(pre),
+    .readme :global(blockquote),
+    .readme :global(table) {
+        margin-bottom: 1em;
+    }
+    .readme :global(ul),
+    .readme :global(ol) {
+        padding-left: 1.5em;
+    }
+    .readme :global(code) {
+        background: var(--color-surface-2);
+        border-radius: 0.25em;
+        padding: 0.15em 0.4em;
+        font-size: 0.85em;
+    }
+    .readme :global(pre) {
+        background: var(--color-surface-2);
+        border-radius: 0.5em;
+        padding: 1em;
+        overflow-x: auto;
+    }
+    .readme :global(pre code) {
+        background: none;
+        padding: 0;
+    }
+    .readme :global(img) {
+        max-width: 100%;
+    }
+    .readme :global(a) {
+        color: var(--color-accent);
+        text-decoration: underline;
+    }
+    .readme :global(blockquote) {
+        border-left: 3px solid var(--color-border);
+        padding-left: 1em;
+        color: var(--color-text-muted);
+    }
+    .readme :global(table) {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .readme :global(th),
+    .readme :global(td) {
+        border: 1px solid var(--color-border);
+        padding: 0.5em 0.75em;
+        text-align: left;
+    }
 </style>

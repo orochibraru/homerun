@@ -1,5 +1,5 @@
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
-import { S3BackupService } from "../s3-backup.service.ts";
+import { enqueueVolumeBackup } from "../backup-queue.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
 import { cronMatches, sameMinute } from "./cron-expression.ts";
 
@@ -26,14 +26,7 @@ export class BackupScheduler extends BaseScheduler {
 			`Scheduled backup triggered: volume=${volume.id} schedule="${volume.backupSchedule}"`,
 		);
 		await volume.update({ backupLastRunAt: now });
-
-		const result = await S3BackupService.backupVolume(volume);
-		if (!result.success) {
-			this.logger.error(
-				`Scheduled backup failed: volume=${volume.id}`,
-				result.error,
-			);
-		}
+		await enqueueVolumeBackup(volume);
 	}
 
 	protected async tick(): Promise<void> {

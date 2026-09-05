@@ -174,9 +174,9 @@
       action="?/backupNow"
       method="POST"
       use:enhance={enhanceToast({
-        error: "Backup failed : check the volume's config.",
-        loading: "Uploading the backup",
-        success: "Backup uploaded.",
+        error: "Couldn't queue the backup.",
+        loading: "Queueing the backup",
+        success: "Backup queued : it shows up below once it starts.",
       })}
     >
       <Button

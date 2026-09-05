@@ -126,6 +126,13 @@
 			"when": 1788530998727,
 			"tag": "0017_regular_invaders",
 			"breakpoints": true
+		},
+		{
+			"idx": 18,
+			"version": "7",
+			"when": 1788605438275,
+			"tag": "0018_ancient_goblin_queen",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

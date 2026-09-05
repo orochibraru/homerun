@@ -5,9 +5,11 @@ import { cronMatches, sameMinute } from "./cron-expression.ts";
 
 /**
  * Opt-in, per-service redeploy scheduler (Settings tab's `cronEnabled` +
- * `cronSchedule`). Fires `DeploymentService.deployService()` for whatever's
- * due each tick, guarding against a double-fire in the same matching
- * minute via `cronLastRunAt`.
+ * `cronSchedule`). Queues a deploy job for whatever's due each tick,
+ * guarding against a double-fire in the same matching minute via
+ * `cronLastRunAt` ; the queue's own per-service dedupe is the second
+ * guard, so a redeploy that's still waiting its turn is never queued
+ * twice.
  */
 export class CronRedeployScheduler extends BaseScheduler {
 	protected readonly label = "Cron";
@@ -29,21 +31,11 @@ export class CronRedeployScheduler extends BaseScheduler {
 			`Cron redeploy triggered: service=${svc.id} schedule="${svc.cronSchedule}"`,
 		);
 		await svc.update({ cronLastRunAt: now });
-
-		// Fire-and-forget the actual deploy: one service's failure shouldn't
-		// block the others, and the tick itself only needs to record intent.
-		DeploymentService.deployService(svc, svc.userId, undefined, "cron")
-			.then((result) => {
-				if (!result.success) {
-					this.logger.error(
-						`Cron redeploy failed: service=${svc.id}`,
-						result.error,
-					);
-				}
-			})
-			.catch((err) => {
-				this.logger.error(`Cron redeploy threw: service=${svc.id}`, err);
-			});
+		await DeploymentService.enqueueDeploy({
+			svc,
+			trigger: "cron",
+			userId: svc.userId,
+		});
 	}
 
 	protected async tick(): Promise<void> {

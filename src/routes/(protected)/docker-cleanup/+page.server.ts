@@ -1,9 +1,8 @@
-import { fail, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { Logger } from "$lib/logger";
+import { allowLongRequest } from "$lib/server/long-request";
 import { DockerService } from "$lib/services/docker.service";
-
-const logger = new Logger("DockerCleanup");
+import { runQueuedCleanup } from "$lib/services/docker-cleanup-queue";
 
 export const load = async ({ locals }) => {
 	if (!locals.isAdmin) {
@@ -15,135 +14,74 @@ export const load = async ({ locals }) => {
 };
 
 export const actions = {
-	pruneBuildCache: async ({ locals }) => {
+	pruneBuildCache: async ({ locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			throw redirect(302, resolve("/"));
 		}
-
-		try {
-			const result = await DockerService.pruneBuildCache();
-			logger.info(`Build cache pruned by user=${locals.user.id}`);
-			return { action: "pruneBuildCache", result, success: true };
-		} catch (err) {
-			logger.error("Failed to prune build cache", err);
-			return fail(500, {
-				action: "pruneBuildCache",
-				error:
-					err instanceof Error ? err.message : "Failed to prune build cache.",
-			});
-		}
+		return await runQueuedCleanup("pruneBuildCache", false, locals.user.id);
 	},
 
-	pruneContainers: async ({ locals }) => {
+	pruneContainers: async ({ locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			throw redirect(302, resolve("/"));
 		}
-
-		try {
-			const result = await DockerService.pruneContainers();
-			logger.info(`Stopped containers pruned by user=${locals.user.id}`);
-			return { action: "pruneContainers", result, success: true };
-		} catch (err) {
-			logger.error("Failed to prune containers", err);
-			return fail(500, {
-				action: "pruneContainers",
-				error:
-					err instanceof Error ? err.message : "Failed to prune containers.",
-			});
-		}
+		return await runQueuedCleanup("pruneContainers", false, locals.user.id);
 	},
 
-	pruneImages: async ({ locals, request }) => {
+	pruneImages: async ({ locals, platform, request }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			throw redirect(302, resolve("/"));
 		}
-
 		const formData = await request.formData();
-		const all = formData.get("all") === "on";
-
-		try {
-			const result = await DockerService.pruneImages(all);
-			logger.info(`Images pruned (all=${all}) by user=${locals.user.id}`);
-			return { action: "pruneImages", result, success: true };
-		} catch (err) {
-			logger.error("Failed to prune images", err);
-			return fail(500, {
-				action: "pruneImages",
-				error: err instanceof Error ? err.message : "Failed to prune images.",
-			});
-		}
+		return await runQueuedCleanup(
+			"pruneImages",
+			formData.get("all") === "on",
+			locals.user.id,
+		);
 	},
 
-	pruneNetworks: async ({ locals }) => {
+	pruneNetworks: async ({ locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			throw redirect(302, resolve("/"));
 		}
-
-		try {
-			const result = await DockerService.pruneNetworks();
-			logger.info(`Unused networks pruned by user=${locals.user.id}`);
-			return { action: "pruneNetworks", result, success: true };
-		} catch (err) {
-			logger.error("Failed to prune networks", err);
-			return fail(500, {
-				action: "pruneNetworks",
-				error: err instanceof Error ? err.message : "Failed to prune networks.",
-			});
-		}
+		return await runQueuedCleanup("pruneNetworks", false, locals.user.id);
 	},
 
-	pruneSystem: async ({ locals }) => {
+	pruneSystem: async ({ locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			throw redirect(302, resolve("/"));
 		}
-
-		try {
-			const result = await DockerService.pruneSystem();
-			logger.info(`System prune run by user=${locals.user.id}`);
-			return { action: "pruneSystem", result, success: true };
-		} catch (err) {
-			logger.error("Failed to run system prune", err);
-			return fail(500, {
-				action: "pruneSystem",
-				error:
-					err instanceof Error ? err.message : "Failed to run system prune.",
-			});
-		}
+		return await runQueuedCleanup("pruneSystem", false, locals.user.id);
 	},
 
-	pruneVolumes: async ({ locals }) => {
+	pruneVolumes: async ({ locals, platform }) => {
+		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		if (!locals.isAdmin) {
 			throw redirect(302, resolve("/"));
 		}
-
-		try {
-			const result = await DockerService.pruneVolumes();
-			logger.info(`Unused volumes pruned by user=${locals.user.id}`);
-			return { action: "pruneVolumes", result, success: true };
-		} catch (err) {
-			logger.error("Failed to prune volumes", err);
-			return fail(500, {
-				action: "pruneVolumes",
-				error: err instanceof Error ? err.message : "Failed to prune volumes.",
-			});
-		}
+		return await runQueuedCleanup("pruneVolumes", false, locals.user.id);
 	},
 };

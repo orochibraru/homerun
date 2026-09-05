@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
 	index,
@@ -9,7 +9,7 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { ContainerStatus } from "$lib/types";
+import type { ContainerStatus, JobStatus, JobType } from "$lib/types";
 
 export const user = pgTable("user", {
 	banExpires: timestamp("ban_expires", { mode: "date" }),
@@ -855,6 +855,43 @@ export const notification = pgTable(
 	],
 );
 
+export const job = pgTable(
+	"job",
+	{
+		attempts: integer("attempts").default(0).notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		dedupeKey: text("dedupe_key"),
+		dependsOnJobId: text("depends_on_job_id"),
+		error: text("error"),
+		exclusive: boolean("exclusive").default(false).notNull(),
+		finishedAt: timestamp("finished_at", { mode: "date" }),
+		id: text("id").primaryKey(),
+		lockKey: text("lock_key"),
+		maxAttempts: integer("max_attempts").default(1).notNull(),
+		payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+		priority: integer("priority").default(0).notNull(),
+		result: jsonb("result").$type<Record<string, unknown>>(),
+		runAt: timestamp("run_at", { mode: "date" }).notNull(),
+		serviceId: text("service_id").references(() => service.id, {
+			onDelete: "cascade",
+		}),
+		startedAt: timestamp("started_at", { mode: "date" }),
+		status: text("status").$type<JobStatus>().default("queued").notNull(),
+		title: text("title").notNull(),
+		type: text("type").$type<JobType>().notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("job_status_runAt_idx").on(table.status, table.runAt),
+		index("job_userId_createdAt_idx").on(table.userId, table.createdAt),
+		uniqueIndex("job_type_dedupeKey_queued_uidx")
+			.on(table.type, table.dedupeKey)
+			.where(sql`${table.status} = 'queued'`),
+	],
+);
+
 // One user's OAuth connection to one configured git provider (see
 // instanceSettings.gitProviders) : the access/refresh token that lets
 // $lib/services/git-provider.service.ts list that user's repos and check
@@ -1017,6 +1054,7 @@ export type RemoteHost = typeof remoteHost.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
 export type Notification = typeof notification.$inferSelect;
+export type Job = typeof job.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;
 export type InvitationBase = typeof invitation.$inferSelect;

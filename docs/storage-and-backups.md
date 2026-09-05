@@ -31,6 +31,11 @@ scheduler mirrors the [scheduled-redeploy](services.md#scheduled-redeploy) shape
 (a 60-second tick, a due-check, a guard against double-firing in the same
 minute).
 
+Backups, scheduled or from a "Run now" button, are queued and run in the
+background (see [the job queue](services.md#the-job-queue)), so the button
+returns straight away and the run shows up in the history on `/backups` once it
+starts. A failed backup is retried once.
+
 **There's no restore flow yet**, uploads only. Retrieve a backup from your S3
 destination directly (`aws s3 cp`, `rclone`, your provider's console) and
 restore it into the bind-mount path by hand.

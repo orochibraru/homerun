@@ -10,7 +10,6 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
-import { allowLongRequest } from "$lib/server/long-request";
 import {
 	type CreateServiceInput,
 	createServiceSchema,
@@ -239,8 +238,7 @@ export const actions = {
 		);
 	},
 
-	createAndDeploy: async ({ request, locals, platform }) => {
-		allowLongRequest(platform);
+	createAndDeploy: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -251,28 +249,11 @@ export const actions = {
 			return result.failure;
 		}
 
-		for (const linked of result.linkedServices) {
-			// biome-ignore lint/performance/noAwaitInLoops: linked services (e.g. a database) should be up before the primary service that depends on them starts
-			const linkedResult = await DeploymentService.deployService(
-				linked,
-				locals.user.id,
-			);
-			if (!linkedResult.success) {
-				return fail(500, {
-					error: `Service created, but deploying "${linked.name}" failed: ${linkedResult.error ?? "unknown error"}. Find it on the Services page to retry.`,
-				});
-			}
-		}
-
-		const deployResult = await DeploymentService.deployService(
+		await DeploymentService.enqueueStackDeploy(
 			result.svc,
+			result.linkedServices,
 			locals.user.id,
 		);
-		if (!deployResult.success) {
-			return fail(500, {
-				error: `Service created, but the deploy failed: ${deployResult.error ?? "unknown error"}. Find it on the Services page to retry.`,
-			});
-		}
 
 		redirect(
 			303,

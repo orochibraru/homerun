@@ -96,19 +96,30 @@
 
 	/**
 	 * Polls until the deployment reaches a terminal status, then clears
-	 * pendingAction itself : this is the single mechanism for both a live
-	 * deploy just submitted from this tab AND resuming the progress view
-	 * after a mid-deploy page reload (see onMount below), since in both
-	 * cases there's no other signal telling the client when it's done.
+	 * pendingAction itself : this is the single mechanism for a live deploy
+	 * just submitted from this tab, for resuming the progress view after a
+	 * mid-deploy page reload, AND for a deploy queued somewhere else
+	 * entirely (a template quick-deploy, the create wizard, cron) that this
+	 * page is only arriving at (see onMount below), since in all three
+	 * cases there's no other signal telling the client when it's done. It
+	 * pulls the page's own data along on every status transition too : the
+	 * header status pill and the deployment-history rows come from `load`,
+	 * not from this endpoint, and would otherwise sit frozen until a manual
+	 * reload.
 	 */
 	async function pollProgress(deploymentId: string) {
 		pollGeneration += 1;
 		const myGeneration = pollGeneration;
 		let status = await fetchProgress(deploymentId);
+		let lastStatus = status;
 		let misses = 0;
 		while (myGeneration === pollGeneration) {
 			if (status) {
 				misses = 0;
+				if (status !== lastStatus) {
+					lastStatus = status;
+					void refreshAll();
+				}
 				if (!IN_FLIGHT_STATUSES.has(status)) {
 					break;
 				}
@@ -124,32 +135,46 @@
 		}
 		if (myGeneration === pollGeneration) {
 			pendingAction = null;
+			void refreshAll();
 		}
 	}
 
 	onMount(() => {
 		const [latest] = data.deployments;
-		if (latest && IN_FLIGHT_STATUSES.has(svc.currentStatus)) {
+		if (!latest) {
+			return;
+		}
+		if (
+			IN_FLIGHT_STATUSES.has(latest.status) ||
+			IN_FLIGHT_STATUSES.has(svc.currentStatus)
+		) {
 			pendingAction = "deploy";
 			void pollProgress(latest.id);
 		}
 	});
 
 	function deployEnhance() {
+		let submittedDeploymentId: string | null = null;
 		return enhanceToast({
-			error: `Couldn't deploy ${svc.name}.`,
-			loading: `Deploying ${svc.name}`,
+			error: `Couldn't queue a deploy for ${svc.name}.`,
+			loading: `Queueing a deploy for ${svc.name}`,
 			onComplete: () => refreshAll(),
 			onStart: () => {
 				pendingAction = "deploy";
 				progressLines = [];
 			},
 			onSubmit: ({ formData }) => {
-				const deploymentId = crypto.randomUUID();
-				formData.set("deploymentId", deploymentId);
-				void pollProgress(deploymentId);
+				submittedDeploymentId = crypto.randomUUID();
+				formData.set("deploymentId", submittedDeploymentId);
+				void pollProgress(submittedDeploymentId);
 			},
-			success: `${svc.name} deployed.`,
+			onSuccess: (data) => {
+				const actual = data?.deploymentId;
+				if (typeof actual === "string" && actual !== submittedDeploymentId) {
+					void pollProgress(actual);
+				}
+			},
+			success: `${svc.name} is queued for deploy.`,
 		});
 	}
 </script>
@@ -232,17 +257,21 @@
     {/if}
 </div>
 
-{#if pendingAction === "deploy" && progressLines.length > 0}
+{#if pendingAction === "deploy"}
     <div
         class="mb-6 h-48 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
     >
-        {#each progressLines as line, i (i)}
-            <AnsiLine {line} />
-        {/each}
+        {#if progressLines.length === 0}
+            <span class="text-zinc-500">Waiting for the deploy to start…</span>
+        {:else}
+            {#each progressLines as line, i (i)}
+                <AnsiLine {line} />
+            {/each}
+        {/if}
     </div>
 {/if}
 
-{#if !svc.containerId}
+{#if !(svc.containerId || pendingAction === "deploy")}
     <div
         class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm"
     >

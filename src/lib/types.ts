@@ -10,3 +10,12 @@ export type ContainerStatus =
 	| "stopped"
 	| "failed"
 	| "missing";
+
+export type JobStatus =
+	| "queued"
+	| "running"
+	| "succeeded"
+	| "failed"
+	| "cancelled";
+
+export type JobType = "backup" | "deploy" | "docker_cleanup";

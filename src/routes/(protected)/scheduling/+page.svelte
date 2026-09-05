@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import JobQueuePanel from "$lib/components/job-queue-panel.svelte";
 	import { title } from "$lib/store/title";
 
 	const { data } = $props();
@@ -21,12 +22,15 @@
   <div class="mb-8">
     <h1 class="text-text text-xl font-semibold tracking-tight">Scheduling</h1>
     <p class="text-text-muted mt-1 text-sm">
-      Cron redeploys, backups, and autoscale activity across every service and
-      volume, in one place.
+      The job queue plus cron redeploys, backups, and autoscale activity
+      across every service and volume, in one place.
     </p>
   </div>
 
   <div class="space-y-8">
+    <!-- ═══ Job queue ═══ -->
+    <JobQueuePanel active={data.activeJobs} recent={data.recentJobs} />
+
     <!-- ═══ Cron redeploys ═══ -->
     <section>
       <div class="mb-3 flex items-center gap-2">

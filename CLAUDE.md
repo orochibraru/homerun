@@ -1336,6 +1336,150 @@ actually configured. Pangolin's delete path specifically is inferred from REST
 convention rather than confirmed live, the reference project it was modeled on
 is create-only.
 
+### Job queue and worker (`job` table, `JobDTO`, `$lib/services/queue.service.ts`, `$lib/services/queue/`)
+
+Every long-running, side-effecting operation in this app, deploys (including git
+builds), volume backups, and host-wide Docker cleanups, goes through one
+DB-backed queue drained by one in-process worker, instead of running inline in
+whichever request or scheduler tick happened to trigger it. That's what makes
+"five pushes in a minute" collapse into one build, what stops two deploys of the
+same service racing each other, and what keeps a `docker prune` from sweeping
+layers out from under a running build.
+
+- **`job` table / `JobDTO`** (`src/lib/dto/job-dto.ts`) is the queue itself.
+  Beyond the obvious (`type`, `payload` jsonb, `status`, `attempts`/
+  `maxAttempts`, `runAt`, `error`, `result`, `title` for the UI), four columns
+  carry the whole scheduling policy, and `JobDTO.claimNext()` is the one place
+  they're interpreted:
+  - **`dedupeKey`** collapses repeats. A partial unique index
+    (`job_type_dedupeKey_queued_uidx`, `where status = 'queued'`) makes it a
+    real DB-level constraint, not a check-then-insert race : a second
+    `deploy:<serviceId>` while one is still waiting its turn is rejected by
+    Postgres, and `QueueService.enqueue()` returns the already-queued job
+    instead. Once that job starts running the key frees up, so a push landing
+    mid-build still queues a follow-up build rather than being lost.
+  - **`lockKey`** serialises. Only one _running_ job may hold a given key, so
+    `service:<id>` means one deploy per service at a time while other services
+    deploy in parallel.
+  - **`dependsOnJobId`** orders a chain. A job is only claimable once its
+    dependency has actually `succeeded`; if that dependency fails permanently,
+    `JobDTO.cancelDependents()` cancels the rest of the chain transitively
+    rather than leaving it queued behind something that will never finish. This
+    is what replaced the sequential `await deployService()` loop that used to
+    bring a template's linked stack up in order inside the request handler (see
+    `DeploymentService.enqueueStackDeploy`).
+  - **`exclusive`** is the host-wide barrier, used by Docker cleanup. An
+    exclusive job runs alone (nothing else is claimed while it runs, and it
+    waits for whatever is already running), and while one is _queued_ nothing
+    else is claimed either, so it can't starve behind a steady trickle of
+    deploys. The deliberate consequence, verified rather than assumed: a queued
+    prune takes precedence over already-queued deploys, and only waits on
+    in-flight ones. The reverse rule would block a waiting admin behind an
+    unbounded deploy backlog.
+
+  The claim itself is one `for update skip locked` select inside a transaction,
+  so two concurrent claimers pick two different rows rather than racing for the
+  same one.
+
+- **`QueueService`** (`$lib/services/queue.service.ts`) is the enqueue/wait API
+  every caller uses : `enqueue()` (with the coalescing described above),
+  `wait(jobId)` (poll to a terminal status, for the two callers that must keep
+  their synchronous contract), plus the list helpers the Scheduling page reads.
+- **`JobWorker`** (`$lib/services/queue/worker.ts`) is a fourth `BaseScheduler`
+  subclass alongside the three cron schedulers, overriding `intervalMs` to a 1s
+  poll (`BaseScheduler` gained both that knob and a non-overlapping-tick guard
+  for this). Started from `hooks.server.ts`'s `init()`. Each tick claims up to
+  `MAX_CONCURRENT_JOBS` (3) jobs, claiming _serially_ so each claim sees the
+  previous one's committed `running` row (a parallel batch of claims would each
+  run in its own uncommitted transaction and could hand out two jobs sharing a
+  `lockKey`). On the very first tick it calls `JobDTO.requeueOrphaned()` : this
+  app runs one worker, so any row still `running` at boot was left there by a
+  process that died, and is put back on the queue. `runJob()` is public
+  specifically so `tests/unit/app/queue.test.ts` can drive the
+  succeed/retry/permanently-fail decision without an interval.
+- **`$lib/services/queue/handlers.ts`** maps a `JobType` to its handler
+  (`deploy` → `DeploymentService.deployService`, `backup` →
+  `S3BackupService.backupVolume`, `docker_cleanup` → the matching
+  `DockerService.prune*`), each parsing its own payload through a zod schema in
+  `queue/payloads.ts` rather than casting : a payload written by an older
+  version of the app fails as a clean job error instead of deep inside
+  dockerode. Throwing is how a handler reports failure. Kept in its own module
+  so `QueueService` stays importable from `deploy.service.ts` without an import
+  cycle (`handlers` → `deploy.service` → `queue.service`, and `worker` →
+  `handlers`, so `hooks.server.ts` imports the worker directly).
+
+**What changed at each trigger point.** `DeploymentService.deployService()` is
+unchanged as the actual pipeline and is still the single source of truth; what
+moved is _who calls it_. `DeploymentService.enqueueDeploy()` creates the
+`deployment` row up front with status `"pending"` (and sets the service's
+`currentStatus` to match) and queues the job, so the Overview tab's existing
+progress polling, which already treated `pending` as in-flight and already
+resumes from `svc.currentStatus` after a reload, works unchanged for a deploy
+that hasn't started yet. `deployService()` now reuses an existing deployment row
+when handed its id instead of always creating one.
+
+**The Overview tab's progress polling had to grow two things for this**, both
+real bugs found by driving a template quick-deploy in a real browser rather than
+by reading the code. It now `refreshAll()`s on every status transition and once
+more at the end : the header status pill and the deployment-history rows come
+from `load`, not from the progress endpoint, so a deploy started _somewhere
+else_ (a quick-deploy, the create wizard, cron) left them frozen at whatever
+they were when the page loaded, and only a manual reload caught up. And
+`onMount` resumes from the latest deployment row's own `status`, not just
+`svc.currentStatus` : on a redeploy the layout's `syncServiceStatus` inspects
+the still-running _old_ container and writes `"running"` back over the in-flight
+`"pending"`, so the service-level check alone could miss a deploy that really
+was in flight. The progress panel also renders while
+`pendingAction === "deploy"` even with zero log lines yet (a queued job, or a
+pull that hasn't emitted a status change), showing "Waiting for the deploy to
+start…" rather than nothing, and the "this service hasn't been deployed yet"
+banner is suppressed during a first deploy.
+
+- Service Overview's `deploy` action, `services/new`'s `createAndDeploy`, the
+  templates gallery's `quickDeploy`, `CronRedeployScheduler` and
+  `AutoscaleScheduler` all enqueue and return immediately. The two
+  create-a-service-and-deploy-it paths no longer block the request on a real
+  image pull at all, which is what makes the redirect land on the service page
+  with live progress instead of a spinning button.
+- `POST /api/v1/services/<id>/deploy` enqueues _and_ `QueueService.wait()`s, so
+  its "returns once the deploy is done" contract (and therefore
+  `homerun services deploy`) is unchanged, verified by `tests/integration/`'s
+  real deploy tests still passing untouched.
+- The Docker Cleanup page's six actions likewise enqueue-and-wait (via
+  `$lib/services/docker-cleanup-queue.ts`, split out of the route file so the
+  route keeps no manual typing), since the page renders the reclaimed-space
+  summary. They also gained `allowLongRequest()`, which they were missing.
+- Backups (`/backups`'s and `storage/[volumeId]`'s "Run now", plus
+  `BackupScheduler`) enqueue and return : a tar-and-upload could comfortably
+  outlive Bun's idle timeout, and neither route called `allowLongRequest()`. The
+  `backup_run` row is still written by `BackupService.runBackup()` when the job
+  actually starts.
+
+**Retries** are per job type (`maxAttempts`, default 1) with exponential backoff
+: backups get 2 attempts, deploys and cleanups get one, since a failed deploy is
+something the user should see and decide about rather than have silently
+retried. Finished rows are amortized-pruned after 7 days on ~2% of inserts, the
+same convention as `AppLogDTO`/`NotificationDTO`.
+
+**Visibility** is the Scheduling page's new "Job queue" section
+(`$lib/components/job-queue-panel.svelte`, running/queued plus the last 15
+finished, refreshing itself every 3s while anything is active).
+
+**Verified against real Postgres**, not just reasoned about : a throwaway
+database driven through `JobDTO` directly covered dedupe/coalescing, the lock
+key skipping a same-service job while claiming another, dependency gating and
+transitive cancellation, both directions of the exclusive barrier, priority
+ordering, `runAt` gating and retry rescheduling, orphan requeue, and eight
+racing `claimNext()` calls handing out five jobs exactly once each. The
+browser-level flow was verified live too : a real template quick-deploy against
+an isolated instance, driven through Playwright, lands on the service page with
+the progress panel already streaming, no stale "not deployed yet" banner, and
+the status pill reaching RUNNING with no manual reload. The API-level end-to-end
+path is covered by `tests/integration/` (real image pulls, real containers,
+local + docker-remote + agent-remote targets, git builds, and the failure path)
+passing unchanged through the queue, and the policy layer by
+`tests/unit/app/queue.test.ts`.
+
 ### Schedulers: cron redeploy, S3 backup, autoscale migration (`src/lib/services/cron.service.ts`, `src/lib/services/cron/`)
 
 `CronService` (`cron.service.ts`) is a facade composing one instance each of

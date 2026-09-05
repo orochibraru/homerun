@@ -12,9 +12,17 @@
       the confirm button in a danger zone) let's use a real confirmation modal
       that sticks out with a "type in service name to confirm" to make sure we
       alert enough the users so they don't destroy their config accidentally
+- [ ] [App] Multi select actions on services
+- [ ] [App] Grid/list layout in services should also be shared with projects &
+      templates
 
 ## Medium
 
+- [ ] "Only bind-mount volumes can be backed up right now : this is a
+      Docker-managed named volume." ==> Add support for backuping docker-managed
+      named volumes
+- [ ] Add a "Paste compose file" feature which parses a docker compose config
+      file into homerun services, volumes, networks etc..
 - [ ] [App] When creating a new service add possibility to link it to another
       even if it's outside of a project. When linking to something like Redis or
       Postgres let's be smart: offer to add an env variable to the main service
@@ -24,11 +32,6 @@
       they want. In the other scenario where they don't want JDBC apply the same
       logic, they should have vars such as (DB_USER) or (POSTGRES_USER) etc
       etc..
-- [ ] [App] Add a queue system with a worker. This should be prioritized for
-      build queues (multiple pushes on git in a short span of time would be a
-      no-op without it) as well as deployments (especially at the end of the
-      service creation wizard) but also for cron-triggered tasks like backups
-      and docker cleanups
 - [ ] [App] For container logs I'm certain we need to use a websocket instead of
       polling. For other tasks I wonder if RPC would be a good choice but seems
       like a trend over a good REST API. Let's evaluate where each is more
@@ -37,6 +40,7 @@
       clicking a deploy button such as "pulling image 'image-name'",
       "registering configuration", "provisioning container", "checking container
       health", "routing traffic", "creating volumes" etc...
+- [ ] [App] Ability to create a cron job from UI (via docker image or host exec)
 
 ## Large
 

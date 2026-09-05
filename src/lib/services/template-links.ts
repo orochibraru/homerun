@@ -245,25 +245,9 @@ export async function quickDeployFromTemplate(
 			type: "service_created",
 			userId,
 		});
-		// biome-ignore lint/performance/noAwaitInLoops: linked services (e.g. a database) should be up before the primary service that depends on them starts
-		const linkedResult = await DeploymentService.deployService(linked, userId);
-		if (!linkedResult.success) {
-			return {
-				error: `Service created, but deploying "${linked.name}" failed: ${linkedResult.error ?? "unknown error"}. Find it on the Services page to retry.`,
-				ok: false,
-				status: 500,
-			};
-		}
 	}
 
-	const deployResult = await DeploymentService.deployService(svc, userId);
-	if (!deployResult.success) {
-		return {
-			error: `Service created, but the deploy failed: ${deployResult.error ?? "unknown error"}. Find it on the Services page to retry.`,
-			ok: false,
-			status: 500,
-		};
-	}
+	await DeploymentService.enqueueStackDeploy(svc, linkedServices, userId);
 
 	return {
 		ok: true,

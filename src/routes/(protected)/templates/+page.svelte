@@ -109,8 +109,8 @@
                         onClick: () =>
                             goto(lastDeployedHref ?? resolve("/services")),
                     },
-                    error: "Couldn't deploy.",
-                    loading: `Deploying "${tmpl.name}"`,
+                    error: "Couldn't prepare deployment.",
+                    loading: `Preparing "${tmpl.name}" for deployment`,
                     onSettled: () => {
                         quickDeploying = null;
                     },
@@ -118,10 +118,12 @@
                         quickDeploying = tmpl.id;
                     },
                     onSuccess: (data) => {
-                        lastDeployedHref = (data as { href?: string } | undefined)?.href;
+                        lastDeployedHref = (
+                            data as { href?: string } | undefined
+                        )?.href;
                     },
                     reset: false,
-                    success: `"${tmpl.name}" deployed.`,
+                    success: `"${tmpl.name}" deploying`,
                 })}
             >
                 <input name="templateId" type="hidden" value={tmpl.id} />
@@ -166,7 +168,9 @@
 <div class="p-6 md:p-8">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="text-text text-xl font-semibold tracking-tight">Templates</h1>
+            <h1 class="text-text text-xl font-semibold tracking-tight">
+                Templates
+            </h1>
             <p class="mt-1 text-sm text-text-muted">
                 One-click configs for common services.
             </p>

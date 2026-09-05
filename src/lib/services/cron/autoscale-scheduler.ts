@@ -70,13 +70,13 @@ export class AutoscaleScheduler extends BaseScheduler {
 
 		await svc.update({ remoteHostId: overflowRemoteHostId });
 
-		const result = await DeploymentService.deployService(svc, svc.userId);
-		if (!result.success) {
-			this.logger.error(
-				`Autoscale migration deploy failed: service=${svc.id}`,
-				result.error,
-			);
-		}
+		const enqueued = await DeploymentService.enqueueDeploy({
+			svc,
+			userId: svc.userId,
+		});
+		this.logger.info(
+			`Autoscale migration deploy queued: service=${svc.id} job=${enqueued.jobId}`,
+		);
 	}
 
 	protected async tick(): Promise<void> {

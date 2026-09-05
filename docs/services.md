@@ -39,6 +39,41 @@ resumes correctly if you reload the page mid-deploy. Below it, deployment
 history lists every attempt with status, image digest, and an expandable full
 log.
 
+Clicking Deploy **queues** the deploy rather than running it inside the request
+(see [The job queue](#the-job-queue) below), so the button comes back
+immediately and the progress panel narrates the rest. Same for "Create and
+Deploy" at the end of the new-service wizard: it creates the service, queues the
+deploy, and drops you straight on the service page watching it come up.
+
+## The job queue
+
+Deploys, git builds, volume backups and Docker cleanups all run through one
+background worker instead of inside the request that triggered them. That buys
+four things worth knowing about as an operator:
+
+- **Repeats collapse.** Queueing a deploy for a service that already has one
+  waiting doesn't queue a second, it joins the one that's already there. Push
+  five times in a minute to a git-based service on a redeploy schedule and you
+  get one build, not five.
+- **One deploy per service at a time.** Different services still deploy in
+  parallel (up to three jobs at once); the same service never deploys twice
+  concurrently.
+- **Linked services keep their order.** Deploying a template that links a
+  database or cache queues the companions first and the primary service behind
+  them, and if a companion fails, the primary is cancelled rather than started
+  against a missing dependency.
+- **A Docker cleanup runs alone.** A host-wide prune waits for anything already
+  running to finish and holds new work back while it runs, so it can't delete
+  images or build cache out from under a deploy in flight. It does take
+  precedence over deploys that are merely queued.
+
+The **Scheduling** page has a Job queue panel showing what's running, what's
+waiting, and how recent jobs finished. Work that was still running when the app
+was restarted is put back on the queue at next boot.
+
+A failed deploy is not retried automatically, you'll see it fail and decide;
+backups get one retry.
+
 ## Env vars
 
 Plain key/value rows on the Env Vars tab, stored as-is (not encrypted, don't put
@@ -159,7 +194,9 @@ oversight, raw TTY bytes don't map cleanly to discrete commands anyway).
 
 Off by default, per service, the Settings tab's `cronEnabled` checkbox + a
 standard 5-field cron schedule. Useful for an image tracking `:latest`, or a
-git-mode service you want rebuilt on a schedule rather than manually.
+git-mode service you want rebuilt on a schedule rather than manually. A due
+schedule queues a deploy like any other trigger, so a redeploy that's still
+waiting its turn is never queued twice.
 
 ## Errors
 
