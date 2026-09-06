@@ -26,6 +26,14 @@ limitation for services that opt in.
 
 ## Known, real limitations (not hypothetical)
 
+- **OAuth / OIDC sign-in** needs **Origin** set under Settings → General and
+  matching how you actually reach Homerun: the redirect URI sent to your
+  provider is built from it, and providers reject any URI they weren't given in
+  advance. See [Users & access](users-and-access.md#authentication-providers).
+- **The login wall's Auth-check URL defaults to port 3000**, which is right for
+  a normal deployment but wrong under `vite dev` (which serves on 5173 and
+  doesn't set `PORT`). Set Auth-check URL explicitly under Settings → General
+  when developing, or the wall's checks call a port nothing is listening on.
 - **The per-app login wall** needs **Origin** set under Settings → General
   (that's where visitors are sent to sign in), and the service has to be
   redeployed after the wall is turned on or off. Group restrictions depend on

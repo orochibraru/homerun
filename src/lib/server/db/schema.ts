@@ -391,14 +391,20 @@ export const instanceSettings = pgTable("instance_settings", {
 		.notNull(),
 });
 
+export type OauthTokenAuthMethod = "auto" | "basic" | "post";
+
 export interface InstanceOauthProvider {
 	clientId: string;
 	clientSecretEnc: string;
+	discoveredTokenAuth?: string[];
 	discoveryUrl: string;
 	enabled: boolean;
+	label?: string;
 	name: string;
 	pkce: boolean;
 	scopes: string[];
+	signOutOfProvider?: boolean;
+	tokenAuthMethod?: OauthTokenAuthMethod;
 }
 
 export type GitProviderKind = "github" | "gitlab" | "gitea" | "bitbucket";

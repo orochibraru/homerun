@@ -245,7 +245,7 @@
                   checked={methods.includes(provider.method)}
                   helperText="OAuth / OIDC provider configured under Authentication"
                   id="method-{provider.name}"
-                  label={provider.name}
+                  label={provider.label}
                   name="method-{provider.name}"
                   onCheckedChange={(v) => toggleMethod(provider.method, v)}
                 />

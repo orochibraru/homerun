@@ -7,6 +7,7 @@
 	import { signIn, signOut } from "$lib/auth-client";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { rememberOauthAttempt } from "$lib/oauth-attempt";
 	import { title } from "$lib/store/title";
 	import { toastError } from "$lib/toast";
 
@@ -50,6 +51,7 @@
 
 	async function oauthSignInCallback(providerId: string) {
 		loading = true;
+		rememberOauthAttempt(providerId);
 		try {
 			const { error } = await signIn.social({
 				callbackURL: data.returnTo,

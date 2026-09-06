@@ -120,3 +120,15 @@ export function emailMatchesPattern(email: string, pattern: string): boolean {
 	}
 	return normalizedEmail === normalizedPattern;
 }
+
+export function resolveAdvertisedTokenAuth(
+	methods: string[],
+): "basic" | "post" | null {
+	if (methods.includes("client_secret_basic")) {
+		return "basic";
+	}
+	if (methods.includes("client_secret_post")) {
+		return "post";
+	}
+	return null;
+}

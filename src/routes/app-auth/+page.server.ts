@@ -7,13 +7,19 @@ import {
 	signGateToken,
 	verifyGateToken,
 } from "$lib/server/app-gate";
+import { offCanonicalOrigin } from "$lib/server/canonical-origin";
 import { gatedService } from "$lib/server/gated-service-cache";
 import {
 	ACCESS_DENIAL_MESSAGES,
 	AppAccessService,
 } from "$lib/services/app-access.service";
 
-export const load = async ({ url, locals }) => {
+export const load = async ({ request: incoming, url, locals }) => {
+	const canonicalOrigin = offCanonicalOrigin(incoming, url);
+	if (canonicalOrigin) {
+		redirect(302, `${canonicalOrigin}${url.pathname}${url.search}`);
+	}
+
 	const rd = url.searchParams.get("rd");
 	const request = rd ? verifyGateToken(rd) : null;
 	if (!request?.target) {
@@ -31,7 +37,7 @@ export const load = async ({ url, locals }) => {
 	const enabledProviders = new Map(
 		config.auth.oauthProviders
 			.filter((p) => p.enabled)
-			.map((p) => [p.name, p.name]),
+			.map((p) => [p.name, p.label || p.name]),
 	);
 	const methods = svc.authProviders
 		.map((method) => {
@@ -49,7 +55,7 @@ export const load = async ({ url, locals }) => {
 			return {
 				id: method,
 				kind: "oauth" as const,
-				label: providerName,
+				label: enabledProviders.get(providerName) ?? providerName,
 				providerId: providerName,
 			};
 		})

@@ -155,6 +155,14 @@ export class Logger {
 		message: string;
 		metadata?: unknown[];
 	}) {
+		if (level === logLevels.WARN || level === logLevels.ERROR) {
+			persistLog(
+				level === logLevels.WARN ? "warn" : "error",
+				this.prefix,
+				message,
+				metadata,
+			);
+		}
 		if (this.logFormat === "console") {
 			const colorFn = (str: string) => {
 				switch (level) {

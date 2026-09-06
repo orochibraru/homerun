@@ -57,8 +57,8 @@ export const actions = {
 		}
 		const input = parsed.data;
 
-		const baseDomain = normalizeBaseDomain(input.baseDomain);
-		if (!baseDomain) {
+		const normalized = normalizeBaseDomain(input.baseDomain);
+		if (!normalized) {
 			return fail(400, {
 				errors: {
 					baseDomain: [
@@ -71,7 +71,10 @@ export const actions = {
 		// Origin isn't a separate field, same derivation as
 		// settings/+page.server.ts's updateCore action : base domain plus the
 		// "Use HTTPS" checkbox, so this wizard only ever asks for one domain.
-		const authOrigin = `${input.useHttps ? "https" : "http"}://${baseDomain}`;
+		const baseDomain = normalized.domain;
+		const authOrigin = `${input.useHttps ? "https" : "http"}://${
+			normalized.domain
+		}${normalized.port ? `:${normalized.port}` : ""}`;
 
 		const settings = await InstanceSettingsDTO.get();
 		// authCheckUrl isn't part of this wizard (advanced/rarely-changed,

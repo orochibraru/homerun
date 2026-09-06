@@ -18,11 +18,20 @@
 							"clientSecret": {
 								"type": "string"
 							},
+							"discoveredTokenAuth": {
+								"items": {
+									"type": "string"
+								},
+								"type": "array"
+							},
 							"discoveryUrl": {
 								"type": "string"
 							},
 							"enabled": {
 								"type": "boolean"
+							},
+							"label": {
+								"type": "string"
 							},
 							"name": {
 								"type": "string"
@@ -35,6 +44,13 @@
 									"type": "string"
 								},
 								"type": "array"
+							},
+							"signOutOfProvider": {
+								"type": "boolean"
+							},
+							"tokenAuthMethod": {
+								"enum": ["auto", "basic", "post"],
+								"type": "string"
 							}
 						},
 						"required": ["clientId", "clientSecret", "discoveryUrl", "name"],

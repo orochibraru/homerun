@@ -23,7 +23,7 @@
 	let deleteForm: HTMLFormElement | undefined = $state();
 </script>
 
-<div class="mx-auto max-w-2xl p-6 md:p-8">
+<div class="p-6 md:p-8">
   <a
     class="mb-4 inline-flex items-center gap-1 text-sm text-text-muted hover:text-text"
     href={resolve("/remote-hosts")}

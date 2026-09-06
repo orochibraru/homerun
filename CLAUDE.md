@@ -353,6 +353,21 @@ that pattern for any new skill.
   third: the Terminal tab reports failures through its own `errored` banner,
   since a promise that only settles when the connection ends can't drive a
   toast. Anything that mutates state on the server gets a promise toast.
+- **Never cap the width of a dashboard page.** A page under `(protected)/` fills
+  the viewport : its root wrapper is `<div class="p-6 md:p-8">`, with **no
+  `mx-auto` and no `max-w-*`**. This app is used on ultrawide monitors, and a
+  centred `max-w-4xl` column leaves most of the screen as empty gutter while the
+  content it was "protecting" (tables, lists, key/value grids, side-by-side
+  cards) is exactly the content that wants the room. If a genuinely long block
+  of running prose needs a reading measure, cap **that one text node** (the
+  precedent is `templates/[templateId]`'s description at `max-w-2xl`) — but
+  don't reach for it reflexively: no other dashboard page caps its helper text,
+  and sprinkling `max-w-prose` over some paragraphs and not others reads as an
+  accident rather than a decision. The only other exception is a **centred
+  single-purpose card** on an otherwise-empty page (`auth/sign-in`,
+  `auth/sign-up`, `auth/accept-invite`, `auth/error`, `app-auth`, `cli-auth` —
+  all `max-w-md`). Neither exception is a licence to wrap a real page in a
+  column.
 - **No comments. Anywhere. In any code file.** No explanatory line comments, no
   header banners, no prose in YAML/compose/shell files either. A change's
   rationale belongs in the git commit message, a feature's explanation belongs
@@ -600,6 +615,16 @@ that with a `\b`-anchored regex**: `bg-surface\b` matches inside `bg-surface-2`,
 silently producing a bogus `glass-2` class that Tailwind emits nothing for.
 Match on whole class tokens, not substrings.
 
+### Page width and layout
+
+Covered as a hard rule under Conventions above, repeated here because it's a
+layout decision rather than a code-style one: **dashboard pages fill the
+viewport** (`p-6 md:p-8`, no `mx-auto`, no `max-w-*`). `/authentication` shipped
+with `mx-auto max-w-4xl` and looked broken on an ultrawide display, with the
+whole page squeezed into a centre column; `remote-hosts/[hostId]` had the same
+defect (`mx-auto max-w-2xl`). Both now follow the same wrapper every other page
+uses.
+
 ### Shared UI components (`src/lib/components/`)
 
 Not a full componentized design system, this app still doesn't have one, but a
@@ -837,9 +862,10 @@ Setup diagnostics below) in favor of the dashboard banner deep-linking into
   work, `onMount` checks the latest deployment's status and `svc.currentStatus`
   and reattaches if either is still in-flight.
 
-`src/routes/(protected)/projects/`, `templates/`, `storage/` mirror this pattern
-(list + `new/` create route + `[id]` detail where applicable). `system-logs/`
-streams the Traefik container's own logs (see Docker integration below).
+`src/routes/(protected)/projects/`, `templates/`, `storage/`, `authentication/`
+mirror this pattern (list + `new/` create route + `[id]` detail where
+applicable). `system-logs/` streams the Traefik container's own logs (see Docker
+integration below).
 
 ### REST API (`src/routes/api/v1/`)
 
@@ -2826,22 +2852,94 @@ live-bindings mean a reassignment inside `auth.ts` is immediately visible
 everywhere without a restart. `rebuildAuth()` is called at the end of
 `hooks.server.ts`'s `init()` and every `/settings` action.
 
-### Authentication page (`/authentication`, `$lib/auth-providers.ts`)
+### Base domain vs. Dashboard URL, and why they're two things
 
-Admin-only, its own sidebar item under Administration. This is where every
-sign-in method for the instance is configured — it **replaced** the old
+`instance_settings.baseDomain` and `auth.origin` answer different questions, and
+collapsing them caused a real, reported breakage. **Base domain is the DNS
+suffix deployed services are routed under** : `labels.ts` interpolates it into a
+Traefik `Host()` rule as `<slug>` dot `<baseDomain>`, and a host rule cannot
+contain a port. **Dashboard URL (`auth.origin`) is where this app itself is
+reached**, scheme and port included, and it's what the OAuth redirect URI and
+the login wall's redirects are built from. In production the two coincide
+(`example.com`→`<https://example.com`>); **in development they diverge**,
+because the dashboard runs on `http://localhost:5173` while services are routed
+by Traefik on 443 as `<slug>.localhost`.
+
+Origin used to be derived as `scheme://baseDomain` with no separate field, and
+`normalizeBaseDomain` explicitly permitted an optional `:port`. So getting the
+origin right for dev forced `localhost:5173` into Base domain, which then became
+the routing suffix : every service rendered as `<slug>.localhost:5173`, a URL
+that hits the **Vite dev server** rather than Traefik, which served the
+dashboard under that hostname, found no session cookie for it, and bounced to
+`/auth/sign-in`. That's the bug, and nothing about it looked like a domain
+problem from the outside.
+
+Now: `normalizeBaseDomain` returns `{domain, port}` and **the port is moved to
+the origin instead of the routing name**, so pasting `localhost:5173` (or a full
+URL) into Base domain does the right thing silently rather than corrupting
+routing. `applyCoreOverride` also strips any port from `config.baseDomain` at
+boot, so an instance that already stored one is correct without needing a
+re-save. Settings gained an explicit optional **Dashboard URL** field for the
+cases derivation can't express. **A blank Dashboard URL means "derive it"**, and
+that is load-bearing : `authOrigin` is always persisted, derived or not, so a
+naive `value={settings.authOrigin}` pre-fills the field and then silently
+overrides a later Base domain edit — caught by a browser test, not by reading
+the code. The field renders blank whenever the stored origin equals
+`scheme://baseDomain`, and shows the placeholder as a hint.
+
+**Known dev-mode papercut, deliberately not automated**: `config.authCheckUrl`
+defaults to `http://host.docker.internal:${PORT}/api/v1/auth-check` with `PORT`
+defaulting to 3000, but `vite dev` serves on 5173 and doesn't set `PORT`, so the
+login wall's forwardAuth calls a dead port in development until Auth-check URL
+is set by hand. **Don't "fix" this by deriving the port from `auth.origin`** :
+that is only the same port in dev. Behind a reverse proxy the origin is 443
+while the app listens on 3000, so deriving would break production to fix
+development.
+
+### Authentication pages (`/authentication`, `$lib/auth-providers.ts`)
+
+Admin-only, its own sidebar item under Administration. It **replaced** the old
 `/settings/authentication` tab (that route is gone; `/settings` is down to four
-tabs), so there's one place editing `instance_settings.oauthProviders` rather
-than two.
+tabs), so there's one place editing `instance_settings.oauthProviders`.
 
-- **Presets.** `OAUTH_PRESETS` (`$lib/auth-providers.ts`, a pure module, also
-  home to the method-id encoding and the email matcher) carries a discovery-URL
-  template, default scopes and PKCE default for Pocket ID, Keycloak, Authelia,
-  Logto, Authentik, Zitadel and Kanidm. Clicking one appends a prefilled
-  provider row with `{host}`/`{realm}`/`{slug}`/`{clientId}` placeholders left
-  in for the admin to replace; "Blank" is still there for anything else. The
-  templates are the products' own documented discovery paths, which differ more
-  than you'd guess (Logto nests under `/oidc`, Authentik under
+**It follows the list + `new/` + `[id]` shape every other entity uses**
+(services, projects, storage), not a single page of inline expanding forms. The
+first cut was that inline page and it was wrong on every axis the user cared
+about : one provider looked like _the_ provider, deleting had no confirmation,
+and the whole thing lived in one whole-array `updateOauth` action whose seven
+parallel `formData.getAll()` arrays had to stay index-aligned between collapsed
+and expanded rows. The route split deleted that fragility outright : each page
+edits exactly one provider through `addOauthProvider`/`updateOauthProvider`/
+`deleteOauthProvider` on the DTO, and `$lib/server/oauth-provider-form.ts`
+parses one provider from one form. Providers still live in the
+`instance_settings.oauthProviders` jsonb array rather than their own table, so
+the route param is the provider **name**, which is why the name is immutable
+once created (it's in the redirect URI and in every service's `oauth:<name>`
+method reference). Deletion goes through `ConfirmDialog` with the provider name
+as the typed phrase, same as the service danger zone.
+
+**`label` vs `name`.** `name` is the machine id (lowercase, hyphens, part of the
+redirect URI and of `oauth:<name>`); `label` is the human name shown on the
+"Continue with …" button, the app-auth screen, the per-service Access checkbox
+list and the provider list. `label` falls back to `name` everywhere it's read,
+so providers stored before it existed keep working.
+
+**Signing out of the provider is opt-in, off by default** (`signOutOfProvider`).
+better-auth picks `end_session_endpoint` straight out of the discovery document
+(`endSessionEndpoint ??= discovered.end_session_endpoint`) and performs
+RP-initiated logout by default, so signing out of Homerun bounced the user to
+their IdP's logout page without anyone having configured it. The provider config
+now always passes `disableProviderLogout: !signOutOfProvider`, so the default is
+a local sign-out and the redirect only happens when an admin ticks the box.
+
+- **Presets.**- **Presets.** `OAUTH_PRESETS` (`$lib/auth-providers.ts`, a pure
+  module, also home to the method-id encoding and the email matcher) carries a
+  discovery-URL template, default scopes and PKCE default for Pocket ID,
+  Keycloak, Authelia, Logto, Authentik, Zitadel and Kanidm. Clicking one appends
+  a prefilled provider row with `{host}`/`{realm}`/`{slug}`/`{clientId}`
+  placeholders left in for the admin to replace; "Blank" is still there for
+  anything else. The templates are the products' own documented discovery paths,
+  which differ more than you'd guess (Logto nests under `/oidc`, Authentik under
   `/application/o/<slug>`, Kanidm under `/oauth2/openid/<client id>`).
 - The page prints the exact redirect URI to register with the provider
   (`<origin>/api/v1/auth/callback/<provider id>`), and says so explicitly when
@@ -2851,6 +2949,117 @@ than two.
   duplicates and the UI shows a per-provider "used by N apps" count.
 - A "Protected apps" panel lists services with the wall on, flagging any with no
   sign-in method picked, and deep-links to each one's Networking tab.
+
+**The OAuth redirect URI comes from the request, and both halves of the exchange
+must agree.** better-auth builds the authorize step's `redirect_uri` from the
+provider's optional `redirectURI`, but the **token exchange ignores it
+entirely** and rebuilds the URI from `context.baseURL` (see
+`api/routes/callback.mjs`, which interpolates `c.context.baseURL` with the
+callback path), and that is derived per-request because `auth.ts` deliberately
+leaves `baseURL` undefined — see Auth above for the lockout that causes. **Real
+bug, introduced and reverted in one session**: pinning only `redirectURI` to
+`config.auth.origin` made the authorize step stable but desynced it from the
+token step, turning a `redirect_uri ... is not registered` error into
+`invalid_code`, since OAuth requires the two to match byte for byte. Don't pin
+one half. The request origin is the single source of truth for both, and the fix
+for "it points at the wrong hostname" is to make the user reach Homerun at the
+right one : that's what the Base domain / Dashboard URL split above and the
+canonicalization below are for. The original report (a `dashy.localhost:5173`
+callback not being registered) turned out to be the _same_ root cause as the
+layout bug — a port in Base domain sending the browser to the dev server under a
+service hostname — and fixing that fixes the redirect URI without pinning
+anything.
+
+**Client authentication on the token exchange is selectable per provider**
+(`instance_settings.oauthProviders[].tokenAuthMethod`,
+`"auto" | "post" | "basic"`, Authentication page). better-auth's default
+(`getDefaultTokenEndpointAuth`) is `client_secret_post` whenever a client secret
+is configured, and `none` when it isn't — and `none` sends **no client
+credentials at all**, which an IdP reports as `invalid_client`,
+indistinguishable from a wrong secret. A discovery document's
+`token_endpoint_auth_methods_supported` lists what the _server_ accepts, but
+each registered client has its own configured method, so a client set to
+`client_secret_basic` rejects the default POST-body request. **Automatic is not
+"let better-auth decide"** : it reads the provider's own
+`token_endpoint_auth_methods_supported`, captured into `discoveredTokenAuth` by
+the same discovery fetch that already validates the URL on save, and prefers
+`client_secret_basic` when offered — which is what RFC 6749 §2.3.1 requires
+servers to support and calls body credentials "NOT RECOMMENDED", and what OIDC
+Core defaults `token_endpoint_auth_method` to. better-auth's POST-body default
+is the outlier, and following it is what made a correctly configured Pocket ID
+client fail. Falls back to `post` when Basic isn't advertised, and to
+better-auth's own default when neither is (`resolveAdvertisedTokenAuth`, a pure
+function in `$lib/auth-providers.ts`, covered by
+`tests/unit/app/token-auth.test.ts`). Because the list is captured at save time,
+a provider stored before this exists has an empty `discoveredTokenAuth` and
+behaves as before until it's saved again. `"basic"` maps to better-auth's
+`authentication: "basic"`, `"post"` to an explicit
+`tokenEndpointAuth: { method: "client_secret_post" }`, and all of it is only
+applied when a secret is actually present : passing a secret-based method with
+no secret makes the plugin **throw during init**, which would take the whole
+auth context down (the lockout shape described under Auth above). **Verified by
+observing the real request** against a stub IdP that logs what arrives —
+`auto`/`post` put the secret in the body, `basic` sends an
+`Authorization: Basic` header and no body secret. That stub is the tool to reach
+for here : two earlier guesses at this bug (a pinned `redirectURI`, then a
+suspected empty secret) were both wrong, and only watching the actual outgoing
+request settled it.
+
+**The flow still has to start and finish on one origin.** The PKCE code-verifier
+cookie is set on whichever origin began the exchange, so beginning on host A and
+finishing on host B fails on the verifier even when the URIs line up.
+`$lib/server/canonical-origin.ts`'s `offCanonicalOrigin()` is what closes that:
+`/app-auth` 302s to the canonical origin (lossless, its state is the signed `rd`
+param), and the dashboard sign-in page swaps its provider buttons for a link to
+the canonical sign-in URL rather than offering a button that cannot work. **The
+load-bearing detail is that it reads the `Host` (or `X-Forwarded-Host`) header,
+not `url.origin`** : with `ORIGIN` set, SvelteKit normalizes `event.url` to the
+configured origin, so a `url.origin` comparison can never detect the mismatch
+and the guard is silently dead code, which is exactly how the first attempt at
+it was written. The header is attacker-controllable, which is safe here because
+it only ever decides _whether_ to redirect; the target is always
+`config.auth.origin`, never derived from the request.
+
+**Linking a provider to an existing account is explicit, and it has to be.**
+better-auth refuses implicit linking when the **local** user row has
+`emailVerified: false`, even for a trusted provider (`link-account.mjs`'s single
+condition, which also covers `accountLinking.enabled`/`disableImplicitLinking`).
+Homerun's bootstrap admin signs up with email and password while SMTP is
+typically disabled, so `emailVerified` is false and can never become true : that
+account could **never** link an OIDC provider, and the failure surfaced as a raw
+`account_not_linked` code. The escape hatch (`requireLocalEmailVerified: false`)
+is marked deprecated upstream — "the gate will become unconditional" — so
+disabling it buys months and then breaks. The fix is therefore the explicit
+path, not the loophole: `/profile/security` has a **Connected accounts** section
+listing every enabled provider with Connect/Disconnect, driven by better-auth's
+authenticated `linkSocial()`/`unlinkAccount()` (which bypass the gate entirely,
+since being signed in is itself the proof both accounts are yours). Disconnect
+is disabled while the user has no `credential` account, so nobody can strip
+their own last sign-in method. **`unlinkAccount` takes `accountId`, not
+`providerId`**, in this version, so the load returns each provider's
+`account.accountId` alongside its linked flag.
+
+**better-auth's own error UI is replaced by `/auth/error`** via
+`onAPIError.errorURL`. Without it, a failed OAuth callback renders better-auth's
+branded "Something went wrong" page with a raw code and an "Ask AI" button,
+which is jarring in a self-hosted dashboard. The page maps the codes that
+actually occur (`account_not_linked`, `state_mismatch`, `email_not_verified`,
+`email_not_found`, `invalid_callback_request`) to plain language, and falls back
+to a sane message for anything else. **It normalizes the incoming code**
+(lowercase, spaces and hyphens to underscores) because better-auth emits
+`"account not linked"` with spaces and it arrives slugified.
+
+**The page performs the fix rather than describing it.** A first cut told the
+user to go to Profile → Security themselves, which the user rightly rejected :
+the page already knows everything needed to do it. For `account_not_linked` it
+now renders a real **Link \<provider\> to this account** button (calling
+`linkSocial()` inline) plus **Sign out**, when `locals.user` is set — and the
+sign-in prompt only when nobody is signed in, since linking requires an
+authenticated session. Which provider failed isn't in better-auth's redirect (it
+only appends `error=`), so the two places that start an OAuth flow stash the
+provider name in `sessionStorage` first (`$lib/oauth-attempt.ts`); the page
+falls back to the only enabled provider when there's exactly one, and to a
+button per provider otherwise, so it degrades instead of guessing wrong.
 
 **Enabled providers now actually appear on the dashboard's own sign-in page**
 too, as "Continue with …" buttons. They never did before: providers could be

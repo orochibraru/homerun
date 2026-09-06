@@ -6,6 +6,7 @@ import {
 	type InstanceOauthProvider,
 	type InstanceSettings,
 	instanceSettings,
+	type OauthTokenAuthMethod,
 } from "$lib/server/db/schema";
 import { decryptSecret, encryptSecret } from "$lib/services/secrets";
 import { BaseDTO } from "./base-dto";
@@ -81,11 +82,15 @@ export interface GitProviderInput {
 export interface OauthProviderInput {
 	clientId: string;
 	clientSecret?: string;
+	discoveredTokenAuth?: string[];
 	discoveryUrl: string;
 	enabled: boolean;
+	label: string;
 	name: string;
 	pkce: boolean;
 	scopes: string[];
+	signOutOfProvider: boolean;
+	tokenAuthMethod: OauthTokenAuthMethod;
 }
 
 /** The plain-value shape $lib/config.ts's applyInstanceSettings() merges over env defaults. */
@@ -103,7 +108,11 @@ export interface InstanceSettingsOverride {
 		enabled: boolean;
 		name: string;
 		pkce: boolean;
+		discoveredTokenAuth: string[];
+		label: string;
 		scopes: string[];
+		signOutOfProvider: boolean;
+		tokenAuthMethod: OauthTokenAuthMethod;
 	}>;
 	smtpEnabled?: boolean | null;
 	smtpFrom?: string | null;
@@ -327,21 +336,48 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		await this.persist({ gitProviders: rows });
 	}
 
-	async updateOauthProviders(providers: OauthProviderInput[]): Promise<void> {
-		const existingByName = new Map(
-			this.row.oauthProviders.map((p) => [p.name, p]),
+	#toRow(
+		input: OauthProviderInput,
+		existing?: InstanceOauthProvider,
+	): InstanceOauthProvider {
+		return {
+			clientId: input.clientId,
+			clientSecretEnc: input.clientSecret
+				? encryptSecret(input.clientSecret)
+				: (existing?.clientSecretEnc ?? ""),
+			discoveredTokenAuth: input.discoveredTokenAuth,
+			discoveryUrl: input.discoveryUrl,
+			enabled: input.enabled,
+			label: input.label,
+			name: input.name,
+			pkce: input.pkce,
+			scopes: input.scopes,
+			signOutOfProvider: input.signOutOfProvider,
+			tokenAuthMethod: input.tokenAuthMethod,
+		};
+	}
+
+	oauthProvider(name: string): InstanceOauthProvider | null {
+		return this.row.oauthProviders.find((p) => p.name === name) ?? null;
+	}
+
+	async addOauthProvider(input: OauthProviderInput): Promise<void> {
+		const rows = [...this.row.oauthProviders, this.#toRow(input)];
+		await this.persist({ oauthProviders: rows });
+	}
+
+	async updateOauthProvider(
+		name: string,
+		input: OauthProviderInput,
+	): Promise<void> {
+		const rows = this.row.oauthProviders.map((p) =>
+			p.name === name ? this.#toRow(input, p) : p,
 		);
-		const rows: InstanceOauthProvider[] = providers.map((p) => ({
-			clientId: p.clientId,
-			clientSecretEnc: p.clientSecret
-				? encryptSecret(p.clientSecret)
-				: (existingByName.get(p.name)?.clientSecretEnc ?? ""),
-			discoveryUrl: p.discoveryUrl,
-			enabled: p.enabled,
-			name: p.name,
-			pkce: p.pkce,
-			scopes: p.scopes,
-		}));
+		await this.persist({ oauthProviders: rows });
+	}
+
+	async deleteOauthProvider(name: string): Promise<void> {
+		const rows = this.row.oauthProviders.filter((p) => p.name !== name);
 		await this.persist({ oauthProviders: rows });
 	}
 
@@ -373,7 +409,11 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 				enabled: p.enabled,
 				name: p.name,
 				pkce: p.pkce,
+				discoveredTokenAuth: p.discoveredTokenAuth ?? [],
+				label: p.label || p.name,
 				scopes: p.scopes,
+				signOutOfProvider: p.signOutOfProvider ?? false,
+				tokenAuthMethod: p.tokenAuthMethod ?? "auto",
 			})),
 			smtpEnabled: this.row.smtpEnabled,
 			smtpFrom: this.row.smtpFrom,

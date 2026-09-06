@@ -13,6 +13,8 @@
       remote connection but nothing passes one, so an image job can't be
       targeted at a Remote Host, and a run's output is only visible after it
       finishes (no live tail).
+- [ ] Add security policies for an instance: require passkey, 2fa etc.. with
+      passkey and 2fa support on auth pages.
 
 ## Large
 

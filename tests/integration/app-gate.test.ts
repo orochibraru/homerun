@@ -291,6 +291,36 @@ describe("per-app auth gate", () => {
 		expect((await gateCheck("/", cookie)).status).toBe(302);
 	});
 
+	test("/app-auth reached on a gated app's own host is sent to the canonical origin", async () => {
+		const res = await nativeFetch(`${fixture.origin}/app-auth?rd=tok`, {
+			headers: { host: GATED_HOST },
+			redirect: "manual",
+		});
+		expect(res.status).toBe(302);
+		expect(res.headers.get("location")).toBe(
+			`${fixture.origin}/app-auth?rd=tok`,
+		);
+	});
+
+	test("/app-auth on the canonical origin runs its own load instead of looping", async () => {
+		const res = await nativeFetch(`${fixture.origin}/app-auth?rd=tok`, {
+			redirect: "manual",
+		});
+		expect(res.status).toBe(400);
+	});
+
+	test("the sign-in page resolves a canonical URL from the Host header, not url.origin", async () => {
+		const off = await nativeFetch(`${fixture.origin}/auth/sign-in`, {
+			headers: { host: GATED_HOST },
+		});
+		expect(await off.text()).toContain(
+			`canonicalSignInUrl:"${fixture.origin}/auth/sign-in"`,
+		);
+
+		const on = await nativeFetch(`${fixture.origin}/auth/sign-in`);
+		expect(await on.text()).toContain("canonicalSignInUrl:null");
+	});
+
 	test("an expired redirect token is refused rather than followed", async () => {
 		const res = await nativeFetch(`${fixture.origin}/app-auth?rd=bogus.token`, {
 			headers: { "x-api-key": fixture.apiKey },

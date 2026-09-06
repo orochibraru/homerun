@@ -60,7 +60,11 @@ export const load = async () => {
 		dashboardOrigin: config.auth.origin ?? null,
 		oauthProviders: config.auth.oauthProviders
 			.filter((p) => p.enabled)
-			.map((p) => ({ method: oauthMethod(p.name), name: p.name })),
+			.map((p) => ({
+				label: p.label || p.name,
+				method: oauthMethod(p.name),
+				name: p.name,
+			})),
 		users: users.map((u) => ({ email: u.email, id: u.id, name: u.name })),
 	};
 };

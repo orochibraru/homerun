@@ -72,6 +72,10 @@ const oauthProviderSchema = z.object({
 	name: z.string(),
 	pkce: z.boolean().optional(),
 	scopes: z.array(z.string()).optional(),
+	discoveredTokenAuth: z.array(z.string()).optional(),
+	label: z.string().optional(),
+	signOutOfProvider: z.boolean().optional(),
+	tokenAuthMethod: z.enum(["auto", "basic", "post"]).optional(),
 });
 
 /**
@@ -155,6 +159,10 @@ const configSchema = z.object({
 					enabled: z.boolean().default(false),
 					pkce: z.boolean().default(true),
 					scopes: z.array(z.string()).default([]),
+					discoveredTokenAuth: z.array(z.string()).default([]),
+					label: z.string().default(""),
+					signOutOfProvider: z.boolean().default(false),
+					tokenAuthMethod: z.enum(["auto", "basic", "post"]).default("auto"),
 				}),
 			)
 			.default([]),
@@ -348,7 +356,8 @@ export function applyInstanceSettings(
 /** Instance-wide addressing : the base domain and the forwardAuth check URL. */
 function applyCoreOverride(override: InstanceSettingsOverride): void {
 	config.authCheckUrl = override.authCheckUrl ?? fileDefaults.authCheckUrl;
-	config.baseDomain = override.baseDomain ?? fileDefaults.baseDomain;
+	const domain = override.baseDomain ?? fileDefaults.baseDomain;
+	config.baseDomain = domain.split(":")[0] ?? domain;
 }
 
 function applyAuthOverride(override: InstanceSettingsOverride): void {

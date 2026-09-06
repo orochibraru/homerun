@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { Eye, EyeOff, Server } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { goto } from "$app/navigation";
+	import { goto, onNavigate } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { signIn, useSession } from "$lib/auth-client";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { rememberOauthAttempt } from "$lib/oauth-attempt";
 	import { title } from "$lib/store/title";
 
 	const { data } = $props();
@@ -56,8 +57,13 @@
 		});
 	}
 
+	onNavigate(() => {
+		loading = false;
+	});
+
 	async function oauthSignInCallback(providerId: string) {
 		loading = true;
+		rememberOauthAttempt(providerId);
 		try {
 			const { error } = await signIn.social({
 				callbackURL: resolve("/"),
@@ -72,14 +78,14 @@
 		}
 	}
 
-	function handleOauthSignIn(providerId: string) {
+	function handleOauthSignIn(providerId: string, providerLabel: string) {
 		return toast.promise(oauthSignInCallback(providerId), {
 			error: (err) =>
 				err instanceof Error
 					? err.message
-					: `Couldn't sign you in with ${providerId}.`,
-			loading: `Redirecting to ${providerId}`,
-			success: `Redirecting to ${providerId}…`,
+					: `Couldn't sign you in with ${providerLabel}.`,
+			loading: `Redirecting to ${providerLabel}`,
+			success: `Redirecting to ${providerLabel}…`,
 		});
 	}
 </script>
@@ -107,7 +113,9 @@
         <div class="w-full max-w-md">
             <!-- Header -->
             <div class="mb-8">
-                <h2 class="text-text text-2xl font-semibold tracking-tight">Welcome back</h2>
+                <h2 class="text-text text-2xl font-semibold tracking-tight">
+                    Welcome back
+                </h2>
                 <p class="text-text-muted mt-1 text-sm">
                     Sign in to manage your services.
                 </p>
@@ -196,18 +204,36 @@
                     <span class="text-text-subtle text-xs uppercase">or</span>
                     <span class="bg-border h-px flex-1"></span>
                 </div>
-                <div class="space-y-2">
-                    {#each data.oauthProviders as provider (provider)}
-                        <Button
-                            class="w-full"
-                            disabled={loading}
-                            onclick={() => handleOauthSignIn(provider)}
-                            variant="outline"
+                {#if data.canonicalSignInUrl}
+                    <p
+                        class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600"
+                    >
+                        You've reached this instance on a different address than
+                        its configured Origin, and single sign-on has to start
+                        there so the provider can hand you back.
+                        <a
+                            class="font-medium underline"
+                            href={data.canonicalSignInUrl}
                         >
-                            Continue with {provider}
-                        </Button>
-                    {/each}
-                </div>
+                            Sign in on the configured address
+                        </a>
+                        instead, or use your email and password here.
+                    </p>
+                {:else}
+                    <div class="space-y-2">
+                        {#each data.oauthProviders as provider (provider.name)}
+                            <Button
+                                class="w-full"
+                                disabled={loading}
+                                onclick={() =>
+                                handleOauthSignIn(provider.name, provider.label)}
+                                variant="outline"
+                            >
+                                Continue with {provider.label}
+                            </Button>
+                        {/each}
+                    </div>
+                {/if}
             {/if}
 
             <p class="mt-6 text-center text-sm text-text-muted">
