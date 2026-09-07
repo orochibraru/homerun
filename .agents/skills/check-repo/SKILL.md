@@ -5,10 +5,10 @@ description:
   gates this codebase enforces: bun run check (svelte-check --fail-on-warnings,
   0 errors AND 0 warnings across the whole src/ tree, not just touched files)
   and bun run lint (biome check ., 0 errors), plus bunx tsc --noEmit for any of
-  agent/, installer/, cli/ that were touched (separate tsconfig.json, not
+  packages/agent/, packages/installer/, packages/cli/ that were touched (separate tsconfig.json, not
   covered by the root check script). Use whenever finishing an edit to this
   codebase, before saying a change is "done", or after any change under src/,
-  agent/, installer/, or cli/.
+  packages/agent/, packages/installer/, or packages/cli/.
 user-invocable: true
 allowed-tools: Bash(bun run check), Bash(bun run lint), Bash(bunx tsc --noEmit *), Bash(bunx biome check *), Bash(git diff *), Bash(git status *)
 ---
@@ -35,20 +35,22 @@ actually reading the failing file first.
    every Write/Edit, so most formatting drift is caught immediately — this step
    is the final confirmation, not the first line of defense.
 
-3. **If `agent/`, `installer/`, or `cli/` were touched** (check with
-   `git status`/`git diff`): each is a standalone Bun/TypeScript sub-project
-   with its own `tsconfig.json`, not covered by the root `bun run check`. Run
-   its own typecheck:
-   - `agent/` touched → `bunx tsc --noEmit -p agent/tsconfig.json`
-   - `installer/` touched → `bunx tsc --noEmit -p installer/tsconfig.json`
-   - `cli/` touched → `bunx tsc --noEmit -p cli/tsconfig.json`
+3. **If `packages/agent/`, `packages/installer/`, or `packages/cli/` were
+   touched** (check with `git status`/`git diff`): each is a standalone
+   Bun/TypeScript sub-project with its own `tsconfig.json`, not covered by the
+   root `bun run check`. Run its own typecheck:
+   - `packages/agent/` touched →
+     `bunx tsc --noEmit -p packages/agent/tsconfig.json`
+   - `packages/installer/` touched →
+     `bunx tsc --noEmit -p packages/installer/tsconfig.json`
+   - `packages/cli/` touched → `bunx tsc --noEmit -p packages/cli/tsconfig.json`
 
    (Or use the root `check:agent`/`check:installer`/`check:cli` scripts if
    present in `package.json` — check first, they wrap the same command.)
 
-4. **If `agent/`, `installer/`, or `cli/` tests were touched, or their source
-   changed in a way that could affect behavior**: run the matching
-   `bun test:agent` / `bun test:cli` / `bun test:installer`.
+4. **If `packages/agent/`, `packages/installer/`, or `packages/cli/` tests were
+   touched, or their source changed in a way that could affect behavior**: run
+   the matching `bun test:agent` / `bun test:cli` / `bun test:installer`.
 
 5. **IDE diagnostics are not ground truth in this repo.** If an inline IDE error
    looks suspicious or doesn't match what `bun run check` reports, trust

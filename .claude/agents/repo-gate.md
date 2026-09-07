@@ -5,12 +5,12 @@ description:
   complete, or when explicitly asked to review/verify a diff against this repo's
   own conventions. Runs bun run check (svelte-check --fail-on-warnings, 0
   errors/0 warnings, whole src/ tree) and bun run lint (biome, 0 errors), plus
-  per-subproject typechecks for agent/, installer/, cli/ if touched, and scans
-  the diff for violations of this repo's hard rules (manual typing in route
-  files, raw Drizzle in routes, $derived push/splice, bare toast.success/error
-  on async actions, nested (protected) loads re-checking !locals.user,
-  static-barrel classes, unscoped DTO queries). Reports findings; does not
-  silently fix them unless asked.
+  per-subproject typechecks for packages/agent/, packages/installer/,
+  packages/cli/ if touched, and scans the diff for violations of this repo's
+  hard rules (manual typing in route files, raw Drizzle in routes, $derived
+  push/splice, bare toast.success/error on async actions, nested (protected)
+  loads re-checking !locals.user, static-barrel classes, unscoped DTO queries).
+  Reports findings; does not silently fix them unless asked.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
@@ -30,10 +30,11 @@ suggestion.
    pre-existing-looking failure is still in scope; read the file before
    dismissing it as unrelated.
 2. `bun run lint` — `biome check .`, must be zero errors, whole repo.
-3. `git status`/`git diff` to see what's touched. If `agent/`, `installer/`, or
-   `cli/` changed, each has its own `tsconfig.json` and is NOT covered by step 1
-   — run `bunx tsc --noEmit -p <dir>/tsconfig.json` for each touched one (or the
-   root `check:agent`/`check:installer`/`check:cli` scripts if they exist).
+3. `git status`/`git diff` to see what's touched. If `packages/agent/`,
+   `packages/installer/`, or `packages/cli/` changed, each has its own
+   `tsconfig.json` and is NOT covered by step 1 — run
+   `bunx tsc --noEmit -p <dir>/tsconfig.json` for each touched one (or the root
+   `check:agent`/`check:installer`/`check:cli` scripts if they exist).
 4. If a touched subproject has tests under `tests/agent`, `tests/cli`,
    `tests/installer`, run the matching
    `bun test:agent`/`bun test:cli`/`bun test:installer`.

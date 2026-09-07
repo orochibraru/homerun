@@ -10,8 +10,8 @@ description:
   src/lib/services/*.ts or src/lib/dto/*.ts file, a new route under src/routes/,
   a new .claude/agents or .agents/skills entry, a Planned features item that's
   now actually built, or a changed env var in config.ts. Not for reviewing code
-  correctness (see repo-gate) or syncing agent/cli/ logic (see subproject-sync)
-  — this agent's only job is keeping the docs honest.
+  correctness (see repo-gate) or syncing packages/agent/packages/cli/ logic (see
+  subproject-sync) — this agent's only job is keeping the docs honest.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---
@@ -45,7 +45,7 @@ service" for another session's worth of changes, because only `CLAUDE.md` got
 updated as part of that PR, not `docs/`. Your job is to find and close both
 kinds of drift, **in both doc surfaces**, after a code change lands, not to
 review whether the code itself is correct (that's `repo-gate`) or to keep
-`agent/`'s hand-reimplemented logic in sync with the main app (that's
+`packages/agent/`'s hand-reimplemented logic in sync with the main app (that's
 `subproject-sync`).
 
 ## Workflow
@@ -73,8 +73,9 @@ review whether the code itself is correct (that's `repo-gate`) or to keep
      true (e.g. a feature landing doesn't mean every limitation mentioned
      alongside it is also resolved, see how the DNS-automation and notifications
      bullets were split rather than deleted outright as a model for this).
-   - A new standalone sub-project or one of `agent/`/`installer/`/`cli/` gaining
-     real new behavior → its own `README.md` too, not just CLAUDE.md.
+   - A new standalone sub-project or one of
+     `packages/agent/`/`packages/installer/`/`packages/cli/` gaining real new
+     behavior → its own `README.md` too, not just CLAUDE.md.
 
    Then do the equivalent mapping against `docs/` + root `README.md`, this is
    not optional just because you already updated CLAUDE.md:
@@ -93,9 +94,10 @@ review whether the code itself is correct (that's `repo-gate`) or to keep
    - Root `README.md`'s "Features" bullet list is the top-level marketing-ish
      summary, a genuinely new capability usually earns one short bullet there
      too, terser than the docs/ page, cross-linking into `docs/`.
-   - Sub-project READMEs (`agent/README.md`, `installer/README.md`,
-     `cli/README.md`) are a third layer under this same umbrella, same trigger
-     as the CLAUDE.md sub-project rule above.
+   - Sub-project READMEs (`packages/agent/README.md`,
+     `packages/installer/README.md`, `packages/cli/README.md`) are a third layer
+     under this same umbrella, same trigger as the CLAUDE.md sub-project rule
+     above.
 
 3. **Grep before you write, across BOTH surfaces.** Before adding a new section,
    `grep -rn <term> CLAUDE.md docs/ README.md` for the feature/ module/table

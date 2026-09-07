@@ -79,7 +79,7 @@ are made.
 ## Finish
 
 Run the `check-repo` skill. If the change also needs to be mirrored into the
-standalone `agent/` sub-project (see its own README — `agent/src/docker.ts`
-re-implements, not imports, the equivalent logic since the agent has no access
-to this app's source tree at runtime), use the `subproject-sync` agent to keep
-the two in sync.
+standalone `packages/agent/` sub-project (see its own README —
+`packages/agent/docker.ts` re-implements, not imports, the equivalent logic
+since the agent has no access to this app's source tree at runtime), use the
+`subproject-sync` agent to keep the two in sync.
