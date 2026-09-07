@@ -65,7 +65,6 @@
         "openapi-typescript": "^7.13.0",
         "prettier": "^3.9.6",
         "rolldown": "^1.0.0-beta.38",
-        "rustywind": "^0.27.0",
         "semantic-release": "^25.0.9",
         "shadcn-svelte": "^1.5.0",
         "svelte": "^5.56.10",
@@ -1388,24 +1387,6 @@
     "run-parallel": ["run-parallel@1.2.0", "", { "dependencies": { "queue-microtask": "^1.2.2" } }, "sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA=="],
 
     "runed": ["runed@0.35.1", "", { "dependencies": { "dequal": "^2.0.3", "esm-env": "^1.0.0", "lz-string": "^1.5.0" }, "peerDependencies": { "@sveltejs/kit": "^2.21.0", "svelte": "^5.7.0" }, "optionalPeers": ["@sveltejs/kit"] }, "sha512-2F4Q/FZzbeJTFdIS/PuOoPRSm92sA2LhzTnv6FXhCoENb3huf5+fDuNOg1LNvGOouy3u/225qxmuJvcV3IZK5Q=="],
-
-    "rustywind": ["rustywind@0.27.0", "", { "dependencies": { "detect-libc": "^2.0.3" }, "optionalDependencies": { "rustywind-darwin-arm64": "0.27.0", "rustywind-darwin-x64": "0.27.0", "rustywind-linux-arm-gnueabihf": "0.27.0", "rustywind-linux-arm64-gnu": "0.27.0", "rustywind-linux-arm64-musl": "0.27.0", "rustywind-linux-x64-musl": "0.27.0", "rustywind-win32-ia32-msvc": "0.27.0", "rustywind-win32-x64-msvc": "0.27.0" }, "bin": { "rustywind": "bin/rustywind" } }, "sha512-0JLq+G3bhmEjjjdAO6+Lc1xNJBvcL9CliurjTp3rewVOXiM1Za3pAfkI7wR2aAtzlSfoqEv03UklakUK7VKbSA=="],
-
-    "rustywind-darwin-arm64": ["rustywind-darwin-arm64@0.27.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-WJ2V92lv6PxV4iIXnH19sbogx9zenird9J+TfHQAiX9ZpSrvI3KeQcn42lOTYPTO6/q9B3HDB6b5eChGvC1alw=="],
-
-    "rustywind-darwin-x64": ["rustywind-darwin-x64@0.27.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-5s4eOMXdP0jwXZXoHc1+x/Qg7whnfOdjv0Z8O92ZJ7fCdpr9eBMNSlwh8nhBW3O8HQHN4QWtSPh47l+uR0ne9Q=="],
-
-    "rustywind-linux-arm-gnueabihf": ["rustywind-linux-arm-gnueabihf@0.27.0", "", { "os": "linux", "cpu": "arm" }, "sha512-SkGaoNBquQYVjyXP7IQeoaRnobaiN4uCkhxMeRNKzeLL5SIFlpXja78P98hnwOfbsGzkBi0yiJOGiGuAsd70bA=="],
-
-    "rustywind-linux-arm64-gnu": ["rustywind-linux-arm64-gnu@0.27.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-u16GL7UNqrtSIbqsWZpjvVWBHPMPsWY0QqVKuQodGJCGr6INwIxvGGfQI9LUjoDYycbGbrKR5jQO1la9rVUMhw=="],
-
-    "rustywind-linux-arm64-musl": ["rustywind-linux-arm64-musl@0.27.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-+s9ZuwB+ldSu1LXnaWWsMKdqdMRBZtnCBKl5iOEypZ5n1o/7POpLChQN4prAI263673bPS+zVY+0bGP8lqqdFA=="],
-
-    "rustywind-linux-x64-musl": ["rustywind-linux-x64-musl@0.27.0", "", { "os": "linux", "cpu": "x64" }, "sha512-41JLxWSTE/yKh8tRuL8JQm/N5N2FFgmYvTPaGd38rJRIH+sidwea3WlSYAaO5uyXNjExkzLkT2Kr+a/7cKxOdg=="],
-
-    "rustywind-win32-ia32-msvc": ["rustywind-win32-ia32-msvc@0.27.0", "", { "os": "win32", "cpu": "ia32" }, "sha512-WbLsYTVjdS0qPPTj0+PYZv5i7iKFcLIWUH8cxY4eLNBQ6yyT6T3rOMsxU9jQcCpzxi6pUqjM0oDVaA6S7IabRA=="],
-
-    "rustywind-win32-x64-msvc": ["rustywind-win32-x64-msvc@0.27.0", "", { "os": "win32", "cpu": "x64" }, "sha512-TN4NrjKWOpudGLGWjGidVhHzyjC6++D1tsoMHJWh7m5TNLcCHqSkcxTSR7MatZKyCdVma7RNPhmGXXiNaCNIOw=="],
 
     "sade": ["sade@1.8.1", "", { "dependencies": { "mri": "^1.1.0" } }, "sha512-xal3CZX1Xlo/k4ApwCFrHVACi9fBqJ7V+mwhBsuf/1IOKbBy098Fex+Wa/5QMubw09pSZ/u8EY8PWgevJsXp1A=="],
 

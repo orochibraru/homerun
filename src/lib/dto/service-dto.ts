@@ -24,7 +24,6 @@ import { BaseDTO } from "./base-dto";
 /** Fields a caller supplies to insert a new service row. */
 export interface NewServiceInput {
 	authRequired?: boolean;
-	autoscaleEligible?: boolean;
 	buildCacheRegistryId?: string | null;
 	buildServerRemoteHostId?: string | null;
 	buildSource?: "image" | "git";
@@ -45,7 +44,6 @@ export interface NewServiceInput {
 	registryPasswordEnc?: string | null;
 	registryUrl?: string | null;
 	registryUsername?: string | null;
-	remoteHostId?: string | null;
 	replicas?: number;
 	restartPolicy: string;
 	slug: string;
@@ -62,7 +60,6 @@ export type ServiceUpdateInput = Partial<
 		| "authAllowedUserIds"
 		| "authProviders"
 		| "authRequired"
-		| "autoscaleEligible"
 		| "buildCacheRegistryId"
 		| "buildServerRemoteHostId"
 		| "buildSource"
@@ -92,7 +89,6 @@ export type ServiceUpdateInput = Partial<
 		| "registryPasswordEnc"
 		| "registryUrl"
 		| "registryUsername"
-		| "remoteHostId"
 		| "replicas"
 		| "restartPolicy"
 		| "slug"
@@ -268,21 +264,6 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return rows.map((row) => new ServiceDTO(row));
 	}
 
-	/** Every autoscale-eligible service (across all users) currently on the local host : for CronService's autoscale tick, which isn't scoped to one user. */
-	static async listAutoscaleEligibleOnLocalHost(): Promise<ServiceDTO[]> {
-		const rows = await db
-			.select()
-			.from(service)
-			.where(
-				and(
-					eq(service.autoscaleEligible, true),
-					isNull(service.remoteHostId),
-					eq(service.desiredState, "running"),
-				),
-			);
-		return rows.map((row) => new ServiceDTO(row));
-	}
-
 	/** Whether `customDomain` is already taken by a *different* service. */
 	static async customDomainTaken(
 		customDomain: string,
@@ -336,14 +317,12 @@ export class ServiceDTO extends BaseDTO<Service> {
 			authAllowedUserIds: [],
 			authProviders: [],
 			authRequired: input.authRequired ?? false,
-			autoscaleEligible: input.autoscaleEligible ?? false,
 			cpuLimit: input.cpuLimit ?? null,
 			dnsResolvable: input.dnsResolvable ?? true,
 			memoryLimitMb: input.memoryLimitMb ?? null,
 			networkMode: input.networkMode ?? "bridge",
 			portProtocol: input.portProtocol ?? "tcp",
 			projectId: input.projectId ?? null,
-			remoteHostId: input.remoteHostId ?? null,
 			replicas: input.replicas ?? 1,
 		} satisfies Partial<Service>;
 	}
@@ -487,9 +466,6 @@ export class ServiceDTO extends BaseDTO<Service> {
 	get authAllowedGroups(): string[] {
 		return this.row.authAllowedGroups;
 	}
-	get autoscaleEligible(): boolean {
-		return this.row.autoscaleEligible;
-	}
 	get buildSource(): Service["buildSource"] {
 		return this.row.buildSource;
 	}
@@ -510,9 +486,6 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get buildServerRemoteHostId(): string | null {
 		return this.row.buildServerRemoteHostId;
-	}
-	get remoteHostId(): string | null {
-		return this.row.remoteHostId;
 	}
 	get replicas(): number {
 		return this.row.replicas;

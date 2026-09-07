@@ -100,11 +100,6 @@
                   Homerun Agent
                 </span>
               {/if}
-              {#if host.isBuildServer}
-                <span class="ml-1.5 rounded-full bg-accent-light px-2 py-0.5 text-[0.65rem] font-semibold text-accent">
-                  Build server
-                </span>
-              {/if}
             </p>
             <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
               {host.kind === "agent" ? host.agentUrl : host.dockerHost}

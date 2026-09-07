@@ -37,13 +37,6 @@
 		}
 	});
 
-	let autoscaleOverflowRemoteHostId = $state(
-		untrack(() => data.settings.autoscaleOverflowRemoteHostId ?? ""),
-	);
-	const autoscaleOverflowRemoteHostLabel = $derived(
-		data.remoteHosts.find((h) => h.id === autoscaleOverflowRemoteHostId)
-			?.name ?? "Choose a remote host…",
-	);
 	let orchestrationMode = $state(
 		untrack(() => data.settings.orchestrationMode ?? "standalone"),
 	);
@@ -143,87 +136,4 @@
     </form>
   </section>
 
-  <section class="glass rounded-2xl">
-    <div class="border-border border-b px-5 py-4">
-      <h2 class="eyebrow">Autoscaling</h2>
-      <p class="text-text-muted text-xs">
-        "GCP Cloud Run"-style load shedding : when this host crosses a
-        resource threshold, one autoscale-eligible service (opt in from its
-        Compute tab) gets migrated onto the overflow remote host below. This
-        moves the service, it doesn't run a second replica of it : off by
-        default, and inert unless both enabled here and opted into
-        per-service.
-      </p>
-    </div>
-    <form
-      action="?/updateAutoscale"
-      class="space-y-4 p-5"
-      method="POST"
-      use:enhance={saveToast("Autoscaling settings")}
-    >
-      <CheckBox
-        checked={data.settings.autoscaleEnabled}
-        helperText="Allow the autoscale scheduler to migrate eligible services off this host"
-        id="autoscaleEnabled"
-        label="Enable autoscaling"
-        name="autoscaleEnabled"
-      />
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class={label} for="autoscaleCpuThresholdPercent">
-            CPU threshold (%)
-          </label>
-          <Input
-            id="autoscaleCpuThresholdPercent"
-            max="99"
-            min="1"
-            name="autoscaleCpuThresholdPercent"
-            type="number"
-            value={data.settings.autoscaleCpuThresholdPercent}
-          />
-        </div>
-        <div>
-          <label class={label} for="autoscaleMemoryThresholdPercent">
-            Memory threshold (%)
-          </label>
-          <Input
-            id="autoscaleMemoryThresholdPercent"
-            max="99"
-            min="1"
-            name="autoscaleMemoryThresholdPercent"
-            type="number"
-            value={data.settings.autoscaleMemoryThresholdPercent}
-          />
-        </div>
-      </div>
-      <div>
-        <p class={label}>Overflow remote host</p>
-        {#if data.remoteHosts.length === 0}
-          <p class="text-text-subtle text-xs">
-            No remote hosts registered yet : add one on the Remote Hosts page
-            first.
-          </p>
-        {:else}
-          <SelectRoot
-            name="autoscaleOverflowRemoteHostId"
-            type="single"
-            bind:value={autoscaleOverflowRemoteHostId}
-          >
-            <SelectTrigger class="w-full">
-              {autoscaleOverflowRemoteHostLabel}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem label="None" value="" />
-              {#each data.remoteHosts as host (host.id)}
-                <SelectItem label={host.name} value={host.id} />
-              {/each}
-            </SelectContent>
-          </SelectRoot>
-        {/if}
-      </div>
-      <div class="flex justify-end">
-        <Button type="submit">Save</Button>
-      </div>
-    </form>
-  </section>
 </div>

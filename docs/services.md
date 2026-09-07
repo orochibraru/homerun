@@ -215,13 +215,9 @@ the signed-in visitor, is in
 ## Compute
 
 CPU and memory limits on the Compute tab, applied as real Docker resource limits
-on the next deploy. The same tab has the **autoscale-eligible** opt-in toggle,
-see
-[Remote hosts: autoscaling](remote-hosts-and-agent.md#autoscaling--load-based-migration)
-for what that actually does (migration, not replica scaling, unrelated to swarm
-mode below). Don't combine the two, autoscale-eligible isn't currently
-swarm-aware and can end up trying to migrate a swarm-mode service to a remote
-host, which swarm mode doesn't support (see below).
+on the next deploy. The same tab carries the replica count used by
+[swarm mode](#swarm-mode); it has no effect in standalone mode, where a service
+is always one container.
 
 ## Swarm mode
 
@@ -239,14 +235,11 @@ Traefik container to have `--providers.docker.swarmMode=true` added to its
 command, another one-time `compose.yaml` edit + restart, same "admin does the
 one-time infra change" pattern as custom SSL's `TRAEFIK_DYNAMIC_CONFIG_DIR`.
 
-**Local-manager-only for now**: a [remote host](remote-hosts-and-agent.md) has
-to actually join the swarm as a worker, which is a different thing than just
-being a registered `tcp://`/`ssh://` Docker daemon, so a swarm-mode service
-can't currently target a Remote Host, deploying one there is rejected outright.
-`packages/installer/swarm-join.sh` (see
+**Adding a node**: a second machine joins the swarm as a worker rather than
+being registered separately. `packages/installer/swarm-join.sh` (see
 [`packages/installer/README.md`](../packages/installer/README.md)) joins a box
-to an existing swarm as a worker and installs the Homerun Agent on it,
-groundwork for closing this gap, not the integration itself yet.
+to an existing swarm and installs the Homerun Agent on it; the swarm scheduler
+places tasks there from then on.
 
 ## Logs
 
@@ -313,10 +306,9 @@ delete it.
 
 ## Settings
 
-Name, slug, restart policy, which project the service belongs to, which
-[remote host](remote-hosts-and-agent.md) it deploys to, save-as-template, the
-cron schedule above, and a danger-zone delete (typed-confirm, see
-[The services list](#the-services-list) above).
+Name, slug, restart policy, which project the service belongs to,
+save-as-template, the cron schedule above, and a danger-zone delete
+(typed-confirm, see [The services list](#the-services-list) above).
 
 ## Next steps
 

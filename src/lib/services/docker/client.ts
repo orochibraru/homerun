@@ -56,10 +56,10 @@ function parseDockerHost(conn: RemoteHostConnection): Docker.DockerOptions {
 
 /**
  * Gets (or opens and caches) a Docker client. No argument, or a
- * remoteHostId-less connection object, → the local socket (the only
+ * connection object, → the local socket (the only
  * option before remote hosts existed, and still the default for every
  * service). Pass a `RemoteHostConnection` (see RemoteHostDTO) to reach a
- * remote Docker daemon instead : services opt in via `remoteHostId`.
+ * remote Docker daemon instead : used for git builds on a build server.
  */
 export function getDocker(remote?: RemoteHostConnection | null): Docker {
 	const cache = clientCache();

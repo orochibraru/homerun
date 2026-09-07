@@ -19,7 +19,7 @@ scaling and load balancing for a single service, opt-in Docker
 [Swarm mode](services.md#swarm-mode), but it's local-manager-only today: a
 remote machine has to actually join the swarm as a worker
 (`packages/installer/swarm-join.sh`), which isn't the same as registering it as
-a Remote Host, so multi-host swarm scaling isn't wired up end-to-end yet either.
+a swarm worker, which `packages/installer/swarm-join.sh` automates.
 `service.containerId` still being a single column is what standalone mode (the
 default) is built around; swarm mode is the separate, newer path around that
 limitation for services that opt in.
@@ -57,9 +57,10 @@ limitation for services that opt in.
   [`packages/installer/README.md`](../packages/installer/README.md)). Verify by
   hand before relying on it.
 - **Swarm mode** is local-manager-only, see
-  [above](#does-it-support-multiple-hosts--kubernetes-style-orchestration), and
-  isn't autoscale-aware, don't combine `autoscaleEligible` with a swarm-mode
-  service.
+  [above](#does-it-support-multiple-hosts--kubernetes-style-orchestration): a
+  second machine joins the swarm as a worker rather than being registered
+  separately, and `packages/installer/swarm-join.sh` has not been verified
+  against a real swarm yet.
 - **Cloudflare and Pangolin DNS automation** are new and haven't been exercised
   against a real account yet, verify the first sync by hand once you've
   configured one. See [Services: DNS automation](services.md#dns-automation).

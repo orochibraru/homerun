@@ -32,11 +32,7 @@ export const POST = async ({ params, locals, platform }) => {
 		);
 	}
 
-	await ServiceLifecycleService.restart(
-		service.containerId,
-		service.remoteHostId,
-		locals.user.id,
-	);
+	await ServiceLifecycleService.restart(service.containerId);
 	logger.info(
 		`Service restarted via API: service=${service.id} user=${locals.user.id}`,
 	);

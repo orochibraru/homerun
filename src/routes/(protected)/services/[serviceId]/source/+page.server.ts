@@ -54,7 +54,6 @@ interface BuildTargets {
  */
 async function checkBuildServer(
 	targets: BuildTargets,
-	deployTargetHostId: string | null,
 	userId: string,
 ): Promise<Record<string, string[]> | null> {
 	const { buildCacheRegistryId, buildServerRemoteHostId } = targets;
@@ -67,10 +66,10 @@ async function checkBuildServer(
 		return { buildServerRemoteHostId: ["That build server wasn't found."] };
 	}
 
-	if (buildServerRemoteHostId !== deployTargetHostId && !buildCacheRegistryId) {
+	if (!buildCacheRegistryId) {
 		return {
 			buildCacheRegistryId: [
-				"A build server different from the deploy target needs a build cache registry, to publish the built image through.",
+				"A build server needs a build cache registry, to publish the built image through.",
 			],
 		};
 	}
@@ -136,7 +135,6 @@ export const actions = {
 
 		const buildServerError = await checkBuildServer(
 			{ buildCacheRegistryId, buildServerRemoteHostId },
-			svc.remoteHostId,
 			locals.user.id,
 		);
 		if (buildServerError) {

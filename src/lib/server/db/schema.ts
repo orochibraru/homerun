@@ -193,25 +193,16 @@ export const remoteHost = pgTable(
 		// below) or "ssh://user@host" : passed to dockerode's constructor
 		// as-is, parsed by docker/client.ts's getDocker(). Never a bare
 		// "unix://..." : the local socket is always the implicit default
-		// (remoteHostId: null on a service), not a row in this table. Only
+		// for deploys, not a row in this table. Only
 		// set when kind = "docker".
 		dockerHost: text("docker_host"),
 		id: text("id").primaryKey(),
-		// Opt-in : whether this host can be picked as a service's *build
-		// server* (Source tab, git mode), separate from being picked as a
-		// deploy target. Off by default, same "background/cross-cutting
-		// capability defaults inert" posture as autoscaleEligible. Either
-		// kind : a "docker" build server runs a raw dockerode `buildImage()`
-		// (docker/git-build.ts), an "agent" one calls its own `POST /v1/build`
-		// (agent-client.service.ts), see RemoteHostDTO.listBuildServers.
-		isBuildServer: boolean("is_build_server").default(false).notNull(),
 		// "docker" (the original/default, a raw tcp://ssh:// Docker Engine
 		// connection) or "agent" (a registered Homerun Agent, see agent/README.md
 		// : token-authenticated HTTP instead of a raw Docker socket/TLS cert).
-		// Both kinds are real deploy targets and build servers :
-		// RemoteHostDTO.resolveTarget resolves either one into a
-		// `RemoteExecutionTarget`, which deploy.service.ts and
-		// service-lifecycle.service.ts branch on to route through
+		// Both kinds are real build servers : RemoteHostDTO.resolveBuildTarget
+		// resolves either one into a `RemoteExecutionTarget`, which
+		// deploy.service.ts branches on to route a git build through
 		// DockerService (docker) or AgentClientService (agent).
 		kind: text("kind", { enum: ["docker", "agent"] })
 			.default("docker")
@@ -274,28 +265,6 @@ export const instanceSettings = pgTable("instance_settings", {
 	authCheckUrl: text("auth_check_url"),
 	authCrossSubdomainCookies: boolean("auth_cross_subdomain_cookies"),
 	authOrigin: text("auth_origin"),
-	// Opt-in, off by default : same "background automation that touches
-	// live containers must default to inert" posture as cronEnabled/
-	// backupEnabled elsewhere in this app. When on, CronService's autoscale
-	// tick migrates autoscale-eligible services (service.autoscaleEligible)
-	// off the local host onto autoscaleOverflowRemoteHostId whenever host
-	// CPU or memory crosses its threshold : see $lib/services/cron.service.ts
-	// and the Settings page's Autoscaling section.
-	autoscaleCpuThresholdPercent: integer("autoscale_cpu_threshold_percent")
-		.notNull()
-		.default(80),
-	autoscaleEnabled: boolean("autoscale_enabled").notNull().default(false),
-	autoscaleMemoryThresholdPercent: integer("autoscale_memory_threshold_percent")
-		.notNull()
-		.default(80),
-	// Nullable FK to remote_host : where an over-threshold service gets
-	// migrated to. Not a hard requirement at the schema level (autoscaling
-	// is simply a no-op with this unset) since Postgres FKs aren't the
-	// enforcement mechanism this app leans on for row-cleanup anyway (see
-	// the Postgres-vs-SQLite FK note above).
-	autoscaleOverflowRemoteHostId: text(
-		"autoscale_overflow_remote_host_id",
-	).references(() => remoteHost.id, { onDelete: "set null" }),
 	baseDomain: text("base_domain"),
 	// Cloudflare API token (Zone:DNS:Edit scope) + the zone id `baseDomain`
 	// lives in : when both are set, a deployed service with `dnsResolvable`
@@ -515,12 +484,6 @@ export const service = pgTable(
 			.default([])
 			.notNull(),
 		authRequired: boolean("auth_required").default(false).notNull(),
-		// Opt-in, off by default (Compute tab) : whether CronService's
-		// autoscale tick is allowed to migrate this service onto
-		// instanceSettings.autoscaleOverflowRemoteHostId when the local
-		// host is over its configured resource threshold. No effect unless
-		// autoscaling is also enabled instance-wide.
-		autoscaleEligible: boolean("autoscale_eligible").default(false).notNull(),
 		// Registry to use as a git-build layer cache (git mode only, see
 		// docker/git-build.ts) : null means no cache-from/cache-to, every
 		// build is from scratch, same as before this existed.
@@ -528,15 +491,11 @@ export const service = pgTable(
 			() => buildCacheRegistry.id,
 			{ onDelete: "set null" },
 		),
-		// A remote host (must have isBuildServer=true) to run the git-build
-		// step on instead of the deploy target (null : build on whatever
-		// daemon deployService would build on anyway, remoteHostId or local,
-		// same as before this existed). When set to a host *different* from
-		// the deploy target, the built image only exists on the build
+		// A remote host to run the git-build step on instead of this one
+		// (null : build locally). The built image only exists on the build
 		// server's own daemon, so deployService requires buildCacheRegistryId
-		// too in that case : it pushes the final image there and pulls it on
-		// the deploy target before starting the container. See
-		// deploy.service.ts.
+		// alongside it : it pushes the final image there and pulls it back
+		// here before starting the container. See deploy.service.ts.
 		buildServerRemoteHostId: text("build_server_remote_host_id").references(
 			() => remoteHost.id,
 			{ onDelete: "set null" },
@@ -626,11 +585,6 @@ export const service = pgTable(
 		registryPasswordEnc: text("registry_password_enc"),
 		registryUrl: text("registry_url"),
 		registryUsername: text("registry_username"),
-		// Null = the local Docker socket (the default, and the only option
-		// before remote hosts existed). See docker/client.ts's getDocker().
-		remoteHostId: text("remote_host_id").references(() => remoteHost.id, {
-			onDelete: "set null",
-		}),
 		// Desired replica count, swarm-mode only (instanceSettings.orchestrationMode
 		// = "swarm") : ignored entirely in standalone mode, always 1 container.
 		// Editable on the Compute tab.

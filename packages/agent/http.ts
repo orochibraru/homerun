@@ -1,7 +1,7 @@
 import type { BunRequest } from "bun";
-import { ContainerNotFoundError, DockerService } from "./docker";
+import { DockerService } from "./docker";
 import { OpenApiBuilder } from "./openapi";
-import { buildInputSchema, deployInputSchema } from "./schemas";
+import { buildInputSchema } from "./schemas";
 import { SystemStatsService } from "./stats";
 import { tokensMatch } from "./token";
 import { AGENT_VERSION } from "./version";
@@ -53,71 +53,6 @@ export class AgentHttpServer {
 					return json(result, { status: result.success ? 200 : 500 });
 				}),
 			},
-			"/v1/containers": {
-				GET: this.#authed(async () =>
-					json(await DockerService.listManagedContainers()),
-				),
-			},
-			"/v1/containers/:id": {
-				DELETE: this.#authed<"/v1/containers/:id">(async (req) => {
-					await DockerService.removeContainer(
-						decodeURIComponent(req.params.id),
-					);
-					return json({ ok: true });
-				}),
-				GET: this.#authed<"/v1/containers/:id">(async (req) =>
-					json(
-						await DockerService.inspectStatus(
-							decodeURIComponent(req.params.id),
-						),
-					),
-				),
-			},
-			"/v1/containers/:id/logs": {
-				GET: this.#authed<"/v1/containers/:id/logs">(async (req) => {
-					const follow = new URL(req.url).searchParams.get("follow") === "true";
-					const stream = await DockerService.streamLogs(
-						decodeURIComponent(req.params.id),
-						follow,
-					);
-					return new Response(stream, {
-						headers: { "content-type": "application/octet-stream" },
-					});
-				}),
-			},
-			"/v1/containers/:id/restart": {
-				POST: this.#authed<"/v1/containers/:id/restart">(async (req) => {
-					await DockerService.restartContainer(
-						decodeURIComponent(req.params.id),
-					);
-					return json({ ok: true });
-				}),
-			},
-			"/v1/containers/:id/start": {
-				POST: this.#authed<"/v1/containers/:id/start">(async (req) => {
-					await DockerService.startContainer(decodeURIComponent(req.params.id));
-					return json({ ok: true });
-				}),
-			},
-			"/v1/containers/:id/stop": {
-				POST: this.#authed<"/v1/containers/:id/stop">(async (req) => {
-					await DockerService.stopContainer(decodeURIComponent(req.params.id));
-					return json({ ok: true });
-				}),
-			},
-			"/v1/deploy": {
-				POST: this.#authed(async (req) => {
-					const body = await req.json().catch(() => null);
-					const parsed = deployInputSchema.safeParse(body);
-					if (!parsed.success) {
-						return json(
-							{ error: "Invalid request body", issues: parsed.error.issues },
-							{ status: 400 },
-						);
-					}
-					return json(await DockerService.deploy(parsed.data));
-				}),
-			},
 			"/v1/health": {
 				GET: () => json({ status: "ok", version: AGENT_VERSION }),
 			},
@@ -167,11 +102,10 @@ export class AgentHttpServer {
 				return res;
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				const status = error instanceof ContainerNotFoundError ? 404 : 500;
 				console.log(
-					`[http] ${req.method} ${pathname} - ${status} (${Math.round(performance.now() - start)}ms): ${message}`,
+					`[http] ${req.method} ${pathname} - 500 (${Math.round(performance.now() - start)}ms): ${message}`,
 				);
-				return json({ error: message }, { status });
+				return json({ error: message }, { status: 500 });
 			}
 		};
 	}

@@ -354,7 +354,6 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
-						autoscaleEligible: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -403,7 +402,6 @@ export interface operations {
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
-						remoteHostId: string | null;
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
@@ -490,7 +488,6 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
-						autoscaleEligible: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -539,7 +536,6 @@ export interface operations {
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
-						remoteHostId: string | null;
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
@@ -615,7 +611,6 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
-						autoscaleEligible: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -664,7 +659,6 @@ export interface operations {
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
-						remoteHostId: string | null;
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
@@ -782,7 +776,6 @@ export interface operations {
 					registryPassword?: string;
 					registryUrl?: string | null;
 					registryUsername?: string | null;
-					remoteHostId?: string | null;
 					/** @enum {string} */
 					restartPolicy?: "no" | "always" | "on-failure" | "unless-stopped";
 					tag?: string;
@@ -802,7 +795,6 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
-						autoscaleEligible: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -851,7 +843,6 @@ export interface operations {
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
-						remoteHostId: string | null;
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;

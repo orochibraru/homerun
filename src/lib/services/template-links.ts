@@ -123,7 +123,7 @@ export async function createProjectForLinkedStack(
 
 export async function createLinkedServices(
 	links: ResolvedTemplateLink[],
-	params: { projectId: string; remoteHostId: string | null; userId: string },
+	params: { projectId: string; userId: string },
 ): Promise<ServiceDTO[]> {
 	const created: ServiceDTO[] = [];
 	for (const link of links) {
@@ -136,7 +136,6 @@ export async function createLinkedServices(
 			memoryLimitMb: link.memoryLimitMb,
 			name: link.templateName,
 			projectId: params.projectId,
-			remoteHostId: params.remoteHostId,
 			restartPolicy: link.restartPolicy,
 			slug: link.slug,
 			tag: link.tag,
@@ -200,7 +199,6 @@ export async function createServiceFromTemplate(
 		links.length > 0 && finalProjectId
 			? await createLinkedServices(links, {
 					projectId: finalProjectId,
-					remoteHostId: null,
 					userId,
 				})
 			: [];

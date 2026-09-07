@@ -33,11 +33,7 @@ export const POST = async ({ params, locals, platform }) => {
 		);
 	}
 
-	await ServiceLifecycleService.stop(
-		service.containerId,
-		service.remoteHostId,
-		locals.user.id,
-	);
+	await ServiceLifecycleService.stop(service.containerId);
 	await service.update({ desiredState: "stopped" });
 	logger.info(
 		`Service stopped via API: service=${service.id} user=${locals.user.id}`,

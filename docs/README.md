@@ -28,9 +28,8 @@ second copy to keep in sync by hand, see
 5. **[Storage & backups](storage-and-backups.md)**: bind-mount and
    Docker-managed volumes, mounting them into services, S3-compatible backups of
    either kind.
-6. **[Remote hosts & the Homerun Agent](remote-hosts-and-agent.md)**: deploying
-   to a second machine, autoscale-by-migration, the standalone agent and
-   installer.
+6. **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
+   images on a second machine, the standalone agent and installer.
 7. **[Users & access](users-and-access.md)**: roles, invites, OAuth/OIDC login,
    the per-service auth gate, API keys, per-account appearance preferences.
 8. **[API & CLI](api-and-cli.md)**: the REST API, the live Swagger UI, and the

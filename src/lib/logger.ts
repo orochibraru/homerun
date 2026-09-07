@@ -16,6 +16,8 @@ import { config } from "$lib/config";
 // log can be heuristically attributed to a service without threading an
 // explicit serviceId through every one of the ~40 existing Logger call
 // sites : see schema.ts's `appLog` docstring.
+export const DEPLOY_LOG_SCOPE = "Deploy";
+
 const SERVICE_ID_RE = /service=([0-9a-fA-F-]{36})/;
 
 function extractServiceId(text: string): string | null {
@@ -83,7 +85,7 @@ function persistLog(
 	// pipeline already fires its own richer deploy_success/deploy_failure
 	// notification (deploy.service.ts) for the same underlying event, this
 	// would otherwise double up on every deploy failure.
-	if (level === "error" && serviceId && scope !== "Deploy") {
+	if (level === "error" && serviceId && scope !== DEPLOY_LOG_SCOPE) {
 		import("$lib/dto/notification-dto")
 			.then(({ NotificationDTO }) =>
 				NotificationDTO.notifyServiceError(serviceId, message),

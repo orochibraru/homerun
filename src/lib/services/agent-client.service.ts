@@ -1,4 +1,3 @@
-import type { ContainerStatus } from "$lib/types";
 import type { RegistryAuth } from "./docker/containers.ts";
 
 /** Decrypted connection to a registered Homerun Agent : see remote-host-dto.ts's `toAgentConnection`. */
@@ -119,31 +118,6 @@ class AgentClientServiceClass {
 		}
 	}
 
-	/** POST /v1/deploy : pull (unless skipPull)/create/start, same shape as DockerService.createAndStartContainer + pullImage combined, just server-side on the agent. */
-	deploy(
-		connection: AgentConnection,
-		params: AgentDeployParams,
-	): Promise<AgentDeployResult> {
-		return this.#request<AgentDeployResult>(connection, "POST", "/v1/deploy", {
-			containerPort: params.containerPort,
-			cpuLimit: params.cpuLimit ?? null,
-			envVars: Object.entries(params.envVars).map(([key, value]) => ({
-				key,
-				value,
-			})),
-			image: params.image,
-			memoryLimitMb: params.memoryLimitMb ?? null,
-			networkMode: params.networkMode ?? "bridge",
-			portProtocol: params.portProtocol ?? "tcp",
-			registryAuth: params.registryAuth ?? null,
-			restartPolicy: params.restartPolicy,
-			serviceId: params.serviceId,
-			skipPull: params.skipPull ?? false,
-			slug: params.slug,
-			tag: params.tag,
-		});
-	}
-
 	/** POST /v1/build : clone + docker build on the agent itself, see agent/schemas.ts's buildInputSchema for the `push` tradeoff. No live progress streaming (same as `deploy`, a single JSON response once it's done, not an SSE/chunked stream). */
 	build(
 		connection: AgentConnection,
@@ -157,96 +131,6 @@ class AgentClientServiceClass {
 			push: params.push ?? null,
 			tag: params.tag,
 		});
-	}
-
-	async startContainer(connection: AgentConnection, id: string): Promise<void> {
-		await this.#request(
-			connection,
-			"POST",
-			`/v1/containers/${encodeURIComponent(id)}/start`,
-		);
-	}
-
-	async stopContainer(connection: AgentConnection, id: string): Promise<void> {
-		await this.#request(
-			connection,
-			"POST",
-			`/v1/containers/${encodeURIComponent(id)}/stop`,
-		);
-	}
-
-	async restartContainer(
-		connection: AgentConnection,
-		id: string,
-	): Promise<void> {
-		await this.#request(
-			connection,
-			"POST",
-			`/v1/containers/${encodeURIComponent(id)}/restart`,
-		);
-	}
-
-	async removeContainer(
-		connection: AgentConnection,
-		id: string,
-	): Promise<void> {
-		await this.#request(
-			connection,
-			"DELETE",
-			`/v1/containers/${encodeURIComponent(id)}`,
-		);
-	}
-
-	async inspectStatus(
-		connection: AgentConnection,
-		id: string,
-	): Promise<ContainerStatus> {
-		try {
-			const info = await this.#request<{
-				exitCode: number | null;
-				id: string;
-				state: string;
-				status: string;
-			}>(connection, "GET", `/v1/containers/${encodeURIComponent(id)}`);
-			if (info.state === "running") {
-				return "running";
-			}
-			if (info.state === "created" || info.state === "restarting") {
-				return "starting";
-			}
-			if (info.state === "exited" || info.state === "dead") {
-				return info.exitCode === 0 ? "stopped" : "failed";
-			}
-			return "stopped";
-		} catch (error) {
-			return error instanceof AgentRequestError && error.status === 404
-				? "missing"
-				: "failed";
-		}
-	}
-
-	/** GET /v1/containers/:id/logs, proxying the agent's own octet-stream response body straight through. */
-	async streamLogs(
-		connection: AgentConnection,
-		id: string,
-		follow: boolean,
-	): Promise<ReadableStream<Uint8Array>> {
-		const url = new URL(
-			`/v1/containers/${encodeURIComponent(id)}/logs`,
-			connection.agentUrl,
-		);
-		if (follow) {
-			url.searchParams.set("follow", "true");
-		}
-		const response = await fetch(url, {
-			headers: { authorization: `Bearer ${connection.token}` },
-		});
-		if (!(response.ok && response.body)) {
-			throw new Error(
-				`Agent returned ${response.status} while streaming logs.`,
-			);
-		}
-		return response.body;
 	}
 
 	async #request<T>(

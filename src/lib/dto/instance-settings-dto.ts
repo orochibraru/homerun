@@ -33,13 +33,6 @@ export interface InstanceSettingsTraefikInput {
 	traefikEntrypoint: string | null;
 }
 
-export interface InstanceSettingsAutoscaleInput {
-	autoscaleCpuThresholdPercent: number;
-	autoscaleEnabled: boolean;
-	autoscaleMemoryThresholdPercent: number;
-	autoscaleOverflowRemoteHostId: string | null;
-}
-
 export interface InstanceSettingsCloudflareInput {
 	cloudflareZoneId: string | null;
 	/** Blank/undefined means "keep the currently stored token". */
@@ -150,10 +143,6 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			authCheckUrl: null,
 			authCrossSubdomainCookies: null,
 			authOrigin: null,
-			autoscaleCpuThresholdPercent: 80,
-			autoscaleEnabled: false,
-			autoscaleMemoryThresholdPercent: 80,
-			autoscaleOverflowRemoteHostId: null,
 			baseDomain: null,
 			cloudflareApiTokenEnc: null,
 			cloudflareZoneId: null,
@@ -201,19 +190,6 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	}
 
 	async updateDocker(input: InstanceSettingsDockerInput): Promise<void> {
-		await this.persist(input);
-	}
-
-	get autoscale(): InstanceSettingsAutoscaleInput {
-		return {
-			autoscaleCpuThresholdPercent: this.row.autoscaleCpuThresholdPercent,
-			autoscaleEnabled: this.row.autoscaleEnabled,
-			autoscaleMemoryThresholdPercent: this.row.autoscaleMemoryThresholdPercent,
-			autoscaleOverflowRemoteHostId: this.row.autoscaleOverflowRemoteHostId,
-		};
-	}
-
-	async updateAutoscale(input: InstanceSettingsAutoscaleInput): Promise<void> {
 		await this.persist(input);
 	}
 

@@ -52,12 +52,9 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   interactive shell into a running container, all from the browser
 - **Custom domains & SSL**: a second hostname per service, plus bring-your-own
   cert/key for domains outside Traefik's automatic ACME coverage
-- **Remote hosts**: point a service at another Docker daemon (`tcp://`/`ssh://`,
-  or the lightweight [Homerun Agent](packages/agent/README.md)) instead of the
-  local socket
-- **Autoscale-by-migration**: when the local host crosses a CPU/memory
-  threshold, automatically move one opted-in service to a designated overflow
-  host
+- **Build servers**: build a git-based service's image on another Docker daemon
+  (`tcp://`/`ssh://`, or the lightweight
+  [Homerun Agent](packages/agent/README.md)) instead of this host
 - **Swarm mode**: opt-in Docker Swarm deploys for real replica scaling and load
   balancing across one service, instead of the default one-container model
 - **Docker Cleanup**: admin-only host-wide `docker system df`/prune from the

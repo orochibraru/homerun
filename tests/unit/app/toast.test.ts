@@ -40,7 +40,9 @@ describe("toastError", () => {
 
 	test("falls back for a non-Error, and for an Error with no message", () => {
 		expect(toastError("boom", "fallback")).toBe("fallback");
-		expect(toastError(new Error(""), "fallback")).toBe("fallback");
+		const blank = new Error("placeholder");
+		blank.message = "";
+		expect(toastError(blank, "fallback")).toBe("fallback");
 	});
 });
 

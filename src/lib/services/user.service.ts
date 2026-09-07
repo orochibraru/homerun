@@ -1,5 +1,4 @@
 import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import type { User } from "$lib/server/db/schema";
@@ -56,12 +55,9 @@ class UserServiceClass {
 				.filter((svc) => svc.containerId)
 				.map(async (svc) => {
 					try {
-						const remote = await RemoteHostDTO.connectionFor(svc, userId);
-						await DockerService.removeContainer(
-							svc.containerId as string,
-							{ force: true },
-							remote,
-						);
+						await DockerService.removeContainer(svc.containerId as string, {
+							force: true,
+						});
 					} catch {
 						// Already gone on the host : fine, keep cleaning up.
 					}

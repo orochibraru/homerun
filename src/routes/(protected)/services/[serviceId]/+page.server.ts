@@ -70,11 +70,7 @@ export const actions = {
 		}
 
 		try {
-			await ServiceLifecycleService.restart(
-				svc.containerId,
-				svc.remoteHostId,
-				locals.user.id,
-			);
+			await ServiceLifecycleService.restart(svc.containerId);
 		} catch (error) {
 			return lifecycleFailure("restart", error);
 		}
@@ -112,11 +108,7 @@ export const actions = {
 		}
 
 		try {
-			await ServiceLifecycleService.start(
-				svc.containerId,
-				svc.remoteHostId,
-				locals.user.id,
-			);
+			await ServiceLifecycleService.start(svc.containerId);
 		} catch (error) {
 			return lifecycleFailure("start", error);
 		}
@@ -159,11 +151,7 @@ export const actions = {
 		}
 
 		try {
-			await ServiceLifecycleService.stop(
-				svc.containerId,
-				svc.remoteHostId,
-				locals.user.id,
-			);
+			await ServiceLifecycleService.stop(svc.containerId);
 		} catch (error) {
 			return lifecycleFailure("stop", error);
 		}

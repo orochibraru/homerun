@@ -1,5 +1,4 @@
 import { JobDTO } from "$lib/dto/job-dto";
-import { Logger } from "$lib/logger";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { jobHandlers } from "./handlers.ts";
 
@@ -8,7 +7,6 @@ const MAX_CONCURRENT_JOBS = 3;
 const RETRY_BASE_MS = 10_000;
 
 class JobWorkerClass extends BaseScheduler {
-	protected readonly logger = new Logger("Queue");
 	protected readonly label = "Queue";
 	protected readonly intervalMs = POLL_MS;
 	readonly #inFlight = new Set<string>();

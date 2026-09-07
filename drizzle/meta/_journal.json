@@ -147,6 +147,20 @@
 			"when": 1788633788491,
 			"tag": "0020_curious_scarecrow",
 			"breakpoints": true
+		},
+		{
+			"idx": 21,
+			"version": "7",
+			"when": 1788769938795,
+			"tag": "0021_nappy_the_renegades",
+			"breakpoints": true
+		},
+		{
+			"idx": 22,
+			"version": "7",
+			"when": 1788770761691,
+			"tag": "0022_shiny_shiva",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

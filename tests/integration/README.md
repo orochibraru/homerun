@@ -105,7 +105,6 @@ process. Tracked here instead, by scenario/endpoint.
 - [ ] `networkMode: "host"` vs `"bridge"` — not yet covered
 - [ ] cpu/memory limits — not yet covered
 - [ ] Custom domain — not yet covered
-- [ ] Autoscale-eligible toggle — not yet covered
 - [ ] Git-build with build server = a _different_ agent host than the deploy
       target (the cross-host publish path, needs a disposable S3-compatible
       cache registry endpoint) — not yet covered, flagged as a real gap rather
