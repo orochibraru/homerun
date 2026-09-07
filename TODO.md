@@ -37,6 +37,10 @@ Sizes are rough. No priority, pick whatever.
 
 ## Done
 
+- [x] [Bug] Every real deploy failed on a host where the shared `homerun`
+      network didn't exist (all of CI, any non-compose install, and any instance
+      after a Docker Cleanup network prune). `createAndStartContainer` now
+      ensures it, alongside the per-project one.
 - [x] [Docs] Docs-sync pass over the Remote Hosts removal: `CLAUDE.md`'s Remote
       hosts section is now Build servers, and the agent, swarm, data model,
       queue and Planned-features sections stopped describing remote deploys.

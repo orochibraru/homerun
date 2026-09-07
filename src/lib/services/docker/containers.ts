@@ -117,13 +117,14 @@ export interface CreateContainerParams {
 	volumes?: VolumeMountParams[];
 }
 
-/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the network mixin's connectToProjectNetwork. */
+/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the network mixin. */
 interface RequiresNetworkMixin {
 	connectToProjectNetwork: (
 		containerId: string,
 		projectId: string,
 		alias: string,
 	) => Promise<void>;
+	ensureSharedNetwork: () => Promise<void>;
 }
 
 /**
@@ -131,7 +132,7 @@ interface RequiresNetworkMixin {
  * container for the same service), start/stop/restart/remove, status
  * inspection, log streaming. Requires the network mixin ahead of it in
  * the merge chain : createAndStartContainer calls
- * `this.connectToProjectNetwork`.
+ * `this.ensureSharedNetwork` and `this.connectToProjectNetwork`.
  */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerContainerMixin<
@@ -470,6 +471,10 @@ export function DockerContainerMixin<
 			const name = this.#containerName(params.slug, params.projectSlug);
 
 			await this.#removePreviousContainer(params, onProgress);
+
+			if (!(params.remote || params.networkMode === "host")) {
+				await this.ensureSharedNetwork();
+			}
 
 			onProgress?.("Creating container...");
 			const container = await docker.createContainer(

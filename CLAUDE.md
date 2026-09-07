@@ -2461,10 +2461,15 @@ utility, not Docker-specific, also used by SMTP/OAuth/S3-backup secrets),
 `encryptSecret`/`decryptSecret` for `registryPasswordEnc` and every other `*Enc`
 column, key derived via `scryptSync` from `config.auth.secret`.
 
-Containers attach to the external `homerun` Docker network
-(`docker network create homerun` once) rather than publishing host ports, true
-for the default `networkMode: "bridge"`; see Network mode below for the `"host"`
-exception.
+Containers attach to the shared `homerun` Docker network rather than publishing
+host ports, true for the default `networkMode: "bridge"`; see Network mode below
+for the `"host"` exception. **`createAndStartContainer` calls
+`ensureSharedNetwork()` on every local bridge-mode deploy** rather than assuming
+a one-time `docker network create`: compose creates it for a compose-run
+instance and nothing does for a bare `bun run start`, and Docker Cleanup's
+network prune removes it once the last container detaches. Its absence fails at
+container **start**, not create ("network homerun not found"), which is why the
+deploy looked like it had gotten further than it had.
 
 **Compose files.** The actual service definitions live once in
 `tools/compose/{base,app,agent}.compose.yaml` (Traefik + Postgres in `base`, the
