@@ -3,6 +3,40 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with
 code in this repository.
 
+## How to work here (read this first)
+
+**Don't think like enterprise.** No phased rollouts, no "Phase 1 / Phase 2", no
+priority tiers, no migration plans, no risk matrices, no asking whether we
+should ship it. This is a one-person hobby PaaS, not a bank. Just do the work
+and ship the software. If it breaks, we open an issue and fix it. Nobody dies.
+
+Concretely:
+
+- Do the whole change in one go. Don't split it into stages and hand back a plan
+  for the rest.
+- Don't ask permission to proceed on something already asked for. Do it.
+- Don't rank findings by severity or write a rollout strategy. Fix what's
+  broken, mention what you skipped in one line.
+- No feature flags, no backwards-compat shims, no deprecation windows. There's
+  one instance and one user. Change the thing.
+- Breaking a migration, losing dev data, or needing a manual step is fine. Say
+  so, move on.
+- The conventions below (types, DTOs, toasts, no comments, `bun run check`
+  clean) still apply. Being fast isn't licence to leave the repo broken.
+
+**Work out of `TODO.md`.** It's the backlog, and it's the only one. Don't write
+a plan in chat, don't keep a task list somewhere else, don't hand back a
+"proposed roadmap".
+
+- Picking up work with no specific ask : take something from `TODO.md` and do
+  it.
+- Finished an item : tick it off and move it under `## Done` in the same change,
+  not in a follow-up.
+- Found something out of scope mid-task : add a line to `TODO.md` and carry on.
+  Don't stop, don't ask, don't do it anyway.
+- The `Small`/`Medium`/`Large` headings are rough size, not priority. There is
+  no priority ordering, don't add one.
+
 ## What this is
 
 Homerun, a self-hosted, single-user PaaS for deploying Docker containers with a
