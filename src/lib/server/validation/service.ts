@@ -18,14 +18,6 @@ const baseServiceSchema = z.object({
 		(val) => val === "on" || val === true,
 		z.boolean(),
 	),
-	// Opt-in : whether CronService's autoscale tick may migrate this service
-	// onto the configured overflow remote host (Settings' Autoscaling
-	// section) when the local host is over threshold. See schema.ts's
-	// `service.autoscaleEligible` docstring.
-	autoscaleEligible: z.preprocess(
-		(val) => val === "on" || val === true,
-		z.boolean(),
-	),
 	// "image" (bring-your-own, the default) | "git" (clone + build a
 	// Dockerfile) : cross-checked against the other git*/image fields below,
 	// since which of those is required depends on this.
@@ -118,12 +110,8 @@ export const updateGeneralSchema = baseServiceSchema.pick({
 });
 export type UpdateGeneralInput = z.infer<typeof updateGeneralSchema>;
 
-// Backs the Compute tab : cpu/memory limits (moved off the old Settings
-// tab) plus autoscale opt-in, since they're all "how much of the host this
-// service is allowed to use, and what happens when that's not enough"
-// (see the Autoscaling section on Settings for the instance-wide half).
+// Backs the Compute tab : cpu/memory limits and swarm replica count.
 export const updateComputeSchema = baseServiceSchema.pick({
-	autoscaleEligible: true,
 	cpuLimit: true,
 	memoryLimitMb: true,
 	replicas: true,

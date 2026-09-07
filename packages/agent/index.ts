@@ -76,13 +76,15 @@ Usage:
 
 	const { token, source } = await TokenManager.resolveToken();
 
-	await DockerService.ensureNetwork().catch((error) => {
-		console.error(
-			`[homerun-agent] couldn't ensure "${config.dockerNetworkName}" network exists : is Docker reachable at ${config.dockerSocketPath}?`,
-		);
-		console.error(error);
-		process.exit(1);
-	});
+	await DockerService.getDocker()
+		.ping()
+		.catch((error: unknown) => {
+			console.error(
+				`[homerun-agent] Docker isn't reachable at ${config.dockerSocketPath}.`,
+			);
+			console.error(error);
+			process.exit(1);
+		});
 
 	const server = new AgentHttpServer(token);
 	const bunServer = Bun.serve({
@@ -97,7 +99,6 @@ Usage:
 	console.log("  Homerun Agent is running.");
 	console.log(`  Listening on:   http://0.0.0.0:${config.port}`);
 	console.log(`  Docker socket:  ${config.dockerSocketPath}`);
-	console.log(`  Network:        ${config.dockerNetworkName}`);
 	console.log(
 		source === "env"
 			? "  Token source:   AGENT_TOKEN env var"

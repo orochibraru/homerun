@@ -38,10 +38,7 @@ async function loadServices(userId: string, url: URL) {
 		};
 	}
 
-	await DockerService.syncAllServiceStatuses(
-		deployed.map((r) => r.service.id),
-		userId,
-	);
+	await DockerService.syncAllServiceStatuses(deployed.map((r) => r.service.id));
 	const fresh = await ServiceDTO.listWithProjectNamesPaged(userId, query);
 
 	return {
@@ -55,13 +52,13 @@ async function loadServices(userId: string, url: URL) {
 
 async function runOp(op: BulkOp, svc: ServiceDTO, userId: string) {
 	if (op === "delete") {
-		await ServiceLifecycleService.deleteService(svc, userId);
+		await ServiceLifecycleService.deleteService(svc);
 	} else if (op === "start") {
-		await ServiceLifecycleService.startService(svc, userId);
+		await ServiceLifecycleService.startService(svc);
 	} else if (op === "stop") {
-		await ServiceLifecycleService.stopService(svc, userId);
+		await ServiceLifecycleService.stopService(svc);
 	} else {
-		await ServiceLifecycleService.restartService(svc, userId);
+		await ServiceLifecycleService.restartService(svc);
 	}
 	logger.info(`Service ${OP_PAST_TENSE[op]}: service=${svc.id} user=${userId}`);
 }

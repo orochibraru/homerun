@@ -29,10 +29,10 @@ YAML-language-server extension gets linting/autocomplete for free.
 
 | Key                                                  | Default                                                | `/settings` tab                                                                                                              |
 | ---------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `baseDomain`                                         | `localhost`                                            | General, the domain deployed services get subdomained under (`<slug>.<baseDomain>`)                                          |
-| `auth.origin`                                        | _(derived per-request)_                                | General, this app's own public origin                                                                                        |
-| `auth.crossSubdomainCookies`                         | `false`                                                | General, scopes the session cookie to `.baseDomain`; see [Users & access](users-and-access.md) before enabling               |
-| `authCheckUrl`                                       | `http://host.docker.internal:<PORT>/api/v1/auth-check` | General, where Traefik's forwardAuth middleware checks a gated service's login state                                         |
+| `baseDomain`                                         | `localhost`                                            | General, the DNS suffix deployed services are routed under (`<slug>.<baseDomain>`); never includes a port, see below         |
+| `auth.origin`                                        | `ORIGIN` env, else derived from `baseDomain`           | General ("Dashboard URL"), where this app itself is reached, scheme and port included; required for SSO and the login wall   |
+| `auth.crossSubdomainCookies`                         | `false`                                                | General, scopes the session cookie to `.baseDomain`; unrelated to the per-app login wall, which doesn't need it              |
+| `authCheckUrl`                                       | `http://host.docker.internal:<PORT>/api/v1/auth-check` | General, where Traefik's forwardAuth middleware checks a gated app's login state; must be reachable from inside Traefik      |
 | `docker.socketPath`                                  | auto-detected                                          | Docker                                                                                                                       |
 | `docker.networkName`                                 | `homerun`                                              | Docker                                                                                                                       |
 | `traefik.entrypoint`                                 | `websecure`                                            | Networking                                                                                                                   |
@@ -41,15 +41,14 @@ YAML-language-server extension gets linting/autocomplete for free.
 | `traefik.acmeEmail`                                  | _(unset)_                                              | Networking, informational mirror only, see below                                                                             |
 | `smtp.enabled`                                       | `false`                                                | Email                                                                                                                        |
 | `smtp.host`/`port`/`user`/`password`/`secure`/`from` | _(unset)_                                              | Email, all required together for `smtp.enabled: true` to take effect; a partial config is treated as disabled with a warning |
-| `auth.oauthProviders`                                | `[]`                                                   | Authentication, see [Users & access](users-and-access.md)                                                                    |
+| `auth.oauthProviders`                                | `[]`                                                   | Authentication page (its own sidebar item, not a `/settings` tab), see [Users & access](users-and-access.md)                 |
 | `logLevel`                                           | `info`                                                 | `debug` \| `info` \| `warn` \| `error`                                                                                       |
 | `logFormat`                                          | `console`                                              | `console` \| `json`                                                                                                          |
 
-Orchestration mode/autoscaling (Docker tab) and both DNS integrations,
-Cloudflare and Pangolin (Networking tab), have **no file form at all**, they're
-added, edited, and removed only from `/settings`, secrets among them stored
-encrypted the same way `registryPasswordEnc` is, on the singleton
-`instance_settings` row.
+Orchestration mode (Docker tab) and both DNS integrations, Cloudflare and
+Pangolin (Networking tab), have **no file form at all**, they're added, edited,
+and removed only from `/settings`, secrets among them stored encrypted the same
+way `registryPasswordEnc` is, on the singleton `instance_settings` row.
 
 ## Compose-only variables
 

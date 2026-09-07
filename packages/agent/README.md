@@ -1,15 +1,15 @@
 # Homerun Agent
 
 A standalone binary that runs on a _remote_ host's own Docker daemon and exposes
-a small, token-authenticated HTTP control surface, deploy, start, stop, restart,
-logs, host stats, for the main Homerun instance to drive.
+a small, token-authenticated HTTP control surface, git builds and host stats,
+for the main Homerun instance to drive.
 
-This exists as an alternative to registering a Remote Host by raw
+This exists as an alternative to registering a build server by raw
 `tcp://`/`ssh://` Docker socket: instead of exposing (or SSH-tunneling into) the
-daemon itself, the remote host runs this agent and the main app only ever talks
+daemon itself, the build server runs this agent and the main app only ever talks
 to it over plain HTTP with a bearer token. It's wired into the main app as a
-Remote Hosts connection kind (`remote_host.kind: "agent"`), see `CLAUDE.md`'s
-"Homerun Agent + installer" and "Remote hosts" sections for how it plugs in.
+build-server connection kind (`remote_host.kind: "agent"`), see `CLAUDE.md`'s
+"Homerun Agent + installer" and "Build servers" sections for how it plugs in.
 
 ## Running it
 
@@ -84,8 +84,7 @@ bun run build:packages       # builds cli/installer/agent binaries for both arch
 | `AGENT_TOKEN`            | _(generated)_            | Bearer token every non-health request must present. Set this explicitly for a reproducible deploy (e.g. via the installer or a systemd unit); otherwise the agent generates one on first boot and persists it to `AGENT_TOKEN_FILE`. |
 | `AGENT_TOKEN_FILE`       | `~/.homerun-agent/token` | Where a generated token is persisted across restarts.                                                                                                                                                                                |
 | `DOCKER_SOCKET_PATH`     | `/var/run/docker.sock`   | Point this at a rootless Docker socket (e.g. `/run/user/<uid>/docker.sock`) when installed via `packages/installer/`'s rootless setup.                                                                                               |
-| `HOMERUN_NETWORK_NAME`   | `homerun`                | Created on boot if missing; every deployed container joins it (bridge mode only, host-mode services skip it, same as the main app).                                                                                                  |
-| `AGENT_SHUTDOWN_TIMEOUT` | `120`                    | Seconds SIGINT/SIGTERM waits for in-flight requests (a `/v1/deploy` pull or `/v1/build` clone+build in progress) to finish before forcing the shutdown.                                                                              |
+| `AGENT_SHUTDOWN_TIMEOUT` | `120`                    | Seconds SIGINT/SIGTERM waits for in-flight requests (a `/v1/build` clone+build in progress) to finish before forcing the shutdown.                                                                                                   |
 
 ## HTTP surface
 
@@ -95,39 +94,19 @@ Every route below requires `Authorization: Bearer <token>` except `/v1/health`.
   balancer/monitor probe).
 - `GET /v1/stats`, host CPU/RAM/disk/GPU, same shape as the main app's
   `SystemStatsService`.
-- `GET /v1/containers`, every `homerun.managed=true` container on this host (raw
-  dockerode `ContainerInfo[]`).
-- `POST /v1/deploy`, body is a `DeployInput` (see `docker.ts`): pulls the image
-  (unless `skipPull`), removes the previous container for that `serviceId`
-  (found by label, not name), creates + starts the new one. Returns
-  `{containerId, log}`.
 - `POST /v1/build`, body is a `BuildInput` (see `schemas.ts`): clones a git repo
   at a ref and builds its Dockerfile into a local image, optionally pushing it
   to a registry afterward. Returns `{success, error?}`.
-- `GET /v1/containers/:id`, `{id, state, status}`; a container Docker can't find
-  (removed outside the agent) returns a real `404` (`ContainerNotFoundError`,
-  `docker.ts`), not the generic `500` every other unhandled error gets, so
-  `agent-client.service.ts`'s `inspectStatus` on the main app's side can map it
-  to the `"missing"` status distinct from `"failed"`, see `CLAUDE.md`'s Docker
-  integration section.
-- `DELETE /v1/containers/:id`, stop + remove.
-- `POST /v1/containers/:id/{start,stop,restart}`.
-- `GET /v1/containers/:id/logs?follow=true|false`, raw log bytes, streamed when
-  `follow=true`.
 
 ## What's verified vs. not
 
-Verified live in development against a real local Docker socket: boot + network
-creation, every endpoint above (including a real `nginx:alpine` pull → create →
-start → redeploy-replaces-old → stop/remove round trip), and the compiled binary
-running standalone with the same behavior as `bun run dev`.
+Verified live in development against a real local Docker socket: boot, every
+endpoint above, and the compiled binary running standalone with the same
+behavior as `bun run dev`.
 
 **Also now verified**, against a real disposable Multipass Ubuntu 24.04 VM
 provisioned by `packages/installer/bootstrap.sh --mode=agent` (see
 `packages/installer/README.md` for that run's own findings): running under
 rootless Docker specifically, long-running under a real `systemd --user` unit,
 reachable over the network from outside the VM (health endpoint + OpenAPI doc
-both responded correctly), and, as a genuinely separate/remote host from a
-second VM's perspective, registered as a real `agent`-kind Remote Host and
-deploying a real service onto it (confirmed via `docker ps` that the container
-landed there, plus a working stop/start round trip).
+both responded correctly).

@@ -1,4 +1,35 @@
 {
+	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "*",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "prek run --all-files",
+						"timeout": 120,
+						"statusMessage": "Running prek..."
+					},
+					{
+						"type": "command",
+						"command": "bun run test:integration",
+						"timeout": 120,
+						"statusMessage": "Running integration tests..."
+					},
+					{
+						"type": "command",
+						"command": "bun run test:e2e",
+						"timeout": 120000,
+						"statusMessage": "Running e2e tests..."
+					}
+				]
+			}
+		]
+	},
+	"enabledPlugins": {
+		"svelte@svelte": true,
+		"ponytail@ponytail": true
+	},
 	"extraKnownMarketplaces": {
 		"svelte": {
 			"source": {
@@ -6,28 +37,5 @@
 				"repo": "sveltejs/ai-tools"
 			}
 		}
-	},
-	"enabledPlugins": {
-		"svelte@svelte": true
-	},
-	"hooks": {
-		"PostToolUse": [
-			{
-				"hooks": [
-					{
-						"command": "bun run lint:fix",
-						"statusMessage": "Running linters...",
-						"type": "command"
-					},
-					{
-						"command": "bun run test:unit",
-						"statusMessage": "Running unit tests...",
-						"timeout": 120,
-						"type": "command"
-					}
-				],
-				"matcher": "Write|Edit|MultiEdit"
-			}
-		]
 	}
 }

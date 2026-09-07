@@ -17,7 +17,7 @@ export const load = async ({ params, parent }) => {
 		: null;
 
 	if (svc.containerId) {
-		await DockerService.syncServiceStatus(svc.id, user.id);
+		await DockerService.syncServiceStatus(svc.id);
 		const fresh = await ServiceDTO.get(params.serviceId, user.id);
 		return {
 			baseDomain: config.baseDomain,

@@ -34,11 +34,7 @@ export const POST = async ({ params, locals }) => {
 		);
 	}
 
-	await ServiceLifecycleService.start(
-		service.containerId,
-		service.remoteHostId,
-		locals.user.id,
-	);
+	await ServiceLifecycleService.start(service.containerId);
 	await service.update({ desiredState: "running" });
 	logger.info(
 		`Service started via API: service=${service.id} user=${locals.user.id}`,

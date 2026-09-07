@@ -2,7 +2,6 @@ import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { envDefaultsForDisplay } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { AdminService } from "$lib/services/admin.service";
 
 const FIELD_TAB: Record<string, string> = {
@@ -34,9 +33,8 @@ export const load = async ({ locals, url }) => {
 		);
 	}
 
-	const [settings, remoteHosts, setupChecks] = await Promise.all([
+	const [settings, setupChecks] = await Promise.all([
 		InstanceSettingsDTO.get(),
-		RemoteHostDTO.listDeployTargets(locals.user.id),
 		AdminService.runSetupChecks(),
 	]);
 
@@ -53,7 +51,6 @@ export const load = async ({ locals, url }) => {
 	return {
 		envDefaults: envDefaultsForDisplay(),
 		fieldIssues,
-		remoteHosts: remoteHosts.map((h) => h.toJSON()),
 		settings: settings.toJSON(),
 	};
 };

@@ -28,7 +28,7 @@ export const GET = async ({ params, locals }) => {
 	// unless someone happened to also load the dashboard page for that
 	// service. Same fix, same call, as the dashboard's own reconciliation.
 	if (svc.containerId) {
-		await DockerService.syncServiceStatus(svc.id, locals.user.id);
+		await DockerService.syncServiceStatus(svc.id);
 		const fresh = await ServiceDTO.get(params.serviceId, locals.user.id);
 		return json((fresh ?? svc).toJSON());
 	}
@@ -79,11 +79,7 @@ export const DELETE = async ({ params, locals, platform }) => {
 
 	if (svc.containerId) {
 		try {
-			await ServiceLifecycleService.remove(
-				svc.containerId,
-				svc.remoteHostId,
-				locals.user.id,
-			);
+			await ServiceLifecycleService.remove(svc.containerId);
 		} catch {
 			// Already gone on the host : proceed with deleting the record.
 		}

@@ -56,6 +56,4 @@ of your own) by hand.
 ## Next steps
 
 - [Services: Volumes tab](services.md#volumes)
-- [Remote hosts](remote-hosts-and-agent.md), note that bind-mount volumes are
-  skipped entirely on a remote-hosted deploy (a local path has no meaning on a
-  different machine)
+- [Build servers & the Homerun Agent](remote-hosts-and-agent.md)

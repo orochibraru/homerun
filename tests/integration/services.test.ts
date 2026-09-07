@@ -82,7 +82,6 @@ describe("services : image-mode deploy", () => {
 		const svc = expectOk(created.data, created.response);
 		expect(created.response.status).toBe(201);
 		cleanup.track(svc.id as string);
-		expect(svc.remoteHostId).toBeNull();
 		expect(svc.desiredState).toBe("stopped");
 
 		const deployed = await client.POST("/services/{serviceId}/deploy", {
@@ -239,83 +238,6 @@ describe("services : lifecycle", () => {
 	});
 });
 
-describe("services : remote deploy targets", () => {
-	test("deploy to a docker-kind remote host (real second daemon connection)", async () => {
-		const ctx = integrationContext();
-		const created = await client.POST("/services", {
-			body: {
-				authRequired: false,
-				buildSource: "image",
-				containerPort: 80,
-				dnsResolvable: false,
-				envVars: {},
-				image: "nginx",
-				name: "IT docker remote",
-				restartPolicy: "no",
-				slug: slug("docker-remote"),
-				tag: "alpine",
-			},
-		});
-		const svc = expectOk(created.data, created.response);
-		cleanup.track(svc.id as string);
-
-		const patched = await client.PATCH("/services/{serviceId}", {
-			body: { remoteHostId: ctx.dockerRemoteHostId },
-			params: { path: { serviceId: svc.id as string } },
-		});
-		expect(patched.response.status).toBe(200);
-
-		await client.POST("/services/{serviceId}/deploy", {
-			params: { path: { serviceId: svc.id as string } },
-		});
-		const status = await waitForStatus(svc.id as string, "running");
-		expect(status.containerId).toBeTruthy();
-	});
-
-	test("deploy to an agent-kind remote host (real spawned agent)", async () => {
-		const ctx = integrationContext();
-		const created = await client.POST("/services", {
-			body: {
-				authRequired: false,
-				buildSource: "image",
-				containerPort: 80,
-				dnsResolvable: false,
-				envVars: {},
-				image: "nginx",
-				name: "IT agent remote",
-				restartPolicy: "no",
-				slug: slug("agent-remote"),
-				tag: "alpine",
-			},
-		});
-		const svc = expectOk(created.data, created.response);
-		cleanup.track(svc.id as string);
-
-		const patched = await client.PATCH("/services/{serviceId}", {
-			body: { remoteHostId: ctx.agentRemoteHostId },
-			params: { path: { serviceId: svc.id as string } },
-		});
-		expect(patched.response.status).toBe(200);
-
-		const deployed = await client.POST("/services/{serviceId}/deploy", {
-			params: { path: { serviceId: svc.id as string } },
-		});
-		const deployResult = expectOk(deployed.data, deployed.response);
-		expect(deployResult.success).toBe(true);
-		const status = await waitForStatus(svc.id as string, "running");
-		expect(status.containerId).toBeTruthy();
-
-		// Lifecycle actions must also route through the agent, not silently
-		// fall back to the local socket (the exact real bug this session
-		// found and fixed).
-		const stopRes = await client.POST("/services/{serviceId}/stop", {
-			params: { path: { serviceId: svc.id as string } },
-		});
-		expect(stopRes.response.status).toBe(200);
-		await waitForStatus(svc.id as string, "stopped");
-	});
-});
-
 describe("services : git-build deploy", () => {
 	test("local target, built from a real git clone", async () => {
 		const ctx = integrationContext();
@@ -350,7 +272,7 @@ describe("services : git-build deploy", () => {
 });
 
 describe("services : update and delete", () => {
-	test("PATCH updates non-remoteHostId fields, DELETE actually removes it", async () => {
+	test("PATCH updates fields, DELETE actually removes it", async () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,

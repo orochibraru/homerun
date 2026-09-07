@@ -127,7 +127,6 @@ async function finishLinkedStack(
 	}
 	const linkedServices = await createLinkedServices(links, {
 		projectId,
-		remoteHostId: null,
 		userId,
 	});
 	logger.info(

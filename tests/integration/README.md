@@ -22,7 +22,7 @@ top-level-await-plus-signal-handlers script) that, once per run:
 4. Spawn a real Homerun Agent and a real second Docker connection (`socat`),
    each on their own random port too.
 5. Bootstrap the first (admin) account, mint a real API key, register both
-   remote-host kinds, build the git-build fixture repo.
+   build-server kinds, build the git-build fixture repo.
 
 No mocks, no in-process shortcuts, and — because every port is resolved fresh
 per run — no fixed ports anywhere in this suite to collide on. Only runs any of
@@ -95,31 +95,46 @@ process. Tracked here instead, by scenario/endpoint.
 - [x] Image-mode deploy, local target, inside a project
 - [x] Git-build deploy, local target (real `git clone`, local fixture repo)
 - [x] Env vars land in the deployed container
-- [x] Deploy to a `docker`-kind remote host (real second daemon connection)
-- [x] Deploy to an `agent`-kind remote host (real spawned agent)
 - [x] Start/stop/restart lifecycle, local target
-- [x] Start/stop lifecycle, agent target (the exact "silently used the local
-      socket instead" bug class this session found is what this guards)
 - [x] Bad/nonexistent image fails with a real, non-empty error message, not
       silently
 - [ ] `networkMode: "host"` vs `"bridge"` — not yet covered
 - [ ] cpu/memory limits — not yet covered
 - [ ] Custom domain — not yet covered
-- [ ] Autoscale-eligible toggle — not yet covered
-- [ ] Git-build with build server = a _different_ agent host than the deploy
-      target (the cross-host publish path, needs a disposable S3-compatible
-      cache registry endpoint) — not yet covered, flagged as a real gap rather
-      than silently skipped
-- [ ] `PATCH /services/{id}` field-by-field coverage (only `remoteHostId` is
-      exercised so far)
+- [ ] Git-build on a remote build server, `docker`- or `agent`-kind (the
+      cross-host publish path, needs a disposable registry endpoint for the
+      build cache) — not yet covered, flagged as a real gap rather than silently
+      skipped. The setup registers both host kinds, nothing builds through them
+      yet.
+- [ ] `PATCH /services/{id}` field-by-field coverage (only plain fields like
+      `name`/`envVars` are exercised so far)
+- [ ] Swarm-mode deploys — needs a swarm-active daemon, not covered
+
+### Per-app login wall (`app-gate.test.ts`)
+
+- [x] Unknown service id, and a service with the wall off, are handled without
+      leaking anything
+- [x] Turning the wall on with no sign-in method picked is refused
+- [x] An anonymous visitor gets a 302 to `/app-auth`, not a 401
+- [x] A forged or absent gate cookie is challenged rather than trusted
+- [x] `/app-auth` mints a grant for an allowed user and bounces to the callback
+- [x] The callback sets a host-scoped (`Domain`-less), `HttpOnly`, `Secure`
+      cookie and returns the visitor to the original deep-linked URL
+- [x] A cookie minted for one host is rejected on another
+- [x] Each denial reason: user allowlist, email allowlist (exact and
+      `*@domain`), and group claims
+- [x] Tightening the policy revokes an already-issued cookie immediately
+- [x] A malformed redirect token is refused rather than followed
+- [ ] The Traefik half of the loop (that a non-2xx forwardAuth response with a
+      `Set-Cookie` reaches the browser verbatim) — verified by hand against a
+      real Traefik, not automated here: this suite spawns no Traefik
 
 ### REST API surface
 
 - [x] `POST /services`, `GET /services/{id}`, `PATCH /services/{id}`
-      (`remoteHostId` and plain fields like `name`/`envVars`),
-      `POST /services/{id}/deploy`, `/start`, `/stop`, `/restart`,
-      `DELETE /services/{id}` (asserted directly : 204, then a 404 on the next
-      `GET`, not just relied on via cleanup)
+      (`name`/`envVars`), `POST /services/{id}/deploy`, `/start`, `/stop`,
+      `/restart`, `DELETE /services/{id}` (asserted directly : 204, then a 404
+      on the next `GET`, not just relied on via cleanup)
 - [x] `POST /projects`, `GET /projects`, slug-conflict 409
 - [x] `GET /templates`
 - [x] `GET /system-stats`

@@ -21,10 +21,11 @@ export const actions = {
 		}
 		const formData = await request.formData();
 		const rawBaseDomain = nullableText(formData, "baseDomain");
-		const baseDomain = rawBaseDomain
+		const normalized = rawBaseDomain
 			? normalizeBaseDomain(rawBaseDomain)
 			: null;
-		if (rawBaseDomain && !baseDomain) {
+		const baseDomain = normalized?.domain ?? null;
+		if (rawBaseDomain && !normalized) {
 			return fail(400, {
 				error:
 					'Base domain must be a bare hostname, like "example.com" or "app.example.local" : no "https://", path, or trailing slash.',
@@ -37,9 +38,22 @@ export const actions = {
 		// base domain plus the "Use HTTPS" checkbox next to it, so setting
 		// one domain is enough.
 		const useHttps = checkbox(formData, "useHttps");
-		const authOrigin = baseDomain
-			? `${useHttps ? "https" : "http"}://${baseDomain}`
+		const explicitOrigin = nullableText(formData, "authOrigin");
+		if (explicitOrigin && !URL.canParse(explicitOrigin)) {
+			return fail(400, {
+				error:
+					'Dashboard URL must be a full URL, like "https://homerun.example.com" or "http://localhost:5173".',
+				savedSection: "core",
+			});
+		}
+		const derivedOrigin = normalized
+			? `${useHttps ? "https" : "http"}://${normalized.domain}${
+					normalized.port ? `:${normalized.port}` : ""
+				}`
 			: null;
+		const authOrigin = explicitOrigin
+			? new URL(explicitOrigin).origin
+			: derivedOrigin;
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateCore({
 			authCheckUrl: nullableText(formData, "authCheckUrl"),

@@ -9,6 +9,20 @@
 
 	const { data } = $props();
 
+	const derivedOrigin = $derived(
+		data.settings.baseDomain
+			? `${
+					data.settings.authOrigin?.startsWith("http://") ? "http" : "https"
+				}://${data.settings.baseDomain}`
+			: null,
+	);
+	const originIsDerived = $derived(
+		!data.settings.authOrigin ||
+			(!!data.settings.baseDomain &&
+				(data.settings.authOrigin === `https://${data.settings.baseDomain}` ||
+					data.settings.authOrigin === `http://${data.settings.baseDomain}`)),
+	);
+
 	const highlighted = $derived(
 		new Set(
 			(page.url.searchParams.get("highlight") ?? "").split(",").filter(Boolean),
@@ -47,11 +61,12 @@
       />
       <p class="text-text-subtle mt-1.5 text-xs">
         A bare hostname, e.g. <code class="font-mono">example.com</code>
-        or <code class="font-mono">app.example.local</code> : no
-        <code class="font-mono">https://</code>, path, or trailing slash.
-        Deployed services are routed under &lt;slug&gt;.&lt;this&gt;, and
-        this app's own origin below is derived from it, so this one field
-        is all that's needed.
+        or <code class="font-mono">app.example.local</code>. Deployed
+        services are routed by Traefik under
+        <code class="font-mono">&lt;slug&gt;.{data.settings.baseDomain ??
+        data.envDefaults.baseDomain}</code>, so a port here is never part of
+        that : add one only if this dashboard is reached on a port, and it
+        moves to the Dashboard URL below instead of the routing name.
       </p>
       {#if issueFor("baseDomain")}
         <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
@@ -73,6 +88,29 @@
       label="Use HTTPS"
       name="useHttps"
     />
+    <div>
+      <label class={label} for="authOrigin">Dashboard URL</label>
+      <Input
+        class="font-mono"
+        id="authOrigin"
+        name="authOrigin"
+        placeholder={derivedOrigin ??
+        data.envDefaults.authOrigin ??
+        "https://example.com"}
+        type="text"
+        value={originIsDerived ? "" : (data.settings.authOrigin ?? "")}
+      />
+      <p class="text-text-subtle mt-1.5 text-xs">
+        Where <em>this dashboard</em> is reached, scheme and port included.
+        Leave blank to derive it from the base domain above. It's separate
+        from the routing name because the two genuinely differ in
+        development, where the dashboard runs on a port
+        (<code class="font-mono">http://localhost:5173</code>) while
+        services are routed by Traefik on 443
+        (<code class="font-mono">dashy.localhost</code>). Single sign-on
+        redirect URIs and the per-app login wall both point here.
+      </p>
+    </div>
     <div>
       <label class={label} for="authCheckUrl">Auth-check URL</label>
       <Input

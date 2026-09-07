@@ -7,10 +7,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
-import {
-	ContainerNotFoundError,
-	DockerService,
-} from "../../../packages/agent/docker";
+import { DockerService } from "../../../packages/agent/docker";
 import { AgentHttpServer } from "../../../packages/agent/http";
 import { SystemStatsService } from "../../../packages/agent/stats";
 import { AGENT_VERSION } from "../../../packages/agent/version";
@@ -47,10 +44,9 @@ import { AGENT_VERSION } from "../../../packages/agent/version";
  */
 function freshDefaults() {
 	return {
-		deploy: spyOn(DockerService, "deploy").mockImplementation(async () => ({
-			containerId: "container-1",
-			log: ["ok"],
-		})),
+		buildFromGit: spyOn(DockerService, "buildFromGit").mockImplementation(
+			async () => ({ success: true }),
+		),
 		getSystemStats: spyOn(
 			SystemStatsService,
 			"getSystemStats",
@@ -64,40 +60,6 @@ function freshDefaults() {
 			memTotalMb: 100,
 			memUsedMb: 2,
 		})),
-		inspectStatus: spyOn(DockerService, "inspectStatus").mockImplementation(
-			async (id: string) => ({
-				exitCode: null,
-				id,
-				state: "running",
-				status: "running",
-			}),
-		),
-		listManagedContainers: spyOn(
-			DockerService,
-			"listManagedContainers",
-		).mockImplementation(async () => [{ Id: "container-1" }] as never),
-		removeContainer: spyOn(DockerService, "removeContainer").mockImplementation(
-			async () => undefined,
-		),
-		restartContainer: spyOn(
-			DockerService,
-			"restartContainer",
-		).mockImplementation(async () => undefined),
-		startContainer: spyOn(DockerService, "startContainer").mockImplementation(
-			async () => undefined,
-		),
-		stopContainer: spyOn(DockerService, "stopContainer").mockImplementation(
-			async () => undefined,
-		),
-		streamLogs: spyOn(DockerService, "streamLogs").mockImplementation(
-			async () =>
-				new ReadableStream<Uint8Array>({
-					start(controller) {
-						controller.enqueue(new TextEncoder().encode("log bytes"));
-						controller.close();
-					},
-				}),
-		),
 	};
 }
 
@@ -216,131 +178,17 @@ describe("routes", () => {
 		expect(await res.json()).toEqual(await mocks.getSystemStats());
 	});
 
-	test("GET /v1/containers lists managed containers", async () => {
-		const res = await handle(req("/v1/containers", { authed: true }));
-		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual([{ Id: "container-1" }]);
-	});
-
-	test("POST /v1/deploy rejects an invalid body with 400 and no deploy() call", async () => {
-		const res = await handle(
-			req("/v1/deploy", {
-				authed: true,
-				body: JSON.stringify({ image: "" }),
-				method: "POST",
-			}),
-		);
-		expect(res.status).toBe(400);
-		const body = (await res.json()) as { error: string; issues: unknown };
-		expect(body.error).toBe("Invalid request body");
-		expect(Array.isArray(body.issues)).toBe(true);
-		expect(mocks.deploy).not.toHaveBeenCalled();
-	});
-
-	test("POST /v1/deploy rejects unparseable JSON with 400", async () => {
-		const res = await handle(
-			req("/v1/deploy", {
-				authed: true,
-				body: "not json",
-				method: "POST",
-			}),
-		);
-		expect(res.status).toBe(400);
-	});
-
-	test("POST /v1/deploy calls deploy() with the parsed body and returns its result", async () => {
-		const input = {
-			containerPort: 80,
-			cpuLimit: null,
-			envVars: [],
-			image: "nginx",
-			memoryLimitMb: null,
-			networkMode: "bridge",
-			portProtocol: "tcp",
-			restartPolicy: "always",
-			serviceId: "svc-1",
-			slug: "svc",
-			tag: "latest",
-		};
-		const res = await handle(
-			req("/v1/deploy", {
-				authed: true,
-				body: JSON.stringify(input),
-				method: "POST",
-			}),
-		);
-		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual({
-			containerId: "container-1",
-			log: ["ok"],
-		});
-		expect(mocks.deploy).toHaveBeenCalledTimes(1);
-		expect(mocks.deploy.mock.calls[0][0]).toMatchObject({
-			image: "nginx",
-			serviceId: "svc-1",
-		});
-	});
-
-	test("GET /v1/containers/:id inspects that container, decoding the id", async () => {
-		const res = await handle(req("/v1/containers/abc%2Fdef", { authed: true }));
-		expect(res.status).toBe(200);
-		expect(mocks.inspectStatus).toHaveBeenCalledWith("abc/def");
-	});
-
-	test("DELETE /v1/containers/:id removes it", async () => {
-		const res = await handle(
-			req("/v1/containers/abc", { authed: true, method: "DELETE" }),
-		);
-		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual({ ok: true });
-		expect(mocks.removeContainer).toHaveBeenCalledWith("abc");
-	});
-
-	test.each(["start", "stop", "restart"] as const)(
-		"POST /v1/containers/:id/%s calls the matching action",
-		async (action) => {
-			const res = await handle(
-				req(`/v1/containers/abc/${action}`, { authed: true, method: "POST" }),
-			);
-			expect(res.status).toBe(200);
-			expect(await res.json()).toEqual({ ok: true });
-		},
-	);
-
-	test("GET /v1/containers/:id/logs streams bytes with an octet-stream content type", async () => {
-		const res = await handle(
-			req("/v1/containers/abc/logs?follow=true", { authed: true }),
-		);
-		expect(res.headers.get("content-type")).toBe("application/octet-stream");
-		expect(await res.text()).toBe("log bytes");
-		expect(mocks.streamLogs).toHaveBeenCalledWith("abc", true);
-	});
-
-	test("logs defaults to follow=false when the query param is absent", async () => {
-		await handle(req("/v1/containers/abc/logs", { authed: true }));
-		expect(mocks.streamLogs).toHaveBeenCalledWith("abc", false);
-	});
-
 	test("an unknown path 404s", async () => {
 		const res = await handle(req("/v1/nope", { authed: true }));
 		expect(res.status).toBe(404);
 	});
 
 	test("a thrown error inside a route surfaces as a 500 with its message", async () => {
-		mocks.inspectStatus.mockImplementationOnce(async () => {
-			throw new Error("inspect boom");
+		mocks.getSystemStats.mockImplementationOnce(async () => {
+			throw new Error("stats boom");
 		});
-		const res = await handle(req("/v1/containers/abc", { authed: true }));
+		const res = await handle(req("/v1/stats", { authed: true }));
 		expect(res.status).toBe(500);
-		expect(await res.json()).toEqual({ error: "inspect boom" });
-	});
-
-	test("a ContainerNotFoundError from inspectStatus surfaces as a 404", async () => {
-		mocks.inspectStatus.mockImplementationOnce(async () => {
-			throw new ContainerNotFoundError("No such container: abc");
-		});
-		const res = await handle(req("/v1/containers/abc", { authed: true }));
-		expect(res.status).toBe(404);
-		expect(await res.json()).toEqual({ error: "No such container: abc" });
+		expect(await res.json()).toEqual({ error: "stats boom" });
 	});
 });

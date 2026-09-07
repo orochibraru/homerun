@@ -8,7 +8,6 @@ import { encryptSecret } from "$lib/services/secrets";
 const logger = new Logger("RemoteHosts");
 
 interface NewHostBase {
-	isBuildServer: boolean;
 	name: string;
 	userId: string;
 }
@@ -40,7 +39,6 @@ async function createAgentHost(formData: FormData, base: NewHostBase) {
 	const host = await RemoteHostDTO.create({
 		agentTokenEnc: encryptSecret(agentToken),
 		agentUrl,
-		isBuildServer: base.isBuildServer,
 		kind: "agent",
 		name: base.name,
 		userId: base.userId,
@@ -74,7 +72,6 @@ async function createDockerHost(formData: FormData, base: NewHostBase) {
 
 	const host = await RemoteHostDTO.create({
 		dockerHost,
-		isBuildServer: base.isBuildServer,
 		kind: "docker",
 		name: base.name,
 		tlsCaEnc: tlsCa ? encryptSecret(tlsCa) : null,
@@ -103,7 +100,6 @@ export const actions = {
 		}
 
 		const base: NewHostBase = {
-			isBuildServer: formData.get("isBuildServer") === "on",
 			name,
 			userId: locals.user.id,
 		};

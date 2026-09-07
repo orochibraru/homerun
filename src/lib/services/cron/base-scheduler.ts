@@ -8,7 +8,7 @@ const TICK_MS = 60_000;
 // Keyed per subclass (see start() below) rather than one module-level flag
 // per scheduler, so one starting never short-circuits another, same
 // property the old three separate globalForCron/globalForBackup/
-// globalForAutoscale guards had, just expressed as one shared registry now
+// per-scheduler guards had, just expressed as one shared registry now
 // that each scheduler is its own class instead of a function in one file.
 const globalForSchedulers = globalThis as unknown as {
 	__scheduler_intervals?: Map<string, ReturnType<typeof setInterval>>;
@@ -23,7 +23,7 @@ function intervalRegistry(): Map<string, ReturnType<typeof setInterval>> {
 
 /**
  * Shared ticking-with-HMR-safe-guard boilerplate every scheduler in this
- * app needs (cron redeploy, S3 backup, autoscale migration, see the
+ * app needs (cron redeploy, S3 backup, user cron jobs, see the
  * sibling files in this directory, plus the job-queue worker in
  * services/queue/). A subclass just implements `tick()` and a
  * human-readable `label` for its log lines, optionally overriding
@@ -32,9 +32,14 @@ function intervalRegistry(): Map<string, ReturnType<typeof setInterval>> {
  * inherited, not reimplemented per scheduler.
  */
 export abstract class BaseScheduler {
-	protected readonly logger = new Logger("Cron");
+	#logger: Logger | null = null;
 
-	/** Short label for this scheduler's own log lines (e.g. "Cron", "Backup", "Autoscale"). */
+	protected get logger(): Logger {
+		this.#logger ??= new Logger(this.label);
+		return this.#logger;
+	}
+
+	/** Short label for this scheduler's own log lines, and its HMR registry key (e.g. "Cron", "Backup", "Queue"). */
 	protected abstract readonly label: string;
 
 	protected readonly intervalMs: number = TICK_MS;
@@ -46,7 +51,7 @@ export abstract class BaseScheduler {
 	/** Starts this scheduler's own tick (see `intervalMs`). Idempotent : safe to call on every dev-server HMR reload. */
 	start(): void {
 		const registry = intervalRegistry();
-		const key = this.constructor.name;
+		const key = this.label;
 		if (registry.has(key)) {
 			return;
 		}

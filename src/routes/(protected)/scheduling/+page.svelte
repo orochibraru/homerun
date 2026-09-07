@@ -22,7 +22,7 @@
   <div class="mb-8">
     <h1 class="text-text text-xl font-semibold tracking-tight">Scheduling</h1>
     <p class="text-text-muted mt-1 text-sm">
-      The job queue plus cron redeploys, cron jobs, backups, and autoscale
+      The job queue plus cron redeploys, cron jobs, and backups
       activity across every service and volume, in one place.
     </p>
   </div>
@@ -144,56 +144,5 @@
       {/if}
     </section>
 
-    <!-- ═══ Autoscaling ═══ -->
-    {#if data.isAdmin}
-      <section>
-        <div class="mb-3 flex items-center gap-2">
-          <Gauge class="text-accent size-4" />
-          <h2 class="eyebrow">Autoscaling</h2>
-        </div>
-        {#if !data.autoscale?.autoscaleEnabled}
-          <EmptyState
-            icon={Gauge}
-            subtitle="Turn it on and pick an overflow remote host from Settings."
-            title="Autoscaling is off for this instance"
-          />
-        {:else}
-          <p class="text-text-muted mb-3 text-xs">
-            Migrates one eligible service to <span class="text-text font-medium"
-              >{data.autoscale.overflowHostName ?? "no overflow host configured"}</span>
-            when the local host crosses {data.autoscale.autoscaleCpuThresholdPercent}%
-            CPU or {data.autoscale.autoscaleMemoryThresholdPercent}% memory.
-          </p>
-          {#if data.autoscaleServices.length === 0}
-            <EmptyState
-              icon={Gauge}
-              subtitle="Opt a service in from its Compute tab."
-              title="No services are autoscale-eligible"
-            />
-          {:else}
-            <div class="space-y-2.5">
-              {#each data.autoscaleServices as { hostName, projectName, service } (service.id)}
-                <a
-                  class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
-                  href="{resolve('/services')}/{service.id}/compute"
-                >
-                  <div class="min-w-0 flex-1">
-                    <p class="text-text truncate text-sm font-semibold">
-                      {service.name}
-                      {#if projectName}
-                        <span class="text-text-muted font-normal">· {projectName}</span>
-                      {/if}
-                    </p>
-                  </div>
-                  <p class="text-text-subtle shrink-0 text-xs">
-                    running on: {hostName}
-                  </p>
-                </a>
-              {/each}
-            </div>
-          {/if}
-        {/if}
-      </section>
-    {/if}
   </div>
 </div>

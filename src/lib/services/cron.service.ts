@@ -1,5 +1,5 @@
 // CronService : facade over the three independent 60s-tick schedulers this
-// app runs (cron redeploy, S3 backup, autoscale migration, see
+// app runs (cron redeploy, S3 backup, user cron jobs, see
 // services/cron/*) plus the standalone cron-expression parser two route
 // files use for schedule validation.
 //
@@ -12,58 +12,77 @@
 // is the natural fit, a method here just delegates one call into the
 // composed instance it owns.
 
-import { AutoscaleScheduler } from "./cron/autoscale-scheduler.ts";
-import { BackupScheduler } from "./cron/backup-scheduler.ts";
+import { CronJobDTO } from "$lib/dto/cron-job-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
+import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { enqueueVolumeBackup } from "./backup-queue.ts";
 import {
 	cronMatches,
 	type ParsedCron,
 	parseCronSchedule,
 } from "./cron/cron-expression.ts";
-import { CronJobScheduler } from "./cron/cron-job-scheduler.ts";
-import { CronRedeployScheduler } from "./cron/cron-redeploy-scheduler.ts";
+import { DueScheduler } from "./cron/due-scheduler.ts";
+import { enqueueCronJobRun } from "./cron-job-queue.ts";
+import { DeploymentService } from "./deploy.service.ts";
 
 export type { ParsedCron } from "./cron/cron-expression.ts";
 
 class CronServiceClass {
-	private readonly redeployScheduler = new CronRedeployScheduler();
-	private readonly backupScheduler = new BackupScheduler();
-	private readonly autoscaleScheduler = new AutoscaleScheduler();
-	private readonly cronJobScheduler = new CronJobScheduler();
+	private readonly redeployScheduler = new DueScheduler<ServiceDTO>({
+		describe: (svc) =>
+			`cron redeploy: service=${svc.id} schedule="${svc.cronSchedule}"`,
+		fire: (svc) =>
+			DeploymentService.enqueueDeploy({
+				svc,
+				trigger: "cron",
+				userId: svc.userId,
+			}),
+		label: "Cron",
+		lastRunAt: (svc) => svc.cronLastRunAt,
+		list: () => ServiceDTO.listCronEnabled(),
+		markRun: (svc, now) => svc.update({ cronLastRunAt: now }),
+		schedule: (svc) => svc.cronSchedule,
+	});
 
-	/** Parses a 5-field cron expression, or null if it's malformed. */
+	private readonly backupScheduler = new DueScheduler<StorageVolumeDTO>({
+		describe: (volume) =>
+			`scheduled backup: volume=${volume.id} schedule="${volume.backupSchedule}"`,
+		fire: (volume) => enqueueVolumeBackup(volume),
+		label: "Backup",
+		lastRunAt: (volume) => volume.backupLastRunAt,
+		list: () => StorageVolumeDTO.listBackupEnabled(),
+		markRun: (volume, now) => volume.update({ backupLastRunAt: now }),
+		schedule: (volume) => volume.backupSchedule,
+	});
+
+	private readonly cronJobScheduler = new DueScheduler<CronJobDTO>({
+		describe: (job) => `cron job: job=${job.id} schedule="${job.schedule}"`,
+		fire: (job) => enqueueCronJobRun(job),
+		label: "Cron job",
+		lastRunAt: (job) => job.lastRunAt,
+		list: () => CronJobDTO.listEnabled(),
+		markRun: (job, now) => job.update({ lastRunAt: now }),
+		schedule: (job) => job.schedule,
+	});
+
 	parseCronSchedule(schedule: string): ParsedCron | null {
 		return parseCronSchedule(schedule);
 	}
 
-	/** Whether the given schedule is due at the given date (minute resolution : seconds are ignored). */
 	cronMatches(schedule: string, date: Date): boolean {
 		return cronMatches(schedule, date);
 	}
 
-	/** Starts the once-a-minute cron redeploy check. Idempotent : safe to call on every dev-server HMR reload. */
 	startCronScheduler(): void {
 		this.redeployScheduler.start();
 	}
 
-	/** Starts the once-a-minute scheduled-backup check. Idempotent : safe to call on every dev-server HMR reload. */
 	startBackupScheduler(): void {
 		this.backupScheduler.start();
 	}
 
-	/** Starts the once-a-minute user-defined cron job check. Idempotent : safe to call on every dev-server HMR reload. */
 	startCronJobScheduler(): void {
 		this.cronJobScheduler.start();
-	}
-
-	/**
-	 * Starts the once-a-minute autoscale check. Idempotent : safe to call on
-	 * every dev-server HMR reload. A no-op every tick unless
-	 * instanceSettings.autoscaleEnabled is on *and* an overflow remote host
-	 * is configured (Settings' Autoscaling section) : same opt-in-and-inert-
-	 * by-default posture as the other two schedulers here.
-	 */
-	startAutoscaleScheduler(): void {
-		this.autoscaleScheduler.start();
 	}
 }
 

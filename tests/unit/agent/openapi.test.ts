@@ -32,18 +32,7 @@ describe("OpenApiBuilder.buildDocument", () => {
 
 	test("documents every route the HTTP handler actually serves", () => {
 		expect(Object.keys(doc.paths).sort()).toEqual(
-			[
-				"/v1/build",
-				"/v1/containers",
-				"/v1/containers/{id}",
-				"/v1/containers/{id}/logs",
-				"/v1/containers/{id}/restart",
-				"/v1/containers/{id}/start",
-				"/v1/containers/{id}/stop",
-				"/v1/deploy",
-				"/v1/health",
-				"/v1/stats",
-			].sort(),
+			["/v1/build", "/v1/health", "/v1/stats"].sort(),
 		);
 	});
 
@@ -63,27 +52,6 @@ describe("OpenApiBuilder.buildDocument", () => {
 				).toEqual([{ bearerAuth: [] }]);
 			}
 		}
-	});
-
-	test("/v1/deploy's request body schema embeds deployInputSchema's required fields", () => {
-		const deployPost = doc.paths["/v1/deploy"].post as {
-			requestBody: {
-				content: { "application/json": { schema: Record<string, unknown> } };
-			};
-		};
-		const schema = deployPost.requestBody.content["application/json"].schema;
-		expect(schema).not.toHaveProperty("$schema");
-		expect(schema.required).toEqual(
-			expect.arrayContaining([
-				"image",
-				"tag",
-				"serviceId",
-				"slug",
-				"networkMode",
-				"portProtocol",
-				"restartPolicy",
-			]),
-		);
 	});
 
 	test("embedded schemas never leak zod's top-level $schema pointer", () => {

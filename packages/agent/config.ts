@@ -10,8 +10,6 @@ import process from "node:process";
  * obvious to whoever's running it.
  */
 class AgentConfig {
-	/** Same network name convention as the main app's `homerun` : not the same network (different host), just the same name so both sides' docs/mental model line up. */
-	dockerNetworkName = process.env.HOMERUN_NETWORK_NAME ?? "homerun";
 	/** Only falls back to auto-detection when DOCKER_SOCKET_PATH is unset : see detectDockerSocketPath's docstring. */
 	dockerSocketPath =
 		process.env.DOCKER_SOCKET_PATH ?? AgentConfig.detectDockerSocketPath();
@@ -22,10 +20,9 @@ class AgentConfig {
 	 * Max seconds to wait, on SIGINT/SIGTERM, for in-flight requests to
 	 * finish before forcing the shutdown : deliberately generous compared to
 	 * the main app's own default (see the adapter's SHUTDOWN_TIMEOUT), since
-	 * a request here can be a real long-running `/v1/deploy` (image pull) or
-	 * `/v1/build` (git clone + docker build), not just an ordinary
-	 * request/response, killing one mid-way can leave a container half
-	 * created or a build silently truncated.
+	 * a request here can be a real long-running `/v1/build` (git clone +
+	 * docker build), not just an ordinary request/response, killing one
+	 * mid-way can leave a build silently truncated.
 	 */
 	shutdownTimeoutSeconds = Number.parseInt(
 		process.env.AGENT_SHUTDOWN_TIMEOUT ?? "120",

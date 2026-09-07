@@ -66,11 +66,6 @@
 	const projectLabel = $derived(
 		data.projects.find((p) => p.id === projectId)?.name ?? "Ungrouped",
 	);
-
-	let remoteHostId = $derived(svc.remoteHostId ?? "");
-	const remoteHostLabel = $derived(
-		data.remoteHosts.find((h) => h.id === remoteHostId)?.name ?? "This host",
-	);
 </script>
 
 <div class="space-y-6">
@@ -236,48 +231,6 @@
           </SelectContent>
         </SelectRoot>
         <Button class="shrink-0" type="submit" variant="outline">Move</Button>
-      </form>
-    </div>
-  </section>
-
-  <!-- ═══ Deploy target (remote host) ═══ -->
-  <section class="glass rounded-2xl">
-    <div class="flex items-center justify-between gap-4 p-5">
-      <div class="flex items-center gap-3">
-        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-          <Server class="size-4" />
-        </div>
-        <div>
-          <p class="text-text text-sm font-medium">Deploy target</p>
-          <p class="text-text-muted text-xs">
-            Which Docker daemon this service runs on. Changing this only takes
-            effect on the next deploy : the current container, if any, keeps
-            running where it is.
-          </p>
-        </div>
-      </div>
-      <form
-        action="?/moveRemoteHost"
-        class="flex w-75 items-center gap-2"
-        method="POST"
-        use:enhance={enhanceToast({
-          error: "Couldn't change the deploy target.",
-          loading: "Saving the deploy target",
-          success: "Saved.",
-        })}
-      >
-        <SelectRoot name="remoteHostId" type="single" bind:value={remoteHostId}>
-          <SelectTrigger class="w-full">
-            {remoteHostLabel}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem label="This host" value="" />
-            {#each data.remoteHosts as host (host.id)}
-              <SelectItem label={host.name} value={host.id} />
-            {/each}
-          </SelectContent>
-        </SelectRoot>
-        <Button class="shrink-0" type="submit" variant="outline">Save</Button>
       </form>
     </div>
   </section>

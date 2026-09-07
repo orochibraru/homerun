@@ -28,10 +28,10 @@ host's architecture and runs it, which:
    from published images.
 
 Run `--mode=agent` instead of `--mode=full` if you only want this box to run the
-[Homerun Agent](remote-hosts-and-agent.md#homerun-agent) as a remote
-build/deploy target for a different Homerun instance, not the full app. Add
-`--dry-run` to print every command without running anything, `--version=vX.Y.Z`
-to pin a release instead of the latest one, and see
+[Homerun Agent](remote-hosts-and-agent.md#homerun-agent) as a remote build
+server for a different Homerun instance, not the full app. Add `--dry-run` to
+print every command without running anything, `--version=vX.Y.Z` to pin a
+release instead of the latest one, and see
 [`packages/installer/README.md`](../packages/installer/README.md) for the rest
 of the flags (`--user=`, `--port=`).
 

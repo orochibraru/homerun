@@ -11,32 +11,39 @@ you'd mind losing, and keep backups (see
 ## Does it support multiple hosts / Kubernetes-style orchestration?
 
 Not a Kubernetes-equivalent control plane, no, that's still by design, see the
-README's "Why Homerun". [Remote hosts](remote-hosts-and-agent.md) let one
-instance deploy _individual_ services onto other machines, and
-[autoscaling](remote-hosts-and-agent.md#autoscaling--load-based-migration) can
-migrate one service off an overloaded host. There **is** now real replica
-scaling and load balancing for a single service, opt-in Docker
-[Swarm mode](services.md#swarm-mode), but it's local-manager-only today: a
-remote machine has to actually join the swarm as a worker
-(`packages/installer/swarm-join.sh`), which isn't the same as registering it as
-a Remote Host, so multi-host swarm scaling isn't wired up end-to-end yet either.
-`service.containerId` still being a single column is what standalone mode (the
-default) is built around; swarm mode is the separate, newer path around that
-limitation for services that opt in.
+README's "Why Homerun". Extra capacity comes from opt-in Docker
+[Swarm mode](services.md#swarm-mode), which gives real replica scaling and load
+balancing for a single service: a second machine joins the swarm as a worker
+(`packages/installer/swarm-join.sh`) and Docker schedules onto it. Homerun
+itself only ever talks to the local manager.
+[Build servers](remote-hosts-and-agent.md) are a separate thing, a second
+machine that compiles images, not one that runs them. `service.containerId`
+still being a single column is what standalone mode (the default) is built
+around; swarm mode is the separate, newer path around that limitation for
+services that opt in.
 
 ## Known, real limitations (not hypothetical)
 
-- **Per-service auth gate** (`authRequired`) blocks _everyone_, including a
-  signed-in admin, unless `AUTH_CROSS_SUBDOMAIN=true`, and even then it's not
-  fully reliable. See
-  [Users & access](users-and-access.md#per-service-auth-gate).
+- **OAuth / OIDC sign-in** needs **Origin** set under Settings → General and
+  matching how you actually reach Homerun: the redirect URI sent to your
+  provider is built from it, and providers reject any URI they weren't given in
+  advance. See [Users & access](users-and-access.md#authentication-providers).
+- **The login wall's Auth-check URL defaults to port 3000**, which is right for
+  a normal deployment but wrong under `vite dev` (which serves on 5173 and
+  doesn't set `PORT`). Set Auth-check URL explicitly under Settings → General
+  when developing, or the wall's checks call a port nothing is listening on.
+- **The per-app login wall** needs **Origin** set under Settings → General
+  (that's where visitors are sent to sign in), and the service has to be
+  redeployed after the wall is turned on or off. Group restrictions depend on
+  your provider actually putting group or role claims in the id token. See
+  [Users & access](users-and-access.md#per-app-login-wall).
 - **Custom SSL certs** require a one-time manual Traefik config change
   (`TRAEFIK_DYNAMIC_CONFIG_DIR` + uncommenting flags in `compose.yaml`), Homerun
   writes the cert files but never touches the live Traefik container itself. See
   [Services: custom domains & SSL](services.md#custom-domains--ssl).
-- **Remote hosts** get no Traefik routing, no shared network, no host-port
-  publishing, and skip bind-mount volumes entirely. See
-  [Remote hosts](remote-hosts-and-agent.md#real-limitations-not-oversights).
+- **Build servers** only build; they never run your services, and one always
+  needs a build-cache registry so the image it produced can reach the host that
+  deploys it. See [Build servers](remote-hosts-and-agent.md).
 - **Git-based builds** clone by branch/tag only, a bare commit SHA doesn't work,
   and have no webhook/auto-deploy-on-push yet.
 - **S3 backups** cover both volume kinds now (a Docker-managed volume is read
@@ -48,9 +55,10 @@ limitation for services that opt in.
   [`packages/installer/README.md`](../packages/installer/README.md)). Verify by
   hand before relying on it.
 - **Swarm mode** is local-manager-only, see
-  [above](#does-it-support-multiple-hosts--kubernetes-style-orchestration), and
-  isn't autoscale-aware, don't combine `autoscaleEligible` with a swarm-mode
-  service.
+  [above](#does-it-support-multiple-hosts--kubernetes-style-orchestration): a
+  second machine joins the swarm as a worker rather than being registered
+  separately, and `packages/installer/swarm-join.sh` has not been verified
+  against a real swarm yet.
 - **Cloudflare and Pangolin DNS automation** are new and haven't been exercised
   against a real account yet, verify the first sync by hand once you've
   configured one. See [Services: DNS automation](services.md#dns-automation).

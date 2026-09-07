@@ -7,12 +7,6 @@ import process from "node:process";
 import { config } from "../../../packages/agent/config";
 
 describe("agent config defaults", () => {
-	test("dockerNetworkName defaults to homerun", () => {
-		expect(config.dockerNetworkName).toBe(
-			process.env.HOMERUN_NETWORK_NAME ?? "homerun",
-		);
-	});
-
 	test("dockerSocketPath honors an explicit DOCKER_SOCKET_PATH, or else auto-detects one", () => {
 		// An explicit value always wins outright (see
 		// AgentConfig.detectDockerSocketPath's docstring) : deterministic to

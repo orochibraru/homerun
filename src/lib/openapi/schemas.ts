@@ -22,8 +22,11 @@ export const errorResponse = z.object({
 });
 
 export const serviceResponse = z.object({
+	authAllowedEmails: z.array(z.string()),
+	authAllowedGroups: z.array(z.string()),
+	authAllowedUserIds: z.array(z.string()),
+	authProviders: z.array(z.string()),
 	authRequired: z.boolean(),
-	autoscaleEligible: z.boolean(),
 	buildSource: z.enum(["image", "git"]),
 	containerId: z.string().nullable(),
 	containerPort: z.number().int(),
@@ -68,7 +71,6 @@ export const serviceResponse = z.object({
 		.meta({ description: "Ciphertext, not plaintext." }),
 	registryUrl: z.string().nullable(),
 	registryUsername: z.string().nullable(),
-	remoteHostId: z.string().nullable(),
 	restartPolicy: z.enum(["no", "always", "on-failure", "unless-stopped"]),
 	slug: z.string(),
 	tag: z.string(),

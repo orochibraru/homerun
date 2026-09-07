@@ -1,6 +1,5 @@
-# Run by prek (https://github.com/j178/prek), a drop-in pre-commit runner.
-# Install the hooks once with `prek install -t pre-commit -t commit-msg`;
-# `bun install` does it for you.
+fail_fast: true
+
 repos:
   # Cheap, generic hygiene the language tooling below does not cover: biome
   # owns the code files and prettier the markdown, but nothing was looking at

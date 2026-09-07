@@ -334,10 +334,31 @@
 									"items": {
 										"additionalProperties": false,
 										"properties": {
-											"authRequired": {
-												"type": "boolean"
+											"authAllowedEmails": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
 											},
-											"autoscaleEligible": {
+											"authAllowedGroups": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"authAllowedUserIds": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"authProviders": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"authRequired": {
 												"type": "boolean"
 											},
 											"buildSource": {
@@ -567,16 +588,6 @@
 													}
 												]
 											},
-											"remoteHostId": {
-												"anyOf": [
-													{
-														"type": "string"
-													},
-													{
-														"type": "null"
-													}
-												]
-											},
 											"restartPolicy": {
 												"enum": [
 													"no",
@@ -602,8 +613,11 @@
 											}
 										},
 										"required": [
+											"authAllowedEmails",
+											"authAllowedGroups",
+											"authAllowedUserIds",
+											"authProviders",
 											"authRequired",
-											"autoscaleEligible",
 											"buildSource",
 											"containerId",
 											"containerPort",
@@ -633,7 +647,6 @@
 											"registryPasswordEnc",
 											"registryUrl",
 											"registryUsername",
-											"remoteHostId",
 											"restartPolicy",
 											"slug",
 											"tag",
@@ -793,10 +806,31 @@
 								"schema": {
 									"additionalProperties": false,
 									"properties": {
-										"authRequired": {
-											"type": "boolean"
+										"authAllowedEmails": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
-										"autoscaleEligible": {
+										"authAllowedGroups": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authAllowedUserIds": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authProviders": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authRequired": {
 											"type": "boolean"
 										},
 										"buildSource": {
@@ -1026,16 +1060,6 @@
 												}
 											]
 										},
-										"remoteHostId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
@@ -1056,8 +1080,11 @@
 										}
 									},
 									"required": [
+										"authAllowedEmails",
+										"authAllowedGroups",
+										"authAllowedUserIds",
+										"authProviders",
 										"authRequired",
-										"autoscaleEligible",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -1087,7 +1114,6 @@
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
-										"remoteHostId",
 										"restartPolicy",
 										"slug",
 										"tag",
@@ -1254,10 +1280,31 @@
 								"schema": {
 									"additionalProperties": false,
 									"properties": {
-										"authRequired": {
-											"type": "boolean"
+										"authAllowedEmails": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
-										"autoscaleEligible": {
+										"authAllowedGroups": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authAllowedUserIds": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authProviders": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authRequired": {
 											"type": "boolean"
 										},
 										"buildSource": {
@@ -1487,16 +1534,6 @@
 												}
 											]
 										},
-										"remoteHostId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
@@ -1517,8 +1554,11 @@
 										}
 									},
 									"required": [
+										"authAllowedEmails",
+										"authAllowedGroups",
+										"authAllowedUserIds",
+										"authProviders",
 										"authRequired",
-										"autoscaleEligible",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -1548,7 +1588,6 @@
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
-										"remoteHostId",
 										"restartPolicy",
 										"slug",
 										"tag",
@@ -1756,16 +1795,6 @@
 											}
 										]
 									},
-									"remoteHostId": {
-										"anyOf": [
-											{
-												"type": "string"
-											},
-											{
-												"type": "null"
-											}
-										]
-									},
 									"restartPolicy": {
 										"enum": ["no", "always", "on-failure", "unless-stopped"],
 										"type": "string"
@@ -1788,10 +1817,31 @@
 								"schema": {
 									"additionalProperties": false,
 									"properties": {
-										"authRequired": {
-											"type": "boolean"
+										"authAllowedEmails": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
-										"autoscaleEligible": {
+										"authAllowedGroups": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authAllowedUserIds": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authProviders": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"authRequired": {
 											"type": "boolean"
 										},
 										"buildSource": {
@@ -2021,16 +2071,6 @@
 												}
 											]
 										},
-										"remoteHostId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
@@ -2051,8 +2091,11 @@
 										}
 									},
 									"required": [
+										"authAllowedEmails",
+										"authAllowedGroups",
+										"authAllowedUserIds",
+										"authProviders",
 										"authRequired",
-										"autoscaleEligible",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -2082,7 +2125,6 @@
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
-										"remoteHostId",
 										"restartPolicy",
 										"slug",
 										"tag",

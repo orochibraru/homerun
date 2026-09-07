@@ -1,6 +1,12 @@
 <script lang="ts">
-	import { Check, Globe, Network, ShieldCheck } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import {
+		Check,
+		Globe,
+		LockKeyhole,
+		Network,
+		ShieldCheck,
+	} from "@lucide/svelte";
+	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
@@ -56,6 +62,31 @@
 	const portProtocolLabel = $derived(
 		portProtocolOptions.find(([val]) => val === portProtocol)?.[1] ?? "TCP",
 	);
+
+	let submittingAuth = $state(false);
+	let authRequired = $state(untrack(() => svc.authRequired));
+	let methods = $state<string[]>(untrack(() => [...svc.authProviders]));
+	let allowedUserIds = $state<string[]>(
+		untrack(() => [...svc.authAllowedUserIds]),
+	);
+
+	$effect(() => {
+		authRequired = svc.authRequired;
+		methods = [...svc.authProviders];
+		allowedUserIds = [...svc.authAllowedUserIds];
+	});
+
+	function toggleMethod(method: string, checked: boolean) {
+		methods = checked
+			? [...new Set([...methods, method])]
+			: methods.filter((entry) => entry !== method);
+	}
+
+	function toggleUser(userId: string, checked: boolean) {
+		allowedUserIds = checked
+			? [...new Set([...allowedUserIds, userId])]
+			: allowedUserIds.filter((entry) => entry !== userId);
+	}
 </script>
 
 <div class="space-y-6">
@@ -119,38 +150,194 @@
           </p>
         </div>
 
-        <div class="border-border border-t pt-3">
-          <CheckBox
-            checked={svc.authRequired}
-            helperText="Gate this app behind Homerun's own login via Traefik forwardAuth"
-            id="authRequired"
-            label="Require login to access this app"
-            name="authRequired"
-          />
-          <p class="mt-1.5 text-xs text-red-500">
-            ⚠ In its current form this blocks <em>everyone</em>, including you
-            : there's no login page mounted on this app's own hostname to
-            authenticate against. Treat it as a hard "make this unreachable from
-            the public internet" switch (defense-in-depth, or temporarily
-            pulling something offline), not as a working per-app login wall yet.
-          </p>
-          <p class="text-text-subtle mt-1.5 text-xs">
-            Checks Traefik forwardAuth requests against this instance's own
-            session (any provider you sign into Homerun with, including a
-            configured OIDC one) : anyone without a valid session for
-            <em>this exact hostname</em>
-            gets a 401. Setting
-            <code>AUTH_CROSS_SUBDOMAIN=true</code>
-            widens the session cookie to cover every subdomain of the base
-            domain, which is a real security tradeoff and, in testing, wasn't
-            sufficient on its own for a signed-in admin to pass through
-            automatically : a proper login-redirect flow for gated subdomains
-            isn't built yet.
-          </p>
-        </div>
-
         <Button disabled={submitting} type="submit" variant="outline">
           {#if submitting}
+            <Spinner />
+          {:else}
+            <Check class="size-4" />
+          {/if}
+          Save
+        </Button>
+      </form>
+    {/if}
+  </section>
+
+  <!-- ═══ Access ═══ -->
+  <section class="glass rounded-2xl p-5">
+    <div class="mb-4 flex items-center gap-3">
+      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+        <LockKeyhole class="size-4" />
+      </div>
+      <div>
+        <p class="text-text text-sm font-medium">Access</p>
+        <p class="text-text-muted text-xs">
+          {#if svc.authRequired}
+            Visitors are sent to this instance's sign-in page before they reach
+            this app.
+          {:else}
+            Open to anyone who can reach it.
+          {/if}
+        </p>
+      </div>
+    </div>
+
+    {#if !svc.dnsResolvable}
+      <p class="text-text-muted text-sm">
+        Not applicable : this service isn't publicly routed, so it has no
+        Traefik router to gate. Turn on DNS resolvability in the Network
+        section below first.
+      </p>
+    {:else}
+      <form
+        action="?/updateAppAuth"
+        class="space-y-4"
+        method="POST"
+        use:enhance={enhanceToast({
+          error: "Couldn't save the access rules.",
+          loading: "Saving access rules",
+          onSettled: () => {
+            submittingAuth = false;
+          },
+          onStart: () => {
+            submittingAuth = true;
+          },
+          success: "Saved. Redeploy this service for it to take effect.",
+        })}
+      >
+        {#if form?.authError}
+          <p class="text-xs text-red-500">{form.authError}</p>
+        {/if}
+
+        <CheckBox
+          helperText="Send anonymous visitors to Homerun's sign-in page instead of letting them through"
+          id="authRequired"
+          label="Require login to access this app"
+          name="authRequired"
+          bind:checked={authRequired}
+        />
+
+        {#if authRequired}
+          {#if !data.dashboardOrigin}
+            <p class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600">
+              Set Origin under Settings → General first. The login wall
+              redirects visitors to this instance's own sign-in page, so
+              Homerun has to know its own public URL to send them there.
+            </p>
+          {/if}
+
+          <div class="border-border border-t pt-4">
+            <p class={label}>Sign-in methods</p>
+            <p class="text-text-subtle mb-2 text-xs">
+              Nothing is enabled by default. Pick every method someone may use
+              to get into this app.
+            </p>
+            <div class="space-y-2">
+              <CheckBox
+                checked={methods.includes("password")}
+                helperText="Homerun's own email and password accounts"
+                id="method-password"
+                label="Built-in Homerun login"
+                name="method-password"
+                onCheckedChange={(v) => toggleMethod("password", v)}
+              />
+              {#each data.oauthProviders as provider (provider.method)}
+                <CheckBox
+                  checked={methods.includes(provider.method)}
+                  helperText="OAuth / OIDC provider configured under Authentication"
+                  id="method-{provider.name}"
+                  label={provider.label}
+                  name="method-{provider.name}"
+                  onCheckedChange={(v) => toggleMethod(provider.method, v)}
+                />
+              {/each}
+              {#if data.oauthProviders.length === 0}
+                <p class="text-text-subtle text-xs">
+                  No OAuth provider is enabled yet. Add one on the
+                  <a class="text-accent" href={resolve("/authentication")}>
+                    Authentication
+                  </a>
+                  page to offer it here.
+                </p>
+              {/if}
+            </div>
+            {#each methods as method (method)}
+              <input name="authProvider" type="hidden" value={method}>
+            {/each}
+          </div>
+
+          <div class="border-border border-t pt-4">
+            <p class={label}>Who's allowed</p>
+            <p class="text-text-subtle mb-3 text-xs">
+              Leave all three empty to let any signed-in user through, as long
+              as they used one of the methods above. Filling any of them
+              narrows access to whoever matches at least one entry in that
+              list.
+            </p>
+
+            <div class="space-y-3">
+              <div>
+                <p class="text-text mb-1.5 text-xs font-medium">Users</p>
+                <div class="max-h-40 space-y-1.5 overflow-y-auto">
+                  {#each data.users as u (u.id)}
+                    <CheckBox
+                      checked={allowedUserIds.includes(u.id)}
+                      helperText={u.email}
+                      id="user-{u.id}"
+                      label={u.name}
+                      name="user-{u.id}"
+                      onCheckedChange={(v) => toggleUser(u.id, v)}
+                    />
+                  {/each}
+                </div>
+                {#each allowedUserIds as userId (userId)}
+                  <input name="authAllowedUserId" type="hidden" value={userId}>
+                {/each}
+              </div>
+
+              <div>
+                <label class={label} for="authAllowedEmails">Emails</label>
+                <Textarea
+                  class="font-mono"
+                  id="authAllowedEmails"
+                  name="authAllowedEmails"
+                  placeholder={"ada@example.com\n*@example.com"}
+                  rows={3}
+                  value={svc.authAllowedEmails.join("\n")}
+                />
+                <p class="text-text-subtle mt-1.5 text-xs">
+                  One per line. A
+                  <span class="font-mono">*@domain.com</span>
+                  entry matches every address at that domain.
+                </p>
+              </div>
+
+              <div>
+                <label class={label} for="authAllowedGroups">
+                  Groups / roles
+                </label>
+                <Textarea
+                  class="font-mono"
+                  id="authAllowedGroups"
+                  name="authAllowedGroups"
+                  placeholder={"platform-team\nadmins"}
+                  rows={3}
+                  value={svc.authAllowedGroups.join("\n")}
+                />
+                <p class="text-text-subtle mt-1.5 text-xs">
+                  One per line, matched against the group and role claims in
+                  the id token your OAuth provider issued
+                  (<span class="font-mono">groups</span>,
+                  <span class="font-mono">roles</span>, and Keycloak's realm and
+                  resource roles). Make sure the provider's scopes actually
+                  request them.
+                </p>
+              </div>
+            </div>
+          </div>
+        {/if}
+
+        <Button disabled={submittingAuth} type="submit" variant="outline">
+          {#if submittingAuth}
             <Spinner />
           {:else}
             <Check class="size-4" />

@@ -38,7 +38,6 @@ export const load = async ({ params, parent }) => {
 };
 
 interface UpdateHostBase {
-	isBuildServer: boolean;
 	name: string;
 }
 
@@ -98,7 +97,6 @@ async function updateAgentHost(
 
 	await host.update({
 		agentUrl,
-		isBuildServer: base.isBuildServer,
 		name: base.name,
 		...(agentToken ? { agentTokenEnc: encryptSecret(agentToken) } : {}),
 	});
@@ -131,7 +129,6 @@ async function updateDockerHost(
 
 	await host.update({
 		dockerHost,
-		isBuildServer: base.isBuildServer,
 		name: base.name,
 		...(tlsCa ? { tlsCaEnc: encryptSecret(tlsCa) } : {}),
 		...(tlsCert ? { tlsCertEnc: encryptSecret(tlsCert) } : {}),
@@ -171,7 +168,6 @@ export const actions = {
 		}
 
 		const base: UpdateHostBase = {
-			isBuildServer: formData.get("isBuildServer") === "on",
 			name,
 		};
 

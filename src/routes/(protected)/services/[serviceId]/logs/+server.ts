@@ -21,11 +21,7 @@ export const GET = async ({ params, locals, platform }) => {
 
 	const stream = svc.swarmServiceId
 		? await DockerService.streamSwarmServiceLogs(svc.swarmServiceId)
-		: await ServiceLifecycleService.streamLogs(
-				svc.containerId as string,
-				svc.remoteHostId,
-				locals.user.id,
-			);
+		: await ServiceLifecycleService.streamLogs(svc.containerId as string);
 	return new Response(stream, {
 		headers: {
 			"Cache-Control": "no-store",

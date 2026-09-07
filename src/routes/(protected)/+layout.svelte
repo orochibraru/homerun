@@ -10,6 +10,7 @@
 		FolderKanban,
 		GitBranch,
 		HardDrive,
+		KeyRound,
 		LayoutDashboard,
 		LayoutGrid,
 		Menu,
@@ -169,6 +170,14 @@
 			href: resolve("/users"),
 			icon: Users,
 			label: "Users",
+		},
+		{
+			adminOnly: true,
+			category: "Administration",
+			exact: false,
+			href: resolve("/authentication"),
+			icon: KeyRound,
+			label: "Authentication",
 		},
 		{
 			adminOnly: true,

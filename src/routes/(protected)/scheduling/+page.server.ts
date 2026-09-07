@@ -13,7 +13,7 @@ export const load = async ({ parent, locals }) => {
 		volumes,
 		remoteHosts,
 		destinations,
-		settings,
+		_settings,
 		cronJobs,
 	] = await Promise.all([
 		ServiceDTO.listWithProjectNames(user.id),
@@ -22,12 +22,11 @@ export const load = async ({ parent, locals }) => {
 		S3DestinationDTO.list(user.id),
 		// Instance-wide, only meaningful to show to an admin (see Settings'
 		// own admin-only gate); a developer's own cron/backup rows are still
-		// theirs to see regardless, unlike autoscale which is instance config.
 		locals.isAdmin ? InstanceSettingsDTO.get() : null,
 		CronJobDTO.list(user.id),
 	]);
 
-	const remoteHostNames = new Map(remoteHosts.map((h) => [h.id, h.name]));
+	const _remoteHostNames = new Map(remoteHosts.map((h) => [h.id, h.name]));
 	const destinationNames = new Map(destinations.map((d) => [d.id, d.name]));
 	const services = servicesWithProjects.map(({ projectName, service }) => ({
 		projectName,
@@ -35,16 +34,6 @@ export const load = async ({ parent, locals }) => {
 	}));
 
 	const cronServices = services.filter(({ service }) => service.cronEnabled);
-
-	const autoscaleServices = services
-		.filter(({ service }) => service.autoscaleEligible)
-		.map(({ projectName, service }) => ({
-			hostName: service.remoteHostId
-				? (remoteHostNames.get(service.remoteHostId) ?? "unknown remote host")
-				: "local",
-			projectName,
-			service,
-		}));
 
 	const backupVolumes = volumes
 		.filter((v) => v.backupEnabled)
@@ -56,17 +45,6 @@ export const load = async ({ parent, locals }) => {
 		}));
 
 	return {
-		autoscale: settings
-			? {
-					...settings.autoscale,
-					overflowHostName: settings.autoscale.autoscaleOverflowRemoteHostId
-						? (remoteHostNames.get(
-								settings.autoscale.autoscaleOverflowRemoteHostId,
-							) ?? "unknown remote host")
-						: null,
-				}
-			: null,
-		autoscaleServices,
 		backupVolumes,
 		cronJobs: cronJobs.filter((j) => j.enabled).map((j) => j.toJSON()),
 		cronServices,

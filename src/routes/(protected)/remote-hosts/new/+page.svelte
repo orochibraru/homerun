@@ -199,14 +199,6 @@
             {/if}
         {/if}
 
-        <CheckBox
-            checked={false}
-            helperText="Lets this host be picked as a git-based service's build server (Source tab), separate from being picked as a deploy target."
-            id="isBuildServer"
-            label="Available as a build server"
-            name="isBuildServer"
-        />
-
         <div class="flex justify-end gap-3">
             <Button disabled={submitting} type="submit" variant="outline">
                 Add host

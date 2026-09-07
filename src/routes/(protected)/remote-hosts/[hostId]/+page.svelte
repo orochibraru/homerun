@@ -23,7 +23,7 @@
 	let deleteForm: HTMLFormElement | undefined = $state();
 </script>
 
-<div class="mx-auto max-w-2xl p-6 md:p-8">
+<div class="p-6 md:p-8">
   <a
     class="mb-4 inline-flex items-center gap-1 text-sm text-text-muted hover:text-text"
     href={resolve("/remote-hosts")}
@@ -180,14 +180,6 @@
         </div>
       {/if}
     {/if}
-
-    <CheckBox
-      checked={data.host.isBuildServer}
-      helperText="Lets this host be picked as a git-based service's build server (Source tab), separate from being picked as a deploy target."
-      id="isBuildServer"
-      label="Available as a build server"
-      name="isBuildServer"
-    />
 
     <div class="flex justify-end gap-3">
       <Button disabled={submitting} type="submit" variant="outline">

@@ -10,10 +10,6 @@ const logger = new Logger("Services");
 export const load = async () => {
 	const settings = await InstanceSettingsDTO.get();
 	return {
-		// Just enough to explain *why* the autoscale toggle might not do
-		// anything yet (instance-wide autoscaling off, or no overflow host
-		// configured) : full config lives on Settings' Autoscaling section.
-		autoscale: settings.autoscale,
 		orchestrationMode: settings.orchestrationMode,
 	};
 };
@@ -39,14 +35,13 @@ export const actions = {
 		const input = result.data;
 
 		await svc.update({
-			autoscaleEligible: input.autoscaleEligible,
 			cpuLimit: input.cpuLimit || null,
 			memoryLimitMb: input.memoryLimitMb ?? null,
 			replicas: input.replicas ?? 1,
 		});
 
 		logger.info(
-			`Service compute settings updated: service=${svc.id} autoscaleEligible=${input.autoscaleEligible} user=${locals.user.id}`,
+			`Service compute settings updated: service=${svc.id} user=${locals.user.id}`,
 		);
 		return { success: true };
 	},

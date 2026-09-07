@@ -67,7 +67,6 @@ export const updateServiceApiBody = z.object({
 	registryPassword: z.string().optional(),
 	registryUrl: z.string().nullable().optional(),
 	registryUsername: z.string().nullable().optional(),
-	remoteHostId: z.string().nullable().optional(),
 	restartPolicy: z
 		.enum(["no", "always", "on-failure", "unless-stopped"])
 		.optional(),

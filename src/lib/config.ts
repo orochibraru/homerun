@@ -72,6 +72,10 @@ const oauthProviderSchema = z.object({
 	name: z.string(),
 	pkce: z.boolean().optional(),
 	scopes: z.array(z.string()).optional(),
+	discoveredTokenAuth: z.array(z.string()).optional(),
+	label: z.string().optional(),
+	signOutOfProvider: z.boolean().optional(),
+	tokenAuthMethod: z.enum(["auto", "basic", "post"]).optional(),
 });
 
 /**
@@ -155,6 +159,10 @@ const configSchema = z.object({
 					enabled: z.boolean().default(false),
 					pkce: z.boolean().default(true),
 					scopes: z.array(z.string()).default([]),
+					discoveredTokenAuth: z.array(z.string()).default([]),
+					label: z.string().default(""),
+					signOutOfProvider: z.boolean().default(false),
+					tokenAuthMethod: z.enum(["auto", "basic", "post"]).default("auto"),
 				}),
 			)
 			.default([]),
@@ -250,6 +258,12 @@ export const parseConfig = (): AppConfig => {
 		...yamlConfig,
 		auth: {
 			...yamlConfig.auth,
+			// ORIGIN is what compose.prod.yaml and the installer's generated
+			// stack already set, and what better-auth's own docs call it :
+			// honored as the env default for auth.origin so the per-app login
+			// wall (docker/labels.ts's authRequired) knows where to send a
+			// visitor without a second, separately-configured value.
+			origin: yamlConfig.auth?.origin ?? Bun.env.ORIGIN,
 			// AUTH_SECRET is the app-local var name ; BETTER_AUTH_SECRET is what
 			// better-auth's own CLI (`auth generate`) and `.env` use by
 			// convention, fall back to it so a generated secret is honored.
@@ -342,7 +356,8 @@ export function applyInstanceSettings(
 /** Instance-wide addressing : the base domain and the forwardAuth check URL. */
 function applyCoreOverride(override: InstanceSettingsOverride): void {
 	config.authCheckUrl = override.authCheckUrl ?? fileDefaults.authCheckUrl;
-	config.baseDomain = override.baseDomain ?? fileDefaults.baseDomain;
+	const domain = override.baseDomain ?? fileDefaults.baseDomain;
+	config.baseDomain = domain.split(":")[0] ?? domain;
 }
 
 function applyAuthOverride(override: InstanceSettingsOverride): void {

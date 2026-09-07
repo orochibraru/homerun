@@ -1,5 +1,16 @@
 import { config } from "$lib/config";
 
+export const GATE_IDENTITY_HEADERS = [
+	"X-Homerun-User",
+	"X-Homerun-Email",
+	"X-Homerun-Name",
+];
+
+export function authCheckUrlFor(serviceId: string): string {
+	const separator = config.authCheckUrl.includes("?") ? "&" : "?";
+	return `${config.authCheckUrl}${separator}service=${encodeURIComponent(serviceId)}`;
+}
+
 /**
  * Every container this app creates is tagged with these two labels.
  * `listManagedContainers()` (see service.ts) always filters on
@@ -85,7 +96,10 @@ export function buildContainerLabels(params: {
 	if (authRequired) {
 		const authMiddleware = `${slug}-auth`;
 		labels[`traefik.http.middlewares.${authMiddleware}.forwardauth.address`] =
-			config.authCheckUrl;
+			authCheckUrlFor(serviceId);
+		labels[
+			`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`
+		] = GATE_IDENTITY_HEADERS.join(",");
 		labels[`traefik.http.routers.${slug}.middlewares`] = authMiddleware;
 		if (customDomain) {
 			labels[`traefik.http.routers.${slug}-custom.middlewares`] =

@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
-import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { db } from "$lib/server/db/lib";
 import { service } from "$lib/server/db/schema";
 import type { ContainerStatus } from "$lib/types";
-import { AgentClientService } from "../agent-client.service.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
 
@@ -30,14 +28,10 @@ export function DockerReconcileMixin<
 >(Base: TBase) {
 	return class DockerReconcileService extends Base {
 		/** Syncs one service's `currentStatus` with the live Docker state of its container (or swarm service). */
-		async syncServiceStatus(
-			serviceId: string,
-			userId: string,
-		): Promise<string> {
+		async syncServiceStatus(serviceId: string): Promise<string> {
 			const [row] = await db
 				.select({
 					containerId: service.containerId,
-					remoteHostId: service.remoteHostId,
 					swarmServiceId: service.swarmServiceId,
 				})
 				.from(service)
@@ -57,20 +51,7 @@ export function DockerReconcileMixin<
 				return "pending";
 			}
 
-			const target = await RemoteHostDTO.resolveTarget(
-				row.remoteHostId,
-				userId,
-			);
-			const status =
-				target.kind === "agent"
-					? await AgentClientService.inspectStatus(
-							target.connection,
-							row.containerId,
-						)
-					: await this.inspectStatus(
-							row.containerId,
-							target.kind === "docker" ? target.connection : undefined,
-						);
+			const status = await this.inspectStatus(row.containerId);
 			await db
 				.update(service)
 				.set({ currentStatus: status })
@@ -80,13 +61,8 @@ export function DockerReconcileMixin<
 		}
 
 		/** Syncs every one of a user's services in parallel. Returns nothing : callers re-query the DB after. */
-		async syncAllServiceStatuses(
-			serviceIds: string[],
-			userId: string,
-		): Promise<void> {
-			await Promise.all(
-				serviceIds.map((id) => this.syncServiceStatus(id, userId)),
-			);
+		async syncAllServiceStatuses(serviceIds: string[]): Promise<void> {
+			await Promise.all(serviceIds.map((id) => this.syncServiceStatus(id)));
 		}
 	};
 }

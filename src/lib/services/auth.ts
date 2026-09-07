@@ -7,6 +7,7 @@ import { admin, bearer, genericOAuth, openAPI } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { building, dev } from "$app/environment";
 import { getRequestEvent } from "$app/server";
+import { resolveAdvertisedTokenAuth } from "$lib/auth-providers";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
@@ -16,6 +17,30 @@ import { EmailService } from "./email.service.ts";
 import { UserService } from "./user.service.ts";
 
 const logger = new Logger("Auth");
+
+function tokenAuthOptions(provider: {
+	clientSecret: string;
+	discoveredTokenAuth: string[];
+	tokenAuthMethod: "auto" | "basic" | "post";
+}):
+	| { authentication: "basic" }
+	| { tokenEndpointAuth: { method: "client_secret_post" } }
+	| Record<string, never> {
+	if (!provider.clientSecret) {
+		return {};
+	}
+	const resolved =
+		provider.tokenAuthMethod === "auto"
+			? resolveAdvertisedTokenAuth(provider.discoveredTokenAuth)
+			: provider.tokenAuthMethod;
+	if (resolved === "basic") {
+		return { authentication: "basic" };
+	}
+	if (resolved === "post") {
+		return { tokenEndpointAuth: { method: "client_secret_post" } };
+	}
+	return {};
+}
 
 // Doesn't throw : ORIGIN (or the Core section's Base domain + Use HTTPS on
 // /settings, see config.ts's applyInstanceSettings) can also be supplied
@@ -135,6 +160,9 @@ function buildAuth() {
 				await email.send();
 			},
 		},
+		onAPIError: {
+			errorURL: "/auth/error",
+		},
 		logger: {
 			level: dev ? "debug" : config.logLevel,
 			log: (level, message, ...metadata) => {
@@ -181,9 +209,11 @@ function buildAuth() {
 					clientSecret: provider.clientSecret,
 					discoveryUrl: provider.discoveryUrl,
 					enabled: provider.enabled,
+					disableProviderLogout: !provider.signOutOfProvider,
 					pkce: provider.pkce,
 					providerId: provider.name,
 					scopes: provider.scopes,
+					...tokenAuthOptions(provider),
 				})),
 			}),
 		],
