@@ -32,9 +32,12 @@ if you have more than a page's worth, searched/paginated server-side.
 ## A build server needs a cache registry
 
 The built image only exists on the build server's own daemon, so a service with
-a build server set also needs a [build cache registry](services.md#git-builds):
-the build pushes the final image there and this host pulls it back before
-starting the container. Saving a build server without one is rejected.
+a build server set also needs a **build cache registry**, a registry credential
+registered under `/build-cache-registries` and picked on the service's
+[Source tab](services.md#deploy-source-image-or-git-repo): the build pushes the
+final image there and this host pulls it back before starting the container.
+Saving a build server without one is rejected. The same registry doubles as the
+layer cache, so a repeat build reuses what the last one pushed.
 
 The `git clone` step always happens on the build server, alongside the build.
 

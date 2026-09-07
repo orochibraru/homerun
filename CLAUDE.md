@@ -3504,6 +3504,14 @@ Three audiences, three places, keep them apart:
   keep in sync), and a `/docs/api` Swagger UI page. Published as
   `docker.io/orochibraru/homerun-docs`.
 
+**A dead `#anchor` in `docs/` fails the docs image build, and nothing else
+catches it.** `adapter-static`'s prerender resolves every cross-page anchor
+against the ids `docs-content.ts`'s own slugger emits, and errors on a miss;
+`bun run check` only runs `check:docs` (svelte-check), never a prerender, so a
+heading rename that orphans a link is green locally and red in
+`Docker Build (Docs)`. Run `bun run build:docs` after renaming a heading in
+`docs/`.
+
 `bun run dev:docs`/`build:docs`/`check:docs` all go through `scripts/docs.ts`
 rather than plain `vite`/`svelte-check`, for two reasons documented at length in
 that file: it writes a stub `.svelte-kit/tsconfig.json` at the **repo root** (a

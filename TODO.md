@@ -37,6 +37,10 @@ Sizes are rough. No priority, pick whatever.
 
 ## Done
 
+- [x] [Bug] `docs/remote-hosts-and-agent.md` linked to `services.md#git-builds`,
+      a heading that no longer exists, which failed the docs image build (the
+      only job that prerenders). Points at the Source-tab section now, and says
+      where build cache registries actually live.
 - [x] [Bug] Every real deploy failed on a host where the shared `homerun`
       network didn't exist (all of CI, any non-compose install, and any instance
       after a Docker Cleanup network prune). `createAndStartContainer` now
