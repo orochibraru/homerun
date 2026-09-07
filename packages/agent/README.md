@@ -84,7 +84,6 @@ bun run build:packages       # builds cli/installer/agent binaries for both arch
 | `AGENT_TOKEN`            | _(generated)_            | Bearer token every non-health request must present. Set this explicitly for a reproducible deploy (e.g. via the installer or a systemd unit); otherwise the agent generates one on first boot and persists it to `AGENT_TOKEN_FILE`. |
 | `AGENT_TOKEN_FILE`       | `~/.homerun-agent/token` | Where a generated token is persisted across restarts.                                                                                                                                                                                |
 | `DOCKER_SOCKET_PATH`     | `/var/run/docker.sock`   | Point this at a rootless Docker socket (e.g. `/run/user/<uid>/docker.sock`) when installed via `packages/installer/`'s rootless setup.                                                                                               |
-| `HOMERUN_NETWORK_NAME`   | `homerun`                | Created on boot if missing; every deployed container joins it (bridge mode only, host-mode services skip it, same as the main app).                                                                                                  |
 | `AGENT_SHUTDOWN_TIMEOUT` | `120`                    | Seconds SIGINT/SIGTERM waits for in-flight requests (a `/v1/build` clone+build in progress) to finish before forcing the shutdown.                                                                                                   |
 
 ## HTTP surface

@@ -11,18 +11,16 @@ you'd mind losing, and keep backups (see
 ## Does it support multiple hosts / Kubernetes-style orchestration?
 
 Not a Kubernetes-equivalent control plane, no, that's still by design, see the
-README's "Why Homerun". [Remote hosts](remote-hosts-and-agent.md) let one
-instance deploy _individual_ services onto other machines, and
-[autoscaling](remote-hosts-and-agent.md#autoscaling--load-based-migration) can
-migrate one service off an overloaded host. There **is** now real replica
-scaling and load balancing for a single service, opt-in Docker
-[Swarm mode](services.md#swarm-mode), but it's local-manager-only today: a
-remote machine has to actually join the swarm as a worker
-(`packages/installer/swarm-join.sh`), which isn't the same as registering it as
-a swarm worker, which `packages/installer/swarm-join.sh` automates.
-`service.containerId` still being a single column is what standalone mode (the
-default) is built around; swarm mode is the separate, newer path around that
-limitation for services that opt in.
+README's "Why Homerun". Extra capacity comes from opt-in Docker
+[Swarm mode](services.md#swarm-mode), which gives real replica scaling and load
+balancing for a single service: a second machine joins the swarm as a worker
+(`packages/installer/swarm-join.sh`) and Docker schedules onto it. Homerun
+itself only ever talks to the local manager.
+[Build servers](remote-hosts-and-agent.md) are a separate thing, a second
+machine that compiles images, not one that runs them. `service.containerId`
+still being a single column is what standalone mode (the default) is built
+around; swarm mode is the separate, newer path around that limitation for
+services that opt in.
 
 ## Known, real limitations (not hypothetical)
 
@@ -43,9 +41,9 @@ limitation for services that opt in.
   (`TRAEFIK_DYNAMIC_CONFIG_DIR` + uncommenting flags in `compose.yaml`), Homerun
   writes the cert files but never touches the live Traefik container itself. See
   [Services: custom domains & SSL](services.md#custom-domains--ssl).
-- **Remote hosts** get no Traefik routing, no shared network, no host-port
-  publishing, and skip bind-mount volumes entirely. See
-  [Remote hosts](remote-hosts-and-agent.md#real-limitations-not-oversights).
+- **Build servers** only build; they never run your services, and one always
+  needs a build-cache registry so the image it produced can reach the host that
+  deploys it. See [Build servers](remote-hosts-and-agent.md).
 - **Git-based builds** clone by branch/tag only, a bare commit SHA doesn't work,
   and have no webhook/auto-deploy-on-push yet.
 - **S3 backups** cover both volume kinds now (a Docker-managed volume is read

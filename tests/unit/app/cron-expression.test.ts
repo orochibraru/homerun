@@ -81,10 +81,23 @@ describe("cronMatches", () => {
 		expect(cronMatches("nonsense", at("2026-09-06T13:37:00"))).toBe(false);
 	});
 
-	test("day-of-month and weekday are 'AND', not 'OR' as in standard cron", () => {
+	test("day-of-month and weekday are ORed when both are restricted", () => {
 		expect(cronMatches("0 0 1 * 1", at("2026-06-01T00:00:00"))).toBe(true);
-		expect(cronMatches("0 0 1 * 1", at("2026-09-01T00:00:00"))).toBe(false);
-		expect(cronMatches("0 0 1 * 1", at("2026-09-07T00:00:00"))).toBe(false);
+		expect(cronMatches("0 0 1 * 1", at("2026-09-01T00:00:00"))).toBe(true);
+		expect(cronMatches("0 0 1 * 1", at("2026-09-07T00:00:00"))).toBe(true);
+		expect(cronMatches("0 0 1 * 1", at("2026-09-02T00:00:00"))).toBe(false);
+	});
+
+	test("only the restricted one applies when the other is a wildcard", () => {
+		expect(cronMatches("0 0 1 * *", at("2026-09-01T00:00:00"))).toBe(true);
+		expect(cronMatches("0 0 1 * *", at("2026-09-07T00:00:00"))).toBe(false);
+		expect(cronMatches("0 0 * * 1", at("2026-09-07T00:00:00"))).toBe(true);
+		expect(cronMatches("0 0 * * 1", at("2026-09-01T00:00:00"))).toBe(false);
+	});
+
+	test("a stepped wildcard still counts as unrestricted, as in Vixie cron", () => {
+		expect(cronMatches("0 0 */2 * 1", at("2026-09-07T00:00:00"))).toBe(true);
+		expect(cronMatches("0 0 */2 * 1", at("2026-09-03T00:00:00"))).toBe(false);
 	});
 });
 

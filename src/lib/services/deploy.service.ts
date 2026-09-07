@@ -241,8 +241,7 @@ class DeploymentServiceClass {
 	/**
 	 * After a cross-host build the deploy target needs the *published* ref,
 	 * not the bare local build tag (that only exists on the build server's
-	 * own daemon). An agent target pulls it itself as part of its own
-	 * /v1/deploy, same as any other registry image.
+	 * own daemon).
 	 */
 	async #pullPublishedImage(
 		ctx: DeployContext,

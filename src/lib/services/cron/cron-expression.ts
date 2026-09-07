@@ -81,10 +81,12 @@ function parseField(raw: string, field: FieldName): Set<number> | null {
 
 export interface ParsedCron {
 	day: Set<number>;
+	dayRestricted: boolean;
 	hour: Set<number>;
 	minute: Set<number>;
 	month: Set<number>;
 	weekday: Set<number>;
+	weekdayRestricted: boolean;
 }
 
 /** Parses a 5-field cron expression, or null if it's malformed. */
@@ -94,29 +96,43 @@ export function parseCronSchedule(schedule: string): ParsedCron | null {
 		return null;
 	}
 
-	const result: Partial<ParsedCron> = {};
+	const fields: Partial<Record<FieldName, Set<number>>> = {};
 	for (const [i, field] of FIELD_ORDER.entries()) {
 		const parsed = parseField(parts[i], field);
 		if (!parsed) {
 			return null;
 		}
-		result[field] = parsed;
+		fields[field] = parsed;
 	}
-	return result as ParsedCron;
+	return {
+		...(fields as Record<FieldName, Set<number>>),
+		dayRestricted: !parts[2].startsWith("*"),
+		weekdayRestricted: !parts[4].startsWith("*"),
+	};
 }
 
-/** Whether the given schedule is due at the given date (minute resolution : seconds are ignored). */
+/**
+ * Whether the given schedule is due at the given date (minute resolution :
+ * seconds are ignored). Day-of-month and weekday follow the standard cron
+ * rule : OR when both are restricted, AND (i.e. only the restricted one
+ * applies) otherwise, so "0 0 1 * 1" fires on the 1st *and* on every Monday.
+ */
 export function cronMatches(schedule: string, date: Date): boolean {
 	const parsed = parseCronSchedule(schedule);
 	if (!parsed) {
 		return false;
 	}
+	const dayHit = parsed.day.has(date.getDate());
+	const weekdayHit = parsed.weekday.has(date.getDay());
+	const dateHit =
+		parsed.dayRestricted && parsed.weekdayRestricted
+			? dayHit || weekdayHit
+			: dayHit && weekdayHit;
 	return (
 		parsed.minute.has(date.getMinutes()) &&
 		parsed.hour.has(date.getHours()) &&
-		parsed.day.has(date.getDate()) &&
 		parsed.month.has(date.getMonth() + 1) &&
-		parsed.weekday.has(date.getDay())
+		dateHit
 	);
 }
 

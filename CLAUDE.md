@@ -442,12 +442,11 @@ that pattern for any new skill.
     calling another's method uses real inheritance (`this.inspectStatus(...)`),
     not a cross-module import.
   - **Composition**, when the pieces are independent and don't call each other,
-    `$lib/services/cron.service.ts`: `CronService` composes one instance each of
-    `CronRedeployScheduler`/`BackupScheduler`/`AutoscaleScheduler`
-    (`src/lib/services/cron/*.ts`), every one extending `BaseScheduler` for its
-    shared tick/HMR-guard boilerplate, and a `CronService` static method just
-    calls `.start()` on the instance it owns rather than being
-    `static start = importedStart`.
+    `$lib/services/cron.service.ts`: `CronService` composes three instances of
+    one generic `DueScheduler<T>` (`src/lib/services/cron/due-scheduler.ts`),
+    extending `BaseScheduler` for its shared tick/HMR-guard boilerplate, and a
+    `CronService` method just calls `.start()` on the instance it owns rather
+    than being `static start = importedStart`.
 
     Across all three, a genuinely pure/stateless transform (`docker/labels.ts`,
     `cron/cron-expression.ts`, `api.service.ts`'s
@@ -509,10 +508,11 @@ yet built).
   volume's name/kind/source), `attach`/`detach`, the mounts of a StorageVolume
   into a service, shown on the service's Volumes tab.
 - `remote-host-dto.ts`, `RemoteHostDTO`:
-  `get`/`list`/`listPaged`/`create`/`update`/`delete`, `toConnection()`
-  (decrypts TLS material into what `DockerService.getDocker()` wants), and the
-  static `connectionFor(svc, userId)` helper every route/module uses instead of
-  calling `getDocker()` bare, see Remote hosts below.
+  `get`/`list`/`listPaged`/`listBuildServers`/`create`/`update`/`delete`,
+  `toConnection()` (decrypts TLS material into what `DockerService.getDocker()`
+  wants), and the static `resolveBuildTarget(hostId, userId)` that turns a host
+  id into the `RemoteExecutionTarget` `deploy.service.ts` branches on, see Build
+  servers below.
 - `s3-destination-dto.ts`, `S3DestinationDTO`:
   `get`/`list`/`listPaged`/`create`/`update`/`delete`, plus
   `decryptSecretAccessKey()` (for the S3 client only, never a `load` return
@@ -777,7 +777,7 @@ Appearance preferences below for the per-user "single accent color" override):
 - **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",
   see S3 backups below), **S3 Destinations** (reusable, named backup targets),
   **Remote Hosts**, **Scheduling** (one instance-wide view of every cron
-  redeploy, enabled cron job, backup schedule, and the autoscale config).
+  redeploy, enabled cron job and backup schedule, plus the job queue).
 - **Integrations**: **Git Providers**, **Build Cache** (registry credentials for
   cross-build cache reuse, see Git-based builds below), **API Docs**.
 - **Administration**: **Users** (admin-only), **Authentication** (admin-only,
@@ -817,17 +817,17 @@ Setup diagnostics below) in favor of the dashboard banner deep-linking into
   `service-lifecycle.service.ts`, each taking a `ServiceDTO` and branching on
   `svc.swarmServiceId` internally) rather than each call site re-deriving that
   branch; the pre-existing containerId-level `start`/`stop`/`restart`/`remove`
-  methods are unchanged and still used elsewhere (see Remote hosts below).
-  `+page.server.ts`'s single `bulk` action takes repeated `serviceId` fields
-  plus an `op` (from the clicked submit button's own name/value) and runs every
-  resolved service through `Promise.allSettled` (this repo's `noAwaitInLoops`
-  lint rule forbids an await loop), returning `{succeeded, failed, op}` so the
-  toast reports a partial result, or `fail(400)` with the first rejection's
-  message if every one failed. Bulk delete is gated behind `ConfirmDialog`'s
-  typed-phrase confirm (`delete N services`); single-row delete requires typing
-  the service's own name. `load` also now calls `allowLongRequest(platform)` (it
-  didn't before, see Server-side list pagination above for the status-sync fix
-  that came with it and Long-running requests below for why that matters).
+  methods are unchanged and still used elsewhere. `+page.server.ts`'s single
+  `bulk` action takes repeated `serviceId` fields plus an `op` (from the clicked
+  submit button's own name/value) and runs every resolved service through
+  `Promise.allSettled` (this repo's `noAwaitInLoops` lint rule forbids an await
+  loop), returning `{succeeded, failed, op}` so the toast reports a partial
+  result, or `fail(400)` with the first rejection's message if every one failed.
+  Bulk delete is gated behind `ConfirmDialog`'s typed-phrase confirm
+  (`delete N services`); single-row delete requires typing the service's own
+  name. `load` also now calls `allowLongRequest(platform)` (it didn't before,
+  see Server-side list pagination above for the status-sync fix that came with
+  it and Long-running requests below for why that matters).
 - `import/+page.svelte`, paste a compose file, preview what it maps onto, then
   create (and optionally deploy) the stack : see Compose import below. Reached
   from the "Import compose" button next to "Deploy a Service" on the list.
@@ -867,21 +867,19 @@ Setup diagnostics below) in favor of the dashboard banner deep-linking into
   `updatePorts` action, moved off Settings; SSL section is a read-only explainer
   for the automatic-vs-custom-cert split, host ports are still never
   _published_/mapped by design even though host network mode now exists, see
-  below), **Compute** (cpu/memory limits + the autoscale-eligible opt-in toggle,
-  `updateComputeSchema`, its own `updateCompute` action, moved off Settings; see
-  Autoscaling below for what the toggle actually does and its own instance-wide
-  config), **Terminal** (interactive shell into the live container, see below),
-  **Errors** (failed deployments + a live "container currently down" banner +
-  "Application errors", persisted app-level warn/error `Logger` output
-  attributed to this service, see `app_log`/`AppLogDTO` in Data model below;
-  plus, when `currentStatus === "missing"`, a distinct banner with a "Resolve"
-  button, `?/resolveOrphan`, calling `ServiceDTO.resolveOrphan()` to clear the
-  stale `containerId`/`swarmServiceId` and put the row back to a clean,
-  never-deployed shape so Deploy works again, see the `"missing"`
-  `ContainerStatus` note under Docker integration below), **Settings**
-  (name/slug/restart-policy, move between projects/remote deploy target,
-  save-as-template, auto-redeploy cron schedule, danger-zone delete,
-  image/git/registry, port/network, and cpu/memory/autoscale fields all moved to
+  below), **Compute** (cpu/memory limits, `updateComputeSchema`, its own
+  `updateCompute` action, moved off Settings), **Terminal** (interactive shell
+  into the live container, see below), **Errors** (failed deployments + a live
+  "container currently down" banner + "Application errors", persisted app-level
+  warn/error `Logger` output attributed to this service, see
+  `app_log`/`AppLogDTO` in Data model below; plus, when
+  `currentStatus === "missing"`, a distinct banner with a "Resolve" button,
+  `?/resolveOrphan`, calling `ServiceDTO.resolveOrphan()` to clear the stale
+  `containerId`/`swarmServiceId` and put the row back to a clean, never-deployed
+  shape so Deploy works again, see the `"missing"` `ContainerStatus` note under
+  Docker integration below), **Settings** (name/slug/restart-policy, move
+  between projects, save-as-template, auto-redeploy cron schedule, danger-zone
+  delete, image/git/registry, port/network and cpu/memory fields all moved to
   their own tabs, see Source/Networking/Compute above)
 - `[serviceId]/deployments/[deploymentId]/events/+server.ts`, the SSE stream the
   Overview tab listens on while a deploy is in flight (see Live progress below),
@@ -1703,7 +1701,7 @@ and `BUILDKIT_INLINE_CACHE` is a BuildKit-only concept the classic builder warns
 about and ignores, real reuse comes from the cache image's own layers (verified
 live, a repeat build showed "Using cache" for every step).
 `buildServerRemoteHostId` picks a _different_ host to build on than the one the
-service deploys to (a Remote Host opted in via `isBuildServer`);
+service deploys to (any registered Remote Host, see Build servers below);
 `deploy.service.ts` rejects that combination outright unless a cache registry is
 configured too, since publishing through that registry is the only way the built
 image reaches the deploy target.
@@ -1748,74 +1746,50 @@ real callback URL, which nothing server-side can do standalone. Built carefully
 from each provider's own standard, well-documented OAuth2 + REST API shapes;
 verify the first real connect by hand once an OAuth App exists.
 
-### Remote hosts (`remote_host` table, `RemoteHostDTO`, `DockerService`)
+### Build servers (`remote_host` table, `RemoteHostDTO`, `/remote-hosts`)
 
-A service normally deploys to the local Docker socket
-(`config.docker.socketPath`), that's still the default
-(`service.remoteHostId: null`). Registering a remote host (Remote Hosts page)
-and picking it as a service's "Deploy target" (Settings tab) routes every Docker
-operation for that service, deploy, start/stop/restart, logs, status-sync,
-account-deletion cleanup, at that daemon instead. Two connection kinds
-(`remote_host.kind`, chosen on the "new host" form's connection-type toggle),
-both real deploy targets and (opt-in per host, `isBuildServer`) build servers:
+**A registered remote host is a build server, nothing else.** Placement is
+Swarm's job (see Swarm mode below): capacity comes from joining a node to the
+swarm, not from pointing a service at a second daemon. `service.remoteHostId`,
+the Settings tab's "Deploy target" picker, `resolveTarget`, `connectionFor` and
+every remote branch in `deploy.service.ts`/`service-lifecycle.service.ts`/
+`docker/reconcile.ts` were removed (migration `drizzle/0022_shiny_shiva.sql`).
+Deploys run on the local daemon, or as a swarm service on the local manager.
+What survives is `service.buildServerRemoteHostId`: a git-mode service can build
+its image somewhere other than where it runs, which matters because a swarm
+manager shouldn't have to also be the box with the build cache and the CPU
+budget.
+
+Two connection kinds (`remote_host.kind`, chosen on the "new host" form's
+connection-type toggle), both real build servers:
 
 - `"docker"` (the original/default): name + `tcp://host:port` [+ optional TLS
-  client cert] or `ssh://user@host`, a raw Docker Engine connection.
+  client cert] or `ssh://user@host`, a raw Docker Engine connection, built
+  through dockerode's own `buildImage()`.
 - `"agent"`: name + `agentUrl`/`agentTokenEnc`, a registered Homerun Agent (see
   below) instead, token-authenticated HTTP rather than exposing the daemon
-  itself, verified live against the agent (`AgentClientService.verifyToken`)
-  before the row is saved.
+  itself, built through its own `POST /v1/build`. The token is verified against
+  the agent (`AgentClientService.verifyToken`, which hits the authenticated
+  `/v1/stats`) before the row is saved.
 
-`services/docker/client.ts`'s `getDocker(remote?: RemoteHostConnection)`
-(exposed as `DockerService.getDocker`, see Docker integration below) caches one
-dockerode client per host (keyed by remote host id, `"local"` for the default)
-in the same HMR-safe `globalThis` pattern as the db singleton, for `"docker"`
-hosts. `RemoteHostDTO.connectionFor(svc, userId)` is the one place that turns a
-service into the connection object `getDocker()` wants (returns `undefined` for
-a local **or** agent-backed service, neither has a dockerode-reachable daemon),
-for any docker-only operation that can't meaningfully run against an agent.
-`RemoteHostDTO.resolveTarget(hostId, userId)` is the newer, kind-aware
-equivalent (`RemoteExecutionTarget`, `{kind: "local"}` /
-`{kind: "docker", connection}` / `{kind: "agent", connection}`), used by
-`deploy.service.ts` and `service-lifecycle.service.ts` to branch between
-`DockerService` and `AgentClientService`; a new lifecycle operation that should
-work against an agent-backed host too should resolve through this rather than
-`connectionFor`.
+`RemoteHostDTO.resolveBuildTarget(hostId, userId)` is the one place a host id
+becomes a `RemoteExecutionTarget` (`{kind: "local"}` /
+`{kind: "docker", connection}` / `{kind: "agent", connection}`);
+`deploy.service.ts` branches on that `kind` to route the build through
+`DockerService` or `AgentClientService`. `RemoteHostDTO.listBuildServers()` is
+what the Source tab's build-server picker reads : every registered host
+qualifies, there's no per-host opt-in flag. `services/docker/client.ts`'s
+`getDocker(remote?: RemoteHostConnection)` (exposed as
+`DockerService.getDocker`, see Docker integration below) caches one dockerode
+client per host (keyed by remote host id, `"local"` for the default) in the same
+HMR-safe `globalThis` pattern as the db singleton, for `"docker"` hosts.
 
-**Real architectural limitation, not an oversight**: the shared `homerun` Docker
-network, per-project networks, and Traefik itself all live on the _local_ host.
-A remote-hosted container gets Docker's own default `bridge` network instead
-(verified via `docker inspect`'s `NetworkMode`), no Traefik routing, no
-`<slug>:<port>` internal DNS alias, no project-network membership. It's
-genuinely reachable only however you arrange that yourself (there's no
-host-port-publishing UI for this, deliberately, see the Networking tab's own "no
-port mapping by design" stance). Bind-mount volumes are skipped entirely on a
-remote deploy (a local path has no meaning on a different machine),
-`deployService()` passes an empty volume list rather than silently creating a
-wrong mount. Git-based builds work against a remote host too (dockerode's
-`buildImage` streams the tar'd context to whichever daemon the client points
-at), but the `git clone` step itself always happens locally first, only the
-Docker build step runs remotely.
-
-Verified during development against a real second Docker connection, not just
-reasoned about, by running
-`socat TCP-LISTEN:12375,fork UNIX-CONNECT:/var/run/docker.sock` (a genuine TCP
-proxy in front of the same daemon, standing in for a truly separate remote host)
-and deploying a real service through it end-to-end: real container created,
-`docker inspect` confirmed `NetworkMode: bridge` (not the shared network), and
-start/stop both round-tripped through the proxied connection successfully.
-
-**The `"agent"` kind has its own, separately verified live test, against an
-actually-separate second host, not a proxy in front of the same daemon**: two
-real disposable Multipass Ubuntu 24.04 VMs, one running the Homerun Agent
-(`packages/installer/bootstrap.sh --mode=agent`), the other running the full app
-stack (`--mode=full`). The full-stack VM's dashboard registered the agent VM as
-a real `remote_host` row (`kind: "agent"`, token verified live via
-`AgentClientService.verifyToken`), then a real `nginx:alpine` service was
-created and deployed through it; `docker ps` on the agent VM confirmed the
-container actually landed there, and stop/start both round-tripped through the
-agent successfully. See Homerun Agent + installer below for the installer bugs
-this same session's testing found and fixed.
+**A build server always needs a cache registry.** The built image lands on the
+build server's own daemon, which by definition isn't the daemon the service
+deploys to, so the registry is the only way it gets across; `deploy.service.ts`
+rejects the combination outright rather than deploying a tag that doesn't exist
+locally. The `git clone` step itself always happens on this host first, only the
+Docker build runs remotely.
 
 ### Custom SSL certificates (`src/lib/services/docker/custom-ssl.ts`)
 
@@ -1829,7 +1803,7 @@ it), cert/key PEM stored encrypted
 a **deliberate no-op unless `config.traefik.dynamicConfigDir` (env
 `TRAEFIK_DYNAMIC_CONFIG_DIR`) is set**, this app never modifies the live Traefik
 container's command/mounts itself (that's the same "don't touch infra without
-the admin's own action" boundary as the remote-hosts feature's Docker daemon
+the admin's own action" boundary as the build-server feature's Docker daemon
 connections, just applied to Traefik instead). When it _is_ set, it decrypts the
 cert/key and writes three files into that directory: `certs/<slug>.crt`,
 `certs/<slug>.key`, and `<slug>-tls.yml` (a Traefik file-provider dynamic config
@@ -1997,11 +1971,11 @@ start…" rather than nothing, and the "this service hasn't been deployed yet"
 banner is suppressed during a first deploy.
 
 - Service Overview's `deploy` action, `services/new`'s `createAndDeploy`, the
-  templates gallery's `quickDeploy`, `CronRedeployScheduler` and
-  `AutoscaleScheduler` all enqueue and return immediately. The two
-  create-a-service-and-deploy-it paths no longer block the request on a real
-  image pull at all, which is what makes the redirect land on the service page
-  with live progress instead of a spinning button.
+  templates gallery's `quickDeploy` and the cron redeploy scheduler all enqueue
+  and return immediately. The two create-a-service-and-deploy-it paths no longer
+  block the request on a real image pull at all, which is what makes the
+  redirect land on the service page with live progress instead of a spinning
+  button.
 - `POST /api/v1/services/<id>/deploy` enqueues _and_ `QueueService.wait()`s, so
   its "returns once the deploy is done" contract (and therefore
   `homerun services deploy`) is unchanged, verified by `tests/integration/`'s
@@ -2010,9 +1984,9 @@ banner is suppressed during a first deploy.
   `$lib/services/docker-cleanup-queue.ts`, split out of the route file so the
   route keeps no manual typing), since the page renders the reclaimed-space
   summary. They also gained `allowLongRequest()`, which they were missing.
-- Backups (`/backups`'s and `storage/[volumeId]`'s "Run now", plus
-  `BackupScheduler`) enqueue and return : a tar-and-upload could comfortably
-  outlive Bun's idle timeout, and neither route called `allowLongRequest()`. The
+- Backups (`/backups`'s and `storage/[volumeId]`'s "Run now", plus the backup
+  scheduler) enqueue and return : a tar-and-upload could comfortably outlive
+  Bun's idle timeout, and neither route called `allowLongRequest()`. The
   `backup_run` row is still written by `BackupService.runBackup()` when the job
   actually starts.
 
@@ -2039,114 +2013,46 @@ an isolated instance, driven through Playwright, lands on the service page with
 the progress panel already streaming, no stale "not deployed yet" banner, and
 the status pill reaching RUNNING with no manual reload. The API-level end-to-end
 path is covered by `tests/integration/` (real image pulls, real containers,
-local + docker-remote + agent-remote targets, git builds, and the failure path)
-passing unchanged through the queue, and the policy layer by
-`tests/unit/app/queue.test.ts`.
+local deploys, git builds, and the failure path) passing unchanged through the
+queue, and the policy layer by `tests/unit/app/queue.test.ts`.
 
-### Schedulers: cron redeploy, S3 backup, autoscale migration (`src/lib/services/cron.service.ts`, `src/lib/services/cron/`)
+### Schedulers (`src/lib/services/cron.service.ts`, `src/lib/services/cron/`)
 
-`CronService` (`cron.service.ts`) is a facade composing one instance each of
-four independent scheduler classes under `services/cron/`,
-`CronRedeployScheduler`, `BackupScheduler`, `CronJobScheduler` (see Cron jobs
-above), `AutoscaleScheduler`, every one extending `BaseScheduler`
-(`cron/base-scheduler.ts`), which owns the shared "60s `setInterval`, HMR-safe
-via a `globalThis`-backed registry keyed per subclass (same pattern as the db
-singleton in `db/lib.ts`), idempotent `start()`" boilerplate; a subclass only
-implements its own `tick()` plus a short `label` for its log lines.
+`CronService` (`cron.service.ts`) composes three instances of one generic
+`DueScheduler<T>` (`cron/due-scheduler.ts`), one per scheduled concern: cron
+redeploy (`ServiceDTO.listCronEnabled()` → `DeploymentService.enqueueDeploy`),
+S3 backup (`StorageVolumeDTO.listBackupEnabled()` → `enqueueVolumeBackup`) and
+user cron jobs (`CronJobDTO.listEnabled()` → `enqueueCronJobRun`, see Cron jobs
+above). All three were separate near-identical classes before; the config object
+(`list`/`schedule`/`lastRunAt`/`markRun`/`fire`/`describe`/`label`) is the only
+thing that actually differed. Each `list()` is unscoped by user, since a
+scheduler isn't running on behalf of a request. Due-checking is
+`cronMatches(schedule, now)` plus a `sameMinute(lastRunAt, now)` guard against a
+double-fire within one matching minute.
+
+`DueScheduler` extends `BaseScheduler` (`cron/base-scheduler.ts`), which owns
+the shared "60s `setInterval`, HMR-safe via a `globalThis`-backed registry keyed
+on `label`, non-overlapping ticks, idempotent `start()`" boilerplate. **Keyed on
+`label`, not `constructor.name`**: three instances of the same class would
+collide on the latter. `JobWorker` (`queue/worker.ts`) is the fourth subclass,
+overriding `intervalMs` to a 1s poll, see Job queue and worker above.
 `CronService.startCronScheduler()`/`startBackupScheduler()`/
-`startCronJobScheduler()`/`startAutoscaleScheduler()` (all called from
-`hooks.server.ts`'s `init()`) just call `.start()` on the composed instance,
-unlike `DockerService` (see Docker integration above), these schedulers never
-call into each other, so plain composition is the fit here, not the mixin-merge
-pattern. `cron/cron-expression.ts` holds the small dependency-free 5-field cron
-matcher (wildcard/number/range/list/step, minute resolution, server-local time,
-no external cron package, matching this app's generally dependency-light
-posture) as plain exported functions
-(`parseCronSchedule`/`cronMatches`/`sameMinute`), pure and stateless, so it
-stays outside the class hierarchy, same "pure transform doesn't need an
-instance" precedent as `docker/labels.ts`;
+`startCronJobScheduler()` (all called from `hooks.server.ts`'s `init()`) just
+call `.start()` on the composed instance.
+
+`cron/cron-expression.ts` holds the small dependency-free 5-field cron matcher
+(wildcard/number/range/list/step, minute resolution, server-local time, no
+external cron package, matching this app's generally dependency-light posture)
+as plain exported functions (`parseCronSchedule`/`cronMatches`/`sameMinute`),
+pure and stateless, so it stays outside the class hierarchy, same "pure
+transform doesn't need an instance" precedent as `docker/labels.ts`;
 `CronService.parseCronSchedule`/`cronMatches` just delegate to it, and two
-Settings-page validation call sites call those directly.
-
-Cron redeploy is opt-in, per service, off by default, configured on the Settings
-tab (`cronEnabled` checkbox + `cronSchedule` text field, validated with the same
-parser used at redeploy time). `CronRedeployScheduler`'s tick calls
-`ServiceDTO.listCronEnabled()` (unscoped by user, the only DTO method that
-queries across all users, since the scheduler isn't running on behalf of a
-request) and fires `DeploymentService.deployService()` for anything due,
-guarding against a double-fire in the same matching minute via `cronLastRunAt`.
-`BackupScheduler` mirrors this exactly (own file, same
-due-check/double-fire-guard shape) but operates on
-`StorageVolumeDTO`/`backupSchedule`/`backupLastRunAt` instead, see S3 backups
-below.
-
-### Autoscaling / resource-aware workload migration (`instance_settings.autoscale*`, `service.autoscaleEligible`, `AutoscaleScheduler`)
-
-**Scoped-down "GCP Cloud Run like" load shedding, not real elastic replica
-autoscaling**, see TODO.md's note on this item for why the literal ask (spin up
-N replicas, load-balance across them) needs a rearchitecture this codebase
-doesn't have (`service.containerId` is a single column;
-`createAndStartContainer`/`findServiceContainer`/status reconciliation/the
-Overview tab's lifecycle actions all assume exactly one container per service).
-What's built instead composes two already-existing primitives, Remote Hosts
-(above) and `SystemStatsService`, into a third: when the local host is over a
-configured resource threshold, one opted-in service gets **migrated**, not
-replicated, onto a designated overflow Remote Host. Swarm mode (below) is a
-separate, unrelated feature, real Docker Swarm replicas rather than
-CPU/memory-triggered migration, and `AutoscaleScheduler` doesn't drive it or
-know about `service.replicas`. **Untested interaction, flagged not fixed**:
-`listAutoscaleEligibleOnLocalHost()` doesn't exclude swarm-mode services (it
-only filters on `autoscaleEligible`/`remoteHostId is null`/`desiredState`), so a
-swarm-mode service marked autoscale-eligible could be picked up by a tick and
-handed to `migrateToOverflow()`, which sets `remoteHostId` and calls
-`deployService()`, the same combination Swarm mode's own section above says
-`deployService()` explicitly rejects. Don't mark a swarm-mode service
-autoscale-eligible until this gap is closed (either scheduler-side exclusion or
-turning the deploy-side rejection into a caught, logged no-op here).
-
-Two-level opt-in, same "background automation that touches live containers
-defaults to inert" posture as the cron/backup schedulers:
-`instanceSettings.autoscaleEnabled` (off by default, Settings' Autoscaling
-section, alongside
-`autoscaleCpuThresholdPercent`/`autoscaleMemoryThresholdPercent`, both default
-80, and `autoscaleOverflowRemoteHostId`, which Remote Host absorbs the load)
-**and** `service.autoscaleEligible` (off by default, per service, the Compute
-tab). Neither alone does anything, both must be true for a service to ever
-actually move.
-
-`AutoscaleScheduler` (`services/cron/autoscale-scheduler.ts`) is the third
-`BaseScheduler` subclass, alongside cron-redeploy and backup (own `globalThis`
-registry key, `this.constructor.name`, distinct from the other two the same way
-the pre-refactor module had three separate guard variables). Each tick: no-op
-unless `autoscaleEnabled` and an overflow host are configured; reads
-`SystemStatsService.getSystemStats()`; no-op unless CPU% or memory% crosses its
-threshold; picks one service from
-`ServiceDTO.listAutoscaleEligibleOnLocalHost()` (unscoped by user,
-`autoscaleEligible = true AND remoteHostId IS NULL AND desiredState = 'running'`,
-same "the one unscoped query for this DTO" precedent as `listCronEnabled()`);
-migrates only that one per tick, re-checking the threshold next time rather than
-potentially moving several services for a single reading.
-
-The migration itself (`this.migrateToOverflow()`, a private method) explicitly
-stops/removes the _old_ local container before deploying the new one on the
-overflow host, `deployService()`'s own "replace previous container" logic
-(`findServiceContainer`) only looks on whichever daemon it's pointed at, so
-pointed at the _new_ remote it would never find (and thus never clean up) a
-container left behind on a _different_ host; this method resolves the local
-connection and removes it explicitly first, then flips `remoteHostId` and calls
-the normal `DeploymentService.deployService()`. The overflow host must be owned
-by the same user as the migrating service, `RemoteHostDTO.connectionFor()`'s
-existing ownership scoping makes a host configured by a different account a safe
-no-op (logged) rather than a cross-account leak, at the cost of silently not
-migrating in that specific setup.
-
-**Not tested against a real second host**, composed entirely from
-already-exercised primitives (the remote-host removeContainer/deployService
-paths every other remote-hosted deploy already goes through, not new Docker API
-shapes) rather than invented mechanics, which is meaningfully lower-risk than
-that sounds, but still: no second Docker daemon was available to actually
-migrate a live service across and verify. Verify the first real migration by
-hand once a real Remote Host is registered.
+route-level validation call sites call those directly. Day-of-month and weekday
+follow the standard cron OR rule: when **both** fields are restricted a date
+matches if **either** does (`0 0 1 * 1` fires on the 1st _and_ every Monday);
+when one is a wildcard only the other applies. "Restricted" means the field
+doesn't start with `*`, matching Vixie cron's own star flag, so `*/2` counts as
+unrestricted. Covered by `tests/unit/app/cron-expression.test.ts`.
 
 ### Web terminal (`src/lib/services/docker/terminal.ts`)
 
@@ -2220,11 +2126,9 @@ mixin under Docker integration below). Both paths produce the same bytes, so
 only `BackupService`'s private `archive()` branches, `attemptBackup` and every
 caller are kind-agnostic. A non-zero exit from the helper fails the run with the
 helper's own stderr attached, rather than uploading a truncated/empty tarball.
-`BackupScheduler` (`services/cron/backup-scheduler.ts`) mirrors
-`CronRedeployScheduler` exactly (same 60s-tick / `BaseScheduler` / `cronMatches`
-/ last-run double-fire-guard shape, see the scheduler section above), the two
-are independent classes, not shared code, since they operate on different DTOs.
-No restore flow, upload-only.
+Scheduled backups are one `DueScheduler` config over
+`StorageVolumeDTO.listBackupEnabled()`, see Schedulers above. No restore flow,
+upload-only.
 
 ### Data model (`src/lib/server/db/schema.ts`)
 
@@ -2241,19 +2145,20 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   policy, see Per-app login wall below), `buildSource` (`"image"` | `"git"`) +
   `gitUrl`/`gitRef`/`gitBuildContext`/`gitDockerfilePath` (see Git-based builds
   below, `image`/`tag` hold the resolved local build tag when `buildSource` is
-  `"git"`, not user-editable directly in that mode), `remoteHostId` (nullable FK
-  to `remote_host`, `onDelete: "set null"`, see Remote hosts below),
+  `"git"`, not user-editable directly in that mode),
   `customSslCertEnc`/`customSslKeyEnc` (see Custom SSL certificates below),
   `networkMode` (`"bridge"` default | `"host"`) + `portProtocol` (`"tcp"`
   default | `"udp"` | `"both"`) (see Network mode below), `buildCacheRegistryId`
   (nullable FK to `build_cache_registry`) + `buildServerRemoteHostId` (nullable
-  FK to `remote_host`, build this service's image on a different host than it
-  deploys to; `deploy.service.ts` rejects that combination outright unless a
-  cache registry is also set, since a cross-host build has no other way to hand
-  the built image over), both see Git-based builds below.
-- `remote_host`, a registered non-local Docker daemon: `dockerHost` (`tcp://...`
-  or `ssh://...`), optional `tlsCaEnc`/`tlsCertEnc`/`tlsKeyEnc` (AES-256-GCM,
-  same scheme as `registryPasswordEnc`). See Remote hosts below.
+  FK to `remote_host`, build this service's image somewhere other than where it
+  runs; `deploy.service.ts` rejects that unless a cache registry is also set,
+  since a cross-host build has no other way to hand the built image over), both
+  see Git-based builds below.
+- `remote_host`, a registered build server: `kind` (`"docker"` | `"agent"`),
+  `dockerHost` (`tcp://...` or `ssh://...`) plus optional
+  `tlsCaEnc`/`tlsCertEnc`/`tlsKeyEnc` for the former, `agentUrl`/`agentTokenEnc`
+  for the latter (all AES-256-GCM, same scheme as `registryPasswordEnc`). See
+  Build servers below.
 - `deployment`, history of deploy attempts: status, image digest, error message,
   timestamps, and `log` (text, default `""`), the live-appended progress log
   described above, kept after the deploy completes as an audit trail (shown as
@@ -2629,13 +2534,11 @@ added to its command, a one-time `tools/compose/base.compose.yaml` edit +
 restart (or its equivalent in whichever compose file is actually running,
 `compose.prod.yaml` is self-contained, see Compose files below).
 
-**Real architectural limitation, flagged deliberately, not an oversight**: swarm
-mode is local-manager-only. Remote Hosts (above) doesn't apply the same way
-under swarm, a "remote" node has to actually _join this swarm_ as a worker
-rather than just being a separate standalone Docker daemon, that's a different
-integration than `RemoteHostDTO`'s raw `tcp://`/`ssh://` connection model.
-`deploy.service.ts` explicitly throws rather than silently misbehaving if a
-swarm-mode service's deploy target is a Remote Host.
+**This app only ever talks to the local manager.** Extra capacity comes from a
+node _joining this swarm_ as a worker, which Docker then schedules onto on its
+own; it is never a `remote_host` row. That's exactly why Remote Hosts was cut
+back to build servers (see Build servers above), a second standalone daemon and
+a swarm worker are different things and this app only wires up the latter.
 `packages/installer/swarm-join.sh` (a standalone bash script, not part of the
 TypeScript installer's `StepRunner`, documented in
 `packages/installer/README.md`) is the groundwork for this gap: it joins a
@@ -2646,16 +2549,12 @@ than sharing the TS installer's dry-run machinery so the two scripts stay in
 lockstep by inspection. Usage:
 `curl -fsSL .../swarm-join.sh | sudo bash -s -- --token <SWMTKN-...> --manager <ip>:2377`
 (token/manager address come from `docker swarm join-token worker` on the
-manager). This is preparatory only: joining a swarm node this way doesn't by
-itself make it a selectable deploy target, that still needs registering it
-separately as a Remote Host (`kind: "agent"`, see Remote hosts above), and even
-then a swarm-joined node isn't the same thing as this app's own swarm-mode
-deploys (above), which are local-manager-only regardless. **Not verified against
-a real second host or a real swarm**: syntax-checked (`bash -n`) and
-`shellcheck`-clean, and every individual command mirrors a step already
-dry-run-verified in the main installer, but the actual `docker swarm join`
-handshake and a real Homerun deploy onto that node haven't been run end-to-end,
-same caveat `bootstrap.sh` itself carries.
+manager). Once joined, the node is schedulable by the swarm itself, nothing in
+this app has to register it. **Not verified against a real second host or a real
+swarm**: syntax-checked (`bash -n`) and `shellcheck`-clean, and every individual
+command mirrors a step already dry-run-verified in the main installer, but the
+actual `docker swarm join` handshake and a real Homerun deploy onto that node
+haven't been run end-to-end, same caveat `bootstrap.sh` itself carries.
 
 ### Network mode (`service.networkMode`, `service.portProtocol`, Networking tab)
 
@@ -3454,63 +3353,39 @@ folder's own README for the full detail; this section is the pointer.
 generated docs site, see its own subsection near the end of this document), not
 part of the Agent/installer/CLI trio described here.
 
-**No longer just a standalone primitive**: the Agent is now a real, selectable
-Remote Hosts connection kind (`remote_host.kind: "agent"`,
-`$lib/services/agent-client.service.ts`'s `AgentClientService`, see Remote hosts
-above for the wiring). The installer stays standalone tooling (it's not imported
-by `src/` and isn't meant to be, it drives a target machine's shell, not this
-app's own runtime).
+The Agent is a selectable build-server connection kind
+(`remote_host.kind: "agent"`, `$lib/services/agent-client.service.ts`'s
+`AgentClientService`, see Build servers above for the wiring). The installer
+stays standalone tooling (it's not imported by `src/` and isn't meant to be, it
+drives a target machine's shell, not this app's own runtime).
 
 - **`packages/agent/`**, the **Homerun Agent**: a small token-authenticated HTTP
-  server (`GET /v1/health` and `GET /v1/openapi.json` unauthenticated, the
-  latter for the same "spec describes shapes, not data" reason the main app's is
-  public; every other route needs `Authorization: Bearer <token>`) meant to run
-  on a _remote_ host's own Docker daemon, exposing
-  deploy/start/stop/restart/logs/stats over plain HTTP. This is the alternative
-  to registering a Remote Host by raw `tcp://`/`ssh://` Docker socket (see
-  Remote hosts above), instead of exposing the daemon itself, the remote host
-  runs this agent and the main app only ever talks HTTP-plus-bearer-token to it.
+  server meant to run on a build server's own Docker daemon. Four routes:
+  `GET /v1/health` and `GET /v1/openapi.json` unauthenticated (the latter for
+  the same "spec describes shapes, not data" reason the main app's is public,
+  health so a monitor can probe liveness without holding the token),
+  `POST /v1/build` and `GET /v1/stats` behind `Authorization: Bearer <token>`.
+  It is **not** a deploy target : the deploy/lifecycle/logs routes it used to
+  carry were removed along with remote deploys (see Build servers above), and
+  `AgentClientService.verifyToken` probes `/v1/stats` for exactly that reason.
+  This is the alternative to registering a build server by raw `tcp://`/`ssh://`
+  Docker socket : instead of exposing the daemon itself, the build server runs
+  this agent and the main app only ever talks HTTP-plus-bearer-token to it.
   **Wired into the main app**: `remote_host.kind` (`"docker"` | `"agent"`) +
   `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
-  (`$lib/services/agent-client.service.ts`, a thin HTTP client mirroring
-  `DockerService`'s deploy/start/stop/restart/inspectStatus/streamLogs surface
-  plus `build`), and the Remote Hosts "new host" form's connection-type toggle
-  (URL + token, verified live via `AgentClientService.verifyToken` before the
-  row is saved) all exist; `deploy.service.ts` and
-  `service-lifecycle.service.ts` branch on `RemoteHostDTO.resolveTarget()`'s
-  `kind` to route through `DockerService` or `AgentClientService`. **This
-  main-app integration is now verified live against a real, actually-separate
-  second host**, not just the agent binary's own endpoints in isolation: two
-  real disposable Multipass Ubuntu 24.04 VMs (one `--mode=agent`, one
-  `--mode=full`), the `--mode=full` VM's dashboard registered the `--mode=agent`
-  VM as a real `agent`-kind `remote_host` row (token verified live via
-  `AgentClientService.verifyToken`), then a real `nginx:alpine` service was
-  created and deployed through it, `docker ps` on the agent VM confirmed the
-  container landed there, and stop/start both round-tripped through the agent
-  successfully. See Remote hosts above for how this compares to the existing
-  `socat`-proxy `"docker"`-kind verification (that one's a proxy in front of the
-  _same_ daemon; this one is a genuinely separate host). `POST /v1/deploy`
-  mirrors the main app's own pull→remove-previous-by-label→create→start shape
-  (`findServiceContainer` by `homerun.service.id` label, a fresh randomized
-  container name every deploy, same conventions as `docker/containers.ts`) but
-  is a from-scratch, self-contained implementation, the agent has no access to
-  the main app's source tree at runtime, so `packages/agent/docker.ts` and
+  (`$lib/services/agent-client.service.ts`, a thin HTTP client over
+  `build`/`stats`/`health`), and the Remote Hosts "new host" form's
+  connection-type toggle; `deploy.service.ts` branches on
+  `RemoteHostDTO.resolveBuildTarget()`'s `kind` to route a git build through
+  `DockerService` or `AgentClientService`. The agent has no access to the main
+  app's source tree at runtime, so `packages/agent/docker.ts` and
   `packages/agent/stats.ts` intentionally re-implement (not import) the
-  equivalent logic from `docker/containers.ts` and `SystemStatsService`; keep
-  the two in sync by hand if one changes. `packages/agent/schemas.ts` holds a
-  zod schema for the deploy body (`packages/agent/openapi.ts` generates the
-  agent's own OpenAPI 3.1 doc from it, same "one schema, two purposes" approach
-  as the main app's, see OpenAPI above), **this replaced a real bug**:
-  `/v1/deploy` previously did `(await req.json()) as DeployInput`, an unchecked
-  cast with zero runtime validation, so a malformed request would fail deep
-  inside dockerode with a confusing error instead of a clean 400; now it's
-  `deployInputSchema.safeParse()` first. **Live-verified** against a real local
-  Docker socket: boot + `homerun`-equivalent creation, every HTTP endpoint
-  including a real `nginx:alpine`
-  pull→create→start→redeploy-replaces-old→stop/remove round trip, auth rejection
-  on a missing/wrong token, the new validation actually rejecting a malformed
-  deploy body with a 400, `/v1/openapi.json` being a real parseable OpenAPI 3.1
-  doc, and the compiled binary behaving identically to `bun run dev`.
+  equivalent logic from `docker/git-build.ts` and `SystemStatsService`; keep the
+  two in sync by hand if one changes. `packages/agent/schemas.ts` holds the zod
+  schema for the build body, `safeParse`d at the route rather than cast, and
+  `packages/agent/openapi.ts` generates the agent's own OpenAPI 3.1 doc from the
+  same schema, the "one schema, two purposes" approach the main app uses (see
+  OpenAPI above).
 - **`packages/installer/`**, a single-binary installer
   (`packages/installer/index.ts`) meant to be the target of a `curl | bash`
   one-liner (`packages/installer/bootstrap.sh`) on a fresh Linux server:
@@ -3572,14 +3447,13 @@ app's own runtime).
   catches a regression before it ships), launches two disposable Multipass VMs,
   runs the real installer binary on each (`--mode=agent` / `--mode=full`), signs
   up + onboards the bootstrap admin over the real HTTP API, registers the agent
-  VM as a Remote Host and deploys/stops/starts a real service through it, then
-  drives a real `homerun login` device-code round trip plus every documented CLI
-  command from a throwaway Docker container, tearing everything down after
-  (`--keep` to leave it running, `--skip-build` to reuse a previous build).
-  Deliberately **not** wired into any GitHub Actions workflow, this repo's CI
-  runners have no nested virtualization for Multipass, it's a local-only tool to
-  run by hand before cutting a release or after touching installer/agent/CLI
-  code.
+  VM as a build server and deploys/stops/starts a real service, then drives a
+  real `homerun login` device-code round trip plus every documented CLI command
+  from a throwaway Docker container, tearing everything down after (`--keep` to
+  leave it running, `--skip-build` to reuse a previous build). Deliberately
+  **not** wired into any GitHub Actions workflow, this repo's CI runners have no
+  nested virtualization for Multipass, it's a local-only tool to run by hand
+  before cutting a release or after touching installer/agent/CLI code.
 
   `scripts/e2e-multipass-release.ts` (`bun run e2e:multipass:release`) is its
   mirror image, and the two share `scripts/e2e/` (`multipass.ts`, the VM/HTTP
@@ -3657,13 +3531,12 @@ re-litigating design decisions.
   revocation than the 8h cookie lifetime for a user deleted or re-grouped at the
   provider. Custom SSL cert handling exists too (see below) but genuinely
   requires the admin's own one-time Traefik config change to take effect.
-- **Source integration**: git-based builds exist (see below), no private-repo
-  credential field, no webhook/auto-deploy-on-push. Remote hosts exist too (see
-  below), no host port publishing for remote-hosted services, no
-  shared-network/Traefik integration for them, bind-mount volumes are skipped on
-  remote deploys, and (see Swarm mode above) a Remote Host still can't be a
-  swarm-mode deploy target, `packages/installer/swarm-join.sh` is groundwork for
-  this, not the integration itself.
+- **Source integration**: git-based builds exist (see Git-based builds above),
+  no private-repo credential field beyond a token in the clone URL, no
+  webhook/auto-deploy-on-push. Build servers exist too (see Build servers
+  above); adding capacity for _deploys_ is Swarm's job, and
+  `packages/installer/swarm-join.sh` (joining a node as a worker) is still
+  unverified against a real swarm.
 - **Onboarding**: the forced first-run wizard now exists (`/onboarding`, see
   above), and setup diagnostics feed a highlighted deep-link into `/settings`
   instead of a standalone page; DNS automation itself now exists (Cloudflare and

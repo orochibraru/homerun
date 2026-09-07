@@ -99,7 +99,6 @@ Usage:
 	console.log("  Homerun Agent is running.");
 	console.log(`  Listening on:   http://0.0.0.0:${config.port}`);
 	console.log(`  Docker socket:  ${config.dockerSocketPath}`);
-	console.log(`  Network:        ${config.dockerNetworkName}`);
 	console.log(
 		source === "env"
 			? "  Token source:   AGENT_TOKEN env var"

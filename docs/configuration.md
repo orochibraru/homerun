@@ -45,11 +45,10 @@ YAML-language-server extension gets linting/autocomplete for free.
 | `logLevel`                                           | `info`                                                 | `debug` \| `info` \| `warn` \| `error`                                                                                       |
 | `logFormat`                                          | `console`                                              | `console` \| `json`                                                                                                          |
 
-Orchestration mode/autoscaling (Docker tab) and both DNS integrations,
-Cloudflare and Pangolin (Networking tab), have **no file form at all**, they're
-added, edited, and removed only from `/settings`, secrets among them stored
-encrypted the same way `registryPasswordEnc` is, on the singleton
-`instance_settings` row.
+Orchestration mode (Docker tab) and both DNS integrations, Cloudflare and
+Pangolin (Networking tab), have **no file form at all**, they're added, edited,
+and removed only from `/settings`, secrets among them stored encrypted the same
+way `registryPasswordEnc` is, on the singleton `instance_settings` row.
 
 ## Compose-only variables
 

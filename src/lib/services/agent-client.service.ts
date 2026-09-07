@@ -92,11 +92,11 @@ class AgentClientServiceClass {
 
 	/**
 	 * Confirms the bearer token is actually accepted by the agent, by hitting
-	 * an authenticated route (`/v1/containers`, cheap and side-effect-free).
+	 * an authenticated route (`/v1/stats`, cheap and side-effect-free).
 	 * Throws on an unreachable host, a 401 (bad token), or any other failure.
 	 */
 	async verifyToken(agentUrl: string, token: string): Promise<void> {
-		const url = new URL("/v1/containers", agentUrl);
+		const url = new URL("/v1/stats", agentUrl);
 		let response: Response;
 		try {
 			response = await fetch(url, {

@@ -67,7 +67,6 @@ export function spawnAgent(port: number, token: string) {
 		env: {
 			...process.env,
 			AGENT_TOKEN: token,
-			HOMERUN_NETWORK_NAME: "homerun",
 			PORT: String(port),
 		},
 		stderr: "pipe",
