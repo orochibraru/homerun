@@ -1,3 +1,10 @@
+## [1.0.10](https://github.com/orochibraru/homerun/compare/v1.0.9...v1.0.10) (2026-09-07)
+
+### Features
+
+- oauth gate ([#6](https://github.com/orochibraru/homerun/issues/6))
+  ([27ed10f](https://github.com/orochibraru/homerun/commit/27ed10fe671a490abdc1d0b23b146acb77dcd90c))
+
 ## [1.0.9](https://github.com/orochibraru/homerun/compare/v1.0.8...v1.0.9) (2026-09-05)
 
 ### Features
