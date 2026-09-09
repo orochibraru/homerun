@@ -13,9 +13,6 @@ group "ci" {
 target "base" {
   context    = "."
   dockerfile = "./Dockerfile"
-  args = {
-    APP_VERSION = "${TAG}"
-  }
 }
 
 target "ci-base" {

@@ -1,5 +1,7 @@
 FROM oven/bun:1-alpine AS deps-base
 
+ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
+
 WORKDIR /app
 
 COPY package.json bun.lock* /app/
@@ -11,13 +13,7 @@ RUN bun install --frozen-lockfile --ignore-scripts
 
 FROM deps AS app-builder
 
-ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
-
 COPY . .
-
-ARG APP_VERSION
-
-ENV APP_VERSION=${APP_VERSION}
 
 COPY --from=deps /app/node_modules /app/node_modules
 
@@ -63,10 +59,7 @@ CMD ["/app/build/server"]
 
 FROM deps AS agent-builder
 
-ARG APP_VERSION
-
 ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
-ENV APP_VERSION=${APP_VERSION}
 
 WORKDIR /app
 
