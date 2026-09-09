@@ -11,6 +11,8 @@ export interface Options {
 	/** Which release to install from, "latest" or a tag like "v1.2.3". Selects the agent/installer/cli binaries fetched from this repo's GitHub releases; see steps/release.ts for why the app's Docker image (--mode=full) isn't pinned the same way. */
 	version: string;
 	agentPort: number;
+	/** Domain or IP this instance will be reached at (`--mode=full`): becomes the app's baseDomain and its ORIGIN. Prompted for, or detected from this host's own address, when not given : it must never end up as localhost, see steps/full-stack.ts. */
+	domain?: string;
 	/** Skip the "here's what I'm about to do, continue?" prompt : required for a non-interactive `curl | sh` install. */
 	yes: boolean;
 }
@@ -47,6 +49,9 @@ const FLAG_ARGS: Record<string, (opts: Options) => void> = {
 const VALUED_ARGS: Record<string, (opts: Options, value: string) => void> = {
 	"--port=": (opts, value) => {
 		opts.agentPort = Number.parseInt(value, 10);
+	},
+	"--domain=": (opts, value) => {
+		opts.domain = value;
 	},
 	"--user=": (opts, value) => {
 		opts.rootlessUser = value;
@@ -104,6 +109,9 @@ Options:
                        binaries fetched from GitHub releases.
   --mode=agent|full   agent = just the Homerun Agent (default)
                       full  = also brings up the main app via docker compose
+  --domain=<host>     Domain or IP the instance is reached at (--mode=full).
+                      Prompted for, or detected from this host's own address,
+                      when omitted. Never defaults to localhost.
   --user=<name>       Rootless-Docker system user to create (default: homerun)
   --port=<n>          Agent HTTP port (default: 7420)
   --dry-run           Print every command instead of running it

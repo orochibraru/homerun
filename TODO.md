@@ -4,6 +4,13 @@ Sizes are rough. No priority, pick whatever.
 
 ## Medium
 
+- [ ] [App] Onboarding drops the dashboard's port. Its Core step derives
+      `authOrigin` from the base-domain field alone, prefilled from
+      `config.baseDomain` (portless), so finishing the wizard on an installer
+      instance reached at `http://<ip>:3000` persists `http://<ip>` over the
+      correct `ORIGIN`. Sign-in still works (SvelteKit's ORIGIN env is separate)
+      but the login wall's redirects and OAuth redirect URIs point at port 80.
+      Prefill it from `config.auth.origin` instead.
 - [ ] [App] No restore flow for S3 backups. Upload only; getting a tarball back
       into a volume is manual.
 - [ ] [App] Compose import ignores `build:`, so those services land needing
@@ -37,6 +44,12 @@ Sizes are rough. No priority, pick whatever.
 
 ## Done
 
+- [x] [Installer] `--mode=full` asks for the domain (or takes `--domain=`, or
+      detects this host's own address) and never writes a localhost origin. The
+      old `ORIGIN=http://localhost:3000` default made the first sign-up 403 with
+      better-auth's "Invalid origin" from any browser not on the box.
+      `compose.prod.yaml` requires `ORIGIN` outright, nothing can detect an
+      address there.
 - [x] [Bug] `docs/remote-hosts-and-agent.md` linked to `services.md#git-builds`,
       a heading that no longer exists, which failed the docs image build (the
       only job that prerenders). Points at the Source-tab section now, and says

@@ -9,7 +9,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
       AUTH_SECRET: "${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}"
-      ORIGIN: ${ORIGIN:-http://localhost:3000}
+      ORIGIN: "${ORIGIN:?set ORIGIN in .env to the scheme+host you open the dashboard at, e.g. http://203.0.113.10:3000 - a localhost default makes the first sign-up fail with Invalid origin from any other machine}"
     ports:
       - "3000:3000"
     volumes:

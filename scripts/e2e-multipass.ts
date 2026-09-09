@@ -66,25 +66,6 @@ async function provisionFull(vm: Vm): Promise<AppClient> {
 
 	const ip = await vm.ip();
 	const baseUrl = `http://${ip}:${APP_PORT}`;
-	const composePath = `/home/${ROOTLESS_USER}/homerun/compose.yaml`;
-
-	await vm.exec([
-		"sudo",
-		"-u",
-		ROOTLESS_USER,
-		"bash",
-		"-c",
-		`echo 'ORIGIN=${baseUrl}' >> /home/${ROOTLESS_USER}/homerun/.env`,
-	]);
-	await vm.docker([
-		"compose",
-		"-f",
-		composePath,
-		"up",
-		"-d",
-		"--force-recreate",
-		"app",
-	]);
 
 	await waitFor(`app healthy at ${baseUrl}`, async () => {
 		const res = await fetch(baseUrl, { redirect: "manual" }).catch(() => null);

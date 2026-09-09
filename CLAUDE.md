@@ -3412,6 +3412,25 @@ drives a target machine's shell, not this app's own runtime).
   distinct from the root dev `compose.yaml`; see Docker integration above)
   pulling the published `docker.io/orochibraru/homerun` app image alongside
   Traefik/Postgres, then `docker compose pull && ...up -d`.
+
+  **`--mode=full` resolves an address for the instance and it is never
+  `localhost`** (`index.ts`'s `resolveHost`): `--domain=` wins, else an
+  interactive prompt (skipped when stdin isn't a TTY, which is every
+  `curl | bash` install), else `Detector.hostAddress()` (the `src` of
+  `ip -4 route get 1.1.1.1`, falling back to the first non-loopback
+  `hostname -I` address). It becomes `baseDomain` in the generated
+  `homerun.yaml` and the `ORIGIN` default in the generated `compose.yaml`, and
+  `homerun.yaml` no longer carries its own `auth.origin` so those two can't
+  disagree. **Real, reported bug this fixes**: the old `http://localhost:3000`
+  default didn't just produce wrong absolute URLs, it made a fresh instance
+  impossible to sign up to. With `ORIGIN` set, SvelteKit normalizes `event.url`
+  to it, so better-auth derives its `baseURL`, and therefore its trusted
+  origins, from `localhost` while the browser's `Origin` header is the real
+  address, and `POST /api/v1/auth/sign-up/email` 403s with `Invalid origin`.
+  `compose.prod.yaml` (the manual Option B path, where nothing can detect an
+  address) makes `ORIGIN` required with `${ORIGIN:?...}` instead, the same
+  fail-closed shape `AUTH_SECRET` already used.
+
   `packages/installer/steps/release.ts` is the one place both artifact kinds
   (release binaries vs. the Docker image) resolve from: `--version=` (a GitHub
   release tag, default `latest`) picks which release's binaries to fetch, but

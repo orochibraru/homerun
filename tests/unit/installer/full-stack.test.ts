@@ -11,12 +11,13 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		const appendLine = mock(async (_path: string, _line: string) => undefined);
 		const runner = { appendLine, run, writeFile } as unknown as StepRunner;
 
-		const composePath = await FullStackInstaller.bringUpFullStack(
-			runner,
-			"homerun",
-			"v1.2.3",
-			"/run/user/1000/docker.sock",
-		);
+		const composePath = await FullStackInstaller.bringUpFullStack({
+			dockerSocket: "/run/user/1000/docker.sock",
+			host: "homerun.example.com",
+			run: runner,
+			username: "homerun",
+			version: "v1.2.3",
+		});
 
 		expect(composePath).toBe("/home/homerun/homerun/compose.yaml");
 		expect(run).toHaveBeenCalledWith(["mkdir", "-p", "/home/homerun/homerun"], {
@@ -34,11 +35,17 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		expect(content).toContain("./homerun.yaml:/app/homerun.yaml:ro");
 		expect(content).toContain("name: homerun");
 		expect(content).toContain("AUTH_SECRET");
+		expect(content).toMatch(
+			/ORIGIN: \$\{ORIGIN:-http:\/\/homerun\.example\.com:3000\}/,
+		);
+		expect(content).not.toContain("localhost");
 
 		const configCall = writeFile.mock.calls.find(
 			(call) => call[0] === "/home/homerun/homerun/homerun.yaml",
 		) as [string, string];
 		expect(configCall[1]).toContain("socketPath: /run/user/1000/docker.sock");
+		expect(configCall[1]).toContain("baseDomain: homerun.example.com");
+		expect(configCall[1]).not.toContain("localhost");
 
 		expect(appendLine).toHaveBeenCalledTimes(1);
 		const [envPath, line] = appendLine.mock.calls[0] as [string, string];
@@ -69,12 +76,13 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		const appendLine = mock(async (_path: string, _line: string) => undefined);
 		const runner = { appendLine, run, writeFile } as unknown as StepRunner;
 
-		await FullStackInstaller.bringUpFullStack(
-			runner,
-			"homerun",
-			"latest",
-			"/var/run/docker.sock",
-		);
+		await FullStackInstaller.bringUpFullStack({
+			dockerSocket: "/var/run/docker.sock",
+			host: "203.0.113.10",
+			run: runner,
+			username: "homerun",
+			version: "latest",
+		});
 
 		const composeCall = writeFile.mock.calls.find(
 			(call) => call[0] === "/home/homerun/homerun/compose.yaml",

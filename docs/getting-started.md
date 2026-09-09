@@ -23,9 +23,16 @@ host's architecture and runs it, which:
 2. Creates a dedicated system user (`homerun` by default) and installs rootless
    Docker under that account, nothing this app deploys runs as root.
 3. Creates the `homerun` Docker network.
-4. Writes a standalone compose file and runs `docker compose up -d` against it
+4. Asks what domain (or IP) this instance will be reached at, offering the
+   host's own address as the default. It is never `localhost`: that address
+   becomes the app's `ORIGIN`, and better-auth only trusts that one origin, so a
+   `localhost` value makes the first sign-up fail with "Invalid origin" from any
+   browser that isn't on the box. Pass `--domain=homerun.example.com` to answer
+   it up front, which a `curl | bash` install has to do (no terminal to prompt
+   on, so it takes the detected address otherwise).
+5. Writes a standalone compose file and runs `docker compose up -d` against it
    under that rootless daemon: Traefik, Postgres, and the app itself, all pulled
-   from published images.
+   from published images, then prints the dashboard URL.
 
 Run `--mode=agent` instead of `--mode=full` if you only want this box to run the
 [Homerun Agent](remote-hosts-and-agent.md#homerun-agent) as a remote build
@@ -64,19 +71,22 @@ docker compose -f compose.prod.yaml up -d
 `tools/compose/*.yaml` fragments `compose.yaml` shares, so a downloaded copy
 works on its own) and bind-mounts the `homerun.yaml` above into the app
 container, hence the third download, see
-[Configuration](configuration.md#compose-only-variables). `AUTH_SECRET` is the
-only value with no default; `ORIGIN` should be set to the scheme+host the
-instance is really reachable at once it has one.
+[Configuration](configuration.md#compose-only-variables). `AUTH_SECRET` and
+`ORIGIN` are the two values with no default and `docker compose` refuses to
+start without them: `ORIGIN` is the scheme+host you actually open the dashboard
+at, port included (`http://203.0.113.10:3000`, `https://homerun.example.com`).
+Leaving it at `localhost` when you reach the instance at anything else makes
+sign-in and the first sign-up fail with "Invalid origin".
 
 [`compose.yaml`](../compose.yaml) (the dev-only variant, no `app` service) is
 the reference if you'd rather run each container by hand.
 
 ## First boot
 
-Visit the app (`http://localhost:5173` in dev, `http://localhost:3000` for a
-built/production run). The first account you create becomes **admin**
-automatically, every account after that is created by an admin from `/users`
-(direct-create or email invite), there's no public sign-up.
+Visit the app (`http://localhost:5173` in dev, otherwise the address the
+installer printed / the `ORIGIN` you set). The first account you create becomes
+**admin** automatically, every account after that is created by an admin from
+`/users` (direct-create or email invite), there's no public sign-up.
 
 Signing in for the first time on a fresh instance drops you into a 5-step
 onboarding wizard (Core / Docker / Traefik / Email / Review) that sets the

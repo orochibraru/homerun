@@ -74,3 +74,43 @@ describe("Detector.detectPackageManager", () => {
 		);
 	});
 });
+
+describe("Detector.hostAddress", () => {
+	afterEach(() => {
+		mock.restore();
+	});
+
+	function spawnReturning(outputs: Record<string, string>) {
+		spyOn(Bun, "spawn").mockImplementation(((cmd: string[]) => {
+			const stdout = outputs[cmd[0]];
+			if (stdout === undefined) {
+				throw new Error("ENOENT");
+			}
+			return {
+				exited: Promise.resolve(0),
+				stdout: new Response(stdout).body,
+			};
+		}) as unknown as typeof Bun.spawn);
+	}
+
+	test("takes the source IP of the route out to the internet", async () => {
+		spawnReturning({
+			hostname: "10.0.0.5 172.17.0.1\n",
+			ip: "1.1.1.1 via 10.0.0.1 dev eth0 src 37.27.7.3 uid 0 \ncache\n",
+		});
+		expect(await Detector.hostAddress()).toBe("37.27.7.3");
+	});
+
+	test("falls back to hostname -I, and never returns loopback", async () => {
+		spawnReturning({
+			hostname: "127.0.0.1 192.168.1.9\n",
+			ip: "1.1.1.1 dev lo src 127.0.0.1 uid 0\n",
+		});
+		expect(await Detector.hostAddress()).toBe("192.168.1.9");
+	});
+
+	test("returns null when neither command exists", async () => {
+		spawnReturning({});
+		expect(await Detector.hostAddress()).toBeNull();
+	});
+});

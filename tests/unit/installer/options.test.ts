@@ -128,3 +128,12 @@ describe("OptionsParser.printHelp", () => {
 		}
 	});
 });
+
+describe("OptionsParser.parseArgs --domain", () => {
+	test("is unset by default and takes the value verbatim", () => {
+		expect(OptionsParser.parseArgs([]).domain).toBeUndefined();
+		expect(
+			OptionsParser.parseArgs(["--domain=https://homerun.example.com/"]).domain,
+		).toBe("https://homerun.example.com/");
+	});
+});

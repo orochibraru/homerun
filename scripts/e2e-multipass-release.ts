@@ -576,9 +576,10 @@ async function testComposeStack(
 
 	await vm.runScript("curl -fsSL https://get.docker.com | sh", { sudo: true });
 
+	const baseUrl = `http://${await vm.ip()}:${APP_PORT}`;
 	await vm.writeFile(
 		"/tmp/homerun-e2e-editor",
-		`#!/bin/sh\nsed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -hex 32)|" "$1"\n`,
+		`#!/bin/sh\nsed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -hex 32)|" "$1"\nif grep -q "^ORIGIN=" "$1"; then sed -i "s|^ORIGIN=.*|ORIGIN=${baseUrl}|" "$1"; else echo "ORIGIN=${baseUrl}" >> "$1"; fi\n`,
 	);
 	await vm.runScript("chmod +x /tmp/homerun-e2e-editor", { sudo: true });
 
@@ -589,7 +590,6 @@ async function testComposeStack(
 		sudo: true,
 	});
 
-	const baseUrl = `http://${await vm.ip()}:${APP_PORT}`;
 	await waitFor(
 		`compose stack healthy at ${baseUrl}`,
 		async () => {

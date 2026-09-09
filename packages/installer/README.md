@@ -59,10 +59,21 @@ sudo ./homerun-installer --mode=full
 ## Flags
 
 See `--help`. Notable ones: `--version=` (a release tag like `v1.2.3`, default
-`latest`), `--mode=agent|full`, `--user=` (rootless account name), `--port=`
-(agent port), `--dry-run` (prints every command instead of running it, see
-below), `--yes`/`-y` (no confirmation prompt, needed for a non-interactive
+`latest`), `--mode=agent|full`, `--domain=` (the domain or IP this instance is
+reached at, see below), `--user=` (rootless account name), `--port=` (agent
+port), `--dry-run` (prints every command instead of running it, see below),
+`--yes`/`-y` (no confirmation prompt, needed for a non-interactive
 `curl | bash`).
+
+`--mode=full` needs to know **where this instance will be reached**, and it is
+never allowed to be `localhost`. `--domain=` sets it outright (a full URL is
+accepted, the scheme and trailing slash are stripped); with the flag omitted the
+installer asks, offering this host's own address (the source IP of its route out
+to the internet, else `hostname -I`) as the blank-answer default. A
+`curl | bash` install has no TTY on stdin, so it takes that detected address
+silently rather than hanging on a prompt nobody can answer. Whatever it lands on
+becomes `baseDomain` in the generated `homerun.yaml` and the `ORIGIN` default in
+the generated `compose.yaml`, and is printed at the end as the dashboard URL.
 
 `--mode=full` needs `AUTH_SECRET` set before the app container will start: the
 generated `compose.yaml` fails closed on a missing one rather than booting with
@@ -70,14 +81,16 @@ an insecure default (the installer itself generates this automatically into
 `.env`, this only matters if running the compose file standalone, outside the
 installer). Put it (and anything else you want to override, `POSTGRES_PASSWORD`,
 `ORIGIN`, `ACME_EMAIL`) in a `.env` file next to that `compose.yaml`, then
-`docker compose -f compose.yaml up -d` as the rootless user. `ORIGIN` matters
-once you're reachable at a real domain, not just the install-time default of
-`http://localhost:3000`, real, tested-live finding: without it, absolute URLs
-this app constructs (e.g. the CLI login flow's own approval link) silently fall
-back to `localhost` regardless of where the instance is actually reachable, see
-`steps/full-stack.ts`'s own docstring. Base domain itself isn't `.env`-driven,
-it's set on first boot by the onboarding wizard (or by hand afterward in
-`homerun.yaml` next to `compose.yaml`, or on `/settings`).
+`docker compose -f compose.yaml up -d` as the rootless user. Set `ORIGIN` there
+if the instance moves to another address after install (the compose file's own
+default is whatever `--domain=`/detection resolved to). Getting it wrong is not
+cosmetic, real, reported finding: better-auth's trusted origins are derived from
+`ORIGIN` alone, so a stale one makes every sign-in and the very first sign-up
+403 with "Invalid origin" from the address you are actually using, and absolute
+URLs this app constructs (e.g. the CLI login flow's own approval link) point at
+the wrong host too. See `steps/full-stack.ts`'s own docstring. Base domain is
+seeded from the same answer, and is still editable afterward in `homerun.yaml`
+next to `compose.yaml`, or on `/settings`.
 
 ## Joining a host to a swarm (`swarm-join.sh`)
 
@@ -201,6 +214,13 @@ each file's own doc comments for the full detail):
    silently fell back to `http://localhost:3000` regardless of the instance's
    real reachable address. Fixed by adding an overridable `ORIGIN` default, see
    the Flags section above.
+7. That default was `http://localhost:3000`, which turned out to be worse than
+   wrong links: reported live on a real install reached at
+   `http://<public ip>:3000`, where the first sign-up 403'd with better-auth's
+   "Invalid origin ... Current list of trustedOrigins: <http://localhost:3000>",
+   making a fresh instance impossible to sign up to from anywhere but the box
+   itself. Fixed by asking for (or detecting) the real address, see the Flags
+   section above.
 
 **Still not verified**: `swarm-join.sh` (see its own section above), this VM
 testing round didn't touch it. Particular things worth double-checking on a
