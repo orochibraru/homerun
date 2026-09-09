@@ -1,3 +1,10 @@
+## [1.0.11](https://github.com/orochibraru/homerun/compare/v1.0.10...v1.0.11) (2026-09-09)
+
+### Bug Fixes
+
+- origin on setup
+  ([ece74be](https://github.com/orochibraru/homerun/commit/ece74bec313ba70e3897ac663d724b2e9f72bedb))
+
 ## [1.0.10](https://github.com/orochibraru/homerun/compare/v1.0.9...v1.0.10) (2026-09-07)
 
 ### Features
