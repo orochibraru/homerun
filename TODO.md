@@ -22,6 +22,12 @@ Sizes are rough. No priority, pick whatever.
       require them.
 - [ ] [Tests] `deploy.service.ts` and `app-access.service.ts` have no tests.
       They are the deploy pipeline and the login wall's access decision.
+- [ ] [CI] Nothing in CI runs `bun run check` or `bun run lint`. The prek config
+      only formats (`biome format --write`), it never runs `biome check`,
+      `svelte-check`/`tsgo`, or `tailwint`, so a type error or a lint error
+      reaches `main` ungated. `code_quality.yaml`'s comment above the prek step
+      still claims otherwise. Both gates pass clean today, so this is a missing
+      guard, not a backlog of breakage.
 
 ## Large
 
