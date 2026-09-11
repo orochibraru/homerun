@@ -22,12 +22,6 @@ Sizes are rough. No priority, pick whatever.
       require them.
 - [ ] [Tests] `deploy.service.ts` and `app-access.service.ts` have no tests.
       They are the deploy pipeline and the login wall's access decision.
-- [ ] [CI] The prek config no longer regenerates the derived files
-      (`openapi.json`, `packages/cli/generated/openapi-types.ts`,
-      `homerun.schema.json`) before checking. The old `gen` hook did; only the
-      narrower `gen:env` survives, so a REST API change can land with those
-      snapshots stale. `code_quality.yaml`'s comment above the prek step still
-      claims the regen runs.
 
 ## Large
 

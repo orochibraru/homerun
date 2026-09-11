@@ -1141,6 +1141,21 @@ load-bearing parts:
 - **`bunfig.toml` excludes it from `bun test`**
   (`pathIgnorePatterns = ["**/tests/e2e/**"]`), these specs match `bun test`'s
   own `*.spec.ts` discovery and would otherwise be picked up and fail there.
+- **`E2E_IMAGE` runs the suite against a built Docker image instead of the local
+  `build/server` binary** (`tests/integration/support/app-container.ts`'s
+  `startAppContainer`, chosen by `bootstrap-runtime.ts` when the variable is
+  set). This is how CI tests the exact artefact it is about to publish rather
+  than a second build of the same source, see the CI pipeline note under Release
+  automation below. Everything else about the harness is unchanged : the same
+  throwaway Postgres, the same migrations, the same fixed port, the same
+  health-check wait. Two details are load-bearing : the container's
+  `DATABASE_URL` has `localhost`/`127.0.0.1` rewritten to `host.docker.internal`
+  (a container's own `localhost` is itself, not the host) and it is started with
+  `--add-host=host.docker.internal:host-gateway` so that name resolves on Linux
+  too, not just Docker Desktop; and `assertAppIsBuilt()` is skipped in image
+  mode, since there is no local build to assert on. **Verified live**: the full
+  suite against a locally-built `app` image produces the identical pass/fail set
+  as the binary path, so the two modes are interchangeable.
 
 Covered today: blank-instance bootstrap sign-up landing on `/onboarding`, the
 sign-up→sign-in redirect once an account exists, clicking the whole onboarding
@@ -1174,6 +1189,36 @@ push/splice-mutated row list anywhere in this app, copy that shape (or the
 now-fixed three), never `$derived`.
 
 ### Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-release-binaries.ts`)
+
+**The CI pipeline builds each image once and reuses it.** Both
+`pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
+`docker.yaml` (per image) → `e2e.yaml` → `docker-manifest.yaml` (per image) →
+gate/release. The split between the last two is the point : `docker.yaml` pushes
+**by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
+`docker pull` that exact digest and run Playwright against the real artefact,
+and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`,
+`vX.Y.Z`, `latest`). Nothing anyone can pull by name is ever published before
+e2e has passed against it, and the app is built once per platform instead of
+once for the image plus again from source for the tests. The per-platform
+digests and the `docker-metadata-action` bake file travel between those
+workflows as run artefacts, which is why they must stay in one workflow run
+(`uses:`, not a separate `workflow_run`). Both arches build natively
+(`ubuntu-24.04-arm` for arm64), never under QEMU.
+
+Three consequences worth not re-deriving: **a fork builds but publishes
+nothing** — `push: false` makes the build `type=cacheonly`, so no digest
+artefact exists, which is why `e2e.yaml` takes a `pulled` input and falls back
+to `bun run build:app`, and why every manifest job is gated on the PR not coming
+from a fork. **`pr-cleanup.yaml`** deletes the three `pr-<n>` tags when a PR
+closes, so the Docker Hub repos don't accumulate one per pull request; a 404
+there is normal (e2e failed, so the tag was never created). And
+**`code_quality.yaml` no longer runs e2e at all** — it is `lint` +
+`docs-check` + `ts-test` only, with the heavy gates (`lint:ts`, `lint:tailwind`,
+`check`, `test:unit`) skipped inside prek via `SKIP` and run as their own named
+steps instead, so a red run names the gate that broke rather than burying it in
+one `prek` log. Its `Codegen is current` step runs `bun run gen` and fails on
+any resulting diff, which is what keeps `openapi.json`, `homerun.schema.json`
+and `packages/cli/generated/` from silently going stale after a REST API change.
 
 `semantic-release`, driven by conventional-commit messages (this repo's commits
 already follow `feat:`/`fix:`/`chore:`, no new discipline required). Runs as a

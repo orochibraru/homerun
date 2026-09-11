@@ -15,6 +15,9 @@ permissions:
   contents: read
   packages: write
 
+# code quality → build (by digest) → e2e against that exact image → tag
+# `pr-<number>`. The images are built once and reused, and nothing is published
+# under a pullable tag until e2e has passed.
 jobs:
   code_quality:
     name: Code Quality
@@ -32,7 +35,10 @@ jobs:
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
-      push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      # Forks get no secrets; the build still warms the cache.
+      push:
+        ${{ github.event.pull_request.head.repo.full_name == github.repository
+        }}
       image_name: orochibraru/homerun
       registry_name: docker.io
       registry_username: orochibraru
@@ -46,7 +52,9 @@ jobs:
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
-      push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      push:
+        ${{ github.event.pull_request.head.repo.full_name == github.repository
+        }}
       image_name: orochibraru/homerun-agent
       registry_name: docker.io
       registry_username: orochibraru
@@ -60,7 +68,64 @@ jobs:
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
-      push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      push:
+        ${{ github.event.pull_request.head.repo.full_name == github.repository
+        }}
+      image_name: orochibraru/homerun-docs
+      registry_name: docker.io
+      registry_username: orochibraru
+      bake_target: docs-ci
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+  e2e:
+    name: E2E
+    needs: [build-app]
+    uses: ./.github/workflows/e2e.yaml
+    with:
+      image: ${{ needs.build-app.outputs.image }}
+      registry_name: docker.io
+      registry_username: orochibraru
+      bake_target: app-ci
+      pulled:
+        ${{ github.event.pull_request.head.repo.full_name == github.repository
+        }}
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+  publish-app:
+    name: Publish App pr-${{ github.event.pull_request.number }}
+    needs: [e2e]
+    # A fork pushed no digests.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/docker-manifest.yaml
+    with:
+      image_name: orochibraru/homerun
+      registry_name: docker.io
+      registry_username: orochibraru
+      bake_target: app-ci
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+  publish-agent:
+    name: Publish Agent pr-${{ github.event.pull_request.number }}
+    needs: [e2e, build-agent]
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/docker-manifest.yaml
+    with:
+      image_name: orochibraru/homerun-agent
+      registry_name: docker.io
+      registry_username: orochibraru
+      bake_target: agent-ci
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+  publish-docs:
+    name: Publish Docs pr-${{ github.event.pull_request.number }}
+    needs: [e2e, build-docs]
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/docker-manifest.yaml
+    with:
       image_name: orochibraru/homerun-docs
       registry_name: docker.io
       registry_username: orochibraru
@@ -71,12 +136,31 @@ jobs:
   gate:
     name: CI Gate
     if: always()
-    needs: [code_quality, binaries, build-app, build-agent, build-docs]
+    needs:
+      - code_quality
+      - binaries
+      - build-app
+      - build-agent
+      - build-docs
+      - e2e
+      - publish-app
+      - publish-agent
+      - publish-docs
     runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |
-          results=("${{ needs.code_quality.result }}" "${{ needs.binaries.result }}" "${{ needs.build-app.result }}" "${{ needs.build-agent.result }}" "${{ needs.build-docs.result }}")
+          results=(
+            "${{ needs.code_quality.result }}"
+            "${{ needs.binaries.result }}"
+            "${{ needs.build-app.result }}"
+            "${{ needs.build-agent.result }}"
+            "${{ needs.build-docs.result }}"
+            "${{ needs.e2e.result }}"
+            "${{ needs.publish-app.result }}"
+            "${{ needs.publish-agent.result }}"
+            "${{ needs.publish-docs.result }}"
+          )
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
               echo "::error::One or more jobs failed or were cancelled"
