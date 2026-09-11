@@ -2767,6 +2767,36 @@ also DB-editable, see Instance settings above) sets better-auth's
 instead of the exact host, see the per-service auth gate below for why, and its
 documented, tested limitation.
 
+**`advanced.useSecureCookies` is set explicitly from `config.auth.origin`'s
+scheme, and it has to be.** Real, reproduced bug, not a precaution: sign-in on
+an instance reached over plain HTTP at a bare IP (`http://<ip>:3000`, exactly
+what the installer's `--mode=full` produces) returned 200 and toasted "Signed in
+successfully", but the button stayed stuck on "Signing in…" forever and the user
+never reached the dashboard. better-auth derives the secure-cookie flag through
+a fallback chain (`cookies/index.mjs`'s `createCookieGetter`): explicit
+`useSecureCookies`, else `baseURL`'s protocol, else **`isProduction`**. This app
+deliberately never pins `baseURL` (see the long comment in `auth.ts` for the
+lockout that causes), so a deployed container (`NODE_ENV=production`) fell
+through to `isProduction` and issued
+`__Secure-better-auth.session_token; Secure`. A browser on plain HTTP at a bare
+IP silently **discards** that cookie twice over : `Secure` requires a secure
+context (only `localhost`/`127.0.0.1` are exempt, an IP is not), and the
+`__Secure-` prefix independently requires both. So the POST succeeded, no cookie
+was ever stored, `locals.user` stayed empty on the next request, the sign-in
+page's `load` never threw its `redirect(302, resolve("/"))`, `refreshAll()` had
+no redirect to act on, and `loading` is only ever reset in `catch` or
+`onNavigate` : hence a success toast over a permanently spinning button.
+**Verified by A/B against a real production build on a real LAN IP**, reading
+the actual `Set-Cookie`: pre-fix + `ORIGIN=http://<ip>:3000` →
+`__Secure-…; Secure`; fixed → `better-auth.session_token` with no `Secure`;
+fixed + `ORIGIN=https://…` → `__Secure-…; Secure` again, so an HTTPS deployment
+is not downgraded. The full chain was then driven end to end: sign-in stores the
+cookie, `get-session` returns the session, and `/auth/sign-in`'s data request
+answers `{"type":"redirect","location":"../../"}`, which is what `client.js`'s
+`_invalidate` turns into the `_goto` that un-sticks the button. The branch is
+skipped entirely when `config.auth.origin` is unset, leaving better-auth's own
+`isProduction` default rather than guessing.
+
 Rate limiting is on outside `vite dev`: 100 requests per IP per 15 minutes
 overall, plus the `apiKey()` plugin's own 300/minute. **Real, tested finding**:
 better-auth also applies an undocumented-in-config "special rule" (its
