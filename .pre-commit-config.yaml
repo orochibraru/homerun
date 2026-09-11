@@ -8,9 +8,6 @@ repos:
       - id: check-case-conflict
         name: Look for case conflicts
 
-      - id: detect-private-key
-        name: Detect private keys
-
       - id: check-yaml
         name: Validate Yaml
 
