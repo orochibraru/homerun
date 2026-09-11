@@ -2,7 +2,7 @@
 	import { Eye, EyeOff, Server } from "@lucide/svelte";
 	import { onDestroy, onMount } from "svelte";
 	import { toast } from "svelte-sonner";
-	import { goto, onNavigate } from "$app/navigation";
+	import { goto, onNavigate, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { signIn, useSession } from "$lib/auth-client";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -41,7 +41,7 @@
 					error.message ?? "Invalid credentials. Please try again.",
 				);
 			}
-			goto(resolve("/"));
+			await refreshAll({ includeLoadFunctions: true });
 		} catch (e) {
 			password = "";
 			loading = false;
@@ -226,7 +226,10 @@
                                 class="w-full"
                                 disabled={loading}
                                 onclick={() =>
-                                handleOauthSignIn(provider.name, provider.label)}
+                                    handleOauthSignIn(
+                                        provider.name,
+                                        provider.label,
+                                    )}
                                 variant="outline"
                             >
                                 Continue with {provider.label}

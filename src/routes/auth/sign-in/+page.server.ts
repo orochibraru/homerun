@@ -4,10 +4,13 @@ import { config } from "$lib/config";
 import { offCanonicalOrigin } from "$lib/server/canonical-origin";
 import { AdminService } from "$lib/services/admin.service";
 
-export const load = async ({ request, url }) => {
+export const load = async ({ request, url, locals }) => {
 	const hasUsers = await AdminService.hasAnyUser();
 	if (!hasUsers) {
 		throw redirect(302, resolve("/auth/sign-up"));
+	}
+	if (locals.user) {
+		throw redirect(302, resolve("/"));
 	}
 	const canonicalOrigin = offCanonicalOrigin(request, url);
 	return {
