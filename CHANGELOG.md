@@ -1,3 +1,14 @@
+## [1.0.12](https://github.com/orochibraru/homerun/compare/v1.0.11...v1.0.12) (2026-09-11)
+
+### Bug Fixes
+
+- precommit & signin flow
+  ([3259623](https://github.com/orochibraru/homerun/commit/3259623e85e5b152051474ec7fc78adde0686608))
+- prek
+  ([acd16a2](https://github.com/orochibraru/homerun/commit/acd16a2d3e2589aaf10cfbe755f9d38048142a6e))
+- sveltekit sync before tests
+  ([ddcffaa](https://github.com/orochibraru/homerun/commit/ddcffaafbbe88143c454dbbca458b7a92b87efd8))
+
 ## [1.0.11](https://github.com/orochibraru/homerun/compare/v1.0.10...v1.0.11) (2026-09-09)
 
 ### Bug Fixes
