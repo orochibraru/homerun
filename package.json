@@ -113,7 +113,7 @@
 		"lint:fix:ts": "biome check --write --unsafe",
 		"lint:md": "markdownlint-cli2 \"**/*.md\"",
 		"lint:tailwind": "tailwint",
-		"lint:ts": "biome check",
+		"lint:ts": "biome check --error-on-warnings",
 		"preinstall": "bunx only-allow bun",
 		"prepare": "prek install --allow-missing-config || true",
 		"preview": "vite preview",

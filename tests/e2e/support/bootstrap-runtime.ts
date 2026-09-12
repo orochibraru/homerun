@@ -1,25 +1,35 @@
 import { randomBytes } from "node:crypto";
 import process from "node:process";
+import {
+	imageUnderTest,
+	startAppContainer,
+} from "../../integration/support/app-container";
 import { runMigrations } from "../../integration/support/migrate";
 import { startTestPostgres } from "../../integration/support/postgres";
 import { assertAppIsBuilt, spawnApp } from "../../integration/support/server";
 import { E2E_BASE_URL, E2E_PORT } from "./config";
 
 async function main(): Promise<void> {
-	assertAppIsBuilt();
+	const image = imageUnderTest();
+	if (!image) {
+		assertAppIsBuilt();
+	}
 
 	const pg = await startTestPostgres();
 	await runMigrations(pg.databaseUrl);
 
 	process.env.HOMERUN_DISABLE_AUTH_RATE_LIMIT = "1";
 
-	const app = await spawnApp({
+	const options = {
 		authSecret: randomBytes(32).toString("hex"),
 		baseDomain: "localhost",
 		databaseUrl: pg.databaseUrl,
 		origin: E2E_BASE_URL,
 		port: E2E_PORT,
-	});
+	};
+	const app = image
+		? await startAppContainer(image, options)
+		: await spawnApp(options);
 
 	let shuttingDown = false;
 	process.on("SIGTERM", () => {
@@ -34,7 +44,9 @@ async function main(): Promise<void> {
 		})();
 	});
 
-	console.log(`READY ${JSON.stringify({ baseUrl: E2E_BASE_URL })}`);
+	console.log(
+		`READY ${JSON.stringify({ baseUrl: E2E_BASE_URL, image: image ?? null })}`,
+	);
 }
 
 main().catch((err) => {

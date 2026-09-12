@@ -95,12 +95,32 @@ repos:
         language: system
         types: [markdown]
 
+      - id: lint-ts
+        name: Lint (TS)
+        entry: bun run lint:ts
+        language: system
+        files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html)$
+
+      - id: lint-tailwind
+        name: Lint (Tailwind)
+        entry: bun run lint:tailwind
+        language: system
+        pass_filenames: false
+        files: \.(tsx|jsx|html|vue|svelte|astro|mdx|css)$
+
       - id: test-unit
         name: Unit Tests
         entry: bun run test:unit
         language: system
         pass_filenames: false
         files: ^(src/|test\.setup\.ts$|bunfig\.toml$)
+
+      - id: check
+        name: Type Check
+        entry: bun run check
+        language: system
+        pass_filenames: false
+        files: ^(src/|packages/|scripts/|tests/|vite\.config\.ts$|tsconfig.*\.json$)
 
   - repo: local
     hooks:
