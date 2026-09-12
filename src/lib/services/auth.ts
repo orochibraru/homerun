@@ -68,8 +68,8 @@ if (!(process.env.ORIGIN || dev || building)) {
 function buildAuth() {
 	return betterAuth({
 		advanced: {
-			...(config.auth.origin
-				? { useSecureCookies: config.auth.origin.startsWith("https://") }
+			...(process.env.ORIGIN
+				? { useSecureCookies: process.env.ORIGIN.startsWith("https://") }
 				: {}),
 			// Opt-in (AUTH_CROSS_SUBDOMAIN=true) : see config.ts for the tradeoff.
 			// Required for a signed-in admin to be recognized on a gated deployed

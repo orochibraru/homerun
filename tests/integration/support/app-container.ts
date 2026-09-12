@@ -3,6 +3,17 @@ import { ciTimeout } from "./ci";
 import type { SpawnAppOptions, SpawnedApp } from "./server";
 
 /**
+ * A fixed name, not a unique one, so a container left behind by a crashed or
+ * killed run is found and removed by the next one rather than holding the
+ * suite's fixed port until the runner is recycled. CI retries the whole suite
+ * up to three times, and a leaked container made every retry fail on
+ * `Bind for 0.0.0.0:4310 failed: port is already allocated` before the app
+ * could start. Safe because the suite already can't run twice concurrently on
+ * one machine, for the same fixed-port reason (see tests/e2e/support/config.ts).
+ */
+const E2E_CONTAINER_NAME = "homerun-e2e-app";
+
+/**
  * The image under test, set by CI to the exact digest `docker.yaml` pushed
  * (`<registry>/<image>@sha256:<digest>`). Unset locally, where the suite falls
  * back to spawning the `build/server` binary instead, see `spawnAppOrContainer`.
@@ -57,8 +68,8 @@ export async function startAppContainer(
 	image: string,
 	options: SpawnAppOptions,
 ): Promise<SpawnedApp> {
-	const name = `homerun-e2e-${Date.now().toString(36)}`;
-	await dockerRemove(name);
+	await dockerRemove(E2E_CONTAINER_NAME);
+	const name = E2E_CONTAINER_NAME;
 
 	const proc = Bun.spawn(
 		[

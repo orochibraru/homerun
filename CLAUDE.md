@@ -1153,9 +1153,17 @@ load-bearing parts:
   (a container's own `localhost` is itself, not the host) and it is started with
   `--add-host=host.docker.internal:host-gateway` so that name resolves on Linux
   too, not just Docker Desktop; and `assertAppIsBuilt()` is skipped in image
-  mode, since there is no local build to assert on. **Verified live**: the full
-  suite against a locally-built `app` image produces the identical pass/fail set
-  as the binary path, so the two modes are interchangeable.
+  mode, since there is no local build to assert on. The container also runs
+  under a **fixed** name (`homerun-e2e-app`), removed before each start rather
+  than given a unique one : a container left behind by a crashed or killed run
+  otherwise holds the suite's fixed port forever, and CI's three whole-suite
+  retries all failed on
+  `Bind for 0.0.0.0:4310 failed: port is already allocated` before the app could
+  even start. Safe for the same reason the port is fixed, this suite already
+  can't run twice concurrently on one machine. **Verified live**: the full suite
+  against a locally-built `app` image passes 23/23, and passes again with a
+  leaked container already holding 4310, which is the retry case that was
+  failing.
 
 Covered today: blank-instance bootstrap sign-up landing on `/onboarding`, the
 sign-up→sign-in redirect once an account exists, clicking the whole onboarding
@@ -2812,7 +2820,7 @@ also DB-editable, see Instance settings above) sets better-auth's
 instead of the exact host, see the per-service auth gate below for why, and its
 documented, tested limitation.
 
-**`advanced.useSecureCookies` is set explicitly from `config.auth.origin`'s
+**`advanced.useSecureCookies` is set explicitly from the `ORIGIN` env var's
 scheme, and it has to be.** Real, reproduced bug, not a precaution: sign-in on
 an instance reached over plain HTTP at a bare IP (`http://<ip>:3000`, exactly
 what the installer's `--mode=full` produces) returned 200 and toasted "Signed in
@@ -2839,8 +2847,26 @@ is not downgraded. The full chain was then driven end to end: sign-in stores the
 cookie, `get-session` returns the session, and `/auth/sign-in`'s data request
 answers `{"type":"redirect","location":"../../"}`, which is what `client.js`'s
 `_invalidate` turns into the `_goto` that un-sticks the button. The branch is
-skipped entirely when `config.auth.origin` is unset, leaving better-auth's own
+skipped entirely when `ORIGIN` is unset, leaving better-auth's own
 `isProduction` default rather than guessing.
+
+**It reads `process.env.ORIGIN`, never `config.auth.origin`, and that
+distinction is load-bearing.** The first version of this fix derived the flag
+from `config.auth.origin`, which is a _mutable, user-editable setting_ : saving
+it calls `applyInstanceSettings()` + `rebuildAuth()`, and flipping
+`useSecureCookies` renames the cookie (`better-auth.session_token` ↔
+`__Secure-better-auth.session_token`), so every live session is instantly
+unreadable. Concretely, and caught by e2e rather than by reading the code :
+onboarding's "Use HTTPS" checkbox defaults to **on** whenever
+`settings.authOrigin` is still null (a fresh instance), so clicking through the
+wizard with defaults saved `https://…`, flipped the flag, renamed the cookie,
+and **signed the admin out onto `/auth/sign-in` at the exact moment they
+finished setting the instance up**. `ORIGIN` is the right source because it is
+how the app is actually _served_ (compose.prod.yaml requires it, the installer
+sets it, the e2e harness sets it) and is immutable for the process lifetime, so
+no settings save can ever rename a cookie out from under a signed-in user. If a
+deployment genuinely changes scheme, that's a restart, which is the correct
+blast radius for a cookie-security change.
 
 Rate limiting is on outside `vite dev`: 100 requests per IP per 15 minutes
 overall, plus the `apiKey()` plugin's own 300/minute. **Real, tested finding**:
