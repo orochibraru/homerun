@@ -1141,6 +1141,29 @@ load-bearing parts:
 - **`bunfig.toml` excludes it from `bun test`**
   (`pathIgnorePatterns = ["**/tests/e2e/**"]`), these specs match `bun test`'s
   own `*.spec.ts` discovery and would otherwise be picked up and fail there.
+- **`E2E_IMAGE` runs the suite against a built Docker image instead of the local
+  `build/server` binary** (`tests/integration/support/app-container.ts`'s
+  `startAppContainer`, chosen by `bootstrap-runtime.ts` when the variable is
+  set). This is how CI tests the exact artefact it is about to publish rather
+  than a second build of the same source, see the CI pipeline note under Release
+  automation below. Everything else about the harness is unchanged : the same
+  throwaway Postgres, the same migrations, the same fixed port, the same
+  health-check wait. Two details are load-bearing : the container's
+  `DATABASE_URL` has `localhost`/`127.0.0.1` rewritten to `host.docker.internal`
+  (a container's own `localhost` is itself, not the host) and it is started with
+  `--add-host=host.docker.internal:host-gateway` so that name resolves on Linux
+  too, not just Docker Desktop; and `assertAppIsBuilt()` is skipped in image
+  mode, since there is no local build to assert on. The container also runs
+  under a **fixed** name (`homerun-e2e-app`), removed before each start rather
+  than given a unique one : a container left behind by a crashed or killed run
+  otherwise holds the suite's fixed port forever, and CI's three whole-suite
+  retries all failed on
+  `Bind for 0.0.0.0:4310 failed: port is already allocated` before the app could
+  even start. Safe for the same reason the port is fixed, this suite already
+  can't run twice concurrently on one machine. **Verified live**: the full suite
+  against a locally-built `app` image passes 23/23, and passes again with a
+  leaked container already holding 4310, which is the retry case that was
+  failing.
 
 Covered today: blank-instance bootstrap sign-up landing on `/onboarding`, the
 sign-up→sign-in redirect once an account exists, clicking the whole onboarding
@@ -1174,6 +1197,36 @@ push/splice-mutated row list anywhere in this app, copy that shape (or the
 now-fixed three), never `$derived`.
 
 ### Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-release-binaries.ts`)
+
+**The CI pipeline builds each image once and reuses it.** Both
+`pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
+`docker.yaml` (per image) → `e2e.yaml` → `docker-manifest.yaml` (per image) →
+gate/release. The split between the last two is the point : `docker.yaml` pushes
+**by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
+`docker pull` that exact digest and run Playwright against the real artefact,
+and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`,
+`vX.Y.Z`, `latest`). Nothing anyone can pull by name is ever published before
+e2e has passed against it, and the app is built once per platform instead of
+once for the image plus again from source for the tests. The per-platform
+digests and the `docker-metadata-action` bake file travel between those
+workflows as run artefacts, which is why they must stay in one workflow run
+(`uses:`, not a separate `workflow_run`). Both arches build natively
+(`ubuntu-24.04-arm` for arm64), never under QEMU.
+
+Three consequences worth not re-deriving: **a fork builds but publishes
+nothing** — `push: false` makes the build `type=cacheonly`, so no digest
+artefact exists, which is why `e2e.yaml` takes a `pulled` input and falls back
+to `bun run build:app`, and why every manifest job is gated on the PR not coming
+from a fork. **`pr-cleanup.yaml`** deletes the three `pr-<n>` tags when a PR
+closes, so the Docker Hub repos don't accumulate one per pull request; a 404
+there is normal (e2e failed, so the tag was never created). And
+**`code_quality.yaml` no longer runs e2e at all** — it is `lint` +
+`docs-check` + `ts-test` only, with the heavy gates (`lint:ts`, `lint:tailwind`,
+`check`, `test:unit`) skipped inside prek via `SKIP` and run as their own named
+steps instead, so a red run names the gate that broke rather than burying it in
+one `prek` log. Its `Codegen is current` step runs `bun run gen` and fails on
+any resulting diff, which is what keeps `openapi.json`, `homerun.schema.json`
+and `packages/cli/generated/` from silently going stale after a REST API change.
 
 `semantic-release`, driven by conventional-commit messages (this repo's commits
 already follow `feat:`/`fix:`/`chore:`, no new discipline required). Runs as a
@@ -2766,6 +2819,54 @@ also DB-editable, see Instance settings above) sets better-auth's
 `advanced.crossSubDomainCookies` to scope the session cookie to `.{baseDomain}`
 instead of the exact host, see the per-service auth gate below for why, and its
 documented, tested limitation.
+
+**`advanced.useSecureCookies` is set explicitly from the `ORIGIN` env var's
+scheme, and it has to be.** Real, reproduced bug, not a precaution: sign-in on
+an instance reached over plain HTTP at a bare IP (`http://<ip>:3000`, exactly
+what the installer's `--mode=full` produces) returned 200 and toasted "Signed in
+successfully", but the button stayed stuck on "Signing in…" forever and the user
+never reached the dashboard. better-auth derives the secure-cookie flag through
+a fallback chain (`cookies/index.mjs`'s `createCookieGetter`): explicit
+`useSecureCookies`, else `baseURL`'s protocol, else **`isProduction`**. This app
+deliberately never pins `baseURL` (see the long comment in `auth.ts` for the
+lockout that causes), so a deployed container (`NODE_ENV=production`) fell
+through to `isProduction` and issued
+`__Secure-better-auth.session_token; Secure`. A browser on plain HTTP at a bare
+IP silently **discards** that cookie twice over : `Secure` requires a secure
+context (only `localhost`/`127.0.0.1` are exempt, an IP is not), and the
+`__Secure-` prefix independently requires both. So the POST succeeded, no cookie
+was ever stored, `locals.user` stayed empty on the next request, the sign-in
+page's `load` never threw its `redirect(302, resolve("/"))`, `refreshAll()` had
+no redirect to act on, and `loading` is only ever reset in `catch` or
+`onNavigate` : hence a success toast over a permanently spinning button.
+**Verified by A/B against a real production build on a real LAN IP**, reading
+the actual `Set-Cookie`: pre-fix + `ORIGIN=http://<ip>:3000` →
+`__Secure-…; Secure`; fixed → `better-auth.session_token` with no `Secure`;
+fixed + `ORIGIN=https://…` → `__Secure-…; Secure` again, so an HTTPS deployment
+is not downgraded. The full chain was then driven end to end: sign-in stores the
+cookie, `get-session` returns the session, and `/auth/sign-in`'s data request
+answers `{"type":"redirect","location":"../../"}`, which is what `client.js`'s
+`_invalidate` turns into the `_goto` that un-sticks the button. The branch is
+skipped entirely when `ORIGIN` is unset, leaving better-auth's own
+`isProduction` default rather than guessing.
+
+**It reads `process.env.ORIGIN`, never `config.auth.origin`, and that
+distinction is load-bearing.** The first version of this fix derived the flag
+from `config.auth.origin`, which is a _mutable, user-editable setting_ : saving
+it calls `applyInstanceSettings()` + `rebuildAuth()`, and flipping
+`useSecureCookies` renames the cookie (`better-auth.session_token` ↔
+`__Secure-better-auth.session_token`), so every live session is instantly
+unreadable. Concretely, and caught by e2e rather than by reading the code :
+onboarding's "Use HTTPS" checkbox defaults to **on** whenever
+`settings.authOrigin` is still null (a fresh instance), so clicking through the
+wizard with defaults saved `https://…`, flipped the flag, renamed the cookie,
+and **signed the admin out onto `/auth/sign-in` at the exact moment they
+finished setting the instance up**. `ORIGIN` is the right source because it is
+how the app is actually _served_ (compose.prod.yaml requires it, the installer
+sets it, the e2e harness sets it) and is immutable for the process lifetime, so
+no settings save can ever rename a cookie out from under a signed-in user. If a
+deployment genuinely changes scheme, that's a restart, which is the correct
+blast radius for a cookie-security change.
 
 Rate limiting is on outside `vite dev`: 100 requests per IP per 15 minutes
 overall, plus the `apiKey()` plugin's own 300/minute. **Real, tested finding**:

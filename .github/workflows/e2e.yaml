@@ -1,0 +1,123 @@
+name: E2E
+# Runs Playwright against the image `docker.yaml` just built, rather than
+# building the app a second time from source. Forks push no digest, so
+# `pulled: false` falls back to a local `bun run build:app`.
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        description: "Registry path of the image under test, without a tag"
+        type: string
+      registry_name:
+        required: true
+        type: string
+      registry_username:
+        required: true
+        type: string
+      bake_target:
+        required: true
+        description: "Target whose amd64 digest artefact should be pulled"
+        type: string
+      pulled:
+        required: false
+        default: true
+        description:
+          "False when no image was pushed (forks), forcing a local build"
+        type: boolean
+    secrets:
+      registry_password:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  TZ: Europe/Paris
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CI: true
+  NO_COLOR: "1"
+
+jobs:
+  e2e:
+    name: Tests (E2E)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: homerun
+          POSTGRES_PASSWORD: homerun
+          POSTGRES_DB: homerun_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U homerun -d homerun_test" --health-interval
+          5s --health-timeout 5s --health-retries 20
+    env:
+      HOMERUN_TEST_POSTGRES_URL: postgres://homerun:homerun@127.0.0.1:5432/homerun_test
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Login to Container registry
+        if: inputs.pulled
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ inputs.registry_name }}
+          username: ${{ inputs.registry_username }}
+          password: ${{ secrets.registry_password }}
+
+      # The digest artefact is a single empty file named after the digest.
+      - name: Download amd64 digest
+        if: inputs.pulled
+        uses: orochibraru/download-artifact@v8
+        with:
+          name: digests-${{ inputs.bake_target }}-linux-amd64
+          path: ${{ runner.temp }}/digest
+
+      - name: Resolve and pull the image under test
+        if: inputs.pulled
+        run: |
+          digest="$(find "${{ runner.temp }}/digest" -type f -printf '%f\n' | head -n1)"
+          if [ -z "$digest" ]; then
+            echo "::error::No digest artefact found for ${{ inputs.bake_target }} (linux/amd64)"
+            exit 1
+          fi
+          ref="${{ inputs.image }}@sha256:${digest}"
+          echo "Testing $ref"
+          docker pull "$ref"
+          echo "E2E_IMAGE=$ref" >> "$GITHUB_ENV"
+
+      # Only reached on a fork, where no image was pushed to pull.
+      - name: Build app from source
+        if: ${{ !inputs.pulled }}
+        run: bun run build:app
+
+      - name: Install Playwright's Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Tests (E2E)
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_on: any
+          command: bun run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: orochibraru/upload-artifact@v8
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7

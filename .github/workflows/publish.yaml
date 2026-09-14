@@ -117,6 +117,54 @@ jobs:
     with:
       version: ${{ needs.version.outputs.version }}
 
+  e2e:
+    name: E2E
+    needs: [build-app]
+    uses: ./.github/workflows/e2e.yaml
+    with:
+      image: ${{ needs.build-app.outputs.image }}
+      registry_name: docker.io
+      registry_username: orochibraru
+      bake_target: app-ci
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+  publish-app:
+    name: Publish App ${{ needs.version.outputs.tag }}
+    needs: [version, e2e]
+    uses: ./.github/workflows/docker-manifest.yaml
+    with:
+      image_name: orochibraru/homerun
+      registry_name: docker.io
+      registry_username: orochibraru
+      bake_target: app-ci
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+  publish-agent:
+    name: Publish Agent ${{ needs.version.outputs.tag }}
+    needs: [version, e2e, build-agent]
+    uses: ./.github/workflows/docker-manifest.yaml
+    with:
+      image_name: orochibraru/homerun-agent
+      registry_name: docker.io
+      registry_username: orochibraru
+      bake_target: agent-ci
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
+  publish-docs:
+    name: Publish Docs ${{ needs.version.outputs.tag }}
+    needs: [version, e2e, build-docs]
+    uses: ./.github/workflows/docker-manifest.yaml
+    with:
+      image_name: orochibraru/homerun-docs
+      registry_name: docker.io
+      registry_username: orochibraru
+      bake_target: docs-ci
+    secrets:
+      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+
   release:
     name: Release
     runs-on: ubuntu-latest
@@ -127,6 +175,10 @@ jobs:
       - build-agent
       - build-docs
       - binaries
+      - e2e
+      - publish-app
+      - publish-agent
+      - publish-docs
     permissions:
       contents: write
       issues: write

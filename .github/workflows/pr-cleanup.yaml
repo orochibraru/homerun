@@ -1,0 +1,67 @@
+name: PR Cleanup
+# Deletes the `pr-<number>` tags once the PR is closed or merged, so the three
+# Docker Hub repos don't accumulate a tag per pull request.
+
+on:
+  pull_request:
+    types: [closed]
+
+concurrency:
+  group: pr-cleanup-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TZ: Europe/Paris
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CI: true
+
+jobs:
+  delete-image:
+    name: Delete pr-${{ github.event.pull_request.number }} images
+    # A fork never published one.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repository:
+          - orochibraru/homerun
+          - orochibraru/homerun-agent
+          - orochibraru/homerun-docs
+    steps:
+      - name: Delete the tag from Docker Hub
+        env:
+          DOCKER_HUB_USERNAME: orochibraru
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+          REPOSITORY: ${{ matrix.repository }}
+          TAG: pr-${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          token="$(
+            curl -fsS -X POST https://hub.docker.com/v2/users/login/ \
+              -H 'Content-Type: application/json' \
+              -d "$(jq -nc --arg u "$DOCKER_HUB_USERNAME" --arg p "$DOCKER_HUB_TOKEN" \
+                    '{username: $u, password: $p}')" \
+              | jq -r .token
+          )"
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "::error::Could not authenticate against Docker Hub"
+            exit 1
+          fi
+
+          status="$(
+            curl -sS -o /dev/null -w '%{http_code}' -X DELETE \
+              -H "Authorization: JWT $token" \
+              "https://hub.docker.com/v2/repositories/${REPOSITORY}/tags/${TAG}/"
+          )"
+
+          case "$status" in
+            # 404 is normal: e2e failed, so the tag was never published.
+            204|202) echo "Deleted ${REPOSITORY}:${TAG}" ;;
+            404) echo "No ${REPOSITORY}:${TAG} to delete" ;;
+            *) echo "::error::Deleting ${REPOSITORY}:${TAG} failed with HTTP ${status}"; exit 1 ;;
+          esac

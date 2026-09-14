@@ -1,4 +1,6 @@
 name: Code Quality
+# Static checks and unit/integration tests. E2E lives in `e2e.yaml`, so it can
+# run against the already-built image instead of a second build from source.
 on:
   workflow_call:
 
@@ -22,18 +24,52 @@ jobs:
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
 
-      # The hooks shell out to the repo's own tooling (bun run gen, bunx
-      # biome/prettier/markdownlint/tailwint), so deps have to exist first.
+      # The hooks shell out to the repo's own tooling (bun run gen, biome,
+      # prettier, markdownlint, tailwint, svelte-check), so deps have to exist
+      # first.
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      # Same .pre-commit-config.yaml the local pre-commit hook runs: actionlint,
-      # biome, prettier + markdownlint on markdown, tailwint, a regen of the
-      # derived openapi/CLI-types/config-schema files, and svelte-check/tsc over
-      # the app and every sub-project. The fixer hooks autofix in place, so CI
-      # fails on any file one of them had to modify, with the diff printed.
+      # $lib resolves through .svelte-kit/tsconfig.json's paths, which is
+      # generated and gitignored. The test/check scripts sync it themselves;
+      # this keeps the rest of the hooks honest on a cold checkout too.
+      - name: Sync SvelteKit
+        run: bun run svelte-kit sync
+
+      # Same .pre-commit-config.yaml the local pre-commit hook runs: hygiene,
+      # actionlint, hadolint, gitleaks, typos, and the formatters. The fixer
+      # hooks autofix in place, so CI fails on any file one of them had to
+      # modify. --no-fail-fast reports every failing hook in one run rather
+      # than stopping at the first. The heavy gates below are skipped here and
+      # run as their own named steps, so a failure says which gate broke.
       - name: Run prek
         uses: j178/prek-action@v3.0.0
+        env:
+          SKIP: lint-ts,lint-tailwind,test-unit,check
+        with:
+          extra-args: --all-files --no-fail-fast
+
+      - name: Lint (TS)
+        run: bun run lint:ts
+
+      - name: Lint (MD)
+        run: bun run lint:md
+
+      - name: Lint (Tailwind)
+        run: bun run lint:tailwind
+
+      - name: Type check
+        run: bun run check
+
+      # openapi.json, the CLI's generated types and the config JSON schema are
+      # derived from source. Regenerating has to be a no-op on a clean tree.
+      - name: Codegen is current
+        run: |
+          bun run gen
+          if ! git diff --exit-code -- openapi.json homerun.schema.json packages/cli/generated; then
+            echo "::error::Generated files are stale : run 'bun run gen' and commit the result."
+            exit 1
+          fi
 
   docs-check:
     name: Docs (Checks)
@@ -110,43 +146,3 @@ jobs:
           path: coverage/
           if-no-files-found: warn
           retention-days: 14
-
-  e2e:
-    name: Tests (E2E)
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: homerun
-          POSTGRES_PASSWORD: homerun
-          POSTGRES_DB: homerun_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U homerun -d homerun_test" --health-interval
-          5s --health-timeout 5s --health-retries 20
-    env:
-      HOMERUN_TEST_POSTGRES_URL: postgres://homerun:homerun@127.0.0.1:5432/homerun_test
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      - name: Build App
-        run: bun run build:app
-
-      - name: Install Playwright's Chromium
-        run: bunx playwright install --with-deps chromium
-
-      - name: Tests (E2E)
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 3
-          timeout_minutes: 30
-          retry_on: any
-          command: bun run test:e2e
