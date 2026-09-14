@@ -37,9 +37,11 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   confirmation before anything destructive runs
 - **Projects**: group services under one Docker network so they reach each other
   by slug (`http://api:8080`), independent of the shared Traefik network
-- **Templates**: one-click deploys for common services (Redis, Postgres, MySQL,
-  MongoDB, Adminer, Uptime Kuma, n8n, Vaultwarden), plus save any service's
-  config as your own reusable template
+- **Templates**: a built-in catalog of ~58 common self-hosted apps (Jellyfin,
+  the *arr stack, Pi-hole, Vaultwarden, Grafana, Uptime Kuma, PostgreSQL, Redis,
+  n8n and more) with real app logos, one-click **Quick Deploy**, companion
+  containers that come along with the primary (WordPress pulls MySQL), plus save
+  any service's config as your own reusable template
 - **Storage volumes**: define bind-mount paths or Docker-managed volumes once,
   mount into one or more services
 - **Compose import**: paste a `docker-compose.yaml` and turn its services,
@@ -72,25 +74,45 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   [`homerun` CLI](packages/cli/README.md) built against the generated OpenAPI
   types
 - **Users, roles & invites**: admin/developer roles, email or direct-create
-  invites, optional OAuth/OIDC login
+  invites, and OAuth/OIDC sign-in with one-click presets for Pocket ID,
+  Keycloak, Authelia, Authentik, Logto, Zitadel and Kanidm
+- **Git provider accounts**: connect GitHub, GitLab, self-hosted Gitea or
+  Bitbucket and browse your repos from the service form instead of pasting URLs
+- **Operations**: live Traefik logs with restart/update from the dashboard, a
+  job-queue and scheduling overview, and setup diagnostics that deep-link
+  straight to the setting that's wrong
 - **Per-service auth gate & account isolation**: optionally require a Homerun
   login to reach a deployed service; every container is labeled
   `homerun.managed=true` so this app never touches anything it didn't create
 - **Appearance**: per-account light/dark/system theme, sidebar color intensity,
   and a custom accent color, from your profile page
 
+## Configuration
+
+You configure Homerun from its own dashboard. The installer sets up everything
+the container needs to boot and then hands you a first-run wizard; after that,
+base domain, Docker, Traefik, email, sign-in methods, DNS automation and
+orchestration mode are all settings pages. There's no config file to maintain,
+just `AUTH_SECRET` and `ORIGIN` if you're running `docker compose` by hand
+instead of using the installer. See
+[`docs/configuration.md`](docs/configuration.md).
+
 ## Documentation
 
-See [the website](https://homerun.orochibraru.com)
+[`docs/`](docs/README.md) in this repo is the source of truth, plain Markdown,
+readable straight from the file browser. Start with
+[Getting started](docs/getting-started.md). The
+[website](https://homerun.orochibraru.com) renders the same files.
 
 ## Sub-projects
 
-Four standalone Bun/TypeScript tools live under `packages/` alongside the main
+Three standalone Bun/TypeScript tools live under `packages/` alongside the main
 app (sharing the root `package.json`/`bun install`, each compiling to its own
 binary or build output):
 
 - [`packages/agent/`](packages/agent/README.md): a small token-authenticated
-  HTTP server for driving a _remote_ host's Docker daemon
+  HTTP server that lets a second machine build images for this one, without
+  exposing its Docker daemon
 - [`packages/installer/`](packages/installer/README.md): the one-liner installer
   used above (Docker + rootless setup + the agent or full stack)
 - [`packages/cli/`](packages/cli/README.md): a typed CLI

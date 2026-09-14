@@ -8,6 +8,13 @@ services:
     # gracefully, real requests (a live log stream, an in-progress deploy
     # poll) would still get cut regardless of that adapter fix.
     stop_grace_period: 35s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homerun.rule=Host(`${DASHBOARD_DOMAIN:-localhost}`)"
+      - "traefik.http.routers.homerun.entrypoints=${DASHBOARD_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.homerun.tls=true"
+      - "traefik.http.routers.homerun.tls.certresolver=${DASHBOARD_DOMAIN:+${DASHBOARD_CERT_RESOLVER:-letsencrypt}}"
+      - "traefik.http.services.homerun.loadbalancer.server.port=3000"
     ports:
       - "3000:3000"
     volumes:

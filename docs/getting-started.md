@@ -1,13 +1,18 @@
 # Getting started
 
 Homerun needs three things at runtime: a Docker socket to manage containers, a
-Postgres database, and Traefik for routing/TLS. Pick whichever install path
-fits.
-
-Both options below run entirely from prebuilt release binaries and Docker
-images, neither needs Bun, `git`, or a source checkout on the target host. Want
-to run this from source instead (to develop on it)? See
+Postgres database, and Traefik for routing and TLS. Pick whichever install path
+fits, both run entirely from prebuilt release binaries and Docker images, and
+neither needs Bun, `git`, or a source checkout on the target host. Want to run
+from source instead, to develop on it? See
 [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+**You configure Homerun from its own dashboard, not from files.** The one-liner
+below sets up everything the container needs to start and then hands you a
+first-run wizard; from that point on, base domain, Docker, Traefik, email,
+sign-in methods and DNS are all settings pages you click through. There's no
+config file you have to maintain, see [Configuration](configuration.md) for the
+handful of exceptions and why they exist.
 
 ## Option A, the one-liner (fresh Linux server)
 
@@ -33,6 +38,11 @@ host's architecture and runs it, which:
 5. Writes a standalone compose file and runs `docker compose up -d` against it
    under that rootless daemon: Traefik, Postgres, and the app itself, all pulled
    from published images, then prints the dashboard URL.
+
+The dashboard is routed through Traefik like any deployed service, so it's
+reachable at the domain you gave it, with a real certificate. Installing against
+a bare IP instead gets you Traefik's own self-signed certificate, since ACME
+can't issue for an IP; port 3000 works directly either way.
 
 Run `--mode=agent` instead of `--mode=full` if you only want this box to run the
 [Homerun Agent](remote-hosts-and-agent.md#homerun-agent) as a remote build
@@ -61,48 +71,95 @@ rootless setup, no source checkout:
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/compose.prod.yaml
 curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/.env.example
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/homerun.example.yaml -o homerun.yaml
-mv .env.example .env && $EDITOR .env   # set AUTH_SECRET at minimum, see configuration.md
+mv .env.example .env && $EDITOR .env
+touch homerun.yaml
 docker network create homerun
 docker compose -f compose.prod.yaml up -d
 ```
 
-`compose.prod.yaml` is self-contained (it doesn't `extends:` the in-repo
-`tools/compose/*.yaml` fragments `compose.yaml` shares, so a downloaded copy
-works on its own) and bind-mounts the `homerun.yaml` above into the app
-container, hence the third download, see
-[Configuration](configuration.md#compose-only-variables). `AUTH_SECRET` and
-`ORIGIN` are the two values with no default and `docker compose` refuses to
-start without them: `ORIGIN` is the scheme+host you actually open the dashboard
-at, port included (`http://203.0.113.10:3000`, `https://homerun.example.com`).
-Leaving it at `localhost` when you reach the instance at anything else makes
-sign-in and the first sign-up fail with "Invalid origin".
+**There are exactly two values to fill in**, both in `.env`, and then you're
+done with files for good:
 
-[`compose.yaml`](../compose.yaml) (the dev-only variant, no `app` service) is
-the reference if you'd rather run each container by hand.
+- `AUTH_SECRET`, any long random string (`openssl rand -hex 32`). It signs your
+  sessions and encrypts every secret Homerun stores, so don't leave it blank and
+  don't change it later.
+- `ORIGIN`, the scheme, host and port you actually type in the address bar to
+  reach the dashboard: `http://203.0.113.10:3000`, or
+  `https://homerun.example.com`. Leaving it at `localhost` while reaching the
+  instance from another machine makes the first sign-up fail with "Invalid
+  origin". See
+  [Configuration](configuration.md#what-the-container-needs-before-it-can-start).
+
+`docker compose` refuses to start without either one, on purpose, rather than
+booting into a broken instance.
+
+The `touch homerun.yaml` line is only there because the compose file bind-mounts
+that path and Docker would otherwise create a directory there. An empty file
+means "all defaults", and you set the real values in the dashboard afterwards.
+It's only worth filling in if you'd specifically rather manage settings as a
+file, see [the optional YAML file](configuration.md#the-optional-yaml-file).
+
+Everything else in `.env` already has a working default. The ones worth knowing
+about are `DASHBOARD_DOMAIN` (serve the dashboard on a real hostname through
+Traefik with a real certificate, instead of port 3000 with a self-signed one)
+and `ACME_EMAIL`, see
+[Compose-only variables](configuration.md#compose-only-variables).
+
+`compose.prod.yaml` is self-contained: it doesn't `extends:` the in-repo
+`tools/compose/*.yaml` fragments that `compose.yaml` shares, so a downloaded
+copy works on its own. [`compose.yaml`](../compose.yaml) (the dev-only variant,
+no `app` service) is the reference if you'd rather run each container by hand.
 
 ## First boot
 
-Visit the app (`http://localhost:5173` in dev, otherwise the address the
-installer printed / the `ORIGIN` you set). The first account you create becomes
-**admin** automatically, every account after that is created by an admin from
-`/users` (direct-create or email invite), there's no public sign-up.
+Visit the app at the address the installer printed, or the `ORIGIN` you set
+(`http://localhost:5173` in dev). **The first account you create becomes admin
+automatically.** After that there's no public sign-up: every other account is
+created by an admin from `/users`, either directly (name, email, temporary
+password) or by email invite once SMTP is configured.
 
-Signing in for the first time on a fresh instance drops you into a 5-step
-onboarding wizard (Core / Docker / Traefik / Email / Review) that sets the
-instance-wide config a first deploy needs: base domain, Docker socket/network,
-Traefik entrypoint/cert resolver, and (optionally) SMTP for invite emails.
-Everything it sets is also editable later from `/settings`, see
-[Configuration](configuration.md).
+Signing in for the first time drops you into a five-step onboarding wizard:
+
+1. **Core**, your base domain (the DNS suffix deployed services are routed
+   under, so a service lands at `<slug>.<your domain>`) and the dashboard URL.
+2. **Docker**, the socket path and the shared network name. The detected
+   defaults are almost always right.
+3. **Traefik**, which entrypoint and certificate resolver your services' routes
+   should use.
+4. **Email**, optional SMTP, only needed for invite emails.
+5. **Review**, confirm and finish.
+
+Everything it asks is also editable afterwards from `/settings`, and nothing it
+skips is hidden in a file, see [Configuration](configuration.md).
+
+## Your first service
+
+1. **Services → Deploy a Service**, or start from **Templates** and pick
+   something from the built-in catalog, which is the fastest way to see it work
+   end to end. **Quick Deploy** on a template card creates and deploys it with
+   no further input.
+2. The wizard walks four steps: basic info, networking (container port and
+   whether it gets a public subdomain), environment variables, and compute
+   limits.
+3. **Create and Deploy** drops you on the service's Overview tab with live
+   progress, pull, create, start, streaming as it happens.
+4. Once it's running, it's reachable at `<slug>.<your base domain>` over TLS,
+   with no DNS or reverse-proxy work on your side beyond pointing the domain at
+   this host.
+
+See [Services](services.md) for everything the wizard doesn't cover: git-based
+builds, volumes, logs, the web terminal, scheduled redeploys, and the per-app
+login wall.
 
 ## Health check
 
 `GET /api/health` returns a plain `200 OK`, useful for a container healthcheck
-or an uptime monitor, and unauthenticated by design (matches
-`/api/v1/openapi.json`'s "spec/health describe shape, not data" carve-out, see
-[API & CLI](api-and-cli.md)).
+or an uptime monitor, and unauthenticated by design (the same "describes shape,
+not data" carve-out as `/api/v1/openapi.json`, see [API & CLI](api-and-cli.md)).
 
 ## Next steps
 
-- [Configuration](configuration.md), the full environment variable reference.
 - [Services](services.md), deploy your first service.
+- [Configuration](configuration.md), what's settable and where.
+- [Users & access](users-and-access.md), inviting people and adding SSO.
+- [Operations & maintenance](operations.md), day-two housekeeping.

@@ -6,8 +6,8 @@ Homerun has two roles, **admin** and **developer**. Both get the full dashboard
 over their own data, every project/service/volume is already scoped by account,
 invisible to other users, the only difference is a few admin-only pages,
 `/users`, `/settings`, and `/docker-cleanup` (see
-[Configuration](configuration.md#docker-cleanup)). There's no finer-grained
-permission system yet (no per-project access control, no read-only role).
+[Operations](operations.md#docker-cleanup)). There's no finer-grained permission
+system yet (no per-project access control, no read-only role).
 
 **The very first account created on a fresh instance becomes admin
 automatically.** After that, there's no public sign-up, every other account is
@@ -33,11 +33,43 @@ Applies live once saved, no restart. The discovery URL is validated before
 saving specifically because a broken one used to be able to lock the whole
 instance out (see [Configuration](configuration.md#a-note-on-lockout)).
 
+## Your profile
+
+The profile pages (reached from the avatar menu, not the sidebar) are per
+account:
+
+- **Personal information**, your name and email.
+- **Security**, change your password, connect or disconnect OAuth providers (see
+  [below](#connecting-a-provider-to-an-existing-account)), and delete your
+  account. Deleting stops and removes every container you own first, it isn't
+  just a row disappearing.
+- **Sessions**, every browser currently signed in as you, with the device and
+  when it was last seen. Revoke any of them, useful after signing in somewhere
+  you don't control.
+- **Authorized clients**, API keys, including the ones the
+  [CLI](api-and-cli.md#logging-in) created for itself through its device-code
+  login. Create a key here to use the REST API or CLI without a browser session,
+  and revoke one the same way. A key is shown once, at creation.
+- **Appearance**, see [below](#appearance).
+
 ## API keys
 
-Generate an API key from your profile page to use the
-[REST API or CLI](api-and-cli.md) without a browser session, `x-api-key` or
-`Authorization: Bearer <key>` on any `/api/v1/*` request.
+Generate an API key from **Profile → Authorized Clients** to use the
+[REST API or CLI](api-and-cli.md) without a browser session, sent as `x-api-key`
+or `Authorization: Bearer <key>` on any `/api/v1/*` request. A key carries the
+full permissions of the account that owns it, there's no per-key scoping yet.
+
+`homerun login` creates one for you through a device-code flow rather than
+making you copy-paste, and it shows up in this list like any other.
+
+## Git provider accounts
+
+Separate from signing in to Homerun: connecting a GitHub, GitLab, Gitea or
+Bitbucket account on the **Git Providers** page lets a git-based service browse
+your repositories instead of pasting a URL, and reach private ones without a
+token in the clone URL. An admin registers the OAuth app once for the instance;
+each person connects their own account to it. See
+[Services](services.md#connecting-a-git-provider).
 
 ## Appearance
 

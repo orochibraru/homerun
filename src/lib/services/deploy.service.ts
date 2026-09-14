@@ -57,11 +57,46 @@ interface WorkloadContext {
 	tag: string;
 }
 
-function syncAutoDns(svc: ServiceDTO, project: ProjectDTO | null): void {
+/**
+ * Fires the configured DNS/routing providers for every hostname this service
+ * answers on, and writes each one's verdict into the deployment log. It used
+ * to be fire-and-forget with the provider swallowing its own failures into a
+ * `logger.warn`, which is how "Pangolin is configured and nothing ever gets
+ * created" stayed invisible. Still never fails a deploy : the container is
+ * already up and running by the time this runs.
+ */
+async function syncAutoDns(
+	svc: ServiceDTO,
+	project: ProjectDTO | null,
+	dep: DeploymentDTO,
+): Promise<void> {
 	if (!svc.dnsResolvable) {
 		return;
 	}
-	syncDns(serviceHostname(svc.slug, project?.slug));
+	const row = svc.toJSON();
+	const hostnames = [
+		serviceHostname(svc.slug, project?.slug),
+		...(row.customDomain ? [row.customDomain] : []),
+	];
+	const results = await syncDns(hostnames);
+	if (results.length > 0) {
+		await dep.appendLog(
+			results
+				.map(
+					(result) =>
+						`${result.ok ? "DNS" : "DNS failed"} (${result.provider}): ${result.detail}`,
+				)
+				.join("\n"),
+		);
+	}
+	const failed = results.filter((result) => !result.ok);
+	if (failed.length > 0) {
+		logger.warn(
+			`DNS sync incomplete: service=${svc.id} ${failed
+				.map((result) => `${result.provider}=${result.detail}`)
+				.join(" ")}`,
+		);
+	}
 }
 
 /** Volume mounts in the shape both the container and swarm create calls want. */
@@ -442,7 +477,7 @@ class DeploymentServiceClass {
 			`Deploy succeeded: service=${svc.id} container=${containerId ?? swarmServiceId} deployment=${dep.id}`,
 		);
 
-		syncAutoDns(svc, project);
+		await syncAutoDns(svc, project, dep);
 	}
 
 	async enqueueDeploy(input: EnqueueDeployInput): Promise<EnqueueDeployResult> {

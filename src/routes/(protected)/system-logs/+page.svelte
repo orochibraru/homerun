@@ -125,10 +125,11 @@
   <div class="border-border bg-surface-2 text-text-muted mb-6 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs">
     <Info class="mt-0.5 size-3.5 shrink-0" />
     <p>
-      Local Run's own server isn't containerized : it runs directly on the host,
-      so its logs are whatever process manager or terminal you started
-      <code class="bg-surface rounded px-1 py-0.5">bun run start</code>
-      from is already capturing (no in-app viewer for it here).
+      Homerun's own server logs aren't shown here : they're whatever your
+      process manager, <code class="bg-surface rounded px-1 py-0.5">docker
+      compose logs</code>, or the terminal you started it from is already
+      capturing. App-level warnings and errors are surfaced on each service's
+      Errors tab instead.
     </p>
   </div>
 

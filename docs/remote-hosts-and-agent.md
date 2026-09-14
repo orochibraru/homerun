@@ -39,7 +39,13 @@ final image there and this host pulls it back before starting the container.
 Saving a build server without one is rejected. The same registry doubles as the
 layer cache, so a repeat build reuses what the last one pushed.
 
-The `git clone` step always happens on the build server, alongside the build.
+Where the `git clone` itself happens depends on the connection kind, which
+matters if the repository is only reachable from one of the two machines:
+
+- A **Docker connection** host clones on _this_ machine and streams the build
+  context over to the remote daemon.
+- A **Homerun Agent** host clones on _itself_, so the repository has to be
+  reachable from the build server rather than from here.
 
 ## Homerun Agent
 

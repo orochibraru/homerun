@@ -164,8 +164,10 @@
           target="_blank"
         >Pangolin</a> tunnel instead of a DNS provider. Auto-creates a
         Resource + Target for every deployed service's hostname, routed
-        through the site below. Unset : no-op, wire routes up by hand as
-        before.
+        through the site below. Every field here is required : with any of
+        them blank the integration stays off. "Test connection" checks the
+        whole set, not just the token, and each deploy writes what Pangolin
+        did into its own deployment log.
       </p>
     </div>
     <form
@@ -177,7 +179,7 @@
         loading: "Saving Pangolin settings",
         success: (data) =>
           data?.pangolinTestOk
-            ? "Org access verified."
+            ? `Pangolin reachable : ${data.pangolinTestDetail ?? "org access verified"}.`
             : "Pangolin settings saved.",
       })}
     >
@@ -187,10 +189,18 @@
           class="font-mono"
           id="pangolinApiBaseUrl"
           name="pangolinApiBaseUrl"
-          placeholder="https://pangolin.example.com/api/v1"
+          placeholder="https://api.pangolin.example.com/v1"
           type="text"
           value={data.settings.pangolinApiBaseUrl ?? ""}
         />
+        <p class="text-text-subtle mt-1.5 text-xs">
+          The <strong>Integration API</strong>, not the dashboard : it's a
+          separate server (port 3003 by default) that self-hosted Pangolin
+          only exposes once you enable it, and its base path ends in
+          <code class="font-mono">/v1</code>. A dashboard URL like
+          <code class="font-mono">/api/v1</code> authenticates with a session
+          cookie, never an API key, so every call here would fail.
+        </p>
       </div>
       <div>
         <label class={label} for="pangolinOrgId">Org ID</label>
@@ -213,7 +223,9 @@
         />
         <p class="text-text-subtle mt-1.5 text-xs">
           The Pangolin site (tunnel agent) whose host runs this instance's
-          own Traefik. Must already exist in Pangolin.
+          own Traefik. Must already exist in Pangolin, and is
+          <strong>required</strong> : with it blank the integration stays off
+          and no resource is ever created.
         </p>
       </div>
       <div>

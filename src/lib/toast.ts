@@ -19,6 +19,7 @@ export interface EnhanceToastOptions extends ToastMessages {
 	onSubmit?: (input: Parameters<SubmitFunction>[0]) => void;
 	onStart?: () => void;
 	onSuccess?: (data: ActionData) => void | Promise<void>;
+	/** Forwarded to enhance's `update()`. Defaults to **false**, unlike SvelteKit's own default : a DOM form reset blanks this app's server-value-driven fields and overwrites `bind:value` state, see CLAUDE.md. */
 	reset?: boolean;
 }
 
@@ -81,9 +82,7 @@ export function enhanceToast(options: EnhanceToastOptions): SubmitFunction {
 				await options.onSuccess?.(data);
 				settle(data);
 			}
-			await update(
-				options.reset === undefined ? undefined : { reset: options.reset },
-			);
+			await update({ reset: options.reset ?? false });
 			await options.onComplete?.();
 		};
 	};
