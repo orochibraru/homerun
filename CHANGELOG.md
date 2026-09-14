@@ -1,3 +1,10 @@
+## [1.0.13](https://github.com/orochibraru/homerun/compare/v1.0.12...v1.0.13) (2026-09-14)
+
+### Bug Fixes
+
+- auth & ci ([#9](https://github.com/orochibraru/homerun/issues/9))
+  ([8133de5](https://github.com/orochibraru/homerun/commit/8133de51b3d46319287be8f59d2115b9e6f1b649))
+
 ## [1.0.12](https://github.com/orochibraru/homerun/compare/v1.0.11...v1.0.12) (2026-09-11)
 
 ### Bug Fixes
