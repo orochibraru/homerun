@@ -21,6 +21,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { deployPhaseStates } from "$lib/deploy-phases";
 	import { timeAgo } from "$lib/formatting";
+	import { randomId } from "$lib/random-id";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -223,7 +224,7 @@
 				progressStatus = "pending";
 			},
 			onSubmit: ({ formData }) => {
-				submittedDeploymentId = crypto.randomUUID();
+				submittedDeploymentId = randomId();
 				formData.set("deploymentId", submittedDeploymentId);
 				watchProgress(submittedDeploymentId);
 			},

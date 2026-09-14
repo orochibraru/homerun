@@ -118,6 +118,11 @@ test.describe
 		}) => {
 			await signIn(page);
 			await page.goto("/settings");
+			// Blank means "derive it from the base domain below", which is what
+			// this test is about. Onboarding persists the instance's real origin
+			// (the ORIGIN this app is served at, port included), so the field
+			// starts out holding that rather than empty.
+			await page.locator("#authOrigin").fill("");
 			await page.locator("#baseDomain").fill("localhost:5173");
 			const https = page.getByRole("checkbox", { name: /Use HTTPS/ });
 			if (await https.isChecked()) {

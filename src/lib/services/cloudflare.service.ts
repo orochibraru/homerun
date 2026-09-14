@@ -1,5 +1,6 @@
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import type { DnsSyncResult } from "./dns-result";
 
 const logger = new Logger("Cloudflare");
 
@@ -75,15 +76,18 @@ class CloudflareServiceClass {
 	 * on any failure, a missed DNS sync isn't worth failing a deploy over,
 	 * the admin can always add the record by hand.
 	 */
-	async syncDnsRecord(hostname: string, target: string): Promise<void> {
+	async syncDnsRecord(
+		hostname: string,
+		target: string,
+	): Promise<DnsSyncResult | null> {
 		const settings = await InstanceSettingsDTO.get();
 		if (!settings.cloudflareConfigured) {
-			return;
+			return null;
 		}
 		const token = settings.decryptCloudflareApiToken();
 		const zoneId = settings.cloudflareZoneId;
 		if (!(token && zoneId)) {
-			return;
+			return null;
 		}
 
 		try {
@@ -112,38 +116,56 @@ class CloudflareServiceClass {
 			logger.info(
 				`DNS record synced: ${hostname} -> ${target} (${existingId ? "updated" : "created"})`,
 			);
+			return {
+				detail: `${existingId ? "updated" : "created"} CNAME ${hostname} -> ${target}`,
+				ok: true,
+				provider: "cloudflare",
+			};
 		} catch (err) {
+			const detail = err instanceof Error ? err.message : String(err);
 			logger.warn(`Couldn't sync DNS record for ${hostname}`, {
-				error: err instanceof Error ? err.message : String(err),
+				error: detail,
 			});
+			return { detail, ok: false, provider: "cloudflare" };
 		}
 	}
 
 	/** Best-effort removal, same non-throwing posture as syncDnsRecord : called when a service with a Cloudflare-managed hostname is deleted. */
-	async deleteDnsRecord(hostname: string): Promise<void> {
+	async deleteDnsRecord(hostname: string): Promise<DnsSyncResult | null> {
 		const settings = await InstanceSettingsDTO.get();
 		if (!settings.cloudflareConfigured) {
-			return;
+			return null;
 		}
 		const token = settings.decryptCloudflareApiToken();
 		const zoneId = settings.cloudflareZoneId;
 		if (!(token && zoneId)) {
-			return;
+			return null;
 		}
 
 		try {
 			const existingId = await this.findRecordId(token, zoneId, hostname);
 			if (!existingId) {
-				return;
+				return {
+					detail: `no record for ${hostname}`,
+					ok: true,
+					provider: "cloudflare",
+				};
 			}
 			await this.request(token, `/zones/${zoneId}/dns_records/${existingId}`, {
 				method: "DELETE",
 			});
 			logger.info(`DNS record removed: ${hostname}`);
+			return {
+				detail: `removed ${hostname}`,
+				ok: true,
+				provider: "cloudflare",
+			};
 		} catch (err) {
+			const detail = err instanceof Error ? err.message : String(err);
 			logger.warn(`Couldn't remove DNS record for ${hostname}`, {
-				error: err instanceof Error ? err.message : String(err),
+				error: detail,
 			});
+			return { detail, ok: false, provider: "cloudflare" };
 		}
 	}
 

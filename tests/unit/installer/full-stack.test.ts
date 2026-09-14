@@ -94,5 +94,31 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		expect(composeCall[1]).toContain(
 			"image: docker.io/orochibraru/homerun:latest",
 		);
+		expect(composeCall[1]).toContain("traefik.enable=true");
+		expect(composeCall[1]).toContain("DASHBOARD_DOMAIN:-203.0.113.10");
+		expect(composeCall[1]).toContain("DASHBOARD_CERT_RESOLVER:-}");
+	});
+
+	test("gives the dashboard router a real cert resolver on a domain install", async () => {
+		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
+		const writeFile = mock(
+			async (_path: string, _content: string) => undefined,
+		);
+		const appendLine = mock(async (_path: string, _line: string) => undefined);
+		const runner = { appendLine, run, writeFile } as unknown as StepRunner;
+
+		await FullStackInstaller.bringUpFullStack({
+			dockerSocket: "/var/run/docker.sock",
+			host: "homerun.example.com",
+			run: runner,
+			username: "homerun",
+			version: "latest",
+		});
+
+		const composeCall = writeFile.mock.calls.find(
+			(call) => call[0] === "/home/homerun/homerun/compose.yaml",
+		) as [string, string];
+		expect(composeCall[1]).toContain("DASHBOARD_DOMAIN:-homerun.example.com");
+		expect(composeCall[1]).toContain("DASHBOARD_CERT_RESOLVER:-letsencrypt}");
 	});
 });

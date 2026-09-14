@@ -2,11 +2,31 @@
 
 ## Is this production-ready?
 
-It's alpha (`0.1.0-alpha`), and it's a single-maintainer project running on real
-hardware, but "production" for Homerun means _your_ homelab/single-server setup,
-not a multi-tenant SaaS. Read this whole page before trusting it with something
-you'd mind losing, and keep backups (see
+It's actively developed and running on real hardware, but it's a
+single-maintainer project and "production" here means _your_ homelab or single
+server, not a multi-tenant SaaS. Read this whole page before trusting it with
+something you'd mind losing, and keep backups (see
 [Storage & backups](storage-and-backups.md)).
+
+Releases are versioned and published automatically from `main`, so the version
+you're running is whatever the image tag says, `latest` tracks the newest
+release. Pin `HOMERUN_VERSION` in `.env` if you'd rather upgrade deliberately,
+see [Operations](operations.md#upgrading-homerun-itself).
+
+## Do I have to edit config files?
+
+No. The installer sets up everything the container needs to boot, and from your
+first sign-in onwards, base domain, Docker, Traefik, email, sign-in methods, DNS
+automation and orchestration mode are all pages in the dashboard.
+
+Three values are env-only and always will be: the database URL (needed before
+there's a database to read settings from), `AUTH_SECRET` (it's the key the
+stored settings are encrypted _with_, so it can't live among them), and `ORIGIN`
+(changing the scheme at runtime would rename your session cookie and sign
+everyone out). The installer writes all three; with plain `docker compose` you
+set two of them once. A `homerun.yaml` file exists for people who want
+configuration as code, and is entirely optional, see
+[Configuration](configuration.md).
 
 ## Does it support multiple hosts / Kubernetes-style orchestration?
 
@@ -59,9 +79,30 @@ services that opt in.
   second machine joins the swarm as a worker rather than being registered
   separately, and `packages/installer/swarm-join.sh` has not been verified
   against a real swarm yet.
-- **Cloudflare and Pangolin DNS automation** are new and haven't been exercised
-  against a real account yet, verify the first sync by hand once you've
-  configured one. See [Services: DNS automation](services.md#dns-automation).
+- **Cloudflare and Pangolin DNS automation** are new and neither has been
+  exercised against a real account by the maintainer. Point Pangolin at its
+  **Integration API** (a separate server on its own port, base path `/v1`), not
+  the dashboard's `/api/v1`, which is the usual reason a setup that looks right
+  doesn't work. "Test connection" checks the whole configuration rather than
+  just the credentials, and every deploy writes what each provider did into that
+  deploy's own log, so verify the first real sync by reading it. See
+  [Services: DNS automation](services.md#dns-automation).
+- **A swarm-mode service's status isn't reconciled on its own pages.**
+  Standalone services re-inspect their container on every visit; a swarm service
+  has no single container to inspect, so its status pill reflects what the last
+  deploy wrote rather than live state. Deploy/start/stop still work correctly,
+  the display just doesn't self-correct.
+- **Pruning Docker volumes deletes data.** `/docker-cleanup` is host-wide and
+  deliberately not limited to containers Homerun created; an "unreferenced"
+  volume includes one belonging to a service you stopped and meant to restart.
+  Read the preview. See [Operations](operations.md#docker-cleanup).
+- **Backups aren't quiesced.** A volume is tarred while the service using it
+  keeps running, which is fine for files and can tear a database mid-write. Dump
+  databases with their own tooling into a bind mount and back that up instead.
+  See [Storage & backups](storage-and-backups.md#s3-compatible-backups).
+- **Passkeys and two-factor sign-in aren't exposed yet.** The underlying support
+  is wired up server-side but there's no UI for enrolling or using either, so
+  today it's passwords and OAuth/OIDC.
 - **Compose import** maps what Homerun has an equivalent for and tells you what
   it dropped, it is not a compose runtime: `build:`, `command:`, healthchecks,
   capabilities, `env_file`, secrets/configs and host port publishing all come
@@ -91,6 +132,11 @@ services that opt in.
   that's still a manual `/settings` visit afterward.
 - **Finer-grained permissions**, today "developer" is a role label plus
   route-gating only, not a real permissions system.
+- **Backup restore**, getting a tarball back into a volume from the dashboard.
+  Uploads work; restoring is manual today.
+- **Passkeys and 2FA**, plus instance-level policies to require them.
+- **Auto-deploy on push**, a webhook from your git provider triggering a
+  rebuild, rather than redeploying manually or on a schedule.
 
 See the repo's [`TODO.md`](../TODO.md) for the live, granular backlog, this page
 is the "what should a self-hoster know before relying on X" summary of it.

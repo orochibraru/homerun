@@ -25,6 +25,19 @@
 
 	onMount(() => title.set("Set up Homerun"));
 
+	/** The `:port` an origin carries, when the base domain itself doesn't : onboarding asks for one hostname, and this is how the port survives it. */
+	function originPort(origin: string | null, domain: string): string {
+		if (!origin || domain.includes(":")) {
+			return "";
+		}
+		try {
+			const { port } = new URL(origin);
+			return port ? `:${port}` : "";
+		} catch {
+			return "";
+		}
+	}
+
 	const STEPS: StepperStep[] = [
 		{ icon: Globe, label: "Core" },
 		{ icon: Server, label: "Docker" },
@@ -41,9 +54,33 @@
 	// satisfied by just clicking through if the defaults are already fine.
 	const { settings, envDefaults } = $derived(data);
 
+	// The effective origin : a stored override, else the ORIGIN env var the
+	// installer and compose.prod.yaml both set. Everything about this step is
+	// prefilled from it rather than from baseDomain alone, because baseDomain
+	// is deliberately portless (it's a Traefik Host() rule, see CLAUDE.md)
+	// while an installer instance is reached at http://<ip>:3000. Prefilling
+	// from the portless value and re-deriving the origin from it is how
+	// clicking Next on the defaults used to overwrite a correct ORIGIN with a
+	// port-80 URL.
+	const effectiveOrigin = $derived(
+		settings?.authOrigin ?? envDefaults?.authOrigin ?? null,
+	);
+	const originHost = $derived.by(() => {
+		if (!effectiveOrigin) {
+			return null;
+		}
+		try {
+			return new URL(effectiveOrigin).host;
+		} catch {
+			return null;
+		}
+	});
 	let baseDomain = $derived(
 		(form?.values?.baseDomain as string | undefined) ??
-			settings?.baseDomain ??
+			(settings?.baseDomain
+				? `${settings.baseDomain}${originPort(effectiveOrigin, settings.baseDomain)}`
+				: null) ??
+			originHost ??
 			envDefaults?.baseDomain ??
 			"",
 	);
@@ -51,7 +88,7 @@
 	// page's Core section : base domain plus this checkbox, so onboarding
 	// only ever asks for one domain, not two URLs.
 	let useHttps = $derived(
-		settings?.authOrigin ? settings.authOrigin.startsWith("https://") : true,
+		effectiveOrigin ? effectiveOrigin.startsWith("https://") : true,
 	);
 	const originPreview = $derived(
 		`${useHttps ? "https" : "http"}://${baseDomain || "…"}`,

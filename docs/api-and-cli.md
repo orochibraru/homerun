@@ -45,13 +45,35 @@ its types are generated straight from a running instance's real
 `/api/v1/openapi.json`, so the client is checked against the actual API shape,
 not a hand-maintained guess.
 
-Install it with one command: it detects your arch, downloads the matching
-release binary, and drops it at `/usr/local/bin/homerun` (Linux only, no
-Bun/build step needed):
+### Install
+
+One command: it detects your arch, downloads the matching release binary, and
+drops it at `/usr/local/bin/homerun` (Linux only, no Bun or build step needed):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/cli/install.sh | bash
 ```
+
+`homerun update` re-runs that from inside the binary, replacing itself with the
+latest release. `homerun --version` tells you what you have.
+
+### Logging in
+
+```sh
+homerun login --base-url https://your-instance.example.com
+```
+
+This is a **device-code flow**: the CLI prints a short user code and a URL, you
+open that URL in a browser where you're already signed in to Homerun, approve
+the request, and the CLI picks up an API key of its own. It's saved to
+`~/.config/homerun/config.json` (mode `0600`) alongside the instance URL, so
+every later command just works with no flags.
+
+`homerun logout` clears that file. Approved CLI clients are also listed under
+**Profile → Authorized Clients** in the dashboard, where you can revoke one.
+
+If you'd rather not use the device flow, generate an API key from your profile
+page and pass it per call or by environment:
 
 ```sh
 HOMERUN_BASE_URL=https://your-instance.example.com \
@@ -59,10 +81,21 @@ HOMERUN_API_KEY=<a key from your profile page> \
 homerun services list
 ```
 
-Or, working on the CLI itself, from the repo root:
-`bun install && bun run packages/cli/index.ts services list`
-(`bun run scripts/build-packages.ts <amd64|arm64>` compiles it the same way CI
-does). See [`packages/cli/README.md`](../packages/cli/README.md).
+`--base-url` and `--api-key` are global flags that override both the saved login
+and those env vars, for hopping between instances.
+
+### Commands
+
+Session management, run these once rather than per-task:
+
+```bash
+homerun login --base-url <url>   # device-code login, saves an API key
+homerun logout                   # clear the saved login
+homerun update                   # self-update to the latest release
+homerun --version
+```
+
+The rest operate on your instance:
 
 ```bash
 homerun services list [--json]
@@ -75,10 +108,18 @@ homerun projects list [--json]
 homerun templates list [--json]
 ```
 
-No `create`/`update`/`delete` yet. Every `list` command above also accepts
-`--page`, `--per-page` (default 100, max 100) and `--search <term>` for a large
-result set; if what's printed is only part of the total, a footer line tells you
-so (`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.`)
-rather than letting a truncated table look complete. See
-[`packages/cli/README.md`](../packages/cli/README.md) for the full reference,
-including how to regenerate the generated types after an API change.
+No `create`/`update`/`delete` yet. Every `list` command also accepts `--page`,
+`--per-page` (default 100, max 100) and `--search <term>` for a large result
+set; if what's printed is only part of the total, a footer line tells you so
+(`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.`) rather
+than letting a truncated table look complete.
+
+`homerun services deploy` returns when the deploy has actually finished, not
+when it's been queued, so it's usable as a step in a script or CI job.
+
+### Working on the CLI itself
+
+From the repo root: `bun install && bun run packages/cli/index.ts services list`
+(`bun run scripts/build-packages.ts <amd64|arm64>` compiles it the same way CI
+does). See [`packages/cli/README.md`](../packages/cli/README.md) for the full
+reference, including how to regenerate the generated types after an API change.

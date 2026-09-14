@@ -49,6 +49,46 @@ There's no webhook / auto-deploy-on-push yet, redeploy a git-mode service the
 same way as an image-mode one: manually, or via its own cron schedule (below)
 for `:latest`-tracking-equivalent auto-rebuilds.
 
+### Connecting a git provider
+
+`Git Providers` in the sidebar is what turns "paste a clone URL" into "browse my
+repos", and it's how a private repo works without putting a token in the URL.
+There are two steps, and they're done by different people:
+
+1. **An admin registers an OAuth app**, once per provider. Pick GitHub, GitLab,
+   self-hosted Gitea (which also wants its base URL) or Bitbucket, register an
+   OAuth application on that provider's own site, and paste the client id and
+   secret in. The page prints the exact callback URL to register on the
+   provider's side.
+2. **Each person connects their own account** from the same page, one click
+   through the provider's consent screen. Connections are per-account: your
+   token is yours, and another user connecting to the same provider gets their
+   own.
+
+Once connected, the **Browse repos** picker on a service's Source tab (and in
+the new-service wizard) lists the repositories that account can see, and checks
+the branch you pick for a `Dockerfile` before you commit to it. Tokens are
+stored encrypted, and disconnecting removes them.
+
+This is only about _browsing and access_. Cloning itself is provider-agnostic,
+so any public HTTPS git URL works with no provider connected at all.
+
+### Build servers and build cache
+
+By default a git build runs on this host. Two optional pickers on the Source tab
+change that:
+
+- **Build cache registry**, a registry credential registered under
+  `/build-cache-registries`. The build pulls the previous image from it as a
+  layer cache and pushes fresh layers back, so a repeat build reuses what the
+  last one produced instead of starting cold. Both directions are best-effort: a
+  missing cache image or a failed push logs and carries on rather than failing
+  the build.
+- **Build server**, a second machine that compiles the image instead of this
+  one, see [Build servers](remote-hosts-and-agent.md). Picking one **requires**
+  a cache registry, since publishing through that registry is the only way the
+  built image reaches the host that runs it.
+
 ## Importing a compose file
 
 **Import compose** on the services list takes a `docker-compose.yaml` pasted
@@ -159,6 +199,12 @@ simply by mounting it into more than one service.
 
 ## Networking
 
+Everything on this tab is written onto the container as Traefik labels at
+**create** time, so saving a change here doesn't affect the container that's
+already running. Once a service has been deployed, the tab shows a **Redeploy**
+button for exactly that reason, use it after changing a custom domain,
+DNS-resolvability, or the login wall.
+
 - **Container port, protocol, network mode**, `bridge` (default, joins the
   shared `homerun` plus the service's project network if any) or `host` (shares
   the host's network namespace directly, for apps needing real host-network
@@ -175,17 +221,47 @@ simply by mounting it into more than one service.
 
 If your instance's DNS is on Cloudflare, or you front it with a self-hosted
 [Pangolin](https://github.com/fosrl/pangolin) tunnel instead, configure one (or
-both) from `/settings` → DNS and Homerun keeps DNS in sync on its own for any
-service with **DNS-resolvable** on: a deploy creates/updates the record (a
-Cloudflare CNAME, or a Pangolin Resource + Target), deleting the service removes
-it. Both are best-effort and fire only after a successful deploy to the
-**local** host, a DNS sync failure never fails the deploy itself, it just logs a
-warning. Neither is required, this is purely a convenience over pointing DNS at
-your instance yourself.
+both) from `/settings` → Networking and Homerun keeps DNS in sync on its own for
+any service with **DNS-resolvable** on: a deploy creates or updates the record
+(a Cloudflare CNAME, or a Pangolin Resource + Target), deleting the service
+removes it, including its custom domain if it has one.
 
-> Both integrations are new and haven't been exercised against a real
-> Cloudflare/Pangolin account yet, verify the first real sync by hand once
-> you've configured one. See [FAQ & limitations](faq-and-limitations.md).
+Both are best-effort and fire only after a successful deploy, a DNS failure
+never fails the deploy itself. **What each provider did is written into that
+deploy's own log**, so a sync that was skipped or rejected says so where you're
+already looking, rather than only in the server's log. An empty result means no
+DNS automation is configured, which is the default.
+
+Neither is required. This is purely a convenience over pointing DNS at your
+instance yourself.
+
+**Cloudflare** needs an API token with DNS edit permission on the zone, plus the
+zone id. **Test connection** on the settings page verifies both before you save.
+
+**Pangolin** needs all of its fields, with any one blank the integration stays
+off:
+
+- **API base URL**: the **Integration API**, not the dashboard. Self-hosted
+  Pangolin only exposes it once you enable it, it listens on its own port (3003
+  by default), and its base path ends in `/v1`, e.g.
+  `https://api.pangolin.example.com/v1`. A dashboard-style URL ending in
+  `/api/v1` authenticates with a session cookie rather than an API key, so every
+  call would fail.
+- **Org ID** and an **API token** for it.
+- **Main site name**: the Pangolin site (tunnel agent) whose host runs this
+  instance's Traefik. It must already exist in Pangolin.
+- Optionally a **target port**, defaulting to 80, since Pangolin terminates
+  public TLS itself.
+
+**Test connection** checks the whole set rather than just that the token
+authenticates: it confirms the site exists, and that one of your registered
+Pangolin domains actually covers this instance's base domain, since without that
+no service hostname could ever be routed. A token-only check passed on setups
+that could never work.
+
+> Neither integration has been exercised against a real account by the
+> maintainer yet, so verify the first real sync by reading the deploy log it
+> writes to. See [FAQ & limitations](faq-and-limitations.md).
 
 ### Custom domains & SSL
 
@@ -221,13 +297,14 @@ is always one container.
 
 ## Swarm mode
 
-Instance-wide, opt-in (`/settings` → Orchestration → `swarm`), an alternative to
-the default one-container-per-service model: once enabled, every **local**
-deploy creates a real Docker Swarm Service instead of a plain container, and the
-Compute tab gets a **replicas** field (default 1) controlling how many copies
-Docker runs and load-balances across via its own routing mesh. Start/ stop map
-to scaling to 0/back up rather than a real container stop/start, and restart
-force-updates every task (recreating them) instead of restarting one container.
+Instance-wide, opt-in (`/settings` → Docker → Orchestration mode → `swarm`), an
+alternative to the default one-container-per-service model: once enabled, every
+**local** deploy creates a real Docker Swarm Service instead of a plain
+container, and the Compute tab gets a **replicas** field (default 1) controlling
+how many copies Docker runs and load-balances across via its own routing mesh.
+Start/ stop map to scaling to 0/back up rather than a real container stop/start,
+and restart force-updates every task (recreating them) instead of restarting one
+container.
 
 Requires the host's own Docker daemon to already be swarm-active
 (`docker swarm init`, a one-time step Homerun doesn't do for you) and the live
@@ -297,21 +374,27 @@ and Deploy works again.
 
 ## Notifications
 
-A bell icon in the header shows a per-user feed of lifecycle events, deploy
-success/failure, service created/started/stopped, auto-redeploy fired, and
-runtime errors, distinct from the Errors tab's persisted app-log view (this is a
-short, curated list, not everything logged). Click a notification to jump to its
-service, mark all read from the dropdown, or hover a row and click the `x` to
-delete it.
+The bell in the header shows a per-account feed of lifecycle events for your
+services, deploy succeeded or failed, service created, started or stopped, an
+auto-redeploy firing, and runtime errors. Click an entry to jump to its service.
+See [Operations](operations.md#notifications) for how it differs from the Errors
+tab's persisted log view.
 
 ## Settings
 
-Name, slug, restart policy, which project the service belongs to,
-save-as-template, the cron schedule above, and a danger-zone delete
-(typed-confirm, see [The services list](#the-services-list) above).
+Name, slug, restart policy, which project the service belongs to, the
+[scheduled redeploy](#scheduled-redeploy) above, and a danger-zone delete
+(typed-confirm, see [The services list](#the-services-list)).
+
+**Save as template** is here too: it snapshots this service's current image,
+tag, port, env vars and resource limits into a reusable template of your own,
+which then behaves exactly like a built-in one, including being linkable as a
+companion to another template. See
+[Projects & templates](projects-and-templates.md#templates).
 
 ## Next steps
 
 - [Projects & templates](projects-and-templates.md)
 - [Storage & backups](storage-and-backups.md)
-- [Remote hosts & the Homerun Agent](remote-hosts-and-agent.md)
+- [Build servers & the Homerun Agent](remote-hosts-and-agent.md)
+- [Operations & maintenance](operations.md)

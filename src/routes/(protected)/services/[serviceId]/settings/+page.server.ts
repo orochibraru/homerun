@@ -48,7 +48,11 @@ export const actions = {
 			const project = svc.projectId
 				? await ProjectDTO.get(svc.projectId, locals.user.id)
 				: null;
-			deleteDns(serviceHostname(svc.slug, project?.slug));
+			const customDomain = svc.toJSON().customDomain;
+			await deleteDns([
+				serviceHostname(svc.slug, project?.slug),
+				...(customDomain ? [customDomain] : []),
+			]);
 		}
 		await svc.delete();
 		logger.info(`Service deleted: service=${svc.id} user=${locals.user.id}`);

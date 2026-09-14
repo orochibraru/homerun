@@ -4,6 +4,7 @@
 		Globe,
 		LockKeyhole,
 		Network,
+		RefreshCw,
 		ShieldCheck,
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
@@ -33,6 +34,8 @@
 	onMount(() => title.set(`${svc.name} · Networking`));
 
 	let submitting = $state(false);
+	let redeploying = $state(false);
+	const deployed = $derived(!!(svc.containerId || svc.swarmServiceId));
 
 	const portsValues = $derived(
 		(form?.portsValues as Record<string, string> | undefined) ?? {
@@ -112,6 +115,39 @@
         </p>
       </div>
     </div>
+
+    {#if deployed}
+      <form
+        action="?/redeploy"
+        class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2"
+        method="POST"
+        use:enhance={enhanceToast({
+          error: "Couldn't queue the redeploy.",
+          loading: "Queueing a redeploy",
+          onSettled: () => {
+            redeploying = false;
+          },
+          onStart: () => {
+            redeploying = true;
+          },
+          success: "Redeploy queued : routing changes take effect once it finishes.",
+        })}
+      >
+        <p class="text-xs text-amber-600 dark:text-amber-400">
+          Everything on this tab is written onto the container as Traefik
+          labels when it's created, so saving here changes nothing for the
+          <em>running</em> container. Redeploy to apply it.
+        </p>
+        <Button disabled={redeploying} size="sm" type="submit" variant="outline">
+          {#if redeploying}
+            <Spinner />
+          {:else}
+            <RefreshCw class="size-4" />
+          {/if}
+          Redeploy
+        </Button>
+      </form>
+    {/if}
 
     {#if svc.dnsResolvable}
       <form

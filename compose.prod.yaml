@@ -10,6 +10,13 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
       AUTH_SECRET: "${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}"
       ORIGIN: "${ORIGIN:?set ORIGIN in .env to the scheme+host you open the dashboard at, e.g. http://203.0.113.10:3000 - a localhost default makes the first sign-up fail with Invalid origin from any other machine}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homerun.rule=Host(`${DASHBOARD_DOMAIN:-localhost}`)"
+      - "traefik.http.routers.homerun.entrypoints=${DASHBOARD_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.homerun.tls=true"
+      - "traefik.http.routers.homerun.tls.certresolver=${DASHBOARD_DOMAIN:+${DASHBOARD_CERT_RESOLVER:-letsencrypt}}"
+      - "traefik.http.services.homerun.loadbalancer.server.port=3000"
     ports:
       - "3000:3000"
     volumes:

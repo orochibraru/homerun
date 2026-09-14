@@ -1,14 +1,17 @@
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import type { DnsSyncResult } from "./dns-result";
 
 const logger = new Logger("Pangolin");
 
-// Hand-typed against api.pangolin.net/v1/docs/'s Swagger UI (a rendered
-// widget, not a fetchable static doc) cross-checked with
-// github.com/orochibraru/dokploy-to-pangolin, a sibling Dokploy-to-Pangolin
-// bridge doing the same job for a different source platform : that project's
-// own src/lib/types.ts carries the same "Custom types for Pangolin API -
-// defined manually since the OAS is broken" note, same posture taken here.
+// Hand-typed against the real Integration API OpenAPI document, which *is*
+// fetchable after all : GET https://api.pangolin.net/v1/openapi.json (the
+// Swagger UI at /v1/docs is a widget over it). This file used to carry a
+// "the OAS is broken, types are guesses" note inherited from
+// github.com/orochibraru/dokploy-to-pangolin ; the paths and request bodies
+// below are now checked against that document. Response payloads for the
+// list endpoints are typed as a bare `object` there, so those shapes are
+// still hand-written, /org/{orgId}/domains being the one fully specified.
 interface PangolinDomain {
 	baseDomain: string;
 	domainId: string;
@@ -17,48 +20,90 @@ interface PangolinDomain {
 interface PangolinResource {
 	fullDomain: string;
 	name: string;
-	resourceId: string;
+	resourceId: number | string;
 }
 
 interface PangolinSite {
 	name: string;
-	siteId: string;
+	siteId: number | string;
 }
 
 interface PangolinResourceTarget {
-	targetId: string;
+	targetId: number | string;
 }
 
 /** Pangolin's own response envelope : `{data, success, message?, error?}`, `data` holds the endpoint-specific payload. */
 interface PangolinEnvelope<T> {
 	data: T;
+	message?: string;
 	success: boolean;
 }
 
+interface PangolinPagination {
+	limit?: number;
+	offset?: number;
+	total?: number;
+}
+
+interface PangolinListQuery {
+	baseUrl: string;
+	field: string;
+	pageParam: "offset" | "page";
+	path: string;
+	sizeParam: "limit" | "pageSize";
+	token: string;
+}
+
+export interface PangolinVerifyInput {
+	baseDomain?: string | null;
+	baseUrl: string;
+	orgId: string;
+	siteName?: string | null;
+	token: string;
+}
+
+export interface PangolinVerifyResult {
+	detail?: string;
+	error?: string;
+	success: boolean;
+}
+
+// The list endpoints are paginated and default to 20 items per page, which
+// is *not* enough to find one site or one existing resource on a real
+// instance : asking for the whole set and then following `pagination.total`
+// is what makes `findMainSite` and the already-exists check actually
+// correct rather than accidentally right on a small org.
+const PAGE_SIZE = 1000;
+const MAX_PAGES = 20;
+
 /**
  * Auto-manages routing for deployed services via a self-hosted Pangolin
- * instance's REST API : an alternative to CloudflareService (see
+ * instance's Integration API : an alternative to CloudflareService (see
  * cloudflare.service.ts) for instances that front themselves with Pangolin
  * (a tunnel/reverse-proxy manager) instead of a DNS provider Traefik can ACME
  * against directly. A service with `dnsResolvable` gets a Pangolin Resource
  * (a subdomain under one of the org's already-registered Pangolin domains)
  * created, plus a Target pointing at this Homerun host's own Traefik
  * entrypoint through the configured "site"'s tunnel, instead of the admin
- * wiring one up by hand for every service. Same "not live-tested against a
- * real registered account" posture as CloudflareService/git-provider OAuth :
- * verify the first real sync by hand once an org/site/API key are
- * configured.
+ * wiring one up by hand for every service.
  *
- * Deliberately hand-rolled fetch calls, not the reference project's
- * `openapi-fetch` client : that's a real dependency for a spec that project
- * itself gave up generating types from (see the type note above), plain
- * `fetch` matches this codebase's existing CloudflareService/git-provider
- * posture and avoids adding it for one caller.
+ * Every entry point returns a `DnsSyncResult`/`PangolinVerifyResult` instead
+ * of `void` : this used to swallow every failure into a `logger.warn`, so a
+ * misconfigured integration looked identical to a working one (the Settings
+ * page's own "Test connection" passed, since it only listed sites) and the
+ * only evidence was a log line nobody was looking at. The deploy pipeline now
+ * writes the outcome into the deployment log, see deploy.service.ts.
+ *
+ * Deliberately hand-rolled fetch calls, not an `openapi-fetch` client : that
+ * would be a real dependency and a generated-types build step for one
+ * caller, and plain `fetch` matches this codebase's existing
+ * CloudflareService/git-provider posture.
  *
  * Deliberately re-reads instance settings itself on every call rather than
- * caching them on the instance, same reasoning as CloudflareService : the token/org/
- * site can change on /settings mid-session, and syncs are infrequent (once
- * per deploy), so there's no meaningful state worth caching here.
+ * caching them on the instance, same reasoning as CloudflareService : the
+ * token/org/site can change on /settings mid-session, and syncs are
+ * infrequent (once per deploy), so there's no meaningful state worth caching
+ * here.
  */
 class PangolinServiceClass {
 	private async request<T>(
@@ -75,47 +120,107 @@ class PangolinServiceClass {
 				...init?.headers,
 			},
 		});
-		const body = (await res.json()) as T;
-		if (!res.ok) {
-			throw new Error(`Pangolin API ${res.status}: ${JSON.stringify(body)}`);
+		const raw = await res.text();
+		let body: unknown = null;
+		if (raw) {
+			try {
+				body = JSON.parse(raw);
+			} catch {
+				throw new Error(
+					`Pangolin API ${res.status} returned ${raw.trimStart().startsWith("<") ? "HTML, not JSON : this looks like the dashboard, not the Integration API" : "an unreadable body"}`,
+				);
+			}
 		}
-		return body;
+		if (!res.ok) {
+			const message = (body as PangolinEnvelope<unknown> | null)?.message;
+			throw new Error(`Pangolin API ${res.status}: ${message ?? raw}`);
+		}
+		return body as T;
 	}
 
-	private async listDomains(
+	/**
+	 * Collects every page of a paginated list endpoint, keyed by the array's
+	 * own field name (`sites`, `resources`, `domains`). Recursive rather than
+	 * a loop : this repo's `noAwaitInLoops` lint rule forbids the obvious
+	 * `for` version, and the requests are inherently sequential (each page
+	 * depends on the previous one's count).
+	 */
+	private async listAll<T>(
+		query: PangolinListQuery,
+		collected: T[] = [],
+		page = 0,
+	): Promise<T[]> {
+		const params = new URLSearchParams({
+			[query.pageParam]:
+				query.pageParam === "offset"
+					? String(collected.length)
+					: String(page + 1),
+			[query.sizeParam]: String(PAGE_SIZE),
+		});
+		const res = await this.request<
+			PangolinEnvelope<
+				Record<string, unknown> & { pagination?: PangolinPagination }
+			>
+		>(query.baseUrl, query.token, `${query.path}?${params}`);
+		const batch = res.data?.[query.field];
+		if (!Array.isArray(batch)) {
+			throw new Error(
+				`Pangolin returned no "${query.field}" list for ${query.path} : is that base URL the Integration API (it ends in /v1) rather than the dashboard?`,
+			);
+		}
+		const items = [...collected, ...(batch as T[])];
+		const total = res.data.pagination?.total;
+		const done =
+			batch.length === 0 ||
+			total === undefined ||
+			items.length >= total ||
+			page + 1 >= MAX_PAGES;
+		return done ? items : this.listAll<T>(query, items, page + 1);
+	}
+
+	private listDomains(
 		baseUrl: string,
 		token: string,
 		orgId: string,
 	): Promise<PangolinDomain[]> {
-		const res = await this.request<
-			PangolinEnvelope<{ domains: PangolinDomain[] }>
-		>(baseUrl, token, `/org/${orgId}/domains`);
-		return res.data.domains;
+		return this.listAll<PangolinDomain>({
+			baseUrl,
+			field: "domains",
+			pageParam: "offset",
+			path: `/org/${orgId}/domains`,
+			sizeParam: "limit",
+			token,
+		});
 	}
 
-	private async listResources(
+	private listResources(
 		baseUrl: string,
 		token: string,
 		orgId: string,
 	): Promise<PangolinResource[]> {
-		const res = await this.request<
-			PangolinEnvelope<{ resources: PangolinResource[] }>
-		>(baseUrl, token, `/org/${orgId}/resources`);
-		return res.data.resources;
+		return this.listAll<PangolinResource>({
+			baseUrl,
+			field: "resources",
+			pageParam: "page",
+			path: `/org/${orgId}/resources`,
+			sizeParam: "pageSize",
+			token,
+		});
 	}
 
-	private async findMainSite(
+	private listSites(
 		baseUrl: string,
 		token: string,
 		orgId: string,
-		mainSiteName: string,
-	): Promise<PangolinSite | null> {
-		const res = await this.request<PangolinEnvelope<{ sites: PangolinSite[] }>>(
+	): Promise<PangolinSite[]> {
+		return this.listAll<PangolinSite>({
 			baseUrl,
+			field: "sites",
+			pageParam: "page",
+			path: `/org/${orgId}/sites`,
+			sizeParam: "pageSize",
 			token,
-			`/org/${orgId}/sites`,
-		);
-		return res.data.sites.find((s) => s.name === mainSiteName) ?? null;
+		});
 	}
 
 	private async createResource(
@@ -141,15 +246,24 @@ class PangolinServiceClass {
 				method: "PUT",
 			},
 		);
+		if (!res.data?.resourceId) {
+			throw new Error(
+				`Pangolin created no resource id for ${params.name}: ${JSON.stringify(res.data)}`,
+			);
+		}
 		return res.data;
 	}
 
-	private async createResourceTarget(
+	private createResourceTarget(
 		baseUrl: string,
 		token: string,
-		params: { port: number; resourceId: string; siteId: string },
-	): Promise<PangolinResourceTarget> {
-		const res = await this.request<PangolinEnvelope<PangolinResourceTarget>>(
+		params: {
+			port: number;
+			resourceId: number | string;
+			siteId: number | string;
+		},
+	): Promise<PangolinEnvelope<PangolinResourceTarget>> {
+		return this.request<PangolinEnvelope<PangolinResourceTarget>>(
 			baseUrl,
 			token,
 			`/resource/${params.resourceId}/target`,
@@ -164,7 +278,6 @@ class PangolinServiceClass {
 				method: "PUT",
 			},
 		);
-		return res.data;
 	}
 
 	/** Finds the Pangolin domain (and the subdomain prefix within it) that `hostname` belongs to, or null if no registered domain matches. */
@@ -185,49 +298,78 @@ class PangolinServiceClass {
 		return { domain, subdomain };
 	}
 
-	/**
-	 * Creates a Pangolin Resource + Target for `hostname` if one doesn't
-	 * already exist. Best-effort : never throws into the deploy pipeline,
-	 * logs and returns on any failure, a missed routing sync isn't worth
-	 * failing a deploy over, the admin can always wire it up by hand.
-	 */
-	async syncDnsRecord(hostname: string): Promise<void> {
+	private async settingsOrNull(): Promise<{
+		baseUrl: string;
+		mainSiteName: string;
+		orgId: string;
+		port: number;
+		token: string;
+	} | null> {
 		const settings = await InstanceSettingsDTO.get();
 		if (!settings.pangolinConfigured) {
-			return;
+			return null;
 		}
 		const token = settings.decryptPangolinApiToken();
 		const baseUrl = settings.pangolinApiBaseUrl;
 		const orgId = settings.pangolinOrgId;
 		const mainSiteName = settings.pangolinMainSiteName;
 		if (!(token && baseUrl && orgId && mainSiteName)) {
-			return;
+			return null;
 		}
+		return {
+			baseUrl,
+			mainSiteName,
+			orgId,
+			port: settings.pangolinTargetPort,
+			token,
+		};
+	}
+
+	/**
+	 * Creates a Pangolin Resource + Target for `hostname` if one doesn't
+	 * already exist. Never throws into the deploy pipeline : a missed routing
+	 * sync isn't worth failing a deploy over, the admin can always wire it up
+	 * by hand, but the outcome is reported back rather than swallowed.
+	 */
+	async syncDnsRecord(hostname: string): Promise<DnsSyncResult | null> {
+		const cfg = await this.settingsOrNull();
+		if (!cfg) {
+			return null;
+		}
+		const { baseUrl, mainSiteName, orgId, port, token } = cfg;
 
 		try {
 			const resources = await this.listResources(baseUrl, token, orgId);
 			if (resources.some((r) => r.fullDomain === hostname)) {
-				return;
+				return {
+					detail: `${hostname} already has a resource`,
+					ok: true,
+					provider: "pangolin",
+				};
 			}
 
 			const domains = await this.listDomains(baseUrl, token, orgId);
 			const match = this.matchDomain(hostname, domains);
 			if (!match) {
-				logger.warn(
-					`No registered Pangolin domain matches ${hostname}, skipping`,
-				);
-				return;
+				return {
+					detail: `no registered Pangolin domain covers ${hostname} (registered: ${
+						domains.map((d) => d.baseDomain).join(", ") || "none"
+					})`,
+					ok: false,
+					provider: "pangolin",
+				};
 			}
 
-			const mainSite = await this.findMainSite(
-				baseUrl,
-				token,
-				orgId,
-				mainSiteName,
-			);
+			const sites = await this.listSites(baseUrl, token, orgId);
+			const mainSite = sites.find((s) => s.name === mainSiteName);
 			if (!mainSite) {
-				logger.warn(`Pangolin site "${mainSiteName}" not found, skipping`);
-				return;
+				return {
+					detail: `site "${mainSiteName}" not found (available: ${
+						sites.map((s) => s.name).join(", ") || "none"
+					})`,
+					ok: false,
+					provider: "pangolin",
+				};
 			}
 
 			const resource = await this.createResource(baseUrl, token, orgId, {
@@ -236,78 +378,103 @@ class PangolinServiceClass {
 				subdomain: match.subdomain,
 			});
 			await this.createResourceTarget(baseUrl, token, {
-				port: settings.pangolinTargetPort,
+				port,
 				resourceId: resource.resourceId,
 				siteId: mainSite.siteId,
 			});
 			logger.info(`Pangolin resource created: ${hostname} -> ${mainSiteName}`);
+			return {
+				detail: `created ${hostname} -> ${mainSiteName}:${port}`,
+				ok: true,
+				provider: "pangolin",
+			};
 		} catch (err) {
+			const detail = err instanceof Error ? err.message : String(err);
 			logger.warn(`Couldn't sync Pangolin resource for ${hostname}`, {
-				error: err instanceof Error ? err.message : String(err),
+				error: detail,
 			});
+			return { detail, ok: false, provider: "pangolin" };
 		}
 	}
 
 	/** Best-effort removal, same non-throwing posture as syncDnsRecord : called when a service with a Pangolin-managed hostname is deleted. */
-	async deleteDnsRecord(hostname: string): Promise<void> {
-		const settings = await InstanceSettingsDTO.get();
-		if (!settings.pangolinConfigured) {
-			return;
+	async deleteDnsRecord(hostname: string): Promise<DnsSyncResult | null> {
+		const cfg = await this.settingsOrNull();
+		if (!cfg) {
+			return null;
 		}
-		const token = settings.decryptPangolinApiToken();
-		const baseUrl = settings.pangolinApiBaseUrl;
-		const orgId = settings.pangolinOrgId;
-		if (!(token && baseUrl && orgId)) {
-			return;
-		}
+		const { baseUrl, orgId, token } = cfg;
 
 		try {
 			const resources = await this.listResources(baseUrl, token, orgId);
 			const existing = resources.find((r) => r.fullDomain === hostname);
 			if (!existing) {
-				return;
+				return {
+					detail: `no resource for ${hostname}`,
+					ok: true,
+					provider: "pangolin",
+				};
 			}
-			// DELETE /resource/{resourceId} : inferred from REST convention (the
-			// reference project is create-only, it never deletes a resource),
-			// not confirmed against a real instance, same caveat as the rest of
-			// this file.
 			await this.request(baseUrl, token, `/resource/${existing.resourceId}`, {
 				method: "DELETE",
 			});
 			logger.info(`Pangolin resource removed: ${hostname}`);
+			return { detail: `removed ${hostname}`, ok: true, provider: "pangolin" };
 		} catch (err) {
+			const detail = err instanceof Error ? err.message : String(err);
 			logger.warn(`Couldn't remove Pangolin resource for ${hostname}`, {
-				error: err instanceof Error ? err.message : String(err),
+				error: detail,
 			});
+			return { detail, ok: false, provider: "pangolin" };
 		}
 	}
 
 	/**
-	 * Live connectivity + auth check, for the Settings page's "Test
-	 * connection" button : confirms the token can actually list the
-	 * configured org's sites, rather than only validating it was non-blank.
+	 * Live end-to-end configuration check for the Settings page's "Test
+	 * connection" button : confirms the token can list the org's sites *and*
+	 * that the configured site and a domain covering this instance's base
+	 * domain both actually exist. The old version only listed sites, so it
+	 * passed happily on a configuration that could never create a single
+	 * resource, which is exactly how "test passes, nothing gets created"
+	 * happened.
 	 */
 	async verifyConnection(
-		baseUrl: string,
-		token: string,
-		orgId: string,
-	): Promise<{ error?: string; success: boolean }> {
+		input: PangolinVerifyInput,
+	): Promise<PangolinVerifyResult> {
+		const { baseDomain, baseUrl, orgId, siteName, token } = input;
 		try {
-			const res = await fetch(
-				`${baseUrl.replace(/\/$/, "")}/org/${orgId}/sites`,
-				{ headers: { Authorization: `Bearer ${token}` } },
-			);
-			const body = (await res.json()) as {
-				message?: string;
-				success: boolean;
-			};
-			if (!(res.ok && body.success)) {
+			const sites = await this.listSites(baseUrl, token, orgId);
+			const site = siteName
+				? sites.find((s) => s.name === siteName)
+				: undefined;
+			if (siteName && !site) {
 				return {
-					error: body.message ?? `HTTP ${res.status}`,
+					error: `Site "${siteName}" doesn't exist in that org. Available: ${
+						sites.map((s) => s.name).join(", ") || "none"
+					}.`,
 					success: false,
 				};
 			}
-			return { success: true };
+
+			const domains = await this.listDomains(baseUrl, token, orgId);
+			const match = baseDomain ? this.matchDomain(baseDomain, domains) : null;
+			if (baseDomain && !match) {
+				return {
+					error: `No registered Pangolin domain covers "${baseDomain}", so no service hostname could ever be routed. Registered: ${
+						domains.map((d) => d.baseDomain).join(", ") || "none"
+					}.`,
+					success: false,
+				};
+			}
+
+			const parts = [`${sites.length} site(s)`, `${domains.length} domain(s)`];
+			if (site) {
+				parts.push(`site "${site.name}" found`);
+			}
+			if (match) {
+				parts.push(`${baseDomain} routes under ${match.domain.baseDomain}`);
+			}
+			return { detail: parts.join(", "), success: true };
 		} catch (err) {
 			return {
 				error: err instanceof Error ? err.message : String(err),

@@ -374,6 +374,26 @@ that pattern for any new skill.
     from either `data.error` or the first entry of this repo's zod-shaped
     `data.errors` field map, so a route never needs to dig that out itself.
     `tests/unit/app/toast.test.ts` covers that extraction and the hook order.
+
+    **`reset` defaults to `false`, deliberately inverting SvelteKit's own
+    default, and it must stay that way.** Real bug, two visible symptoms from
+    one cause: Svelte strips an input's `value` attribute during hydration (see
+    `svelte/src/internal/client/dom/elements/attributes.js`'s
+    `remove_input_defaults`, whose own comment says it's there "to avoid a bug
+    when someone resets the form value"), so an input's `defaultValue` is `""`
+    no matter what the server rendered. `update()`'s default `reset: true` then
+    calls `form.reset()`, and (a) every `value={data.settings.x}` field on
+    `/settings` blanked out, with Svelte declining to repaint them since its own
+    cached value never changed, so the next save persisted the blanks; and (b)
+    `bind:value` state is actively overwritten with `defaultValue` by Svelte's
+    own form-reset listener (`listen_to_event_and_reset_event` in
+    `bindings/input.js`), which emptied the compose-import page's `text` state
+    and therefore the mirrored hidden `compose` field, so the Import step
+    rejected the exact file its own Parse step had just previewed ("That doesn't
+    look like a compose file", which is `parseYaml("")` returning `null`). Every
+    form in this app renders from server or `$state` values, so a DOM reset is
+    always wrong here. Pass `reset: true` only for a form that genuinely wants
+    clearing.
 - **The exceptions are narrow and all of them are non-mutating or instant**: a
   synchronous result with nothing to await (`env-paste-button.svelte`'s parse, a
   clipboard copy), and a background _load_ that already renders its own inline
@@ -1607,7 +1627,7 @@ a linked service to be _healthy_, just created and started.
 
 ### Built-in template catalog and gallery (`builtin-templates.ts`, `builtin-templates-apps.ts`, `template-icon.svelte`, `templates/[templateId]/`)
 
-55 built-in templates (up from the original 8), split across two data files
+58 built-in templates (up from the original 8), split across two data files
 purely to stay under `noExcessiveLinesPerFile`'s 680-line limit:
 `src/lib/server/db/builtin-templates.ts` (the original 8 infra templates plus
 Media/Network/Dashboard/Productivity/Finance category entries, also exports the
@@ -1628,7 +1648,7 @@ external-link buttons on the template details page (below); either can be `null`
 (some projects genuinely have no separate marketing site).
 
 **Icons are real bundled app logos, not generic per-category lucide icons.**
-`static/template-icons/` holds 55 downloaded SVG/PNG files (named
+`static/template-icons/` holds the downloaded SVG/PNG files (named
 `<id-without-builtin->.{svg,png}`, e.g. `redis.svg`, `ghost.png`), sourced from
 [selfh.st/icons](https://selfh.st/icons/) (the de facto self-hosted-app icon
 set, also used by Homepage/Dashy/Homarr), CC BY 4.0, bundled locally rather than
@@ -1837,8 +1857,12 @@ HMR-safe `globalThis` pattern as the db singleton, for `"docker"` hosts.
 build server's own daemon, which by definition isn't the daemon the service
 deploys to, so the registry is the only way it gets across; `deploy.service.ts`
 rejects the combination outright rather than deploying a tag that doesn't exist
-locally. The `git clone` step itself always happens on this host first, only the
-Docker build runs remotely.
+locally. Where the `git clone` runs depends on the build target: a `"docker"`
+host clones on this host (`git-build.ts`'s `mkdtemp` is local) and streams the
+build context to the remote daemon, whereas an `"agent"` host clones on the
+agent itself (`packages/agent/docker.ts` does its own `mkdtemp` + `git clone`).
+A repo only reachable from one of the two machines therefore works with one kind
+and not the other.
 
 ### Custom SSL certificates (`src/lib/services/docker/custom-ssl.ts`)
 
@@ -1881,9 +1905,24 @@ configured), and both can be turned on simultaneously (they run independently).
 Both are plain classes with static methods that re-read `InstanceSettingsDTO` on
 every call rather than caching, the admin can change credentials mid-session and
 syncs are infrequent (once per deploy), same reasoning as `GitProviderService`.
-Both fire from the same spot, `deploy.service.ts`, right after a successful
-**local** deploy with `dnsResolvable` set, fire-and-forget (`.catch(() => {})`),
-never able to fail the deploy itself, only log+warn on error.
+Both fire from the same spot, `deploy.service.ts`'s `syncAutoDns`, right after a
+successful **local** deploy with `dnsResolvable` set, for **every** hostname the
+service answers on (`<slug>.<baseDomain>` and its `customDomain`, which used not
+to be synced at all). Neither can fail the deploy.
+
+**They are no longer fire-and-forget, and that was the whole bug behind
+"Pangolin is configured and nothing gets created".** Both `syncDnsRecord`s
+caught their own failures into a `logger.warn` and returned `void`, so a
+misconfiguration was indistinguishable from a working setup. Every entry point
+now returns a `DnsSyncResult` (`$lib/services/dns-result.ts`,
+`{provider, ok, detail}`, `null` when that provider isn't configured);
+`dns.service.ts`'s `syncDns`/`deleteDns` take an **array** of hostnames and
+return every provider's verdict, and `syncAutoDns` awaits that and appends each
+one to the deployment's own log
+(`DNS (pangolin): created app.example.com -> tunnel:80`, or
+`DNS failed (pangolin): no registered Pangolin domain covers …`). The user sees
+it on the Overview tab's deploy log where they're already looking, instead of in
+a server log line nobody reads.
 
 - **`CloudflareService`**: for instances that own DNS on Cloudflare directly.
   `syncDnsRecord(hostname, target)` upserts a CNAME (`<slug>.<baseDomain>` →
@@ -1899,25 +1938,52 @@ never able to fail the deploy itself, only log+warn on error.
   domains matching the hostname) plus a **Target** pointing at this host's own
   Traefik entrypoint through the configured "main site"'s tunnel;
   `deleteDnsRecord(hostname)` removes the Resource;
-  `verifyConnection(baseUrl, token, orgId)` backs its own "Test connection"
-  button. Config:
+  `verifyConnection({baseUrl, token, orgId, siteName, baseDomain})` backs its
+  own "Test connection" button. Config:
   `pangolinApiBaseUrl`/`pangolinApiTokenEnc`/`pangolinOrgId`/`pangolinMainSiteName`
   (all four required to activate) + optional `pangolinTargetPort` (defaults to
-  80, Pangolin terminates public TLS itself). Pangolin's own OpenAPI spec is
-  broken/unusable, so its API shapes (`PangolinDomain`/`PangolinResource`/
-  `PangolinSite`/`PangolinResourceTarget`, envelope `{data, success}`) are
-  hand-typed against its Swagger UI widget, cross-checked against a sibling
-  open-source Dokploy-to-Pangolin bridge project that hit the same issue and
-  took the same approach. Both services use plain hand-rolled `fetch` calls
-  rather than an `openapi-fetch` client, same posture as `GitProviderService`.
+  80, Pangolin terminates public TLS itself). Both services use plain
+  hand-rolled `fetch` calls rather than an `openapi-fetch` client, same posture
+  as `GitProviderService`.
 
-**Not live-tested against a real registered account**, same posture as
-`GitProviderService`'s OAuth flow and the autoscaling migration: built carefully
-from each provider's own documented API shapes, but verify the first real sync
-by hand once a zone/token (Cloudflare) or org/site/API key (Pangolin) are
-actually configured. Pangolin's delete path specifically is inferred from REST
-convention rather than confirmed live, the reference project it was modeled on
-is create-only.
+**Pangolin's OpenAPI document is fetchable after all**, contrary to what this
+section used to say (a "the OAS is broken, the types are guesses" note inherited
+from the sibling `dokploy-to-pangolin` project):
+`GET https://api.pangolin.net/v1/openapi.json` serves the real 3.1 document, and
+`/v1/docs` is just a Swagger UI widget over it. Every path and request body this
+client sends is now checked against that document plus `fosrl/pangolin`'s own
+route source. Three things it settled, all of which matter:
+
+- **The base URL is the Integration API, not the dashboard.** It's a separate
+  server (port 3003 by default) that a self-hosted instance only exposes once
+  it's enabled, and its base path ends in `/v1`. The Settings placeholder used
+  to say `https://pangolin.example.com/api/v1`, which is the cookie-authed
+  dashboard API and rejects an API key. `request()` now names that case
+  specifically when a response body is HTML rather than JSON.
+- **Every list endpoint is paginated, and `/sites` and `/resources` default to
+  20 per page.** The old client read page one and stopped, so `findMainSite`
+  silently missed a site and the already-exists check silently missed a resource
+  on any org bigger than that. `listAll` now follows `pagination.total`
+  (recursively, since this repo's `noAwaitInLoops` rule forbids the obvious
+  loop). Note the two parameter spellings: `/sites` and `/resources` page with
+  1-based `page` + `pageSize`, `/domains` with `offset` + `limit`.
+- **Resource creation bodies are `z.strictObject`**, so an unknown field is a
+  400, not an ignored key. `http: true` + `protocol: "tcp"` are deprecated in
+  favour of `mode`, but still accepted, and are kept deliberately: an older
+  self-hosted instance wouldn't know `mode`, and strict parsing would reject it.
+
+`verifyConnection` deliberately checks the **whole** configuration, not just
+that the token authenticates: the named site must exist and one of the org's
+registered domains must cover this instance's `baseDomain`, since without either
+no resource can ever be created. The old version listed sites and called it a
+pass, which is how a setup that could never work reported "Org access verified".
+`tests/unit/app/pangolin.test.ts` drives all of this against a stubbed API that
+caps pages at 10 rows regardless of the requested size, so a client that stops
+after page one fails the test.
+
+**Cloudflare is still not live-tested against a real registered account**, same
+posture as `GitProviderService`'s OAuth flow: built from the documented API
+shapes, verify the first real sync by hand once a zone/token is configured.
 
 ### Job queue and worker (`job` table, `JobDTO`, `$lib/services/queue.service.ts`, `$lib/services/queue/`)
 
@@ -2539,6 +2605,39 @@ place:
   this one file down has no `tools/` directory; it's Option B in
   `docs/getting-started.md`, so a change here has to stay in step with that doc
   (`bun run e2e:multipass:release --only=docs` checks exactly that).
+
+**The dashboard gets its own Traefik router, off one variable
+(`DASHBOARD_DOMAIN`).** The app container used to carry no `traefik.*` labels at
+all in any compose file, so Homerun itself was reachable on `:3000` and nowhere
+else no matter how carefully `baseDomain` was configured, while every service it
+deployed got a routed hostname. The labels live in
+`tools/compose/app.compose.yaml`, `compose.prod.yaml` and the installer's
+generated compose (`packages/installer/steps/full-stack.ts`), and the shape they
+take is the result of testing three candidates against the real dev Traefik:
+
+- `traefik.enable` set to an empty string (what `${DASHBOARD_DOMAIN:+true}`
+  expands to when the variable is unset) is **not** silently ignored: Traefik
+  logs `ERR Skip container ... decoding Docker labels: strconv.ParseBool` on
+  every provider refresh, which the app's own System Logs page then shows. That
+  label must be exactly `true` or `false`.
+- Always-on with a placeholder hostname is worse: a router with a cert resolver
+  and a host rule naming `localhost` makes Traefik call the **real** Let's
+  Encrypt API and log
+  `Unable to obtain ACME certificate ... Domain name needs at least one dot`, a
+  rate-limited request for nothing.
+- What works, verified live (no log output at all, and a real 200 served through
+  Traefik): always `traefik.enable=true`, a host rule reading
+  `${DASHBOARD_DOMAIN:-localhost}`, `tls=true`, and a cert resolver of
+  `${DASHBOARD_DOMAIN:+${DASHBOARD_CERT_RESOLVER:-letsencrypt}}`. An **empty**
+  cert resolver is quietly fine and falls back to Traefik's own self-signed
+  cert, and nested interpolation like that is supported by Compose (checked with
+  `docker compose config`, all three branches). So unset means "dashboard on
+  `https://localhost` plus `:3000`, nothing logged", set means "real hostname,
+  real certificate", from one variable.
+
+The installer bakes the address it resolved (`--domain=` or the detected host)
+in as the rule's default, and picks the cert resolver by whether that address is
+a bare IP, since ACME can't issue for one.
 
 The app itself _is_ containerized for production use (`Dockerfile`,
 `docker-bake.hcl`, built/pushed by `.github/workflows/docker.yaml`; see Release
@@ -3603,11 +3702,19 @@ Three audiences, three places, keep them apart:
 - **`docs/*.md`**: the operator-facing guides (`getting-started`,
   `configuration`, `services`, `remote-hosts-and-agent`, `storage-and-backups`,
   `projects-and-templates`, `users-and-access`, `api-and-cli`,
-  `faq-and-limitations`, indexed by `docs/README.md`), plus the root
-  `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These are the
-  source of truth, plain Markdown, readable straight from the repo. The commands
-  they print are **executed verbatim** by `bun run e2e:multipass:release` (see
-  above), so a stale install one-liner is a test failure, not just a doc nit.
+  `faq-and-limitations`, `operations`, indexed by `docs/README.md`), plus the
+  root `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These are
+  the source of truth, plain Markdown, readable straight from the repo. The
+  commands they print are **executed verbatim** by
+  `bun run e2e:multipass:release` (see above), so a stale install one-liner is a
+  test failure, not just a doc nit. **Configuration docs are UI-first on
+  purpose**: an operator is expected to configure Homerun from `/settings` and
+  the onboarding wizard, never from a file. `docs/configuration.md` leads with
+  the dashboard, treats `DATABASE_URL`/`AUTH_SECRET`/`ORIGIN` as the three
+  unavoidable boot-time values, and demotes `homerun.yaml` to an optional
+  config-as-code path. Don't reintroduce an env-var table as the opening
+  section.
+
 - **The website** (<https://homerun.orochibraru.com>): built from a **separate
   repository** that renders this repo's `docs/*.md` itself. It used to live here
   as `packages/docs/` (a static SvelteKit site published as

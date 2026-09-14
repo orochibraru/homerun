@@ -25,22 +25,81 @@ the project's name to confirm, since it also deletes every service inside it.
 
 ## Templates
 
-A template is a saved service config (image/tag/port/env vars/etc.) you can
-deploy from repeatedly without re-entering everything. Two kinds:
+A template is a saved service config (image, tag, container port, env vars, CPU/
+memory) you can deploy from repeatedly without re-entering everything. Two
+kinds:
 
-- **Built-in**, Redis, Postgres, MySQL, MongoDB, Adminer, Uptime Kuma, n8n,
-  Vaultwarden. Seeded on every boot (idempotent), immutable, available to every
-  user.
+- **Built-in**, a catalog of ~58 common self-hosted apps, media (Jellyfin,
+  Navidrome, the *arr stack, qBittorrent), databases and caches (PostgreSQL,
+  MySQL, MongoDB, Redis), networking (Pi-hole, AdGuard Home, Nginx Proxy
+  Manager), monitoring (Uptime Kuma, Grafana, Gatus, Healthchecks), dashboards
+  (Homepage, Dashy, Homarr, Portainer), productivity (Vaultwarden, Trilium,
+  Wiki.js, Vikunja, Excalidraw), and more. Seeded on every boot (idempotent),
+  immutable, available to every account. Each carries its real app logo, bundled
+  with Homerun rather than hotlinked, so the gallery renders with no outbound
+  internet; an app with no official logo falls back to a colored icon for its
+  category.
 - **Custom**, save any service's current config as a template from its Settings
-  tab. Owned by the user who created it; visible only to them.
+  tab. Owned by the account that created it and visible only to them.
 
-Deploying from a template pre-fills the New Service form (`?templateId=`), you
-still review and can adjust anything before creating the service, and it still
-doesn't deploy automatically (same "create ≠ deploy" split as every other
-service).
+### The gallery
 
-`Templates` has the same search-and-filters bar as every other list page
-(matches name/description/image, plus a category filter) and a list/card view
-toggle, defaulting to card view here. The built-in and your own custom templates
-page independently, 24 at a time each, so a large custom collection doesn't push
-the built-in catalog off the first screen.
+`Templates` has the same toolbar as every other list page, a search box
+(matching name, description and image) and a category filter built from the
+categories actually present, plus a list/card view toggle that defaults to
+**card** here. Built-in and custom templates page independently, 24 at a time
+each, so a large custom collection doesn't push the built-in catalog off the
+first screen.
+
+Every card, and the template's own details page, offers two actions:
+
+- **Quick Deploy** creates the service straight from the template's defaults
+  (name and slug generated for you) and deploys it immediately, no wizard. From
+  the gallery it stays put and toasts a "View" link when it's done, so you can
+  quick-deploy several apps back to back; from a details page it takes you to
+  the new service.
+- **Configure** opens the New Service wizard pre-filled from the template
+  (`?templateId=`, plus `?projectId=` if you arrived from a project) so you can
+  adjust anything before creating it. Nothing is deployed until you submit.
+
+### The details page
+
+Clicking a template opens its own page: the full description, container port,
+CPU/memory defaults, every env var it sets, and links to the project's source
+repository and website where it has them. When the source link points at GitHub,
+Homerun also pulls in the repo's star count, last push, latest release tag and
+rendered README, so you can read what an app actually is without leaving the
+dashboard. That's fetched unauthenticated and streamed in after the rest of the
+page, so GitHub being slow, rate-limiting you (60 requests an hour per IP), or
+down just means the panel doesn't render.
+
+### Linked containers
+
+A template can pull its companions along with it. WordPress ships linked to
+MySQL, Umami and Miniflux to PostgreSQL, and you can link your own the same way
+from the "Linked containers" section on `Templates → New`: tick any other
+template, give it an alias (defaults to a slug of its name), and deploying the
+primary deploys the companions too.
+
+Env vars on the primary template can then reference a companion:
+
+- `{{db}}` resolves to that companion's generated slug, which is its hostname on
+  the shared network, so `DATABASE_HOST={{db}}` just works.
+- `{{db.POSTGRES_PASSWORD}}` resolves to the companion's own value for that env
+  var, so the primary and the database agree on a password without you typing it
+  twice.
+
+An alias that doesn't resolve is left in the deployed env var verbatim rather
+than silently blanked, so a typo is visible instead of mysterious.
+
+Deploying a linked template creates a project for the stack if the service
+doesn't already belong to one (so it shows up grouped), gives each companion a
+deterministic slug (`<primary>-<alias>`), and creates them **not**
+DNS-resolvable by default, a database or cache usually doesn't want a public
+subdomain. Companions are queued ahead of the primary, and if one fails the
+primary is cancelled rather than started against a missing dependency (see
+[the job queue](services.md#the-job-queue)).
+
+Links go exactly one level deep: you can't link to a template that itself has
+links. That's deliberate, it keeps `{{alias}}` resolution to a single pass with
+no cycles to detect.

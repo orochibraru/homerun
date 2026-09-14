@@ -178,20 +178,20 @@ describe("enhanceToast", () => {
 		await settle({ type: "success", data: {} });
 	});
 
-	test("forwards the reset option through to update", async () => {
+	test("forwards an explicit reset through to update", async () => {
 		const { settle, update } = run({
 			loading: "Deploying",
-			reset: false,
+			reset: true,
 			success: "Deployed.",
 		});
 		await settle({ type: "success", data: {} });
-		expect(update).toHaveBeenCalledWith({ reset: false });
+		expect(update).toHaveBeenCalledWith({ reset: true });
 	});
 
-	test("leaves update's own defaults alone when reset is unset", async () => {
+	test("never resets the form unless a call site asks for it", async () => {
 		const { settle, update } = run({ loading: "Saving", success: "Saved." });
 		await settle({ type: "success", data: {} });
-		expect(update).toHaveBeenCalledWith(undefined);
+		expect(update).toHaveBeenCalledWith({ reset: false });
 	});
 });
 

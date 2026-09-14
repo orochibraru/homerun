@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
 import {
@@ -64,17 +65,27 @@ export const actions = {
 		if (!token) {
 			return fail(400, { error: "Enter an API token first." });
 		}
-		const result = await PangolinService.verifyConnection(
+		// Deliberately checks the *whole* configuration, not just that the
+		// token authenticates : the site name and a domain covering this
+		// instance's base domain are both required for a single resource to
+		// ever be created, so a test that skipped them passed on a setup that
+		// could never work.
+		const result = await PangolinService.verifyConnection({
+			baseDomain: config.baseDomain,
 			baseUrl,
-			token,
 			orgId,
-		);
+			siteName:
+				(formData.get("pangolinMainSiteName") as string | null)?.trim() || null,
+			token,
+		});
 		if (!result.success) {
-			return fail(400, {
-				error: `Couldn't verify org access: ${result.error}`,
-			});
+			return fail(400, { error: result.error });
 		}
-		return { pangolinTestOk: true, success: true };
+		return {
+			pangolinTestDetail: result.detail ?? null,
+			pangolinTestOk: true,
+			success: true,
+		};
 	},
 
 	updateCloudflare: async ({ request, locals }) => {
