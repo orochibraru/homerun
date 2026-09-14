@@ -32,6 +32,10 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		expect(content).toContain(
 			"- /run/user/1000/docker.sock:/run/user/1000/docker.sock",
 		);
+		expect(content).toContain("DOCKER_SOCKET_PATH: /run/user/1000/docker.sock");
+		expect(content).toContain(
+			"- /run/user/1000/docker.sock:/var/run/docker.sock:ro",
+		);
 		expect(content).toContain("./homerun.yaml:/app/homerun.yaml:ro");
 		expect(content).toContain("name: homerun");
 		expect(content).toContain("AUTH_SECRET");
