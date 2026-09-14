@@ -316,7 +316,7 @@
                     h-1 flex-1 rounded-full transition-all duration-300 {level <=
                     passwordStrength
                     ? strengthMeta.bar
-                    : 'bg-(--color-surface-3)'}
+                    : 'bg-surface-3'}
                   "
                 >
                 </div>
