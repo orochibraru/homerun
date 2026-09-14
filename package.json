@@ -47,6 +47,7 @@
 		"clsx": "^2.1.1",
 		"commander": "^15.0.0",
 		"conventional-changelog-conventionalcommits": "^10.0.0",
+		"conventional-changelog-writer": "9",
 		"devalue": "^5.9.1",
 		"dprint": "^0.56.1",
 		"drizzle-kit": "^0.31.10",
