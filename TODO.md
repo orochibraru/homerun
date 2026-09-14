@@ -2,6 +2,8 @@
 
 No priority, pick whatever.
 
+- [ ] [App] Allow email change
+- [ ] [App] Add email config test button in UI
 - [ ] [App] `compose.prod.yaml` bind-mounts `./homerun.yaml`, so Option B still
       makes an operator `touch homerun.yaml` before the stack starts even though
       the file is entirely optional and everything in it is a `/settings` field.
