@@ -2,14 +2,14 @@
 	import {
 		Cpu,
 		Globe,
-		LoaderIcon,
 		Mail,
+		Rocket,
 		Server,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import type { ActionResult } from "@sveltejs/kit";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
+	import BrandMark from "$lib/components/brand-mark.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import {
 		errorClass,
@@ -17,6 +17,8 @@
 		labelClass as label,
 	} from "$lib/components/form-styles";
 	import Stepper, { type StepperStep } from "$lib/components/stepper.svelte";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { ONBOARDING_FIELD_STEP } from "$lib/onboarding-fields";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -295,35 +297,67 @@
 	}
 </script>
 
+{#snippet panelHeader(label: string, description: string)}
+  <div class="border-b border-border pb-4">
+    <h2 class="text-text text-base font-semibold tracking-tight">{label}</h2>
+    <p class="text-text-muted mt-1 text-sm">{description}</p>
+  </div>
+{/snippet}
+
+{#snippet reviewRow(term: string, value: string, mono = false)}
+  <div
+    class="flex items-baseline justify-between gap-4 border-b border-border/60 py-2.5 last:border-0"
+  >
+    <dt class="text-text-muted text-sm">{term}</dt>
+    <dd class="text-text truncate text-sm {mono ? 'font-mono text-xs' : ''}">
+      {value}
+    </dd>
+  </div>
+{/snippet}
+
 {#if data.waitingForAdmin}
-  <div class="flex min-h-screen items-center justify-center p-6">
-    <div class="text-center">
-      <TriangleAlert class="mx-auto mb-4 size-8 text-amber-500" />
-      <h1 class="text-text text-xl font-semibold tracking-tight">Almost there</h1>
-      <p class="mt-2 text-sm text-text-muted">
+  <div class="flex min-h-screen flex-col items-center justify-center p-6">
+    <BrandMark class="mb-10" size="lg" />
+    <div class="glass w-full max-w-md rounded-2xl p-8 text-center">
+      <div
+        class="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500"
+      >
+        <TriangleAlert class="size-6" />
+      </div>
+      <h1 class="text-text text-xl font-semibold tracking-tight">
+        Almost there
+      </h1>
+      <p class="text-text-muted mt-2 text-sm leading-relaxed">
         An admin needs to finish setting up this instance before you can
         continue. Check back shortly.
       </p>
     </div>
   </div>
 {:else}
-  <div class="mx-auto space-y-6 p-6 md:p-10">
-    <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Set up Homerun</h1>
-      <p class="mt-0.5 text-sm text-text-muted">
+  <div class="mx-auto w-full max-w-3xl p-6 md:p-10">
+    <BrandMark class="mb-9" size="lg" />
+
+    <div class="mb-8">
+      <p class="eyebrow mb-2">Setup</p>
+      <h1 class="text-text text-2xl font-semibold tracking-tight md:text-3xl">
+        Let's get this instance running
+      </h1>
+      <p class="text-text-muted mt-2 max-w-xl text-sm leading-relaxed">
         A few instance-wide settings before the dashboard unlocks : every field
         below is also editable later from Settings.
       </p>
     </div>
 
     {#if data.authSecretIsDefault}
-      <div class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+      <div
+        class="mb-8 flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/5 p-3.5 text-xs text-red-600 dark:text-red-400"
+      >
         <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
         <span>
           Still using the built-in placeholder auth secret : this can't be fixed
-          from this wizard. Set <code>AUTH_SECRET</code> (e.g.
-          <code>openssl rand -base64 32</code>) and restart when you get a
-          chance.
+          from this wizard. Set <code class="font-mono">AUTH_SECRET</code> (e.g.
+          <code class="font-mono">openssl rand -base64 32</code>) and restart
+          when you get a chance.
         </span>
       </div>
     {/if}
@@ -352,15 +386,20 @@
         {#snippet children()}
           <!-- ═══ Step 1: Core ═══ -->
           <section
-            class="space-y-4 rounded-2xl glass p-5"
+            class="space-y-5 rounded-2xl glass p-6"
             class:hidden={activeStep !== 0}
           >
+            {@render panelHeader(
+              "Core",
+              "The domain this instance and everything it deploys lives under.",
+            )}
             <div>
               <label class={label} for="baseDomain">Base domain</label>
               <input
                 class={input}
                 id="baseDomain"
                 name="baseDomain"
+                placeholder="example.com"
                 type="text"
                 bind:value={baseDomain}
               >
@@ -389,9 +428,13 @@
 
           <!-- ═══ Step 2: Docker ═══ -->
           <section
-            class="space-y-4 rounded-2xl glass p-5"
+            class="space-y-5 rounded-2xl glass p-6"
             class:hidden={activeStep !== 1}
           >
+            {@render panelHeader(
+              "Docker",
+              "How Homerun reaches the daemon it deploys onto.",
+            )}
             <div>
               <label class={label} for="dockerSocketPath">Socket path</label>
               <input
@@ -428,35 +471,41 @@
 
           <!-- ═══ Step 3: Traefik ═══ -->
           <section
-            class="space-y-4 rounded-2xl glass p-5"
+            class="space-y-5 rounded-2xl glass p-6"
             class:hidden={activeStep !== 2}
           >
-            <div>
-              <label class={label} for="traefikEntrypoint">Entrypoint</label>
-              <input
-                class={input}
-                id="traefikEntrypoint"
-                name="traefikEntrypoint"
-                type="text"
-                bind:value={traefikEntrypoint}
-              >
-              {#if showError("traefikEntrypoint")}
-                <p class={errorClass}>{showError("traefikEntrypoint")}</p>
-              {/if}
-            </div>
-            <div>
-              <label class={label} for="traefikCertResolver"
-              >Cert resolver</label>
-              <input
-                class={input}
-                id="traefikCertResolver"
-                name="traefikCertResolver"
-                type="text"
-                bind:value={traefikCertResolver}
-              >
-              {#if showError("traefikCertResolver")}
-                <p class={errorClass}>{showError("traefikCertResolver")}</p>
-              {/if}
+            {@render panelHeader(
+              "Traefik",
+              "The router that puts your services on the internet, with certificates.",
+            )}
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label class={label} for="traefikEntrypoint">Entrypoint</label>
+                <input
+                  class={input}
+                  id="traefikEntrypoint"
+                  name="traefikEntrypoint"
+                  type="text"
+                  bind:value={traefikEntrypoint}
+                >
+                {#if showError("traefikEntrypoint")}
+                  <p class={errorClass}>{showError("traefikEntrypoint")}</p>
+                {/if}
+              </div>
+              <div>
+                <label class={label} for="traefikCertResolver"
+                >Cert resolver</label>
+                <input
+                  class={input}
+                  id="traefikCertResolver"
+                  name="traefikCertResolver"
+                  type="text"
+                  bind:value={traefikCertResolver}
+                >
+                {#if showError("traefikCertResolver")}
+                  <p class={errorClass}>{showError("traefikCertResolver")}</p>
+                {/if}
+              </div>
             </div>
             <div>
               <label class={label} for="traefikDynamicConfigDir"
@@ -474,9 +523,13 @@
 
           <!-- ═══ Step 4: Email ═══ -->
           <section
-            class="space-y-4 rounded-2xl glass p-5"
+            class="space-y-5 rounded-2xl glass p-6"
             class:hidden={activeStep !== 3}
           >
+            {@render panelHeader(
+              "Email",
+              "Optional : used for verification links and invitations.",
+            )}
             <CheckBox
               helperText="Send email through this SMTP server"
               id="smtpEnabled"
@@ -485,7 +538,7 @@
               bind:checked={smtpEnabled}
             />
             {#if smtpEnabled}
-              <div class="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-5 sm:grid-cols-2">
                 <div>
                   <label class={label} for="smtpHost">Host</label>
                   <input
@@ -571,51 +624,64 @@
 
           <!-- ═══ Step 5: Review ═══ -->
           <section
-            class="space-y-3 rounded-2xl glass p-5"
+            class="space-y-5 rounded-2xl glass p-6"
             class:hidden={activeStep !== 4}
           >
-            <h2 class="eyebrow">Ready to go</h2>
-            <dl class="space-y-1.5 text-sm">
-              <div class="flex justify-between gap-4">
-                <dt class="text-text-muted">Base domain</dt>
-                <dd class="truncate text-text">{baseDomain || "—"}</dd>
+            {@render panelHeader(
+              "Review",
+              "What this instance will start with. Everything here is editable later from Settings.",
+            )}
+            <div
+              class="flex items-center gap-3 rounded-xl border border-accent/25 bg-accent-light p-4"
+            >
+              <span
+                class="bg-accent/15 text-accent flex size-9 shrink-0 items-center justify-center rounded-xl"
+              >
+                <Rocket class="size-4.5" />
+              </span>
+              <div class="min-w-0">
+                <p class="text-text text-sm font-medium">Ready to go</p>
+                <p class="text-text-muted text-xs">
+                  Finishing unlocks the dashboard for this instance.
+                </p>
               </div>
-              <div class="flex justify-between gap-4">
-                <dt class="text-text-muted">Docker socket</dt>
-                <dd class="truncate font-mono text-xs text-text">
-                  {dockerSocketPath || "auto-detected"}
-                </dd>
-              </div>
-              <div class="flex justify-between gap-4">
-                <dt class="text-text-muted">Traefik entrypoint</dt>
-                <dd class="truncate text-text">{traefikEntrypoint || "—"}</dd>
-              </div>
-              <div class="flex justify-between gap-4">
-                <dt class="text-text-muted">Email</dt>
-                <dd class="truncate text-text">
-                  {smtpEnabled ? smtpHost || "—" : "Not configured"}
-                </dd>
-              </div>
+            </div>
+            <dl>
+              {@render reviewRow("Base domain", baseDomain || "—")}
+              {@render reviewRow("Origin", originPreview, true)}
+              {@render reviewRow(
+                "Docker socket",
+                dockerSocketPath || "auto-detected",
+                true,
+              )}
+              {@render reviewRow(
+                "Shared network",
+                dockerNetworkName || "—",
+                true,
+              )}
+              {@render reviewRow(
+                "Traefik entrypoint",
+                traefikEntrypoint || "—",
+              )}
+              {@render reviewRow("Cert resolver", traefikCertResolver || "—")}
+              {@render reviewRow(
+                "Email",
+                smtpEnabled ? smtpHost || "—" : "Not configured",
+              )}
             </dl>
-            <p class="text-xs text-text-subtle">
-              Everything here can be changed later from Settings.
-            </p>
           </section>
         {/snippet}
 
         {#snippet finish()}
-          <button
-            class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={submitting}
-            type="submit"
-          >
+          <Button disabled={submitting} type="submit">
             {#if submitting}
-              <LoaderIcon class="size-4 animate-spin" />
+              <Spinner />
               Finishing…
             {:else}
+              <Rocket class="size-4" />
               Finish setup
             {/if}
-          </button>
+          </Button>
         {/snippet}
       </Stepper>
     </form>
