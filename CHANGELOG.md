@@ -1,3 +1,10 @@
+## [1.0.15](https://github.com/orochibraru/homerun/compare/v1.0.14...v1.0.15) (2026-09-14)
+
+### Features
+
+- docs trigger floow
+  ([9f7790b](https://github.com/orochibraru/homerun/commit/9f7790b631057897ec0147248f91c2d63edc3547))
+
 ## [1.0.14](https://github.com/orochibraru/homerun/compare/v1.0.13...v1.0.14) (2026-09-14)
 
 ### Bug Fixes
