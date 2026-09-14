@@ -884,28 +884,45 @@ Setup diagnostics below) in favor of the dashboard banner deep-linking into
   `updatePorts` action, moved off Settings; SSL section is a read-only explainer
   for the automatic-vs-custom-cert split, host ports are still never
   _published_/mapped by design even though host network mode now exists, see
-  below), **Compute** (cpu/memory limits, `updateComputeSchema`, its own
-  `updateCompute` action, moved off Settings), **Terminal** (interactive shell
-  into the live container, see below), **Errors** (failed deployments + a live
-  "container currently down" banner + "Application errors", persisted app-level
-  warn/error `Logger` output attributed to this service, see
-  `app_log`/`AppLogDTO` in Data model below; plus, when
-  `currentStatus === "missing"`, a distinct banner with a "Resolve" button,
-  `?/resolveOrphan`, calling `ServiceDTO.resolveOrphan()` to clear the stale
-  `containerId`/`swarmServiceId` and put the row back to a clean, never-deployed
-  shape so Deploy works again, see the `"missing"` `ContainerStatus` note under
-  Docker integration below), **Settings** (name/slug/restart-policy, move
-  between projects, save-as-template, auto-redeploy cron schedule, danger-zone
-  delete, image/git/registry, port/network and cpu/memory fields all moved to
-  their own tabs, see Source/Networking/Compute above)
+  below; **every one of those settings is a Traefik label written when the
+  container is created**, so saving one changes nothing about the container
+  that's already running, which is why an already-deployed service shows an
+  amber notice and a `?/redeploy` button at the top of this tab rather than
+  leaving the user to work out why their custom domain 404s), **Compute**
+  (cpu/memory limits, `updateComputeSchema`, its own `updateCompute` action,
+  moved off Settings), **Terminal** (interactive shell into the live container,
+  see below), **Errors** (failed deployments + a live "container currently down"
+  banner + "Application errors", persisted app-level warn/error `Logger` output
+  attributed to this service, see `app_log`/`AppLogDTO` in Data model below;
+  plus, when `currentStatus === "missing"`, a distinct banner with a "Resolve"
+  button, `?/resolveOrphan`, calling `ServiceDTO.resolveOrphan()` to clear the
+  stale `containerId`/`swarmServiceId` and put the row back to a clean,
+  never-deployed shape so Deploy works again, see the `"missing"`
+  `ContainerStatus` note under Docker integration below), **Settings**
+  (name/slug/restart-policy, move between projects, save-as-template,
+  auto-redeploy cron schedule, danger-zone delete, image/git/registry,
+  port/network and cpu/memory fields all moved to their own tabs, see
+  Source/Networking/Compute above)
 - `[serviceId]/deployments/[deploymentId]/events/+server.ts`, the SSE stream the
   Overview tab listens on while a deploy is in flight (see Live progress below),
   and `.../progress/+server.ts`, the older `{log, status}` JSON endpoint, now
   the client's fallback when the stream can't be held open. The client
-  pre-generates the deployment id itself (`crypto.randomUUID()`, set on the form
-  via `formData.set("deploymentId", ...)` in `use:enhance`'s pre-submit
-  callback) so it can start listening _before_ the deploy request even resolves,
-  which is why the stream waits for the row instead of 404ing. Both are
+  pre-generates the deployment id itself (`randomId()` from `$lib/random-id.ts`,
+  set on the form via `formData.set("deploymentId", ...)` in `use:enhance`'s
+  pre-submit callback) so it can start listening _before_ the deploy request
+  even resolves, which is why the stream waits for the row instead of 404ing.
+  **It must not call `crypto.randomUUID()` directly, and that's a real reported
+  bug, not a style preference**: that API is secure-context-gated in browsers,
+  so on a plain-HTTP instance at a bare IP (exactly what the installer's
+  `--mode=full` produces) it's `undefined`, the pre-submit callback threw
+  `TypeError: crypto.randomUUID is not a function` before the submission ever
+  reached the server, and since `onStart` had already set `pendingAction`,
+  Deploy spun forever with nothing queued and no toast (`toast.promise` is
+  called after `onSubmit`). `randomId()` falls back to `crypto.getRandomValues`,
+  which carries no such restriction. Server-side `crypto.randomUUID()` (every
+  DTO's id) is fine, this only applies to code that runs in the browser.
+  `navigator.clipboard` is gated the same way, which `profile/clients` already
+  handles by catching and telling the user to copy manually. Both are
   status-driven (they end once the deployment reaches a terminal status), which
   is also what makes resuming the progress view after a mid-deploy page reload
   work, `onMount` checks the latest deployment's status and `svc.currentStatus`
@@ -1190,10 +1207,21 @@ that the dashboard's Host Resources panel, the notification feed and the
 job-queue panel each resolve past their skeleton against real data, and that a
 mark-read/delete command updates the feed with no page reload, and
 (`ui-login-wall.spec.ts`) the Authentication page's presets and the service
-Access section's reveal-and-validate behaviour. Not covered: a real deploy needs
-a Docker socket reachable from _inside_ the spawned app, which this bootstrap
+Access section's reveal-and-validate behaviour, and (`ui-form-state.spec.ts`)
+that a saved settings section keeps its field values and that the compose-import
+page's Import step accepts the file its own Parse step previewed, the two halves
+of the `reset` bug under Conventions above. Not covered: a real deploy needs a
+Docker socket reachable from _inside_ the spawned app, which this bootstrap
 doesn't wire up. Add browser-level cases here; don't re-prove API shapes
 `tests/integration/` already covers directly and faster.
+
+**A spec file that signs in as the bootstrap admin must sort after
+`onboarding.spec.ts`**, hence the `ui-` prefix on the two that do: Playwright
+runs files in discovery order with one shared app, so a spec landing before
+onboarding finishes is bounced to `/onboarding` by the layout's own gate.
+Anything Docker-touching is still out : importing a compose file into a
+_project_ creates a Docker network, so `ui-form-state.spec.ts` imports ungrouped
+on purpose.
 
 ### The `$derived` + push/splice anti-pattern (real, tested bug)
 
