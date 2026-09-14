@@ -95,6 +95,3 @@ binary or build output):
   used above (Docker + rootless setup + the agent or full stack)
 - [`packages/cli/`](packages/cli/README.md): a typed CLI
   (`homerun services deploy <id>`, etc.) against the REST API
-- [`packages/docs/`](packages/docs/README.md): the static docs site rendering
-  this repo's `docs/*.md` guides (what's deployed at
-  [the website](https://homerun.orochibraru.com))

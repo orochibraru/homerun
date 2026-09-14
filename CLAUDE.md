@@ -68,7 +68,6 @@ bun run format:md        # prettier over **/*.md, separate from lint:md's rule c
 bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts
 bun run component:add    # shadcn-svelte add <name>, installs a UI primitive into src/lib/components/ui/
 bun run dev:agent        # bun run --hot packages/agent/index.ts, the Homerun Agent against the local Docker socket
-bun run dev:docs         # packages/docs/ (the docs site) in dev; build:docs/check:docs are its build/typecheck, all three via scripts/docs.ts
 docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml), required, the app has no fallback DB, see Compose files below
 bun run release          # semantic-release, normally CI-only (.github/workflows/publish.yaml), see Release automation below
 ```
@@ -91,9 +90,7 @@ standalone Bun/TypeScript sub-projects (their own `tsconfig.json`, checked via
 the root `check:agent`/`check:cli`/`check:installer` scripts and compiled via
 `scripts/build-packages.ts`, **not** their own `package.json`/`bun install`,
 they share the root one), not part of the SvelteKit app above, see "Homerun
-Agent + installer" and "Homerun CLI" below for what they are. `packages/docs/`
-is a fourth sub-project under `packages/`, a generated docs site, see its own
-subsection below.
+Agent + installer" and "Homerun CLI" below for what they are.
 
 ### Unit tests (`tests/`)
 
@@ -1699,18 +1696,17 @@ breaks the page, `getGitHubRepoInfo()` just resolves to `null` and the panel/
 readme sections don't render. Results are cached in-memory per `owner/repo` (1h
 TTL, HMR-safe `globalThis` singleton, same pattern as the db client) since every
 viewer of the same template would otherwise re-hit the same three endpoints. The
-readme is rendered with `marked` (already a dependency, used by `packages/docs/`
-for the operator guides) through a custom renderer that resolves relative
-image/link paths against the repo's default branch (`raw.githubusercontent.com`
-for images, a `blob/<branch>/` GitHub URL for links), then run through
-`sanitize-html` (a new dependency, added specifically for this) before being
-sent to the client and rendered via `{@html}`. This sanitization step is
-load-bearing, not decorative: a template's `sourceUrl` is user-settable (a
-developer can save any service as a template with any source URL), so a
-malicious template could point at a repo whose README is crafted to exploit gaps
-in GitHub's own rendering; sanitizing server-side means the client only ever
-receives an already-restricted tag/attribute allowlist, regardless of what
-GitHub returned.
+readme is rendered with `marked` (already a dependency) through a custom
+renderer that resolves relative image/link paths against the repo's default
+branch (`raw.githubusercontent.com` for images, a `blob/<branch>/` GitHub URL
+for links), then run through `sanitize-html` (a new dependency, added
+specifically for this) before being sent to the client and rendered via
+`{@html}`. This sanitization step is load-bearing, not decorative: a template's
+`sourceUrl` is user-settable (a developer can save any service as a template
+with any source URL), so a malicious template could point at a repo whose README
+is crafted to exploit gaps in GitHub's own rendering; sanitizing server-side
+means the client only ever receives an already-restricted tag/attribute
+allowlist, regardless of what GitHub returned.
 
 ### Git-based builds (`src/lib/services/docker/git-build.ts`)
 
@@ -3455,9 +3451,6 @@ Two standalone Bun/TypeScript sub-projects under `packages/`, siblings of
 sub-project, see the Commands section above) and **not** part of the SvelteKit
 build, both compile to a native binary via `bun build --compile`. See each
 folder's own README for the full detail; this section is the pointer.
-`packages/docs/` is a fourth, unrelated sub-project under `packages/` (the
-generated docs site, see its own subsection near the end of this document), not
-part of the Agent/installer/CLI trio described here.
 
 The Agent is a selectable build-server connection kind
 (`remote_host.kind: "agent"`, `$lib/services/agent-client.service.ts`'s
@@ -3589,9 +3582,8 @@ drives a target machine's shell, not this app's own runtime).
   from `docs/getting-started.md`, `packages/agent/README.md` and
   `docs/api-and-cli.md` at run time and executed verbatim (`Vm.runScript` writes
   a documented block to a file and runs it rather than re-typing it), so a
-  renamed flag, a moved `raw.githubusercontent.com` path, or a landing page that
-  disagrees with `docs/getting-started.md` fails the run. Phases are
-  `--only=`/`--skip=` selectable: `docs` (cross-checks every place the same
+  renamed flag or a moved `raw.githubusercontent.com` path fails the run. Phases
+  are `--only=`/`--skip=` selectable: `docs` (cross-checks every place the same
   command is documented, asserts each documented URL exists in this checkout
   _and_ is live, and asserts the GitHub release under test really published all
   six binaries, no VM needed, seconds to run), `full`, `agent`, `remote`, `cli`,
@@ -3601,7 +3593,7 @@ drives a target machine's shell, not this app's own runtime).
   URLs at a pushed branch when verifying a docs/installer change before merging,
   and `--version=vX.Y.Z` pins a release instead of `latest`.
 
-### Documentation (`docs/`, `packages/docs/`, `README.md`, `CONTRIBUTING.md`)
+### Documentation (`docs/`, `README.md`, `CONTRIBUTING.md`)
 
 Three audiences, three places, keep them apart:
 
@@ -3615,33 +3607,14 @@ Three audiences, three places, keep them apart:
   `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These are the
   source of truth, plain Markdown, readable straight from the repo. The commands
   they print are **executed verbatim** by `bun run e2e:multipass:release` (see
-  below), so a stale install one-liner is a test failure, not just a doc nit.
-- **`packages/docs/`**: a standalone, fully static SvelteKit site (own
-  `svelte.config.js`/`vite.config.ts`/`tsconfig.json`, `adapter-static`, sharing
-  the root `package.json`/`bun install` like every other `packages/*`
-  sub-project) that renders the landing page, a `/docs/<slug>` page per file
-  under `docs/` (via `import.meta.glob` at build time, never a second copy to
-  keep in sync), and a `/docs/api` Swagger UI page. Published as
-  `docker.io/orochibraru/homerun-docs`.
-
-**A dead `#anchor` in `docs/` fails the docs image build, and nothing else
-catches it.** `adapter-static`'s prerender resolves every cross-page anchor
-against the ids `docs-content.ts`'s own slugger emits, and errors on a miss;
-`bun run check` only runs `check:docs` (svelte-check), never a prerender, so a
-heading rename that orphans a link is green locally and red in
-`Docker Build (Docs)`. Run `bun run build:docs` after renaming a heading in
-`docs/`.
-
-`bun run dev:docs`/`build:docs`/`check:docs` all go through `scripts/docs.ts`
-rather than plain `vite`/`svelte-check`, for two reasons documented at length in
-that file: it writes a stub `.svelte-kit/tsconfig.json` at the **repo root** (a
-real, tested rolldown-vite bug resolves `packages/docs/tsconfig.json`'s
-`extends` chain against the repo root instead of `packages/docs/`, and fails
-outright if that file doesn't exist, invisible locally the moment
-`bun run dev`/`check:app` has run once, caught for real by a clean Docker
-build), and it copies the checked-in root `openapi.json` into
-`packages/docs/static/` (gitignored, regenerated every dev/build) so the Swagger
-UI page has a spec to serve. `check:docs` is part of `bun run check`.
+  above), so a stale install one-liner is a test failure, not just a doc nit.
+- **The website** (<https://homerun.orochibraru.com>): built from a **separate
+  repository** that renders this repo's `docs/*.md` itself. It used to live here
+  as `packages/docs/` (a static SvelteKit site published as
+  `docker.io/orochibraru/homerun-docs`); that sub-project, its `scripts/docs.ts`
+  wrapper, the `dev:docs`/`build:docs`/`check:docs` scripts, the `docs`
+  Dockerfile stage and bake target, and every CI job building or publishing it
+  are all gone. Don't reintroduce a docs site under `packages/`.
 
 ## Planned features (not yet built)
 

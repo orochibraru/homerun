@@ -30,7 +30,6 @@ jobs:
         repository:
           - orochibraru/homerun
           - orochibraru/homerun-agent
-          - orochibraru/homerun-docs
     steps:
       - name: Delete the tag from Docker Hub
         env:

@@ -5,13 +5,10 @@ repo, fill in a form, deploy: Traefik routes it to `<slug>.yourdomain.com` with
 TLS. Single host, local Docker socket, no multi-node orchestration.
 
 This directory is plain Markdown, the source of truth: read it straight from the
-repo, or on your GitHub remote's file browser. A generated static site
-(`packages/docs/`) renders these same files at build time via
-`bun run build:docs`/`dev:docs`, published as
-`docker.io/orochibraru/homerun-docs` and served at
-[the website](https://homerun.orochibraru.com); it's a companion renderer, not a
-second copy to keep in sync by hand, see
-[`../packages/docs/README.md`](../packages/docs/README.md) for how it works.
+repo, or on your GitHub remote's file browser. The
+[website](https://homerun.orochibraru.com) renders these same files from its own
+separate repository; it's a companion renderer, not a second copy to keep in
+sync by hand.
 
 ## Guides
 

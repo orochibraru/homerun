@@ -138,10 +138,6 @@ async function readDocumentedCommands(): Promise<DocumentedCommands> {
 		normalizeCommand(installerReadme) === normalizeCommand(installerFull),
 		`packages/installer/README.md's one-liner differs from docs/getting-started.md's:\n  ${normalizeCommand(installerReadme)}\n  ${normalizeCommand(installerFull)}`,
 	);
-	assert(
-		normalizeCommand(Docs.siteOneLiner()) === normalizeCommand(installerFull),
-		`The docs site landing page's copy-paste command differs from docs/getting-started.md's:\n  ${normalizeCommand(Docs.siteOneLiner())}\n  ${normalizeCommand(installerFull)}`,
-	);
 
 	const installerAgent = Docs.command(
 		"packages/agent/README.md",

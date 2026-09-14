@@ -49,10 +49,8 @@ test-results/
 .DS_Store
 Thumbs.db
 
-# Root README/notes aren't needed by any image ; docs/*.md is the one
-# exception (packages/docs/'s own build stage reads it at build time via
-# src/lib/docs-content.ts's import.meta.glob, see that file's own comment),
-# so it isn't excluded here the way the others are.
+# Notes and prose aren't needed by any image.
+docs/
 README.md
 CONTRIBUTING.md
 CHANGELOG.md

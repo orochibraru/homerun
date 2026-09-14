@@ -95,28 +95,3 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD ["sh", "-c", "wget --no-verbose --tries=1 --spider http://0.0.0.0:7420/v1/health || exit 1"]
 
 ENTRYPOINT ["/usr/local/bin/homerun-agent"]
-
-FROM deps AS docs-builder
-
-COPY . .
-
-COPY --from=deps /app/node_modules /app/node_modules
-
-RUN mkdir -p .svelte-kit && echo '{"compilerOptions":{}}' > .svelte-kit/tsconfig.json
-
-RUN cp openapi.json packages/docs/static/openapi.json
-
-WORKDIR /app/packages/docs
-
-RUN ../../node_modules/.bin/svelte-kit sync && ../../node_modules/.bin/vite build
-
-FROM nginx:alpine AS docs
-
-COPY --from=docs-builder /app/packages/docs/build /usr/share/nginx/html
-
-COPY packages/docs/nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD ["sh", "-c", "wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1"]

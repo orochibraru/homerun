@@ -3,11 +3,11 @@ variable "TAG" {
 }
 
 group "default" {
-  targets = ["app", "agent", "docs"]
+  targets = ["app", "agent"]
 }
 
 group "ci" {
-  targets = ["app-ci", "agent-ci", "docs-ci"]
+  targets = ["app-ci", "agent-ci"]
 }
 
 target "base" {
@@ -37,13 +37,6 @@ target "agent-base" {
   cache-to   = ["type=gha,mode=max,scope=agent"]
 }
 
-target "docs-base" {
-  target = "docs"
-  tags       = ["docker.io/orochibraru/homerun-docs:latest", "docker.io/orochibraru/homerun-docs:${TAG}"]
-  cache-from = ["type=gha,scope=docs"]
-  cache-to   = ["type=gha,mode=max,scope=docs"]
-}
-
 target "app" {
   inherits   = ["base", "app-base"]
 }
@@ -52,18 +45,10 @@ target "agent" {
   inherits   = ["base", "agent-base"]
 }
 
-target "docs" {
-  inherits   = ["base", "docs-base"]
-}
-
 target "app-ci" {
   inherits   = ["ci-base", "app-base"]
 }
 
 target "agent-ci" {
   inherits   = ["ci-base", "agent-base"]
-}
-
-target "docs-ci" {
-  inherits   = ["ci-base", "docs-base"]
 }

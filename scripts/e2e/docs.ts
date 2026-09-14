@@ -65,17 +65,6 @@ class DocsClass {
 		}
 		return (matches[0] as FencedBlock).code.trim();
 	}
-
-	siteOneLiner(): string {
-		const source = this.#read("packages/docs/src/routes/+page.svelte");
-		const match = source.match(/const oneLiner\s*=\s*"((?:[^"\\]|\\.)*)"/);
-		if (!match) {
-			throw new Error(
-				"Couldn't find the `oneLiner` install command in packages/docs/src/routes/+page.svelte",
-			);
-		}
-		return (JSON.parse(`"${match[1]}"`) as string).trim();
-	}
 }
 
 export const Docs = new DocsClass();

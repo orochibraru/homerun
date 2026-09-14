@@ -93,21 +93,6 @@ jobs:
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-  build-docs:
-    name: Docker Build (Docs)
-    uses: ./.github/workflows/docker.yaml
-    needs:
-      - code_quality
-      - version
-    with:
-      image_tag: ${{ needs.version.outputs.tag }}
-      image_name: orochibraru/homerun-docs
-      registry_name: docker.io
-      registry_username: orochibraru
-      bake_target: docs-ci
-    secrets:
-      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
-
   binaries:
     name: Binaries
     uses: ./.github/workflows/binaries.yaml
@@ -153,18 +138,6 @@ jobs:
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-  publish-docs:
-    name: Publish Docs ${{ needs.version.outputs.tag }}
-    needs: [version, e2e, build-docs]
-    uses: ./.github/workflows/docker-manifest.yaml
-    with:
-      image_name: orochibraru/homerun-docs
-      registry_name: docker.io
-      registry_username: orochibraru
-      bake_target: docs-ci
-    secrets:
-      registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
-
   release:
     name: Release
     runs-on: ubuntu-latest
@@ -173,12 +146,10 @@ jobs:
       - version
       - build-app
       - build-agent
-      - build-docs
       - binaries
       - e2e
       - publish-app
       - publish-agent
-      - publish-docs
     permissions:
       contents: write
       issues: write

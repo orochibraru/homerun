@@ -34,14 +34,11 @@ the onboarding wizard (base domain / Docker / Traefik / email).
 server, closer to how the production Docker image runs it, still directly on the
 host, still against the same `compose.yaml` Postgres/Traefik.
 
-`packages/agent/`, `packages/installer/`, `packages/cli/`, and `packages/docs/`
-all share this same root `bun install`/`node_modules` (no separate per-package
-installs). Run the first three directly from source with
-`bun run packages/agent/index.ts`,
+`packages/agent/`, `packages/installer/`, and `packages/cli/` all share this
+same root `bun install`/`node_modules` (no separate per-package installs). Run
+each directly from source with `bun run packages/agent/index.ts`,
 `bun run packages/installer/index.ts --dry-run`,
-`bun run packages/cli/index.ts services list`, etc. `packages/docs/` isn't run
-directly the same way, it's built/served via `bun run dev:docs`/`build:docs`
-(see `packages/docs/README.md`).
+`bun run packages/cli/index.ts services list`, etc.
 
 ## Before every change: the hard gates
 
