@@ -1,3 +1,10 @@
+## [1.0.14](https://github.com/orochibraru/homerun/compare/v1.0.13...v1.0.14) (2026-09-14)
+
+### Bug Fixes
+
+- installer docker path
+  ([2051ae2](https://github.com/orochibraru/homerun/commit/2051ae2e20d401d01f62becc4b58e891e3da9885))
+
 ## [1.0.13](https://github.com/orochibraru/homerun/compare/v1.0.12...v1.0.13) (2026-09-14)
 
 ### Bug Fixes
