@@ -1,5 +1,8 @@
-import { createTransport, type Transporter } from "nodemailer";
-import type SmtpTransport from "nodemailer/lib/smtp-transport";
+import {
+	createTransport,
+	type SMTPSentMessageInfo,
+	type Transporter,
+} from "nodemailer";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
 
@@ -16,10 +19,7 @@ export class EmailService {
 	to: string;
 	subject: string;
 	content: string;
-	transporter: Transporter<
-		SmtpTransport.SentMessageInfo,
-		SmtpTransport.Options
-	>;
+	transporter: Transporter<SMTPSentMessageInfo>;
 
 	constructor({ to, subject, content }: EmailProps) {
 		logger.debug(`Preparing email to: ${to}, subject: ${subject}`);

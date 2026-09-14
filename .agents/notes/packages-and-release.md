@@ -1,0 +1,283 @@
+# Agent, installer, release automation
+
+Homerun reference notes, loaded on demand rather than every session. `CLAUDE.md`
+holds the rules that always apply plus an index of the sibling notes in this
+directory. These sections were split out of that file, so a "see X below/above"
+in the text below may now point at a section living in a sibling note rather
+than in this one.
+
+## Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-release-binaries.ts`)
+
+**The CI pipeline builds each image once and reuses it.** Both
+`pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
+`docker.yaml` (per image) → `e2e.yaml` → `docker-manifest.yaml` (per image) →
+gate/release. The split between the last two is the point : `docker.yaml` pushes
+**by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
+`docker pull` that exact digest and run Playwright against the real artefact,
+and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`,
+`vX.Y.Z`, `latest`). Nothing anyone can pull by name is ever published before
+e2e has passed against it, and the app is built once per platform instead of
+once for the image plus again from source for the tests. The per-platform
+digests and the `docker-metadata-action` bake file travel between those
+workflows as run artefacts, which is why they must stay in one workflow run
+(`uses:`, not a separate `workflow_run`). Both arches build natively
+(`ubuntu-24.04-arm` for arm64), never under QEMU.
+
+Three consequences worth not re-deriving: **a fork builds but publishes
+nothing** — `push: false` makes the build `type=cacheonly`, so no digest
+artefact exists, which is why `e2e.yaml` takes a `pulled` input and falls back
+to `bun run build:app`, and why every manifest job is gated on the PR not coming
+from a fork. **`pr-cleanup.yaml`** deletes the three `pr-<n>` tags when a PR
+closes, so the Docker Hub repos don't accumulate one per pull request; a 404
+there is normal (e2e failed, so the tag was never created). And
+**`code_quality.yaml` no longer runs e2e at all** — it is `lint` +
+`docs-check` + `ts-test` only, with the heavy gates (`lint:ts`, `lint:tailwind`,
+`check`, `test:unit`) skipped inside prek via `SKIP` and run as their own named
+steps instead, so a red run names the gate that broke rather than burying it in
+one `prek` log. Its `Codegen is current` step runs `bun run gen` and fails on
+any resulting diff, which is what keeps `openapi.json`, `homerun.schema.json`
+and `packages/cli/generated/` from silently going stale after a REST API change.
+
+`semantic-release`, driven by conventional-commit messages (this repo's commits
+already follow `feat:`/`fix:`/`chore:`, no new discipline required). Runs as a
+new `release` job in `.github/workflows/publish.yaml`, alongside the existing
+`code_quality`/`build` jobs, on every push to `main`; a non-releasable push
+(docs/chore-only) is a no-op, not a failure. One version number covers the whole
+repo, the root app plus `packages/agent`/`packages/installer`/`packages/cli`'s
+own `package.json`s all get bumped together by `scripts/bump-version.ts` (an
+`@semantic-release/exec` `prepareCmd`, not `@semantic-release/npm`, this repo
+has no npm package to publish, and `npm`'s plugin still wants registry-shaped
+config even with `npmPublish: false`; a small script fits this codebase's
+existing "hand-roll a small thing rather than fight a mismatched tool" posture
+better, same instinct as the cron matcher/SigV4 client).
+`scripts/build-release-binaries.ts` cross-compiles all six
+`agent`/`installer`/`cli` Linux binaries (x64 + arm64, each sub-project's own
+`build:linux-x64`/`build:linux-arm64` scripts) so `.releaserc.json`'s
+release-assets step has something to attach, directly serving the "installer
+(and homerun agent) in each release artifact" TODO item, with the CLI's own
+binary added the same way for consistency.
+
+**Uses `@semantic-release/github`**, the official plugin: this repo is hosted on
+GitHub (`github.com/orochibraru/homerun`) and runs on GitHub Actions. It
+previously lived on a self-hosted Gitea and used
+`@saithodev/semantic-release-gitea`; that migration is done, so don't
+reintroduce Gitea-specific release/CI config.
+
+**Container images go to Docker Hub, not GHCR**, deliberately:
+`docker.io/orochibraru/homerun{,-agent,-docs}`. That's the one piece of the
+pipeline that does _not_ follow the code host, so `docker.yaml`'s login takes a
+real Docker Hub credential (`secrets.DOCKER_REGISTRY_PASSWORD`, an access token;
+the Docker Hub username is the plain `registry_username` input, since it isn't
+secret) rather than the built-in `GITHUB_TOKEN`.
+
+**The release job needs `secrets.RELEASE_TOKEN`, not `GITHUB_TOKEN`**: a
+fine-grained PAT scoped to this repo (Contents + Issues + Pull requests: write).
+`@semantic-release/git` pushes the version bump straight to `main`, and a `main`
+ruleset blocks pushes from anyone but a repo admin, which `github-actions[bot]`
+isn't. It's threaded in twice, as `actions/checkout`'s `token` (git push auth)
+and as the `GH_TOKEN` env var (`@semantic-release/github`'s API calls). The
+`version` job's dry run takes it too, unlike the sibling `nuvio-web` repo this
+CI shape is shared with: here that job's output also feeds the `binaries` job's
+baked version, so it has to actually resolve rather than silently falling back
+to a commit SHA.
+
+**Job ids use `-`, never `:`** (`build-app`, not `build:app`). GitHub rejects a
+colon in a job id outright and refuses to run the whole workflow file; the
+Gitea-era config had `build:app` and got away with it.
+
+**Fork PRs build but never push.** `docker.yaml` takes a `push` input (default
+true); `pull_request.yaml` passes
+`github.event.pull_request.head.repo.full_name == github.repository`, so a
+same-repo PR still publishes its `pr-<n>` tag while a fork's build switches its
+bake output to `type=cacheonly` and skips the registry login, the digest upload,
+and the whole `merge` job. GitHub withholds secrets from fork PRs, so the login
+there could only ever fail; this way the build is still a real gate (and still
+warms the layer cache) without needing a credential. `secrets.registry_password`
+is `required: false` for the same reason.
+
+**Not verified**: an actual release running end-to-end on GitHub Actions
+(creating a real tag/release and pushing the version bump back to `main`). The
+earlier Gitea-era verification of `scripts/bump-version.ts` and
+`scripts/build-release-binaries.ts` still stands (both were run for real
+locally, all six binaries cross-compiled), since neither is host-specific.
+
+## Homerun Agent + installer (`packages/agent/`, `packages/installer/`)
+
+Two standalone Bun/TypeScript sub-projects under `packages/`, siblings of
+`src/`, each its own `tsconfig.json` (**not** its own `package.json`/
+`node_modules`, they share the root install, same as every other `packages/*`
+sub-project, see the Commands section above) and **not** part of the SvelteKit
+build, both compile to a native binary via `bun build --compile`. See each
+folder's own README for the full detail; this section is the pointer.
+
+The Agent is a selectable build-server connection kind
+(`remote_host.kind: "agent"`, `$lib/services/agent-client.service.ts`'s
+`AgentClientService`, see Build servers above for the wiring). The installer
+stays standalone tooling (it's not imported by `src/` and isn't meant to be, it
+drives a target machine's shell, not this app's own runtime).
+
+- **`packages/agent/`**, the **Homerun Agent**: a small token-authenticated HTTP
+  server meant to run on a build server's own Docker daemon. Four routes:
+  `GET /v1/health` and `GET /v1/openapi.json` unauthenticated (the latter for
+  the same "spec describes shapes, not data" reason the main app's is public,
+  health so a monitor can probe liveness without holding the token),
+  `POST /v1/build` and `GET /v1/stats` behind `Authorization: Bearer <token>`.
+  It is **not** a deploy target : the deploy/lifecycle/logs routes it used to
+  carry were removed along with remote deploys (see Build servers above), and
+  `AgentClientService.verifyToken` probes `/v1/stats` for exactly that reason.
+  This is the alternative to registering a build server by raw `tcp://`/`ssh://`
+  Docker socket : instead of exposing the daemon itself, the build server runs
+  this agent and the main app only ever talks HTTP-plus-bearer-token to it.
+  **Wired into the main app**: `remote_host.kind` (`"docker"` | `"agent"`) +
+  `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
+  (`$lib/services/agent-client.service.ts`, a thin HTTP client over
+  `build`/`stats`/`health`), and the Remote Hosts "new host" form's
+  connection-type toggle; `deploy.service.ts` branches on
+  `RemoteHostDTO.resolveBuildTarget()`'s `kind` to route a git build through
+  `DockerService` or `AgentClientService`. The agent has no access to the main
+  app's source tree at runtime, so `packages/agent/docker.ts` and
+  `packages/agent/stats.ts` intentionally re-implement (not import) the
+  equivalent logic from `docker/git-build.ts` and `SystemStatsService`; keep the
+  two in sync by hand if one changes. `packages/agent/schemas.ts` holds the zod
+  schema for the build body, `safeParse`d at the route rather than cast, and
+  `packages/agent/openapi.ts` generates the agent's own OpenAPI 3.1 doc from the
+  same schema, the "one schema, two purposes" approach the main app uses (see
+  OpenAPI above).
+- **`packages/installer/`**, a single-binary installer
+  (`packages/installer/index.ts`) meant to be the target of a `curl | bash`
+  one-liner (`packages/installer/bootstrap.sh`) on a fresh Linux server:
+  installs Docker Engine + rootless prerequisites
+  (`uidmap`/`dbus-user-session`), creates a dedicated non-root system user,
+  installs **rootless** Docker for that user via Docker's own documented flow
+  (`get.docker.com/rootless` → `dockerd-rootless-setuptool.sh`,
+  `loginctl enable-linger` + a `systemd --user` unit so the daemon survives a
+  headless reboot without an active login session), creates the `homerun` on
+  that rootless daemon, then installs either just the Agent (`--mode=agent`,
+  default, own `systemd --user` unit) or the full stack (`--mode=full`), all
+  under that same rootless account, never as root. **Binaries and Docker images
+  only, nothing built from source on the target host** (superseding an earlier
+  draft that cloned the repo and ran `bun run build` there): `bootstrap.sh`
+  downloads the `homerun-installer-<arch>` release binary itself and `exec`s it
+  (no Bun, no git); `--mode=agent` downloads the matching `homerun-agent-<arch>`
+  release binary straight to `/usr/local/bin/homerun-agent`; `--mode=full`
+  writes a standalone `compose.yaml` (`packages/installer/steps/full-stack.ts`,
+  distinct from the root dev `compose.yaml`; see Docker integration above)
+  pulling the published `docker.io/orochibraru/homerun` app image alongside
+  Traefik/Postgres, then `docker compose pull && ...up -d`.
+
+  **`--mode=full` resolves an address for the instance and it is never
+  `localhost`** (`index.ts`'s `resolveHost`): `--domain=` wins, else an
+  interactive prompt (skipped when stdin isn't a TTY, which is every
+  `curl | bash` install), else `Detector.hostAddress()` (the `src` of
+  `ip -4 route get 1.1.1.1`, falling back to the first non-loopback
+  `hostname -I` address). It becomes `baseDomain` in the generated
+  `homerun.yaml` and the `ORIGIN` default in the generated `compose.yaml`, and
+  `homerun.yaml` no longer carries its own `auth.origin` so those two can't
+  disagree. **Real, reported bug this fixes**: the old `http://localhost:3000`
+  default didn't just produce wrong absolute URLs, it made a fresh instance
+  impossible to sign up to. With `ORIGIN` set, SvelteKit normalizes `event.url`
+  to it, so better-auth derives its `baseURL`, and therefore its trusted
+  origins, from `localhost` while the browser's `Origin` header is the real
+  address, and `POST /api/v1/auth/sign-up/email` 403s with `Invalid origin`.
+  `compose.prod.yaml` (the manual Option B path, where nothing can detect an
+  address) makes `ORIGIN` required with `${ORIGIN:?...}` instead, the same
+  fail-closed shape `AUTH_SECRET` already used.
+
+  `packages/installer/steps/release.ts` is the one place both artifact kinds
+  (release binaries vs. the Docker image) resolve from: `--version=` (a GitHub
+  release tag, default `latest`) picks which release's binaries to fetch, but
+  doesn't pin the app image the same way: `docker.yaml` tags images by commit
+  SHA + `latest` only, there's no `:vX.Y.Z` image tag, a real asymmetry in this
+  repo's release pipeline documented in that file rather than papered over.
+  Every shell-out goes through one `StepRunner` (`packages/installer/exec.ts`)
+  so `--dry-run` (print every command instead of running it) is a single
+  interception point, not scattered per-step conditionals. **Verified**: the
+  full command sequence via `--dry-run` for both modes (including on a non-Linux
+  dev machine, via a dry-run-only package-manager-detection fallback, and
+  including the generated `compose.yaml` content), and that the compiled
+  binary's dry-run output matches running from source.
+
+  **The real, mutating steps are now verified too**, against two real disposable
+  Multipass Ubuntu 24.04 VMs (superseding this section's earlier "needs a
+  disposable VM/CI runner this environment doesn't have" note): `--mode=agent`
+  end to end (real `apt`/Docker Engine install, real rootless Docker setup, real
+  `systemd --user` unit, the Agent actually running and reachable over the
+  network, health endpoint + OpenAPI both responding from outside the VM), and
+  `--mode=full` end to end on a second VM (real rootless Docker, real
+  `docker compose pull && ...up -d` bringing up Traefik, Postgres, and the real
+  published `docker.io/orochibraru/homerun` app image, all healthy, dashboard
+  reachable from outside the VM). See `packages/installer/README.md` for the
+  full verification notes and the real bugs this run found and fixed
+  (AppArmor-restricted unprivileged user namespaces on Ubuntu 24.04, an
+  RootlessKit privileged-port restriction blocking Traefik's 80/443, an unquoted
+  YAML scalar in the generated compose file, a postgres-18 volume-mount-path
+  mismatch, and a missing `ORIGIN` env var, all now fixed in
+  `packages/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts`).
+  **Still not verified**: `packages/installer/swarm-join.sh` (see Swarm mode
+  above), this session's VM testing didn't touch it, it remains untested against
+  a real second host or a real swarm, same caveat as before.
+
+  This whole run is reproducible, not a one-off: `scripts/e2e-multipass.ts`
+  (`bun run e2e:multipass`) automates exactly this, builds the
+  installer/agent/CLI binaries from local source (not a published release, so it
+  catches a regression before it ships), launches two disposable Multipass VMs,
+  runs the real installer binary on each (`--mode=agent` / `--mode=full`), signs
+  up + onboards the bootstrap admin over the real HTTP API, registers the agent
+  VM as a build server and deploys/stops/starts a real service, then drives a
+  real `homerun login` device-code round trip plus every documented CLI command
+  from a throwaway Docker container, tearing everything down after (`--keep` to
+  leave it running, `--skip-build` to reuse a previous build). Deliberately
+  **not** wired into any GitHub Actions workflow, this repo's CI runners have no
+  nested virtualization for Multipass, it's a local-only tool to run by hand
+  before cutting a release or after touching installer/agent/CLI code.
+
+  `scripts/e2e-multipass-release.ts` (`bun run e2e:multipass:release`) is its
+  mirror image, and the two share `scripts/e2e/` (`multipass.ts`, the VM/HTTP
+  machinery both drive; `docs.ts`, the docs command extractor; `release.ts`, the
+  GitHub-release resolver). Where the suite above builds from local source and
+  runs the binaries directly, this one runs **only what's already published,
+  using the commands the docs themselves print**: the one-liners are extracted
+  from `docs/getting-started.md`, `packages/agent/README.md` and
+  `docs/api-and-cli.md` at run time and executed verbatim (`Vm.runScript` writes
+  a documented block to a file and runs it rather than re-typing it), so a
+  renamed flag or a moved `raw.githubusercontent.com` path fails the run. Phases
+  are `--only=`/`--skip=` selectable: `docs` (cross-checks every place the same
+  command is documented, asserts each documented URL exists in this checkout
+  _and_ is live, and asserts the GitHub release under test really published all
+  six binaries, no VM needed, seconds to run), `full`, `agent`, `remote`, `cli`,
+  `compose` (`docs/getting-started.md`'s Option B, on rootful Docker). Because
+  it tests what's published, a fix in the working tree isn't reflected until it
+  ships, that's the point, not a gap, `--ref=<branch>` points the documented
+  URLs at a pushed branch when verifying a docs/installer change before merging,
+  and `--version=vX.Y.Z` pins a release instead of `latest`.
+
+## Documentation (`docs/`, `README.md`, `CONTRIBUTING.md`)
+
+Three audiences, three places, keep them apart:
+
+- **`CLAUDE.md`** (this file): everything a future session needs that isn't
+  derivable from the code, including the "real, tested finding" notes. Not
+  user-facing.
+- **`docs/*.md`**: the operator-facing guides (`getting-started`,
+  `configuration`, `services`, `remote-hosts-and-agent`, `storage-and-backups`,
+  `projects-and-templates`, `users-and-access`, `api-and-cli`,
+  `faq-and-limitations`, `operations`, indexed by `docs/README.md`), plus the
+  root `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These are
+  the source of truth, plain Markdown, readable straight from the repo. The
+  commands they print are **executed verbatim** by
+  `bun run e2e:multipass:release` (see above), so a stale install one-liner is a
+  test failure, not just a doc nit. **Configuration docs are UI-first on
+  purpose**: an operator is expected to configure Homerun from `/settings` and
+  the onboarding wizard, never from a file. `docs/configuration.md` leads with
+  the dashboard, treats `DATABASE_URL`/`AUTH_SECRET`/`ORIGIN` as the three
+  unavoidable boot-time values, and demotes `homerun.yaml` to an optional
+  config-as-code path. Don't reintroduce an env-var table as the opening
+  section.
+
+- **The website** (<https://homerun.orochibraru.com>): built from a **separate
+  repository** that renders this repo's `docs/*.md` itself. It used to live here
+  as `packages/docs/` (a static SvelteKit site published as
+  `docker.io/orochibraru/homerun-docs`); that sub-project, its `scripts/docs.ts`
+  wrapper, the `dev:docs`/`build:docs`/`check:docs` scripts, the `docs`
+  Dockerfile stage and bake target, and every CI job building or publishing it
+  are all gone. Don't reintroduce a docs site under `packages/`.
