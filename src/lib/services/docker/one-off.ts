@@ -28,11 +28,22 @@ export interface OneOffRunParams {
 	image: string;
 	labels?: Record<string, string>;
 	networkName?: string | null;
+	/** Called with each chunk of the container's own stdout/stderr as it arrives, for a caller that wants to show a run before it finishes. */
+	onOutput?: (chunk: string) => void;
 	onProgress?: (line: string) => void;
 	remote?: RemoteHostConnection | null;
 	tag: string;
 	timeoutMs?: number;
 	workingDir?: string | null;
+}
+
+export interface ExtractIntoVolumeParams {
+	archive: Buffer;
+	image: string;
+	mountPath: string;
+	remote?: RemoteHostConnection | null;
+	tag: string;
+	volumeName: string;
 }
 
 export interface OneOffRunResult {
@@ -55,6 +66,7 @@ function isNotFoundError(error: unknown): boolean {
 	return (error as { statusCode?: number } | null)?.statusCode === 404;
 }
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerOneOffMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {
@@ -77,6 +89,36 @@ export function DockerOneOffMixin<
 				remote: params.remote,
 				tag: params.tag,
 			});
+		}
+
+		/**
+		 * Unpacks a tar (gzipped is fine, Docker sniffs it) into a named
+		 * volume, through a stopped helper container that has the volume
+		 * mounted. The daemon does the extraction, so this works against a
+		 * remote one and needs nothing on this host.
+		 */
+		async extractIntoVolume(params: ExtractIntoVolumeParams): Promise<void> {
+			await this.#ensureImage({
+				image: params.image,
+				remote: params.remote,
+				tag: params.tag,
+			});
+			const docker = this.getDocker(params.remote);
+			const container = await docker.createContainer({
+				Entrypoint: ["true"],
+				HostConfig: {
+					Binds: [`${params.volumeName}:${params.mountPath}`],
+				},
+				Image: `${params.image}:${params.tag}`,
+				Labels: { [MANAGED_LABEL]: "true" },
+			});
+			try {
+				await container.putArchive(params.archive, { path: params.mountPath });
+			} finally {
+				await container.remove({ force: true }).catch((err) => {
+					logger.warn(`Couldn't remove restore helper ${container.id}`, err);
+				});
+			}
 		}
 
 		async runOneOff(params: OneOffRunParams): Promise<OneOffRunResult> {
@@ -104,6 +146,12 @@ export function DockerOneOffMixin<
 			const stderrStream = new PassThrough();
 			const stdoutDone = collect(stdoutStream);
 			const stderrDone = collect(stderrStream);
+			if (params.onOutput) {
+				const forward = (chunk: Buffer) =>
+					params.onOutput?.(chunk.toString("utf8"));
+				stdoutStream.on("data", forward);
+				stderrStream.on("data", forward);
+			}
 
 			const raw = (await container.attach({
 				stderr: true,

@@ -279,3 +279,36 @@ helper's own stderr attached, rather than uploading a truncated/empty tarball.
 Scheduled backups are one `DueScheduler` config over
 `StorageVolumeDTO.listBackupEnabled()`, see Schedulers above. No restore flow,
 upload-only.
+
+## Cron jobs on another daemon, and live output
+
+`cron_job.remoteHostId` (nullable FK to `remote_host`, "Run on" on the job form)
+picks which daemon a kind `image` job runs its container on;
+`RemoteHostDTO.resolveBuildTarget` resolves it the same way a build server is
+resolved, and an **agent** host is refused with a message rather than silently
+running locally : the agent has no one-off run endpoint. Kind `exec` ignores it
+by definition, it's a shell command on the machine this app runs on.
+
+**Output arrives while the job runs, not after it.** `runOneOff` takes an
+`onOutput` callback fed from the same demuxed stdout/stderr streams it already
+collects, and `CronJobService`'s `OutputFlusher` batches those chunks into
+`CronJobRunDTO.appendOutput` once a second (one write a second, not one per
+chunk). The job's page re-reads `getCronJobRuns` every 2s while any run has no
+`finishedAt`, so a long job shows progress instead of a spinner and then a wall
+of text.
+
+## Restoring an S3 backup
+
+`S3BackupService.listBackups(volume)` is ListObjectsV2 against the volume's own
+prefix (same hand-rolled SigV4 as the upload, `signedRequest` shared between GET
+and LIST), and `restoreVolume(volume, key)` downloads one and unpacks it back
+over the volume. **Docker's own archive endpoint does the unpacking**
+(`DockerService.extractIntoVolume` → `putArchive` into a stopped helper
+container with the target mounted): it accepts a gzipped tar directly, needs no
+`tar` on this host, no stdin plumbing into a running container, and works
+against a remote daemon. One path covers both volume kinds, since a bind's
+source is as mountable as a named volume.
+
+It's a **restore-over, not a wipe-and-restore** : files in the archive replace
+what's on disk and anything else is left alone. The confirm dialog says so, and
+says to stop services using the volume first.

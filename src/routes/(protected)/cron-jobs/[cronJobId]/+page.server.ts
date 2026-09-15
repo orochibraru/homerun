@@ -2,6 +2,7 @@ import { error, fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { CronJobRunDTO } from "$lib/dto/cron-job-run-dto";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { parseCronJobForm } from "$lib/server/cron-job-form";
 import { enqueueCronJobRun } from "$lib/services/cron-job-queue";
@@ -14,10 +15,16 @@ export const load = async ({ params, parent }) => {
 	if (!job) {
 		error(404, "Cron job not found");
 	}
-	const runs = await CronJobRunDTO.listForJob(job.id);
+	const [runs, hosts] = await Promise.all([
+		CronJobRunDTO.listForJob(job.id),
+		RemoteHostDTO.list(user.id),
+	]);
 	return {
 		canUseExec: user.role === "admin",
 		job: job.toJSON(),
+		remoteHosts: hosts
+			.filter((host) => host.kind === "docker")
+			.map((host) => ({ id: host.id, name: host.name })),
 		runs: runs.map((r) => r.toJSON()),
 	};
 };

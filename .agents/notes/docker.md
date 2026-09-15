@@ -409,6 +409,28 @@ oversight, logging raw TTY bytes verbatim would be noisy and wouldn't cleanly
 map to discrete commands anyway (arrow-key history, tab-completion, etc. all
 flow through the same input channel).
 
+## Orphaned project networks (`findOrphanProjectNetworks`, Docker Cleanup)
+
+A project's network is named from its id (`homerun-project-<id>`) and removed
+when the project is, but a project row that disappears any other way (a test run
+tearing down the database, a half-failed create) leaves the network behind
+forever. **Twenty-one of them exhausted Docker's default address pools on the
+dev box**, which fails _every_ new network with "all predefined address pools
+have been fully subnetted" : compose import, new projects and three integration
+tests broke at once, with the real cause nowhere in the error.
+`docker network prune` doesn't help while anything is attached, and it's a
+sledgehammer otherwise (it takes unrelated unused networks with it, including
+the shared one).
+
+`DockerService.findOrphanProjectNetworks(liveProjectIds)` lists every
+`homerun-project-*` network whose id isn't in the set the caller passes
+(`ProjectDTO.allIds()`, so the DB stays out of the docker layer), and
+`reclaimOrphanProjectNetworks` removes the ones nothing is attached to,
+reporting the rest rather than tearing a network out from under running
+containers. It's a `docker_cleanup` queue action (`reclaimProjectNetworks`) like
+every other prune, with its own button and an inline list of what's orphaned on
+the Docker Cleanup page.
+
 ## Custom SSL certificates (`src/lib/services/docker/custom-ssl.ts`)
 
 Per-service, only meaningful once `customDomain` is set (a domain outside this

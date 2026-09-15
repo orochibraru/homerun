@@ -3,6 +3,7 @@
 		FileUp,
 		LayoutGridIcon,
 		Link2,
+		MoveRight,
 		Play,
 		Plus,
 		RotateCw,
@@ -319,6 +320,10 @@
       >
         <FileUp class="size-4" />
         Import compose
+      </Button>
+      <Button href={resolve("/services/migrate")} size="sm" variant="outline">
+        <MoveRight class="size-4" />
+        Migrate from Dokploy
       </Button>
       <Button href={resolve("/services/new")} size="sm">
         <Plus class="size-4" />

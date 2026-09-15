@@ -58,8 +58,10 @@
   >
     <CronJobFields
       canUseExec={data.canUseExec}
+      remoteHosts={data.remoteHosts}
       values={{
         command: null,
+        remoteHostId: null,
         description: null,
         enabled: true,
         envVars: {},

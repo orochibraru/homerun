@@ -1,6 +1,7 @@
 import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import type { JobDTO } from "$lib/dto/job-dto";
+import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import type { JobType } from "$lib/types";
@@ -80,11 +81,23 @@ async function runCronJob(entry: JobDTO): Promise<JobResult> {
 	return { exitCode: outcome.exitCode };
 }
 
+async function reclaimProjectNetworks(): Promise<PruneSummary> {
+	const reclaimed = await DockerService.reclaimOrphanProjectNetworks(
+		await ProjectDTO.allIds(),
+	);
+	return {
+		itemsDeleted: reclaimed.removed.length,
+		spaceReclaimedBytes: 0,
+	};
+}
+
 function cleanupRunner(
 	action: DockerCleanupAction,
 	all: boolean,
 ): Promise<PruneSummary | SystemPruneSummary> {
 	switch (action) {
+		case "reclaimProjectNetworks":
+			return reclaimProjectNetworks();
 		case "pruneBuildCache":
 			return DockerService.pruneBuildCache();
 		case "pruneContainers":
