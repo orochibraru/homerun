@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { parseCommand } from "$lib/command-parse";
 import type { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { CronJobRunDTO } from "$lib/dto/cron-job-run-dto";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { DockerService, type RegistryAuth } from "./docker.service.ts";
 import { decryptSecret } from "./secrets.ts";
@@ -12,6 +13,7 @@ const logger = new Logger("CronJob");
 const execFileAsync = promisify(execFile);
 
 const MAX_OUTPUT_BYTES = 1024 * 1024;
+const FLUSH_INTERVAL_MS = 1000;
 const CRON_JOB_LABEL = "homerun.cronjob.id";
 
 export interface CronJobRunOutcome {
@@ -42,8 +44,39 @@ function authFor(job: CronJobDTO): RegistryAuth | undefined {
 	};
 }
 
+/** Batches the container's own output into the run row : one write a second at most, rather than one per chunk. */
+class OutputFlusher {
+	#buffer = "";
+	#timer: ReturnType<typeof setTimeout> | null = null;
+
+	constructor(private readonly run: CronJobRunDTO) {}
+
+	push(chunk: string): void {
+		this.#buffer += chunk;
+		this.#timer ??= setTimeout(() => {
+			this.#timer = null;
+			void this.flush();
+		}, FLUSH_INTERVAL_MS);
+	}
+
+	async flush(): Promise<void> {
+		if (this.#timer) {
+			clearTimeout(this.#timer);
+			this.#timer = null;
+		}
+		const pending = this.#buffer;
+		this.#buffer = "";
+		await this.run.appendOutput(pending).catch((err) => {
+			logger.warn("Couldn't append cron job output", err);
+		});
+	}
+}
+
 class CronJobServiceClass {
-	async #runImage(job: CronJobDTO): Promise<CronJobRunOutcome> {
+	async #runImage(
+		job: CronJobDTO,
+		run: CronJobRunDTO,
+	): Promise<CronJobRunOutcome> {
 		if (!job.image) {
 			return {
 				error: "No image set on this cron job.",
@@ -53,16 +86,34 @@ class CronJobServiceClass {
 			};
 		}
 
+		const target = await RemoteHostDTO.resolveBuildTarget(
+			job.remoteHostId,
+			job.userId,
+		);
+		if (target.kind === "agent") {
+			return {
+				error:
+					"This cron job's host is a Homerun Agent, which has no one-off run endpoint : pick a Docker-socket host, or this one.",
+				exitCode: null,
+				output: "",
+				success: false,
+			};
+		}
+
 		const cmd = job.command ? parseCommand(job.command) : undefined;
+		const flusher = new OutputFlusher(run);
 		const result = await DockerService.runOneOff({
 			auth: authFor(job),
 			cmd: cmd && cmd.length > 0 ? cmd : undefined,
 			envVars: job.envVars,
 			image: job.image,
 			labels: { [CRON_JOB_LABEL]: job.id },
+			onOutput: (chunk) => flusher.push(chunk),
+			remote: target.kind === "docker" ? target.connection : null,
 			tag: job.tag ?? "latest",
 			timeoutMs: job.timeoutSeconds * 1000,
 		});
+		await flusher.flush();
 
 		const output = [
 			result.stdout.toString("utf8"),
@@ -130,7 +181,7 @@ class CronJobServiceClass {
 		try {
 			outcome =
 				job.kind === "image"
-					? await this.#runImage(job)
+					? await this.#runImage(job, run)
 					: await this.#runExec(job);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);

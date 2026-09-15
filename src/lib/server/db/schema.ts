@@ -826,6 +826,12 @@ export const cronJob = pgTable(
 		registryPasswordEnc: text("registry_password_enc"),
 		registryUrl: text("registry_url"),
 		registryUsername: text("registry_username"),
+		// Which daemon a kind "image" job runs its container on : null is
+		// this host's own socket. Ignored for kind "exec", which is a shell
+		// command on the machine this app runs on by definition.
+		remoteHostId: text("remote_host_id").references(() => remoteHost.id, {
+			onDelete: "set null",
+		}),
 		// Standard 5-field cron expression, evaluated in the server's local
 		// time by the same matcher every other schedule in this app uses.
 		schedule: text("schedule").notNull(),

@@ -15,7 +15,10 @@
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
-	import { getCleanupPreview } from "$lib/remote/docker-infra.remote";
+	import {
+		getCleanupPreview,
+		getOrphanProjectNetworks,
+	} from "$lib/remote/docker-infra.remote";
 	import type { CleanupItem } from "$lib/services/docker.service";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -23,6 +26,7 @@
 	const { form } = $props();
 
 	const cleanup = getCleanupPreview();
+	const orphans = getOrphanProjectNetworks();
 
 	onMount(() => title.set("Docker Cleanup"));
 
@@ -32,7 +36,8 @@
 		| "pruneImages"
 		| "pruneNetworks"
 		| "pruneSystem"
-		| "pruneVolumes";
+		| "pruneVolumes"
+		| "reclaimProjectNetworks";
 
 	const confirmCopy: Record<
 		CleanupAction,
@@ -61,6 +66,12 @@
 			description:
 				"Removes every Docker network on this host not currently used by a container.",
 			title: "Prune unused networks?",
+		},
+		reclaimProjectNetworks: {
+			confirmLabel: "Reclaim",
+			description:
+				"Removes the per-project networks whose project no longer exists. One with containers still attached is left alone. Nothing else on this host is touched.",
+			title: "Reclaim orphaned project networks?",
 		},
 		pruneSystem: {
 			confirmLabel: "Clean up",
@@ -361,35 +372,89 @@
             <NetworkIcon class="text-text-muted size-4" />
             <h2 class="eyebrow">Networks</h2>
           </div>
-          <form action="?/pruneNetworks" method="POST"
-        use:enhance={enhanceToast({
-          error: "Docker cleanup action failed.",
-          loading: "Running cleanup",
-          onSettled: () => {
-            pendingAction = null;
-          },
-          onStart: () => {
-            pendingAction = "pruneNetworks";
-          },
-          success: (data) =>
-            describeResult((data as { result?: unknown } | undefined)?.result),
-        })}
-        >
-            <Button
-              disabled={pendingAction !== null}
-              onclick={(e) => requestConfirm("pruneNetworks", e)}
-              size="sm"
-              type="button"
-              variant="outline"
+          <div class="flex items-center gap-2">
+            <form
+              action="?/reclaimProjectNetworks"
+              method="POST"
+              use:enhance={enhanceToast({
+                error: "Docker cleanup action failed.",
+                loading: "Reclaiming orphaned project networks",
+                onComplete: () => orphans.refresh(),
+                onSettled: () => {
+                  pendingAction = null;
+                },
+                onStart: () => {
+                  pendingAction = "reclaimProjectNetworks";
+                },
+                success: (data) =>
+                  describeResult(
+                    (data as { result?: unknown } | undefined)?.result,
+                  ),
+              })}
             >
-              {#if pendingAction === "pruneNetworks"}
-                <Loader2 class="size-3.5 animate-spin" />
-              {/if}
-              Prune unused
-            </Button>
-          </form>
+              <Button
+                disabled={pendingAction !== null}
+                onclick={(e) => requestConfirm("reclaimProjectNetworks", e)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {#if pendingAction === "reclaimProjectNetworks"}
+                  <Loader2 class="size-3.5 animate-spin" />
+                {/if}
+                Reclaim orphaned
+              </Button>
+            </form>
+            <form action="?/pruneNetworks" method="POST"
+          use:enhance={enhanceToast({
+            error: "Docker cleanup action failed.",
+            loading: "Running cleanup",
+            onSettled: () => {
+              pendingAction = null;
+            },
+            onStart: () => {
+              pendingAction = "pruneNetworks";
+            },
+            success: (data) =>
+              describeResult((data as { result?: unknown } | undefined)?.result),
+          })}
+          >
+              <Button
+                disabled={pendingAction !== null}
+                onclick={(e) => requestConfirm("pruneNetworks", e)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {#if pendingAction === "pruneNetworks"}
+                  <Loader2 class="size-3.5 animate-spin" />
+                {/if}
+                Prune unused
+              </Button>
+            </form>
+          </div>
         </div>
-        <div class="p-5">
+        <div class="space-y-3 p-5">
+          {#if orphans.current && orphans.current.length > 0}
+            <div class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <p class="text-xs font-medium text-amber-600 dark:text-amber-400">
+                {orphans.current.length} project network(s) outlived their
+                project
+              </p>
+              <ul class="mt-2 space-y-1">
+                {#each orphans.current as orphan (orphan.id)}
+                  <li class="text-text-muted flex justify-between gap-3 font-mono text-xs">
+                    <span class="truncate">{orphan.name}</span>
+                    <span class="text-text-subtle shrink-0">
+                      {orphan.containersAttached > 0
+                        ? `${orphan.containersAttached} attached, kept`
+                        : "unused"}
+                    </span>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
           {@render itemList(preview.networks.items)}
         </div>
       </section>

@@ -18,6 +18,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
+	import { getCronJobRuns } from "$lib/remote/cron-runs.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -25,7 +26,21 @@
 
 	const job = $derived(data.job);
 
-	onMount(() => title.set(job.name));
+	const RUN_POLL_MS = 2000;
+
+	const liveRuns = $derived(getCronJobRuns(data.job.id));
+	const runs = $derived(liveRuns.current ?? data.runs);
+	const running = $derived(runs.some((run) => run.finishedAt === null));
+
+	onMount(() => {
+		title.set(job.name);
+		const timer = setInterval(() => {
+			if (running) {
+				void liveRuns.refresh();
+			}
+		}, RUN_POLL_MS);
+		return () => clearInterval(timer);
+	});
 
 	let submitting = $state(false);
 	let deleteDialogOpen = $state(false);
@@ -33,7 +48,7 @@
 	let expandedRunId = $state<string | null>(null);
 </script>
 
-<div class="space-y-6 p-6 md:p-8">
+<div class="space-y-6 p-5 md:p-6">
   <a
     class="text-text-muted hover:text-text inline-flex items-center gap-1.5 text-sm"
     href={resolve("/cron-jobs")}
@@ -93,8 +108,10 @@
   >
     <CronJobFields
       canUseExec={data.canUseExec}
+      remoteHosts={data.remoteHosts}
       values={{
         command: job.command,
+        remoteHostId: job.remoteHostId,
         description: job.description,
         enabled: job.enabled,
         envVars: job.envVars ?? {},
@@ -119,13 +136,13 @@
     </Button>
   </form>
 
-  {#if data.runs.length > 0}
+  {#if runs.length > 0}
     <section class="panel rounded-md">
       <div class="border-border border-b px-5 py-4">
         <h2 class="eyebrow">Run history</h2>
       </div>
       <div class="divide-border divide-y">
-        {#each data.runs as run (run.id)}
+        {#each runs as run (run.id)}
           <div>
             <button
               class="flex w-full items-center gap-3 px-5 py-3 text-left text-sm"

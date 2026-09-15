@@ -4,12 +4,15 @@
 		Check,
 		CheckCircle2,
 		CloudUpload,
+		RotateCcw,
 		XCircle,
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -19,7 +22,8 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { timeAgo } from "$lib/formatting";
+	import { formatBytes, timeAgo } from "$lib/formatting";
+	import { getVolumeBackups } from "$lib/remote/backups.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -32,6 +36,23 @@
 
 	let submitting = $state(false);
 	let backingUp = $state(false);
+	let showBackups = $state(false);
+	let restoringKey = $state<string | null>(null);
+	let restoreDialogOpen = $state(false);
+	let pendingRestoreKey = $state("");
+	let pendingRestoreForm: HTMLFormElement | null = null;
+
+	const backups = $derived(getVolumeBackups(data.volume.id));
+	const destinationName = $derived(
+		data.destinations.find((d) => d.id === vol.s3DestinationId)?.name ??
+			"this destination",
+	);
+
+	function requestRestore(e: MouseEvent, key: string) {
+		pendingRestoreForm = (e.currentTarget as HTMLElement).closest("form");
+		pendingRestoreKey = key;
+		restoreDialogOpen = true;
+	}
 	let s3DestinationId = $state(untrack(() => vol.s3DestinationId ?? ""));
 	const destinationLabel = $derived(
 		data.destinations.find((d) => d.id === s3DestinationId)?.name ??
@@ -190,6 +211,94 @@
     </Button>
   </form>
 
+  {#if vol.s3DestinationId}
+    <section class="rounded-md panel">
+      <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <h2 class="eyebrow">Restore</h2>
+        <Button
+          onclick={() => {
+            showBackups = true;
+            void backups.refresh();
+          }}
+          size="sm"
+          variant="ghost"
+        >
+          <RotateCcw class="size-3.5" />
+          {showBackups ? "Refresh list" : "List backups"}
+        </Button>
+      </div>
+      <div class="p-5">
+        {#if !showBackups}
+          <p class="text-text-muted text-sm">
+            Unpacks a backup from
+            <span class="font-mono text-xs">{destinationName}</span>
+            back over this volume. Files in the archive replace the ones on
+            disk; anything else already there is left alone.
+          </p>
+        {:else if backups.error}
+          <p class="text-sm text-red-500">
+            Couldn't list this bucket : {backups.error.message}
+          </p>
+        {:else if !backups.current}
+          <Skeleton class="h-16 w-full" />
+        {:else if backups.current.length === 0}
+          <p class="text-text-muted text-sm">
+            No backups for this volume in that bucket yet.
+          </p>
+        {:else}
+          <ul class="divide-border divide-y">
+            {#each backups.current as backup (backup.key)}
+              <li class="flex items-center gap-3 py-2">
+                <div class="min-w-0 flex-1">
+                  <p class="text-text truncate font-mono text-xs">
+                    {backup.key}
+                  </p>
+                  <p class="text-text-subtle mt-0.5 text-xs">
+                    {backup.lastModified
+                      ? new Date(backup.lastModified).toLocaleString()
+                      : "unknown date"}
+                    · {formatBytes(backup.sizeBytes)}
+                  </p>
+                </div>
+                <form
+                  action="?/restore"
+                  method="POST"
+                  use:enhance={enhanceToast({
+                    error: "Restore failed.",
+                    loading: "Restoring this backup",
+                    onSettled: () => {
+                      restoringKey = null;
+                    },
+                    onStart: () => {
+                      restoringKey = backup.key;
+                    },
+                    success: "Volume restored.",
+                  })}
+                >
+                  <input name="key" type="hidden" value={backup.key}>
+                  <Button
+                    disabled={restoringKey !== null}
+                    onclick={(e) => requestRestore(e, backup.key)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {#if restoringKey === backup.key}
+                      <Spinner />
+                      Restoring…
+                    {:else}
+                      Restore
+                    {/if}
+                  </Button>
+                </form>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+    </section>
+  {/if}
+
   {#if data.runs.length > 0}
     <section class="rounded-md panel">
       <div class="border-b border-border px-5 py-4">
@@ -235,3 +344,11 @@
     </section>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={restoreDialogOpen}
+  confirmLabel="Restore"
+  description={`Unpack "${pendingRestoreKey}" over ${vol.name}? Files in the archive replace what's on disk. Stop any service using this volume first : restoring under a running container is how you get half-old, half-new data.`}
+  onConfirm={() => pendingRestoreForm?.requestSubmit()}
+  title="Restore this backup?"
+/>

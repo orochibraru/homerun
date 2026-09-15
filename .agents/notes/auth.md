@@ -560,6 +560,14 @@ and shows a non-admin a "an admin needs to finish setting up this instance"
 holding message instead of the real wizard rather than handing them
 instance-wide config controls.
 
+The Docker step shows a live **swarm readiness** block
+(`DockerService.swarmReadiness()` via `getSwarmReadiness`): whether this daemon
+is a swarm manager, whether the overlay network exists, and whether Traefik is
+actually running its swarm provider, each read off the daemon rather than
+assumed. It's informational, not a gate : standalone containers need none of it,
+and Settings → Docker sets up whatever's missing when the mode is switched.
+`packages/installer/swarm-join.sh` is still unverified against a real host.
+
 **Doc correction**: this section previously described both directions as gated
 from a single `(protected)/+layout.server.ts` load comparing `route.id` against
 `"/(protected)/onboarding"`, following an earlier fix for a real

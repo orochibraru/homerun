@@ -8,6 +8,11 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 
+	interface CronHostOption {
+		id: string;
+		name: string;
+	}
+
 	interface CronJobValues {
 		command: string | null;
 		description: string | null;
@@ -18,13 +23,21 @@
 		name: string;
 		registryUrl: string | null;
 		registryUsername: string | null;
+		remoteHostId: string | null;
 		schedule: string;
 		tag: string | null;
 		timeoutSeconds: number;
 	}
 
-	const { canUseExec, values }: { canUseExec: boolean; values: CronJobValues } =
-		$props();
+	const {
+		canUseExec,
+		remoteHosts = [],
+		values,
+	}: {
+		canUseExec: boolean;
+		remoteHosts?: CronHostOption[];
+		values: CronJobValues;
+	} = $props();
 
 	function initialEnvRows(): ParsedEnvVar[] {
 		const rows = Object.entries(values.envVars).map(([key, value]) => ({
@@ -156,6 +169,27 @@
         />
       </div>
     </div>
+
+    {#if remoteHosts.length > 0}
+      <div>
+        <label class={labelClass} for="remoteHostId">Run on</label>
+        <select
+          class={inputClass}
+          id="remoteHostId"
+          name="remoteHostId"
+          value={values.remoteHostId ?? ""}
+        >
+          <option value="">This host</option>
+          {#each remoteHosts as host (host.id)}
+            <option value={host.id}>{host.name}</option>
+          {/each}
+        </select>
+        <p class="text-text-subtle mt-1 text-xs">
+          Which Docker daemon runs the container. A Homerun Agent host can't
+          take one-off runs : pick a Docker-socket host, or this one.
+        </p>
+      </div>
+    {/if}
   {/if}
 
   <div>

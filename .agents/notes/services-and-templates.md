@@ -624,3 +624,33 @@ register an OAuth App on GitHub/GitLab/Gitea/Bitbucket's own site first, with a
 real callback URL, which nothing server-side can do standalone. Built carefully
 from each provider's own standard, well-documented OAuth2 + REST API shapes;
 verify the first real connect by hand once an OAuth App exists.
+
+## Migrating from Dokploy (`$lib/services/dokploy.service.ts`, `services/migrate/`)
+
+Reads another PaaS's instance and recreates it here, **pull-only** : the one
+call it ever makes is `GET /api/project.all` with the user's `x-api-key`, and
+nothing on the Dokploy side is stopped, changed or deleted. The token isn't
+stored either, it's used for that one request and forgotten.
+
+Dokploy's project tree is flattened into `DokployEntry[]` : `applications`,
+`compose`, and the five database keys (`postgres`/`mysql`/`mariadb`/`mongo`/
+`redis`), each carrying whatever of name/image/port/env it has. Field names
+differ per entry type (`applicationId` vs `composeId` vs `postgresId`,
+`dockerImage` vs `image`), so the readers take a list of candidate keys rather
+than assuming one shape, and the env blob is one `KEY=value`-per-line string
+(`parseDokployEnv`, same rules as a `.env` file, an empty value kept as `""`
+since that's meaningful to Docker).
+
+`plan(entries, takenSlugs)` is the **dry run the user approves** : per entry,
+the slug it would get, whether that slug is already taken here, and a `blocked`
+reason when it can't be recreated (built from source on Dokploy, or a compose
+stack Dokploy returned no file for). `importPlan` then creates one service per
+application/database and hands a compose stack to the existing
+`ComposeImportService`, reusing its parser rather than a second one. Nothing is
+deployed by the import; the services sit there until the user deploys them.
+
+**Not verified against a live Dokploy instance.** The endpoint, header and
+response shapes are from Dokploy's documented API, and the client is
+deliberately tolerant (it accepts a bare array or a `result.data` wrapper, and
+names the likely cause when the answer isn't a project list at all). First real
+migration is the real test.

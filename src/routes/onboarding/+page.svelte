@@ -1,14 +1,17 @@
 <script lang="ts">
 	import {
+		Check,
 		Cpu,
 		Globe,
 		Mail,
+		Minus,
 		Rocket,
 		Server,
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
+	import AsyncBlock from "$lib/components/async-block.svelte";
 	import BrandMark from "$lib/components/brand-mark.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import {
@@ -16,10 +19,12 @@
 		inputClass as input,
 		labelClass as label,
 	} from "$lib/components/form-styles";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import Stepper, { type StepperStep } from "$lib/components/stepper.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { ONBOARDING_FIELD_STEP } from "$lib/onboarding-fields";
+	import { getSwarmReadiness } from "$lib/remote/setup.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -39,6 +44,8 @@
 			return "";
 		}
 	}
+
+	const swarm = getSwarmReadiness();
 
 	const STEPS: StepperStep[] = [
 		{ icon: Globe, label: "Core" },
@@ -297,6 +304,18 @@
 	}
 </script>
 
+{#snippet swarmCheck(ok: boolean, yes: string, no: string)}
+  <li class="flex items-start gap-2">
+    {#if ok}
+      <Check class="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
+      <span>{yes}</span>
+    {:else}
+      <Minus class="text-text-subtle mt-0.5 size-3.5 shrink-0" />
+      <span>{no}</span>
+    {/if}
+  </li>
+{/snippet}
+
 {#snippet panelHeader(label: string, description: string)}
   <div class="border-b border-border pb-4">
     <h2 class="text-text text-base font-semibold tracking-tight">{label}</h2>
@@ -467,6 +486,51 @@
                 <p class={errorClass}>{showError("dockerNetworkName")}</p>
               {/if}
             </div>
+
+            <AsyncBlock errorTitle="Couldn't check this host's swarm state." query={swarm}>
+              {#snippet pending()}
+                <Skeleton class="h-16 w-full" />
+              {/snippet}
+              {#snippet children(readiness)}
+                {@const ready =
+                  readiness.swarmActive &&
+                  readiness.overlayReady &&
+                  readiness.traefikSwarmProvider}
+                <div
+                  class="rounded-md border p-3 text-xs {ready
+                    ? 'border-emerald-500/30 bg-emerald-500/5'
+                    : 'border-border bg-surface-2'}"
+                >
+                  <p class="text-text font-medium">
+                    Swarm mode {ready ? "is ready on this host" : "isn't set up"}
+                  </p>
+                  <ul class="text-text-muted mt-2 space-y-1">
+                    {@render swarmCheck(
+                      readiness.swarmActive,
+                      "This daemon is a swarm manager",
+                      "docker swarm init hasn't been run here",
+                    )}
+                    {@render swarmCheck(
+                      readiness.overlayReady,
+                      `Overlay network ${readiness.network} exists`,
+                      `Overlay network ${readiness.network} is missing`,
+                    )}
+                    {@render swarmCheck(
+                      readiness.traefikSwarmProvider,
+                      "Traefik runs its swarm provider",
+                      readiness.traefikFound
+                        ? "Traefik's swarm provider is off"
+                        : "No Traefik container found on this host",
+                    )}
+                  </ul>
+                  <p class="text-text-subtle mt-2">
+                    Standalone containers don't need any of this. Switching to
+                    swarm later from Settings → Docker sets up whatever's
+                    missing above.
+                  </p>
+                </div>
+              {/snippet}
+            </AsyncBlock>
           </section>
 
           <!-- ═══ Step 3: Traefik ═══ -->

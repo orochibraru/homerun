@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { query } from "$app/server";
+import { ProjectDTO } from "$lib/dto/project-dto";
 import { requireAdmin, requireUser } from "$lib/server/remote-auth";
 import type { CleanupPreview } from "$lib/services/docker/cleanup";
 import type {
 	InfraContainer,
 	TraefikInfo,
 } from "$lib/services/docker/core-services";
+import type { OrphanNetwork } from "$lib/services/docker/networks";
 import { DockerService } from "$lib/services/docker.service";
 
 export interface InfraStatus {
@@ -17,6 +19,16 @@ export const getCleanupPreview = query(async (): Promise<CleanupPreview> => {
 	requireAdmin();
 	return await DockerService.getCleanupPreview();
 });
+
+/** Project networks the daemon still has but no project row does : the leak Docker's own network prune can't see while anything is attached. */
+export const getOrphanProjectNetworks = query(
+	async (): Promise<OrphanNetwork[]> => {
+		requireAdmin();
+		return await DockerService.findOrphanProjectNetworks(
+			await ProjectDTO.allIds(),
+		);
+	},
+);
 
 export const getInfraStatus = query(async (): Promise<InfraStatus> => {
 	requireAdmin();

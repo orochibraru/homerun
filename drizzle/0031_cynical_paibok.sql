@@ -1,0 +1,2 @@
+ALTER TABLE "cron_job" ADD COLUMN "remote_host_id" text;--> statement-breakpoint
+ALTER TABLE "cron_job" ADD CONSTRAINT "cron_job_remote_host_id_remote_host_id_fk" FOREIGN KEY ("remote_host_id") REFERENCES "public"."remote_host"("id") ON DELETE set null ON UPDATE no action;

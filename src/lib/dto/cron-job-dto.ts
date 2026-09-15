@@ -19,6 +19,7 @@ export interface NewCronJobInput {
 	registryPasswordEnc?: string | null;
 	registryUrl?: string | null;
 	registryUsername?: string | null;
+	remoteHostId?: string | null;
 	schedule: string;
 	tag?: string | null;
 	timeoutSeconds: number;
@@ -39,6 +40,7 @@ export type CronJobUpdateInput = Partial<
 		| "registryPasswordEnc"
 		| "registryUrl"
 		| "registryUsername"
+		| "remoteHostId"
 		| "schedule"
 		| "tag"
 		| "timeoutSeconds"
@@ -138,6 +140,7 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 			registryPasswordEnc: input.registryPasswordEnc ?? null,
 			registryUrl: input.registryUrl ?? null,
 			registryUsername: input.registryUsername ?? null,
+			remoteHostId: input.remoteHostId ?? null,
 			schedule: input.schedule,
 			tag: input.tag ?? "latest",
 			timeoutSeconds: input.timeoutSeconds,
@@ -166,6 +169,10 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 	get name(): string {
 		return this.row.name;
 	}
+	get remoteHostId(): string | null {
+		return this.row.remoteHostId;
+	}
+
 	get kind(): CronJob["kind"] {
 		return this.row.kind;
 	}
