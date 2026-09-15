@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
+	doublePrecision,
 	index,
 	integer,
 	jsonb,
@@ -888,6 +889,43 @@ export const notification = pgTable(
 	],
 );
 
+/**
+ * One point on the resource graphs, written every minute by
+ * services/stats-sampler.ts. `serviceId` null is the host itself, so the
+ * dashboard's own chart and a service's scoped chart read the same table.
+ *
+ * Deliberately a raw sample rather than pre-rolled buckets: at a minute
+ * apart, a year of host samples is ~525k rows and Postgres aggregates them
+ * per range at query time (see StatSampleDTO.history), which is far less
+ * machinery than maintaining rollup tables, and the retention prune keeps
+ * the table from growing without bound.
+ */
+export const statSample = pgTable(
+	"stat_sample",
+	{
+		cpuPercent: doublePrecision("cpu_percent").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		diskUsedGb: doublePrecision("disk_used_gb"),
+		id: text("id").primaryKey(),
+		memLimitMb: doublePrecision("mem_limit_mb"),
+		memUsedMb: doublePrecision("mem_used_mb").notNull(),
+		// Cumulative counters as the daemon reports them, not deltas : a
+		// container's own counters reset when it restarts, so the rate is
+		// derived per bucket at read time and clamped at zero.
+		netRxBytes: doublePrecision("net_rx_bytes"),
+		netTxBytes: doublePrecision("net_tx_bytes"),
+		serviceId: text("service_id").references(() => service.id, {
+			onDelete: "cascade",
+		}),
+	},
+	(table) => [
+		index("statSample_serviceId_createdAt_idx").on(
+			table.serviceId,
+			table.createdAt,
+		),
+	],
+);
+
 export const job = pgTable(
 	"job",
 	{
@@ -1089,6 +1127,7 @@ export type RemoteHost = typeof remoteHost.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
 export type Notification = typeof notification.$inferSelect;
+export type StatSample = typeof statSample.$inferSelect;
 export type Job = typeof job.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;

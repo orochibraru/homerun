@@ -13,45 +13,58 @@ fonts, and the four custom Tailwind v4 `@utility` definitions every surface is
 built from. Nothing under `src/routes`/`src/lib` should hardcode a hex value or
 a blur/shadow stack, route it through a token here instead.
 
-- **Two typefaces.** `--font-sans` is Inter (self-hosted `@font-face` blocks
-  pointing at `static/fonts/`, plus the `@fontsource-variable/inter` import);
-  `--font-mono` is **JetBrains Mono** (`@fontsource-variable/jetbrains-mono`,
-  bundled, no CDN, same "a self-hosted app shouldn't need outbound internet to
-  render" reasoning as the Swagger UI docs page). Mono is not decorative : it
-  carries every machine-readable string, image refs (`redis:alpine`), slugs and
-  hostnames, image digests, metrics, status badges, and section labels, which is
-  most of what makes this read as infrastructure tooling rather than a generic
-  dashboard.
-- **`panel`** is the card treatment : an **opaque** `--color-surface`, a 1px
-  border, a hairline inner top rule (`--panel-rule`) and a tight shadow. It
-  replaced a `glass` utility (translucent surface + `backdrop-filter`
-  blur/saturate + a specular sheen gradient) that sampled an ambient backdrop
-  painted on `body::before`/`::after` : three radial color pools plus a 44px
-  engineering grid. All of that is gone, deliberately. Translucency over a
-  tinted, gridded ground washed every surface toward the same mid-grey, which is
-  what made the app read as flat and low-contrast no matter how the text tokens
-  were tuned. The ground is now a flat `--color-bg` and panels are opaque, so a
-  card's edge is a real edge. **`panel-strong`** is the chrome variant (it
-  paints `--sidebar` rather than `--color-surface`); **`panel-interactive`**
-  adds the hover lift.
-- **`tech`** is `--font-mono` + `tabular-nums`, for any number that updates live
-  (the dashboard's 5s stats poll) so digits don't reflow as they change.
-  **`eyebrow`** is the small uppercase mono section label used for every panel
-  title and sidebar category heading ; it's `--color-text` at weight 600, not a
-  muted grey, because it _is_ the panel's title.
-- **`--color-ink`/`--color-ink-foreground`** are the primary-action pair, and
-  they invert per theme : near-black with white text in light, near-white with
-  black text in dark. The default `Button` variant uses them, which is why the
-  main action on every page reads as the highest-contrast thing on it. Reserve
-  `--color-accent` for state (active tab underline, active nav rail, links,
-  focus rings, the brand square) rather than for filled buttons.
-- **The radius scale is deliberately tight** : `--radius` is `0.375rem` and the
-  multiplier curve is flat, so `rounded-2xl` resolves to `0.5625rem`. Card
-  corners are the single biggest "toy vs. tool" tell, don't loosen them up.
+- **Two typefaces, and mono is now rare.** `--font-sans` is Inter (self-hosted
+  `@font-face` blocks pointing at `static/fonts/`); `--font-mono` is JetBrains
+  Mono, and it is reserved for **code, logs and terminal output** :
+  `live-log-viewer.svelte`, `ansi-line.svelte`, the Terminal tab, System Logs,
+  the Errors tab and the env paste box. Everything else — nav, labels, status
+  badges, metrics, image refs, hostnames — is sans. An earlier pass made mono
+  the UI's voice across the board and it read as a terminal emulator rather than
+  an app. `tech` survives as _tabular figures only_ (`font-variant-numeric`), so
+  live-updating numbers still don't reflow.
+- **The design is ported from Penombre** (`orochibraru/penombre`'s
+  `src/app.css`), deliberately, because that app's look is the target. Four
+  things carry it:
+  - **The aurora.** `body::before` paints two oversized, heavily blurred radial
+    colour fields on opposite corners (`--brand-2` pink top-right, `--brand-3`
+    cyan bottom-left), `filter: blur(72px) saturate(140%)`, fixed so they stay
+    put while content scrolls. `html` holds the solid ground (`--color-bg`) and
+    `body` is transparent, so panels above can be translucent without stacking
+    washes.
+  - **Film grain.** `body::after` is an inline SVG `feTurbulence` at 3.5%
+    opacity, `mix-blend-mode: soft-light`. It exists so the aurora's gradient
+    doesn't band; keep it subtle enough that type stays crisp.
+  - **Frosted panels.** `panel` is a translucent `--color-surface` +
+    `backdrop-filter: blur(10px)` + hairline border. The blur is deliberately
+    light : heavier turns the gradient behind a card into a visible rectangle.
+    `panel-strong` is the near-opaque, heavily blurred variant for chrome that
+    overlaps scrolling content (the sticky header, the mobile drawer).
+  - **A violet brand.** `--color-accent` (and `--color-ink`, the fill primary
+    buttons paint with) is `oklch(0.54 0.25 293)` in light, brighter in dark.
+    `--radius` is `0.75rem` : soft corners, not the tightened technical ones a
+    previous pass used.
+- **The shell is a rail plus a floating pane.** `(protected)/+layout.svelte` is
+  `flex h-screen p-2 md:gap-2`: a transparent 14rem sidebar sitting directly on
+  the aurora (no panel of its own), and the page itself a `panel rounded-xl`
+  pane with the sticky header inside it. The sidebar carries the one primary
+  action (`Deploy a service`, full width, brand-filled) above the nav, the way
+  Penombre's "New" button does.
+- **The accent picker has to move more than one variable.**
+  `/profile/appearance` writes `--color-accent`, and the layout's `accentStyle`
+  also sets `--color-ink`, `--primary` and `--ring` from the same hex.
+  Overriding only `--color-accent` leaves every button on the stock violet,
+  which is exactly what "the accent switch doesn't work on buttons" meant.
+- **`eyebrow`** is a small sans semibold label (no longer uppercase mono), used
+  for panel titles and sidebar group headings. **`metric`** is the large tabular
+  number on the stat tiles. **`panel-head`** is the shared card-header strip.
 - Both themes are real and both are checked : light is `:root`, dark is `.dark`
-  (driven by `mode-watcher`, see Appearance preferences below). Every token that
-  differs between them is redefined in both blocks, a color defined only in one
-  is a bug.
+  (driven by `mode-watcher`). Every token that differs between them is redefined
+  in both blocks, a color defined only in one is a bug.
+
+**`layout.css` is formatted by biome, not prettier.** Biome owns CSS here
+(`biome.json`'s `css.parser`), and it indents with tabs; prettier has no
+`useTabs` in `.prettierrc` and rewrites the whole file to spaces, which is a
+600-line diff that nothing then checks. Run `bunx biome check --write` on it.
 
 **Sweeping this file's tokens is how a global visual change is made**, not a
 per-route pass : both redesigns so far changed ~65 files, and almost all of that
@@ -64,6 +77,27 @@ longest-first (`glass-strong` before `glass`) for the same reason. `\bglass\b`
 also matches inside `--glass-highlight`, which is how a dangling
 `var(--panel-highlight)` got left behind in three files : grep the CSS variable
 names separately afterward.
+
+**One list/grid component, `entity-list.svelte`.** It takes `items` (each
+`{id, title, subtitle?, description?, href?}`) plus optional
+`media`/`badge`/`meta`/`actions` snippets and a `selectedIds`/`onToggleSelect`
+pair, and renders both the list view (one `panel`, rows separated by hairlines)
+and the card view from the same data. It replaced `entity-list-view.svelte`,
+which took raw `row`/`card` snippets : every page drew its own row chrome, so
+each list had different padding, and once the shared container became a panel
+the pages that still drew a `panel` per row showed **double borders with no gap
+between items**. Services, templates, projects and storage go through it; the
+remaining five list pages (remote hosts, S3 destinations, cron jobs, build
+cache, git providers) still hand-roll their row internals inside the same
+panel/divider shell, see `TODO.md`.
+
+**The resource graphs** (`usage-chart.svelte`, `service-usage-table.svelte`)
+read `stat_sample` through `$lib/remote/stats.remote.ts`. The chart is a plain
+inline SVG path over a `0 0 100 40` viewBox — no chart library, same "a
+self-hosted app shouldn't need a CDN" reasoning as the bundled fonts — with
+metric (CPU/memory/traffic) and range (live…all) switches, and it refreshes
+itself every 5s only on the live range. `service-graph.svelte` is the service
+overview's Connections diagram.
 
 **Verify a visual change by actually looking at it.** `tests/e2e/`'s harness
 boots a real app against a real Postgres (`bun run build:app`, then a throwaway

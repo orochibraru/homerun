@@ -56,6 +56,22 @@ a server log line nobody reads.
   hand-rolled `fetch` calls rather than an `openapi-fetch` client, same posture
   as `GitProviderService`.
 
+**The Target is `https` against 443, and that is what fixed "routes are created
+but we hit a 404".** Every router Homerun writes lives on
+`config.traefik.entrypoint` (`websecure`) with `tls=true`, so a Target pointing
+at port 80 reached a Traefik entrypoint with **no matching router** and Traefik
+answered its own 404 — the tunnel was working, the request just landed nowhere.
+`targetScheme(port)` maps 80 to `http` and everything else to `https` (`method`
+is a free-form nullable string in the Integration API's own schema), and
+`pangolinTargetPort` now defaults to **443**. TLS is therefore terminated twice
+on purpose: Pangolin for the public connection, Traefik again for the hop from
+the tunnel to the container. With DNS pointing at Pangolin rather than this
+host, Traefik's own HTTP-01 challenge can't complete, so that inner certificate
+is usually its self-signed default — which is fine, nothing verifies it, but
+it's why the inner hop is encrypted rather than trusted. The one remaining
+assumption is `ip: "localhost"`, which is only right when the newt tunnel runs
+on this host with host networking (see `TODO.md`).
+
 **Pangolin's OpenAPI document is fetchable after all**, contrary to what this
 section used to say (a "the OAS is broken, the types are guesses" note inherited
 from the sibling `dokploy-to-pangolin` project):

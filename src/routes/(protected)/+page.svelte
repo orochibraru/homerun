@@ -9,7 +9,9 @@
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import HostResources from "$lib/components/host-resources.svelte";
+	import ServiceUsageTable from "$lib/components/service-usage-table.svelte";
 	import { Button } from "$lib/components/ui/button";
+	import UsageChart from "$lib/components/usage-chart.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
 	import type { ContainerStatus } from "$lib/types";
@@ -89,6 +91,11 @@
     </div>
 
     <HostResources />
+  </div>
+
+  <div class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <UsageChart title="Host resources" />
+    <ServiceUsageTable />
   </div>
 
   <div class="grid items-start gap-4 lg:grid-cols-3">

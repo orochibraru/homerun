@@ -63,6 +63,34 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
   `ensureSharedNetwork()` call below: a network a prune or a Docker Cleanup run
   removed out from under a still-live project row gets recreated, rather than
   failing every subsequent deploy with a raw dockerode 404.
+- `core-services.ts`, `DockerCoreServicesMixin`, the Traefik container itself :
+  `findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`
+  (image-only recreate), plus **`applyTraefikFlags(flags)`**, which rewrites
+  `--key=value` entries on the _running_ container's command line and recreates
+  it from its own inspected config. That one crosses the line
+  `updateTraefikContainer` documents ("never invents new command-line flags") on
+  purpose: Traefik reads its ACME account, its providers and its entrypoints
+  from **static** configuration at process start, so a dashboard field that only
+  writes a database row is a field that does nothing. Two callers today:
+  `applyAcmeEmail` (Settings → Networking) and `enableSwarmMode`. Both no-op
+  when every flag already holds the requested value, so saving an unchanged
+  section never bounces the proxy. `applyFlags` itself is a pure exported
+  function with its own unit test (`tests/unit/app/traefik-flags.test.ts`) : it
+  matches whole keys, so `providers.docker` never clobbers
+  `providers.docker.exposedbydefault`, and a null value removes a flag.
+- **Switching orchestration mode actually prepares the host.**
+  `enableSwarmMode()` runs `docker swarm init` if the daemon isn't a manager,
+  ensures an **attachable overlay** network, attaches Traefik to it and turns on
+  `--providers.swarm`. The overlay is deliberately a _second_ network,
+  `<networkName>-swarm` (`swarmNetworkName()`): swarm services can only join an
+  overlay, the shared network already exists as a bridge with the app and
+  Traefik attached, and a live bridge network can't be converted in place.
+  `buildContainerLabels` therefore takes a `networkName` so a swarm service's
+  `traefik.docker.network` points at the overlay. `disableSwarmMode()` removes
+  the provider flags and **leaves the swarm running** :
+  `docker swarm leave --force` would kill every swarm service on the host,
+  including ones this app never created, which is not something a dashboard
+  select should do behind your back.
 - `containers.ts`, `DockerContainerMixin` (the old `service.ts`, renamed to
   avoid reading as "the Service service" next to `dto/service-dto.ts`), the
   operational surface, merged in right after the network mixin (see the ordering

@@ -16,9 +16,11 @@
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
+	import ServiceGraph from "$lib/components/service-graph.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import UsageChart from "$lib/components/usage-chart.svelte";
 	import { deployPhaseStates } from "$lib/deploy-phases";
 	import { timeAgo } from "$lib/formatting";
 	import { randomId } from "$lib/random-id";
@@ -240,7 +242,7 @@
 </script>
 
 <!-- ═══ Actions ═══ -->
-<div class="mb-6 flex flex-wrap gap-2">
+<div class="mb-4 flex flex-wrap gap-2">
     <form action="?/deploy" method="POST" use:enhance={deployEnhance()}>
         <Button disabled={pendingAction !== null} type="submit">
             {#if pendingAction === "deploy"}
@@ -315,6 +317,11 @@
             </Button>
         </form>
     {/if}
+</div>
+
+<div class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <UsageChart serviceId={svc.id} title="Resource usage" />
+    <ServiceGraph dependsOn={data.dependsOn} name={svc.name} usedBy={data.usedBy} />
 </div>
 
 {#if pendingAction === "deploy"}

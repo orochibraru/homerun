@@ -251,6 +251,12 @@ both publish, are **generated, not taken by hand** : `bun run screenshots` runs
 `playwright.config.ts` carries `testIgnore: "screenshots/**"` for exactly that
 reason, and the screenshot config's `testDir` points at the subfolder.
 
+- **It signs in once.** The bootstrap test saves `storageState` to
+  `test-results/screenshots-auth.json` and every later test runs under
+  `test.use({ storageState })`. Signing in per test meant ~26 sign-ins inside
+  two minutes and produced its own flake (a sign-in that silently didn't
+  navigate, failing whichever shot drew it). The sign-in shot itself sits
+  outside that describe, so it gets a clean signed-out context.
 - **It bootstraps its own world.** A blank instance means signing up, clicking
   through onboarding (with Base domain set to `example.com`, so the hostnames in
   the shots read like a real deployment rather than `127.0.0.1`), then seeding a

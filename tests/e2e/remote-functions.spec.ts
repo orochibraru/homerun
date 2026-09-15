@@ -15,14 +15,16 @@ test.describe
 		}) => {
 			await signIn(page);
 
-			const panel = page
-				.locator("div")
-				.filter({ has: page.getByRole("heading", { name: "Host Resources" }) })
-				.last();
-			await expect(panel.getByText("CPU")).toBeVisible();
-			await expect(panel.getByText(/^\d+%$/)).toBeVisible();
+			// The strip renders nothing but skeletons until the query resolves,
+			// so any of its real text proves it got past them.
+			const main = page.locator("main");
+			for (const label of ["CPU", "RAM", "Disk"]) {
+				await expect(
+					main.locator("span.eyebrow").filter({ hasText: label }),
+				).toBeVisible();
+			}
 			await expect(
-				panel.getByText(/^\d+(\.\d+)? \/ \d+(\.\d+)? GB$/),
+				main.getByText(/^\d+(\.\d+)? \/ \d+(\.\d+)? GB$/),
 			).toHaveCount(2);
 		});
 

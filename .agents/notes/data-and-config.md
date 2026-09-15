@@ -178,6 +178,11 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   twice over: `UserService.cleanupUserResources` removes each project's Docker
   network and then deletes the rows explicitly, and `project.userId` is
   `onDelete: "cascade"` underneath that.
+- `stat_sample`, one point on the resource graphs: `serviceId` (null = the host
+  itself), CPU%, memory, the cumulative network counters and a timestamp,
+  written every minute by `StatsSampler` and read back bucketed per range. See
+  Recorded resource history in `observability.md` for why it's raw samples
+  rather than rollup tables.
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).
 - `template_link`, a template linking to another template (a database, a cache,

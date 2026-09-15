@@ -42,6 +42,28 @@ between two samples (`os.cpus()` gives cumulative counters since boot), so a
 module-scope `lastCpuSample` is diffed on each call, first call after boot
 always reads 0%. Polled by the dashboard's `/system-stats` endpoint every 5s.
 
+## Recorded resource history (`stat_sample`, `StatSampleDTO`, `$lib/remote/stats.remote.ts`)
+
+The live poll above keeps nothing, so the graphs read a recorded history
+instead. `StatsSampler` (`$lib/services/stats/stats-sampler.ts`, a
+`BaseScheduler`) writes one `stat_sample` row a minute for the host and one per
+service with a running container (`DockerService.sampleContainerStats`, a
+non-streaming `docker stats` read), and prunes past a year every sixtieth tick.
+It's the one scheduler with `runOnStart = true`: without it a fresh instance
+shows an empty chart for a full minute, and unlike the due-date schedulers
+there's nothing to double-fire.
+
+`StatSampleDTO.history(range, serviceId)` buckets that table per range at query
+time (`live` 15min/1min … `all` 1-day buckets) rather than maintaining rollup
+tables, averaging CPU and memory and turning the **cumulative** network counters
+into a per-second rate across each bucket, clamped at zero because a container
+restart resets its own counters. Two Postgres details are load-bearing: the
+bucket width is `sql.raw`'d rather than bound, since dividing by an untyped bind
+parameter makes Postgres reject the expression as an ambiguous operator (that
+was a real "Couldn't load the history" bug), and `latestPerService` uses
+`selectDistinctOn`. `serviceId` null is the host itself, so the dashboard's
+chart and a service's own chart are the same query.
+
 ## Logging
 
 Every module that mutates state (`page.server.ts` actions, the Docker layer,

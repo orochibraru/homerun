@@ -4,6 +4,7 @@ import {
 	desc,
 	eq,
 	inArray,
+	isNotNull,
 	isNull,
 	ne,
 	or,
@@ -261,6 +262,24 @@ export class ServiceDTO extends BaseDTO<Service> {
 			.select()
 			.from(service)
 			.where(eq(service.cronEnabled, true));
+		return rows.map((row) => new ServiceDTO(row));
+	}
+
+	/**
+	 * Every service with a live container, for the per-minute stats sampler.
+	 * Unscoped by owner deliberately, same precedent as `listCronEnabled`:
+	 * this is a system-triggered sweep, not a user-facing access path.
+	 */
+	static async listRunningWithContainers(): Promise<ServiceDTO[]> {
+		const rows = await db
+			.select()
+			.from(service)
+			.where(
+				and(
+					isNotNull(service.containerId),
+					eq(service.currentStatus, "running"),
+				),
+			);
 		return rows.map((row) => new ServiceDTO(row));
 	}
 

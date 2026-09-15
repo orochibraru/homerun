@@ -6,33 +6,30 @@ move it under `## Done` in the same change that finishes it.
 
 ## UI
 
-- [ ] Dashboard needs to be fuller or it's useless. Graphed stats (recorded
-      locally) with ability to see live, last hour, last day, last week, last
-      month, last year and all time. Also list services with resource
-      consumption and traffic and sort by traffic usage and resource
-      consumption.
-- [ ] Service overview also needs to have stats first, scoped to the service.
-      Also show to which services it might be linked via a diagram-ish form,
-      sort of like github actions/gitlab CI UI show u which jobs need which to
-      run
-- [ ] UI still looks like shit, redesign from the ground up.
-
-## Broken core features
-
-- [ ] Domain routing doesnt work through pangolin. Routes are created, but we
-      hit a 404.
-- [ ] Setting a let's encrypt email in the ui does nothing, it needs to.
-- [ ] For SSL regardless of what we use we need to terminate on both ends so yes
-      even if we use pangolin we're terminating tls.
-- [ ] Switching to swarm mode just changes a setting but doesnt initialize a
-      swarm nor updates the network or do anything to make this feature work.
+- [ ] Rename "Deployment history" with "Revisions" and put it in a separate tab.
+- [ ] Merge "logs" and "errors" in one tab called "Observability"
+- [ ] Adding a volume on an instance is one of the worst UX experiences of my
+      life, let's change it to make it simple to link a volume to a container.
+      Also pull in existing volumes on the machine.
 
 ## Small
 
-- [ ] [App] Delete all notifications buttons
+- [ ] [App] **Convert the last five list pages to `EntityList`.** Services,
+      templates, projects and storage pass their rows through it; remote hosts,
+      S3 destinations, cron jobs, build cache and git providers still hand-roll
+      their row internals, now inside the same panel/divider shell so they look
+      identical. Their rows carry per-page extras (an agent's reachability line,
+      a provider's kind badge) that want `badge`/`meta` snippets.
+- [ ] [Docker] **Make the Pangolin target host configurable.** `ip` is hardcoded
+      to `localhost`, which is only right when the newt tunnel runs on this host
+      with host networking. Everything else needs the LAN address.
 
 ## Medium
 
+- [ ] [App] Add a "Migrate from Dokploy" button which will ask for Dokploy
+      server info (url, api token), will list all services and dry run a
+      migration that the user can approve or not. The migration will only pull
+      services from Dokploy, not act on anything on there.
 - [ ] [App] **Restore an S3 backup.** Upload only today; getting a tarball back
       into a volume is a manual operation.
 - [ ] [App] **Handle `build:` in compose import.** It's ignored, so those
@@ -116,3 +113,42 @@ move it under `## Done` in the same change that finishes it.
       a tinted fill. The signed-out pages are one centred column now, not a
       two-pane product pitch. See `.agents/notes/ui.md` for the token map and
       for how to screenshot a visual change before calling it done.
+
+- [x] [App] **Delete-all notifications button.** "Clear all" next to "Mark all
+      read" in the bell, `NotificationDTO.deleteAll` behind a
+      `deleteAllNotifications` command.
+- [x] [App] **Domain routing through Pangolin 404s.** The Target was created as
+      `http` against port 80, and every router Homerun writes lives on the
+      `websecure` entrypoint : Pangolin reached an entrypoint with no matching
+      router, and Traefik answered 404. Targets are `https` against 443 now, and
+      the default `pangolinTargetPort` moved to 443.
+- [x] [App] **Terminate TLS on both ends.** Same change as above, from the other
+      direction: Pangolin still terminates the public connection, and the hop
+      from its tunnel to this host is TLS too rather than plaintext to :80.
+- [x] [App] **A Let's Encrypt email set in the UI does nothing.** Traefik reads
+      the ACME account from static config at startup, so saving it only ever
+      wrote a database row. `DockerService.applyAcmeEmail` rewrites
+      `--certificatesresolvers.<resolver>.acme.email` on the running container
+      and recreates it, and does nothing when the value is unchanged.
+- [x] [App] **Switching to swarm mode did nothing.** It now runs
+      `docker swarm init` when the daemon isn't a manager, creates the
+      attachable overlay (`<network>-swarm`, since a live bridge network can't
+      be converted), attaches Traefik to it and turns on Traefik's swarm
+      provider. Switching back turns the provider off and leaves the swarm
+      alone.
+- [x] [UI] **Redesign, following Penombre.** Aurora background, film grain,
+      frosted translucent panels, violet brand, a floating rounded content pane
+      on a transparent sidebar rail, soft corners. The accent picker now drives
+      buttons too (it only moved `--color-accent`, never the fill buttons paint
+      with), and monospace is back to code, logs and terminals only.
+- [x] [UI] **One reusable list/grid.** `entity-list.svelte` takes
+      title/subtitle/description/href plus `media`/`badge`/`meta`/`actions`
+      snippets and renders both the list and the card view, which is what fixed
+      the double borders and the inconsistent spacing between pages.
+- [x] [UI] **A fuller dashboard.** A recorded `stat_sample` history (per-minute
+      sampler, host and per-container), a range-switching chart
+      (live/1h/24h/7d/30d/1y/all × CPU/memory/traffic) and a per-service usage
+      table sortable by CPU, memory or traffic.
+- [x] [UI] **Stats first on a service's overview**, scoped to that service, plus
+      a Connections diagram showing what it needs and what needs it, derived
+      from env vars pointing at another service's slug.
