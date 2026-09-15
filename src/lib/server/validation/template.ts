@@ -23,6 +23,22 @@ export const createTemplateSchema = z.object({
 		.enum(["no", "always", "on-failure", "unless-stopped"])
 		.default("unless-stopped"),
 	tag: z.string().min(1).default("latest"),
+	tags: z.string().optional(),
 });
+
+/** Turns the Tags field's comma-separated text into the stored `string[]` : lowercased, trimmed, de-duplicated, capped so one paste can't fill the column. */
+export function parseTags(raw: string | undefined | null): string[] {
+	if (!raw) {
+		return [];
+	}
+	const seen = new Set<string>();
+	for (const part of raw.split(",")) {
+		const tag = part.trim().toLowerCase().slice(0, 30);
+		if (tag) {
+			seen.add(tag);
+		}
+	}
+	return [...seen].slice(0, 12);
+}
 
 export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;

@@ -345,6 +345,17 @@ export const instanceSettings = pgTable("instance_settings", {
 	// creates a site itself.
 	pangolinMainSiteName: text("pangolin_main_site_name"),
 	pangolinOrgId: text("pangolin_org_id"),
+	// When true, a created Resource keeps Pangolin's own SSO gate and this
+	// app's per-service login wall steps aside for anything published through
+	// Pangolin : one login instead of two. Default (false/null) is the
+	// reverse, Homerun owns access and every Resource it creates is created
+	// with `sso: false` (see $lib/services/pangolin.service.ts).
+	pangolinOwnsAuth: boolean("pangolin_owns_auth"),
+	// The host a Resource's Target points at, as resolved from the Pangolin
+	// site agent (usually newt), null defaults to "localhost", which is only
+	// right when that agent runs on this host with host networking : anything
+	// else needs this host's LAN address.
+	pangolinTargetHost: text("pangolin_target_host"),
 	// Local port a Resource's Target forwards to on pangolinMainSiteName's
 	// host, null defaults to 80 (this app's own Traefik entrypoint, assumed
 	// to be running on the same host as the Pangolin site agent, HTTP-only :
@@ -442,6 +453,10 @@ export const template = pgTable(
 		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
 		sourceUrl: text("source_url"),
 		tag: text("tag").default("latest").notNull(),
+		// Free-form search keywords ("sql", "s3", "monitoring"), matched by the
+		// gallery's search box alongside name/description/image : a category is
+		// one bucket per template, these are many and overlap.
+		tags: text("tags").array().default([]).notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),

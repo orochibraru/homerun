@@ -4,7 +4,10 @@ import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
 import { parseEnvVars } from "$lib/server/validation/service";
-import { createTemplateSchema } from "$lib/server/validation/template";
+import {
+	createTemplateSchema,
+	parseTags,
+} from "$lib/server/validation/template";
 import { slugify } from "$lib/services/template-links";
 
 const logger = new Logger("Templates");
@@ -98,6 +101,7 @@ export const actions = {
 			ownerId: locals.user.id,
 			restartPolicy: input.restartPolicy,
 			tag: input.tag,
+			tags: parseTags(input.tags),
 		});
 
 		const linkError = await createLinks(

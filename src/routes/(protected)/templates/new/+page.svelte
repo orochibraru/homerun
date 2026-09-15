@@ -160,6 +160,21 @@
           </Select.Root>
         </div>
 
+        <div>
+          <label class={label} for="tags">Tags</label>
+          <Input
+            id="tags"
+            name="tags"
+            placeholder="sql, storage, self-hosted"
+            type="text"
+            value={values?.tags ?? ""}
+          />
+          <p class="mt-1.5 text-xs text-text-subtle">
+            Comma-separated keywords the gallery's search box matches on, on
+            top of the name, description and image.
+          </p>
+        </div>
+
         <div class="grid grid-cols-3 gap-3">
           <div class="col-span-2">
             <label class={label} for="image">

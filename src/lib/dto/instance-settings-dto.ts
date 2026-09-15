@@ -41,6 +41,8 @@ export interface InstanceSettingsCloudflareInput {
 
 export interface InstanceSettingsPangolinInput {
 	pangolinApiBaseUrl: string | null;
+	pangolinOwnsAuth: boolean;
+	pangolinTargetHost: string | null;
 	/** Blank/undefined means "keep the currently stored token". */
 	pangolinApiToken?: string;
 	pangolinMainSiteName: string | null;
@@ -107,6 +109,7 @@ export interface InstanceSettingsOverride {
 		signOutOfProvider: boolean;
 		tokenAuthMethod: OauthTokenAuthMethod;
 	}>;
+	pangolinOwnsAuth?: boolean | null;
 	smtpEnabled?: boolean | null;
 	smtpFrom?: string | null;
 	smtpHost?: string | null;
@@ -158,6 +161,8 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			pangolinApiTokenEnc: null,
 			pangolinMainSiteName: null,
 			pangolinOrgId: null,
+			pangolinOwnsAuth: null,
+			pangolinTargetHost: null,
 			pangolinTargetPort: null,
 			smtpEnabled: null,
 			smtpFrom: null,
@@ -250,6 +255,16 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	get pangolinTargetPort(): number {
 		return this.row.pangolinTargetPort ?? 443;
+	}
+
+	/** The host a created Target points at : "localhost" only works when the Pangolin site agent runs on this host with host networking. */
+	get pangolinTargetHost(): string {
+		return this.row.pangolinTargetHost || "localhost";
+	}
+
+	/** Whether Pangolin's own SSO gate is left on, and this app's per-service login wall steps aside for anything it publishes. */
+	get pangolinOwnsAuth(): boolean {
+		return this.row.pangolinOwnsAuth ?? false;
 	}
 
 	/** Whether every field PangolinService needs is set : anything less treats the integration as "feature off". */
@@ -376,6 +391,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			baseDomain: this.row.baseDomain,
 			dockerNetworkName: this.row.dockerNetworkName,
 			dockerSocketPath: this.row.dockerSocketPath,
+			pangolinOwnsAuth: this.pangolinOwnsAuth && this.pangolinConfigured,
 			oauthProviders: this.row.oauthProviders.map((p) => ({
 				clientId: p.clientId,
 				clientSecret: p.clientSecretEnc

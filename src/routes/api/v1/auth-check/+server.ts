@@ -128,6 +128,9 @@ export const GET = async ({ request, url }) => {
 	if (!svc.authRequired) {
 		return new Response("OK", { status: 200 });
 	}
+	if (config.pangolinOwnsAuth) {
+		return new Response("OK", { status: 200 });
+	}
 
 	const forwarded = readForwarded(request, url);
 

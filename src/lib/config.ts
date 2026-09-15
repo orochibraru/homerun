@@ -182,6 +182,9 @@ const configSchema = z.object({
 		.prefault({}),
 	logFormat: z.enum(["console", "json"]).default("console"),
 	logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
+	// DB-only (the Pangolin card on /settings), mirrored here so the
+	// forward-auth endpoint can read it per request without a query.
+	pangolinOwnsAuth: z.boolean().default(false),
 	port: z.number().default(3000),
 	smtp: z
 		.object({
@@ -209,6 +212,7 @@ export type AppConfig = z.infer<typeof configSchema>;
 /** The plain-value shape InstanceSettingsDTO.toConfigOverride() produces : kept here rather than imported from the DTO so this module stays DB-free (see applyInstanceSettings below). */
 export interface InstanceSettingsOverride {
 	authCheckUrl?: string | null;
+	pangolinOwnsAuth?: boolean | null;
 	authCrossSubdomainCookies?: boolean | null;
 	authOrigin?: string | null;
 	baseDomain?: string | null;
@@ -356,6 +360,7 @@ export function applyInstanceSettings(
 /** Instance-wide addressing : the base domain and the forwardAuth check URL. */
 function applyCoreOverride(override: InstanceSettingsOverride): void {
 	config.authCheckUrl = override.authCheckUrl ?? fileDefaults.authCheckUrl;
+	config.pangolinOwnsAuth = override.pangolinOwnsAuth ?? false;
 	const domain = override.baseDomain ?? fileDefaults.baseDomain;
 	config.baseDomain = domain.split(":")[0] ?? domain;
 }

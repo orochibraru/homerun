@@ -13,18 +13,42 @@
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import EntityList from "$lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import { ViewMode } from "$lib/view-mode.svelte";
 
 	const { data } = $props();
 
 	onMount(() => title.set("Cron Jobs"));
+
+	const view = new ViewMode("cron-jobs");
+
+	const rows = $derived(
+		data.jobs.map((job) => ({
+			enabled: job.enabled,
+			href: `${resolve("/cron-jobs")}/${job.id}`,
+			id: job.id,
+			kind: job.kind,
+			name: job.name,
+			subtitle: [
+				job.schedule,
+				job.kind === "exec" ? job.command : `${job.image}:${job.tag}`,
+				job.lastRunAt ? `last run ${timeAgo(job.lastRunAt)}` : null,
+			]
+				.filter(Boolean)
+				.join(" · "),
+			title: job.name,
+		})),
+	);
+	type JobRow = (typeof rows)[number];
 
 	const filters: FilterGroup[] = [
 		{
@@ -56,6 +80,63 @@
 	}
 </script>
 
+{#snippet media(job: JobRow)}
+  <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
+    {#if job.kind === "exec"}
+      <Terminal class="size-5" />
+    {:else}
+      <Clock class="size-5" />
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet badge(job: JobRow)}
+  {#if !job.enabled}
+    <span class="bg-surface-2 text-text-subtle shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold">
+      Disabled
+    </span>
+  {/if}
+{/snippet}
+
+{#snippet actions(job: JobRow)}
+  <form
+    action="?/runNow"
+    method="POST"
+    use:enhance={enhanceToast({
+      error: "Couldn't queue that run.",
+      loading: "Queueing the run",
+      success: "Run queued.",
+    })}
+  >
+    <input name="jobId" type="hidden" value={job.id}>
+    <Button size="icon-sm" title="Run now" type="submit" variant="ghost">
+      <Play class="size-4" />
+    </Button>
+  </form>
+
+  <form
+    action="?/delete"
+    method="POST"
+    use:enhance={enhanceToast({
+      error: "Couldn't delete that cron job.",
+      loading: "Deleting the cron job",
+      success: "Cron job deleted.",
+    })}
+  >
+    <input name="jobId" type="hidden" value={job.id}>
+    <Button
+      class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+      onclick={(e) => requestDelete(e, job.name)}
+      size="icon-sm"
+      title="Delete"
+      type="button"
+      variant="ghost"
+    >
+      <Trash2 class="size-4" />
+    </Button>
+  </form>
+{/snippet}
+
 <div class="p-5 md:p-6">
   <div class="mb-8 flex items-center justify-between gap-4">
     <div>
@@ -83,85 +164,18 @@
       </Button>
     </EmptyState>
   {:else}
-    <EntityToolbar {filters} placeholder="Search cron jobs…" />
+    <EntityToolbar {filters} placeholder="Search cron jobs…">
+      {#snippet trailing()}
+        <ViewModeToggle {view} />
+      {/snippet}
+    </EntityToolbar>
 
     {#if data.jobs.length === 0}
       <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No cron jobs match your search.</p>
       </div>
     {:else}
-      <div class="panel divide-border divide-y overflow-hidden rounded-xl">
-        {#each data.jobs as job (job.id)}
-          <div class="hover:bg-surface-2 flex items-center gap-4 px-4 py-3 transition-colors">
-            <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
-              {#if job.kind === "exec"}
-                <Terminal class="size-5" />
-              {:else}
-                <Clock class="size-5" />
-              {/if}
-            </div>
-            <a
-              class="min-w-0 flex-1"
-              href="{resolve('/cron-jobs')}/{job.id}"
-            >
-              <p class="text-text truncate text-sm font-semibold">
-                {job.name}
-                {#if !job.enabled}
-                  <span class="text-text-subtle text-xs font-normal">
-                    · disabled
-                  </span>
-                {/if}
-              </p>
-              <p class="text-text-muted mt-0.5 truncate text-xs">
-                {job.schedule}
-                · {job.kind === "exec"
-                  ? job.command
-                  : `${job.image}:${job.tag}`}
-                {#if job.lastRunAt}
-                  · last run {timeAgo(job.lastRunAt)}
-                {/if}
-              </p>
-            </a>
-
-            <form
-              action="?/runNow"
-              method="POST"
-              use:enhance={enhanceToast({
-                error: "Couldn't queue that run.",
-                loading: "Queueing the run",
-                success: "Run queued.",
-              })}
-            >
-              <input name="jobId" type="hidden" value={job.id}>
-              <Button size="icon-sm" title="Run now" type="submit" variant="ghost">
-                <Play class="size-4" />
-              </Button>
-            </form>
-
-            <form
-              action="?/delete"
-              method="POST"
-              use:enhance={enhanceToast({
-                error: "Couldn't delete that cron job.",
-                loading: "Deleting the cron job",
-                success: "Cron job deleted.",
-              })}
-            >
-              <input name="jobId" type="hidden" value={job.id}>
-              <Button
-                class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                onclick={(e) => requestDelete(e, job.name)}
-                size="icon-sm"
-                title="Delete"
-                type="button"
-                variant="ghost"
-              >
-                <Trash2 class="size-4" />
-              </Button>
-            </form>
-          </div>
-        {/each}
-      </div>
+      <EntityList {actions} {badge} items={rows} {media} {view} />
       <Pagination
         label="cron jobs"
         page={data.page}

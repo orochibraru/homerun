@@ -4,6 +4,7 @@
 		Clock,
 		Container,
 		Cpu,
+		ExternalLink,
 		FileText,
 		HardDrive,
 		LayoutGrid,
@@ -30,6 +31,14 @@
 	);
 	const publicHost = $derived(
 		data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug,
+	);
+	const publicDomains = $derived(
+		svc.dnsResolvable
+			? [
+					`${publicHost}.${data.baseDomain}`,
+					...(svc.customDomain ? [svc.customDomain] : []),
+				]
+			: [],
 	);
 
 	interface RouteTab extends NavTab {
@@ -154,19 +163,30 @@
     <h1 class="text-text text-lg font-semibold tracking-tight">{svc.name}</h1>
     <StatusBadge status={liveStatus} />
   </div>
-  <p class="text-text-muted -mt-4 mb-6 text-sm">
-    {svc.image}:{svc.tag}
-    ·
-    {#if svc.dnsResolvable}
-      <span class="text-accent">{publicHost}.{data.baseDomain}</span>
+  <p class="text-text-muted -mt-4 mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+    <span>{svc.image}:{svc.tag}</span>
+    {#if publicDomains.length > 0}
+      {#each publicDomains as domain (domain)}
+        <span aria-hidden="true">·</span>
+        <a
+          class="text-accent inline-flex items-center gap-1 hover:underline"
+          href="{data.publicScheme}://{domain}"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          {domain}
+          <ExternalLink class="size-3" />
+        </a>
+      {/each}
     {:else}
+      <span aria-hidden="true">·</span>
       <span class="text-text-subtle">not publicly routed</span>
     {/if}
     {#if svc.containerId || svc.swarmServiceId}
-      · internal:
-      <span class="text-text-subtle">{svc.slug}:{
-          svc.containerPort
-        }</span>
+      <span aria-hidden="true">·</span>
+      <span class="text-text-subtle">
+        internal: {svc.slug}:{svc.containerPort}
+      </span>
     {/if}
   </p>
 

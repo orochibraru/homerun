@@ -5,6 +5,7 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
 import {
 	applyAndRebuild,
+	checkbox,
 	nullableText,
 } from "$lib/server/validation/instance-settings-form";
 import { CloudflareService } from "$lib/services/cloudflare.service";
@@ -128,6 +129,8 @@ export const actions = {
 				undefined,
 			pangolinMainSiteName: nullableText(formData, "pangolinMainSiteName"),
 			pangolinOrgId: nullableText(formData, "pangolinOrgId"),
+			pangolinOwnsAuth: checkbox(formData, "pangolinOwnsAuth"),
+			pangolinTargetHost: nullableText(formData, "pangolinTargetHost"),
 			pangolinTargetPort: Number.isFinite(port) ? port : null,
 		});
 		logger.info(`Pangolin instance settings updated: user=${locals.user.id}`);

@@ -1,3 +1,4 @@
+import type { GitCredential } from "$lib/git-clone-url";
 import type { RegistryAuth } from "./docker/containers.ts";
 
 /** Decrypted connection to a registered Homerun Agent : see remote-host-dto.ts's `toAgentConnection`. */
@@ -48,6 +49,7 @@ export interface AgentBuildPush {
 
 export interface AgentBuildParams {
 	buildContext?: string | null;
+	credential?: GitCredential | null;
 	dockerfilePath?: string | null;
 	gitRef?: string | null;
 	gitUrl: string;
@@ -125,6 +127,7 @@ class AgentClientServiceClass {
 	): Promise<AgentBuildResult> {
 		return this.#request<AgentBuildResult>(connection, "POST", "/v1/build", {
 			buildContext: params.buildContext ?? null,
+			credential: params.credential ?? null,
 			dockerfilePath: params.dockerfilePath ?? null,
 			gitRef: params.gitRef ?? null,
 			gitUrl: params.gitUrl,

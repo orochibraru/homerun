@@ -132,7 +132,7 @@ you ship a button that turns out to be grey.
 
 Covered as a hard rule under Conventions above, repeated here because it's a
 layout decision rather than a code-style one: **dashboard pages fill the
-viewport** (`p-6 md:p-8`, no `mx-auto`, no `max-w-*`). `/authentication` shipped
+viewport** (`p-5 md:p-6`, no `mx-auto`, no `max-w-*`). `/authentication` shipped
 with `mx-auto max-w-4xl` and looked broken on an ultrawide display, with the
 whole page squeezed into a centre column; `remote-hosts/[hostId]` had the same
 defect (`mx-auto max-w-2xl`). Both now follow the same wrapper every other page
@@ -243,6 +243,20 @@ sidebar, in `sm`/`lg`; it's also the "gated by" footer on `app-auth`.
 replaced the copy of that markup each of those four forms carried. The pages
 that predated this also carried stale `LocalRun` branding and a hand-rolled
 `inputClass`, both gone.
+
+**Every list page now renders its rows through `entity-list.svelte`.** Remote
+hosts, S3 destinations, cron jobs, build cache registries and git providers used
+to hand-roll their row internals inside the same panel/divider shell, which is
+how they drifted : different title weights, different subtitle separators, a
+status line in one and a badge in another. They map their rows to `EntityRow`
+(`id`/`title`/`subtitle`/`description`/`href`) and pass the page-specific parts
+as `media`/`badge`/`meta`/`actions` snippets, which is what those snippets are
+for — an agent's reachability line is `meta`, a provider's Connected pill is
+`badge`. They gained a card view along the way, since `EntityList` takes a
+`ViewMode` either way and the toggle costs one `trailing` snippet in the
+toolbar. Git providers is the one exception to that: it has no toolbar, so it
+stays list-only, and its admin-only callback URL moved from a bordered line
+under the row into the row's own `description`.
 
 `confirm-dialog.svelte` gained an optional `confirmPhrase` prop: when set, the
 dialog renders an input and the confirm button stays disabled until the typed

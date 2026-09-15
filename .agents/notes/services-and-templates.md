@@ -336,19 +336,40 @@ a linked service to be _healthy_, just created and started.
 
 ## Built-in template catalog and gallery (`builtin-templates.ts`, `builtin-templates-apps.ts`, `template-icon.svelte`, `templates/[templateId]/`)
 
-58 built-in templates (up from the original 8), split across two data files
+69 built-in templates (up from the original 8), split across two data files
 purely to stay under `noExcessiveLinesPerFile`'s 680-line limit:
 `src/lib/server/db/builtin-templates.ts` (the original 8 infra templates plus
 Media/Network/Dashboard/Productivity/Finance category entries, also exports the
 `BuiltinTemplate`/`BuiltinTemplateLink` interfaces both files use) and
-`src/lib/server/db/builtin-templates-apps.ts` (17 more, Analytics/Monitoring/
-Development/other categories). `src/lib/server/db/seed.ts` is a thin
-orchestrator importing both arrays plus `BUILTIN_TEMPLATE_LINKS` (3 entries:
-WordPress→MySQL, Umami→Postgres, Miniflux→Postgres, wiring the Template links
-feature above into real built-ins) and inserting all of it with
-`onConflictDoNothing()`, same idempotent-seed-on-boot pattern as before. Every
-image was verified real via `docker manifest inspect <image>:<tag>` (fast, no
-full pull) before being added, not just guessed from a project's README.
+`src/lib/server/db/builtin-templates-apps.ts` (the rest, Analytics/Monitoring/
+Development/other categories, including Penombre, Nextcloud, Home Assistant,
+Mealie, Memos, Paperless-ngx, Beszel, Kavita, code-server, the Docker registry
+itself, Ollama, Open WebUI and Duplicati). `src/lib/server/db/seed.ts` is a thin
+orchestrator importing both arrays plus `BUILTIN_TEMPLATE_LINKS` (4 entries:
+WordPress→MySQL, Umami→Postgres, Miniflux→Postgres, Paperless-ngx→Redis, wiring
+the Template links feature above into real built-ins). Every image was verified
+real via `docker manifest inspect <image>:<tag>` (fast, no full pull) before
+being added, not just guessed from a project's README.
+
+**The seed upserts rather than `onConflictDoNothing()`, and it has to.** A
+built-in is code, not user data (`ownerId` null, and `TemplateDTO.owned()`
+refuses to hand one to an edit/delete route), so an instance that seeded once
+would otherwise keep the first version of every row forever : adding `tags` to
+the catalog changed nothing on any existing install, which is exactly how it was
+caught. `seedBuiltinTemplates()` now writes every display field back from
+`excluded.*` on conflict, so a boot re-syncs the catalog to whatever the code
+says. It deliberately doesn't touch `createdAt` or `ownerId`.
+
+**Tags (`template.tags`, `text[]`)** are the search keywords a category can't
+be: a category is one bucket per template, tags are many and overlap ("sql",
+"arr", "self-hosted"). `TemplateDTO.listPaged` ORs a `tagSearchCondition` over
+the existing name/description/image `searchCondition` —
+`array_to_string(tags, ' ') ILIKE '%q%'` rather than a column list, since
+`searchCondition` only takes text columns and this one is an array. The Tags
+field on `templates/new` is comma-separated text run through `parseTags`
+(`$lib/server/validation/template.ts`: trimmed, lowercased, de-duplicated, 12
+tags of 30 chars max, so one paste can't fill the column), and every built-in
+carries its own set, checked by a test that fails on an untagged one.
 
 Every template row (`template.category`/`sourceUrl`/`websiteUrl`, the latter two
 added to `schema.ts` and `TemplateDTO.NewTemplateInput` alongside the

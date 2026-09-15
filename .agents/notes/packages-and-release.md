@@ -6,6 +6,24 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
+## The agent's git builds (`packages/agent/docker.ts`)
+
+`buildFromGit` mirrors the main app's `docker/git-build.ts` by hand (the agent
+can't import from `src/`), **including its clone-in-a-container shape**: it used
+to `execFile("git", ...)` into a temp dir, and the agent image is `alpine:3`
+plus a few libraries with no git binary at all, so every agent-dispatched git
+build failed with ENOENT. It now pulls `alpine/git`, clones into a named volume,
+tars the context back out with `getArchive`, and removes the volume in a
+`finally`. The same fix, for the same reason, as the main app's.
+
+**A private repo works too**: `buildInputSchema` carries an optional
+`credential` (`{username, token}`) that `deploy.service.ts` fills from
+`resolveGitCredential` and `AgentClientService.build` sends over, since the
+agent has no access to the git-provider tables. `authenticatedCloneUrl` and
+`redactCloneUrl` are hand-mirrored from `$lib/git-clone-url.ts`, and every log
+line and error message goes through the redaction so a token can't reach the
+deployment log.
+
 ## Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-release-binaries.ts`)
 
 **The CI pipeline builds each image once and reuses it.** Both

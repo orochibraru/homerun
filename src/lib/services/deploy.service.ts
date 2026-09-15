@@ -249,6 +249,7 @@ class DeploymentServiceClass {
 
 		const result = await AgentClientService.build(plan.buildTarget.connection, {
 			buildContext: svc.gitBuildContext,
+			credential: await resolveGitCredential(svc.gitUrl, ctx.userId),
 			dockerfilePath: svc.gitDockerfilePath,
 			gitRef: svc.gitRef,
 			gitUrl: svc.gitUrl,

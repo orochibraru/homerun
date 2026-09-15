@@ -20,6 +20,14 @@ export interface NewBuildCacheRegistryInput {
 	username: string;
 }
 
+/** `password` blank keeps the stored one, same "leave blank to keep current" convention as the SMTP password on /settings. */
+export interface UpdateBuildCacheRegistryInput {
+	name: string;
+	password?: string;
+	registryUrl: string;
+	username: string;
+}
+
 /** Wraps the `build_cache_registry` table : see ServiceDTO for the pattern this follows. */
 export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 	static async get(
@@ -99,6 +107,23 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 		};
 		await db.insert(buildCacheRegistry).values(row);
 		return new BuildCacheRegistryDTO(row);
+	}
+
+	async update(input: UpdateBuildCacheRegistryInput): Promise<void> {
+		const patch: Partial<BuildCacheRegistry> = {
+			name: input.name,
+			registryUrl: input.registryUrl,
+			updatedAt: new Date(),
+			username: input.username,
+		};
+		if (input.password) {
+			patch.passwordEnc = encryptSecret(input.password);
+		}
+		await db
+			.update(buildCacheRegistry)
+			.set(patch)
+			.where(eq(buildCacheRegistry.id, this.row.id));
+		Object.assign(this.row, patch);
 	}
 
 	async delete(): Promise<void> {

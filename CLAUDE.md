@@ -255,7 +255,7 @@ that pattern for any new skill.
   banner, since a promise that only settles when the connection ends can't drive
   a toast. Anything that mutates state on the server gets a promise toast.
 - **Never cap the width of a dashboard page.** A page under `(protected)/` fills
-  the viewport : its root wrapper is `<div class="p-6 md:p-8">`, with **no
+  the viewport : its root wrapper is `<div class="p-5 md:p-6">`, with **no
   `mx-auto` and no `max-w-*`**. This app is used on ultrawide monitors, and a
   centred `max-w-4xl` column leaves most of the screen as empty gutter while the
   content it was "protecting" (tables, lists, key/value grids, side-by-side

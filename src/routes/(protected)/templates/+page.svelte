@@ -118,6 +118,11 @@
       + {tmpl.linkedNames.join(", ")}
     </span>
   {/if}
+  {#if tmpl?.tags && tmpl.tags.length > 0}
+    <span class="text-text-subtle truncate font-mono text-[0.65rem]">
+      {tmpl.tags.join(" · ")}
+    </span>
+  {/if}
 {/snippet}
 
 {#snippet actions(item: { id: string })}

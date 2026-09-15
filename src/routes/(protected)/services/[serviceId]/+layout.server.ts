@@ -19,6 +19,7 @@ export const load = async ({ params, parent }) => {
 		baseDomain: config.baseDomain,
 		certResolver: config.traefik.certResolver,
 		projectSlug: project?.slug ?? null,
+		publicScheme: config.traefik.entrypoint === "web" ? "http" : "https",
 		service: svc.toJSON(),
 	};
 };

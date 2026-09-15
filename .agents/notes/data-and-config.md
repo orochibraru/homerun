@@ -237,7 +237,11 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `build_cache_registry` (`BuildCacheRegistryDTO`), a per-user container
   registry credential (`registryUrl` with no scheme, `username`, `passwordEnc`)
   used only as a build cache source/destination, not as a deploy image source,
-  managed on `/build-cache-registries`. See Git-based builds below.
+  managed on `/build-cache-registries`. See Git-based builds below. Editable in
+  place from `/build-cache-registries/[registryId]` (`update()`, with a blank
+  password meaning "keep the stored one", the same convention the SMTP password
+  field uses); it was create-and-delete-only before, so fixing a typo meant
+  re-adding it and re-picking it on every service that used it.
 - `service_volume`, join table: one mount of one `storage_volume` into one
   `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by
   being mounted into more than one service, no separate project-volume concept.

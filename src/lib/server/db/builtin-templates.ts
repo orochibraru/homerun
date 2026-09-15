@@ -9,6 +9,7 @@ export interface BuiltinTemplate {
 	name: string;
 	sourceUrl: string | null;
 	tag: string;
+	tags: string[];
 	websiteUrl: string | null;
 }
 
@@ -31,6 +32,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/redis/redis",
 		name: "Redis",
 		tag: "alpine",
+		tags: ["cache", "key-value", "nosql", "queue"],
 		websiteUrl: "https://redis.io",
 	},
 	{
@@ -49,6 +51,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/postgres/postgres",
 		name: "PostgreSQL",
 		tag: "18-alpine",
+		tags: ["sql", "database", "relational", "postgres"],
 		websiteUrl: "https://www.postgresql.org",
 	},
 	{
@@ -66,6 +69,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/mysql/mysql-server",
 		name: "MySQL",
 		tag: "8",
+		tags: ["sql", "database", "relational", "mariadb"],
 		websiteUrl: "https://www.mysql.com",
 	},
 	{
@@ -83,6 +87,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/mongodb/mongo",
 		name: "MongoDB",
 		tag: "7",
+		tags: ["nosql", "database", "documents"],
 		websiteUrl: "https://www.mongodb.com",
 	},
 	{
@@ -97,6 +102,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/vrana/adminer",
 		name: "Adminer",
 		tag: "latest",
+		tags: ["sql", "database", "admin", "gui"],
 		websiteUrl: "https://www.adminer.org",
 	},
 	{
@@ -110,6 +116,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/louislam/uptime-kuma",
 		name: "Uptime Kuma",
 		tag: "2",
+		tags: ["uptime", "status", "alerts", "monitoring"],
 		websiteUrl: "https://uptime.kuma.pet",
 	},
 	{
@@ -123,6 +130,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/n8n-io/n8n",
 		name: "n8n",
 		tag: "latest",
+		tags: ["automation", "workflows", "integrations", "no-code"],
 		websiteUrl: "https://n8n.io",
 	},
 	{
@@ -136,6 +144,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/dani-garcia/vaultwarden",
 		name: "Vaultwarden",
 		tag: "latest",
+		tags: ["passwords", "bitwarden", "secrets", "security"],
 		websiteUrl: null,
 	},
 	{
@@ -149,6 +158,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/jellyfin/jellyfin",
 		name: "Jellyfin",
 		tag: "latest",
+		tags: ["media", "video", "streaming", "movies", "tv"],
 		websiteUrl: "https://jellyfin.org",
 	},
 	{
@@ -162,6 +172,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/navidrome/navidrome",
 		name: "Navidrome",
 		tag: "latest",
+		tags: ["music", "audio", "streaming", "subsonic"],
 		websiteUrl: "https://www.navidrome.org",
 	},
 	{
@@ -175,6 +186,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/advplyr/audiobookshelf",
 		name: "Audiobookshelf",
 		tag: "latest",
+		tags: ["audiobooks", "podcasts", "audio"],
 		websiteUrl: "https://www.audiobookshelf.org",
 	},
 	{
@@ -188,6 +200,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/Sonarr/Sonarr",
 		name: "Sonarr",
 		tag: "latest",
+		tags: ["tv", "pvr", "arr", "downloads"],
 		websiteUrl: "https://sonarr.tv",
 	},
 	{
@@ -201,6 +214,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/Radarr/Radarr",
 		name: "Radarr",
 		tag: "latest",
+		tags: ["movies", "pvr", "arr", "downloads"],
 		websiteUrl: "https://radarr.video",
 	},
 	{
@@ -214,6 +228,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/Prowlarr/Prowlarr",
 		name: "Prowlarr",
 		tag: "latest",
+		tags: ["indexers", "arr", "downloads"],
 		websiteUrl: null,
 	},
 	{
@@ -227,6 +242,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/morpheus65535/bazarr",
 		name: "Bazarr",
 		tag: "latest",
+		tags: ["subtitles", "arr", "movies", "tv"],
 		websiteUrl: "https://www.bazarr.media",
 	},
 	{
@@ -240,6 +256,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/Lidarr/Lidarr",
 		name: "Lidarr",
 		tag: "latest",
+		tags: ["music", "pvr", "arr", "downloads"],
 		websiteUrl: "https://lidarr.audio",
 	},
 	{
@@ -253,6 +270,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/Fallenbagel/jellyseerr",
 		name: "Jellyseerr",
 		tag: "latest",
+		tags: ["requests", "jellyfin", "arr", "media"],
 		websiteUrl: null,
 	},
 	{
@@ -266,6 +284,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/sct/overseerr",
 		name: "Overseerr",
 		tag: "latest",
+		tags: ["requests", "plex", "arr", "media"],
 		websiteUrl: "https://overseerr.dev",
 	},
 	{
@@ -279,6 +298,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/qbittorrent/qBittorrent",
 		name: "qBittorrent",
 		tag: "latest",
+		tags: ["torrent", "downloads", "bittorrent"],
 		websiteUrl: "https://www.qbittorrent.org",
 	},
 	{
@@ -292,6 +312,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/transmission/transmission",
 		name: "Transmission",
 		tag: "latest",
+		tags: ["torrent", "downloads", "bittorrent"],
 		websiteUrl: "https://transmissionbt.com",
 	},
 	{
@@ -306,6 +327,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/photoprism/photoprism",
 		name: "PhotoPrism",
 		tag: "latest",
+		tags: ["photos", "gallery", "images", "ai"],
 		websiteUrl: "https://www.photoprism.app",
 	},
 	{
@@ -319,6 +341,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/janeczku/calibre-web",
 		name: "Calibre-Web",
 		tag: "latest",
+		tags: ["books", "ebooks", "library", "reading"],
 		websiteUrl: null,
 	},
 	{
@@ -333,6 +356,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/pi-hole/pi-hole",
 		name: "Pi-hole",
 		tag: "latest",
+		tags: ["dns", "adblock", "network", "privacy"],
 		websiteUrl: "https://pi-hole.net",
 	},
 	{
@@ -347,6 +371,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/AdguardTeam/AdGuardHome",
 		name: "AdGuard Home",
 		tag: "latest",
+		tags: ["dns", "adblock", "network", "privacy"],
 		websiteUrl: "https://adguard.com/en/adguard-home/overview.html",
 	},
 	{
@@ -360,6 +385,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/NginxProxyManager/nginx-proxy-manager",
 		name: "Nginx Proxy Manager",
 		tag: "latest",
+		tags: ["proxy", "reverse-proxy", "ssl", "nginx"],
 		websiteUrl: "https://nginxproxymanager.com",
 	},
 	{
@@ -373,6 +399,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/portainer/portainer",
 		name: "Portainer",
 		tag: "latest",
+		tags: ["docker", "containers", "admin", "gui"],
 		websiteUrl: "https://www.portainer.io",
 	},
 	{
@@ -386,6 +413,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/alexjustesen/speedtest-tracker",
 		name: "Speedtest Tracker",
 		tag: "latest",
+		tags: ["speedtest", "bandwidth", "network", "monitoring"],
 		websiteUrl: "https://speedtest-tracker.dev",
 	},
 	{
@@ -399,6 +427,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/gethomepage/homepage",
 		name: "Homepage",
 		tag: "latest",
+		tags: ["dashboard", "start-page", "bookmarks", "widgets"],
 		websiteUrl: "https://gethomepage.dev",
 	},
 	{
@@ -412,6 +441,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/Lissy93/dashy",
 		name: "Dashy",
 		tag: "latest",
+		tags: ["dashboard", "start-page", "bookmarks"],
 		websiteUrl: "https://dashy.to",
 	},
 	{
@@ -425,6 +455,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/homarr-labs/homarr",
 		name: "Homarr",
 		tag: "latest",
+		tags: ["dashboard", "start-page", "bookmarks", "widgets"],
 		websiteUrl: "https://homarr.dev",
 	},
 	{
@@ -438,6 +469,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/TriliumNext/Trilium",
 		name: "Trilium Notes",
 		tag: "latest",
+		tags: ["notes", "knowledge-base", "wiki", "writing"],
 		websiteUrl: null,
 	},
 	{
@@ -451,6 +483,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/hedgedoc/hedgedoc",
 		name: "HedgeDoc",
 		tag: "latest",
+		tags: ["notes", "markdown", "collaboration", "writing"],
 		websiteUrl: "https://hedgedoc.org",
 	},
 	{
@@ -464,6 +497,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/laurent22/joplin",
 		name: "Joplin Server",
 		tag: "latest",
+		tags: ["notes", "sync", "markdown"],
 		websiteUrl: "https://joplinapp.org",
 	},
 	{
@@ -478,6 +512,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/requarks/wiki",
 		name: "Wiki.js",
 		tag: "latest",
+		tags: ["wiki", "docs", "knowledge-base"],
 		websiteUrl: "https://js.wiki",
 	},
 	{
@@ -491,6 +526,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/excalidraw/excalidraw",
 		name: "Excalidraw",
 		tag: "latest",
+		tags: ["diagrams", "whiteboard", "drawing"],
 		websiteUrl: "https://excalidraw.com",
 	},
 	{
@@ -504,6 +540,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/ether/etherpad-lite",
 		name: "Etherpad",
 		tag: "latest",
+		tags: ["documents", "collaboration", "writing"],
 		websiteUrl: "https://etherpad.org",
 	},
 	{
@@ -517,6 +554,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/go-vikunja/vikunja",
 		name: "Vikunja",
 		tag: "latest",
+		tags: ["tasks", "todo", "kanban", "project-management"],
 		websiteUrl: "https://vikunja.io",
 	},
 	{
@@ -530,6 +568,7 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
 		sourceUrl: "https://github.com/actualbudget/actual",
 		name: "Actual Budget",
 		tag: "latest",
+		tags: ["budget", "finance", "money", "accounting"],
 		websiteUrl: "https://actualbudget.org",
 	},
 ];
@@ -552,5 +591,11 @@ export const BUILTIN_TEMPLATE_LINKS: BuiltinTemplateLink[] = [
 		id: "builtin-link-miniflux-postgres",
 		linkedTemplateId: "builtin-postgres",
 		templateId: "builtin-miniflux",
+	},
+	{
+		alias: "redis",
+		id: "builtin-link-paperless-redis",
+		linkedTemplateId: "builtin-redis",
+		templateId: "builtin-paperless-ngx",
 	},
 ];

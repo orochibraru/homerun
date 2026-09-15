@@ -12,6 +12,8 @@ const settings = {
 	pangolinConfigured: true,
 	pangolinMainSiteName: "site-23",
 	pangolinOrgId: "org-1",
+	pangolinOwnsAuth: false,
+	pangolinTargetHost: "localhost",
 	pangolinTargetPort: 443,
 };
 
@@ -82,6 +84,8 @@ function pageOf<T>(rows: T[], url: URL, field: string): Response {
 }
 
 beforeEach(() => {
+	settings.pangolinOwnsAuth = false;
+	settings.pangolinTargetHost = "localhost";
 	requested = [];
 	resources = [];
 	writes = [];
@@ -164,7 +168,7 @@ describe("PangolinService.syncDnsRecord", () => {
 		const result = await PangolinService.syncDnsRecord("app.example.com");
 
 		expect(result).toEqual({
-			detail: "created app.example.com -> https://site-23:443",
+			detail: "created app.example.com -> https://localhost:443 via site-23",
 			ok: true,
 			provider: "pangolin",
 		});
@@ -185,6 +189,38 @@ describe("PangolinService.syncDnsRecord", () => {
 		expect(writes).toEqual([
 			{ body: { sso: false }, method: "POST", path: "/v1/resource/7" },
 		]);
+	});
+
+	test("leaves Pangolin's SSO on when Pangolin is the one that owns sign-in", async () => {
+		settings.pangolinOwnsAuth = true;
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.ok).toBe(true);
+		expect(writes).toContainEqual({
+			body: { sso: true },
+			method: "POST",
+			path: "/v1/resource/99",
+		});
+	});
+
+	test("points the target at the configured host, not always localhost", async () => {
+		settings.pangolinTargetHost = "192.168.1.50";
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.detail).toContain("https://192.168.1.50:443");
+		expect(writes).toContainEqual({
+			body: {
+				enabled: true,
+				ip: "192.168.1.50",
+				method: "https",
+				port: 443,
+				siteId: 23,
+			},
+			method: "PUT",
+			path: "/v1/resource/99/target",
+		});
 	});
 
 	test("reports a failed SSO update instead of leaving a gated route looking fine", async () => {

@@ -279,6 +279,7 @@ class PangolinServiceClass {
 		baseUrl: string,
 		token: string,
 		params: {
+			host: string;
 			port: number;
 			resourceId: number | string;
 			siteId: number | string;
@@ -291,7 +292,7 @@ class PangolinServiceClass {
 			{
 				body: JSON.stringify({
 					enabled: true,
-					ip: "localhost",
+					ip: params.host,
 					method: targetScheme(params.port),
 					port: params.port,
 					siteId: params.siteId,
@@ -323,7 +324,9 @@ class PangolinServiceClass {
 		baseUrl: string;
 		mainSiteName: string;
 		orgId: string;
+		ownsAuth: boolean;
 		port: number;
+		targetHost: string;
 		token: string;
 	} | null> {
 		const settings = await InstanceSettingsDTO.get();
@@ -341,7 +344,9 @@ class PangolinServiceClass {
 			baseUrl,
 			mainSiteName,
 			orgId,
+			ownsAuth: settings.pangolinOwnsAuth,
 			port: settings.pangolinTargetPort,
+			targetHost: settings.pangolinTargetHost,
 			token,
 		};
 	}
@@ -357,15 +362,21 @@ class PangolinServiceClass {
 		if (!cfg) {
 			return null;
 		}
-		const { baseUrl, mainSiteName, orgId, port, token } = cfg;
+		const { baseUrl, mainSiteName, orgId, ownsAuth, port, targetHost, token } =
+			cfg;
 
 		try {
 			const resources = await this.listResources(baseUrl, token, orgId);
 			const existing = resources.find((r) => r.fullDomain === hostname);
 			if (existing) {
-				await this.setResourceSso(baseUrl, token, existing.resourceId, false);
+				await this.setResourceSso(
+					baseUrl,
+					token,
+					existing.resourceId,
+					ownsAuth,
+				);
 				return {
-					detail: `${hostname} already has a resource, Pangolin SSO off`,
+					detail: `${hostname} already has a resource, Pangolin SSO ${ownsAuth ? "on" : "off"}`,
 					ok: true,
 					provider: "pangolin",
 				};
@@ -400,15 +411,16 @@ class PangolinServiceClass {
 				name: match.subdomain || hostname,
 				subdomain: match.subdomain,
 			});
-			await this.setResourceSso(baseUrl, token, resource.resourceId, false);
+			await this.setResourceSso(baseUrl, token, resource.resourceId, ownsAuth);
 			await this.createResourceTarget(baseUrl, token, {
+				host: targetHost,
 				port,
 				resourceId: resource.resourceId,
 				siteId: mainSite.siteId,
 			});
 			logger.info(`Pangolin resource created: ${hostname} -> ${mainSiteName}`);
 			return {
-				detail: `created ${hostname} -> ${targetScheme(port)}://${mainSiteName}:${port}`,
+				detail: `created ${hostname} -> ${targetScheme(port)}://${targetHost}:${port} via ${mainSiteName}`,
 				ok: true,
 				provider: "pangolin",
 			};

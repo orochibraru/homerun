@@ -420,7 +420,7 @@
 
     <!-- Page content -->
     <main class="flex-1 overflow-y-auto">
-      <ErrorBoundary class="p-6 md:p-8">
+      <ErrorBoundary class="p-5 md:p-6">
         {@render children()}
       </ErrorBoundary>
     </main>

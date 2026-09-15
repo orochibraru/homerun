@@ -150,6 +150,14 @@
                         <dd class="text-text">{tmpl.category}</dd>
                     </div>
                 {/if}
+                {#if tmpl.tags.length > 0}
+                    <div class="flex justify-between gap-4">
+                        <dt class="text-text-muted">Tags</dt>
+                        <dd class="text-text truncate font-mono text-xs">
+                            {tmpl.tags.join(" · ")}
+                        </dd>
+                    </div>
+                {/if}
                 {#if tmpl.cpuLimit}
                     <div class="flex justify-between gap-4">
                         <dt class="text-text-muted">CPU limit</dt>

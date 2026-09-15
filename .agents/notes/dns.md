@@ -86,8 +86,19 @@ to reach the ones already made — the exists check returns early). A failed SSO
 update is reported as a failed sync rather than a success, since a gated route
 is exactly as unreachable as a missing one. Access control for a deployed
 service belongs to this app's own per-service login wall (see `auth.md`), not to
-a second, invisible gate at the edge. **Diagnosed against a real instance**, not
-from the docs: Traefik on the host answered `200` for
+a second, invisible gate at the edge — **unless the admin says otherwise**:
+`instance_settings.pangolinOwnsAuth` ("Let Pangolin handle sign-in", the
+Pangolin card on `/settings/networking`, default off) flips it, creating
+Resources with `sso: true` and making `api/v1/auth-check` answer 200 for every
+gated service, so Pangolin's own login is the only one a visitor sees instead of
+two in a row. That endpoint runs on every proxied request, so it reads
+`config.pangolinOwnsAuth` rather than querying the DTO; `toConfigOverride()`
+only reports it true when Pangolin is actually configured.
+`instance_settings.pangolinTargetHost` (same card, default `localhost`) is the
+address a created Target points at : `localhost` is only right when the site
+agent (newt) runs on this host with host networking, which is why hardcoding it
+was wrong. **Diagnosed against a real instance**, not from the docs: Traefik on
+the host answered `200` for
 `curl -k -H "Host: <slug>.<domain>" https://127.0.0.1` while the public hostname
 answered `401`, with the target already correct (`localhost:443`,
 `method=https`, site online).

@@ -203,6 +203,20 @@
 			"when": 1789489980014,
 			"tag": "0028_young_medusa",
 			"breakpoints": true
+		},
+		{
+			"idx": 29,
+			"version": "7",
+			"when": 1789503264782,
+			"tag": "0029_dapper_prodigy",
+			"breakpoints": true
+		},
+		{
+			"idx": 30,
+			"version": "7",
+			"when": 1789504715222,
+			"tag": "0030_certain_piledriver",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

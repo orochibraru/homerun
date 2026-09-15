@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
 	import AsyncBlock from "$lib/components/async-block.svelte";
+	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -256,6 +257,23 @@
       </AsyncBlock>
 
       <div>
+        <label class={label} for="pangolinTargetHost">Target host</label>
+        <Input
+          id="pangolinTargetHost"
+          name="pangolinTargetHost"
+          placeholder="localhost"
+          type="text"
+          value={data.settings.pangolinTargetHost ?? ""}
+        />
+        <p class="text-text-subtle mt-1.5 text-xs">
+          The address the Pangolin site agent reaches this host at. Unset means
+          <code>localhost</code>, which is right when that agent (Newt above)
+          runs on this host with host networking : anything else needs this
+          host's LAN address.
+        </p>
+      </div>
+
+      <div>
         <label class={label} for="pangolinTargetPort">Target port</label>
         <Input
           id="pangolinTargetPort"
@@ -285,6 +303,14 @@
           type="password"
         />
       </div>
+      <CheckBox
+        checked={data.settings.pangolinOwnsAuth ?? false}
+        helperText="Resources keep Pangolin's own SSO, and this instance's per-service login wall steps aside for anything Pangolin publishes : one sign-in instead of two. Off, Homerun owns access and every Resource it creates has Pangolin SSO disabled."
+        id="pangolinOwnsAuth"
+        label="Let Pangolin handle sign-in"
+        name="pangolinOwnsAuth"
+      />
+
       <div class="flex justify-end gap-2">
         <Button formaction="?/testPangolin" type="submit" variant="outline">
           Test connection

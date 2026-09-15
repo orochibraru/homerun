@@ -96,7 +96,9 @@ class FakeDocker {
 // tests/README.md) : nothing else in the test suite touches this specifier.
 mock.module("dockerode", () => ({ default: FakeDocker }));
 
-const { DockerService } = await import("../../../packages/agent/docker");
+const { authenticatedCloneUrl, DockerService, redactCloneUrl } = await import(
+	"../../../packages/agent/docker"
+);
 afterAll(() => {
 	mock.module("dockerode", () => ({ default: FakeDocker }));
 });
@@ -132,5 +134,46 @@ describe("getDocker", () => {
 		const a = DockerService.getDocker();
 		const b = DockerService.getDocker();
 		expect(a).toBe(b);
+	});
+});
+
+describe("authenticatedCloneUrl", () => {
+	test("injects a provider token into an https clone URL", () => {
+		expect(
+			authenticatedCloneUrl("https://github.com/me/private.git", {
+				token: "ghp_secret",
+				username: "me",
+			}),
+		).toBe("https://me:ghp_secret@github.com/me/private.git");
+	});
+
+	test("leaves a URL alone when there's no credential, or it already carries one, or it isn't http(s)", () => {
+		expect(authenticatedCloneUrl("https://github.com/me/pub.git", null)).toBe(
+			"https://github.com/me/pub.git",
+		);
+		expect(
+			authenticatedCloneUrl("https://u:p@github.com/me/pub.git", {
+				token: "t",
+				username: "me",
+			}),
+		).toBe("https://u:p@github.com/me/pub.git");
+		expect(
+			authenticatedCloneUrl("git@github.com:me/pub.git", {
+				token: "t",
+				username: "me",
+			}),
+		).toBe("git@github.com:me/pub.git");
+	});
+});
+
+describe("redactCloneUrl", () => {
+	test("keeps a token out of a log line or an error message", () => {
+		expect(
+			redactCloneUrl("https://me:ghp_secret@github.com/me/private.git"),
+		).not.toContain("ghp_secret");
+		expect(redactCloneUrl("https://github.com/me/pub.git")).toBe(
+			"https://github.com/me/pub.git",
+		);
+		expect(redactCloneUrl("not a url")).toBe("not a url");
 	});
 });
