@@ -114,15 +114,15 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-6">
-    <h1 class="text-text text-xl font-semibold tracking-tight">System Logs</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">System Logs</h1>
     <p class="text-text-muted mt-1 text-sm">
       Logs from core infrastructure this app depends on.
     </p>
   </div>
 
-  <div class="border-border bg-surface-2 text-text-muted mb-6 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs">
+  <div class="border-border bg-surface-2 text-text-muted mb-6 flex items-start gap-2.5 rounded-md border px-4 py-3 text-xs">
     <Info class="mt-0.5 size-3.5 shrink-0" />
     <p>
       Homerun's own server logs aren't shown here : they're whatever your
@@ -133,7 +133,7 @@
     </p>
   </div>
 
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
       <div class="flex items-center gap-2">
         <Terminal class="text-text-muted size-4" />

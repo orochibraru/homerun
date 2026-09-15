@@ -77,6 +77,15 @@ const PAGE_SIZE = 1000;
 const MAX_PAGES = 20;
 
 /**
+ * Which scheme Pangolin's tunnel speaks to this host's Traefik. `method` is
+ * a free-form nullable string in the Integration API's own OpenAPI document
+ * (`/resource/{id}/target`), carrying the target's scheme.
+ */
+export function targetScheme(port: number): "http" | "https" {
+	return port === 80 ? "http" : "https";
+}
+
+/**
  * Auto-manages routing for deployed services via a self-hosted Pangolin
  * instance's Integration API : an alternative to CloudflareService (see
  * cloudflare.service.ts) for instances that front themselves with Pangolin
@@ -271,7 +280,7 @@ class PangolinServiceClass {
 				body: JSON.stringify({
 					enabled: true,
 					ip: "localhost",
-					method: "http",
+					method: targetScheme(params.port),
 					port: params.port,
 					siteId: params.siteId,
 				}),
@@ -384,7 +393,7 @@ class PangolinServiceClass {
 			});
 			logger.info(`Pangolin resource created: ${hostname} -> ${mainSiteName}`);
 			return {
-				detail: `created ${hostname} -> ${mainSiteName}:${port}`,
+				detail: `created ${hostname} -> ${targetScheme(port)}://${mainSiteName}:${port}`,
 				ok: true,
 				provider: "pangolin",
 			};

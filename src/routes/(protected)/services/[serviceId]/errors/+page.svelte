@@ -18,7 +18,7 @@
 </script>
 
 {#if data.service.currentStatus === "failed"}
-  <div class="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+  <div class="mb-6 flex items-start gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
     <AlertTriangle class="mt-0.5 size-4 shrink-0" />
     <div>
       <p class="font-medium">This service's container is currently down.</p>
@@ -35,7 +35,7 @@
     </div>
   </div>
 {:else if data.service.currentStatus === "missing"}
-  <div class="mb-6 flex items-start gap-3 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300">
+  <div class="mb-6 flex items-start gap-3 rounded-md border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300">
     <Ghost class="mt-0.5 size-4 shrink-0" />
     <div class="flex-1">
       <p class="font-medium">This service's container is gone.</p>
@@ -70,7 +70,7 @@
   </div>
 {/if}
 
-<section class="panel rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border flex items-center gap-2 border-b px-5 py-4">
     <AlertTriangle class="text-text-muted size-4" />
     <h2 class="eyebrow">
@@ -119,7 +119,7 @@
             {/if}
           </button>
           {#if expandedDeploymentId === dep.id && dep.log}
-            <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
+            <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
               {#each dep.log.split("\n").filter(Boolean) as line, i (i)}
                 <AnsiLine {line} />
               {/each}
@@ -138,7 +138,7 @@
   own code logged as wrong" (a failed Docker call, a rejected reconcile,
   etc.), independent of whether a deploy was even in flight when it happened.
 -->
-<section class="panel mt-6 rounded-2xl">
+<section class="panel mt-6 rounded-md">
   <div class="border-border flex items-center gap-2 border-b px-5 py-4">
     <AlertTriangle class="text-text-muted size-4" />
     <h2 class="eyebrow">

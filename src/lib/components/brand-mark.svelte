@@ -15,7 +15,7 @@
   >
   </span>
   <span
-    class="text-text font-mono font-semibold tracking-tight {size === 'lg'
+    class="text-text font-semibold tracking-tight {size === 'lg'
       ? 'text-lg'
       : 'text-[0.95rem]'}"
   >

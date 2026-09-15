@@ -45,10 +45,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Remote Hosts</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Remote Hosts</h1>
       <p class="text-text-muted mt-1 text-sm">
         Other Docker daemons a service can be deployed to instead of this host.
         A remote-hosted service isn't on the shared network or routed through
@@ -77,14 +77,14 @@
     <EntityToolbar {filters} placeholder="Search hosts by name or address…" />
 
     {#if data.hosts.length === 0}
-      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No hosts match your filters.</p>
       </div>
     {:else}
     <div class="space-y-3">
       {#each data.hosts as host (host.id)}
-        <div class="panel flex items-center gap-4 rounded-2xl p-5">
-          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+        <div class="panel flex items-center gap-4 rounded-md p-5">
+          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
             <Server class="size-5" />
           </div>
           <a
@@ -101,7 +101,7 @@
                 </span>
               {/if}
             </p>
-            <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+            <p class="text-text-muted mt-0.5 truncate text-xs">
               {host.kind === "agent" ? host.agentUrl : host.dockerHost}
             </p>
             {#if host.kind === "agent"}

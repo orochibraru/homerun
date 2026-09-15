@@ -56,10 +56,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Cron Jobs</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Cron Jobs</h1>
       <p class="text-text-muted mt-1 text-sm">
         Scheduled one-off tasks : a throwaway container, or a shell command on
         this host. Every run goes through the job queue and keeps its output.
@@ -86,14 +86,14 @@
     <EntityToolbar {filters} placeholder="Search cron jobs…" />
 
     {#if data.jobs.length === 0}
-      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No cron jobs match your search.</p>
       </div>
     {:else}
       <div class="space-y-3">
         {#each data.jobs as job (job.id)}
-          <div class="panel flex items-center gap-4 rounded-2xl p-5">
-            <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <div class="panel flex items-center gap-4 rounded-md p-5">
+            <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
               {#if job.kind === "exec"}
                 <Terminal class="size-5" />
               {:else}
@@ -112,7 +112,7 @@
                   </span>
                 {/if}
               </p>
-              <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+              <p class="text-text-muted mt-0.5 truncate text-xs">
                 {job.schedule}
                 · {job.kind === "exec"
                   ? job.command
@@ -171,7 +171,7 @@
     {/if}
 
     {#if data.runs.length > 0}
-      <section class="panel mt-8 rounded-2xl">
+      <section class="panel mt-8 rounded-md">
         <div class="border-border border-b px-5 py-4">
           <h2 class="eyebrow">Recent runs</h2>
         </div>

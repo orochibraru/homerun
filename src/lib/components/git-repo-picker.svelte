@@ -52,7 +52,7 @@
 	}
 </script>
 
-<div class="border-border rounded-xl border p-4">
+<div class="border-border rounded-md border p-4">
   <p class={labelClass}>Browse repos</p>
   <div class="flex flex-wrap gap-2">
     {#if providers.length > 1}

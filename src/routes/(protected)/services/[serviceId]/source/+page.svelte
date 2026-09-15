@@ -72,7 +72,7 @@
 	let gitRef = $derived(values.gitRef);
 </script>
 
-<section class="panel rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <Container class="size-4" />
@@ -116,11 +116,11 @@
       <div class="flex gap-2">
         <button
           class="
-            flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+            flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
             'image'
             ? 'border-accent bg-accent-light text-accent'
             : 'border-border text-text-muted hover:bg-surface-2'}
-          "
+         "
           onclick={() => {
             buildSource = "image";
           }}
@@ -130,11 +130,11 @@
         </button>
         <button
           class="
-            flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+            flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
             'git'
             ? 'border-accent bg-accent-light text-accent'
             : 'border-border text-text-muted hover:bg-surface-2'}
-          "
+         "
           onclick={() => {
             buildSource = "git";
           }}
@@ -308,7 +308,7 @@
       </div>
     {/if}
 
-    <div class="border-border rounded-xl border">
+    <div class="border-border rounded-md border">
       <Button
         class="text-text h-auto w-full justify-start gap-3 px-4 py-3 font-normal"
         onclick={() => {
@@ -325,7 +325,7 @@
             text-text-muted size-4 transition-transform {showRegistry
             ? 'rotate-180'
             : ''}
-          "
+         "
         />
       </Button>
       {#if showRegistry}

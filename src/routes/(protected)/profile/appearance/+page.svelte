@@ -14,7 +14,7 @@
 
 	const { data } = $props();
 
-	const DEFAULT_ACCENT = "#0b8ac0";
+	const DEFAULT_ACCENT = "#7c3aed";
 	const PRESET_ACCENTS = [
 		"#0b8ac0",
 		"#22c55e",
@@ -58,7 +58,7 @@
 
 <div class="space-y-6">
     <!-- ═══ Theme ═══ -->
-    <section class="panel rounded-2xl">
+    <section class="panel rounded-md">
         <div class="border-border border-b px-5 py-4">
             <h2 class="eyebrow">Theme</h2>
             <p class="text-text-muted text-xs">
@@ -94,7 +94,7 @@
     </section>
 
     <!-- ═══ Sidebar color intensity ═══ -->
-    <section class="panel rounded-2xl">
+    <section class="panel rounded-md">
         <div class="border-border border-b px-5 py-4">
             <h2 class="eyebrow">
                 Sidebar color intensity
@@ -131,7 +131,7 @@
     </section>
 
     <!-- ═══ Main color accent ═══ -->
-    <section class="panel rounded-2xl">
+    <section class="panel rounded-md">
         <div class="border-border border-b px-5 py-4">
             <h2 class="eyebrow">Main color accent</h2>
             <p class="text-text-muted text-xs">

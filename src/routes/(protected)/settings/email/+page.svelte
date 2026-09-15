@@ -22,7 +22,7 @@
 	}
 </script>
 
-<section class="panel rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border border-b px-5 py-4">
     <h2 class="eyebrow">Email (SMTP)</h2>
     <p class="text-text-muted text-xs">

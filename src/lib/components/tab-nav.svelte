@@ -25,21 +25,21 @@
 		$props();
 </script>
 
-<div class="border-border mb-6 flex gap-1 overflow-x-auto border-b">
+<div class="border-border mb-5 flex gap-0.5 overflow-x-auto border-b">
   {#each tabs as tab (tab.id)}
     {@const isActive = tab.id === active}
     {@const TabIcon = tab.icon}
     {#if tab.href}
       <a
         class="
-          relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-all duration-200
+          relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-150
           {isActive
           ? 'border-accent text-text'
           : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
-        "
+       "
         href={tab.href}
       >
-        {#if TabIcon}<TabIcon class="size-4" />{/if}
+        {#if TabIcon}<TabIcon class="size-3.5" />{/if}
         {tab.label}
         {#if tab.hasWarning}
           <span
@@ -51,15 +51,15 @@
     {:else}
       <button
         class="
-          relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-all duration-200
+          relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-150
           {isActive
           ? 'border-accent text-text'
           : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
-        "
+       "
         onclick={() => onSelect?.(tab.id)}
         type="button"
       >
-        {#if TabIcon}<TabIcon class="size-4" />{/if}
+        {#if TabIcon}<TabIcon class="size-3.5" />{/if}
         {tab.label}
         {#if tab.hasWarning}
           <span

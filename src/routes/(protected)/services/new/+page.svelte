@@ -196,7 +196,7 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-text text-xl font-semibold tracking-tight">Deploy a Service</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">Deploy a Service</h1>
     <p class="mt-0.5 text-sm text-text-muted">
       Point at an image, fill in the config, deploy.
     </p>
@@ -208,10 +208,10 @@
       {@const StepIcon = step.icon}
       <button
         class="
-          flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all {stepButtonClass(
+          flex flex-1 items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm font-medium transition-all {stepButtonClass(
           i,
           )}
-        "
+       "
         onclick={() => {
           currentStep = i;
         }}
@@ -223,7 +223,7 @@
             currentStep
             ? 'bg-accent text-white'
             : 'bg-surface-2 text-text-subtle'}
-          "
+         "
         >
           {#if i < currentStep}
             <Check class="size-3" />
@@ -271,14 +271,14 @@
 
     {#if data.template}
       <input name="templateId" type="hidden" value={data.template.id}>
-      <div class="bg-accent/10 text-accent rounded-xl px-4 py-3 text-sm font-medium">
+      <div class="bg-accent/10 text-accent rounded-md px-4 py-3 text-sm font-medium">
         Starting from the {data.template.name} template : review everything
         below (especially any placeholder passwords) before deploying.
       </div>
     {/if}
 
     {#if data.templateLinks.length > 0}
-      <div class="rounded-xl panel p-4 text-sm">
+      <div class="rounded-md panel p-4 text-sm">
         <p class="font-medium text-text">
           {data.projectId
             ? "This will also deploy, alongside this service in the project:"
@@ -297,7 +297,7 @@
     {/if}
 
     {#if errorMessages.length > 0}
-      <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+      <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
         <p class="font-semibold">Couldn't create the service:</p>
         <ul class="mt-1 ml-4 list-disc">
           {#each errorMessages as msg}
@@ -311,7 +311,7 @@
       <div class="flex-1 space-y-6">
         <!-- ═══ Step 1: Basic info ═══ -->
         <section
-          class="rounded-2xl panel"
+          class="rounded-md panel"
           class:hidden={currentStep !== 0}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -374,11 +374,11 @@
               <div class="flex gap-2">
                 <button
                   class="
-                    flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+                    flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
                     'image'
                     ? 'border-accent bg-accent-light text-accent'
                     : 'border-border text-text-muted hover:bg-surface-2'}
-                  "
+                 "
                   onclick={() => {
                     buildSource = "image";
                   }}
@@ -389,11 +389,11 @@
                 </button>
                 <button
                   class="
-                    flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+                    flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
                     'git'
                     ? 'border-accent bg-accent-light text-accent'
                     : 'border-border text-text-muted hover:bg-surface-2'}
-                  "
+                 "
                   onclick={() => {
                     buildSource = "git";
                   }}
@@ -541,7 +541,7 @@
 
         <!-- ═══ Step 1: Private registry (collapsible) ═══ -->
         <section
-          class="rounded-2xl panel"
+          class="rounded-md panel"
           class:hidden={currentStep !== 0}
         >
           <Button
@@ -565,7 +565,7 @@
                 size-4 text-text-muted transition-transform {showRegistry
                 ? 'rotate-180'
                 : ''}
-              "
+             "
             />
           </Button>
 
@@ -608,7 +608,7 @@
 
         <!-- ═══ Step 2: Networking ═══ -->
         <section
-          class="rounded-2xl panel"
+          class="rounded-md panel"
           class:hidden={currentStep !== 1}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -658,7 +658,7 @@
 
         <!-- ═══ Step 3: Environment ═══ -->
         <section
-          class="rounded-2xl panel"
+          class="rounded-md panel"
           class:hidden={currentStep !== 2}
         >
           <div class="border-b border-border px-5 py-4">
@@ -672,14 +672,14 @@
             {#each envRows as row, i}
               <div class="flex items-center gap-2">
                 <Input
-                  class="font-mono"
+                  class=""
                   name="envKey"
                   placeholder="KEY"
                   type="text"
                   bind:value={row.key}
                 />
                 <Input
-                  class="font-mono"
+                  class=""
                   name="envValue"
                   placeholder="value"
                   type="text"
@@ -713,7 +713,7 @@
 
         <!-- ═══ Step 4: Compute ═══ -->
         <section
-          class="rounded-2xl panel"
+          class="rounded-md panel"
           class:hidden={currentStep !== 3}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">

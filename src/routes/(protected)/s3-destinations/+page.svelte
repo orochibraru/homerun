@@ -26,10 +26,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">S3 Destinations</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">S3 Destinations</h1>
       <p class="text-text-muted mt-1 text-sm">
         Reusable S3-compatible backup destinations. Pick one from any volume's
         page instead of retyping the same bucket/keys everywhere.
@@ -56,21 +56,21 @@
     <EntityToolbar placeholder="Search destinations by name, endpoint or bucket…" />
 
     {#if data.destinations.length === 0}
-      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No destinations match your search.</p>
       </div>
     {:else}
     <div class="space-y-3">
       {#each data.destinations as dest (dest.id)}
-        <div class="panel flex items-center gap-4 rounded-2xl p-5">
-          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+        <div class="panel flex items-center gap-4 rounded-md p-5">
+          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
             <CloudUpload class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
             <p class="text-text truncate text-sm font-semibold">
               {dest.name}
             </p>
-            <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+            <p class="text-text-muted mt-0.5 truncate text-xs">
               {dest.endpoint}
               · {dest.bucket}
               · {dest.region}

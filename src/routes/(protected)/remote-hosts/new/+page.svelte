@@ -22,10 +22,10 @@
 	let submitting = $state(false);
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
     <div class="mb-8 flex items-center justify-between gap-4">
         <div>
-            <h1 class="text-text text-xl font-semibold tracking-tight">Add a new remote host</h1>
+            <h1 class="text-text text-lg font-semibold tracking-tight">Add a new remote host</h1>
             <p class="mt-1 text-sm text-text-muted">
                 Fill in the form below to add a remote docker host.
             </p>
@@ -34,7 +34,7 @@
 
     <form
         action="?/create"
-        class="mb-6 space-y-4 rounded-2xl panel p-5"
+        class="mb-6 space-y-4 rounded-md panel p-5"
         method="POST"
         use:enhance={enhanceToast({
           error: "Check the form for errors.",
@@ -65,7 +65,7 @@
             <input name="kind" type="hidden" value={kind} />
             <div class="mt-1.5 grid grid-cols-2 gap-2">
                 <button
-                    class="rounded-xl border p-3 text-left text-sm transition-colors {kind ===
+                    class="rounded-md border p-3 text-left text-sm transition-colors {kind ===
                     'docker'
                         ? 'border-accent bg-accent-light text-accent'
                         : 'border-border text-text-muted hover:border-text-subtle'}"
@@ -80,7 +80,7 @@
                     </p>
                 </button>
                 <button
-                    class="rounded-xl border p-3 text-left text-sm transition-colors {kind ===
+                    class="rounded-md border p-3 text-left text-sm transition-colors {kind ===
                     'agent'
                         ? 'border-accent bg-accent-light text-accent'
                         : 'border-border text-text-muted hover:border-text-subtle'}"
@@ -99,7 +99,7 @@
 
         {#if kind === "agent"}
             <div
-                class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400"
+                class="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400"
             >
                 A remote-hosted service (docker *or* agent) isn't on the shared
                 network or routed through Traefik, see the Networking tab's own
@@ -108,7 +108,7 @@
             <div>
                 <label class={label} for="agentUrl">Agent URL</label>
                 <Input
-                    class="font-mono"
+                    class=""
                     id="agentUrl"
                     name="agentUrl"
                     placeholder="http://192.168.1.50:7420"
@@ -123,7 +123,7 @@
             <div>
                 <label class={label} for="agentToken">Agent token</label>
                 <Input
-                    class="font-mono"
+                    class=""
                     id="agentToken"
                     name="agentToken"
                     placeholder="paste the token printed by the agent on boot"
@@ -135,7 +135,7 @@
             <div>
                 <label class={label} for="dockerHost">Docker host</label>
                 <Input
-                    class="font-mono"
+                    class=""
                     id="dockerHost"
                     name="dockerHost"
                     placeholder="tcp://192.168.1.50:2376"
@@ -169,7 +169,7 @@
                     <div>
                         <label class={label} for="tlsCa">CA certificate</label>
                         <Textarea
-                            class="resize-none font-mono"
+                            class="resize-none"
                             id="tlsCa"
                             name="tlsCa"
                             rows={3}
@@ -180,7 +180,7 @@
                             >Client certificate</label
                         >
                         <Textarea
-                            class="resize-none font-mono"
+                            class="resize-none"
                             id="tlsCert"
                             name="tlsCert"
                             rows={3}
@@ -189,7 +189,7 @@
                     <div>
                         <label class={label} for="tlsKey">Client key</label>
                         <Textarea
-                            class="resize-none font-mono"
+                            class="resize-none"
                             id="tlsKey"
                             name="tlsKey"
                             rows={3}

@@ -34,7 +34,7 @@
 	let deleting = $state(false);
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <a
     class="mb-4 inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text"
     href={resolve("/projects")}
@@ -46,7 +46,7 @@
   {#if !editing}
     <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 class="text-text text-xl font-semibold tracking-tight">
+        <h1 class="text-text text-lg font-semibold tracking-tight">
           {proj.name}
         </h1>
         {#if proj.description}
@@ -81,7 +81,7 @@
   {:else}
     <form
       action="?/rename"
-      class="mb-8 space-y-4 rounded-2xl panel p-5"
+      class="mb-8 space-y-4 rounded-md panel p-5"
       method="POST"
       use:enhance={enhanceToast({
         error: "Check the form for errors.",
@@ -94,7 +94,7 @@
       {/if}
       <Input name="name" required type="text" value={proj.name} />
       <Input
-        class="font-mono"
+        class=""
         name="slug"
         pattern={"[a-z0-9-]{1,63}"}
         required
@@ -131,7 +131,7 @@
 
   <!-- ═══ Services ═══ -->
   {#if data.services.length === 0}
-    <div class="mb-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center">
+    <div class="mb-8 flex flex-col items-center justify-center rounded-md border border-dashed border-border py-16 text-center">
       <Server class="mb-3 size-8 text-text-muted opacity-40" />
       <p class="text-sm font-medium text-text-muted">
         No services in this project yet
@@ -154,10 +154,10 @@
     <div class="mb-8 space-y-3">
       {#each data.services as svc (svc.id)}
         <a
-          class="flex items-center gap-4 rounded-2xl panel p-5 transition-shadow hover:shadow-md"
+          class="flex items-center gap-4 rounded-md panel p-5 transition-shadow hover:shadow-md"
           href="{resolve('/services')}/{svc.id}"
         >
-          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
             <Server class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
@@ -177,7 +177,7 @@
   {/if}
 
   <!-- ═══ Danger zone ═══ -->
-  <section class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40">
+  <section class="rounded-md border border-red-200 bg-surface dark:border-red-900/40">
     <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
       <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <AlertTriangle class="size-4" />

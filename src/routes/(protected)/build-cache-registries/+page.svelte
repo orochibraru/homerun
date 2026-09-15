@@ -26,10 +26,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Build Cache Registries</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Build Cache Registries</h1>
       <p class="text-text-muted mt-1 text-sm">
         Docker registries used to cache layers between git builds. Pick one
         from a git-based service's Source tab so a rebuild reuses unchanged
@@ -57,21 +57,21 @@
     <EntityToolbar placeholder="Search registries by name, URL or username…" />
 
     {#if data.registries.length === 0}
-      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No registries match your search.</p>
       </div>
     {:else}
     <div class="space-y-3">
       {#each data.registries as reg (reg.id)}
-        <div class="panel flex items-center gap-4 rounded-2xl p-5">
-          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+        <div class="panel flex items-center gap-4 rounded-md p-5">
+          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
             <Container class="size-5" />
           </div>
           <div class="min-w-0 flex-1">
             <p class="text-text truncate text-sm font-semibold">
               {reg.name}
             </p>
-            <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+            <p class="text-text-muted mt-0.5 truncate text-xs">
               {reg.registryUrl}
               · {reg.username}
             </p>

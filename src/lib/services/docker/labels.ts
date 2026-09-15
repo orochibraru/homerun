@@ -40,6 +40,10 @@ export function buildContainerLabels(params: {
 	// /api/v1/auth-check. Only applied when dnsResolvable is true (a
 	// subnet-only service has no public router to gate anyway).
 	authRequired?: boolean;
+	// Which network Traefik should reach this workload on. Defaults to the
+	// shared bridge network every standalone container joins; swarm-mode
+	// services pass their own overlay instead (see docker/swarm.ts).
+	networkName?: string;
 }): Record<string, string> {
 	const {
 		serviceId,
@@ -49,6 +53,7 @@ export function buildContainerLabels(params: {
 		projectSlug,
 		customDomain,
 		authRequired,
+		networkName = config.docker.networkName,
 	} = params;
 
 	const baseLabels = {
@@ -64,7 +69,7 @@ export function buildContainerLabels(params: {
 
 	const labels: Record<string, string> = {
 		...baseLabels,
-		"traefik.docker.network": config.docker.networkName,
+		"traefik.docker.network": networkName,
 
 		// Traefik auto-discovers this container via the Docker provider :
 		// no control-plane push required. See compose.yaml for how Traefik

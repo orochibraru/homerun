@@ -8,6 +8,7 @@ import {
 	nullableText,
 } from "$lib/server/validation/instance-settings-form";
 import { CloudflareService } from "$lib/services/cloudflare.service";
+import { DockerService } from "$lib/services/docker.service";
 import { PangolinService } from "$lib/services/pangolin.service";
 
 const logger = new Logger("InstanceSettings");
@@ -162,6 +163,14 @@ export const actions = {
 		});
 		applyAndRebuild(settings);
 		logger.info(`Traefik instance settings updated: user=${locals.user.id}`);
-		return { savedSection: "traefik", success: true };
+
+		let traefikDetail: string | null = null;
+		try {
+			const applied = await DockerService.applyAcmeEmail(traefikAcmeEmail);
+			traefikDetail = applied.updated ? applied.message : null;
+		} catch (err) {
+			traefikDetail = `Saved, but Traefik wasn't reconfigured: ${err instanceof Error ? err.message : String(err)}`;
+		}
+		return { savedSection: "traefik", success: true, traefikDetail };
 	},
 };

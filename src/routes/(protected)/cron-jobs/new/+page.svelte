@@ -26,7 +26,7 @@
   </a>
 
   <div>
-    <h1 class="text-text text-xl font-semibold tracking-tight">New Cron Job</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">New Cron Job</h1>
     <p class="text-text-muted mt-0.5 text-sm">
       Runs on a 5-field cron schedule, through the same job queue as deploys
       and backups.
@@ -34,7 +34,7 @@
   </div>
 
   {#if form?.error}
-    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+    <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
       {form.error}
     </div>
   {/if}

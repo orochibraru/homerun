@@ -67,7 +67,7 @@
       <div class="space-y-2">
         <p class="text-text-muted text-sm">
           Type
-          <span class="text-text font-mono font-semibold">{confirmPhrase}</span>
+          <span class="text-text font-semibold">{confirmPhrase}</span>
           to confirm.
         </p>
         <Input

@@ -12,7 +12,7 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
-	import { saveToast } from "$lib/toast";
+	import { enhanceToast, saveToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -43,7 +43,7 @@
 </script>
 
 <div class="space-y-6">
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Docker</h2>
       <p class="text-text-muted text-xs">
@@ -60,7 +60,7 @@
       <div>
         <label class={label} for="dockerSocketPath">Socket path</label>
         <Input
-          class="font-mono {highlightClass('dockerSocketPath')}"
+          class={highlightClass('dockerSocketPath')}
           id="dockerSocketPath"
           name="dockerSocketPath"
           placeholder={data.envDefaults.dockerSocketPath}
@@ -77,7 +77,7 @@
         <label class={label} for="dockerNetworkName"
         >Shared network name</label>
         <Input
-          class="font-mono"
+          class=""
           id="dockerNetworkName"
           name="dockerNetworkName"
           placeholder={data.envDefaults.dockerNetworkName}
@@ -91,28 +91,38 @@
     </form>
   </section>
 
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Orchestration</h2>
       <p class="text-text-muted text-xs">
         "Standalone" is a single container per service (this app's original
         model). "Swarm" deploys every service as a replicated, self-healing
         Docker Swarm service instead : scale via the Replicas field on a
-        service's Compute tab, restarts are rolling force-updates. Requires
-        this host's own Docker daemon to already be swarm-active (<code
+        service's Compute tab, restarts are rolling force-updates. Saving
+        <strong>Swarm</strong> prepares this host for it : <code
         >docker swarm init</code
-        >, your own one-time step, this app never runs that itself) and
-        Traefik configured with <code
-        >--providers.docker.swarmMode=true</code
-        >. Remote Hosts aren't part of the swarm cluster : a swarm-mode
-        service can only deploy locally.
+        > if the daemon isn't a manager yet, an attachable overlay network
+        (<code>{data.settings.dockerNetworkName
+        ?? data.envDefaults.dockerNetworkName}-swarm</code
+        >, since the shared bridge network can't be converted in place),
+        Traefik attached to it, and Traefik's swarm provider turned on. That
+        last step recreates the Traefik container, so this page may blink if
+        you reach it through Traefik. Switching back turns the provider off
+        again and leaves the swarm itself alone. Remote Hosts aren't part of
+        the cluster : a swarm-mode service can only deploy locally.
       </p>
     </div>
     <form
       action="?/updateOrchestration"
       class="space-y-4 p-5"
       method="POST"
-      use:enhance={saveToast("Orchestration settings")}
+      use:enhance={enhanceToast({
+        error: "Couldn't apply the orchestration mode.",
+        loading: "Applying the orchestration mode",
+        success: (data) =>
+          (data?.orchestrationSteps as string[] | undefined)?.at(-1) ??
+          "Orchestration settings saved.",
+      })}
     >
       <div>
         <label class={label} for="orchestrationMode">Mode</label>

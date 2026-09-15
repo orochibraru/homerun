@@ -23,7 +23,7 @@
 	let deleteForm: HTMLFormElement | undefined = $state();
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <a
     class="mb-4 inline-flex items-center gap-1 text-sm text-text-muted hover:text-text"
     href={resolve("/remote-hosts")}
@@ -33,11 +33,11 @@
   </a>
 
   <div class="mb-6 flex items-center gap-3">
-    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+    <div class="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
       <Server class="size-5" />
     </div>
     <div class="min-w-0">
-      <h1 class="truncate text-text text-xl font-semibold tracking-tight">{data.host.name}</h1>
+      <h1 class="truncate text-text text-lg font-semibold tracking-tight">{data.host.name}</h1>
       <p class="text-sm text-text-muted">
         {data.host.kind === "agent" ? "Homerun Agent" : "Direct Docker connection"}
       </p>
@@ -45,7 +45,7 @@
   </div>
 
   {#if data.host.kind === "agent"}
-    <div class="mb-6 flex items-center gap-2 rounded-xl panel p-4 text-sm">
+    <div class="mb-6 flex items-center gap-2 rounded-md panel p-4 text-sm">
       {#if data.agentStatus?.reachable}
         <span class="inline-block size-2 rounded-full bg-green-500"></span>
         <span class="text-text">Online</span>
@@ -60,7 +60,7 @@
   {/if}
 
   <form
-    class="mb-6 space-y-4 rounded-2xl panel p-5"
+    class="mb-6 space-y-4 rounded-md panel p-5"
     action="?/update"
     method="POST"
     use:enhance={enhanceToast({
@@ -87,7 +87,7 @@
       <div>
         <label class={label} for="agentUrl">Agent URL</label>
         <Input
-          class="font-mono"
+          class=""
           id="agentUrl"
           name="agentUrl"
           placeholder="http://192.168.1.50:7420"
@@ -102,7 +102,7 @@
       <div>
         <label class={label} for="agentToken">Agent token</label>
         <Input
-          class="font-mono"
+          class=""
           id="agentToken"
           name="agentToken"
           placeholder="Leave blank to keep current"
@@ -117,7 +117,7 @@
       <div>
         <label class={label} for="dockerHost">Docker host</label>
         <Input
-          class="font-mono"
+          class=""
           id="dockerHost"
           name="dockerHost"
           placeholder="tcp://192.168.1.50:2376"
@@ -150,7 +150,7 @@
           <div>
             <label class={label} for="tlsCa">CA certificate</label>
             <Textarea
-              class="resize-none font-mono"
+              class="resize-none"
               id="tlsCa"
               name="tlsCa"
               placeholder="Leave blank to keep current"
@@ -160,7 +160,7 @@
           <div>
             <label class={label} for="tlsCert">Client certificate</label>
             <Textarea
-              class="resize-none font-mono"
+              class="resize-none"
               id="tlsCert"
               name="tlsCert"
               placeholder="Leave blank to keep current"
@@ -170,7 +170,7 @@
           <div>
             <label class={label} for="tlsKey">Client key</label>
             <Textarea
-              class="resize-none font-mono"
+              class="resize-none"
               id="tlsKey"
               name="tlsKey"
               placeholder="Leave blank to keep current"
@@ -188,7 +188,7 @@
     </div>
   </form>
 
-  <div class="rounded-2xl border border-red-500/30 bg-red-500/5 p-5">
+  <div class="rounded-md border border-red-500/30 bg-red-500/5 p-5">
     <h2 class="eyebrow">Danger zone</h2>
     <p class="mt-1 text-xs text-text-muted">
       Services deployed to this host keep running there : they just won't be

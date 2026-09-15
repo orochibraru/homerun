@@ -137,7 +137,7 @@
           class="bg-surface-2 flex items-center justify-between gap-3 rounded-lg px-3 py-1.5 text-xs {dimUnlessTagged && item.dangling === false && !includeTagged ? 'opacity-40' : ''}"
         >
           <div class="min-w-0">
-            <p class="text-text truncate font-mono">{item.label}</p>
+            <p class="text-text truncate">{item.label}</p>
             {#if item.detail}
               <p class="text-text-subtle truncate">{item.detail}</p>
             {/if}
@@ -153,9 +153,9 @@
   {/if}
 {/snippet}
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-6">
-    <h1 class="text-text text-xl font-semibold tracking-tight">Docker Cleanup</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">Docker Cleanup</h1>
     <p class="text-text-muted mt-1 text-sm">
       Reclaims disk space from unused Docker resources on this host. These
       actions apply to the whole host, not just what Homerun manages.
@@ -163,45 +163,45 @@
   </div>
 
   <div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
-    <div class="panel rounded-2xl p-4">
+    <div class="panel rounded-md p-4">
       <p class="eyebrow">Images</p>
-      <p class="tech text-text mt-1 text-xl font-semibold">
+      <p class="tabular-nums text-text mt-1 text-xl font-semibold">
         {data.preview.images.totalCount}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
         {formatBytes(sumSize(data.preview.images.items))} reclaimable
       </p>
     </div>
-    <div class="panel rounded-2xl p-4">
+    <div class="panel rounded-md p-4">
       <p class="eyebrow">Containers</p>
-      <p class="tech text-text mt-1 text-xl font-semibold">
+      <p class="tabular-nums text-text mt-1 text-xl font-semibold">
         {data.preview.containers.totalCount}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
         {data.preview.containers.items.length} stopped
       </p>
     </div>
-    <div class="panel rounded-2xl p-4">
+    <div class="panel rounded-md p-4">
       <p class="eyebrow">Networks</p>
-      <p class="tech text-text mt-1 text-xl font-semibold">
+      <p class="tabular-nums text-text mt-1 text-xl font-semibold">
         {data.preview.networks.totalCount}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
         {data.preview.networks.items.length} unused
       </p>
     </div>
-    <div class="panel rounded-2xl p-4">
+    <div class="panel rounded-md p-4">
       <p class="eyebrow">Volumes</p>
-      <p class="tech text-text mt-1 text-xl font-semibold">
+      <p class="tabular-nums text-text mt-1 text-xl font-semibold">
         {data.preview.volumes.totalCount}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
         {data.preview.volumes.items.length} unused
       </p>
     </div>
-    <div class="panel rounded-2xl p-4">
+    <div class="panel rounded-md p-4">
       <p class="eyebrow">Build cache</p>
-      <p class="tech text-text mt-1 text-xl font-semibold">
+      <p class="tabular-nums text-text mt-1 text-xl font-semibold">
         {formatBytes(data.preview.buildCache.totalSizeBytes ?? 0)}
       </p>
       <p class="text-text-subtle mt-0.5 text-xs">
@@ -210,7 +210,7 @@
     </div>
   </div>
 
-  <section class="panel mb-6 rounded-2xl">
+  <section class="panel mb-6 rounded-md">
     <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
       <div class="flex items-center gap-2">
         <Eraser class="text-text-muted size-4" />
@@ -253,7 +253,7 @@
   </section>
 
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-    <section class="panel rounded-2xl">
+    <section class="panel rounded-md">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <Boxes class="text-text-muted size-4" />
@@ -292,7 +292,7 @@
       </div>
     </section>
 
-    <section class="panel rounded-2xl">
+    <section class="panel rounded-md">
       <form action="?/pruneImages" method="POST"
       use:enhance={enhanceToast({
         error: "Docker cleanup action failed.",
@@ -338,7 +338,7 @@
       </form>
     </section>
 
-    <section class="panel rounded-2xl">
+    <section class="panel rounded-md">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <NetworkIcon class="text-text-muted size-4" />
@@ -377,7 +377,7 @@
       </div>
     </section>
 
-    <section class="panel rounded-2xl">
+    <section class="panel rounded-md">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <HardDrive class="text-text-muted size-4" />
@@ -417,7 +417,7 @@
     </section>
   </div>
 
-  <section class="bg-surface mt-6 rounded-2xl border border-red-200 dark:border-red-900/40">
+  <section class="bg-surface mt-6 rounded-md border border-red-200 dark:border-red-900/40">
     <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
       <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <TriangleAlert class="size-4" />

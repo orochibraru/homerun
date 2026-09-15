@@ -47,7 +47,7 @@
     <div>
       <label class={label} for="name">Provider id</label>
       <Input
-        class="font-mono"
+        class=""
         id="name"
         name="name"
         placeholder="pocket-id"
@@ -81,7 +81,7 @@
     <div class="sm:col-span-2">
       <label class={label} for="discoveryUrl">Discovery URL</label>
       <Input
-        class="font-mono"
+        class=""
         id="discoveryUrl"
         name="discoveryUrl"
         placeholder="https://provider.example.com/.well-known/openid-configuration"
@@ -95,7 +95,7 @@
     <div class="sm:col-span-2">
       <label class={label} for="scopes">Scopes (comma-separated)</label>
       <Input
-        class="font-mono"
+        class=""
         id="scopes"
         name="scopes"
         placeholder="openid, profile, email"
@@ -104,7 +104,7 @@
       />
       <p class="text-text-subtle mt-1.5 text-xs">
         Include the scope that carries group or role claims (often
-        <span class="font-mono">groups</span>) if you want to restrict an app by
+        <span class="">groups</span>) if you want to restrict an app by
         group.
       </p>
     </div>
@@ -124,7 +124,7 @@
         Automatic reads the provider's discovery document and prefers the HTTP
         Basic header when offered, which is what OpenID Connect defaults to.
         Override only if sign-in fails with
-        <span class="font-mono">invalid_client</span>
+        <span class="">invalid_client</span>
         while the credentials are right.
       </p>
     </div>
@@ -157,7 +157,7 @@
   {#if callbackBase && values.name}
     <p class="text-text-subtle text-xs">
       Redirect URI to register with your provider:
-      <span class="text-accent font-mono">
+      <span class="text-accent">
         {callbackBase}/api/v1/auth/callback/{values.name}
       </span>
     </p>

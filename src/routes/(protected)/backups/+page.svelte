@@ -57,10 +57,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Backups</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Backups</h1>
       <p class="text-text-muted mt-1 text-sm">
         Per-volume S3 backups and their run history. Configure a volume's
         destination and schedule from its own page.
@@ -89,7 +89,7 @@
     {:else}
       <div class="space-y-2.5">
         {#each backupEnabledVolumes as vol (vol.id)}
-          <div class="panel flex items-center gap-4 rounded-2xl p-4">
+          <div class="panel flex items-center gap-4 rounded-md p-4">
             <div class="min-w-0 flex-1">
               <a
                 class="text-text hover:text-accent truncate text-sm font-semibold"
@@ -97,7 +97,7 @@
               >
                 {vol.name}
               </a>
-              <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+              <p class="text-text-muted mt-0.5 truncate text-xs">
                 {vol.backupSchedule}
                 · {vol.destinationName}
               </p>
@@ -143,11 +143,11 @@
       <EntityToolbar {filters} placeholder="Search runs by volume name…" />
 
       {#if data.runs.length === 0}
-        <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+        <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
           <p class="text-text-muted text-sm">No runs match your filters.</p>
         </div>
       {:else}
-      <div class="panel overflow-x-auto rounded-2xl">
+      <div class="panel overflow-x-auto rounded-md">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-border text-text-muted border-b text-left text-xs uppercase">

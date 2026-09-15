@@ -55,7 +55,7 @@
 	}
 </script>
 
-<section class="rounded-2xl panel">
+<section class="rounded-md panel">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <SlidersHorizontal class="size-4" />
@@ -88,14 +88,14 @@
     {#each envRows as row, i}
       <div class="flex items-center gap-2">
         <Input
-          class="font-mono"
+          class=""
           name="envKey"
           placeholder="KEY"
           type="text"
           bind:value={row.key}
         />
         <Input
-          class="font-mono"
+          class=""
           name="envValue"
           placeholder="value"
           type="text"

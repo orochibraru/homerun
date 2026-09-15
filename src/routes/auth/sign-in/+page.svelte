@@ -143,7 +143,7 @@
     </div>
     {#if data.canonicalSignInUrl}
       <div
-        class="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400"
+        class="flex items-start gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400"
       >
         <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
         <span>

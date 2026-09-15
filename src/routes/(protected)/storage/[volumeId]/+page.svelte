@@ -49,14 +49,14 @@
   </a>
 
   <div>
-    <h1 class="text-text text-xl font-semibold tracking-tight">{vol.name}</h1>
-    <p class="mt-1 font-mono text-sm text-text-muted">
+    <h1 class="text-text text-lg font-semibold tracking-tight">{vol.name}</h1>
+    <p class="mt-1 text-sm text-text-muted">
       {vol.kind}
       · {vol.source}
     </p>
   </div>
 
-  <section class="rounded-2xl panel p-5">
+  <section class="rounded-md panel p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <CloudUpload class="size-4" />
@@ -107,7 +107,7 @@
         <label class={label} for="backupSchedule"
         >Schedule (cron syntax)</label>
         <Input
-          class="font-mono"
+          class=""
           id="backupSchedule"
           name="backupSchedule"
           placeholder="0 3 * * *"
@@ -191,7 +191,7 @@
   </form>
 
   {#if data.runs.length > 0}
-    <section class="rounded-2xl panel">
+    <section class="rounded-md panel">
       <div class="border-b border-border px-5 py-4">
         <h2 class="eyebrow">Run log</h2>
       </div>

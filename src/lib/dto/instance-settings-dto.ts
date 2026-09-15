@@ -249,7 +249,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	}
 
 	get pangolinTargetPort(): number {
-		return this.row.pangolinTargetPort ?? 80;
+		return this.row.pangolinTargetPort ?? 443;
 	}
 
 	/** Whether every field PangolinService needs is set : anything less treats the integration as "feature off". */

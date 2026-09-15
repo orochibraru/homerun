@@ -56,10 +56,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Git Providers</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Git Providers</h1>
       <p class="text-text-muted mt-1 text-sm">
         Connect a git hosting account (GitHub, GitLab, self-hosted Gitea,
         Bitbucket) so a git-based service's Source tab can browse your repos
@@ -79,7 +79,7 @@
   </div>
 
   {#if data.isAdmin && showAddForm}
-    <div class="panel mb-6 rounded-2xl p-5">
+    <div class="panel mb-6 rounded-md p-5">
       <p class="text-text-subtle mb-4 text-xs">
         Register an OAuth App on the provider's own site first (its
         developer/application settings), then paste the client ID/secret here.
@@ -186,9 +186,9 @@
     <div class="space-y-3">
       {#each data.providers as provider (provider.id)}
         {@const connected = data.connectedProviderIds.includes(provider.id)}
-        <div class="panel rounded-2xl p-5">
+        <div class="panel rounded-md p-5">
           <div class="flex items-center gap-4">
-            <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
+            <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
               <GitBranch class="size-5" />
             </div>
             <div class="min-w-0 flex-1">
@@ -257,7 +257,7 @@
             {/if}
           </div>
           {#if data.isAdmin && !connected}
-            <p class="border-border text-text-subtle mt-3 border-t pt-3 font-mono text-xs">
+            <p class="border-border text-text-subtle mt-3 border-t pt-3 text-xs">
               Callback URL for this provider's OAuth App: {
                 callbackUrlFor(
                   provider.id,

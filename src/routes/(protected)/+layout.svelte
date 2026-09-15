@@ -2,7 +2,6 @@
 	import {
 		BookOpen,
 		CalendarClock,
-		ChevronRight,
 		Clock,
 		CloudUpload,
 		Container,
@@ -15,6 +14,7 @@
 		LayoutGrid,
 		Menu,
 		Network,
+		Plus,
 		ScrollText,
 		Server,
 		Settings,
@@ -265,7 +265,11 @@
 		const r = Number.parseInt(hex.slice(1, 3), 16);
 		const g = Number.parseInt(hex.slice(3, 5), 16);
 		const b = Number.parseInt(hex.slice(5, 7), 16);
-		return `--color-accent:${hex};--color-accent-light:rgba(${r},${g},${b},0.1);--color-accent-glow:rgba(${r},${g},${b},0.2);`;
+		// --color-ink is the solid brand fill every primary Button paints
+		// with, so it has to move with the chosen accent too : overriding
+		// only --color-accent left every button on the stock violet, which
+		// read as "the accent picker doesn't work".
+		return `--color-accent:${hex};--color-ink:${hex};--primary:${hex};--color-accent-light:rgba(${r},${g},${b},0.12);--color-accent-glow:rgba(${r},${g},${b},0.35);--ring:rgba(${r},${g},${b},0.55);`;
 	});
 
 	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
@@ -305,8 +309,7 @@
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
   {#each groups as group (group.heading)}
     {@const color = colorful ? (categoryColors[group.heading] ?? fallbackColor) : fallbackColor}
-    <p class="eyebrow mt-5 mb-1.5 flex items-center gap-1.5 px-3">
-      <span class="size-1.5 rounded-full {color.dot}"></span>
+    <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium">
       {group.heading}
     </p>
     {#each group.items as item (item.href)}
@@ -314,37 +317,39 @@
       {@const NavIcon = item.icon}
       <a
         class="
-          group/nav relative mb-0.5 flex items-center gap-2.5 overflow-hidden rounded-md px-3 py-2 text-[0.8125rem] transition-colors duration-150
+          group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150
           {active
-          ? `${color.activeBg} ${color.activeText} font-semibold`
-          : 'text-text-muted hover:bg-surface-2 hover:text-text'}
-        "
+          ? `border-sidebar-border bg-sidebar-accent ${color.activeText} font-medium`
+          : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent'}
+       "
         href={item.href}
         onclick={onNavigate}
       >
-        {#if active}
-          <span class="absolute inset-y-0 left-0 w-[3px] {color.dot}"></span>
-        {/if}
-        <NavIcon class="size-4 shrink-0 transition-opacity {active ? '' : color.icon + ' opacity-60 group-hover/nav:opacity-100'}" />
+        <NavIcon class="size-4 shrink-0 {active ? '' : color.icon}" />
         {item.label}
-        {#if active}
-          <ChevronRight class="ml-auto size-3.5 opacity-50" />
-        {/if}
       </a>
     {/each}
   {/each}
 {/snippet}
 
 <!-- Fills the full viewport : there's no global navbar above this. -->
-<div class="flex h-screen overflow-hidden" style={accentStyle}>
+<div class="flex h-screen overflow-hidden p-2 md:gap-2" style={accentStyle}>
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
-  <aside class="panel-strong hidden w-60 shrink-0 flex-col border-r border-border md:flex">
+  <aside class="hidden w-56 shrink-0 flex-col md:flex">
+    <div class="flex items-center gap-2.5 px-3 py-2.5">
+      <span class="bg-accent size-3.5 rounded-md"></span>
+      <span class="text-text text-[0.9375rem] font-semibold tracking-tight">homerun</span>
+    </div>
+
+    <div class="px-2 pb-2">
+      <Button class="w-full" href={resolve("/services/new")}>
+        <Plus class="size-4" />
+        Deploy a service
+      </Button>
+    </div>
+
     <!-- Nav links -->
-    <nav class="flex-1 overflow-y-auto p-3 pt-4">
-      <div class="mb-3 flex items-center gap-2 px-2 pt-1">
-        <span class="bg-accent size-2.5 rounded-[2px]"></span>
-        <span class="text-text font-mono text-[0.95rem] font-semibold tracking-tight">homerun</span>
-      </div>
+    <nav class="flex-1 overflow-y-auto px-2 pb-3">
       {@render navGroups(mainNavGroups)}
       {@render navGroups(adminNavGroups)}
     </nav>
@@ -363,10 +368,10 @@
     </button>
 
     <div
-      class="panel-strong fixed top-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-border md:hidden"
+      class="panel-strong fixed top-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-border md:hidden"
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
-      <nav class="flex-1 overflow-y-auto p-3 pt-4">
+      <nav class="flex-1 overflow-y-auto px-2.5 pt-3 pb-4">
         {@render navGroups(mainNavGroups, () => {
           sidebarOpen = false;
         })}
@@ -378,11 +383,11 @@
   {/if}
 
   <!-- ── Main content ───────────────────────────────────────────── -->
-  <div class="flex flex-1 flex-col overflow-hidden">
+  <div class="panel flex flex-1 flex-col overflow-hidden rounded-xl">
     <!-- Sticky header, every page, both breakpoints : hamburger (mobile
          only) + page title on the left, notifications + account menu on
          the right. -->
-    <header class="panel-strong sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b px-4 md:px-6">
+    <header class="border-border sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b px-3 md:px-5">
       <Button
         aria-label="Toggle sidebar"
         class="md:hidden"
@@ -398,7 +403,7 @@
           <Menu class="size-5" />
         {/if}
       </Button>
-      <span class="text-text flex-1 truncate font-mono text-sm font-medium tracking-tight">
+      <span class="text-text flex-1 truncate text-sm font-medium">
         {$title || "Dashboard"}
       </span>
       <NotificationBell />

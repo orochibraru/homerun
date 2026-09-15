@@ -56,3 +56,9 @@ export const deleteNotification = command(z.string(), async (id) => {
 	await NotificationDTO.delete(id, user.id);
 	await getNotifications().refresh();
 });
+
+export const deleteAllNotifications = command(async () => {
+	const user = requireUser();
+	await NotificationDTO.deleteAll(user.id);
+	await getNotifications().refresh();
+});

@@ -4,7 +4,7 @@
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import EntityListView from "$lib/components/entity-list-view.svelte";
+	import EntityList from "$lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
@@ -75,6 +75,10 @@
 			success: `"${tmpl.name}" deploying`,
 		});
 	}
+
+	function byId(id: string): Template | undefined {
+		return [...data.builtins, ...data.mine].find((tmpl) => tmpl.id === id);
+	}
 </script>
 
 {#snippet templateActions(tmpl: Template)}
@@ -109,55 +113,33 @@
   </Button>
 {/snippet}
 
-{#snippet card(tmpl: Template)}
-  <div class="panel flex h-full flex-col justify-between gap-2 rounded-2xl p-5 transition-shadow hover:shadow-md">
-    <a class="flex flex-col gap-2" href={detailsHref(tmpl)}>
-      <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
-      <p class="text-text font-semibold">{tmpl.name}</p>
-      {#if tmpl.description}
-        <p class="text-text-muted line-clamp-2 text-xs">
-          {tmpl.description}
-        </p>
-      {/if}
-      <p class="text-text-subtle font-mono text-xs">
-        {tmpl.image}:{tmpl.tag}
-      </p>
-      {#if tmpl.linkedNames && tmpl.linkedNames.length > 0}
-        <p class="text-accent text-xs">
-          + {tmpl.linkedNames.join(", ")}
-        </p>
-      {/if}
-    </a>
-    <div class="flex gap-2">
-      {@render templateActions(tmpl)}
-    </div>
-  </div>
+{#snippet media(item: { id: string })}
+  {@const tmpl = byId(item.id)}
+  {#if tmpl}
+    <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
+  {/if}
 {/snippet}
 
-{#snippet row(tmpl: Template)}
-  <div class="panel flex flex-wrap items-center gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md">
-    <a class="flex min-w-0 flex-1 items-center gap-4" href={detailsHref(tmpl)}>
-      <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
-      <div class="min-w-0">
-        <p class="text-text truncate text-sm font-semibold">{tmpl.name}</p>
-        <p class="text-text-subtle truncate font-mono text-xs">
-          {tmpl.image}:{tmpl.tag}
-        </p>
-        {#if tmpl.description}
-          <p class="text-text-muted truncate text-xs">{tmpl.description}</p>
-        {/if}
-      </div>
-    </a>
-    <div class="flex shrink-0 items-center gap-2">
-      {@render templateActions(tmpl)}
-    </div>
-  </div>
+{#snippet meta(item: { id: string })}
+  {@const tmpl = byId(item.id)}
+  {#if tmpl?.linkedNames && tmpl.linkedNames.length > 0}
+    <span class="text-accent truncate text-xs">
+      + {tmpl.linkedNames.join(", ")}
+    </span>
+  {/if}
 {/snippet}
 
-<div class="p-6 md:p-8">
+{#snippet actions(item: { id: string })}
+  {@const tmpl = byId(item.id)}
+  {#if tmpl}
+    {@render templateActions(tmpl)}
+  {/if}
+{/snippet}
+
+<div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">
+      <h1 class="text-text text-lg font-semibold tracking-tight">
         Templates
       </h1>
       <p class="text-text-muted mt-1 text-sm">
@@ -185,12 +167,18 @@
     {#if data.builtins.length === 0}
       <p class="text-text-subtle text-sm">No built-in templates match.</p>
     {:else}
-      <EntityListView
-        {card}
+      <EntityList
+        {actions}
         cardGridClass={CARD_GRID}
-        getKey={(tmpl) => tmpl.id}
-        items={data.builtins}
-        {row}
+        items={data.builtins.map((tmpl) => ({
+          description: tmpl.description,
+          href: detailsHref(tmpl),
+          id: tmpl.id,
+          subtitle: `${tmpl.image}:${tmpl.tag}`,
+          title: tmpl.name,
+        }))}
+        {media}
+        {meta}
         {view}
       />
       <Pagination
@@ -206,7 +194,7 @@
   <div>
     <h2 class="eyebrow mb-3">My Templates</h2>
     {#if data.mineTotal === 0 && !data.filtered}
-      <div class="border-border flex flex-col items-center justify-center rounded-2xl border border-dashed py-12 text-center">
+      <div class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-12 text-center">
         <LayoutGrid class="text-text-muted mb-3 size-8 opacity-40" />
         <p class="text-text-muted text-sm font-medium">
           No custom templates yet
@@ -219,12 +207,18 @@
     {:else if data.mine.length === 0}
       <p class="text-text-subtle text-sm">No custom templates match.</p>
     {:else}
-      <EntityListView
-        {card}
+      <EntityList
+        {actions}
         cardGridClass={CARD_GRID}
-        getKey={(tmpl) => tmpl.id}
-        items={data.mine}
-        {row}
+        items={data.mine.map((tmpl) => ({
+          description: tmpl.description,
+          href: detailsHref(tmpl),
+          id: tmpl.id,
+          subtitle: `${tmpl.image}:${tmpl.tag}`,
+          title: tmpl.name,
+        }))}
+        {media}
+        {meta}
         {view}
       />
       <Pagination

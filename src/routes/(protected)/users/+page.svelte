@@ -74,10 +74,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Users</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Users</h1>
       <p class="text-text-muted mt-1 text-sm">
         Admin and developer accounts for this instance. Public sign-up is closed
         once the first account exists : every account after that is created
@@ -95,15 +95,15 @@
   </div>
 
   {#if showAddForm}
-    <div class="panel mb-6 rounded-2xl p-5">
+    <div class="panel mb-6 rounded-md p-5">
       <div class="mb-4 flex gap-2">
         <button
           class="
-            flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-all {addMode ===
+            flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-all {addMode ===
             'direct'
             ? 'border-accent bg-accent-light text-accent'
             : 'border-border text-text-muted hover:bg-surface-2'}
-          "
+         "
           onclick={() => {
             addMode = "direct";
           }}
@@ -113,11 +113,11 @@
         </button>
         <button
           class="
-            flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 {addMode ===
+            flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 {addMode ===
             'invite'
             ? 'border-accent bg-accent-light text-accent'
             : 'border-border text-text-muted hover:bg-surface-2'}
-          "
+         "
           disabled={!data.smtpEnabled}
           onclick={() => {
             addMode = "invite";
@@ -241,13 +241,13 @@
   <EntityToolbar {filters} placeholder="Search users by name or email…" />
 
   {#if data.users.length === 0}
-    <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+    <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
       <p class="text-text-muted text-sm">No users match your filters.</p>
     </div>
   {:else}
   <div class="space-y-3">
     {#each data.users as u (u.id)}
-      <div class="panel flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+      <div class="panel flex flex-wrap items-center justify-between gap-3 rounded-md p-4">
         <div class="min-w-0">
           <p class="text-text truncate text-sm font-medium">
             {u.name}
@@ -309,7 +309,7 @@
       <h2 class="eyebrow mb-3">Pending invitations</h2>
       <div class="space-y-3">
         {#each data.invites as inv (inv.id)}
-          <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed p-4">
+          <div class="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed p-4">
             <div class="min-w-0">
               <p class="text-text truncate text-sm font-medium">
                 {inv.email}

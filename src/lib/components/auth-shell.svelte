@@ -33,7 +33,7 @@
       {/if}
     </div>
 
-    <div class="panel rounded-2xl p-6 sm:p-7">
+    <div class="panel rounded-md p-6 sm:p-7">
       {@render children()}
     </div>
 

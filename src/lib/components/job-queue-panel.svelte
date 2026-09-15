@@ -29,10 +29,10 @@
 
 {#snippet row(entry: QueuedJob)}
   {@const meta = JOB_STATUS_CONFIG[entry.status]}
-  <div class="panel flex items-center gap-4 rounded-2xl p-4">
+  <div class="panel flex items-center gap-4 rounded-md p-4">
     <div class="min-w-0 flex-1">
       <p class="text-text truncate text-sm font-semibold">{entry.title}</p>
-      <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+      <p class="text-text-muted mt-0.5 truncate text-xs">
         {JOB_TYPE_LABELS[entry.type]}
         {#if entry.maxAttempts > 1}
           · attempt {entry.attempts}/{entry.maxAttempts}
@@ -47,7 +47,7 @@
         <span class="text-text-subtle text-xs">{formatFinished(entry.finishedAt)}</span>
       {/if}
       <span
-        class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-mono text-[0.65rem] font-medium tracking-wider uppercase {meta.class}"
+        class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[0.65rem] font-medium tracking-wider uppercase {meta.class}"
       >
         {#if entry.status === "running"}
           <meta.icon class="size-3 animate-spin" />
@@ -73,7 +73,7 @@
   {#if !queue.ready}
     <div class="space-y-2.5">
       {#each [0, 1] as placeholder (placeholder)}
-        <div class="panel flex items-center gap-4 rounded-2xl p-4">
+        <div class="panel flex items-center gap-4 rounded-md p-4">
           <div class="min-w-0 flex-1 space-y-1.5">
             <Skeleton class="h-4 w-48" />
             <Skeleton class="h-3 w-32" />

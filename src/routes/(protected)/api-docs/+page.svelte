@@ -27,7 +27,7 @@
 
 <div class="flex h-full flex-col gap-4">
   <div>
-    <h1 class="text-text text-xl font-semibold tracking-tight">API Docs</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">API Docs</h1>
     <p class="text-text-muted text-sm">
       The REST API's live OpenAPI spec, served at <code
         class="bg-surface-2 rounded px-1 py-0.5 text-xs"
@@ -42,7 +42,7 @@
   <!-- Swagger UI ships its own dark styling that doesn't follow this app's
 	     theme tokens, wrapped in a light-background card so it reads
 	     correctly regardless of the dashboard's own dark/light mode. -->
-  <div class="min-h-0 flex-1 overflow-auto rounded-2xl bg-white p-2">
+  <div class="min-h-0 flex-1 overflow-auto rounded-md bg-white p-2">
     <div bind:this={container}></div>
   </div>
 </div>

@@ -46,7 +46,7 @@
 
 <div class="space-y-6">
   {#if form?.success && "key" in form && form.key}
-    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/20">
+    <div class="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/20">
       <p class="font-semibold text-emerald-800 dark:text-emerald-400">
         API key created
       </p>
@@ -55,7 +55,7 @@
       </p>
       <div class="mt-2 flex items-center gap-2">
         <code
-          class="flex-1 overflow-x-auto rounded-lg border border-emerald-200 bg-surface px-3 py-2 font-mono text-xs whitespace-nowrap dark:border-emerald-900/40"
+          class="flex-1 overflow-x-auto rounded-lg border border-emerald-200 bg-surface px-3 py-2 text-xs whitespace-nowrap dark:border-emerald-900/40"
         >{form.key}</code>
         <Button onclick={() => copyKey(form.key as string)} size="icon-sm" variant="outline">
           <Copy class="size-4" />
@@ -64,7 +64,7 @@
     </div>
   {/if}
 
-  <section class="rounded-2xl panel">
+  <section class="rounded-md panel">
     <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div class="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
         <KeyRound class="size-4" />
@@ -130,7 +130,7 @@
       {:else}
         <div class="space-y-2.5">
           {#each data.apiKeys as key (key.id)}
-            <div class="flex items-center gap-4 rounded-xl border border-border p-4">
+            <div class="flex items-center gap-4 rounded-md border border-border p-4">
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium text-text">
                   {key.name ?? "Unnamed key"}
@@ -140,7 +140,7 @@
                     </span>
                   {/if}
                 </p>
-                <p class="mt-0.5 truncate font-mono text-xs text-text-muted">
+                <p class="mt-0.5 truncate text-xs text-text-muted">
                   {key.prefix ?? ""}{key.start ?? "••••••••"}…
                 </p>
                 <p class="mt-0.5 text-xs text-text-subtle">

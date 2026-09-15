@@ -309,7 +309,7 @@
     class="flex items-baseline justify-between gap-4 border-b border-border/60 py-2.5 last:border-0"
   >
     <dt class="text-text-muted text-sm">{term}</dt>
-    <dd class="text-text truncate text-sm {mono ? 'font-mono text-xs' : ''}">
+    <dd class="text-text truncate text-sm {mono ? 'text-xs' : ''}">
       {value}
     </dd>
   </div>
@@ -318,13 +318,13 @@
 {#if data.waitingForAdmin}
   <div class="flex min-h-screen flex-col items-center justify-center p-6">
     <BrandMark class="mb-10" size="lg" />
-    <div class="panel w-full max-w-md rounded-2xl p-8 text-center">
+    <div class="panel w-full max-w-md rounded-md p-8 text-center">
       <div
-        class="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500"
+        class="mx-auto mb-5 flex size-12 items-center justify-center rounded-md bg-amber-500/10 text-amber-500"
       >
         <TriangleAlert class="size-6" />
       </div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">
+      <h1 class="text-text text-lg font-semibold tracking-tight">
         Almost there
       </h1>
       <p class="text-text-muted mt-2 text-sm leading-relaxed">
@@ -350,13 +350,13 @@
 
     {#if data.authSecretIsDefault}
       <div
-        class="mb-8 flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/5 p-3.5 text-xs text-red-600 dark:text-red-400"
+        class="mb-8 flex items-start gap-2.5 rounded-md border border-red-500/30 bg-red-500/5 p-3.5 text-xs text-red-600 dark:text-red-400"
       >
         <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
         <span>
           Still using the built-in placeholder auth secret : this can't be fixed
-          from this wizard. Set <code class="font-mono">AUTH_SECRET</code> (e.g.
-          <code class="font-mono">openssl rand -base64 32</code>) and restart
+          from this wizard. Set <code class="">AUTH_SECRET</code> (e.g.
+          <code class="">openssl rand -base64 32</code>) and restart
           when you get a chance.
         </span>
       </div>
@@ -386,7 +386,7 @@
         {#snippet children()}
           <!-- ═══ Step 1: Core ═══ -->
           <section
-            class="space-y-5 rounded-2xl panel p-6"
+            class="space-y-5 rounded-md panel p-6"
             class:hidden={activeStep !== 0}
           >
             {@render panelHeader(
@@ -428,7 +428,7 @@
 
           <!-- ═══ Step 2: Docker ═══ -->
           <section
-            class="space-y-5 rounded-2xl panel p-6"
+            class="space-y-5 rounded-md panel p-6"
             class:hidden={activeStep !== 1}
           >
             {@render panelHeader(
@@ -438,7 +438,7 @@
             <div>
               <label class={label} for="dockerSocketPath">Socket path</label>
               <input
-                class="{input} font-mono"
+                class="{input}"
                 id="dockerSocketPath"
                 name="dockerSocketPath"
                 placeholder={envDefaults?.dockerSocketPath}
@@ -457,7 +457,7 @@
               <label class={label} for="dockerNetworkName"
               >Shared network name</label>
               <input
-                class="{input} font-mono"
+                class="{input}"
                 id="dockerNetworkName"
                 name="dockerNetworkName"
                 type="text"
@@ -471,7 +471,7 @@
 
           <!-- ═══ Step 3: Traefik ═══ -->
           <section
-            class="space-y-5 rounded-2xl panel p-6"
+            class="space-y-5 rounded-md panel p-6"
             class:hidden={activeStep !== 2}
           >
             {@render panelHeader(
@@ -511,7 +511,7 @@
               <label class={label} for="traefikDynamicConfigDir"
               >Dynamic config directory (optional)</label>
               <input
-                class="{input} font-mono"
+                class="{input}"
                 id="traefikDynamicConfigDir"
                 name="traefikDynamicConfigDir"
                 placeholder="unset : custom SSL is a no-op"
@@ -523,7 +523,7 @@
 
           <!-- ═══ Step 4: Email ═══ -->
           <section
-            class="space-y-5 rounded-2xl panel p-6"
+            class="space-y-5 rounded-md panel p-6"
             class:hidden={activeStep !== 3}
           >
             {@render panelHeader(
@@ -624,7 +624,7 @@
 
           <!-- ═══ Step 5: Review ═══ -->
           <section
-            class="space-y-5 rounded-2xl panel p-6"
+            class="space-y-5 rounded-md panel p-6"
             class:hidden={activeStep !== 4}
           >
             {@render panelHeader(
@@ -632,10 +632,10 @@
               "What this instance will start with. Everything here is editable later from Settings.",
             )}
             <div
-              class="flex items-center gap-3 rounded-xl border border-accent/25 bg-accent-light p-4"
+              class="flex items-center gap-3 rounded-md border border-accent/25 bg-accent-light p-4"
             >
               <span
-                class="bg-accent/15 text-accent flex size-9 shrink-0 items-center justify-center rounded-xl"
+                class="bg-accent/15 text-accent flex size-9 shrink-0 items-center justify-center rounded-md"
               >
                 <Rocket class="size-4.5" />
               </span>

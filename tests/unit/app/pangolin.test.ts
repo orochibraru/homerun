@@ -6,7 +6,7 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { PangolinService } = await import(
+const { PangolinService, targetScheme } = await import(
 	"../../../src/lib/services/pangolin.service"
 );
 
@@ -86,6 +86,14 @@ beforeEach(() => {
 
 afterEach(() => {
 	globalThis.fetch = realFetch;
+});
+
+describe("targetScheme", () => {
+	test("443 and anything else Traefik serves is https, only 80 is http", () => {
+		expect(targetScheme(443)).toBe("https");
+		expect(targetScheme(8443)).toBe("https");
+		expect(targetScheme(80)).toBe("http");
+	});
 });
 
 describe("PangolinService.verifyConnection", () => {

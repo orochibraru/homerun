@@ -31,7 +31,7 @@
 	let createError = $state<string | null>(null);
 </script>
 
-<section class="panel rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <HardDrive class="size-4" />
@@ -57,7 +57,7 @@
                 >(read-only)</span>
               {/if}
             </p>
-            <p class="text-text-muted truncate font-mono text-xs">
+            <p class="text-text-muted truncate text-xs">
               {mount.containerPath}
             </p>
           </div>
@@ -143,7 +143,7 @@
             Mount path
           </label>
           <Input
-            class="font-mono"
+            class=""
             id="containerPath"
             name="containerPath"
             placeholder="/data"
@@ -194,7 +194,7 @@
       })}
     >
       {#if createError}
-        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+        <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
           {createError}
         </div>
       {/if}

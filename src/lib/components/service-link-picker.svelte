@@ -119,7 +119,7 @@
         {#if engine && target}
           <p class="text-text-subtle mt-1.5 text-xs">
             Detected {engine.label} · reachable at
-            <span class="font-mono">{target.slug}:{target.containerPort}</span>
+            <span class="">{target.slug}:{target.containerPort}</span>
           </p>
         {/if}
       </div>
@@ -143,7 +143,7 @@
           <div>
             <label class={labelClass} for="linkPrefix">Variable prefix</label>
             <Input
-              class="font-mono"
+              class=""
               id="linkPrefix"
               placeholder="POSTGRES"
               type="text"
@@ -154,7 +154,7 @@
           <div>
             <label class={labelClass} for="linkUrlKey">Variable name</label>
             <Input
-              class="font-mono"
+              class=""
               id="linkUrlKey"
               placeholder="DATABASE_URL"
               type="text"
@@ -166,7 +166,7 @@
         <div class="bg-surface-2 border-border rounded-lg border p-3">
           <p class={labelClass}>Preview</p>
           {#each preview as row (row.key)}
-            <p class="text-text truncate font-mono text-xs">
+            <p class="text-text truncate text-xs">
               {row.key}={row.value}
             </p>
           {/each}

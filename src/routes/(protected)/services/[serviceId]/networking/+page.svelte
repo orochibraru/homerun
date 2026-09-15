@@ -94,7 +94,7 @@
 
 <div class="space-y-6">
   <!-- ═══ DNS / public routing ═══ -->
-  <section class="panel rounded-2xl p-5">
+  <section class="panel rounded-md p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Globe class="size-4" />
@@ -119,7 +119,7 @@
     {#if deployed}
       <form
         action="?/redeploy"
-        class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2"
+        class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2"
         method="POST"
         use:enhance={enhanceToast({
           error: "Couldn't queue the redeploy.",
@@ -199,7 +199,7 @@
   </section>
 
   <!-- ═══ Access ═══ -->
-  <section class="panel rounded-2xl p-5">
+  <section class="panel rounded-md p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <LockKeyhole class="size-4" />
@@ -254,7 +254,7 @@
 
         {#if authRequired}
           {#if !data.dashboardOrigin}
-            <p class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600">
+            <p class="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600">
               Set Origin under Settings → General first. The login wall
               redirects visitors to this instance's own sign-in page, so
               Homerun has to know its own public URL to send them there.
@@ -333,7 +333,7 @@
               <div>
                 <label class={label} for="authAllowedEmails">Emails</label>
                 <Textarea
-                  class="font-mono"
+                  class=""
                   id="authAllowedEmails"
                   name="authAllowedEmails"
                   placeholder={"ada@example.com\n*@example.com"}
@@ -342,7 +342,7 @@
                 />
                 <p class="text-text-subtle mt-1.5 text-xs">
                   One per line. A
-                  <span class="font-mono">*@domain.com</span>
+                  <span class="">*@domain.com</span>
                   entry matches every address at that domain.
                 </p>
               </div>
@@ -352,7 +352,7 @@
                   Groups / roles
                 </label>
                 <Textarea
-                  class="font-mono"
+                  class=""
                   id="authAllowedGroups"
                   name="authAllowedGroups"
                   placeholder={"platform-team\nadmins"}
@@ -362,8 +362,8 @@
                 <p class="text-text-subtle mt-1.5 text-xs">
                   One per line, matched against the group and role claims in
                   the id token your OAuth provider issued
-                  (<span class="font-mono">groups</span>,
-                  <span class="font-mono">roles</span>, and Keycloak's realm and
+                  (<span class="">groups</span>,
+                  <span class="">roles</span>, and Keycloak's realm and
                   resource roles). Make sure the provider's scopes actually
                   request them.
                 </p>
@@ -385,7 +385,7 @@
   </section>
 
   <!-- ═══ SSL ═══ -->
-  <section class="panel rounded-2xl p-5">
+  <section class="panel rounded-md p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <ShieldCheck class="size-4" />
@@ -434,7 +434,7 @@
         <div>
           <label class={label} for="customSslCert">Certificate (PEM)</label>
           <Textarea
-            class="resize-none font-mono"
+            class="resize-none"
             id="customSslCert"
             name="customSslCert"
             placeholder={svc.customSslCertEnc
@@ -446,7 +446,7 @@
         <div>
           <label class={label} for="customSslKey">Private key (PEM)</label>
           <Textarea
-            class="resize-none font-mono"
+            class="resize-none"
             id="customSslKey"
             name="customSslKey"
             placeholder={svc.customSslKeyEnc
@@ -465,7 +465,7 @@
           />
         {/if}
         <button
-          class="border-border text-text hover:bg-surface-2 flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60"
+          class="border-border text-text hover:bg-surface-2 flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60"
           disabled={submitting}
           type="submit"
         >
@@ -481,7 +481,7 @@
   </section>
 
   <!-- ═══ Network ═══ -->
-  <section class="panel rounded-2xl p-5">
+  <section class="panel rounded-md p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Network class="size-4" />
@@ -494,12 +494,12 @@
             at its own port, not through Traefik or the shared network.
           {:else if svc.containerId}
             Reachable from other services at
-            <span class="text-text-subtle font-mono">{svc.slug}:{
+            <span class="text-text-subtle">{svc.slug}:{
                 svc.containerPort
               }</span>.
           {:else}
             Container port
-            <span class="text-text-subtle font-mono">{svc.containerPort}</span>
+            <span class="text-text-subtle">{svc.containerPort}</span>
             (deploy to make it reachable).
           {/if}
         </p>
@@ -527,11 +527,11 @@
         <div class="grid grid-cols-2 gap-3">
           <button
             class="
-              flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
+              flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
               'bridge'
               ? 'border-accent bg-accent-light text-accent'
               : 'border-border text-text-muted hover:bg-surface-2'}
-            "
+           "
             onclick={() => {
               networkMode = "bridge";
             }}
@@ -541,11 +541,11 @@
           </button>
           <button
             class="
-              flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
+              flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {networkMode ===
               'host'
               ? 'border-accent bg-accent-light text-accent'
               : 'border-border text-text-muted hover:bg-surface-2'}
-            "
+           "
             onclick={() => {
               networkMode = "host";
             }}

@@ -43,10 +43,10 @@
       Authentication
     </Button>
     <h1 class="text-text mt-2 text-xl font-semibold">{data.provider.label}</h1>
-    <p class="text-text-subtle mt-1 font-mono text-sm">{data.provider.name}</p>
+    <p class="text-text-subtle mt-1 text-sm">{data.provider.name}</p>
   </div>
 
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Provider</h2>
       <p class="text-text-muted text-xs">
@@ -70,7 +70,7 @@
       })}
     >
       {#if form?.error}
-        <p class="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500">
+        <p class="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500">
           {form.error}
         </p>
       {/if}
@@ -88,7 +88,7 @@
   </section>
 
   {#if data.usedBy.length > 0}
-    <section class="panel rounded-2xl">
+    <section class="panel rounded-md">
       <div class="border-border border-b px-5 py-4">
         <h2 class="eyebrow">Used by</h2>
         <p class="text-text-muted text-xs">
@@ -111,7 +111,7 @@
   {/if}
 
   <!-- ═══ Danger zone ═══ -->
-  <section class="rounded-2xl border border-red-200 dark:border-red-900/40">
+  <section class="rounded-md border border-red-200 dark:border-red-900/40">
     <div class="border-b border-red-200 px-5 py-4 dark:border-red-900/40">
       <h2 class="eyebrow text-red-600 dark:text-red-400">Danger zone</h2>
       <p class="text-text-muted text-xs">

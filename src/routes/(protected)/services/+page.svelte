@@ -13,7 +13,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EntityListView from "$lib/components/entity-list-view.svelte";
+	import EntityList from "$lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
@@ -108,6 +108,10 @@
 		}
 	});
 
+	function byId(id: string): Svc | undefined {
+		return data.services.find((svc) => svc.id === id);
+	}
+
 	function toggleSelected(id: string) {
 		selectedIds = selectedSet.has(id)
 			? selectedIds.filter((other) => other !== id)
@@ -191,11 +195,11 @@
 	};
 </script>
 
-<div class="p-6 md:p-8 {selectedIds.length > 0 ? 'pb-28' : ''}">
-  <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+<div class="p-5 md:p-6 {selectedIds.length > 0 ? 'pb-28' : ''}">
+  <div class="border-border mb-5 flex flex-wrap items-end justify-between gap-3 border-b pb-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Services</h1>
-      <p class="text-text-muted mt-1 text-sm">
+      <h1 class="text-text text-lg font-semibold tracking-tight">Services</h1>
+      <p class="text-text-muted mt-0.5 text-xs">
         Containers deployed to this server.
       </p>
     </div>
@@ -216,7 +220,7 @@
   </div>
 
   {#if data.total === 0 && !data.filtered}
-    <div class="border-border flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
+    <div class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-20 text-center">
       <Server class="text-text-muted mb-3 size-10 opacity-40" />
       <p class="text-text-muted text-sm font-medium">No services yet</p>
       <p class="text-text-subtle mt-1 text-xs">
@@ -249,7 +253,7 @@
     </EntityToolbar>
 
     {#if data.services.length === 0}
-      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No services match your filters.</p>
       </div>
     {:else}
@@ -267,7 +271,26 @@
         </span>
       </div>
 
-      {#snippet actions(svc: Svc)}
+      {#snippet media(item: { id: string })}
+        {@const svc = byId(item.id)}
+        <span class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
+          <Server class="size-4" />
+        </span>
+        {#if svc}
+          <span class="sr-only">{svc.name}</span>
+        {/if}
+      {/snippet}
+
+      {#snippet badge(item: { id: string })}
+        {@const svc = byId(item.id)}
+        {#if svc}
+          <StatusBadge status={svc.currentStatus} />
+        {/if}
+      {/snippet}
+
+      {#snippet actions(item: { id: string })}
+        {@const svc = byId(item.id)}
+        {#if svc}
         <div class="flex shrink-0 items-center gap-1.5">
           {#if svc.desiredState === "running"}
             <form action="?/stop" method="POST" use:enhance={withPending(svc.id, "stop")}>
@@ -335,94 +358,30 @@
             </Button>
           </form>
         </div>
+        {/if}
       {/snippet}
 
-      {#snippet row(svc: Svc)}
-        <div
-          class="panel flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md {selectedSet.has(
-          svc.id,
-        )
-          ? 'ring-accent/40 ring-2'
-          : ''}"
-        >
-          <div class="flex min-w-0 flex-1 items-center gap-4">
-            <Checkbox
-              aria-label="Select {svc.name}"
-              checked={selectedSet.has(svc.id)}
-              onCheckedChange={() => toggleSelected(svc.id)}
-            />
-            <a
-              class="flex min-w-0 flex-1 items-center gap-4"
-              href="{resolve('/services')}/{svc.id}"
-            >
-              <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-                <Server class="size-5" />
-              </div>
-              <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                  <p class="text-text truncate text-sm font-semibold">
-                    {svc.name}
-                  </p>
-                  <StatusBadge status={svc.currentStatus} />
-                </div>
-                <p class="text-text-subtle mt-0.5 truncate font-mono text-xs">
-                  {svc.image}:{svc.tag}
-                  · {svc.slug}.{data.baseDomain}
-                </p>
-              </div>
-            </a>
-          </div>
-          {@render actions(svc)}
-        </div>
-      {/snippet}
-
-      {#snippet card(svc: Svc)}
-        <div
-          class="panel panel-interactive flex flex-col gap-3 rounded-2xl p-5 {selectedSet.has(
-          svc.id,
-        )
-          ? 'ring-accent/40 ring-2'
-          : ''}"
-        >
-          <div class="flex min-w-0 items-center gap-3">
-            <Checkbox
-              aria-label="Select {svc.name}"
-              checked={selectedSet.has(svc.id)}
-              onCheckedChange={() => toggleSelected(svc.id)}
-            />
-            <a class="flex min-w-0 flex-1 items-center gap-3" href="{resolve('/services')}/{svc.id}">
-              <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-                <Server class="size-5" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-text truncate text-sm font-semibold">{svc.name}</p>
-                <p class="text-text-subtle truncate font-mono text-xs">
-                  {svc.slug}.{data.baseDomain}
-                </p>
-              </div>
-            </a>
-          </div>
-          <p class="text-text-subtle truncate font-mono text-xs">{svc.image}:{svc.tag}</p>
-          <div class="flex items-center justify-between gap-2">
-            <StatusBadge status={svc.currentStatus} />
-            {@render actions(svc)}
-          </div>
-        </div>
-      {/snippet}
-
-      <div class="space-y-8">
+      <div class="space-y-6">
         {#each groups as [label, services] (label)}
           <div>
             {#if groups.length > 1}
-              <h2 class="eyebrow mb-3">
+              <h2 class="eyebrow mb-2">
                 {label}
               </h2>
             {/if}
-            <EntityListView
-              {card}
-              getKey={(svc) => svc.id}
-              items={services}
-              {row}
+            <EntityList
+              {actions}
+              items={services.map((svc) => ({
+                description: `${svc.image}:${svc.tag}`,
+                href: `${resolve("/services")}/${svc.id}`,
+                id: svc.id,
+                subtitle: `${svc.slug}.${data.baseDomain}`,
+                title: svc.name,
+              }))}
+              onToggleSelect={toggleSelected}
+              {badge}
+              {media}
+              selectedIds={selectedIds}
               {view}
             />
           </div>
@@ -443,7 +402,7 @@
   <div class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
     <form
       action="?/bulk"
-      class="panel-strong pointer-events-auto flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 shadow-lg"
+      class="panel-strong pointer-events-auto flex flex-wrap items-center gap-2 rounded-md px-4 py-3 shadow-lg"
       method="POST"
       bind:this={bulkForm}
       use:enhance={bulkSubmit}

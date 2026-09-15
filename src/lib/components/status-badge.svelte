@@ -8,12 +8,12 @@
 </script>
 
 <span
-  class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-mono text-[0.65rem] font-medium tracking-wider uppercase {meta.class}"
+  class="inline-flex items-center gap-1 rounded-sm border px-1.5 py-px text-[0.625rem] font-semibold tracking-[0.08em] uppercase {meta.class}"
 >
   {#if status === "pulling" || status === "starting"}
-    <meta.icon class="size-3 animate-spin" />
+    <meta.icon class="size-2.5 animate-spin" />
   {:else}
-    <meta.icon class="size-3" />
+    <meta.icon class="size-2.5" />
   {/if}
   {meta.label}
 </span>

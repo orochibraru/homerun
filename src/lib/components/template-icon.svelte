@@ -17,14 +17,14 @@
 
 {#if isBundledLogo}
   <div
-    class="flex shrink-0 items-center justify-center rounded-xl bg-surface-2 p-2 {className}"
+    class="flex shrink-0 items-center justify-center rounded-md bg-surface-2 p-2 {className}"
   >
     <img alt="" class="size-full object-contain" src="/template-icons/{icon}">
   </div>
 {:else}
   {@const Icon = templateCategoryIcon(category)}
   <div
-    class="flex shrink-0 items-center justify-center rounded-xl {color.bg} {color.text} {className}"
+    class="flex shrink-0 items-center justify-center rounded-md {color.bg} {color.text} {className}"
   >
     <Icon class="size-1/2" />
   </div>

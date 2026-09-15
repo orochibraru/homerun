@@ -97,7 +97,7 @@
 	);
 </script>
 
-<section class="rounded-2xl panel">
+<section class="rounded-md panel">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
     <div class="flex size-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
       <UserCircle class="size-4" />
@@ -118,11 +118,11 @@
         {#if accountImage}
           <img
             alt={accountName}
-            class="size-16 rounded-2xl object-cover ring-2 ring-border"
+            class="size-16 rounded-md object-cover ring-2 ring-border"
             src={accountImage}
           >
         {:else}
-          <div class="bg-accent flex size-16 items-center justify-center rounded-2xl text-xl font-bold text-white">
+          <div class="bg-accent flex size-16 items-center justify-center rounded-md text-xl font-bold text-white">
             {initials}
           </div>
         {/if}

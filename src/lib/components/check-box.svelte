@@ -22,7 +22,7 @@
 </script>
 
 <Label
-  class="flex items-start gap-3 rounded-xl border p-3 hover:bg-muted/50 has-aria-checked:border-accent has-aria-checked:bg-accent-light"
+  class="flex items-start gap-3 rounded-md border p-3 hover:bg-muted/50 has-aria-checked:border-accent has-aria-checked:bg-accent-light"
 >
   <Checkbox {id} {name} {onCheckedChange} bind:checked />
   <div class="grid gap-1.5 font-normal">

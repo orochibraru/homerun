@@ -132,7 +132,7 @@
 	);
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <a
     class="text-text-muted hover:text-text mb-4 inline-flex items-center gap-1.5 text-sm"
     href={resolve("/services")}
@@ -143,7 +143,7 @@
 
   <!-- ── Hero ─────────────────────────────────────────────── -->
   <div class="mb-6 flex flex-wrap items-center gap-3">
-    <h1 class="text-text text-xl font-semibold tracking-tight">{svc.name}</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">{svc.name}</h1>
     <StatusBadge status={svc.currentStatus} />
   </div>
   <p class="text-text-muted -mt-4 mb-6 text-sm">
@@ -156,7 +156,7 @@
     {/if}
     {#if svc.containerId || svc.swarmServiceId}
       · internal:
-      <span class="text-text-subtle font-mono">{svc.slug}:{
+      <span class="text-text-subtle">{svc.slug}:{
           svc.containerPort
         }</span>
     {/if}

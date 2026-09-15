@@ -318,7 +318,7 @@
 </div>
 
 {#if pendingAction === "deploy"}
-    <div class="panel mb-6 rounded-2xl">
+    <div class="panel mb-6 rounded-md">
         <ul class="border-border grid gap-2 border-b px-5 py-4 sm:grid-cols-3">
             {#each deployPhaseStates(progressLines.join("\n"), progressStatus) as { phase, state } (phase.id)}
                 <li class="flex items-center gap-2 text-xs">
@@ -339,7 +339,7 @@
             {/each}
         </ul>
         <div
-            class="h-48 overflow-y-auto rounded-b-2xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+            class="h-48 overflow-y-auto rounded-b-2xl bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-300"
         >
             {#if progressLines.length === 0}
                 <span class="text-zinc-500">Waiting for the deploy to start…</span>
@@ -354,11 +354,11 @@
 
 {#if !(svc.containerId || pendingAction === "deploy")}
     <div
-        class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm"
+        class="border-border bg-surface-2 text-text-muted mb-6 rounded-md border p-4 text-sm"
     >
         This service hasn't been deployed yet : click <strong>Deploy</strong> to
         pull
-        <span class="text-text font-mono">{svc.image}:{svc.tag}</span>
+        <span class="text-text">{svc.image}:{svc.tag}</span>
         and start it.
     </div>
 {:else if pendingAction !== "deploy"}
@@ -384,7 +384,7 @@
 {/if}
 
 <!-- ═══ Deployment history ═══ -->
-<section class="panel rounded-2xl">
+<section class="panel rounded-md">
     <div class="border-border flex items-center gap-2 border-b px-5 py-4">
         <Clock class="text-text-muted size-4" />
         <h2 class="eyebrow">Deployment history</h2>
@@ -416,7 +416,7 @@
                                 {timeAgo(dep.createdAt)}
                                 {#if dep.imageDigest}
                                     ·
-                                    <span class="font-mono"
+                                    <span class=""
                                         >{dep.imageDigest.slice(0, 19)}</span
                                     >
                                 {/if}
@@ -434,13 +434,13 @@
                                 dep.id
                                     ? 'rotate-180'
                                     : ''}
-                "
+               "
                             />
                         {/if}
                     </button>
                     {#if expandedDeploymentId === dep.id && dep.log}
                         <div
-                            class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+                            class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-300"
                         >
                             {#each dep.log
                                 .split("\n")

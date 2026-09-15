@@ -69,7 +69,7 @@
 </script>
 
 <div class="space-y-6">
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border flex items-center gap-3 border-b px-5 py-4">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Settings class="size-4" />
@@ -196,7 +196,7 @@
   </section>
 
   <!-- ═══ Project ═══ -->
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -236,7 +236,7 @@
   </section>
 
   <!-- ═══ Save as template ═══ -->
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -266,7 +266,7 @@
   </section>
 
   <!-- ═══ Auto-redeploy (cron) ═══ -->
-  <section class="panel rounded-2xl p-5">
+  <section class="panel rounded-md p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Clock class="size-4" />
@@ -305,7 +305,7 @@
       <div>
         <label class={label} for="cronSchedule">Schedule (cron syntax)</label>
         <Input
-          class="font-mono"
+          class=""
           id="cronSchedule"
           name="cronSchedule"
           placeholder="0 3 * * *"
@@ -325,7 +325,7 @@
   </section>
 
   <!-- ═══ Danger zone ═══ -->
-  <section class="bg-surface rounded-2xl border border-red-200 dark:border-red-900/40">
+  <section class="bg-surface rounded-md border border-red-200 dark:border-red-900/40">
     <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
       <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <TriangleAlertIcon class="size-4" />

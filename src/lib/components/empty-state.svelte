@@ -14,8 +14,8 @@
 	} = $props();
 </script>
 
-<div class="border-border/70 flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
-  <div class="panel mb-4 flex size-12 items-center justify-center rounded-xl">
+<div class="border-border/70 flex flex-col items-center justify-center rounded-md border border-dashed py-20 text-center">
+  <div class="panel mb-4 flex size-12 items-center justify-center rounded-md">
     <Icon class="text-text-subtle size-5" />
   </div>
   <p class="text-text text-sm font-medium">{title}</p>

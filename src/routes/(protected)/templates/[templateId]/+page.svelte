@@ -51,10 +51,10 @@
                 icon={tmpl.icon}
             />
             <div>
-                <h1 class="text-text text-xl font-semibold tracking-tight">
+                <h1 class="text-text text-lg font-semibold tracking-tight">
                     {tmpl.name}
                 </h1>
-                <p class="font-mono text-sm text-text-muted">
+                <p class="text-sm text-text-muted">
                     {tmpl.image}:{tmpl.tag}
                 </p>
             </div>
@@ -133,7 +133,7 @@
     {/if}
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="rounded-2xl panel p-5">
+        <div class="rounded-md panel p-5">
             <h2
                 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
             >
@@ -142,7 +142,7 @@
             <dl class="space-y-2 text-sm">
                 <div class="flex justify-between gap-4">
                     <dt class="text-text-muted">Port</dt>
-                    <dd class="font-mono text-text">{tmpl.containerPort}</dd>
+                    <dd class="text-text">{tmpl.containerPort}</dd>
                 </div>
                 {#if tmpl.category}
                     <div class="flex justify-between gap-4 capitalize">
@@ -153,13 +153,13 @@
                 {#if tmpl.cpuLimit}
                     <div class="flex justify-between gap-4">
                         <dt class="text-text-muted">CPU limit</dt>
-                        <dd class="font-mono text-text">{tmpl.cpuLimit}</dd>
+                        <dd class="text-text">{tmpl.cpuLimit}</dd>
                     </div>
                 {/if}
                 {#if tmpl.memoryLimitMb}
                     <div class="flex justify-between gap-4">
                         <dt class="text-text-muted">Memory limit</dt>
-                        <dd class="font-mono text-text">
+                        <dd class="text-text">
                             {tmpl.memoryLimitMb} MB
                         </dd>
                     </div>
@@ -168,7 +168,7 @@
         </div>
 
         {#if Object.keys(tmpl.envVars ?? {}).length > 0}
-            <div class="rounded-2xl panel p-5">
+            <div class="rounded-md panel p-5">
                 <h2
                     class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
                 >
@@ -177,8 +177,8 @@
                 <dl class="space-y-2 text-sm">
                     {#each Object.entries(tmpl.envVars ?? {}) as [key, value] (key)}
                         <div class="flex justify-between gap-4">
-                            <dt class="font-mono text-text-muted">{key}</dt>
-                            <dd class="truncate font-mono text-text">
+                            <dt class="text-text-muted">{key}</dt>
+                            <dd class="truncate text-text">
                                 {value}
                             </dd>
                         </div>
@@ -189,7 +189,7 @@
     </div>
 
     {#if data.links.length > 0}
-        <div class="rounded-2xl panel p-5">
+        <div class="rounded-md panel p-5">
             <h2
                 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
             >
@@ -198,7 +198,7 @@
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {#each data.links as link (link.alias)}
                     <div
-                        class="flex items-center gap-3 rounded-xl border border-border p-3"
+                        class="flex items-center gap-3 rounded-md border border-border p-3"
                     >
                         <TemplateIcon
                             category={null}
@@ -210,7 +210,7 @@
                                 {link.name}
                             </p>
                             <p
-                                class="truncate font-mono text-xs text-text-subtle"
+                                class="truncate text-xs text-text-subtle"
                             >
                                 {link.image}:{link.tag} · alias {link.alias}
                             </p>
@@ -224,7 +224,7 @@
     {#if tmpl.sourceUrl}
         {#await data.github then repo}
             {#if repo}
-                <div class="rounded-2xl panel p-5">
+                <div class="rounded-md panel p-5">
                     <h2 class="eyebrow mb-3">Repository</h2>
                     <div class="flex flex-wrap gap-6 text-sm">
                         {#if repo.stars !== null}
@@ -258,7 +258,7 @@
                 </div>
 
                 {#if repo.readmeHtml}
-                    <div class="rounded-2xl panel p-6">
+                    <div class="rounded-md panel p-6">
                         <h2 class="eyebrow mb-3">Readme</h2>
                         <div class="readme max-w-none text-sm text-text">
                             {@html repo.readmeHtml}

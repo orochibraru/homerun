@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { Bell, CheckCheck, X } from "@lucide/svelte";
+	import { Bell, CheckCheck, Trash2, X } from "@lucide/svelte";
 	import { resolve } from "$app/paths";
 	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { timeAgo } from "$lib/formatting";
 	import {
+		deleteAllNotifications,
 		deleteNotification,
 		getNotifications,
 		markAllNotificationsRead,
@@ -48,16 +49,28 @@
 
   <Popover.Content
     align="end"
-    class="max-h-96 w-80 gap-0 overflow-y-auto rounded-2xl p-0"
+    class="max-h-96 w-80 gap-0 overflow-y-auto rounded-md p-0"
   >
-    <div class="border-border flex items-center justify-between border-b px-4 py-3">
+    <div class="border-border flex items-center justify-between gap-2 border-b px-4 py-3">
       <p class="text-text text-sm font-semibold">Notifications</p>
-      {#if unreadCount > 0}
-        <Button class="h-auto p-0 text-xs" onclick={() => markAllNotificationsRead()} variant="link">
-          <CheckCheck class="size-3.5" />
-          Mark all read
-        </Button>
-      {/if}
+      <div class="flex items-center gap-3">
+        {#if unreadCount > 0}
+          <Button class="h-auto p-0 text-xs" onclick={() => markAllNotificationsRead()} variant="link">
+            <CheckCheck class="size-3.5" />
+            Mark all read
+          </Button>
+        {/if}
+        {#if notifications.length > 0}
+          <Button
+            class="text-text-subtle hover:text-destructive h-auto p-0 text-xs"
+            onclick={() => deleteAllNotifications()}
+            variant="link"
+          >
+            <Trash2 class="size-3.5" />
+            Clear all
+          </Button>
+        {/if}
+      </div>
     </div>
     {#if !feed.ready}
       <div class="space-y-3 p-4">

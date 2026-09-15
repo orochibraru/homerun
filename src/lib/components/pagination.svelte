@@ -41,7 +41,7 @@
 
 {#if total > perPage}
   <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-    <p class="text-text-subtle tech text-xs">
+    <p class="text-text-subtle tabular-nums text-xs">
       {first}–{last} of {total}
       {label}
     </p>
@@ -55,7 +55,7 @@
         <ChevronLeft class="size-4" />
         Previous
       </Button>
-      <span class="text-text-muted tech text-xs">
+      <span class="text-text-muted tabular-nums text-xs">
         Page {page} of {lastPage}
       </span>
       <Button

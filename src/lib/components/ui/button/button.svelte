@@ -29,14 +29,14 @@
 			},
 			variant: {
 				default:
-					"bg-ink text-ink-foreground hover:bg-ink/90 focus-visible:ring-ink/25",
+					"bg-ink text-ink-foreground shadow-sm hover:brightness-110 focus-visible:ring-ink/30",
 				destructive:
 					"bg-destructive/12 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/18 dark:focus-visible:ring-destructive/40 dark:hover:bg-destructive/28",
 				ghost:
 					"text-text-muted hover:bg-surface-2 hover:text-text aria-expanded:bg-surface-2 aria-expanded:text-text",
 				link: "text-accent underline-offset-4 hover:underline",
 				outline:
-					"border-border-light bg-surface text-text hover:bg-surface-2 aria-expanded:bg-surface-2",
+					"border-border bg-surface text-text backdrop-blur-sm hover:bg-surface-2 aria-expanded:bg-surface-2",
 				secondary:
 					"bg-surface-2 text-text hover:bg-surface-3 aria-expanded:bg-surface-3",
 			},

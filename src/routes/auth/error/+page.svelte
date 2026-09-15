@@ -164,7 +164,7 @@
 >
   {#if code === "account_not_linked"}
     {#if data.signedInAs}
-      <p class="text-text-subtle mb-4 font-mono text-xs">
+      <p class="text-text-subtle mb-4 text-xs">
         Signed in as {data.signedInAs}
       </p>
       <div class="flex flex-wrap gap-2">
@@ -244,6 +244,6 @@
   {/if}
 
   {#snippet footer()}
-    <span class="text-text-subtle font-mono text-xs">code: {code}</span>
+    <span class="text-text-subtle text-xs">code: {code}</span>
   {/snippet}
 </AuthShell>

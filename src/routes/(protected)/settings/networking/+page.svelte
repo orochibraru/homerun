@@ -9,7 +9,7 @@
 </script>
 
 <div class="space-y-6">
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Traefik</h2>
       <p class="text-text-muted text-xs">
@@ -24,7 +24,8 @@
       use:enhance={enhanceToast({
         error: "Check the form for errors.",
         loading: "Saving Traefik settings",
-        success: "Traefik settings saved.",
+        success: (data) =>
+          (data?.traefikDetail as string | null) ?? "Traefik settings saved.",
       })}
     >
       <div>
@@ -36,19 +37,14 @@
           type="email"
           value={data.settings.traefikAcmeEmail ?? ""}
         />
-        <p
-          class="mt-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"
-        >
-          <strong>Doesn't take effect by saving here.</strong> The contact
-          email Traefik registers with Let's Encrypt when generating
-          certificates : recorded for reference and validated as a real
-          email, but this app never touches the running Traefik container's
-          own config. Traefik reads it from the
-          <code class="font-mono">ACME_EMAIL</code>
-          env var at container startup (compose.yaml's
-          <code class="font-mono">--certificatesresolvers.letsencrypt.acme.email</code>
-          flag) : set it there and recreate the Traefik container for a
-          change to actually take effect.
+        <p class="text-text-subtle mt-1.5 text-xs">
+          The contact address Traefik registers with Let's Encrypt. Traefik
+          only reads it at startup, so saving a <em>new</em> one here
+          rewrites
+          <code class="">--certificatesresolvers.&lt;resolver&gt;.acme.email</code>
+          on the running container and recreates it : expect a few seconds of
+          downtime, and this page may blink if you reach it through Traefik.
+          Saving the value it already has changes nothing.
         </p>
       </div>
       <div>
@@ -75,7 +71,7 @@
         <label class={label} for="traefikDynamicConfigDir"
         >Dynamic config directory</label>
         <Input
-          class="font-mono"
+          class=""
           id="traefikDynamicConfigDir"
           name="traefikDynamicConfigDir"
           placeholder={data.envDefaults.traefikDynamicConfigDir
@@ -95,7 +91,7 @@
     </form>
   </section>
 
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Cloudflare</h2>
       <p class="text-text-muted text-xs">
@@ -121,7 +117,7 @@
       <div>
         <label class={label} for="cloudflareZoneId">Zone ID</label>
         <Input
-          class="font-mono"
+          class=""
           id="cloudflareZoneId"
           name="cloudflareZoneId"
           type="text"
@@ -152,7 +148,7 @@
     </form>
   </section>
 
-  <section class="panel rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Pangolin</h2>
       <p class="text-text-muted text-xs">
@@ -186,7 +182,7 @@
       <div>
         <label class={label} for="pangolinApiBaseUrl">API base URL</label>
         <Input
-          class="font-mono"
+          class=""
           id="pangolinApiBaseUrl"
           name="pangolinApiBaseUrl"
           placeholder="https://api.pangolin.example.com/v1"
@@ -197,15 +193,15 @@
           The <strong>Integration API</strong>, not the dashboard : it's a
           separate server (port 3003 by default) that self-hosted Pangolin
           only exposes once you enable it, and its base path ends in
-          <code class="font-mono">/v1</code>. A dashboard URL like
-          <code class="font-mono">/api/v1</code> authenticates with a session
+          <code class="">/v1</code>. A dashboard URL like
+          <code class="">/api/v1</code> authenticates with a session
           cookie, never an API key, so every call here would fail.
         </p>
       </div>
       <div>
         <label class={label} for="pangolinOrgId">Org ID</label>
         <Input
-          class="font-mono"
+          class=""
           id="pangolinOrgId"
           name="pangolinOrgId"
           type="text"
@@ -215,7 +211,7 @@
       <div>
         <label class={label} for="pangolinMainSiteName">Site name</label>
         <Input
-          class="font-mono"
+          class=""
           id="pangolinMainSiteName"
           name="pangolinMainSiteName"
           type="text"
@@ -233,15 +229,20 @@
         <Input
           id="pangolinTargetPort"
           name="pangolinTargetPort"
-          placeholder="80"
+          placeholder="443"
           type="number"
           value={data.settings.pangolinTargetPort ?? ""}
         />
         <p class="text-text-subtle mt-1.5 text-xs">
-          The local port on that site's host a Resource's Target forwards
-          to. Unset defaults to 80 (this instance's own Traefik entrypoint,
-          HTTP-only : Pangolin terminates the public TLS connection
-          itself).
+          The local port on that site's host a Resource's Target forwards to.
+          Unset defaults to <strong>443</strong>, this instance's own
+          <code class="">websecure</code> Traefik entrypoint, and the
+          Target is created as <code class="">https</code>. Every
+          service router Homerun writes lives on that entrypoint with TLS on,
+          so a Target pointing at 80 reaches an entrypoint with no matching
+          router and Traefik answers <strong>404</strong>. TLS is terminated
+          twice on purpose : Pangolin for the public connection, Traefik again
+          for the hop to the container.
         </p>
       </div>
       <div>

@@ -4,6 +4,19 @@ The backlog, and the only one. `Small`/`Medium`/`Large` are rough size, not
 priority : there is no priority ordering, pick whatever. Tick an item off and
 move it under `## Done` in the same change that finishes it.
 
+## UI
+
+- [ ] Dashboard needs to be fuller or it's useless. Graphed stats (recorded
+      locally) with ability to see live, last hour, last day, last week, last
+      month, last year and all time. Also list services with resource
+      consumption and traffic and sort by traffic usage and resource
+      consumption.
+- [ ] Service overview also needs to have stats first, scoped to the service.
+      Also show to which services it might be linked via a diagram-ish form,
+      sort of like github actions/gitlab CI UI show u which jobs need which to
+      run
+- [ ] UI still looks like shit, redesign from the ground up.
+
 ## Broken core features
 
 - [ ] Domain routing doesnt work through pangolin. Routes are created, but we

@@ -3,7 +3,7 @@
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityListView from "$lib/components/entity-list-view.svelte";
+	import EntityList from "$lib/components/entity-list.svelte";
 	import EntityToolbar from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button";
@@ -24,10 +24,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Projects</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Projects</h1>
       <p class="text-text-muted mt-1 text-sm">
         Group related services together.
       </p>
@@ -57,63 +57,36 @@
     </EntityToolbar>
 
     {#if data.projects.length === 0}
-      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No projects match your search.</p>
       </div>
     {:else}
-      {#snippet row(proj: Project)}
-        <a
-          class="panel flex items-center gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md"
-          href="{resolve('/projects')}/{proj.id}"
-        >
-          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-            <FolderKanban class="size-5" />
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-text truncate text-sm font-semibold">{proj.name}</p>
-            {#if proj.description}
-              <p class="text-text-muted mt-0.5 truncate text-xs">
-                {proj.description}
-              </p>
-            {/if}
-          </div>
-          <span class="text-text-subtle flex shrink-0 items-center gap-1.5 font-mono text-xs">
+      {#snippet media(_item: { id: string })}
+        <span class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
+          <FolderKanban class="size-4" />
+        </span>
+      {/snippet}
+
+      {#snippet meta(item: { id: string })}
+        {@const proj = data.projects.find((p) => p.id === item.id)}
+        {#if proj}
+          <span class="text-text-subtle flex shrink-0 items-center gap-1.5 text-xs">
             <Server class="size-3.5" />
             {proj.serviceCount}
             {serviceLabel(proj.serviceCount)}
           </span>
-        </a>
+        {/if}
       {/snippet}
 
-      {#snippet card(proj: Project)}
-        <a
-          class="panel panel-interactive block rounded-2xl p-5"
-          href="{resolve('/projects')}/{proj.id}"
-        >
-          <div class="bg-accent/10 text-accent mb-3 flex size-10 items-center justify-center rounded-xl">
-            <FolderKanban class="size-5" />
-          </div>
-          <p class="text-text truncate font-semibold">
-            {proj.name}
-          </p>
-          {#if proj.description}
-            <p class="text-text-muted mt-0.5 line-clamp-2 text-xs">
-              {proj.description}
-            </p>
-          {/if}
-          <div class="text-text-subtle mt-3 flex items-center gap-1.5 text-xs">
-            <Server class="size-3.5" />
-            {proj.serviceCount}
-            {serviceLabel(proj.serviceCount)}
-          </div>
-        </a>
-      {/snippet}
-
-      <EntityListView
-        {card}
-        getKey={(proj) => proj.id}
-        items={data.projects}
-        {row}
+      <EntityList
+        items={data.projects.map((proj) => ({
+          description: proj.description,
+          href: `${resolve("/projects")}/${proj.id}`,
+          id: proj.id,
+          title: proj.name,
+        }))}
+        {media}
+        {meta}
         {view}
       />
 

@@ -96,13 +96,13 @@
 >
   <div class="text-center">
     <div
-      class="bg-accent/10 ring-accent/5 mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl ring-8"
+      class="bg-accent/10 ring-accent/5 mx-auto mb-5 flex size-14 items-center justify-center rounded-md ring-8"
     >
       <Mail class="text-accent size-7" />
     </div>
     <p class="text-text-muted text-sm leading-relaxed">
       We sent a confirmation link to
-      <span class="text-text block font-mono text-xs">{data.email}</span>
+      <span class="text-text block text-xs">{data.email}</span>
     </p>
   </div>
 
@@ -110,7 +110,7 @@
     {#each STEPS as step, i (step)}
       <li class="text-text-muted flex items-start gap-3 text-sm">
         <span
-          class="bg-accent/10 text-accent mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[0.65rem] font-bold"
+          class="bg-accent/10 text-accent mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-bold"
         >
           {i + 1}
         </span>
@@ -159,7 +159,7 @@
   {#snippet below()}
     {#if data.isDev}
       <div
-        class="overflow-hidden rounded-2xl border border-amber-300/40 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-950/20"
+        class="overflow-hidden rounded-md border border-amber-300/40 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-950/20"
       >
         <div
           class="flex items-start gap-3 border-b border-amber-200/60 px-4 py-3 dark:border-amber-800/30"
@@ -177,7 +177,7 @@
             </p>
           </div>
           <span
-            class="ml-auto flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wide text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+            class="ml-auto flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
           >
             <FlaskConical class="size-3" />
             DEV
@@ -185,7 +185,7 @@
         </div>
         <div class="px-4 py-3">
           <button
-            class="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-medium text-amber-800 transition-all duration-200 hover:bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+            class="flex w-full items-center justify-center gap-2 rounded-md border border-amber-300 bg-white px-4 py-2.5 text-sm font-medium text-amber-800 transition-all duration-200 hover:bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
             onclick={devBypass}
             type="button"
           >
