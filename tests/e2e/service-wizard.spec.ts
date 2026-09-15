@@ -26,7 +26,7 @@ test.describe
 			await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
 		});
 
-		test("'Create service' actually submits and lands on the services list", async ({
+		test("'Create service' actually submits and lands on the new service", async ({
 			page,
 		}) => {
 			await page.goto("/services/new");
@@ -42,8 +42,13 @@ test.describe
 			await expect(create).toBeEnabled();
 			await create.click();
 
-			await expect(page).toHaveURL(/\/services$/);
-			await expect(page.getByText("wizard-check").first()).toBeVisible();
+			// Both wizard buttons land on what they just created rather than on
+			// the list : "Create service" on the service, "Create and deploy"
+			// on the service (or the project, when companions came along).
+			await expect(page).toHaveURL(/\/services\/[0-9a-f-]{36}$/);
+			await expect(
+				page.getByRole("heading", { name: "wizard-check" }),
+			).toBeVisible();
 		});
 
 		test("a validation failure comes back to step 1 with the button usable again", async ({

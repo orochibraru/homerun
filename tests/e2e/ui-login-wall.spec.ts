@@ -95,9 +95,9 @@ test.describe
 			await page.getByRole("button", { name: "Next" }).click();
 			await page.getByRole("button", { name: "Next" }).click();
 			await page.getByRole("button", { name: "Create service" }).click();
-			await expect(page).toHaveURL(/\/services$/);
+			// The wizard lands on the service it just created, not on the list.
+			await expect(page).toHaveURL(/\/services\/[0-9a-f-]{36}$/);
 
-			await page.getByText("wall-check").first().click();
 			await page.getByRole("link", { name: "Networking" }).click();
 
 			await expect(page.getByText("Access", { exact: true })).toBeVisible();

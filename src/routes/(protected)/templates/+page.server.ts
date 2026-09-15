@@ -86,11 +86,11 @@ export const actions = {
 			return fail(result.status, { error: result.error });
 		}
 
-		return {
-			href: result.projectId
+		redirect(
+			303,
+			result.projectId
 				? `${resolve("/projects")}/${result.projectId}`
 				: `${resolve("/services")}/${result.serviceId}`,
-			serviceId: result.serviceId,
-		};
+		);
 	},
 };

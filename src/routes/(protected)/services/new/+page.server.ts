@@ -240,9 +240,9 @@ export const actions = {
 
 		redirect(
 			303,
-			result.projectId
+			result.projectId && result.linkedServices.length > 0
 				? `${resolve("/projects")}/${result.projectId}`
-				: resolve("/services"),
+				: `${resolve("/services")}/${result.svc.id}`,
 		);
 	},
 

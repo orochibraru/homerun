@@ -4,13 +4,28 @@ The backlog, and the only one. `Small`/`Medium`/`Large` are rough size, not
 priority : there is no priority ordering, pick whatever. Tick an item off and
 move it under `## Done` in the same change that finishes it.
 
-## UI
+## Unorganized, sort later
 
 - [ ] Rename "Deployment history" with "Revisions" and put it in a separate tab.
 - [ ] Merge "logs" and "errors" in one tab called "Observability"
 - [ ] Adding a volume on an instance is one of the worst UX experiences of my
       life, let's change it to make it simple to link a volume to a container.
       Also pull in existing volumes on the machine.
+- [ ] Media type database should print a JDBC connection URL helper in UI.
+- [ ] When clicking on a linked service in the connections panel, invalidate all
+      data, it's not refreshing logs.
+- [ ] First row, recent deployments and quick actions on the dashboard aren't
+      rounded on the dashboard page. Recent deployments should show more info.
+- [ ] Add recent errors caught by observability on dashboard
+- [ ] Add test to the connection action button on git providers
+      (Connect/Disconnect) in plain text for UX.
+- [ ] New service wizard should show more settings including networking DNS to
+      map the domain before creation.
+- [ ] New service from git connection: Automatically list repos when selected,
+      show [combobox](https://shadcn-svelte.com/docs/components/combobox) to
+      select repo via filtering.
+- [ ] Replace "fetching image" status on deploy progress section with "building
+      image" if source is git not docker.
 
 ## Small
 

@@ -2,7 +2,6 @@
 	import { LayoutGrid, Plus, Rocket, SettingsIcon } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
-	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import EntityList from "$lib/components/entity-list.svelte";
 	import EntityToolbar, {
@@ -26,7 +25,6 @@
 	const view = new ViewMode("templates", "card");
 
 	let quickDeploying = $state<string | null>(null);
-	let lastDeployedHref = $state<string | undefined>(undefined);
 
 	const CARD_GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4";
 
@@ -56,10 +54,6 @@
 
 	function quickDeployEnhance(tmpl: Template) {
 		return enhanceToast({
-			action: {
-				label: "View",
-				onClick: () => goto(lastDeployedHref ?? resolve("/services")),
-			},
 			error: "Couldn't prepare deployment.",
 			loading: `Preparing "${tmpl.name}" for deployment`,
 			onSettled: () => {
@@ -67,9 +61,6 @@
 			},
 			onStart: () => {
 				quickDeploying = tmpl.id;
-			},
-			onSuccess: (result) => {
-				lastDeployedHref = (result as { href?: string } | undefined)?.href;
 			},
 			reset: false,
 			success: `"${tmpl.name}" deploying`,

@@ -6,6 +6,19 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
+## Where creating something lands you
+
+Every create path ends on the thing it just made, not on a list: the wizard's
+**Create service** and **Create and deploy** both redirect to `/services/<id>`,
+and a template's **Quick Deploy** does the same from both the catalog and the
+template's own detail page. The one exception is a create that produced
+_companions_ (a template pulling in its linked services, see Template links
+below): those land on `/projects/<id>`, where all of them are visible together,
+which is the only view that shows the whole thing that was just created. The
+catalog's Quick Deploy used to return an `href` and offer a "View" button on its
+toast instead; the redirect now happens server-side, the same way the detail
+page always did.
+
 ## Shared deploy pipeline (`src/lib/services/deploy.service.ts`)
 
 `DeploymentService.deployService(svc, userId, clientDeploymentId?)` is the one
