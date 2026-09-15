@@ -122,7 +122,7 @@ const SHOTS: Shot[] = [
 	},
 	{
 		doc: "/templates",
-		expect: /Jellyfin/i,
+		expect: /New Template/i,
 		name: "templates",
 		path: () => "/templates",
 	},

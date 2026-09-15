@@ -360,6 +360,15 @@ caught. `seedBuiltinTemplates()` now writes every display field back from
 `excluded.*` on conflict, so a boot re-syncs the catalog to whatever the code
 says. It deliberately doesn't touch `createdAt` or `ownerId`.
 
+**Adding a built-in can push an existing one off the gallery's first page**,
+which is how a green local run still failed CI: the built-in list is paginated
+at 24, ordered by name, and the docs-screenshot spec used to wait for
+`/Jellyfin/i` on `/templates` before capturing. Thirteen new templates moved
+Jellyfin to page two and the shot timed out. That expectation is now
+`/New Template/i` — present on the page whatever the catalog holds, and absent
+from the sidebar, so it still proves the page rendered. Don't anchor a
+screenshot (or a test) on a template name.
+
 **Tags (`template.tags`, `text[]`)** are the search keywords a category can't
 be: a category is one bucket per template, tags are many and overlap ("sql",
 "arr", "self-hosted"). `TemplateDTO.listPaged` ORs a `tagSearchCondition` over
