@@ -1,3 +1,23 @@
+## [1.0.16](https://github.com/orochibraru/homerun/compare/v1.0.15...v1.0.16) (2026-09-15)
+
+### Bug Fixes
+
+- agent conf & types
+  ([315f383](https://github.com/orochibraru/homerun/commit/315f38305b1eb139e44d6e5f15f23e02c38e1b45))
+- linting (should have done this in a pr -_-)
+  ([49a4ca9](https://github.com/orochibraru/homerun/commit/49a4ca9c445094776d0b978e557e6f9cb5548fcc))
+- no parallel commands
+  ([b518fc1](https://github.com/orochibraru/homerun/commit/b518fc15c8c07f600f890dcf740ee12fadd04387))
+- pangolin integration & docs
+  ([#12](https://github.com/orochibraru/homerun/issues/12))
+  ([a356a00](https://github.com/orochibraru/homerun/commit/a356a00ab04d8bfa219275e87274db0eefd921d2))
+- release
+  ([3224ad0](https://github.com/orochibraru/homerun/commit/3224ad098c72a3609df6cd9ffab06997d52820d3))
+- settings
+  ([70d6e24](https://github.com/orochibraru/homerun/commit/70d6e24854a58e3500f40aa70bd5dcef2c76fbef))
+- tests again
+  ([581c9bf](https://github.com/orochibraru/homerun/commit/581c9bf33c78906a3c4c74527a9b3e31467a3851))
+
 ## [1.0.15](https://github.com/orochibraru/homerun/compare/v1.0.14...v1.0.15) (2026-09-14)
 
 ### Features
