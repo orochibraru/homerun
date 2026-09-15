@@ -1,3 +1,10 @@
+## [1.0.19](https://github.com/orochibraru/homerun/compare/v1.0.18...v1.0.19) (2026-09-15)
+
+### Bug Fixes
+
+- release the bug-batch merge
+  ([d420723](https://github.com/orochibraru/homerun/commit/d4207232becae812ac335ba48c0ed6f1e71d5edb))
+
 ## [1.0.18](https://github.com/orochibraru/homerun/compare/v1.0.17...v1.0.18) (2026-09-15)
 
 ### Features
