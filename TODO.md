@@ -16,6 +16,8 @@ move it under `## Done` in the same change that finishes it.
 
 ## Small
 
+- [ ] [App] Delete all notifications buttons
+
 ## Medium
 
 - [ ] [App] **Restore an S3 backup.** Upload only today; getting a tarball back

@@ -62,6 +62,11 @@ jobs:
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
+  screenshots:
+    name: Screenshots
+    needs: [code_quality]
+    uses: ./.github/workflows/screenshots.yaml
+
   e2e:
     name: E2E
     needs: [build-app]
@@ -112,6 +117,7 @@ jobs:
       - binaries
       - build-app
       - build-agent
+      - screenshots
       - e2e
       - publish-app
       - publish-agent
@@ -124,6 +130,7 @@ jobs:
             "${{ needs.binaries.result }}"
             "${{ needs.build-app.result }}"
             "${{ needs.build-agent.result }}"
+            "${{ needs.screenshots.result }}"
             "${{ needs.e2e.result }}"
             "${{ needs.publish-app.result }}"
             "${{ needs.publish-agent.result }}"

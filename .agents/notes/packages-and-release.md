@@ -11,8 +11,13 @@ than in this one.
 **The CI pipeline builds each image once and reuses it.** Both
 `pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
 `docker.yaml` (per image) → `e2e.yaml` → `docker-manifest.yaml` (per image) →
-gate/release. The split between the last two is the point : `docker.yaml` pushes
-**by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
+gate/release. `pull_request.yaml` additionally runs `screenshots.yaml` off
+`code_quality`, in parallel with the image builds rather than after them,
+because that one is the exception to "build the image once" : it must run the
+app as a local process to reach the Docker socket (see Screenshots in
+`testing.md`), so it does its own `bun run build:app` and never touches the
+image under test. The split between the last two is the point : `docker.yaml`
+pushes **by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
 `docker pull` that exact digest and run Playwright against the real artefact,
 and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`,
 `vX.Y.Z`, `latest`). Nothing anyone can pull by name is ever published before

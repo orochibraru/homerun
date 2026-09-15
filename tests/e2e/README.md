@@ -117,4 +117,13 @@ harness spawns the app as a local process next to the daemon — don't run it wi
 it creates is removed in `afterAll` (containers, then the project and its Docker
 network) so a failed shot can't leak either.
 
+In CI it runs on every pull request (`.github/workflows/screenshots.yaml`, wired
+into `pull_request.yaml` and its gate), which makes it the only job that does a
+real deploy — `e2e.yaml` runs the app as a container with no Docker socket. That
+run uploads the images as an artefact and commits nothing. Refreshing what's
+checked in is a manual `Refresh Screenshots` workflow dispatch: the shots of
+pages with live data (dashboard, service overview, logs) come out byte-different
+every single run, so regenerating on each merge would only add megabytes of
+undeltifiable blobs to the history for no signal.
+
 See `.agents/notes/testing.md` for the rest of the rules that pipeline follows.

@@ -285,6 +285,34 @@ reason, and the screenshot config's `testDir` points at the subfolder.
   section to `docs/showcase.md`; `docs/images/README.md` is written by the run
   itself.
 
+**In CI it runs two ways, and only one of them commits.** `screenshots.yaml` is
+a `workflow_call` job wired into `pull_request.yaml` (off `code_quality`, in
+parallel with the image builds): it builds from source, pre-pulls the two images
+the seed deploys, captures everything and uploads `docs/images` as an artefact.
+It proves the generator still works and is the only job in CI that performs a
+**real deploy** — `e2e.yaml` can't, because it runs the app as a container with
+no Docker socket. It does **not** commit anything. The capture step is wrapped
+in `nick-fields/retry` for the same reason `e2e.yaml`'s is: one run in six
+against a shared Postgres failed at the seeding step and passed on every re-run.
+`screenshots-refresh.yaml` (`workflow_dispatch`, `contents: write`) calls that
+same workflow, downloads the artefact over `docs/images/`, and commits the
+result with `[skip ci]`, then pings the docs site the way `docs-update.yaml`
+does — `[skip ci]` stops the push from re-running the whole publish pipeline,
+and a `GITHUB_TOKEN` push wouldn't trigger `docs-update.yaml` anyway.
+
+**Refreshing the gallery is deliberate, not automatic, and that's the point.**
+The png can't be diffed for drift: the pages carrying live data (the dashboard,
+a service's overview, the log viewer) come out byte-different on every single
+run — live CPU%, "just now", the container's random name suffix — so ~8 of the
+26 files change even when nothing in the app did, and PNG blobs don't
+delta-compress. Regenerating on every merge would add megabytes of history for
+no signal. Run the refresh workflow when the UI has actually changed.
+
+`docs/images/README.md` is written by the run itself and must come out already
+prettier-formatted (the spec hard-wraps its one prose line exactly where
+prettier would): a generated file that the pre-commit hook then reformats fights
+the next regeneration forever.
+
 **A spec file that signs in as the bootstrap admin must sort after
 `onboarding.spec.ts`**, hence the `ui-` prefix on the two that do: Playwright
 runs files in discovery order with one shared app, so a spec landing before
