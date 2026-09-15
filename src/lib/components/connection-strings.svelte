@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Check, Copy, Database } from "@lucide/svelte";
-	import { toast } from "svelte-sonner";
+	import { Database } from "@lucide/svelte";
+	import CopyBox from "$lib/components/copy-box.svelte";
 	import {
 		buildLinkUrl,
 		detectLinkEngine,
@@ -26,19 +26,6 @@
 		}
 		return entries;
 	});
-
-	let copied = $state<string | null>(null);
-
-	function copy(value: string) {
-		void navigator.clipboard.writeText(value);
-		copied = value;
-		toast.success("Copied to clipboard.");
-		setTimeout(() => {
-			if (copied === value) {
-				copied = null;
-			}
-		}, 1500);
-	}
 </script>
 
 {#if rows.length > 0}
@@ -56,21 +43,12 @@
       {#each rows as row (row.label)}
         <div class="flex items-center gap-3 px-4 py-2.5">
           <span class="text-text-subtle w-28 shrink-0 text-xs">{row.label}</span>
-          <code class="text-text min-w-0 flex-1 truncate font-mono text-xs">
-            {row.value}
-          </code>
-          <button
-            aria-label="Copy {row.label}"
-            class="text-text-subtle hover:bg-surface-2 hover:text-text shrink-0 rounded-md p-1.5 transition-colors"
-            onclick={() => copy(row.value)}
-            type="button"
-          >
-            {#if copied === row.value}
-              <Check class="size-3.5 text-emerald-500" />
-            {:else}
-              <Copy class="size-3.5" />
-            {/if}
-          </button>
+          <CopyBox
+            class="min-w-0 flex-1 border-transparent bg-transparent py-0 pl-0"
+            label={row.label}
+            truncate
+            value={row.value}
+          />
         </div>
       {/each}
     </div>

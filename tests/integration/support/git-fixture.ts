@@ -1,47 +1,132 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import Docker from "dockerode";
 
-/**
- * A throwaway local git repo with a trivial Dockerfile, for the git-build
- * deploy scenario : `git clone file:///...` works exactly like a real
- * `https://` clone (git doesn't care about the transport), so this avoids
- * the git-build scenario depending on network access to some external repo
- * staying available forever. Built fresh under a scratch tmpdir (not
- * nested inside this repo's own working tree, to avoid a nested-.git
- * headache), one `git init` + one commit, called once from boot.ts.
- */
-export async function createGitBuildFixture(): Promise<string> {
-	const dir = await mkdtemp(join(tmpdir(), "homerun-integration-git-fixture-"));
+const GIT_IMAGE = "alpine/git:latest";
+const GIT_DAEMON_PORT = 9418;
 
-	await writeFile(
-		join(dir, "Dockerfile"),
-		[
-			"FROM busybox:latest",
-			'CMD ["sh", "-c", "echo hello from git-build; sleep 3600"]',
-			"",
-		].join("\n"),
-	);
+export interface GitBuildFixture {
+	stop: () => Promise<void>;
+	url: string;
+}
 
-	const run = async (args: string[]) => {
-		const proc = Bun.spawn(["git", ...args], {
-			cwd: dir,
-			stderr: "pipe",
-			stdout: "pipe",
+export async function createGitBuildFixture(
+	socketPath: string,
+): Promise<GitBuildFixture> {
+	const docker = new Docker({ socketPath });
+	const id = Math.random().toString(36).slice(2, 8);
+	const volumeName = `homerun-it-gitfixture-${id}`;
+
+	await ensureImage(docker);
+	await docker.createVolume({ Name: volumeName });
+
+	let daemon: Docker.Container | null = null;
+	try {
+		return await build();
+	} catch (err) {
+		await daemon?.remove({ force: true }).catch(() => undefined);
+		await docker
+			.getVolume(volumeName)
+			.remove()
+			.catch(() => undefined);
+		throw err;
+	}
+
+	async function build(): Promise<GitBuildFixture> {
+		const seed = await docker.createContainer({
+			Cmd: [
+				[
+					"mkdir -p /srv/repo",
+					"cd /srv/repo",
+					'printf \'FROM busybox:latest\\nCMD ["sh", "-c", "echo hello from git-build; sleep 3600"]\\n\' > Dockerfile',
+					"git init --initial-branch=main -q .",
+					"git config user.email integration-tests@homerun.local",
+					"git config user.name 'Homerun Integration Tests'",
+					"git add -A",
+					"git commit -q -m 'git-build fixture'",
+					"touch .git/git-daemon-export-ok",
+				].join(" && "),
+			],
+			Entrypoint: ["/bin/sh", "-c"],
+			HostConfig: { Binds: [`${volumeName}:/srv`] },
+			Image: GIT_IMAGE,
 		});
-		const code = await proc.exited;
-		if (code !== 0) {
+		await seed.start();
+		const seeded = await seed.wait();
+		const seedLog = (
+			await seed.logs({ stderr: true, stdout: true })
+		).toString();
+		await seed.remove({ force: true });
+		if (seeded.StatusCode !== 0) {
 			throw new Error(
-				`git ${args.join(" ")} failed (${code}): ${await new Response(proc.stderr).text()}`,
+				`git fixture seed failed (${seeded.StatusCode}): ${seedLog}`,
 			);
 		}
-	};
 
-	await run(["init", "--initial-branch=main"]);
-	await run(["config", "user.email", "integration-tests@homerun.local"]);
-	await run(["config", "user.name", "Homerun Integration Tests"]);
-	await run(["add", "-A"]);
-	await run(["commit", "-m", "git-build fixture"]);
+		daemon = await docker.createContainer({
+			Cmd: [
+				[
+					"apk add --no-cache git-daemon >/dev/null",
+					"exec git daemon --verbose --base-path=/srv --export-all --reuseaddr --listen=0.0.0.0 /srv",
+				].join(" && "),
+			],
+			Entrypoint: ["/bin/sh", "-c"],
+			HostConfig: { Binds: [`${volumeName}:/srv:ro`] },
+			Image: GIT_IMAGE,
+		});
+		await daemon.start();
+		await waitForDaemon(daemon);
 
-	return `file://${dir}`;
+		const info = await daemon.inspect();
+		const ip = Object.values(info.NetworkSettings?.Networks ?? {}).find(
+			(net) => net.IPAddress,
+		)?.IPAddress;
+		if (!ip) {
+			throw new Error(
+				"git fixture daemon has no address on the Docker network",
+			);
+		}
+
+		const started = daemon;
+		return {
+			stop: async () => {
+				await started.remove({ force: true }).catch(() => undefined);
+				await docker
+					.getVolume(volumeName)
+					.remove()
+					.catch(() => undefined);
+			},
+			url: `git://${ip}:${GIT_DAEMON_PORT}/repo`,
+		};
+	}
+}
+
+async function waitForDaemon(
+	daemon: Docker.Container,
+	timeoutMs = 60_000,
+): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		const log = (await daemon.logs({ stderr: true, stdout: true })).toString();
+		if (/Ready to rumble/i.test(log)) {
+			return;
+		}
+		const info = await daemon.inspect();
+		if (!info.State?.Running) {
+			throw new Error(`git fixture daemon exited: ${log}`);
+		}
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	throw new Error("git fixture daemon never became ready");
+}
+
+async function ensureImage(docker: Docker): Promise<void> {
+	try {
+		await docker.getImage(GIT_IMAGE).inspect();
+		return;
+	} catch {}
+	const stream: NodeJS.ReadableStream = await docker.pull(GIT_IMAGE, {});
+	await new Promise<void>((resolve, reject) => {
+		docker.modem.followProgress(stream, (err) =>
+			err ? reject(err) : resolve(),
+		);
+	});
 }

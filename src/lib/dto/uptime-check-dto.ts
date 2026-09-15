@@ -99,6 +99,24 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 			);
 	}
 
+	static async latestByProbe(
+		serviceIds: string[],
+	): Promise<Map<string, UptimeCheck>> {
+		if (serviceIds.length === 0) {
+			return new Map();
+		}
+		const rows = await db
+			.selectDistinctOn([uptimeCheck.serviceId, uptimeCheck.kind])
+			.from(uptimeCheck)
+			.where(inArray(uptimeCheck.serviceId, serviceIds))
+			.orderBy(
+				uptimeCheck.serviceId,
+				uptimeCheck.kind,
+				desc(uptimeCheck.checkedAt),
+			);
+		return new Map(rows.map((row) => [`${row.serviceId}:${row.kind}`, row]));
+	}
+
 	static async prune(): Promise<void> {
 		await db
 			.delete(uptimeCheck)

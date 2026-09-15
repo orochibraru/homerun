@@ -186,6 +186,18 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `uptime_check`, one appended row per liveness probe per tick (the heartbeat
   strips read the last 40, "now" is the newest). See Uptime probes in
   `observability.md`.
+- `status_page`, a published-or-private page grouping services: `scope`
+  (`"global"` | `"project"` | `"custom"`), nullable `projectId`, unique `slug`,
+  `isPublic`. A `global`/`project` page resolves its members **live** from
+  `service` on every read, so a newly deployed service appears without editing
+  the page; only a `custom` page reads `status_page_service`. See Status pages
+  in `services-and-templates.md`.
+- `status_page_service`, the explicit membership join for a `custom` page only,
+  with a unique index on (`statusPageId`, `serviceId`).
+- `notification_channel`, a webhook URL or email address alerted on an uptime
+  state change: `kind`, `target`, `enabled`, `lastError` (the last failure, so a
+  silently-broken channel is visible), and a nullable `statusPageId` — null
+  means "every status page", set means just that one.
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).
 - `template_link`, a template linking to another template (a database, a cache,

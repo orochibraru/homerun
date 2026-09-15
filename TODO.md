@@ -6,18 +6,22 @@ move it under `## Done` in the same change that finishes it.
 
 ## Not prioritized / No size / Too lazy to size just got an idea
 
-- [ ] [App] Still getting failing uptime from a postgres container.
-- [ ] [App] New feature: status page. Add a page linked in the sidebar in the
-      workspace category labelled "Status Page". From there a user can view the
-      status of each service, configure webhook and email notifications and
-      configure public status pages. They can set a status page per project, a
-      global one or choose which services are available on which status page.
-- [ ] For git sources (building locally) instead of cloning in a local directory
-      let's use a docker dind container.
-- [ ] Encapsulate matching text in a copy box on confirmation modal so it's easy
-      to copy/paste
+- [ ] [App] Add a button to clear heartbeats on a service. Add another one to
+      clear errors.
+- [ ] [App] For service errors let's link them to revisions. New revision
+      successfully deployed and live = dismissed errors.
 
 ## Small
+
+- [ ] [Docs] **CLAUDE.md says a `(protected)` page root is `p-6 md:p-8`; 26 of
+      27 pages use `p-5 md:p-6`.** The doc is the outlier, not the code. Decide
+      which is right and make them agree rather than leaving new pages to guess.
+
+- [ ] [Agent] **`packages/agent/docker.ts` shells out to `git` and its image has
+      no `git`** (`alpine:3` + `ca-certificates wget libstdc++ libgcc`), so an
+      agent-dispatched git build fails with ENOENT the same way the main app's
+      did. Same fix: clone in a container into a volume. Found while doing the
+      main app's half.
 
 - [ ] [App] **Convert the last five list pages to `EntityList`.** Services,
       templates, projects and storage pass their rows through it; remote hosts,
@@ -220,6 +224,33 @@ move it under `## Done` in the same change that finishes it.
       target's own image and env) and optionally puts both on one project
       network : whichever project either is already in, or a new one named after
       the source.
+- [x] [App] **The internal uptime probe could never succeed for a database.**
+      `Bun.connect({ socket: {} })` throws
+      `Expected at least "data" or "drain"     callback` before it opens
+      anything, so every TCP probe failed and stored that string as the reason —
+      the exact rows the Postgres container had. `tcpConnect` now passes real
+      handlers and resolves on `open`, covered against a live `Bun.listen`
+      socket in `tests/unit/app/uptime-probe.test.ts` (the tests fail against
+      the old implementation).
+- [x] [App] **Status pages.** `status_page` + `status_page_service` +
+      `notification_channel`, a "Status Page" entry in the Workspace sidebar
+      group, a per-page editor (global / one project / hand-picked services),
+      and a public `/status/<slug>` route outside `(protected)` that renders
+      names, up/down and uptime percentages only — never images, ports,
+      hostnames or probe errors. Webhook and email channels fire on an actual
+      up→down / down→up transition (`detectTransitions`, compared against the
+      previous beat so a first reading never alerts), scoped per page or
+      account-wide, with a "Send test" button.
+- [x] [Docker] **Git builds clone in a container into a volume**, not on the
+      host. This was a production bug, not a refactor: the runtime image has no
+      `git`, so `execFile("git", …)` failed with ENOENT and git builds only
+      worked in dev. The build context is streamed to the _same_ daemon, so no
+      cache registry is needed the way a real DinD sidecar would have required.
+      Fixed a commit-SHA corruption on the way (`Building commit )68c1b9` — the
+      log frame header's length byte).
+- [x] [UI] **`CopyBox`**, used for the confirmation modal's phrase (so it can be
+      copied rather than retyped), the connection strings panel and the API-key
+      reveal, replacing three hand-rolled copy affordances.
 - [x] [UI/Perf] **Navigation no longer waits on the Docker daemon.** Every
       daemon round-trip that sat in a `load` moved to a remote query the page
       fills in behind itself: the services list's and every service tab's status

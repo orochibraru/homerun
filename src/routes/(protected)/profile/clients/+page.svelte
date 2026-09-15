@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Copy, KeyRound, Plus, Trash2 } from "@lucide/svelte";
+	import { KeyRound, Plus, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import CopyBox from "$lib/components/copy-box.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -33,15 +33,6 @@
 		pendingRevokeName = name;
 		revokeDialogOpen = true;
 	}
-
-	async function copyKey(key: string) {
-		try {
-			await navigator.clipboard.writeText(key);
-			toast.success("Copied to clipboard.");
-		} catch {
-			toast.error("Couldn't copy : select and copy it manually.");
-		}
-	}
 </script>
 
 <div class="space-y-6">
@@ -53,14 +44,11 @@
       <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
         Copy it now : it won't be shown again.
       </p>
-      <div class="mt-2 flex items-center gap-2">
-        <code
-          class="flex-1 overflow-x-auto rounded-lg border border-emerald-200 bg-surface px-3 py-2 text-xs whitespace-nowrap dark:border-emerald-900/40"
-        >{form.key}</code>
-        <Button onclick={() => copyKey(form.key as string)} size="icon-sm" variant="outline">
-          <Copy class="size-4" />
-        </Button>
-      </div>
+      <CopyBox
+        class="mt-2 border-emerald-200 bg-surface dark:border-emerald-900/40"
+        label="the API key"
+        value={form.key}
+      />
     </div>
   {/if}
 

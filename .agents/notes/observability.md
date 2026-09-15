@@ -143,9 +143,20 @@ container, run by another `BaseScheduler`:
    `starting` counts as up (the container is inside its own start period), only
    `unhealthy` is a failure.
 2. `tcp` — a datastore (`isDatabaseImage`, i.e. anything `detectLinkEngine`
-   recognises) with no healthcheck of its own. A `Bun.connect` raced against the
-   5s timer; "the port accepts a connection" is the honest liveness signal there
-   and nothing more is claimed.
+   recognises) with no healthcheck of its own. "The port accepts a connection"
+   is the honest liveness signal there and nothing more is claimed.
+
+   **`Bun.connect` needs real socket handlers.**
+   `Bun.connect({hostname, port, socket: {}})` throws
+   `Expected at least "data" or "drain" callback` synchronously, before it opens
+   anything — so the first version of this probe failed for _every_ database and
+   stored that sentence as the outage reason. `tcpConnect` passes
+   `open`/`data`/`error`/`connectError` and resolves from `open`, racing a
+   `TIMEOUT_MS` timer. It's covered against a real `Bun.listen` socket (open
+   port, closed port, unroutable address) in
+   `tests/unit/app/uptime-probe.test.ts`, deliberately not with a mock: a mock
+   would have accepted the broken call too.
+
 3. `http` — everything else, where a status code means something.
 
 That hierarchy exists because speaking HTTP at a Postgres is how a perfectly
@@ -175,4 +186,15 @@ for the strip, `latestForUser` uses a `selectDistinctOn` for the "now" view, and
 `prune()` drops anything past a 7-day retention, amortized one tick in 60. The
 service Observability tab renders both probes with per-probe troubleshooting
 steps when one fails; the dashboard shows a banner listing every failing probe,
-linking into the service that owns it.
+linking into the service that owns it. `$lib/components/heartbeat-strip.svelte`
+is the shared strip, also used by both status-page surfaces.
+
+**A state change also fires alerts** (`status-alert.service.ts`). The tick reads
+`UptimeCheckDTO.latestByProbe` _before_ recording its own results, and
+`detectTransitions` compares the two: a probe with no previous beat is
+deliberately not a transition, or the first tick after a deploy (or after
+`prune()` cleared the window) would alert on every service at once. Each
+transition fans out to the channels attached to any status page covering that
+service — see `status-and-notifications` in
+`.agents/notes/services-and-templates.md`. A channel that throws is caught,
+logged and written to its own `lastError`, never allowed to abort the tick.

@@ -437,22 +437,93 @@ is crafted to exploit gaps in GitHub's own rendering; sanitizing server-side
 means the client only ever receives an already-restricted tag/attribute
 allowlist, regardless of what GitHub returned.
 
+## Status pages and alerting (`status_page`, `notification_channel`, `status-alert.service.ts`)
+
+A status page groups services and answers one question — is this up? — for an
+audience that may not be signed in. Three shapes, set by `scope`:
+
+- `global` : every service the owner has.
+- `project` : that project's services.
+- `custom` : a hand-picked list, the only one that reads `status_page_service`.
+
+**`global` and `project` resolve live** (`StatusPageDTO.serviceIds()` queries
+`service` on every read) so deploying a new service puts it on the page without
+anyone re-editing it. That's the whole reason the join table isn't used for all
+three.
+
+`/status-pages` is the operator's view: health of every service, the pages
+themselves, and the notification channels. `/status/<slug>` is the public one,
+and the routing and disclosure rules for it are in `routing.md` — read that
+before touching either.
+
+**Alerts fire on a state change, not on a state.** `uptime-probe.ts`'s tick
+reads the previous beat per probe before recording the new one and
+`detectTransitions` diffs them, so a service that's been down for an hour
+doesn't re-alert every minute, and a probe with no previous beat never alerts at
+all (otherwise the first tick after a deploy, or after `prune()` cleared the
+window, would alert on everything at once). Each transition reaches the channels
+of every page covering that service : `listForStatusPage` returns that page's
+own channels plus every account-wide one (`statusPageId` null).
+
+A channel is a generic JSON `POST` or an email. Failures are contained — caught
+per channel, logged, and stored on `notification_channel.lastError` so a
+silently-broken webhook is visible in the UI instead of just never firing. Email
+needs SMTP configured and says so rather than failing opaquely. The payload
+shape and the two formatters (`alertSubject`/`alertBody`) are pure and
+unit-tested in `tests/unit/app/status-alert.test.ts`, along with the transition
+logic.
+
 ## Git-based builds (`src/lib/services/docker/git-build.ts`)
 
 A service's `buildSource` is `"image"` (bring-your-own, the default) or `"git"`,
 set on the new-service form or edited later on the Source tab, both share the
-same "Deploy from" toggle UI. Git mode shells out to the system `git` binary
-(`clone --depth 1 --branch <ref> --single-branch`, same "shell out to a
-well-known CLI" precedent as `tar`/`df`/`nvidia-smi` elsewhere) into a temp
-directory, then `DockerService.buildFromGit()` calls dockerode's `buildImage()`
-against that directory (tar'd internally by dockerode, not manually) and tags
-the result `homerun-build-<slug>:<timestamp>`, a fresh tag every build, same
-"never reuse a name across deploys" precedent as container names. Progress lines
-stream into the deployment log exactly like `pullImage`'s layer-status events
-(filtered to status changes, not every line, build output is chattier than a
-pull). The temp clone directory is always removed afterward (`finally`), success
-or failure. A bare commit SHA doesn't work (shallow clone by branch/tag only,
-not by arbitrary ref).
+same "Deploy from" toggle UI.
+
+**The clone runs in a container, into a Docker volume — never on the host.**
+`buildFromGit()` creates a throwaway `homerun-build-<uuid>` volume, runs
+`alpine/git` against it (`clone --depth 1 --branch <ref> --single-branch` into
+`/workspace/repo`, then a second container for `rev-parse HEAD`), reads the
+build context back out as a tar stream, and hands that stream to dockerode's
+`buildImage()`. The result is tagged `homerun-build-<slug>:<timestamp>`, a fresh
+tag every build, same "never reuse a name across deploys" precedent as container
+names. Progress lines stream into the deployment log exactly like `pullImage`'s
+layer-status events (filtered to status changes, not every line, build output is
+chattier than a pull). The volume and both containers are always removed
+afterward (`finally`), success or failure. A bare commit SHA doesn't work
+(shallow clone by branch/tag only, not by arbitrary ref).
+
+This replaced `execFile("git", ...)` into an `mkdtemp()` directory, and it was a
+**production bug fix, not a refactor**: the runtime image is `oven/bun:1-alpine`
+plus `ca-certificates` and `su-exec` (see the `app` stage of the `Dockerfile`),
+which has no `git`, so the old code failed with ENOENT and git-based builds only
+ever worked in dev. Verified by running the base image: `command -v git` finds
+nothing. The temp directory was the second problem — inside the container it was
+the container's own ephemeral writable layer, not a volume, so a large clone
+grew the container unboundedly and vanished on restart.
+
+Four things about this shape are load-bearing:
+
+- **It stays on one daemon.** A real Docker-in-Docker sidecar would build on a
+  _different_ daemon, and the image would then need a cache registry to get back
+  to the deploy target — the same constraint `deploy.service.ts` already
+  enforces for build servers. Streaming the context to the existing daemon
+  avoids inheriting that.
+- **The archive path ends in `/.`.** `getArchive({path: "/workspace/repo"})`
+  prefixes every tar entry with `repo/`, and the daemon then can't find the
+  Dockerfile at the context root; `"/workspace/repo/."` roots the entries at
+  `./`. Verified live both ways.
+- **Argv is passed directly, never through `sh -c`.** The repo URL and ref are
+  user input.
+- **Container output is demuxed, not stripped.** Docker frames non-TTY output
+  with an 8-byte header whose big-endian length bytes are often printable ASCII
+  — a 41-byte frame carries `)`. A "drop control characters" pass left that `)`
+  glued to the front of the commit SHA (a real, observed
+  `Building commit )68c1b9`), so `demuxDockerFrames` walks the frames properly
+  and `extractCommitSha` matches `\b[0-9a-f]{40}\b` rather than slicing. Both
+  are pure and unit-tested in `tests/unit/app/git-build.test.ts`.
+
+`packages/agent/docker.ts` still shells out to `git` for agent-dispatched builds
+and its image has no `git` either : same latent bug, tracked in `TODO.md`.
 
 Any git-clone-able HTTPS URL works, this is what makes it "Git providers,
 including self-hosted Gitea" without any provider-specific API integration for

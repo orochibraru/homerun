@@ -10,7 +10,13 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { ContainerStatus, JobStatus, JobType } from "$lib/types";
+import type {
+	ContainerStatus,
+	JobStatus,
+	JobType,
+	NotificationChannelKind,
+	StatusPageScope,
+} from "$lib/types";
 
 export const user = pgTable("user", {
 	banExpires: timestamp("ban_expires", { mode: "date" }),
@@ -1152,6 +1158,72 @@ export const serviceVolumeRelations = relations(serviceVolume, ({ one }) => ({
 }));
 
 export type UserRole = "user" | "admin";
+export const statusPage = pgTable(
+	"status_page",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		description: text("description"),
+		id: text("id").primaryKey(),
+		isPublic: boolean("is_public").notNull().default(false),
+		name: text("name").notNull(),
+		projectId: text("project_id").references(() => project.id, {
+			onDelete: "cascade",
+		}),
+		scope: text("scope").$type<StatusPageScope>().notNull(),
+		slug: text("slug").notNull().unique(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("statusPage_userId_idx").on(table.userId)],
+);
+
+export const statusPageService = pgTable(
+	"status_page_service",
+	{
+		id: text("id").primaryKey(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		statusPageId: text("status_page_id")
+			.notNull()
+			.references(() => statusPage.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		uniqueIndex("statusPageService_pageId_serviceId_uidx").on(
+			table.statusPageId,
+			table.serviceId,
+		),
+		index("statusPageService_serviceId_idx").on(table.serviceId),
+	],
+);
+
+export const notificationChannel = pgTable(
+	"notification_channel",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		enabled: boolean("enabled").notNull().default(true),
+		id: text("id").primaryKey(),
+		kind: text("kind").$type<NotificationChannelKind>().notNull(),
+		lastError: text("last_error"),
+		name: text("name").notNull(),
+		statusPageId: text("status_page_id").references(() => statusPage.id, {
+			onDelete: "cascade",
+		}),
+		target: text("target").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("notificationChannel_userId_idx").on(table.userId)],
+);
+
 export type Project = typeof project.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type TemplateLink = typeof templateLink.$inferSelect;
@@ -1170,6 +1242,9 @@ export type AppLog = typeof appLog.$inferSelect;
 export type Notification = typeof notification.$inferSelect;
 export type StatSample = typeof statSample.$inferSelect;
 export type UptimeCheck = typeof uptimeCheck.$inferSelect;
+export type StatusPage = typeof statusPage.$inferSelect;
+export type StatusPageService = typeof statusPageService.$inferSelect;
+export type NotificationChannel = typeof notificationChannel.$inferSelect;
 export type Job = typeof job.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;

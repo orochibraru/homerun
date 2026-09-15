@@ -6,6 +6,7 @@
 		MinusCircle,
 		Network,
 	} from "@lucide/svelte";
+	import HeartbeatStrip from "$lib/components/heartbeat-strip.svelte";
 	import { timeAgo } from "$lib/formatting";
 
 	interface Beat {
@@ -50,21 +51,7 @@
 </script>
 
 {#snippet heartbeat(series: Beat[])}
-  <div class="mt-2 flex items-end gap-[3px]">
-    {#each series as beat (beat.id)}
-      <span
-        class="h-5 w-[5px] shrink-0 rounded-[2px] {beat.ok
-        ? 'bg-emerald-500'
-        : 'bg-red-500'}"
-        title="{beat.ok ? 'Up' : 'Down'} · {timeAgo(beat.checkedAt)}{beat.detail
-        ? ` · ${beat.detail}`
-        : ''}"
-      ></span>
-    {/each}
-    {#if series.length === 0}
-      <span class="text-text-subtle text-xs">No beats recorded yet.</span>
-    {/if}
-  </div>
+  <HeartbeatStrip beats={series} class="mt-2" />
 {/snippet}
 
 {#snippet probe(

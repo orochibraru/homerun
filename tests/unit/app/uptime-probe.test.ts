@@ -6,8 +6,12 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { externalProbeSkipReason, internalProbeMethod, probeErrorMessage } =
-	await import("../../../src/lib/services/uptime/uptime-probe");
+const {
+	externalProbeSkipReason,
+	internalProbeMethod,
+	probeErrorMessage,
+	tcpConnect,
+} = await import("../../../src/lib/services/uptime/uptime-probe");
 
 describe("externalProbeSkipReason", () => {
 	test("skips loopback hostnames, with or without a port", () => {
@@ -72,5 +76,38 @@ describe("probeErrorMessage", () => {
 	test("passes anything else through, including a non-Error throw", () => {
 		expect(probeErrorMessage(new Error("Nope"))).toBe("Nope");
 		expect(probeErrorMessage("plain string")).toBe("plain string");
+	});
+});
+
+describe("tcpConnect", () => {
+	test("resolves against a port that is actually listening", async () => {
+		const server = Bun.listen({
+			hostname: "127.0.0.1",
+			port: 0,
+			socket: { data: () => {} },
+		});
+		try {
+			expect(await tcpConnect("127.0.0.1", server.port, 2000)).toBeUndefined();
+		} finally {
+			server.stop(true);
+		}
+	});
+
+	test("rejects on a closed port rather than hanging", async () => {
+		const server = Bun.listen({
+			hostname: "127.0.0.1",
+			port: 0,
+			socket: { data: () => {} },
+		});
+		const port = server.port;
+		server.stop(true);
+
+		await expect(tcpConnect("127.0.0.1", port, 2000)).rejects.toThrow();
+	});
+
+	test("rejects with a timeout on an unroutable address", async () => {
+		await expect(tcpConnect("10.255.255.1", 5432, 250)).rejects.toThrow(
+			"Timed out.",
+		);
 	});
 });

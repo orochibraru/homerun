@@ -147,7 +147,11 @@ if (wantsIntegrationTests()) {
 				);
 
 				stepLog("Building git-build fixture repo...");
-				const gitBuildFixtureUrl = await createGitBuildFixture();
+				const gitFixture = await createGitBuildFixture(
+					agentConfig.dockerSocketPath,
+				);
+				stopFns.push(gitFixture.stop);
+				const gitBuildFixtureUrl = gitFixture.url;
 
 				globalForIntegration.__integration_ctx = {
 					agentRemoteHostId,

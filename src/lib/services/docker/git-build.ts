@@ -1,15 +1,39 @@
-import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { promisify } from "node:util";
+import type { Readable } from "node:stream";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
 import type { RegistryAuth } from "./containers.ts";
+import { MANAGED_LABEL } from "./labels.ts";
 
 const logger = new Logger("GitBuild");
-const execFileAsync = promisify(execFile);
+
+const GIT_IMAGE = "alpine/git:latest";
+
+const CLONE_TIMEOUT_MS = 10 * 60 * 1000;
+
+export function demuxDockerFrames(raw: Buffer): string {
+	const parts: string[] = [];
+	let offset = 0;
+	while (offset + 8 <= raw.length) {
+		const stream = raw[offset];
+		if (stream > 2 || raw[offset + 1] !== 0) {
+			return raw.toString("utf8").trim();
+		}
+		const length = raw.readUInt32BE(offset + 4);
+		parts.push(raw.subarray(offset + 8, offset + 8 + length).toString("utf8"));
+		offset += 8 + length;
+	}
+	return parts.join("").trim();
+}
+
+export function extractCommitSha(output: string): string | null {
+	return /\b[0-9a-f]{40}\b/.exec(output)?.[0] ?? null;
+}
+
+const ignoreCleanupFailure = () => undefined;
+
+const WORKSPACE = "/workspace";
+const REPO_DIR = `${WORKSPACE}/repo`;
 
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pushImage. */
 interface RequiresContainerMixin {
@@ -60,46 +84,131 @@ export function DockerGitBuildMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {
 	return class DockerGitBuildService extends Base {
-		/**
-		 * Clones a git repo at a specific ref and builds its Dockerfile into
-		 * a local image, tagged `tag` : the deploy pipeline then runs that
-		 * tag like any other image, no registry involved. Shells out to the
-		 * system `git` binary (same "shell out to a well-known CLI tool"
-		 * precedent as `tar`/`df`/`nvidia-smi` elsewhere in this app) rather
-		 * than a git library dependency.
-		 */
-		/** Shallow-clones the repo at `ref` into `dir`. A bare commit SHA doesn't work : branches and tags only. */
+		async #ensureGitImage(
+			remote?: RemoteHostConnection | null,
+			onProgress?: (line: string) => void,
+		): Promise<void> {
+			const docker = this.getDocker(remote);
+			try {
+				await docker.getImage(GIT_IMAGE).inspect();
+				return;
+			} catch {
+				onProgress?.(`Pulling ${GIT_IMAGE}...`);
+			}
+			const stream: NodeJS.ReadableStream = await docker.pull(GIT_IMAGE, {});
+			await new Promise<void>((resolve, reject) => {
+				docker.modem.followProgress(stream, (err) =>
+					err ? reject(err) : resolve(),
+				);
+			});
+		}
+
+		async #runInWorkspace(opts: {
+			cmd: string[];
+			entrypoint: string[];
+			readOnly?: boolean;
+			remote?: RemoteHostConnection | null;
+			volumeName: string;
+		}): Promise<{ output: string; statusCode: number }> {
+			const { cmd, entrypoint, readOnly = false, remote, volumeName } = opts;
+			const docker = this.getDocker(remote);
+			const container = await docker.createContainer({
+				Cmd: cmd,
+				Entrypoint: entrypoint,
+				HostConfig: {
+					Binds: [`${volumeName}:${WORKSPACE}${readOnly ? ":ro" : ""}`],
+				},
+				Image: GIT_IMAGE,
+				Labels: { [MANAGED_LABEL]: "true" },
+			});
+			try {
+				await container.start();
+				const result = await Promise.race([
+					container.wait(),
+					new Promise<never>((_, reject) => {
+						setTimeout(
+							() => reject(new Error("The clone timed out.")),
+							CLONE_TIMEOUT_MS,
+						);
+					}),
+				]);
+				const logs = await container.logs({ stderr: true, stdout: true });
+				return {
+					output: demuxDockerFrames(logs as unknown as Buffer),
+					statusCode: result.StatusCode,
+				};
+			} finally {
+				await container.remove({ force: true }).catch(ignoreCleanupFailure);
+			}
+		}
+
 		async #cloneRepo(
 			params: GitBuildParams,
 			ref: string,
-			dir: string,
+			volumeName: string,
 			onProgress?: (line: string) => void,
 		): Promise<string | null> {
 			onProgress?.(`Cloning ${params.gitUrl} (${ref})...`);
-			await execFileAsync("git", [
-				"clone",
-				"--depth",
-				"1",
-				"--branch",
-				ref,
-				"--single-branch",
-				params.gitUrl,
-				dir,
-			]);
-			logger.info(`Cloned: ${params.gitUrl}#${ref} -> ${dir}`);
+			const clone = await this.#runInWorkspace({
+				cmd: [
+					"clone",
+					"--depth",
+					"1",
+					"--branch",
+					ref,
+					"--single-branch",
+					params.gitUrl,
+					REPO_DIR,
+				],
+				entrypoint: ["git"],
+				remote: params.remote,
+				volumeName,
+			});
+			if (clone.statusCode !== 0) {
+				throw new Error(clone.output || `git clone exited ${clone.statusCode}`);
+			}
+			logger.info(`Cloned: ${params.gitUrl}#${ref} -> ${volumeName}`);
 
-			const commit = await execFileAsync("git", [
-				"-C",
-				dir,
-				"rev-parse",
-				"HEAD",
-			])
-				.then(({ stdout }) => stdout.trim() || null)
-				.catch(() => null);
+			const rev = await this.#runInWorkspace({
+				cmd: ["-C", REPO_DIR, "rev-parse", "HEAD"],
+				entrypoint: ["git"],
+				readOnly: true,
+				remote: params.remote,
+				volumeName,
+			}).catch(() => null);
+			const commit =
+				rev?.statusCode === 0 ? extractCommitSha(rev.output) : null;
 			if (commit) {
 				onProgress?.(`Building commit ${commit.slice(0, 7)}`);
 			}
 			return commit;
+		}
+
+		async #openContext(
+			volumeName: string,
+			buildContext: string | null | undefined,
+			remote?: RemoteHostConnection | null,
+		): Promise<{ close: () => Promise<void>; stream: Readable }> {
+			const docker = this.getDocker(remote);
+			const container = await docker.createContainer({
+				Entrypoint: ["true"],
+				HostConfig: { Binds: [`${volumeName}:${WORKSPACE}:ro`] },
+				Image: GIT_IMAGE,
+				Labels: { [MANAGED_LABEL]: "true" },
+			});
+			await container.start();
+			await container.wait();
+
+			const path = buildContext
+				? `${REPO_DIR}/${buildContext.replace(/^\/+|\/+$/g, "")}/.`
+				: `${REPO_DIR}/.`;
+			const stream = (await container.getArchive({ path })) as Readable;
+			return {
+				close: async () => {
+					await container.remove({ force: true }).catch(ignoreCleanupFailure);
+				},
+				stream,
+			};
 		}
 
 		/** Best-effort cache warm-up : no cache yet (first build) or a briefly unreachable registry never fails the build. */
@@ -128,37 +237,31 @@ export function DockerGitBuildMixin<
 		/** Runs the image build itself, forwarding only changed output lines to `onProgress`. */
 		async #runBuild(
 			params: GitBuildParams,
-			dir: string,
+			context: Readable,
 			cacheRef: string | null,
 			onProgress?: (line: string) => void,
 		): Promise<void> {
 			const docker = this.getDocker(params.remote);
-			const contextDir = params.buildContext
-				? join(dir, params.buildContext)
-				: dir;
 			const dockerfile = params.dockerfilePath || "Dockerfile";
 
 			onProgress?.(`Building ${dockerfile}...`);
-			const stream = await docker.buildImage(
-				{ context: contextDir, src: ["."] },
-				{
-					dockerfile,
-					rm: true,
-					t: params.tag,
-					// The classic (non-BuildKit) build API this app uses wants
-					// cachefrom as a JSON-encoded array string, despite
-					// @types/dockerode typing it as a plain string : verified
-					// live, a bare string 400s with "error reading cache-from:
-					// invalid character ... looking for beginning of value"
-					// (the daemon tries to JSON-parse it). No
-					// BUILDKIT_INLINE_CACHE buildarg : that's a BuildKit-only
-					// concept, the classic builder just warns "not consumed"
-					// and ignores it, real cache reuse here comes from the
-					// cachefrom image's layers alone (verified live : a repeat
-					// build showed "Using cache" for every step).
-					...(cacheRef ? { cachefrom: JSON.stringify([cacheRef]) } : {}),
-				},
-			);
+			const stream = await docker.buildImage(context, {
+				dockerfile,
+				rm: true,
+				t: params.tag,
+				// The classic (non-BuildKit) build API this app uses wants
+				// cachefrom as a JSON-encoded array string, despite
+				// @types/dockerode typing it as a plain string : verified
+				// live, a bare string 400s with "error reading cache-from:
+				// invalid character ... looking for beginning of value"
+				// (the daemon tries to JSON-parse it). No
+				// BUILDKIT_INLINE_CACHE buildarg : that's a BuildKit-only
+				// concept, the classic builder just warns "not consumed"
+				// and ignores it, real cache reuse here comes from the
+				// cachefrom image's layers alone (verified live : a repeat
+				// build showed "Using cache" for every step).
+				...(cacheRef ? { cachefrom: JSON.stringify([cacheRef]) } : {}),
+			});
 
 			await new Promise<void>((resolvePromise, reject) => {
 				let lastStatus = "";
@@ -189,8 +292,8 @@ export function DockerGitBuildMixin<
 			onProgress?: (line: string) => void,
 		): Promise<GitBuildResult> {
 			const ref = params.gitRef || "main";
-			const dir = await mkdtemp(join(tmpdir(), "homerun-build-"));
 			const docker = this.getDocker(params.remote);
+			const volumeName = `homerun-build-${crypto.randomUUID()}`;
 
 			// Same image name as `tag` (before the ":"), just pushed under the
 			// cache registry instead of staying purely local : a stable name
@@ -209,14 +312,26 @@ export function DockerGitBuildMixin<
 				: undefined;
 
 			let commit: string | null = null;
+			let context: { close: () => Promise<void>; stream: Readable } | null =
+				null;
 			try {
-				commit = await this.#cloneRepo(params, ref, dir, onProgress);
+				await docker.createVolume({
+					Labels: { [MANAGED_LABEL]: "true" },
+					Name: volumeName,
+				});
+				await this.#ensureGitImage(params.remote, onProgress);
+				commit = await this.#cloneRepo(params, ref, volumeName, onProgress);
 
 				if (cacheRef) {
 					await this.#pullBuildCache(docker, cacheRef, cacheAuth, onProgress);
 				}
 
-				await this.#runBuild(params, dir, cacheRef, onProgress);
+				context = await this.#openContext(
+					volumeName,
+					params.buildContext,
+					params.remote,
+				);
+				await this.#runBuild(params, context.stream, cacheRef, onProgress);
 				logger.info(`Build succeeded: tag=${params.tag}`);
 
 				if (cacheRef) {
@@ -244,10 +359,10 @@ export function DockerGitBuildMixin<
 				logger.error(`Build failed: ${params.gitUrl}#${ref}`, err);
 				return { error: message, success: false };
 			} finally {
-				await rm(dir, { force: true, recursive: true }).catch(() => {
-					// Best-effort cleanup : a leftover temp dir isn't worth
-					// failing the build over.
-				});
+				await context?.close();
+				// Best-effort cleanup : a leftover temp dir isn't worth
+				// failing the build over.
+				await docker.getVolume(volumeName).remove().catch(ignoreCleanupFailure);
 			}
 		}
 	};

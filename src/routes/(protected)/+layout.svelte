@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Activity,
 		BookOpen,
 		CalendarClock,
 		Clock,
@@ -99,6 +100,14 @@
 			href: resolve("/cron-jobs"),
 			icon: Clock,
 			label: "Cron Jobs",
+		},
+		{
+			adminOnly: false,
+			category: "Workspace",
+			exact: false,
+			href: resolve("/status-pages"),
+			icon: Activity,
+			label: "Status Page",
 		},
 		{
 			adminOnly: false,

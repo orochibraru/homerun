@@ -4,6 +4,10 @@ import { type ProbeResult, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 import { isDatabaseImage } from "$lib/service-link";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { DockerService } from "../docker.service.ts";
+import {
+	detectTransitions,
+	StatusAlertService,
+} from "../status-alert.service.ts";
 
 const TIMEOUT_MS = 5000;
 
@@ -57,13 +61,53 @@ export function probeErrorMessage(err: unknown): string {
 	if (/timed? ?out|aborted/i.test(message)) {
 		return "Timed out.";
 	}
-	if (/refused/i.test(message)) {
+	if (/refused|failed to connect/i.test(message)) {
 		return "Connection refused.";
 	}
 	if (/certificate|tls|ssl/i.test(message)) {
 		return `TLS failed: ${message}`;
 	}
 	return message;
+}
+
+const REQUIRED_BY_BUN_CONNECT = () => undefined;
+
+export function tcpConnect(
+	host: string,
+	port: number,
+	timeoutMs: number = TIMEOUT_MS,
+): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		const timer = setTimeout(() => {
+			reject(new Error("Timed out."));
+		}, timeoutMs);
+		let settled = false;
+		const settle = (err?: unknown) => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			clearTimeout(timer);
+			if (err) {
+				reject(err instanceof Error ? err : new Error(String(err)));
+			} else {
+				resolve();
+			}
+		};
+		Bun.connect({
+			hostname: host,
+			port,
+			socket: {
+				connectError: (_socket, err) => settle(err),
+				data: REQUIRED_BY_BUN_CONNECT,
+				error: (_socket, err) => settle(err),
+				open: (socket) => {
+					socket.end();
+					settle();
+				},
+			},
+		}).catch(settle);
+	});
 }
 
 /**
@@ -91,12 +135,27 @@ export class UptimeProbe extends BaseScheduler {
 	protected async tick(): Promise<void> {
 		this.#ticks += 1;
 
-		const services = await ServiceDTO.listRunningWithContainers();
-		const probes = services
-			.filter((svc) => svc.uptimeEnabled)
-			.flatMap((svc) => [this.#internal(svc), this.#external(svc)]);
-		const results = await Promise.all(probes);
-		await UptimeCheckDTO.recordMany(results.filter((r) => r !== null));
+		const services = (await ServiceDTO.listRunningWithContainers()).filter(
+			(svc) => svc.uptimeEnabled,
+		);
+		const previous = await UptimeCheckDTO.latestByProbe(
+			services.map((svc) => svc.id),
+		);
+
+		const probes = services.flatMap((svc) => [
+			this.#internal(svc),
+			this.#external(svc),
+		]);
+		const results = (await Promise.all(probes)).filter((r) => r !== null);
+		await UptimeCheckDTO.recordMany(results);
+
+		const transitions = detectTransitions(previous, results);
+		if (transitions.length > 0) {
+			await StatusAlertService.dispatch(
+				transitions,
+				new Map(services.map((svc) => [svc.id, svc])),
+			);
+		}
 
 		if (this.#ticks % PRUNE_EVERY_TICKS === 0) {
 			await UptimeCheckDTO.prune();
@@ -147,13 +206,7 @@ export class UptimeProbe extends BaseScheduler {
 		const startedAt = Date.now();
 		const target = `tcp://${host}:${port}`;
 		try {
-			const socket = await Promise.race([
-				Bun.connect({ hostname: host, port, socket: {} }),
-				new Promise<never>((_, reject) => {
-					setTimeout(() => reject(new Error("Timed out.")), TIMEOUT_MS);
-				}),
-			]);
-			socket.end();
+			await tcpConnect(host, port);
 			return {
 				detail: "Port accepting connections",
 				kind: "internal",
