@@ -278,7 +278,7 @@
     {/if}
 
     {#if data.templateLinks.length > 0}
-      <div class="rounded-xl glass p-4 text-sm">
+      <div class="rounded-xl panel p-4 text-sm">
         <p class="font-medium text-text">
           {data.projectId
             ? "This will also deploy, alongside this service in the project:"
@@ -311,7 +311,7 @@
       <div class="flex-1 space-y-6">
         <!-- ═══ Step 1: Basic info ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-2xl panel"
           class:hidden={currentStep !== 0}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -541,7 +541,7 @@
 
         <!-- ═══ Step 1: Private registry (collapsible) ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-2xl panel"
           class:hidden={currentStep !== 0}
         >
           <Button
@@ -608,7 +608,7 @@
 
         <!-- ═══ Step 2: Networking ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-2xl panel"
           class:hidden={currentStep !== 1}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -658,7 +658,7 @@
 
         <!-- ═══ Step 3: Environment ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-2xl panel"
           class:hidden={currentStep !== 2}
         >
           <div class="border-b border-border px-5 py-4">
@@ -713,7 +713,7 @@
 
         <!-- ═══ Step 4: Compute ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-2xl panel"
           class:hidden={currentStep !== 3}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">

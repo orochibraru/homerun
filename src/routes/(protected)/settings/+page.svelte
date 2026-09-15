@@ -36,7 +36,7 @@
 	}
 </script>
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-2xl">
   <div class="border-border border-b px-5 py-4">
     <h2 class="eyebrow">Core</h2>
     <p class="text-text-muted text-xs">

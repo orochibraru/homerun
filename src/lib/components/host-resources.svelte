@@ -61,7 +61,7 @@
   </div>
 {/snippet}
 
-<div class="glass mb-8 rounded-2xl p-5">
+<div class="panel mb-8 rounded-2xl p-5">
   <h2 class="eyebrow mb-4">Host Resources</h2>
 
   {#if stats.error}

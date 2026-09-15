@@ -108,7 +108,7 @@
       success: "Template created.",
     })}
   >
-    <section class="rounded-2xl glass">
+    <section class="rounded-2xl panel">
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <LayoutGrid class="size-4" />
@@ -210,7 +210,7 @@
       </div>
     </section>
 
-    <section class="rounded-2xl glass">
+    <section class="rounded-2xl panel">
       <div class="border-b border-border px-5 py-4">
         <h2 class="eyebrow">Environment variables</h2>
       </div>
@@ -253,7 +253,7 @@
     </section>
 
     {#if data.linkableTemplates.length > 0}
-      <section class="rounded-2xl glass">
+      <section class="rounded-2xl panel">
         <div class="flex items-center gap-3 border-b border-border px-5 py-4">
           <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
             <Link2 class="size-4" />

@@ -36,12 +36,9 @@
 
 <div class="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
   <aside
-    class="relative hidden flex-col justify-between overflow-hidden border-r border-border px-10 py-12 lg:flex xl:px-16"
+    class="bg-surface relative hidden flex-col justify-between overflow-hidden border-r border-border px-10 py-12 lg:flex xl:px-16"
   >
-    <div
-      class="pointer-events-none absolute -top-40 -left-32 size-[34rem] rounded-full bg-(--color-accent-glow) opacity-70 blur-[130px]"
-    >
-    </div>
+    <span class="bg-accent absolute inset-y-0 left-0 w-1"></span>
 
     <BrandMark class="relative" size="lg" />
 
@@ -75,7 +72,7 @@
       </ul>
     </div>
 
-    <div class="glass relative max-w-md rounded-2xl p-4">
+    <div class="panel relative max-w-md rounded-2xl p-4">
       <div class="flex items-center gap-1.5 border-b border-border pb-3">
         <span class="size-2 rounded-full bg-red-400/60"></span>
         <span class="size-2 rounded-full bg-amber-400/60"></span>
@@ -116,7 +113,7 @@
         {/if}
       </div>
 
-      <div class="glass rounded-2xl p-6 sm:p-7">
+      <div class="panel rounded-2xl p-6 sm:p-7">
         {@render children()}
       </div>
 

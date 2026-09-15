@@ -121,7 +121,7 @@
   <div class="relative min-w-52 flex-1">
     <Search class="text-text-subtle absolute top-1/2 left-3 size-4 -translate-y-1/2" />
     <input
-      class="glass text-text placeholder:text-text-subtle focus:border-accent w-full rounded-lg py-2 pr-3 pl-9 text-sm focus:outline-none"
+      class="panel text-text placeholder:text-text-subtle focus:border-accent w-full rounded-lg py-2 pr-3 pl-9 text-sm focus:outline-none"
       oninput={(e) => onSearchInput(e.currentTarget.value)}
       {placeholder}
       type="search"

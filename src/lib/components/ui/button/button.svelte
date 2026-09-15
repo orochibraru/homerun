@@ -29,16 +29,16 @@
 			},
 			variant: {
 				default:
-					"bg-accent text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.22),0_1px_2px_rgba(0,0,0,0.16)] hover:brightness-110 hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.28),0_0_0_4px_var(--color-accent-light),0_1px_2px_rgba(0,0,0,0.16)]",
+					"bg-ink text-ink-foreground hover:bg-ink/90 focus-visible:ring-ink/25",
 				destructive:
-					"bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 dark:hover:bg-destructive/30",
+					"bg-destructive/12 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/18 dark:focus-visible:ring-destructive/40 dark:hover:bg-destructive/28",
 				ghost:
 					"text-text-muted hover:bg-surface-2 hover:text-text aria-expanded:bg-surface-2 aria-expanded:text-text",
 				link: "text-accent underline-offset-4 hover:underline",
 				outline:
-					"border-border bg-surface-2 text-text shadow-[inset_0_1px_0_0_var(--glass-highlight)] backdrop-blur-md hover:border-border-light hover:bg-surface-3 aria-expanded:bg-surface-3",
+					"border-border-light bg-surface text-text hover:bg-surface-2 aria-expanded:bg-surface-2",
 				secondary:
-					"bg-surface-2 text-text shadow-[inset_0_1px_0_0_var(--glass-highlight)] backdrop-blur-md hover:bg-surface-3 aria-expanded:bg-surface-3",
+					"bg-surface-2 text-text hover:bg-surface-3 aria-expanded:bg-surface-3",
 			},
 		},
 	});

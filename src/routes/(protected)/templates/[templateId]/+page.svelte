@@ -107,7 +107,7 @@
         <div class="flex flex-wrap gap-3">
             {#if tmpl.sourceUrl}
                 <a
-                    class="inline-flex items-center gap-1.5 rounded-lg glass px-3 py-1.5 text-sm text-text hover:bg-surface-2"
+                    class="inline-flex items-center gap-1.5 rounded-lg panel px-3 py-1.5 text-sm text-text hover:bg-surface-2"
                     href={tmpl.sourceUrl}
                     rel="noopener noreferrer"
                     target="_blank"
@@ -119,7 +119,7 @@
             {/if}
             {#if tmpl.websiteUrl}
                 <a
-                    class="inline-flex items-center gap-1.5 rounded-lg glass px-3 py-1.5 text-sm text-text hover:bg-surface-2"
+                    class="inline-flex items-center gap-1.5 rounded-lg panel px-3 py-1.5 text-sm text-text hover:bg-surface-2"
                     href={tmpl.websiteUrl}
                     rel="noopener noreferrer"
                     target="_blank"
@@ -133,7 +133,7 @@
     {/if}
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="rounded-2xl glass p-5">
+        <div class="rounded-2xl panel p-5">
             <h2
                 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
             >
@@ -168,7 +168,7 @@
         </div>
 
         {#if Object.keys(tmpl.envVars ?? {}).length > 0}
-            <div class="rounded-2xl glass p-5">
+            <div class="rounded-2xl panel p-5">
                 <h2
                     class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
                 >
@@ -189,7 +189,7 @@
     </div>
 
     {#if data.links.length > 0}
-        <div class="rounded-2xl glass p-5">
+        <div class="rounded-2xl panel p-5">
             <h2
                 class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
             >
@@ -224,7 +224,7 @@
     {#if tmpl.sourceUrl}
         {#await data.github then repo}
             {#if repo}
-                <div class="rounded-2xl glass p-5">
+                <div class="rounded-2xl panel p-5">
                     <h2 class="eyebrow mb-3">Repository</h2>
                     <div class="flex flex-wrap gap-6 text-sm">
                         {#if repo.stars !== null}
@@ -258,7 +258,7 @@
                 </div>
 
                 {#if repo.readmeHtml}
-                    <div class="rounded-2xl glass p-6">
+                    <div class="rounded-2xl panel p-6">
                         <h2 class="eyebrow mb-3">Readme</h2>
                         <div class="readme max-w-none text-sm text-text">
                             {@html repo.readmeHtml}

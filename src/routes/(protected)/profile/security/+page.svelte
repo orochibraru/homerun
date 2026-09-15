@@ -168,7 +168,7 @@
 <div class="space-y-6">
   <!-- ═══ Connected sign-in providers ═══ -->
   {#if data.providers.length > 0}
-    <section class="glass rounded-2xl">
+    <section class="panel rounded-2xl">
       <div class="border-border border-b px-5 py-4">
         <h2 class="eyebrow">Connected accounts</h2>
         <p class="text-text-muted text-xs">
@@ -231,7 +231,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        PASSWORD
        ════════════════════════════════════════════════════════════ -->
-  <section class="rounded-2xl glass">
+  <section class="rounded-2xl panel">
     <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
         <KeyRound class="size-4" />

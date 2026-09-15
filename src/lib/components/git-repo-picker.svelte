@@ -56,7 +56,7 @@
   <p class={labelClass}>Browse repos</p>
   <div class="flex flex-wrap gap-2">
     {#if providers.length > 1}
-      <select bind:value={providerId} class="glass rounded-lg px-3 py-2 text-sm">
+      <select bind:value={providerId} class="panel rounded-lg px-3 py-2 text-sm">
         {#each providers as p (p.id)}
           <option value={p.id}>{p.name} ({p.providerUsername})</option>
         {/each}
@@ -82,7 +82,7 @@
       {:else}
         <select
           bind:value={selectedRepo}
-          class="glass mt-3 w-full rounded-lg px-3 py-2 text-sm"
+          class="panel mt-3 w-full rounded-lg px-3 py-2 text-sm"
           onchange={(e) => pickRepo(repos, e.currentTarget.value)}
         >
           <option value="">Select a repo…</option>

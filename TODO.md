@@ -4,12 +4,17 @@ The backlog, and the only one. `Small`/`Medium`/`Large` are rough size, not
 priority : there is no priority ordering, pick whatever. Tick an item off and
 move it under `## Done` in the same change that finishes it.
 
-## Small
+## Broken core features
 
-- [ ] [API] **Remove a swarm service on `DELETE /api/v1/services/:id`.** The
-      handler only removes a container, so deleting a swarm-mode service through
-      the API leaves its swarm service running on the host. The dashboard's own
-      delete action already handles both.
+- [ ] Domain routing doesnt work through pangolin. Routes are created, but we
+      hit a 404.
+- [ ] Setting a let's encrypt email in the ui does nothing, it needs to.
+- [ ] For SSL regardless of what we use we need to terminate on both ends so yes
+      even if we use pangolin we're terminating tls.
+- [ ] Switching to swarm mode just changes a setting but doesnt initialize a
+      swarm nor updates the network or do anything to make this feature work.
+
+## Small
 
 ## Medium
 
@@ -87,3 +92,13 @@ move it under `## Done` in the same change that finishes it.
       done : `UserService.cleanupUserResources` deletes them (after removing
       each project's Docker network), and `project.userId` is
       `onDelete: "cascade"` on top of that.
+- [x] [API] **Remove a swarm service on `DELETE /api/v1/services/:id`.** Same
+      `swarmServiceId` branch the dashboard's own delete action already had.
+- [x] [App] **Make the UI less blah.** The gridded, blurred, low-contrast look
+      is gone: no ambient backdrop and no `body::after` grid, `glass` is now an
+      opaque `panel`, text tokens are pushed to real contrast, the radius scale
+      is tighter, and primary buttons are ink-on-white / white-on-ink instead of
+      a tinted fill. The sidebar is a permanently dark `ink-surface` rail in
+      both themes, which is where the light/dark split comes from. See
+      `.agents/notes/ui.md` for the token map and for how to screenshot a visual
+      change before calling it done.

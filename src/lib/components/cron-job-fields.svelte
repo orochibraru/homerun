@@ -62,7 +62,7 @@
 
 <input name="kind" type="hidden" value={kind}>
 
-<section class="glass space-y-4 rounded-2xl p-5">
+<section class="panel space-y-4 rounded-2xl p-5">
   <div class="grid gap-3 sm:grid-cols-2">
     <div>
       <label class={labelClass} for="name">Name</label>
@@ -199,7 +199,7 @@
   />
 </section>
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-2xl">
   <div class="border-border border-b px-5 py-4">
     <h2 class="eyebrow">Environment variables</h2>
   </div>
@@ -242,7 +242,7 @@
 </section>
 
 {#if kind === "image"}
-  <section class="glass rounded-2xl p-5">
+  <section class="panel rounded-2xl p-5">
     <Button
       class="h-auto p-0"
       onclick={() => {

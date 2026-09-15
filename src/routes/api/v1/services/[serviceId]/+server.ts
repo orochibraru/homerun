@@ -77,7 +77,13 @@ export const DELETE = async ({ params, locals, platform }) => {
 		return json({ error: "Not found" }, { status: 404 });
 	}
 
-	if (svc.containerId) {
+	if (svc.swarmServiceId) {
+		try {
+			await DockerService.removeSwarmService(svc.swarmServiceId);
+		} catch {
+			// Already gone on the swarm : proceed with deleting the record.
+		}
+	} else if (svc.containerId) {
 		try {
 			await ServiceLifecycleService.remove(svc.containerId);
 		} catch {

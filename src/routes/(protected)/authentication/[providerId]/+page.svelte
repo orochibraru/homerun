@@ -46,7 +46,7 @@
     <p class="text-text-subtle mt-1 font-mono text-sm">{data.provider.name}</p>
   </div>
 
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Provider</h2>
       <p class="text-text-muted text-xs">
@@ -88,7 +88,7 @@
   </section>
 
   {#if data.usedBy.length > 0}
-    <section class="glass rounded-2xl">
+    <section class="panel rounded-2xl">
       <div class="border-border border-b px-5 py-4">
         <h2 class="eyebrow">Used by</h2>
         <p class="text-text-muted text-xs">

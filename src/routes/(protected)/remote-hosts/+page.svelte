@@ -83,7 +83,7 @@
     {:else}
     <div class="space-y-3">
       {#each data.hosts as host (host.id)}
-        <div class="glass flex items-center gap-4 rounded-2xl p-5">
+        <div class="panel flex items-center gap-4 rounded-2xl p-5">
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <Server class="size-5" />
           </div>

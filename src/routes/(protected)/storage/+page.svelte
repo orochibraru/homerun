@@ -115,7 +115,7 @@
     {/snippet}
 
     {#snippet row(vol: (typeof data.volumes)[number])}
-      <div class="glass flex items-center gap-4 rounded-2xl p-5">
+      <div class="panel flex items-center gap-4 rounded-2xl p-5">
         <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
           <HardDrive class="size-5" />
         </div>
@@ -144,7 +144,7 @@
     {/snippet}
 
     {#snippet card(vol: (typeof data.volumes)[number])}
-      <div class="glass flex flex-col gap-3 rounded-2xl p-5">
+      <div class="panel flex flex-col gap-3 rounded-2xl p-5">
         <div class="flex items-center gap-3">
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
             <HardDrive class="size-5" />

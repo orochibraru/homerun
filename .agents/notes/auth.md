@@ -574,7 +574,7 @@ underlying gotcha (`resolve()` here returns a relative path, not useful for a
 gate needs one, just not implemented this way anymore.
 
 `/onboarding/+page.svelte` is a 5-step wizard (Core / Docker / Traefik / Email /
-Review) in a centred `max-w-3xl` column, each step a `glass` panel with its own
+Review) in a centred `max-w-3xl` column, each step a `panel` card with its own
 header, closing on a Review step that lists what's about to be persisted. It's
 built on the reusable `$lib/components/stepper.svelte` (connected circular step
 markers with labels at `sm+`, a progress bar below that, `Button` primitives for

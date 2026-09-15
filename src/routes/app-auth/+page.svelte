@@ -91,7 +91,7 @@
 
 <div class="flex min-h-screen flex-col items-center justify-center px-6 py-12">
   <div class="w-full max-w-md">
-    <div class="glass overflow-hidden rounded-2xl">
+    <div class="panel overflow-hidden rounded-2xl">
       <div
         class="flex items-center gap-3 border-b border-border bg-surface-2 px-6 py-5"
       >

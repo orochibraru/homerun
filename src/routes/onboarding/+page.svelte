@@ -318,7 +318,7 @@
 {#if data.waitingForAdmin}
   <div class="flex min-h-screen flex-col items-center justify-center p-6">
     <BrandMark class="mb-10" size="lg" />
-    <div class="glass w-full max-w-md rounded-2xl p-8 text-center">
+    <div class="panel w-full max-w-md rounded-2xl p-8 text-center">
       <div
         class="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500"
       >
@@ -386,7 +386,7 @@
         {#snippet children()}
           <!-- ═══ Step 1: Core ═══ -->
           <section
-            class="space-y-5 rounded-2xl glass p-6"
+            class="space-y-5 rounded-2xl panel p-6"
             class:hidden={activeStep !== 0}
           >
             {@render panelHeader(
@@ -428,7 +428,7 @@
 
           <!-- ═══ Step 2: Docker ═══ -->
           <section
-            class="space-y-5 rounded-2xl glass p-6"
+            class="space-y-5 rounded-2xl panel p-6"
             class:hidden={activeStep !== 1}
           >
             {@render panelHeader(
@@ -471,7 +471,7 @@
 
           <!-- ═══ Step 3: Traefik ═══ -->
           <section
-            class="space-y-5 rounded-2xl glass p-6"
+            class="space-y-5 rounded-2xl panel p-6"
             class:hidden={activeStep !== 2}
           >
             {@render panelHeader(
@@ -523,7 +523,7 @@
 
           <!-- ═══ Step 4: Email ═══ -->
           <section
-            class="space-y-5 rounded-2xl glass p-6"
+            class="space-y-5 rounded-2xl panel p-6"
             class:hidden={activeStep !== 3}
           >
             {@render panelHeader(
@@ -624,7 +624,7 @@
 
           <!-- ═══ Step 5: Review ═══ -->
           <section
-            class="space-y-5 rounded-2xl glass p-6"
+            class="space-y-5 rounded-2xl panel p-6"
             class:hidden={activeStep !== 4}
           >
             {@render panelHeader(

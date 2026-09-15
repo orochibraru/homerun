@@ -34,7 +34,7 @@
         class="
           relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-all duration-200
           {isActive
-          ? 'border-accent text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]'
+          ? 'border-accent text-text'
           : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
         "
         href={tab.href}
@@ -53,7 +53,7 @@
         class="
           relative flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.8125rem] font-medium whitespace-nowrap transition-all duration-200
           {isActive
-          ? 'border-accent text-accent drop-shadow-[0_0_6px_var(--color-accent-glow)]'
+          ? 'border-accent text-text'
           : 'border-transparent text-text-muted hover:border-border-light hover:text-text'}
         "
         onclick={() => onSelect?.(tab.id)}

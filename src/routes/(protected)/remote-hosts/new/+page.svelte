@@ -34,7 +34,7 @@
 
     <form
         action="?/create"
-        class="mb-6 space-y-4 rounded-2xl glass p-5"
+        class="mb-6 space-y-4 rounded-2xl panel p-5"
         method="POST"
         use:enhance={enhanceToast({
           error: "Check the form for errors.",

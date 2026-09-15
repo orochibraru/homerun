@@ -29,7 +29,7 @@
 
 {#snippet row(entry: QueuedJob)}
   {@const meta = JOB_STATUS_CONFIG[entry.status]}
-  <div class="glass flex items-center gap-4 rounded-2xl p-4">
+  <div class="panel flex items-center gap-4 rounded-2xl p-4">
     <div class="min-w-0 flex-1">
       <p class="text-text truncate text-sm font-semibold">{entry.title}</p>
       <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
@@ -73,7 +73,7 @@
   {#if !queue.ready}
     <div class="space-y-2.5">
       {#each [0, 1] as placeholder (placeholder)}
-        <div class="glass flex items-center gap-4 rounded-2xl p-4">
+        <div class="panel flex items-center gap-4 rounded-2xl p-4">
           <div class="min-w-0 flex-1 space-y-1.5">
             <Skeleton class="h-4 w-48" />
             <Skeleton class="h-3 w-32" />

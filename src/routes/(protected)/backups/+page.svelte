@@ -89,7 +89,7 @@
     {:else}
       <div class="space-y-2.5">
         {#each backupEnabledVolumes as vol (vol.id)}
-          <div class="glass flex items-center gap-4 rounded-2xl p-4">
+          <div class="panel flex items-center gap-4 rounded-2xl p-4">
             <div class="min-w-0 flex-1">
               <a
                 class="text-text hover:text-accent truncate text-sm font-semibold"
@@ -147,7 +147,7 @@
           <p class="text-text-muted text-sm">No runs match your filters.</p>
         </div>
       {:else}
-      <div class="glass overflow-x-auto rounded-2xl">
+      <div class="panel overflow-x-auto rounded-2xl">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-border text-text-muted border-b text-left text-xs uppercase">

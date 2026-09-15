@@ -78,7 +78,7 @@
 
   <form
     action="?/preview"
-    class="glass space-y-3 rounded-2xl p-5"
+    class="panel space-y-3 rounded-2xl p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Couldn't parse that compose file.",
@@ -143,7 +143,7 @@
         </div>
       {/if}
 
-      <section class="glass rounded-2xl">
+      <section class="panel rounded-2xl">
         <div class="border-border border-b px-5 py-4">
           <h2 class="eyebrow">Services ({plan.services.length})</h2>
         </div>
@@ -195,7 +195,7 @@
         </div>
       </section>
 
-      <section class="glass space-y-4 rounded-2xl p-5">
+      <section class="panel space-y-4 rounded-2xl p-5">
         <div>
           <label class={labelClass} for="projectId">Project</label>
           <SelectRoot name="projectId" type="single" bind:value={projectId}>

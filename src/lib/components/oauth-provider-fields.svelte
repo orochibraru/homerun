@@ -112,7 +112,7 @@
       <label class={label} for="tokenAuthMethod">Client authentication</label>
       <select
         bind:value={values.tokenAuthMethod}
-        class="glass w-full rounded-lg px-3 py-2 text-sm"
+        class="panel w-full rounded-lg px-3 py-2 text-sm"
         id="tokenAuthMethod"
         name="tokenAuthMethod"
       >

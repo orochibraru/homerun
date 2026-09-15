@@ -339,7 +339,7 @@
 
       {#snippet row(svc: Svc)}
         <div
-          class="glass flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md {selectedSet.has(
+          class="panel flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md {selectedSet.has(
           svc.id,
         )
           ? 'ring-accent/40 ring-2'
@@ -378,7 +378,7 @@
 
       {#snippet card(svc: Svc)}
         <div
-          class="glass glass-interactive flex flex-col gap-3 rounded-2xl p-5 {selectedSet.has(
+          class="panel panel-interactive flex flex-col gap-3 rounded-2xl p-5 {selectedSet.has(
           svc.id,
         )
           ? 'ring-accent/40 ring-2'
@@ -443,7 +443,7 @@
   <div class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
     <form
       action="?/bulk"
-      class="glass-strong pointer-events-auto flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 shadow-lg"
+      class="panel-strong pointer-events-auto flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 shadow-lg"
       method="POST"
       bind:this={bulkForm}
       use:enhance={bulkSubmit}

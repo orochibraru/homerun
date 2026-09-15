@@ -63,7 +63,7 @@
     {:else}
       {#snippet row(proj: Project)}
         <a
-          class="glass flex items-center gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md"
+          class="panel flex items-center gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md"
           href="{resolve('/projects')}/{proj.id}"
         >
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
@@ -87,7 +87,7 @@
 
       {#snippet card(proj: Project)}
         <a
-          class="glass glass-interactive block rounded-2xl p-5"
+          class="panel panel-interactive block rounded-2xl p-5"
           href="{resolve('/projects')}/{proj.id}"
         >
           <div class="bg-accent/10 text-accent mb-3 flex size-10 items-center justify-center rounded-xl">

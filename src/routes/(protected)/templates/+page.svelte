@@ -110,7 +110,7 @@
 {/snippet}
 
 {#snippet card(tmpl: Template)}
-  <div class="glass flex h-full flex-col justify-between gap-2 rounded-2xl p-5 transition-shadow hover:shadow-md">
+  <div class="panel flex h-full flex-col justify-between gap-2 rounded-2xl p-5 transition-shadow hover:shadow-md">
     <a class="flex flex-col gap-2" href={detailsHref(tmpl)}>
       <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
       <p class="text-text font-semibold">{tmpl.name}</p>
@@ -135,7 +135,7 @@
 {/snippet}
 
 {#snippet row(tmpl: Template)}
-  <div class="glass flex flex-wrap items-center gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md">
+  <div class="panel flex flex-wrap items-center gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md">
     <a class="flex min-w-0 flex-1 items-center gap-4" href={detailsHref(tmpl)}>
       <TemplateIcon category={tmpl.category} icon={tmpl.icon} />
       <div class="min-w-0">

@@ -6,7 +6,7 @@
 	const { view }: { view: ViewMode } = $props();
 </script>
 
-<div class="glass inline-flex shrink-0 rounded-lg p-0.5">
+<div class="panel inline-flex shrink-0 rounded-lg p-0.5">
   <Button
     aria-label="List view"
     class="h-auto px-2 py-1 {view.current === 'list' ? 'bg-surface-2' : ''}"

@@ -47,11 +47,11 @@
       </span>
     </div>
   {:else if form?.denied}
-    <div class="rounded-2xl glass p-4 text-sm text-text-muted">
+    <div class="rounded-2xl panel p-4 text-sm text-text-muted">
       Login request denied.
     </div>
   {:else}
-    <form action="?/approve" class="glass rounded-2xl p-5" method="POST" use:enhance>
+    <form action="?/approve" class="panel rounded-2xl p-5" method="POST" use:enhance>
       <p class="text-text-muted mb-4 text-sm">
         Confirm the code shown by
         <code class="font-mono text-xs text-text">homerun login</code> on your

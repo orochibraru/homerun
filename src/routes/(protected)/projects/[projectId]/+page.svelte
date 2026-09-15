@@ -81,7 +81,7 @@
   {:else}
     <form
       action="?/rename"
-      class="mb-8 space-y-4 rounded-2xl glass p-5"
+      class="mb-8 space-y-4 rounded-2xl panel p-5"
       method="POST"
       use:enhance={enhanceToast({
         error: "Check the form for errors.",
@@ -154,7 +154,7 @@
     <div class="mb-8 space-y-3">
       {#each data.services as svc (svc.id)}
         <a
-          class="flex items-center gap-4 rounded-2xl glass p-5 transition-shadow hover:shadow-md"
+          class="flex items-center gap-4 rounded-2xl panel p-5 transition-shadow hover:shadow-md"
           href="{resolve('/services')}/{svc.id}"
         >
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">

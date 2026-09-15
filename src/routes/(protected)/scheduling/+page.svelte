@@ -47,7 +47,7 @@
         <div class="space-y-2.5">
           {#each data.cronServices as { projectName, service } (service.id)}
             <a
-              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
+              class="panel hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
               href="{resolve('/services')}/{service.id}/settings"
             >
               <div class="min-w-0 flex-1">
@@ -86,7 +86,7 @@
         <div class="space-y-2.5">
           {#each data.cronJobs as job (job.id)}
             <a
-              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
+              class="panel hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
               href="{resolve('/cron-jobs')}/{job.id}"
             >
               <div class="min-w-0 flex-1">
@@ -123,7 +123,7 @@
         <div class="space-y-2.5">
           {#each data.backupVolumes as vol (vol.id)}
             <a
-              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
+              class="panel hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
               href="{resolve('/storage')}/{vol.id}"
             >
               <div class="min-w-0 flex-1">

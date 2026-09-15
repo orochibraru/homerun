@@ -54,7 +54,7 @@
     </p>
   </div>
 
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border border-b px-5 py-4">
       <p class={label}>Start from a preset</p>
       <div class="flex flex-wrap gap-2">

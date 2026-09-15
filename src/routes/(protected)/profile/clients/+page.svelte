@@ -64,7 +64,7 @@
     </div>
   {/if}
 
-  <section class="rounded-2xl glass">
+  <section class="rounded-2xl panel">
     <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div class="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
         <KeyRound class="size-4" />

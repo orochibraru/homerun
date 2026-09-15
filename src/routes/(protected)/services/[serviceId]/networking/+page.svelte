@@ -94,7 +94,7 @@
 
 <div class="space-y-6">
   <!-- ═══ DNS / public routing ═══ -->
-  <section class="glass rounded-2xl p-5">
+  <section class="panel rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Globe class="size-4" />
@@ -199,7 +199,7 @@
   </section>
 
   <!-- ═══ Access ═══ -->
-  <section class="glass rounded-2xl p-5">
+  <section class="panel rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <LockKeyhole class="size-4" />
@@ -385,7 +385,7 @@
   </section>
 
   <!-- ═══ SSL ═══ -->
-  <section class="glass rounded-2xl p-5">
+  <section class="panel rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <ShieldCheck class="size-4" />
@@ -481,7 +481,7 @@
   </section>
 
   <!-- ═══ Network ═══ -->
-  <section class="glass rounded-2xl p-5">
+  <section class="panel rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Network class="size-4" />

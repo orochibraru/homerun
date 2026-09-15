@@ -45,7 +45,7 @@
   </div>
 
   {#if data.host.kind === "agent"}
-    <div class="mb-6 flex items-center gap-2 rounded-xl glass p-4 text-sm">
+    <div class="mb-6 flex items-center gap-2 rounded-xl panel p-4 text-sm">
       {#if data.agentStatus?.reachable}
         <span class="inline-block size-2 rounded-full bg-green-500"></span>
         <span class="text-text">Online</span>
@@ -60,7 +60,7 @@
   {/if}
 
   <form
-    class="mb-6 space-y-4 rounded-2xl glass p-5"
+    class="mb-6 space-y-4 rounded-2xl panel p-5"
     action="?/update"
     method="POST"
     use:enhance={enhanceToast({

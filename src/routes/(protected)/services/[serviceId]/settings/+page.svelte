@@ -69,7 +69,7 @@
 </script>
 
 <div class="space-y-6">
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border flex items-center gap-3 border-b px-5 py-4">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Settings class="size-4" />
@@ -196,7 +196,7 @@
   </section>
 
   <!-- ═══ Project ═══ -->
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -236,7 +236,7 @@
   </section>
 
   <!-- ═══ Save as template ═══ -->
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -266,7 +266,7 @@
   </section>
 
   <!-- ═══ Auto-redeploy (cron) ═══ -->
-  <section class="glass rounded-2xl p-5">
+  <section class="panel rounded-2xl p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Clock class="size-4" />

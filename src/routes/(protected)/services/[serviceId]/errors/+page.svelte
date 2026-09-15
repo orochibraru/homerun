@@ -70,7 +70,7 @@
   </div>
 {/if}
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-2xl">
   <div class="border-border flex items-center gap-2 border-b px-5 py-4">
     <AlertTriangle class="text-text-muted size-4" />
     <h2 class="eyebrow">
@@ -138,7 +138,7 @@
   own code logged as wrong" (a failed Docker call, a rejected reconcile,
   etc.), independent of whether a deploy was even in flight when it happened.
 -->
-<section class="glass mt-6 rounded-2xl">
+<section class="panel mt-6 rounded-2xl">
   <div class="border-border flex items-center gap-2 border-b px-5 py-4">
     <AlertTriangle class="text-text-muted size-4" />
     <h2 class="eyebrow">

@@ -82,7 +82,7 @@
     {#each statCards as card}
       {@const StatIcon = card.icon}
       <div
-        class="rounded-2xl glass p-5 transition-shadow hover:shadow-md"
+        class="rounded-2xl panel p-5 transition-shadow hover:shadow-md"
       >
         <div class="mb-3 flex items-start justify-between">
           <div class="rounded-xl p-2.5 {card.color} {card.dark}">
@@ -104,7 +104,7 @@
   <!-- ── Bottom grid ───────────────────────────────────────────── -->
   <div class="grid gap-6 lg:grid-cols-3">
     <!-- Recent deployments (2/3 width on lg) -->
-    <div class="rounded-2xl glass lg:col-span-2">
+    <div class="rounded-2xl panel lg:col-span-2">
       <div
         class="flex items-center justify-between border-b border-border px-5 py-4"
       >
@@ -157,7 +157,7 @@
     </div>
 
     <!-- Quick actions (1/3 width on lg) -->
-    <div class="rounded-2xl glass">
+    <div class="rounded-2xl panel">
       <div class="border-b border-border px-5 py-4">
         <h2 class="eyebrow">Quick Actions</h2>
       </div>

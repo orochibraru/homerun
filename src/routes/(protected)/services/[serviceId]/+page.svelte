@@ -318,7 +318,7 @@
 </div>
 
 {#if pendingAction === "deploy"}
-    <div class="glass mb-6 rounded-2xl">
+    <div class="panel mb-6 rounded-2xl">
         <ul class="border-border grid gap-2 border-b px-5 py-4 sm:grid-cols-3">
             {#each deployPhaseStates(progressLines.join("\n"), progressStatus) as { phase, state } (phase.id)}
                 <li class="flex items-center gap-2 text-xs">
@@ -384,7 +384,7 @@
 {/if}
 
 <!-- ═══ Deployment history ═══ -->
-<section class="glass rounded-2xl">
+<section class="panel rounded-2xl">
     <div class="border-border flex items-center gap-2 border-b px-5 py-4">
         <Clock class="text-text-muted size-4" />
         <h2 class="eyebrow">Deployment history</h2>

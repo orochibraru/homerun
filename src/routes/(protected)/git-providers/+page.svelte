@@ -79,7 +79,7 @@
   </div>
 
   {#if data.isAdmin && showAddForm}
-    <div class="glass mb-6 rounded-2xl p-5">
+    <div class="panel mb-6 rounded-2xl p-5">
       <p class="text-text-subtle mb-4 text-xs">
         Register an OAuth App on the provider's own site first (its
         developer/application settings), then paste the client ID/secret here.
@@ -186,7 +186,7 @@
     <div class="space-y-3">
       {#each data.providers as provider (provider.id)}
         {@const connected = data.connectedProviderIds.includes(provider.id)}
-        <div class="glass rounded-2xl p-5">
+        <div class="panel rounded-2xl p-5">
           <div class="flex items-center gap-4">
             <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
               <GitBranch class="size-5" />

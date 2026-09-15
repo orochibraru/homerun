@@ -9,7 +9,7 @@
 </script>
 
 <div class="space-y-6">
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Traefik</h2>
       <p class="text-text-muted text-xs">
@@ -95,7 +95,7 @@
     </form>
   </section>
 
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Cloudflare</h2>
       <p class="text-text-muted text-xs">
@@ -152,7 +152,7 @@
     </form>
   </section>
 
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Pangolin</h2>
       <p class="text-text-muted text-xs">

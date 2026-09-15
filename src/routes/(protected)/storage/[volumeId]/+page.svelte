@@ -56,7 +56,7 @@
     </p>
   </div>
 
-  <section class="rounded-2xl glass p-5">
+  <section class="rounded-2xl panel p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <CloudUpload class="size-4" />
@@ -191,7 +191,7 @@
   </form>
 
   {#if data.runs.length > 0}
-    <section class="rounded-2xl glass">
+    <section class="rounded-2xl panel">
       <div class="border-b border-border px-5 py-4">
         <h2 class="eyebrow">Run log</h2>
       </div>

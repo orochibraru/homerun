@@ -92,7 +92,7 @@
     {:else}
       <div class="space-y-3">
         {#each data.jobs as job (job.id)}
-          <div class="glass flex items-center gap-4 rounded-2xl p-5">
+          <div class="panel flex items-center gap-4 rounded-2xl p-5">
             <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
               {#if job.kind === "exec"}
                 <Terminal class="size-5" />
@@ -171,7 +171,7 @@
     {/if}
 
     {#if data.runs.length > 0}
-      <section class="glass mt-8 rounded-2xl">
+      <section class="panel mt-8 rounded-2xl">
         <div class="border-border border-b px-5 py-4">
           <h2 class="eyebrow">Recent runs</h2>
         </div>

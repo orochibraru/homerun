@@ -9,10 +9,9 @@
 
 <span class="inline-flex items-center gap-2.5 {className}">
   <span
-    class="bg-accent relative rounded-full shadow-[0_0_12px_3px_var(--color-accent-glow)] {size
-    === 'lg'
-      ? 'size-2.5'
-      : 'size-2'}"
+    class="bg-accent relative rounded-[2px] {size === 'lg'
+      ? 'size-3'
+      : 'size-2.5'}"
   >
   </span>
   <span

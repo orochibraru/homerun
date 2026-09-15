@@ -22,40 +22,65 @@ a blur/shadow stack, route it through a token here instead.
   hostnames, image digests, metrics, status badges, and section labels, which is
   most of what makes this read as infrastructure tooling rather than a generic
   dashboard.
-- **`glass`** is the panel/card treatment : translucent `--color-surface`, a
-  `backdrop-filter` blur+saturate, a hairline border, a top inner highlight, and
-  a soft drop shadow, plus a `--glass-sheen` specular gradient over the top 45%.
-  That sheen is load-bearing, not decoration : without it a translucent panel on
-  a near-black ground reads as a flat tinted rectangle rather than as glass.
-  **`glass-strong`** is the same for elements that overlap scrolling content and
-  therefore need more opacity to stay readable (the sidebar, the sticky header,
-  the mobile drawer). **`glass-interactive`** adds the hover lift.
+- **`panel`** is the card treatment : an **opaque** `--color-surface`, a 1px
+  border, a hairline inner top rule (`--panel-rule`) and a tight shadow. It
+  replaced a `glass` utility (translucent surface + `backdrop-filter`
+  blur/saturate + a specular sheen gradient) that sampled an ambient backdrop
+  painted on `body::before`/`::after` : three radial color pools plus a 44px
+  engineering grid. All of that is gone, deliberately. Translucency over a
+  tinted, gridded ground washed every surface toward the same mid-grey, which is
+  what made the app read as flat and low-contrast no matter how the text tokens
+  were tuned. The ground is now a flat `--color-bg` and panels are opaque, so a
+  card's edge is a real edge. **`panel-strong`** is the chrome variant (it
+  paints `--sidebar` rather than `--color-surface`); **`panel-interactive`**
+  adds the hover lift.
+- **`ink-surface`** is the signature element : a permanently dark surface in
+  _both_ themes, used for the sidebar and the mobile drawer. It isn't just a
+  background, it redefines `--color-text`/`--color-text-muted`/
+  `--color-text-subtle`/`--color-surface-2`/`--color-border` for its own
+  subtree, so every `text-text-muted`/`bg-surface-2` utility underneath it flips
+  to the dark-ground values without a single `dark:` variant in the markup.
+  That's what makes a dark rail against a white canvas work in light mode.
+  Anything else that wants an inverted region should use this class, not
+  hand-written `dark:` pairs.
 - **`tech`** is `--font-mono` + `tabular-nums`, for any number that updates live
   (the dashboard's 5s stats poll) so digits don't reflow as they change.
   **`eyebrow`** is the small uppercase mono section label used for every panel
-  title and sidebar category heading.
-- **The ambient backdrop** (`body::before`/`::after`) is what the glass actually
-  samples : three off-screen radial color pools plus a faint 44px engineering
-  grid, both `position: fixed` so they stay put while content scrolls. **Any
-  full-height wrapper inside `(protected)/` must not paint an opaque
-  background** or it covers this and every glass surface flattens out ; the
-  layout's root div is deliberately transparent for exactly this reason.
-- **The radius scale was deliberately tightened** : `--radius` is `0.5rem` (from
-  `0.625rem`) and the multiplier curve is flatter, so `rounded-2xl` resolves to
-  `0.75rem` rather than the old `1.125rem`. Card corners are the single biggest
-  "toy vs. tool" tell, don't loosen them back up.
+  title and sidebar category heading ; it's `--color-text` at weight 600, not a
+  muted grey, because it _is_ the panel's title.
+- **`--color-ink`/`--color-ink-foreground`** are the primary-action pair, and
+  they invert per theme : near-black with white text in light, near-white with
+  black text in dark. The default `Button` variant uses them, which is why the
+  main action on every page reads as the highest-contrast thing on it. Reserve
+  `--color-accent` for state (active tab underline, active nav rail, links,
+  focus rings, the brand square) rather than for filled buttons.
+- **The radius scale is deliberately tight** : `--radius` is `0.375rem` and the
+  multiplier curve is flat, so `rounded-2xl` resolves to `0.5625rem`. Card
+  corners are the single biggest "toy vs. tool" tell, don't loosen them up.
 - Both themes are real and both are checked : light is `:root`, dark is `.dark`
   (driven by `mode-watcher`, see Appearance preferences below). Every token that
   differs between them is redefined in both blocks, a color defined only in one
   is a bug.
 
 **Sweeping this file's tokens is how a global visual change is made**, not a
-per-route pass : the redesign that introduced this section changed ~40 route
-files, but almost all of that was one mechanical substitution
-(`border border-border bg-surface` → `glass`). **A real bug came out of doing
-that with a `\b`-anchored regex**: `bg-surface\b` matches inside `bg-surface-2`,
+per-route pass : both redesigns so far changed ~65 files, and almost all of that
+was one mechanical substitution (`border border-border bg-surface` → `glass` the
+first time, `glass` → `panel` the second). **A real bug came out of doing that
+with a `\b`-anchored regex**: `bg-surface\b` matches inside `bg-surface-2`,
 silently producing a bogus `glass-2` class that Tailwind emits nothing for.
-Match on whole class tokens, not substrings.
+Match on whole class tokens, not substrings, and order the replacements
+longest-first (`glass-strong` before `glass`) for the same reason. `\bglass\b`
+also matches inside `--glass-highlight`, which is how a dangling
+`var(--panel-highlight)` got left behind in three files : grep the CSS variable
+names separately afterward.
+
+**Verify a visual change by actually looking at it.** `tests/e2e/`'s harness
+boots a real app against a real Postgres (`bun run build:app`, then a throwaway
+spec under `tests/e2e/` run with `bun run test:e2e -- tests/e2e/<name>.spec.ts`)
+: sign up, click through onboarding, and screenshot the pages you touched in
+both themes (set `localStorage["mode-watcher-mode"] = "dark"` and reload for the
+dark pass). Delete the spec afterward. Reasoning about token values alone is how
+you ship a button that turns out to be grey.
 
 ## Page width and layout
 
@@ -150,18 +175,19 @@ users, backups):
 (hidden below `lg`, carrying `brand-mark.svelte`, three product highlights and a
 mono deploy-log card) and a `max-w-md` form column on the right, taking
 `eyebrow`/`heading`/`subheading` props plus `children` (the form, rendered in a
-`glass` card), an optional `below` snippet for content outside that card (the
+`panel` card), an optional `below` snippet for content outside that card (the
 confirm page's dev-bypass panel) and an optional `footer` snippet for the
-trailing "Don't have an account?" line. **Don't paint an opaque background on
-these pages** — the pre-redesign versions wrapped themselves in `bg-bg`, which
-hid the ambient backdrop the glass is supposed to sample (same rule as the
-`(protected)/` wrappers above). `brand-mark.svelte` is the glowing-dot +
-`homerun` mono wordmark from the sidebar, in `sm`/`lg`; it's also the "gated by"
-footer on `app-auth`. `password-field.svelte` (label + `Input` + show/hide eye
-toggle) and `password-strength.svelte` (the four-bar meter over
-`getPasswordStrength`) replaced the copy of that markup each of those four forms
-carried. The pages that predated this also carried stale `LocalRun` branding and
-a hand-rolled `inputClass`, both gone.
+trailing "Don't have an account?" line. The two panes are deliberately different
+grounds — `--color-surface` on the pitch side, `--color-bg` on the form side,
+with a full-height accent rail down the far left edge — rather than one field
+with a blurred color blob floating over it, which is what it used to be.
+`brand-mark.svelte` is the accent square + `homerun` mono wordmark from the
+sidebar, in `sm`/`lg`; it's also the "gated by" footer on `app-auth`.
+`password-field.svelte` (label + `Input` + show/hide eye toggle) and
+`password-strength.svelte` (the four-bar meter over `getPasswordStrength`)
+replaced the copy of that markup each of those four forms carried. The pages
+that predated this also carried stale `LocalRun` branding and a hand-rolled
+`inputClass`, both gone.
 
 `confirm-dialog.svelte` gained an optional `confirmPhrase` prop: when set, the
 dialog renders an input and the confirm button stays disabled until the typed

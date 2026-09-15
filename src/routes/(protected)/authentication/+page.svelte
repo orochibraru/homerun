@@ -27,7 +27,7 @@
   </div>
 
   <!-- ═══ Built-in ═══ -->
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Built-in authentication</h2>
       <p class="text-text-muted text-xs">
@@ -53,7 +53,7 @@
   </section>
 
   <!-- ═══ Providers ═══ -->
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border flex items-start justify-between gap-4 border-b px-5 py-4">
       <div>
         <h2 class="eyebrow">OAuth / OIDC providers</h2>
@@ -123,7 +123,7 @@
   </section>
 
   <!-- ═══ Protected apps ═══ -->
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-2xl">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Protected apps</h2>
       <p class="text-text-muted text-xs">

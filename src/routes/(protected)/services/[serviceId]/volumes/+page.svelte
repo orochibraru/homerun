@@ -31,7 +31,7 @@
 	let createError = $state<string | null>(null);
 </script>
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-2xl">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <HardDrive class="size-4" />

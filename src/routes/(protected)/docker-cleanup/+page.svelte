@@ -163,7 +163,7 @@
   </div>
 
   <div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
-    <div class="glass rounded-2xl p-4">
+    <div class="panel rounded-2xl p-4">
       <p class="eyebrow">Images</p>
       <p class="tech text-text mt-1 text-xl font-semibold">
         {data.preview.images.totalCount}
@@ -172,7 +172,7 @@
         {formatBytes(sumSize(data.preview.images.items))} reclaimable
       </p>
     </div>
-    <div class="glass rounded-2xl p-4">
+    <div class="panel rounded-2xl p-4">
       <p class="eyebrow">Containers</p>
       <p class="tech text-text mt-1 text-xl font-semibold">
         {data.preview.containers.totalCount}
@@ -181,7 +181,7 @@
         {data.preview.containers.items.length} stopped
       </p>
     </div>
-    <div class="glass rounded-2xl p-4">
+    <div class="panel rounded-2xl p-4">
       <p class="eyebrow">Networks</p>
       <p class="tech text-text mt-1 text-xl font-semibold">
         {data.preview.networks.totalCount}
@@ -190,7 +190,7 @@
         {data.preview.networks.items.length} unused
       </p>
     </div>
-    <div class="glass rounded-2xl p-4">
+    <div class="panel rounded-2xl p-4">
       <p class="eyebrow">Volumes</p>
       <p class="tech text-text mt-1 text-xl font-semibold">
         {data.preview.volumes.totalCount}
@@ -199,7 +199,7 @@
         {data.preview.volumes.items.length} unused
       </p>
     </div>
-    <div class="glass rounded-2xl p-4">
+    <div class="panel rounded-2xl p-4">
       <p class="eyebrow">Build cache</p>
       <p class="tech text-text mt-1 text-xl font-semibold">
         {formatBytes(data.preview.buildCache.totalSizeBytes ?? 0)}
@@ -210,7 +210,7 @@
     </div>
   </div>
 
-  <section class="glass mb-6 rounded-2xl">
+  <section class="panel mb-6 rounded-2xl">
     <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
       <div class="flex items-center gap-2">
         <Eraser class="text-text-muted size-4" />
@@ -253,7 +253,7 @@
   </section>
 
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-    <section class="glass rounded-2xl">
+    <section class="panel rounded-2xl">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <Boxes class="text-text-muted size-4" />
@@ -292,7 +292,7 @@
       </div>
     </section>
 
-    <section class="glass rounded-2xl">
+    <section class="panel rounded-2xl">
       <form action="?/pruneImages" method="POST"
       use:enhance={enhanceToast({
         error: "Docker cleanup action failed.",
@@ -338,7 +338,7 @@
       </form>
     </section>
 
-    <section class="glass rounded-2xl">
+    <section class="panel rounded-2xl">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <NetworkIcon class="text-text-muted size-4" />
@@ -377,7 +377,7 @@
       </div>
     </section>
 
-    <section class="glass rounded-2xl">
+    <section class="panel rounded-2xl">
       <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
         <div class="flex items-center gap-2">
           <HardDrive class="text-text-muted size-4" />

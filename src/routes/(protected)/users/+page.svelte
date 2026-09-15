@@ -95,7 +95,7 @@
   </div>
 
   {#if showAddForm}
-    <div class="glass mb-6 rounded-2xl p-5">
+    <div class="panel mb-6 rounded-2xl p-5">
       <div class="mb-4 flex gap-2">
         <button
           class="
@@ -247,7 +247,7 @@
   {:else}
   <div class="space-y-3">
     {#each data.users as u (u.id)}
-      <div class="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+      <div class="panel flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
         <div class="min-w-0">
           <p class="text-text truncate text-sm font-medium">
             {u.name}
