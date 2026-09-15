@@ -6,26 +6,10 @@ move it under `## Done` in the same change that finishes it.
 
 ## Unorganized, sort later
 
-- [ ] Rename "Deployment history" with "Revisions" and put it in a separate tab.
-- [ ] Merge "logs" and "errors" in one tab called "Observability"
-- [ ] Adding a volume on an instance is one of the worst UX experiences of my
-      life, let's change it to make it simple to link a volume to a container.
-      Also pull in existing volumes on the machine.
-- [ ] Media type database should print a JDBC connection URL helper in UI.
-- [ ] When clicking on a linked service in the connections panel, invalidate all
-      data, it's not refreshing logs.
-- [ ] First row, recent deployments and quick actions on the dashboard aren't
-      rounded on the dashboard page. Recent deployments should show more info.
-- [ ] Add recent errors caught by observability on dashboard
-- [ ] Add test to the connection action button on git providers
-      (Connect/Disconnect) in plain text for UX.
-- [ ] New service wizard should show more settings including networking DNS to
-      map the domain before creation.
-- [ ] New service from git connection: Automatically list repos when selected,
-      show [combobox](https://shadcn-svelte.com/docs/components/combobox) to
-      select repo via filtering.
-- [ ] Replace "fetching image" status on deploy progress section with "building
-      image" if source is git not docker.
+- [ ] Page load is quite slow, let's instead use await in svelte code instead of
+      the server with skeleton loaders, error boundaries and error catching
+      mechanisme with a reusable alert component. This should prevent from
+      blocking navigation or just from the app feeling slugish
 
 ## Small
 
@@ -167,3 +151,66 @@ move it under `## Done` in the same change that finishes it.
 - [x] [UI] **Stats first on a service's overview**, scoped to that service, plus
       a Connections diagram showing what it needs and what needs it, derived
       from env vars pointing at another service's slug.
+
+- [x] [UI] **Revisions is its own tab**, split out of the Overview, and **Logs +
+      Errors are one "Observability" tab**. `logs/` keeps only its SSE endpoint;
+      the page is gone.
+- [x] [UI] **Mounting a volume is one step.** The picker lists Homerun's own
+      volumes _and_ the Docker volumes already on the machine
+      (`DockerService.listHostVolumes`); choosing one of those registers it in
+      Storage as part of mounting, instead of making you create it first.
+- [x] [UI] **A database service prints its connection URLs**, including the JDBC
+      one where the engine has a driver, with copy buttons on its Overview.
+- [x] [UI] **Clicking a linked service refreshes its logs.** `LiveLogViewer`
+      connected on mount only, and SvelteKit reuses the component across the
+      same route, so the previous container's stream kept running under the new
+      service. It reconnects on `serviceId`/`containerId` now.
+- [x] [UI] **Dashboard**: every panel is rounded, recent deployments carry
+      status, slug, digest and duration, and a **Recent errors** panel lists
+      what the log persister caught, linking into each service's Observability.
+- [x] [UI] **Git provider Connect/Disconnect are labelled buttons**, not
+      icon-only ones.
+- [x] [UI] **The wizard sets networking before creation**: custom domain (the
+      DNS mapping), the login wall, network mode and port protocol, all
+      persisted by `create`, not just by the Networking tab afterwards.
+- [x] [UI] **Repos list themselves on provider select**, in a filtering combobox
+      (shadcn `command` + `popover`) instead of a "List repos" button and a
+      plain `<select>`.
+- [x] [UI] **"Building image"** replaces "Fetching image" on a git-sourced
+      deploy's progress, and the progress log **follows the tail** as it
+      streams.
+
+- [x] [UI] **Project pages are summaries.** Stats, recent deployments, a
+      project-scoped resource table and a searchable service list with grid/list
+      modes. Rename and the danger zone moved to `/projects/<id>/settings`
+      behind a Settings button.
+- [x] [UI] **Revisions carry what actually ran**: the `image:tag` of that
+      deploy, its digest, its duration, and for a git build the commit it built,
+      linked to the provider. (`deployment` gained `image_ref`, `git_commit`,
+      `git_ref`.)
+- [x] [UI] **The avatar button matches the bell** : same size, radius and hover.
+- [x] [UI] **Recent errors name their service**, and link into that service's
+      Observability rather than always to System Logs.
+- [x] [UI] **System Logs lists this instance's own stack** (anything with a
+      compose project label that Homerun didn't create : the app, Postgres,
+      Traefik, Newt) and streams any of their logs inline.
+- [x] [App] **Newt detection + template.** Settings → Networking says whether a
+      Pangolin tunnel client is running on this host, and
+      `Newt (Pangolin     tunnel)` is a built-in template.
+- [x] [App] **Datastores aren't DNS-resolvable by default**, in the wizard and
+      for templates : `isDatabaseImage` off the link-engine detection.
+- [x] [UI] **Right-click context menu on services**: start/stop/restart,
+      settings, delete, plus Link to…, group into a project and ungroup, with
+      `EntityList` gaining a `wrapper` snippet so rows can be wrapped without
+      every page rebuilding its own row markup.
+- [x] [App] **Uptime monitoring.** Two probes a minute per service : internal
+      (the container's own port on the Docker network) and external (the
+      hostname Traefik publishes), stored one row per service+kind. The service
+      Observability tab shows both with per-probe troubleshooting steps when one
+      fails, and the dashboard shows a banner of everything currently failing.
+      On by default, `service.uptimeEnabled` turns it off.
+- [x] [UI] **Link two services from the context menu.** The dialog injects the
+      connection variables (URL / JDBC / separate vars, prefilled from the
+      target's own image and env) and optionally puts both on one project
+      network : whichever project either is already in, or a new one named after
+      the source.

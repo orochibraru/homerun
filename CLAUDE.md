@@ -30,6 +30,11 @@ a plan in chat, don't keep a task list somewhere else, don't hand back a
 
 - Picking up work with no specific ask : take something from `TODO.md` and do
   it.
+- **Keep `TODO.md` current as you go, not at the end.** Before starting an item,
+  mark it `- [ ] **[WIP]** …`; the moment it's actually done, tick it and move
+  it under `## Done`. If you stop half-way, leave it `[WIP]` with a line saying
+  what landed and what didn't. The file is the shared view of what's in flight :
+  it's how anyone else knows which files are safe to touch while you're working.
 - Finished an item : tick it off and move it under `## Done` in the same change,
   not in a follow-up.
 - Found something out of scope mid-task : add a line to `TODO.md` and carry on.

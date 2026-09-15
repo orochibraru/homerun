@@ -259,6 +259,10 @@ class DeploymentServiceClass {
 		if (!result.success) {
 			throw new Error(result.error ?? "Build failed.");
 		}
+		await dep.update({
+			gitCommit: result.commit ?? null,
+			gitRef: svc.gitRef ?? null,
+		});
 
 		if (plan.crossHostBuild && cacheRegistryRow && publishedImage && auth) {
 			await dep.appendLog(

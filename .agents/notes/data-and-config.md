@@ -183,6 +183,9 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   written every minute by `StatsSampler` and read back bucketed per range. See
   Recorded resource history in `observability.md` for why it's raw samples
   rather than rollup tables.
+- `uptime_check`, the latest result of each liveness probe, one row per
+  (service, kind), upserted rather than appended. See Uptime probes in
+  `observability.md`.
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).
 - `template_link`, a template linking to another template (a database, a cache,

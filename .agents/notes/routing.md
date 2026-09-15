@@ -6,6 +6,21 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
+## A service's tabs
+
+`services/[serviceId]/` is the reference tab layout (see Conventions in
+`CLAUDE.md`), and the set changed: **Revisions** is its own tab (the deployment
+history that used to sit at the bottom of Overview, now with the `image:tag`
+that ran, its digest, how long it took and — for a git build — the commit,
+linked to the provider), and **Observability** is Logs and Errors merged into
+one page, since flipping between "what is it printing" and "what went wrong" was
+the common path. `logs/` still exists as a **route without a page**: its
+`+server.ts` is the SSE stream `live-log-viewer.svelte` fetches.
+
+Overview now leads with the service's own resource chart and a **Connections**
+panel (what it needs, what needs it, derived from env vars naming another
+service's slug), plus the connection URLs for a datastore image.
+
 ## Routing: dashboard-only, no public pages
 
 `src/routes/(protected)/` is a route group living at `/` itself (not

@@ -6,6 +6,17 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
+## Linking and grouping from the services list
+
+A right-click on a service row offers **Link to…** and **group/ungroup**
+(`services/+page.server.ts`'s `link` and `group` actions). Linking writes the
+target's connection variables into the source's env — the same `buildLinkEnv`
+output the wizard's link picker produces, so a URL, a JDBC URL or separate vars
+depending on the target's image — and optionally puts both on one project
+network, since two services only reach each other by slug once they share one.
+It moves them into whichever project either is already in, and creates one named
+after the source otherwise.
+
 ## Where creating something lands you
 
 Every create path ends on the thing it just made, not on a list: the wizard's

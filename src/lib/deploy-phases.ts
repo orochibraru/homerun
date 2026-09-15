@@ -48,16 +48,32 @@ export function currentPhase(log: string): DeployPhaseId | null {
 	return current;
 }
 
+/**
+ * The image phase's label depends on where the image comes from: a git-based
+ * service builds one, it doesn't fetch one, and "Fetching image" while a
+ * Dockerfile build streams past is just wrong.
+ */
+export function phasesFor(buildSource: "git" | "image"): DeployPhase[] {
+	if (buildSource !== "git") {
+		return DEPLOY_PHASES;
+	}
+	return DEPLOY_PHASES.map((phase) =>
+		phase.id === "image" ? { ...phase, label: "Building image" } : phase,
+	);
+}
+
 export function deployPhaseStates(
 	log: string,
 	status: string,
+	buildSource: "git" | "image" = "image",
 ): Array<{ phase: DeployPhase; state: DeployPhaseState }> {
 	const current = currentPhase(log);
-	const index = current ? DEPLOY_PHASES.findIndex((p) => p.id === current) : -1;
+	const phases = phasesFor(buildSource);
+	const index = current ? phases.findIndex((p) => p.id === current) : -1;
 	const failed = status === "failed";
 	const finished = status === "running" || status === "stopped";
 
-	return DEPLOY_PHASES.map((phase, i) => {
+	return phases.map((phase, i) => {
 		if (finished) {
 			return { phase, state: "done" as DeployPhaseState };
 		}

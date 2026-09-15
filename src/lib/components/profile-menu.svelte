@@ -36,19 +36,19 @@
       <button
         {...props}
         aria-label="Account menu"
-        class="ring-border/0 hover:ring-border shrink-0 rounded-full ring-2 transition-all"
+        class="hover:bg-surface-2 flex size-8 shrink-0 items-center justify-center rounded-md transition-colors"
         type="button"
       >
         {#if user?.image}
           <img
             alt={user.name ?? ""}
-            class="size-8 rounded-full object-cover"
+            class="size-6 rounded-full object-cover"
             src={user.image}
           >
         {:else}
-          <div class="bg-accent flex size-8 items-center justify-center rounded-full text-xs font-bold text-white">
+          <span class="bg-accent text-bg flex size-6 items-center justify-center rounded-full text-[0.6875rem] font-semibold">
             {userInitial}
-          </div>
+          </span>
         {/if}
       </button>
     {/snippet}

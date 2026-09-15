@@ -2,6 +2,26 @@ import type { BuiltinTemplate } from "$lib/server/db/builtin-templates";
 
 export const BUILTIN_TEMPLATES_APPS: BuiltinTemplate[] = [
 	{
+		category: "networking",
+		// Newt holds an outbound tunnel to Pangolin and has nothing to serve
+		// locally; the port is only here because every template carries one.
+		containerPort: 80,
+		description:
+			"Pangolin's tunnel client. Connects this host to a Pangolin site so its Resources can reach services here : fill in the endpoint, id and secret from Pangolin's own site page.",
+		envVars: {
+			PANGOLIN_ENDPOINT: "https://pangolin.example.com",
+			NEWT_ID: "",
+			NEWT_SECRET: "",
+		},
+		icon: "",
+		id: "builtin-newt",
+		image: "fosrl/newt",
+		sourceUrl: "https://github.com/fosrl/newt",
+		name: "Newt (Pangolin tunnel)",
+		tag: "latest",
+		websiteUrl: "https://docs.digpangolin.com",
+	},
+	{
 		category: "analytics",
 		containerPort: 3000,
 		description:

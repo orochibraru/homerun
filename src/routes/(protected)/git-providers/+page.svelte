@@ -221,23 +221,18 @@
                 })}
               >
                 <input name="providerId" type="hidden" value={provider.id}>
-                <Button
-                  size="icon-sm"
-                  title="Disconnect"
-                  type="submit"
-                  variant="ghost"
-                >
+                <Button size="sm" type="submit" variant="outline">
                   <Unlink class="size-4" />
+                  Disconnect
                 </Button>
               </form>
             {:else}
               <Button
                 href={`/api/v1/git-providers/${provider.id}/connect`}
-                size="icon-sm"
-                title="Connect"
-                variant="ghost"
+                size="sm"
               >
                 <Link2 class="size-4" />
+                Connect
               </Button>
             {/if}
             {#if data.isAdmin}

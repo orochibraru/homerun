@@ -30,6 +30,7 @@ export interface NewServiceInput {
 	buildSource?: "image" | "git";
 	containerPort: number;
 	cpuLimit?: string | null;
+	customDomain?: string | null;
 	dnsResolvable?: boolean;
 	envVars: Record<string, string>;
 	gitBuildContext?: string | null;
@@ -94,6 +95,7 @@ export type ServiceUpdateInput = Partial<
 		| "restartPolicy"
 		| "slug"
 		| "swarmServiceId"
+		| "uptimeEnabled"
 		| "tag"
 	>
 >;
@@ -358,7 +360,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			cronLastRunAt: null,
 			cronSchedule: null,
 			currentStatus: "pending",
-			customDomain: null,
+			customDomain: input.customDomain ?? null,
 			customSslCertEnc: null,
 			customSslKeyEnc: null,
 			desiredState: "stopped",
@@ -370,6 +372,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			slug: input.slug,
 			swarmServiceId: null,
 			tag: input.tag,
+			uptimeEnabled: true,
 			updatedAt: now,
 			userId: input.userId,
 		};
@@ -511,6 +514,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get swarmServiceId(): string | null {
 		return this.row.swarmServiceId;
+	}
+
+	get uptimeEnabled(): boolean {
+		return this.row.uptimeEnabled;
 	}
 	get networkMode(): Service["networkMode"] {
 		return this.row.networkMode;

@@ -85,10 +85,16 @@ const SHOTS: Shot[] = [
 		path: () => `/services/${seeded.serviceIds.web}`,
 	},
 	{
-		doc: "/services/:id/logs",
+		doc: "/services/:id/observability",
 		expect: /Reconnect/i,
 		name: "logs",
-		path: () => `/services/${seeded.serviceIds.web}/logs`,
+		path: () => `/services/${seeded.serviceIds.web}/observability`,
+	},
+	{
+		doc: "/services/:id/revisions",
+		expect: /Revisions/i,
+		name: "revisions",
+		path: () => `/services/${seeded.serviceIds.web}/revisions`,
 	},
 	{
 		doc: "/services/:id/networking",
@@ -163,7 +169,7 @@ test.afterAll(async ({ browser }) => {
 		expect(removed.ok(), `removing service ${id}`).toBeTruthy();
 	}
 	const project = await page.request.post(
-		`/projects/${seeded.projectId}?/delete`,
+		`/projects/${seeded.projectId}/settings?/delete`,
 		{
 			form: {},
 			headers: { origin: E2E_BASE_URL, "x-sveltekit-action": "true" },

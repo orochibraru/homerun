@@ -113,6 +113,15 @@ export function detectLinkEngine(image: string): LinkEngine {
 	return ENGINES.generic;
 }
 
+/**
+ * Whether an image looks like a datastore. Used for defaults that should be
+ * private: a Postgres or Redis has no business answering on a public
+ * hostname just because the wizard's DNS checkbox starts checked.
+ */
+export function isDatabaseImage(image: string): boolean {
+	return detectLinkEngine(image).id !== "generic";
+}
+
 export function envKeyPrefix(slug: string): string {
 	const cleaned = slug
 		.toUpperCase()

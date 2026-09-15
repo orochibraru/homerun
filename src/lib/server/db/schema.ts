@@ -601,6 +601,7 @@ export const service = pgTable(
 		// live container id per-task when one's needed, e.g. the Terminal
 		// tab : see docker/swarm.ts).
 		swarmServiceId: text("swarm_service_id"),
+		uptimeEnabled: boolean("uptime_enabled").default(true).notNull(),
 		tag: text("tag").default("latest").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
@@ -623,8 +624,15 @@ export const deployment = pgTable(
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		errorMessage: text("error_message"),
 		finishedAt: timestamp("finished_at", { mode: "date" }),
+		// The commit this revision actually built, for a git-sourced service :
+		// "latest" on a branch says nothing about what ran, the SHA does.
+		gitCommit: text("git_commit"),
+		gitRef: text("git_ref"),
 		id: text("id").primaryKey(),
 		imageDigest: text("image_digest"),
+		// The image:tag this revision ran, recorded at deploy time so a later
+		// retag doesn't rewrite history.
+		imageRef: text("image_ref"),
 		// Progress lines appended live during deploy ("Pulling image...",
 		// "Starting container...") : polled by the Overview tab while a deploy
 		// is in flight, kept around after for a lightweight audit trail.
@@ -926,6 +934,37 @@ export const statSample = pgTable(
 	],
 );
 
+/**
+ * The latest result of each liveness probe for a service : one row per
+ * (service, kind), overwritten every tick rather than appended, since the
+ * graphs already carry history and a status panel only ever shows "now".
+ *
+ * `internal` is "the container is up and its port accepts a connection on the
+ * Docker network"; `external` is "the hostname Traefik publishes actually
+ * answers". They fail independently and for different reasons, which is the
+ * whole point of probing both.
+ */
+export const uptimeCheck = pgTable(
+	"uptime_check",
+	{
+		checkedAt: timestamp("checked_at", { mode: "date" }).notNull(),
+		detail: text("detail"),
+		kind: text("kind").$type<"internal" | "external">().notNull(),
+		latencyMs: integer("latency_ms"),
+		ok: boolean("ok").notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		target: text("target"),
+	},
+	(table) => [
+		uniqueIndex("uptimeCheck_serviceId_kind_uidx").on(
+			table.serviceId,
+			table.kind,
+		),
+	],
+);
+
 export const job = pgTable(
 	"job",
 	{
@@ -1128,6 +1167,7 @@ export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
 export type Notification = typeof notification.$inferSelect;
 export type StatSample = typeof statSample.$inferSelect;
+export type UptimeCheck = typeof uptimeCheck.$inferSelect;
 export type Job = typeof job.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;

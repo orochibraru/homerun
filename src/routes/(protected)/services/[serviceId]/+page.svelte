@@ -10,11 +10,12 @@
 		Square,
 		XCircle,
 	} from "@lucide/svelte";
-	import { onDestroy, onMount } from "svelte";
+	import { onDestroy, onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import ConnectionStrings from "$lib/components/connection-strings.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import ServiceGraph from "$lib/components/service-graph.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
@@ -239,6 +240,19 @@
 			success: `${svc.name} is queued for deploy.`,
 		});
 	}
+
+	let progressEl = $state<HTMLElement | undefined>();
+
+	// A build streams hundreds of lines; pinning the view to the bottom is the
+	// only way to watch one happen without chasing the scrollbar.
+	$effect(() => {
+		const lineCount = progressLines.length;
+		if (lineCount > 0 && progressEl) {
+			void tick().then(() => {
+				progressEl?.scrollTo({ top: progressEl.scrollHeight });
+			});
+		}
+	});
 </script>
 
 <!-- ═══ Actions ═══ -->
@@ -321,13 +335,28 @@
 
 <div class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
     <UsageChart serviceId={svc.id} title="Resource usage" />
-    <ServiceGraph dependsOn={data.dependsOn} name={svc.name} usedBy={data.usedBy} />
+    <div class="space-y-4">
+        <ServiceGraph
+            dependsOn={data.dependsOn}
+            name={svc.name}
+            usedBy={data.usedBy}
+        />
+        <ConnectionStrings
+            service={{
+                containerPort: svc.containerPort,
+                envVars: svc.envVars ?? {},
+                image: svc.image,
+                name: svc.name,
+                slug: svc.slug,
+            }}
+        />
+    </div>
 </div>
 
 {#if pendingAction === "deploy"}
     <div class="panel mb-6 rounded-md">
         <ul class="border-border grid gap-2 border-b px-5 py-4 sm:grid-cols-3">
-            {#each deployPhaseStates(progressLines.join("\n"), progressStatus) as { phase, state } (phase.id)}
+            {#each deployPhaseStates(progressLines.join("\n"), progressStatus, svc.buildSource) as { phase, state } (phase.id)}
                 <li class="flex items-center gap-2 text-xs">
                     {#if state === "done"}
                         <CheckCircle2 class="size-3.5 shrink-0 text-emerald-500" />
@@ -346,7 +375,8 @@
             {/each}
         </ul>
         <div
-            class="h-48 overflow-y-auto rounded-b-2xl bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-300"
+            class="h-48 overflow-y-auto rounded-b-md bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-300"
+            bind:this={progressEl}
         >
             {#if progressLines.length === 0}
                 <span class="text-zinc-500">Waiting for the deploy to start…</span>
@@ -381,7 +411,7 @@
         />
         <a
             class="text-accent mt-2 inline-block text-xs underline"
-            href={resolve("/(protected)/services/[serviceId]/logs", {
+            href={resolve("/(protected)/services/[serviceId]/observability", {
                 serviceId: svc.id,
             })}
         >
@@ -389,75 +419,3 @@
         </a>
     </div>
 {/if}
-
-<!-- ═══ Deployment history ═══ -->
-<section class="panel rounded-md">
-    <div class="border-border flex items-center gap-2 border-b px-5 py-4">
-        <Clock class="text-text-muted size-4" />
-        <h2 class="eyebrow">Deployment history</h2>
-    </div>
-
-    {#if data.deployments.length === 0}
-        <div
-            class="flex flex-col items-center justify-center py-12 text-center"
-        >
-            <p class="text-text-muted text-sm font-medium">
-                No deployments yet
-            </p>
-        </div>
-    {:else}
-        <div class="divide-border divide-y">
-            {#each data.deployments as dep (dep.id)}
-                <div>
-                    <button
-                        class="flex w-full items-center gap-4 px-5 py-3 text-left"
-                        onclick={() => {
-                            expandedDeploymentId =
-                                expandedDeploymentId === dep.id ? null : dep.id;
-                        }}
-                        type="button"
-                    >
-                        <StatusBadge status={dep.status} />
-                        <div class="min-w-0 flex-1">
-                            <p class="text-text-muted truncate text-xs">
-                                {timeAgo(dep.createdAt)}
-                                {#if dep.imageDigest}
-                                    ·
-                                    <span class=""
-                                        >{dep.imageDigest.slice(0, 19)}</span
-                                    >
-                                {/if}
-                            </p>
-                            {#if dep.errorMessage}
-                                <p class="mt-0.5 truncate text-xs text-red-500">
-                                    {dep.errorMessage}
-                                </p>
-                            {/if}
-                        </div>
-                        {#if dep.log}
-                            <ChevronDown
-                                class="
-                  text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
-                                dep.id
-                                    ? 'rotate-180'
-                                    : ''}
-               "
-                            />
-                        {/if}
-                    </button>
-                    {#if expandedDeploymentId === dep.id && dep.log}
-                        <div
-                            class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-300"
-                        >
-                            {#each dep.log
-                                .split("\n")
-                                .filter(Boolean) as line, i (i)}
-                                <AnsiLine {line} />
-                            {/each}
-                        </div>
-                    {/if}
-                </div>
-            {/each}
-        </div>
-    {/if}
-</section>

@@ -24,6 +24,12 @@
 		selectLabel?: (item: T) => string;
 		selectedIds?: string[];
 		view: ViewMode;
+		/**
+		 * Wraps every row/card, for pages that need one (the services list
+		 * puts each row inside a context-menu trigger). It receives the item
+		 * and the body snippet to render inside whatever it wraps with.
+		 */
+		wrapper?: Snippet<[EntityRow, Snippet]>;
 	}
 
 	const {
@@ -37,6 +43,7 @@
 		onToggleSelect,
 		selectLabel = (item: T) => `Select ${item.title}`,
 		cardGridClass = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3",
+		wrapper,
 	}: Props = $props();
 
 	const selected = $derived(new Set(selectedIds ?? []));
@@ -55,10 +62,8 @@
   {/if}
 {/snippet}
 
-{#if view.current === "list"}
-  <div class="panel divide-border divide-y overflow-hidden rounded-xl">
-    {#each items as item (item.id)}
-      <div
+{#snippet listRow(item: T)}
+  <div
         class="hover:bg-surface-2 flex items-center gap-3 px-4 py-3 transition-colors {selected.has(
         item.id,
       )
@@ -92,12 +97,10 @@
           {@render meta?.(item)}
           {@render actions?.(item)}
         </div>
-      </div>
-    {/each}
   </div>
-{:else}
-  <div class={cardGridClass}>
-    {#each items as item (item.id)}
+{/snippet}
+
+{#snippet gridCard(item: T)}
       <div
         class="panel flex flex-col rounded-xl p-4 transition-colors {selected.has(
         item.id,
@@ -134,6 +137,32 @@
           </div>
         {/if}
       </div>
+{/snippet}
+
+{#if view.current === "list"}
+  <div class="panel divide-border divide-y overflow-hidden rounded-xl">
+    {#each items as item (item.id)}
+      {#snippet body()}
+        {@render listRow(item)}
+      {/snippet}
+      {#if wrapper}
+        {@render wrapper(item, body)}
+      {:else}
+        {@render body()}
+      {/if}
+    {/each}
+  </div>
+{:else}
+  <div class={cardGridClass}>
+    {#each items as item (item.id)}
+      {#snippet body()}
+        {@render gridCard(item)}
+      {/snippet}
+      {#if wrapper}
+        {@render wrapper(item, body)}
+      {:else}
+        {@render body()}
+      {/if}
     {/each}
   </div>
 {/if}

@@ -25,6 +25,7 @@ import { DueScheduler } from "./cron/due-scheduler.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { StatsSampler } from "./stats/stats-sampler.ts";
+import { UptimeProbe } from "./uptime/uptime-probe.ts";
 
 export type { ParsedCron } from "./cron/cron-expression.ts";
 
@@ -68,6 +69,8 @@ class CronServiceClass {
 
 	private readonly statsSampler = new StatsSampler();
 
+	private readonly uptimeProbe = new UptimeProbe();
+
 	parseCronSchedule(schedule: string): ParsedCron | null {
 		return parseCronSchedule(schedule);
 	}
@@ -90,6 +93,10 @@ class CronServiceClass {
 
 	startStatsSampler(): void {
 		this.statsSampler.start();
+	}
+
+	startUptimeProbe(): void {
+		this.uptimeProbe.start();
 	}
 }
 

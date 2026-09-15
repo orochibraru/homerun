@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Boxes,
 		Info,
 		Loader2,
 		RefreshCw,
@@ -12,6 +13,7 @@
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -112,6 +114,8 @@
 		cancelled = false;
 		void connect();
 	}
+
+	let selectedInfraId = $state<string | null>(null);
 </script>
 
 <div class="p-5 md:p-6">
@@ -122,16 +126,61 @@
     </p>
   </div>
 
-  <div class="border-border bg-surface-2 text-text-muted mb-6 flex items-start gap-2.5 rounded-md border px-4 py-3 text-xs">
-    <Info class="mt-0.5 size-3.5 shrink-0" />
-    <p>
-      Homerun's own server logs aren't shown here : they're whatever your
-      process manager, <code class="bg-surface rounded px-1 py-0.5">docker
-      compose logs</code>, or the terminal you started it from is already
-      capturing. App-level warnings and errors are surfaced on each service's
-      Errors tab instead.
-    </p>
-  </div>
+  {#if data.infra.length > 0}
+    <section class="panel mb-4 rounded-xl">
+      <div class="panel-head">
+        <h2 class="eyebrow flex items-center gap-1.5">
+          <Boxes class="size-3" />
+          This instance's stack
+        </h2>
+        <span class="text-text-subtle text-[0.6875rem]">
+          Everything your compose file starts, Homerun included
+        </span>
+      </div>
+      <div class="divide-border divide-y">
+        {#each data.infra as container (container.id)}
+          <button
+            class="hover:bg-surface-2 flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors {selectedInfraId ===
+            container.id
+              ? 'bg-accent-light'
+              : ''}"
+            onclick={() => {
+              selectedInfraId =
+                selectedInfraId === container.id ? null : container.id;
+            }}
+            type="button"
+          >
+            <span
+              class="size-1.5 shrink-0 rounded-full {container.state === 'running'
+              ? 'bg-emerald-500'
+              : 'bg-zinc-400'}"
+            ></span>
+            <span class="min-w-0 flex-1">
+              <span class="text-text block truncate text-sm font-medium">
+                {container.service || container.name}
+              </span>
+              <span class="text-text-subtle block truncate text-xs">
+                {container.image}
+              </span>
+            </span>
+            <span class="text-text-subtle shrink-0 text-[0.6875rem]">
+              {container.state}
+            </span>
+          </button>
+          {#if selectedInfraId === container.id}
+            <div class="p-3">
+              <LiveLogViewer
+                containerId={container.id}
+                heightClass="h-64"
+                logsUrl="{resolve('/system-logs')}/containers/{container.id}/logs"
+                serviceId={container.id}
+              />
+            </div>
+          {/if}
+        {/each}
+      </div>
+    </section>
+  {/if}
 
   <section class="panel rounded-md">
     <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">

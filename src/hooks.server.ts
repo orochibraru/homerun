@@ -179,6 +179,7 @@ export const init = async () => {
 	CronService.startBackupScheduler();
 	CronService.startCronJobScheduler();
 	CronService.startStatsSampler();
+	CronService.startUptimeProbe();
 };
 
 /**

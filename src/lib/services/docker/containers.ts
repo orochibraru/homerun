@@ -656,6 +656,22 @@ export function DockerContainerMixin<
 			}
 		}
 
+		/** The container's own IP on the first network it's attached to, for the internal liveness probe. */
+		async containerAddress(
+			containerId: string,
+			remote?: RemoteHostConnection | null,
+		): Promise<string | null> {
+			try {
+				const info = await this.getDocker(remote)
+					.getContainer(containerId)
+					.inspect();
+				const networks = Object.values(info.NetworkSettings?.Networks ?? {});
+				return networks.find((net) => net.IPAddress)?.IPAddress ?? null;
+			} catch {
+				return null;
+			}
+		}
+
 		/**
 		 * Lists only containers this app created (filtered on MANAGED_LABEL).
 		 * This app must never enumerate, inspect side effects on, or remove

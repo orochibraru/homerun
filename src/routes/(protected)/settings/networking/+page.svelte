@@ -224,6 +224,22 @@
           and no resource is ever created.
         </p>
       </div>
+      {#if data.newt}
+        <p class="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
+          <span class="size-1.5 rounded-full {data.newt.state === 'running'
+          ? 'bg-emerald-500'
+          : 'bg-amber-500'}"></span>
+          A Pangolin tunnel client is on this host
+          (<code class="font-mono">{data.newt.image}</code>, {data.newt.state}).
+        </p>
+      {:else}
+        <p class="text-text-subtle rounded-lg border border-border px-3 py-2 text-xs">
+          No Newt tunnel container found on this host. Pangolin can only reach
+          services here through one : deploy the
+          <strong>Newt (Pangolin tunnel)</strong> template, or run your own.
+        </p>
+      {/if}
+
       <div>
         <label class={label} for="pangolinTargetPort">Target port</label>
         <Input

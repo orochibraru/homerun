@@ -3,19 +3,22 @@ import { resolve } from "$app/paths";
 import { AppLogDTO } from "$lib/dto/app-log-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 import { Logger } from "$lib/logger";
 
 const logger = new Logger("Services");
 
 export const load = async ({ params }) => {
-	const [failedDeployments, appLogs] = await Promise.all([
+	const [failedDeployments, appLogs, uptime] = await Promise.all([
 		DeploymentDTO.listFailedForService(params.serviceId),
 		AppLogDTO.listForService(params.serviceId),
+		UptimeCheckDTO.listForService(params.serviceId),
 	]);
 
 	return {
 		appLogs: appLogs.map((l) => l.toJSON()),
 		failedDeployments: failedDeployments.map((d) => d.toJSON()),
+		uptime,
 	};
 };
 

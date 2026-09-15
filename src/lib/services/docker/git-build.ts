@@ -48,6 +48,8 @@ export interface GitBuildParams {
 }
 
 export interface GitBuildResult {
+	/** The commit that was actually built, when git reported one. */
+	commit?: string | null;
 	error?: string;
 	success: boolean;
 }
@@ -72,7 +74,7 @@ export function DockerGitBuildMixin<
 			ref: string,
 			dir: string,
 			onProgress?: (line: string) => void,
-		): Promise<void> {
+		): Promise<string | null> {
 			onProgress?.(`Cloning ${params.gitUrl} (${ref})...`);
 			await execFileAsync("git", [
 				"clone",
@@ -85,6 +87,19 @@ export function DockerGitBuildMixin<
 				dir,
 			]);
 			logger.info(`Cloned: ${params.gitUrl}#${ref} -> ${dir}`);
+
+			const commit = await execFileAsync("git", [
+				"-C",
+				dir,
+				"rev-parse",
+				"HEAD",
+			])
+				.then(({ stdout }) => stdout.trim() || null)
+				.catch(() => null);
+			if (commit) {
+				onProgress?.(`Building commit ${commit.slice(0, 7)}`);
+			}
+			return commit;
 		}
 
 		/** Best-effort cache warm-up : no cache yet (first build) or a briefly unreachable registry never fails the build. */
@@ -193,8 +208,9 @@ export function DockerGitBuildMixin<
 					}
 				: undefined;
 
+			let commit: string | null = null;
 			try {
-				await this.#cloneRepo(params, ref, dir, onProgress);
+				commit = await this.#cloneRepo(params, ref, dir, onProgress);
 
 				if (cacheRef) {
 					await this.#pullBuildCache(docker, cacheRef, cacheAuth, onProgress);
@@ -222,7 +238,7 @@ export function DockerGitBuildMixin<
 					});
 				}
 
-				return { success: true };
+				return { commit, success: true };
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);
 				logger.error(`Build failed: ${params.gitUrl}#${ref}`, err);

@@ -11,8 +11,10 @@ there is no demo instance.
 - `services-dark.png` — /services
 - `service.png` — /services/:id
 - `service-dark.png` — /services/:id
-- `logs.png` — /services/:id/logs
-- `logs-dark.png` — /services/:id/logs
+- `logs.png` — /services/:id/observability
+- `logs-dark.png` — /services/:id/observability
+- `revisions.png` — /services/:id/revisions
+- `revisions-dark.png` — /services/:id/revisions
 - `networking.png` — /services/:id/networking
 - `networking-dark.png` — /services/:id/networking
 - `env.png` — /services/:id/env

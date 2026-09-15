@@ -7,13 +7,24 @@
 
 	type SortKey = "cpu" | "memory" | "traffic" | "name";
 
+	interface Props {
+		/** Limits the table to these services; omitted means every service. */
+		serviceIds?: string[];
+		title?: string;
+	}
+
+	const { serviceIds, title = "Per-service usage" }: Props = $props();
+
 	const usage = getServiceUsage();
 
 	let sort = $state<SortKey>("cpu");
 	let descending = $state(true);
 
 	const rows = $derived.by(() => {
-		const items = [...(usage.current ?? [])];
+		const all = usage.current ?? [];
+		const items = serviceIds
+			? all.filter((row) => serviceIds.includes(row.id))
+			: [...all];
 		const value = (row: (typeof items)[number]) => {
 			if (sort === "cpu") {
 				return row.cpuPercent;
@@ -53,7 +64,7 @@
 
 <section class="panel rounded-xl">
   <div class="border-border flex items-center justify-between gap-3 border-b px-4 py-3">
-    <h2 class="eyebrow">Per-service usage</h2>
+    <h2 class="eyebrow">{title}</h2>
     <span class="text-text-subtle text-[0.6875rem]">
       Newest sample · traffic is since each container started
     </span>

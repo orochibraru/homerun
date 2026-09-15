@@ -197,3 +197,10 @@ export const GRADIENTS_DARKER = [
 	"from-fuchsia-600 via-violet-700 to-purple-900",
 	"from-red-600 via-rose-700 to-pink-900",
 ] as const;
+
+/**
+ * Marks a volume choice that exists on the Docker daemon but isn't a Homerun
+ * storage volume yet : the service Volumes tab offers both in one picker and
+ * registers the host one on submit.
+ */
+export const HOST_VOLUME_PREFIX = "docker:";

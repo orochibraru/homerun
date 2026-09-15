@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type Deployment, deployment, service } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -19,7 +19,10 @@ export type DeploymentUpdateInput = Partial<
 		| "containerId"
 		| "errorMessage"
 		| "finishedAt"
+		| "gitCommit"
+		| "gitRef"
 		| "imageDigest"
+		| "imageRef"
 		| "log"
 		| "startedAt"
 		| "status"
@@ -69,6 +72,38 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return rows.map((row) => new DeploymentDTO(row));
 	}
 
+	/** Recent deployments across a set of services, for a project's own summary. */
+	static async listRecentForServices(
+		serviceIds: string[],
+		limit = 5,
+	): Promise<
+		Array<{
+			deployment: DeploymentDTO;
+			serviceName: string | null;
+			serviceSlug: string | null;
+		}>
+	> {
+		if (serviceIds.length === 0) {
+			return [];
+		}
+		const rows = await db
+			.select({
+				row: deployment,
+				serviceName: service.name,
+				serviceSlug: service.slug,
+			})
+			.from(deployment)
+			.leftJoin(service, eq(deployment.serviceId, service.id))
+			.where(inArray(deployment.serviceId, serviceIds))
+			.orderBy(desc(deployment.createdAt))
+			.limit(limit);
+		return rows.map((r) => ({
+			deployment: new DeploymentDTO(r.row),
+			serviceName: r.serviceName,
+			serviceSlug: r.serviceSlug,
+		}));
+	}
+
 	/** Same as `listForService`, scoped to a user across all their services : plus each row's service name/slug, for the dashboard. */
 	static async listRecentForUser(
 		userId: string,
@@ -105,8 +140,11 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			createdAt: now,
 			errorMessage: null,
 			finishedAt: null,
+			gitCommit: null,
+			gitRef: null,
 			id: input.id || crypto.randomUUID(),
 			imageDigest: null,
+			imageRef: null,
 			log: "",
 			serviceId: input.serviceId,
 			startedAt: now,

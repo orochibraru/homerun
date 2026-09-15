@@ -34,6 +34,7 @@
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
+	import { isDatabaseImage } from "$lib/service-link";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -94,8 +95,24 @@
 	let containerPort = $derived(
 		values?.containerPort ?? String(data.template?.containerPort ?? ""),
 	);
+	let authRequired = $derived(values?.authRequired === "on");
+	let networkMode = $derived<"bridge" | "host">(
+		values?.networkMode === "host" ? "host" : "bridge",
+	);
+	let portProtocol = $derived<"tcp" | "udp" | "both">(
+		values?.portProtocol === "udp"
+			? "udp"
+			: values?.portProtocol === "both"
+				? "both"
+				: "tcp",
+	);
+	// Datastores default to private : they're reached by their siblings over
+	// the project network, and a public hostname for a Postgres is a mistake
+	// waiting to happen. A resubmit keeps whatever the user actually chose.
 	let dnsResolvable = $derived(
-		values?.dnsResolvable !== "off" && values?.dnsResolvable !== "false",
+		values?.dnsResolvable === undefined
+			? !isDatabaseImage(image)
+			: values.dnsResolvable !== "off" && values.dnsResolvable !== "false",
 	);
 	let restartPolicy = $derived(
 		values?.restartPolicy ?? data.template?.restartPolicy ?? "unless-stopped",
@@ -647,12 +664,77 @@
             </div>
 
             <CheckBox
-              helperText="Get a public slug.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network. More networking controls (custom domain, auth gate) are on the service's Networking tab after it's created."
+              helperText="Get a public {slug || 'slug'}.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network."
               id="dnsResolvable"
               label="DNS-resolvable"
               name="dnsResolvable"
               bind:checked={dnsResolvable}
             />
+
+            {#if dnsResolvable}
+              <div>
+                <label class={label} for="customDomain">Custom domain</label>
+                <Input
+                  id="customDomain"
+                  name="customDomain"
+                  placeholder="app.example.com"
+                  type="text"
+                  value={values?.customDomain ?? ""}
+                />
+                <p class="mt-1 text-xs text-text-subtle">
+                  Optional second hostname routed to this service, mapped
+                  before the first deploy. Point its DNS at this host; Traefik
+                  requests a certificate for it on deploy.
+                </p>
+                {#if errors?.customDomain}
+                  <p class={errorClass}>{errors.customDomain[0]}</p>
+                {/if}
+              </div>
+
+              <CheckBox
+                helperText="Visitors have to sign in to this Homerun instance before they reach the service. Fine-grained rules (emails, groups, OAuth providers) are on the Networking tab once it exists."
+                id="authRequired"
+                label="Require login to access this app"
+                name="authRequired"
+                bind:checked={authRequired}
+              />
+            {/if}
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class={label} for="networkMode">Network mode</label>
+                <SelectRoot name="networkMode" type="single" bind:value={networkMode}>
+                  <SelectTrigger class="w-full" id="networkMode">
+                    {networkMode === "host" ? "Host" : "Bridge"}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem label="Bridge" value="bridge" />
+                    <SelectItem label="Host" value="host" />
+                  </SelectContent>
+                </SelectRoot>
+                <p class="mt-1 text-xs text-text-subtle">
+                  Host shares the machine's network namespace : needed for
+                  mDNS/SSDP apps, and not routable by Traefik.
+                </p>
+              </div>
+              <div>
+                <label class={label} for="portProtocol">Protocol</label>
+                <SelectRoot name="portProtocol" type="single" bind:value={portProtocol}>
+                  <SelectTrigger class="w-full" id="portProtocol">
+                    {portProtocol === "udp"
+                    ? "UDP"
+                    : portProtocol === "both"
+                      ? "Both"
+                      : "TCP"}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem label="TCP" value="tcp" />
+                    <SelectItem label="UDP" value="udp" />
+                    <SelectItem label="Both" value="both" />
+                  </SelectContent>
+                </SelectRoot>
+              </div>
+            </div>
           </div>
         </section>
 

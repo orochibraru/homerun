@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { envDefaultsForDisplay } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { AdminService } from "$lib/services/admin.service";
+import { DockerService } from "$lib/services/docker.service";
 
 const FIELD_TAB: Record<string, string> = {
 	authCheckUrl: "",
@@ -33,9 +34,10 @@ export const load = async ({ locals, url }) => {
 		);
 	}
 
-	const [settings, setupChecks] = await Promise.all([
+	const [settings, setupChecks, newt] = await Promise.all([
 		InstanceSettingsDTO.get(),
 		AdminService.runSetupChecks(),
+		DockerService.findNewtContainer().catch(() => null),
 	]);
 
 	const fieldIssues: Record<string, string> = {};
@@ -51,6 +53,7 @@ export const load = async ({ locals, url }) => {
 	return {
 		envDefaults: envDefaultsForDisplay(),
 		fieldIssues,
+		newt,
 		settings: settings.toJSON(),
 	};
 };

@@ -1,6 +1,7 @@
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
+import { MANAGED_LABEL } from "./labels.ts";
 import { swarmNetworkName } from "./swarm.ts";
 
 const LEADING_SLASH_RE = /^\//;
@@ -11,6 +12,15 @@ export interface TraefikInfo {
 	id: string;
 	image: string;
 	name: string;
+}
+
+export interface InfraContainer {
+	id: string;
+	image: string;
+	name: string;
+	project: string;
+	service: string;
+	state: string;
 }
 
 export interface TraefikUpdateResult {
@@ -159,6 +169,64 @@ export function DockerCoreServicesMixin<
 			return {
 				message: "Traefik was recreated with the new configuration.",
 				updated: true,
+			};
+		}
+
+		/**
+		 * The containers that make up this instance's own stack : anything
+		 * carrying a compose project label that Homerun didn't create itself
+		 * (the app, Postgres, Traefik, a Newt tunnel, whatever else the
+		 * operator's compose file starts). Deployed services are excluded by
+		 * the managed label, they have their own pages.
+		 *
+		 * The same narrow "core infrastructure" exception findTraefikContainer
+		 * documents, and read-only: this lists and streams logs, it never
+		 * touches them.
+		 */
+		async listInfraContainers(): Promise<InfraContainer[]> {
+			const containers = await this.getDocker().listContainers({ all: true });
+			return containers
+				.filter(
+					(container) =>
+						!container.Labels?.[MANAGED_LABEL] &&
+						container.Labels?.["com.docker.compose.project"],
+				)
+				.map((container) => ({
+					id: container.Id,
+					image: container.Image,
+					name:
+						container.Names[0]?.replace(LEADING_SLASH_RE, "") ??
+						container.Id.slice(0, 12),
+					project: container.Labels["com.docker.compose.project"] ?? "",
+					service: container.Labels["com.docker.compose.service"] ?? "",
+					state: container.State,
+				}))
+				.sort((a, b) => a.name.localeCompare(b.name));
+		}
+
+		/**
+		 * Whether a Pangolin tunnel client is already running on this host, so
+		 * the Pangolin settings can say "the tunnel is up" rather than leaving
+		 * the operator to guess why Resources resolve but nothing answers.
+		 * Matched on the image name, same shape as findTraefikContainer.
+		 */
+		async findNewtContainer(): Promise<InfraContainer | null> {
+			const containers = await this.getDocker().listContainers({ all: true });
+			const match = containers.find((container) =>
+				container.Image.includes("newt"),
+			);
+			if (!match) {
+				return null;
+			}
+			return {
+				id: match.Id,
+				image: match.Image,
+				name:
+					match.Names[0]?.replace(LEADING_SLASH_RE, "") ??
+					match.Id.slice(0, 12),
+				project: match.Labels?.["com.docker.compose.project"] ?? "",
+				service: match.Labels?.["com.docker.compose.service"] ?? "",
+				state: match.State,
 			};
 		}
 

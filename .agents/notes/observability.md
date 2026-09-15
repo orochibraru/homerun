@@ -119,3 +119,27 @@ markup as its own component alongside this feature).
 This closes the "in-app lifecycle event feed" half of what Planned features
 below used to list as unbuilt; outbound webhooks (Telegram/Discord/generic HTTP)
 on the same events are still unbuilt, see below.
+
+## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `$lib/services/uptime/uptime-probe.ts`)
+
+Two probes a minute per service with `uptimeEnabled` (default true) and a live
+container, run by another `BaseScheduler`:
+
+- **internal** — HTTP to the container's own address on the Docker network
+  (`DockerService.containerAddress`) and its container port. This is what a
+  sibling service sees, and it catches a dead process inside a container the
+  daemon still reports as running.
+- **external** — HTTP to the hostname Traefik publishes (the custom domain when
+  set, else `<slug>.<baseDomain>`). It fails for entirely different reasons:
+  DNS, a missing router, a certificate, a tunnel that isn't up.
+
+**Any HTTP response counts as up**, including 401/403 (a service behind the
+login wall is alive, it's just refusing the prober) and 404 (it answered, it
+just has no route at `/`). Only a transport error or the 5s timeout is a
+failure, and `redirect: "manual"` keeps a redirect from being chased.
+
+Results are **upserted one row per (service, kind)** rather than appended : the
+panel only ever shows "now", and the graphs already carry history. The service
+Observability tab renders both probes with per-probe troubleshooting steps when
+one fails; the dashboard shows a banner listing every failing probe, linking
+into the service that owns it.

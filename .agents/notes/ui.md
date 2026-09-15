@@ -91,6 +91,13 @@ remaining five list pages (remote hosts, S3 destinations, cron jobs, build
 cache, git providers) still hand-roll their row internals inside the same
 panel/divider shell, see `TODO.md`.
 
+`entity-list.svelte` also takes a **`wrapper`** snippet, which the services list
+uses to put every row inside a right-click `ContextMenu` (start/stop/ restart,
+settings, delete, Link to…, group into a project, ungroup) without each page
+rebuilding its own row markup. The wrapper receives the item and a no-argument
+body snippet; that shape is deliberate, a `Snippet<[T]>` body can't be assigned
+across the generic boundary.
+
 **The resource graphs** (`usage-chart.svelte`, `service-usage-table.svelte`)
 read `stat_sample` through `$lib/remote/stats.remote.ts`. The chart is a plain
 inline SVG path over a `0 0 100 40` viewBox — no chart library, same "a

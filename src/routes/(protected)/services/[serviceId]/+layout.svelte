@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		ArrowLeft,
+		Clock,
 		Container,
 		Cpu,
 		FileText,
@@ -10,7 +11,6 @@
 		Settings,
 		SlidersHorizontal,
 		Terminal,
-		TriangleAlert,
 	} from "@lucide/svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -48,12 +48,21 @@
 		},
 		{
 			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/logs", {
+			href: resolve("/(protected)/services/[serviceId]/revisions", {
+				serviceId: svc.id,
+			}),
+			icon: Clock,
+			id: "revisions",
+			label: "Revisions",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/observability", {
 				serviceId: svc.id,
 			}),
 			icon: FileText,
-			id: "logs",
-			label: "Logs",
+			id: "observability",
+			label: "Observability",
 		},
 		{
 			exact: false,
@@ -99,15 +108,6 @@
 			icon: Terminal,
 			id: "terminal",
 			label: "Terminal",
-		},
-		{
-			exact: false,
-			href: resolve("/(protected)/services/[serviceId]/errors", {
-				serviceId: svc.id,
-			}),
-			icon: TriangleAlert,
-			id: "errors",
-			label: "Errors",
 		},
 		{
 			exact: false,

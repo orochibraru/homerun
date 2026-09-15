@@ -2,6 +2,7 @@
 	import {
 		AlertTriangle,
 		ArrowRight,
+		CircleX,
 		Clock,
 		Plus,
 		Server,
@@ -10,6 +11,7 @@
 	import { resolve } from "$app/paths";
 	import HostResources from "$lib/components/host-resources.svelte";
 	import ServiceUsageTable from "$lib/components/service-usage-table.svelte";
+	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import UsageChart from "$lib/components/usage-chart.svelte";
 	import { timeAgo } from "$lib/formatting";
@@ -77,8 +79,34 @@
     </a>
   {/if}
 
+  {#if data.uptimeDown.length > 0}
+    <div class="mb-4 rounded-xl border border-red-400/40 bg-red-500/10">
+      <div class="flex items-center gap-2 border-b border-red-400/30 px-4 py-2.5">
+        <CircleX class="size-3.5 text-red-500" />
+        <span class="text-sm font-medium text-red-600 dark:text-red-400">
+          {data.uptimeDown.length}
+          {data.uptimeDown.length === 1 ? "probe is" : "probes are"} failing
+        </span>
+      </div>
+      <div class="divide-y divide-red-400/20">
+        {#each data.uptimeDown as check (check.serviceId + check.kind)}
+          <a
+            class="flex items-center gap-3 px-4 py-2 text-xs transition-colors hover:bg-red-500/10"
+            href="{resolve('/services')}/{check.serviceId}/observability"
+          >
+            <span class="text-text truncate font-medium">{check.serviceName}</span>
+            <span class="text-text-muted">
+              {check.kind === "internal" ? "not answering on the network" : "hostname not responding"}
+            </span>
+            <span class="text-text-subtle ml-auto truncate">{check.detail ?? ""}</span>
+          </a>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
   <div class="mb-4 grid items-start gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
-    <div class="panel divide-border flex divide-x">
+    <div class="panel divide-border flex divide-x rounded-xl">
       {#each statCards as card (card.label)}
         <div class="min-w-0 flex-1 px-4 py-3">
           <p class="eyebrow flex items-center gap-1.5">
@@ -98,8 +126,8 @@
     <ServiceUsageTable />
   </div>
 
-  <div class="grid items-start gap-4 lg:grid-cols-3">
-    <div class="panel lg:col-span-2">
+  <div class="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">
+    <div class="panel rounded-xl lg:col-span-2 xl:col-span-1">
       <div class="panel-head">
         <h2 class="eyebrow flex items-center gap-1.5">
           <Clock class="size-3" />
@@ -125,18 +153,41 @@
         <div class="divide-border divide-y">
           {#each data.recentDeployments as dep (dep.id)}
             <a
-              class="hover:bg-surface-2 flex items-center gap-3 px-3.5 py-2 transition-colors"
+              class="hover:bg-surface-2 flex items-start gap-3 px-4 py-2.5 transition-colors"
               href="{resolve('/services')}/{dep.serviceId}"
             >
-              <span class="size-1.5 shrink-0 rounded-full {statusDot(dep.status)}"></span>
-              <span class="text-text min-w-0 flex-1 truncate text-sm">
-                {dep.serviceName ?? "Unknown service"}
+              <span class="mt-1.5 size-1.5 shrink-0 rounded-full {statusDot(dep.status)}"></span>
+              <span class="min-w-0 flex-1">
+                <span class="flex items-center gap-2">
+                  <span class="text-text truncate text-sm font-medium">
+                    {dep.serviceName ?? "Unknown service"}
+                  </span>
+                  <StatusBadge status={dep.status} />
+                </span>
+                <span class="text-text-subtle mt-0.5 block truncate text-xs">
+                  {dep.serviceSlug ?? ""}
+                  {#if dep.imageDigest}
+                    · {dep.imageDigest.slice(0, 19)}
+                  {/if}
+                  {#if dep.startedAt && dep.finishedAt}
+                    · took {Math.max(
+                      1,
+                      Math.round(
+                        (new Date(dep.finishedAt).getTime() -
+                          new Date(dep.startedAt).getTime()) /
+                          1000,
+                      ),
+                    )}s
+                  {/if}
+                </span>
+                {#if dep.errorMessage}
+                  <span class="mt-0.5 block truncate text-xs text-red-500">
+                    {dep.errorMessage}
+                  </span>
+                {/if}
               </span>
-              <span class="tabular-nums text-text-subtle shrink-0 text-[0.6875rem]">
+              <span class="tabular-nums text-text-subtle mt-0.5 shrink-0 text-[0.6875rem]">
                 {timeAgo(dep.createdAt)}
-              </span>
-              <span class="text-text-subtle w-20 shrink-0 text-right text-xs">
-                {dep.status}
               </span>
             </a>
           {/each}
@@ -144,7 +195,50 @@
       {/if}
     </div>
 
-    <div class="panel">
+    <div class="panel rounded-xl">
+      <div class="panel-head">
+        <h2 class="eyebrow flex items-center gap-1.5">
+          <AlertTriangle class="size-3" />
+          Recent errors
+        </h2>
+        <a class="text-accent text-xs font-medium hover:underline" href={resolve("/system-logs")}>
+          System logs
+        </a>
+      </div>
+      {#if data.recentErrors.length === 0}
+        <p class="text-text-muted px-4 py-6 text-center text-xs">
+          Nothing logged at warn or error level.
+        </p>
+      {:else}
+        <div class="divide-border divide-y">
+          {#each data.recentErrors as entry (entry.id)}
+            {@const href = entry.serviceId
+            ? `${resolve("/services")}/${entry.serviceId}/observability`
+            : resolve("/system-logs")}
+            <a class="hover:bg-surface-2 block px-4 py-2.5 transition-colors" {href}>
+              <span class="flex items-center gap-2">
+                <span
+                  class="size-1.5 shrink-0 rounded-full {entry.level === 'error'
+                  ? 'bg-red-500'
+                  : 'bg-amber-500'}"
+                ></span>
+                <span class="text-text truncate text-xs font-medium">
+                  {entry.serviceName ?? entry.scope ?? "Instance"}
+                </span>
+                <span class="tabular-nums text-text-subtle ml-auto shrink-0 text-[0.6875rem]">
+                  {timeAgo(entry.createdAt)}
+                </span>
+              </span>
+              <span class="text-text-muted mt-0.5 line-clamp-2 text-xs">
+                {entry.message}
+              </span>
+            </a>
+          {/each}
+        </div>
+      {/if}
+    </div>
+
+    <div class="panel rounded-xl">
       <div class="panel-head">
         <h2 class="eyebrow">Quick Actions</h2>
       </div>

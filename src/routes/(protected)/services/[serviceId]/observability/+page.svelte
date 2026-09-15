@@ -4,18 +4,28 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import UptimePanel from "$lib/components/uptime-panel.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
-	onMount(() => title.set(`${data.service.name} · Errors`));
+	onMount(() => title.set(`${data.service.name} · Observability`));
 
 	let expandedDeploymentId = $state<string | null>(null);
 	let resolving = $state(false);
 </script>
+
+<div class="mb-4">
+  <UptimePanel checks={data.uptime} enabled={data.service.uptimeEnabled} />
+</div>
+
+<div class="mb-4">
+  <LiveLogViewer containerId={data.service.containerId} serviceId={data.service.id} heightClass="h-96" />
+</div>
 
 {#if data.service.currentStatus === "failed"}
   <div class="mb-6 flex items-start gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
@@ -23,14 +33,7 @@
     <div>
       <p class="font-medium">This service's container is currently down.</p>
       <p class="mt-0.5 text-xs opacity-80">
-        Check its
-        <a
-          class="underline"
-          href={resolve("/(protected)/services/[serviceId]/logs", {
-            serviceId: data.service.id,
-          })}
-        >Logs</a>
-        tab for the crash output.
+        The crash output is in the log stream above.
       </p>
     </div>
   </div>
