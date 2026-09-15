@@ -1,3 +1,4 @@
+import { stripAnsi } from "$lib/ansi";
 import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { type ProbeResult, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
@@ -15,6 +16,9 @@ const TIMEOUT_MS = 5000;
 const PRUNE_EVERY_TICKS = 60;
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
+
+const UNTRUSTED_CERT_NOTE =
+	"certificate not trusted (self-signed, or not issued yet)";
 
 /**
  * Why the external probe can't mean anything for this hostname, or null when
@@ -68,6 +72,11 @@ export function probeErrorMessage(err: unknown): string {
 		return `TLS failed: ${message}`;
 	}
 	return message;
+}
+
+export function isCertificateError(err: unknown): boolean {
+	const message = err instanceof Error ? err.message : String(err);
+	return /certificate|tls|ssl/i.test(message);
 }
 
 const REQUIRED_BY_BUN_CONNECT = () => undefined;
@@ -170,8 +179,9 @@ export class UptimeProbe extends BaseScheduler {
 		const health = await DockerService.containerHealth(svc.containerId);
 		const method = internalProbeMethod(svc.image, health !== null);
 		if (method === "healthcheck" && health) {
+			const output = health.output ? stripAnsi(health.output).trim() : "";
 			return {
-				detail: `Healthcheck: ${health.status}${health.output ? ` · ${health.output.slice(0, 120)}` : ""}`,
+				detail: `Healthcheck: ${health.status}${output ? ` · ${output.slice(0, 120)}` : ""}`,
 				kind: "internal",
 				ok: health.status !== "unhealthy",
 				serviceId: svc.id,
@@ -236,19 +246,32 @@ export class UptimeProbe extends BaseScheduler {
 		return await this.#probe(svc.id, "external", `${scheme}://${host}/`);
 	}
 
+	#request(target: string, verifyTls: boolean): Promise<Response> {
+		return fetch(target, {
+			// A redirect is an answer, not a failure.
+			redirect: "manual",
+			signal: AbortSignal.timeout(TIMEOUT_MS),
+			tls: { rejectUnauthorized: verifyTls },
+		});
+	}
+
 	async #probe(
 		serviceId: string,
 		kind: "internal" | "external",
 		target: string,
 	): Promise<ProbeResult> {
 		const startedAt = Date.now();
+		const failure = (err: unknown): ProbeResult => ({
+			detail: probeErrorMessage(err),
+			kind,
+			latencyMs: Date.now() - startedAt,
+			ok: false,
+			serviceId,
+			target,
+		});
+
 		try {
-			const response = await fetch(target, {
-				// A self-signed certificate is the normal case behind a tunnel,
-				// and a redirect is an answer : neither means "down".
-				redirect: "manual",
-				signal: AbortSignal.timeout(TIMEOUT_MS),
-			});
+			const response = await this.#request(target, true);
 			return {
 				detail: `HTTP ${response.status}`,
 				kind,
@@ -258,14 +281,22 @@ export class UptimeProbe extends BaseScheduler {
 				target,
 			};
 		} catch (err) {
-			return {
-				detail: probeErrorMessage(err),
-				kind,
-				latencyMs: Date.now() - startedAt,
-				ok: false,
-				serviceId,
-				target,
-			};
+			if (!isCertificateError(err)) {
+				return failure(err);
+			}
+			try {
+				const response = await this.#request(target, false);
+				return {
+					detail: `HTTP ${response.status} · ${UNTRUSTED_CERT_NOTE}`,
+					kind,
+					latencyMs: Date.now() - startedAt,
+					ok: true,
+					serviceId,
+					target,
+				};
+			} catch (retryErr) {
+				return failure(retryErr);
+			}
 		}
 	}
 }

@@ -1,3 +1,4 @@
+import { hostname } from "node:os";
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
@@ -70,6 +71,14 @@ export function DockerCoreServicesMixin<
 		 * project naming isn't guaranteed stable across setups (no-compose /
 		 * standalone Traefik is a documented fallback too).
 		 */
+		async selfContainerLabels(): Promise<Record<string, string> | null> {
+			const info = await this.getDocker()
+				.getContainer(hostname())
+				.inspect()
+				.catch(() => null);
+			return info?.Config?.Labels ?? null;
+		}
+
 		async findTraefikContainer(): Promise<TraefikInfo | null> {
 			const containers = await this.getDocker().listContainers({
 				all: true,

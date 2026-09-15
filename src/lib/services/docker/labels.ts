@@ -17,6 +17,21 @@ export function authCheckUrlFor(serviceId: string): string {
  * MANAGED_LABEL : this app must never list, inspect, or touch a
  * container on the host that it didn't create itself.
  */
+export function hasTraefikRouterFor(
+	labels: Record<string, string>,
+	host: string,
+): boolean {
+	if (labels["traefik.enable"] !== "true") {
+		return false;
+	}
+	return Object.entries(labels).some(
+		([key, value]) =>
+			key.startsWith("traefik.http.routers.") &&
+			key.endsWith(".rule") &&
+			value.includes(host),
+	);
+}
+
 export const MANAGED_LABEL = "homerun.managed";
 export const SERVICE_ID_LABEL = "homerun.service.id";
 

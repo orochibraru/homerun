@@ -18,6 +18,21 @@ layer it came from. DNS automation (Cloudflare/Pangolin, see below) is separate
 from this check, `runSetupChecks()` doesn't currently flag an unset DNS
 provider, that's an opt-in feature, not a base-instance misconfiguration.
 
+**`dashboard-router` is the one check that reads this app's own container.**
+`DockerService.selfContainerLabels()` inspects it (Docker sets a container's
+hostname to its own short id, which is what makes self-inspection possible) and
+`hasTraefikRouterFor(labels, host)` looks for an enabled router whose rule
+carries the Dashboard URL's host. **Real, reproduced case**: an instance
+installed before the app container got its `DASHBOARD_DOMAIN` router had no
+Traefik labels at all, so the dashboard answered on `:3000` and Traefik returned
+its own 404 for the configured hostname, with nothing anywhere saying why —
+labels are only read when a container is **created**, so editing the Dashboard
+URL in `/settings` can never fix it, only regenerating the compose file and
+recreating the container can. The check skips itself when the origin carries an
+explicit port (that instance is reached directly on that port, not through
+Traefik : the installer's own IP-mode default) and when self-inspection fails
+(dev, or not running in a container).
+
 There's no standalone `/setup` page anymore (removed, it duplicated what
 `/settings` already does live). `AdminService.runSetupChecks()` now only backs
 the dashboard's setup-issue banner, which deep-links straight into `/settings`
@@ -131,7 +146,25 @@ container, run by another `BaseScheduler`:
   daemon still reports as running.
 - **external** — HTTP to the hostname Traefik publishes (the custom domain when
   set, else `<slug>.<baseDomain>`). It fails for entirely different reasons:
-  DNS, a missing router, a certificate, a tunnel that isn't up.
+  DNS, a missing router, a tunnel that isn't up.
+
+**An untrusted certificate is not an outage, and treating it as one reported
+healthy services as down.** The probe's own comment always claimed a self-signed
+certificate was the normal case behind a tunnel, but nothing implemented it:
+Bun's `fetch` verifies by default, so a service sitting behind a Pangolin tunnel
+whose edge hadn't issued a certificate for that subdomain showed
+`TLS failed: unable to verify the first certificate` and 0% uptime while serving
+200s perfectly well. The probe now tries verified first and, **only** when the
+failure is a certificate one (`isCertificateError`), retries with
+`tls: {rejectUnauthorized: false}` : a success on the retry is `ok` with
+`certificate not trusted` appended to the detail, so the cert problem stays
+visible without being an outage, and a connection refused or a timeout still
+fails on the first attempt as before.
+
+**The healthcheck detail is stripped of ANSI escapes** (`stripAnsi`,
+`$lib/ansi`) before it's stored. A container whose `HEALTHCHECK` prints coloured
+output put raw `\x1b[32m` sequences into the uptime row, which the panel renders
+as plain text : they showed up on screen as `[32mStatus: 200`.
 
 **The internal probe isn't always HTTP**, and
 `internalProbeMethod(image, hasHealthcheck)` picks between three, in this order:

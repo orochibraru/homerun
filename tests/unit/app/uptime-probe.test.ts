@@ -9,6 +9,7 @@ mock.module("$app/environment", () => ({
 const {
 	externalProbeSkipReason,
 	internalProbeMethod,
+	isCertificateError,
 	probeErrorMessage,
 	tcpConnect,
 } = await import("../../../src/lib/services/uptime/uptime-probe");
@@ -76,6 +77,25 @@ describe("probeErrorMessage", () => {
 	test("passes anything else through, including a non-Error throw", () => {
 		expect(probeErrorMessage(new Error("Nope"))).toBe("Nope");
 		expect(probeErrorMessage("plain string")).toBe("plain string");
+	});
+});
+
+describe("isCertificateError", () => {
+	test("recognises the failures a tunnel's own certificate produces", () => {
+		expect(
+			isCertificateError(new Error("unable to verify the first certificate")),
+		).toBe(true);
+		expect(isCertificateError(new Error("self-signed certificate"))).toBe(true);
+		expect(isCertificateError(new Error("SSL routines: wrong version"))).toBe(
+			true,
+		);
+	});
+
+	test("leaves a real outage alone, so it still reports as down", () => {
+		expect(isCertificateError(new Error("ConnectionRefused"))).toBe(false);
+		expect(isCertificateError(new Error("The operation timed out"))).toBe(
+			false,
+		);
 	});
 });
 

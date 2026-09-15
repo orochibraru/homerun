@@ -6,31 +6,35 @@ move it under `## Done` in the same change that finishes it.
 
 ## Not prioritized / No size / Too lazy to size just got an idea
 
-- [ ] **[WIP]** [Docker] **Routing doesn't work on the test server.** Reproduced
-      on 37.27.7.3 (pr-14, rootless docker under the `homerun` user), and the
-      app's half is **fixed**: `PangolinService` never sent `sso`, Pangolin
-      defaults it to true, so every resource it created was behind Pangolin's
-      login (302 to `/auth/resource/…` in a browser, bare 401 otherwise). It now
-      follows every create with `POST /resource/{id}` `{"sso": false}` and does
-      the same on the already-exists path, so a redeploy heals the ones created
-      before it, see `.agents/notes/dns.md`. Traefik itself was never wrong: on
-      the box, `curl -k -H "Host: dashy.penombre.space" https://127.0.0.1`
-      answers 200, and the target was already `localhost:443` with
-      `method=https`. Left to do, all of it on the instance rather than in this
-      repo: 1. Ship this image to the test server and redeploy each service (or
-      flip the five existing resources by hand:
-      `POST /resource/{317,318,333,335,336}` with `{"sso": false}`). The sandbox
-      refuses to make that call from here, it reads as an auth weakening. 2.
-      **No TLS certificate for `*.penombre.space` at the Pangolin edge**, so
-      every subdomain gets Pangolin's Traefik default self-signed cert while the
-      apex has a real Let's Encrypt one. The domain is
+- [ ] **[WIP]** [Docker] **Routing doesn't work on the test server.** Mostly
+      fixed and verified live : `dashy.penombre.space` serves Dashy, and
+      `better-livebox.penombre.space` reaches its own app. - **Done** :
+      `PangolinService` never sent `sso` and Pangolin defaults it to true, so
+      every resource it created was behind Pangolin's login (302 to
+      `/auth/resource/…`, or a bare 401). It now follows every create with
+      `POST /resource/{id}` `{"sso": false}`, and does the same on the
+      already-exists path, so a redeploy heals the older ones. - **Done** : the
+      hostname uptime probe called an untrusted certificate an outage, so a
+      service behind the tunnel read 0% while serving 200s. It now retries
+      certificate failures unverified and reports `certificate not trusted` on
+      an otherwise-fine response. ANSI escapes from a container's own
+      healthcheck output are stripped too, they were rendering as
+      `[32mStatus: 200` in the Observability tab. - **Done** : new
+      `dashboard-router` setup check. The app inspects its own container's
+      labels and warns when nothing routes the Dashboard URL's host to it, which
+      is the 404 below, previously silent. - **Left, on the instance** : the
+      box's `compose.yaml` predates the `DASHBOARD_DOMAIN` router, so
+      `homerun-app-1` carries no Traefik labels and `dash.penombre.space` 404s.
+      Add the labels (patched copy waiting at `scratchpad/remote-compose.yaml`),
+      set `DASHBOARD_DOMAIN` in `.env`, `docker compose up -d app`, and repoint
+      that Pangolin target from `localhost:80` to 443/https. Resources
+      317/318/333 are hand-made and still `sso=1`, Homerun won't touch what it
+      didn't create. - **Left, on Pangolin** : no cert for `*.penombre.space`,
+      so subdomains get the edge's default self-signed one and a browser still
+      warns. The domain is
       `verified: true, type: wildcard, preferWildcardCert: true` with no
-      `certResolver`: issue the wildcard over DNS-01, or turn
-      `preferWildcardCert` off and let it issue per-subdomain. 3. **The box's
-      `compose.yaml` predates the dashboard router**, so `app` carries no
-      Traefik labels and nothing answers for `dash.penombre.space` (whose target
-      also points at `:80`, where no router exists). Regenerate it with the
-      current installer, which emits the `DASHBOARD_DOMAIN` router.
+      `certResolver` : issue the wildcard over DNS-01 or turn
+      `preferWildcardCert` off and let it issue per-subdomain.
 - [ ] Ability to edit a docker registry
 - [ ] Add penombre template (github.com/orochibraru/penombre)
 - [ ] Add tags to templates to make search more relevant.
@@ -59,6 +63,20 @@ move it under `## Done` in the same change that finishes it.
       their row internals, now inside the same panel/divider shell so they look
       identical. Their rows carry per-page extras (an agent's reachability line,
       a provider's kind badge) that want `badge`/`meta` snippets.
+- [ ] [App] **Let Pangolin own SSO instead of the in-app login wall.** Homerun
+      now force-disables Pangolin's own `sso` on every resource it creates (see
+      `.agents/notes/dns.md`), which is right when the per-service login wall is
+      the gate and wrong for an instance that would rather have Pangolin
+      authenticate everything : today that isn't a choice, and running both
+      means signing in twice. Add one optional instance setting in the Pangolin
+      section (default off, so current behaviour is unchanged): when it's on,
+      created resources keep `sso: true` and the per-service wall is skipped for
+      services published through Pangolin. Touches `instance_settings` plus a
+      migration, `InstanceSettingsDTO`'s Pangolin section,
+      `settings/networking`'s Pangolin card, `setResourceSso`'s call sites in
+      `pangolin.service.ts`, and the wall itself (`$lib/server/app-gate.ts` /
+      `api/v1/auth-check`).
+
 - [ ] [Docker] **Make the Pangolin target host configurable.** `ip` is hardcoded
       to `localhost`, which is only right when the newt tunnel runs on this host
       with host networking. Everything else needs the LAN address.
