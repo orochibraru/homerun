@@ -15,6 +15,7 @@ import type {
 	JobStatus,
 	JobType,
 	NotificationChannelKind,
+	PullPolicy,
 	StatusPageScope,
 } from "$lib/types";
 
@@ -518,6 +519,11 @@ export const service = pgTable(
 		containerId: text("container_id"),
 		containerPort: integer("container_port").notNull(),
 		cpuLimit: text("cpu_limit"),
+		// Errors older than this are hidden on the Observability tab. Set by
+		// the "Clear errors" button, and automatically by a deploy that goes
+		// live : errorsDismissedByDeploymentId is that revision.
+		errorsDismissedAt: timestamp("errors_dismissed_at", { mode: "date" }),
+		errorsDismissedByDeploymentId: text("errors_dismissed_by_deployment_id"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// Standard 5-field cron expression ("min hour day month weekday"),
 		// evaluated in the server's local time : see $lib/services/cron.service.ts.
@@ -596,6 +602,11 @@ export const service = pgTable(
 		// = "swarm") : ignored entirely in standalone mode, always 1 container.
 		// Editable on the Compute tab.
 		replicas: integer("replicas").default(1).notNull(),
+		// always | missing | never
+		pullPolicy: text("pull_policy")
+			.$type<PullPolicy>()
+			.default("always")
+			.notNull(),
 		// no | always | on-failure | unless-stopped
 		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
 		// subdomain: <slug>.<baseDomain>

@@ -19,7 +19,7 @@ import {
 	type PagedResult,
 	searchCondition,
 } from "$lib/server/list-query";
-import type { ContainerStatus } from "$lib/types";
+import type { ContainerStatus, PullPolicy } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
 /** Fields a caller supplies to insert a new service row. */
@@ -46,6 +46,7 @@ export interface NewServiceInput {
 	registryPasswordEnc?: string | null;
 	registryUrl?: string | null;
 	registryUsername?: string | null;
+	pullPolicy?: PullPolicy;
 	replicas?: number;
 	restartPolicy: string;
 	slug: string;
@@ -78,6 +79,8 @@ export type ServiceUpdateInput = Partial<
 		| "desiredState"
 		| "dnsResolvable"
 		| "envVars"
+		| "errorsDismissedAt"
+		| "errorsDismissedByDeploymentId"
 		| "gitBuildContext"
 		| "gitDockerfilePath"
 		| "gitRef"
@@ -88,6 +91,7 @@ export type ServiceUpdateInput = Partial<
 		| "networkMode"
 		| "portProtocol"
 		| "projectId"
+		| "pullPolicy"
 		| "registryPasswordEnc"
 		| "registryUrl"
 		| "registryUsername"
@@ -344,6 +348,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			networkMode: input.networkMode ?? "bridge",
 			portProtocol: input.portProtocol ?? "tcp",
 			projectId: input.projectId ?? null,
+			pullPolicy: input.pullPolicy ?? "always",
 			replicas: input.replicas ?? 1,
 		} satisfies Partial<Service>;
 	}
@@ -360,6 +365,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 			cronLastRunAt: null,
 			cronSchedule: null,
 			currentStatus: "pending",
+			errorsDismissedAt: null,
+			errorsDismissedByDeploymentId: null,
 			customDomain: input.customDomain ?? null,
 			customSslCertEnc: null,
 			customSslKeyEnc: null,
@@ -383,6 +390,13 @@ export class ServiceDTO extends BaseDTO<Service> {
 	async update(input: ServiceUpdateInput): Promise<void> {
 		await db.update(service).set(input).where(eq(service.id, this.row.id));
 		Object.assign(this.row, input);
+	}
+
+	async dismissErrors(deploymentId: string | null): Promise<void> {
+		await this.update({
+			errorsDismissedAt: new Date(),
+			errorsDismissedByDeploymentId: deploymentId,
+		});
 	}
 
 	async resolveOrphan(): Promise<void> {
@@ -448,6 +462,12 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get currentStatus(): Service["currentStatus"] {
 		return this.row.currentStatus;
+	}
+	get pullPolicy(): PullPolicy {
+		return this.row.pullPolicy;
+	}
+	get errorsDismissedAt(): Date | null {
+		return this.row.errorsDismissedAt;
 	}
 	get projectId(): string | null {
 		return this.row.projectId;

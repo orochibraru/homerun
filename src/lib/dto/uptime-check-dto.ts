@@ -117,6 +117,10 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 		return new Map(rows.map((row) => [`${row.serviceId}:${row.kind}`, row]));
 	}
 
+	static async clearForService(serviceId: string): Promise<void> {
+		await db.delete(uptimeCheck).where(eq(uptimeCheck.serviceId, serviceId));
+	}
+
 	static async prune(): Promise<void> {
 		await db
 			.delete(uptimeCheck)

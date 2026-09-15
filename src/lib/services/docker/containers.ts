@@ -216,6 +216,18 @@ export function DockerContainerMixin<
 			};
 		}
 
+		async localImageDigest(
+			ref: string,
+			remote?: RemoteHostConnection | null,
+		): Promise<string | null | undefined> {
+			try {
+				const inspect = await this.getDocker(remote).getImage(ref).inspect();
+				return inspect.RepoDigests?.[0]?.split("@")[1] ?? null;
+			} catch {
+				return undefined;
+			}
+		}
+
 		/** Pulls `image:tag`, optionally authenticating against a private registry. */
 		async pullImage(
 			params: PullImageParams,

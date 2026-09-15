@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, lte } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type Deployment, deployment, service } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -57,19 +57,39 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	static async listFailedForService(
 		serviceId: string,
 		limit = 50,
+		since: Date | null = null,
 	): Promise<DeploymentDTO[]> {
+		const conditions = [
+			eq(deployment.serviceId, serviceId),
+			eq(deployment.status, "failed"),
+		];
+		if (since) {
+			conditions.push(gt(deployment.createdAt, since));
+		}
 		const rows = await db
 			.select()
+			.from(deployment)
+			.where(and(...conditions))
+			.orderBy(desc(deployment.createdAt))
+			.limit(limit);
+		return rows.map((row) => new DeploymentDTO(row));
+	}
+
+	static async countFailedForServiceUpTo(
+		serviceId: string,
+		until: Date,
+	): Promise<number> {
+		const [row] = await db
+			.select({ total: count() })
 			.from(deployment)
 			.where(
 				and(
 					eq(deployment.serviceId, serviceId),
 					eq(deployment.status, "failed"),
+					lte(deployment.createdAt, until),
 				),
-			)
-			.orderBy(desc(deployment.createdAt))
-			.limit(limit);
-		return rows.map((row) => new DeploymentDTO(row));
+			);
+		return row?.total ?? 0;
 	}
 
 	/** Recent deployments across a set of services, for a project's own summary. */

@@ -57,6 +57,7 @@ function toCreateInput(
 		memoryLimitMb: input.memoryLimitMb ?? null,
 		name: input.name,
 		projectId,
+		pullPolicy: input.pullPolicy,
 		restartPolicy: input.restartPolicy,
 		slug: input.slug,
 		userId,

@@ -1,4 +1,10 @@
 import type { Readable } from "node:stream";
+import {
+	authenticatedCloneUrl,
+	cloneFailureHint,
+	type GitCredential,
+	redactCloneUrl,
+} from "$lib/git-clone-url";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
@@ -60,6 +66,11 @@ export interface GitBuildParams {
 	// cache this time). Undefined/null : no cache-from/cache-to at all, same
 	// behavior as before this existed.
 	cacheRegistry?: BuildCacheRegistryConfig | null;
+	// Credentials for a private repo, when a git provider is connected for
+	// the repo's host : injected into the clone URL rather than relying on a
+	// credential helper, since the clone runs in a container with no tty (git
+	// would otherwise fail with "could not read Username ... No such device").
+	credential?: GitCredential | null;
 	// Relative to buildContext.
 	dockerfilePath?: string | null;
 	// Branch, tag, or commit : passed to `git clone --branch`, so only
@@ -115,6 +126,7 @@ export function DockerGitBuildMixin<
 			const container = await docker.createContainer({
 				Cmd: cmd,
 				Entrypoint: entrypoint,
+				Env: ["GIT_TERMINAL_PROMPT=0"],
 				HostConfig: {
 					Binds: [`${volumeName}:${WORKSPACE}${readOnly ? ":ro" : ""}`],
 				},
@@ -148,7 +160,11 @@ export function DockerGitBuildMixin<
 			volumeName: string,
 			onProgress?: (line: string) => void,
 		): Promise<string | null> {
-			onProgress?.(`Cloning ${params.gitUrl} (${ref})...`);
+			const cloneUrl = authenticatedCloneUrl(
+				params.gitUrl,
+				params.credential ?? null,
+			);
+			onProgress?.(`Cloning ${redactCloneUrl(cloneUrl)} (${ref})...`);
 			const clone = await this.#runInWorkspace({
 				cmd: [
 					"clone",
@@ -157,7 +173,7 @@ export function DockerGitBuildMixin<
 					"--branch",
 					ref,
 					"--single-branch",
-					params.gitUrl,
+					cloneUrl,
 					REPO_DIR,
 				],
 				entrypoint: ["git"],
@@ -165,7 +181,10 @@ export function DockerGitBuildMixin<
 				volumeName,
 			});
 			if (clone.statusCode !== 0) {
-				throw new Error(clone.output || `git clone exited ${clone.statusCode}`);
+				const output = redactCloneUrl(
+					clone.output || `git clone exited ${clone.statusCode}`,
+				);
+				throw new Error(cloneFailureHint(params.gitUrl, output));
 			}
 			logger.info(`Cloned: ${params.gitUrl}#${ref} -> ${volumeName}`);
 

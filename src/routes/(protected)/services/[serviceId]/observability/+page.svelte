@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { AlertTriangle, ChevronDown, Ghost, Loader2 } from "@lucide/svelte";
+	import {
+		AlertTriangle,
+		ChevronDown,
+		Eraser,
+		Ghost,
+		Loader2,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -18,6 +24,15 @@
 
 	let expandedDeploymentId = $state<string | null>(null);
 	let resolving = $state(false);
+	let clearing = $state<"errors" | "heartbeats" | null>(null);
+
+	const dismissedLabel = $derived(
+		data.dismissedBy
+			? (data.dismissedBy.gitCommit?.slice(0, 7) ??
+					data.dismissedBy.imageRef ??
+					"a later revision")
+			: null,
+	);
 </script>
 
 <div class="mb-4">
@@ -26,6 +41,34 @@
     enabled={data.service.uptimeEnabled}
     externalSkipped={data.externalSkipped}
   />
+  {#if data.uptime.internal.length > 0 || data.uptime.external.length > 0}
+    <form
+      action="?/clearHeartbeats"
+      class="mt-2 flex justify-end"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't clear the heartbeats.",
+        loading: "Clearing heartbeats",
+        onSettled: () => {
+          clearing = null;
+        },
+        onStart: () => {
+          clearing = "heartbeats";
+        },
+        success: "Heartbeats cleared.",
+      })}
+    >
+      <Button
+        disabled={clearing !== null}
+        size="sm"
+        type="submit"
+        variant="ghost"
+      >
+        <Eraser class="size-3.5" />
+        Clear heartbeats
+      </Button>
+    </form>
+  {/if}
 </div>
 
 <div class="mb-4">
@@ -69,6 +112,33 @@
         Resolve
       </Button>
     </form>
+  </div>
+{/if}
+
+{#if data.dismissedCount > 0}
+  <div class="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2.5 text-xs">
+    <span class="text-text-muted">
+      {data.dismissedCount}
+      {data.dismissedCount === 1 ? "earlier error is" : "earlier errors are"}
+      hidden
+      {#if data.dismissedBy}
+        — cleared by revision
+        <a
+          class="text-accent underline"
+          href={resolve("/(protected)/services/[serviceId]/revisions", {
+            serviceId: data.service.id,
+          })}
+        >{dismissedLabel}</a>
+      {:else}
+        — cleared by hand
+      {/if}
+    </span>
+    <a
+      class="text-text-subtle hover:text-text ml-auto underline"
+      href="?dismissed={data.showDismissed ? '0' : '1'}"
+    >
+      {data.showDismissed ? "Hide them" : "Show them"}
+    </a>
   </div>
 {/if}
 
@@ -190,3 +260,27 @@
     </div>
   {/if}
 </section>
+
+{#if data.failedDeployments.length > 0 || data.appLogs.length > 0}
+  <form
+    action="?/clearErrors"
+    class="mt-2 flex justify-end"
+    method="POST"
+    use:enhance={enhanceToast({
+      error: "Couldn't clear the errors.",
+      loading: "Clearing errors",
+      onSettled: () => {
+        clearing = null;
+      },
+      onStart: () => {
+        clearing = "errors";
+      },
+      success: "Errors cleared.",
+    })}
+  >
+    <Button disabled={clearing !== null} size="sm" type="submit" variant="ghost">
+      <Eraser class="size-3.5" />
+      Clear errors
+    </Button>
+  </form>
+{/if}

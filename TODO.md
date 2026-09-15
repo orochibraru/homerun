@@ -6,12 +6,21 @@ move it under `## Done` in the same change that finishes it.
 
 ## Not prioritized / No size / Too lazy to size just got an idea
 
-- [ ] [App] Add a button to clear heartbeats on a service. Add another one to
-      clear errors.
-- [ ] [App] For service errors let's link them to revisions. New revision
-      successfully deployed and live = dismissed errors.
+- [ ] **[WIP]** [Docker] **Routing doesn't work on the test server.** Reported
+      against this PR's image; no detail yet on what "doesn't work" means (no
+      DNS, 404 from Traefik, TLS?). Needs a reproduction before anything is
+      changed.
+
+- [ ] Add penombre template (github.com/orochibraru/penombre)
+- [ ] Add tags to templates to make search more relevant.
 
 ## Small
+
+- [ ] [Agent] **`packages/agent/docker.ts` can't clone a private repo either.**
+      It shells out to `git` with the raw URL, so the same "could not read
+      Username" failure applies on an agent-dispatched build. The main app now
+      injects a connected provider's token (`resolveGitCredential`); the agent
+      path needs the credential passed over the wire.
 
 - [ ] [Docs] **CLAUDE.md says a `(protected)` page root is `p-6 md:p-8`; 26 of
       27 pages use `p-5 md:p-6`.** The doc is the outlier, not the code. Decide
@@ -251,6 +260,26 @@ move it under `## Done` in the same change that finishes it.
 - [x] [UI] **`CopyBox`**, used for the confirmation modal's phrase (so it can be
       copied rather than retyped), the connection strings panel and the API-key
       reveal, replacing three hand-rolled copy affordances.
+- [x] [App] **Pull policy per service** (`always` by default, plus `missing` and
+      `never`), on the Settings tab and the REST API. `shouldSkipPull` is pure
+      and unit-tested; `never` with no local image fails the deploy with a real
+      message instead of silently running something stale.
+- [x] [App] **Clear heartbeats / clear errors**, both on the Observability tab,
+      and errors are linked to revisions: a deploy that reaches "running" sets
+      `errorsDismissedAt`/`errorsDismissedByDeploymentId`, so the errors it
+      superseded are hidden behind a "N earlier errors hidden — cleared by
+      revision X" banner with a Show them toggle. Nothing is deleted except
+      heartbeats.
+- [x] [Docker] **A private git repo can be cloned.** The clone container has no
+      credential helper and no tty, so git asked for a username and died with
+      "No such device or address". `resolveGitCredential` injects a connected
+      provider's OAuth token into the clone URL (matched by host),
+      `GIT_TERMINAL_PROMPT=0` makes the failure immediate, the URL is redacted
+      in every log line, and an auth failure now says which host and what to do.
+- [x] [UI] **A failed deploy takes you to the failed revision** instead of
+      silently refreshing: the SSE `done` handler checks the final status and
+      navigates to `revisions?deployment=<id>`, which auto-expands that
+      revision's log.
 - [x] [UI/Perf] **Navigation no longer waits on the Docker daemon.** Every
       daemon round-trip that sat in a `load` moved to a remote query the page
       fills in behind itself: the services list's and every service tab's status

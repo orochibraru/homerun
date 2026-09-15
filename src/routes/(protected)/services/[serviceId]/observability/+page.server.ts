@@ -12,22 +12,48 @@ import {
 
 const logger = new Logger("Services");
 
-export const load = async ({ params, parent }) => {
+export const load = async ({ params, parent, url }) => {
 	const { service: svc } = await parent();
+	const showDismissed = url.searchParams.get("dismissed") === "1";
+	const since = showDismissed ? null : svc.errorsDismissedAt;
+
 	const [failedDeployments, appLogs, internal, external] = await Promise.all([
-		DeploymentDTO.listFailedForService(params.serviceId),
-		AppLogDTO.listForService(params.serviceId),
+		DeploymentDTO.listFailedForService(params.serviceId, 50, since),
+		AppLogDTO.listForService(params.serviceId, 50, since),
 		UptimeCheckDTO.beats(params.serviceId, "internal"),
 		UptimeCheckDTO.beats(params.serviceId, "external"),
 	]);
 
+	const dismissedCount = since
+		? (
+				await Promise.all([
+					DeploymentDTO.countFailedForServiceUpTo(params.serviceId, since),
+					AppLogDTO.countForServiceUpTo(params.serviceId, since),
+				])
+			).reduce((total, n) => total + n, 0)
+		: 0;
+
+	const dismissedBy = svc.errorsDismissedByDeploymentId
+		? await DeploymentDTO.get(svc.errorsDismissedByDeploymentId)
+		: null;
+
 	const externalHost = externalHostFor(svc);
 	return {
 		appLogs: appLogs.map((l) => l.toJSON()),
+		dismissedBy: dismissedBy
+			? {
+					createdAt: dismissedBy.toJSON().createdAt,
+					gitCommit: dismissedBy.toJSON().gitCommit,
+					id: dismissedBy.id,
+					imageRef: dismissedBy.toJSON().imageRef,
+				}
+			: null,
+		dismissedCount,
 		externalSkipped: externalHost
 			? externalProbeSkipReason(externalHost)
 			: "This service isn't publicly routed, so there's no hostname to check.",
 		failedDeployments: failedDeployments.map((d) => d.toJSON()),
+		showDismissed,
 		uptime: { external, internal },
 	};
 };
@@ -46,6 +72,34 @@ export const actions = {
 		logger.info(
 			`Orphaned container reference cleared: service=${svc.id} user=${locals.user.id}`,
 		);
+		return { success: true };
+	},
+
+	clearHeartbeats: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		await UptimeCheckDTO.clearForService(svc.id);
+		logger.info(`Heartbeats cleared: service=${svc.id} user=${locals.user.id}`);
+		return { success: true };
+	},
+
+	clearErrors: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		await svc.dismissErrors(null);
+		logger.info(`Errors dismissed: service=${svc.id} user=${locals.user.id}`);
 		return { success: true };
 	},
 };

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ChevronDown, Clock } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
+	import { page } from "$app/state";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { timeAgo } from "$lib/formatting";
@@ -10,7 +11,9 @@
 
 	onMount(() => title.set(`${data.service.name} · Revisions`));
 
-	let expandedDeploymentId = $state<string | null>(null);
+	let expandedDeploymentId = $state<string | null>(
+		untrack(() => page.url.searchParams.get("deployment")),
+	);
 
 	// Every provider Homerun can clone from (GitHub, GitLab, Gitea, Forgejo)
 	// serves a commit at <repo>/commit/<sha>, so the link is derived from the

@@ -25,6 +25,7 @@
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
+	import { PULL_POLICIES } from "$lib/pull-policy";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -39,6 +40,7 @@
 	const values = $derived(
 		(form?.values as Record<string, string> | undefined) ?? {
 			name: svc.name,
+			pullPolicy: svc.pullPolicy,
 			restartPolicy: svc.restartPolicy,
 			slug: svc.slug,
 		},
@@ -60,6 +62,11 @@
 	const restartPolicyLabel = $derived(
 		restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
 			"Unless stopped",
+	);
+
+	let pullPolicy = $derived(values.pullPolicy);
+	const pullPolicyOption = $derived(
+		PULL_POLICIES.find((opt) => opt.value === pullPolicy) ?? PULL_POLICIES[0],
 	);
 
 	let projectId = $derived(svc.projectId ?? "");
@@ -151,6 +158,23 @@
         >Networking</a>
         tab.
       </p>
+
+      <div>
+        <label class={label} for="pullPolicy">Pull policy</label>
+        <SelectRoot name="pullPolicy" type="single" bind:value={pullPolicy}>
+          <SelectTrigger class="w-full" id="pullPolicy">
+            {pullPolicyOption.label}
+          </SelectTrigger>
+          <SelectContent>
+            {#each PULL_POLICIES as option (option.value)}
+              <SelectItem label={option.label} value={option.value} />
+            {/each}
+          </SelectContent>
+        </SelectRoot>
+        <p class="text-text-subtle mt-1.5 text-xs">
+          {pullPolicyOption.description}
+        </p>
+      </div>
 
       <div>
         <label class={label} for="restartPolicy">Restart policy</label>

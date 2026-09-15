@@ -25,3 +25,5 @@ export type StatusPageScope = "global" | "project" | "custom";
 export type NotificationChannelKind = "webhook" | "email";
 
 export type ServiceHealth = "up" | "down" | "unknown";
+
+export type PullPolicy = "always" | "missing" | "never";

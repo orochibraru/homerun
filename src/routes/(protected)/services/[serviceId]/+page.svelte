@@ -11,8 +11,9 @@
 		XCircle,
 	} from "@lucide/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
+	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
-	import { refreshAll } from "$app/navigation";
+	import { goto, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConnectionStrings from "$lib/components/connection-strings.svelte";
@@ -161,6 +162,12 @@
 	 * second. Falls back to pollProgress above if the stream can't be held
 	 * open (a buffering proxy, a dropped connection mid-deploy).
 	 */
+	function revisionHref(deploymentId: string): string {
+		return `${resolve("/(protected)/services/[serviceId]/revisions", {
+			serviceId: svc.id,
+		})}?deployment=${deploymentId}`;
+	}
+
 	function watchProgress(deploymentId: string) {
 		pollGeneration += 1;
 		closeProgressSource();
@@ -191,6 +198,16 @@
 			closeProgressSource();
 			pendingAction = null;
 			void refreshAll();
+			if (progressStatus === "failed") {
+				toast.error(`${svc.name} failed to deploy.`, {
+					action: {
+						label: "See why",
+						onClick: () => goto(revisionHref(deploymentId)),
+					},
+					description: "Opening the revision that failed.",
+				});
+				void goto(revisionHref(deploymentId));
+			}
 		});
 
 		source.onerror = () => {
