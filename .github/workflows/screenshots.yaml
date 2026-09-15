@@ -2,6 +2,10 @@ name: Screenshots
 
 on:
   workflow_call:
+    outputs:
+      summary:
+        description: "Playwright's own pass/fail counts for this run"
+        value: ${{ jobs.screenshots.outputs.summary }}
 
 permissions:
   contents: read
@@ -17,6 +21,8 @@ jobs:
     name: Docs screenshots
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      summary: ${{ steps.stats.outputs.summary }}
     services:
       postgres:
         image: postgres:18-alpine
@@ -52,12 +58,23 @@ jobs:
           docker pull redis:alpine
 
       - name: Capture
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
           timeout_minutes: 20
           retry_on: any
-          command: bun run screenshots
+          command: bun run screenshots -- --reporter=list,json
+
+      - name: Summarise the run
+        id: stats
+        if: always()
+        run: |
+          if [ -f playwright-results.json ]; then
+            jq -r '.stats | "summary=\(.expected) passed" + (if .unexpected > 0 then ", \(.unexpected) failed" else "" end)' \
+              playwright-results.json >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload the captured images
         uses: orochibraru/upload-artifact@v8

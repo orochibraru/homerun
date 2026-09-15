@@ -28,6 +28,34 @@ workflows as run artefacts, which is why they must stay in one workflow run
 (`uses:`, not a separate `workflow_run`). Both arches build natively
 (`ubuntu-24.04-arm` for arm64), never under QEMU.
 
+**Every PR gets one comment, edited in place.** `pull_request.yaml`'s `summary`
+job runs `if: always()` after everything else and upserts a single comment
+carrying the check table (with Playwright's own pass/fail counts), the images
+that were published and the tag they got, and a copy-pasteable
+`HOMERUN_VERSION=pr-<n> docker compose -f compose.prod.yaml up -d` for trying
+that exact build. It finds its previous comment by a hidden
+`<!-- homerun-ci-summary -->` marker on the first line and PATCHes it, so a
+force-push or a re-run edits one comment instead of adding another. The plumbing
+behind the counts is worth knowing before touching it:
+
+- **Reusable workflows only report one aggregate `result` to the caller**, so
+  `code_quality.yaml` exposes its two jobs separately through `workflow_call`
+  outputs. Those outputs can't be `${{ jobs.<id>.result }}` — actionlint (which
+  `code_quality.yaml` itself runs via prek) rejects `result` on the `jobs`
+  context there — so each job ends with a `Record result` step writing
+  `job.status` to a step output, which the workflow output then reads.
+- **The Playwright counts come from its JSON reporter**, enabled per-run rather
+  than in the config: CI appends `--reporter=list,json` and sets
+  `PLAYWRIGHT_JSON_OUTPUT_NAME`, then a `jq` step turns `.stats` into
+  `"25 passed"` / `"23 passed, 2 failed"`. Reading the file in a separate step
+  is what makes it survive the `nick-fields/retry` wrapper : the counts are
+  whatever the last attempt produced.
+- **The job is gated on the PR not coming from a fork**, like the publish jobs :
+  a fork's `GITHUB_TOKEN` is read-only and couldn't comment anyway. It carries
+  its own `pull-requests: write` at job level rather than widening the
+  workflow's default token, and it is deliberately **not** in the `gate` job's
+  `needs` : a failed comment shouldn't block a merge.
+
 Three consequences worth not re-deriving: **a fork builds but publishes
 nothing** — `push: false` makes the build `type=cacheonly`, so no digest
 artefact exists, which is why `e2e.yaml` takes a `pulled` input and falls back

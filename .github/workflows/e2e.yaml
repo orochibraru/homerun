@@ -29,6 +29,10 @@ on:
     secrets:
       registry_password:
         required: false
+    outputs:
+      summary:
+        description: "Playwright's own pass/fail counts for this run"
+        value: ${{ jobs.e2e.outputs.summary }}
 
 permissions:
   contents: read
@@ -43,6 +47,8 @@ jobs:
   e2e:
     name: Tests (E2E)
     runs-on: ubuntu-latest
+    outputs:
+      summary: ${{ steps.stats.outputs.summary }}
     services:
       postgres:
         image: postgres:18-alpine
@@ -104,12 +110,23 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: Tests (E2E)
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
         uses: nick-fields/retry@v3
         with:
           max_attempts: 3
           timeout_minutes: 30
           retry_on: any
-          command: bun run test:e2e
+          command: bun run test:e2e -- --reporter=list,json
+
+      - name: Summarise the run
+        id: stats
+        if: always()
+        run: |
+          if [ -f playwright-results.json ]; then
+            jq -r '.stats | "summary=\(.expected) passed" + (if .flaky > 0 then ", \(.flaky) flaky" else "" end) + (if .unexpected > 0 then ", \(.unexpected) failed" else "" end)' \
+              playwright-results.json >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload Playwright report
         if: failure()

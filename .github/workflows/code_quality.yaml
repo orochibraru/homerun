@@ -3,6 +3,13 @@ name: Code Quality
 # run against the already-built image instead of a second build from source.
 on:
   workflow_call:
+    outputs:
+      lint:
+        description: "Result of the lint/type-check/codegen job"
+        value: ${{ jobs.lint.outputs.result }}
+      tests:
+        description: "Result of the unit + integration test job"
+        value: ${{ jobs['ts-test'].outputs.result }}
 
 permissions:
   contents: read
@@ -18,6 +25,8 @@ jobs:
   lint:
     name: Linting / Formatting / Type checking
     runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.done.outputs.result }}
     steps:
       - uses: actions/checkout@v6
 
@@ -71,9 +80,16 @@ jobs:
             exit 1
           fi
 
+      - name: Record result
+        id: done
+        if: always()
+        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"
+
   ts-test:
     name: Tests (TS)
     runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.done.outputs.result }}
     services:
       postgres:
         image: postgres:18-alpine
@@ -122,6 +138,11 @@ jobs:
           command:
             bun run test:integration -- --coverage-reporter=lcov
             --coverage-dir=coverage/integration
+
+      - name: Record result
+        id: done
+        if: always()
+        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"
 
       - name: Upload coverage report
         if: always()
