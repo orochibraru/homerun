@@ -4,9 +4,13 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
+	import { getSetupStatus } from "$lib/remote/setup.remote";
 	import { title } from "$lib/store/title";
 
 	const { data, children } = $props();
+
+	const setup = getSetupStatus();
+	const issuesByField = $derived(setup.current?.issuesByField ?? {});
 
 	const highlighted = $derived(
 		new Set(
@@ -74,7 +78,7 @@
 			},
 		].map((tab) => ({
 			...tab,
-			hasWarning: Object.keys(data.fieldIssues).some(
+			hasWarning: Object.keys(issuesByField).some(
 				(field) => FIELD_TAB[field] === tab.id,
 			),
 		})),

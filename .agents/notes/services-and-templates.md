@@ -225,15 +225,40 @@ a skeleton rather than a broken page. Concretely:
   `services/new` and the service Source tab. They're now one shared component
   each (`git-repo-picker.svelte`, `image-check-warning.svelte`) over one shared
   query.
+- **Every remaining Docker round-trip that used to sit in a `load`.** This was
+  the single biggest source of "the app feels sluggish": a navigation couldn't
+  paint until the daemon answered, and a slow or unreachable daemon stalled the
+  page rather than one panel of it.
+  - `service-status.remote.ts`, `syncServiceStatuses` : the status
+    reconciliation that ran in the services list's `load` (one `inspect` per
+    deployed service, every visit) and again in
+    `services/[serviceId]/+layout.server.ts` (once per tab navigation). Both
+    pages render the stored `currentStatus` immediately and patch it when this
+    lands, so a stale badge corrects itself instead of a blank page waiting.
+  - `setup.remote.ts`, `getSetupStatus`/`getNewtContainer` : the setup
+    diagnostics (which ping the daemon and the Traefik container) behind the
+    dashboard's banner and `/settings`' per-field warnings, plus the Newt lookup
+    on the Networking tab. `getSetupStatus` returns `issuesByField` ready-made,
+    so the three settings tabs that highlight a field just read it.
+  - `docker-infra.remote.ts`, `getCleanupPreview`/`getInfraStatus`/
+    `getUnknownHostVolumes` : Docker Cleanup's `system df` preview, System Logs'
+    Traefik + compose-stack lookup, and the volumes tab's host-volume picker.
+
+  This is the one category where a _page's own subject_ moved out of `load`, and
+  it's allowed for the reason the rule exists: none of it is the page's
+  correctness, it's a live reading _about_ what the page already rendered from
+  the database. The entity lists themselves still come from `load`.
 
 **Auth is not inherited.** A remote function is its own endpoint : the
 `(protected)` layout's `load` guard never runs for one, exactly like a
 `+server.ts` route. Every query/command starts with `requireUser()`
 (`$lib/server/remote-auth.ts`), which reads `getRequestEvent().locals.user` and
 `error(401)`s otherwise. `hooks.server.ts` populates `locals` for these requests
-the same as any other, so cookie sessions and API keys both work. Anything
-admin-only would need its own `locals.isAdmin` check on top, same as an
-admin-only route's `load`.
+the same as any other, so cookie sessions and API keys both work. Admin-only
+ones use `requireAdmin()` from the same module, which is `requireUser()` plus a
+`locals.isAdmin` check and a `error(403)` — `getCleanupPreview` and
+`getInfraStatus` back admin-only pages, so the guard has to be on the function,
+not only on the route that happens to call it.
 
 **Arguments are validated, not cast.** A query/command taking an argument passes
 a zod schema as its first parameter (`query(z.string(), ...)`), the same "one
@@ -250,7 +275,16 @@ changes identity. So:
   `query.error`, with the pending branch rendering
   `$lib/components/skeleton.svelte`. `host-resources.svelte`,
   `job-queue-panel.svelte` and `notification-bell.svelte` are the reference
-  shapes.
+  shapes. **`$lib/components/async-block.svelte` is that whole triple as one
+  component** — `<AsyncBlock {query}>` with a `pending` snippet and a
+  `children(value)` snippet, rendering an `Alert` with a working **Retry**
+  (`query.refresh()`) on failure. Prefer it to hand-rolling the three branches
+  again; the hand-rolled ones above predate it and each invented their own
+  failure wording with no retry. `tests/unit/app/async-block.test.ts` covers all
+  three branches.
+- **A query whose argument is reactive must be _called_ inside a `$derived`**,
+  not created once: `const q = $derived(someQuery(ids))`. Calling it at the top
+  level pins the first argument value forever.
 - A one-shot, user-triggered lookup assigns a fresh promise to `$state` and
   `{#await}`s that, which is what makes the block re-run per invocation.
   `git-repo-picker.svelte` (a "List repos" click, then a Dockerfile check for

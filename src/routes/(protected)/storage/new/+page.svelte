@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import NewVolumeFields from "$lib/components/new-volume-fields.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
@@ -42,9 +43,9 @@
     })}
   >
     {#if form?.error}
-      <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+      <Alert>
         {form.error}
-      </div>
+      </Alert>
     {/if}
 
     <NewVolumeFields bind:kind />

@@ -18,6 +18,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import GitRepoPicker from "$lib/components/git-repo-picker.svelte";
@@ -314,14 +315,13 @@
     {/if}
 
     {#if errorMessages.length > 0}
-      <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
-        <p class="font-semibold">Couldn't create the service:</p>
-        <ul class="mt-1 ml-4 list-disc">
+      <Alert title="Couldn't create the service:">
+        <ul class="ml-4 list-disc">
           {#each errorMessages as msg}
             <li>{msg}</li>
           {/each}
         </ul>
-      </div>
+      </Alert>
     {/if}
 
     <div class="flex min-h-136 flex-col gap-6">

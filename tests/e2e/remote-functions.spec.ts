@@ -79,4 +79,34 @@ test.describe
 			).toBeVisible();
 			await expect(page.getByText("Nothing in the queue")).toBeVisible();
 		});
+
+		for (const { heading, name, path } of [
+			{ heading: "Services", name: "the services list", path: "/services" },
+			{
+				heading: "Docker Cleanup",
+				name: "Docker Cleanup",
+				path: "/docker-cleanup",
+			},
+			{ heading: "Traefik", name: "System Logs", path: "/system-logs" },
+		]) {
+			test(`${name} renders before its Docker query resolves`, async ({
+				page,
+			}) => {
+				await signIn(page);
+
+				await page.goto(path);
+				await expect(
+					page.getByRole("heading", { name: heading }),
+				).toBeVisible();
+			});
+		}
+
+		test("the settings tabs render without their setup diagnostics", async ({
+			page,
+		}) => {
+			await signIn(page);
+
+			await page.goto("/settings/networking");
+			await expect(page.getByLabel("ACME account email")).toBeVisible();
+		});
 	});

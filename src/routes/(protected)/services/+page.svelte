@@ -38,6 +38,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
+	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import type { ContainerStatus } from "$lib/types";
@@ -104,6 +105,20 @@
 		}
 		return entries;
 	});
+
+	const deployedIds = $derived(
+		data.services
+			.filter((svc) => svc.containerId || svc.swarmServiceId)
+			.map((svc) => svc.id),
+	);
+	const synced = $derived(syncServiceStatuses(deployedIds));
+	const liveStatus = $derived(
+		new Map((synced.current ?? []).map((row) => [row.id, row.status])),
+	);
+
+	function statusOf(svc: Svc): ContainerStatus {
+		return liveStatus.get(svc.id) ?? svc.currentStatus;
+	}
 
 	const selectedSet = $derived(new Set(selectedIds));
 	const visibleIds = $derived(data.services.map((svc) => svc.id));
@@ -394,7 +409,7 @@
       {#snippet badge(item: { id: string })}
         {@const svc = byId(item.id)}
         {#if svc}
-          <StatusBadge status={svc.currentStatus} />
+          <StatusBadge status={statusOf(svc)} />
         {/if}
       {/snippet}
 

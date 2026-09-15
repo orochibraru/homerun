@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -32,15 +33,9 @@
 </div>
 
 {#if data.service.currentStatus === "failed"}
-  <div class="mb-6 flex items-start gap-3 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
-    <AlertTriangle class="mt-0.5 size-4 shrink-0" />
-    <div>
-      <p class="font-medium">This service's container is currently down.</p>
-      <p class="mt-0.5 text-xs opacity-80">
-        The crash output is in the log stream above.
-      </p>
-    </div>
-  </div>
+  <Alert class="mb-6" title="This service's container is currently down.">
+    The crash output is in the log stream above.
+  </Alert>
 {:else if data.service.currentStatus === "missing"}
   <div class="mb-6 flex items-start gap-3 rounded-md border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300">
     <Ghost class="mt-0.5 size-4 shrink-0" />

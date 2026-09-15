@@ -27,6 +27,7 @@
 	import { fly } from "svelte/transition";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import ErrorBoundary from "$lib/components/error-boundary.svelte";
 	import NotificationBell from "$lib/components/notification-bell.svelte";
 	import ProfileMenu from "$lib/components/profile-menu.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -253,23 +254,15 @@
 		data.preferences.sidebarColorIntensity === "colorful",
 	);
 
-	// Custom accent color (see /profile/appearance) : overriding these three
-	// CSS vars on this subtree's root cascades into every bg-accent/text-accent/
-	// etc. Tailwind utility beneath it, since Tailwind v4's @theme block makes
-	// them all reference var(--color-accent...) rather than a literal value.
-	const accentStyle = $derived.by(() => {
-		const hex = data.preferences.accentColor;
-		if (!hex) {
+	const accentCss = $derived.by(() => {
+		const hex = data.preferences.accentColor ?? "";
+		if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
 			return "";
 		}
 		const r = Number.parseInt(hex.slice(1, 3), 16);
 		const g = Number.parseInt(hex.slice(3, 5), 16);
 		const b = Number.parseInt(hex.slice(5, 7), 16);
-		// --color-ink is the solid brand fill every primary Button paints
-		// with, so it has to move with the chosen accent too : overriding
-		// only --color-accent left every button on the stock violet, which
-		// read as "the accent picker doesn't work".
-		return `--color-accent:${hex};--color-ink:${hex};--primary:${hex};--color-accent-light:rgba(${r},${g},${b},0.12);--color-accent-glow:rgba(${r},${g},${b},0.35);--ring:rgba(${r},${g},${b},0.55);`;
+		return `:root:root{--color-accent:${hex};--color-ink:${hex};--primary:${hex};--color-accent-light:rgba(${r},${g},${b},0.12);--color-accent-glow:rgba(${r},${g},${b},0.35);--ring:rgba(${r},${g},${b},0.55);}`;
 	});
 
 	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
@@ -332,8 +325,14 @@
   {/each}
 {/snippet}
 
+<svelte:head>
+  {#if accentCss}
+    {@html `<style>${accentCss}</style>`}
+  {/if}
+</svelte:head>
+
 <!-- Fills the full viewport : there's no global navbar above this. -->
-<div class="flex h-screen overflow-hidden p-2 md:gap-2" style={accentStyle}>
+<div class="flex h-screen overflow-hidden p-2 md:gap-2">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
   <aside class="hidden w-56 shrink-0 flex-col md:flex">
     <div class="flex items-center gap-2.5 px-3 py-2.5">
@@ -412,7 +411,9 @@
 
     <!-- Page content -->
     <main class="flex-1 overflow-y-auto">
-      {@render children()}
+      <ErrorBoundary class="p-6 md:p-8">
+        {@render children()}
+      </ErrorBoundary>
     </main>
   </div>
 </div>

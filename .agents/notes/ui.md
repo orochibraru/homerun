@@ -49,11 +49,25 @@ a blur/shadow stack, route it through a token here instead.
   pane with the sticky header inside it. The sidebar carries the one primary
   action (`Deploy a service`, full width, brand-filled) above the nav, the way
   Penombre's "New" button does.
-- **The accent picker has to move more than one variable.**
-  `/profile/appearance` writes `--color-accent`, and the layout's `accentStyle`
-  also sets `--color-ink`, `--primary` and `--ring` from the same hex.
-  Overriding only `--color-accent` leaves every button on the stock violet,
-  which is exactly what "the accent switch doesn't work on buttons" meant.
+- **The accent picker has to move more than one variable, and it has to move
+  them on the document root.** `/profile/appearance` writes `--color-accent`,
+  and the `(protected)` layout's `accentCss` also sets `--color-ink`,
+  `--primary` and `--ring` from the same hex. Overriding only `--color-accent`
+  leaves every button on the stock violet, which is exactly what "the accent
+  switch doesn't work on buttons" meant. Two further traps, both real bugs that
+  shipped:
+  - **It's a `<svelte:head>` rule, not a `style=""` on the layout wrapper.**
+    bits-ui portals every dialog, popover, dropdown and tooltip out to
+    `document.body`, so anything rendered inside one sits outside that wrapper
+    and keeps the stock colour — which is how the notification bell's link
+    buttons stayed violet while the page behind them followed the picker.
+  - **The selector is `:root:root`, not `:root`.** SvelteKit assembles its head
+    as `[component head, style tags, stylesheet links]` (`Head.build()` in
+    `@sveltejs/kit`'s `render.js`), so a `<svelte:head>` rule is emitted
+    _before_ `layout.css` and loses a same-specificity tie against it. Doubling
+    the selector wins on specificity instead, over both `:root` and `.dark`,
+    whatever the order. `tests/e2e/ui-appearance.spec.ts` asserts the chosen hex
+    reaches a portaled popover, which is the assertion that caught both.
 - **`eyebrow`** is a small sans semibold label (no longer uppercase mono), used
   for panel titles and sidebar group headings. **`metric`** is the large tabular
   number on the stat tiles. **`panel-head`** is the shared card-header strip.
@@ -140,8 +154,18 @@ multi-step form needs, extracted while building the onboarding wizard, see
 Onboarding below; not yet retrofitted onto `services/new`'s own inlined
 equivalent), and `skeleton.svelte` (one pulsing placeholder block, sized by a
 `class` prop, the pending branch every remote-query-backed panel renders, see
-Remote functions below). If you're touching a page with an inline empty-state or
-the same three class-string literals, prefer wiring in the shared version over
+Remote functions below), `alert.svelte` (the inline banner, `error`/`warning`/
+`info`/`success`, optional `title` and `actions` snippet, `role="alert"` when
+it's an error — eight pages had hand-rolled the same
+`border-red-200 bg-red-50 …` div before it existed), `async-block.svelte`
+(pending/ready/failed over one remote query, with a Retry, see Remote functions
+in `services-and-templates.md`), and `error-boundary.svelte` (a
+`<svelte:boundary>` whose `failed` snippet is an `Alert` with a **Try again**
+that calls `reset` — wrapped around `{@render children()}` in
+`(protected)/+layout.svelte`, so a render error in any dashboard page is a
+banner in the content area with the sidebar and header still usable, instead of
+a blank screen). If you're touching a page with an inline empty-state or the
+same three class-string literals, prefer wiring in the shared version over
 copy-pasting again, but this is opportunistic, not a mandate to refactor
 unrelated pages.
 

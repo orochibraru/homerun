@@ -14,13 +14,19 @@
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { getInfraStatus } from "$lib/remote/docker-infra.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
 	onMount(() => title.set("System Logs"));
+
+	const status = getInfraStatus();
+	const infra = $derived(status.current?.infra ?? []);
+	const traefik = $derived(status.current?.traefik ?? null);
 
 	let restarting = $state(false);
 	let updating = $state(false);
@@ -60,7 +66,7 @@
 	let cancelled = false;
 
 	async function connect() {
-		if (!data.traefik) {
+		if (!traefik) {
 			return;
 		}
 		lines = [];
@@ -103,7 +109,11 @@
 		}
 	}
 
-	onMount(connect);
+	$effect(() => {
+		if (traefik && !connected && !errored) {
+			void connect();
+		}
+	});
 
 	onDestroy(() => {
 		cancelled = true;
@@ -126,7 +136,7 @@
     </p>
   </div>
 
-  {#if data.infra.length > 0}
+  {#if infra.length > 0}
     <section class="panel mb-4 rounded-xl">
       <div class="panel-head">
         <h2 class="eyebrow flex items-center gap-1.5">
@@ -138,7 +148,7 @@
         </span>
       </div>
       <div class="divide-border divide-y">
-        {#each data.infra as container (container.id)}
+        {#each infra as container (container.id)}
           <button
             class="hover:bg-surface-2 flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors {selectedInfraId ===
             container.id
@@ -187,11 +197,11 @@
       <div class="flex items-center gap-2">
         <Terminal class="text-text-muted size-4" />
         <h2 class="eyebrow">Traefik</h2>
-        {#if data.traefik}
+        {#if traefik}
           <code
             class="bg-surface-2 text-text-muted rounded px-1.5 py-0.5 text-[11px]"
           >
-            {data.traefik.image}
+            {traefik.image}
           </code>
         {/if}
         {#if connected}
@@ -202,7 +212,7 @@
         {/if}
       </div>
       <div class="flex items-center gap-2">
-        {#if data.traefik && data.user.role === "admin"}
+        {#if traefik && data.user.role === "admin"}
           <form
             action="?/restartTraefik"
             method="POST"
@@ -267,7 +277,7 @@
           </form>
         {/if}
         <Button
-          disabled={!data.traefik}
+          disabled={!traefik}
           onclick={reconnect}
           size="sm"
           variant="ghost"
@@ -282,7 +292,9 @@
       class="h-112 overflow-y-auto bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
       bind:this={logEl}
     >
-      {#if !data.traefik}
+      {#if !status.ready}
+        <Skeleton class="h-4 w-2/3" />
+      {:else if !traefik}
         <p class="text-zinc-500">
           Traefik container not found : is it running (`docker compose up -d`)?
         </p>

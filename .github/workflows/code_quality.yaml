@@ -120,24 +120,16 @@ jobs:
         run: bun run build:app
 
       - name: Tests (Unit)
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 3
-          timeout_minutes: 20
-          retry_on: any
-          command:
-            bun run test:unit -- --coverage-reporter=lcov
-            --coverage-dir=coverage/unit
+        timeout-minutes: 20
+        run:
+          bun run test:unit -- --coverage-reporter=lcov
+          --coverage-dir=coverage/unit
 
       - name: Tests (Integration)
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 3
-          timeout_minutes: 30
-          retry_on: any
-          command:
-            bun run test:integration -- --coverage-reporter=lcov
-            --coverage-dir=coverage/integration
+        timeout-minutes: 30
+        run:
+          bun run test:integration -- --coverage-reporter=lcov
+          --coverage-dir=coverage/integration
 
       - name: Record result
         id: done

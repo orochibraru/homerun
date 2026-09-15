@@ -28,7 +28,7 @@ export function DockerReconcileMixin<
 >(Base: TBase) {
 	return class DockerReconcileService extends Base {
 		/** Syncs one service's `currentStatus` with the live Docker state of its container (or swarm service). */
-		async syncServiceStatus(serviceId: string): Promise<string> {
+		async syncServiceStatus(serviceId: string): Promise<ContainerStatus> {
 			const [row] = await db
 				.select({
 					containerId: service.containerId,

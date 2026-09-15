@@ -70,6 +70,9 @@ test.describe
 				page.getByText("Couldn't create the service:"),
 			).toBeVisible();
 
+			await page.getByRole("button", { name: "Close toast" }).first().click();
+			await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
+
 			// onFailure sends you back to step 1, where the submit buttons aren't
 			// rendered at all : stepping forward again is what shows the button
 			// reset to "Create service" rather than stuck on "Creating…".

@@ -656,6 +656,27 @@ export function DockerContainerMixin<
 			}
 		}
 
+		async containerHealth(
+			containerId: string,
+			remote?: RemoteHostConnection | null,
+		): Promise<{ output: string | null; status: string } | null> {
+			try {
+				const info = await this.getDocker(remote)
+					.getContainer(containerId)
+					.inspect();
+				const health = info.State?.Health;
+				if (!health?.Status) {
+					return null;
+				}
+				return {
+					output: health.Log?.at(-1)?.Output?.trim() || null,
+					status: health.Status,
+				};
+			} catch {
+				return null;
+			}
+		}
+
 		/** The container's own IP on the first network it's attached to, for the internal liveness probe. */
 		async containerAddress(
 			containerId: string,

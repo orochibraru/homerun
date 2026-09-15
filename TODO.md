@@ -4,12 +4,18 @@ The backlog, and the only one. `Small`/`Medium`/`Large` are rough size, not
 priority : there is no priority ordering, pick whatever. Tick an item off and
 move it under `## Done` in the same change that finishes it.
 
-## Unorganized, sort later
+## Not prioritized / No size / Too lazy to size just got an idea
 
-- [ ] Page load is quite slow, let's instead use await in svelte code instead of
-      the server with skeleton loaders, error boundaries and error catching
-      mechanisme with a reusable alert component. This should prevent from
-      blocking navigation or just from the app feeling slugish
+- [ ] [App] Still getting failing uptime from a postgres container.
+- [ ] [App] New feature: status page. Add a page linked in the sidebar in the
+      workspace category labelled "Status Page". From there a user can view the
+      status of each service, configure webhook and email notifications and
+      configure public status pages. They can set a status page per project, a
+      global one or choose which services are available on which status page.
+- [ ] For git sources (building locally) instead of cloning in a local directory
+      let's use a docker dind container.
+- [ ] Encapsulate matching text in a copy box on confirmation modal so it's easy
+      to copy/paste
 
 ## Small
 
@@ -214,6 +220,43 @@ move it under `## Done` in the same change that finishes it.
       target's own image and env) and optionally puts both on one project
       network : whichever project either is already in, or a new one named after
       the source.
+- [x] [UI/Perf] **Navigation no longer waits on the Docker daemon.** Every
+      daemon round-trip that sat in a `load` moved to a remote query the page
+      fills in behind itself: the services list's and every service tab's status
+      reconciliation (`syncServiceStatuses`), the dashboard's and `/settings`'
+      setup diagnostics and Newt lookup (`getSetupStatus`/`getNewtContainer`),
+      Docker Cleanup's `system df` preview, System Logs' Traefik + stack lookup,
+      and the volumes tab's host-volume picker. Three new shared components came
+      with it — `alert.svelte` (which also replaced eight hand-rolled copies of
+      the same red banner), `async-block.svelte` (pending/ready/failed over one
+      query, with a Retry) and `error-boundary.svelte` (wrapped around the
+      dashboard's content, so a render error is a banner rather than a blank
+      page). The e2e suite went from 1.4m to 49s on the same machine.
+- [x] [UI] **The accent picker reaches portaled content.** It was a `style=""`
+      on the `(protected)` wrapper, so every dialog, popover and dropdown
+      bits-ui portals to `document.body` kept the stock violet — `link`-variant
+      buttons in the notification bell most visibly. It's a `:root:root` rule in
+      `<svelte:head>` now (doubled selector because SvelteKit emits component
+      head content before its own stylesheets), covered by
+      `tests/e2e/ui-appearance.spec.ts`.
+- [x] [Tests] **The wizard's validation-failure e2e test stopped deadlocking.**
+      The toaster and the wizard's step nav are both bottom-right, so the
+      failure toast covered "Next"; hovering it to reach the button paused
+      sonner's dismiss timer and the click never landed. The test dismisses the
+      toast instead. This was CI's real E2E failure, on every attempt, not
+      flake.
+- [x] [App] **A probe per service type**, so a healthy database stops reading as
+      down with a raw Bun fetch diagnostic. `internalProbeMethod` prefers the
+      image's own `HEALTHCHECK` (`State.Health` via
+      `DockerService.containerHealth`), falls back to a plain TCP connect for
+      datastores, and only then speaks HTTP. `probeErrorMessage` strips Bun's
+      "pass `verbose: true`" tail and names the real failure.
+- [x] [CI] **Dropped the `nick-fields/retry` wrapper** from Tests (Unit), Tests
+      (Integration), Tests (E2E) and screenshot Capture : three attempts buried
+      the first failure's output, which is the one worth reading. Plain `run:`
+      with a step-level `timeout-minutes`.
+- [x] [UI] **Revision, deploy and cron-run logs render in JetBrains Mono**, like
+      the live log viewer, system logs and the terminal already did.
 - [x] [App] **Uptime heartbeats**, and no external probe on a loopback host.
       `uptime_check` is append-only now, the panel draws the last 40 beats as a
       strip with the uptime percentage over that window, and

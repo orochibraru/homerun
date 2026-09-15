@@ -1,6 +1,7 @@
 import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { type ProbeResult, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
+import { isDatabaseImage } from "$lib/service-link";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { DockerService } from "../docker.service.ts";
 
@@ -36,6 +37,33 @@ export function externalHostFor(svc: {
 		return null;
 	}
 	return svc.customDomain ?? `${svc.slug}.${config.baseDomain}`;
+}
+
+export type InternalProbeMethod = "healthcheck" | "http" | "tcp";
+
+export function internalProbeMethod(
+	image: string,
+	hasHealthcheck: boolean,
+): InternalProbeMethod {
+	if (hasHealthcheck) {
+		return "healthcheck";
+	}
+	return isDatabaseImage(image) ? "tcp" : "http";
+}
+
+export function probeErrorMessage(err: unknown): string {
+	const raw = err instanceof Error ? err.message : String(err);
+	const message = raw.split("For more information")[0]?.trim() || raw;
+	if (/timed? ?out|aborted/i.test(message)) {
+		return "Timed out.";
+	}
+	if (/refused/i.test(message)) {
+		return "Connection refused.";
+	}
+	if (/certificate|tls|ssl/i.test(message)) {
+		return `TLS failed: ${message}`;
+	}
+	return message;
 }
 
 /**
@@ -79,6 +107,19 @@ export class UptimeProbe extends BaseScheduler {
 		if (!svc.containerId) {
 			return null;
 		}
+
+		const health = await DockerService.containerHealth(svc.containerId);
+		const method = internalProbeMethod(svc.image, health !== null);
+		if (method === "healthcheck" && health) {
+			return {
+				detail: `Healthcheck: ${health.status}${health.output ? ` · ${health.output.slice(0, 120)}` : ""}`,
+				kind: "internal",
+				ok: health.status !== "unhealthy",
+				serviceId: svc.id,
+				target: "docker healthcheck",
+			};
+		}
+
 		const address = await DockerService.containerAddress(svc.containerId);
 		if (!address) {
 			return {
@@ -88,11 +129,49 @@ export class UptimeProbe extends BaseScheduler {
 				serviceId: svc.id,
 			};
 		}
-		return await this.#probe(
-			svc.id,
-			"internal",
-			`http://${address}:${svc.containerPort}/`,
-		);
+
+		return method === "tcp"
+			? await this.#tcpProbe(svc.id, address, svc.containerPort)
+			: await this.#probe(
+					svc.id,
+					"internal",
+					`http://${address}:${svc.containerPort}/`,
+				);
+	}
+
+	async #tcpProbe(
+		serviceId: string,
+		host: string,
+		port: number,
+	): Promise<ProbeResult> {
+		const startedAt = Date.now();
+		const target = `tcp://${host}:${port}`;
+		try {
+			const socket = await Promise.race([
+				Bun.connect({ hostname: host, port, socket: {} }),
+				new Promise<never>((_, reject) => {
+					setTimeout(() => reject(new Error("Timed out.")), TIMEOUT_MS);
+				}),
+			]);
+			socket.end();
+			return {
+				detail: "Port accepting connections",
+				kind: "internal",
+				latencyMs: Date.now() - startedAt,
+				ok: true,
+				serviceId,
+				target,
+			};
+		} catch (err) {
+			return {
+				detail: probeErrorMessage(err),
+				kind: "internal",
+				latencyMs: Date.now() - startedAt,
+				ok: false,
+				serviceId,
+				target,
+			};
+		}
 	}
 
 	async #external(svc: ServiceDTO): Promise<ProbeResult | null> {
@@ -127,7 +206,7 @@ export class UptimeProbe extends BaseScheduler {
 			};
 		} catch (err) {
 			return {
-				detail: err instanceof Error ? err.message : String(err),
+				detail: probeErrorMessage(err),
 				kind,
 				latencyMs: Date.now() - startedAt,
 				ok: false,

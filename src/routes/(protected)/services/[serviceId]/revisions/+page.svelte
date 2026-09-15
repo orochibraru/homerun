@@ -107,7 +107,7 @@
                     </button>
                     {#if expandedDeploymentId === dep.id && dep.log}
                         <div
-                            class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-300"
+                            class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
                         >
                             {#each dep.log
                                 .split("\n")

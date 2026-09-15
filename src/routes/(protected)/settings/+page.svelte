@@ -5,9 +5,13 @@
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { getSetupStatus } from "$lib/remote/setup.remote";
 	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
+
+	const setup = getSetupStatus();
+	const issuesByField = $derived(setup.current?.issuesByField ?? {});
 
 	const derivedOrigin = $derived(
 		data.settings.baseDomain
@@ -32,7 +36,7 @@
 		return highlighted.has(field) ? "ring-2 ring-amber-400" : "";
 	}
 	function issueFor(field: string): string | undefined {
-		return highlighted.has(field) ? data.fieldIssues[field] : undefined;
+		return highlighted.has(field) ? issuesByField[field] : undefined;
 	}
 </script>
 

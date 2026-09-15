@@ -50,14 +50,13 @@ job no longer racing its own container: the runner pulls the service image and
 gates every step behind its `pg_isready` health check before our code runs at
 all (the inline `docker pull` eating the readiness budget on a cold runner is a
 real, previously-observed CI failure documented in `postgres-container.ts`), and
-a fresh database name per run is what makes the workflow's `nick-fields/retry`
-re-attempts meaningful — attempt 2 gets an empty database on the same
-still-running service container instead of inheriting attempt 1's
-already-bootstrapped admin account. The deploy tests still need a real Docker
-daemon either way; only Postgres moved. Verified live, both paths: the full
-integration suite and the full Playwright suite each pass against a stand-in
-service container (twice back to back, the retry case, no leaked databases) and
-against the local `docker run` fallback.
+a fresh database name per run is what makes a re-run meaningful — the second run
+gets an empty database on the same still-running service container instead of
+inheriting the first one's already-bootstrapped admin account. The deploy tests
+still need a real Docker daemon either way; only Postgres moved. Verified live,
+both paths: the full integration suite and the full Playwright suite each pass
+against a stand-in service container (twice back to back, the re-run case, no
+leaked databases) and against the local `docker run` fallback.
 
 **Vitest was tried and abandoned for this suite.** It fixed the `[test].timeout`
 bug above (real `hookTimeout`/`testTimeout` config) and gave each test file its
@@ -297,9 +296,13 @@ parallel with the image builds): it builds from source, pre-pulls the two images
 the seed deploys, captures everything and uploads `docs/images` as an artefact.
 It proves the generator still works and is the only job in CI that performs a
 **real deploy** — `e2e.yaml` can't, because it runs the app as a container with
-no Docker socket. It does **not** commit anything. The capture step is wrapped
-in `nick-fields/retry` for the same reason `e2e.yaml`'s is: one run in six
-against a shared Postgres failed at the seeding step and passed on every re-run.
+no Docker socket. It does **not** commit anything. The capture step is a plain
+`run:` with a step-level `timeout-minutes`, like `e2e.yaml`'s and
+`code_quality.yaml`'s: all four steps used to be wrapped in `nick-fields/retry`
+(one run in six against a shared Postgres failed at the seeding step and passed
+on re-run), and the wrapper was removed because it buried the first attempt's
+output behind two more, which is exactly what you need to read when the failure
+turns out not to be flake. Re-run the job by hand instead.
 `screenshots-refresh.yaml` (`workflow_dispatch`, `contents: write`) calls that
 same workflow, downloads the artefact over `docs/images/`, and commits the
 result with `[skip ci]`, then pings the docs site the way `docs-update.yaml`
@@ -320,9 +323,29 @@ prettier would): a generated file that the pre-commit hook then reformats fights
 the next regeneration forever.
 
 **A spec file that signs in as the bootstrap admin must sort after
-`onboarding.spec.ts`**, hence the `ui-` prefix on the two that do: Playwright
+`onboarding.spec.ts`**, hence the `ui-` prefix on the ones that do: Playwright
 runs files in discovery order with one shared app, so a spec landing before
 onboarding finishes is bounced to `/onboarding` by the layout's own gate.
 Anything Docker-touching is still out : importing a compose file into a
 _project_ creates a Docker network, so `ui-form-state.spec.ts` imports ungrouped
 on purpose.
+
+**An error toast can deadlock a click, and it took a CI failure to find out.**
+The toaster is `bottom-right` (`+layout.svelte`) and so is the wizard's step
+nav, so after a failed submit the toast sits on top of "Next". Playwright moves
+the mouse to click, the pointer lands on the toast, hovering **pauses sonner's
+own dismiss timer**, and the click retries until the 30s test timeout — every
+attempt, deterministically, which is why `service-wizard.spec.ts` now dismisses
+the toast (`getByRole("button", { name: "Close toast" })`, the toaster has
+`closeButton`) before driving the wizard forward. Two things to carry: a toast
+overlapping a control isn't flake, and `role="alert"` inline banners (the
+`Alert` component) are _not_ toasts and stay put, so don't assert them hidden.
+
+**Don't assert on what the Docker daemon said.** This suite runs against a real
+daemon locally and against a socket-less container in CI, so the same remote
+query succeeds in one and fails in the other : an assertion on either outcome
+only passes in one place. `remote-functions.spec.ts`'s Docker-backed cases
+assert the _page's own chrome_ renders — which is exactly what a blocking `load`
+used to withhold — and the failed branch of `AsyncBlock` is covered
+deterministically in `tests/unit/app/async-block.test.ts` instead. A first pass
+that asserted the failure alert passed in CI and failed on a dev machine.

@@ -12,7 +12,6 @@ import {
 	defaultVarPrefix,
 	detectLinkEngine,
 } from "$lib/service-link";
-import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Services");
@@ -88,28 +87,12 @@ async function loadServices(userId: string, url: URL) {
 	const query = parseListQuery(url, { filterKeys: ["status", "project"] });
 	const paged = await ServiceDTO.listWithProjectNamesPaged(userId, query);
 
-	const deployed = paged.items.filter(
-		(r) => r.service.containerId || r.service.swarmServiceId,
-	);
-	if (deployed.length === 0) {
-		return {
-			services: paged.items.map((r) => ({
-				...r.service.toJSON(),
-				projectName: r.projectName,
-			})),
-			total: paged.total,
-		};
-	}
-
-	await DockerService.syncAllServiceStatuses(deployed.map((r) => r.service.id));
-	const fresh = await ServiceDTO.listWithProjectNamesPaged(userId, query);
-
 	return {
-		services: fresh.items.map((r) => ({
+		services: paged.items.map((r) => ({
 			...r.service.toJSON(),
 			projectName: r.projectName,
 		})),
-		total: fresh.total,
+		total: paged.total,
 	};
 }
 

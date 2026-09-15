@@ -4,6 +4,7 @@
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import NewVolumeFields from "$lib/components/new-volume-fields.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -17,12 +18,21 @@
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { HOST_VOLUME_PREFIX } from "$lib/constants";
+	import { getUnknownHostVolumes } from "$lib/remote/docker-infra.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
 	let volumeId = $state("");
 
 	const { data } = $props();
+
+	const known = $derived(
+		data.volumes
+			.filter((vol) => vol.kind === "volume")
+			.map((vol) => vol.source),
+	);
+	const unknownHostVolumes = $derived(getUnknownHostVolumes(known));
+	const hostVolumes = $derived(unknownHostVolumes.current ?? []);
 
 	onMount(() => title.set("Volumes"));
 
@@ -91,7 +101,7 @@
   {/if}
 
   <div class="p-5">
-    {#if data.volumes.length === 0 && data.hostVolumes.length === 0}
+    {#if data.volumes.length === 0 && hostVolumes.length === 0}
       <p class="text-text-subtle text-xs">
         No storage volumes yet :
         <button
@@ -139,11 +149,11 @@
               {#each data.volumes as vol (vol.id)}
                 <SelectItem label={vol.name} value={vol.id} />
               {/each}
-              {#if data.hostVolumes.length > 0}
+              {#if hostVolumes.length > 0}
                 <div class="text-text-subtle px-2 py-1.5 text-[0.6875rem] font-medium">
                   On this machine
                 </div>
-                {#each data.hostVolumes as name (name)}
+                {#each hostVolumes as name (name)}
                   <SelectItem label={name} value="{HOST_VOLUME_PREFIX}{name}" />
                 {/each}
               {/if}
@@ -214,9 +224,9 @@
       })}
     >
       {#if createError}
-        <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+        <Alert>
           {createError}
-        </div>
+        </Alert>
       {/if}
 
       <NewVolumeFields bind:kind={newVolumeKind} />

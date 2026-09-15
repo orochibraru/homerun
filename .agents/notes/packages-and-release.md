@@ -48,8 +48,9 @@ behind the counts is worth knowing before touching it:
   than in the config: CI appends `--reporter=list,json` and sets
   `PLAYWRIGHT_JSON_OUTPUT_NAME`, then a `jq` step turns `.stats` into
   `"25 passed"` / `"23 passed, 2 failed"`. Reading the file in a separate step
-  is what makes it survive the `nick-fields/retry` wrapper : the counts are
-  whatever the last attempt produced.
+  is what makes the counts survive a failing test run : the reporter step has
+  `if: always()`, so a red job still comments its real numbers instead of
+  nothing.
 - **The job is gated on the PR not coming from a fork**, like the publish jobs :
   a fork's `GITHUB_TOKEN` is read-only and couldn't comment anyway. It carries
   its own `pull-requests: write` at job level rather than widening the

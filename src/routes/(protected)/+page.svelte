@@ -15,10 +15,17 @@
 	import { Button } from "$lib/components/ui/button";
 	import UsageChart from "$lib/components/usage-chart.svelte";
 	import { timeAgo } from "$lib/formatting";
+	import { getSetupStatus } from "$lib/remote/setup.remote";
 	import { title } from "$lib/store/title";
 	import type { ContainerStatus } from "$lib/types";
 
 	const { data } = $props();
+
+	const setup = getSetupStatus();
+	const setupIssues = $derived(
+		(setup.current?.checks ?? []).filter((check) => check.severity !== "ok"),
+	);
+	const highlightFields = $derived(setup.current?.highlightFields ?? []);
 
 	onMount(() => {
 		title.set("Dashboard");
@@ -61,19 +68,19 @@
     </p>
   </div>
 
-  {#if data.setupIssues.length > 0}
+  {#if setupIssues.length > 0}
     <a
       class="mb-5 flex items-center gap-2.5 border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs transition-colors hover:bg-amber-400/15"
-      href={data.highlightFields.length > 0
-        ? `${resolve("/settings")}?highlight=${data.highlightFields.join(",")}`
+      href={highlightFields.length > 0
+        ? `${resolve("/settings")}?highlight=${highlightFields.join(",")}`
         : resolve("/settings")}
     >
       <AlertTriangle class="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
       <span class="flex-1 text-amber-700 dark:text-amber-300">
-        {data.setupIssues.length}
-        {data.setupIssues.length === 1 ? "setup issue" : "setup issues"}
-        found : {data.setupIssues[0].label.toLowerCase()}
-        {data.setupIssues.length > 1 ? ", and more" : ""}.
+        {setupIssues.length}
+        {setupIssues.length === 1 ? "setup issue" : "setup issues"}
+        found : {setupIssues[0].label.toLowerCase()}
+        {setupIssues.length > 1 ? ", and more" : ""}.
       </span>
       <span class="eyebrow shrink-0 text-amber-700 dark:text-amber-400">Review</span>
     </a>

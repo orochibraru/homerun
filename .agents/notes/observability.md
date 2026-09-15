@@ -125,7 +125,7 @@ on the same events are still unbuilt, see below.
 Two probes a minute per service with `uptimeEnabled` (default true) and a live
 container, run by another `BaseScheduler`:
 
-- **internal** — HTTP to the container's own address on the Docker network
+- **internal** — asks the container itself, on the Docker network
   (`DockerService.containerAddress`) and its container port. This is what a
   sibling service sees, and it catches a dead process inside a container the
   daemon still reports as running.
@@ -133,13 +133,46 @@ container, run by another `BaseScheduler`:
   set, else `<slug>.<baseDomain>`). It fails for entirely different reasons:
   DNS, a missing router, a certificate, a tunnel that isn't up.
 
+**The internal probe isn't always HTTP**, and
+`internalProbeMethod(image, hasHealthcheck)` picks between three, in this order:
+
+1. `healthcheck` — the image declares its own `HEALTHCHECK`, read back off
+   `State.Health` by `DockerService.containerHealth`. Always preferred: the
+   image author knows what ready means for that software, and it's the only one
+   of the three that can tell a Postgres mid-recovery from a ready one.
+   `starting` counts as up (the container is inside its own start period), only
+   `unhealthy` is a failure.
+2. `tcp` — a datastore (`isDatabaseImage`, i.e. anything `detectLinkEngine`
+   recognises) with no healthcheck of its own. A `Bun.connect` raced against the
+   5s timer; "the port accepts a connection" is the honest liveness signal there
+   and nothing more is claimed.
+3. `http` — everything else, where a status code means something.
+
+That hierarchy exists because speaking HTTP at a Postgres is how a perfectly
+healthy database read as **down** in the uptime panel, with Bun's own "pass
+`verbose: true` in the second argument to fetch()" hint shown to the user as the
+reason it was down. `probeErrorMessage` strips that tail and collapses the cases
+people actually hit (timeout/abort, refused, TLS) into one actionable sentence;
+both it and `internalProbeMethod` are pure and unit-tested in
+`tests/unit/app/uptime-probe.test.ts`.
+
 **Any HTTP response counts as up**, including 401/403 (a service behind the
 login wall is alive, it's just refusing the prober) and 404 (it answered, it
 just has no route at `/`). Only a transport error or the 5s timeout is a
 failure, and `redirect: "manual"` keeps a redirect from being chased.
 
-Results are **upserted one row per (service, kind)** rather than appended : the
-panel only ever shows "now", and the graphs already carry history. The service
-Observability tab renders both probes with per-probe troubleshooting steps when
-one fails; the dashboard shows a banner listing every failing probe, linking
-into the service that owns it.
+**The external probe is skipped, not failed, when the hostname is a loopback
+one** (`externalProbeSkipReason`: `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`,
+`*.localhost`). A `localhost` base domain is the dev/first-boot default, so the
+"public" hostname resolves to this machine and probing it proves nothing about
+whether anyone else can reach the service — reporting that as an outage would be
+noise, reporting it as up would be a lie. The panel says why instead.
+
+Results are **appended, one row per probe** (`id` primary key), not upserted:
+the panel renders the last `BEAT_WINDOW` (40) as a heartbeat strip, which needs
+the history. `UptimeCheckDTO.beats(serviceId, kind)` returns them oldest-first
+for the strip, `latestForUser` uses a `selectDistinctOn` for the "now" view, and
+`prune()` drops anything past a 7-day retention, amortized one tick in 60. The
+service Observability tab renders both probes with per-probe troubleshooting
+steps when one fails; the dashboard shows a banner listing every failing probe,
+linking into the service that owns it.

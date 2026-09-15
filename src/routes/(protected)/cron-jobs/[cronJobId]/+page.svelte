@@ -11,6 +11,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import CronJobFields from "$lib/components/cron-job-fields.svelte";
@@ -69,9 +70,9 @@
   </div>
 
   {#if form?.error}
-    <div class="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+    <Alert>
       {form.error}
-    </div>
+    </Alert>
   {/if}
 
   <form
@@ -159,7 +160,7 @@
               {/if}
             </button>
             {#if expandedRunId === run.id && run.output}
-              <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-300">
+              <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
                 {#each run.output.split("\n").filter(Boolean) as line, i (i)}
                   <AnsiLine {line} />
                 {/each}

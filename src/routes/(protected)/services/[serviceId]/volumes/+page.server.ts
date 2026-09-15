@@ -5,26 +5,17 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
-import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Services");
 
 export const load = async ({ params, parent }) => {
 	const { user } = await parent();
-	const [volumes, mounts, hostVolumes] = await Promise.all([
+	const [volumes, mounts] = await Promise.all([
 		StorageVolumeDTO.list(user.id),
 		ServiceVolumeDTO.listForService(params.serviceId),
-		DockerService.listHostVolumes().catch(() => [] as string[]),
 	]);
 
-	// Anything the daemon already has that Homerun hasn't been told about
-	// yet, so mounting one is picking it from a list rather than retyping a
-	// name Docker could have told us.
-	const known = new Set(
-		volumes.filter((v) => v.kind === "volume").map((v) => v.source),
-	);
 	return {
-		hostVolumes: hostVolumes.filter((name) => !known.has(name)),
 		mounts: mounts.map((m) => ({
 			...m.mount.toJSON(),
 			volumeKind: m.volumeKind,

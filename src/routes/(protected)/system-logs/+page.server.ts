@@ -5,14 +5,6 @@ import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Traefik");
 
-export const load = async () => {
-	const [traefik, infra] = await Promise.all([
-		DockerService.findTraefikContainer(),
-		DockerService.listInfraContainers().catch(() => []),
-	]);
-	return { infra, traefik };
-};
-
 export const actions = {
 	restartTraefik: async ({ locals }) => {
 		if (!locals.user) {

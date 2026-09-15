@@ -112,12 +112,8 @@ jobs:
       - name: Tests (E2E)
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 3
-          timeout_minutes: 30
-          retry_on: any
-          command: bun run test:e2e -- --reporter=list,json
+        timeout-minutes: 30
+        run: bun run test:e2e -- --reporter=list,json
 
       - name: Summarise the run
         id: stats

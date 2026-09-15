@@ -16,10 +16,18 @@
 	import { page } from "$app/state";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
+	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
 
 	const { data, children } = $props();
 
 	const svc = $derived(data.service);
+	const synced = $derived(
+		syncServiceStatuses(svc.containerId || svc.swarmServiceId ? [svc.id] : []),
+	);
+	const liveStatus = $derived(
+		synced.current?.find((row) => row.id === svc.id)?.status ??
+			svc.currentStatus,
+	);
 	const publicHost = $derived(
 		data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug,
 	);
@@ -144,7 +152,7 @@
   <!-- ── Hero ─────────────────────────────────────────────── -->
   <div class="mb-6 flex flex-wrap items-center gap-3">
     <h1 class="text-text text-lg font-semibold tracking-tight">{svc.name}</h1>
-    <StatusBadge status={svc.currentStatus} />
+    <StatusBadge status={liveStatus} />
   </div>
   <p class="text-text-muted -mt-4 mb-6 text-sm">
     {svc.image}:{svc.tag}

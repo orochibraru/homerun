@@ -1,0 +1,40 @@
+import { z } from "zod";
+import { query } from "$app/server";
+import { requireAdmin, requireUser } from "$lib/server/remote-auth";
+import type { CleanupPreview } from "$lib/services/docker/cleanup";
+import type {
+	InfraContainer,
+	TraefikInfo,
+} from "$lib/services/docker/core-services";
+import { DockerService } from "$lib/services/docker.service";
+
+export interface InfraStatus {
+	infra: InfraContainer[];
+	traefik: TraefikInfo | null;
+}
+
+export const getCleanupPreview = query(async (): Promise<CleanupPreview> => {
+	requireAdmin();
+	return await DockerService.getCleanupPreview();
+});
+
+export const getInfraStatus = query(async (): Promise<InfraStatus> => {
+	requireAdmin();
+	const [traefik, infra] = await Promise.all([
+		DockerService.findTraefikContainer(),
+		DockerService.listInfraContainers().catch(() => []),
+	]);
+	return { infra, traefik };
+});
+
+export const getUnknownHostVolumes = query(
+	z.array(z.string()),
+	async (known): Promise<string[]> => {
+		requireUser();
+		const names = await DockerService.listHostVolumes().catch(
+			() => [] as string[],
+		);
+		const seen = new Set(known);
+		return names.filter((name) => !seen.has(name));
+	},
+);

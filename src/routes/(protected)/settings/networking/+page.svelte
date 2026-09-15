@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import AsyncBlock from "$lib/components/async-block.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { getNewtContainer } from "$lib/remote/setup.remote";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
+
+	const newt = getNewtContainer();
 </script>
 
 <div class="space-y-6">
@@ -224,21 +229,31 @@
           and no resource is ever created.
         </p>
       </div>
-      {#if data.newt}
-        <p class="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
-          <span class="size-1.5 rounded-full {data.newt.state === 'running'
-          ? 'bg-emerald-500'
-          : 'bg-amber-500'}"></span>
-          A Pangolin tunnel client is on this host
-          (<code class="font-mono">{data.newt.image}</code>, {data.newt.state}).
-        </p>
-      {:else}
-        <p class="text-text-subtle rounded-lg border border-border px-3 py-2 text-xs">
-          No Newt tunnel container found on this host. Pangolin can only reach
-          services here through one : deploy the
-          <strong>Newt (Pangolin tunnel)</strong> template, or run your own.
-        </p>
-      {/if}
+      <AsyncBlock
+        errorTitle="Couldn't check this host for a tunnel client."
+        query={newt}
+      >
+        {#snippet pending()}
+          <Skeleton class="h-9 w-full" />
+        {/snippet}
+        {#snippet children(container)}
+          {#if container}
+            <p class="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
+              <span class="size-1.5 rounded-full {container.state === 'running'
+              ? 'bg-emerald-500'
+              : 'bg-amber-500'}"></span>
+              A Pangolin tunnel client is on this host
+              (<code class="font-mono">{container.image}</code>, {container.state}).
+            </p>
+          {:else}
+            <p class="text-text-subtle rounded-lg border border-border px-3 py-2 text-xs">
+              No Newt tunnel container found on this host. Pangolin can only
+              reach services here through one : deploy the
+              <strong>Newt (Pangolin tunnel)</strong> template, or run your own.
+            </p>
+          {/if}
+        {/snippet}
+      </AsyncBlock>
 
       <div>
         <label class={label} for="pangolinTargetPort">Target port</label>

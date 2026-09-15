@@ -1,16 +1,12 @@
 import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { allowLongRequest } from "$lib/server/long-request";
-import { DockerService } from "$lib/services/docker.service";
 import { runQueuedCleanup } from "$lib/services/docker-cleanup-queue";
 
-export const load = async ({ locals }) => {
+export const load = ({ locals }) => {
 	if (!locals.isAdmin) {
 		throw redirect(302, resolve("/"));
 	}
-
-	const preview = await DockerService.getCleanupPreview();
-	return { preview };
 };
 
 export const actions = {

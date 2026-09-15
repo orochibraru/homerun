@@ -116,7 +116,10 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
     `DeploymentService.deployService()` instead (see above), which wraps it with
     deployment-row bookkeeping. → `DockerService.createAndStartContainer`.
   - `start/stop/restartContainer`, `removeContainer`, `inspectStatus` →
-    `ContainerStatus`, `streamLogs` (follow-mode web `ReadableStream`),
+    `ContainerStatus`, `containerHealth` → the container's own `State.Health`
+    verdict (`null` when the image declares no `HEALTHCHECK`, which is the
+    common case; the uptime probe prefers it over any probe of its own, see
+    `observability.md`), `streamLogs` (follow-mode web `ReadableStream`),
     `buildAuthConfig`, all exposed the same way, `DockerService.<name>`.
     `ContainerStatus` (`$lib/types.ts`) has a `"missing"` value alongside
     pending/pulling/starting/running/stopped/failed, for a container Docker

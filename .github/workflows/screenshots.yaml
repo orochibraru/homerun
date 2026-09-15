@@ -60,12 +60,8 @@ jobs:
       - name: Capture
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 2
-          timeout_minutes: 20
-          retry_on: any
-          command: bun run screenshots -- --reporter=list,json
+        timeout-minutes: 20
+        run: bun run screenshots -- --reporter=list,json
 
       - name: Summarise the run
         id: stats
