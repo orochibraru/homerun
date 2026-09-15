@@ -214,3 +214,8 @@ move it under `## Done` in the same change that finishes it.
       target's own image and env) and optionally puts both on one project
       network : whichever project either is already in, or a new one named after
       the source.
+- [x] [App] **Uptime heartbeats**, and no external probe on a loopback host.
+      `uptime_check` is append-only now, the panel draws the last 40 beats as a
+      strip with the uptime percentage over that window, and
+      `externalProbeSkipReason` skips `localhost`/`127.0.0.1`/`*.localhost`
+      instead of reporting a meaningless outage.

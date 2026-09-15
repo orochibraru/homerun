@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, lt } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { service, type UptimeCheck, uptimeCheck } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -14,38 +14,68 @@ export interface ProbeResult {
 	target?: string | null;
 }
 
-/** Wraps `uptime_check` : the latest result of each liveness probe, see schema.ts. */
+/** How many beats the heartbeat strip draws, and therefore how many are read back. */
+export const BEAT_WINDOW = 40;
+
+/** A week at one beat a minute is ~10k rows per service per probe. */
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Wraps `uptime_check` : the appended liveness history behind the heartbeat strips, see schema.ts. */
 export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
-	/** Upserts one probe result, keyed on (service, kind). */
 	static async record(result: ProbeResult): Promise<void> {
-		const row = {
+		await db.insert(uptimeCheck).values({
 			checkedAt: new Date(),
 			detail: result.detail ?? null,
+			id: crypto.randomUUID(),
 			kind: result.kind,
 			latencyMs: result.latencyMs ?? null,
 			ok: result.ok,
 			serviceId: result.serviceId,
 			target: result.target ?? null,
-		};
-		await db
-			.insert(uptimeCheck)
-			.values(row)
-			.onConflictDoUpdate({
-				set: row,
-				target: [uptimeCheck.serviceId, uptimeCheck.kind],
-			});
+		});
 	}
 
-	static async listForService(serviceId: string): Promise<UptimeCheck[]> {
-		return await db
+	static async recordMany(results: ProbeResult[]): Promise<void> {
+		if (results.length === 0) {
+			return;
+		}
+		const now = new Date();
+		await db.insert(uptimeCheck).values(
+			results.map((result) => ({
+				checkedAt: now,
+				detail: result.detail ?? null,
+				id: crypto.randomUUID(),
+				kind: result.kind,
+				latencyMs: result.latencyMs ?? null,
+				ok: result.ok,
+				serviceId: result.serviceId,
+				target: result.target ?? null,
+			})),
+		);
+	}
+
+	/**
+	 * The last `BEAT_WINDOW` beats of one probe, oldest first so the strip
+	 * reads left-to-right like every other heartbeat display.
+	 */
+	static async beats(
+		serviceId: string,
+		kind: ProbeKind,
+		limit = BEAT_WINDOW,
+	): Promise<UptimeCheck[]> {
+		const rows = await db
 			.select()
 			.from(uptimeCheck)
-			.where(eq(uptimeCheck.serviceId, serviceId))
-			.orderBy(desc(uptimeCheck.kind));
+			.where(
+				and(eq(uptimeCheck.serviceId, serviceId), eq(uptimeCheck.kind, kind)),
+			)
+			.orderBy(desc(uptimeCheck.checkedAt))
+			.limit(limit);
+		return rows.reverse();
 	}
 
-	/** Every probe for the services a user owns, for the dashboard's summary. */
-	static async listForUser(userId: string): Promise<UptimeCheck[]> {
+	/** The newest beat of every probe a user owns, for the dashboard's failing-probe banner. */
+	static async latestForUser(userId: string): Promise<UptimeCheck[]> {
 		const owned = await db
 			.select({ id: service.id })
 			.from(service)
@@ -54,13 +84,24 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 			return [];
 		}
 		return await db
-			.select()
+			.selectDistinctOn([uptimeCheck.serviceId, uptimeCheck.kind])
 			.from(uptimeCheck)
 			.where(
 				inArray(
 					uptimeCheck.serviceId,
 					owned.map((row) => row.id),
 				),
+			)
+			.orderBy(
+				uptimeCheck.serviceId,
+				uptimeCheck.kind,
+				desc(uptimeCheck.checkedAt),
 			);
+	}
+
+	static async prune(): Promise<void> {
+		await db
+			.delete(uptimeCheck)
+			.where(lt(uptimeCheck.checkedAt, new Date(Date.now() - RETENTION_MS)));
 	}
 }

@@ -1,20 +1,30 @@
 <script lang="ts">
-	import { CircleCheck, CircleX, Globe, Network } from "@lucide/svelte";
+	import {
+		CircleCheck,
+		CircleX,
+		Globe,
+		MinusCircle,
+		Network,
+	} from "@lucide/svelte";
 	import { timeAgo } from "$lib/formatting";
 
-	interface Check {
+	interface Beat {
 		checkedAt: Date;
 		detail: string | null;
-		kind: "internal" | "external";
+		id: string;
 		latencyMs: number | null;
 		ok: boolean;
 		target: string | null;
 	}
 
-	const { checks, enabled }: { checks: Check[]; enabled: boolean } = $props();
+	interface Props {
+		beats: { external: Beat[]; internal: Beat[] };
+		enabled: boolean;
+		/** Why the external probe is skipped, when it is. */
+		externalSkipped?: string | null;
+	}
 
-	const internal = $derived(checks.find((c) => c.kind === "internal"));
-	const external = $derived(checks.find((c) => c.kind === "external"));
+	const { beats, enabled, externalSkipped = null }: Props = $props();
 
 	/** What to actually try, per probe, when it's failing. */
 	const HINTS: Record<"internal" | "external", string[]> = {
@@ -25,30 +35,63 @@
 			"Behind Pangolin, the Target must point at this host's 443 over https, not 80.",
 		],
 		internal: [
-			"The container is running but its port isn't answering : check the app's own logs above.",
+			"The container is running but its port isn't answering : check the app's own logs below.",
 			"Confirm the container port on the Networking tab matches what the app listens on.",
 			"An app bound to 127.0.0.1 inside its container is unreachable from the network : bind 0.0.0.0.",
 		],
 	};
+
+	function uptimePercent(series: Beat[]): number | null {
+		if (series.length === 0) {
+			return null;
+		}
+		return (series.filter((beat) => beat.ok).length / series.length) * 100;
+	}
 </script>
+
+{#snippet heartbeat(series: Beat[])}
+  <div class="mt-2 flex items-end gap-[3px]">
+    {#each series as beat (beat.id)}
+      <span
+        class="h-5 w-[5px] shrink-0 rounded-[2px] {beat.ok
+        ? 'bg-emerald-500'
+        : 'bg-red-500'}"
+        title="{beat.ok ? 'Up' : 'Down'} · {timeAgo(beat.checkedAt)}{beat.detail
+        ? ` · ${beat.detail}`
+        : ''}"
+      ></span>
+    {/each}
+    {#if series.length === 0}
+      <span class="text-text-subtle text-xs">No beats recorded yet.</span>
+    {/if}
+  </div>
+{/snippet}
 
 {#snippet probe(
   label: string,
   Icon: typeof Globe,
-  check: Check | undefined,
+  series: Beat[],
   kind: "internal" | "external",
+  skipped: string | null,
 )}
+  {@const latest = series.at(-1)}
+  {@const percent = uptimePercent(series)}
   <div class="px-4 py-3">
     <div class="flex items-center gap-2">
       <Icon class="text-text-subtle size-3.5 shrink-0" />
       <span class="text-text text-sm font-medium">{label}</span>
-      {#if check}
+      {#if skipped}
+        <span class="text-text-subtle ml-auto flex items-center gap-1 text-xs">
+          <MinusCircle class="size-3.5" />
+          Not checked
+        </span>
+      {:else if latest}
         <span
-          class="ml-auto flex items-center gap-1 text-xs {check.ok
+          class="ml-auto flex items-center gap-1 text-xs {latest.ok
           ? 'text-emerald-600 dark:text-emerald-400'
           : 'text-red-500'}"
         >
-          {#if check.ok}
+          {#if latest.ok}
             <CircleCheck class="size-3.5" />
             Responding
           {:else}
@@ -60,18 +103,28 @@
         <span class="text-text-subtle ml-auto text-xs">Not checked yet</span>
       {/if}
     </div>
-    {#if check}
-      <p class="text-text-subtle mt-1 truncate text-xs">
-        {check.target ?? ""}
-        {#if check.detail}
-          · {check.detail}
+
+    {#if skipped}
+      <p class="text-text-subtle mt-1 text-xs">{skipped}</p>
+    {:else}
+      {@render heartbeat(series)}
+      <p class="text-text-subtle mt-1.5 truncate text-xs">
+        {#if percent !== null}
+          {percent.toFixed(0)}% over the last {series.length}
+          {series.length === 1 ? "check" : "checks"}
         {/if}
-        {#if check.latencyMs !== null && check.ok}
-          · {check.latencyMs}ms
+        {#if latest}
+          · {latest.target ?? ""}
+          {#if latest.detail}
+            · {latest.detail}
+          {/if}
+          {#if latest.latencyMs !== null && latest.ok}
+            · {latest.latencyMs}ms
+          {/if}
+          · {timeAgo(latest.checkedAt)}
         {/if}
-        · {timeAgo(check.checkedAt)}
       </p>
-      {#if !check.ok}
+      {#if latest && !latest.ok}
         <ul class="text-text-muted mt-2 space-y-1 text-xs">
           {#each HINTS[kind] as hint (hint)}
             <li class="flex gap-1.5">
@@ -90,14 +143,20 @@
     <h2 class="eyebrow">Uptime</h2>
     <span class="text-text-subtle text-[0.6875rem]">Probed every minute</span>
   </div>
-  {#if !enabled}
+  {#if enabled}
+    <div class="divide-border divide-y">
+      {@render probe("From the network", Network, beats.internal, "internal", null)}
+      {@render probe(
+        "From its hostname",
+        Globe,
+        beats.external,
+        "external",
+        externalSkipped,
+      )}
+    </div>
+  {:else}
     <p class="text-text-muted px-4 py-6 text-center text-xs">
       Uptime probing is off for this service.
     </p>
-  {:else}
-    <div class="divide-border divide-y">
-      {@render probe("From the network", Network, internal, "internal")}
-      {@render probe("From its hostname", Globe, external, "external")}
-    </div>
   {/if}
 </section>

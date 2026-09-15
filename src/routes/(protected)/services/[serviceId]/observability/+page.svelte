@@ -20,7 +20,11 @@
 </script>
 
 <div class="mb-4">
-  <UptimePanel checks={data.uptime} enabled={data.service.uptimeEnabled} />
+  <UptimePanel
+    beats={data.uptime}
+    enabled={data.service.uptimeEnabled}
+    externalSkipped={data.externalSkipped}
+  />
 </div>
 
 <div class="mb-4">

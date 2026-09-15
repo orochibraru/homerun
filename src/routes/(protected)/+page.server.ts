@@ -15,7 +15,7 @@ export const load = async ({ parent }) => {
 			DeploymentDTO.listRecentForUser(user.id),
 			AdminService.runSetupChecks(),
 			AppLogDTO.listRecent(5),
-			UptimeCheckDTO.listForUser(user.id),
+			UptimeCheckDTO.latestForUser(user.id),
 		]);
 	const serviceNames = new Map(services.map((svc) => [svc.id, svc.name]));
 

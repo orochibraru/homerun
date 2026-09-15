@@ -935,20 +935,21 @@ export const statSample = pgTable(
 );
 
 /**
- * The latest result of each liveness probe for a service : one row per
- * (service, kind), overwritten every tick rather than appended, since the
- * graphs already carry history and a status panel only ever shows "now".
+ * One liveness probe result, **appended** every tick : the panel draws the last
+ * few dozen as a heartbeat strip, so history is the point, and "now" is just
+ * the newest row per (service, kind).
  *
- * `internal` is "the container is up and its port accepts a connection on the
- * Docker network"; `external` is "the hostname Traefik publishes actually
- * answers". They fail independently and for different reasons, which is the
- * whole point of probing both.
+ * `internal` is "the container's own port answers on the Docker network";
+ * `external` is "the hostname Traefik publishes answers". They fail
+ * independently and for different reasons, which is the whole point of probing
+ * both. Retention is a week, pruned by the probe itself.
  */
 export const uptimeCheck = pgTable(
 	"uptime_check",
 	{
 		checkedAt: timestamp("checked_at", { mode: "date" }).notNull(),
 		detail: text("detail"),
+		id: text("id").primaryKey(),
 		kind: text("kind").$type<"internal" | "external">().notNull(),
 		latencyMs: integer("latency_ms"),
 		ok: boolean("ok").notNull(),
@@ -958,9 +959,10 @@ export const uptimeCheck = pgTable(
 		target: text("target"),
 	},
 	(table) => [
-		uniqueIndex("uptimeCheck_serviceId_kind_uidx").on(
+		index("uptimeCheck_serviceId_kind_checkedAt_idx").on(
 			table.serviceId,
 			table.kind,
+			table.checkedAt,
 		),
 	],
 );

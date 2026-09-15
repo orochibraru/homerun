@@ -183,8 +183,8 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   written every minute by `StatsSampler` and read back bucketed per range. See
   Recorded resource history in `observability.md` for why it's raw samples
   rather than rollup tables.
-- `uptime_check`, the latest result of each liveness probe, one row per
-  (service, kind), upserted rather than appended. See Uptime probes in
+- `uptime_check`, one appended row per liveness probe per tick (the heartbeat
+  strips read the last 40, "now" is the newest). See Uptime probes in
   `observability.md`.
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).

@@ -5,20 +5,30 @@ import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 import { Logger } from "$lib/logger";
+import {
+	externalHostFor,
+	externalProbeSkipReason,
+} from "$lib/services/uptime/uptime-probe";
 
 const logger = new Logger("Services");
 
-export const load = async ({ params }) => {
-	const [failedDeployments, appLogs, uptime] = await Promise.all([
+export const load = async ({ params, parent }) => {
+	const { service: svc } = await parent();
+	const [failedDeployments, appLogs, internal, external] = await Promise.all([
 		DeploymentDTO.listFailedForService(params.serviceId),
 		AppLogDTO.listForService(params.serviceId),
-		UptimeCheckDTO.listForService(params.serviceId),
+		UptimeCheckDTO.beats(params.serviceId, "internal"),
+		UptimeCheckDTO.beats(params.serviceId, "external"),
 	]);
 
+	const externalHost = externalHostFor(svc);
 	return {
 		appLogs: appLogs.map((l) => l.toJSON()),
+		externalSkipped: externalHost
+			? externalProbeSkipReason(externalHost)
+			: "This service isn't publicly routed, so there's no hostname to check.",
 		failedDeployments: failedDeployments.map((d) => d.toJSON()),
-		uptime,
+		uptime: { external, internal },
 	};
 };
 

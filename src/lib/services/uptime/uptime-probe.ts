@@ -6,6 +6,38 @@ import { DockerService } from "../docker.service.ts";
 
 const TIMEOUT_MS = 5000;
 
+/** One in this many ticks also prunes, same amortized shape as the stats sampler. */
+const PRUNE_EVERY_TICKS = 60;
+
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
+
+/**
+ * Why the external probe can't mean anything for this hostname, or null when
+ * it can. A `localhost` base domain is the dev/first-boot default and the
+ * "public" hostname then resolves to this machine, so probing it proves
+ * nothing about whether anyone else can reach the service : reporting that as
+ * an outage would be noise, and reporting it as up would be a lie.
+ */
+export function externalProbeSkipReason(host: string): string | null {
+	const bare = host.split(":")[0]?.toLowerCase() ?? "";
+	if (LOOPBACK_HOSTS.has(bare) || bare.endsWith(".localhost")) {
+		return `${host} is a loopback address, so there's nothing to reach from outside this machine. Set a real base domain in Settings → General.`;
+	}
+	return null;
+}
+
+/** The hostname a service is published at, or null when it isn't published. */
+export function externalHostFor(svc: {
+	customDomain: string | null;
+	dnsResolvable: boolean;
+	slug: string;
+}): string | null {
+	if (!svc.dnsResolvable) {
+		return null;
+	}
+	return svc.customDomain ?? `${svc.slug}.${config.baseDomain}`;
+}
+
 /**
  * Two liveness probes per service, every minute:
  *
@@ -24,15 +56,23 @@ const TIMEOUT_MS = 5000;
 export class UptimeProbe extends BaseScheduler {
 	protected readonly label = "Uptime";
 
+	protected readonly runOnStart = true;
+
+	#ticks = 0;
+
 	protected async tick(): Promise<void> {
+		this.#ticks += 1;
+
 		const services = await ServiceDTO.listRunningWithContainers();
 		const probes = services
 			.filter((svc) => svc.uptimeEnabled)
 			.flatMap((svc) => [this.#internal(svc), this.#external(svc)]);
 		const results = await Promise.all(probes);
-		await Promise.all(
-			results.filter((r) => r !== null).map((r) => UptimeCheckDTO.record(r)),
-		);
+		await UptimeCheckDTO.recordMany(results.filter((r) => r !== null));
+
+		if (this.#ticks % PRUNE_EVERY_TICKS === 0) {
+			await UptimeCheckDTO.prune();
+		}
 	}
 
 	async #internal(svc: ServiceDTO): Promise<ProbeResult | null> {
@@ -56,10 +96,10 @@ export class UptimeProbe extends BaseScheduler {
 	}
 
 	async #external(svc: ServiceDTO): Promise<ProbeResult | null> {
-		if (!svc.dnsResolvable) {
+		const host = externalHostFor(svc);
+		if (!host || externalProbeSkipReason(host)) {
 			return null;
 		}
-		const host = svc.customDomain ?? `${svc.slug}.${config.baseDomain}`;
 		const scheme = config.traefik.entrypoint === "web" ? "http" : "https";
 		return await this.#probe(svc.id, "external", `${scheme}://${host}/`);
 	}
