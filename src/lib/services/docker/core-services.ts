@@ -1,8 +1,15 @@
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
+import { join } from "node:path";
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
-import { MANAGED_LABEL } from "./labels.ts";
+import {
+	DASHBOARD_ROUTER_FILE,
+	dashboardHostFrom,
+	dashboardRouterConfig,
+} from "./dashboard.ts";
+import { hasTraefikRouterFor, MANAGED_LABEL } from "./labels.ts";
 import { swarmNetworkName } from "./swarm.ts";
 
 const LEADING_SLASH_RE = /^\//;
@@ -13,6 +20,12 @@ export interface TraefikInfo {
 	id: string;
 	image: string;
 	name: string;
+}
+
+export interface SelfContainer {
+	labels: Record<string, string>;
+	name: string | null;
+	networkAddress: string | null;
 }
 
 export interface InfraContainer {
@@ -61,6 +74,62 @@ export function DockerCoreServicesMixin<
 	TBase extends Constructor<BaseDockerService & RequiresSwarmMixin>,
 >(Base: TBase) {
 	return class DockerCoreServicesService extends Base {
+		async selfContainer(): Promise<SelfContainer | null> {
+			const info = await this.getDocker()
+				.getContainer(hostname())
+				.inspect()
+				.catch(() => null);
+			if (!info) {
+				return null;
+			}
+			const network =
+				info.NetworkSettings?.Networks?.[config.docker.networkName];
+			return {
+				labels: info.Config?.Labels ?? {},
+				name: info.Name?.replace(LEADING_SLASH_RE, "") || null,
+				networkAddress: network?.IPAddress || null,
+			};
+		}
+
+		async selfContainerLabels(): Promise<Record<string, string> | null> {
+			const self = await this.selfContainer();
+			return self?.labels ?? null;
+		}
+
+		async syncDashboardRouter(): Promise<void> {
+			const dir = config.traefik.dynamicConfigDir;
+			if (!dir) {
+				return;
+			}
+			const path = join(dir, DASHBOARD_ROUTER_FILE);
+			const host = dashboardHostFrom(config.auth.origin ?? null);
+			const self = host ? await this.selfContainer() : null;
+			const target = self?.name ?? self?.networkAddress ?? null;
+
+			if (!(host && target) || hasTraefikRouterFor(self?.labels ?? {}, host)) {
+				await rm(path, { force: true }).catch((err) => {
+					logger.warn("Couldn't remove the dashboard router config", err);
+				});
+				return;
+			}
+
+			try {
+				await mkdir(dir, { recursive: true });
+				await writeFile(
+					path,
+					dashboardRouterConfig({
+						certResolver: config.traefik.certResolver,
+						entrypoint: config.traefik.entrypoint,
+						host,
+						target: `http://${target}:${config.port}`,
+					}),
+				);
+				logger.info(`Dashboard router published for ${host} -> ${target}`);
+			} catch (err) {
+				logger.error(`Couldn't publish the dashboard router for ${host}`, err);
+			}
+		}
+
 		/**
 		 * Locates the Traefik container this app's `compose.yaml` bootstraps.
 		 *
@@ -71,14 +140,6 @@ export function DockerCoreServicesMixin<
 		 * project naming isn't guaranteed stable across setups (no-compose /
 		 * standalone Traefik is a documented fallback too).
 		 */
-		async selfContainerLabels(): Promise<Record<string, string> | null> {
-			const info = await this.getDocker()
-				.getContainer(hostname())
-				.inspect()
-				.catch(() => null);
-			return info?.Config?.Labels ?? null;
-		}
-
 		async findTraefikContainer(): Promise<TraefikInfo | null> {
 			const containers = await this.getDocker().listContainers({
 				all: true,

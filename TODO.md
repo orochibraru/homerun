@@ -6,35 +6,38 @@ move it under `## Done` in the same change that finishes it.
 
 ## Not prioritized / No size / Too lazy to size just got an idea
 
-- [ ] **[WIP]** [Docker] **Routing doesn't work on the test server.** Mostly
-      fixed and verified live : `dashy.penombre.space` serves Dashy, and
-      `better-livebox.penombre.space` reaches its own app. - **Done** :
-      `PangolinService` never sent `sso` and Pangolin defaults it to true, so
-      every resource it created was behind Pangolin's login (302 to
-      `/auth/resource/…`, or a bare 401). It now follows every create with
-      `POST /resource/{id}` `{"sso": false}`, and does the same on the
-      already-exists path, so a redeploy heals the older ones. - **Done** : the
-      hostname uptime probe called an untrusted certificate an outage, so a
-      service behind the tunnel read 0% while serving 200s. It now retries
-      certificate failures unverified and reports `certificate not trusted` on
-      an otherwise-fine response. ANSI escapes from a container's own
-      healthcheck output are stripped too, they were rendering as
-      `[32mStatus: 200` in the Observability tab. - **Done** : new
-      `dashboard-router` setup check. The app inspects its own container's
-      labels and warns when nothing routes the Dashboard URL's host to it, which
-      is the 404 below, previously silent. - **Left, on the instance** : the
-      box's `compose.yaml` predates the `DASHBOARD_DOMAIN` router, so
-      `homerun-app-1` carries no Traefik labels and `dash.penombre.space` 404s.
-      Add the labels (patched copy waiting at `scratchpad/remote-compose.yaml`),
-      set `DASHBOARD_DOMAIN` in `.env`, `docker compose up -d app`, and repoint
-      that Pangolin target from `localhost:80` to 443/https. Resources
-      317/318/333 are hand-made and still `sso=1`, Homerun won't touch what it
-      didn't create. - **Left, on Pangolin** : no cert for `*.penombre.space`,
-      so subdomains get the edge's default self-signed one and a browser still
-      warns. The domain is
+- [ ] Make domains clickable on the service page next to the internal dns, open
+      in a new page
+
+- [ ] **[WIP]** [Docker] **Routing doesn't work on the test server.** Deployed
+      services are fixed and verified live (`dashy.penombre.space` serves Dashy,
+      `better-livebox.penombre.space` reaches its own app). - **Done** :
+      `PangolinService` never sent `sso`, and Pangolin defaults it to true, so
+      every resource it created sat behind Pangolin's login. It now follows a
+      create with `POST /resource/{id}` `{"sso": false}`, and does the same on
+      the already-exists path so a redeploy heals older ones. - **Done** : the
+      hostname uptime probe treated an untrusted certificate as an outage, so a
+      service behind a tunnel read 0% while serving 200s. It retries certificate
+      failures unverified and says `certificate not trusted` on an
+      otherwise-fine response. ANSI escapes from a container's healthcheck
+      output are stripped too. - **Done** : the **Dashboard URL is routed from
+      the UI**, no env var. The app writes a Traefik file-provider router for it
+      (`syncDashboardRouter`), and every compose file plus the installer now
+      share a `traefik_dynamic` volume between the app and Traefik with the file
+      provider on. That also makes custom SSL work on a default install for the
+      first time. A `dashboard-router` setup check reports an instance that has
+      neither the shared directory nor labels. - **Left, on this instance** :
+      the box's compose predates all of the above, so `dash.penombre.space`
+      still 404s until it's regenerated with the current installer (or given the
+      `traefik_dynamic` volume + file provider by hand, then a
+      `docker compose up -d`). Its Pangolin target also points at `localhost:80`
+      and needs 443/https. Resources 317/318/333 are hand-made and still
+      `sso=1`; Homerun won't touch what it didn't create. - **Left, on
+      Pangolin** : no certificate for `*.penombre.space`, so subdomains get the
+      edge's default self-signed one and browsers warn. The domain is
       `verified: true, type: wildcard, preferWildcardCert: true` with no
-      `certResolver` : issue the wildcard over DNS-01 or turn
-      `preferWildcardCert` off and let it issue per-subdomain.
+      `certResolver` : issue the wildcard over DNS-01, or turn
+      `preferWildcardCert` off and let it issue per subdomain.
 - [ ] Ability to edit a docker registry
 - [ ] Add penombre template (github.com/orochibraru/penombre)
 - [ ] Add tags to templates to make search more relevant.

@@ -57,5 +57,6 @@ networks:
 volumes:
   postgres_data: {}
   traefik_certs: {}
+  traefik_dynamic: {}
   agent_data: {}
   app_data: {}

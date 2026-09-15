@@ -95,6 +95,8 @@ class FullStackInstallerService {
 docker:
   networkName: homerun
   socketPath: ${dockerSocket}
+traefik:
+  dynamicConfigDir: /app/traefik-dynamic
 `,
 		);
 	}
@@ -206,6 +208,7 @@ services:
     volumes:
       - ${dockerSocket}:${dockerSocket}
       - homerun-data:/app/data
+      - traefik-dynamic:/app/traefik-dynamic
       - ./homerun.yaml:/app/homerun.yaml:ro
     networks:
       - homerun
@@ -218,6 +221,8 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.network=homerun
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
@@ -230,6 +235,7 @@ services:
     volumes:
       - ${dockerSocket}:/var/run/docker.sock:ro
       - traefik-certs:/letsencrypt
+      - traefik-dynamic:/etc/traefik/dynamic
     networks:
       - homerun
 
@@ -256,6 +262,7 @@ networks:
 volumes:
   postgres-data: {}
   traefik-certs: {}
+  traefik-dynamic: {}
   homerun-data: {}
 `;
 	}

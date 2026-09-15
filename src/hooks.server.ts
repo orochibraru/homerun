@@ -15,6 +15,7 @@ import { seedBuiltinTemplates } from "$lib/server/db/seed";
 import { AdminService } from "$lib/services/admin.service";
 import { auth, rebuildAuth } from "$lib/services/auth";
 import { CronService } from "$lib/services/cron.service";
+import { DockerService } from "$lib/services/docker.service";
 import { JobWorker } from "$lib/services/queue/worker";
 
 const logger = new Logger("Hooks");
@@ -172,6 +173,7 @@ export const init = async () => {
 	const settings = await InstanceSettingsDTO.get();
 	applyInstanceSettings(settings.toConfigOverride());
 	rebuildAuth();
+	await DockerService.syncDashboardRouter();
 
 	JobWorker.start();
 
