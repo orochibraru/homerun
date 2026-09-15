@@ -183,10 +183,10 @@
       title="No git providers configured"
     />
   {:else}
-    <div class="space-y-3">
+    <div class="panel divide-border divide-y overflow-hidden rounded-xl">
       {#each data.providers as provider (provider.id)}
         {@const connected = data.connectedProviderIds.includes(provider.id)}
-        <div class="panel rounded-md p-5">
+        <div class="hover:bg-surface-2 px-4 py-3 transition-colors">
           <div class="flex items-center gap-4">
             <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
               <GitBranch class="size-5" />

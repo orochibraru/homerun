@@ -126,9 +126,9 @@
           {@render badge?.(item)}
         </div>
         {#if meta || actions}
-          <div class="border-border mt-3 flex items-center justify-between gap-2 border-t pt-3">
+          <div class="border-border mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             <div class="min-w-0">{@render meta?.(item)}</div>
-            <div class="flex shrink-0 items-center gap-2">
+            <div class="flex min-w-0 flex-wrap items-center gap-2">
               {@render actions?.(item)}
             </div>
           </div>

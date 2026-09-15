@@ -5,6 +5,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { E2E_BASE_URL } from "../support/config";
 
 const OUT_DIR = join(process.cwd(), "docs", "images");
+const AUTH_STATE = join(process.cwd(), "test-results", "screenshots-auth.json");
 const EMAIL = "ada@example.com";
 const PASSWORD = "a-real-strong-password-123";
 const BASE_DOMAIN = "example.com";
@@ -67,7 +68,6 @@ interface Shot {
 	name: string;
 	path: () => string;
 	prepare?: (page: Page) => Promise<void>;
-	signedOut?: boolean;
 }
 
 const SHOTS: Shot[] = [
@@ -138,26 +138,7 @@ const SHOTS: Shot[] = [
 		name: "users",
 		path: () => "/users",
 	},
-	{
-		doc: "/auth/sign-in",
-		expect: /Sign in/i,
-		name: "sign-in",
-		path: () => "/auth/sign-in",
-		prepare: async (page) => {
-			await page.locator("#email").fill(EMAIL);
-			await page.locator("#password").fill(PASSWORD);
-		},
-		signedOut: true,
-	},
 ];
-
-async function signIn(page: Page): Promise<void> {
-	await page.goto("/auth/sign-in");
-	await page.locator("#email").fill(EMAIL);
-	await page.locator("#password").fill(PASSWORD);
-	await page.getByRole("button", { name: "Sign in" }).click();
-	await expect(page).toHaveURL(/4310\/$/);
-}
 
 async function settle(page: Page): Promise<void> {
 	await page.waitForLoadState("domcontentloaded");
@@ -174,8 +155,7 @@ test.afterAll(async ({ browser }) => {
 	if (!seeded.projectId) {
 		return;
 	}
-	const page = await browser.newPage();
-	await signIn(page);
+	const page = await browser.newPage({ storageState: AUTH_STATE });
 	for (const id of Object.values(seeded.serviceIds)) {
 		const removed = await page.request.delete(`/api/v1/services/${id}`, {
 			timeout: 60_000,
@@ -211,88 +191,105 @@ test("bootstraps a blank instance", async ({ page }) => {
 	}
 	await page.getByRole("button", { name: "Finish setup" }).click();
 	await expect(page).toHaveURL(/4310\/$/);
+
+	await page.context().storageState({ path: AUTH_STATE });
 });
 
-test("seeds a project and one service of each state", async ({ page }) => {
-	await signIn(page);
+test.describe("signed in", () => {
+	test.use({ storageState: AUTH_STATE });
 
-	const project = await page.request.post("/api/v1/projects", {
-		data: {
-			description: "Everything the marketing site needs to serve traffic.",
-			name: "Acme",
-			slug: "acme",
-		},
-	});
-	expect(project.ok()).toBeTruthy();
-	seeded.projectId = (await project.json()).id;
-
-	for (const seed of SEEDS) {
-		const created = await page.request.post("/api/v1/services", {
+	test("seeds a project and one service of each state", async ({ page }) => {
+		const project = await page.request.post("/api/v1/projects", {
 			data: {
-				containerPort: seed.containerPort,
-				envVars: seed.envVars ?? {},
-				image: seed.image,
-				memoryLimitMb: seed.memoryLimitMb,
-				name: seed.name,
-				projectId: seeded.projectId,
-				slug: seed.slug,
-				tag: seed.tag,
+				description: "Everything the marketing site needs to serve traffic.",
+				name: "Acme",
+				slug: "acme",
 			},
 		});
-		expect(created.ok()).toBeTruthy();
-		seeded.serviceIds[seed.slug] = (await created.json()).id;
+		expect(project.ok()).toBeTruthy();
+		seeded.projectId = (await project.json()).id;
+
+		for (const seed of SEEDS) {
+			const created = await page.request.post("/api/v1/services", {
+				data: {
+					containerPort: seed.containerPort,
+					envVars: seed.envVars ?? {},
+					image: seed.image,
+					memoryLimitMb: seed.memoryLimitMb,
+					name: seed.name,
+					projectId: seeded.projectId,
+					slug: seed.slug,
+					tag: seed.tag,
+				},
+			});
+			expect(created.ok()).toBeTruthy();
+			seeded.serviceIds[seed.slug] = (await created.json()).id;
+		}
+	});
+
+	test("deploys the ones that should be running", async ({ page }) => {
+		for (const seed of SEEDS.filter((s) => s.deploy)) {
+			const deployed = await page.request.post(
+				`/api/v1/services/${seeded.serviceIds[seed.slug]}/deploy`,
+				{ timeout: 180_000 },
+			);
+			expect(
+				deployed.ok(),
+				`deploying ${seed.slug}: ${await deployed.text()}`,
+			).toBeTruthy();
+		}
+	});
+
+	for (const shot of SHOTS) {
+		for (const theme of ["light", "dark"] as const) {
+			test(`captures ${shot.name} (${theme})`, async ({ page }) => {
+				await page.emulateMedia({ colorScheme: theme });
+
+				const path = shot.path();
+				await page.goto(path);
+				expect(new URL(page.url()).pathname).toBe(path);
+				await expect(page.getByText(shot.expect).first()).toBeVisible({
+					timeout: 15_000,
+				});
+
+				await shot.prepare?.(page);
+				await settle(page);
+
+				await page.screenshot({
+					fullPage: false,
+					path: join(
+						OUT_DIR,
+						`${shot.name}${theme === "dark" ? "-dark" : ""}.png`,
+					),
+				});
+			});
+		}
 	}
 });
 
-test("deploys the ones that should be running", async ({ page }) => {
-	await signIn(page);
-
-	for (const seed of SEEDS.filter((s) => s.deploy)) {
-		const deployed = await page.request.post(
-			`/api/v1/services/${seeded.serviceIds[seed.slug]}/deploy`,
-			{ timeout: 180_000 },
-		);
-		expect(
-			deployed.ok(),
-			`deploying ${seed.slug}: ${await deployed.text()}`,
-		).toBeTruthy();
-	}
-});
-
-for (const shot of SHOTS) {
-	for (const theme of ["light", "dark"] as const) {
-		test(`captures ${shot.name} (${theme})`, async ({ page }) => {
-			await page.emulateMedia({ colorScheme: theme });
-			if (!shot.signedOut) {
-				await signIn(page);
-			}
-
-			const path = shot.path();
-			await page.goto(path);
-			expect(new URL(page.url()).pathname).toBe(path);
-			await expect(page.getByText(shot.expect).first()).toBeVisible({
-				timeout: 15_000,
-			});
-
-			await shot.prepare?.(page);
-			await settle(page);
-
-			await page.screenshot({
-				fullPage: false,
-				path: join(
-					OUT_DIR,
-					`${shot.name}${theme === "dark" ? "-dark" : ""}.png`,
-				),
-			});
+for (const theme of ["light", "dark"] as const) {
+	test(`captures sign-in (${theme})`, async ({ page }) => {
+		await page.emulateMedia({ colorScheme: theme });
+		await page.goto("/auth/sign-in");
+		await expect(page.getByText(/Sign in/i).first()).toBeVisible({
+			timeout: 15_000,
 		});
-	}
+		await page.locator("#email").fill(EMAIL);
+		await page.locator("#password").fill(PASSWORD);
+		await settle(page);
+		await page.screenshot({
+			fullPage: false,
+			path: join(OUT_DIR, `sign-in${theme === "dark" ? "-dark" : ""}.png`),
+		});
+	});
 }
 
 test("writes an index of what was captured", async () => {
-	const lines = SHOTS.flatMap((shot) =>
-		["", "-dark"].map(
-			(suffix) => `- \`${shot.name}${suffix}.png\` — ${shot.doc}`,
-		),
+	const lines = [...SHOTS, { doc: "/auth/sign-in", name: "sign-in" }].flatMap(
+		(shot) =>
+			["", "-dark"].map(
+				(suffix) => `- \`${shot.name}${suffix}.png\` — ${shot.doc}`,
+			),
 	);
 	await writeFile(
 		join(OUT_DIR, "README.md"),

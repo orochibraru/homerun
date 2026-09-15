@@ -60,9 +60,9 @@
         <p class="text-text-muted text-sm">No destinations match your search.</p>
       </div>
     {:else}
-    <div class="space-y-3">
+    <div class="panel divide-border divide-y overflow-hidden rounded-xl">
       {#each data.destinations as dest (dest.id)}
-        <div class="panel flex items-center gap-4 rounded-md p-5">
+        <div class="hover:bg-surface-2 flex items-center gap-4 px-4 py-3 transition-colors">
           <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
             <CloudUpload class="size-5" />
           </div>
