@@ -18,6 +18,7 @@ export const backupJobPayload = z.object({
 });
 
 export const dockerCleanupActions = [
+	"reclaimProjectNetworks",
 	"pruneBuildCache",
 	"pruneContainers",
 	"pruneImages",

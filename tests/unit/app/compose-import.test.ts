@@ -173,3 +173,64 @@ describe("splitImageRef", () => {
 		});
 	});
 });
+
+describe("build:", () => {
+	test("maps compose's git-context syntax onto a git-based service", () => {
+		const plan = parseComposeFile(`
+services:
+  api:
+    build: https://github.com/acme/api.git#main:backend
+    ports: ["8080:8080"]
+`);
+		const api = plan.services[0];
+		expect(api.build).toEqual({
+			context: "backend",
+			dockerfile: null,
+			gitRef: "main",
+			gitUrl: "https://github.com/acme/api.git",
+		});
+		expect(api.warnings.join(" ")).not.toContain("Source tab");
+	});
+
+	test("reads the object form, including a custom dockerfile", () => {
+		const plan = parseComposeFile(`
+services:
+  api:
+    build:
+      context: https://github.com/acme/api.git
+      dockerfile: docker/Dockerfile.prod
+`);
+		expect(plan.services[0].build).toEqual({
+			context: null,
+			dockerfile: "docker/Dockerfile.prod",
+			gitRef: null,
+			gitUrl: "https://github.com/acme/api.git",
+		});
+	});
+
+	test("a local path has nothing to clone, so it says so instead of failing", () => {
+		const plan = parseComposeFile(`
+services:
+  api:
+    build: ./api
+`);
+		const api = plan.services[0];
+		expect(api.build).toEqual({
+			context: "./api",
+			dockerfile: null,
+			gitRef: null,
+			gitUrl: null,
+		});
+		expect(api.warnings[0]).toContain("./api");
+		expect(api.warnings[0]).toContain("Source tab");
+	});
+
+	test("a service with no build section stays image-based", () => {
+		const plan = parseComposeFile(`
+services:
+  cache:
+    image: redis:alpine
+`);
+		expect(plan.services[0].build).toBeNull();
+	});
+});

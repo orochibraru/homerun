@@ -2,6 +2,7 @@ import { query } from "$app/server";
 import { requireUser } from "$lib/server/remote-auth";
 import { AdminService, type SetupCheck } from "$lib/services/admin.service";
 import type { InfraContainer } from "$lib/services/docker/core-services";
+import type { SwarmReadiness } from "$lib/services/docker/swarm";
 import { DockerService } from "$lib/services/docker.service";
 
 export interface SetupStatus {
@@ -41,3 +42,9 @@ export const getNewtContainer = query(
 		return await DockerService.findNewtContainer();
 	},
 );
+
+/** Whether this host could actually run swarm-mode services today : checked live, so onboarding and Settings can say what's missing instead of the admin finding out on first deploy. */
+export const getSwarmReadiness = query(async (): Promise<SwarmReadiness> => {
+	requireUser();
+	return await DockerService.swarmReadiness();
+});

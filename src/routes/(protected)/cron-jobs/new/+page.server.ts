@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { CronJobDTO } from "$lib/dto/cron-job-dto";
+import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
 import { parseCronJobForm } from "$lib/server/cron-job-form";
 
@@ -8,7 +9,13 @@ const logger = new Logger("CronJob");
 
 export const load = async ({ parent }) => {
 	const { user } = await parent();
-	return { canUseExec: user.role === "admin" };
+	const hosts = await RemoteHostDTO.list(user.id);
+	return {
+		canUseExec: user.role === "admin",
+		remoteHosts: hosts
+			.filter((host) => host.kind === "docker")
+			.map((host) => ({ id: host.id, name: host.name })),
+	};
 };
 
 export const actions = {

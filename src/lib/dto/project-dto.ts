@@ -37,6 +37,12 @@ export class ProjectDTO extends BaseDTO<Project> {
 		return row ? new ProjectDTO(row) : null;
 	}
 
+	/** Every project id on the instance, across all users : for reconciling against what Docker actually has (see DockerService.findOrphanProjectNetworks). */
+	static async allIds(): Promise<Set<string>> {
+		const rows = await db.select({ id: project.id }).from(project);
+		return new Set(rows.map((row) => row.id));
+	}
+
 	static async list(userId: string): Promise<ProjectDTO[]> {
 		const rows = await db
 			.select()

@@ -28,6 +28,27 @@ export class CronJobRunDTO extends BaseDTO<CronJobRun> {
 		return new CronJobRunDTO(row);
 	}
 
+	/** Appends to a still-running run's output, so the page polling it shows a long job's progress instead of nothing until it exits. */
+	async appendOutput(chunk: string): Promise<void> {
+		if (!chunk) {
+			return;
+		}
+		const next = `${this.row.output ?? ""}${chunk}`;
+		const output =
+			next.length > MAX_OUTPUT_CHARS
+				? next.slice(next.length - MAX_OUTPUT_CHARS)
+				: next;
+		await db
+			.update(cronJobRun)
+			.set({ output })
+			.where(eq(cronJobRun.id, this.row.id));
+		this.row.output = output;
+	}
+
+	get output(): string {
+		return this.row.output ?? "";
+	}
+
 	async finish(result: CronJobRunResult): Promise<void> {
 		const output = result.output ?? "";
 		const patch = {

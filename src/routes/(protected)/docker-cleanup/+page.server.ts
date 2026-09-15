@@ -48,6 +48,21 @@ export const actions = {
 		);
 	},
 
+	reclaimProjectNetworks: async ({ locals, platform }) => {
+		allowLongRequest(platform);
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		return await runQueuedCleanup(
+			"reclaimProjectNetworks",
+			false,
+			locals.user.id,
+		);
+	},
+
 	pruneNetworks: async ({ locals, platform }) => {
 		allowLongRequest(platform);
 		if (!locals.user) {

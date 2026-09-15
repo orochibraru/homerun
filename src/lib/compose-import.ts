@@ -14,7 +14,15 @@ export interface ComposeVolumeDraft {
 	source: string;
 }
 
+export interface ComposeBuildDraft {
+	context: string | null;
+	dockerfile: string | null;
+	gitRef: string | null;
+	gitUrl: string | null;
+}
+
 export interface ComposeServiceDraft {
+	build: ComposeBuildDraft | null;
 	containerPort: number;
 	cpuLimit: string | null;
 	dependsOn: string[];
@@ -60,6 +68,52 @@ const UNSUPPORTED_KEYS: Record<string, string> = {
 	tmpfs: "tmpfs mounts are not applied",
 	user: "a custom user is not applied",
 };
+
+const GIT_CONTEXT_RE = /^(https?:\/\/|git@|ssh:\/\/|git:\/\/)/i;
+
+/**
+ * Compose's own git-context syntax : `<url>[#<ref>[:<subdir>]]`, the one
+ * form of `build.context` that names something this app can actually clone.
+ * A plain relative path (`./api`) has no repository behind it, so it comes
+ * back as a context with a null `gitUrl` and the service is created in git
+ * mode waiting for one.
+ */
+export function parseBuildContext(context: string): ComposeBuildDraft {
+	if (!GIT_CONTEXT_RE.test(context)) {
+		return { context, dockerfile: null, gitRef: null, gitUrl: null };
+	}
+	const [url, fragment] = context.split("#");
+	if (!fragment) {
+		return { context: null, dockerfile: null, gitRef: null, gitUrl: url };
+	}
+	const [ref, subdir] = fragment.split(":");
+	return {
+		context: subdir || null,
+		dockerfile: null,
+		gitRef: ref || null,
+		gitUrl: url,
+	};
+}
+
+/** The `build:` section, in either of compose's two shapes : a bare context string, or an object with `context`/`dockerfile`. */
+export function parseBuild(raw: unknown): ComposeBuildDraft | null {
+	if (typeof raw === "string") {
+		return parseBuildContext(raw);
+	}
+	if (!raw || typeof raw !== "object") {
+		return null;
+	}
+	const obj = raw as Record<string, unknown>;
+	const context =
+		typeof obj.context === "string" ? parseBuildContext(obj.context) : null;
+	const dockerfile = typeof obj.dockerfile === "string" ? obj.dockerfile : null;
+	return {
+		context: context?.context ?? null,
+		dockerfile,
+		gitRef: context?.gitRef ?? null,
+		gitUrl: context?.gitUrl ?? null,
+	};
+}
 
 export function slugifyComposeKey(value: string): string {
 	return value
@@ -281,9 +335,10 @@ function uniqueSlug(key: string, name: string, usedSlugs: Set<string>): string {
 
 function unsupportedWarnings(raw: Record<string, unknown>): string[] {
 	const warnings: string[] = [];
-	if (raw.build !== undefined) {
+	const build = parseBuild(raw.build);
+	if (build && !build.gitUrl) {
 		warnings.push(
-			"Built from a local Dockerfile : point it at a git repository on the Source tab after importing.",
+			`Built from ${build.context ? `"${build.context}"` : "a local path"}, which isn't something this host can clone : imported as a git-based service, set its repository on the Source tab.`,
 		);
 	}
 	for (const [composeKey, message] of Object.entries(UNSUPPORTED_KEYS)) {
@@ -359,6 +414,7 @@ function draftFor(
 		.filter((v): v is ComposeVolumeDraft => v !== null);
 
 	return {
+		build: parseBuild(raw.build),
 		containerPort: mappings[0]?.port ?? DEFAULT_CONTAINER_PORT,
 		dependsOn: parseDependsOn(raw.depends_on),
 		dnsResolvable: networkMode === "bridge" && published,

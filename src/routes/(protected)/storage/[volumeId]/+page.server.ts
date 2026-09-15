@@ -4,8 +4,10 @@ import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import { allowLongRequest } from "$lib/server/long-request";
 import { enqueueVolumeBackup } from "$lib/services/backup-queue";
 import { CronService } from "$lib/services/cron.service";
+import { S3BackupService } from "$lib/services/s3-backup.service";
 
 const logger = new Logger("Storage");
 
@@ -40,6 +42,29 @@ export const actions = {
 		const entry = await enqueueVolumeBackup(volume);
 		logger.info(`Manual backup queued: volume=${volume.id} job=${entry.id}`);
 		return { backupSuccess: true };
+	},
+
+	restore: async ({ request, params, locals, platform }) => {
+		allowLongRequest(platform);
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const volume = await StorageVolumeDTO.get(params.volumeId, locals.user.id);
+		if (!volume) {
+			return fail(404, { error: "Volume not found." });
+		}
+		const formData = await request.formData();
+		const key = (formData.get("key") as string | null)?.trim();
+		if (!key) {
+			return fail(400, { error: "Pick a backup to restore." });
+		}
+
+		const result = await S3BackupService.restoreVolume(volume, key);
+		if (!result.success) {
+			return fail(500, { error: result.error ?? "Restore failed." });
+		}
+		logger.info(`Backup restored: volume=${volume.id} key=${key}`);
+		return { restoredKey: key, success: true };
 	},
 
 	updateBackup: async ({ request, params, locals }) => {

@@ -29,6 +29,14 @@ interface RequiresContainerMixin {
 	pullImage: (params: PullImageParams) => Promise<{ digest: string | null }>;
 }
 
+export interface SwarmReadiness {
+	network: string;
+	overlayReady: boolean;
+	swarmActive: boolean;
+	traefikFound: boolean;
+	traefikSwarmProvider: boolean;
+}
+
 export interface CreateSwarmServiceParams {
 	auth?: RegistryAuth;
 	authRequired?: boolean;
@@ -93,6 +101,43 @@ export function DockerSwarmMixin<
 			await this.getDocker().swarmInit({ ListenAddr: "0.0.0.0:2377" });
 			logger.info("Swarm initialised on this host");
 			return true;
+		}
+
+		/**
+		 * What swarm mode needs before a service can be deployed under it,
+		 * each checked against the live daemon rather than assumed : the
+		 * daemon being a swarm manager, the overlay network existing, and
+		 * Traefik actually running its swarm provider. Read-only.
+		 */
+		async swarmReadiness(): Promise<SwarmReadiness> {
+			const network = swarmNetworkName();
+			const docker = this.getDocker();
+			const [active, networks] = await Promise.all([
+				this.isSwarmActive().catch(() => false),
+				docker.listNetworks().catch(() => []),
+			]);
+			const traefik = await this.getDocker()
+				.listContainers({ all: true })
+				.then((rows) => rows.find((row) => row.Image.startsWith("traefik")))
+				.catch(() => undefined);
+			const cmd = traefik
+				? await docker
+						.getContainer(traefik.Id)
+						.inspect()
+						.then((info) => info.Config.Cmd ?? [])
+						.catch(() => [])
+				: [];
+			return {
+				network,
+				overlayReady: networks.some((net) => net.Name === network),
+				swarmActive: active,
+				traefikFound: !!traefik,
+				traefikSwarmProvider: cmd.some(
+					(arg) =>
+						arg.startsWith("--providers.swarm=true") ||
+						arg.startsWith("--providers.docker.swarmMode=true"),
+				),
+			};
 		}
 
 		/** Idempotent : swarm networks are cluster-wide, created once and reused by every swarm-mode service. */

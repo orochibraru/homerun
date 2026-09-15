@@ -17,6 +17,7 @@ export const cronJobSchema = z
 		registryPassword: z.string().optional(),
 		registryUrl: z.string().optional(),
 		registryUsername: z.string().optional(),
+		remoteHostId: z.string().optional(),
 		schedule: z.string().min(1, "Schedule is required."),
 		tag: z.string().optional(),
 		timeoutSeconds: optionalNumber(z.coerce.number().int().min(10).max(86_400)),

@@ -99,10 +99,15 @@ class ComposeImportServiceClass {
 		volumes: StorageVolumeDTO[],
 	): Promise<ServiceDTO> {
 		const svc = await ServiceDTO.create({
+			buildSource: draft.build ? "git" : "image",
 			containerPort: draft.containerPort,
 			cpuLimit: draft.cpuLimit,
 			dnsResolvable: draft.dnsResolvable,
 			envVars: draft.envVars,
+			gitBuildContext: draft.build?.context ?? null,
+			gitDockerfilePath: draft.build?.dockerfile ?? null,
+			gitRef: draft.build?.gitRef ?? null,
+			gitUrl: draft.build?.gitUrl ?? null,
 			image: draft.image,
 			memoryLimitMb: draft.memoryLimitMb,
 			name: draft.name,

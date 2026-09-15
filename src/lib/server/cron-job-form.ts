@@ -1,4 +1,5 @@
 import {
+	type CronJobInput,
 	cronJobSchema,
 	DEFAULT_CRON_JOB_TIMEOUT_SECONDS,
 } from "$lib/server/validation/cron-job";
@@ -17,6 +18,7 @@ export interface ParsedCronJobForm {
 	registryPasswordEnc: string | null;
 	registryUrl: string | null;
 	registryUsername: string | null;
+	remoteHostId: string | null;
 	schedule: string;
 	tag: string;
 	timeoutSeconds: number;
@@ -25,6 +27,19 @@ export interface ParsedCronJobForm {
 export type CronJobFormResult =
 	| { error: string }
 	| { parsed: ParsedCronJobForm };
+
+function validate(
+	input: CronJobInput,
+	options: { isAdmin: boolean },
+): string | null {
+	if (input.kind === "exec" && !options.isAdmin) {
+		return "Only an admin can create a host command job.";
+	}
+	if (!CronService.parseCronSchedule(input.schedule)) {
+		return 'Invalid schedule : use standard 5-field cron syntax (e.g. "0 3 * * *").';
+	}
+	return null;
+}
 
 export function parseCronJobForm(
 	formData: FormData,
@@ -37,14 +52,9 @@ export function parseCronJobForm(
 	}
 	const input = result.data;
 
-	if (input.kind === "exec" && !options.isAdmin) {
-		return { error: "Only an admin can create a host command job." };
-	}
-	if (!CronService.parseCronSchedule(input.schedule)) {
-		return {
-			error:
-				'Invalid schedule : use standard 5-field cron syntax (e.g. "0 3 * * *").',
-		};
+	const invalid = validate(input, options);
+	if (invalid) {
+		return { error: invalid };
 	}
 
 	const registryPassword = input.registryPassword?.trim() || null;
@@ -63,6 +73,8 @@ export function parseCronJobForm(
 				: null,
 			registryUrl: input.registryUrl?.trim() || null,
 			registryUsername: input.registryUsername?.trim() || null,
+			remoteHostId:
+				input.kind === "image" ? input.remoteHostId?.trim() || null : null,
 			schedule: input.schedule.trim(),
 			tag: input.tag?.trim() || "latest",
 			timeoutSeconds: input.timeoutSeconds ?? DEFAULT_CRON_JOB_TIMEOUT_SECONDS,

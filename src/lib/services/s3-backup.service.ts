@@ -136,6 +136,125 @@ async function putObject(
 	}
 }
 
+/** One signed S3 request : the same SigV4 dance `putObject` does, for the verbs restore needs. */
+async function signedRequest(
+	config: S3Config,
+	method: "GET",
+	path: string,
+	queryString = "",
+): Promise<Response> {
+	const url = new URL(config.endpoint);
+	url.pathname = path.replace(/\/+/g, "/");
+	url.search = queryString;
+
+	const { amzDate: amz, dateStamp } = amzDate(new Date());
+	const payloadHash = sha256Hex("");
+
+	const headers: Record<string, string> = {
+		host: url.host,
+		"x-amz-content-sha256": payloadHash,
+		"x-amz-date": amz,
+	};
+	const signedHeaderNames = Object.keys(headers).sort();
+	const canonicalHeaders = signedHeaderNames
+		.map((h) => `${h}:${headers[h]}\n`)
+		.join("");
+	const signedHeaders = signedHeaderNames.join(";");
+
+	const canonicalRequest = [
+		method,
+		url.pathname,
+		queryString,
+		canonicalHeaders,
+		signedHeaders,
+		payloadHash,
+	].join("\n");
+
+	const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
+	const stringToSign = [
+		"AWS4-HMAC-SHA256",
+		amz,
+		credentialScope,
+		sha256Hex(canonicalRequest),
+	].join("\n");
+	const signature = hmac(
+		signingKey(config.secretAccessKey, dateStamp, config.region),
+		stringToSign,
+	).toString("hex");
+
+	return await fetch(url, {
+		headers: {
+			...headers,
+			authorization:
+				`AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${credentialScope}, ` +
+				`SignedHeaders=${signedHeaders}, Signature=${signature}`,
+		},
+		method,
+	});
+}
+
+export interface BackupObject {
+	key: string;
+	lastModified: string | null;
+	sizeBytes: number;
+}
+
+const CONTENTS_RE = /<Contents>([\s\S]*?)<\/Contents>/g;
+
+function tagValue(xml: string, tag: string): string | null {
+	const match = xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
+	return match?.[1] ?? null;
+}
+
+/** ListObjectsV2, parsed out of the XML response : no SDK, same posture as putObject. */
+async function listObjects(
+	config: S3Config,
+	prefix: string,
+): Promise<BackupObject[]> {
+	const query = new URLSearchParams({
+		"list-type": "2",
+		"max-keys": "200",
+		prefix,
+	});
+	query.sort();
+	const res = await signedRequest(
+		config,
+		"GET",
+		`/${config.bucket}`,
+		query.toString(),
+	);
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throw new Error(`S3 LIST failed: ${res.status} ${res.statusText} ${text}`);
+	}
+	const xml = await res.text();
+	const objects: BackupObject[] = [];
+	CONTENTS_RE.lastIndex = 0;
+	let match: RegExpExecArray | null = CONTENTS_RE.exec(xml);
+	while (match) {
+		const body = match[1];
+		const key = tagValue(body, "Key");
+		if (key?.endsWith(".tar.gz")) {
+			objects.push({
+				key,
+				lastModified: tagValue(body, "LastModified"),
+				sizeBytes: Number.parseInt(tagValue(body, "Size") ?? "0", 10),
+			});
+		}
+		match = CONTENTS_RE.exec(xml);
+	}
+	return objects.sort((a, b) => b.key.localeCompare(a.key));
+}
+
+async function getObject(config: S3Config, key: string): Promise<Buffer> {
+	const res = await signedRequest(config, "GET", `/${config.bucket}/${key}`);
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throw new Error(`S3 GET failed: ${res.status} ${res.statusText} ${text}`);
+	}
+	return Buffer.from(await res.arrayBuffer());
+}
+
 class S3BackupServiceClass {
 	/**
 	 * Backs up one storage volume, delegating the "put these bytes at this
@@ -215,6 +334,80 @@ class S3BackupServiceClass {
 			logger.error(`Backup failed: volume=${volume.id}`, err);
 			return { error: message, success: false };
 		}
+	}
+
+	/** The backups that exist for this volume, newest first : what the Restore picker lists. */
+	async listBackups(volume: StorageVolumeDTO): Promise<BackupObject[]> {
+		const destination = await this.#destinationFor(volume);
+		const prefix = volume.backupPrefix
+			? `${volume.backupPrefix}/${volume.name}-`
+			: `${volume.name}-`;
+		return await listObjects(destination, prefix);
+	}
+
+	/**
+	 * Downloads one backup and unpacks it back over the volume's contents.
+	 * Files in the archive replace the ones on disk; anything else already
+	 * there is left alone, so this is a restore-over, not a wipe-and-restore.
+	 */
+	async restoreVolume(
+		volume: StorageVolumeDTO,
+		key: string,
+	): Promise<BackupResult> {
+		try {
+			const destination = await this.#destinationFor(volume);
+			const archive = await getObject(destination, key);
+			await this.#restoreInto(volume.source, archive);
+			logger.info(
+				`Backup restored: volume=${volume.id} key=${key} bytes=${archive.length}`,
+			);
+			return { key, sizeBytes: archive.length, success: true };
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			logger.error(`Restore failed: volume=${volume.id} key=${key}`, err);
+			return { error: message, success: false };
+		}
+	}
+
+	async #destinationFor(volume: StorageVolumeDTO): Promise<S3Config> {
+		if (!volume.s3DestinationId) {
+			throw new Error("No S3 destination picked for this volume.");
+		}
+		const row = await S3DestinationDTO.get(
+			volume.s3DestinationId,
+			volume.userId,
+		);
+		if (!row) {
+			throw new Error("The picked S3 destination no longer exists.");
+		}
+		const secretAccessKey = row.decryptSecretAccessKey();
+		if (!secretAccessKey) {
+			throw new Error("Couldn't decrypt the destination's stored secret key.");
+		}
+		return {
+			accessKeyId: row.accessKeyId,
+			bucket: row.bucket,
+			endpoint: row.endpoint,
+			region: row.region,
+			secretAccessKey,
+		};
+	}
+
+	/**
+	 * Docker's own archive endpoint unpacks a (optionally compressed) tar
+	 * straight into a container's filesystem, so a stopped helper with the
+	 * target mounted is enough : no stdin plumbing into a running container,
+	 * no `tar` needed on this host, and one path for both volume kinds since
+	 * a bind's source is just as mountable as a named volume.
+	 */
+	async #restoreInto(source: string, archive: Buffer): Promise<void> {
+		await DockerService.extractIntoVolume({
+			archive,
+			image: ARCHIVE_HELPER_IMAGE,
+			mountPath: ARCHIVE_MOUNT_PATH,
+			tag: ARCHIVE_HELPER_TAG,
+			volumeName: source,
+		});
 	}
 
 	private archive(volume: StorageVolumeDTO): Promise<Buffer> {
