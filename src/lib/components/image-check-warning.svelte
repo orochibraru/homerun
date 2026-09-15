@@ -37,7 +37,7 @@
 
 {#if result?.checked && !result.exists}
   <div
-    class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
+    class="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400"
   >
     <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
     <span>

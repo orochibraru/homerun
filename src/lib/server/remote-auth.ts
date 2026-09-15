@@ -9,3 +9,12 @@ export function requireUser(): AuthType["user"] {
 	}
 	return locals.user;
 }
+
+export function requireAdmin(): AuthType["user"] {
+	const { locals } = getRequestEvent();
+	const user = requireUser();
+	if (!locals.isAdmin) {
+		error(403, "Forbidden");
+	}
+	return user;
+}

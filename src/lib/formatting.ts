@@ -1,3 +1,16 @@
+const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"];
+
+/** Human byte size, used by the resource graphs and the usage table. */
+export function formatBytes(bytes: number): string {
+	let value = Math.max(0, bytes);
+	let unit = 0;
+	while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+		value /= 1024;
+		unit += 1;
+	}
+	return `${value < 10 && unit > 0 ? value.toFixed(1) : Math.round(value)} ${BYTE_UNITS[unit]}`;
+}
+
 export function formatDate(date: Date | null): string {
 	if (!date) {
 		return "—";

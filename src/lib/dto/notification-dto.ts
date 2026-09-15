@@ -123,6 +123,11 @@ export class NotificationDTO extends BaseDTO<Notification> {
 			.where(and(eq(notification.id, id), eq(notification.userId, userId)));
 	}
 
+	/** Clears a user's whole feed, read or not. */
+	static async deleteAll(userId: string): Promise<void> {
+		await db.delete(notification).where(eq(notification.userId, userId));
+	}
+
 	/**
 	 * Notifies a service's owner of an app-level error attributed to it
 	 * (Logger.error()'s "app runtime failures" feed item), looked up by

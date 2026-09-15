@@ -462,6 +462,11 @@ export interface operations {
 					memoryLimitMb?: number;
 					name: string;
 					projectId?: string;
+					/**
+					 * @default always
+					 * @enum {string}
+					 */
+					pullPolicy: "always" | "missing" | "never";
 					registryPassword?: string;
 					registryUrl?: string;
 					registryUsername?: string;
@@ -773,6 +778,8 @@ export interface operations {
 					image?: string;
 					memoryLimitMb?: number | null;
 					name?: string;
+					/** @enum {string} */
+					pullPolicy?: "always" | "missing" | "never";
 					registryPassword?: string;
 					registryUrl?: string | null;
 					registryUsername?: string | null;

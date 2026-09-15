@@ -5,6 +5,7 @@
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
+	import EntityList from "$lib/components/entity-list.svelte";
 	import {
 		inputClass as input,
 		labelClass as label,
@@ -18,10 +19,28 @@
 	} from "$lib/components/ui/select/index.js";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import { ViewMode } from "$lib/view-mode.svelte";
 
 	const { data, form } = $props();
 
 	onMount(() => title.set("Git Providers"));
+
+	const view = new ViewMode("git-providers");
+
+	const rows = $derived(
+		data.providers.map((provider) => ({
+			connected: data.connectedProviderIds.includes(provider.id),
+			description:
+				data.isAdmin && !data.connectedProviderIds.includes(provider.id)
+					? `Callback URL for this provider's OAuth App: ${callbackUrlFor(provider.id)}`
+					: null,
+			id: provider.id,
+			name: provider.name,
+			subtitle: `${provider.kind}${provider.baseUrl ? ` · ${provider.baseUrl}` : ""}`,
+			title: provider.name,
+		})),
+	);
+	type ProviderRow = (typeof rows)[number];
 
 	const kindOptions: [string, string][] = [
 		["github", "GitHub"],
@@ -56,10 +75,64 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+{#snippet media(_provider: ProviderRow)}
+  <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
+    <GitBranch class="size-5" />
+  </div>
+{/snippet}
+
+{#snippet badge(provider: ProviderRow)}
+  {#if provider.connected}
+    <span class="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-600 dark:text-emerald-400">
+      Connected
+    </span>
+  {/if}
+{/snippet}
+
+{#snippet actions(provider: ProviderRow)}
+  {#if provider.connected}
+    <form
+      action="?/disconnect"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't disconnect.",
+        loading: "Disconnecting",
+        success: "Disconnected.",
+      })}
+    >
+      <input name="providerId" type="hidden" value={provider.id}>
+      <Button size="sm" type="submit" variant="outline">
+        <Unlink class="size-4" />
+        Disconnect
+      </Button>
+    </form>
+  {:else}
+    <Button href={`/api/v1/git-providers/${provider.id}/connect`} size="sm">
+      <Link2 class="size-4" />
+      Connect
+    </Button>
+  {/if}
+  {#if data.isAdmin}
+    <form action="?/deleteProvider" method="POST">
+      <input name="id" type="hidden" value={provider.id}>
+      <Button
+        class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
+        onclick={(e) => requestDelete(e, provider.name)}
+        size="icon-sm"
+        title="Delete"
+        type="button"
+        variant="ghost"
+      >
+        <Trash2 class="size-4" />
+      </Button>
+    </form>
+  {/if}
+{/snippet}
+
+<div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Git Providers</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Git Providers</h1>
       <p class="text-text-muted mt-1 text-sm">
         Connect a git hosting account (GitHub, GitLab, self-hosted Gitea,
         Bitbucket) so a git-based service's Source tab can browse your repos
@@ -79,7 +152,7 @@
   </div>
 
   {#if data.isAdmin && showAddForm}
-    <div class="glass mb-6 rounded-2xl p-5">
+    <div class="panel mb-6 rounded-md p-5">
       <p class="text-text-subtle mb-4 text-xs">
         Register an OAuth App on the provider's own site first (its
         developer/application settings), then paste the client ID/secret here.
@@ -183,91 +256,7 @@
       title="No git providers configured"
     />
   {:else}
-    <div class="space-y-3">
-      {#each data.providers as provider (provider.id)}
-        {@const connected = data.connectedProviderIds.includes(provider.id)}
-        <div class="glass rounded-2xl p-5">
-          <div class="flex items-center gap-4">
-            <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-              <GitBranch class="size-5" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="text-text truncate text-sm font-semibold">
-                {provider.name}
-                <span class="text-text-subtle ml-1 text-xs font-normal"
-                >({provider.kind}{
-                    provider.baseUrl
-                    ? ` · ${provider.baseUrl}`
-                    : ""
-                  })</span>
-              </p>
-              <p class="text-text-muted mt-0.5 truncate text-xs">
-                {#if connected}
-                  <span class="text-emerald-600">Connected</span> : this account
-                  can browse repos on this provider.
-                {:else}
-                  Not connected yet.
-                {/if}
-              </p>
-            </div>
-            {#if connected}
-              <form
-                action="?/disconnect"
-                method="POST"
-                use:enhance={enhanceToast({
-                  error: "Couldn't disconnect.",
-                  loading: "Disconnecting",
-                  success: "Disconnected.",
-                })}
-              >
-                <input name="providerId" type="hidden" value={provider.id}>
-                <Button
-                  size="icon-sm"
-                  title="Disconnect"
-                  type="submit"
-                  variant="ghost"
-                >
-                  <Unlink class="size-4" />
-                </Button>
-              </form>
-            {:else}
-              <Button
-                href={`/api/v1/git-providers/${provider.id}/connect`}
-                size="icon-sm"
-                title="Connect"
-                variant="ghost"
-              >
-                <Link2 class="size-4" />
-              </Button>
-            {/if}
-            {#if data.isAdmin}
-              <form action="?/deleteProvider" method="POST">
-                <input name="id" type="hidden" value={provider.id}>
-                <Button
-                  class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                  onclick={(e) => requestDelete(e, provider.name)}
-                  size="icon-sm"
-                  title="Delete"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Trash2 class="size-4" />
-                </Button>
-              </form>
-            {/if}
-          </div>
-          {#if data.isAdmin && !connected}
-            <p class="border-border text-text-subtle mt-3 border-t pt-3 font-mono text-xs">
-              Callback URL for this provider's OAuth App: {
-                callbackUrlFor(
-                  provider.id,
-                )
-              }
-            </p>
-          {/if}
-        </div>
-      {/each}
-    </div>
+    <EntityList {actions} {badge} items={rows} {media} {view} />
   {/if}
 </div>
 

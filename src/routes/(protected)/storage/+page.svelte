@@ -5,7 +5,7 @@
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
-	import EntityListView from "$lib/components/entity-list-view.svelte";
+	import EntityList from "$lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
@@ -52,10 +52,10 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Storage</h1>
+      <h1 class="text-text text-lg font-semibold tracking-tight">Storage</h1>
       <p class="text-text-muted mt-1 text-sm">
         Local volume sources services can mount for persistent or shared data.
       </p>
@@ -114,59 +114,27 @@
       </form>
     {/snippet}
 
-    {#snippet row(vol: (typeof data.volumes)[number])}
-      <div class="glass flex items-center gap-4 rounded-2xl p-5">
-        <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-          <HardDrive class="size-5" />
-        </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-text truncate text-sm font-semibold">
-            {vol.name}
-          </p>
-          <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
-            {vol.kind === "bind" ? "bind" : "volume"}
-            · {vol.source}
-          </p>
-          {#if vol.description}
-            <p class="text-text-subtle mt-0.5 truncate text-xs">
-              {vol.description}
-            </p>
-          {/if}
-          {#if vol.backupEnabled}
-            <p class="mt-0.5 flex items-center gap-1 text-xs text-emerald-600">
-              <CloudUpload class="size-3" />
-              auto-backup on
-            </p>
-          {/if}
-        </div>
-        {@render volActions(vol)}
-      </div>
+    {#snippet media(_item: { id: string })}
+      <span class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
+        <HardDrive class="size-4" />
+      </span>
     {/snippet}
 
-    {#snippet card(vol: (typeof data.volumes)[number])}
-      <div class="glass flex flex-col gap-3 rounded-2xl p-5">
-        <div class="flex items-center gap-3">
-          <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-            <HardDrive class="size-5" />
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="text-text truncate text-sm font-semibold">{vol.name}</p>
-            <p class="text-text-muted truncate font-mono text-xs">
-              {vol.kind === "bind" ? "bind" : "volume"}
-              · {vol.source}
-            </p>
-          </div>
-        </div>
-        {#if vol.backupEnabled}
-          <p class="flex items-center gap-1 text-xs text-emerald-600">
-            <CloudUpload class="size-3" />
-            auto-backup on
-          </p>
-        {/if}
-        <div class="flex items-center justify-end gap-1">
-          {@render volActions(vol)}
-        </div>
-      </div>
+    {#snippet meta(item: { id: string })}
+      {@const vol = data.volumes.find((v) => v.id === item.id)}
+      {#if vol?.backupEnabled}
+        <span class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+          <CloudUpload class="size-3" />
+          auto-backup on
+        </span>
+      {/if}
+    {/snippet}
+
+    {#snippet actions(item: { id: string })}
+      {@const vol = data.volumes.find((v) => v.id === item.id)}
+      {#if vol}
+        {@render volActions(vol)}
+      {/if}
     {/snippet}
 
     <EntityToolbar {filters} placeholder="Search volumes by name or source…">
@@ -176,15 +144,20 @@
     </EntityToolbar>
 
     {#if data.volumes.length === 0}
-      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No volumes match your filters.</p>
       </div>
     {:else}
-      <EntityListView
-        {card}
-        getKey={(vol) => vol.id}
-        items={data.volumes}
-        {row}
+      <EntityList
+        {actions}
+        items={data.volumes.map((vol) => ({
+          description: vol.description,
+          id: vol.id,
+          subtitle: `${vol.kind === "bind" ? "bind" : "volume"} · ${vol.source}`,
+          title: vol.name,
+        }))}
+        {media}
+        {meta}
         {view}
       />
 

@@ -30,7 +30,7 @@
   >
     <div class="flex flex-col items-center gap-4 py-2 text-center">
       <span
-        class="flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500"
+        class="flex size-12 items-center justify-center rounded-md bg-amber-500/10 text-amber-500"
       >
         <MailX class="size-6" />
       </span>
@@ -46,15 +46,15 @@
     subheading="Pick a password and you're in."
   >
     <div
-      class="mb-5 flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-2 px-3 py-2.5"
+      class="mb-5 flex items-center justify-between gap-3 rounded-md border border-border bg-surface-2 px-3 py-2.5"
     >
-      <span class="text-text truncate font-mono text-xs">{data.email}</span>
+      <span class="text-text truncate text-xs">{data.email}</span>
       <span class="eyebrow shrink-0">{data.role}</span>
     </div>
 
     {#if form?.error}
       <p
-        class="mb-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500"
+        class="mb-4 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500"
       >
         <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
         {form.error}
@@ -120,7 +120,7 @@
           bind:value={confirm}
         />
         {#if confirm && confirm !== password}
-          <p class="mt-1.5 font-mono text-xs text-red-500">
+          <p class="mt-1.5 text-xs text-red-500">
             Passwords don't match.
           </p>
         {/if}

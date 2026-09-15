@@ -10,6 +10,8 @@ repo, or on your GitHub remote's file browser. The
 separate repository; it's a companion renderer, not a second copy to keep in
 sync by hand.
 
+**[Showcase](showcase.md)**: what it looks like, every screen, light and dark.
+
 ## Guides
 
 1. **[Getting started](getting-started.md)**: install (the one-liner or Docker

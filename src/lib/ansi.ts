@@ -169,6 +169,11 @@ function classForState(state: SgrState): string {
 	return classes.join(" ");
 }
 
+/** Drops every ANSI escape code from a string, for text that's stored or rendered as plain text rather than through `AnsiLine`. */
+export function stripAnsi(text: string): string {
+	return text.replace(ANSI_SGR_RE, "");
+}
+
 /** Splits one log line into styled segments, stripping the ANSI escape codes themselves out of the visible text. */
 export function parseAnsiLine(line: string): AnsiSegment[] {
 	if (!line.includes("\x1b[")) {

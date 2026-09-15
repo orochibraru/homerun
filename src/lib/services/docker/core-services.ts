@@ -1,5 +1,16 @@
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { hostname } from "node:os";
+import { join } from "node:path";
+import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
+import {
+	DASHBOARD_ROUTER_FILE,
+	dashboardHostFrom,
+	dashboardRouterConfig,
+} from "./dashboard.ts";
+import { hasTraefikRouterFor, MANAGED_LABEL } from "./labels.ts";
+import { swarmNetworkName } from "./swarm.ts";
 
 const LEADING_SLASH_RE = /^\//;
 
@@ -11,17 +22,114 @@ export interface TraefikInfo {
 	name: string;
 }
 
+export interface SelfContainer {
+	labels: Record<string, string>;
+	name: string | null;
+	networkAddress: string | null;
+}
+
+export interface InfraContainer {
+	id: string;
+	image: string;
+	name: string;
+	project: string;
+	service: string;
+	state: string;
+}
+
 export interface TraefikUpdateResult {
 	message: string;
 	updated: boolean;
 }
 
+/**
+ * Rewrites a Traefik command line so every `--key=value` in `flags` is
+ * present exactly once, replacing whatever that key was set to before and
+ * appending it when it was absent. A null value removes the flag.
+ */
+export function applyFlags(
+	cmd: string[],
+	flags: Record<string, string | null>,
+): string[] {
+	const keys = Object.keys(flags);
+	const kept = cmd.filter(
+		(arg) =>
+			!keys.some((key) => arg === `--${key}` || arg.startsWith(`--${key}=`)),
+	);
+	const added = keys
+		.filter((key) => flags[key] !== null)
+		.map((key) => `--${key}=${flags[key]}`);
+	return [...kept, ...added];
+}
+
+/** What this mixin needs from the swarm mixin, which is merged ahead of it (see docker.service.ts). */
+interface RequiresSwarmMixin {
+	ensureSwarmNetwork: (name: string) => Promise<void>;
+	initSwarm: () => Promise<boolean>;
+}
+
 /** Traefik container management : Homerun's own infra container, a deliberate narrow exception to the managed-label-only rule (see labels.ts). */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerCoreServicesMixin<
-	TBase extends Constructor<BaseDockerService>,
+	TBase extends Constructor<BaseDockerService & RequiresSwarmMixin>,
 >(Base: TBase) {
 	return class DockerCoreServicesService extends Base {
+		async selfContainer(): Promise<SelfContainer | null> {
+			const info = await this.getDocker()
+				.getContainer(hostname())
+				.inspect()
+				.catch(() => null);
+			if (!info) {
+				return null;
+			}
+			const network =
+				info.NetworkSettings?.Networks?.[config.docker.networkName];
+			return {
+				labels: info.Config?.Labels ?? {},
+				name: info.Name?.replace(LEADING_SLASH_RE, "") || null,
+				networkAddress: network?.IPAddress || null,
+			};
+		}
+
+		async selfContainerLabels(): Promise<Record<string, string> | null> {
+			const self = await this.selfContainer();
+			return self?.labels ?? null;
+		}
+
+		async syncDashboardRouter(): Promise<void> {
+			const dir = config.traefik.dynamicConfigDir;
+			if (!dir) {
+				return;
+			}
+			const path = join(dir, DASHBOARD_ROUTER_FILE);
+			const host = dashboardHostFrom(config.auth.origin ?? null);
+			const self = host ? await this.selfContainer() : null;
+			const target = self?.name ?? self?.networkAddress ?? null;
+
+			if (!(host && target) || hasTraefikRouterFor(self?.labels ?? {}, host)) {
+				await rm(path, { force: true }).catch((err) => {
+					logger.warn("Couldn't remove the dashboard router config", err);
+				});
+				return;
+			}
+
+			try {
+				await mkdir(dir, { recursive: true });
+				await writeFile(
+					path,
+					dashboardRouterConfig({
+						certResolver: config.traefik.certResolver,
+						entrypoint: config.traefik.entrypoint,
+						host,
+						target: `http://${target}:${config.port}`,
+					}),
+				);
+				logger.info(`Dashboard router published for ${host} -> ${target}`);
+			} catch (err) {
+				logger.error(`Couldn't publish the dashboard router for ${host}`, err);
+			}
+		}
+
 		/**
 		 * Locates the Traefik container this app's `compose.yaml` bootstraps.
 		 *
@@ -61,6 +169,229 @@ export function DockerCoreServicesMixin<
 			}
 			await this.getDocker().getContainer(traefik.id).restart();
 			logger.info(`Traefik container restarted: ${traefik.id}`);
+		}
+
+		/**
+		 * Recreates the Traefik container with `flags` merged into its own
+		 * command line, everything else (image, mounts, networks, env, ports)
+		 * read back off the running container unchanged.
+		 *
+		 * The narrow "Traefik is core infrastructure this app doesn't own"
+		 * exception findTraefikContainer documents, extended one step
+		 * further: this *does* change the live container's command, which
+		 * updateTraefikContainer deliberately doesn't. It has to. Traefik
+		 * reads its ACME account email, its providers and its entrypoints
+		 * from static configuration at process start, so a dashboard field
+		 * that only writes a database row is a field that does nothing, which
+		 * is exactly what "Setting a Let's Encrypt email in the UI does
+		 * nothing" meant. Returns `updated: false` without touching anything
+		 * when every flag already holds the requested value.
+		 */
+		async applyTraefikFlags(
+			flags: Record<string, string | null>,
+		): Promise<TraefikUpdateResult> {
+			const docker = this.getDocker();
+			const traefik = await this.findTraefikContainer();
+			if (!traefik) {
+				throw new Error("Traefik container not found.");
+			}
+
+			const container = docker.getContainer(traefik.id);
+			const info = await container.inspect();
+			const cmd = info.Config.Cmd ?? [];
+			const next = applyFlags(cmd, flags);
+			if (
+				next.length === cmd.length &&
+				next.every((arg, i) => arg === cmd[i])
+			) {
+				return {
+					message: "Traefik already runs with that configuration.",
+					updated: false,
+				};
+			}
+
+			const wasRunning = info.State.Running;
+			const endpointsConfig = Object.fromEntries(
+				Object.entries(info.NetworkSettings.Networks ?? {}).map(
+					([netName, ep]) => [
+						netName,
+						{ Aliases: ep.Aliases, IPAMConfig: ep.IPAMConfig },
+					],
+				),
+			);
+
+			await container.stop().catch(() => {
+				// Already stopped : remove() below still applies.
+			});
+			await container.remove();
+			const recreated = await docker.createContainer({
+				...info.Config,
+				Cmd: next,
+				HostConfig: info.HostConfig,
+				NetworkingConfig: { EndpointsConfig: endpointsConfig },
+				name: traefik.name,
+			});
+			if (wasRunning) {
+				await recreated.start();
+			}
+
+			logger.info(`Traefik recreated with updated flags: ${next.join(" ")}`);
+			return {
+				message: "Traefik was recreated with the new configuration.",
+				updated: true,
+			};
+		}
+
+		/**
+		 * The containers that make up this instance's own stack : anything
+		 * carrying a compose project label that Homerun didn't create itself
+		 * (the app, Postgres, Traefik, a Newt tunnel, whatever else the
+		 * operator's compose file starts). Deployed services are excluded by
+		 * the managed label, they have their own pages.
+		 *
+		 * The same narrow "core infrastructure" exception findTraefikContainer
+		 * documents, and read-only: this lists and streams logs, it never
+		 * touches them.
+		 */
+		async listInfraContainers(): Promise<InfraContainer[]> {
+			const containers = await this.getDocker().listContainers({ all: true });
+			return containers
+				.filter(
+					(container) =>
+						!container.Labels?.[MANAGED_LABEL] &&
+						container.Labels?.["com.docker.compose.project"],
+				)
+				.map((container) => ({
+					id: container.Id,
+					image: container.Image,
+					name:
+						container.Names[0]?.replace(LEADING_SLASH_RE, "") ??
+						container.Id.slice(0, 12),
+					project: container.Labels["com.docker.compose.project"] ?? "",
+					service: container.Labels["com.docker.compose.service"] ?? "",
+					state: container.State,
+				}))
+				.sort((a, b) => a.name.localeCompare(b.name));
+		}
+
+		/**
+		 * Whether a Pangolin tunnel client is already running on this host, so
+		 * the Pangolin settings can say "the tunnel is up" rather than leaving
+		 * the operator to guess why Resources resolve but nothing answers.
+		 * Matched on the image name, same shape as findTraefikContainer.
+		 */
+		async findNewtContainer(): Promise<InfraContainer | null> {
+			const containers = await this.getDocker().listContainers({ all: true });
+			const match = containers.find((container) =>
+				container.Image.includes("newt"),
+			);
+			if (!match) {
+				return null;
+			}
+			return {
+				id: match.Id,
+				image: match.Image,
+				name:
+					match.Names[0]?.replace(LEADING_SLASH_RE, "") ??
+					match.Id.slice(0, 12),
+				project: match.Labels?.["com.docker.compose.project"] ?? "",
+				service: match.Labels?.["com.docker.compose.service"] ?? "",
+				state: match.State,
+			};
+		}
+
+		/** Attaches Traefik to one more network, ignoring "already attached". */
+		async #connectTraefik(network: string): Promise<void> {
+			const traefik = await this.findTraefikContainer();
+			if (!traefik) {
+				return;
+			}
+			try {
+				await this.getDocker()
+					.getNetwork(network)
+					.connect({ Container: traefik.id });
+				logger.info(`Traefik attached to ${network}`);
+			} catch (err) {
+				const status = (err as { statusCode?: number }).statusCode;
+				if (status !== 403 && status !== 409) {
+					throw err;
+				}
+			}
+		}
+
+		/**
+		 * Everything switching the dashboard's orchestration mode to Swarm
+		 * actually requires on the host, in order: `docker swarm init` (this
+		 * daemon has to be a manager before a single service can be created),
+		 * an **attachable overlay** network for those services to share,
+		 * Traefik attached to it, and Traefik's swarm provider turned on so it
+		 * discovers them at all. Before this, flipping that select only wrote
+		 * a database row and every swarm deploy failed on a daemon that
+		 * wasn't in a swarm.
+		 *
+		 * Reports what it did as a list of lines rather than throwing on a
+		 * missing Traefik : the mode is still worth saving on a host whose
+		 * proxy lives elsewhere, the admin just has to wire that end up.
+		 */
+		async enableSwarmMode(): Promise<string[]> {
+			const steps: string[] = [];
+			steps.push(
+				(await this.initSwarm())
+					? "Initialised a new swarm on this host."
+					: "This host is already a swarm manager.",
+			);
+
+			const network = swarmNetworkName();
+			await this.ensureSwarmNetwork(network);
+			steps.push(`Overlay network ${network} is ready.`);
+
+			if (!(await this.findTraefikContainer())) {
+				steps.push(
+					`No Traefik container on this host : attach your proxy to ${network} and turn on its swarm provider by hand.`,
+				);
+				return steps;
+			}
+
+			await this.#connectTraefik(network);
+			const applied = await this.applyTraefikFlags({
+				"providers.swarm": "true",
+				"providers.swarm.exposedByDefault": "false",
+				"providers.swarm.network": network,
+			});
+			steps.push(applied.message);
+			return steps;
+		}
+
+		/**
+		 * Turns Traefik's swarm provider back off. Deliberately leaves the
+		 * swarm itself running : `docker swarm leave --force` would kill every
+		 * swarm service on the host, including ones this app didn't create,
+		 * which is not a thing a dashboard select should do behind your back.
+		 */
+		async disableSwarmMode(): Promise<string[]> {
+			if (!(await this.findTraefikContainer())) {
+				return ["No Traefik container on this host : nothing to undo."];
+			}
+			const applied = await this.applyTraefikFlags({
+				"providers.swarm": null,
+				"providers.swarm.exposedByDefault": null,
+				"providers.swarm.network": null,
+			});
+			return [
+				applied.message,
+				"The swarm itself is left running : run `docker swarm leave --force` yourself if you want it gone.",
+			];
+		}
+
+		/**
+		 * Puts the ACME account email Settings → Networking holds onto the
+		 * running Traefik, which is the only place it means anything : Traefik
+		 * reads it from static configuration at startup, so the field used to
+		 * be recorded and never applied.
+		 */
+		async applyAcmeEmail(email: string | null): Promise<TraefikUpdateResult> {
+			const key = `certificatesresolvers.${config.traefik.certResolver}.acme.email`;
+			return await this.applyTraefikFlags({ [key]: email });
 		}
 
 		/**

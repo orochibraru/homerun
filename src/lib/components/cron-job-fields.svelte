@@ -62,7 +62,7 @@
 
 <input name="kind" type="hidden" value={kind}>
 
-<section class="glass space-y-4 rounded-2xl p-5">
+<section class="panel space-y-4 rounded-md p-5">
   <div class="grid gap-3 sm:grid-cols-2">
     <div>
       <label class={labelClass} for="name">Name</label>
@@ -77,7 +77,7 @@
     <div>
       <label class={labelClass} for="schedule">Schedule (cron syntax)</label>
       <Input
-        class="font-mono"
+        class=""
         id="schedule"
         name="schedule"
         placeholder="0 3 * * *"
@@ -102,7 +102,7 @@
     <p class={labelClass}>Run as</p>
     <div class="flex gap-2">
       <button
-        class="flex-1 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all {kindClass('image')}"
+        class="flex-1 rounded-md border px-3 py-2.5 text-left text-sm font-medium transition-all {kindClass('image')}"
         onclick={() => {
           kind = "image";
         }}
@@ -114,7 +114,7 @@
         </span>
       </button>
       <button
-        class="flex-1 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all {kindClass('exec')}"
+        class="flex-1 rounded-md border px-3 py-2.5 text-left text-sm font-medium transition-all {kindClass('exec')}"
         disabled={!canUseExec}
         onclick={() => {
           kind = "exec";
@@ -136,7 +136,7 @@
       <div class="sm:col-span-2">
         <label class={labelClass} for="image">Image</label>
         <Input
-          class="font-mono"
+          class=""
           id="image"
           name="image"
           placeholder="postgres"
@@ -147,7 +147,7 @@
       <div>
         <label class={labelClass} for="tag">Tag</label>
         <Input
-          class="font-mono"
+          class=""
           id="tag"
           name="tag"
           placeholder="latest"
@@ -163,7 +163,7 @@
       {kind === "exec" ? "Command" : "Command override (optional)"}
     </label>
     <Input
-      class="font-mono"
+      class=""
       id="command"
       name="command"
       placeholder={kind === "exec"
@@ -199,7 +199,7 @@
   />
 </section>
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border border-b px-5 py-4">
     <h2 class="eyebrow">Environment variables</h2>
   </div>
@@ -207,14 +207,14 @@
     {#each envRows as row, i (i)}
       <div class="flex items-center gap-2">
         <Input
-          class="font-mono"
+          class=""
           name="envKey"
           placeholder="KEY"
           type="text"
           bind:value={row.key}
         />
         <Input
-          class="font-mono"
+          class=""
           name="envValue"
           placeholder="value"
           type="text"
@@ -242,7 +242,7 @@
 </section>
 
 {#if kind === "image"}
-  <section class="glass rounded-2xl p-5">
+  <section class="panel rounded-md p-5">
     <Button
       class="h-auto p-0"
       onclick={() => {
@@ -256,7 +256,7 @@
       <div>
         <label class={labelClass} for="registryUrl">Registry URL</label>
         <Input
-          class="font-mono"
+          class=""
           id="registryUrl"
           name="registryUrl"
           placeholder="ghcr.io"

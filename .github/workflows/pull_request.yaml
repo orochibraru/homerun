@@ -62,6 +62,11 @@ jobs:
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
+  screenshots:
+    name: Screenshots
+    needs: [code_quality]
+    uses: ./.github/workflows/screenshots.yaml
+
   e2e:
     name: E2E
     needs: [build-app]
@@ -104,6 +109,135 @@ jobs:
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
+  summary:
+    name: PR Summary
+    if:
+      always() && github.event.pull_request.head.repo.full_name ==
+      github.repository
+    needs:
+      - code_quality
+      - binaries
+      - build-app
+      - build-agent
+      - screenshots
+      - e2e
+      - publish-app
+      - publish-agent
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post or update the summary comment
+        uses: actions/github-script@v9
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        with:
+          script: |
+            const marker = "<!-- homerun-ci-summary -->";
+            const needs = JSON.parse(process.env.NEEDS);
+            const icons = {
+              success: "✅",
+              failure: "❌",
+              cancelled: "🚫",
+              skipped: "⏭️",
+            };
+            const words = {
+              success: "passed",
+              failure: "failed",
+              cancelled: "cancelled",
+              skipped: "skipped",
+            };
+            const result = (job) => needs[job]?.result ?? "skipped";
+            const cell = (status, detail) =>
+              `${icons[status] ?? "❔"} ${detail || words[status] || status}`;
+
+            const rows = [
+              ["Lint, types, codegen", cell(needs.code_quality?.outputs?.lint ?? result("code_quality"))],
+              ["Tests (unit + integration)", cell(needs.code_quality?.outputs?.tests ?? result("code_quality"))],
+              ["E2E", cell(result("e2e"), needs.e2e?.outputs?.summary)],
+              ["Docs screenshots", cell(result("screenshots"), needs.screenshots?.outputs?.summary)],
+              ["Binaries", cell(result("binaries"))],
+              ["Docker build", cell(result("build-app"))],
+            ];
+
+            const tag = needs["publish-app"]?.outputs?.["image-tag"];
+            const appImage = needs["build-app"]?.outputs?.image;
+            const agentImage = needs["build-agent"]?.outputs?.image;
+            const agentTag = needs["publish-agent"]?.outputs?.["image-tag"];
+            const headSha = context.payload.pull_request.head.sha;
+            const raw = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${headSha}`;
+
+            const lines = [
+              marker,
+              "### CI summary",
+              "",
+              "| Check | Result |",
+              "| --- | --- |",
+              ...rows.map(([name, value]) => `| ${name} | ${value} |`),
+              "",
+            ];
+
+            if (result("publish-app") === "success" && tag) {
+              lines.push(
+                "### Images",
+                "",
+                "| Image | Tag |",
+                "| --- | --- |",
+                `| \`${appImage}\` | \`${tag}\` |`,
+                ...(result("publish-agent") === "success"
+                  ? [`| \`${agentImage}\` | \`${agentTag ?? tag}\` |`]
+                  : []),
+                "",
+                "<details><summary>Try this build</summary>",
+                "",
+                "```sh",
+                `curl -fsSLO ${raw}/compose.prod.yaml`,
+                `curl -fsSLO ${raw}/.env.example`,
+                "mv .env.example .env && $EDITOR .env",
+                "docker network create homerun",
+                `HOMERUN_VERSION=${tag} docker compose -f compose.prod.yaml up -d`,
+                "```",
+                "",
+                "Set `AUTH_SECRET` and `ORIGIN` in `.env` first, the stack refuses to start without them.",
+                "",
+                "</details>",
+                "",
+              );
+            } else {
+              lines.push(
+                "### Images",
+                "",
+                "Nothing published for this run : images are only tagged once E2E passes.",
+                "",
+              );
+            }
+
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            lines.push(`<sub>${headSha.slice(0, 7)} · <a href="${run}">workflow run</a></sub>`);
+
+            const body = lines.join("\n");
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.body?.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number,
+                body,
+              });
+            }
+
   gate:
     name: CI Gate
     if: always()
@@ -112,6 +246,7 @@ jobs:
       - binaries
       - build-app
       - build-agent
+      - screenshots
       - e2e
       - publish-app
       - publish-agent
@@ -124,6 +259,7 @@ jobs:
             "${{ needs.binaries.result }}"
             "${{ needs.build-app.result }}"
             "${{ needs.build-agent.result }}"
+            "${{ needs.screenshots.result }}"
             "${{ needs.e2e.result }}"
             "${{ needs.publish-app.result }}"
             "${{ needs.publish-agent.result }}"

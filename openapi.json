@@ -760,6 +760,11 @@
 									"projectId": {
 										"type": "string"
 									},
+									"pullPolicy": {
+										"default": "always",
+										"enum": ["always", "missing", "never"],
+										"type": "string"
+									},
 									"registryPassword": {
 										"type": "string"
 									},
@@ -790,6 +795,7 @@
 									"dnsResolvable",
 									"envVars",
 									"name",
+									"pullPolicy",
 									"restartPolicy",
 									"slug"
 								],
@@ -1770,6 +1776,10 @@
 									"name": {
 										"maxLength": 100,
 										"minLength": 1,
+										"type": "string"
+									},
+									"pullPolicy": {
+										"enum": ["always", "missing", "never"],
 										"type": "string"
 									},
 									"registryPassword": {

@@ -82,6 +82,26 @@ source, not worked around here):
   daemon-level error (`Get "http:": http: no Host in request URL`) that pointed
   nowhere near the real cause. Fixed in `src/routes/api/v1/services/+server.ts`.
 
+## The git-build fixture lives entirely in Docker
+
+`support/git-fixture.ts` seeds a throwaway repo into a Docker **volume** with
+one `alpine/git` container, then serves it over `git://` from a second one
+(`apk add git-daemon`, since the image doesn't ship `git daemon`), and hands the
+test `git://<container ip>:9418/repo`.
+
+It used to be a host directory passed as `file:///tmp/...`, which was simpler
+and is no longer possible: the clone now runs **inside a container** (see
+Git-based builds in `.agents/notes/services-and-templates.md`), so it can't see
+the host's tmpdir, and on Docker Desktop that path isn't bind-mountable either.
+Keeping the fixture in Docker preserves the original point — the suite doesn't
+depend on some external repo staying reachable — and works the same against a
+remote daemon.
+
+Readiness is the daemon logging `Ready to rumble`, which it only prints under
+`--verbose`; without that flag the wait just times out. The helper removes its
+own container and volume if setup fails part-way, because a throw there happens
+before the caller has registered its teardown.
+
 ## Coverage checklist
 
 Not tracked as a `bun test` coverage percentage — the app runs as a spawned
@@ -93,7 +113,8 @@ process. Tracked here instead, by scenario/endpoint.
 
 - [x] Image-mode deploy, local target, no project
 - [x] Image-mode deploy, local target, inside a project
-- [x] Git-build deploy, local target (real `git clone`, local fixture repo)
+- [x] Git-build deploy, local target (a real clone, from a fixture repo served
+      over `git://` by a container — see below)
 - [x] Env vars land in the deployed container
 - [x] Start/stop/restart lifecycle, local target
 - [x] Bad/nonexistent image fails with a real, non-empty error message, not

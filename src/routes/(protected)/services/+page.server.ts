@@ -1,14 +1,76 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
+import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { allowLongRequest } from "$lib/server/long-request";
-import { DockerService } from "$lib/services/docker.service";
+import {
+	buildLinkEnv,
+	defaultUrlKey,
+	defaultVarPrefix,
+	detectLinkEngine,
+} from "$lib/service-link";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Services");
+
+const SLUG_STRIP_RE = /[^a-z0-9]+/g;
+const SLUG_TRIM_RE = /^-+|-+$/g;
+
+/**
+ * Puts two linked services on one project network : into whichever project
+ * one of them is already in, or a new one named after the first. Two services
+ * only actually reach each other by slug once they share one.
+ */
+async function groupPair(
+	svc: ServiceDTO,
+	target: ServiceDTO,
+	userId: string,
+): Promise<string> {
+	const existing = svc.projectId ?? target.projectId;
+	const projectId =
+		existing ??
+		(
+			await ProjectDTO.create({
+				name: svc.name,
+				slug: await uniqueProjectSlug(slugify(svc.name)),
+				userId,
+			})
+		).id;
+
+	await Promise.all(
+		[svc, target]
+			.filter((row) => row.projectId !== projectId)
+			.map((row) => row.update({ projectId })),
+	);
+	return projectId;
+}
+
+/** Appends -2, -3, … until the slug is free, so linking never fails on a name collision. */
+async function uniqueProjectSlug(base: string): Promise<string> {
+	const candidate = base || "project";
+	if (!(await ProjectDTO.slugTaken(candidate))) {
+		return candidate;
+	}
+	const suffixed = await Promise.all(
+		[2, 3, 4, 5, 6, 7, 8, 9].map(async (n) => ({
+			n,
+			taken: await ProjectDTO.slugTaken(`${candidate}-${n}`),
+		})),
+	);
+	const free = suffixed.find((entry) => !entry.taken);
+	return free ? `${candidate}-${free.n}` : `${candidate}-${Date.now()}`;
+}
+
+function slugify(name: string): string {
+	return name
+		.toLowerCase()
+		.replace(SLUG_STRIP_RE, "-")
+		.replace(SLUG_TRIM_RE, "")
+		.slice(0, 63);
+}
 
 const BULK_OPS = ["delete", "restart", "start", "stop"] as const;
 
@@ -25,28 +87,12 @@ async function loadServices(userId: string, url: URL) {
 	const query = parseListQuery(url, { filterKeys: ["status", "project"] });
 	const paged = await ServiceDTO.listWithProjectNamesPaged(userId, query);
 
-	const deployed = paged.items.filter(
-		(r) => r.service.containerId || r.service.swarmServiceId,
-	);
-	if (deployed.length === 0) {
-		return {
-			services: paged.items.map((r) => ({
-				...r.service.toJSON(),
-				projectName: r.projectName,
-			})),
-			total: paged.total,
-		};
-	}
-
-	await DockerService.syncAllServiceStatuses(deployed.map((r) => r.service.id));
-	const fresh = await ServiceDTO.listWithProjectNamesPaged(userId, query);
-
 	return {
-		services: fresh.items.map((r) => ({
+		services: paged.items.map((r) => ({
 			...r.service.toJSON(),
 			projectName: r.projectName,
 		})),
-		total: fresh.total,
+		total: paged.total,
 	};
 }
 
@@ -133,9 +179,10 @@ export const load = async ({ parent, platform, url }) => {
 	allowLongRequest(platform);
 	const { user } = await parent();
 	const query = parseListQuery(url, { filterKeys: ["status", "project"] });
-	const [{ services, total }, facets] = await Promise.all([
+	const [{ services, total }, facets, projects] = await Promise.all([
 		loadServices(user.id, url),
 		ServiceDTO.listFilterFacets(user.id),
+		ProjectDTO.list(user.id),
 	]);
 
 	return {
@@ -144,12 +191,118 @@ export const load = async ({ parent, platform, url }) => {
 		filtered: query.active,
 		page: query.page,
 		perPage: query.perPage,
+		projects: projects.map((p) => ({ id: p.id, name: p.name })),
 		services,
 		total,
 	};
 };
 
 export const actions = {
+	/**
+	 * Writes the connection variables for `targetId` into `serviceId`'s own
+	 * env, the same values the wizard's link picker would have produced. The
+	 * context menu's "Link to…" : a service that needs a database shouldn't
+	 * mean retyping a URL that Homerun can derive.
+	 */
+	link: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const serviceId = formData.get("serviceId") as string | null;
+		const targetId = formData.get("targetId") as string | null;
+		const format = (formData.get("format") as string | null) ?? "url";
+		if (!(serviceId && targetId)) {
+			return fail(400, { error: "Pick a service to link to." });
+		}
+
+		const [svc, target] = await Promise.all([
+			ServiceDTO.get(serviceId, locals.user.id),
+			ServiceDTO.get(targetId, locals.user.id),
+		]);
+		if (!(svc && target)) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		const engine = detectLinkEngine(target.image);
+		const linkTarget = {
+			containerPort: target.containerPort,
+			envVars: target.envVars,
+			image: target.image,
+			name: target.name,
+			slug: target.slug,
+		};
+		const rows = buildLinkEnv({
+			format: format === "vars" || format === "jdbc" ? format : "url",
+			prefix: defaultVarPrefix(engine, linkTarget),
+			target: linkTarget,
+			urlKey: defaultUrlKey(engine, linkTarget),
+		});
+
+		await svc.update({
+			envVars: {
+				...svc.envVars,
+				...Object.fromEntries(rows.map((row) => [row.key, row.value])),
+			},
+		});
+
+		const groupedInto =
+			formData.get("alsoGroup") === "on"
+				? await groupPair(svc, target, locals.user.id)
+				: null;
+
+		logger.info(
+			`Service linked: service=${svc.id} target=${target.id} project=${groupedInto ?? "none"} user=${locals.user.id}`,
+		);
+		return {
+			grouped: groupedInto !== null,
+			linked: rows.map((row) => row.key),
+			success: true,
+		};
+	},
+
+	/** Moves a service into a project, creating one when `newProjectName` is given. */
+	group: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const serviceIds = formData.getAll("serviceId").map(String).filter(Boolean);
+		const projectId = (formData.get("projectId") as string | null) || null;
+		const newProjectName =
+			(formData.get("newProjectName") as string | null)?.trim() || null;
+		if (serviceIds.length === 0) {
+			return fail(400, { error: "Nothing to move." });
+		}
+
+		let targetProjectId = projectId;
+		if (newProjectName) {
+			const slug = slugify(newProjectName);
+			if (await ProjectDTO.slugTaken(slug)) {
+				return fail(400, { error: "A project with that slug already exists." });
+			}
+			const project = await ProjectDTO.create({
+				name: newProjectName,
+				slug,
+				userId: locals.user.id,
+			});
+			targetProjectId = project.id;
+		}
+
+		const services = await Promise.all(
+			serviceIds.map((id) => ServiceDTO.get(id, locals.user?.id ?? "")),
+		);
+		await Promise.all(
+			services
+				.filter((svc) => svc !== null)
+				.map((svc) => svc.update({ projectId: targetProjectId })),
+		);
+		logger.info(
+			`Services grouped: services=${serviceIds.join(",")} project=${targetProjectId ?? "none"} user=${locals.user.id}`,
+		);
+		return { grouped: serviceIds.length, success: true };
+	},
+
 	bulk: async ({ request, locals, platform }) => {
 		allowLongRequest(platform);
 		if (!locals.user) {

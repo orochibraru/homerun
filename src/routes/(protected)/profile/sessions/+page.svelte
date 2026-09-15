@@ -15,7 +15,7 @@
 	}
 </script>
 
-<section class="rounded-2xl glass">
+<section class="rounded-md panel">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
     <div class="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
       <ShieldCheck class="size-4" />
@@ -31,7 +31,7 @@
 
   <div class="p-5">
     {#if data.sessions === null}
-      <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
+      <div class="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">
         <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
         <span>
           Couldn't load your sessions : this needs a fresh sign-in. Sign out
@@ -44,7 +44,7 @@
       <div class="space-y-2.5">
         {#each data.sessions as s (s.id)}
           {@const isCurrent = s.id === data.currentSessionId}
-          <div class="flex items-center gap-4 rounded-xl border border-border p-4">
+          <div class="flex items-center gap-4 rounded-md border border-border p-4">
             <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-text-muted">
               <Monitor class="size-4" />
             </div>

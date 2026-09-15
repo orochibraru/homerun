@@ -27,7 +27,7 @@
   </div>
 
   <!-- ═══ Built-in ═══ -->
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Built-in authentication</h2>
       <p class="text-text-muted text-xs">
@@ -37,7 +37,7 @@
     <div class="space-y-2 p-5 text-sm">
       <p class="text-text-muted">
         Always available for signing in to the dashboard, and selectable per-app
-        as the <span class="font-mono text-xs">password</span> method. Accounts
+        as the <span class="text-xs">password</span> method. Accounts
         are created by an admin
         {#if data.smtpEnabled}
           (direct-create or email invite).
@@ -53,7 +53,7 @@
   </section>
 
   <!-- ═══ Providers ═══ -->
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border flex items-start justify-between gap-4 border-b px-5 py-4">
       <div>
         <h2 class="eyebrow">OAuth / OIDC providers</h2>
@@ -62,7 +62,7 @@
           wall.
         </p>
       </div>
-      <span class="text-text-subtle shrink-0 font-mono text-xs">
+      <span class="text-text-subtle shrink-0 text-xs">
         {data.providers.length} configured
       </span>
     </div>
@@ -97,16 +97,16 @@
             <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-x-2">
                 <span class="text-text text-sm font-semibold">{provider.label}</span>
-                <span class="text-text-subtle font-mono text-xs">{provider.name}</span>
+                <span class="text-text-subtle text-xs">{provider.name}</span>
                 {#if !provider.enabled}
                   <span
-                    class="border-border text-text-subtle rounded-md border px-1.5 py-0.5 font-mono text-[0.6rem] tracking-wider uppercase"
+                    class="border-border text-text-subtle rounded-md border px-1.5 py-0.5 text-[0.6rem] tracking-wider uppercase"
                   >
                     disabled
                   </span>
                 {/if}
               </div>
-              <p class="text-text-subtle mt-0.5 truncate font-mono text-xs">
+              <p class="text-text-subtle mt-0.5 truncate text-xs">
                 {provider.discoveryUrl}
               </p>
             </div>
@@ -123,7 +123,7 @@
   </section>
 
   <!-- ═══ Protected apps ═══ -->
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Protected apps</h2>
       <p class="text-text-muted text-xs">
@@ -147,7 +147,7 @@
             <LockKeyhole class="text-accent size-4 shrink-0" />
             <div class="min-w-0 flex-1">
               <p class="text-text truncate text-sm font-medium">{svc.name}</p>
-              <p class="text-text-subtle truncate font-mono text-xs">
+              <p class="text-text-subtle truncate text-xs">
                 {#if svc.methods.length === 0}
                   no sign-in method picked yet : nobody can get in
                 {:else}

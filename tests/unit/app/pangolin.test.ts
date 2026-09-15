@@ -6,7 +6,22 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { PangolinService } = await import(
+const settings = {
+	decryptPangolinApiToken: () => "good-token",
+	pangolinApiBaseUrl: "https://api.pangolin.test/v1",
+	pangolinConfigured: true,
+	pangolinMainSiteName: "site-23",
+	pangolinOrgId: "org-1",
+	pangolinOwnsAuth: false,
+	pangolinTargetHost: "localhost",
+	pangolinTargetPort: 443,
+};
+
+mock.module("$lib/dto/instance-settings-dto", () => ({
+	InstanceSettingsDTO: { get: async () => settings },
+}));
+
+const { PangolinService, targetScheme } = await import(
 	"../../../src/lib/services/pangolin.service"
 );
 
@@ -32,6 +47,22 @@ const realFetch = globalThis.fetch;
 let requested: string[] = [];
 let respondWithDashboardHtml = false;
 
+interface StubResource {
+	fullDomain: string;
+	name: string;
+	resourceId: number;
+}
+
+interface StubWrite {
+	body: Record<string, unknown>;
+	method: string;
+	path: string;
+}
+
+let resources: StubResource[] = [];
+let writes: StubWrite[] = [];
+let ssoUpdateStatus = 200;
+
 function json(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		headers: { "content-type": "application/json" },
@@ -53,7 +84,12 @@ function pageOf<T>(rows: T[], url: URL, field: string): Response {
 }
 
 beforeEach(() => {
+	settings.pangolinOwnsAuth = false;
+	settings.pangolinTargetHost = "localhost";
 	requested = [];
+	resources = [];
+	writes = [];
+	ssoUpdateStatus = 200;
 	respondWithDashboardHtml = false;
 	globalThis.fetch = (async (
 		input: string | URL | Request,
@@ -62,6 +98,14 @@ beforeEach(() => {
 		const href = typeof input === "string" ? input : input.toString();
 		requested.push(href);
 		const url = new URL(href);
+		const method = init?.method ?? "GET";
+		const body =
+			typeof init?.body === "string"
+				? (JSON.parse(init.body) as Record<string, unknown>)
+				: {};
+		if (method !== "GET") {
+			writes.push({ body, method, path: url.pathname });
+		}
 		const auth = new Headers(init?.headers).get("authorization");
 		if (auth !== "Bearer good-token") {
 			return json(
@@ -80,12 +124,113 @@ beforeEach(() => {
 		if (url.pathname === "/v1/org/org-1/domains") {
 			return pageOf(DOMAINS, url, "domains");
 		}
+		if (url.pathname === "/v1/org/org-1/resources") {
+			return pageOf(resources, url, "resources");
+		}
+		if (url.pathname === "/v1/org/org-1/resource" && method === "PUT") {
+			const created = {
+				fullDomain: `${body.subdomain as string}.example.com`,
+				name: body.name as string,
+				resourceId: 99,
+			};
+			resources.push(created);
+			return json({ data: created, success: true });
+		}
+		if (/^\/v1\/resource\/\d+$/.test(url.pathname) && method === "POST") {
+			return ssoUpdateStatus === 200
+				? json({ data: {}, success: true })
+				: json(
+						{ data: null, message: "resource update failed", success: false },
+						ssoUpdateStatus,
+					);
+		}
+		if (/^\/v1\/resource\/\d+\/target$/.test(url.pathname)) {
+			return json({ data: { targetId: 1 }, success: true });
+		}
 		return json({ data: null, message: "not found", success: false }, 404);
 	}) as typeof fetch;
 });
 
 afterEach(() => {
 	globalThis.fetch = realFetch;
+});
+
+describe("targetScheme", () => {
+	test("443 and anything else Traefik serves is https, only 80 is http", () => {
+		expect(targetScheme(443)).toBe("https");
+		expect(targetScheme(8443)).toBe("https");
+		expect(targetScheme(80)).toBe("http");
+	});
+});
+
+describe("PangolinService.syncDnsRecord", () => {
+	test("turns Pangolin's own SSO gate off on a resource it creates", async () => {
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result).toEqual({
+			detail: "created app.example.com -> https://localhost:443 via site-23",
+			ok: true,
+			provider: "pangolin",
+		});
+		expect(writes).toContainEqual({
+			body: { sso: false },
+			method: "POST",
+			path: "/v1/resource/99",
+		});
+	});
+
+	test("turns it off on a resource that already exists, so a redeploy heals one created before this", async () => {
+		resources = [{ fullDomain: "app.example.com", name: "app", resourceId: 7 }];
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.ok).toBe(true);
+		expect(result?.detail).toContain("Pangolin SSO off");
+		expect(writes).toEqual([
+			{ body: { sso: false }, method: "POST", path: "/v1/resource/7" },
+		]);
+	});
+
+	test("leaves Pangolin's SSO on when Pangolin is the one that owns sign-in", async () => {
+		settings.pangolinOwnsAuth = true;
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.ok).toBe(true);
+		expect(writes).toContainEqual({
+			body: { sso: true },
+			method: "POST",
+			path: "/v1/resource/99",
+		});
+	});
+
+	test("points the target at the configured host, not always localhost", async () => {
+		settings.pangolinTargetHost = "192.168.1.50";
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.detail).toContain("https://192.168.1.50:443");
+		expect(writes).toContainEqual({
+			body: {
+				enabled: true,
+				ip: "192.168.1.50",
+				method: "https",
+				port: 443,
+				siteId: 23,
+			},
+			method: "PUT",
+			path: "/v1/resource/99/target",
+		});
+	});
+
+	test("reports a failed SSO update instead of leaving a gated route looking fine", async () => {
+		ssoUpdateStatus = 500;
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.ok).toBe(false);
+		expect(result?.detail).toContain("resource update failed");
+	});
 });
 
 describe("PangolinService.verifyConnection", () => {

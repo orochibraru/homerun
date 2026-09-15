@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CopyBox from "$lib/components/copy-box.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Dialog from "$lib/components/ui/dialog/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -65,11 +66,8 @@
     </Dialog.Header>
     {#if confirmPhrase !== undefined}
       <div class="space-y-2">
-        <p class="text-text-muted text-sm">
-          Type
-          <span class="text-text font-mono font-semibold">{confirmPhrase}</span>
-          to confirm.
-        </p>
+        <p class="text-text-muted text-sm">Type the name below to confirm.</p>
+        <CopyBox label="the confirmation phrase" value={confirmPhrase} />
         <Input
           aria-label="Type {confirmPhrase} to confirm"
           autocomplete="off"

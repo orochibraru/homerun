@@ -9,6 +9,7 @@
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import { inputClass, labelClass } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
@@ -61,7 +62,7 @@
   </a>
 
   <div>
-    <h1 class="text-text text-xl font-semibold tracking-tight">
+    <h1 class="text-text text-lg font-semibold tracking-tight">
       Import a compose file
     </h1>
     <p class="text-text-muted mt-0.5 text-sm">
@@ -71,14 +72,14 @@
   </div>
 
   {#if form?.error}
-    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+    <Alert>
       {form.error}
-    </div>
+    </Alert>
   {/if}
 
   <form
     action="?/preview"
-    class="glass space-y-3 rounded-2xl p-5"
+    class="panel space-y-3 rounded-md p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Couldn't parse that compose file.",
@@ -94,7 +95,7 @@
   >
     <label class={labelClass} for="compose">compose.yaml</label>
     <textarea
-      class="{inputClass} h-64 resize-y font-mono text-xs"
+      class="{inputClass} h-64 resize-y text-xs"
       id="compose"
       name="compose"
       placeholder={"services:\n  web:\n    image: nginx:alpine\n    ports:\n      - \"8080:80\""}
@@ -130,7 +131,7 @@
       <input name="compose" type="hidden" value={text} />
 
       {#if plan.warnings.length > 0}
-        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+        <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
           <p class="flex items-center gap-1.5 font-medium">
             <AlertTriangle class="size-4" />
             Not everything maps onto Homerun
@@ -143,7 +144,7 @@
         </div>
       {/if}
 
-      <section class="glass rounded-2xl">
+      <section class="panel rounded-md">
         <div class="border-border border-b px-5 py-4">
           <h2 class="eyebrow">Services ({plan.services.length})</h2>
         </div>
@@ -161,11 +162,11 @@
               <div class="min-w-0 flex-1">
                 <p class="text-text text-sm font-medium">
                   {svc.name}
-                  <span class="text-text-subtle font-mono text-xs">
+                  <span class="text-text-subtle text-xs">
                     ({svc.slug})
                   </span>
                 </p>
-                <p class="text-text-muted mt-0.5 font-mono text-xs">
+                <p class="text-text-muted mt-0.5 text-xs">
                   {svc.image}:{svc.tag} · port {svc.containerPort}/{svc.portProtocol}
                   · {svc.networkMode}
                 </p>
@@ -179,7 +180,7 @@
                   </p>
                 {/if}
                 {#each svc.volumes as vol (vol.containerPath)}
-                  <p class="text-text-subtle mt-1 flex items-center gap-1.5 font-mono text-xs">
+                  <p class="text-text-subtle mt-1 flex items-center gap-1.5 text-xs">
                     <HardDrive class="size-3" />
                     {vol.source} → {vol.containerPath}{vol.readOnly ? " (ro)" : ""}
                   </p>
@@ -195,7 +196,7 @@
         </div>
       </section>
 
-      <section class="glass space-y-4 rounded-2xl p-5">
+      <section class="panel space-y-4 rounded-md p-5">
         <div>
           <label class={labelClass} for="projectId">Project</label>
           <SelectRoot name="projectId" type="single" bind:value={projectId}>

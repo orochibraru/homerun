@@ -5,9 +5,13 @@
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
-	import { saveToast } from "$lib/toast";
+	import { getSetupStatus } from "$lib/remote/setup.remote";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
+
+	const setup = getSetupStatus();
+	const issuesByField = $derived(setup.current?.issuesByField ?? {});
 
 	const highlighted = $derived(
 		new Set(
@@ -18,11 +22,11 @@
 		return highlighted.has(field) ? "ring-2 ring-amber-400" : "";
 	}
 	function issueFor(field: string): string | undefined {
-		return highlighted.has(field) ? data.fieldIssues[field] : undefined;
+		return highlighted.has(field) ? issuesByField[field] : undefined;
 	}
 </script>
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border border-b px-5 py-4">
     <h2 class="eyebrow">Email (SMTP)</h2>
     <p class="text-text-muted text-xs">
@@ -38,7 +42,20 @@
     action="?/updateSmtp"
     class="space-y-4 p-5"
     method="POST"
-    use:enhance={saveToast("SMTP settings")}
+    use:enhance={(input) => {
+      const test = input.action.search === "?/sendTest";
+      return enhanceToast({
+        error: test
+          ? "Couldn't send the test email."
+          : "Check the form for errors.",
+        loading: test
+          ? `Sending a test email to ${data.user.email}`
+          : "Saving SMTP settings",
+        success: test
+          ? `Test email sent to ${data.user.email}.`
+          : "SMTP settings saved.",
+      })(input);
+    }}
   >
     <CheckBox
       checked={data.settings.smtpEnabled ?? false}
@@ -114,7 +131,14 @@
         />
       </div>
     </div>
-    <div class="flex justify-end">
+    <div class="flex items-center justify-end gap-2">
+      <p class="text-text-subtle mr-auto text-xs">
+        The test goes to {data.user.email} using the saved settings, so save
+        first if you've just changed anything.
+      </p>
+      <Button formaction="?/sendTest" type="submit" variant="outline">
+        Send test email
+      </Button>
       <Button type="submit">Save</Button>
     </div>
   </form>

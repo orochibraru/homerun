@@ -18,6 +18,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import GitRepoPicker from "$lib/components/git-repo-picker.svelte";
@@ -34,6 +35,7 @@
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
+	import { isDatabaseImage } from "$lib/service-link";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -94,8 +96,24 @@
 	let containerPort = $derived(
 		values?.containerPort ?? String(data.template?.containerPort ?? ""),
 	);
+	let authRequired = $derived(values?.authRequired === "on");
+	let networkMode = $derived<"bridge" | "host">(
+		values?.networkMode === "host" ? "host" : "bridge",
+	);
+	let portProtocol = $derived<"tcp" | "udp" | "both">(
+		values?.portProtocol === "udp"
+			? "udp"
+			: values?.portProtocol === "both"
+				? "both"
+				: "tcp",
+	);
+	// Datastores default to private : they're reached by their siblings over
+	// the project network, and a public hostname for a Postgres is a mistake
+	// waiting to happen. A resubmit keeps whatever the user actually chose.
 	let dnsResolvable = $derived(
-		values?.dnsResolvable !== "off" && values?.dnsResolvable !== "false",
+		values?.dnsResolvable === undefined
+			? !isDatabaseImage(image)
+			: values.dnsResolvable !== "off" && values.dnsResolvable !== "false",
 	);
 	let restartPolicy = $derived(
 		values?.restartPolicy ?? data.template?.restartPolicy ?? "unless-stopped",
@@ -196,7 +214,7 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-text text-xl font-semibold tracking-tight">Deploy a Service</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">Deploy a Service</h1>
     <p class="mt-0.5 text-sm text-text-muted">
       Point at an image, fill in the config, deploy.
     </p>
@@ -208,10 +226,10 @@
       {@const StepIcon = step.icon}
       <button
         class="
-          flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all {stepButtonClass(
+          flex flex-1 items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm font-medium transition-all {stepButtonClass(
           i,
           )}
-        "
+       "
         onclick={() => {
           currentStep = i;
         }}
@@ -223,7 +241,7 @@
             currentStep
             ? 'bg-accent text-white'
             : 'bg-surface-2 text-text-subtle'}
-          "
+         "
         >
           {#if i < currentStep}
             <Check class="size-3" />
@@ -271,14 +289,14 @@
 
     {#if data.template}
       <input name="templateId" type="hidden" value={data.template.id}>
-      <div class="bg-accent/10 text-accent rounded-xl px-4 py-3 text-sm font-medium">
+      <div class="bg-accent/10 text-accent rounded-md px-4 py-3 text-sm font-medium">
         Starting from the {data.template.name} template : review everything
         below (especially any placeholder passwords) before deploying.
       </div>
     {/if}
 
     {#if data.templateLinks.length > 0}
-      <div class="rounded-xl glass p-4 text-sm">
+      <div class="rounded-md panel p-4 text-sm">
         <p class="font-medium text-text">
           {data.projectId
             ? "This will also deploy, alongside this service in the project:"
@@ -297,21 +315,20 @@
     {/if}
 
     {#if errorMessages.length > 0}
-      <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
-        <p class="font-semibold">Couldn't create the service:</p>
-        <ul class="mt-1 ml-4 list-disc">
+      <Alert title="Couldn't create the service:">
+        <ul class="ml-4 list-disc">
           {#each errorMessages as msg}
             <li>{msg}</li>
           {/each}
         </ul>
-      </div>
+      </Alert>
     {/if}
 
     <div class="flex min-h-136 flex-col gap-6">
       <div class="flex-1 space-y-6">
         <!-- ═══ Step 1: Basic info ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-md panel"
           class:hidden={currentStep !== 0}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -374,11 +391,11 @@
               <div class="flex gap-2">
                 <button
                   class="
-                    flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+                    flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
                     'image'
                     ? 'border-accent bg-accent-light text-accent'
                     : 'border-border text-text-muted hover:bg-surface-2'}
-                  "
+                 "
                   onclick={() => {
                     buildSource = "image";
                   }}
@@ -389,11 +406,11 @@
                 </button>
                 <button
                   class="
-                    flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
+                    flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
                     'git'
                     ? 'border-accent bg-accent-light text-accent'
                     : 'border-border text-text-muted hover:bg-surface-2'}
-                  "
+                 "
                   onclick={() => {
                     buildSource = "git";
                   }}
@@ -541,7 +558,7 @@
 
         <!-- ═══ Step 1: Private registry (collapsible) ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-md panel"
           class:hidden={currentStep !== 0}
         >
           <Button
@@ -565,7 +582,7 @@
                 size-4 text-text-muted transition-transform {showRegistry
                 ? 'rotate-180'
                 : ''}
-              "
+             "
             />
           </Button>
 
@@ -608,7 +625,7 @@
 
         <!-- ═══ Step 2: Networking ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-md panel"
           class:hidden={currentStep !== 1}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -647,18 +664,83 @@
             </div>
 
             <CheckBox
-              helperText="Get a public slug.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network. More networking controls (custom domain, auth gate) are on the service's Networking tab after it's created."
+              helperText="Get a public {slug || 'slug'}.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network."
               id="dnsResolvable"
               label="DNS-resolvable"
               name="dnsResolvable"
               bind:checked={dnsResolvable}
             />
+
+            {#if dnsResolvable}
+              <div>
+                <label class={label} for="customDomain">Custom domain</label>
+                <Input
+                  id="customDomain"
+                  name="customDomain"
+                  placeholder="app.example.com"
+                  type="text"
+                  value={values?.customDomain ?? ""}
+                />
+                <p class="mt-1 text-xs text-text-subtle">
+                  Optional second hostname routed to this service, mapped
+                  before the first deploy. Point its DNS at this host; Traefik
+                  requests a certificate for it on deploy.
+                </p>
+                {#if errors?.customDomain}
+                  <p class={errorClass}>{errors.customDomain[0]}</p>
+                {/if}
+              </div>
+
+              <CheckBox
+                helperText="Visitors have to sign in to this Homerun instance before they reach the service. Fine-grained rules (emails, groups, OAuth providers) are on the Networking tab once it exists."
+                id="authRequired"
+                label="Require login to access this app"
+                name="authRequired"
+                bind:checked={authRequired}
+              />
+            {/if}
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class={label} for="networkMode">Network mode</label>
+                <SelectRoot name="networkMode" type="single" bind:value={networkMode}>
+                  <SelectTrigger class="w-full" id="networkMode">
+                    {networkMode === "host" ? "Host" : "Bridge"}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem label="Bridge" value="bridge" />
+                    <SelectItem label="Host" value="host" />
+                  </SelectContent>
+                </SelectRoot>
+                <p class="mt-1 text-xs text-text-subtle">
+                  Host shares the machine's network namespace : needed for
+                  mDNS/SSDP apps, and not routable by Traefik.
+                </p>
+              </div>
+              <div>
+                <label class={label} for="portProtocol">Protocol</label>
+                <SelectRoot name="portProtocol" type="single" bind:value={portProtocol}>
+                  <SelectTrigger class="w-full" id="portProtocol">
+                    {portProtocol === "udp"
+                    ? "UDP"
+                    : portProtocol === "both"
+                      ? "Both"
+                      : "TCP"}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem label="TCP" value="tcp" />
+                    <SelectItem label="UDP" value="udp" />
+                    <SelectItem label="Both" value="both" />
+                  </SelectContent>
+                </SelectRoot>
+              </div>
+            </div>
           </div>
         </section>
 
         <!-- ═══ Step 3: Environment ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-md panel"
           class:hidden={currentStep !== 2}
         >
           <div class="border-b border-border px-5 py-4">
@@ -672,14 +754,14 @@
             {#each envRows as row, i}
               <div class="flex items-center gap-2">
                 <Input
-                  class="font-mono"
+                  class=""
                   name="envKey"
                   placeholder="KEY"
                   type="text"
                   bind:value={row.key}
                 />
                 <Input
-                  class="font-mono"
+                  class=""
                   name="envValue"
                   placeholder="value"
                   type="text"
@@ -713,7 +795,7 @@
 
         <!-- ═══ Step 4: Compute ═══ -->
         <section
-          class="rounded-2xl glass"
+          class="rounded-md panel"
           class:hidden={currentStep !== 3}
         >
           <div class="flex items-center gap-3 border-b border-border px-5 py-4">

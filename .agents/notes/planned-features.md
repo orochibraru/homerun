@@ -43,9 +43,13 @@ re-litigating design decisions.
   invites exist (see User roles & admin-managed accounts above), "developer" is
   a label plus route-gating only, no finer-grained permissions (e.g. no
   per-project access control, no read-only role) built yet.
-- **Notifications / webhooks**: the in-app lifecycle event feed now exists (see
-  In-app notifications above); outbound webhooks (Telegram/Discord/generic HTTP)
-  on the same events are still unbuilt.
+- **Notifications / webhooks**: the in-app lifecycle event feed exists (see
+  In-app notifications above), and outbound **generic HTTP webhooks and email**
+  now exist too, but only on **uptime state changes**, wired to status pages
+  (`notification_channel`, `status-alert.service.ts`, see
+  `services-and-templates.md`). Webhooks on _deploy_ lifecycle events, and
+  provider-shaped payloads (Telegram/Discord/Slack rather than a generic JSON
+  POST), are still unbuilt.
 
 `TODO.md` at the repo root tracks open follow-up items separately from this
 intentional-gaps list.

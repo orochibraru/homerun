@@ -11,6 +11,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import CronJobFields from "$lib/components/cron-job-fields.svelte";
@@ -43,8 +44,8 @@
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">{job.name}</h1>
-      <p class="text-text-muted mt-0.5 font-mono text-sm">
+      <h1 class="text-text text-lg font-semibold tracking-tight">{job.name}</h1>
+      <p class="text-text-muted mt-0.5 text-sm">
         {job.schedule}
         · {job.kind === "exec" ? "host command" : `${job.image}:${job.tag}`}
         {#if job.lastRunAt}
@@ -69,9 +70,9 @@
   </div>
 
   {#if form?.error}
-    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+    <Alert>
       {form.error}
-    </div>
+    </Alert>
   {/if}
 
   <form
@@ -119,7 +120,7 @@
   </form>
 
   {#if data.runs.length > 0}
-    <section class="glass rounded-2xl">
+    <section class="panel rounded-md">
       <div class="border-border border-b px-5 py-4">
         <h2 class="eyebrow">Run history</h2>
       </div>
@@ -159,7 +160,7 @@
               {/if}
             </button>
             {#if expandedRunId === run.id && run.output}
-              <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
+              <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
                 {#each run.output.split("\n").filter(Boolean) as line, i (i)}
                   <AnsiLine {line} />
                 {/each}
@@ -171,7 +172,7 @@
     </section>
   {/if}
 
-  <section class="rounded-2xl border border-red-200 p-5 dark:border-red-900/40">
+  <section class="rounded-md border border-red-200 p-5 dark:border-red-900/40">
     <h2 class="eyebrow text-red-500">Danger zone</h2>
     <p class="text-text-muted mt-1 text-sm">
       Deleting this cron job also deletes its run history.

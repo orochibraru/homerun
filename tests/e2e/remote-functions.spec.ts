@@ -15,14 +15,16 @@ test.describe
 		}) => {
 			await signIn(page);
 
-			const panel = page
-				.locator("div")
-				.filter({ has: page.getByRole("heading", { name: "Host Resources" }) })
-				.last();
-			await expect(panel.getByText("CPU")).toBeVisible();
-			await expect(panel.getByText(/^\d+%$/)).toBeVisible();
+			// The strip renders nothing but skeletons until the query resolves,
+			// so any of its real text proves it got past them.
+			const main = page.locator("main");
+			for (const label of ["CPU", "RAM", "Disk"]) {
+				await expect(
+					main.locator("span.eyebrow").filter({ hasText: label }),
+				).toBeVisible();
+			}
 			await expect(
-				panel.getByText(/^\d+(\.\d+)? \/ \d+(\.\d+)? GB$/),
+				main.getByText(/^\d+(\.\d+)? \/ \d+(\.\d+)? GB$/),
 			).toHaveCount(2);
 		});
 
@@ -48,7 +50,7 @@ test.describe
 			await page.getByRole("button", { name: "Next" }).click();
 			await page.getByRole("button", { name: "Next" }).click();
 			await page.getByRole("button", { name: "Create service" }).click();
-			await expect(page).toHaveURL(/\/services$/);
+			await expect(page).toHaveURL(/\/services\/[0-9a-f-]{36}$/);
 
 			await page.getByRole("button", { name: "Notifications" }).click();
 			const entry = page.getByText('"remote-fn-check" was created.');
@@ -76,5 +78,35 @@ test.describe
 				page.getByRole("heading", { name: "Job queue" }),
 			).toBeVisible();
 			await expect(page.getByText("Nothing in the queue")).toBeVisible();
+		});
+
+		for (const { heading, name, path } of [
+			{ heading: "Services", name: "the services list", path: "/services" },
+			{
+				heading: "Docker Cleanup",
+				name: "Docker Cleanup",
+				path: "/docker-cleanup",
+			},
+			{ heading: "Traefik", name: "System Logs", path: "/system-logs" },
+		]) {
+			test(`${name} renders before its Docker query resolves`, async ({
+				page,
+			}) => {
+				await signIn(page);
+
+				await page.goto(path);
+				await expect(
+					page.getByRole("heading", { name: heading }),
+				).toBeVisible();
+			});
+		}
+
+		test("the settings tabs render without their setup diagnostics", async ({
+			page,
+		}) => {
+			await signIn(page);
+
+			await page.goto("/settings/networking");
+			await expect(page.getByLabel("ACME account email")).toBeVisible();
 		});
 	});

@@ -31,6 +31,13 @@ export const envVarSchema = z.object({
  */
 export const buildInputSchema = z.object({
 	buildContext: z.string().nullable().optional(),
+	// Injected into the clone URL for a private repo : the main app resolves
+	// it from a connected git provider (`resolveGitCredential`) and sends it
+	// here, since the agent has no access to that table.
+	credential: z
+		.object({ token: z.string().min(1), username: z.string() })
+		.nullable()
+		.optional(),
 	dockerfilePath: z.string().nullable().optional(),
 	gitRef: z.string().nullable().optional(),
 	gitUrl: z.string().min(1),

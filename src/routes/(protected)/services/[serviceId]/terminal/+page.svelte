@@ -150,7 +150,7 @@
 	}
 </script>
 
-<section class="rounded-2xl glass">
+<section class="rounded-md panel">
   <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
     <div class="flex items-center gap-2">
       <TerminalIcon class="size-4 text-text-muted" />

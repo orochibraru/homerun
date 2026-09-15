@@ -1,4 +1,4 @@
-import { desc, eq, lt } from "drizzle-orm";
+import { and, count, desc, eq, gt, lt, lte } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type AppLog, appLog } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -25,14 +25,32 @@ export class AppLogDTO extends BaseDTO<AppLog> {
 	static async listForService(
 		serviceId: string,
 		limit = 50,
+		since: Date | null = null,
 	): Promise<AppLogDTO[]> {
 		const rows = await db
 			.select()
 			.from(appLog)
-			.where(eq(appLog.serviceId, serviceId))
+			.where(
+				since
+					? and(eq(appLog.serviceId, serviceId), gt(appLog.createdAt, since))
+					: eq(appLog.serviceId, serviceId),
+			)
 			.orderBy(desc(appLog.createdAt))
 			.limit(limit);
 		return rows.map((row) => new AppLogDTO(row));
+	}
+
+	static async countForServiceUpTo(
+		serviceId: string,
+		until: Date,
+	): Promise<number> {
+		const [row] = await db
+			.select({ total: count() })
+			.from(appLog)
+			.where(
+				and(eq(appLog.serviceId, serviceId), lte(appLog.createdAt, until)),
+			);
+		return row?.total ?? 0;
 	}
 
 	/** Most recent warn/error logs instance-wide, regardless of service attribution : for a future instance-wide log view. */

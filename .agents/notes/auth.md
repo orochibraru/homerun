@@ -92,6 +92,38 @@ only by `tests/e2e/support/bootstrap-runtime.ts`'s spawned app, never in
 production, same test-only-escape-hatch shape as
 `HOMERUN_SKIP_INTEGRATION_SETUP`.
 
+`user.changeEmail` is enabled (`enabled: true`,
+`updateEmailWithoutVerification: true`) so `/profile`'s email field is editable,
+and the two account states take genuinely different paths through better-auth's
+`changeEmail` endpoint (`update-user.mjs`): an **unverified** address writes the
+new email (and re-sets the session cookie) immediately, synchronously, no
+confirmation step, because `updateEmailWithoutVerification: true` only ever
+applies when `session.user.emailVerified !== true`. A **verified** address is
+untouched in the DB at request time regardless of that flag, better-auth only
+creates a verification token and calls `sendChangeEmailConfirmation` (mailed via
+`EmailService` to the _current_ address, not the new one); the row only changes
+once the user follows that link to `/verify-email`. Both mail callbacks
+(`emailVerification.sendVerificationEmail` and `changeEmail`'s
+`sendChangeEmailConfirmation`) return early with a warn log when
+`!isSmtpEnabled()`, rather than letting `EmailService`'s constructor throw the
+way it does everywhere else. `sendOnSignUp` already gates the sign-up case, but
+`changeEmail` reaches both callbacks off the mere _presence_ of
+`sendVerificationEmail` (`canSendVerification`), whatever the SMTP settings say.
+Two different things happen to a throw from there, and neither is useful: inside
+`changeEmail` both callbacks go through `runInBackgroundOrAwait`, which catches
+and logs (`create-context.mjs`), so the endpoint still answers
+`{ status: true }` and the failure is invisible to the caller; but
+`/send-verification-email` calls `sendVerificationEmailFn` which awaits the
+callback directly, where the same throw is a 500. Returning early makes the skip
+explicit in the log in both cases.
+
+What actually keeps a user out of the resulting dead end is the page, not the
+server: `src/routes/(protected)/profile/+page.server.ts` exposes `smtpEnabled`
+(`isSmtpEnabled()`), and `/profile` disables the email field, with an
+explanation, for a **verified** account while SMTP is off — that account's
+address can't be changed at all without a confirmation link, and better-auth
+would otherwise report success while doing nothing.
+
 The `betterAuth({...})` call is wrapped in `buildAuth()` rather than assigned
 once to a `const`, `export let auth = buildAuth()`, plus
 `export function rebuildAuth()` which reassigns `auth = buildAuth()`. This is
@@ -542,7 +574,7 @@ underlying gotcha (`resolve()` here returns a relative path, not useful for a
 gate needs one, just not implemented this way anymore.
 
 `/onboarding/+page.svelte` is a 5-step wizard (Core / Docker / Traefik / Email /
-Review) in a centred `max-w-3xl` column, each step a `glass` panel with its own
+Review) in a centred `max-w-3xl` column, each step a `panel` card with its own
 header, closing on a Review step that lists what's about to be persisted. It's
 built on the reusable `$lib/components/stepper.svelte` (connected circular step
 markers with labels at `sm+`, a progress bar below that, `Button` primitives for

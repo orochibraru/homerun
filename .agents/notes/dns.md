@@ -56,6 +56,61 @@ a server log line nobody reads.
   hand-rolled `fetch` calls rather than an `openapi-fetch` client, same posture
   as `GitProviderService`.
 
+**The Target is `https` against 443, and that is what fixed "routes are created
+but we hit a 404".** Every router Homerun writes lives on
+`config.traefik.entrypoint` (`websecure`) with `tls=true`, so a Target pointing
+at port 80 reached a Traefik entrypoint with **no matching router** and Traefik
+answered its own 404 — the tunnel was working, the request just landed nowhere.
+`targetScheme(port)` maps 80 to `http` and everything else to `https` (`method`
+is a free-form nullable string in the Integration API's own schema), and
+`pangolinTargetPort` now defaults to **443**. TLS is therefore terminated twice
+on purpose: Pangolin for the public connection, Traefik again for the hop from
+the tunnel to the container. With DNS pointing at Pangolin rather than this
+host, Traefik's own HTTP-01 challenge can't complete, so that inner certificate
+is usually its self-signed default — which is fine, nothing verifies it, but
+it's why the inner hop is encrypted rather than trusted. The one remaining
+assumption is `ip: "localhost"`, which is only right when the newt tunnel runs
+on this host with host networking (see `TODO.md`).
+
+**Every resource Homerun creates has Pangolin's own SSO gate turned off, and
+that is what fixed "the route exists, the tunnel is up, and the service is still
+unreachable".** `resources.sso` defaults to **true** in Pangolin, and
+`PUT /org/{orgId}/resource` is a `strictObject` with no `sso` field, so a
+created resource is gated and nothing in the create call can say otherwise: a
+browser got a 302 to `pangolin.example.com/auth/resource/…` and an API client a
+bare `401 Unauthorized`, for every service the instance published.
+`setResourceSso` therefore follows every create with `POST /resource/{id}`
+`{"sso": false}`, **and does the same on the already-exists path**, so
+redeploying a service heals a resource created before this (there's no other way
+to reach the ones already made — the exists check returns early). A failed SSO
+update is reported as a failed sync rather than a success, since a gated route
+is exactly as unreachable as a missing one. Access control for a deployed
+service belongs to this app's own per-service login wall (see `auth.md`), not to
+a second, invisible gate at the edge — **unless the admin says otherwise**:
+`instance_settings.pangolinOwnsAuth` ("Let Pangolin handle sign-in", the
+Pangolin card on `/settings/networking`, default off) flips it, creating
+Resources with `sso: true` and making `api/v1/auth-check` answer 200 for every
+gated service, so Pangolin's own login is the only one a visitor sees instead of
+two in a row. That endpoint runs on every proxied request, so it reads
+`config.pangolinOwnsAuth` rather than querying the DTO; `toConfigOverride()`
+only reports it true when Pangolin is actually configured.
+`instance_settings.pangolinTargetHost` (same card, default `localhost`) is the
+address a created Target points at : `localhost` is only right when the site
+agent (newt) runs on this host with host networking, which is why hardcoding it
+was wrong. **Diagnosed against a real instance**, not from the docs: Traefik on
+the host answered `200` for
+`curl -k -H "Host: <slug>.<domain>" https://127.0.0.1` while the public hostname
+answered `401`, with the target already correct (`localhost:443`,
+`method=https`, site online).
+
+Two failure modes live **outside** this client and look identical from a
+browser, worth checking before touching code again: a Pangolin domain with
+`preferWildcardCert: true` and no wildcard actually issued serves Pangolin's
+Traefik default self-signed certificate for every subdomain (the apex keeps its
+real one, so "the dashboard works and the services don't" is the tell), and an
+instance whose generated `compose.yaml` predates the `DASHBOARD_DOMAIN` router
+has no Traefik labels on its own `app` service at all.
+
 **Pangolin's OpenAPI document is fetchable after all**, contrary to what this
 section used to say (a "the OAS is broken, the types are guesses" note inherited
 from the sibling `dokploy-to-pangolin` project):

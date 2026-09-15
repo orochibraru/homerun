@@ -161,6 +161,62 @@
 			"when": 1788770761691,
 			"tag": "0022_shiny_shiva",
 			"breakpoints": true
+		},
+		{
+			"idx": 23,
+			"version": "7",
+			"when": 1789470571072,
+			"tag": "0023_lean_felicia_hardy",
+			"breakpoints": true
+		},
+		{
+			"idx": 24,
+			"version": "7",
+			"when": 1789477187812,
+			"tag": "0024_nebulous_kang",
+			"breakpoints": true
+		},
+		{
+			"idx": 25,
+			"version": "7",
+			"when": 1789477889900,
+			"tag": "0025_skinny_nemesis",
+			"breakpoints": true
+		},
+		{
+			"idx": 26,
+			"version": "7",
+			"when": 1789479225759,
+			"tag": "0026_elite_doctor_faustus",
+			"breakpoints": true
+		},
+		{
+			"idx": 27,
+			"version": "7",
+			"when": 1789487161409,
+			"tag": "0027_jittery_namor",
+			"breakpoints": true
+		},
+		{
+			"idx": 28,
+			"version": "7",
+			"when": 1789489980014,
+			"tag": "0028_young_medusa",
+			"breakpoints": true
+		},
+		{
+			"idx": 29,
+			"version": "7",
+			"when": 1789503264782,
+			"tag": "0029_dapper_prodigy",
+			"breakpoints": true
+		},
+		{
+			"idx": 30,
+			"version": "7",
+			"when": 1789504715222,
+			"tag": "0030_certain_piledriver",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

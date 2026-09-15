@@ -4,6 +4,7 @@
 	import { enhance } from "$app/forms";
 	import { refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import NewVolumeFields from "$lib/components/new-volume-fields.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -16,6 +17,8 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { HOST_VOLUME_PREFIX } from "$lib/constants";
+	import { getUnknownHostVolumes } from "$lib/remote/docker-infra.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -23,15 +26,32 @@
 
 	const { data } = $props();
 
+	const known = $derived(
+		data.volumes
+			.filter((vol) => vol.kind === "volume")
+			.map((vol) => vol.source),
+	);
+	const unknownHostVolumes = $derived(getUnknownHostVolumes(known));
+	const hostVolumes = $derived(unknownHostVolumes.current ?? []);
+
 	onMount(() => title.set("Volumes"));
 
 	let newVolumeOpen = $state(false);
 	let newVolumeKind = $state<"bind" | "volume">("volume");
 	let creatingVolume = $state(false);
 	let createError = $state<string | null>(null);
+
+	const selectedLabel = $derived.by(() => {
+		if (volumeId.startsWith(HOST_VOLUME_PREFIX)) {
+			return volumeId.slice(HOST_VOLUME_PREFIX.length);
+		}
+		return (
+			data.volumes.find((v) => v.id === volumeId)?.name ?? "Select a volume"
+		);
+	});
 </script>
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border flex items-center gap-3 border-b px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
       <HardDrive class="size-4" />
@@ -57,7 +77,7 @@
                 >(read-only)</span>
               {/if}
             </p>
-            <p class="text-text-muted truncate font-mono text-xs">
+            <p class="text-text-muted truncate text-xs">
               {mount.containerPath}
             </p>
           </div>
@@ -81,7 +101,7 @@
   {/if}
 
   <div class="p-5">
-    {#if data.volumes.length === 0}
+    {#if data.volumes.length === 0 && hostVolumes.length === 0}
       <p class="text-text-subtle text-xs">
         No storage volumes yet :
         <button
@@ -123,17 +143,27 @@
           </div>
           <SelectRoot name="volumeId" type="single" bind:value={volumeId}>
             <SelectTrigger class="w-full" id="volumeId">
-              {
-                data.volumes.find((v) => v.id === volumeId)?.name
-                ?? "Select a volume"
-              }
+              {selectedLabel}
             </SelectTrigger>
             <SelectContent>
               {#each data.volumes as vol (vol.id)}
                 <SelectItem label={vol.name} value={vol.id} />
               {/each}
+              {#if hostVolumes.length > 0}
+                <div class="text-text-subtle px-2 py-1.5 text-[0.6875rem] font-medium">
+                  On this machine
+                </div>
+                {#each hostVolumes as name (name)}
+                  <SelectItem label={name} value="{HOST_VOLUME_PREFIX}{name}" />
+                {/each}
+              {/if}
             </SelectContent>
           </SelectRoot>
+          {#if volumeId.startsWith(HOST_VOLUME_PREFIX)}
+            <p class="text-text-subtle mt-1.5 text-xs">
+              Already on this machine : mounting it adds it to Storage too.
+            </p>
+          {/if}
         </div>
         <div class="flex-1">
           <label
@@ -143,7 +173,7 @@
             Mount path
           </label>
           <Input
-            class="font-mono"
+            class=""
             id="containerPath"
             name="containerPath"
             placeholder="/data"
@@ -194,9 +224,9 @@
       })}
     >
       {#if createError}
-        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+        <Alert>
           {createError}
-        </div>
+        </Alert>
       {/if}
 
       <NewVolumeFields bind:kind={newVolumeKind} />

@@ -99,6 +99,41 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		expect(composeCall[1]).toContain("DASHBOARD_CERT_RESOLVER:-}");
 	});
 
+	test("shares a dynamic-config volume between the app and Traefik, with the file provider on", async () => {
+		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
+		const writeFile = mock(
+			async (_path: string, _content: string) => undefined,
+		);
+		const appendLine = mock(async (_path: string, _line: string) => undefined);
+		const runner = { appendLine, run, writeFile } as unknown as StepRunner;
+
+		await FullStackInstaller.bringUpFullStack({
+			dockerSocket: "/var/run/docker.sock",
+			host: "homerun.example.com",
+			run: runner,
+			username: "homerun",
+			version: "latest",
+		});
+
+		const compose = (
+			writeFile.mock.calls.find(
+				(call) => call[0] === "/home/homerun/homerun/compose.yaml",
+			) as [string, string]
+		)[1];
+		expect(compose).toContain(
+			"--providers.file.directory=/etc/traefik/dynamic",
+		);
+		expect(compose).toContain("--providers.file.watch=true");
+		expect(compose).toContain("traefik-dynamic:/app/traefik-dynamic");
+		expect(compose).toContain("traefik-dynamic:/etc/traefik/dynamic");
+		expect(compose).toContain("traefik-dynamic: {}");
+
+		const configCall = writeFile.mock.calls.find(
+			(call) => call[0] === "/home/homerun/homerun/homerun.yaml",
+		) as [string, string];
+		expect(configCall[1]).toContain("dynamicConfigDir: /app/traefik-dynamic");
+	});
+
 	test("gives the dashboard router a real cert resolver on a domain install", async () => {
 		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
 		const writeFile = mock(

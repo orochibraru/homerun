@@ -143,6 +143,29 @@ async function finishLinkedStack(
 	return linkedServices;
 }
 
+/** The two uniqueness checks a new service can fail on, as one guard. */
+async function takenFieldFailure(
+	input: { customDomain?: string; slug: string },
+	formData: FormData,
+) {
+	const errors: Record<string, string[]> = {};
+	if (await ServiceDTO.slugTaken(input.slug)) {
+		errors.slug = ["That slug is already in use."];
+	}
+	if (
+		input.customDomain &&
+		(await ServiceDTO.customDomainTaken(input.customDomain))
+	) {
+		errors.customDomain = ["That domain is already in use."];
+	}
+	if (Object.keys(errors).length === 0) {
+		return null;
+	}
+	return {
+		failure: fail(400, { errors, values: Object.fromEntries(formData) }),
+	} as const;
+}
+
 async function createServiceFromForm(formData: FormData, userId: string) {
 	const rawProjectId = formData.get("projectId") as string | null;
 	const initialProjectId =
@@ -163,13 +186,9 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 
 	const input = result.data;
 
-	if (await ServiceDTO.slugTaken(input.slug)) {
-		return {
-			failure: fail(400, {
-				errors: { slug: ["That slug is already in use."] },
-				values: Object.fromEntries(formData),
-			}),
-		} as const;
+	const taken = await takenFieldFailure(input, formData);
+	if (taken) {
+		return taken;
 	}
 
 	const { links, projectId } = await prepareLinkedStack(formData, userId, {
@@ -185,6 +204,9 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 
 	const svc = await ServiceDTO.create({
 		authRequired: input.authRequired,
+		customDomain: input.customDomain || null,
+		networkMode: input.networkMode,
+		portProtocol: input.portProtocol,
 		buildCacheRegistryId:
 			input.buildSource === "git" ? input.buildCacheRegistryId || null : null,
 		buildSource: input.buildSource,
@@ -240,9 +262,9 @@ export const actions = {
 
 		redirect(
 			303,
-			result.projectId
+			result.projectId && result.linkedServices.length > 0
 				? `${resolve("/projects")}/${result.projectId}`
-				: resolve("/services"),
+				: `${resolve("/services")}/${result.svc.id}`,
 		);
 	},
 

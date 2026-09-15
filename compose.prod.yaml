@@ -22,7 +22,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - app_data:/app/data
-      - ./homerun.yaml:/app/homerun.yaml:ro
+      - traefik_dynamic:/app/traefik-dynamic
     healthcheck:
       interval: 30s
       retries: 3
@@ -40,6 +40,8 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.network=homerun
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
@@ -52,6 +54,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/letsencrypt
+      - traefik_dynamic:/etc/traefik/dynamic
     networks:
       - homerun
       - internal
@@ -83,4 +86,5 @@ networks:
 volumes:
   postgres_data: {}
   traefik_certs: {}
+  traefik_dynamic: {}
   app_data: {}

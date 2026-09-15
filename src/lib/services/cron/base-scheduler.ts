@@ -44,6 +44,14 @@ export abstract class BaseScheduler {
 
 	protected readonly intervalMs: number = TICK_MS;
 
+	/**
+	 * Whether to also tick once immediately on start rather than waiting a
+	 * whole interval. Off for the due-date schedulers (nothing is due a
+	 * second after boot that wasn't due before it), on for the stats sampler,
+	 * where waiting means a fresh instance shows an empty graph for a minute.
+	 */
+	protected readonly runOnStart: boolean = false;
+
 	private inFlight: Promise<void> | null = null;
 
 	protected abstract tick(): Promise<void>;
@@ -59,18 +67,25 @@ export abstract class BaseScheduler {
 		this.logger.info(
 			`${this.label} scheduler started (${this.intervalMs}ms tick).`,
 		);
+		if (this.runOnStart) {
+			this.#run();
+		}
 		registry.set(
 			key,
 			setInterval(() => {
-				if (this.inFlight !== null) {
-					return;
-				}
-				this.inFlight = this.tick()
-					.catch((err) => this.logger.error(`${this.label} tick failed`, err))
-					.finally(() => {
-						this.inFlight = null;
-					});
+				this.#run();
 			}, this.intervalMs),
 		);
+	}
+
+	#run(): void {
+		if (this.inFlight !== null) {
+			return;
+		}
+		this.inFlight = this.tick()
+			.catch((err) => this.logger.error(`${this.label} tick failed`, err))
+			.finally(() => {
+				this.inFlight = null;
+			});
 	}
 }

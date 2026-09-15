@@ -19,10 +19,36 @@ function lifecycleFailure(verb: string, error: unknown) {
 	});
 }
 
-export const load = async ({ params }) => {
-	const deployments = await DeploymentDTO.listForService(params.serviceId);
+export const load = async ({ params, parent }) => {
+	const { service: svc, user } = await parent();
+	const [deployments, siblings] = await Promise.all([
+		DeploymentDTO.listForService(params.serviceId),
+		ServiceDTO.list(user.id),
+	]);
 
-	return { deployments: deployments.map((d) => d.toJSON()) };
+	// A link between two services is an env var pointing at the other one's
+	// internal DNS alias (its slug), which is exactly what the service-link
+	// picker writes : deriving the graph from the env values means it stays
+	// true for hand-written variables too, with no second source of truth to
+	// keep in sync.
+	const references = (
+		from: { envVars: Record<string, string> | null },
+		slug: string,
+	) => Object.values(from.envVars ?? {}).some((value) => value.includes(slug));
+
+	const others = siblings.filter((other) => other.id !== params.serviceId);
+	const dependsOn = others
+		.filter((other) => references(svc, other.slug))
+		.map((other) => ({ id: other.id, name: other.name, slug: other.slug }));
+	const usedBy = others
+		.filter((other) => references(other, svc.slug))
+		.map((other) => ({ id: other.id, name: other.name, slug: other.slug }));
+
+	return {
+		dependsOn,
+		deployments: deployments.map((d) => d.toJSON()),
+		usedBy,
+	};
 };
 
 export const actions = {

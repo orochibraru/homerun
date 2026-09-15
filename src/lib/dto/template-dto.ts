@@ -7,6 +7,7 @@ import {
 	isNull,
 	or,
 	type SQL,
+	sql,
 } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type Template, template } from "$lib/server/db/schema";
@@ -31,7 +32,17 @@ export interface NewTemplateInput {
 	restartPolicy: string;
 	sourceUrl?: string | null;
 	tag: string;
+	tags?: string[];
 	websiteUrl?: string | null;
+}
+
+/** Matches `q` against any one of a template's tags, which `searchCondition` can't do : they're a text[], not a text column. */
+function tagSearchCondition(q: string): SQL | undefined {
+	const term = q.trim();
+	if (!term) {
+		return undefined;
+	}
+	return sql`array_to_string(${template.tags}, ' ') ILIKE ${`%${term}%`}`;
 }
 
 /** Wraps the `template` table : see ServiceDTO for the pattern this follows. */
@@ -82,11 +93,14 @@ export class TemplateDTO extends BaseDTO<Template> {
 				? isNull(template.ownerId)
 				: eq(template.ownerId, userId),
 		];
-		const search = searchCondition(query.q, [
-			template.name,
-			template.description,
-			template.image,
-		]);
+		const search = or(
+			searchCondition(query.q, [
+				template.name,
+				template.description,
+				template.image,
+			]),
+			tagSearchCondition(query.q),
+		);
 		if (search) {
 			conditions.push(search);
 		}
@@ -145,6 +159,7 @@ export class TemplateDTO extends BaseDTO<Template> {
 			restartPolicy: input.restartPolicy,
 			sourceUrl: input.sourceUrl ?? null,
 			tag: input.tag,
+			tags: input.tags ?? [],
 			updatedAt: now,
 			websiteUrl: input.websiteUrl ?? null,
 		};

@@ -38,7 +38,10 @@ instance out (see [Configuration](configuration.md#a-note-on-lockout)).
 The profile pages (reached from the avatar menu, not the sidebar) are per
 account:
 
-- **Personal information**, your name and email.
+- **Personal information**, your name and email. Changing an unverified email
+  takes effect immediately; a verified one needs confirming from a link sent to
+  the address you're leaving, so it stays locked until SMTP is configured (see
+  [Known, real limitations](faq-and-limitations.md#known-real-limitations-not-hypothetical)).
 - **Security**, change your password, connect or disconnect OAuth providers (see
   [below](#connecting-a-provider-to-an-existing-account)), and delete your
   account. Deleting stops and removes every container you own first, it isn't

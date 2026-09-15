@@ -16,9 +16,9 @@
 	let submitting = $state(false);
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
     <div class="mb-8">
-        <h1 class="text-text text-xl font-semibold tracking-tight">Add a build cache registry</h1>
+        <h1 class="text-text text-lg font-semibold tracking-tight">Add a build cache registry</h1>
         <p class="mt-1 text-sm text-text-muted">
             Any Docker registry you can push to (a self-hosted registry, GHCR,
             Docker Hub). Only used to cache build layers, never as a deploy
@@ -28,7 +28,7 @@
 
     <form
         action="?/create"
-        class="mb-6 space-y-4 rounded-2xl glass p-5"
+        class="mb-6 space-y-4 rounded-md panel p-5"
         method="POST"
         use:enhance={enhanceToast({
           error: "Check the form for errors.",
@@ -62,7 +62,7 @@
         <div>
             <label class={label} for="registryUrl">Registry URL</label>
             <Input
-                class="font-mono"
+                class=""
                 id="registryUrl"
                 name="registryUrl"
                 placeholder="registry.example.com"

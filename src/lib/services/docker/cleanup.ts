@@ -94,6 +94,20 @@ export function DockerCleanupMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
 	return class DockerCleanupService extends Base {
+		/**
+		 * Docker-managed volumes that already exist on the host, for the
+		 * "pull in existing volumes" picker : a fresh Homerun on a machine
+		 * that has been running containers for years shouldn't make you
+		 * retype names it can already see.
+		 */
+		async listHostVolumes(): Promise<string[]> {
+			const { Volumes } = await this.getDocker().listVolumes();
+			return (Volumes ?? [])
+				.map((volume) => volume.Name)
+				.filter(Boolean)
+				.sort((a, b) => a.localeCompare(b));
+		}
+
 		async getCleanupPreview(): Promise<CleanupPreview> {
 			const docker = this.getDocker();
 			const [df, networks] = await Promise.all([

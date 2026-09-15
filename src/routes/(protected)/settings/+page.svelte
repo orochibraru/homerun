@@ -5,9 +5,13 @@
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { getSetupStatus } from "$lib/remote/setup.remote";
 	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
+
+	const setup = getSetupStatus();
+	const issuesByField = $derived(setup.current?.issuesByField ?? {});
 
 	const derivedOrigin = $derived(
 		data.settings.baseDomain
@@ -32,11 +36,11 @@
 		return highlighted.has(field) ? "ring-2 ring-amber-400" : "";
 	}
 	function issueFor(field: string): string | undefined {
-		return highlighted.has(field) ? data.fieldIssues[field] : undefined;
+		return highlighted.has(field) ? issuesByField[field] : undefined;
 	}
 </script>
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border border-b px-5 py-4">
     <h2 class="eyebrow">Core</h2>
     <p class="text-text-muted text-xs">
@@ -60,10 +64,10 @@
         value={data.settings.baseDomain ?? ""}
       />
       <p class="text-text-subtle mt-1.5 text-xs">
-        A bare hostname, e.g. <code class="font-mono">example.com</code>
-        or <code class="font-mono">app.example.local</code>. Deployed
+        A bare hostname, e.g. <code class="">example.com</code>
+        or <code class="">app.example.local</code>. Deployed
         services are routed by Traefik under
-        <code class="font-mono">&lt;slug&gt;.{data.settings.baseDomain ??
+        <code class="">&lt;slug&gt;.{data.settings.baseDomain ??
         data.envDefaults.baseDomain}</code>, so a port here is never part of
         that : add one only if this dashboard is reached on a port, and it
         moves to the Dashboard URL below instead of the routing name.
@@ -91,7 +95,7 @@
     <div>
       <label class={label} for="authOrigin">Dashboard URL</label>
       <Input
-        class="font-mono"
+        class=""
         id="authOrigin"
         name="authOrigin"
         placeholder={derivedOrigin ??
@@ -105,9 +109,9 @@
         Leave blank to derive it from the base domain above. It's separate
         from the routing name because the two genuinely differ in
         development, where the dashboard runs on a port
-        (<code class="font-mono">http://localhost:5173</code>) while
+        (<code class="">http://localhost:5173</code>) while
         services are routed by Traefik on 443
-        (<code class="font-mono">dashy.localhost</code>). Single sign-on
+        (<code class="">dashy.localhost</code>). Single sign-on
         redirect URIs and the per-app login wall both point here.
       </p>
     </div>

@@ -1,13 +1,21 @@
 import { phaseLine } from "$lib/deploy-phases";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
+import {
+	type GitCredential,
+	hasEmbeddedCredentials,
+	providerForGitUrl,
+} from "$lib/git-clone-url";
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
+import { shouldSkipPull } from "$lib/pull-policy";
+import { decryptSecret } from "$lib/services/secrets";
 import { AgentClientService } from "./agent-client.service.ts";
 import { serviceHostname, syncDns } from "./dns.service.ts";
 import { DockerService, type RemoteHostConnection } from "./docker.service.ts";
@@ -134,6 +142,38 @@ export interface DeployResult {
  * deploy endpoint, and the cron redeploy scheduler : single source of
  * truth so these three trigger points can't drift out of sync.
  */
+async function resolveGitCredential(
+	gitUrl: string,
+	userId: string,
+): Promise<GitCredential | null> {
+	if (hasEmbeddedCredentials(gitUrl)) {
+		return null;
+	}
+	const settings = await InstanceSettingsDTO.get();
+	const provider = providerForGitUrl(
+		gitUrl,
+		settings.gitProviders.filter((p) => p.enabled),
+	);
+	if (!provider) {
+		return null;
+	}
+	const connection = await GitConnectionDTO.getForUserAndProvider(
+		userId,
+		provider.id,
+	);
+	if (!connection) {
+		return null;
+	}
+	const token = decryptSecret(connection.accessTokenEnc);
+	if (!token) {
+		return null;
+	}
+	return {
+		token,
+		username: connection.toJSON().providerUsername || "oauth2",
+	};
+}
+
 class DeploymentServiceClass {
 	/**
 	 * Resolves where the build runs and how its result gets to the deploy
@@ -209,6 +249,7 @@ class DeploymentServiceClass {
 
 		const result = await AgentClientService.build(plan.buildTarget.connection, {
 			buildContext: svc.gitBuildContext,
+			credential: await resolveGitCredential(svc.gitUrl, ctx.userId),
 			dockerfilePath: svc.gitDockerfilePath,
 			gitRef: svc.gitRef,
 			gitUrl: svc.gitUrl,
@@ -248,6 +289,7 @@ class DeploymentServiceClass {
 							username: cacheRegistryRow.username,
 						}
 					: null,
+				credential: await resolveGitCredential(svc.gitUrl, ctx.userId),
 				dockerfilePath: svc.gitDockerfilePath,
 				gitRef: svc.gitRef,
 				gitUrl: svc.gitUrl,
@@ -259,6 +301,10 @@ class DeploymentServiceClass {
 		if (!result.success) {
 			throw new Error(result.error ?? "Build failed.");
 		}
+		await dep.update({
+			gitCommit: result.commit ?? null,
+			gitRef: svc.gitRef ?? null,
+		});
 
 		if (plan.crossHostBuild && cacheRegistryRow && publishedImage && auth) {
 			await dep.appendLog(
@@ -404,6 +450,22 @@ class DeploymentServiceClass {
 			return { digest: "", ...built };
 		}
 
+		const ref = `${svc.image}:${svc.tag}`;
+		const local = await DockerService.localImageDigest(ref);
+		const skip = shouldSkipPull(svc.pullPolicy, local !== undefined);
+		if (skip) {
+			await dep.appendLog(skip);
+			logger.info(
+				`Image pull skipped (${svc.pullPolicy}): ${ref} service=${svc.id}`,
+			);
+			if (local === undefined) {
+				throw new Error(
+					`Pull policy is "never" and ${ref} isn't on this host.`,
+				);
+			}
+			return { digest: local, image: svc.image, tag: svc.tag };
+		}
+
 		const { digest } = await DockerService.pullImage({
 			auth: DockerService.buildAuthConfig(svc),
 			image: svc.image,
@@ -411,7 +473,7 @@ class DeploymentServiceClass {
 			tag: svc.tag,
 		});
 		logger.info(
-			`Image pulled: ${svc.image}:${svc.tag} digest=${digest ?? "unknown"} service=${svc.id}`,
+			`Image pulled: ${ref} digest=${digest ?? "unknown"} service=${svc.id}`,
 		);
 		return { digest, image: svc.image, tag: svc.tag };
 	}
@@ -464,6 +526,10 @@ class DeploymentServiceClass {
 			containerId: containerId ?? null,
 			currentStatus: "running",
 			desiredState: "running",
+			// A revision that reached "running" clears the errors that came
+			// before it : whatever they were, this deploy is the answer.
+			errorsDismissedAt: new Date(),
+			errorsDismissedByDeploymentId: dep.id,
 			swarmServiceId: swarmServiceId ?? null,
 		});
 		await dep.update({

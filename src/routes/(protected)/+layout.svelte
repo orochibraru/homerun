@@ -1,8 +1,8 @@
 <script lang="ts">
 	import {
+		Activity,
 		BookOpen,
 		CalendarClock,
-		ChevronRight,
 		Clock,
 		CloudUpload,
 		Container,
@@ -15,6 +15,7 @@
 		LayoutGrid,
 		Menu,
 		Network,
+		Plus,
 		ScrollText,
 		Server,
 		Settings,
@@ -27,6 +28,7 @@
 	import { fly } from "svelte/transition";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import ErrorBoundary from "$lib/components/error-boundary.svelte";
 	import NotificationBell from "$lib/components/notification-bell.svelte";
 	import ProfileMenu from "$lib/components/profile-menu.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -98,6 +100,14 @@
 			href: resolve("/cron-jobs"),
 			icon: Clock,
 			label: "Cron Jobs",
+		},
+		{
+			adminOnly: false,
+			category: "Workspace",
+			exact: false,
+			href: resolve("/status-pages"),
+			icon: Activity,
+			label: "Status Page",
 		},
 		{
 			adminOnly: false,
@@ -253,19 +263,15 @@
 		data.preferences.sidebarColorIntensity === "colorful",
 	);
 
-	// Custom accent color (see /profile/appearance) : overriding these three
-	// CSS vars on this subtree's root cascades into every bg-accent/text-accent/
-	// etc. Tailwind utility beneath it, since Tailwind v4's @theme block makes
-	// them all reference var(--color-accent...) rather than a literal value.
-	const accentStyle = $derived.by(() => {
-		const hex = data.preferences.accentColor;
-		if (!hex) {
+	const accentCss = $derived.by(() => {
+		const hex = data.preferences.accentColor ?? "";
+		if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
 			return "";
 		}
 		const r = Number.parseInt(hex.slice(1, 3), 16);
 		const g = Number.parseInt(hex.slice(3, 5), 16);
 		const b = Number.parseInt(hex.slice(5, 7), 16);
-		return `--color-accent:${hex};--color-accent-light:rgba(${r},${g},${b},0.1);--color-accent-glow:rgba(${r},${g},${b},0.2);`;
+		return `:root:root{--color-accent:${hex};--color-ink:${hex};--primary:${hex};--color-accent-light:rgba(${r},${g},${b},0.12);--color-accent-glow:rgba(${r},${g},${b},0.35);--ring:rgba(${r},${g},${b},0.55);}`;
 	});
 
 	/** Groups a flat item list into category-labeled sections, preserving first-seen category order. */
@@ -305,8 +311,7 @@
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
   {#each groups as group (group.heading)}
     {@const color = colorful ? (categoryColors[group.heading] ?? fallbackColor) : fallbackColor}
-    <p class="eyebrow mt-5 mb-1.5 flex items-center gap-1.5 px-3">
-      <span class="size-1.5 rounded-full {color.dot}"></span>
+    <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium">
       {group.heading}
     </p>
     {#each group.items as item (item.href)}
@@ -314,37 +319,45 @@
       {@const NavIcon = item.icon}
       <a
         class="
-          group/nav relative mb-0.5 flex items-center gap-2.5 overflow-hidden rounded-lg px-3 py-2 text-[0.8125rem] transition-all duration-200
+          group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150
           {active
-          ? `${color.activeBg} ${color.activeText} font-medium shadow-[inset_0_1px_0_0_var(--glass-highlight)]`
-          : 'text-text-muted hover:bg-surface-2 hover:text-text'}
-        "
+          ? `border-sidebar-border bg-sidebar-accent ${color.activeText} font-medium`
+          : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent'}
+       "
         href={item.href}
         onclick={onNavigate}
       >
-        {#if active}
-          <span class="absolute inset-y-1.5 left-0 w-0.5 rounded-full {color.dot}"></span>
-        {/if}
-        <NavIcon class="size-4 shrink-0 transition-opacity {active ? '' : color.icon + ' opacity-60 group-hover/nav:opacity-100'}" />
+        <NavIcon class="size-4 shrink-0 {active ? '' : color.icon}" />
         {item.label}
-        {#if active}
-          <ChevronRight class="ml-auto size-3.5 opacity-50" />
-        {/if}
       </a>
     {/each}
   {/each}
 {/snippet}
 
+<svelte:head>
+  {#if accentCss}
+    {@html `<style>${accentCss}</style>`}
+  {/if}
+</svelte:head>
+
 <!-- Fills the full viewport : there's no global navbar above this. -->
-<div class="flex h-screen overflow-hidden" style={accentStyle}>
+<div class="flex h-screen overflow-hidden p-2 md:gap-2">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
-  <aside class="glass-strong hidden w-60 shrink-0 flex-col border-r md:flex">
+  <aside class="hidden w-56 shrink-0 flex-col md:flex">
+    <div class="flex items-center gap-2.5 px-3 py-2.5">
+      <span class="bg-accent size-3.5 rounded-md"></span>
+      <span class="text-text text-[0.9375rem] font-semibold tracking-tight">homerun</span>
+    </div>
+
+    <div class="px-2 pb-2">
+      <Button class="w-full" href={resolve("/services/new")}>
+        <Plus class="size-4" />
+        Deploy a service
+      </Button>
+    </div>
+
     <!-- Nav links -->
-    <nav class="flex-1 overflow-y-auto p-3 pt-4">
-      <div class="mb-3 flex items-center gap-2 px-2 pt-1">
-        <span class="bg-accent shadow-[0_0_10px_2px_var(--color-accent-glow)] size-2 rounded-full"></span>
-        <span class="text-text font-mono text-[0.95rem] font-semibold tracking-tight">homerun</span>
-      </div>
+    <nav class="flex-1 overflow-y-auto px-2 pb-3">
       {@render navGroups(mainNavGroups)}
       {@render navGroups(adminNavGroups)}
     </nav>
@@ -363,10 +376,10 @@
     </button>
 
     <div
-      class="glass-strong fixed top-0 left-0 z-50 flex h-screen w-72 flex-col border-r md:hidden"
+      class="panel-strong fixed top-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-border md:hidden"
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
-      <nav class="flex-1 overflow-y-auto p-3 pt-4">
+      <nav class="flex-1 overflow-y-auto px-2.5 pt-3 pb-4">
         {@render navGroups(mainNavGroups, () => {
           sidebarOpen = false;
         })}
@@ -378,11 +391,11 @@
   {/if}
 
   <!-- ── Main content ───────────────────────────────────────────── -->
-  <div class="flex flex-1 flex-col overflow-hidden">
+  <div class="panel flex flex-1 flex-col overflow-hidden rounded-xl">
     <!-- Sticky header, every page, both breakpoints : hamburger (mobile
          only) + page title on the left, notifications + account menu on
          the right. -->
-    <header class="glass-strong sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b px-4 md:px-6">
+    <header class="border-border sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b px-3 md:px-5">
       <Button
         aria-label="Toggle sidebar"
         class="md:hidden"
@@ -398,7 +411,7 @@
           <Menu class="size-5" />
         {/if}
       </Button>
-      <span class="text-text flex-1 truncate font-mono text-sm font-medium tracking-tight">
+      <span class="text-text flex-1 truncate text-sm font-medium">
         {$title || "Dashboard"}
       </span>
       <NotificationBell />
@@ -407,7 +420,9 @@
 
     <!-- Page content -->
     <main class="flex-1 overflow-y-auto">
-      {@render children()}
+      <ErrorBoundary class="p-5 md:p-6">
+        {@render children()}
+      </ErrorBoundary>
     </main>
   </div>
 </div>

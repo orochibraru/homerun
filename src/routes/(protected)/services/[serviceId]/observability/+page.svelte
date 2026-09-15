@@ -1,41 +1,86 @@
 <script lang="ts">
-	import { AlertTriangle, ChevronDown, Ghost, Loader2 } from "@lucide/svelte";
+	import {
+		AlertTriangle,
+		ChevronDown,
+		Eraser,
+		Ghost,
+		Loader2,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import UptimePanel from "$lib/components/uptime-panel.svelte";
 	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
-	onMount(() => title.set(`${data.service.name} · Errors`));
+	onMount(() => title.set(`${data.service.name} · Observability`));
 
 	let expandedDeploymentId = $state<string | null>(null);
 	let resolving = $state(false);
+	let clearing = $state<"errors" | "heartbeats" | null>(null);
+
+	const dismissedLabel = $derived(
+		data.dismissedBy
+			? (data.dismissedBy.gitCommit?.slice(0, 7) ??
+					data.dismissedBy.imageRef ??
+					"a later revision")
+			: null,
+	);
 </script>
 
+<div class="mb-4">
+  <UptimePanel
+    beats={data.uptime}
+    enabled={data.service.uptimeEnabled}
+    externalSkipped={data.externalSkipped}
+  />
+  {#if data.uptime.internal.length > 0 || data.uptime.external.length > 0}
+    <form
+      action="?/clearHeartbeats"
+      class="mt-2 flex justify-end"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't clear the heartbeats.",
+        loading: "Clearing heartbeats",
+        onSettled: () => {
+          clearing = null;
+        },
+        onStart: () => {
+          clearing = "heartbeats";
+        },
+        success: "Heartbeats cleared.",
+      })}
+    >
+      <Button
+        disabled={clearing !== null}
+        size="sm"
+        type="submit"
+        variant="ghost"
+      >
+        <Eraser class="size-3.5" />
+        Clear heartbeats
+      </Button>
+    </form>
+  {/if}
+</div>
+
+<div class="mb-4">
+  <LiveLogViewer containerId={data.service.containerId} serviceId={data.service.id} heightClass="h-96" />
+</div>
+
 {#if data.service.currentStatus === "failed"}
-  <div class="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
-    <AlertTriangle class="mt-0.5 size-4 shrink-0" />
-    <div>
-      <p class="font-medium">This service's container is currently down.</p>
-      <p class="mt-0.5 text-xs opacity-80">
-        Check its
-        <a
-          class="underline"
-          href={resolve("/(protected)/services/[serviceId]/logs", {
-            serviceId: data.service.id,
-          })}
-        >Logs</a>
-        tab for the crash output.
-      </p>
-    </div>
-  </div>
+  <Alert class="mb-6" title="This service's container is currently down.">
+    The crash output is in the log stream above.
+  </Alert>
 {:else if data.service.currentStatus === "missing"}
-  <div class="mb-6 flex items-start gap-3 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300">
+  <div class="mb-6 flex items-start gap-3 rounded-md border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800 dark:border-violet-900/40 dark:bg-violet-950/20 dark:text-violet-300">
     <Ghost class="mt-0.5 size-4 shrink-0" />
     <div class="flex-1">
       <p class="font-medium">This service's container is gone.</p>
@@ -70,7 +115,34 @@
   </div>
 {/if}
 
-<section class="glass rounded-2xl">
+{#if data.dismissedCount > 0}
+  <div class="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2.5 text-xs">
+    <span class="text-text-muted">
+      {data.dismissedCount}
+      {data.dismissedCount === 1 ? "earlier error is" : "earlier errors are"}
+      hidden
+      {#if data.dismissedBy}
+        — cleared by revision
+        <a
+          class="text-accent underline"
+          href={resolve("/(protected)/services/[serviceId]/revisions", {
+            serviceId: data.service.id,
+          })}
+        >{dismissedLabel}</a>
+      {:else}
+        — cleared by hand
+      {/if}
+    </span>
+    <a
+      class="text-text-subtle hover:text-text ml-auto underline"
+      href="?dismissed={data.showDismissed ? '0' : '1'}"
+    >
+      {data.showDismissed ? "Hide them" : "Show them"}
+    </a>
+  </div>
+{/if}
+
+<section class="panel rounded-md">
   <div class="border-border flex items-center gap-2 border-b px-5 py-4">
     <AlertTriangle class="text-text-muted size-4" />
     <h2 class="eyebrow">
@@ -119,7 +191,7 @@
             {/if}
           </button>
           {#if expandedDeploymentId === dep.id && dep.log}
-            <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
+            <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
               {#each dep.log.split("\n").filter(Boolean) as line, i (i)}
                 <AnsiLine {line} />
               {/each}
@@ -138,7 +210,7 @@
   own code logged as wrong" (a failed Docker call, a rejected reconcile,
   etc.), independent of whether a deploy was even in flight when it happened.
 -->
-<section class="glass mt-6 rounded-2xl">
+<section class="panel mt-6 rounded-md">
   <div class="border-border flex items-center gap-2 border-b px-5 py-4">
     <AlertTriangle class="text-text-muted size-4" />
     <h2 class="eyebrow">
@@ -188,3 +260,27 @@
     </div>
   {/if}
 </section>
+
+{#if data.failedDeployments.length > 0 || data.appLogs.length > 0}
+  <form
+    action="?/clearErrors"
+    class="mt-2 flex justify-end"
+    method="POST"
+    use:enhance={enhanceToast({
+      error: "Couldn't clear the errors.",
+      loading: "Clearing errors",
+      onSettled: () => {
+        clearing = null;
+      },
+      onStart: () => {
+        clearing = "errors";
+      },
+      success: "Errors cleared.",
+    })}
+  >
+    <Button disabled={clearing !== null} size="sm" type="submit" variant="ghost">
+      <Eraser class="size-3.5" />
+      Clear errors
+    </Button>
+  </form>
+{/if}

@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import CronJobFields from "$lib/components/cron-job-fields.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
@@ -26,7 +27,7 @@
   </a>
 
   <div>
-    <h1 class="text-text text-xl font-semibold tracking-tight">New Cron Job</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">New Cron Job</h1>
     <p class="text-text-muted mt-0.5 text-sm">
       Runs on a 5-field cron schedule, through the same job queue as deploys
       and backups.
@@ -34,9 +35,9 @@
   </div>
 
   {#if form?.error}
-    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+    <Alert>
       {form.error}
-    </div>
+    </Alert>
   {/if}
 
   <form

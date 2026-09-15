@@ -11,6 +11,19 @@ import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
 
 const logger = new Logger("Swarm");
 
+/**
+ * Swarm services can only join an **overlay** network, and the shared
+ * network standalone containers use (`config.docker.networkName`) already
+ * exists as a bridge on any instance that ever deployed anything, with
+ * Traefik and the app itself attached to it. A live bridge network can't be
+ * converted, so swarm mode gets its own attachable overlay alongside it
+ * rather than fighting over one name : Traefik joins both and routes either
+ * way.
+ */
+export function swarmNetworkName(): string {
+	return `${config.docker.networkName}-swarm`;
+}
+
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pullImage. */
 interface RequiresContainerMixin {
 	pullImage: (params: PullImageParams) => Promise<{ digest: string | null }>;
@@ -60,6 +73,28 @@ export function DockerSwarmMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {
 	return class DockerSwarmService extends Base {
+		/** Whether this daemon is already a swarm manager. */
+		async isSwarmActive(): Promise<boolean> {
+			const info = await this.getDocker().info();
+			return info?.Swarm?.LocalNodeState === "active";
+		}
+
+		/**
+		 * `docker swarm init` on this host, idempotent : returns false when
+		 * the daemon was already a manager. The one place this app runs a
+		 * host-level daemon operation, and it does so only because the
+		 * dashboard's own Swarm switch is otherwise a setting that changes
+		 * nothing.
+		 */
+		async initSwarm(): Promise<boolean> {
+			if (await this.isSwarmActive()) {
+				return false;
+			}
+			await this.getDocker().swarmInit({ ListenAddr: "0.0.0.0:2377" });
+			logger.info("Swarm initialised on this host");
+			return true;
+		}
+
 		/** Idempotent : swarm networks are cluster-wide, created once and reused by every swarm-mode service. */
 		async ensureSwarmNetwork(name: string): Promise<void> {
 			const docker = this.getDocker();
@@ -119,7 +154,7 @@ export function DockerSwarmMixin<
 						Type: "bind" as const,
 					})),
 				},
-				Networks: [{ Target: config.docker.networkName }],
+				Networks: [{ Target: swarmNetworkName() }],
 				Resources: {
 					Limits: {
 						MemoryBytes: params.memoryLimitMb
@@ -141,7 +176,7 @@ export function DockerSwarmMixin<
 			onProgress?: (line: string) => void,
 		): Promise<{ swarmServiceId: string }> {
 			const docker = this.getDocker();
-			await this.ensureSwarmNetwork(config.docker.networkName);
+			await this.ensureSwarmNetwork(swarmNetworkName());
 
 			const existing = await this.#findSwarmService(params.serviceId);
 			if (existing) {
@@ -163,6 +198,7 @@ export function DockerSwarmMixin<
 					containerPort: params.containerPort,
 					customDomain: params.customDomain,
 					dnsResolvable: params.dnsResolvable,
+					networkName: swarmNetworkName(),
 					projectSlug: params.projectSlug,
 					serviceId: params.serviceId,
 					slug: params.slug,

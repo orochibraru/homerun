@@ -10,15 +10,19 @@
 		Square,
 		XCircle,
 	} from "@lucide/svelte";
-	import { onDestroy, onMount } from "svelte";
+	import { onDestroy, onMount, tick } from "svelte";
+	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
-	import { refreshAll } from "$app/navigation";
+	import { goto, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import ConnectionStrings from "$lib/components/connection-strings.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
+	import ServiceGraph from "$lib/components/service-graph.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import UsageChart from "$lib/components/usage-chart.svelte";
 	import { deployPhaseStates } from "$lib/deploy-phases";
 	import { timeAgo } from "$lib/formatting";
 	import { randomId } from "$lib/random-id";
@@ -158,6 +162,12 @@
 	 * second. Falls back to pollProgress above if the stream can't be held
 	 * open (a buffering proxy, a dropped connection mid-deploy).
 	 */
+	function revisionHref(deploymentId: string): string {
+		return `${resolve("/(protected)/services/[serviceId]/revisions", {
+			serviceId: svc.id,
+		})}?deployment=${deploymentId}`;
+	}
+
 	function watchProgress(deploymentId: string) {
 		pollGeneration += 1;
 		closeProgressSource();
@@ -188,6 +198,16 @@
 			closeProgressSource();
 			pendingAction = null;
 			void refreshAll();
+			if (progressStatus === "failed") {
+				toast.error(`${svc.name} failed to deploy.`, {
+					action: {
+						label: "See why",
+						onClick: () => goto(revisionHref(deploymentId)),
+					},
+					description: "Opening the revision that failed.",
+				});
+				void goto(revisionHref(deploymentId));
+			}
 		});
 
 		source.onerror = () => {
@@ -237,10 +257,23 @@
 			success: `${svc.name} is queued for deploy.`,
 		});
 	}
+
+	let progressEl = $state<HTMLElement | undefined>();
+
+	// A build streams hundreds of lines; pinning the view to the bottom is the
+	// only way to watch one happen without chasing the scrollbar.
+	$effect(() => {
+		const lineCount = progressLines.length;
+		if (lineCount > 0 && progressEl) {
+			void tick().then(() => {
+				progressEl?.scrollTo({ top: progressEl.scrollHeight });
+			});
+		}
+	});
 </script>
 
 <!-- ═══ Actions ═══ -->
-<div class="mb-6 flex flex-wrap gap-2">
+<div class="mb-4 flex flex-wrap gap-2">
     <form action="?/deploy" method="POST" use:enhance={deployEnhance()}>
         <Button disabled={pendingAction !== null} type="submit">
             {#if pendingAction === "deploy"}
@@ -317,10 +350,30 @@
     {/if}
 </div>
 
+<div class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <UsageChart serviceId={svc.id} title="Resource usage" />
+    <div class="space-y-4">
+        <ServiceGraph
+            dependsOn={data.dependsOn}
+            name={svc.name}
+            usedBy={data.usedBy}
+        />
+        <ConnectionStrings
+            service={{
+                containerPort: svc.containerPort,
+                envVars: svc.envVars ?? {},
+                image: svc.image,
+                name: svc.name,
+                slug: svc.slug,
+            }}
+        />
+    </div>
+</div>
+
 {#if pendingAction === "deploy"}
-    <div class="glass mb-6 rounded-2xl">
+    <div class="panel mb-6 rounded-md">
         <ul class="border-border grid gap-2 border-b px-5 py-4 sm:grid-cols-3">
-            {#each deployPhaseStates(progressLines.join("\n"), progressStatus) as { phase, state } (phase.id)}
+            {#each deployPhaseStates(progressLines.join("\n"), progressStatus, svc.buildSource) as { phase, state } (phase.id)}
                 <li class="flex items-center gap-2 text-xs">
                     {#if state === "done"}
                         <CheckCircle2 class="size-3.5 shrink-0 text-emerald-500" />
@@ -339,7 +392,8 @@
             {/each}
         </ul>
         <div
-            class="h-48 overflow-y-auto rounded-b-2xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+            class="h-48 overflow-y-auto rounded-b-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+            bind:this={progressEl}
         >
             {#if progressLines.length === 0}
                 <span class="text-zinc-500">Waiting for the deploy to start…</span>
@@ -354,11 +408,11 @@
 
 {#if !(svc.containerId || pendingAction === "deploy")}
     <div
-        class="border-border bg-surface-2 text-text-muted mb-6 rounded-xl border p-4 text-sm"
+        class="border-border bg-surface-2 text-text-muted mb-6 rounded-md border p-4 text-sm"
     >
         This service hasn't been deployed yet : click <strong>Deploy</strong> to
         pull
-        <span class="text-text font-mono">{svc.image}:{svc.tag}</span>
+        <span class="text-text">{svc.image}:{svc.tag}</span>
         and start it.
     </div>
 {:else if pendingAction !== "deploy"}
@@ -374,7 +428,7 @@
         />
         <a
             class="text-accent mt-2 inline-block text-xs underline"
-            href={resolve("/(protected)/services/[serviceId]/logs", {
+            href={resolve("/(protected)/services/[serviceId]/observability", {
                 serviceId: svc.id,
             })}
         >
@@ -382,75 +436,3 @@
         </a>
     </div>
 {/if}
-
-<!-- ═══ Deployment history ═══ -->
-<section class="glass rounded-2xl">
-    <div class="border-border flex items-center gap-2 border-b px-5 py-4">
-        <Clock class="text-text-muted size-4" />
-        <h2 class="eyebrow">Deployment history</h2>
-    </div>
-
-    {#if data.deployments.length === 0}
-        <div
-            class="flex flex-col items-center justify-center py-12 text-center"
-        >
-            <p class="text-text-muted text-sm font-medium">
-                No deployments yet
-            </p>
-        </div>
-    {:else}
-        <div class="divide-border divide-y">
-            {#each data.deployments as dep (dep.id)}
-                <div>
-                    <button
-                        class="flex w-full items-center gap-4 px-5 py-3 text-left"
-                        onclick={() => {
-                            expandedDeploymentId =
-                                expandedDeploymentId === dep.id ? null : dep.id;
-                        }}
-                        type="button"
-                    >
-                        <StatusBadge status={dep.status} />
-                        <div class="min-w-0 flex-1">
-                            <p class="text-text-muted truncate text-xs">
-                                {timeAgo(dep.createdAt)}
-                                {#if dep.imageDigest}
-                                    ·
-                                    <span class="font-mono"
-                                        >{dep.imageDigest.slice(0, 19)}</span
-                                    >
-                                {/if}
-                            </p>
-                            {#if dep.errorMessage}
-                                <p class="mt-0.5 truncate text-xs text-red-500">
-                                    {dep.errorMessage}
-                                </p>
-                            {/if}
-                        </div>
-                        {#if dep.log}
-                            <ChevronDown
-                                class="
-                  text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
-                                dep.id
-                                    ? 'rotate-180'
-                                    : ''}
-                "
-                            />
-                        {/if}
-                    </button>
-                    {#if expandedDeploymentId === dep.id && dep.log}
-                        <div
-                            class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
-                        >
-                            {#each dep.log
-                                .split("\n")
-                                .filter(Boolean) as line, i (i)}
-                                <AnsiLine {line} />
-                            {/each}
-                        </div>
-                    {/if}
-                </div>
-            {/each}
-        </div>
-    {/if}
-</section>

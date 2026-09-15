@@ -30,6 +30,21 @@ const baseServiceSchema = z.object({
 		.min(1)
 		.max(65_535),
 	cpuLimit: z.string().optional(),
+	// Blank is "no custom domain". Validated the same way the Networking tab
+	// validates it, minus the uniqueness check, which needs the DB.
+	customDomain: z
+		.string()
+		.trim()
+		.toLowerCase()
+		.refine(
+			(value) =>
+				value === "" ||
+				/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(
+					value,
+				),
+			"That doesn't look like a domain name.",
+		)
+		.optional(),
 	dnsResolvable: z.preprocess(
 		(val) => val === "on" || val === true,
 		z.boolean(),
@@ -55,6 +70,7 @@ const baseServiceSchema = z.object({
 	// Swarm mode only (instanceSettings.orchestrationMode) : ignored entirely
 	// in standalone mode.
 	replicas: optionalNumber(z.coerce.number().int().min(0).max(50)),
+	pullPolicy: z.enum(["always", "missing", "never"]).default("always"),
 	restartPolicy: z
 		.enum(["no", "always", "on-failure", "unless-stopped"])
 		.default("unless-stopped"),
@@ -105,6 +121,7 @@ export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 // than the full create-time shape.
 export const updateGeneralSchema = baseServiceSchema.pick({
 	name: true,
+	pullPolicy: true,
 	restartPolicy: true,
 	slug: true,
 });

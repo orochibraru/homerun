@@ -34,41 +34,41 @@
 </script>
 
 {#snippet meter(label: string, Icon: typeof Cpu, value: string, percent: number)}
-  <div>
-    <div class="mb-1.5 flex items-center justify-between text-xs">
-      <span class="text-text-muted flex items-center gap-1.5 font-medium">
-        <Icon class="size-3.5" />
+  <div class="min-w-0 flex-1 px-4 py-3">
+    <div class="flex items-baseline justify-between gap-2">
+      <span class="eyebrow flex items-center gap-1.5">
+        <Icon class="size-3" />
         {label}
       </span>
-      <span class="tech text-text-subtle">{value}</span>
+      <span class="metric text-[1.0625rem]">{percent.toFixed(0)}<span class="text-text-subtle text-xs font-normal">%</span></span>
     </div>
-    <div class="bg-surface-2 h-1.5 overflow-hidden rounded-full">
+    <div class="bg-surface-2 mt-2 h-[3px] overflow-hidden">
       <div
-        class="h-full rounded-full transition-all duration-500 {barColor(percent)}"
+        class="h-full transition-all duration-500 {barColor(percent)}"
         style="width: {percent}%"
       ></div>
     </div>
+    <p class="tabular-nums text-text-subtle mt-1.5 text-[0.6875rem]">{value}</p>
   </div>
 {/snippet}
 
 {#snippet meterSkeleton()}
-  <div>
-    <div class="mb-1.5 flex items-center justify-between">
-      <Skeleton class="h-3.5 w-16" />
-      <Skeleton class="h-3.5 w-20" />
+  <div class="min-w-0 flex-1 px-4 py-3">
+    <div class="flex items-center justify-between">
+      <Skeleton class="h-3 w-12" />
+      <Skeleton class="h-4 w-10" />
     </div>
-    <Skeleton class="h-1.5 w-full rounded-full" />
+    <Skeleton class="mt-2 h-[3px] w-full" />
+    <Skeleton class="mt-1.5 h-3 w-20" />
   </div>
 {/snippet}
 
-<div class="glass mb-8 rounded-2xl p-5">
-  <h2 class="eyebrow mb-4">Host Resources</h2>
-
+<div class="panel">
   {#if stats.error}
-    <p class="text-text-muted text-sm">Host resource stats are unavailable right now.</p>
+    <p class="text-text-muted px-4 py-3 text-xs">Host resource stats are unavailable right now.</p>
   {:else if stats.ready}
     {@const s = stats.current}
-    <div class="grid gap-5 sm:grid-cols-3">
+    <div class="divide-border flex flex-col divide-y sm:flex-row sm:divide-x sm:divide-y-0">
       {@render meter(
         "CPU",
         Cpu,
@@ -92,10 +92,10 @@
     </div>
 
     {#if s.gpu}
-      <div class="border-border mt-5 border-t pt-4">
-        <div class="mb-1.5 flex items-center justify-between text-xs">
-          <span class="text-text-muted font-medium">GPU · {s.gpu.name}</span>
-          <span class="tech text-text-subtle">
+      <div class="border-border border-t px-4 py-3">
+        <div class="flex items-baseline justify-between gap-2">
+          <span class="eyebrow truncate">GPU · {s.gpu.name}</span>
+          <span class="tabular-nums text-text-subtle text-[0.6875rem]">
             {s.gpu.utilizationPercent}% ·
             {(s.gpu.memUsedMb / 1024).toFixed(1)}
             /
@@ -103,9 +103,9 @@
             GB
           </span>
         </div>
-        <div class="bg-surface-2 h-1.5 overflow-hidden rounded-full">
+        <div class="bg-surface-2 mt-2 h-[3px] overflow-hidden">
           <div
-            class="h-full rounded-full transition-all duration-500 {barColor(
+            class="h-full transition-all duration-500 {barColor(
               s.gpu.utilizationPercent,
             )}"
             style="width: {s.gpu.utilizationPercent}%"
@@ -114,7 +114,7 @@
       </div>
     {/if}
   {:else}
-    <div class="grid gap-5 sm:grid-cols-3">
+    <div class="divide-border flex flex-col divide-y sm:flex-row sm:divide-x sm:divide-y-0">
       {@render meterSkeleton()}
       {@render meterSkeleton()}
       {@render meterSkeleton()}

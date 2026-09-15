@@ -166,6 +166,12 @@ scheduler isn't running on behalf of a request. Due-checking is
 `cronMatches(schedule, now)` plus a `sameMinute(lastRunAt, now)` guard against a
 double-fire within one matching minute.
 
+A fourth scheduler doesn't fit `DueScheduler` and extends `BaseScheduler`
+directly: `StatsSampler` (`$lib/services/stats/stats-sampler.ts`) has no
+schedule expression and no per-row `lastRunAt`, it just samples every tick, see
+Recorded resource history in `observability.md`. It's also the only one with
+`runOnStart = true`.
+
 `DueScheduler` extends `BaseScheduler` (`cron/base-scheduler.ts`), which owns
 the shared "60s `setInterval`, HMR-safe via a `globalThis`-backed registry keyed
 on `label`, non-overlapping ticks, idempotent `start()`" boilerplate. **Keyed on

@@ -13,55 +13,126 @@ fonts, and the four custom Tailwind v4 `@utility` definitions every surface is
 built from. Nothing under `src/routes`/`src/lib` should hardcode a hex value or
 a blur/shadow stack, route it through a token here instead.
 
-- **Two typefaces.** `--font-sans` is Inter (self-hosted `@font-face` blocks
-  pointing at `static/fonts/`, plus the `@fontsource-variable/inter` import);
-  `--font-mono` is **JetBrains Mono** (`@fontsource-variable/jetbrains-mono`,
-  bundled, no CDN, same "a self-hosted app shouldn't need outbound internet to
-  render" reasoning as the Swagger UI docs page). Mono is not decorative : it
-  carries every machine-readable string, image refs (`redis:alpine`), slugs and
-  hostnames, image digests, metrics, status badges, and section labels, which is
-  most of what makes this read as infrastructure tooling rather than a generic
-  dashboard.
-- **`glass`** is the panel/card treatment : translucent `--color-surface`, a
-  `backdrop-filter` blur+saturate, a hairline border, a top inner highlight, and
-  a soft drop shadow, plus a `--glass-sheen` specular gradient over the top 45%.
-  That sheen is load-bearing, not decoration : without it a translucent panel on
-  a near-black ground reads as a flat tinted rectangle rather than as glass.
-  **`glass-strong`** is the same for elements that overlap scrolling content and
-  therefore need more opacity to stay readable (the sidebar, the sticky header,
-  the mobile drawer). **`glass-interactive`** adds the hover lift.
-- **`tech`** is `--font-mono` + `tabular-nums`, for any number that updates live
-  (the dashboard's 5s stats poll) so digits don't reflow as they change.
-  **`eyebrow`** is the small uppercase mono section label used for every panel
-  title and sidebar category heading.
-- **The ambient backdrop** (`body::before`/`::after`) is what the glass actually
-  samples : three off-screen radial color pools plus a faint 44px engineering
-  grid, both `position: fixed` so they stay put while content scrolls. **Any
-  full-height wrapper inside `(protected)/` must not paint an opaque
-  background** or it covers this and every glass surface flattens out ; the
-  layout's root div is deliberately transparent for exactly this reason.
-- **The radius scale was deliberately tightened** : `--radius` is `0.5rem` (from
-  `0.625rem`) and the multiplier curve is flatter, so `rounded-2xl` resolves to
-  `0.75rem` rather than the old `1.125rem`. Card corners are the single biggest
-  "toy vs. tool" tell, don't loosen them back up.
+- **Two typefaces, and mono is now rare.** `--font-sans` is Inter (self-hosted
+  `@font-face` blocks pointing at `static/fonts/`); `--font-mono` is JetBrains
+  Mono, and it is reserved for **code, logs and terminal output** :
+  `live-log-viewer.svelte`, `ansi-line.svelte`, the Terminal tab, System Logs,
+  the Errors tab and the env paste box. Everything else — nav, labels, status
+  badges, metrics, image refs, hostnames — is sans. An earlier pass made mono
+  the UI's voice across the board and it read as a terminal emulator rather than
+  an app. `tech` survives as _tabular figures only_ (`font-variant-numeric`), so
+  live-updating numbers still don't reflow.
+- **The design is ported from Penombre** (`orochibraru/penombre`'s
+  `src/app.css`), deliberately, because that app's look is the target. Four
+  things carry it:
+  - **The aurora.** `body::before` paints two oversized, heavily blurred radial
+    colour fields on opposite corners (`--brand-2` pink top-right, `--brand-3`
+    cyan bottom-left), `filter: blur(72px) saturate(140%)`, fixed so they stay
+    put while content scrolls. `html` holds the solid ground (`--color-bg`) and
+    `body` is transparent, so panels above can be translucent without stacking
+    washes.
+  - **Film grain.** `body::after` is an inline SVG `feTurbulence` at 3.5%
+    opacity, `mix-blend-mode: soft-light`. It exists so the aurora's gradient
+    doesn't band; keep it subtle enough that type stays crisp.
+  - **Frosted panels.** `panel` is a translucent `--color-surface` +
+    `backdrop-filter: blur(10px)` + hairline border. The blur is deliberately
+    light : heavier turns the gradient behind a card into a visible rectangle.
+    `panel-strong` is the near-opaque, heavily blurred variant for chrome that
+    overlaps scrolling content (the sticky header, the mobile drawer).
+  - **A violet brand.** `--color-accent` (and `--color-ink`, the fill primary
+    buttons paint with) is `oklch(0.54 0.25 293)` in light, brighter in dark.
+    `--radius` is `0.75rem` : soft corners, not the tightened technical ones a
+    previous pass used.
+- **The shell is a rail plus a floating pane.** `(protected)/+layout.svelte` is
+  `flex h-screen p-2 md:gap-2`: a transparent 14rem sidebar sitting directly on
+  the aurora (no panel of its own), and the page itself a `panel rounded-xl`
+  pane with the sticky header inside it. The sidebar carries the one primary
+  action (`Deploy a service`, full width, brand-filled) above the nav, the way
+  Penombre's "New" button does.
+- **The accent picker has to move more than one variable, and it has to move
+  them on the document root.** `/profile/appearance` writes `--color-accent`,
+  and the `(protected)` layout's `accentCss` also sets `--color-ink`,
+  `--primary` and `--ring` from the same hex. Overriding only `--color-accent`
+  leaves every button on the stock violet, which is exactly what "the accent
+  switch doesn't work on buttons" meant. Two further traps, both real bugs that
+  shipped:
+  - **It's a `<svelte:head>` rule, not a `style=""` on the layout wrapper.**
+    bits-ui portals every dialog, popover, dropdown and tooltip out to
+    `document.body`, so anything rendered inside one sits outside that wrapper
+    and keeps the stock colour — which is how the notification bell's link
+    buttons stayed violet while the page behind them followed the picker.
+  - **The selector is `:root:root`, not `:root`.** SvelteKit assembles its head
+    as `[component head, style tags, stylesheet links]` (`Head.build()` in
+    `@sveltejs/kit`'s `render.js`), so a `<svelte:head>` rule is emitted
+    _before_ `layout.css` and loses a same-specificity tie against it. Doubling
+    the selector wins on specificity instead, over both `:root` and `.dark`,
+    whatever the order. `tests/e2e/ui-appearance.spec.ts` asserts the chosen hex
+    reaches a portaled popover, which is the assertion that caught both.
+- **`eyebrow`** is a small sans semibold label (no longer uppercase mono), used
+  for panel titles and sidebar group headings. **`metric`** is the large tabular
+  number on the stat tiles. **`panel-head`** is the shared card-header strip.
 - Both themes are real and both are checked : light is `:root`, dark is `.dark`
-  (driven by `mode-watcher`, see Appearance preferences below). Every token that
-  differs between them is redefined in both blocks, a color defined only in one
-  is a bug.
+  (driven by `mode-watcher`). Every token that differs between them is redefined
+  in both blocks, a color defined only in one is a bug.
+
+**`layout.css` is formatted by biome, not prettier.** Biome owns CSS here
+(`biome.json`'s `css.parser`), and it indents with tabs; prettier has no
+`useTabs` in `.prettierrc` and rewrites the whole file to spaces, which is a
+600-line diff that nothing then checks. Run `bunx biome check --write` on it.
 
 **Sweeping this file's tokens is how a global visual change is made**, not a
-per-route pass : the redesign that introduced this section changed ~40 route
-files, but almost all of that was one mechanical substitution
-(`border border-border bg-surface` → `glass`). **A real bug came out of doing
-that with a `\b`-anchored regex**: `bg-surface\b` matches inside `bg-surface-2`,
+per-route pass : both redesigns so far changed ~65 files, and almost all of that
+was one mechanical substitution (`border border-border bg-surface` → `glass` the
+first time, `glass` → `panel` the second). **A real bug came out of doing that
+with a `\b`-anchored regex**: `bg-surface\b` matches inside `bg-surface-2`,
 silently producing a bogus `glass-2` class that Tailwind emits nothing for.
-Match on whole class tokens, not substrings.
+Match on whole class tokens, not substrings, and order the replacements
+longest-first (`glass-strong` before `glass`) for the same reason. `\bglass\b`
+also matches inside `--glass-highlight`, which is how a dangling
+`var(--panel-highlight)` got left behind in three files : grep the CSS variable
+names separately afterward.
+
+**One list/grid component, `entity-list.svelte`.** It takes `items` (each
+`{id, title, subtitle?, description?, href?}`) plus optional
+`media`/`badge`/`meta`/`actions` snippets and a `selectedIds`/`onToggleSelect`
+pair, and renders both the list view (one `panel`, rows separated by hairlines)
+and the card view from the same data. It replaced `entity-list-view.svelte`,
+which took raw `row`/`card` snippets : every page drew its own row chrome, so
+each list had different padding, and once the shared container became a panel
+the pages that still drew a `panel` per row showed **double borders with no gap
+between items**. Services, templates, projects and storage go through it; the
+remaining five list pages (remote hosts, S3 destinations, cron jobs, build
+cache, git providers) still hand-roll their row internals inside the same
+panel/divider shell, see `TODO.md`.
+
+`entity-list.svelte` also takes a **`wrapper`** snippet, which the services list
+uses to put every row inside a right-click `ContextMenu` (start/stop/ restart,
+settings, delete, Link to…, group into a project, ungroup) without each page
+rebuilding its own row markup. The wrapper receives the item and a no-argument
+body snippet; that shape is deliberate, a `Snippet<[T]>` body can't be assigned
+across the generic boundary.
+
+**The resource graphs** (`usage-chart.svelte`, `service-usage-table.svelte`)
+read `stat_sample` through `$lib/remote/stats.remote.ts`. The chart is a plain
+inline SVG path over a `0 0 100 40` viewBox — no chart library, same "a
+self-hosted app shouldn't need a CDN" reasoning as the bundled fonts — with
+metric (CPU/memory/traffic) and range (live…all) switches, and it refreshes
+itself every 5s only on the live range. `service-graph.svelte` is the service
+overview's Connections diagram.
+
+**Verify a visual change by actually looking at it.** `tests/e2e/`'s harness
+boots a real app against a real Postgres (`bun run build:app`, then a throwaway
+spec under `tests/e2e/` run with `bun run test:e2e -- tests/e2e/<name>.spec.ts`)
+: sign up, click through onboarding, and screenshot the pages you touched in
+both themes (set `localStorage["mode-watcher-mode"] = "dark"` and reload for the
+dark pass). Delete the spec afterward. Reasoning about token values alone is how
+you ship a button that turns out to be grey.
 
 ## Page width and layout
 
 Covered as a hard rule under Conventions above, repeated here because it's a
 layout decision rather than a code-style one: **dashboard pages fill the
-viewport** (`p-6 md:p-8`, no `mx-auto`, no `max-w-*`). `/authentication` shipped
+viewport** (`p-5 md:p-6`, no `mx-auto`, no `max-w-*`). `/authentication` shipped
 with `mx-auto max-w-4xl` and looked broken on an ultrawide display, with the
 whole page squeezed into a centre column; `remote-hosts/[hostId]` had the same
 defect (`mx-auto max-w-2xl`). Both now follow the same wrapper every other page
@@ -83,8 +154,18 @@ multi-step form needs, extracted while building the onboarding wizard, see
 Onboarding below; not yet retrofitted onto `services/new`'s own inlined
 equivalent), and `skeleton.svelte` (one pulsing placeholder block, sized by a
 `class` prop, the pending branch every remote-query-backed panel renders, see
-Remote functions below). If you're touching a page with an inline empty-state or
-the same three class-string literals, prefer wiring in the shared version over
+Remote functions below), `alert.svelte` (the inline banner, `error`/`warning`/
+`info`/`success`, optional `title` and `actions` snippet, `role="alert"` when
+it's an error — eight pages had hand-rolled the same
+`border-red-200 bg-red-50 …` div before it existed), `async-block.svelte`
+(pending/ready/failed over one remote query, with a Retry, see Remote functions
+in `services-and-templates.md`), and `error-boundary.svelte` (a
+`<svelte:boundary>` whose `failed` snippet is an `Alert` with a **Try again**
+that calls `reset` — wrapped around `{@render children()}` in
+`(protected)/+layout.svelte`, so a render error in any dashboard page is a
+banner in the content area with the sidebar and header still usable, instead of
+a blank screen). If you're touching a page with an inline empty-state or the
+same three class-string literals, prefer wiring in the shared version over
 copy-pasting again, but this is opportunistic, not a mandate to refactor
 unrelated pages.
 
@@ -146,22 +227,36 @@ users, backups):
 
 **The signed-out surfaces** (`auth/sign-in`, `auth/sign-up`,
 `auth/sign-up/confirm`, `auth/accept-invite`, `auth/error`) all render through
-`auth-shell.svelte`: a two-pane layout with a brand/pitch panel on the left
-(hidden below `lg`, carrying `brand-mark.svelte`, three product highlights and a
-mono deploy-log card) and a `max-w-md` form column on the right, taking
-`eyebrow`/`heading`/`subheading` props plus `children` (the form, rendered in a
-`glass` card), an optional `below` snippet for content outside that card (the
-confirm page's dev-bypass panel) and an optional `footer` snippet for the
-trailing "Don't have an account?" line. **Don't paint an opaque background on
-these pages** — the pre-redesign versions wrapped themselves in `bg-bg`, which
-hid the ambient backdrop the glass is supposed to sample (same rule as the
-`(protected)/` wrappers above). `brand-mark.svelte` is the glowing-dot +
-`homerun` mono wordmark from the sidebar, in `sm`/`lg`; it's also the "gated by"
-footer on `app-auth`. `password-field.svelte` (label + `Input` + show/hide eye
-toggle) and `password-strength.svelte` (the four-bar meter over
-`getPasswordStrength`) replaced the copy of that markup each of those four forms
-carried. The pages that predated this also carried stale `LocalRun` branding and
-a hand-rolled `inputClass`, both gone.
+`auth-shell.svelte`: one `max-w-md` column centred on an otherwise empty page,
+carrying `brand-mark.svelte`, then the heading block, then the form in a `panel`
+card. It takes `eyebrow`/`heading`/`subheading` props plus `children` (the
+form), an optional `below` snippet for content outside that card (the confirm
+page's dev-bypass panel) and an optional `footer` snippet for the trailing
+"Don't have an account?" line. It used to be a two-pane layout with a
+product-pitch panel (highlights, a mono deploy-log card, a blurred accent blob)
+filling the left half — deliberately dropped: this is a single-user self-hosted
+app's login screen, nobody arriving at it needs to be sold the product.
+`brand-mark.svelte` is the accent square + `homerun` mono wordmark from the
+sidebar, in `sm`/`lg`; it's also the "gated by" footer on `app-auth`.
+`password-field.svelte` (label + `Input` + show/hide eye toggle) and
+`password-strength.svelte` (the four-bar meter over `getPasswordStrength`)
+replaced the copy of that markup each of those four forms carried. The pages
+that predated this also carried stale `LocalRun` branding and a hand-rolled
+`inputClass`, both gone.
+
+**Every list page now renders its rows through `entity-list.svelte`.** Remote
+hosts, S3 destinations, cron jobs, build cache registries and git providers used
+to hand-roll their row internals inside the same panel/divider shell, which is
+how they drifted : different title weights, different subtitle separators, a
+status line in one and a badge in another. They map their rows to `EntityRow`
+(`id`/`title`/`subtitle`/`description`/`href`) and pass the page-specific parts
+as `media`/`badge`/`meta`/`actions` snippets, which is what those snippets are
+for — an agent's reachability line is `meta`, a provider's Connected pill is
+`badge`. They gained a card view along the way, since `EntityList` takes a
+`ViewMode` either way and the toggle costs one `trailing` snippet in the
+toolbar. Git providers is the one exception to that: it has no toolbar, so it
+stays list-only, and its admin-only callback URL moved from a bordered line
+under the row into the row's own `description`.
 
 `confirm-dialog.svelte` gained an optional `confirmPhrase` prop: when set, the
 dialog renders an input and the confirm button stays disabled until the typed

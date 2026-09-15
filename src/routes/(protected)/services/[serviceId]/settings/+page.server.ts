@@ -145,6 +145,7 @@ export const actions = {
 
 		await svc.update({
 			name: input.name,
+			pullPolicy: input.pullPolicy,
 			restartPolicy: input.restartPolicy,
 			slug: input.slug,
 		});

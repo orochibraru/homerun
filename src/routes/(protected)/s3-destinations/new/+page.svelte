@@ -16,9 +16,9 @@
 	let submitting = $state(false);
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
     <div class="mb-8">
-        <h1 class="text-text text-xl font-semibold tracking-tight">Add an S3 destination</h1>
+        <h1 class="text-text text-lg font-semibold tracking-tight">Add an S3 destination</h1>
         <p class="mt-1 text-sm text-text-muted">
             Any S3-compatible bucket (AWS S3, MinIO, R2, Backblaze B2). Pick it
             from any volume's backup config once it's added here.
@@ -27,7 +27,7 @@
 
     <form
         action="?/create"
-        class="mb-6 space-y-4 rounded-2xl glass p-5"
+        class="mb-6 space-y-4 rounded-md panel p-5"
         method="POST"
         use:enhance={enhanceToast({
           error: "Check the form for errors.",
@@ -61,7 +61,7 @@
         <div>
             <label class={label} for="endpoint">Endpoint</label>
             <Input
-                class="font-mono"
+                class=""
                 id="endpoint"
                 name="endpoint"
                 placeholder="https://s3.us-east-1.amazonaws.com"

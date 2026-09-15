@@ -54,7 +54,7 @@
     </p>
   </div>
 
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <p class={label}>Start from a preset</p>
       <div class="flex flex-wrap gap-2">
@@ -73,7 +73,7 @@
       <p class="text-text-subtle mt-2 text-xs">
         A preset fills in the discovery URL shape, scopes and PKCE default for
         that product. Replace the
-        <span class="font-mono">{"{placeholders}"}</span>
+        <span class="">{"{placeholders}"}</span>
         with your own values.
       </p>
     </div>
@@ -95,7 +95,7 @@
       })}
     >
       {#if form?.error}
-        <p class="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500">
+        <p class="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-500">
           {form.error}
         </p>
       {/if}

@@ -174,10 +174,30 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `project`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
   member service's container name and public subdomain, see Docker integration
   below). Every project has a matching Docker network (see below), created
-  alongside the row and removed on cascade-delete. Known gap: account deletion's
-  cascade cleans up a user's services/containers but not their `project` rows,
-  harmless clutter today (FK pragma is off) but should get the same explicit
-  treatment eventually (see TODO.md Chores).
+  alongside the row and removed on cascade-delete. Account deletion covers these
+  twice over: `UserService.cleanupUserResources` removes each project's Docker
+  network and then deletes the rows explicitly, and `project.userId` is
+  `onDelete: "cascade"` underneath that.
+- `stat_sample`, one point on the resource graphs: `serviceId` (null = the host
+  itself), CPU%, memory, the cumulative network counters and a timestamp,
+  written every minute by `StatsSampler` and read back bucketed per range. See
+  Recorded resource history in `observability.md` for why it's raw samples
+  rather than rollup tables.
+- `uptime_check`, one appended row per liveness probe per tick (the heartbeat
+  strips read the last 40, "now" is the newest). See Uptime probes in
+  `observability.md`.
+- `status_page`, a published-or-private page grouping services: `scope`
+  (`"global"` | `"project"` | `"custom"`), nullable `projectId`, unique `slug`,
+  `isPublic`. A `global`/`project` page resolves its members **live** from
+  `service` on every read, so a newly deployed service appears without editing
+  the page; only a `custom` page reads `status_page_service`. See Status pages
+  in `services-and-templates.md`.
+- `status_page_service`, the explicit membership join for a `custom` page only,
+  with a unique index on (`statusPageId`, `serviceId`).
+- `notification_channel`, a webhook URL or email address alerted on an uptime
+  state change: `kind`, `target`, `enabled`, `lastError` (the last failure, so a
+  silently-broken channel is visible), and a nullable `statusPageId` — null
+  means "every status page", set means just that one.
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).
 - `template_link`, a template linking to another template (a database, a cache,
@@ -217,7 +237,11 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `build_cache_registry` (`BuildCacheRegistryDTO`), a per-user container
   registry credential (`registryUrl` with no scheme, `username`, `passwordEnc`)
   used only as a build cache source/destination, not as a deploy image source,
-  managed on `/build-cache-registries`. See Git-based builds below.
+  managed on `/build-cache-registries`. See Git-based builds below. Editable in
+  place from `/build-cache-registries/[registryId]` (`update()`, with a blank
+  password meaning "keep the stored one", the same convention the SMTP password
+  field uses); it was create-and-delete-only before, so fixing a typo meant
+  re-adding it and re-picking it on every service that used it.
 - `service_volume`, join table: one mount of one `storage_volume` into one
   `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by
   being mounted into more than one service, no separate project-volume concept.

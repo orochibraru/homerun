@@ -2,6 +2,7 @@ import { dev } from "$app/env";
 import { config, isSmtpEnabled } from "$lib/config";
 import { db } from "$lib/server/db/lib";
 import { user as userTable } from "$lib/server/db/schema";
+import { hasTraefikRouterFor } from "./docker/labels.ts";
 import { DockerService } from "./docker.service.ts";
 
 export interface SetupCheck {
@@ -70,6 +71,14 @@ class AdminServiceClass {
 			await this.#dockerCheck(),
 		];
 
+		const dashboardHost = this.#dashboardHost();
+		if (dashboardHost) {
+			const routing = await this.#dashboardRouterCheck(dashboardHost);
+			if (routing) {
+				checks.push(routing);
+			}
+		}
+
 		if (config.smtp.enabled) {
 			checks.push(this.#smtpCheck());
 		}
@@ -130,6 +139,40 @@ class AdminServiceClass {
 			envVar: "ORIGIN",
 			id: "origin",
 			label: "Origin URL",
+			severity: "warn",
+		};
+	}
+
+	#dashboardHost(): string | null {
+		if (!config.auth.origin) {
+			return null;
+		}
+		try {
+			const url = new URL(config.auth.origin);
+			return url.port ? null : url.hostname;
+		} catch {
+			return null;
+		}
+	}
+
+	async #dashboardRouterCheck(host: string): Promise<SetupCheck | null> {
+		const labels = await DockerService.selfContainerLabels().catch(() => null);
+		if (!labels) {
+			return null;
+		}
+		if (hasTraefikRouterFor(labels, host)) {
+			return {
+				detail: `This container carries a Traefik router for ${host}.`,
+				id: "dashboard-router",
+				label: "Dashboard routing",
+				severity: "ok",
+			};
+		}
+		return {
+			detail: `Nothing routes ${host} to this container, so the dashboard answers only on its published port and Traefik returns 404 for that hostname. Its compose file needs Traefik labels on this service : the installer generates them from DASHBOARD_DOMAIN, but a compose file written before that was added has none, and labels are only read when a container is created.`,
+			envVar: "DASHBOARD_DOMAIN",
+			id: "dashboard-router",
+			label: "Dashboard routing",
 			severity: "warn",
 		};
 	}

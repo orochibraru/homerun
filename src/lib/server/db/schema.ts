@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
+	doublePrecision,
 	index,
 	integer,
 	jsonb,
@@ -9,7 +10,14 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { ContainerStatus, JobStatus, JobType } from "$lib/types";
+import type {
+	ContainerStatus,
+	JobStatus,
+	JobType,
+	NotificationChannelKind,
+	PullPolicy,
+	StatusPageScope,
+} from "$lib/types";
 
 export const user = pgTable("user", {
 	banExpires: timestamp("ban_expires", { mode: "date" }),
@@ -337,6 +345,17 @@ export const instanceSettings = pgTable("instance_settings", {
 	// creates a site itself.
 	pangolinMainSiteName: text("pangolin_main_site_name"),
 	pangolinOrgId: text("pangolin_org_id"),
+	// When true, a created Resource keeps Pangolin's own SSO gate and this
+	// app's per-service login wall steps aside for anything published through
+	// Pangolin : one login instead of two. Default (false/null) is the
+	// reverse, Homerun owns access and every Resource it creates is created
+	// with `sso: false` (see $lib/services/pangolin.service.ts).
+	pangolinOwnsAuth: boolean("pangolin_owns_auth"),
+	// The host a Resource's Target points at, as resolved from the Pangolin
+	// site agent (usually newt), null defaults to "localhost", which is only
+	// right when that agent runs on this host with host networking : anything
+	// else needs this host's LAN address.
+	pangolinTargetHost: text("pangolin_target_host"),
 	// Local port a Resource's Target forwards to on pangolinMainSiteName's
 	// host, null defaults to 80 (this app's own Traefik entrypoint, assumed
 	// to be running on the same host as the Pangolin site agent, HTTP-only :
@@ -434,6 +453,10 @@ export const template = pgTable(
 		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
 		sourceUrl: text("source_url"),
 		tag: text("tag").default("latest").notNull(),
+		// Free-form search keywords ("sql", "s3", "monitoring"), matched by the
+		// gallery's search box alongside name/description/image : a category is
+		// one bucket per template, these are many and overlap.
+		tags: text("tags").array().default([]).notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
 			.notNull(),
@@ -511,6 +534,11 @@ export const service = pgTable(
 		containerId: text("container_id"),
 		containerPort: integer("container_port").notNull(),
 		cpuLimit: text("cpu_limit"),
+		// Errors older than this are hidden on the Observability tab. Set by
+		// the "Clear errors" button, and automatically by a deploy that goes
+		// live : errorsDismissedByDeploymentId is that revision.
+		errorsDismissedAt: timestamp("errors_dismissed_at", { mode: "date" }),
+		errorsDismissedByDeploymentId: text("errors_dismissed_by_deployment_id"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// Standard 5-field cron expression ("min hour day month weekday"),
 		// evaluated in the server's local time : see $lib/services/cron.service.ts.
@@ -589,6 +617,11 @@ export const service = pgTable(
 		// = "swarm") : ignored entirely in standalone mode, always 1 container.
 		// Editable on the Compute tab.
 		replicas: integer("replicas").default(1).notNull(),
+		// always | missing | never
+		pullPolicy: text("pull_policy")
+			.$type<PullPolicy>()
+			.default("always")
+			.notNull(),
 		// no | always | on-failure | unless-stopped
 		restartPolicy: text("restart_policy").default("unless-stopped").notNull(),
 		// subdomain: <slug>.<baseDomain>
@@ -600,6 +633,7 @@ export const service = pgTable(
 		// live container id per-task when one's needed, e.g. the Terminal
 		// tab : see docker/swarm.ts).
 		swarmServiceId: text("swarm_service_id"),
+		uptimeEnabled: boolean("uptime_enabled").default(true).notNull(),
 		tag: text("tag").default("latest").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())
@@ -622,8 +656,15 @@ export const deployment = pgTable(
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		errorMessage: text("error_message"),
 		finishedAt: timestamp("finished_at", { mode: "date" }),
+		// The commit this revision actually built, for a git-sourced service :
+		// "latest" on a branch says nothing about what ran, the SHA does.
+		gitCommit: text("git_commit"),
+		gitRef: text("git_ref"),
 		id: text("id").primaryKey(),
 		imageDigest: text("image_digest"),
+		// The image:tag this revision ran, recorded at deploy time so a later
+		// retag doesn't rewrite history.
+		imageRef: text("image_ref"),
 		// Progress lines appended live during deploy ("Pulling image...",
 		// "Starting container...") : polled by the Overview tab while a deploy
 		// is in flight, kept around after for a lightweight audit trail.
@@ -888,6 +929,76 @@ export const notification = pgTable(
 	],
 );
 
+/**
+ * One point on the resource graphs, written every minute by
+ * services/stats-sampler.ts. `serviceId` null is the host itself, so the
+ * dashboard's own chart and a service's scoped chart read the same table.
+ *
+ * Deliberately a raw sample rather than pre-rolled buckets: at a minute
+ * apart, a year of host samples is ~525k rows and Postgres aggregates them
+ * per range at query time (see StatSampleDTO.history), which is far less
+ * machinery than maintaining rollup tables, and the retention prune keeps
+ * the table from growing without bound.
+ */
+export const statSample = pgTable(
+	"stat_sample",
+	{
+		cpuPercent: doublePrecision("cpu_percent").notNull(),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		diskUsedGb: doublePrecision("disk_used_gb"),
+		id: text("id").primaryKey(),
+		memLimitMb: doublePrecision("mem_limit_mb"),
+		memUsedMb: doublePrecision("mem_used_mb").notNull(),
+		// Cumulative counters as the daemon reports them, not deltas : a
+		// container's own counters reset when it restarts, so the rate is
+		// derived per bucket at read time and clamped at zero.
+		netRxBytes: doublePrecision("net_rx_bytes"),
+		netTxBytes: doublePrecision("net_tx_bytes"),
+		serviceId: text("service_id").references(() => service.id, {
+			onDelete: "cascade",
+		}),
+	},
+	(table) => [
+		index("statSample_serviceId_createdAt_idx").on(
+			table.serviceId,
+			table.createdAt,
+		),
+	],
+);
+
+/**
+ * One liveness probe result, **appended** every tick : the panel draws the last
+ * few dozen as a heartbeat strip, so history is the point, and "now" is just
+ * the newest row per (service, kind).
+ *
+ * `internal` is "the container's own port answers on the Docker network";
+ * `external` is "the hostname Traefik publishes answers". They fail
+ * independently and for different reasons, which is the whole point of probing
+ * both. Retention is a week, pruned by the probe itself.
+ */
+export const uptimeCheck = pgTable(
+	"uptime_check",
+	{
+		checkedAt: timestamp("checked_at", { mode: "date" }).notNull(),
+		detail: text("detail"),
+		id: text("id").primaryKey(),
+		kind: text("kind").$type<"internal" | "external">().notNull(),
+		latencyMs: integer("latency_ms"),
+		ok: boolean("ok").notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		target: text("target"),
+	},
+	(table) => [
+		index("uptimeCheck_serviceId_kind_checkedAt_idx").on(
+			table.serviceId,
+			table.kind,
+			table.checkedAt,
+		),
+	],
+);
+
 export const job = pgTable(
 	"job",
 	{
@@ -1073,6 +1184,72 @@ export const serviceVolumeRelations = relations(serviceVolume, ({ one }) => ({
 }));
 
 export type UserRole = "user" | "admin";
+export const statusPage = pgTable(
+	"status_page",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		description: text("description"),
+		id: text("id").primaryKey(),
+		isPublic: boolean("is_public").notNull().default(false),
+		name: text("name").notNull(),
+		projectId: text("project_id").references(() => project.id, {
+			onDelete: "cascade",
+		}),
+		scope: text("scope").$type<StatusPageScope>().notNull(),
+		slug: text("slug").notNull().unique(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("statusPage_userId_idx").on(table.userId)],
+);
+
+export const statusPageService = pgTable(
+	"status_page_service",
+	{
+		id: text("id").primaryKey(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		statusPageId: text("status_page_id")
+			.notNull()
+			.references(() => statusPage.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		uniqueIndex("statusPageService_pageId_serviceId_uidx").on(
+			table.statusPageId,
+			table.serviceId,
+		),
+		index("statusPageService_serviceId_idx").on(table.serviceId),
+	],
+);
+
+export const notificationChannel = pgTable(
+	"notification_channel",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		enabled: boolean("enabled").notNull().default(true),
+		id: text("id").primaryKey(),
+		kind: text("kind").$type<NotificationChannelKind>().notNull(),
+		lastError: text("last_error"),
+		name: text("name").notNull(),
+		statusPageId: text("status_page_id").references(() => statusPage.id, {
+			onDelete: "cascade",
+		}),
+		target: text("target").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("notificationChannel_userId_idx").on(table.userId)],
+);
+
 export type Project = typeof project.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type TemplateLink = typeof templateLink.$inferSelect;
@@ -1089,6 +1266,11 @@ export type RemoteHost = typeof remoteHost.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
 export type Notification = typeof notification.$inferSelect;
+export type StatSample = typeof statSample.$inferSelect;
+export type UptimeCheck = typeof uptimeCheck.$inferSelect;
+export type StatusPage = typeof statusPage.$inferSelect;
+export type StatusPageService = typeof statusPageService.$inferSelect;
+export type NotificationChannel = typeof notificationChannel.$inferSelect;
 export type Job = typeof job.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;

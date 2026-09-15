@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Loader2, RefreshCw, Terminal } from "@lucide/svelte";
-	import { onDestroy, onMount, tick } from "svelte";
+	import { onDestroy, tick } from "svelte";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 
@@ -12,10 +12,13 @@
 		serviceId,
 		containerId,
 		heightClass = "h-[28rem]",
+		logsUrl,
 	}: {
 		serviceId: string;
 		containerId: string | null;
 		heightClass?: string;
+		/** Overrides the per-service stream, for a container that isn't one (see System Logs). */
+		logsUrl?: string;
 	} = $props();
 
 	let lines = $state<string[]>([]);
@@ -35,7 +38,8 @@
 
 		try {
 			const res = await fetch(
-				resolve("/(protected)/services/[serviceId]/logs", { serviceId }),
+				logsUrl ??
+					resolve("/(protected)/services/[serviceId]/logs", { serviceId }),
 			);
 			if (!(res.ok && res.body)) {
 				errored = true;
@@ -71,7 +75,26 @@
 		}
 	}
 
-	onMount(connect);
+	// Reconnects whenever the service (or its container) changes, not just on
+	// mount. Navigating between two services keeps this component instance
+	// alive — SvelteKit reuses it across the same route — so a mount-only
+	// connect left the previous container's stream running under the new
+	// service's page, which is what "clicking a linked service doesn't refresh
+	// the logs" was.
+	$effect(() => {
+		const target = `${serviceId}:${containerId ?? ""}`;
+		void target;
+		cancelled = true;
+		reader?.cancel();
+		reader = undefined;
+		cancelled = false;
+		void connect();
+
+		return () => {
+			cancelled = true;
+			reader?.cancel();
+		};
+	});
 
 	onDestroy(() => {
 		cancelled = true;
@@ -84,7 +107,7 @@
 	}
 </script>
 
-<section class="glass rounded-2xl">
+<section class="panel rounded-md">
   <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
     <div class="flex items-center gap-2">
       <Terminal class="text-text-muted size-4" />

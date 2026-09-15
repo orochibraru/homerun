@@ -4,6 +4,7 @@ import {
 	desc,
 	eq,
 	inArray,
+	isNotNull,
 	isNull,
 	ne,
 	or,
@@ -18,7 +19,7 @@ import {
 	type PagedResult,
 	searchCondition,
 } from "$lib/server/list-query";
-import type { ContainerStatus } from "$lib/types";
+import type { ContainerStatus, PullPolicy } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
 /** Fields a caller supplies to insert a new service row. */
@@ -29,6 +30,7 @@ export interface NewServiceInput {
 	buildSource?: "image" | "git";
 	containerPort: number;
 	cpuLimit?: string | null;
+	customDomain?: string | null;
 	dnsResolvable?: boolean;
 	envVars: Record<string, string>;
 	gitBuildContext?: string | null;
@@ -44,6 +46,7 @@ export interface NewServiceInput {
 	registryPasswordEnc?: string | null;
 	registryUrl?: string | null;
 	registryUsername?: string | null;
+	pullPolicy?: PullPolicy;
 	replicas?: number;
 	restartPolicy: string;
 	slug: string;
@@ -76,6 +79,8 @@ export type ServiceUpdateInput = Partial<
 		| "desiredState"
 		| "dnsResolvable"
 		| "envVars"
+		| "errorsDismissedAt"
+		| "errorsDismissedByDeploymentId"
 		| "gitBuildContext"
 		| "gitDockerfilePath"
 		| "gitRef"
@@ -86,6 +91,7 @@ export type ServiceUpdateInput = Partial<
 		| "networkMode"
 		| "portProtocol"
 		| "projectId"
+		| "pullPolicy"
 		| "registryPasswordEnc"
 		| "registryUrl"
 		| "registryUsername"
@@ -93,6 +99,7 @@ export type ServiceUpdateInput = Partial<
 		| "restartPolicy"
 		| "slug"
 		| "swarmServiceId"
+		| "uptimeEnabled"
 		| "tag"
 	>
 >;
@@ -264,6 +271,24 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return rows.map((row) => new ServiceDTO(row));
 	}
 
+	/**
+	 * Every service with a live container, for the per-minute stats sampler.
+	 * Unscoped by owner deliberately, same precedent as `listCronEnabled`:
+	 * this is a system-triggered sweep, not a user-facing access path.
+	 */
+	static async listRunningWithContainers(): Promise<ServiceDTO[]> {
+		const rows = await db
+			.select()
+			.from(service)
+			.where(
+				and(
+					isNotNull(service.containerId),
+					eq(service.currentStatus, "running"),
+				),
+			);
+		return rows.map((row) => new ServiceDTO(row));
+	}
+
 	/** Whether `customDomain` is already taken by a *different* service. */
 	static async customDomainTaken(
 		customDomain: string,
@@ -323,6 +348,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			networkMode: input.networkMode ?? "bridge",
 			portProtocol: input.portProtocol ?? "tcp",
 			projectId: input.projectId ?? null,
+			pullPolicy: input.pullPolicy ?? "always",
 			replicas: input.replicas ?? 1,
 		} satisfies Partial<Service>;
 	}
@@ -339,7 +365,9 @@ export class ServiceDTO extends BaseDTO<Service> {
 			cronLastRunAt: null,
 			cronSchedule: null,
 			currentStatus: "pending",
-			customDomain: null,
+			errorsDismissedAt: null,
+			errorsDismissedByDeploymentId: null,
+			customDomain: input.customDomain ?? null,
 			customSslCertEnc: null,
 			customSslKeyEnc: null,
 			desiredState: "stopped",
@@ -351,6 +379,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			slug: input.slug,
 			swarmServiceId: null,
 			tag: input.tag,
+			uptimeEnabled: true,
 			updatedAt: now,
 			userId: input.userId,
 		};
@@ -361,6 +390,13 @@ export class ServiceDTO extends BaseDTO<Service> {
 	async update(input: ServiceUpdateInput): Promise<void> {
 		await db.update(service).set(input).where(eq(service.id, this.row.id));
 		Object.assign(this.row, input);
+	}
+
+	async dismissErrors(deploymentId: string | null): Promise<void> {
+		await this.update({
+			errorsDismissedAt: new Date(),
+			errorsDismissedByDeploymentId: deploymentId,
+		});
 	}
 
 	async resolveOrphan(): Promise<void> {
@@ -427,6 +463,12 @@ export class ServiceDTO extends BaseDTO<Service> {
 	get currentStatus(): Service["currentStatus"] {
 		return this.row.currentStatus;
 	}
+	get pullPolicy(): PullPolicy {
+		return this.row.pullPolicy;
+	}
+	get errorsDismissedAt(): Date | null {
+		return this.row.errorsDismissedAt;
+	}
 	get projectId(): string | null {
 		return this.row.projectId;
 	}
@@ -492,6 +534,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get swarmServiceId(): string | null {
 		return this.row.swarmServiceId;
+	}
+
+	get uptimeEnabled(): boolean {
+		return this.row.uptimeEnabled;
 	}
 	get networkMode(): Service["networkMode"] {
 		return this.row.networkMode;

@@ -58,6 +58,39 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
   _internal_ alias is never project-prefixed, only the container name and public
   subdomain are, sibling services keep addressing each other by plain slug) →
   `DockerService.ensureProjectNetwork`/`removeProjectNetwork`/`connectToProjectNetwork`.
+  `connectToProjectNetwork` calls `ensureProjectNetwork` itself first, same
+  re-assert-on-every-deploy shape as `createAndStartContainer`'s own
+  `ensureSharedNetwork()` call below: a network a prune or a Docker Cleanup run
+  removed out from under a still-live project row gets recreated, rather than
+  failing every subsequent deploy with a raw dockerode 404.
+- `core-services.ts`, `DockerCoreServicesMixin`, the Traefik container itself :
+  `findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`
+  (image-only recreate), plus **`applyTraefikFlags(flags)`**, which rewrites
+  `--key=value` entries on the _running_ container's command line and recreates
+  it from its own inspected config. That one crosses the line
+  `updateTraefikContainer` documents ("never invents new command-line flags") on
+  purpose: Traefik reads its ACME account, its providers and its entrypoints
+  from **static** configuration at process start, so a dashboard field that only
+  writes a database row is a field that does nothing. Two callers today:
+  `applyAcmeEmail` (Settings → Networking) and `enableSwarmMode`. Both no-op
+  when every flag already holds the requested value, so saving an unchanged
+  section never bounces the proxy. `applyFlags` itself is a pure exported
+  function with its own unit test (`tests/unit/app/traefik-flags.test.ts`) : it
+  matches whole keys, so `providers.docker` never clobbers
+  `providers.docker.exposedbydefault`, and a null value removes a flag.
+- **Switching orchestration mode actually prepares the host.**
+  `enableSwarmMode()` runs `docker swarm init` if the daemon isn't a manager,
+  ensures an **attachable overlay** network, attaches Traefik to it and turns on
+  `--providers.swarm`. The overlay is deliberately a _second_ network,
+  `<networkName>-swarm` (`swarmNetworkName()`): swarm services can only join an
+  overlay, the shared network already exists as a bridge with the app and
+  Traefik attached, and a live bridge network can't be converted in place.
+  `buildContainerLabels` therefore takes a `networkName` so a swarm service's
+  `traefik.docker.network` points at the overlay. `disableSwarmMode()` removes
+  the provider flags and **leaves the swarm running** :
+  `docker swarm leave --force` would kill every swarm service on the host,
+  including ones this app never created, which is not something a dashboard
+  select should do behind your back.
 - `containers.ts`, `DockerContainerMixin` (the old `service.ts`, renamed to
   avoid reading as "the Service service" next to `dto/service-dto.ts`), the
   operational surface, merged in right after the network mixin (see the ordering
@@ -83,7 +116,10 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
     `DeploymentService.deployService()` instead (see above), which wraps it with
     deployment-row bookkeeping. → `DockerService.createAndStartContainer`.
   - `start/stop/restartContainer`, `removeContainer`, `inspectStatus` →
-    `ContainerStatus`, `streamLogs` (follow-mode web `ReadableStream`),
+    `ContainerStatus`, `containerHealth` → the container's own `State.Health`
+    verdict (`null` when the image declares no `HEALTHCHECK`, which is the
+    common case; the uptime probe prefers it over any probe of its own, see
+    `observability.md`), `streamLogs` (follow-mode web `ReadableStream`),
     `buildAuthConfig`, all exposed the same way, `DockerService.<name>`.
     `ContainerStatus` (`$lib/types.ts`) has a `"missing"` value alongside
     pending/pulling/starting/running/stopped/failed, for a container Docker
@@ -390,14 +426,42 @@ connections, just applied to Traefik instead). When it _is_ set, it decrypts the
 cert/key and writes three files into that directory: `certs/<slug>.crt`,
 `certs/<slug>.key`, and `<slug>-tls.yml` (a Traefik file-provider dynamic config
 pointing at the other two), or removes all three if the cert's been cleared or
-the domain's changed. `tools/compose/base.compose.yaml` (the shared Traefik
-definition every root compose file extends, see Compose files below) has the
-exact commented-out Traefik flags
-(`--providers.file.directory`/`--providers.file.watch`) and bind mount to
-uncomment, at the same host path as `TRAEFIK_DYNAMIC_CONFIG_DIR`, a one-time
-`docker compose up -d` the admin runs themselves; Traefik's file provider then
-picks up changes on its own (`watch=true`), no restart needed per-certificate
-after that initial setup.
+the domain's changed. **That directory is now wired by default**, so this is
+only inert on an instance whose compose file predates it: every compose file in
+this repo and the one the installer generates share a `traefik_dynamic` named
+volume between the app (`/app/traefik-dynamic`, which is what the generated
+`homerun.yaml` points `traefik.dynamicConfigDir` at) and Traefik
+(`/etc/traefik/dynamic`), with `--providers.file.directory` and
+`--providers.file.watch` on. It used to be commented out with the admin expected
+to wire a bind mount themselves, which meant custom SSL did nothing on a default
+install. Traefik's file provider picks up changes on its own (`watch=true`), no
+restart needed per certificate.
+
+## The dashboard's own route (`syncDashboardRouter`, `docker/dashboard.ts`)
+
+The same file provider is what makes the **Dashboard URL a real setting rather
+than a compose variable**. The router that publishes this app itself is a set of
+Traefik labels on its own container (`DASHBOARD_DOMAIN`, see the installer), and
+**container labels are read only at creation**, so an app that can't recreate
+itself can never honour a Dashboard URL typed into `/settings` : the host 404'd
+at Traefik with nothing explaining why, and the only fix was editing compose by
+hand. `DockerService.syncDashboardRouter()` writes `homerun-dashboard.yml` into
+the dynamic-config directory instead : a router for
+`dashboardHostFrom(config.auth.origin)` pointing at this container's own name on
+the shared network (`selfContainer()`, found via the hostname Docker sets to the
+container id, falling back to its IP), on `config.traefik.entrypoint`. It runs
+from `hooks.server.ts`'s `init()` and from `applyAndRebuild()`, so every
+settings save re-publishes it, and the file provider's `watch` means the change
+is live with no restart of anything.
+
+Three deliberate skips: an origin carrying an **explicit port** (that instance
+is reached directly on it, not through Traefik : the installer's IP-mode
+default), a container **whose own labels already route that host** (writing a
+second, competing router for it would be worse than doing nothing), and an
+**IPv4 dashboard host**, which gets `tls: {}` rather than a cert resolver
+because ACME can't issue for a bare IP. The matching `dashboard-router` setup
+check (see `observability.md`) reports the case this can't fix itself: no
+dynamic config directory and no labels either.
 
 Verified live: the encrypted round-trip, the no-op path when the dir is unset,
 and, with a real directory configured, the three files actually landing with

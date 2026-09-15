@@ -6,7 +6,22 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
-## Routing: dashboard-only, no public pages
+## A service's tabs
+
+`services/[serviceId]/` is the reference tab layout (see Conventions in
+`CLAUDE.md`), and the set changed: **Revisions** is its own tab (the deployment
+history that used to sit at the bottom of Overview, now with the `image:tag`
+that ran, its digest, how long it took and — for a git build — the commit,
+linked to the provider), and **Observability** is Logs and Errors merged into
+one page, since flipping between "what is it printing" and "what went wrong" was
+the common path. `logs/` still exists as a **route without a page**: its
+`+server.ts` is the SSE stream `live-log-viewer.svelte` fetches.
+
+Overview now leads with the service's own resource chart and a **Connections**
+panel (what it needs, what needs it, derived from env vars naming another
+service's slug), plus the connection URLs for a datastore image.
+
+## Routing: dashboard-first, with exactly one public page
 
 `src/routes/(protected)/` is a route group living at `/` itself (not
 `/dashboard`), its `+layout.server.ts` is the single auth guard, redirecting to
@@ -15,7 +30,21 @@ than in this one.
 instance hasn't finished it (see Onboarding below for the other half,
 `src/routes/onboarding/` is its own top-level route, not nested under
 `(protected)/`, with its own reverse-direction `load`). There is no public
-marketing page. `src/routes/auth/**` is the only unauthenticated surface.
+marketing page.
+
+**Two unauthenticated surfaces, and only two**: `src/routes/auth/**`, and
+`src/routes/status/[slug]` — a published status page, deliberately outside
+`(protected)/` so a signed-out visitor can read it. Its gate is not a layout but
+the DTO finder it calls: `StatusPageDTO.getPublicBySlug()` filters on
+`isPublic = true` and takes no `userId`, so an unpublished page 404s for
+everyone. Keep that guard in the DTO rather than the route — it's the only thing
+standing between a slug and someone else's service list.
+
+What that page renders is a security decision too: service names, up/down and an
+uptime percentage, never an image, port, hostname, or a probe's own error text,
+all of which describe infrastructure. `tests/e2e/ui-status-page.spec.ts` asserts
+both halves (a published page is readable signed out and leaks none of that; an
+unpublished one 404s).
 
 The sidebar nav is grouped into four labeled categories (`category` on each item
 in `(protected)/+layout.svelte`'s nav array, color-coded per category, see
@@ -23,7 +52,8 @@ Appearance preferences below for the per-user "single accent color" override):
 
 - **Workspace**: **Overview** (dashboard stats + recent deployments),
   **Services**, **Projects**, **Templates**, **Cron Jobs** (user-defined
-  scheduled tasks, see Cron jobs below).
+  scheduled tasks, see Cron jobs below), **Status Page** (service health,
+  notification channels, and the public pages themselves).
 - **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",
   see S3 backups below), **S3 Destinations** (reusable, named backup targets),
   **Remote Hosts**, **Scheduling** (one instance-wide view of every cron

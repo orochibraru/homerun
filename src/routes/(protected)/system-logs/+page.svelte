@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Boxes,
 		Info,
 		Loader2,
 		RefreshCw,
@@ -12,13 +13,20 @@
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { getInfraStatus } from "$lib/remote/docker-infra.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 
 	onMount(() => title.set("System Logs"));
+
+	const status = getInfraStatus();
+	const infra = $derived(status.current?.infra ?? []);
+	const traefik = $derived(status.current?.traefik ?? null);
 
 	let restarting = $state(false);
 	let updating = $state(false);
@@ -58,7 +66,7 @@
 	let cancelled = false;
 
 	async function connect() {
-		if (!data.traefik) {
+		if (!traefik) {
 			return;
 		}
 		lines = [];
@@ -101,7 +109,11 @@
 		}
 	}
 
-	onMount(connect);
+	$effect(() => {
+		if (traefik && !connected && !errored) {
+			void connect();
+		}
+	});
 
 	onDestroy(() => {
 		cancelled = true;
@@ -112,37 +124,84 @@
 		cancelled = false;
 		void connect();
 	}
+
+	let selectedInfraId = $state<string | null>(null);
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-6">
-    <h1 class="text-text text-xl font-semibold tracking-tight">System Logs</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">System Logs</h1>
     <p class="text-text-muted mt-1 text-sm">
       Logs from core infrastructure this app depends on.
     </p>
   </div>
 
-  <div class="border-border bg-surface-2 text-text-muted mb-6 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-xs">
-    <Info class="mt-0.5 size-3.5 shrink-0" />
-    <p>
-      Homerun's own server logs aren't shown here : they're whatever your
-      process manager, <code class="bg-surface rounded px-1 py-0.5">docker
-      compose logs</code>, or the terminal you started it from is already
-      capturing. App-level warnings and errors are surfaced on each service's
-      Errors tab instead.
-    </p>
-  </div>
+  {#if infra.length > 0}
+    <section class="panel mb-4 rounded-xl">
+      <div class="panel-head">
+        <h2 class="eyebrow flex items-center gap-1.5">
+          <Boxes class="size-3" />
+          This instance's stack
+        </h2>
+        <span class="text-text-subtle text-[0.6875rem]">
+          Everything your compose file starts, Homerun included
+        </span>
+      </div>
+      <div class="divide-border divide-y">
+        {#each infra as container (container.id)}
+          <button
+            class="hover:bg-surface-2 flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors {selectedInfraId ===
+            container.id
+              ? 'bg-accent-light'
+              : ''}"
+            onclick={() => {
+              selectedInfraId =
+                selectedInfraId === container.id ? null : container.id;
+            }}
+            type="button"
+          >
+            <span
+              class="size-1.5 shrink-0 rounded-full {container.state === 'running'
+              ? 'bg-emerald-500'
+              : 'bg-zinc-400'}"
+            ></span>
+            <span class="min-w-0 flex-1">
+              <span class="text-text block truncate text-sm font-medium">
+                {container.service || container.name}
+              </span>
+              <span class="text-text-subtle block truncate text-xs">
+                {container.image}
+              </span>
+            </span>
+            <span class="text-text-subtle shrink-0 text-[0.6875rem]">
+              {container.state}
+            </span>
+          </button>
+          {#if selectedInfraId === container.id}
+            <div class="p-3">
+              <LiveLogViewer
+                containerId={container.id}
+                heightClass="h-64"
+                logsUrl="{resolve('/system-logs')}/containers/{container.id}/logs"
+                serviceId={container.id}
+              />
+            </div>
+          {/if}
+        {/each}
+      </div>
+    </section>
+  {/if}
 
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
       <div class="flex items-center gap-2">
         <Terminal class="text-text-muted size-4" />
         <h2 class="eyebrow">Traefik</h2>
-        {#if data.traefik}
+        {#if traefik}
           <code
             class="bg-surface-2 text-text-muted rounded px-1.5 py-0.5 text-[11px]"
           >
-            {data.traefik.image}
+            {traefik.image}
           </code>
         {/if}
         {#if connected}
@@ -153,7 +212,7 @@
         {/if}
       </div>
       <div class="flex items-center gap-2">
-        {#if data.traefik && data.user.role === "admin"}
+        {#if traefik && data.user.role === "admin"}
           <form
             action="?/restartTraefik"
             method="POST"
@@ -218,7 +277,7 @@
           </form>
         {/if}
         <Button
-          disabled={!data.traefik}
+          disabled={!traefik}
           onclick={reconnect}
           size="sm"
           variant="ghost"
@@ -233,7 +292,9 @@
       class="h-112 overflow-y-auto bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
       bind:this={logEl}
     >
-      {#if !data.traefik}
+      {#if !status.ready}
+        <Skeleton class="h-4 w-2/3" />
+      {:else if !traefik}
         <p class="text-zinc-500">
           Traefik container not found : is it running (`docker compose up -d`)?
         </p>

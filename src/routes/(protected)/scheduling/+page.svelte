@@ -18,9 +18,9 @@
 	}
 </script>
 
-<div class="p-6 md:p-8">
+<div class="p-5 md:p-6">
   <div class="mb-8">
-    <h1 class="text-text text-xl font-semibold tracking-tight">Scheduling</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">Scheduling</h1>
     <p class="text-text-muted mt-1 text-sm">
       The job queue plus cron redeploys, cron jobs, and backups
       activity across every service and volume, in one place.
@@ -47,7 +47,7 @@
         <div class="space-y-2.5">
           {#each data.cronServices as { projectName, service } (service.id)}
             <a
-              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
+              class="panel hover:border-accent/40 flex items-center gap-4 rounded-md p-4 transition-colors"
               href="{resolve('/services')}/{service.id}/settings"
             >
               <div class="min-w-0 flex-1">
@@ -57,7 +57,7 @@
                     <span class="text-text-muted font-normal">· {projectName}</span>
                   {/if}
                 </p>
-                <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+                <p class="text-text-muted mt-0.5 truncate text-xs">
                   {service.cronSchedule}
                 </p>
               </div>
@@ -86,14 +86,14 @@
         <div class="space-y-2.5">
           {#each data.cronJobs as job (job.id)}
             <a
-              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
+              class="panel hover:border-accent/40 flex items-center gap-4 rounded-md p-4 transition-colors"
               href="{resolve('/cron-jobs')}/{job.id}"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-text truncate text-sm font-semibold">
                   {job.name}
                 </p>
-                <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+                <p class="text-text-muted mt-0.5 truncate text-xs">
                   {job.schedule}
                   · {job.kind === "exec" ? "host command" : `${job.image}:${job.tag}`}
                 </p>
@@ -123,14 +123,14 @@
         <div class="space-y-2.5">
           {#each data.backupVolumes as vol (vol.id)}
             <a
-              class="glass hover:border-accent/40 flex items-center gap-4 rounded-2xl p-4 transition-colors"
+              class="panel hover:border-accent/40 flex items-center gap-4 rounded-md p-4 transition-colors"
               href="{resolve('/storage')}/{vol.id}"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-text truncate text-sm font-semibold">
                   {vol.name}
                 </p>
-                <p class="text-text-muted mt-0.5 truncate font-mono text-xs">
+                <p class="text-text-muted mt-0.5 truncate text-xs">
                   {vol.backupSchedule}
                   · {vol.destinationName}
                 </p>

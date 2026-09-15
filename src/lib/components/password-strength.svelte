@@ -27,7 +27,7 @@
         </div>
       {/each}
     </div>
-    <p class="text-text-subtle mt-1.5 flex justify-between font-mono text-[0.65rem] tracking-wide uppercase">
+    <p class="text-text-subtle mt-1.5 flex justify-between text-[0.65rem] tracking-wide uppercase">
       <span>{password.length} chars</span>
       <span class={meta.text}>{meta.label}</span>
     </p>

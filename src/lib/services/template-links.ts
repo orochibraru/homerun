@@ -4,6 +4,7 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
+import { isDatabaseImage } from "$lib/service-link";
 import { DeploymentService } from "./deploy.service";
 
 const logger = new Logger("Templates");
@@ -184,6 +185,9 @@ export async function createServiceFromTemplate(
 	const svc = await ServiceDTO.create({
 		containerPort: row.containerPort,
 		cpuLimit: row.cpuLimit,
+		// Same default as the wizard: a datastore template (Postgres, Redis,
+		// …) is for its siblings, not for the public internet.
+		dnsResolvable: !isDatabaseImage(row.image),
 		envVars,
 		image: row.image,
 		memoryLimitMb: row.memoryLimitMb,

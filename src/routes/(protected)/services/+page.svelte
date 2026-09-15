@@ -2,6 +2,7 @@
 	import {
 		FileUp,
 		LayoutGridIcon,
+		Link2,
 		Play,
 		Plus,
 		RotateCw,
@@ -9,21 +10,35 @@
 		Square,
 		Trash2,
 	} from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import CheckBox from "$lib/components/check-box.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import EntityListView from "$lib/components/entity-list-view.svelte";
+	import EntityList, {
+		type EntityRow,
+	} from "$lib/components/entity-list.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
+	import { labelClass as label } from "$lib/components/form-styles";
 	import Pagination from "$lib/components/pagination.svelte";
+	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
+	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import {
+		SelectContent,
+		SelectItem,
+		Select as SelectRoot,
+		SelectTrigger,
+	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
+	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import type { ContainerStatus } from "$lib/types";
@@ -91,6 +106,20 @@
 		return entries;
 	});
 
+	const deployedIds = $derived(
+		data.services
+			.filter((svc) => svc.containerId || svc.swarmServiceId)
+			.map((svc) => svc.id),
+	);
+	const synced = $derived(syncServiceStatuses(deployedIds));
+	const liveStatus = $derived(
+		new Map((synced.current ?? []).map((row) => [row.id, row.status])),
+	);
+
+	function statusOf(svc: Svc): ContainerStatus {
+		return liveStatus.get(svc.id) ?? svc.currentStatus;
+	}
+
 	const selectedSet = $derived(new Set(selectedIds));
 	const visibleIds = $derived(data.services.map((svc) => svc.id));
 	const allVisibleSelected = $derived(
@@ -107,6 +136,10 @@
 			selectedIds = selectedIds.filter((id) => existing.has(id));
 		}
 	});
+
+	function byId(id: string): Svc | undefined {
+		return data.services.find((svc) => svc.id === id);
+	}
 
 	function toggleSelected(id: string) {
 		selectedIds = selectedSet.has(id)
@@ -189,13 +222,92 @@
 			},
 		})(input);
 	};
+
+	// Context-menu state. The menu itself is per row; the two dialogs it can
+	// open are page-level, so only one of each exists in the DOM.
+	let linkOpen = $state(false);
+	let groupOpen = $state(false);
+	let menuService = $state<Svc | null>(null);
+	let linkTargetId = $state("");
+	let linkFormat = $state<"url" | "jdbc" | "vars">("url");
+	let groupProjectId = $state("");
+	let newProjectName = $state("");
+	let linkForm = $state<HTMLFormElement | null>(null);
+	let groupForm = $state<HTMLFormElement | null>(null);
+	let ungroupForm = $state<HTMLFormElement | null>(null);
+
+	let alsoGroup = $state(true);
+
+	// Names the project they'd land in, so the checkbox says what it does
+	// rather than making you guess which one wins.
+	const groupHint = $derived.by(() => {
+		const target = data.services.find((svc) => svc.id === linkTargetId);
+		const existingId = menuService?.projectId ?? target?.projectId ?? null;
+		if (existingId) {
+			const name =
+				data.projects.find((proj) => proj.id === existingId)?.name ??
+				"that project";
+			return `Moves both into ${name}, where they reach each other by slug.`;
+		}
+		return menuService
+			? `Creates a project named "${menuService.name}" and moves both into it, so they reach each other by slug.`
+			: "They only reach each other by slug once they share a project network.";
+	});
+
+	const linkCandidates = $derived(
+		data.services.filter((svc) => svc.id !== menuService?.id),
+	);
+
+	function openLink(svc: { id: string }) {
+		menuService = byId(svc.id) ?? null;
+		linkTargetId = "";
+		linkFormat = "url";
+		linkOpen = true;
+	}
+
+	function openGroup(svc: { id: string }) {
+		menuService = byId(svc.id) ?? null;
+		groupProjectId = menuService?.projectId ?? "";
+		newProjectName = "";
+		groupOpen = true;
+	}
+
+	function ungroup(svc: { id: string }) {
+		menuService = byId(svc.id) ?? null;
+		void tick().then(() => ungroupForm?.requestSubmit());
+	}
+
+	function runRowAction(
+		op: "delete" | "restart" | "start" | "stop",
+		id: string,
+	) {
+		const svc = byId(id);
+		if (!svc) {
+			return;
+		}
+		if (op === "delete") {
+			menuService = svc;
+			pendingDeleteName = svc.name;
+			void tick().then(() => {
+				pendingDeleteForm = document.querySelector<HTMLFormElement>(
+					`form[data-row-action="delete"][data-service="${id}"]`,
+				);
+				deleteDialogOpen = true;
+			});
+			return;
+		}
+		const form = document.querySelector<HTMLFormElement>(
+			`form[data-row-action="${op}"][data-service="${id}"]`,
+		);
+		form?.requestSubmit();
+	}
 </script>
 
-<div class="p-6 md:p-8 {selectedIds.length > 0 ? 'pb-28' : ''}">
-  <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+<div class="p-5 md:p-6 {selectedIds.length > 0 ? 'pb-28' : ''}">
+  <div class="border-border mb-5 flex flex-wrap items-end justify-between gap-3 border-b pb-4">
     <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Services</h1>
-      <p class="text-text-muted mt-1 text-sm">
+      <h1 class="text-text text-lg font-semibold tracking-tight">Services</h1>
+      <p class="text-text-muted mt-0.5 text-xs">
         Containers deployed to this server.
       </p>
     </div>
@@ -216,7 +328,7 @@
   </div>
 
   {#if data.total === 0 && !data.filtered}
-    <div class="border-border flex flex-col items-center justify-center rounded-2xl border border-dashed py-20 text-center">
+    <div class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-20 text-center">
       <Server class="text-text-muted mb-3 size-10 opacity-40" />
       <p class="text-text-muted text-sm font-medium">No services yet</p>
       <p class="text-text-subtle mt-1 text-xs">
@@ -249,7 +361,7 @@
     </EntityToolbar>
 
     {#if data.services.length === 0}
-      <div class="border-border/70 rounded-2xl border border-dashed py-16 text-center">
+      <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
         <p class="text-text-muted text-sm">No services match your filters.</p>
       </div>
     {:else}
@@ -267,10 +379,52 @@
         </span>
       </div>
 
-      {#snippet actions(svc: Svc)}
+      {#snippet wrapper(item: EntityRow, body: import("svelte").Snippet)}
+        {@const svc = byId(item.id)}
+        {#if svc}
+          <ServiceContextMenu
+            onaction={runRowAction}
+            ongroup={openGroup}
+            onlink={openLink}
+            onungroup={ungroup}
+            service={svc}
+          >
+            {@render body()}
+          </ServiceContextMenu>
+        {:else}
+          {@render body()}
+        {/if}
+      {/snippet}
+
+      {#snippet media(item: { id: string })}
+        {@const svc = byId(item.id)}
+        <span class="bg-accent/10 text-accent flex size-8 shrink-0 items-center justify-center rounded-lg">
+          <Server class="size-4" />
+        </span>
+        {#if svc}
+          <span class="sr-only">{svc.name}</span>
+        {/if}
+      {/snippet}
+
+      {#snippet badge(item: { id: string })}
+        {@const svc = byId(item.id)}
+        {#if svc}
+          <StatusBadge status={statusOf(svc)} />
+        {/if}
+      {/snippet}
+
+      {#snippet actions(item: { id: string })}
+        {@const svc = byId(item.id)}
+        {#if svc}
         <div class="flex shrink-0 items-center gap-1.5">
           {#if svc.desiredState === "running"}
-            <form action="?/stop" method="POST" use:enhance={withPending(svc.id, "stop")}>
+            <form
+              action="?/stop"
+              data-row-action="stop"
+              data-service={svc.id}
+              method="POST"
+              use:enhance={withPending(svc.id, "stop")}
+            >
               <input name="serviceId" type="hidden" value={svc.id}>
               <Button
                 disabled={pending[svc.id]}
@@ -287,7 +441,13 @@
               </Button>
             </form>
           {:else}
-            <form action="?/start" method="POST" use:enhance={withPending(svc.id, "start")}>
+            <form
+              action="?/start"
+              data-row-action="start"
+              data-service={svc.id}
+              method="POST"
+              use:enhance={withPending(svc.id, "start")}
+            >
               <input name="serviceId" type="hidden" value={svc.id}>
               <Button
                 disabled={pending[svc.id] || !svc.containerId}
@@ -307,7 +467,13 @@
             </form>
           {/if}
 
-          <form action="?/restart" method="POST" use:enhance={withPending(svc.id, "restart")}>
+          <form
+            action="?/restart"
+            data-row-action="restart"
+            data-service={svc.id}
+            method="POST"
+            use:enhance={withPending(svc.id, "restart")}
+          >
             <input name="serviceId" type="hidden" value={svc.id}>
             <Button
               disabled={pending[svc.id] || !svc.containerId}
@@ -320,7 +486,13 @@
             </Button>
           </form>
 
-          <form action="?/delete" method="POST" use:enhance={withPending(svc.id, "delete")}>
+          <form
+            action="?/delete"
+            data-row-action="delete"
+            data-service={svc.id}
+            method="POST"
+            use:enhance={withPending(svc.id, "delete")}
+          >
             <input name="serviceId" type="hidden" value={svc.id}>
             <Button
               class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
@@ -335,94 +507,31 @@
             </Button>
           </form>
         </div>
+        {/if}
       {/snippet}
 
-      {#snippet row(svc: Svc)}
-        <div
-          class="glass flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 transition-shadow hover:shadow-md {selectedSet.has(
-          svc.id,
-        )
-          ? 'ring-accent/40 ring-2'
-          : ''}"
-        >
-          <div class="flex min-w-0 flex-1 items-center gap-4">
-            <Checkbox
-              aria-label="Select {svc.name}"
-              checked={selectedSet.has(svc.id)}
-              onCheckedChange={() => toggleSelected(svc.id)}
-            />
-            <a
-              class="flex min-w-0 flex-1 items-center gap-4"
-              href="{resolve('/services')}/{svc.id}"
-            >
-              <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-                <Server class="size-5" />
-              </div>
-              <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                  <p class="text-text truncate text-sm font-semibold">
-                    {svc.name}
-                  </p>
-                  <StatusBadge status={svc.currentStatus} />
-                </div>
-                <p class="text-text-subtle mt-0.5 truncate font-mono text-xs">
-                  {svc.image}:{svc.tag}
-                  · {svc.slug}.{data.baseDomain}
-                </p>
-              </div>
-            </a>
-          </div>
-          {@render actions(svc)}
-        </div>
-      {/snippet}
-
-      {#snippet card(svc: Svc)}
-        <div
-          class="glass glass-interactive flex flex-col gap-3 rounded-2xl p-5 {selectedSet.has(
-          svc.id,
-        )
-          ? 'ring-accent/40 ring-2'
-          : ''}"
-        >
-          <div class="flex min-w-0 items-center gap-3">
-            <Checkbox
-              aria-label="Select {svc.name}"
-              checked={selectedSet.has(svc.id)}
-              onCheckedChange={() => toggleSelected(svc.id)}
-            />
-            <a class="flex min-w-0 flex-1 items-center gap-3" href="{resolve('/services')}/{svc.id}">
-              <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-xl">
-                <Server class="size-5" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-text truncate text-sm font-semibold">{svc.name}</p>
-                <p class="text-text-subtle truncate font-mono text-xs">
-                  {svc.slug}.{data.baseDomain}
-                </p>
-              </div>
-            </a>
-          </div>
-          <p class="text-text-subtle truncate font-mono text-xs">{svc.image}:{svc.tag}</p>
-          <div class="flex items-center justify-between gap-2">
-            <StatusBadge status={svc.currentStatus} />
-            {@render actions(svc)}
-          </div>
-        </div>
-      {/snippet}
-
-      <div class="space-y-8">
+      <div class="space-y-6">
         {#each groups as [label, services] (label)}
           <div>
             {#if groups.length > 1}
-              <h2 class="eyebrow mb-3">
+              <h2 class="eyebrow mb-2">
                 {label}
               </h2>
             {/if}
-            <EntityListView
-              {card}
-              getKey={(svc) => svc.id}
-              items={services}
-              {row}
+            <EntityList
+              {actions}
+              {wrapper}
+              items={services.map((svc) => ({
+                description: `${svc.image}:${svc.tag}`,
+                href: `${resolve("/services")}/${svc.id}`,
+                id: svc.id,
+                subtitle: `${svc.slug}.${data.baseDomain}`,
+                title: svc.name,
+              }))}
+              onToggleSelect={toggleSelected}
+              {badge}
+              {media}
+              selectedIds={selectedIds}
               {view}
             />
           </div>
@@ -443,7 +552,7 @@
   <div class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
     <form
       action="?/bulk"
-      class="glass-strong pointer-events-auto flex flex-wrap items-center gap-2 rounded-2xl px-4 py-3 shadow-lg"
+      class="panel-strong pointer-events-auto flex flex-wrap items-center gap-2 rounded-md px-4 py-3 shadow-lg"
       method="POST"
       bind:this={bulkForm}
       use:enhance={bulkSubmit}
@@ -553,3 +662,149 @@
   onConfirm={() => bulkForm?.requestSubmit(bulkDeleteSubmitter ?? undefined)}
   title="Delete selected services"
 />
+
+<form
+  action="?/group"
+  method="POST"
+  bind:this={ungroupForm}
+  use:enhance={enhanceToast({
+    error: "Couldn't ungroup the service.",
+    loading: "Ungrouping",
+    success: "Removed from its project.",
+  })}
+>
+  <input name="serviceId" type="hidden" value={menuService?.id ?? ""}>
+  <input name="projectId" type="hidden" value="">
+</form>
+
+<ResponsiveDialog
+  description="Writes the connection variables for the service you pick into this service's own environment. Takes effect on its next deploy."
+  size="sm"
+  title="Link {menuService?.name ?? 'service'}"
+  bind:open={linkOpen}
+>
+  <form
+    action="?/link"
+    class="space-y-4"
+    method="POST"
+    bind:this={linkForm}
+    use:enhance={enhanceToast({
+      error: "Couldn't link the services.",
+      loading: "Linking",
+      onSuccess: () => {
+        linkOpen = false;
+      },
+      success: (result) => {
+        const data = result as
+          | { grouped?: boolean; linked?: string[] }
+          | undefined;
+        const keys = data?.linked ?? [];
+        const vars = keys.length > 0 ? `Added ${keys.join(", ")}` : "Linked";
+        return data?.grouped ? `${vars}, and grouped them.` : `${vars}.`;
+      },
+    })}
+  >
+    <input name="serviceId" type="hidden" value={menuService?.id ?? ""}>
+    <div>
+      <label class={label} for="targetId">Link to</label>
+      <SelectRoot name="targetId" type="single" bind:value={linkTargetId}>
+        <SelectTrigger class="w-full" id="targetId">
+          {linkCandidates.find((svc) => svc.id === linkTargetId)?.name
+          ?? "Select a service"}
+        </SelectTrigger>
+        <SelectContent>
+          {#each linkCandidates as svc (svc.id)}
+            <SelectItem label="{svc.name} ({svc.image})" value={svc.id} />
+          {/each}
+        </SelectContent>
+      </SelectRoot>
+    </div>
+    <div>
+      <label class={label} for="format">Inject as</label>
+      <SelectRoot name="format" type="single" bind:value={linkFormat}>
+        <SelectTrigger class="w-full" id="format">
+          {linkFormat === "jdbc"
+          ? "JDBC URL"
+          : linkFormat === "vars"
+            ? "Separate variables"
+            : "Connection URL"}
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem label="Connection URL" value="url" />
+          <SelectItem label="JDBC URL" value="jdbc" />
+          <SelectItem label="Separate variables" value="vars" />
+        </SelectContent>
+      </SelectRoot>
+    </div>
+    <CheckBox
+      helperText={groupHint}
+      id="alsoGroup"
+      label="Also put them in the same project"
+      name="alsoGroup"
+      bind:checked={alsoGroup}
+    />
+
+    <div class="flex justify-end gap-2">
+      <Button disabled={!linkTargetId} type="submit">
+        <Link2 class="size-4" />
+        Link
+      </Button>
+    </div>
+  </form>
+</ResponsiveDialog>
+
+<ResponsiveDialog
+  description="Services in one project share a Docker network and reach each other by slug."
+  size="sm"
+  title="Group {menuService?.name ?? 'service'}"
+  bind:open={groupOpen}
+>
+  <form
+    action="?/group"
+    class="space-y-4"
+    method="POST"
+    bind:this={groupForm}
+    use:enhance={enhanceToast({
+      error: "Couldn't move the service.",
+      loading: "Moving the service",
+      onSuccess: () => {
+        groupOpen = false;
+      },
+      success: "Moved.",
+    })}
+  >
+    <input name="serviceId" type="hidden" value={menuService?.id ?? ""}>
+    {#if data.projects.length > 0}
+      <div>
+        <label class={label} for="projectId">Existing project</label>
+        <SelectRoot name="projectId" type="single" bind:value={groupProjectId}>
+          <SelectTrigger class="w-full" id="projectId">
+            {data.projects.find((proj) => proj.id === groupProjectId)?.name
+            ?? "Select a project"}
+          </SelectTrigger>
+          <SelectContent>
+            {#each data.projects as proj (proj.id)}
+              <SelectItem label={proj.name} value={proj.id} />
+            {/each}
+          </SelectContent>
+        </SelectRoot>
+      </div>
+      <p class="text-text-subtle text-center text-xs">or</p>
+    {/if}
+    <div>
+      <label class={label} for="newProjectName">New project</label>
+      <Input
+        id="newProjectName"
+        name="newProjectName"
+        placeholder="Acme"
+        type="text"
+        bind:value={newProjectName}
+      />
+    </div>
+    <div class="flex justify-end gap-2">
+      <Button disabled={!(groupProjectId || newProjectName)} type="submit">
+        Move
+      </Button>
+    </div>
+  </form>
+</ResponsiveDialog>

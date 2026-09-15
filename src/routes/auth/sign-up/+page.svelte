@@ -147,12 +147,12 @@
         bind:value={confirm}
       />
       {#if confirm && confirm !== password}
-        <p class="mt-1.5 font-mono text-xs text-red-500">
+        <p class="mt-1.5 text-xs text-red-500">
           Passwords don't match.
         </p>
       {:else if confirm && confirm === password}
         <p
-          class="mt-1.5 flex items-center gap-1.5 font-mono text-xs text-green-500"
+          class="mt-1.5 flex items-center gap-1.5 text-xs text-green-500"
         >
           <ShieldCheck class="size-3.5" />
           Passwords match

@@ -30,6 +30,11 @@ a plan in chat, don't keep a task list somewhere else, don't hand back a
 
 - Picking up work with no specific ask : take something from `TODO.md` and do
   it.
+- **Keep `TODO.md` current as you go, not at the end.** Before starting an item,
+  mark it `- [ ] **[WIP]** …`; the moment it's actually done, tick it and move
+  it under `## Done`. If you stop half-way, leave it `[WIP]` with a line saying
+  what landed and what didn't. The file is the shared view of what's in flight :
+  it's how anyone else knows which files are safe to touch while you're working.
 - Finished an item : tick it off and move it under `## Done` in the same change,
   not in a follow-up.
 - Found something out of scope mid-task : add a line to `TODO.md` and carry on.
@@ -250,7 +255,7 @@ that pattern for any new skill.
   banner, since a promise that only settles when the connection ends can't drive
   a toast. Anything that mutates state on the server gets a promise toast.
 - **Never cap the width of a dashboard page.** A page under `(protected)/` fills
-  the viewport : its root wrapper is `<div class="p-6 md:p-8">`, with **no
+  the viewport : its root wrapper is `<div class="p-5 md:p-6">`, with **no
   `mx-auto` and no `max-w-*`**. This app is used on ultrawide monitors, and a
   centred `max-w-4xl` column leaves most of the screen as empty gutter while the
   content it was "protecting" (tables, lists, key/value grids, side-by-side

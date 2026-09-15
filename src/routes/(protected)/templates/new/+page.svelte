@@ -86,7 +86,7 @@
 
 <div class="mspace-y-6 p-6 md:p-8">
   <div class="mb-3">
-    <h1 class="text-text text-xl font-semibold tracking-tight">New Template</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">New Template</h1>
     <p class="text-sm text-text-muted">
       A reusable config you can deploy from again later.
     </p>
@@ -108,7 +108,7 @@
       success: "Template created.",
     })}
   >
-    <section class="rounded-2xl glass">
+    <section class="rounded-md panel">
       <div class="flex items-center gap-3 border-b border-border px-5 py-4">
         <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
           <LayoutGrid class="size-4" />
@@ -158,6 +158,21 @@
               {/each}
             </Select.Content>
           </Select.Root>
+        </div>
+
+        <div>
+          <label class={label} for="tags">Tags</label>
+          <Input
+            id="tags"
+            name="tags"
+            placeholder="sql, storage, self-hosted"
+            type="text"
+            value={values?.tags ?? ""}
+          />
+          <p class="mt-1.5 text-xs text-text-subtle">
+            Comma-separated keywords the gallery's search box matches on, on
+            top of the name, description and image.
+          </p>
         </div>
 
         <div class="grid grid-cols-3 gap-3">
@@ -210,7 +225,7 @@
       </div>
     </section>
 
-    <section class="rounded-2xl glass">
+    <section class="rounded-md panel">
       <div class="border-b border-border px-5 py-4">
         <h2 class="eyebrow">Environment variables</h2>
       </div>
@@ -218,14 +233,14 @@
         {#each envRows as row, i}
           <div class="flex items-center gap-2">
             <Input
-              class="font-mono"
+              class=""
               name="envKey"
               placeholder="KEY"
               type="text"
               bind:value={row.key}
             />
             <Input
-              class="font-mono"
+              class=""
               name="envValue"
               placeholder="value"
               type="text"
@@ -253,7 +268,7 @@
     </section>
 
     {#if data.linkableTemplates.length > 0}
-      <section class="rounded-2xl glass">
+      <section class="rounded-md panel">
         <div class="flex items-center gap-3 border-b border-border px-5 py-4">
           <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
             <Link2 class="size-4" />
@@ -265,9 +280,9 @@
               e.g. a database or cache. Each gets an alias (defaults to its
               name if you don't set one) that's also its internal hostname :
               reference it in an env var above as
-              <code class="font-mono">{"{{alias}}"}</code> (or, for one of the
+              <code class="">{"{{alias}}"}</code> (or, for one of the
               linked container's own env vars,
-              <code class="font-mono">{"{{alias.ENV_KEY}}"}</code>).
+              <code class="">{"{{alias.ENV_KEY}}"}</code>).
             </p>
           </div>
         </div>
@@ -293,17 +308,17 @@
                 <p class="truncate text-sm font-medium text-text">
                   {linkable.name}
                 </p>
-                <p class="truncate font-mono text-xs text-text-subtle">
+                <p class="truncate text-xs text-text-subtle">
                   {linkable.image}:{linkable.tag} · port {linkable.containerPort}
                 </p>
                 {#if envEntries.length > 0}
-                  <p class="truncate font-mono text-xs text-text-subtle">
+                  <p class="truncate text-xs text-text-subtle">
                     {envEntries.map(([k, v]) => `${k}=${v}`).join(", ")}
                   </p>
                 {/if}
               </label>
               <Input
-                class="w-32 shrink-0 font-mono"
+                class="w-32 shrink-0"
                 disabled={!enabled}
                 name="linkAlias.{linkable.id}"
                 placeholder={slugify(linkable.name)}

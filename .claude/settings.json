@@ -27,6 +27,12 @@
 						"command": "bun run check:app",
 						"timeout": 90,
 						"statusMessage": "Typechecking before handing back..."
+					},
+					{
+						"type": "command",
+						"command": "prek run",
+						"timeout": 90,
+						"statusMessage": "Running status checks..."
 					}
 				]
 			}

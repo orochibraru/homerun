@@ -54,6 +54,29 @@ export interface PullImageParams {
 	remote?: RemoteHostConnection | null;
 }
 
+export interface ContainerSample {
+	cpuPercent: number;
+	memLimitMb: number;
+	memUsedMb: number;
+	netRxBytes: number;
+	netTxBytes: number;
+}
+
+/** The subset of the daemon's stats payload this app reads; dockerode types it as `unknown`. */
+interface DockerStats {
+	cpu_stats: {
+		cpu_usage: { percpu_usage?: number[]; total_usage: number };
+		online_cpus?: number;
+		system_cpu_usage?: number;
+	};
+	memory_stats: { limit?: number; usage?: number };
+	networks?: Record<string, { rx_bytes?: number; tx_bytes?: number }>;
+	precpu_stats: {
+		cpu_usage: { total_usage: number };
+		system_cpu_usage?: number;
+	};
+}
+
 export interface VolumeMountParams {
 	containerPath: string;
 	readOnly: boolean;
@@ -191,6 +214,18 @@ export function DockerContainerMixin<
 				serveraddress: service.registryUrl ?? undefined,
 				username: service.registryUsername,
 			};
+		}
+
+		async localImageDigest(
+			ref: string,
+			remote?: RemoteHostConnection | null,
+		): Promise<string | null | undefined> {
+			try {
+				const inspect = await this.getDocker(remote).getImage(ref).inspect();
+				return inspect.RepoDigests?.[0]?.split("@")[1] ?? null;
+			} catch {
+				return undefined;
+			}
 		}
 
 		/** Pulls `image:tag`, optionally authenticating against a private registry. */
@@ -578,6 +613,96 @@ export function DockerContainerMixin<
 					nodeStream.on("error", (err: Error) => controller.error(err));
 				},
 			});
+		}
+
+		/**
+		 * One non-streaming `docker stats` sample for a container, in the
+		 * units the graphs store (see schema.ts's stat_sample): CPU as a
+		 * percentage of one host's worth of cores, memory in MB, and the
+		 * network counters as the daemon reports them (cumulative since the
+		 * container started, so rates are derived at read time).
+		 *
+		 * Returns null rather than throwing for anything that isn't running,
+		 * which is the normal case for most of the list this is called over.
+		 */
+		async sampleContainerStats(
+			containerId: string,
+			remote?: RemoteHostConnection | null,
+		): Promise<ContainerSample | null> {
+			try {
+				const stats = (await this.getDocker(remote)
+					.getContainer(containerId)
+					.stats({ stream: false })) as DockerStats;
+
+				const cpuDelta =
+					stats.cpu_stats.cpu_usage.total_usage -
+					stats.precpu_stats.cpu_usage.total_usage;
+				const systemDelta =
+					(stats.cpu_stats.system_cpu_usage ?? 0) -
+					(stats.precpu_stats.system_cpu_usage ?? 0);
+				const cores =
+					stats.cpu_stats.online_cpus ??
+					stats.cpu_stats.cpu_usage.percpu_usage?.length ??
+					1;
+				const cpuPercent =
+					systemDelta > 0 && cpuDelta > 0
+						? (cpuDelta / systemDelta) * cores * 100
+						: 0;
+
+				const networks = Object.values(stats.networks ?? {});
+				return {
+					cpuPercent: Math.max(0, cpuPercent),
+					memLimitMb: (stats.memory_stats.limit ?? 0) / 1024 / 1024,
+					memUsedMb: (stats.memory_stats.usage ?? 0) / 1024 / 1024,
+					netRxBytes: networks.reduce(
+						(sum, net) => sum + (net.rx_bytes ?? 0),
+						0,
+					),
+					netTxBytes: networks.reduce(
+						(sum, net) => sum + (net.tx_bytes ?? 0),
+						0,
+					),
+				};
+			} catch {
+				return null;
+			}
+		}
+
+		async containerHealth(
+			containerId: string,
+			remote?: RemoteHostConnection | null,
+		): Promise<{ output: string | null; status: string } | null> {
+			try {
+				const info = await this.getDocker(remote)
+					.getContainer(containerId)
+					.inspect();
+				const health = info.State?.Health;
+				if (!health?.Status) {
+					return null;
+				}
+				return {
+					output: health.Log?.at(-1)?.Output?.trim() || null,
+					status: health.Status,
+				};
+			} catch {
+				return null;
+			}
+		}
+
+		/** The container's own IP on the first network it's attached to, for the internal liveness probe. */
+		async containerAddress(
+			containerId: string,
+			remote?: RemoteHostConnection | null,
+		): Promise<string | null> {
+			try {
+				const info = await this.getDocker(remote)
+					.getContainer(containerId)
+					.inspect();
+				const networks = Object.values(info.NetworkSettings?.Networks ?? {});
+				return networks.find((net) => net.IPAddress)?.IPAddress ?? null;
+			} catch {
+				return null;
+			}
 		}
 
 		/**

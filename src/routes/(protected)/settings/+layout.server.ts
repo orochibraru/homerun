@@ -2,7 +2,6 @@ import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { envDefaultsForDisplay } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { AdminService } from "$lib/services/admin.service";
 
 const FIELD_TAB: Record<string, string> = {
 	authCheckUrl: "",
@@ -33,24 +32,10 @@ export const load = async ({ locals, url }) => {
 		);
 	}
 
-	const [settings, setupChecks] = await Promise.all([
-		InstanceSettingsDTO.get(),
-		AdminService.runSetupChecks(),
-	]);
-
-	const fieldIssues: Record<string, string> = {};
-	for (const check of setupChecks) {
-		if (check.severity === "ok") {
-			continue;
-		}
-		for (const field of AdminService.SETUP_CHECK_FIELDS[check.id] ?? []) {
-			fieldIssues[field] = check.detail;
-		}
-	}
+	const settings = await InstanceSettingsDTO.get();
 
 	return {
 		envDefaults: envDefaultsForDisplay(),
-		fieldIssues,
 		settings: settings.toJSON(),
 	};
 };

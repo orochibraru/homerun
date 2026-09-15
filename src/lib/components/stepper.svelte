@@ -97,11 +97,11 @@
           {:else if StepIcon}
             <StepIcon class="size-4" />
           {:else}
-            <span class="font-mono text-xs">{i + 1}</span>
+            <span class="text-xs">{i + 1}</span>
           {/if}
         </span>
         <span
-          class="font-mono text-[0.7rem] tracking-wide transition-colors {i
+          class="text-[0.7rem] tracking-wide transition-colors {i
           === activeStep
             ? 'text-text'
             : 'text-text-subtle'} {i <= reachableStep
@@ -125,7 +125,7 @@
 
   <div class="sm:hidden">
     <div class="flex items-center justify-between text-sm font-medium text-text">
-      <span class="font-mono text-xs">
+      <span class="text-xs">
         Step {activeStep + 1} of {steps.length}
       </span>
       <span class="text-text-muted">{steps[activeStep]?.label}</span>

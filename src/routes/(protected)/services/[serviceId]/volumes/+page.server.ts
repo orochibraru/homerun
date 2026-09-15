@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { HOST_VOLUME_PREFIX } from "$lib/constants";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
@@ -50,7 +51,19 @@ export const actions = {
 			});
 		}
 
-		const vol = await StorageVolumeDTO.get(volumeId, locals.user.id);
+		// A `docker:<name>` choice is a volume the daemon already has that
+		// Homerun hasn't registered : register it here rather than making the
+		// user create it first and come back. That two-step was the whole
+		// complaint about this page.
+		const vol = volumeId.startsWith(HOST_VOLUME_PREFIX)
+			? await StorageVolumeDTO.create({
+					description: "Imported from this machine",
+					kind: "volume",
+					name: volumeId.slice(HOST_VOLUME_PREFIX.length),
+					source: volumeId.slice(HOST_VOLUME_PREFIX.length),
+					userId: locals.user.id,
+				})
+			: await StorageVolumeDTO.get(volumeId, locals.user.id);
 		if (!vol) {
 			return fail(400, { error: "That volume wasn't found." });
 		}

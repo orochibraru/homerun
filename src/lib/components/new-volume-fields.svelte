@@ -32,11 +32,11 @@
   <div class="grid grid-cols-2 gap-3">
     <label
       class="
-        flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition-all {kind ===
+        flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-all {kind ===
         'volume'
         ? 'border-accent bg-accent-light text-accent'
         : 'border-border text-text-muted'}
-      "
+     "
     >
       <input
         class="sr-only"
@@ -49,11 +49,11 @@
     </label>
     <label
       class="
-        flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition-all {kind ===
+        flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-all {kind ===
         'bind'
         ? 'border-accent bg-accent-light text-accent'
         : 'border-border text-text-muted'}
-      "
+     "
     >
       <input
         class="sr-only"
@@ -73,7 +73,7 @@
     <span class="text-red-500">*</span>
   </label>
   <Input
-    class="font-mono"
+    class=""
     id="source"
     name="source"
     placeholder={kind === "bind" ? "/mnt/data/media" : "homerun-media"}

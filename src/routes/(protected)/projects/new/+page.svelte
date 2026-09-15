@@ -3,6 +3,7 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
@@ -44,7 +45,7 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <h1 class="text-text text-xl font-semibold tracking-tight">New Project</h1>
+    <h1 class="text-text text-lg font-semibold tracking-tight">New Project</h1>
     <p class="mt-0.5 text-sm text-text-muted">
       Group related services together.
     </p>
@@ -52,7 +53,7 @@
 
   <form
     action="?/create"
-    class="space-y-5 rounded-2xl glass p-5"
+    class="space-y-5 rounded-md panel p-5"
     method="POST"
     use:enhance={enhanceToast({
       error: "Check the form for errors.",
@@ -67,9 +68,9 @@
     })}
   >
     {#if form?.error}
-      <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+      <Alert>
         {form.error}
-      </div>
+      </Alert>
     {/if}
 
     <div>
@@ -92,7 +93,7 @@
         Slug <span class="text-red-500">*</span>
       </label>
       <Input
-        class="font-mono"
+        class=""
         id="slug"
         name="slug"
         oninput={onSlugInput}

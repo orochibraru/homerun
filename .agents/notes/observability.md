@@ -18,6 +18,21 @@ layer it came from. DNS automation (Cloudflare/Pangolin, see below) is separate
 from this check, `runSetupChecks()` doesn't currently flag an unset DNS
 provider, that's an opt-in feature, not a base-instance misconfiguration.
 
+**`dashboard-router` is the one check that reads this app's own container.**
+`DockerService.selfContainerLabels()` inspects it (Docker sets a container's
+hostname to its own short id, which is what makes self-inspection possible) and
+`hasTraefikRouterFor(labels, host)` looks for an enabled router whose rule
+carries the Dashboard URL's host. **Real, reproduced case**: an instance
+installed before the app container got its `DASHBOARD_DOMAIN` router had no
+Traefik labels at all, so the dashboard answered on `:3000` and Traefik returned
+its own 404 for the configured hostname, with nothing anywhere saying why —
+labels are only read when a container is **created**, so editing the Dashboard
+URL in `/settings` can never fix it, only regenerating the compose file and
+recreating the container can. The check skips itself when the origin carries an
+explicit port (that instance is reached directly on that port, not through
+Traefik : the installer's own IP-mode default) and when self-inspection fails
+(dev, or not running in a container).
+
 There's no standalone `/setup` page anymore (removed, it duplicated what
 `/settings` already does live). `AdminService.runSetupChecks()` now only backs
 the dashboard's setup-issue banner, which deep-links straight into `/settings`
@@ -41,6 +56,28 @@ common case, not an error; no other vendor supported). CPU% needs a delta
 between two samples (`os.cpus()` gives cumulative counters since boot), so a
 module-scope `lastCpuSample` is diffed on each call, first call after boot
 always reads 0%. Polled by the dashboard's `/system-stats` endpoint every 5s.
+
+## Recorded resource history (`stat_sample`, `StatSampleDTO`, `$lib/remote/stats.remote.ts`)
+
+The live poll above keeps nothing, so the graphs read a recorded history
+instead. `StatsSampler` (`$lib/services/stats/stats-sampler.ts`, a
+`BaseScheduler`) writes one `stat_sample` row a minute for the host and one per
+service with a running container (`DockerService.sampleContainerStats`, a
+non-streaming `docker stats` read), and prunes past a year every sixtieth tick.
+It's the one scheduler with `runOnStart = true`: without it a fresh instance
+shows an empty chart for a full minute, and unlike the due-date schedulers
+there's nothing to double-fire.
+
+`StatSampleDTO.history(range, serviceId)` buckets that table per range at query
+time (`live` 15min/1min … `all` 1-day buckets) rather than maintaining rollup
+tables, averaging CPU and memory and turning the **cumulative** network counters
+into a per-second rate across each bucket, clamped at zero because a container
+restart resets its own counters. Two Postgres details are load-bearing: the
+bucket width is `sql.raw`'d rather than bound, since dividing by an untyped bind
+parameter makes Postgres reject the expression as an ambiguous operator (that
+was a real "Couldn't load the history" bug), and `latestPerService` uses
+`selectDistinctOn`. `serviceId` null is the host itself, so the dashboard's
+chart and a service's own chart are the same query.
 
 ## Logging
 
@@ -97,3 +134,100 @@ markup as its own component alongside this feature).
 This closes the "in-app lifecycle event feed" half of what Planned features
 below used to list as unbuilt; outbound webhooks (Telegram/Discord/generic HTTP)
 on the same events are still unbuilt, see below.
+
+## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `$lib/services/uptime/uptime-probe.ts`)
+
+Two probes a minute per service with `uptimeEnabled` (default true) and a live
+container, run by another `BaseScheduler`:
+
+- **internal** — asks the container itself, on the Docker network
+  (`DockerService.containerAddress`) and its container port. This is what a
+  sibling service sees, and it catches a dead process inside a container the
+  daemon still reports as running.
+- **external** — HTTP to the hostname Traefik publishes (the custom domain when
+  set, else `<slug>.<baseDomain>`). It fails for entirely different reasons:
+  DNS, a missing router, a tunnel that isn't up.
+
+**An untrusted certificate is not an outage, and treating it as one reported
+healthy services as down.** The probe's own comment always claimed a self-signed
+certificate was the normal case behind a tunnel, but nothing implemented it:
+Bun's `fetch` verifies by default, so a service sitting behind a Pangolin tunnel
+whose edge hadn't issued a certificate for that subdomain showed
+`TLS failed: unable to verify the first certificate` and 0% uptime while serving
+200s perfectly well. The probe now tries verified first and, **only** when the
+failure is a certificate one (`isCertificateError`), retries with
+`tls: {rejectUnauthorized: false}` : a success on the retry is `ok` with
+`certificate not trusted` appended to the detail, so the cert problem stays
+visible without being an outage, and a connection refused or a timeout still
+fails on the first attempt as before.
+
+**The healthcheck detail is stripped of ANSI escapes** (`stripAnsi`,
+`$lib/ansi`) before it's stored. A container whose `HEALTHCHECK` prints coloured
+output put raw `\x1b[32m` sequences into the uptime row, which the panel renders
+as plain text : they showed up on screen as `[32mStatus: 200`.
+
+**The internal probe isn't always HTTP**, and
+`internalProbeMethod(image, hasHealthcheck)` picks between three, in this order:
+
+1. `healthcheck` — the image declares its own `HEALTHCHECK`, read back off
+   `State.Health` by `DockerService.containerHealth`. Always preferred: the
+   image author knows what ready means for that software, and it's the only one
+   of the three that can tell a Postgres mid-recovery from a ready one.
+   `starting` counts as up (the container is inside its own start period), only
+   `unhealthy` is a failure.
+2. `tcp` — a datastore (`isDatabaseImage`, i.e. anything `detectLinkEngine`
+   recognises) with no healthcheck of its own. "The port accepts a connection"
+   is the honest liveness signal there and nothing more is claimed.
+
+   **`Bun.connect` needs real socket handlers.**
+   `Bun.connect({hostname, port, socket: {}})` throws
+   `Expected at least "data" or "drain" callback` synchronously, before it opens
+   anything — so the first version of this probe failed for _every_ database and
+   stored that sentence as the outage reason. `tcpConnect` passes
+   `open`/`data`/`error`/`connectError` and resolves from `open`, racing a
+   `TIMEOUT_MS` timer. It's covered against a real `Bun.listen` socket (open
+   port, closed port, unroutable address) in
+   `tests/unit/app/uptime-probe.test.ts`, deliberately not with a mock: a mock
+   would have accepted the broken call too.
+
+3. `http` — everything else, where a status code means something.
+
+That hierarchy exists because speaking HTTP at a Postgres is how a perfectly
+healthy database read as **down** in the uptime panel, with Bun's own "pass
+`verbose: true` in the second argument to fetch()" hint shown to the user as the
+reason it was down. `probeErrorMessage` strips that tail and collapses the cases
+people actually hit (timeout/abort, refused, TLS) into one actionable sentence;
+both it and `internalProbeMethod` are pure and unit-tested in
+`tests/unit/app/uptime-probe.test.ts`.
+
+**Any HTTP response counts as up**, including 401/403 (a service behind the
+login wall is alive, it's just refusing the prober) and 404 (it answered, it
+just has no route at `/`). Only a transport error or the 5s timeout is a
+failure, and `redirect: "manual"` keeps a redirect from being chased.
+
+**The external probe is skipped, not failed, when the hostname is a loopback
+one** (`externalProbeSkipReason`: `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`,
+`*.localhost`). A `localhost` base domain is the dev/first-boot default, so the
+"public" hostname resolves to this machine and probing it proves nothing about
+whether anyone else can reach the service — reporting that as an outage would be
+noise, reporting it as up would be a lie. The panel says why instead.
+
+Results are **appended, one row per probe** (`id` primary key), not upserted:
+the panel renders the last `BEAT_WINDOW` (40) as a heartbeat strip, which needs
+the history. `UptimeCheckDTO.beats(serviceId, kind)` returns them oldest-first
+for the strip, `latestForUser` uses a `selectDistinctOn` for the "now" view, and
+`prune()` drops anything past a 7-day retention, amortized one tick in 60. The
+service Observability tab renders both probes with per-probe troubleshooting
+steps when one fails; the dashboard shows a banner listing every failing probe,
+linking into the service that owns it. `$lib/components/heartbeat-strip.svelte`
+is the shared strip, also used by both status-page surfaces.
+
+**A state change also fires alerts** (`status-alert.service.ts`). The tick reads
+`UptimeCheckDTO.latestByProbe` _before_ recording its own results, and
+`detectTransitions` compares the two: a probe with no previous beat is
+deliberately not a transition, or the first tick after a deploy (or after
+`prune()` cleared the window) would alert on every service at once. Each
+transition fans out to the channels attached to any status page covering that
+service — see `status-and-notifications` in
+`.agents/notes/services-and-templates.md`. A channel that throws is caught,
+logged and written to its own `lastError`, never allowed to abort the tick.

@@ -6,6 +6,7 @@ import {
 	applyAndRebuild,
 	nullableText,
 } from "$lib/server/validation/instance-settings-form";
+import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("InstanceSettings");
 
@@ -45,6 +46,23 @@ export const actions = {
 		logger.info(
 			`Orchestration mode updated: mode=${mode} user=${locals.user.id}`,
 		);
-		return { savedSection: "orchestration", success: true };
+
+		try {
+			const steps =
+				mode === "swarm"
+					? await DockerService.enableSwarmMode()
+					: await DockerService.disableSwarmMode();
+			return {
+				orchestrationSteps: steps,
+				savedSection: "orchestration",
+				success: true,
+			};
+		} catch (err) {
+			const detail = err instanceof Error ? err.message : String(err);
+			logger.error(`Applying orchestration mode failed: ${detail}`);
+			return fail(500, {
+				error: `Mode saved, but the host couldn't be prepared: ${detail}`,
+			});
+		}
 	},
 };

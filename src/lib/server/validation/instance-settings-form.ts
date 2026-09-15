@@ -1,6 +1,7 @@
 import { applyInstanceSettings } from "$lib/config";
 import type { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { rebuildAuth } from "$lib/services/auth";
+import { DockerService } from "$lib/services/docker.service";
 
 export function nullableText(formData: FormData, key: string): string | null {
 	const value = (formData.get(key) as string | null)?.trim();
@@ -14,4 +15,5 @@ export function checkbox(formData: FormData, key: string): boolean {
 export function applyAndRebuild(settings: InstanceSettingsDTO) {
 	applyInstanceSettings(settings.toConfigOverride());
 	rebuildAuth();
+	void DockerService.syncDashboardRouter();
 }

@@ -168,7 +168,7 @@
 <div class="space-y-6">
   <!-- ═══ Connected sign-in providers ═══ -->
   {#if data.providers.length > 0}
-    <section class="glass rounded-2xl">
+    <section class="panel rounded-md">
       <div class="border-border border-b px-5 py-4">
         <h2 class="eyebrow">Connected accounts</h2>
         <p class="text-text-muted text-xs">
@@ -189,7 +189,7 @@
               <KeyRound class="size-4" />
             </div>
             <div class="min-w-0 flex-1">
-              <p class="text-text font-mono text-sm font-medium">
+              <p class="text-text text-sm font-medium">
                 {provider.name}
               </p>
               <p class="text-text-subtle text-xs">
@@ -231,7 +231,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        PASSWORD
        ════════════════════════════════════════════════════════════ -->
-  <section class="rounded-2xl glass">
+  <section class="rounded-md panel">
     <div class="flex items-center gap-3 border-b border-border px-5 py-4">
       <div class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
         <KeyRound class="size-4" />
@@ -317,7 +317,7 @@
                     passwordStrength
                     ? strengthMeta.bar
                     : 'bg-surface-3'}
-                  "
+                 "
                 >
                 </div>
               {/each}
@@ -395,7 +395,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        DANGER ZONE
        ════════════════════════════════════════════════════════════ -->
-  <section class="rounded-2xl border border-red-200 bg-surface dark:border-red-900/40">
+  <section class="rounded-md border border-red-200 bg-surface dark:border-red-900/40">
     <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
       <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
         <AlertTriangle class="size-4" />

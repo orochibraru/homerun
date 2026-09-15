@@ -6,6 +6,30 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
+## Linking and grouping from the services list
+
+A right-click on a service row offers **Link to…** and **group/ungroup**
+(`services/+page.server.ts`'s `link` and `group` actions). Linking writes the
+target's connection variables into the source's env — the same `buildLinkEnv`
+output the wizard's link picker produces, so a URL, a JDBC URL or separate vars
+depending on the target's image — and optionally puts both on one project
+network, since two services only reach each other by slug once they share one.
+It moves them into whichever project either is already in, and creates one named
+after the source otherwise.
+
+## Where creating something lands you
+
+Every create path ends on the thing it just made, not on a list: the wizard's
+**Create service** and **Create and deploy** both redirect to `/services/<id>`,
+and a template's **Quick Deploy** does the same from both the catalog and the
+template's own detail page. The one exception is a create that produced
+_companions_ (a template pulling in its linked services, see Template links
+below): those land on `/projects/<id>`, where all of them are visible together,
+which is the only view that shows the whole thing that was just created. The
+catalog's Quick Deploy used to return an `href` and offer a "View" button on its
+toast instead; the redirect now happens server-side, the same way the detail
+page always did.
+
 ## Shared deploy pipeline (`src/lib/services/deploy.service.ts`)
 
 `DeploymentService.deployService(svc, userId, clientDeploymentId?)` is the one
@@ -201,15 +225,40 @@ a skeleton rather than a broken page. Concretely:
   `services/new` and the service Source tab. They're now one shared component
   each (`git-repo-picker.svelte`, `image-check-warning.svelte`) over one shared
   query.
+- **Every remaining Docker round-trip that used to sit in a `load`.** This was
+  the single biggest source of "the app feels sluggish": a navigation couldn't
+  paint until the daemon answered, and a slow or unreachable daemon stalled the
+  page rather than one panel of it.
+  - `service-status.remote.ts`, `syncServiceStatuses` : the status
+    reconciliation that ran in the services list's `load` (one `inspect` per
+    deployed service, every visit) and again in
+    `services/[serviceId]/+layout.server.ts` (once per tab navigation). Both
+    pages render the stored `currentStatus` immediately and patch it when this
+    lands, so a stale badge corrects itself instead of a blank page waiting.
+  - `setup.remote.ts`, `getSetupStatus`/`getNewtContainer` : the setup
+    diagnostics (which ping the daemon and the Traefik container) behind the
+    dashboard's banner and `/settings`' per-field warnings, plus the Newt lookup
+    on the Networking tab. `getSetupStatus` returns `issuesByField` ready-made,
+    so the three settings tabs that highlight a field just read it.
+  - `docker-infra.remote.ts`, `getCleanupPreview`/`getInfraStatus`/
+    `getUnknownHostVolumes` : Docker Cleanup's `system df` preview, System Logs'
+    Traefik + compose-stack lookup, and the volumes tab's host-volume picker.
+
+  This is the one category where a _page's own subject_ moved out of `load`, and
+  it's allowed for the reason the rule exists: none of it is the page's
+  correctness, it's a live reading _about_ what the page already rendered from
+  the database. The entity lists themselves still come from `load`.
 
 **Auth is not inherited.** A remote function is its own endpoint : the
 `(protected)` layout's `load` guard never runs for one, exactly like a
 `+server.ts` route. Every query/command starts with `requireUser()`
 (`$lib/server/remote-auth.ts`), which reads `getRequestEvent().locals.user` and
 `error(401)`s otherwise. `hooks.server.ts` populates `locals` for these requests
-the same as any other, so cookie sessions and API keys both work. Anything
-admin-only would need its own `locals.isAdmin` check on top, same as an
-admin-only route's `load`.
+the same as any other, so cookie sessions and API keys both work. Admin-only
+ones use `requireAdmin()` from the same module, which is `requireUser()` plus a
+`locals.isAdmin` check and a `error(403)` — `getCleanupPreview` and
+`getInfraStatus` back admin-only pages, so the guard has to be on the function,
+not only on the route that happens to call it.
 
 **Arguments are validated, not cast.** A query/command taking an argument passes
 a zod schema as its first parameter (`query(z.string(), ...)`), the same "one
@@ -226,7 +275,16 @@ changes identity. So:
   `query.error`, with the pending branch rendering
   `$lib/components/skeleton.svelte`. `host-resources.svelte`,
   `job-queue-panel.svelte` and `notification-bell.svelte` are the reference
-  shapes.
+  shapes. **`$lib/components/async-block.svelte` is that whole triple as one
+  component** — `<AsyncBlock {query}>` with a `pending` snippet and a
+  `children(value)` snippet, rendering an `Alert` with a working **Retry**
+  (`query.refresh()`) on failure. Prefer it to hand-rolling the three branches
+  again; the hand-rolled ones above predate it and each invented their own
+  failure wording with no retry. `tests/unit/app/async-block.test.ts` covers all
+  three branches.
+- **A query whose argument is reactive must be _called_ inside a `$derived`**,
+  not created once: `const q = $derived(someQuery(ids))`. Calling it at the top
+  level pins the first argument value forever.
 - A one-shot, user-triggered lookup assigns a fresh promise to `$state` and
   `{#await}`s that, which is what makes the block re-run per invocation.
   `git-repo-picker.svelte` (a "List repos" click, then a Dockerfile check for
@@ -278,19 +336,49 @@ a linked service to be _healthy_, just created and started.
 
 ## Built-in template catalog and gallery (`builtin-templates.ts`, `builtin-templates-apps.ts`, `template-icon.svelte`, `templates/[templateId]/`)
 
-58 built-in templates (up from the original 8), split across two data files
+69 built-in templates (up from the original 8), split across two data files
 purely to stay under `noExcessiveLinesPerFile`'s 680-line limit:
 `src/lib/server/db/builtin-templates.ts` (the original 8 infra templates plus
 Media/Network/Dashboard/Productivity/Finance category entries, also exports the
 `BuiltinTemplate`/`BuiltinTemplateLink` interfaces both files use) and
-`src/lib/server/db/builtin-templates-apps.ts` (17 more, Analytics/Monitoring/
-Development/other categories). `src/lib/server/db/seed.ts` is a thin
-orchestrator importing both arrays plus `BUILTIN_TEMPLATE_LINKS` (3 entries:
-WordPress→MySQL, Umami→Postgres, Miniflux→Postgres, wiring the Template links
-feature above into real built-ins) and inserting all of it with
-`onConflictDoNothing()`, same idempotent-seed-on-boot pattern as before. Every
-image was verified real via `docker manifest inspect <image>:<tag>` (fast, no
-full pull) before being added, not just guessed from a project's README.
+`src/lib/server/db/builtin-templates-apps.ts` (the rest, Analytics/Monitoring/
+Development/other categories, including Penombre, Nextcloud, Home Assistant,
+Mealie, Memos, Paperless-ngx, Beszel, Kavita, code-server, the Docker registry
+itself, Ollama, Open WebUI and Duplicati). `src/lib/server/db/seed.ts` is a thin
+orchestrator importing both arrays plus `BUILTIN_TEMPLATE_LINKS` (4 entries:
+WordPress→MySQL, Umami→Postgres, Miniflux→Postgres, Paperless-ngx→Redis, wiring
+the Template links feature above into real built-ins). Every image was verified
+real via `docker manifest inspect <image>:<tag>` (fast, no full pull) before
+being added, not just guessed from a project's README.
+
+**The seed upserts rather than `onConflictDoNothing()`, and it has to.** A
+built-in is code, not user data (`ownerId` null, and `TemplateDTO.owned()`
+refuses to hand one to an edit/delete route), so an instance that seeded once
+would otherwise keep the first version of every row forever : adding `tags` to
+the catalog changed nothing on any existing install, which is exactly how it was
+caught. `seedBuiltinTemplates()` now writes every display field back from
+`excluded.*` on conflict, so a boot re-syncs the catalog to whatever the code
+says. It deliberately doesn't touch `createdAt` or `ownerId`.
+
+**Adding a built-in can push an existing one off the gallery's first page**,
+which is how a green local run still failed CI: the built-in list is paginated
+at 24, ordered by name, and the docs-screenshot spec used to wait for
+`/Jellyfin/i` on `/templates` before capturing. Thirteen new templates moved
+Jellyfin to page two and the shot timed out. That expectation is now
+`/New Template/i` — present on the page whatever the catalog holds, and absent
+from the sidebar, so it still proves the page rendered. Don't anchor a
+screenshot (or a test) on a template name.
+
+**Tags (`template.tags`, `text[]`)** are the search keywords a category can't
+be: a category is one bucket per template, tags are many and overlap ("sql",
+"arr", "self-hosted"). `TemplateDTO.listPaged` ORs a `tagSearchCondition` over
+the existing name/description/image `searchCondition` —
+`array_to_string(tags, ' ') ILIKE '%q%'` rather than a column list, since
+`searchCondition` only takes text columns and this one is an array. The Tags
+field on `templates/new` is comma-separated text run through `parseTags`
+(`$lib/server/validation/template.ts`: trimmed, lowercased, de-duplicated, 12
+tags of 30 chars max, so one paste can't fill the column), and every built-in
+carries its own set, checked by a test that fails on an untagged one.
 
 Every template row (`template.category`/`sourceUrl`/`websiteUrl`, the latter two
 added to `schema.ts` and `TemplateDTO.NewTemplateInput` alongside the
@@ -379,22 +467,93 @@ is crafted to exploit gaps in GitHub's own rendering; sanitizing server-side
 means the client only ever receives an already-restricted tag/attribute
 allowlist, regardless of what GitHub returned.
 
+## Status pages and alerting (`status_page`, `notification_channel`, `status-alert.service.ts`)
+
+A status page groups services and answers one question — is this up? — for an
+audience that may not be signed in. Three shapes, set by `scope`:
+
+- `global` : every service the owner has.
+- `project` : that project's services.
+- `custom` : a hand-picked list, the only one that reads `status_page_service`.
+
+**`global` and `project` resolve live** (`StatusPageDTO.serviceIds()` queries
+`service` on every read) so deploying a new service puts it on the page without
+anyone re-editing it. That's the whole reason the join table isn't used for all
+three.
+
+`/status-pages` is the operator's view: health of every service, the pages
+themselves, and the notification channels. `/status/<slug>` is the public one,
+and the routing and disclosure rules for it are in `routing.md` — read that
+before touching either.
+
+**Alerts fire on a state change, not on a state.** `uptime-probe.ts`'s tick
+reads the previous beat per probe before recording the new one and
+`detectTransitions` diffs them, so a service that's been down for an hour
+doesn't re-alert every minute, and a probe with no previous beat never alerts at
+all (otherwise the first tick after a deploy, or after `prune()` cleared the
+window, would alert on everything at once). Each transition reaches the channels
+of every page covering that service : `listForStatusPage` returns that page's
+own channels plus every account-wide one (`statusPageId` null).
+
+A channel is a generic JSON `POST` or an email. Failures are contained — caught
+per channel, logged, and stored on `notification_channel.lastError` so a
+silently-broken webhook is visible in the UI instead of just never firing. Email
+needs SMTP configured and says so rather than failing opaquely. The payload
+shape and the two formatters (`alertSubject`/`alertBody`) are pure and
+unit-tested in `tests/unit/app/status-alert.test.ts`, along with the transition
+logic.
+
 ## Git-based builds (`src/lib/services/docker/git-build.ts`)
 
 A service's `buildSource` is `"image"` (bring-your-own, the default) or `"git"`,
 set on the new-service form or edited later on the Source tab, both share the
-same "Deploy from" toggle UI. Git mode shells out to the system `git` binary
-(`clone --depth 1 --branch <ref> --single-branch`, same "shell out to a
-well-known CLI" precedent as `tar`/`df`/`nvidia-smi` elsewhere) into a temp
-directory, then `DockerService.buildFromGit()` calls dockerode's `buildImage()`
-against that directory (tar'd internally by dockerode, not manually) and tags
-the result `homerun-build-<slug>:<timestamp>`, a fresh tag every build, same
-"never reuse a name across deploys" precedent as container names. Progress lines
-stream into the deployment log exactly like `pullImage`'s layer-status events
-(filtered to status changes, not every line, build output is chattier than a
-pull). The temp clone directory is always removed afterward (`finally`), success
-or failure. A bare commit SHA doesn't work (shallow clone by branch/tag only,
-not by arbitrary ref).
+same "Deploy from" toggle UI.
+
+**The clone runs in a container, into a Docker volume — never on the host.**
+`buildFromGit()` creates a throwaway `homerun-build-<uuid>` volume, runs
+`alpine/git` against it (`clone --depth 1 --branch <ref> --single-branch` into
+`/workspace/repo`, then a second container for `rev-parse HEAD`), reads the
+build context back out as a tar stream, and hands that stream to dockerode's
+`buildImage()`. The result is tagged `homerun-build-<slug>:<timestamp>`, a fresh
+tag every build, same "never reuse a name across deploys" precedent as container
+names. Progress lines stream into the deployment log exactly like `pullImage`'s
+layer-status events (filtered to status changes, not every line, build output is
+chattier than a pull). The volume and both containers are always removed
+afterward (`finally`), success or failure. A bare commit SHA doesn't work
+(shallow clone by branch/tag only, not by arbitrary ref).
+
+This replaced `execFile("git", ...)` into an `mkdtemp()` directory, and it was a
+**production bug fix, not a refactor**: the runtime image is `oven/bun:1-alpine`
+plus `ca-certificates` and `su-exec` (see the `app` stage of the `Dockerfile`),
+which has no `git`, so the old code failed with ENOENT and git-based builds only
+ever worked in dev. Verified by running the base image: `command -v git` finds
+nothing. The temp directory was the second problem — inside the container it was
+the container's own ephemeral writable layer, not a volume, so a large clone
+grew the container unboundedly and vanished on restart.
+
+Four things about this shape are load-bearing:
+
+- **It stays on one daemon.** A real Docker-in-Docker sidecar would build on a
+  _different_ daemon, and the image would then need a cache registry to get back
+  to the deploy target — the same constraint `deploy.service.ts` already
+  enforces for build servers. Streaming the context to the existing daemon
+  avoids inheriting that.
+- **The archive path ends in `/.`.** `getArchive({path: "/workspace/repo"})`
+  prefixes every tar entry with `repo/`, and the daemon then can't find the
+  Dockerfile at the context root; `"/workspace/repo/."` roots the entries at
+  `./`. Verified live both ways.
+- **Argv is passed directly, never through `sh -c`.** The repo URL and ref are
+  user input.
+- **Container output is demuxed, not stripped.** Docker frames non-TTY output
+  with an 8-byte header whose big-endian length bytes are often printable ASCII
+  — a 41-byte frame carries `)`. A "drop control characters" pass left that `)`
+  glued to the front of the commit SHA (a real, observed
+  `Building commit )68c1b9`), so `demuxDockerFrames` walks the frames properly
+  and `extractCommitSha` matches `\b[0-9a-f]{40}\b` rather than slicing. Both
+  are pure and unit-tested in `tests/unit/app/git-build.test.ts`.
+
+`packages/agent/docker.ts` still shells out to `git` for agent-dispatched builds
+and its image has no `git` either : same latent bug, tracked in `TODO.md`.
 
 Any git-clone-able HTTPS URL works, this is what makes it "Git providers,
 including self-hosted Gitea" without any provider-specific API integration for

@@ -77,6 +77,15 @@ const PAGE_SIZE = 1000;
 const MAX_PAGES = 20;
 
 /**
+ * Which scheme Pangolin's tunnel speaks to this host's Traefik. `method` is
+ * a free-form nullable string in the Integration API's own OpenAPI document
+ * (`/resource/{id}/target`), carrying the target's scheme.
+ */
+export function targetScheme(port: number): "http" | "https" {
+	return port === 80 ? "http" : "https";
+}
+
+/**
  * Auto-manages routing for deployed services via a self-hosted Pangolin
  * instance's Integration API : an alternative to CloudflareService (see
  * cloudflare.service.ts) for instances that front themselves with Pangolin
@@ -254,10 +263,23 @@ class PangolinServiceClass {
 		return res.data;
 	}
 
+	private setResourceSso(
+		baseUrl: string,
+		token: string,
+		resourceId: number | string,
+		sso: boolean,
+	): Promise<unknown> {
+		return this.request(baseUrl, token, `/resource/${resourceId}`, {
+			body: JSON.stringify({ sso }),
+			method: "POST",
+		});
+	}
+
 	private createResourceTarget(
 		baseUrl: string,
 		token: string,
 		params: {
+			host: string;
 			port: number;
 			resourceId: number | string;
 			siteId: number | string;
@@ -270,8 +292,8 @@ class PangolinServiceClass {
 			{
 				body: JSON.stringify({
 					enabled: true,
-					ip: "localhost",
-					method: "http",
+					ip: params.host,
+					method: targetScheme(params.port),
 					port: params.port,
 					siteId: params.siteId,
 				}),
@@ -302,7 +324,9 @@ class PangolinServiceClass {
 		baseUrl: string;
 		mainSiteName: string;
 		orgId: string;
+		ownsAuth: boolean;
 		port: number;
+		targetHost: string;
 		token: string;
 	} | null> {
 		const settings = await InstanceSettingsDTO.get();
@@ -320,7 +344,9 @@ class PangolinServiceClass {
 			baseUrl,
 			mainSiteName,
 			orgId,
+			ownsAuth: settings.pangolinOwnsAuth,
 			port: settings.pangolinTargetPort,
+			targetHost: settings.pangolinTargetHost,
 			token,
 		};
 	}
@@ -336,13 +362,21 @@ class PangolinServiceClass {
 		if (!cfg) {
 			return null;
 		}
-		const { baseUrl, mainSiteName, orgId, port, token } = cfg;
+		const { baseUrl, mainSiteName, orgId, ownsAuth, port, targetHost, token } =
+			cfg;
 
 		try {
 			const resources = await this.listResources(baseUrl, token, orgId);
-			if (resources.some((r) => r.fullDomain === hostname)) {
+			const existing = resources.find((r) => r.fullDomain === hostname);
+			if (existing) {
+				await this.setResourceSso(
+					baseUrl,
+					token,
+					existing.resourceId,
+					ownsAuth,
+				);
 				return {
-					detail: `${hostname} already has a resource`,
+					detail: `${hostname} already has a resource, Pangolin SSO ${ownsAuth ? "on" : "off"}`,
 					ok: true,
 					provider: "pangolin",
 				};
@@ -377,14 +411,16 @@ class PangolinServiceClass {
 				name: match.subdomain || hostname,
 				subdomain: match.subdomain,
 			});
+			await this.setResourceSso(baseUrl, token, resource.resourceId, ownsAuth);
 			await this.createResourceTarget(baseUrl, token, {
+				host: targetHost,
 				port,
 				resourceId: resource.resourceId,
 				siteId: mainSite.siteId,
 			});
 			logger.info(`Pangolin resource created: ${hostname} -> ${mainSiteName}`);
 			return {
-				detail: `created ${hostname} -> ${mainSiteName}:${port}`,
+				detail: `created ${hostname} -> ${targetScheme(port)}://${targetHost}:${port} via ${mainSiteName}`,
 				ok: true,
 				provider: "pangolin",
 			};

@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import AsyncBlock from "$lib/components/async-block.svelte";
+	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
+	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import { getNewtContainer } from "$lib/remote/setup.remote";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
+
+	const newt = getNewtContainer();
 </script>
 
 <div class="space-y-6">
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Traefik</h2>
       <p class="text-text-muted text-xs">
@@ -24,7 +30,8 @@
       use:enhance={enhanceToast({
         error: "Check the form for errors.",
         loading: "Saving Traefik settings",
-        success: "Traefik settings saved.",
+        success: (data) =>
+          (data?.traefikDetail as string | null) ?? "Traefik settings saved.",
       })}
     >
       <div>
@@ -36,19 +43,14 @@
           type="email"
           value={data.settings.traefikAcmeEmail ?? ""}
         />
-        <p
-          class="mt-1.5 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"
-        >
-          <strong>Doesn't take effect by saving here.</strong> The contact
-          email Traefik registers with Let's Encrypt when generating
-          certificates : recorded for reference and validated as a real
-          email, but this app never touches the running Traefik container's
-          own config. Traefik reads it from the
-          <code class="font-mono">ACME_EMAIL</code>
-          env var at container startup (compose.yaml's
-          <code class="font-mono">--certificatesresolvers.letsencrypt.acme.email</code>
-          flag) : set it there and recreate the Traefik container for a
-          change to actually take effect.
+        <p class="text-text-subtle mt-1.5 text-xs">
+          The contact address Traefik registers with Let's Encrypt. Traefik
+          only reads it at startup, so saving a <em>new</em> one here
+          rewrites
+          <code class="">--certificatesresolvers.&lt;resolver&gt;.acme.email</code>
+          on the running container and recreates it : expect a few seconds of
+          downtime, and this page may blink if you reach it through Traefik.
+          Saving the value it already has changes nothing.
         </p>
       </div>
       <div>
@@ -75,7 +77,7 @@
         <label class={label} for="traefikDynamicConfigDir"
         >Dynamic config directory</label>
         <Input
-          class="font-mono"
+          class=""
           id="traefikDynamicConfigDir"
           name="traefikDynamicConfigDir"
           placeholder={data.envDefaults.traefikDynamicConfigDir
@@ -95,7 +97,7 @@
     </form>
   </section>
 
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Cloudflare</h2>
       <p class="text-text-muted text-xs">
@@ -121,7 +123,7 @@
       <div>
         <label class={label} for="cloudflareZoneId">Zone ID</label>
         <Input
-          class="font-mono"
+          class=""
           id="cloudflareZoneId"
           name="cloudflareZoneId"
           type="text"
@@ -152,7 +154,7 @@
     </form>
   </section>
 
-  <section class="glass rounded-2xl">
+  <section class="panel rounded-md">
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Pangolin</h2>
       <p class="text-text-muted text-xs">
@@ -186,7 +188,7 @@
       <div>
         <label class={label} for="pangolinApiBaseUrl">API base URL</label>
         <Input
-          class="font-mono"
+          class=""
           id="pangolinApiBaseUrl"
           name="pangolinApiBaseUrl"
           placeholder="https://api.pangolin.example.com/v1"
@@ -197,15 +199,15 @@
           The <strong>Integration API</strong>, not the dashboard : it's a
           separate server (port 3003 by default) that self-hosted Pangolin
           only exposes once you enable it, and its base path ends in
-          <code class="font-mono">/v1</code>. A dashboard URL like
-          <code class="font-mono">/api/v1</code> authenticates with a session
+          <code class="">/v1</code>. A dashboard URL like
+          <code class="">/api/v1</code> authenticates with a session
           cookie, never an API key, so every call here would fail.
         </p>
       </div>
       <div>
         <label class={label} for="pangolinOrgId">Org ID</label>
         <Input
-          class="font-mono"
+          class=""
           id="pangolinOrgId"
           name="pangolinOrgId"
           type="text"
@@ -215,7 +217,7 @@
       <div>
         <label class={label} for="pangolinMainSiteName">Site name</label>
         <Input
-          class="font-mono"
+          class=""
           id="pangolinMainSiteName"
           name="pangolinMainSiteName"
           type="text"
@@ -228,20 +230,68 @@
           and no resource is ever created.
         </p>
       </div>
+      <AsyncBlock
+        errorTitle="Couldn't check this host for a tunnel client."
+        query={newt}
+      >
+        {#snippet pending()}
+          <Skeleton class="h-9 w-full" />
+        {/snippet}
+        {#snippet children(container)}
+          {#if container}
+            <p class="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
+              <span class="size-1.5 rounded-full {container.state === 'running'
+              ? 'bg-emerald-500'
+              : 'bg-amber-500'}"></span>
+              A Pangolin tunnel client is on this host
+              (<code class="font-mono">{container.image}</code>, {container.state}).
+            </p>
+          {:else}
+            <p class="text-text-subtle rounded-lg border border-border px-3 py-2 text-xs">
+              No Newt tunnel container found on this host. Pangolin can only
+              reach services here through one : deploy the
+              <strong>Newt (Pangolin tunnel)</strong> template, or run your own.
+            </p>
+          {/if}
+        {/snippet}
+      </AsyncBlock>
+
+      <div>
+        <label class={label} for="pangolinTargetHost">Target host</label>
+        <Input
+          id="pangolinTargetHost"
+          name="pangolinTargetHost"
+          placeholder="localhost"
+          type="text"
+          value={data.settings.pangolinTargetHost ?? ""}
+        />
+        <p class="text-text-subtle mt-1.5 text-xs">
+          The address the Pangolin site agent reaches this host at. Unset means
+          <code>localhost</code>, which is right when that agent (Newt above)
+          runs on this host with host networking : anything else needs this
+          host's LAN address.
+        </p>
+      </div>
+
       <div>
         <label class={label} for="pangolinTargetPort">Target port</label>
         <Input
           id="pangolinTargetPort"
           name="pangolinTargetPort"
-          placeholder="80"
+          placeholder="443"
           type="number"
           value={data.settings.pangolinTargetPort ?? ""}
         />
         <p class="text-text-subtle mt-1.5 text-xs">
-          The local port on that site's host a Resource's Target forwards
-          to. Unset defaults to 80 (this instance's own Traefik entrypoint,
-          HTTP-only : Pangolin terminates the public TLS connection
-          itself).
+          The local port on that site's host a Resource's Target forwards to.
+          Unset defaults to <strong>443</strong>, this instance's own
+          <code class="">websecure</code> Traefik entrypoint, and the
+          Target is created as <code class="">https</code>. Every
+          service router Homerun writes lives on that entrypoint with TLS on,
+          so a Target pointing at 80 reaches an entrypoint with no matching
+          router and Traefik answers <strong>404</strong>. TLS is terminated
+          twice on purpose : Pangolin for the public connection, Traefik again
+          for the hop to the container.
         </p>
       </div>
       <div>
@@ -253,6 +303,14 @@
           type="password"
         />
       </div>
+      <CheckBox
+        checked={data.settings.pangolinOwnsAuth ?? false}
+        helperText="Resources keep Pangolin's own SSO, and this instance's per-service login wall steps aside for anything Pangolin publishes : one sign-in instead of two. Off, Homerun owns access and every Resource it creates has Pangolin SSO disabled."
+        id="pangolinOwnsAuth"
+        label="Let Pangolin handle sign-in"
+        name="pangolinOwnsAuth"
+      />
+
       <div class="flex justify-end gap-2">
         <Button formaction="?/testPangolin" type="submit" variant="outline">
           Test connection

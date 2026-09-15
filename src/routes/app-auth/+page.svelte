@@ -91,12 +91,12 @@
 
 <div class="flex min-h-screen flex-col items-center justify-center px-6 py-12">
   <div class="w-full max-w-md">
-    <div class="glass overflow-hidden rounded-2xl">
+    <div class="panel overflow-hidden rounded-md">
       <div
         class="flex items-center gap-3 border-b border-border bg-surface-2 px-6 py-5"
       >
         <div
-          class="bg-accent/10 text-accent flex size-11 shrink-0 items-center justify-center rounded-xl"
+          class="bg-accent/10 text-accent flex size-11 shrink-0 items-center justify-center rounded-md"
         >
           {#if data.denial}
             <ShieldX class="size-5" />
@@ -115,7 +115,7 @@
       <div class="p-6">
         {#if data.denial}
           <p class="text-text-muted mb-4 text-sm">{data.denial}</p>
-          <p class="text-text-subtle mb-5 font-mono text-xs">
+          <p class="text-text-subtle mb-5 text-xs">
             Signed in as {data.signedInAs}
           </p>
           <div class="flex flex-wrap gap-2">

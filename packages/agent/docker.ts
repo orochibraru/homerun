@@ -1,13 +1,58 @@
-import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { promisify } from "node:util";
+import type { Readable } from "node:stream";
 import Docker from "dockerode";
 import { config } from "./config";
 import type { BuildInput } from "./schemas";
 
-const execFileAsync = promisify(execFile);
+/**
+ * Cloning runs in this image rather than shelling out to `git` : the agent's
+ * own image is `alpine:3` plus a handful of libraries and has no git binary,
+ * so the old `execFile("git", ...)` failed with ENOENT on every git build.
+ * Mirrors the main app's `docker/git-build.ts`, which hit the same wall.
+ */
+const GIT_IMAGE = "alpine/git:latest";
+const WORKSPACE = "/workspace";
+const REPO_DIR = `${WORKSPACE}/repo`;
+const CLONE_TIMEOUT_MS = 10 * 60 * 1000;
+
+/** Injects a credential into an https clone URL, same rules as the main app's `authenticatedCloneUrl` (hand-mirrored, the agent can't import from src/). */
+export function authenticatedCloneUrl(
+	gitUrl: string,
+	credential: { token: string; username: string } | null | undefined,
+): string {
+	if (!credential) {
+		return gitUrl;
+	}
+	let url: URL;
+	try {
+		url = new URL(gitUrl);
+	} catch {
+		return gitUrl;
+	}
+	if (url.protocol !== "https:" && url.protocol !== "http:") {
+		return gitUrl;
+	}
+	if (url.username !== "" || url.password !== "") {
+		return gitUrl;
+	}
+	url.username = encodeURIComponent(credential.username);
+	url.password = encodeURIComponent(credential.token);
+	return url.toString();
+}
+
+/** Strips any credential back out before a URL reaches a log line. */
+export function redactCloneUrl(gitUrl: string): string {
+	try {
+		const url = new URL(gitUrl);
+		if (url.username === "" && url.password === "") {
+			return gitUrl;
+		}
+		url.username = "";
+		url.password = "";
+		return url.toString();
+	} catch {
+		return gitUrl;
+	}
+}
 
 /** Same convention as the main app's docker/labels.ts : kept identical on purpose so both sides read the same way. */
 export const MANAGED_LABEL = "homerun.managed";
@@ -47,12 +92,103 @@ class AgentDockerService {
 	 * app's source tree, same "keep the two in sync by hand" precedent as
 	 * `deploy()`/`createAndStartContainer` already document).
 	 */
+	async #ensureGitImage(push: (line: string) => void): Promise<void> {
+		const d = this.getDocker();
+		try {
+			await d.getImage(GIT_IMAGE).inspect();
+			return;
+		} catch {
+			push(`Pulling ${GIT_IMAGE}...`);
+		}
+		const stream: NodeJS.ReadableStream = await d.pull(GIT_IMAGE, {});
+		await new Promise<void>((resolvePromise, reject) => {
+			d.modem.followProgress(stream, (err) =>
+				err ? reject(err) : resolvePromise(),
+			);
+		});
+	}
+
+	async #runInWorkspace(opts: {
+		cmd: string[];
+		volumeName: string;
+	}): Promise<{ output: string; statusCode: number }> {
+		const d = this.getDocker();
+		const container = await d.createContainer({
+			Cmd: opts.cmd,
+			Entrypoint: ["git"],
+			Env: ["GIT_TERMINAL_PROMPT=0"],
+			HostConfig: { Binds: [`${opts.volumeName}:${WORKSPACE}`] },
+			Image: GIT_IMAGE,
+			Labels: { [MANAGED_LABEL]: "true" },
+		});
+		try {
+			await container.start();
+			const result = await Promise.race([
+				container.wait(),
+				new Promise<never>((_, reject) => {
+					setTimeout(
+						() => reject(new Error("The clone timed out.")),
+						CLONE_TIMEOUT_MS,
+					);
+				}),
+			]);
+			const logs = await container.logs({ stderr: true, stdout: true });
+			return {
+				output: logs.toString("utf8"),
+				statusCode: result.StatusCode,
+			};
+		} finally {
+			await container.remove({ force: true }).catch(() => {
+				// Best-effort cleanup, same as the main app's own git build.
+			});
+		}
+	}
+
+	/** Tars the cloned repo out of the workspace volume, which is what dockerode's buildImage wants as a context. */
+	async #openContext(
+		volumeName: string,
+		buildContext: string | null | undefined,
+	): Promise<{ close: () => Promise<void>; stream: Readable }> {
+		const d = this.getDocker();
+		const container = await d.createContainer({
+			Entrypoint: ["true"],
+			HostConfig: { Binds: [`${volumeName}:${WORKSPACE}:ro`] },
+			Image: GIT_IMAGE,
+			Labels: { [MANAGED_LABEL]: "true" },
+		});
+		await container.start();
+		await container.wait();
+		const path = buildContext
+			? `${REPO_DIR}/${buildContext.replace(/^\/+|\/+$/g, "")}/.`
+			: `${REPO_DIR}/.`;
+		const stream = (await container.getArchive({ path })) as Readable;
+		return {
+			close: async () => {
+				await container.remove({ force: true }).catch(() => {
+					// Best-effort cleanup.
+				});
+			},
+			stream,
+		};
+	}
+
+	/**
+	 * Clones a git repo at a ref and builds its Dockerfile into a local
+	 * image tagged `input.tag`, optionally pushing it to a registry
+	 * afterward : see `buildInputSchema`'s docstring for the full picture
+	 * (why no cache-from pull, when `push` matters). Mirrors the main app's
+	 * `docker/git-build.ts`'s `buildFromGit`, this is a from-scratch,
+	 * self-contained implementation (the agent has no access to the main
+	 * app's source tree, same "keep the two in sync by hand" precedent as
+	 * `deploy()`/`createAndStartContainer` already document), including its
+	 * clone-in-a-container-into-a-volume shape : the agent image has no git
+	 * binary of its own.
+	 */
 	async buildFromGit(
 		input: BuildInput,
 		onProgress?: (line: string) => void,
 	): Promise<{ error?: string; success: boolean }> {
 		const ref = input.gitRef || "main";
-		const dir = await mkdtemp(join(tmpdir(), "homerun-agent-build-"));
 		const d = this.getDocker();
 		// Always logs to this process's own console, regardless of whether a
 		// caller passed onProgress (http.ts's /v1/build route currently
@@ -66,29 +202,48 @@ class AgentDockerService {
 			onProgress?.(line);
 		};
 
-		try {
-			push(`Cloning ${input.gitUrl} (${ref})...`);
-			await execFileAsync("git", [
-				"clone",
-				"--depth",
-				"1",
-				"--branch",
-				ref,
-				"--single-branch",
-				input.gitUrl,
-				dir,
-			]);
+		const volumeName = `homerun-agent-build-${crypto.randomUUID().slice(0, 8)}`;
+		let context: { close: () => Promise<void>; stream: Readable } | null = null;
 
-			const contextDir = input.buildContext
-				? join(dir, input.buildContext)
-				: dir;
+		try {
+			await this.#ensureGitImage(push);
+			await d.createVolume({
+				Labels: { [MANAGED_LABEL]: "true" },
+				Name: volumeName,
+			});
+
+			const cloneUrl = authenticatedCloneUrl(input.gitUrl, input.credential);
+			push(`Cloning ${redactCloneUrl(cloneUrl)} (${ref})...`);
+			const clone = await this.#runInWorkspace({
+				cmd: [
+					"clone",
+					"--depth",
+					"1",
+					"--branch",
+					ref,
+					"--single-branch",
+					cloneUrl,
+					REPO_DIR,
+				],
+				volumeName,
+			});
+			if (clone.statusCode !== 0) {
+				throw new Error(
+					redactCloneUrl(
+						clone.output || `git clone exited ${clone.statusCode}`,
+					),
+				);
+			}
+
 			const dockerfile = input.dockerfilePath || "Dockerfile";
+			context = await this.#openContext(volumeName, input.buildContext);
 
 			push(`Building ${dockerfile}...`);
-			const stream = await d.buildImage(
-				{ context: contextDir, src: ["."] },
-				{ dockerfile, rm: true, t: input.tag },
-			);
+			const stream = await d.buildImage(context.stream, {
+				dockerfile,
+				rm: true,
+				t: input.tag,
+			});
 
 			await new Promise<void>((resolvePromise, reject) => {
 				let lastStatus = "";
@@ -117,11 +272,15 @@ class AgentDockerService {
 			return { success: true };
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			return { error: message, success: false };
+			return { error: redactCloneUrl(message), success: false };
 		} finally {
-			await rm(dir, { force: true, recursive: true }).catch(() => {
-				// Best-effort cleanup, same as the main app's own buildFromGit.
-			});
+			await context?.close();
+			await d
+				.getVolume(volumeName)
+				.remove({ force: true })
+				.catch(() => {
+					// Best-effort cleanup, same as the main app's own buildFromGit.
+				});
 		}
 	}
 
