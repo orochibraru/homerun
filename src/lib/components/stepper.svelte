@@ -8,6 +8,7 @@
 <script lang="ts">
   import { ArrowLeft, ArrowRight, Check } from "@lucide/svelte";
   import type { Component, Snippet } from "svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
 
   interface Props {
     /** Which step is currently shown : the page toggles its own step panels with this, same pattern services/new uses today. */
@@ -60,64 +61,78 @@
     activeStep = Math.max(0, activeStep - 1);
   }
 
-  function stepButtonClass(i: number): string {
+  function markerClass(i: number): string {
     if (i === activeStep) {
-      return "border-accent bg-accent-light text-accent";
+      return "border-accent bg-accent text-white shadow-[0_0_0_4px_var(--color-accent-light)]";
     }
     if (i < activeStep) {
-      return "border-border text-text bg-surface-2";
+      return "border-accent/40 bg-accent-light text-accent";
     }
-    return "border-border text-text-muted";
+    return "border-border bg-surface-2 text-text-subtle";
   }
 </script>
 
-<div class="space-y-6">
-  <!-- ═══ Step indicator : full labeled row at sm+, compact progress bar
-       below it. Two separate layouts rather than one that just hides the
-       label at small widths: five equal-width pill buttons with nothing
-       but a bare number in them (padding and border intact) reads as
-       broken, not minimal, once there's no room for the label. ═══ -->
-  <div class="hidden justify-between gap-1 sm:flex">
+<div class="space-y-7">
+  <!-- ═══ Step indicator : connected markers with labels at sm+, compact
+       progress bar below it. Two separate layouts rather than one that
+       just hides the label at small widths: bare markers with nothing but
+       a number in them read as broken, not minimal, once there's no room
+       for the label. ═══ -->
+  <div class="hidden items-start sm:flex">
     {#each steps as step, i (step.label)}
       {@const StepIcon = step.icon}
       <button
-        class="flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 {stepButtonClass(
-          i,
-        )}"
+        class="group flex shrink-0 flex-col items-center gap-2 disabled:cursor-not-allowed"
         disabled={i > reachableStep}
         onclick={() => goToStep(i)}
         type="button"
       >
-        <div
-          class="flex size-5 shrink-0 items-center justify-center rounded-full text-xs {i <=
-          activeStep
-            ? 'bg-accent text-white'
-            : 'bg-surface-2 text-text-subtle'}"
+        <span
+          class="flex size-9 items-center justify-center rounded-full border transition-all duration-300 {markerClass(
+            i,
+          )}"
         >
           {#if i < activeStep}
-            <Check class="size-3" />
+            <Check class="size-4" />
+          {:else if StepIcon}
+            <StepIcon class="size-4" />
           {:else}
-            {i + 1}
+            <span class="font-mono text-xs">{i + 1}</span>
           {/if}
-        </div>
-        {#if StepIcon}
-          <StepIcon class="size-3.5" />
-        {/if}
-        {step.label}
+        </span>
+        <span
+          class="font-mono text-[0.7rem] tracking-wide transition-colors {i
+          === activeStep
+            ? 'text-text'
+            : 'text-text-subtle'} {i <= reachableStep
+            ? 'group-hover:text-text'
+            : 'opacity-60'}"
+        >
+          {step.label}
+        </span>
       </button>
+      {#if i < steps.length - 1}
+        <div
+          class="mt-[1.0625rem] h-0.5 flex-1 rounded-full transition-colors duration-300 {i
+          < activeStep
+            ? 'bg-accent/50'
+            : 'bg-surface-3'}"
+        >
+        </div>
+      {/if}
     {/each}
   </div>
 
   <div class="sm:hidden">
-    <div
-      class="flex items-center justify-between text-sm font-medium text-text"
-    >
-      <span>Step {activeStep + 1} of {steps.length}</span>
+    <div class="flex items-center justify-between text-sm font-medium text-text">
+      <span class="font-mono text-xs">
+        Step {activeStep + 1} of {steps.length}
+      </span>
       <span class="text-text-muted">{steps[activeStep]?.label}</span>
     </div>
     <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
       <div
-        class="h-full rounded-full bg-accent transition-all"
+        class="h-full rounded-full bg-accent transition-all duration-300"
         style="width: {((activeStep + 1) / steps.length) * 100}%"
       ></div>
     </div>
@@ -129,26 +144,18 @@
   <div class="flex justify-between gap-3">
     <div>
       {#if activeStep > 0}
-        <button
-          class="flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-text transition-all hover:bg-surface-2"
-          onclick={back}
-          type="button"
-        >
+        <Button onclick={back} variant="outline">
           <ArrowLeft class="size-4" />
           Back
-        </button>
+        </Button>
       {/if}
     </div>
     <div class="flex gap-3">
       {#if activeStep < steps.length - 1}
-        <button
-          class="bg-accent shadow-accent/30 hover:bg-accent-dark flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all"
-          onclick={next}
-          type="button"
-        >
+        <Button onclick={next}>
           Next
           <ArrowRight class="size-4" />
-        </button>
+        </Button>
       {:else}
         {@render finish()}
       {/if}

@@ -260,10 +260,12 @@ that pattern for any new skill.
   don't reach for it reflexively: no other dashboard page caps its helper text,
   and sprinkling `max-w-prose` over some paragraphs and not others reads as an
   accident rather than a decision. The only other exception is a **centred
-  single-purpose card** on an otherwise-empty page (`auth/sign-in`,
-  `auth/sign-up`, `auth/accept-invite`, `auth/error`, `app-auth`, `cli-auth` —
-  all `max-w-md`). Neither exception is a licence to wrap a real page in a
-  column.
+  single-purpose card** on an otherwise-empty page: every signed-out page
+  (`auth/sign-in`, `auth/sign-up`, `auth/sign-up/confirm`, `auth/accept-invite`,
+  `auth/error`) goes through `AuthShell` (`$lib/components/auth-shell.svelte`),
+  whose form column is `max-w-md`; `app-auth` and `cli-auth` are their own
+  `max-w-md` cards, and `/onboarding` is a `max-w-3xl` wizard column. Neither
+  exception is a licence to wrap a real page in a column.
 - **No comments. Anywhere. In any code file.** No explanatory line comments, no
   header banners, no prose in YAML/compose/shell files either. A change's
   rationale belongs in the git commit message, a feature's explanation belongs

@@ -2,6 +2,7 @@
 
 No priority, pick whatever.
 
+- [ ] [Tooling] Homerun SDK (shared lib with CLI)
 - [ ] [App] Allow email change
 - [ ] [App] Add email config test button in UI
 - [ ] [App] `compose.prod.yaml` bind-mounts `./homerun.yaml`, so Option B still
@@ -57,6 +58,14 @@ No priority, pick whatever.
 
 ## Done
 
+- [x] [UI] Auth and onboarding looked like scaffolding. Every signed-out page
+      now renders through `AuthShell` (a brand/pitch pane plus a glass form
+      card, `brand-mark.svelte`/`password-field.svelte`/
+      `password-strength.svelte` extracted with it), the onboarding wizard is a
+      centred column of headed panels over a connected step indicator, and
+      `accept-invite` finally uses `enhanceToast` and the shared primitives
+      instead of its own inputs. Killed the stale `LocalRun` branding and the
+      `bg-bg` wrappers that were hiding the ambient backdrop.
 - [x] Pangolin integration doesn't work. Every failure was swallowed into a
       `logger.warn` and the "Test connection" button only listed sites, so a
       configuration that could never create a resource passed it. The test now

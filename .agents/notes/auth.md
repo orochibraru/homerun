@@ -542,16 +542,19 @@ underlying gotcha (`resolve()` here returns a relative path, not useful for a
 gate needs one, just not implemented this way anymore.
 
 `/onboarding/+page.svelte` is a 5-step wizard (Core / Docker / Traefik / Email /
-Review) built on the new reusable `$lib/components/stepper.svelte`, extracted
-from `services/new`'s inlined step-indicator-bar-plus-Back/Next pattern (not
-retrofitted onto `services/new` itself, a deliberate scope cut). `Stepper` owns
-navigation and which step is unlocked (`reachableStep`, grows only after a
-passed `onNext`); the consuming page owns field markup and validation, same
-"shared chrome, not shared shape" split as `form-styles.ts`. No phantom errors:
-a field's error paragraph only renders once that field's step has actually
-failed an attempted `Next`/submit (tracked in the page's own
-`attempted: Set<number>` state, not the component's), nothing shows on initial
-render. The finish action reuses the exact
+Review) in a centred `max-w-3xl` column, each step a `glass` panel with its own
+header, closing on a Review step that lists what's about to be persisted. It's
+built on the reusable `$lib/components/stepper.svelte` (connected circular step
+markers with labels at `sm+`, a progress bar below that, `Button` primitives for
+Back/Next), extracted from `services/new`'s inlined
+step-indicator-bar-plus-Back/Next pattern (not retrofitted onto `services/new`
+itself, a deliberate scope cut). `Stepper` owns navigation and which step is
+unlocked (`reachableStep`, grows only after a passed `onNext`); the consuming
+page owns field markup and validation, same "shared chrome, not shared shape"
+split as `form-styles.ts`. No phantom errors: a field's error paragraph only
+renders once that field's step has actually failed an attempted `Next`/submit
+(tracked in the page's own `attempted: Set<number>` state, not the component's),
+nothing shows on initial render. The finish action reuses the exact
 `InstanceSettingsDTO.updateCore/updateDocker/updateTraefik/updateSmtp` methods
 `/settings` already calls, then `markOnboardingComplete()`, then the same
 `applyInstanceSettings()` + `rebuildAuth()` post-save dance `/settings`'s

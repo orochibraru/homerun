@@ -144,6 +144,25 @@ users, backups):
   tells a true empty state apart from a no-match one via
   `data.total === 0 && !data.filtered`.
 
+**The signed-out surfaces** (`auth/sign-in`, `auth/sign-up`,
+`auth/sign-up/confirm`, `auth/accept-invite`, `auth/error`) all render through
+`auth-shell.svelte`: a two-pane layout with a brand/pitch panel on the left
+(hidden below `lg`, carrying `brand-mark.svelte`, three product highlights and a
+mono deploy-log card) and a `max-w-md` form column on the right, taking
+`eyebrow`/`heading`/`subheading` props plus `children` (the form, rendered in a
+`glass` card), an optional `below` snippet for content outside that card (the
+confirm page's dev-bypass panel) and an optional `footer` snippet for the
+trailing "Don't have an account?" line. **Don't paint an opaque background on
+these pages** — the pre-redesign versions wrapped themselves in `bg-bg`, which
+hid the ambient backdrop the glass is supposed to sample (same rule as the
+`(protected)/` wrappers above). `brand-mark.svelte` is the glowing-dot +
+`homerun` mono wordmark from the sidebar, in `sm`/`lg`; it's also the "gated by"
+footer on `app-auth`. `password-field.svelte` (label + `Input` + show/hide eye
+toggle) and `password-strength.svelte` (the four-bar meter over
+`getPasswordStrength`) replaced the copy of that markup each of those four forms
+carried. The pages that predated this also carried stale `LocalRun` branding and
+a hand-rolled `inputClass`, both gone.
+
 `confirm-dialog.svelte` gained an optional `confirmPhrase` prop: when set, the
 dialog renders an input and the confirm button stays disabled until the typed
 text matches the phrase exactly (Enter in the input confirms too). This replaced

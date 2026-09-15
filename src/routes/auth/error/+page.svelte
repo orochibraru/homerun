@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { KeyRound, ShieldAlert } from "@lucide/svelte";
+	import { KeyRound } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { goto, invalidateAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient, signIn, signOut } from "$lib/auth-client";
+	import AuthShell from "$lib/components/auth-shell.svelte";
+	import PasswordField from "$lib/components/password-field.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { clearOauthAttempt, lastOauthAttempt } from "$lib/oauth-attempt";
@@ -155,114 +157,93 @@
 	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center px-6 py-12">
-  <div class="glass w-full max-w-md rounded-2xl p-6">
-    <div class="mb-5 flex items-center gap-3">
-      <div
-        class="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600"
-      >
-        <ShieldAlert class="size-5" />
-      </div>
-      <div class="min-w-0">
-        <p class="eyebrow">Sign-in</p>
-        <h1 class="text-text text-lg font-semibold">{detail.heading}</h1>
-      </div>
-    </div>
-
-    <p class="text-text-muted mb-5 text-sm">{detail.body}</p>
-
-    {#if code === "account_not_linked"}
-      {#if data.signedInAs}
-        <p class="text-text-subtle mb-4 font-mono text-xs">
-          Signed in as {data.signedInAs}
-        </p>
-        <div class="flex flex-wrap gap-2">
-          {#if linkable}
-            <Button disabled={busy} onclick={() => handleLink(linkable.name, linkable.label)}>
-              <KeyRound class="size-4" />
-              Link {linkable.label} to this account
-            </Button>
-          {:else}
-            {#each data.providers as provider (provider.name)}
-              <Button
-                disabled={busy}
-                onclick={() => handleLink(provider.name, provider.label)}
-              >
-                <KeyRound class="size-4" />
-                Link {provider.label}
-              </Button>
-            {/each}
-          {/if}
-          <Button disabled={busy} onclick={handleSignOut} variant="outline">
-            Sign out
-          </Button>
-        </div>
-      {:else if linkable}
-        <form
-          class="space-y-3"
-          onsubmit={(event) =>
-          handleSignInAndLink(event, linkable.name, linkable.label)}
-        >
-          <p class="text-text-subtle text-xs">
-            Sign in with your existing password and {linkable.label} will be
-            connected to that account straight away.
-          </p>
-          <div>
-            <label class="text-text mb-1.5 block text-sm font-medium" for="email">
-              Email
-            </label>
-            <Input
-              autocomplete="email"
-              id="email"
-              required
-              type="email"
-              bind:value={email}
-            />
-          </div>
-          <div>
-            <label class="text-text mb-1.5 block text-sm font-medium" for="password">
-              Password
-            </label>
-            <Input
-              autocomplete="current-password"
-              id="password"
-              required
-              type="password"
-              bind:value={password}
-            />
-          </div>
-          <Button class="w-full" disabled={busy} type="submit">
-            <KeyRound class="size-4" />
-            Sign in and connect {linkable.label}
-          </Button>
-        </form>
-      {:else}
-        <p class="text-text-subtle mb-4 text-xs">
-          Sign in with your email and password first, then connect the provider
-          from your profile.
-        </p>
-        <div class="flex flex-wrap gap-2">
-          <Button href={resolve("/auth/sign-in")}>Sign in</Button>
-          <Button href={resolve("/")} variant="ghost">
-            Go to the dashboard
-          </Button>
-        </div>
-      {/if}
-    {:else}
+<AuthShell
+  eyebrow="Sign-in problem"
+  heading={detail.heading}
+  subheading={detail.body}
+>
+  {#if code === "account_not_linked"}
+    {#if data.signedInAs}
+      <p class="text-text-subtle mb-4 font-mono text-xs">
+        Signed in as {data.signedInAs}
+      </p>
       <div class="flex flex-wrap gap-2">
-        <Button href={resolve("/auth/sign-in")}>Back to sign in</Button>
-        {#if data.signedInAs}
-          <Button disabled={busy} onclick={handleSignOut} variant="outline">
-            Sign out
+        {#if linkable}
+          <Button
+            disabled={busy}
+            onclick={() => handleLink(linkable.name, linkable.label)}
+          >
+            <KeyRound class="size-4" />
+            Link {linkable.label} to this account
           </Button>
         {:else}
-          <Button href={resolve("/")} variant="ghost">
-            Go to the dashboard
-          </Button>
+          {#each data.providers as provider (provider.name)}
+            <Button
+              disabled={busy}
+              onclick={() => handleLink(provider.name, provider.label)}
+            >
+              <KeyRound class="size-4" />
+              Link {provider.label}
+            </Button>
+          {/each}
         {/if}
+        <Button disabled={busy} onclick={handleSignOut} variant="outline">
+          Sign out
+        </Button>
+      </div>
+    {:else if linkable}
+      <form
+        class="space-y-4"
+        onsubmit={(event) =>
+        handleSignInAndLink(event, linkable.name, linkable.label)}
+      >
+        <p class="text-text-subtle text-xs">
+          Sign in with your existing password and {linkable.label} will be
+          connected to that account straight away.
+        </p>
+        <div>
+          <label class="text-text mb-1.5 block text-sm font-medium" for="email">
+            Email
+          </label>
+          <Input
+            autocomplete="email"
+            class="h-10"
+            id="email"
+            required
+            type="email"
+            bind:value={email}
+          />
+        </div>
+        <PasswordField id="password" label="Password" bind:value={password} />
+        <Button class="h-10 w-full" disabled={busy} type="submit">
+          <KeyRound class="size-4" />
+          Sign in and connect {linkable.label}
+        </Button>
+      </form>
+    {:else}
+      <p class="text-text-subtle mb-4 text-xs">
+        Sign in with your email and password first, then connect the provider
+        from your profile.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <Button href={resolve("/auth/sign-in")}>Sign in</Button>
+        <Button href={resolve("/")} variant="ghost">Go to the dashboard</Button>
       </div>
     {/if}
+  {:else}
+    <div class="flex flex-wrap gap-2">
+      <Button href={resolve("/auth/sign-in")}>Back to sign in</Button>
+      {#if data.signedInAs}
+        <Button disabled={busy} onclick={handleSignOut} variant="outline">
+          Sign out
+        </Button>
+      {:else}
+        <Button href={resolve("/")} variant="ghost">Go to the dashboard</Button>
+      {/if}
+    </div>
+  {/if}
 
-    <p class="text-text-subtle mt-5 font-mono text-xs">code: {code}</p>
-  </div>
-</div>
+  {#snippet footer()}
+    <span class="text-text-subtle font-mono text-xs">code: {code}</span>
+  {/snippet}
+</AuthShell>

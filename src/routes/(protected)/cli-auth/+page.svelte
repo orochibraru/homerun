@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { KeyRound } from "@lucide/svelte";
+	import { CircleCheck, KeyRound } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import {
@@ -23,46 +23,58 @@
 
 <div class="mx-auto max-w-md p-6 md:p-8">
   <div class="mb-6 flex items-center gap-3">
-    <div class="rounded-xl bg-surface p-2.5">
-      <KeyRound class="text-text-muted size-5" />
+    <div
+      class="bg-accent/10 text-accent flex size-11 shrink-0 items-center justify-center rounded-xl"
+    >
+      <KeyRound class="size-5" />
     </div>
-    <div>
-      <h1 class="text-text text-xl font-semibold tracking-tight">Authorize CLI</h1>
-      <p class="text-text-muted text-sm">
-        Confirm the code shown by <code>homerun login</code> on your machine.
-      </p>
+    <div class="min-w-0">
+      <p class="eyebrow">Device login</p>
+      <h1 class="text-text mt-0.5 text-xl font-semibold tracking-tight">
+        Authorize CLI
+      </h1>
     </div>
   </div>
 
   {#if form?.success}
-    <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-500">
-      CLI login approved. You can return to your terminal, it should log you in
-      automatically.
+    <div
+      class="flex items-start gap-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-500"
+    >
+      <CircleCheck class="mt-0.5 size-4 shrink-0" />
+      <span>
+        CLI login approved. You can return to your terminal, it should log you
+        in automatically.
+      </span>
     </div>
   {:else if form?.denied}
-    <div class="rounded-xl glass p-4 text-sm text-text-muted">
+    <div class="rounded-2xl glass p-4 text-sm text-text-muted">
       Login request denied.
     </div>
   {:else}
-    <form method="POST" action="?/approve" use:enhance>
+    <form action="?/approve" class="glass rounded-2xl p-5" method="POST" use:enhance>
+      <p class="text-text-muted mb-4 text-sm">
+        Confirm the code shown by
+        <code class="font-mono text-xs text-text">homerun login</code> on your
+        machine.
+      </p>
       <label class={labelClass} for="code">Code</label>
       <input
+        autocapitalize="characters"
+        autocomplete="off"
+        class="{inputClass} font-mono tracking-[0.2em] uppercase"
         id="code"
         name="code"
-        class={inputClass}
         placeholder="XXXX-XXXX"
-        autocomplete="off"
-        autocapitalize="characters"
         spellcheck="false"
         bind:value={code}
-      />
+      >
       {#if form?.error}
         <p class={errorClass}>{form.error}</p>
       {/if}
 
-      <div class="mt-4 flex gap-2">
+      <div class="mt-5 flex gap-2">
         <Button type="submit">Approve</Button>
-        <Button type="submit" formaction="?/deny" variant="outline">Deny</Button>
+        <Button formaction="?/deny" type="submit" variant="outline">Deny</Button>
       </div>
     </form>
   {/if}

@@ -42,7 +42,7 @@ test.describe
 			// is set, see CLAUDE.md's Onboarding section.
 			await expect(page).toHaveURL(/\/onboarding$/);
 			await expect(
-				page.getByRole("heading", { name: "Set up Homerun" }),
+				page.getByRole("heading", { name: "Let's get this instance running" }),
 			).toBeVisible();
 		});
 

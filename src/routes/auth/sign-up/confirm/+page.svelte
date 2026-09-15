@@ -12,6 +12,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
+	import AuthShell from "$lib/components/auth-shell.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
@@ -24,6 +25,12 @@
 	let resending = $state(false);
 	let resent = $state(false);
 	let checking = $state(false);
+
+	const STEPS = [
+		"Open the email from Homerun",
+		'Click the "Confirm email" button',
+		"You'll be signed in automatically",
+	];
 
 	// ── Resend verification email ──────────────────────────────────────
 	async function resendEmailCallback() {
@@ -82,100 +89,81 @@
 	}
 </script>
 
-<div class="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-bg px-4">
-  <div class="w-full max-w-lg">
-    <!-- ── Main card ──────────────────────────────────────────────── -->
-    <div class="rounded-2xl glass p-8 text-center shadow-sm">
-      <!-- Icon -->
-      <div class="bg-accent/10 ring-accent/5 mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl ring-8">
-        <Mail class="text-accent size-8" />
-      </div>
+<AuthShell
+  eyebrow="Verify"
+  heading="Check your inbox"
+  subheading="One link stands between you and the dashboard."
+>
+  <div class="text-center">
+    <div
+      class="bg-accent/10 ring-accent/5 mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl ring-8"
+    >
+      <Mail class="text-accent size-7" />
+    </div>
+    <p class="text-text-muted text-sm leading-relaxed">
+      We sent a confirmation link to
+      <span class="text-text block font-mono text-xs">{data.email}</span>
+    </p>
+  </div>
 
-      <!-- Heading -->
-      <h1 class="text-text text-xl font-semibold tracking-tight">Check your inbox</h1>
-      <p class="mt-3 text-sm leading-relaxed text-text-muted">
-        We sent a confirmation link to
-        <strong class="font-semibold text-text">{data.email}</strong>.
-        <br>
-        Click that link to verify your account and access your dashboard.
-      </p>
+  <ol class="mt-6 space-y-2.5">
+    {#each STEPS as step, i (step)}
+      <li class="text-text-muted flex items-start gap-3 text-sm">
+        <span
+          class="bg-accent/10 text-accent mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full font-mono text-[0.65rem] font-bold"
+        >
+          {i + 1}
+        </span>
+        {step}
+      </li>
+    {/each}
+  </ol>
 
-      <!-- Steps -->
-      <ol class="mt-6 space-y-2 text-left">
-        {#each [
-          "Open the email from Homerun",
-          "Click the \"Confirm email\" button",
-          "You'll be signed in automatically",
-        ] as step, i}
-          <li class="flex items-start gap-3 text-sm text-text-muted">
-            <span
-              class="bg-accent/10 text-accent mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-            >
-              {i + 1}
-            </span>
-            {step}
-          </li>
-        {/each}
-      </ol>
+  <Button class="mt-6 h-10 w-full" disabled={checking} onclick={checkVerification}>
+    {#if checking}
+      <Spinner />
+      Checking…
+    {:else}
+      <CircleCheckIcon class="size-4" />
+      I've confirmed my email
+      <ArrowRight class="size-4 opacity-70" />
+    {/if}
+  </Button>
 
-      <!-- Already confirmed? -->
-      <Button
-        class="mt-7 w-full"
-        disabled={checking}
-        onclick={checkVerification}
+  <div class="mt-3 text-center">
+    {#if resent}
+      <p
+        class="flex items-center justify-center gap-1.5 text-sm text-green-600"
       >
-        {#if checking}
+        <CircleCheckIcon class="size-4" />
+        Email sent! Check your spam folder if you don't see it.
+      </p>
+    {:else}
+      <Button
+        class="text-text-muted hover:text-text"
+        disabled={resending}
+        onclick={resendEmail}
+        variant="link"
+      >
+        {#if resending}
           <Spinner />
-          Checking…
+          Sending…
         {:else}
-          <CircleCheckIcon class="size-4" />
-          I've confirmed my email
-          <ArrowRight class="size-4" />
+          <RefreshCw class="size-3.5" />
+          Resend confirmation email
         {/if}
       </Button>
+    {/if}
+  </div>
 
-      <!-- Resend -->
-      <div class="mt-4">
-        {#if resent}
-          <p class="flex items-center justify-center gap-1.5 text-sm text-green-600">
-            <CircleCheckIcon class="size-4" />
-            Email sent! Check your spam folder if you don't see it.
-          </p>
-        {:else}
-          <Button
-            class="text-text-muted hover:text-text"
-            disabled={resending}
-            onclick={resendEmail}
-            variant="link"
-          >
-            {#if resending}
-              <Spinner />
-              Sending…
-            {:else}
-              <RefreshCw class="size-3.5" />
-              Resend confirmation email
-            {/if}
-          </Button>
-        {/if}
-      </div>
-
-      <!-- Sign in with a different account -->
-      <p class="mt-6 text-xs text-text-subtle">
-        Wrong email?
-        <a class="text-accent hover:underline" href={resolve("/auth/sign-up")}>
-          Create a new account
-        </a>
-        or
-        <a class="text-accent hover:underline" href={resolve("/auth/sign-in")}>
-          sign in to a different one
-        </a>.
-      </p>
-    </div>
-
-    <!-- ── Dev-only bypass ─────────────────────────────────────────── -->
+  {#snippet below()}
     {#if data.isDev}
-      <div class="mt-4 overflow-hidden rounded-2xl border border-amber-300/40 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-950/20">
-        <div class="flex items-start gap-3 border-b border-amber-200/60 px-4 py-3 dark:border-amber-800/30">
+      <div
+        class="overflow-hidden rounded-2xl border border-amber-300/40 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-950/20"
+      >
+        <div
+          class="flex items-start gap-3 border-b border-amber-200/60 px-4 py-3 dark:border-amber-800/30"
+        >
           <TriangleAlert
             class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
           />
@@ -189,7 +177,7 @@
             </p>
           </div>
           <span
-            class="ml-auto flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+            class="ml-auto flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wide text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
           >
             <FlaskConical class="size-3" />
             DEV
@@ -208,5 +196,16 @@
         </div>
       </div>
     {/if}
-  </div>
-</div>
+  {/snippet}
+
+  {#snippet footer()}
+    Wrong email?
+    <a class="text-accent hover:underline" href={resolve("/auth/sign-up")}>
+      Create a new account
+    </a>
+    or
+    <a class="text-accent hover:underline" href={resolve("/auth/sign-in")}>
+      sign in to a different one
+    </a>.
+  {/snippet}
+</AuthShell>
