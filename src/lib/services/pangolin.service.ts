@@ -263,6 +263,18 @@ class PangolinServiceClass {
 		return res.data;
 	}
 
+	private setResourceSso(
+		baseUrl: string,
+		token: string,
+		resourceId: number | string,
+		sso: boolean,
+	): Promise<unknown> {
+		return this.request(baseUrl, token, `/resource/${resourceId}`, {
+			body: JSON.stringify({ sso }),
+			method: "POST",
+		});
+	}
+
 	private createResourceTarget(
 		baseUrl: string,
 		token: string,
@@ -349,9 +361,11 @@ class PangolinServiceClass {
 
 		try {
 			const resources = await this.listResources(baseUrl, token, orgId);
-			if (resources.some((r) => r.fullDomain === hostname)) {
+			const existing = resources.find((r) => r.fullDomain === hostname);
+			if (existing) {
+				await this.setResourceSso(baseUrl, token, existing.resourceId, false);
 				return {
-					detail: `${hostname} already has a resource`,
+					detail: `${hostname} already has a resource, Pangolin SSO off`,
 					ok: true,
 					provider: "pangolin",
 				};
@@ -386,6 +400,7 @@ class PangolinServiceClass {
 				name: match.subdomain || hostname,
 				subdomain: match.subdomain,
 			});
+			await this.setResourceSso(baseUrl, token, resource.resourceId, false);
 			await this.createResourceTarget(baseUrl, token, {
 				port,
 				resourceId: resource.resourceId,

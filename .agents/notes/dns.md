@@ -72,6 +72,34 @@ it's why the inner hop is encrypted rather than trusted. The one remaining
 assumption is `ip: "localhost"`, which is only right when the newt tunnel runs
 on this host with host networking (see `TODO.md`).
 
+**Every resource Homerun creates has Pangolin's own SSO gate turned off, and
+that is what fixed "the route exists, the tunnel is up, and the service is still
+unreachable".** `resources.sso` defaults to **true** in Pangolin, and
+`PUT /org/{orgId}/resource` is a `strictObject` with no `sso` field, so a
+created resource is gated and nothing in the create call can say otherwise: a
+browser got a 302 to `pangolin.example.com/auth/resource/…` and an API client a
+bare `401 Unauthorized`, for every service the instance published.
+`setResourceSso` therefore follows every create with `POST /resource/{id}`
+`{"sso": false}`, **and does the same on the already-exists path**, so
+redeploying a service heals a resource created before this (there's no other way
+to reach the ones already made — the exists check returns early). A failed SSO
+update is reported as a failed sync rather than a success, since a gated route
+is exactly as unreachable as a missing one. Access control for a deployed
+service belongs to this app's own per-service login wall (see `auth.md`), not to
+a second, invisible gate at the edge. **Diagnosed against a real instance**, not
+from the docs: Traefik on the host answered `200` for
+`curl -k -H "Host: <slug>.<domain>" https://127.0.0.1` while the public hostname
+answered `401`, with the target already correct (`localhost:443`,
+`method=https`, site online).
+
+Two failure modes live **outside** this client and look identical from a
+browser, worth checking before touching code again: a Pangolin domain with
+`preferWildcardCert: true` and no wildcard actually issued serves Pangolin's
+Traefik default self-signed certificate for every subdomain (the apex keeps its
+real one, so "the dashboard works and the services don't" is the tell), and an
+instance whose generated `compose.yaml` predates the `DASHBOARD_DOMAIN` router
+has no Traefik labels on its own `app` service at all.
+
 **Pangolin's OpenAPI document is fetchable after all**, contrary to what this
 section used to say (a "the OAS is broken, the types are guesses" note inherited
 from the sibling `dokploy-to-pangolin` project):
