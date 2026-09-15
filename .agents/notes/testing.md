@@ -234,10 +234,56 @@ mark-read/delete command updates the feed with no page reload, and
 Access section's reveal-and-validate behaviour, and (`ui-form-state.spec.ts`)
 that a saved settings section keeps its field values and that the compose-import
 page's Import step accepts the file its own Parse step previewed, the two halves
-of the `reset` bug under Conventions above. Not covered: a real deploy needs a
-Docker socket reachable from _inside_ the spawned app, which this bootstrap
-doesn't wire up. Add browser-level cases here; don't re-prove API shapes
-`tests/integration/` already covers directly and faster.
+of the `reset` bug under Conventions above. Not covered by the specs above: a
+real deploy (the screenshot pipeline below does one, on purpose, and is the only
+thing here that touches Docker). Add browser-level cases here; don't re-prove
+API shapes `tests/integration/` already covers directly and faster.
+
+## Screenshots for the docs (`tests/e2e/screenshots/`, `bun run screenshots`)
+
+The images in `docs/images/`, which `docs/showcase.md` and the README's hero
+both publish, are **generated, not taken by hand** : `bun run screenshots` runs
+`tests/e2e/screenshots/docs-screenshots.spec.ts` through
+`playwright.screenshots.config.ts`. It reuses the E2E harness above (same
+`globalSetup`, same throwaway Postgres, same fixed port, same
+`bun run build:app` prerequisite) but has its own config so the ordinary
+`bun run test:e2e` doesn't shoot screenshots on every run :
+`playwright.config.ts` carries `testIgnore: "screenshots/**"` for exactly that
+reason, and the screenshot config's `testDir` points at the subfolder.
+
+- **It bootstraps its own world.** A blank instance means signing up, clicking
+  through onboarding (with Base domain set to `example.com`, so the hostnames in
+  the shots read like a real deployment rather than `127.0.0.1`), then seeding a
+  project and three services through `POST /api/v1/projects` and
+  `POST /api/v1/services` : `page.request` shares the browser context's cookie
+  jar, so the session authenticates the API calls with no key to mint.
+- **Two of those services are really deployed**, through
+  `POST /api/v1/services/:id/deploy`, which is what makes the dashboard, the
+  status pills, the deployment history and the live log viewer show real state
+  instead of empty states. That works because the default harness spawns the app
+  as a **local process** sharing the host's Docker daemon. It would not work
+  under `E2E_IMAGE`, where the app runs in a container with no socket mounted :
+  don't set that variable for this pipeline.
+- **It cleans up after itself in `afterAll`, not in a final test.** Playwright's
+  serial mode skips the rest of the file after a failure, so a teardown written
+  as the last `test()` leaks the containers _and_ the project's Docker network
+  the moment any single shot fails — which is the exact leak behind "Reclaim
+  project networks whose project row is gone" in `TODO.md`. `afterAll` runs
+  either way. (The project is deleted by POSTing its `?/delete` form action with
+  an `x-sveltekit-action` header, since projects have no REST DELETE.)
+- **Dark mode is `page.emulateMedia({ colorScheme })`**, which works only
+  because the account's theme preference defaults to `system` and the browser
+  context is fresh, so `mode-watcher` has no `localStorage` override to prefer.
+  If a shot ever needs a signed-in account with an explicit theme, set that
+  entry instead.
+- **Don't wait on `networkidle`** anywhere in these specs. The dashboard polls
+  stats every 5s and the log viewer holds an SSE connection open, so it never
+  settles; the spec waits on `domcontentloaded` plus a fixed beat.
+- Each shot asserts its own URL and a page-specific string before the shutter,
+  so a redirected, blank or broken screen fails the run rather than being
+  published as marketing. Adding a shot means adding one entry to `SHOTS` and a
+  section to `docs/showcase.md`; `docs/images/README.md` is written by the run
+  itself.
 
 **A spec file that signs in as the bootstrap admin must sort after
 `onboarding.spec.ts`**, hence the `ui-` prefix on the two that do: Playwright

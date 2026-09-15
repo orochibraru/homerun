@@ -338,7 +338,7 @@
 <!-- Fills the full viewport : there's no global navbar above this. -->
 <div class="flex h-screen overflow-hidden" style={accentStyle}>
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
-  <aside class="ink-surface hidden w-60 shrink-0 flex-col border-r border-border md:flex">
+  <aside class="panel-strong hidden w-60 shrink-0 flex-col border-r border-border md:flex">
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto p-3 pt-4">
       <div class="mb-3 flex items-center gap-2 px-2 pt-1">
@@ -363,7 +363,7 @@
     </button>
 
     <div
-      class="ink-surface fixed top-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-border md:hidden"
+      class="panel-strong fixed top-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-border md:hidden"
       transition:fly={{ duration: 240, opacity: 1, x: -280 }}
     >
       <nav class="flex-1 overflow-y-auto p-3 pt-4">

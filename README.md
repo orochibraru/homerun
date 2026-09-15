@@ -13,6 +13,13 @@ babysit.
 > its shape: see [`docs/faq-and-limitations.md`](docs/faq-and-limitations.md)
 > for what's solid and what isn't yet.
 
+<!-- Regenerate with `bun run screenshots`; do not edit by hand. -->
+
+[![Homerun's dashboard](docs/images/hero.png)](docs/showcase.md)
+
+**[See the full showcase →](docs/showcase.md)** — every screen, light and dark,
+generated from a real instance.
+
 ## Why Homerun
 
 Dokploy, Coolify, and friends are great, but there are stuff I can't get around:

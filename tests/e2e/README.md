@@ -90,13 +90,31 @@ set in production.
       own discovery-URL template
 - [x] A service's Access section: policy fields only appearing once the login
       wall is on, and saving it with no sign-in method picked being refused
-- [ ] A real deploy — needs a reachable Docker socket from _inside_ the spawned
-      app process, which this suite's bootstrap doesn't currently wire up
-      (`tests/integration/`'s own `spawnApp` doesn't either, by design, that
-      suite drives the API directly rather than through a browser)
+- [ ] A real deploy _as a test_ — the screenshot pipeline below does deploy for
+      real, but nothing here asserts on it yet
 
 Extend `bootstrap.spec.ts` or add new files here rather than duplicating
 `tests/integration/`'s own API-level coverage — this suite's job is specifically
 the client-side-interactive parts (`$state`/`$derived` reactivity, client-side
 `goto()` redirects, real form submission), not re-proving the API shapes that
 suite already covers directly and faster.
+
+## `screenshots/` is not part of this suite
+
+`screenshots/docs-screenshots.spec.ts` generates the images in `docs/images/`
+that `docs/showcase.md` and the README publish. It runs through its own
+`playwright.screenshots.config.ts` (`bun run screenshots`) and is excluded from
+this one by `playwright.config.ts`'s `testIgnore`, so an ordinary
+`bun run test:e2e` never shoots screenshots.
+
+It reuses this suite's bootstrap wholesale, then goes further than any spec
+here: it seeds a project and three services through the REST API (the browser
+context's session cookie authenticates them) and **really deploys two of them**
+against the host's Docker daemon, which is what puts live statuses, deployment
+history and streaming logs in the shots. That only works because the default
+harness spawns the app as a local process next to the daemon — don't run it with
+`E2E_IMAGE` set, where the app is containerised without the socket. Everything
+it creates is removed in `afterAll` (containers, then the project and its Docker
+network) so a failed shot can't leak either.
+
+See `.agents/notes/testing.md` for the rest of the rules that pipeline follows.

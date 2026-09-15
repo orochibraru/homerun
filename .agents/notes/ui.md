@@ -34,15 +34,6 @@ a blur/shadow stack, route it through a token here instead.
   card's edge is a real edge. **`panel-strong`** is the chrome variant (it
   paints `--sidebar` rather than `--color-surface`); **`panel-interactive`**
   adds the hover lift.
-- **`ink-surface`** is the signature element : a permanently dark surface in
-  _both_ themes, used for the sidebar and the mobile drawer. It isn't just a
-  background, it redefines `--color-text`/`--color-text-muted`/
-  `--color-text-subtle`/`--color-surface-2`/`--color-border` for its own
-  subtree, so every `text-text-muted`/`bg-surface-2` utility underneath it flips
-  to the dark-ground values without a single `dark:` variant in the markup.
-  That's what makes a dark rail against a white canvas work in light mode.
-  Anything else that wants an inverted region should use this class, not
-  hand-written `dark:` pairs.
 - **`tech`** is `--font-mono` + `tabular-nums`, for any number that updates live
   (the dashboard's 5s stats poll) so digits don't reflow as they change.
   **`eyebrow`** is the small uppercase mono section label used for every panel
@@ -171,16 +162,15 @@ users, backups):
 
 **The signed-out surfaces** (`auth/sign-in`, `auth/sign-up`,
 `auth/sign-up/confirm`, `auth/accept-invite`, `auth/error`) all render through
-`auth-shell.svelte`: a two-pane layout with a brand/pitch panel on the left
-(hidden below `lg`, carrying `brand-mark.svelte`, three product highlights and a
-mono deploy-log card) and a `max-w-md` form column on the right, taking
-`eyebrow`/`heading`/`subheading` props plus `children` (the form, rendered in a
-`panel` card), an optional `below` snippet for content outside that card (the
-confirm page's dev-bypass panel) and an optional `footer` snippet for the
-trailing "Don't have an account?" line. The two panes are deliberately different
-grounds — `--color-surface` on the pitch side, `--color-bg` on the form side,
-with a full-height accent rail down the far left edge — rather than one field
-with a blurred color blob floating over it, which is what it used to be.
+`auth-shell.svelte`: one `max-w-md` column centred on an otherwise empty page,
+carrying `brand-mark.svelte`, then the heading block, then the form in a `panel`
+card. It takes `eyebrow`/`heading`/`subheading` props plus `children` (the
+form), an optional `below` snippet for content outside that card (the confirm
+page's dev-bypass panel) and an optional `footer` snippet for the trailing
+"Don't have an account?" line. It used to be a two-pane layout with a
+product-pitch panel (highlights, a mono deploy-log card, a blurred accent blob)
+filling the left half — deliberately dropped: this is a single-user self-hosted
+app's login screen, nobody arriving at it needs to be sold the product.
 `brand-mark.svelte` is the accent square + `homerun` mono wordmark from the
 sidebar, in `sm`/`lg`; it's also the "gated by" footer on `app-auth`.
 `password-field.svelte` (label + `Input` + show/hide eye toggle) and

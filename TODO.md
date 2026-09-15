@@ -98,7 +98,6 @@ move it under `## Done` in the same change that finishes it.
       is gone: no ambient backdrop and no `body::after` grid, `glass` is now an
       opaque `panel`, text tokens are pushed to real contrast, the radius scale
       is tighter, and primary buttons are ink-on-white / white-on-ink instead of
-      a tinted fill. The sidebar is a permanently dark `ink-surface` rail in
-      both themes, which is where the light/dark split comes from. See
-      `.agents/notes/ui.md` for the token map and for how to screenshot a visual
-      change before calling it done.
+      a tinted fill. The signed-out pages are one centred column now, not a
+      two-pane product pitch. See `.agents/notes/ui.md` for the token map and
+      for how to screenshot a visual change before calling it done.
