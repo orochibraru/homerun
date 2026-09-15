@@ -1,99 +1,89 @@
 # TODO
 
-No priority, pick whatever.
+The backlog, and the only one. `Small`/`Medium`/`Large` are rough size, not
+priority : there is no priority ordering, pick whatever. Tick an item off and
+move it under `## Done` in the same change that finishes it.
 
-- [ ] [Tooling] Homerun SDK (shared lib with CLI)
-- [ ] [App] Allow email change
-- [ ] [App] Add email config test button in UI
-- [ ] [App] `compose.prod.yaml` bind-mounts `./homerun.yaml`, so Option B still
-      makes an operator `touch homerun.yaml` before the stack starts even though
-      the file is entirely optional and everything in it is a `/settings` field.
-      Drop the mount (or make it a named volume / optional mount) so the
-      documented compose path needs no file at all beyond `.env`.
-- [ ] [App] No restore flow for S3 backups. Upload only; getting a tarball back
-      into a volume is manual.
-- [ ] [App] Compose import ignores `build:`, so those services land needing
-      their Source tab pointed at a git repo by hand.
-- [ ] [App] Cron jobs only run on the local daemon (`runOneOff` takes a remote
-      connection, nothing passes one) and output only shows up after the run
-      finishes.
-- [ ] [App] A swarm-mode service's status is never reconciled on its own pages:
-      `services/[serviceId]/+layout.server.ts` only calls `syncServiceStatus`
-      when `containerId` is set, which is null for a swarm service, so the
-      status pill is whatever the last deploy wrote.
-- [ ] [Docker] `connectToProjectNetwork` assumes the project's network exists
-      rather than ensuring it, unlike `ensureSharedNetwork` on the same path, so
-      a project whose network was removed out from under it (a prune, a Docker
-      Cleanup run) fails at deploy with a raw dockerode 404 forever. Call
-      `ensureProjectNetwork` first.
-- [ ] [Docker] Nothing reclaims a project network whose project row is gone.
+## Small
+
+- [ ] [API] **Remove a swarm service on `DELETE /api/v1/services/:id`.** The
+      handler only removes a container, so deleting a swarm-mode service through
+      the API leaves its swarm service running on the host. The dashboard's own
+      delete action already handles both.
+
+## Medium
+
+- [ ] [App] **Restore an S3 backup.** Upload only today; getting a tarball back
+      into a volume is a manual operation.
+- [ ] [App] **Handle `build:` in compose import.** It's ignored, so those
+      services land needing their Source tab pointed at a git repo by hand.
+- [ ] [App] **Run cron jobs on remote daemons, and stream their output.**
+      `runOneOff` takes a remote connection but nothing passes one, and output
+      only appears once the run has finished.
+- [ ] [Docker] **Reclaim project networks whose project row is gone.**
       Twenty-one leaked from test runs on the dev box and exhausted Docker's
       default address pools outright, which fails _every_ new network with "all
       predefined address pools have been fully subnetted" : compose import, new
       projects and three integration tests all broke at once, with the real
       cause nowhere in the error. Docker Cleanup's network prune only sees
-      unattached ones.
-- [ ] [Auth] Passkey + 2FA on the auth pages, and instance-level policies to
-      require them. The plugin and client are already wired
-      (`@better-auth/passkey`), nothing in `src/routes` uses them.
-- [ ] [Tests] `deploy.service.ts` and `app-access.service.ts` have no tests.
-      They are the deploy pipeline and the login wall's access decision.
+      unattached networks.
+- [ ] [Arch] **Check the swarm prerequisites during onboarding.**
+      `docker swarm init` and Traefik's `--providers.docker.swarmMode=true` are
+      both manual today. `packages/installer/swarm-join.sh` is also still
+      unverified against a real host.
+- [ ] [Schema] **Extract the five auth-policy columns off `service`.** It has 46
+      columns. This is the obvious split, but it touches the `policyVersion`
+      HMAC, `gated-service-cache.ts`, `labels.ts` and needs a migration for no
+      behaviour change. Ride along with the next change in that area, or close
+      this.
+- [ ] [SDKs] **GitHub Actions and GitLab CI presets**, with a setting for
+      tracking latest vs. tagged.
+- [ ] [Tests] **Cover `deploy.service.ts` and `app-access.service.ts`.** Neither
+      has tests, and they are the deploy pipeline and the login wall's access
+      decision.
 
-- [ ] [Docker] Security scanning.
-- [ ] [SDKs] Terraform/Pulumi providers.
-- [ ] [SDKs] GitHub Actions + GitLab CI presets, with a setting for tracking
-      latest vs. tagged.
-- [ ] [Arch] Swarm prerequisites are manual: `docker swarm init` and Traefik's
-      `--providers.docker.swarmMode=true`. Onboarding should check for both.
-      `packages/installer/swarm-join.sh` is still unverified against a real
-      host.
-- [ ] [Refactor] `deploy.service.ts` is ~600 lines over `buildSource` x
-      `buildTarget.kind` x `orchestrationMode`. Most combinations are illegal
-      and only rejected by a `throw` at the end of the pipeline, which is how
-      the autoscale/swarm bug happened. Make the legal set a union instead.
-- [ ] [Schema] `service` has 46 columns. The five auth-policy ones are the
-      obvious extraction, but it touches the `policyVersion` HMAC,
-      `gated-service-cache.ts`, `labels.ts` and a migration for no behaviour
-      change. Ride along with the next change in that area, or close this.
+## Large
+
+- [ ] [App] **Self-update from the sidebar.** Print the version in the sidebar
+      from `package.json` (computed in CI by semantic-release before the build),
+      compare it to the latest GitHub release on page load, and surface a notice
+      when a newer one exists. Clicking it opens a modal that checks no
+      deployments are queued, then starts the update sequence: hold the worker
+      for all deployments and actions, then start an update worker that stops
+      the main app, pulls its latest image and brings it back up.
+- [ ] [Auth] **Passkey and 2FA on the auth pages**, plus instance-level policies
+      to require them. The plugin and client are already wired
+      (`@better-auth/passkey`), nothing in `src/routes` uses them.
+- [ ] [Refactor] **Make the legal deploy combinations a union.**
+      `deploy.service.ts` is ~600 lines over `buildSource` x `buildTarget.kind`
+      x `orchestrationMode`. Most combinations are illegal and only rejected by
+      a `throw` at the end of the pipeline, which is how the autoscale/swarm bug
+      happened.
+- [ ] [Tooling] **Homerun SDK**, a shared library with the CLI.
+- [ ] [SDKs] **Terraform and Pulumi providers.**
+- [ ] [Docker] **Image security scanning.**
 
 ## Done
 
-- [x] [UI] Auth and onboarding looked like scaffolding. Every signed-out page
-      now renders through `AuthShell` (a brand/pitch pane plus a glass form
-      card, `brand-mark.svelte`/`password-field.svelte`/
-      `password-strength.svelte` extracted with it), the onboarding wizard is a
-      centred column of headed panels over a connected step indicator, and
-      `accept-invite` finally uses `enhanceToast` and the shared primitives
-      instead of its own inputs. Killed the stale `LocalRun` branding and the
-      `bg-bg` wrappers that were hiding the ambient backdrop.
-- [x] Pangolin integration doesn't work. Every failure was swallowed into a
-      `logger.warn` and the "Test connection" button only listed sites, so a
-      configuration that could never create a resource passed it. The test now
-      checks the whole set (token, named site, a registered domain covering the
-      base domain), every list call pages instead of taking Pangolin's
-      20-per-page default, and each deploy writes every provider's verdict into
-      its own deployment log. The API base URL guidance was wrong too: it's the
-      Integration API at `https://api.<host>/v1`, not the dashboard's `/api/v1`.
-- [x] Domain mapping for the dashboard. The app container carried no Traefik
-      labels in any compose file, so Homerun itself was only ever reachable on
-      `:3000` while every service it deployed got a routed hostname. It now has
-      a router keyed off one `DASHBOARD_DOMAIN` variable (compose.prod.yaml,
-      tools/compose/app.compose.yaml and the installer's generated compose),
-      quiet and self-signed when unset, real hostname plus a real certificate
-      when set. A _service's_ custom domain was a second, separate problem: it
-      is a Traefik label, written only when the container is created, so saving
-      it did nothing to the running container and nothing said so. The
-      Networking tab now shows that and offers a Redeploy button, and a deploy
-      syncs DNS for the custom domain too, not just `<slug>.<baseDomain>`.
-- [x] Forms on `/settings` blanked themselves after a save, and the compose
-      import rejected the file its own preview had just parsed : one cause,
-      `update()`'s default form reset against Svelte's stripped `value`
-      attributes. `enhanceToast` no longer resets by default.
-- [x] Deploy/redeploy hung forever on a plain-HTTP instance:
-      `crypto.randomUUID()` is secure-context-only, so the deploy form's
-      pre-submit callback threw before the request was ever sent.
-- [x] [App] Onboarding drops the dashboard's port. Its Core step now prefills
-      from the effective origin (a stored override, else `ORIGIN`) rather than
-      from the portless base domain, so clicking through the defaults on an
-      installer instance keeps `:3000` instead of persisting a port-80 URL over
-      it. The "Use HTTPS" box follows the same source instead of defaulting on.
+- [x] [App] **Allow changing the account email.** `/profile`'s email field is
+      editable now, wired to better-auth's `changeEmail` : an unverified address
+      changes on save, a verified one only after confirming from the link sent
+      to the current address, and the field is locked with an explanation when
+      that's impossible because SMTP isn't configured.
+- [x] [App] **Add a "send test email" button to the email settings tab.** Sends
+      to the signed-in admin's own address using the saved settings, and reports
+      the SMTP server's own error when it fails.
+- [x] [App] **Drop the `homerun.yaml` bind-mount from `compose.prod.yaml`.** The
+      compose path needs nothing but `.env` now ; `docs/configuration.md` shows
+      the mount to add for anyone who does want the file.
+- [x] [App] **Reconcile a swarm service's status on its own pages.** The service
+      layout and `GET /api/v1/services/:id` both sync when either `containerId`
+      or `swarmServiceId` is set ; `syncServiceStatus` already knew how to
+      inspect a swarm service, nothing reached it.
+- [x] [Docker] **Ensure the project network exists in
+      `connectToProjectNetwork`.** Calls `ensureProjectNetwork` first, same
+      re-assert-every-deploy shape as `ensureSharedNetwork`.
+- [x] [Schema] **Delete a user's `project` rows on account deletion.** Already
+      done : `UserService.cleanupUserResources` deletes them (after removing
+      each project's Docker network), and `project.userId` is
+      `onDelete: "cascade"` on top of that.

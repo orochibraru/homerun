@@ -9,6 +9,8 @@
 	import { title } from "$lib/store/title";
 	import { toastError } from "$lib/toast";
 
+	const { data } = $props();
+
 	// Access layout-injected data via the session / parent
 	const session = authClient.useSession();
 
@@ -19,6 +21,7 @@
 
 	let accountName = $derived(user?.name ?? "");
 	let accountImage = $derived(user?.image ?? "");
+	let accountEmail = $derived(user?.email ?? "");
 	let accountLoading = $state(false);
 
 	// Keep fields in sync if the session refreshes
@@ -31,10 +34,22 @@
 		}
 	});
 
+	const emailLocked = $derived(!!user?.emailVerified && !data.smtpEnabled);
+
 	async function saveAccountCallback(e: SubmitEvent) {
 		e.preventDefault();
 		if (!accountName.trim()) {
 			throw new Error("Display name cannot be empty.");
+		}
+		const newEmail = accountEmail.trim().toLowerCase();
+		if (!newEmail) {
+			throw new Error("Email cannot be empty.");
+		}
+		const emailChanged = newEmail !== user?.email;
+		if (emailChanged && emailLocked) {
+			throw new Error(
+				"Changing a verified email needs SMTP configured in Settings → Email.",
+			);
 		}
 		accountLoading = true;
 		try {
@@ -45,6 +60,24 @@
 			if (error) {
 				throw new Error(error.message ?? "Could not update account.");
 			}
+			if (!emailChanged) {
+				return "Account updated.";
+			}
+			const { error: emailError } = await authClient.changeEmail({
+				callbackURL: "/profile",
+				newEmail,
+			});
+			if (emailError) {
+				throw new Error(
+					emailError.message ?? "Could not change the email address.",
+				);
+			}
+			if (!user?.emailVerified) {
+				return "Account updated.";
+			}
+			const pendingFrom = user.email;
+			accountEmail = pendingFrom;
+			return `Account updated. Confirm the change from the link sent to ${pendingFrom}.`;
 		} finally {
 			accountLoading = false;
 		}
@@ -54,7 +87,7 @@
 		return toast.promise(saveAccountCallback(e), {
 			error: (error) => toastError(error, "Could not update account."),
 			loading: "Saving your account",
-			success: "Account updated.",
+			success: (message) => message,
 		});
 	}
 
@@ -72,7 +105,8 @@
     <div>
       <h2 class="eyebrow">Account</h2>
       <p class="text-xs text-text-muted">
-        Your display name and avatar shown across the platform.
+        Your display name and avatar shown across the platform, and the
+        email you sign in with.
       </p>
     </div>
   </div>
@@ -123,15 +157,12 @@
       />
     </div>
 
-    <!-- Email (read-only) -->
+    <!-- Email -->
     <div>
-      <label class="mb-1.5 block text-sm font-medium text-text" for="email">
-        Email
-      </label>
-      <div class="flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-2.5">
-        <span class="flex-1 text-sm text-text-muted">
-          {user?.email ?? "—"}
-        </span>
+      <div class="mb-1.5 flex items-center gap-2">
+        <label class="block text-sm font-medium text-text" for="accountEmail">
+          Email <span class="text-red-500">*</span>
+        </label>
         {#if user?.emailVerified}
           <span
             class="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[0.65rem] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400"
@@ -147,8 +178,25 @@
           </span>
         {/if}
       </div>
+      <Input
+        disabled={emailLocked}
+        id="accountEmail"
+        placeholder="you@example.com"
+        required
+        type="email"
+        bind:value={accountEmail}
+      />
       <p class="mt-1 text-xs text-text-subtle">
-        Email changes are not yet supported.
+        {#if emailLocked}
+          Changing a verified email needs a confirmation link, so it stays
+          locked until SMTP is configured in Settings → Email.
+        {:else if user?.emailVerified}
+          You'll get a confirmation link at {user.email}; the new address
+          takes effect once you follow it.
+        {:else}
+          This is also the address you sign in with. It changes as soon as you
+          save.
+        {/if}
       </p>
     </div>
 

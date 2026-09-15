@@ -16,7 +16,7 @@ export const load = async ({ params, parent }) => {
 		? await ProjectDTO.get(svc.projectId, user.id)
 		: null;
 
-	if (svc.containerId) {
+	if (svc.containerId || svc.swarmServiceId) {
 		await DockerService.syncServiceStatus(svc.id);
 		const fresh = await ServiceDTO.get(params.serviceId, user.id);
 		return {

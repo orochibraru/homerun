@@ -5,7 +5,7 @@
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
-	import { saveToast } from "$lib/toast";
+	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -38,7 +38,20 @@
     action="?/updateSmtp"
     class="space-y-4 p-5"
     method="POST"
-    use:enhance={saveToast("SMTP settings")}
+    use:enhance={(input) => {
+      const test = input.action.search === "?/sendTest";
+      return enhanceToast({
+        error: test
+          ? "Couldn't send the test email."
+          : "Check the form for errors.",
+        loading: test
+          ? `Sending a test email to ${data.user.email}`
+          : "Saving SMTP settings",
+        success: test
+          ? `Test email sent to ${data.user.email}.`
+          : "SMTP settings saved.",
+      })(input);
+    }}
   >
     <CheckBox
       checked={data.settings.smtpEnabled ?? false}
@@ -114,7 +127,14 @@
         />
       </div>
     </div>
-    <div class="flex justify-end">
+    <div class="flex items-center justify-end gap-2">
+      <p class="text-text-subtle mr-auto text-xs">
+        The test goes to {data.user.email} using the saved settings, so save
+        first if you've just changed anything.
+      </p>
+      <Button formaction="?/sendTest" type="submit" variant="outline">
+        Send test email
+      </Button>
       <Button type="submit">Save</Button>
     </div>
   </form>

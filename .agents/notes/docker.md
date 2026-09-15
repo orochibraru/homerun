@@ -58,6 +58,11 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
   _internal_ alias is never project-prefixed, only the container name and public
   subdomain are, sibling services keep addressing each other by plain slug) →
   `DockerService.ensureProjectNetwork`/`removeProjectNetwork`/`connectToProjectNetwork`.
+  `connectToProjectNetwork` calls `ensureProjectNetwork` itself first, same
+  re-assert-on-every-deploy shape as `createAndStartContainer`'s own
+  `ensureSharedNetwork()` call below: a network a prune or a Docker Cleanup run
+  removed out from under a still-live project row gets recreated, rather than
+  failing every subsequent deploy with a raw dockerode 404.
 - `containers.ts`, `DockerContainerMixin` (the old `service.ts`, renamed to
   avoid reading as "the Service service" next to `dto/service-dto.ts`), the
   operational surface, merged in right after the network mixin (see the ordering

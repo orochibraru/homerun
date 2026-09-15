@@ -149,6 +149,12 @@ function buildAuth() {
 		emailVerification: {
 			sendOnSignUp: isSmtpEnabled(),
 			sendVerificationEmail: async (params) => {
+				if (!isSmtpEnabled()) {
+					logger.warn(
+						`Skipping verification email to ${params.user.email}: SMTP isn't configured`,
+					);
+					return;
+				}
 				const fullUrl = new URL(params.url);
 				// If not hostname, add it
 				if (!fullUrl.hostname) {
@@ -240,6 +246,24 @@ function buildAuth() {
 		},
 		secret: config.auth.secret,
 		user: {
+			changeEmail: {
+				enabled: true,
+				sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+					if (!isSmtpEnabled()) {
+						logger.warn(
+							`Skipping email-change confirmation to ${user.email}: SMTP isn't configured`,
+						);
+						return;
+					}
+					const email = new EmailService({
+						content: `Confirm changing your Homerun account email to ${newEmail}: ${url}`,
+						subject: "Confirm your new email address",
+						to: user.email,
+					});
+					await email.send();
+				},
+				updateEmailWithoutVerification: true,
+			},
 			deleteUser: {
 				// Extracted to user.service.ts : the admin Users page's "remove
 				// user" action needs the exact same cleanup and can't get it for

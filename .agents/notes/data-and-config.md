@@ -174,10 +174,10 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `project`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
   member service's container name and public subdomain, see Docker integration
   below). Every project has a matching Docker network (see below), created
-  alongside the row and removed on cascade-delete. Known gap: account deletion's
-  cascade cleans up a user's services/containers but not their `project` rows,
-  harmless clutter today (FK pragma is off) but should get the same explicit
-  treatment eventually (see TODO.md Chores).
+  alongside the row and removed on cascade-delete. Account deletion covers these
+  twice over: `UserService.cleanupUserResources` removes each project's Docker
+  network and then deletes the rows explicitly, and `project.userId` is
+  `onDelete: "cascade"` underneath that.
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).
 - `template_link`, a template linking to another template (a database, a cache,

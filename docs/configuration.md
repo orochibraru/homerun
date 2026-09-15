@@ -15,12 +15,12 @@ for people who'd rather manage settings as code.
 
 `/settings` is one page per tab, all admin-only:
 
-| Tab            | What's on it                                                                                                           |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **General**    | Base domain, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                   |
-| **Docker**     | Docker socket path, the shared network name, orchestration mode (standalone or [swarm](services.md#swarm-mode))        |
-| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and DNS automation (Cloudflare, Pangolin) |
-| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails                                                  |
+| Tab            | What's on it                                                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **General**    | Base domain, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                             |
+| **Docker**     | Docker socket path, the shared network name, orchestration mode (standalone or [swarm](services.md#swarm-mode))                                  |
+| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and DNS automation (Cloudflare, Pangolin)                           |
+| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved |
 
 Sign-in methods live on their own **Authentication** page rather than a
 `/settings` tab, see
@@ -104,17 +104,22 @@ tracked server. **You do not need it.** Every key in it is also a `/settings`
 field, and a value stored in the database wins over the file, so a setting you
 change in the UI stays changed.
 
-`compose.prod.yaml` bind-mounts it, so the file has to _exist_ for that compose
-file to start, but an empty one is completely valid and means "all defaults":
+`compose.prod.yaml` doesn't mount it : the compose path needs no file beyond
+`.env`. To use one, copy [`homerun.example.yaml`](../homerun.example.yaml) next
+to the compose file and add the mount yourself:
 
-```sh
-touch homerun.yaml
+```yaml
+services:
+  app:
+    volumes:
+      - ./homerun.yaml:/app/homerun.yaml:ro
 ```
 
-To actually use it, copy [`homerun.example.yaml`](../homerun.example.yaml)
-instead. It carries a `$schema` comment pointing at `homerun.schema.json`,
+The example file carries a `$schema` comment pointing at `homerun.schema.json`,
 generated from the same schema that validates it, so an editor with the YAML
-language server extension gives you linting and autocomplete.
+language server extension gives you linting and autocomplete. The installer
+(Option A) writes a `homerun.yaml` and mounts it for you, so there's nothing to
+add there.
 
 | Key                                                  | Default                                                | Dashboard equivalent                                                                            |
 | ---------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |

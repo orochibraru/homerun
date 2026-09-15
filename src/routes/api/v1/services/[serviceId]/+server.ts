@@ -27,7 +27,7 @@ export const GET = async ({ params, locals }) => {
 	// would see a stale `currentStatus` forever, never reflecting reality
 	// unless someone happened to also load the dashboard page for that
 	// service. Same fix, same call, as the dashboard's own reconciliation.
-	if (svc.containerId) {
+	if (svc.containerId || svc.swarmServiceId) {
 		await DockerService.syncServiceStatus(svc.id);
 		const fresh = await ServiceDTO.get(params.serviceId, locals.user.id);
 		return json((fresh ?? svc).toJSON());

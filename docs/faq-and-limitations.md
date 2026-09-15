@@ -57,6 +57,12 @@ services that opt in.
   redeployed after the wall is turned on or off. Group restrictions depend on
   your provider actually putting group or role claims in the id token. See
   [Users & access](users-and-access.md#per-app-login-wall).
+- **Changing a verified account's email needs SMTP configured.** The new address
+  has to be confirmed from a link sent to the _current_ one, so with no mail
+  server there's no way to prove it; the field on your profile locks itself with
+  an explanation until Settings → Email is set up. An unverified address changes
+  immediately on save, no confirmation involved. See
+  [Users & access](users-and-access.md#your-profile).
 - **Custom SSL certs** require a one-time manual Traefik config change
   (`TRAEFIK_DYNAMIC_CONFIG_DIR` + uncommenting flags in `compose.yaml`), Homerun
   writes the cert files but never touches the live Traefik container itself. See
@@ -87,11 +93,6 @@ services that opt in.
   just the credentials, and every deploy writes what each provider did into that
   deploy's own log, so verify the first real sync by reading it. See
   [Services: DNS automation](services.md#dns-automation).
-- **A swarm-mode service's status isn't reconciled on its own pages.**
-  Standalone services re-inspect their container on every visit; a swarm service
-  has no single container to inspect, so its status pill reflects what the last
-  deploy wrote rather than live state. Deploy/start/stop still work correctly,
-  the display just doesn't self-correct.
 - **Pruning Docker volumes deletes data.** `/docker-cleanup` is host-wide and
   deliberately not limited to containers Homerun created; an "unreferenced"
   volume includes one belonging to a service you stopped and meant to restart.

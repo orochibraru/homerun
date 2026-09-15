@@ -72,7 +72,6 @@ rootless setup, no source checkout:
 curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/compose.prod.yaml
 curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/.env.example
 mv .env.example .env && $EDITOR .env
-touch homerun.yaml
 docker network create homerun
 docker compose -f compose.prod.yaml up -d
 ```
@@ -93,11 +92,10 @@ done with files for good:
 `docker compose` refuses to start without either one, on purpose, rather than
 booting into a broken instance.
 
-The `touch homerun.yaml` line is only there because the compose file bind-mounts
-that path and Docker would otherwise create a directory there. An empty file
-means "all defaults", and you set the real values in the dashboard afterwards.
-It's only worth filling in if you'd specifically rather manage settings as a
-file, see [the optional YAML file](configuration.md#the-optional-yaml-file).
+`.env` is the only file the stack needs. Everything a YAML config file could
+hold is a `/settings` field in the dashboard instead, and you only mount one if
+you'd specifically rather manage settings as a file, see
+[the optional YAML file](configuration.md#the-optional-yaml-file).
 
 Everything else in `.env` already has a working default. The ones worth knowing
 about are `DASHBOARD_DOMAIN` (serve the dashboard on a real hostname through

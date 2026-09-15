@@ -79,6 +79,7 @@ export function DockerNetworkMixin<
 			projectId: string,
 			alias: string,
 		): Promise<void> {
+			await this.ensureProjectNetwork(projectId);
 			const name = projectNetworkName(projectId);
 			await this.getDocker()
 				.getNetwork(name)
