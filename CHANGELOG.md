@@ -1,3 +1,11 @@
+## [1.0.23](https://github.com/orochibraru/homerun/compare/v1.0.22...v1.0.23) (2026-09-16)
+
+### Features
+
+- stacks, global search, self-update, passkeys/2FA and migrate tab
+  ([#18](https://github.com/orochibraru/homerun/issues/18))
+  ([8cb03c2](https://github.com/orochibraru/homerun/commit/8cb03c23a3afcc1785f6f7f9d78766221f0ab699))
+
 ## [1.0.22](https://github.com/orochibraru/homerun/compare/v1.0.21...v1.0.22) (2026-09-16)
 
 ### Features
