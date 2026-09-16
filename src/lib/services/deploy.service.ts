@@ -14,7 +14,6 @@ import {
 	providerForGitUrl,
 } from "$lib/git-clone-url";
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
-import { shouldSkipPull } from "$lib/pull-policy";
 import { decryptSecret } from "$lib/services/secrets";
 import { AgentClientService } from "./agent-client.service.ts";
 import {
@@ -23,14 +22,15 @@ import {
 	type DeployPlan,
 	type GitBuildPlan,
 	type GitSource,
-	type ImagePlan,
 	resolveDeployPlan,
 	unreachable,
 	type WorkloadPlan,
 } from "./deploy/plan.ts";
+import { pullForDeploy } from "./deploy/pull-step.ts";
 import { serviceHostname, syncDns } from "./dns.service.ts";
 import type { RegistryAuth } from "./docker/containers.ts";
 import { DockerService, type RemoteHostConnection } from "./docker.service.ts";
+import { ImageScanService } from "./image-scan.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
@@ -417,55 +417,23 @@ class DeploymentServiceClass {
 		}
 	}
 
-	async #pullImage(
-		ctx: DeployContext,
-		plan: Extract<ImagePlan, { kind: "pull" }>,
-	): Promise<ResolvedImage> {
-		const { dep, svc } = ctx;
-		const { image, pullPolicy, tag } = plan;
-		const ref = `${image}:${tag}`;
-		const local = await DockerService.localImageDigest(ref);
-		const skip = shouldSkipPull(pullPolicy, local !== undefined);
-		if (skip) {
-			await dep.appendLog(skip);
-			logger.info(
-				`Image pull skipped (${pullPolicy}): ${ref} service=${svc.id}`,
-			);
-			if (local === undefined) {
-				throw new Error(
-					`Pull policy is "never" and ${ref} isn't on this host.`,
-				);
-			}
-			return { digest: local, image, tag };
-		}
-
-		const { digest } = await DockerService.pullImage({
-			auth: DockerService.buildAuthConfig(svc),
-			image,
-			onProgress: (line) => dep.appendLog(line),
-			tag,
-		});
-		logger.info(
-			`Image pulled: ${ref} digest=${digest ?? "unknown"} service=${svc.id}`,
-		);
-		return { digest, image, tag };
-	}
-
 	/**
 	 * Resolves the image ref the deploy step should use : a git build
 	 * (local, docker build server, or agent) or a pull here.
 	 */
 	async #resolveImage(
 		ctx: DeployContext,
-		plan: ImagePlan,
+		plan: DeployPlan,
 	): Promise<ResolvedImage> {
-		switch (plan.kind) {
+		const imagePlan = plan.image;
+		switch (imagePlan.kind) {
 			case "pull":
-				return await this.#pullImage(ctx, plan);
+				return await pullForDeploy(ctx, imagePlan, plan.workload);
 			case "local-build":
 			case "docker-build":
 			case "agent-build": {
-				const built = await this.#buildGitImage(ctx, plan);
+				const built = await this.#buildGitImage(ctx, imagePlan);
+				await ImageScanService.scanBuilt(ctx, imagePlan, built);
 				// Persist the resolved tag immediately : createAndStartContainer,
 				// and any future redeploy that reads svc.image/tag before this
 				// deploy returns, must see the image that actually exists.
@@ -473,7 +441,7 @@ class DeploymentServiceClass {
 				return { digest: "", ...built };
 			}
 			default:
-				return unreachable(plan);
+				return unreachable(imagePlan);
 		}
 	}
 	/** Marks the service and deployment failed, notifies, and shapes the caller's DeployResult. */
@@ -648,7 +616,7 @@ class DeploymentServiceClass {
 			const mounts = await ServiceVolumeDTO.listForService(svc.id);
 
 			await dep.appendLog(phaseLine("image"));
-			const { digest, image, tag } = await this.#resolveImage(ctx, plan.image);
+			const { digest, image, tag } = await this.#resolveImage(ctx, plan);
 
 			await svc.update({ currentStatus: "starting" });
 

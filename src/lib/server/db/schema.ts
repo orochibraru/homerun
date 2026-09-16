@@ -11,6 +11,12 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type {
+	BlockSeverity,
+	ImageScanFinding,
+	ImageScanStatus,
+	SeverityCounts,
+} from "$lib/image-scan";
+import type {
 	ContainerStatus,
 	JobStatus,
 	JobType,
@@ -322,6 +328,10 @@ export const instanceSettings = pgTable("instance_settings", {
 		.notNull()
 		.default([]),
 	id: text("id").primaryKey(),
+	imageScanBlockSeverity: text(
+		"image_scan_block_severity",
+	).$type<BlockSeverity>(),
+	imageScanEnabled: boolean("image_scan_enabled"),
 	// {name, clientId, clientSecretEnc, discoveryUrl, enabled, pkce, scopes}[]
 	// : see genericOAuth's config shape in $lib/services/auth.ts.
 	oauthProviders: jsonb("oauth_providers")
@@ -609,6 +619,7 @@ export const service = pgTable(
 		id: text("id").primaryKey(),
 		// e.g. "ghcr.io/acme/api"
 		image: text("image").notNull(),
+		imageScanEnabled: boolean("image_scan_enabled").default(true).notNull(),
 		memoryLimitMb: integer("memory_limit_mb"),
 		name: text("name").notNull(),
 		// "bridge" (default : the shared homerun + stack network,
@@ -947,6 +958,7 @@ export const notification = pgTable(
 				| "service_stopped"
 				| "auto_redeploy"
 				| "app_runtime_error"
+				| "image_scan_critical"
 			>()
 			.notNull(),
 		userId: text("user_id")
@@ -1027,6 +1039,34 @@ export const uptimeCheck = pgTable(
 			table.serviceId,
 			table.kind,
 			table.checkedAt,
+		),
+	],
+);
+
+export const imageScan = pgTable(
+	"image_scan",
+	{
+		counts: jsonb("counts").$type<SeverityCounts>().notNull(),
+		deploymentId: text("deployment_id").references(() => deployment.id, {
+			onDelete: "set null",
+		}),
+		digest: text("digest"),
+		error: text("error"),
+		findings: jsonb("findings").$type<ImageScanFinding[]>().notNull(),
+		id: text("id").primaryKey(),
+		imageRef: text("image_ref").notNull(),
+		scannedAt: timestamp("scanned_at", { mode: "date" }).notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		source: text("source").notNull(),
+		status: text("status").$type<ImageScanStatus>().notNull(),
+		totalFindings: integer("total_findings").default(0).notNull(),
+	},
+	(table) => [
+		index("imageScan_serviceId_scannedAt_idx").on(
+			table.serviceId,
+			table.scannedAt,
 		),
 	],
 );
@@ -1305,6 +1345,7 @@ export type StatusPage = typeof statusPage.$inferSelect;
 export type StatusPageService = typeof statusPageService.$inferSelect;
 export type NotificationChannel = typeof notificationChannel.$inferSelect;
 export type Job = typeof job.$inferSelect;
+export type ImageScan = typeof imageScan.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;
 export type InvitationBase = typeof invitation.$inferSelect;

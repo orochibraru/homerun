@@ -15,13 +15,13 @@ for people who'd rather manage settings as code.
 
 `/settings` is one page per tab, all admin-only:
 
-| Tab            | What's on it                                                                                                                                     |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **General**    | Base domain, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                             |
-| **Docker**     | Docker socket path, the shared network name, orchestration mode (standalone or [swarm](services.md#swarm-mode))                                  |
-| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and DNS automation (Cloudflare, Pangolin)                           |
-| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved |
-| **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Services](services.md#migrating-from-dokploy-or-coolify)         |
+| Tab            | What's on it                                                                                                                                                                       |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **General**    | Base domain, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                                                               |
+| **Docker**     | Docker socket path, the shared network name, [image scanning](services.md#image-scanning) and its block policy, orchestration mode (standalone or [swarm](services.md#swarm-mode)) |
+| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and DNS automation (Cloudflare, Pangolin)                                                             |
+| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved                                   |
+| **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Services](services.md#migrating-from-dokploy-or-coolify)                                           |
 
 Sign-in methods live on their own **Authentication** page rather than a
 `/settings` tab, see

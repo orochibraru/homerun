@@ -86,6 +86,7 @@ bun run test:unit:cli     # scoped to packages/cli
 bun run test:unit:installer  # scoped to packages/installer
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see .agents/notes/testing.md
+bun run test:e2e:cli      # playwright test over bootstrap + onboarding + ui-cli.spec.ts only, the CLI driven against the E2E app instance
 bun run e2e:multipass     # scripts/e2e-multipass.ts, real-infra installer/agent/CLI e2e, not wired into CI
 bun run e2e:multipass:release  # scripts/e2e-multipass-release.ts, the same but against the *published* release and the *documented* commands, also not wired into CI (`--only=docs` is the VM-free docs-drift check)
 ```

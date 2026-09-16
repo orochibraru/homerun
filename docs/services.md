@@ -144,7 +144,8 @@ What carries over:
   [connected git provider](#connecting-a-git-provider).
 - **Compose stacks**: the stored compose file, with the stack's own variables
   substituted in. On Dokploy, each domain's port is applied to the service it
-  targets.
+  targets, and named volumes keep pointing at the data Dokploy created
+  (`<appName>_<volume>`, or the volume's own `name:`/`external` declaration).
 - **Databases**: the image, the port, and the credentials turned into the
   image's own env vars (`POSTGRES_PASSWORD`, `MYSQL_ROOT_PASSWORD`, ...), always
   internal-only.
@@ -180,11 +181,65 @@ immediately and the progress panel narrates the rest. Same for "Create and
 Deploy" at the end of the new-service wizard: it creates the service, queues the
 deploy, and drops you straight on the service page watching it come up.
 
+## Image scanning
+
+Every deploy scans the image for known vulnerabilities with
+[Trivy](https://trivy.dev) before the workload starts. It's on by default and
+never enforced unless you ask for it.
+
+For an image-based service the pull goes through a registry mirror Homerun runs
+for itself, `homerun-mirror` (a `registry:2` container on the shared network,
+data in the `homerun-mirror-data` volume, published on `127.0.0.1:5055` only).
+The deploy:
+
+1. copies the image from its registry into the mirror with a throwaway
+   [skopeo](https://github.com/containers/skopeo) container, using the service's
+   registry credentials if it has any, without pulling it onto the host first;
+2. scans the copy in the mirror with a throwaway Trivy container (the
+   vulnerability database is cached in the `homerun-trivy-cache` volume, so only
+   the first scan downloads it);
+3. pulls the scanned image from `127.0.0.1:5055` onto the host and tags it with
+   its usual name, so the container runs exactly what was scanned.
+
+In [swarm mode](#swarm-mode) the other nodes can't reach a loopback mirror, so
+the service is deployed from the upstream registry pinned to the scanned digest
+(`image:tag@sha256:...`) instead.
+
+The mirror is created the first time it's needed. If any step of it fails
+(rootless Docker is the usual case, where the daemon can't pull from a loopback
+port), the deploy log says why and the deploy falls back to a normal pull, then
+scans the image on the host through the Docker socket. A pull policy that skips
+the pull scans the image already on the host. Git-built images are scanned once
+built: on the host for a local build, in the build cache registry (falling back
+to the host) for a build server.
+
+The deploy log gets a summary line with counts per severity and the first few
+CRITICAL/HIGH findings. The service's **Security** tab shows the latest scan,
+the severity counts, the findings (top 200, most severe first, with the fixed
+version when there is one), the scan history, and a **Scan now** button that
+queues a scan of the deployed image. A scan that finds a CRITICAL vulnerability
+adds a bell notification and fires the **Critical vulnerabilities** event on any
+notification channel subscribed to it.
+
+Scanning is controlled in two places:
+
+- **Settings → Docker → Image scanning**, admin-only: turn it off for every
+  service, and set **Block deploys at severity** to `Off` (the default),
+  `Critical`, or `High and above`. A blocked deploy fails before its workload
+  starts, and with the mirror the image never reaches the host at all. A scanner
+  that can't run (no network for the database, a registry it can't read) never
+  blocks: the deploy goes ahead and the failed scan is recorded.
+- **Scan this service's image** on a service's Settings tab, to opt one service
+  out. An opted-out service pulls straight from its registry.
+
+Both apply to every deploy path: the Deploy button, the API and CLI, scheduled
+redeploys, and stack or template deploys.
+
 ## The job queue
 
-Deploys, git builds, volume backups and Docker cleanups all run through one
-background worker instead of inside the request that triggered them. That buys
-four things worth knowing about as an operator:
+Deploys, git builds, image scans, volume backups and Docker cleanups all run
+through one background worker instead of inside the request that triggered them.
+That buys four things worth knowing about as an operator:
 
 - **Repeats collapse.** Queueing a deploy for a service that already has one
   waiting doesn't queue a second, it joins the one that's already there. Push
@@ -419,16 +474,18 @@ and Deploy works again.
 
 The bell in the header shows a per-account feed of lifecycle events for your
 services, deploy succeeded or failed, service created, started or stopped, an
-auto-redeploy firing, and runtime errors. Click an entry to jump to its service.
-See [Operations](operations.md#notifications) for how it differs from the Errors
+auto-redeploy firing, an image scan finding a critical vulnerability, and
+runtime errors. Click an entry to jump to its service. See
+[Operations](operations.md#notifications) for how it differs from the Errors
 tab's persisted log view, and for sending the same build/update/deploy/uptime
 events out to a Discord webhook, a generic webhook, or email.
 
 ## Settings
 
 Name, slug, restart policy, which stack the service belongs to, the
-[scheduled redeploy](#scheduled-redeploy) above, and a danger-zone delete
-(typed-confirm, see [The services list](#the-services-list)).
+[scheduled redeploy](#scheduled-redeploy) above, whether its image is
+[scanned](#image-scanning), and a danger-zone delete (typed-confirm, see
+[The services list](#the-services-list)).
 
 **Healthcheck command** overrides the image's own Docker healthcheck with a
 shell command run inside the container every 30s (exit 0 = healthy). When a

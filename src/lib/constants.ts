@@ -60,6 +60,7 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
 	cron_job: "Cron job",
 	deploy: "Deploy",
 	docker_cleanup: "Cleanup",
+	image_scan: "Image scan",
 };
 
 export const SERVICE_STATUS_CONFIG: Record<

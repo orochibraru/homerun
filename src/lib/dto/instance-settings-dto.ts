@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import type { BlockSeverity } from "$lib/image-scan";
 import type { SecurityPolicy } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
 import {
@@ -156,6 +157,8 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			dockerSocketPath: null,
 			gitProviders: [],
 			id: SINGLETON_ID,
+			imageScanBlockSeverity: null,
+			imageScanEnabled: null,
 			oauthProviders: [],
 			onboardingCompletedAt: null,
 			orchestrationMode: null,
@@ -233,6 +236,21 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	async updateOrchestrationMode(mode: "standalone" | "swarm"): Promise<void> {
 		await this.persist({ orchestrationMode: mode });
+	}
+
+	get imageScanEnabled(): boolean {
+		return this.row.imageScanEnabled ?? true;
+	}
+
+	get imageScanBlockSeverity(): BlockSeverity | null {
+		return this.row.imageScanBlockSeverity ?? null;
+	}
+
+	async updateImageScan(input: {
+		imageScanBlockSeverity: BlockSeverity | null;
+		imageScanEnabled: boolean;
+	}): Promise<void> {
+		await this.persist(input);
 	}
 
 	get cloudflareZoneId(): string | null {

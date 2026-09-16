@@ -12,6 +12,11 @@ export const cronJobPayload = z.object({
 	userId: z.string(),
 });
 
+export const imageScanJobPayload = z.object({
+	serviceId: z.string(),
+	userId: z.string(),
+});
+
 export const backupJobPayload = z.object({
 	userId: z.string(),
 	volumeId: z.string(),

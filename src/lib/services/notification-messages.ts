@@ -1,5 +1,10 @@
 import { stripAnsi } from "$lib/ansi";
 import { isPhaseLine } from "$lib/deploy-phases";
+import {
+	countsLine,
+	type ImageScanFinding,
+	type SeverityCounts,
+} from "$lib/image-scan";
 import { deployEvent, deployTitle } from "$lib/notification-events";
 import type { Deployment, Service } from "$lib/server/db/schema";
 import type { NotificationEvent } from "$lib/types";
@@ -155,6 +160,43 @@ export function deployMessage(
 		serviceName: service.name,
 		timestamp,
 		title: deployTitle(event, service.name),
+	};
+}
+
+export interface ImageScanMessageInput {
+	counts: SeverityCounts;
+	findings: ImageScanFinding[];
+	imageRef: string;
+	origin: string | null;
+	service: Pick<Service, "id" | "name">;
+}
+
+const TOP_CRITICAL_LINES = 10;
+
+export function imageScanMessage(
+	input: ImageScanMessageInput,
+	timestamp: string,
+): ChannelMessage {
+	const { service } = input;
+	const critical = input.findings
+		.filter((finding) => finding.severity === "CRITICAL")
+		.slice(0, TOP_CRITICAL_LINES)
+		.map(
+			(finding) =>
+				`${finding.id} ${finding.pkg} ${finding.installedVersion}${finding.fixedVersion ? ` (fixed in ${finding.fixedVersion})` : ""}`,
+		);
+	return {
+		detail: critical.length > 0 ? critical.join("\n") : null,
+		event: "image.vulnerable",
+		fields: [
+			{ name: "Image", value: input.imageRef },
+			{ name: "Findings", value: countsLine(input.counts) },
+		],
+		link: dashboardLink(input.origin, `/services/${service.id}/security`),
+		serviceId: service.id,
+		serviceName: service.name,
+		timestamp,
+		title: `${service.name} has ${input.counts.critical} critical ${input.counts.critical === 1 ? "vulnerability" : "vulnerabilities"}`,
 	};
 }
 

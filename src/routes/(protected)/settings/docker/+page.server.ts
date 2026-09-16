@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { isBlockSeverity } from "$lib/image-scan";
 import { Logger } from "$lib/logger";
 import {
 	applyAndRebuild,
@@ -27,6 +28,30 @@ export const actions = {
 		applyAndRebuild(settings);
 		logger.info(`Docker instance settings updated: user=${locals.user.id}`);
 		return { savedSection: "docker", success: true };
+	},
+
+	updateImageScan: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const formData = await request.formData();
+		const severity = formData.get("imageScanBlockSeverity");
+		if (severity !== "off" && !isBlockSeverity(severity)) {
+			return fail(400, { error: "Invalid block policy." });
+		}
+		const imageScanEnabled = formData.get("imageScanEnabled") === "on";
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateImageScan({
+			imageScanBlockSeverity: isBlockSeverity(severity) ? severity : null,
+			imageScanEnabled,
+		});
+		logger.info(
+			`Image scanning updated: enabled=${imageScanEnabled} block=${severity} user=${locals.user.id}`,
+		);
+		return { savedSection: "imageScan", success: true };
 	},
 
 	updateOrchestration: async ({ request, locals }) => {

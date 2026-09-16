@@ -77,6 +77,54 @@ the image; a cross-host build (`docker-build`/`agent-build`) pushes to
 `<registry>/homerun-build-<slug>:<tag>` and pulls that published ref back onto
 this host first.
 
+## Image scanning in the pipeline (`image_scan`, `ImageScanService`, `deploy/pull-step.ts`)
+
+Scanning happens inside the `image` phase, before `#startWorkload`, on every
+path that reaches `deployService` (Overview, API/CLI, cron, stack/template
+deploys, the queue). `ImageScanService.policyFor(svc)` combines
+`instance_settings.imageScanEnabled` (null = on) with `service.imageScanEnabled`
+(default true) and carries `imageScanBlockSeverity` (null = off, `CRITICAL`,
+`HIGH`). When off, a `skipped` row is recorded and the pull is the plain one.
+
+- **Pull plans** go through `pullForDeploy` (`deploy/pull-step.ts`, split out of
+  `deploy.service.ts` to stay under the 680-line file limit). A pull policy that
+  skips the pull scans the local image (`--image-src docker`). Otherwise
+  `ImageScanService.deployThroughMirror`: `DockerService.copyToMirror` (skopeo)
+  → scan the mirror copy (`--image-src remote --insecure`) → **pull only after
+  the scan**, so a blocked image never lands in the host's image store →
+  `pullFromMirror` pulls `127.0.0.1:5055/<registry>/<repo>:<tag>` and re-tags it
+  as the upstream `image:tag`, so the container, `pullPolicy: missing` and every
+  other reader keep seeing the normal name. Swarm skips the host pull and
+  returns `tag@digest` (`pinnedToDigest`), since workers can't reach a loopback
+  registry; the swarm pre-pull and `createService` both accept that ref.
+- **Fallbacks, all logged into the deployment log**: copy fails → `null`, the
+  caller does the normal pull and a local scan. Scan succeeds but the loopback
+  pull fails → plain upstream pull, no second scan.
+- **Git plans** scan after the build and before `svc.image`/`tag` are written
+  back (`buildScanTargets`, `deploy/scan-targets.ts`): the local tag for
+  `local-build`, the pushed cache-registry ref with its credentials then the
+  local pull for `docker-build`/`agent-build`.
+- `ImageScanService.scan(ctx, targets, {blockSeverity})` tries targets in order,
+  records one `image_scan` row (`ok` with counts + top 200 findings, or `failed`
+  with every target's error), appends the summary and the first five
+  CRITICAL/HIGH findings to the log, notifies on CRITICAL (`image_scan_critical`
+  bell row + the `image.vulnerable` channel event), then throws
+  `ImageScanBlockedError` if `blockReason()` says so, which `#recordFailure`
+  turns into a normal failed deploy. **A scanner failure never blocks**, even
+  with a block policy set: only real findings do.
+- The Security tab's **Scan now** is an `image_scan` job (dedupe/lock
+  `image_scan:<serviceId>`) running `ImageScanService.scanDeployed`: Trivy with
+  `--image-src docker,remote` against `svc.image:svc.tag` and the service's
+  registry credentials, never blocking.
+
+Verified live on OrbStack against the dev database: a real deploy of
+`nginx:1.27-alpine` through the mirror (copy, scan with 2 critical/35 high,
+loopback pull, re-tag, container up), a `CRITICAL` block on `alpine:3.18.0`
+failing before the pull, a per-service opt-out, and a `missing` pull policy
+scanning the local image. **Not verified live**: swarm pinning, git-build scans,
+cross-host registry scans, rootless Docker's fallback, and the Scan now job
+through the worker.
+
 ## Compose import (`$lib/compose-import.ts`, `$lib/services/compose-import.service.ts`, `(protected)/services/import/`)
 
 Paste a `docker-compose.yaml`, get Homerun rows. Two halves, deliberately split:
@@ -703,6 +751,12 @@ notifications are the compose importer's, not a second copy.
 - Compose: `composeFile` holds the YAML only for `sourceType: "raw"`;
   `domains[].serviceName` names the compose service a domain routes to, used to
   mark it public with that port. `env` is used for `${VAR}` substitution.
+  Dokploy runs stacks as `docker compose -p <appName>`, so a named volume on
+  disk is `<appName>_<key>` : `dokployComposeVolume` rewrites each draft's
+  volume source to that, unless the top-level declaration has `name:` (used
+  as-is) or `external` (left plain). Checked against the live instance: every
+  stack had `randomize: false` and `isolatedDeployment: false`, which Dokploy
+  uses to suffix names further; those aren't handled.
 - Databases: `dockerImage`, `databaseName`/`databaseUser`/`databasePassword`/
   `databaseRootPassword`, `externalPort`, and `mounts[]` including the
   auto-created data volume. The Redis password is applied by Dokploy through the

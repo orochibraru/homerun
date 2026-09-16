@@ -196,6 +196,11 @@ SvelteKit route files, swallowed by better-auth's own catch-all handler for
 anything under its `/api/v1/auth` basePath. Fixed by adding both paths alongside
 the pre-existing `/api/v1/auth/providers` entry.
 
+The CLI also has a standing end-to-end suite, `tests/e2e/ui-cli.spec.ts`, which
+runs it against the Playwright suite's built app on every E2E run (device login
+approved in a real browser, every list/get command, overrides, 401/404 exits,
+logout), see `.agents/notes/testing.md`.
+
 ## API Docs page (`(protected)/api-docs/`)
 
 A dashboard page (own nav item, "API Docs", not admin-only) rendering the live

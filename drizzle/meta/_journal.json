@@ -259,6 +259,13 @@
 			"when": 1789576248277,
 			"tag": "0036_smooth_brother_voodoo",
 			"breakpoints": true
+		},
+		{
+			"idx": 37,
+			"version": "7",
+			"when": 1789577614346,
+			"tag": "0037_right_pestilence",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

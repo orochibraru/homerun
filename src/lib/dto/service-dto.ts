@@ -88,6 +88,7 @@ export type ServiceUpdateInput = Partial<
 		| "gitUrl"
 		| "healthcheckCommand"
 		| "image"
+		| "imageScanEnabled"
 		| "memoryLimitMb"
 		| "name"
 		| "networkMode"
@@ -402,6 +403,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			healthcheckCommand: input.healthcheckCommand ?? null,
 			id: crypto.randomUUID(),
 			image: input.image,
+			imageScanEnabled: true,
 			name: input.name,
 			restartPolicy: input.restartPolicy,
 			slug: input.slug,
@@ -576,5 +578,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 	get portProtocol(): Service["portProtocol"] {
 		return this.row.portProtocol;
+	}
+	get imageScanEnabled(): boolean {
+		return this.row.imageScanEnabled;
 	}
 }

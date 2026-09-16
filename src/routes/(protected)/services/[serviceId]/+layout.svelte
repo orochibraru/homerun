@@ -10,6 +10,7 @@
 		LayoutGrid,
 		Network,
 		Settings,
+		ShieldCheck,
 		SlidersHorizontal,
 		Terminal,
 	} from "@lucide/svelte";
@@ -116,6 +117,15 @@
 			icon: Cpu,
 			id: "compute",
 			label: "Compute",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/security", {
+				serviceId: svc.id,
+			}),
+			icon: ShieldCheck,
+			id: "security",
+			label: "Security",
 		},
 		{
 			exact: false,

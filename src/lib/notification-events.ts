@@ -49,6 +49,13 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 		label: "Deploy succeeded",
 	},
 	{
+		description:
+			"An image scan found at least one CRITICAL vulnerability in a service's image.",
+		event: "image.vulnerable",
+		group: "Security",
+		label: "Critical vulnerabilities",
+	},
+	{
 		description: "An uptime probe started failing.",
 		event: "service.down",
 		group: "Uptime",
@@ -76,7 +83,11 @@ export function isNotificationEvent(value: string): value is NotificationEvent {
 }
 
 export function isFailureEvent(event: NotificationEvent): boolean {
-	return event.endsWith(".failed") || event === "service.down";
+	return (
+		event.endsWith(".failed") ||
+		event === "service.down" ||
+		event === "image.vulnerable"
+	);
 }
 
 export function deployEvent(

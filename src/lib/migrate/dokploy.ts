@@ -1,4 +1,8 @@
-import type { ComposeVolumeDraft } from "$lib/compose-import";
+import { parse as parseYaml } from "yaml";
+import type {
+	ComposeServiceDraft,
+	ComposeVolumeDraft,
+} from "$lib/compose-import";
 import {
 	bindVolumeName,
 	composeDrafts,
@@ -347,6 +351,66 @@ export function dokployApplication(
 	};
 }
 
+interface DeclaredComposeVolume {
+	external: boolean;
+	name: string | null;
+}
+
+function declaredComposeVolumes(
+	file: string,
+): Map<string, DeclaredComposeVolume> {
+	const declared = new Map<string, DeclaredComposeVolume>();
+	let doc: unknown;
+	try {
+		doc = parseYaml(file);
+	} catch {
+		return declared;
+	}
+	const volumes = isRow(doc) && isRow(doc.volumes) ? doc.volumes : {};
+	for (const [key, value] of Object.entries(volumes)) {
+		const spec = isRow(value) ? value : {};
+		declared.set(key, {
+			external: spec.external === true || isRow(spec.external),
+			name: typeof spec.name === "string" ? spec.name : null,
+		});
+	}
+	return declared;
+}
+
+export function dokployComposeVolume(
+	volume: ComposeVolumeDraft,
+	appName: string,
+	declared: Map<string, DeclaredComposeVolume>,
+): ComposeVolumeDraft {
+	if (volume.kind !== "volume") {
+		return volume;
+	}
+	const spec = declared.get(volume.source);
+	if (spec?.name) {
+		return { ...volume, source: spec.name };
+	}
+	if (spec?.external) {
+		return volume;
+	}
+	return { ...volume, source: `${appName}_${volume.source}` };
+}
+
+function prefixComposeVolumes(
+	drafts: ComposeServiceDraft[],
+	file: string,
+	appName: string | null,
+): void {
+	if (!appName) {
+		return;
+	}
+	const declared = declaredComposeVolumes(file);
+	for (const draft of drafts) {
+		draft.volumes = draft.volumes.map((volume) =>
+			dokployComposeVolume(volume, appName, declared),
+		);
+	}
+}
+
 export function dokployCompose(
 	row: RawRow,
 	projectName: string,
@@ -366,6 +430,7 @@ export function dokployCompose(
 		};
 	}
 	const parsed = composeDrafts(file, parseEnvBlob(row.env));
+	prefixComposeVolumes(parsed.drafts, file, str(row, "appName"));
 	for (const domain of rows(row.domains)) {
 		const target = str(domain, "serviceName");
 		const draft =

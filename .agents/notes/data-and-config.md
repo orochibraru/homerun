@@ -64,6 +64,9 @@ yet built).
   `cron-job-run-dto.ts`, `CronJobRunDTO`:
   `create`/`finish`/`listForJob`/`listForUser` (joins in the job's name), one
   row per cron job attempt with its captured output. See Cron jobs below.
+- `image-scan-dto.ts`, `ImageScanDTO`: `create` (keeps the newest 25 per
+  service, pruned on every insert)/`listForService`, one row per image scan. See
+  Image scanning in the pipeline in `services-and-templates.md`.
 - `build-cache-registry-dto.ts`, `BuildCacheRegistryDTO`:
   `get`/`list`/`listPaged`/`create`/`delete`, a per-user registry credential a
   git-build pulls its `--cache-from` image from and pushes fresh layers back to,
@@ -183,6 +186,14 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   written every minute by `StatsSampler` and read back bucketed per range. See
   Recorded resource history in `observability.md` for why it's raw samples
   rather than rollup tables.
+- `image_scan`, one row per scan of a service's image: `status` (`ok` | `failed`
+  | `skipped`), `imageRef`, `digest`, `source` (which target answered: the
+  mirror, this host, a build cache registry), `counts` jsonb per severity,
+  `findings` jsonb (top 200, most severe first), `totalFindings`, `error`,
+  nullable `deploymentId` (`set null`, null for a Scan now), `serviceId`
+  cascade. `instance_settings.imageScanEnabled` (null = on) and
+  `imageScanBlockSeverity` (null = off) plus `service.imageScanEnabled` (default
+  true) are its settings.
 - `uptime_check`, one appended row per liveness probe per tick (the heartbeat
   strips read the last 40, "now" is the newest). See Uptime probes in
   `observability.md`.

@@ -174,6 +174,30 @@ reordering the chain.
   explicitly once the run finishes : without that it stays open and keeps Bun's
   event loop alive, leaking one connection per run in a long-lived server. →
   `DockerService.runOneOff`.
+- `image-scan.ts`, `DockerImageScanMixin`, merged outermost (after cleanup,
+  needs `runOneOff`/`pullImage`/`ensureSharedNetwork`), the mirror and the
+  scanner. `ensureImageMirror()` lazily creates `homerun-mirror` (`registry:2`,
+  `homerun-mirror-data` volume, shared network, `127.0.0.1:5055->5000`,
+  `unless-stopped`, labelled `homerun.infra=mirror` and **not**
+  `homerun.managed`, so nothing that lists managed containers ever treats it as
+  a service), same core-infra exception as Traefik. `copyToMirror` runs
+  `quay.io/skopeo/stable` via `runOneOff` on the shared network
+  (`skopeo copy --quiet --dest-tls-verify=false --digestfile /dev/stdout`),
+  passing registry credentials as an auth file written from an env var by an
+  `sh -c` wrapper so they never appear in argv, and reads the digest off stdout.
+  `pullFromMirror` pulls the loopback ref and tags it with the upstream name.
+  `scanImage` runs `aquasec/trivy` (pinned tag) with the `homerun-trivy-cache`
+  volume on `/root/.cache`, JSON output parsed by `$lib/image-scan.ts`'s
+  `summarizeTrivyReport`; for `docker`/`any` sources it binds the daemon socket,
+  resolving the **host** path from this app's own container mounts when it runs
+  in one (`config.docker.socketPath` is the in-container path). Every argv/ref
+  builder is pure in `docker/image-scan-refs.ts`, tested in
+  `tests/unit/app/image-scan.test.ts`. **Real, tested findings**: Docker accepts
+  a loopback registry as insecure with no daemon config (verified on OrbStack);
+  skopeo copies only the host platform's manifest, so the recorded digest is the
+  platform manifest digest, not the upstream index digest;
+  `--digestfile /dev/stdout` works and `--quiet` keeps progress off stdout. The
+  mirror's storage is never garbage-collected.
 
 `src/lib/services/secrets.ts` (not under `docker/`, it's a generic AES-256-GCM
 utility, not Docker-specific, also used by SMTP/OAuth/S3-backup secrets),

@@ -12,6 +12,7 @@ import {
 	type PruneSummary,
 	type SystemPruneSummary,
 } from "../docker.service.ts";
+import { ImageScanService } from "../image-scan.service.ts";
 import { S3BackupService } from "../s3-backup.service.ts";
 import {
 	backupJobPayload,
@@ -19,6 +20,7 @@ import {
 	type DockerCleanupAction,
 	deployJobPayload,
 	dockerCleanupJobPayload,
+	imageScanJobPayload,
 } from "./payloads.ts";
 
 export type JobResult = Record<string, unknown> | null;
@@ -81,6 +83,16 @@ async function runCronJob(entry: JobDTO): Promise<JobResult> {
 	return { exitCode: outcome.exitCode };
 }
 
+async function runImageScan(entry: JobDTO): Promise<JobResult> {
+	const { serviceId, userId } = imageScanJobPayload.parse(entry.payload);
+	const svc = await ServiceDTO.get(serviceId, userId);
+	if (!svc) {
+		throw new Error("The service was deleted before its scan ran.");
+	}
+	const summary = await ImageScanService.scanDeployed(svc);
+	return { ...summary.counts, totalFindings: summary.totalFindings };
+}
+
 async function reclaimStackNetworks(): Promise<PruneSummary> {
 	const reclaimed = await DockerService.reclaimOrphanStackNetworks(
 		await StackDTO.allIds(),
@@ -123,4 +135,5 @@ export const jobHandlers: Record<JobType, JobHandler> = {
 	cron_job: runCronJob,
 	deploy: runDeploy,
 	docker_cleanup: runDockerCleanup,
+	image_scan: runImageScan,
 };

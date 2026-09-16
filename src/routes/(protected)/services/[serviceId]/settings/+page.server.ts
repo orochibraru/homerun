@@ -157,6 +157,22 @@ export const actions = {
 		);
 		return { success: true };
 	},
+	updateImageScan: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		const formData = await request.formData();
+		const imageScanEnabled = formData.get("imageScanEnabled") === "on";
+		await svc.update({ imageScanEnabled });
+		logger.info(
+			`Image scanning updated: service=${svc.id} enabled=${imageScanEnabled} user=${locals.user.id}`,
+		);
+		return { imageScanSaved: true };
+	},
 	updateCron: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

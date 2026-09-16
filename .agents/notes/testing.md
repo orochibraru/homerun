@@ -240,10 +240,16 @@ mark-read/delete command updates the feed with no page reload, and
 Access section's reveal-and-validate behaviour, and (`ui-form-state.spec.ts`)
 that a saved settings section keeps its field values and that the compose-import
 page's Import step accepts the file its own Parse step previewed, the two halves
-of the `reset` bug under Conventions above. Not covered by the specs above: a
-real deploy (the screenshot pipeline below does one, on purpose, and is the only
-thing here that touches Docker). Add browser-level cases here; don't re-prove
-API shapes `tests/integration/` already covers directly and faster.
+of the `reset` bug under Conventions above, and (`ui-cli.spec.ts`) the `homerun`
+CLI spawned from source against the same instance, logged in through its real
+device-code flow approved in the browser, then every list/get command, the
+flag/env overrides, 401/404 exits and logout (`bun run test:e2e:cli` runs it
+with only the bootstrap and onboarding specs ahead of it; see
+`tests/e2e/README.md` for why it strips `FORCE_COLOR` from the CLI's env). Not
+covered by the specs above: a real deploy (the screenshot pipeline below does
+one, on purpose, and is the only thing here that touches Docker). Add
+browser-level cases here; don't re-prove API shapes `tests/integration/` already
+covers directly and faster.
 
 ## Screenshots for the docs (`tests/e2e/screenshots/`, `bun run screenshots`)
 

@@ -243,6 +243,27 @@ describe("dokployCompose", () => {
 		});
 	});
 
+	test("prefixes named volumes with the stack's appName, like compose -p does", () => {
+		const entry = dokployCompose(
+			{
+				...COMPOSE,
+				appName: "homelab-syncthing-lknss6",
+				composeFile:
+					"services:\n  syncthing:\n    image: syncthing/syncthing\n    volumes:\n      - syncthing_config:/config\n      - shared:/shared\n      - pinned:/pinned\n      - /srv/local:/local\nvolumes:\n  syncthing_config:\n  shared:\n    external: true\n  pinned:\n    name: my-pinned\n",
+			},
+			"Homelab",
+		);
+		const sources = Object.fromEntries(
+			(entry.drafts[0]?.volumes ?? []).map((v) => [v.containerPath, v]),
+		);
+		expect(sources["/config"]?.source).toBe(
+			"homelab-syncthing-lknss6_syncthing_config",
+		);
+		expect(sources["/shared"]?.source).toBe("shared");
+		expect(sources["/pinned"]?.source).toBe("my-pinned");
+		expect(sources["/local"]?.kind).toBe("bind");
+	});
+
 	test("blocks a git-sourced stack with no stored file", () => {
 		const entry = dokployCompose(
 			{ ...COMPOSE, composeFile: "", sourceType: "github" },

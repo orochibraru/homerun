@@ -138,6 +138,24 @@ export class JobDTO extends BaseDTO<Job> {
 		return row ? new JobDTO(row) : null;
 	}
 
+	static async findActive(
+		type: JobType,
+		dedupeKey: string,
+	): Promise<JobDTO | null> {
+		const [row] = await db
+			.select()
+			.from(job)
+			.where(
+				and(
+					eq(job.type, type),
+					eq(job.dedupeKey, dedupeKey),
+					inArray(job.status, ["queued", "running"]),
+				),
+			)
+			.limit(1);
+		return row ? new JobDTO(row) : null;
+	}
+
 	static async create(input: NewJobInput): Promise<JobDTO | null> {
 		const now = new Date();
 		const row: Job = {
