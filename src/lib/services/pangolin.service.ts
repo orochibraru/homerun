@@ -1,5 +1,6 @@
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import { DockerService } from "$lib/services/docker.service";
 import type { DnsSyncResult } from "./dns-result";
 
 const logger = new Logger("Pangolin");
@@ -30,6 +31,11 @@ interface PangolinSite {
 
 interface PangolinResourceTarget {
 	targetId: number | string;
+}
+
+interface PangolinTarget extends PangolinResourceTarget {
+	ip: string;
+	port: number;
 }
 
 /** Pangolin's own response envelope : `{data, success, message?, error?}`, `data` holds the endpoint-specific payload. */
@@ -346,9 +352,59 @@ class PangolinServiceClass {
 			orgId,
 			ownsAuth: settings.pangolinOwnsAuth,
 			port: settings.pangolinTargetPort,
-			targetHost: settings.pangolinTargetHost,
+			targetHost:
+				settings.pangolinTargetHost ?? (await DockerService.tunnelTargetHost()),
 			token,
 		};
+	}
+
+	private listTargets(
+		baseUrl: string,
+		token: string,
+		resourceId: number | string,
+	): Promise<PangolinTarget[]> {
+		return this.listAll<PangolinTarget>({
+			baseUrl,
+			field: "targets",
+			pageParam: "offset",
+			path: `/resource/${resourceId}/targets`,
+			sizeParam: "limit",
+			token,
+		});
+	}
+
+	private async ensureTarget(
+		cfg: { baseUrl: string; port: number; targetHost: string; token: string },
+		resourceId: number | string,
+		siteId: number | string,
+	): Promise<string> {
+		const { baseUrl, port, targetHost, token } = cfg;
+		const wanted = `${targetScheme(port)}://${targetHost}:${port}`;
+		const targets = await this.listTargets(baseUrl, token, resourceId);
+		if (targets.some((t) => t.ip === targetHost && t.port === port)) {
+			return `target ${wanted}`;
+		}
+		const [stale] = targets;
+		if (!stale) {
+			await this.createResourceTarget(baseUrl, token, {
+				host: targetHost,
+				port,
+				resourceId,
+				siteId,
+			});
+			return `target ${wanted} added`;
+		}
+		await this.request(baseUrl, token, `/target/${stale.targetId}`, {
+			body: JSON.stringify({
+				enabled: true,
+				ip: targetHost,
+				method: targetScheme(port),
+				port,
+				siteId,
+			}),
+			method: "POST",
+		});
+		return `target moved from ${stale.ip}:${stale.port} to ${wanted}`;
 	}
 
 	/**
@@ -357,26 +413,41 @@ class PangolinServiceClass {
 	 * sync isn't worth failing a deploy over, the admin can always wire it up
 	 * by hand, but the outcome is reported back rather than swallowed.
 	 */
-	async syncDnsRecord(hostname: string): Promise<DnsSyncResult | null> {
+	async syncDnsRecord(
+		hostname: string,
+		opts: { sso?: boolean } = {},
+	): Promise<DnsSyncResult | null> {
 		const cfg = await this.settingsOrNull();
 		if (!cfg) {
 			return null;
 		}
-		const { baseUrl, mainSiteName, orgId, ownsAuth, port, targetHost, token } =
-			cfg;
+		const { baseUrl, mainSiteName, orgId, port, targetHost, token } = cfg;
+		const sso = opts.sso ?? cfg.ownsAuth;
 
 		try {
+			const sites = await this.listSites(baseUrl, token, orgId);
+			const mainSite = sites.find((s) => s.name === mainSiteName);
+			if (!mainSite) {
+				return {
+					detail: `site "${mainSiteName}" not found (available: ${
+						sites.map((s) => s.name).join(", ") || "none"
+					})`,
+					ok: false,
+					provider: "pangolin",
+				};
+			}
+
 			const resources = await this.listResources(baseUrl, token, orgId);
 			const existing = resources.find((r) => r.fullDomain === hostname);
 			if (existing) {
-				await this.setResourceSso(
-					baseUrl,
-					token,
+				await this.setResourceSso(baseUrl, token, existing.resourceId, sso);
+				const target = await this.ensureTarget(
+					cfg,
 					existing.resourceId,
-					ownsAuth,
+					mainSite.siteId,
 				);
 				return {
-					detail: `${hostname} already has a resource, Pangolin SSO ${ownsAuth ? "on" : "off"}`,
+					detail: `${hostname} already has a resource, Pangolin SSO ${sso ? "on" : "off"}, ${target}`,
 					ok: true,
 					provider: "pangolin",
 				};
@@ -394,24 +465,12 @@ class PangolinServiceClass {
 				};
 			}
 
-			const sites = await this.listSites(baseUrl, token, orgId);
-			const mainSite = sites.find((s) => s.name === mainSiteName);
-			if (!mainSite) {
-				return {
-					detail: `site "${mainSiteName}" not found (available: ${
-						sites.map((s) => s.name).join(", ") || "none"
-					})`,
-					ok: false,
-					provider: "pangolin",
-				};
-			}
-
 			const resource = await this.createResource(baseUrl, token, orgId, {
 				domainId: match.domain.domainId,
 				name: match.subdomain || hostname,
 				subdomain: match.subdomain,
 			});
-			await this.setResourceSso(baseUrl, token, resource.resourceId, ownsAuth);
+			await this.setResourceSso(baseUrl, token, resource.resourceId, sso);
 			await this.createResourceTarget(baseUrl, token, {
 				host: targetHost,
 				port,

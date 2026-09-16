@@ -393,7 +393,14 @@
       <div>
         <p class="text-text text-sm font-medium">SSL</p>
         <p class="text-text-muted text-xs">
-          {#if svc.dnsResolvable}
+          {#if svc.dnsResolvable && data.behindPangolin}
+            Pangolin serves the public certificate for {publicHost}.{data.baseDomain}
+            : Traefik only encrypts the hop from the tunnel with its default certificate.
+          {:else if svc.dnsResolvable && !data.certResolver}
+            {publicHost}.{data.baseDomain} can't get a public certificate, since
+            ACME only issues for real domain names : Traefik serves its self-signed
+            default instead.
+          {:else if svc.dnsResolvable}
             TLS is automatic via Traefik's
             <code>{data.certResolver}</code>
             resolver for {publicHost}.{data.baseDomain}

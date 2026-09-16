@@ -1,5 +1,3 @@
-const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
-
 export const DASHBOARD_ROUTER_FILE = "homerun-dashboard.yml";
 
 export function dashboardHostFrom(origin: string | null): string | null {
@@ -15,14 +13,14 @@ export function dashboardHostFrom(origin: string | null): string | null {
 }
 
 export function dashboardRouterConfig(params: {
-	certResolver: string;
+	certResolver: string | null;
 	entrypoint: string;
 	host: string;
 	target: string;
 }): string {
-	const tls = IPV4_RE.test(params.host)
-		? "      tls: {}"
-		: `      tls:\n        certResolver: ${params.certResolver}`;
+	const tls = params.certResolver
+		? `      tls:\n        certResolver: ${params.certResolver}`
+		: "      tls: {}";
 	return `# Written by Homerun from the Dashboard URL in Settings : do not edit by hand.
 http:
   routers:

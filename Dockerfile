@@ -47,7 +47,7 @@ ENV APP_ENV=production
 ENV ORIGIN=http://localhost:3000
 ENV STORAGE_BASE_PATH=/app/data
 
-RUN mkdir -p /app/data && chown -R bun:bun /app/data
+RUN mkdir -p /app/data /app/traefik-dynamic && chown -R bun:bun /app/data /app/traefik-dynamic
 
 VOLUME /app/data
 

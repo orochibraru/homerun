@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
+import { certResolverFor } from "./cert-resolver.ts";
 import {
 	DASHBOARD_ROUTER_FILE,
 	dashboardHostFrom,
@@ -11,6 +12,7 @@ import {
 } from "./dashboard.ts";
 import { hasTraefikRouterFor, MANAGED_LABEL } from "./labels.ts";
 import { swarmNetworkName } from "./swarm.ts";
+import { tunnelTargetHostFrom } from "./tunnel.ts";
 
 const LEADING_SLASH_RE = /^\//;
 
@@ -96,6 +98,13 @@ export function DockerCoreServicesMixin<
 			return self?.labels ?? null;
 		}
 
+		async tunnelTargetHost(): Promise<string> {
+			const containers = await this.getDocker()
+				.listContainers()
+				.catch(() => []);
+			return tunnelTargetHostFrom(containers);
+		}
+
 		async syncDashboardRouter(): Promise<void> {
 			const dir = config.traefik.dynamicConfigDir;
 			if (!dir) {
@@ -118,7 +127,11 @@ export function DockerCoreServicesMixin<
 				await writeFile(
 					path,
 					dashboardRouterConfig({
-						certResolver: config.traefik.certResolver,
+						certResolver: certResolverFor(
+							host,
+							config.traefik.certResolver,
+							config.pangolinEnabled,
+						),
 						entrypoint: config.traefik.entrypoint,
 						host,
 						target: `http://${target}:${config.port}`,

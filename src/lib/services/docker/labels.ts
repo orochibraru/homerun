@@ -1,4 +1,5 @@
 import { config } from "$lib/config";
+import { certResolverFor } from "./cert-resolver.ts";
 
 export const GATE_IDENTITY_HEADERS = [
 	"X-Homerun-User",
@@ -81,6 +82,10 @@ export function buildContainerLabels(params: {
 	}
 
 	const host = projectSlug ? `${projectSlug}-${slug}` : slug;
+	const hostname = `${host}.${config.baseDomain}`;
+	const resolverFor = (name: string) =>
+		certResolverFor(name, config.traefik.certResolver, config.pangolinEnabled);
+	const primaryResolver = resolverFor(hostname);
 
 	const labels: Record<string, string> = {
 		...baseLabels,
@@ -90,14 +95,16 @@ export function buildContainerLabels(params: {
 		// no control-plane push required. See compose.yaml for how Traefik
 		// itself is bootstrapped.
 		"traefik.enable": "true",
-		[`traefik.http.routers.${slug}.rule`]: `Host(\`${host}.${config.baseDomain}\`)`,
+		[`traefik.http.routers.${slug}.rule`]: `Host(\`${hostname}\`)`,
 		[`traefik.http.routers.${slug}.entrypoints`]: config.traefik.entrypoint,
 		[`traefik.http.routers.${slug}.tls`]: "true",
-		[`traefik.http.routers.${slug}.tls.certresolver`]:
-			config.traefik.certResolver,
 		[`traefik.http.services.${slug}.loadbalancer.server.port`]:
 			String(containerPort),
 	};
+
+	if (primaryResolver) {
+		labels[`traefik.http.routers.${slug}.tls.certresolver`] = primaryResolver;
+	}
 
 	if (customDomain) {
 		const customRouter = `${slug}-custom`;
@@ -106,8 +113,11 @@ export function buildContainerLabels(params: {
 		labels[`traefik.http.routers.${customRouter}.entrypoints`] =
 			config.traefik.entrypoint;
 		labels[`traefik.http.routers.${customRouter}.tls`] = "true";
-		labels[`traefik.http.routers.${customRouter}.tls.certresolver`] =
-			config.traefik.certResolver;
+		const customResolver = resolverFor(customDomain);
+		if (customResolver) {
+			labels[`traefik.http.routers.${customRouter}.tls.certresolver`] =
+				customResolver;
+		}
 		// Reuses the primary router's service : same backend, just a second
 		// hostname reaching it, not a duplicated loadbalancer config.
 		labels[`traefik.http.routers.${customRouter}.service`] = slug;
