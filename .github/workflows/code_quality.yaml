@@ -3,6 +3,13 @@ name: Code Quality
 # run against the already-built image instead of a second build from source.
 on:
   workflow_call:
+    inputs:
+      tests:
+        required: false
+        default: true
+        description:
+          "Run the unit + integration suite. False for docs-only changes."
+        type: boolean
     outputs:
       lint:
         description: "Result of the lint/type-check/codegen job"
@@ -87,6 +94,7 @@ jobs:
 
   ts-test:
     name: Tests (TS)
+    if: inputs.tests
     runs-on: ubuntu-latest
     outputs:
       result: ${{ steps.done.outputs.result }}

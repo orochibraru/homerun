@@ -30,6 +30,11 @@ chmod +x homerun-installer
 sudo ./homerun-installer --mode=full
 ```
 
+Which distros this runs on (Ubuntu 24.04 and 26.04 tested, other apt distros
+expected to work, dnf/yum best effort, Alpine and non-systemd hosts unsupported)
+is documented in
+[`docs/getting-started.md`](../../docs/getting-started.md#supported-systems).
+
 ## What it does
 
 1. Installs Docker Engine (the official `get.docker.com` convenience script)

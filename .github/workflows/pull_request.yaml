@@ -19,19 +19,52 @@ permissions:
 # `pr-<number>`. The images are built once and reused, and nothing is published
 # under a pullable tag until e2e has passed.
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - name: List changed files outside docs
+        id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          code="$(
+            gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename' \
+              | grep -vE '^(docs/|\.agents/|\.claude/)|\.md$' || true
+          )"
+          if [ -n "$code" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "$code"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "Docs-only change: skipping tests, builds, e2e and screenshots."
+          fi
+
   code_quality:
     name: Code Quality
+    needs: [changes]
     uses: ./.github/workflows/code_quality.yaml
+    with:
+      tests: ${{ needs.changes.outputs.code == 'true' }}
     secrets: inherit
 
   binaries:
     name: Binaries
-    needs: [code_quality]
+    needs: [changes, code_quality]
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/binaries.yaml
 
   build-app:
     name: Docker Build (App)
-    needs: [code_quality]
+    needs: [changes, code_quality]
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
@@ -48,7 +81,8 @@ jobs:
 
   build-agent:
     name: Docker Build (Agent)
-    needs: [code_quality]
+    needs: [changes, code_quality]
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/docker.yaml
     with:
       image_tag: pr-${{ github.event.pull_request.number }}
@@ -64,7 +98,8 @@ jobs:
 
   screenshots:
     name: Screenshots
-    needs: [code_quality]
+    needs: [changes, code_quality]
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/screenshots.yaml
 
   e2e:
@@ -153,7 +188,7 @@ jobs:
 
             const rows = [
               ["Lint, types, codegen", cell(needs.code_quality?.outputs?.lint ?? result("code_quality"))],
-              ["Tests (unit + integration)", cell(needs.code_quality?.outputs?.tests ?? result("code_quality"))],
+              ["Tests (unit + integration)", cell(needs.code_quality?.outputs?.tests || "skipped")],
               ["E2E", cell(result("e2e"), needs.e2e?.outputs?.summary)],
               ["Docs screenshots", cell(result("screenshots"), needs.screenshots?.outputs?.summary)],
               ["Binaries", cell(result("binaries"))],
@@ -203,6 +238,13 @@ jobs:
                 "</details>",
                 "",
               );
+            } else if (result("build-app") === "skipped") {
+              lines.push(
+                "### Images",
+                "",
+                "Nothing built for this run : it only touches docs.",
+                "",
+              );
             } else {
               lines.push(
                 "### Images",
@@ -242,6 +284,7 @@ jobs:
     name: CI Gate
     if: always()
     needs:
+      - changes
       - code_quality
       - binaries
       - build-app
@@ -255,6 +298,7 @@ jobs:
       - name: Check results
         run: |
           results=(
+            "${{ needs.changes.result }}"
             "${{ needs.code_quality.result }}"
             "${{ needs.binaries.result }}"
             "${{ needs.build-app.result }}"

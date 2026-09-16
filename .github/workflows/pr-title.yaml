@@ -1,0 +1,37 @@
+name: PR Title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  semantic:
+    name: Semantic PR title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the title is a conventional commit
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|perf|refactor|docs|chore|ci|build|test|style|revert)(\([a-z0-9._/-]+\))?(!)?: [^ ].*$'
+          if [[ ! "$TITLE" =~ $pattern ]]; then
+            echo "::error::PR title \"$TITLE\" isn't a conventional commit. The squash merge uses it as the commit message, so semantic-release can't read it. Expected e.g. \"feat(cli): add --json\" or \"fix: handle an empty compose file\"."
+            exit 1
+          fi
+          type="${BASH_REMATCH[1]}"
+          case "$type" in
+            feat|fix|perf|refactor|docs) echo "::notice::\"$type\" cuts a release once merged." ;;
+            *)
+              if [[ -n "${BASH_REMATCH[3]}" ]]; then
+                echo "::notice::Breaking change marker cuts a release once merged."
+              else
+                echo "::notice::\"$type\" doesn't cut a release. Use feat/fix/perf/refactor/docs if this should ship."
+              fi
+              ;;
+          esac

@@ -93,6 +93,12 @@ generation from them on every push to `main` (`.releaserc.json`,
 `.github/workflows/publish.yaml`), so a misformatted subject line isn't just a
 style nit, it changes what actually ships.
 
+PRs are squash-merged with the PR title as the commit message, so the **PR
+title** is what counts, and CI fails a PR whose title isn't a conventional
+commit. Only `feat`, `fix`, `perf`, `refactor`, `docs` and breaking changes
+(`feat!:`) cut a release. Changes that only touch `docs/`, markdown files,
+`.agents/` or `.claude/` don't trigger a release or image build on their own.
+
 ## Releases
 
 Don't run `bun run release` yourself; it's CI-only, triggered on push to `main`.

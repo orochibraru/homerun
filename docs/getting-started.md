@@ -14,6 +14,24 @@ sign-in methods and DNS are all settings pages you click through. There's no
 config file you have to maintain, see [Configuration](configuration.md) for the
 handful of exceptions and why they exist.
 
+## Supported systems
+
+The one-liner installer (Option A) needs Linux on `amd64` or `arm64`, with
+systemd, and with `apt-get`, `dnf` or `yum`. It installs Docker through
+[get.docker.com](https://get.docker.com), so it only works on distros Docker
+itself publishes packages for.
+
+| Distro                                                       | Status                                                                                   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Ubuntu 24.04 LTS, Ubuntu 26.04 LTS                           | **Supported**, the installer is tested against both on real VMs                          |
+| Ubuntu 22.04 LTS, Debian 12+                                 | Should work, same apt path, not tested on real hardware                                  |
+| Fedora, RHEL 9 / Rocky / Alma / CentOS Stream                | Best effort, the dnf/yum path exists but has never run on a real box, report what breaks |
+| CentOS 7, other end-of-life releases                         | Not supported, Docker no longer ships packages for them                                  |
+| Alpine, NixOS, Arch, anything without systemd or apt/dnf/yum | Not supported by the installer, use Option B                                             |
+
+Option B (Docker Compose) doesn't care about the distro: any host that already
+runs Docker Engine with the Compose plugin works, rootful included.
+
 ## Option A, the one-liner (fresh Linux server)
 
 ```sh

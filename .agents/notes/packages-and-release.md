@@ -46,6 +46,39 @@ workflows as run artefacts, which is why they must stay in one workflow run
 (`uses:`, not a separate `workflow_run`). Both arches build natively
 (`ubuntu-24.04-arm` for arm64), never under QEMU.
 
+**A merge to `main` doesn't rebuild what the PR already tested.**
+`publish.yaml`'s `resolve` job looks up the merged PR and promotes its `pr-<n>`
+images straight to `vX.Y.Z` + `latest` (`promote`, a
+`docker buildx imagetools create`, no build, no e2e, no `code_quality`) when
+three things hold: the squash commit's tree is identical to the PR head's tree
+(the PR was up to date with `main`, so the image is byte-for-byte this commit's
+source; the ruleset doesn't require up-to-date branches, so this is checked
+rather than assumed), `CI Gate` passed on that head, and both `pr-<n>` tags
+exist. Anything else (a direct push, a stale PR, a fork) falls back to the full
+build → e2e → manifest chain. Binaries always rebuild, since the release version
+is baked into them. The release job accepts either path. `pr-<n>` tags of a
+merged PR are deleted by `publish.yaml`'s `cleanup` once the images are
+published, not by `pr-cleanup.yaml` (which now only handles PRs closed
+unmerged), otherwise the two would race on merge and delete the tag being
+promoted. Both call `delete-pr-images.yaml`.
+
+**Docs-only changes skip the expensive jobs.** `publish.yaml` has a
+`paths-ignore` for `docs/**`, `**/*.md`, `.agents/**` and `.claude/**`, so a
+docs push neither builds nor releases (its commits ship with the next code
+push). `pull_request.yaml` can't do the same at the workflow level, since
+`CI Gate` is the ruleset's required check and a workflow that never runs leaves
+it pending forever: its `changes` job lists the PR's files against the same
+patterns and, when nothing else changed, skips binaries, image builds, e2e,
+screenshots and `code_quality`'s `ts-test` (its `tests` input). Lint still runs,
+it covers markdown. Keep the two pattern lists in sync.
+
+**PR titles must be conventional commits.** The repo squash-merges with the PR
+title as the commit message, so the title is what `semantic-release` reads.
+`pr-title.yaml` rejects a non-conventional title and leaves a notice saying
+whether the type cuts a release (`feat`/`fix`/`perf`/`refactor`/`docs`, or a
+`!`). A title like "Fix/bug batch" merged without releasing anything before this
+existed.
+
 **Every PR gets one comment, edited in place.** `pull_request.yaml`'s `summary`
 job runs `if: always()` after everything else and upserts a single comment
 carrying the check table (with Playwright's own pass/fail counts), the images
@@ -79,10 +112,10 @@ Three consequences worth not re-deriving: **a fork builds but publishes
 nothing** — `push: false` makes the build `type=cacheonly`, so no digest
 artefact exists, which is why `e2e.yaml` takes a `pulled` input and falls back
 to `bun run build:app`, and why every manifest job is gated on the PR not coming
-from a fork. **`pr-cleanup.yaml`** deletes the three `pr-<n>` tags when a PR
-closes, so the Docker Hub repos don't accumulate one per pull request; a 404
-there is normal (e2e failed, so the tag was never created). And
-**`code_quality.yaml` no longer runs e2e at all** — it is `lint` +
+from a fork. **`pr-cleanup.yaml`** deletes the `pr-<n>` tags when a PR closes
+unmerged (see above for merged ones), so the Docker Hub repos don't accumulate
+one per pull request; a 404 there is normal (e2e failed, so the tag was never
+created). And **`code_quality.yaml` no longer runs e2e at all** — it is `lint` +
 `docs-check` + `ts-test` only, with the heavy gates (`lint:ts`, `lint:tailwind`,
 `check`, `test:unit`) skipped inside prek via `SKIP` and run as their own named
 steps instead, so a red run names the gate that broke rather than burying it in
