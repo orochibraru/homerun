@@ -4,21 +4,17 @@
  */
 
 export interface paths {
-	"/projects": {
+	"/jobs/{jobId}": {
 		parameters: {
 			query?: never;
 			header?: never;
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * List projects
-		 * @description Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.
-		 */
-		get: operations["get_projects"];
+		/** Get a queued job's status */
+		get: operations["get_jobs__jobId_"];
 		put?: never;
-		/** Create a project */
-		post: operations["post_projects"];
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -108,6 +104,104 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/services/{serviceId}/revisions": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's revisions
+		 * @description Newest first, at most 50: every deploy that reached running, with the exact image it ran. current marks the one running now, previous the default rollback target.
+		 */
+		get: operations["get_services__serviceId__revisions"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/revisions/{revisionId}/deploy": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Deploy a revision (roll back)
+		 * @description Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target.
+		 */
+		post: operations["post_services__serviceId__revisions__revisionId__deploy"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/scans": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's image scans
+		 * @description Newest first, without findings. Paginated like the other lists: the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers. q matches the image ref, digest, status or source.
+		 */
+		get: operations["get_services__serviceId__scans"];
+		put?: never;
+		/**
+		 * Scan a service's deployed image
+		 * @description Queues a scan of the service's deployed image. Poll GET /jobs/{jobId} until it finishes, then read GET /services/{serviceId}/scans/latest.
+		 */
+		post: operations["post_services__serviceId__scans"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/scans/latest": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get a service's latest image scan, with findings */
+		get: operations["get_services__serviceId__scans_latest"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/scans/{scanId}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get an image scan, with findings */
+		get: operations["get_services__serviceId__scans__scanId_"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/start": {
 		parameters: {
 			query?: never;
@@ -136,6 +230,27 @@ export interface paths {
 		put?: never;
 		/** Stop a service's container */
 		post: operations["post_services__serviceId__stop"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/stacks": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List stacks
+		 * @description Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.
+		 */
+		get: operations["get_stacks"];
+		put?: never;
+		/** Create a stack */
+		post: operations["post_stacks"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -191,23 +306,19 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-	get_projects: {
+	get_jobs__jobId_: {
 		parameters: {
-			query?: {
-				/** @description 1-based page number (default 1) */
-				page?: string;
-				/** @description Items per page (default 100, max 100) */
-				perPage?: string;
-				/** @description Case-insensitive search term */
-				q?: string;
-			};
+			query?: never;
 			header?: never;
-			path?: never;
+			path: {
+				/** @description Job id */
+				jobId: string;
+			};
 			cookie?: never;
 		};
 		requestBody?: never;
 		responses: {
-			/** @description The caller's projects */
+			/** @description The job */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -219,84 +330,18 @@ export interface operations {
 						 * @example 2026-08-20T12:00:00.000Z
 						 */
 						createdAt: string;
-						description: string | null;
+						error: string | null;
+						finishedAt: string | null;
 						id: string;
-						name: string;
-						slug: string;
-						/**
-						 * @description ISO 8601 timestamp
-						 * @example 2026-08-20T12:00:00.000Z
-						 */
-						updatedAt: string;
-						userId: string;
-					}[];
-				};
-			};
-			/** @description Unauthorized */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						error: string;
-						issues?: unknown;
-					};
-				};
-			};
-		};
-	};
-	post_projects: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": {
-					description?: string;
-					name: string;
-					slug: string;
-				};
-			};
-		};
-		responses: {
-			/** @description Created */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						/**
-						 * @description ISO 8601 timestamp
-						 * @example 2026-08-20T12:00:00.000Z
-						 */
-						createdAt: string;
-						description: string | null;
-						id: string;
-						name: string;
-						slug: string;
-						/**
-						 * @description ISO 8601 timestamp
-						 * @example 2026-08-20T12:00:00.000Z
-						 */
-						updatedAt: string;
-						userId: string;
-					};
-				};
-			};
-			/** @description Invalid request body */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						error: string;
-						issues?: unknown;
+						result: {
+							[key: string]: unknown;
+						} | null;
+						serviceId: string | null;
+						startedAt: string | null;
+						/** @enum {string} */
+						status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+						title: string;
+						type: string;
 					};
 				};
 			};
@@ -312,8 +357,8 @@ export interface operations {
 					};
 				};
 			};
-			/** @description Slug already in use */
-			409: {
+			/** @description Not found */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -354,6 +399,8 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
+						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -389,22 +436,27 @@ export interface operations {
 						gitDockerfilePath: string | null;
 						gitRef: string | null;
 						gitUrl: string | null;
+						healthcheckCommand: string | null;
 						id: string;
 						image: string;
+						imageScanEnabled: boolean;
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
-						projectId: string | null;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
+						requireStatusChecks: boolean;
+						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
+						stackId: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -461,7 +513,6 @@ export interface operations {
 					image?: string;
 					memoryLimitMb?: number;
 					name: string;
-					projectId?: string;
 					/**
 					 * @default always
 					 * @enum {string}
@@ -476,6 +527,7 @@ export interface operations {
 					 */
 					restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 					slug: string;
+					stackId?: string;
 					tag?: string;
 				};
 			};
@@ -493,6 +545,8 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
+						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -528,22 +582,27 @@ export interface operations {
 						gitDockerfilePath: string | null;
 						gitRef: string | null;
 						gitUrl: string | null;
+						healthcheckCommand: string | null;
 						id: string;
 						image: string;
+						imageScanEnabled: boolean;
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
-						projectId: string | null;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
+						requireStatusChecks: boolean;
+						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
+						stackId: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -616,6 +675,8 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
+						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -651,22 +712,27 @@ export interface operations {
 						gitDockerfilePath: string | null;
 						gitRef: string | null;
 						gitUrl: string | null;
+						healthcheckCommand: string | null;
 						id: string;
 						image: string;
+						imageScanEnabled: boolean;
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
-						projectId: string | null;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
+						requireStatusChecks: boolean;
+						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
+						stackId: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -762,6 +828,7 @@ export interface operations {
 			content: {
 				"application/json": {
 					authRequired?: boolean;
+					autoRollback?: boolean;
 					/** @enum {string} */
 					buildSource?: "image" | "git";
 					containerPort?: number;
@@ -775,7 +842,9 @@ export interface operations {
 					gitDockerfilePath?: string | null;
 					gitRef?: string | null;
 					gitUrl?: string | null;
+					healthcheckCommand?: string | null;
 					image?: string;
+					imageScanEnabled?: boolean;
 					memoryLimitMb?: number | null;
 					name?: string;
 					/** @enum {string} */
@@ -783,6 +852,8 @@ export interface operations {
 					registryPassword?: string;
 					registryUrl?: string | null;
 					registryUsername?: string | null;
+					requireStatusChecks?: boolean;
+					requiredStatusChecks?: string[];
 					/** @enum {string} */
 					restartPolicy?: "no" | "always" | "on-failure" | "unless-stopped";
 					tag?: string;
@@ -802,6 +873,8 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
+						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -837,22 +910,27 @@ export interface operations {
 						gitDockerfilePath: string | null;
 						gitRef: string | null;
 						gitUrl: string | null;
+						healthcheckCommand: string | null;
 						id: string;
 						image: string;
+						imageScanEnabled: boolean;
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
-						projectId: string | null;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
+						requireStatusChecks: boolean;
+						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
+						stackId: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -1028,6 +1106,492 @@ export interface operations {
 			};
 		};
 	};
+	get_services__serviceId__revisions: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's revisions */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						buildSource: ("image" | "git") | null;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						/** @description The revision running now */
+						current: boolean;
+						finishedAt: string | null;
+						gitCommit: string | null;
+						gitRef: string | null;
+						/** @description null = recorded before health watching existed */
+						health:
+							| ("watching" | "healthy" | "unhealthy" | "rolled_back")
+							| null;
+						id: string;
+						imageDigest: string | null;
+						imageId: string | null;
+						imageRef: string | null;
+						/** @description The default rollback target: the newest older healthy revision with a different image */
+						previous: boolean;
+						/** @description Among the last 5 distinct images kept on the host and in the mirror */
+						retained: boolean;
+						/** @description Set when this revision redeployed an older one */
+						rollbackOfDeploymentId: string | null;
+						/** @enum {string} */
+						status:
+							| "pending"
+							| "pulling"
+							| "starting"
+							| "running"
+							| "stopped"
+							| "failed"
+							| "missing";
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_services__serviceId__revisions__revisionId__deploy: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+				/** @description Revision (deployment) id, or previous */
+				revisionId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deploy finished */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						containerId?: string;
+						deploymentId: string;
+						error?: string;
+						success: boolean;
+					};
+				};
+			};
+			/** @description No previous revision to roll back to */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Deploy failed */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						containerId?: string;
+						deploymentId: string;
+						error?: string;
+						success: boolean;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__scans: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 100) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's image scans */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						counts: {
+							critical: number;
+							high: number;
+							low: number;
+							medium: number;
+							unknown: number;
+						};
+						/** @description null = scanned on demand, not during a deploy */
+						deploymentId: string | null;
+						digest: string | null;
+						/** @description Why a failed or skipped scan has no findings */
+						error: string | null;
+						id: string;
+						imageRef: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						scannedAt: string;
+						serviceId: string;
+						source: string;
+						/** @enum {string} */
+						status: "ok" | "failed" | "skipped";
+						/** @description Every unique finding, including those beyond the stored findings cap */
+						totalFindings: number;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_services__serviceId__scans: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Scan queued */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						jobId: string;
+						/** @enum {string} */
+						status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+					};
+				};
+			};
+			/** @description Not deployed yet */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description A scan is already queued or running */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						/** @description The scan job already in flight */
+						jobId: string;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__scans_latest: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The newest scan */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						counts: {
+							critical: number;
+							high: number;
+							low: number;
+							medium: number;
+							unknown: number;
+						};
+						/** @description null = scanned on demand, not during a deploy */
+						deploymentId: string | null;
+						digest: string | null;
+						/** @description Why a failed or skipped scan has no findings */
+						error: string | null;
+						/** @description Sorted most severe first, capped at 200 : totalFindings has the real count */
+						findings: {
+							fixedVersion: string | null;
+							id: string;
+							installedVersion: string;
+							pkg: string;
+							/** @enum {string} */
+							severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+							title: string | null;
+						}[];
+						id: string;
+						imageRef: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						scannedAt: string;
+						serviceId: string;
+						source: string;
+						/** @enum {string} */
+						status: "ok" | "failed" | "skipped";
+						/** @description Every unique finding, including those beyond the stored findings cap */
+						totalFindings: number;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Service not found, or never scanned */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__scans__scanId_: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+				/** @description Scan id */
+				scanId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The scan */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						counts: {
+							critical: number;
+							high: number;
+							low: number;
+							medium: number;
+							unknown: number;
+						};
+						/** @description null = scanned on demand, not during a deploy */
+						deploymentId: string | null;
+						digest: string | null;
+						/** @description Why a failed or skipped scan has no findings */
+						error: string | null;
+						/** @description Sorted most severe first, capped at 200 : totalFindings has the real count */
+						findings: {
+							fixedVersion: string | null;
+							id: string;
+							installedVersion: string;
+							pkg: string;
+							/** @enum {string} */
+							severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+							title: string | null;
+						}[];
+						id: string;
+						imageRef: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						scannedAt: string;
+						serviceId: string;
+						source: string;
+						/** @enum {string} */
+						status: "ok" | "failed" | "skipped";
+						/** @description Every unique finding, including those beyond the stored findings cap */
+						totalFindings: number;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	post_services__serviceId__start: {
 		parameters: {
 			query?: never;
@@ -1138,6 +1702,141 @@ export interface operations {
 			};
 			/** @description Not found */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_stacks: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 100) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The caller's stacks */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						name: string;
+						slug: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						updatedAt: string;
+						userId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_stacks: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					description?: string;
+					name: string;
+					slug: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						name: string;
+						slug: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid request body */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Slug already in use */
+			409: {
 				headers: {
 					[name: string]: unknown;
 				};

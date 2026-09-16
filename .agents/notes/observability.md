@@ -140,9 +140,10 @@ too, see Outbound notification channels next.
 The account-wide counterpart to the in-app feed above: a `notification_channel`
 row is a `kind` (`"webhook"` generic JSON POST, `"discord"` embed, or `"email"`)
 plus a `target` and an `events` jsonb column (`NotificationEvent[]`, DB default
-and DTO default `["build.failed","update.failed"]`), managed on
-`/notification-channels` (create/test/delete) with the events matrix itself
-edited on `/profile/notifications`.
+and DTO default
+`["build.failed","build.checks_failed","update.failed","deploy.unhealthy","deploy.rolled_back"]`),
+managed on `/notification-channels` (create/test/delete) with the events matrix
+itself edited on `/profile/notifications`.
 
 `NotificationEvent` (`$lib/types.ts`) and its catalog
 (`$lib/notification-events.ts`, `NOTIFICATION_EVENTS`,
@@ -151,9 +152,16 @@ labels/groups/descriptions for the settings matrix) cover four pairs:
 `update.failed`/`update.succeeded` (an image service redeployed by its own cron
 schedule, i.e. pull + restart), `deploy.failed`/`deploy.succeeded` (a manual
 image deploy), and `service.down`/`service.up` (an uptime probe transition, see
-Uptime probes below). `deployEvent(buildSource, trigger, ok)` picks the right
-one of the first three from what `deploy.service.ts` already knows;
-`isFailureEvent` is what colors a Discord embed red vs. green.
+Uptime probes below), plus three that aren't pairs: `build.checks_failed`
+(`statusChecksMessage`, sent by `notifyStatusChecksFailed` in
+`deploy/status-check-step.ts` _instead of_ `build.failed` when a git build is
+stopped by required status checks), `deploy.unhealthy` and `deploy.rolled_back`
+(`revisionHealthMessage`, sent by `RevisionHealthService`). The bell gets the
+matching `build_checks_failed`/`deploy_unhealthy`/`deploy_rolled_back` rows.
+`isFailureEvent` lists all three explicitly, since `build.checks_failed` doesn't
+end in `.failed`. `deployEvent(buildSource, trigger, ok)` picks the right one of
+the first three from what `deploy.service.ts` already knows; `isFailureEvent` is
+what colors a Discord embed red vs. green.
 
 `NotificationChannelService.dispatch(userId, message)` fans a message out to
 every enabled channel subscribed to that event
@@ -180,7 +188,7 @@ payload builders (`messageSubject`/`messageBody`/`discordPayload`) and
 **A message is built once, in `notification-messages.ts`, and every channel
 renders the same shape**: `title`, `detail`, a list of `fields` (name/value) and
 a dashboard `link` (only when `auth.origin` is set). `deployMessage` fills the
-fields from the finished deployment row: project, trigger (Manual/ Scheduled),
+fields from the finished deployment row: stack, trigger (Manual/ Scheduled),
 image and short digest or repository/branch/short commit, duration, and the
 public URL on success; a failure's `detail` is the error plus the last 15 log
 lines (ANSI and phase markers stripped), since the error alone is often just
@@ -188,7 +196,7 @@ lines (ANSI and phase markers stripped), since the error alone is often just
 probe, the host. Discord shows the fields as embed fields (inline when short)
 and keeps the _end_ of an oversized detail, where the error is; email lists them
 as `Name: value` lines; a generic webhook gets the message object as-is.
-`notifyDeploy` loads the project itself, so both deploy exits pass the same
+`notifyDeploy` loads the stack itself, so both deploy exits pass the same
 `{dep, ok, svc, trigger}`.
 
 ## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `$lib/services/uptime/uptime-probe.ts`)

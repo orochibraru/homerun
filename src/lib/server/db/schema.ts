@@ -11,12 +11,19 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type {
+	BlockSeverity,
+	ImageScanFinding,
+	ImageScanStatus,
+	SeverityCounts,
+} from "$lib/image-scan";
+import type {
 	ContainerStatus,
 	JobStatus,
 	JobType,
 	NotificationChannelKind,
 	NotificationEvent,
 	PullPolicy,
+	RevisionHealth,
 	StatusPageScope,
 } from "$lib/types";
 
@@ -31,6 +38,7 @@ export const user = pgTable("user", {
 	image: text("image"),
 	name: text("name").notNull(),
 	role: text("role"),
+	twoFactorEnabled: boolean("two_factor_enabled").default(false),
 	updatedAt: timestamp("updated_at", { mode: "date" })
 		.$onUpdate(() => new Date())
 		.notNull(),
@@ -162,17 +170,36 @@ export const passkey = pgTable(
 	],
 );
 
+export const twoFactor = pgTable(
+	"two_factor",
+	{
+		backupCodes: text("backup_codes").notNull(),
+		failedVerificationCount: integer("failed_verification_count").default(0),
+		id: text("id").primaryKey(),
+		lockedUntil: timestamp("locked_until", { mode: "date" }),
+		secret: text("secret").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		verified: boolean("verified").default(true),
+	},
+	(table) => [
+		index("twoFactor_secret_idx").on(table.secret),
+		index("twoFactor_userId_idx").on(table.userId),
+	],
+);
+
 // ─── PaaS Domain ────────────────────────────────────────────────────────────
 
-export const project = pgTable(
-	"project",
+export const stack = pgTable(
+	"stack",
 	{
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
 		// DNS-safe prefix applied to every member service's container name and
-		// subdomain (e.g. "<projectSlug>-<serviceSlug>.<baseDomain>") : see
+		// subdomain (e.g. "<stackSlug>-<serviceSlug>.<baseDomain>") : see
 		// docker/service.ts's containerName() and docker/labels.ts.
 		slug: text("slug").notNull().unique(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -182,7 +209,7 @@ export const project = pgTable(
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 	},
-	(table) => [index("project_userId_idx").on(table.userId)],
+	(table) => [index("stack_userId_idx").on(table.userId)],
 );
 
 export const remoteHost = pgTable(
@@ -302,6 +329,10 @@ export const instanceSettings = pgTable("instance_settings", {
 		.notNull()
 		.default([]),
 	id: text("id").primaryKey(),
+	imageScanBlockSeverity: text(
+		"image_scan_block_severity",
+	).$type<BlockSeverity>(),
+	imageScanEnabled: boolean("image_scan_enabled"),
 	// {name, clientId, clientSecretEnc, discoveryUrl, enabled, pkce, scopes}[]
 	// : see genericOAuth's config shape in $lib/services/auth.ts.
 	oauthProviders: jsonb("oauth_providers")
@@ -364,6 +395,9 @@ export const instanceSettings = pgTable("instance_settings", {
 	// layer owns TLS, Traefik doesn't need to" posture as the Cloudflare
 	// integration's plain, unproxied CNAME).
 	pangolinTargetPort: integer("pangolin_target_port"),
+	preferredSignInMethods: jsonb("preferred_sign_in_methods").$type<string[]>(),
+	requirePasskey: boolean("require_passkey"),
+	requireTwoFactor: boolean("require_two_factor"),
 	smtpEnabled: boolean("smtp_enabled"),
 	smtpFrom: text("smtp_from"),
 	smtpHost: text("smtp_host"),
@@ -442,6 +476,7 @@ export const template = pgTable(
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
 		envVars: jsonb("env_vars").$type<Record<string, string>>().default({}),
+		healthcheckCommand: text("healthcheck_command"),
 		icon: text("icon"), // lucide icon name, looked up the same way SERVICE_STATUS_CONFIG maps a key to an icon component
 		id: text("id").primaryKey(),
 		image: text("image").notNull(),
@@ -508,6 +543,7 @@ export const service = pgTable(
 			.default([])
 			.notNull(),
 		authRequired: boolean("auth_required").default(false).notNull(),
+		autoRollback: boolean("auto_rollback").default(false).notNull(),
 		// Registry to use as a git-build layer cache (git mode only, see
 		// docker/git-build.ts) : null means no cache-from/cache-to, every
 		// build is from scratch, same as before this existed.
@@ -535,6 +571,7 @@ export const service = pgTable(
 		containerId: text("container_id"),
 		containerPort: integer("container_port").notNull(),
 		cpuLimit: text("cpu_limit"),
+		healthcheckCommand: text("healthcheck_command"),
 		// Errors older than this are hidden on the Observability tab. Set by
 		// the "Clear errors" button, and automatically by a deploy that goes
 		// live : errorsDismissedByDeploymentId is that revision.
@@ -571,7 +608,7 @@ export const service = pgTable(
 		// When false, no Traefik router/service labels are attached at deploy
 		// time : the container never gets a public <slug>.<baseDomain>, only
 		// reachable over the internal network(s) it's attached to (the shared
-		// network by slug alias, plus its project's network if any).
+		// network by slug alias, plus its stack's network if any).
 		dnsResolvable: boolean("dns_resolvable").default(true).notNull(),
 		envVars: jsonb("env_vars").$type<Record<string, string>>().default({}),
 		// Relative to gitBuildContext. Defaults to "Dockerfile" when unset.
@@ -584,9 +621,10 @@ export const service = pgTable(
 		id: text("id").primaryKey(),
 		// e.g. "ghcr.io/acme/api"
 		image: text("image").notNull(),
+		imageScanEnabled: boolean("image_scan_enabled").default(true).notNull(),
 		memoryLimitMb: integer("memory_limit_mb"),
 		name: text("name").notNull(),
-		// "bridge" (default : the shared homerun + project network,
+		// "bridge" (default : the shared homerun + stack network,
 		// Traefik-routed) | "host" (shares the host's network namespace
 		// directly, e.g. for mDNS/SSDP-dependent apps like Home Assistant :
 		// no Traefik routing, no internal slug alias, not on any Docker
@@ -607,13 +645,20 @@ export const service = pgTable(
 			.default("tcp")
 			.notNull(),
 		// nullable : grouping is opt-in, ungrouped services stay valid
-		projectId: text("project_id").references(() => project.id, {
+		stackId: text("stack_id").references(() => stack.id, {
 			onDelete: "set null",
 		}),
 		// AES-256-GCM ciphertext : see $lib/services/secrets
 		registryPasswordEnc: text("registry_password_enc"),
 		registryUrl: text("registry_url"),
 		registryUsername: text("registry_username"),
+		requireStatusChecks: boolean("require_status_checks")
+			.default(false)
+			.notNull(),
+		requiredStatusChecks: jsonb("required_status_checks")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
 		// Desired replica count, swarm-mode only (instanceSettings.orchestrationMode
 		// = "swarm") : ignored entirely in standalone mode, always 1 container.
 		// Editable on the Compute tab.
@@ -646,13 +691,14 @@ export const service = pgTable(
 	(table) => [
 		index("service_userId_idx").on(table.userId),
 		index("service_slug_idx").on(table.slug),
-		index("service_projectId_idx").on(table.projectId),
+		index("service_stackId_idx").on(table.stackId),
 	],
 );
 
 export const deployment = pgTable(
 	"deployment",
 	{
+		buildSource: text("build_source").$type<"image" | "git">(),
 		containerId: text("container_id"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		errorMessage: text("error_message"),
@@ -661,8 +707,10 @@ export const deployment = pgTable(
 		// "latest" on a branch says nothing about what ran, the SHA does.
 		gitCommit: text("git_commit"),
 		gitRef: text("git_ref"),
+		health: text("health").$type<RevisionHealth>(),
 		id: text("id").primaryKey(),
 		imageDigest: text("image_digest"),
+		imageId: text("image_id"),
 		// The image:tag this revision ran, recorded at deploy time so a later
 		// retag doesn't rewrite history.
 		imageRef: text("image_ref"),
@@ -670,6 +718,7 @@ export const deployment = pgTable(
 		// "Starting container...") : polled by the Overview tab while a deploy
 		// is in flight, kept around after for a lightweight audit trail.
 		log: text("log").default(""),
+		rollbackOfDeploymentId: text("rollback_of_deployment_id"),
 		serviceId: text("service_id")
 			.notNull()
 			.references(() => service.id, { onDelete: "cascade" }),
@@ -756,7 +805,7 @@ export const storageVolume = pgTable(
 );
 
 // One storage volume can be mounted into several services : that's what
-// makes it "shared" across a project, no separate project-level concept
+// makes it "shared" across a stack, no separate stack-level concept
 // needed (see TODO.md).
 export const serviceVolume = pgTable(
 	"service_volume",
@@ -922,6 +971,10 @@ export const notification = pgTable(
 				| "service_stopped"
 				| "auto_redeploy"
 				| "app_runtime_error"
+				| "image_scan_critical"
+				| "build_checks_failed"
+				| "deploy_unhealthy"
+				| "deploy_rolled_back"
 			>()
 			.notNull(),
 		userId: text("user_id")
@@ -1002,6 +1055,34 @@ export const uptimeCheck = pgTable(
 			table.serviceId,
 			table.kind,
 			table.checkedAt,
+		),
+	],
+);
+
+export const imageScan = pgTable(
+	"image_scan",
+	{
+		counts: jsonb("counts").$type<SeverityCounts>().notNull(),
+		deploymentId: text("deployment_id").references(() => deployment.id, {
+			onDelete: "set null",
+		}),
+		digest: text("digest"),
+		error: text("error"),
+		findings: jsonb("findings").$type<ImageScanFinding[]>().notNull(),
+		id: text("id").primaryKey(),
+		imageRef: text("image_ref").notNull(),
+		scannedAt: timestamp("scanned_at", { mode: "date" }).notNull(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => service.id, { onDelete: "cascade" }),
+		source: text("source").notNull(),
+		status: text("status").$type<ImageScanStatus>().notNull(),
+		totalFindings: integer("total_findings").default(0).notNull(),
+	},
+	(table) => [
+		index("imageScan_serviceId_scannedAt_idx").on(
+			table.serviceId,
+			table.scannedAt,
 		),
 	],
 );
@@ -1124,16 +1205,16 @@ export const userRelations = relations(user, ({ many }) => ({
 	accounts: many(account),
 	deployments: many(deployment),
 	passkeys: many(passkey),
-	projects: many(project),
+	stacks: many(stack),
 	services: many(service),
 	sessions: many(session),
 	storageVolumes: many(storageVolume),
 	templates: many(template),
 }));
 
-export const projectRelations = relations(project, ({ one, many }) => ({
+export const stackRelations = relations(stack, ({ one, many }) => ({
 	services: many(service),
-	user: one(user, { fields: [project.userId], references: [user.id] }),
+	user: one(user, { fields: [stack.userId], references: [user.id] }),
 }));
 
 export const templateRelations = relations(template, ({ one, many }) => ({
@@ -1155,9 +1236,9 @@ export const templateLinkRelations = relations(templateLink, ({ one }) => ({
 
 export const serviceRelations = relations(service, ({ one, many }) => ({
 	deployments: many(deployment),
-	project: one(project, {
-		fields: [service.projectId],
-		references: [project.id],
+	stack: one(stack, {
+		fields: [service.stackId],
+		references: [stack.id],
 	}),
 	user: one(user, { fields: [service.userId], references: [user.id] }),
 	volumeMounts: many(serviceVolume),
@@ -1199,7 +1280,7 @@ export const statusPage = pgTable(
 		id: text("id").primaryKey(),
 		isPublic: boolean("is_public").notNull().default(false),
 		name: text("name").notNull(),
-		projectId: text("project_id").references(() => project.id, {
+		stackId: text("stack_id").references(() => stack.id, {
 			onDelete: "cascade",
 		}),
 		scope: text("scope").$type<StatusPageScope>().notNull(),
@@ -1242,7 +1323,13 @@ export const notificationChannel = pgTable(
 		events: jsonb("events")
 			.$type<NotificationEvent[]>()
 			.notNull()
-			.default(["build.failed", "update.failed"]),
+			.default([
+				"build.failed",
+				"build.checks_failed",
+				"update.failed",
+				"deploy.unhealthy",
+				"deploy.rolled_back",
+			]),
 		id: text("id").primaryKey(),
 		kind: text("kind").$type<NotificationChannelKind>().notNull(),
 		lastError: text("last_error"),
@@ -1258,7 +1345,7 @@ export const notificationChannel = pgTable(
 	(table) => [index("notificationChannel_userId_idx").on(table.userId)],
 );
 
-export type Project = typeof project.$inferSelect;
+export type Stack = typeof stack.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type TemplateLink = typeof templateLink.$inferSelect;
 export type Service = typeof service.$inferSelect;
@@ -1280,6 +1367,7 @@ export type StatusPage = typeof statusPage.$inferSelect;
 export type StatusPageService = typeof statusPageService.$inferSelect;
 export type NotificationChannel = typeof notificationChannel.$inferSelect;
 export type Job = typeof job.$inferSelect;
+export type ImageScan = typeof imageScan.$inferSelect;
 export type GitConnection = typeof gitConnection.$inferSelect;
 export type UserPreferences = typeof userPreferences.$inferSelect;
 export type InvitationBase = typeof invitation.$inferSelect;
@@ -1306,6 +1394,13 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const passkeyRelations = relations(passkey, ({ one }) => ({
 	user: one(user, {
 		fields: [passkey.userId],
+		references: [user.id],
+	}),
+}));
+
+export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
+	user: one(user, {
+		fields: [twoFactor.userId],
 		references: [user.id],
 	}),
 }));

@@ -49,6 +49,7 @@ export function externalHostFor(svc: {
 
 export type InternalProbeMethod = "healthcheck" | "http" | "tcp";
 
+/** Which internal probe to use for a service: its own Docker healthcheck when it has one, else a raw TCP connect for a database image, else an HTTP request. */
 export function internalProbeMethod(
 	image: string,
 	hasHealthcheck: boolean,
@@ -59,6 +60,7 @@ export function internalProbeMethod(
 	return isDatabaseImage(image) ? "tcp" : "http";
 }
 
+/** Normalizes a probe failure into a short, human-readable message (timeout, connection refused, TLS), trimming Node's verbose error suffixes. */
 export function probeErrorMessage(err: unknown): string {
 	const raw = err instanceof Error ? err.message : String(err);
 	const message = raw.split("For more information")[0]?.trim() || raw;
@@ -74,6 +76,7 @@ export function probeErrorMessage(err: unknown): string {
 	return message;
 }
 
+/** Whether an error looks like a TLS/certificate failure rather than a transport-level one. */
 export function isCertificateError(err: unknown): boolean {
 	const message = err instanceof Error ? err.message : String(err);
 	return /certificate|tls|ssl/i.test(message);
@@ -81,6 +84,13 @@ export function isCertificateError(err: unknown): boolean {
 
 const REQUIRED_BY_BUN_CONNECT = () => undefined;
 
+/**
+ * Opens a raw TCP connection to `host`:`port` and closes it as soon as it's
+ * established, used as the liveness check for database images with no HTTP
+ * server to probe.
+ *
+ * @throws When the connection can't be established, or after `timeoutMs`.
+ */
 export function tcpConnect(
 	host: string,
 	port: number,
@@ -141,6 +151,12 @@ export class UptimeProbe extends BaseScheduler {
 
 	#ticks = 0;
 
+	/**
+	 * One uptime-check cycle: probes every uptime-enabled service internally
+	 * and externally, persists the results, dispatches notifications for any
+	 * up/down transitions (`StatusAlertService.dispatch`), and, once every
+	 * `PRUNE_EVERY_TICKS` ticks, prunes old check rows.
+	 */
 	protected async tick(): Promise<void> {
 		this.#ticks += 1;
 
@@ -173,6 +189,12 @@ export class UptimeProbe extends BaseScheduler {
 		}
 	}
 
+	/**
+	 * Probes a service from inside the Docker network: its own healthcheck if
+	 * it has one, else TCP or HTTP against its container address. Returns
+	 * null when the service has no container or the container has no network
+	 * address to probe.
+	 */
 	async #internal(svc: ServiceDTO): Promise<ProbeResult | null> {
 		if (!svc.containerId) {
 			return null;
@@ -210,6 +232,7 @@ export class UptimeProbe extends BaseScheduler {
 				);
 	}
 
+	/** Internal probe for a database-image service: a raw TCP connect, no HTTP request. */
 	async #tcpProbe(
 		serviceId: string,
 		host: string,
@@ -239,6 +262,7 @@ export class UptimeProbe extends BaseScheduler {
 		}
 	}
 
+	/** Probes a service's publicly published hostname over HTTP(S), or null when it isn't published or externally reachable to probe (see `externalHostFor`/`externalProbeSkipReason`). */
 	async #external(svc: ServiceDTO): Promise<ProbeResult | null> {
 		const host = externalHostFor(svc);
 		if (!host || externalProbeSkipReason(host)) {
@@ -248,6 +272,7 @@ export class UptimeProbe extends BaseScheduler {
 		return await this.#probe(svc.id, "external", `${scheme}://${host}/`);
 	}
 
+	/** Issues the underlying HTTP request for a probe, without following redirects, optionally skipping TLS verification. */
 	#request(target: string, verifyTls: boolean): Promise<Response> {
 		return fetch(target, {
 			// A redirect is an answer, not a failure.
@@ -257,6 +282,11 @@ export class UptimeProbe extends BaseScheduler {
 		});
 	}
 
+	/**
+	 * HTTP probe of `target`: any response counts as up. On a certificate
+	 * error, retries once without verifying TLS so a self-signed/not-yet-
+	 * issued cert is reported as "up, untrusted cert" rather than as down.
+	 */
 	async #probe(
 		serviceId: string,
 		kind: "internal" | "external",

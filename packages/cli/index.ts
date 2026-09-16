@@ -1,7 +1,12 @@
 import process from "node:process";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { ClientFactory } from "./client";
-import { Commands, type ListArgs } from "./commands";
+import {
+	Commands,
+	FAIL_ON_LEVELS,
+	type FailOnLevel,
+	type ListArgs,
+} from "./commands";
 import { LoginFlow } from "./login";
 import { Output } from "./output";
 import { UpdateService } from "./update";
@@ -17,6 +22,13 @@ interface ListOptions {
 	page?: string;
 	perPage?: string;
 	search?: string;
+}
+
+interface ScanOptions {
+	failOn?: FailOnLevel;
+	json?: boolean;
+	timeout?: string;
+	wait?: boolean;
 }
 
 function positive(raw: string | undefined): number | undefined {
@@ -125,17 +137,92 @@ for (const action of ["deploy", "start", "stop", "restart"] as const) {
 		});
 }
 
-const projects = program.command("projects").description("manage projects");
+services
+	.command("revisions <id>")
+	.description("list a service's revisions, newest first")
+	.option("--json", "print raw JSON instead of a table")
+	.action(async (id: string, options: { json?: boolean }) => {
+		await Commands.revisionsList(requireClient(), id, options.json ?? false);
+	});
 
-projects
+services
+	.command("rollback <id> [revisionId]")
+	.description(
+		"redeploy a revision's exact image and wait for it (default: the previous revision)",
+	)
+	.action(async (id: string, revisionId: string | undefined) => {
+		await Commands.serviceRollback(requireClient(), id, revisionId);
+	});
+
+services
+	.command("scan <id>")
+	.description("queue a vulnerability scan of a service's deployed image")
+	.option("--wait", "wait for the scan to finish and print its findings")
+	.addOption(
+		new Option(
+			"--fail-on <level>",
+			"exit non-zero if the scan found anything at or above this severity (implies --wait)",
+		).choices(FAIL_ON_LEVELS),
+	)
+	.option(
+		"--timeout <seconds>",
+		"give up waiting after this long (default 1800)",
+	)
+	.option("--json", "print raw JSON instead of a summary")
+	.action(async (id: string, options: ScanOptions) => {
+		const timeout = positive(options.timeout);
+		await Commands.serviceScan(requireClient(), id, {
+			failOn: options.failOn,
+			json: options.json ?? false,
+			timeoutMs: timeout === undefined ? undefined : timeout * 1000,
+			wait: Boolean(options.wait || options.failOn),
+		});
+	});
+
+const scans = services
+	.command("scans")
+	.description("list and inspect a service's image scans");
+
+scans
+	.command("list <id>", { isDefault: true })
+	.description("list a service's image scans, newest first")
+	.option("--json", "print raw JSON instead of a table")
+	.option("--page <n>", "1-based page number (default 1)")
+	.option("--per-page <n>", "items per page (default 100, max 100)")
+	.option(
+		"--search <term>",
+		"only scans whose image, digest, status or source match",
+	)
+	.action(async (id: string, options: ListOptions) => {
+		await Commands.scansList(requireClient(), id, toListArgs(options));
+	});
+
+scans
+	.command("get <id> [scanId]")
+	.description("show one scan's counts and findings (default: the latest)")
+	.option("--json", "print raw JSON instead of a summary")
+	.action(
+		async (id: string, scanId: string | undefined, options: ListOptions) => {
+			await Commands.scanGet(
+				requireClient(),
+				id,
+				scanId ?? "latest",
+				options.json ?? false,
+			);
+		},
+	);
+
+const stacks = program.command("stacks").description("manage stacks");
+
+stacks
 	.command("list")
-	.description("list projects")
+	.description("list stacks")
 	.option("--json", "print raw JSON instead of a table")
 	.option("--page <n>", "1-based page number (default 1)")
 	.option("--per-page <n>", "items per page (default 100, max 100)")
 	.option("--search <term>", "only rows matching this term")
 	.action(async (options: ListOptions) => {
-		await Commands.projectsList(requireClient(), toListArgs(options));
+		await Commands.stacksList(requireClient(), toListArgs(options));
 	});
 
 const templates = program.command("templates").description("manage templates");

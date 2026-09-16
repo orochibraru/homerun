@@ -36,7 +36,7 @@
         {engine.label} connection
       </h2>
       <span class="text-text-subtle text-[0.6875rem]">
-        Reachable from other services in this project
+        Reachable from other services in this stack
       </span>
     </div>
     <div class="divide-border divide-y">

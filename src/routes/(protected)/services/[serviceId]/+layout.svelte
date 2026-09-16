@@ -10,6 +10,7 @@
 		LayoutGrid,
 		Network,
 		Settings,
+		ShieldCheck,
 		SlidersHorizontal,
 		Terminal,
 	} from "@lucide/svelte";
@@ -30,7 +31,7 @@
 			svc.currentStatus,
 	);
 	const publicHost = $derived(
-		data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug,
+		data.stackSlug ? `${data.stackSlug}-${svc.slug}` : svc.slug,
 	);
 	const publicDomains = $derived(
 		svc.dnsResolvable
@@ -116,6 +117,15 @@
 			icon: Cpu,
 			id: "compute",
 			label: "Compute",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/security", {
+				serviceId: svc.id,
+			}),
+			icon: ShieldCheck,
+			id: "security",
+			label: "Security",
 		},
 		{
 			exact: false,

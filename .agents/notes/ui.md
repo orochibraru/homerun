@@ -100,14 +100,14 @@ and the card view from the same data. It replaced `entity-list-view.svelte`,
 which took raw `row`/`card` snippets : every page drew its own row chrome, so
 each list had different padding, and once the shared container became a panel
 the pages that still drew a `panel` per row showed **double borders with no gap
-between items**. Services, templates, projects and storage go through it; the
+between items**. Services, templates, stacks and storage go through it; the
 remaining five list pages (remote hosts, S3 destinations, cron jobs, build
 cache, git providers) still hand-roll their row internals inside the same
 panel/divider shell, see `TODO.md`.
 
 `entity-list.svelte` also takes a **`wrapper`** snippet, which the services list
 uses to put every row inside a right-click `ContextMenu` (start/stop/ restart,
-settings, delete, Link to…, group into a project, ungroup) without each page
+settings, delete, Link to…, group into a stack, ungroup) without each page
 rebuilding its own row markup. The wrapper receives the item and a no-argument
 body snippet; that shape is deliberate, a `Snippet<[T]>` body can't be assigned
 across the generic boundary.
@@ -179,7 +179,7 @@ picker, shared by `services/new` and the service Source tab, calls back with the
 picked repo), and `image-check-warning.svelte` (the debounced "this image wasn't
 found in its registry" warning, shared by the same two pages).
 
-**The list-page toolkit**, used by every entity list page (services, projects,
+**The list-page toolkit**, used by every entity list page (services, stacks,
 templates, storage, remote-hosts, s3-destinations, build-cache-registries,
 users, backups):
 
@@ -213,7 +213,7 @@ users, backups):
   fallback mode, e.g. `new ViewMode("templates", "card")`). Deliberately its own
   module rather than living inside `entity-list-view.svelte`, specifically so
   one page can render several `EntityListView`s sharing a single toggle
-  (services groups its rows by project, one `EntityListView` per group); before
+  (services groups its rows by stack, one `EntityListView` per group); before
   this, each group toggled independently, a real pre-existing bug this fixes,
   not just a refactor.
 - `entity-list-view.svelte` now takes `view: ViewMode` plus an optional
@@ -263,7 +263,7 @@ dialog renders an input and the confirm button stays disabled until the typed
 text matches the phrase exactly (Enter in the input confirms too). This replaced
 the old "append a confirmation div into the section" pattern (an inline
 `{#if showDeleteConfirm}` toggling a form in place) with a real modal everywhere
-that pattern appeared: the service Settings danger zone and the project detail
+that pattern appeared: the service Settings danger zone and the stack detail
 danger zone (typed phrase is the entity's own name), and the services list's own
 per-row delete (service name) and new bulk delete (`delete N services`, see the
 services list bullet below). The profile Security page's account deletion moved
@@ -273,7 +273,7 @@ already used `ConfirmDialog` before this and needed no change.
 
 **Verified live** in a real browser: the toolkit's search/filter narrowing, one
 `ViewMode` toggle staying in sync across a grouped list that renders several
-`EntityListView`s (services' per-project groups), select-all plus the bulk bar,
+`EntityListView`s (services' per-stack groups), select-all plus the bulk bar,
 `confirmPhrase` enabling the confirm button only on an exact match, and real
 single and bulk deletes. A bulk action where every service fails surfaces the
 first rejection's message rather than reporting success.

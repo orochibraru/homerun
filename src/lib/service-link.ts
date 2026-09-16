@@ -103,6 +103,11 @@ const IMAGE_MATCHERS: Array<[RegExp, LinkEngineId]> = [
 	[/(^|\/).*(rabbitmq).*/, "rabbitmq"],
 ];
 
+/**
+ * Guesses which datastore a service runs from its image name (Postgres and its
+ * forks, MySQL/Percona, MariaDB, MongoDB, Redis-compatibles, RabbitMQ), falling
+ * back to a generic HTTP service.
+ */
 export function detectLinkEngine(image: string): LinkEngine {
 	const normalized = image.toLowerCase();
 	for (const [pattern, id] of IMAGE_MATCHERS) {
@@ -122,6 +127,11 @@ export function isDatabaseImage(image: string): boolean {
 	return detectLinkEngine(image).id !== "generic";
 }
 
+/**
+ * Turns a service slug into an env var name prefix: uppercase, underscores for
+ * anything non-alphanumeric, and `SVC_` prepended when it wouldn't start with a
+ * letter.
+ */
 export function envKeyPrefix(slug: string): string {
 	const cleaned = slug
 		.toUpperCase()
@@ -130,6 +140,11 @@ export function envKeyPrefix(slug: string): string {
 	return /^[A-Z]/.test(cleaned) ? cleaned : `SVC_${cleaned}`;
 }
 
+/**
+ * The default prefix for a link's individual `_HOST`/`_PORT`/... variables: the
+ * engine's conventional one (`POSTGRES`, `REDIS`), or one derived from the slug
+ * for a generic service.
+ */
 export function defaultVarPrefix(
 	engine: LinkEngine,
 	target: LinkTargetService,
@@ -139,6 +154,10 @@ export function defaultVarPrefix(
 		: engine.defaultVarPrefix;
 }
 
+/**
+ * The default env var name for a link's connection URL: the engine's
+ * conventional one (`POSTGRES_URL`), or `<SLUG>_URL` for a generic service.
+ */
 export function defaultUrlKey(
 	engine: LinkEngine,
 	target: LinkTargetService,
@@ -169,6 +188,11 @@ function firstOf(
 	return fallback;
 }
 
+/**
+ * Reads the URL scheme, user, password and database a target service was set up
+ * with from the image's standard env vars, using each image's own defaults when
+ * they're unset.
+ */
 function credentialsFor(
 	engine: LinkEngine,
 	target: LinkTargetService,
@@ -240,6 +264,14 @@ function jdbcDriver(engine: LinkEngine): string {
 	return engine.id === "postgres" ? "postgresql" : "mysql";
 }
 
+/**
+ * Builds the connection string another service uses to reach the target over
+ * the internal network, addressed by its slug and container port, with
+ * credentials taken from the target's env vars.
+ *
+ * @param format `url` for a scheme URL with credentials in the authority, `jdbc`
+ * for a JDBC URL with credentials as query parameters.
+ */
 export function buildLinkUrl(
 	engine: LinkEngine,
 	target: LinkTargetService,
@@ -264,6 +296,10 @@ export function buildLinkUrl(
 	return `${credentials.scheme}://${authorityFor(credentials, host)}${path}`;
 }
 
+/**
+ * Builds the individual `<prefix>_HOST`, `_PORT`, `_USER`, `_PASSWORD` and `_DB`
+ * variables for a link, omitting credentials the target doesn't have.
+ */
 function varRows(
 	engine: LinkEngine,
 	target: LinkTargetService,
@@ -289,6 +325,11 @@ function varRows(
 	return rows;
 }
 
+/**
+ * Builds the env vars a service link injects into the consuming service: a
+ * single URL variable for the `url`/`jdbc` formats, or split host/port/credential
+ * variables for `vars`.
+ */
 export function buildLinkEnv(params: BuildLinkEnvParams): ParsedEnvVar[] {
 	const engine = detectLinkEngine(params.target.image);
 	if (params.format === "vars") {

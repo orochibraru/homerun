@@ -90,6 +90,7 @@ set in production.
       own discovery-URL template
 - [x] A service's Access section: policy fields only appearing once the login
       wall is on, and saving it with no sign-in method picked being refused
+- [x] The `homerun` CLI (`ui-cli.spec.ts`), see below
 - [ ] A real deploy _as a test_ — the screenshot pipeline below does deploy for
       real, but nothing here asserts on it yet
 
@@ -98,6 +99,41 @@ Extend `bootstrap.spec.ts` or add new files here rather than duplicating
 the client-side-interactive parts (`$state`/`$derived` reactivity, client-side
 `goto()` redirects, real form submission), not re-proving the API shapes that
 suite already covers directly and faster.
+
+## The CLI runs against this same instance (`ui-cli.spec.ts`)
+
+`ui-cli.spec.ts` spawns the real CLI from source
+(`bun run packages/cli/index.ts`) against the app this suite already booted,
+with a throwaway `HOME` per test so it never reads or writes a real
+`~/.config/homerun/config.json`, and with `HOMERUN_BASE_URL`, `HOMERUN_API_KEY`
+and `FORCE_COLOR` stripped from its environment (Playwright sets `FORCE_COLOR`
+in its workers, and Bun then colours the `error:` prefix, which breaks every
+assertion on stderr). No key is minted by hand: the spec drives
+`homerun login`'s device-code flow for real, reading the code the CLI prints and
+approving it on `/cli-auth` in the browser as the bootstrap admin, then uses the
+key the CLI saved.
+
+Covered: help, `--version`, "Not logged in" with no config, commander's
+missing-argument error, login against an unreachable URL, a denied login
+(non-zero exit, nothing saved), an approved login (config saved at `0600`),
+`stacks list`/`services list`/`templates list` as tables, `--json`, `--search`,
+`--per-page`/`--page` and the truncation footer, `services get`,
+`--base-url`/`--api-key` flags and the env vars overriding the saved login, a
+bad key exiting 1 with the API's 401, `services get`/`deploy` on an unknown id
+exiting 1 with the 404, and `logout`. The stack and services it lists are
+created through the REST API with the CLI's own key, since the CLI has no
+`create` command. Lifecycle commands (`deploy`/`start`/`stop`/`restart`) are
+only exercised on their 404 path : CI runs the app as a container with no Docker
+socket, so a real deploy can't be asserted the same way in both places.
+
+`bun run test:e2e:cli` runs just `bootstrap.spec.ts`, `onboarding.spec.ts` and
+this file, which is the minimum it needs. The `ui-` prefix is for sort order (it
+signs in as the admin, so it must run after onboarding).
+
+A bad-key call logs an "Invalid API key" warning that shows up in the
+dashboard's notification feed, whose text contains "Authentication" : a spec
+that runs afterwards and looks a sidebar link up by a partial name will match
+both, hence `exact: true` in `ui-login-wall.spec.ts`.
 
 ## `screenshots/` is not part of this suite
 
@@ -108,13 +144,13 @@ this one by `playwright.config.ts`'s `testIgnore`, so an ordinary
 `bun run test:e2e` never shoots screenshots.
 
 It reuses this suite's bootstrap wholesale, then goes further than any spec
-here: it seeds a project and three services through the REST API (the browser
+here: it seeds a stack and three services through the REST API (the browser
 context's session cookie authenticates them) and **really deploys two of them**
 against the host's Docker daemon, which is what puts live statuses, deployment
 history and streaming logs in the shots. That only works because the default
 harness spawns the app as a local process next to the daemon — don't run it with
 `E2E_IMAGE` set, where the app is containerised without the socket. Everything
-it creates is removed in `afterAll` (containers, then the project and its Docker
+it creates is removed in `afterAll` (containers, then the stack and its Docker
 network) so a failed shot can't leak either.
 
 In CI it runs on every pull request (`.github/workflows/screenshots.yaml`, wired

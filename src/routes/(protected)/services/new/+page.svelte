@@ -108,7 +108,7 @@
 				: "tcp",
 	);
 	// Datastores default to private : they're reached by their siblings over
-	// the project network, and a public hostname for a Postgres is a mistake
+	// the stack network, and a public hostname for a Postgres is a mistake
 	// waiting to happen. A resubmit keeps whatever the user actually chose.
 	let dnsResolvable = $derived(
 		values?.dnsResolvable === undefined
@@ -283,8 +283,8 @@
       success: "Service created.",
     })}
   >
-    {#if data.projectId}
-      <input name="projectId" type="hidden" value={data.projectId}>
+    {#if data.stackId}
+      <input name="stackId" type="hidden" value={data.stackId}>
     {/if}
 
     {#if data.template}
@@ -298,9 +298,9 @@
     {#if data.templateLinks.length > 0}
       <div class="rounded-md panel p-4 text-sm">
         <p class="font-medium text-text">
-          {data.projectId
-            ? "This will also deploy, alongside this service in the project:"
-            : "This will also deploy, grouped in a new project:"}
+          {data.stackId
+            ? "This will also deploy, alongside this service in the stack:"
+            : "This will also deploy, grouped in a new stack:"}
         </p>
         <ul class="mt-2 space-y-1.5">
           {#each data.templateLinks as link (link.alias)}

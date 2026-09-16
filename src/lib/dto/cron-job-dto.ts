@@ -47,7 +47,15 @@ export type CronJobUpdateInput = Partial<
 	>
 >;
 
+/**
+ * Wraps the `cron_job` table : a user-defined scheduled job, either a one-off
+ * container from an image or a shell command run on the app host.
+ */
 export class CronJobDTO extends BaseDTO<CronJob> {
+	/**
+	 * Loads one cron job by id, scoped to its owner; null when missing or owned
+	 * by someone else.
+	 */
 	static async get(id: string, userId: string): Promise<CronJobDTO | null> {
 		const [row] = await db
 			.select()
@@ -57,6 +65,7 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 		return row ? new CronJobDTO(row) : null;
 	}
 
+	/** Every cron job the user owns, newest first. */
 	static async list(userId: string): Promise<CronJobDTO[]> {
 		const rows = await db
 			.select()
@@ -66,6 +75,10 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 		return rows.map((row) => new CronJobDTO(row));
 	}
 
+	/**
+	 * One page of `list`, searched and filtered by kind and enabled state
+	 * server-side, plus the unpaged total.
+	 */
 	static async listPaged(
 		userId: string,
 		query: ListQuery,
@@ -116,6 +129,10 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 		};
 	}
 
+	/**
+	 * Every enabled cron job across all users, for the scheduler to check which
+	 * are due.
+	 */
 	static async listEnabled(): Promise<CronJobDTO[]> {
 		const rows = await db
 			.select()
@@ -124,6 +141,38 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 		return rows.map((row) => new CronJobDTO(row));
 	}
 
+	/**
+	 * Up to `limit` of the user's cron jobs whose name, description, image or
+	 * command matches `q`, newest first, for global search.
+	 */
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<CronJobDTO[]> {
+		const rows = await db
+			.select()
+			.from(cronJob)
+			.where(
+				and(
+					eq(cronJob.userId, userId),
+					searchCondition(q, [
+						cronJob.name,
+						cronJob.description,
+						cronJob.image,
+						cronJob.command,
+					]),
+				),
+			)
+			.orderBy(desc(cronJob.createdAt))
+			.limit(limit);
+		return rows.map((row) => new CronJobDTO(row));
+	}
+
+	/**
+	 * Inserts a new cron job, defaulting the tag to `latest` and leaving it
+	 * never-run.
+	 */
 	static async create(input: NewCronJobInput): Promise<CronJobDTO> {
 		const now = new Date();
 		const row: CronJob = {
@@ -151,61 +200,85 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 		return new CronJobDTO(row);
 	}
 
+	/** Writes the given fields to the row and mirrors them onto this instance. */
 	async update(input: CronJobUpdateInput): Promise<void> {
 		await db.update(cronJob).set(input).where(eq(cronJob.id, this.row.id));
 		Object.assign(this.row, input);
 	}
 
+	/** Deletes this cron job row. */
 	async delete(): Promise<void> {
 		await db.delete(cronJob).where(eq(cronJob.id, this.row.id));
 	}
 
+	/** The cron job's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The id of the user who owns the job. */
 	get userId(): string {
 		return this.row.userId;
 	}
+	/** The job's display name. */
 	get name(): string {
 		return this.row.name;
 	}
+	/** The daemon an image-kind job runs on, null for this host's own socket. */
 	get remoteHostId(): string | null {
 		return this.row.remoteHostId;
 	}
 
+	/**
+	 * Whether the job runs a one-off container from an image or a shell command
+	 * on the app host.
+	 */
 	get kind(): CronJob["kind"] {
 		return this.row.kind;
 	}
+	/** The job's cron expression. */
 	get schedule(): string {
 		return this.row.schedule;
 	}
+	/** Whether the scheduler should run the job. */
 	get enabled(): boolean {
 		return this.row.enabled;
 	}
+	/** When the job last started, null if it never has. */
 	get lastRunAt(): Date | null {
 		return this.row.lastRunAt;
 	}
+	/** The image an image-kind job runs, null for exec jobs. */
 	get image(): string | null {
 		return this.row.image;
 	}
+	/** The image tag an image-kind job runs. */
 	get tag(): string | null {
 		return this.row.tag;
 	}
+	/** The command the job runs, if one is set. */
 	get command(): string | null {
 		return this.row.command;
 	}
+	/** The job's environment variables, empty when none are stored. */
 	get envVars(): Record<string, string> {
 		return this.row.envVars ?? {};
 	}
+	/** How long a run may take before it is killed. */
 	get timeoutSeconds(): number {
 		return this.row.timeoutSeconds;
 	}
+	/** The private registry to pull the job's image from, if any. */
 	get registryUrl(): string | null {
 		return this.row.registryUrl;
 	}
+	/** The username for the job's private registry, if any. */
 	get registryUsername(): string | null {
 		return this.row.registryUsername;
 	}
+	/**
+	 * The encrypted registry password, still encrypted : decrypt it only for a
+	 * pull.
+	 */
 	get registryPasswordEnc(): string | null {
 		return this.row.registryPasswordEnc;
 	}

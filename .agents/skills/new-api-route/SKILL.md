@@ -45,7 +45,7 @@ A JSON-body zod schema in `$lib/server/validation/api.ts`, **separate** from any
 FormData-shaped schema in `$lib/server/validation/service.ts` — that one's
 checkbox/`envKey[]`/`envValue[]` preprocessing is form-specific and doesn't
 belong here. `safeParse` the body, return 400 with `result.error.flatten()` on
-failure, same shape as `projects/+server.ts`'s `POST`.
+failure, same shape as `stacks/+server.ts`'s `POST`.
 
 ## 3. List endpoints: pagination, not an in-memory scan
 
@@ -89,7 +89,7 @@ stale-spec mismatch at compile time, this is the only thing that catches it.
 ## 7. CLI command (only if this route should be user-facing there)
 
 Not every API route needs a CLI command. If it does, add it to
-`packages/cli/commands.ts` following the existing `services`/`projects`/
+`packages/cli/commands.ts` following the existing `services`/`stacks`/
 `templates` pattern; a `list` command should thread `--page`/`--per-page`/
 `--search` through the same way the existing ones do.
 

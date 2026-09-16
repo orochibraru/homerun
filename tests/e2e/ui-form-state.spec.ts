@@ -63,10 +63,10 @@ test.describe
 			await page.getByRole("button", { name: "Parse" }).click();
 			await expect(page.getByText("Services (2)")).toBeVisible();
 
-			// Imported ungrouped on purpose: a project is a Docker network, and
+			// Imported ungrouped on purpose: a stack is a Docker network, and
 			// this harness deliberately doesn't wire a daemon into the app it
 			// spawns (see tests/e2e/README.md).
-			await page.locator("#projectName").fill("");
+			await page.locator("#stackName").fill("");
 			await page.getByRole("button", { name: /Import 2 services/ }).click();
 
 			await expect(page).toHaveURL(/\/services$/);

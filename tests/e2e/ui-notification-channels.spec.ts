@@ -23,7 +23,11 @@ test.describe
 			await page.getByRole("button", { name: "Add channel" }).click();
 			await expect(page.getByText("Channel added.")).toBeVisible();
 			await expect(page.getByText("https://example.com/hook")).toBeVisible();
-			await expect(page.getByText("Build failed, Update failed")).toBeVisible();
+			await expect(
+				page.getByText(
+					"Build failed, Status checks failed, Update failed, Revision unhealthy, Rolled back",
+				),
+			).toBeVisible();
 
 			await page.goto("/profile/notifications");
 			const serviceDown = page.getByRole("checkbox", {

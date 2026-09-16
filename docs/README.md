@@ -22,22 +22,23 @@ sync by hand.
    the optional YAML file for config-as-code setups.
 3. **[Services](services.md)**: deploying from an image or a git repo, importing
    a compose file, the job queue behind every deploy, env vars, linking one
-   service to another, volumes, networking and DNS automation, the login wall,
-   compute limits, swarm mode, cron redeploys, cron jobs, logs, and the web
-   terminal.
-4. **[Projects & templates](projects-and-templates.md)**: grouping services on a
+   service to another, revisions and rollback, image scanning, volumes,
+   networking and DNS automation, the login wall, compute limits, swarm mode,
+   cron redeploys, cron jobs, uptime, logs, and the web terminal.
+4. **[Stacks & templates](stacks-and-templates.md)**: grouping services on a
    shared network, the built-in app catalog, quick deploys, linked companion
    containers, and saving your own.
 5. **[Storage & backups](storage-and-backups.md)**: bind-mount and
    Docker-managed volumes, mounting them into services, reusable S3 destinations
-   and scheduled backups of either volume kind.
+   scheduled backups of either volume kind, and restoring them.
 6. **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
    images on a second machine, the standalone agent and installer.
 7. **[Users & access](users-and-access.md)**: roles, invites, OAuth/OIDC login,
-   your profile and API keys, the per-service auth gate, appearance preferences.
-8. **[Operations & maintenance](operations.md)**: the dashboard, setup
+   two-factor authentication and passkeys, your profile and API keys, the
+   per-service auth gate, appearance preferences.
+8. **[Operations & maintenance](operations.md)**: the dashboard, search, setup
    diagnostics, system logs, Docker cleanup, the scheduling view, notifications,
-   and upgrading.
+   status pages, and upgrading.
 9. **[API & CLI](api-and-cli.md)**: the REST API, the live Swagger UI, and the
    `homerun` CLI.
 10. **[FAQ & limitations](faq-and-limitations.md)**: what's genuinely finished,

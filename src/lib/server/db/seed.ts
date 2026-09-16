@@ -7,6 +7,11 @@ import { BUILTIN_TEMPLATES_APPS } from "$lib/server/db/builtin-templates-apps";
 import { db } from "$lib/server/db/lib";
 import { template, templateLink } from "$lib/server/db/schema";
 
+/**
+ * Upserts every built-in template, overwriting their stored fields with the
+ * current definitions, then inserts any built-in template links not already
+ * present. Safe to run on every boot.
+ */
 export async function seedBuiltinTemplates(): Promise<void> {
 	const now = new Date();
 	await db
@@ -15,6 +20,7 @@ export async function seedBuiltinTemplates(): Promise<void> {
 			[...BUILTIN_TEMPLATES, ...BUILTIN_TEMPLATES_APPS].map((t) => ({
 				...t,
 				createdAt: now,
+				healthcheckCommand: t.healthcheckCommand ?? null,
 				ownerId: null,
 				restartPolicy: "unless-stopped" as const,
 				updatedAt: now,
@@ -26,6 +32,7 @@ export async function seedBuiltinTemplates(): Promise<void> {
 				containerPort: sql`excluded.container_port`,
 				description: sql`excluded.description`,
 				envVars: sql`excluded.env_vars`,
+				healthcheckCommand: sql`excluded.healthcheck_command`,
 				icon: sql`excluded.icon`,
 				image: sql`excluded.image`,
 				name: sql`excluded.name`,

@@ -45,7 +45,10 @@ test.describe
 			await restart.click();
 			await page.getByRole("option", { name: "On failure" }).click();
 
-			await page.getByRole("button", { exact: true, name: "Save" }).click();
+			await page
+				.locator('form[action="?/update"]')
+				.getByRole("button", { exact: true, name: "Save" })
+				.click();
 			await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
 			await page.reload();
 			await expect(page.locator("#restartPolicy")).toContainText("On failure");
@@ -77,7 +80,10 @@ test.describe
 
 			await page.goto(`/services/${id}/settings`);
 			await page.locator("#name").fill("obs-clear-errors");
-			await page.getByRole("button", { exact: true, name: "Save" }).click();
+			await page
+				.locator('form[action="?/update"]')
+				.getByRole("button", { exact: true, name: "Save" })
+				.click();
 
 			await page.goto(`/services/${id}/observability`);
 			const clear = page.getByRole("button", { name: "Clear errors" });

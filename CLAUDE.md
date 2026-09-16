@@ -86,6 +86,7 @@ bun run test:unit:cli     # scoped to packages/cli
 bun run test:unit:installer  # scoped to packages/installer
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see .agents/notes/testing.md
+bun run test:e2e:cli      # playwright test over bootstrap + onboarding + ui-cli.spec.ts only, the CLI driven against the E2E app instance
 bun run e2e:multipass     # scripts/e2e-multipass.ts, real-infra installer/agent/CLI e2e, not wired into CI
 bun run e2e:multipass:release  # scripts/e2e-multipass-release.ts, the same but against the *published* release and the *documented* commands, also not wired into CI (`--only=docs` is the VM-free docs-drift check)
 ```
@@ -126,7 +127,13 @@ hand:
   `TODO.md`/sub-project READMEs, for exactly the kind of staleness this bullet
   list itself just had two live examples of: `ui-consistency` missing from here,
   and three shipped features still marked unbuilt under planned features, both
-  fixed in the same session `docs-sync` was added).
+  fixed in the same session `docs-sync` was added), `docs-audit` (the full sweep
+  `docs-sync` isn't: starts from the code, not a diff, and checks every `docs/`
+  page, root `README.md` and sub-project README against routes, settings, env
+  vars, API, CLI and installer, both directions), `doc-comments` (finds every
+  class method and exported function outside route files, generated code, tests
+  and `ui/` primitives with no JSDoc block, writes it, and fixes blocks that no
+  longer match their signature).
 
 Skill content lives under `.agents/skills/<name>/SKILL.md` with a symlink from
 `.claude/skills/`, matching the existing `shadcn-svelte` skill's layout, keep
@@ -277,7 +284,11 @@ that pattern for any new skill.
   in `docs/` or this file, and code that needs a comment to be understood needs
   a better name instead. Existing comments in files you aren't otherwise
   touching stay put, don't do sweeping comment-deletion passes, just never add
-  one.
+  one. **The one exception is a JSDoc block (`/** ... */`) directly above a
+  class method or exported function**, which is required, not just allowed: it's
+  what a contributor sees on hover. It says what the function does, its
+  non-obvious side effects and throws, never restates the TS types. The
+  `doc-comments` agent enforces it.
 - **Prefer real OOP over a static-only class that just re-exports imported
   functions (or is `static` throughout for no reason beyond habit).** A
   `class Foo { static bar = importedBar; }` barrel (the shape
@@ -348,7 +359,7 @@ to reintroduce a fixed bug.
 | Note                        | Read it when you're touching                                                                                                                             |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data-and-config.md`        | `schema.ts`, a table/column, a DTO under `$lib/dto/`, list pagination, `config.ts`, instance settings, `/settings`                                       |
-| `routing.md`                | Any route under `src/routes/`, the sidebar nav, the services/projects/templates pages, tab layouts                                                       |
+| `routing.md`                | Any route under `src/routes/`, the sidebar nav, the services/stacks/templates pages, tab layouts                                                         |
 | `ui.md`                     | `layout.css`, theming/tokens, `$lib/components/`, list-page toolkit, page width, the `$derived` push/splice bug, appearance prefs                        |
 | `docker.md`                 | `DockerService` and its mixins, containers/networks/volumes, swarm mode, network mode, web terminal, build servers, custom SSL, Docker Cleanup           |
 | `auth.md`                   | better-auth, sign-in/sign-up, OAuth providers, `/authentication`, the per-app login wall, user roles/invites, onboarding, base domain vs. dashboard URL  |

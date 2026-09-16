@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import type { User } from "$lib/server/db/schema";
@@ -17,7 +17,7 @@ const logger = new Logger("UserCleanup");
 class UserServiceClass {
 	/**
 	 * Stops/removes a user's actual Docker containers and networks and deletes
-	 * their app-owned rows (deployments/services/projects/storage volumes)
+	 * their app-owned rows (deployments/services/stacks/storage volumes)
 	 * before* the user row itself goes away. Postgres enforces the schema's
 	 * `onDelete: "cascade"`/`"set null"` FK constraints for real (unlike the
 	 * previous SQLite setup, where `PRAGMA foreign_keys` was intentionally
@@ -70,21 +70,21 @@ class UserServiceClass {
 		await db.delete(schema.service).where(eq(schema.service.userId, userId));
 
 		// Same explicit-cleanup precedent as services above : FK cascade alone
-		// would leave the project's Docker network dangling.
-		const projects = await db
+		// would leave the stack's Docker network dangling.
+		const stacks = await db
 			.select()
-			.from(schema.project)
-			.where(eq(schema.project.userId, userId));
+			.from(schema.stack)
+			.where(eq(schema.stack.userId, userId));
 		await Promise.all(
-			projects.map((proj) =>
-				DockerService.removeProjectNetwork(proj.id).catch(() => {
+			stacks.map((stack) =>
+				DockerService.removeStackNetwork(stack.id).catch(() => {
 					// Already gone : fine, keep cleaning up.
 				}),
 			),
 		);
-		await db.delete(schema.project).where(eq(schema.project.userId, userId));
+		await db.delete(schema.stack).where(eq(schema.stack.userId, userId));
 
-		// Row-only : no host-side resource (unlike services/projects, nothing was
+		// Row-only : no host-side resource (unlike services/stacks, nothing was
 		// ever created on the user's behalf just by defining a storage volume
 		// source). Delete the join rows first (no userId column of its own to
 		// filter by directly).
@@ -148,6 +148,28 @@ class UserServiceClass {
 		};
 	}
 
+	/** Users matching `q` against name/email, newest first, capped at `limit`. Used by lookups that need a short candidate list rather than a full paged listing (e.g. an owner picker). */
+	async searchUsers(q: string, limit: number): Promise<User[]> {
+		return await db
+			.select()
+			.from(userTable)
+			.where(searchCondition(q, [userTable.name, userTable.email]))
+			.orderBy(desc(userTable.createdAt))
+			.limit(limit);
+	}
+
+	/** The oldest admin user's id, or null if there is none. Used to attribute system-initiated actions (e.g. the scheduled mirror cleanup) to a real user. */
+	async firstAdminId(): Promise<string | null> {
+		const [row] = await db
+			.select({ id: userTable.id })
+			.from(userTable)
+			.where(eq(userTable.role, "admin"))
+			.orderBy(asc(userTable.createdAt))
+			.limit(1);
+		return row?.id ?? null;
+	}
+
+	/** How many users currently hold the `admin` role. */
 	async countAdmins(): Promise<number> {
 		const [row] = await db
 			.select({ total: count() })

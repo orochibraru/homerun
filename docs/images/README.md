@@ -25,8 +25,8 @@ there is no demo instance.
 - `deploy-dark.png` — /services/new
 - `templates.png` — /templates
 - `templates-dark.png` — /templates
-- `project.png` — /projects/:id
-- `project-dark.png` — /projects/:id
+- `stack.png` — /stacks/:id
+- `stack-dark.png` — /stacks/:id
 - `settings.png` — /settings
 - `settings-dark.png` — /settings
 - `users.png` — /users

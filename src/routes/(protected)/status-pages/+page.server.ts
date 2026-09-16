@@ -42,7 +42,7 @@ export const load = async ({ parent }) => {
 						: ("down" as const),
 			id: svc.id,
 			name: svc.name,
-			projectId: svc.projectId,
+			stackId: svc.stackId,
 			slug: svc.slug,
 		})),
 	};

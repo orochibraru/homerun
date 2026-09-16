@@ -8,6 +8,12 @@ export class PublishedRelease {
 		readonly repo: string,
 	) {}
 
+	/**
+	 * Reads the GitHub `owner/repo` the installer bootstrap script downloads
+	 * from, so the suite checks the same repo users install from.
+	 *
+	 * @throws When the script doesn't point at github.com.
+	 */
 	static #repoFromBootstrap(): string {
 		const source = readFileSync("packages/installer/bootstrap.sh", "utf8");
 		const repo = source.match(/^GIT_REPO="([^"]+)"/m)?.[1];
@@ -20,6 +26,13 @@ export class PublishedRelease {
 		return repo;
 	}
 
+	/**
+	 * Looks up a published GitHub release and its asset names, authenticating
+	 * with `GITHUB_TOKEN` when set.
+	 *
+	 * @param version `latest` or a release tag.
+	 * @throws When the release lookup fails.
+	 */
 	static async resolve(version: string): Promise<PublishedRelease> {
 		const repo = PublishedRelease.#repoFromBootstrap();
 		const path =
@@ -51,6 +64,7 @@ export class PublishedRelease {
 		);
 	}
 
+	/** @throws When any of the named assets isn't attached to this release, listing the missing and present ones. */
 	assertAssets(names: readonly string[]): void {
 		const missing = names.filter((name) => !this.assets.includes(name));
 		if (missing.length > 0) {

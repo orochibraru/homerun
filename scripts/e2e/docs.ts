@@ -9,6 +9,7 @@ export interface FencedBlock {
 class DocsClass {
 	readonly #cache = new Map<string, string>();
 
+	/** Reads a file relative to the working directory, caching its content for the rest of the run. */
 	#read(relPath: string): string {
 		const cached = this.#cache.get(relPath);
 		if (cached !== undefined) {
@@ -19,6 +20,7 @@ class DocsClass {
 		return content;
 	}
 
+	/** Extracts every fenced code block from a Markdown file, tagged with its language and the nearest heading above it. */
 	blocks(relPath: string): FencedBlock[] {
 		const found: FencedBlock[] = [];
 		let heading = "";
@@ -49,6 +51,12 @@ class DocsClass {
 		return found;
 	}
 
+	/**
+	 * Returns the trimmed code of the single fenced block that contains every
+	 * needle, so a test runs exactly the command the docs show.
+	 *
+	 * @throws When no block or more than one block matches.
+	 */
 	command(relPath: string, ...needles: string[]): string {
 		const matches = this.blocks(relPath).filter((block) =>
 			needles.every((needle) => block.code.includes(needle)),
@@ -69,6 +77,7 @@ class DocsClass {
 
 export const Docs = new DocsClass();
 
+/** Joins backslash-continued lines and collapses whitespace, so a documented command compares equal however it's wrapped. */
 export function normalizeCommand(command: string): string {
 	return command
 		.replace(/\\\s*\n/g, " ")
@@ -76,6 +85,7 @@ export function normalizeCommand(command: string): string {
 		.trim();
 }
 
+/** Splits a shell block into its non-empty lines, trimmed, dropping `#` comment lines. */
 export function commandLines(block: string): string[] {
 	return block
 		.split("\n")

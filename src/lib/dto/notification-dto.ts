@@ -41,6 +41,9 @@ export class NotificationDTO extends BaseDTO<Notification> {
 		}));
 	}
 
+	/**
+	 * How many of the user's notifications are still unread, for the bell badge.
+	 */
 	static async unreadCount(userId: string): Promise<number> {
 		const rows = await db
 			.select({ id: notification.id })
@@ -62,6 +65,10 @@ export class NotificationDTO extends BaseDTO<Notification> {
 		});
 	}
 
+	/**
+	 * Inserts a notification and, on roughly 5% of writes, prunes that user's
+	 * feed back down to its newest 200 entries.
+	 */
 	static async create(input: NewNotificationInput): Promise<NotificationDTO> {
 		const row: Notification = {
 			createdAt: new Date(),
@@ -81,6 +88,7 @@ export class NotificationDTO extends BaseDTO<Notification> {
 		return new NotificationDTO(row);
 	}
 
+	/** Deletes everything past the user's newest 200 notifications. */
 	static async prune(userId: string): Promise<void> {
 		const [cutoff] = await db
 			.select({ createdAt: notification.createdAt })
@@ -102,6 +110,7 @@ export class NotificationDTO extends BaseDTO<Notification> {
 			);
 	}
 
+	/** Marks every unread notification of the user as read now. */
 	static async markAllRead(userId: string): Promise<void> {
 		await db
 			.update(notification)
@@ -109,6 +118,7 @@ export class NotificationDTO extends BaseDTO<Notification> {
 			.where(and(eq(notification.userId, userId), isNull(notification.readAt)));
 	}
 
+	/** Marks one notification as read now, scoped to its owner. */
 	static async markRead(id: string, userId: string): Promise<void> {
 		await db
 			.update(notification)

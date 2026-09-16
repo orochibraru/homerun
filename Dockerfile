@@ -47,6 +47,9 @@ ENV APP_ENV=production
 ENV ORIGIN=http://localhost:3000
 ENV STORAGE_BASE_PATH=/app/data
 
+ARG HOMERUN_APP_VERSION=""
+ENV HOMERUN_APP_VERSION=$HOMERUN_APP_VERSION
+
 RUN mkdir -p /app/data /app/traefik-dynamic && chown -R bun:bun /app/data /app/traefik-dynamic
 
 VOLUME /app/data

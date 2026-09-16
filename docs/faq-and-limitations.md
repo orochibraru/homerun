@@ -72,9 +72,10 @@ services that opt in.
   deploys it. See [Build servers](remote-hosts-and-agent.md).
 - **Git-based builds** clone by branch/tag only, a bare commit SHA doesn't work,
   and have no webhook/auto-deploy-on-push yet.
-- **S3 backups** cover both volume kinds now (a Docker-managed volume is read
-  out through a short-lived helper container), but there's still no restore
-  flow, upload only.
+- **Restoring a backup unpacks over the volume, it doesn't wipe it first.**
+  Files in the archive replace the ones on disk, anything else already there
+  stays, and nothing stops the service using the volume for you: stop it before
+  restoring. See [Storage & backups](storage-and-backups.md#restoring-a-backup).
 - **`packages/installer/swarm-join.sh`** (joining a remote box to an existing
   swarm) hasn't been run against a real second host or a real swarm yet, unlike
   the rest of the installer, which has (`--mode=agent`/`--mode=full`, see
@@ -106,9 +107,10 @@ services that opt in.
   keeps running, which is fine for files and can tear a database mid-write. Dump
   databases with their own tooling into a bind mount and back that up instead.
   See [Storage & backups](storage-and-backups.md#s3-compatible-backups).
-- **Passkeys and two-factor sign-in aren't exposed yet.** The underlying support
-  is wired up server-side but there's no UI for enrolling or using either, so
-  today it's passwords and OAuth/OIDC.
+- **Passkeys only work on the Dashboard URL's host.** A passkey is bound to that
+  hostname, so it isn't offered on any other address you reach Homerun at, and
+  changing the hostname later strands the passkeys already registered. See
+  [Users & access](users-and-access.md#two-factor-authentication-and-passkeys).
 - **Compose import** maps what Homerun has an equivalent for and tells you what
   it dropped, it is not a compose runtime: `build:`, `command:`, healthchecks,
   capabilities, `env_file`, secrets/configs and host port publishing all come
@@ -126,9 +128,9 @@ services that opt in.
 ## Planned, not yet built
 
 - **Health-gated rollout**, blue-green style: keep the old container alive until
-  a new deploy passes a health check, roll back if it doesn't.
-- **Per-container resource stats**, `docker stats`-style observability beyond
-  the host-level dashboard numbers.
+  a new deploy passes a health check. Today a new revision takes traffic
+  straight away and [auto-rollback](services.md#revisions-and-rollback) replaces
+  it after the fact if it turns out unhealthy.
 - **Provider-shaped outbound notifications beyond Discord**, Telegram and Slack
   in particular. Discord embeds, generic webhooks and email already work on
   build/update/deploy/uptime events, see
@@ -139,9 +141,6 @@ services that opt in.
   that's still a manual `/settings` visit afterward.
 - **Finer-grained permissions**, today "developer" is a role label plus
   route-gating only, not a real permissions system.
-- **Backup restore**, getting a tarball back into a volume from the dashboard.
-  Uploads work; restoring is manual today.
-- **Passkeys and 2FA**, plus instance-level policies to require them.
 - **Auto-deploy on push**, a webhook from your git provider triggering a
   rebuild, rather than redeploying manually or on a schedule.
 

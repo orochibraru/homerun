@@ -223,7 +223,7 @@ async function testCli(fullVm: Vm): Promise<void> {
 
 	for (const cmd of [
 		["services", "list"],
-		["projects", "list"],
+		["stacks", "list"],
 		["templates", "list"],
 	]) {
 		await exec(["docker", "exec", CLI_CONTAINER, "homerun", ...cmd]);

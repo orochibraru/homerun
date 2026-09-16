@@ -43,6 +43,10 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 		}));
 	}
 
+	/**
+	 * Mounts a storage volume into a service at `containerPath`; takes effect on
+	 * the service's next deploy.
+	 */
 	static async attach(input: NewServiceVolumeInput): Promise<ServiceVolumeDTO> {
 		const row: ServiceVolume = {
 			containerPath: input.containerPath,
@@ -56,13 +60,19 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 		return new ServiceVolumeDTO(row);
 	}
 
+	/**
+	 * Deletes this mount row; the running container keeps it until the next
+	 * deploy.
+	 */
 	async detach(): Promise<void> {
 		await db.delete(serviceVolume).where(eq(serviceVolume.id, this.row.id));
 	}
 
+	/** The mount's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The id of the service the volume is mounted into. */
 	get serviceId(): string {
 		return this.row.serviceId;
 	}

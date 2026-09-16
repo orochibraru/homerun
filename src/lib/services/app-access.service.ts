@@ -65,6 +65,13 @@ function collectStrings(value: unknown, into: Set<string>): void {
 	}
 }
 
+/**
+ * Decodes an OIDC id token's payload (no signature verification, the token
+ * already came from a trusted provider round-trip) and collects the group
+ * names it carries: any of `GROUP_CLAIMS` at the top level, plus Keycloak's
+ * `realm_access.roles` and `resource_access.*.roles` shapes. Returns an
+ * empty set rather than throwing if the token can't be decoded.
+ */
 export function groupsFromIdToken(idToken: string): Set<string> {
 	const groups = new Set<string>();
 	const claims = decodeJwtClaims(idToken);
@@ -117,6 +124,13 @@ function emailAllowed(svc: ServiceDTO, email: string): boolean {
 }
 
 class AppAccessServiceClass {
+	/**
+	 * Decides whether `userId` may access `svc`'s per-app login wall,
+	 * checking, in order: a sign-in method is configured at all, an explicit
+	 * allowed-user-id list, the user's email against `authAllowedEmails`, that
+	 * the user has actually linked one of `svc.authProviders`, and (if set)
+	 * that their linked account's OIDC groups intersect `authAllowedGroups`.
+	 */
 	async evaluate(svc: ServiceDTO, userId: string): Promise<AccessDecision> {
 		if (svc.authProviders.length === 0) {
 			return { allowed: false, reason: "no-method-configured" };
@@ -150,6 +164,7 @@ class AppAccessServiceClass {
 		return { allowed: true };
 	}
 
+	/** The distinct sign-in methods (mapped from linked account provider ids) the user has connected. */
 	async linkedMethods(userId: string): Promise<string[]> {
 		const accounts = await db
 			.select({ providerId: accountTable.providerId })
@@ -160,6 +175,7 @@ class AppAccessServiceClass {
 		];
 	}
 
+	/** The user's email address, or null if the user row doesn't exist. */
 	async #emailFor(userId: string): Promise<string | null> {
 		const [row] = await db
 			.select({ email: userTable.email })
@@ -169,6 +185,7 @@ class AppAccessServiceClass {
 		return row?.email ?? null;
 	}
 
+	/** The user's linked accounts whose provider maps to one of `svc.authProviders`, each with its id token for group extraction. */
 	async #linkedAccounts(
 		svc: ServiceDTO,
 		userId: string,

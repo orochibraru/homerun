@@ -46,6 +46,10 @@ export type RemoteExecutionTarget =
 
 /** Wraps the `remote_host` table : see ServiceDTO for the pattern this follows. */
 export class RemoteHostDTO extends BaseDTO<RemoteHost> {
+	/**
+	 * Loads one remote host by id, scoped to its owner; null when missing or
+	 * owned by someone else.
+	 */
 	static async get(id: string, userId: string): Promise<RemoteHostDTO | null> {
 		const [row] = await db
 			.select()
@@ -55,6 +59,7 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		return row ? new RemoteHostDTO(row) : null;
 	}
 
+	/** Every remote host the user registered, newest first. */
 	static async list(userId: string): Promise<RemoteHostDTO[]> {
 		const rows = await db
 			.select()
@@ -111,6 +116,37 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		return RemoteHostDTO.list(userId);
 	}
 
+	/**
+	 * Up to `limit` of the user's hosts whose name, Docker host or agent URL
+	 * matches `q`, newest first, for global search.
+	 */
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<RemoteHostDTO[]> {
+		const rows = await db
+			.select()
+			.from(remoteHost)
+			.where(
+				and(
+					eq(remoteHost.userId, userId),
+					searchCondition(q, [
+						remoteHost.name,
+						remoteHost.dockerHost,
+						remoteHost.agentUrl,
+					]),
+				),
+			)
+			.orderBy(desc(remoteHost.createdAt))
+			.limit(limit);
+		return rows.map((row) => new RemoteHostDTO(row));
+	}
+
+	/**
+	 * Inserts a new remote host, defaulting to a raw Docker daemon connection.
+	 * Secrets must already be encrypted.
+	 */
 	static async create(input: NewRemoteHostInput): Promise<RemoteHostDTO> {
 		const now = new Date();
 		const kind = input.kind ?? "docker";
@@ -132,6 +168,7 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		return new RemoteHostDTO(row);
 	}
 
+	/** Writes the given fields to the row and mirrors them onto this instance. */
 	async update(input: RemoteHostUpdateInput): Promise<void> {
 		await db
 			.update(remoteHost)
@@ -169,23 +206,34 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		return { agentUrl, token };
 	}
 
+	/** The host's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The host's display name. */
 	get name(): string {
 		return this.row.name;
 	}
+	/** The Docker daemon address for a docker-kind host, null for agents. */
 	get dockerHost(): string | null {
 		return this.row.dockerHost;
 	}
+	/** Whether the host is a raw Docker daemon or a Homerun Agent. */
 	get kind(): RemoteHost["kind"] {
 		return this.row.kind;
 	}
+	/** The agent's base URL for an agent-kind host, null for Docker daemons. */
 	get agentUrl(): string | null {
 		return this.row.agentUrl;
 	}
 
-	/** Resolves a build server id into the connection its build should run through. */
+	/**
+	 * Resolves a build server id into the connection its build should run
+	 * through; a missing id means this host.
+	 *
+	 * @throws When the host doesn't exist for this user, or is an agent without a
+	 * usable URL and token.
+	 */
 	static async resolveBuildTarget(
 		hostId: string | null | undefined,
 		userId: string,

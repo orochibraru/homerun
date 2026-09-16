@@ -1,6 +1,6 @@
 import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
@@ -22,6 +22,7 @@ export interface ResolvedTemplateLink {
 	templateName: string;
 }
 
+/** Normalizes a name into a DNS-label-safe slug: lowercased, non-alphanumeric runs collapsed to a single hyphen, trimmed, capped to 63 characters. */
 export function slugify(value: string): string {
 	return value
 		.toLowerCase()
@@ -32,6 +33,11 @@ export function slugify(value: string): string {
 		.slice(0, 63);
 }
 
+/**
+ * Substitutes `{{alias}}` (linked service's slug) and `{{alias.KEY}}`
+ * (linked service's env var) tokens in `value` using `context`. A token
+ * whose alias or key doesn't resolve is left untouched.
+ */
 export function resolveLinkTokens(
 	value: string,
 	context: Record<string, { envVars: Record<string, string>; slug: string }>,
@@ -62,6 +68,11 @@ async function uniqueLinkSlug(baseSlug: string): Promise<string> {
 	return candidate;
 }
 
+/**
+ * Resolves every service linked to a template into a `ResolvedTemplateLink`,
+ * assigning each a unique slug derived from `primarySlug` and the link's
+ * alias (checked against `ServiceDTO.slugTaken`, not yet persisted).
+ */
 export async function buildTemplateLinkContext(
 	templateId: string,
 	primarySlug: string,
@@ -87,6 +98,7 @@ export async function buildTemplateLinkContext(
 	return resolved;
 }
 
+/** Resolves every `{{alias}}`/`{{alias.KEY}}` token in `envVars`' values against the given resolved links. */
 export function resolveEnvVarsWithLinks(
 	envVars: Record<string, string>,
 	links: ResolvedTemplateLink[],
@@ -102,29 +114,31 @@ export function resolveEnvVarsWithLinks(
 	);
 }
 
-async function uniqueProjectSlug(baseSlug: string): Promise<string> {
+async function uniqueStackSlug(baseSlug: string): Promise<string> {
 	let candidate = baseSlug;
 	let suffix = 1;
 	// biome-ignore lint/performance/noAwaitInLoops: retry loop, each check depends on the previous candidate being rejected
-	while (await ProjectDTO.slugTaken(candidate)) {
+	while (await StackDTO.slugTaken(candidate)) {
 		suffix += 1;
 		candidate = slugify(`${baseSlug}-${suffix}`);
 	}
 	return candidate;
 }
 
-export async function createProjectForLinkedStack(
+/** Creates a new stack (with a unique slug derived from `name`) to hold a template's primary service and its linked services. */
+export async function createStackForLinkedServices(
 	name: string,
 	userId: string,
 ): Promise<string> {
-	const slug = await uniqueProjectSlug(slugify(name));
-	const project = await ProjectDTO.create({ name, slug, userId });
-	return project.id;
+	const slug = await uniqueStackSlug(slugify(name));
+	const stack = await StackDTO.create({ name, slug, userId });
+	return stack.id;
 }
 
+/** Creates one service per resolved template link inside `params.stackId`, not DNS-resolvable by default since these back the primary service. */
 export async function createLinkedServices(
 	links: ResolvedTemplateLink[],
-	params: { projectId: string; userId: string },
+	params: { stackId: string; userId: string },
 ): Promise<ServiceDTO[]> {
 	const created: ServiceDTO[] = [];
 	for (const link of links) {
@@ -136,7 +150,7 @@ export async function createLinkedServices(
 			envVars: link.envVars,
 			memoryLimitMb: link.memoryLimitMb,
 			name: link.templateName,
-			projectId: params.projectId,
+			stackId: params.stackId,
 			restartPolicy: link.restartPolicy,
 			slug: link.slug,
 			tag: link.tag,
@@ -159,23 +173,29 @@ async function uniqueServiceSlug(baseSlug: string): Promise<string> {
 	return candidate;
 }
 
+/**
+ * Instantiates a template as a real service: resolves its linked services
+ * (creating a stack for them if none was given), resolves `{{alias}}` env
+ * var tokens against those links, then creates the primary service and its
+ * linked services.
+ */
 export async function createServiceFromTemplate(
 	template: TemplateDTO,
 	userId: string,
-	projectId: string | null,
+	stackId: string | null,
 ): Promise<{
 	linkedServices: ServiceDTO[];
-	projectId: string | null;
+	stackId: string | null;
 	svc: ServiceDTO;
 }> {
 	const row = template.toJSON();
 	const slug = await uniqueServiceSlug(slugify(row.name));
 	const links = await buildTemplateLinkContext(row.id, slug);
 
-	const finalProjectId =
-		links.length > 0 && !projectId
-			? await createProjectForLinkedStack(row.name, userId)
-			: projectId;
+	const finalStackId =
+		links.length > 0 && !stackId
+			? await createStackForLinkedServices(row.name, userId)
+			: stackId;
 
 	const envVars =
 		links.length > 0
@@ -192,7 +212,7 @@ export async function createServiceFromTemplate(
 		image: row.image,
 		memoryLimitMb: row.memoryLimitMb,
 		name: row.name,
-		projectId: finalProjectId,
+		stackId: finalStackId,
 		restartPolicy: row.restartPolicy,
 		slug,
 		tag: row.tag,
@@ -200,24 +220,32 @@ export async function createServiceFromTemplate(
 	});
 
 	const linkedServices =
-		links.length > 0 && finalProjectId
+		links.length > 0 && finalStackId
 			? await createLinkedServices(links, {
-					projectId: finalProjectId,
+					stackId: finalStackId,
 					userId,
 				})
 			: [];
 
-	return { linkedServices, projectId: finalProjectId, svc };
+	return { linkedServices, stackId: finalStackId, svc };
 }
 
 export type QuickDeployResult =
-	| { ok: true; projectId: string | null; serviceId: string }
+	| { ok: true; stackId: string | null; serviceId: string }
 	| { error: string; ok: false; status: number };
 
+/**
+ * One-click template deploy: creates the service(s) via
+ * `createServiceFromTemplate`, records a "service created" notification for
+ * each, and enqueues the stack deploy job.
+ *
+ * @returns An error result (404) when the template isn't usable by this
+ *   user, otherwise the created service/stack ids.
+ */
 export async function quickDeployFromTemplate(
 	templateId: string,
 	userId: string,
-	projectId: string | null,
+	stackId: string | null,
 ): Promise<QuickDeployResult> {
 	const template = await TemplateDTO.usable(templateId, userId);
 	if (!template) {
@@ -226,9 +254,9 @@ export async function quickDeployFromTemplate(
 
 	const {
 		linkedServices,
-		projectId: finalProjectId,
+		stackId: finalStackId,
 		svc,
-	} = await createServiceFromTemplate(template, userId, projectId);
+	} = await createServiceFromTemplate(template, userId, stackId);
 
 	logger.info(
 		`Quick-deployed from template: template=${templateId} service=${svc.id} user=${userId}`,
@@ -253,7 +281,7 @@ export async function quickDeployFromTemplate(
 
 	return {
 		ok: true,
-		projectId: linkedServices.length > 0 ? finalProjectId : null,
+		stackId: linkedServices.length > 0 ? finalStackId : null,
 		serviceId: svc.id,
 	};
 }

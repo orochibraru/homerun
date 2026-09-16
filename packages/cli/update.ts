@@ -11,6 +11,12 @@ const GITHUB_REPO = "orochibraru/homerun";
 
 /** Self-update logic for the compiled binary, grouped as a class for consistency with the rest of cli/ : none of the private helpers carry instance state, this is a one-shot CLI flow like `CliLoginFlow`. */
 class CliUpdateService {
+	/**
+	 * Replaces the running binary with the latest GitHub release when it's
+	 * newer, falling back to `sudo mv` when the install directory isn't
+	 * writable. Exits the process on any failure, including a non-Linux host
+	 * or a run from source.
+	 */
 	async update(): Promise<void> {
 		if (process.platform !== "linux") {
 			Output.fail(
@@ -86,6 +92,7 @@ class CliUpdateService {
 		return base !== "bun" && base !== "bun-debug";
 	}
 
+	/** Maps `process.arch` onto the release-asset arch names, exiting on anything other than x64 or arm64. */
 	#currentArch(): "amd64" | "arm64" {
 		if (process.arch === "x64") {
 			return "amd64";

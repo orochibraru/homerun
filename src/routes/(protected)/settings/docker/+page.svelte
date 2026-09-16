@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
@@ -12,6 +13,7 @@
 		Select as SelectRoot,
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
+	import { BLOCK_SEVERITY_OPTIONS } from "$lib/image-scan";
 	import { getSetupStatus } from "$lib/remote/setup.remote";
 	import { enhanceToast, saveToast } from "$lib/toast";
 
@@ -43,6 +45,14 @@
 
 	let orchestrationMode = $state(
 		untrack(() => data.settings.orchestrationMode ?? "standalone"),
+	);
+
+	let blockSeverity = $state<string>(
+		untrack(() => data.settings.imageScanBlockSeverity ?? "off"),
+	);
+	const blockOption = $derived(
+		BLOCK_SEVERITY_OPTIONS.find((option) => option.value === blockSeverity) ??
+			BLOCK_SEVERITY_OPTIONS[0],
 	);
 </script>
 
@@ -88,6 +98,62 @@
           type="text"
           value={data.settings.dockerNetworkName ?? ""}
         />
+      </div>
+      <div class="flex justify-end">
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel rounded-md">
+    <div class="border-border border-b px-5 py-4">
+      <h2 class="eyebrow">Image scanning</h2>
+      <p class="text-text-muted text-xs">
+        Every deploy copies the image into a Homerun-managed registry mirror
+        (<code>homerun-mirror</code>, published on
+        <code>127.0.0.1:5055</code> only), scans it there with Trivy, and only
+        then pulls it onto this host. If the mirror can't be used the deploy
+        pulls directly and scans the local image instead. Git builds are
+        scanned once built. Each service can opt out on its own Settings tab.
+        The mirror is garbage-collected daily; its size and a manual cleanup
+        are on <a class="underline" href={resolve("/docker-cleanup")}
+        >Docker Cleanup</a>.
+      </p>
+    </div>
+    <form
+      action="?/updateImageScan"
+      class="space-y-4 p-5"
+      method="POST"
+      use:enhance={saveToast("Image scanning settings")}
+    >
+      <CheckBox
+        checked={data.settings.imageScanEnabled ?? true}
+        helperText="Turning this off skips the mirror and the scan for every service."
+        id="imageScanEnabled"
+        label="Scan images before deploying"
+        name="imageScanEnabled"
+      />
+      <div>
+        <label class={label} for="imageScanBlockSeverity"
+        >Block deploys at severity</label>
+        <SelectRoot
+          name="imageScanBlockSeverity"
+          type="single"
+          bind:value={blockSeverity}
+        >
+          <SelectTrigger id="imageScanBlockSeverity">
+            {blockOption.label}
+          </SelectTrigger>
+          <SelectContent>
+            {#each BLOCK_SEVERITY_OPTIONS as option (option.value)}
+              <SelectItem label={option.label} value={option.value} />
+            {/each}
+          </SelectContent>
+        </SelectRoot>
+        <p class="text-text-subtle mt-1.5 text-xs">
+          {blockOption.description} A scanner that fails to run never blocks a
+          deploy.
+        </p>
       </div>
       <div class="flex justify-end">
         <Button type="submit">Save</Button>

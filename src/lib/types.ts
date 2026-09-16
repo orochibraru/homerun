@@ -18,19 +18,34 @@ export type JobStatus =
 	| "failed"
 	| "cancelled";
 
-export type JobType = "backup" | "cron_job" | "deploy" | "docker_cleanup";
+export type JobType =
+	| "backup"
+	| "cron_job"
+	| "deploy"
+	| "docker_cleanup"
+	| "image_scan";
 
-export type StatusPageScope = "global" | "project" | "custom";
+export type RevisionHealth =
+	| "watching"
+	| "healthy"
+	| "unhealthy"
+	| "rolled_back";
+
+export type StatusPageScope = "global" | "stack" | "custom";
 
 export type NotificationChannelKind = "webhook" | "discord" | "email";
 
 export type NotificationEvent =
 	| "build.failed"
 	| "build.succeeded"
+	| "build.checks_failed"
+	| "deploy.unhealthy"
+	| "deploy.rolled_back"
 	| "update.failed"
 	| "update.succeeded"
 	| "deploy.failed"
 	| "deploy.succeeded"
+	| "image.vulnerable"
 	| "service.down"
 	| "service.up";
 

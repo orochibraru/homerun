@@ -25,16 +25,7 @@ class ReleaseAssetsService {
 		return `https://${RELEASE_HOST}/${REPO}/${path}`;
 	}
 
-	/**
-	 * The app's Docker image, by contrast, is not tagged per semantic-release
-	 * version : `docker.yaml` (driven from `publish.yaml`'s `build` job) tags
-	 * every push to main as `:<commit sha>` and `:latest`, there is no `:vX.Y.Z`
-	 * tag. `--version=` therefore only selects which release's agent/installer/
-	 * cli *binaries* to fetch ; the app image installed in `--mode=full` is
-	 * always `:latest` (or the literal tag passed, for a caller who knows a
-	 * matching sha), that's a real asymmetry in this repo's release pipeline,
-	 * not an oversight here.
-	 */
+	/** `publish.yaml`'s `promote` job publishes the app image as both `:vX.Y.Z` and `:latest`, so `--version=` pins the image to the same release as the binaries. */
 	imageRef(version: string): string {
 		const tag = version === "latest" ? "latest" : version;
 		return `${REGISTRY_HOST}/${REPO}:${tag}`;

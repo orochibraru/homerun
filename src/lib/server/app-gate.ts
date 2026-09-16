@@ -27,6 +27,11 @@ export interface GatePolicy {
 	authRequired: boolean;
 }
 
+/**
+ * A short fingerprint of a service's login-wall policy, embedded in gate tokens
+ * so that changing who may access the service invalidates sessions issued under
+ * the old policy.
+ */
 export function policyVersion(policy: GatePolicy): string {
 	const canonical = JSON.stringify([
 		policy.authRequired,
@@ -48,6 +53,10 @@ function sign(data: string): string {
 		.digest("base64url");
 }
 
+/**
+ * Signs a login-wall payload into a `<base64url body>.<HMAC>` token that
+ * expires after `ttlMs`, using the auth secret.
+ */
 export function signGateToken(
 	payload: GateTokenPayload,
 	ttlMs: number,
@@ -57,6 +66,13 @@ export function signGateToken(
 	return `${body}.${sign(body)}`;
 }
 
+/**
+ * Checks a gate token's signature in constant time and its expiry and required
+ * fields.
+ *
+ * @returns The payload, or null for anything tampered with, expired or
+ * malformed.
+ */
 export function verifyGateToken(token: string): GateTokenPayload | null {
 	const dot = token.lastIndexOf(".");
 	if (dot <= 0) {
@@ -89,6 +105,12 @@ export function verifyGateToken(token: string): GateTokenPayload | null {
 	}
 }
 
+/**
+ * Pulls the login-wall session cookie out of a raw `Cookie` header, as
+ * forwarded from the gated app's own host.
+ *
+ * @returns The decoded cookie value, or undefined when it isn't present.
+ */
 export function readGateCookie(
 	cookieHeader: string | null,
 ): string | undefined {
@@ -107,6 +129,10 @@ export function readGateCookie(
 	return undefined;
 }
 
+/**
+ * Builds the `Set-Cookie` value for the login-wall session cookie : HttpOnly,
+ * SameSite=Lax, path `/`, Secure when requested. A max age of 0 clears it.
+ */
 export function gateCookie(
 	value: string,
 	secure: boolean,

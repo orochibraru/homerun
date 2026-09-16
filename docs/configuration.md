@@ -15,15 +15,19 @@ for people who'd rather manage settings as code.
 
 `/settings` is one page per tab, all admin-only:
 
-| Tab            | What's on it                                                                                                                                     |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **General**    | Base domain, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                             |
-| **Docker**     | Docker socket path, the shared network name, orchestration mode (standalone or [swarm](services.md#swarm-mode))                                  |
-| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and DNS automation (Cloudflare, Pangolin)                           |
-| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved |
+| Tab            | What's on it                                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **General**    | Base domain, Use HTTPS, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                                                            |
+| **Docker**     | Docker socket path, the shared network name, [image scanning](services.md#image-scanning) and its block policy, orchestration mode (standalone or [swarm](services.md#swarm-mode))         |
+| **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and [DNS automation](services.md#dns-automation) (Cloudflare, Pangolin, and whether Pangolin handles sign-in) |
+| **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved                                           |
+| **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Services](services.md#migrating-from-dokploy-or-coolify)                                                   |
 
-Sign-in methods live on their own **Authentication** page rather than a
-`/settings` tab, see
+**Use HTTPS** sets the scheme of the Dashboard URL derived from the base domain,
+and the helper text under it shows the resulting origin.
+
+Sign-in methods, and the instance-wide two-factor and passkey requirements, live
+on their own **Authentication** page rather than a `/settings` tab, see
 [Users & access](users-and-access.md#authentication-providers). Git hosting
 accounts live on **Git Providers**, see
 [Services](services.md#connecting-a-git-provider). Per-account preferences
@@ -121,22 +125,22 @@ language server extension gives you linting and autocomplete. The installer
 (Option A) writes a `homerun.yaml` and mounts it for you, so there's nothing to
 add there.
 
-| Key                                                  | Default                                                | Dashboard equivalent                                                                            |
-| ---------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `baseDomain`                                         | `localhost`                                            | Settings → General                                                                              |
-| `auth.origin`                                        | `ORIGIN` env, else derived from `baseDomain`           | Settings → General ("Dashboard URL")                                                            |
-| `auth.crossSubdomainCookies`                         | `false`                                                | Settings → General. Unrelated to the per-app login wall, which doesn't need it                  |
-| `authCheckUrl`                                       | `http://host.docker.internal:<PORT>/api/v1/auth-check` | Settings → General. Must be reachable _from inside the Traefik container_                       |
-| `docker.socketPath`                                  | auto-detected                                          | Settings → Docker                                                                               |
-| `docker.networkName`                                 | `homerun`                                              | Settings → Docker                                                                               |
-| `traefik.entrypoint`                                 | `websecure`                                            | Settings → Networking                                                                           |
-| `traefik.certResolver`                               | `letsencrypt`                                          | Settings → Networking                                                                           |
-| `traefik.acmeEmail`                                  | _(unset)_                                              | Settings → Networking. Informational mirror of `ACME_EMAIL`, Traefik reads the compose one      |
-| `traefik.dynamicConfigDir`                           | _(unset, the feature is inert until set)_              | Settings → Networking, see [Custom domains & SSL](services.md#custom-domains--ssl)              |
-| `smtp.enabled`                                       | `false`                                                | Settings → Email                                                                                |
-| `smtp.host`/`port`/`user`/`password`/`secure`/`from` | _(unset)_                                              | Settings → Email. All required together; a partial config is treated as disabled with a warning |
-| `logLevel`                                           | `info`                                                 | _(file/env only)_ `debug` \| `info` \| `warn` \| `error`                                        |
-| `logFormat`                                          | `console`                                              | _(file/env only)_ `console` \| `json`                                                           |
+| Key                                                  | Default                                                                                                                                                               | Dashboard equivalent                                                                                                        |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `baseDomain`                                         | `localhost`                                                                                                                                                           | Settings → General                                                                                                          |
+| `auth.origin`                                        | `ORIGIN` env, else derived from `baseDomain`                                                                                                                          | Settings → General ("Dashboard URL")                                                                                        |
+| `auth.crossSubdomainCookies`                         | `false`                                                                                                                                                               | Settings → General. Unrelated to the per-app login wall, which doesn't need it                                              |
+| `authCheckUrl`                                       | `http://<app container>:<PORT>/api/v1/auth-check` when the app runs in a container on the Docker network, else `http://host.docker.internal:<PORT>/api/v1/auth-check` | Settings → General. Must be reachable _from inside the Traefik container_. Redeploy login-walled services after changing it |
+| `docker.socketPath`                                  | auto-detected                                                                                                                                                         | Settings → Docker                                                                                                           |
+| `docker.networkName`                                 | `homerun`                                                                                                                                                             | Settings → Docker                                                                                                           |
+| `traefik.entrypoint`                                 | `websecure`                                                                                                                                                           | Settings → Networking                                                                                                       |
+| `traefik.certResolver`                               | `letsencrypt`                                                                                                                                                         | Settings → Networking                                                                                                       |
+| `traefik.acmeEmail`                                  | _(unset)_                                                                                                                                                             | Settings → Networking. Informational mirror of `ACME_EMAIL`, Traefik reads the compose one                                  |
+| `traefik.dynamicConfigDir`                           | _(unset, the feature is inert until set)_                                                                                                                             | Settings → Networking, see [Custom domains & SSL](services.md#custom-domains--ssl)                                          |
+| `smtp.enabled`                                       | `false`                                                                                                                                                               | Settings → Email                                                                                                            |
+| `smtp.host`/`port`/`user`/`password`/`secure`/`from` | _(unset)_                                                                                                                                                             | Settings → Email. All required together; a partial config is treated as disabled with a warning                             |
+| `logLevel`                                           | `info`                                                                                                                                                                | _(file only)_ `debug` \| `info` \| `warn` \| `error`                                                                        |
+| `logFormat`                                          | `console`                                                                                                                                                             | _(file only)_ `console` \| `json`                                                                                           |
 
 Three things have **no file form at all** and are dashboard-only: orchestration
 mode, DNS automation (Cloudflare and Pangolin), and OAuth/OIDC sign-in

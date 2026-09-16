@@ -21,6 +21,11 @@ export class EmailService {
 	content: string;
 	transporter: Transporter<SMTPSentMessageInfo>;
 
+	/**
+	 * Builds a ready-to-send email and its nodemailer transport from instance
+	 * SMTP settings.
+	 * @throws When SMTP isn't enabled or has no `from` address configured.
+	 */
 	constructor({ to, subject, content }: EmailProps) {
 		logger.debug(`Preparing email to: ${to}, subject: ${subject}`);
 		this.to = to;
@@ -47,6 +52,7 @@ export class EmailService {
 		logger.debug("SMTP transporter created successfully");
 	}
 
+	/** Sends the email over SMTP via the configured transporter. */
 	send() {
 		logger.info(`Sending email to: ${this.to}, subject: ${this.subject}`);
 		return this.transporter.sendMail({

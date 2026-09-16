@@ -16,16 +16,16 @@ practice, and it's also the layer a future REST/CLI API would sit on top of (not
 yet built).
 
 - `service-dto.ts`, `ServiceDTO`:
-  `get`/`list`/`listByProject`/`listWithProjectNames` (joins in `project.name`
-  for the grouped services list)/`listWithProjectNamesPaged`/
+  `get`/`list`/`listByStack`/`listWithStackNames` (joins in `stack.name` for the
+  grouped services list)/`listWithStackNamesPaged`/
   `listFilterFacets`/`slugTaken`/`create`/`update`/`delete`. See Server-side
   list pagination below for the paged/faceted pair.
-- `project-dto.ts`, `ProjectDTO`:
+- `stack-dto.ts`, `StackDTO`:
   `get`/`list`/`listWithServiceCounts`/`listWithServiceCountsPaged`/`create`/
   `update`/`delete` (row-only) /`cascadeDelete()` (stops+removes every member
-  container, deletes deployments/services, deletes the project row, then removes
-  the project's Docker network, the real "delete a project" operation, see
-  `projects/[projectId]/+page.server.ts`'s `delete` action).
+  container, deletes deployments/services, deletes the stack row, then removes
+  the stack's Docker network, the real "delete a stack" operation, see
+  `stacks/[stackId]/+page.server.ts`'s `delete` action).
 - `template-dto.ts`, `TemplateDTO`: `usable(id, userId)` (built-in OR owned, for
   deploy-from-template), `owned(id, userId)` (owned only), `listForUser`,
   `listPaged(userId, "builtin" | "mine", query)`, `listCategories`, `create`.
@@ -64,6 +64,9 @@ yet built).
   `cron-job-run-dto.ts`, `CronJobRunDTO`:
   `create`/`finish`/`listForJob`/`listForUser` (joins in the job's name), one
   row per cron job attempt with its captured output. See Cron jobs below.
+- `image-scan-dto.ts`, `ImageScanDTO`: `create` (keeps the newest 25 per
+  service, pruned on every insert)/`listForService`, one row per image scan. See
+  Image scanning in the pipeline in `services-and-templates.md`.
 - `build-cache-registry-dto.ts`, `BuildCacheRegistryDTO`:
   `get`/`list`/`listPaged`/`create`/`delete`, a per-user registry credential a
   git-build pulls its `--cache-from` image from and pushes fresh layers back to,
@@ -108,9 +111,9 @@ paging through.
   why the body itself stays a plain array rather than growing an envelope.
 - Every paged DTO finder does its search/filter/count in SQL, not in memory, the
   row query and a `count()` query run in one `Promise.all`:
-  `ServiceDTO.listWithProjectNamesPaged` (+ `ServiceDTO.listFilterFacets`, every
-  distinct status/project the user actually has, so the filter pills stay stable
-  no matter which page you're on), `ProjectDTO.listWithServiceCountsPaged`,
+  `ServiceDTO.listWithStackNamesPaged` (+ `ServiceDTO.listFilterFacets`, every
+  distinct status/stack the user actually has, so the filter pills stay stable
+  no matter which page you're on), `StackDTO.listWithServiceCountsPaged`,
   `TemplateDTO.listPaged(userId, "builtin" | "mine", query)` (+
   `TemplateDTO.listCategories`), `StorageVolumeDTO.listPaged`,
   `RemoteHostDTO.listPaged`, `S3DestinationDTO.listPaged`,
@@ -143,7 +146,7 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `service`, image/tag, registry creds (`registryPasswordEnc`, AES-256-GCM),
   envVars (JSON), port/restart-policy/resource limits, `desiredState` (user
   intent) vs `currentStatus` (live reconciled Docker state), `containerId`,
-  `projectId` (nullable FK, `onDelete: "set null"`),
+  `stackId` (nullable FK, `onDelete: "set null"`),
   `cronEnabled`/`cronSchedule`/`cronLastRunAt` (opt-in scheduled redeploy, see
   below), `authRequired` + `authProviders`/`authAllowedUserIds`/
   `authAllowedEmails`/`authAllowedGroups` (the per-app login wall and its access
@@ -152,13 +155,15 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   below, `image`/`tag` hold the resolved local build tag when `buildSource` is
   `"git"`, not user-editable directly in that mode),
   `customSslCertEnc`/`customSslKeyEnc` (see Custom SSL certificates below),
-  `networkMode` (`"bridge"` default | `"host"`) + `portProtocol` (`"tcp"`
-  default | `"udp"` | `"both"`) (see Network mode below), `buildCacheRegistryId`
-  (nullable FK to `build_cache_registry`) + `buildServerRemoteHostId` (nullable
-  FK to `remote_host`, build this service's image somewhere other than where it
-  runs; `deploy.service.ts` rejects that unless a cache registry is also set,
-  since a cross-host build has no other way to hand the built image over), both
-  see Git-based builds below.
+  `requireStatusChecks` + `requiredStatusChecks` (jsonb `string[]`, git builds
+  only, see Required status checks in `services-and-templates.md`),
+  `autoRollback` (default false), `networkMode` (`"bridge"` default |
+  `"host"`) + `portProtocol` (`"tcp"` default | `"udp"` | `"both"`) (see Network
+  mode below), `buildCacheRegistryId` (nullable FK to `build_cache_registry`) +
+  `buildServerRemoteHostId` (nullable FK to `remote_host`, build this service's
+  image somewhere other than where it runs; `deploy.service.ts` rejects that
+  unless a cache registry is also set, since a cross-host build has no other way
+  to hand the built image over), both see Git-based builds below.
 - `remote_host`, a registered build server: `kind` (`"docker"` | `"agent"`),
   `dockerHost` (`tcp://...` or `ssh://...`) plus optional
   `tlsCaEnc`/`tlsCertEnc`/`tlsKeyEnc` for the former, `agentUrl`/`agentTokenEnc`
@@ -167,28 +172,45 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `deployment`, history of deploy attempts: status, image digest, error message,
   timestamps, and `log` (text, default `""`), the live-appended progress log
   described above, kept after the deploy completes as an audit trail (shown as
-  an expandable panel per row in the deployment history).
+  an expandable panel per row in the deployment history). A row that reached
+  `running`/`stopped` with an `imageRef` is a **revision** (no separate table):
+  `imageRef` (plain `image:tag`, never `@digest`), `imageDigest`, `imageId`
+  (local image id, what the cleanup keep list resolves), `buildSource`,
+  `gitCommit`/`gitRef`, `health` (`watching`/`healthy`/`unhealthy`/
+  `rolled_back`, null before the watcher existed) and `rollbackOfDeploymentId`
+  (the revision a rollback redeployed, also what makes `deployService` take the
+  `revision` plan). Migration 0038 backfilled `imageRef`/`buildSource` on each
+  service's latest running row from the service's current image. See Revisions
+  and rollback in `services-and-templates.md`.
 - `service.customDomain`, optional second hostname (unique), a second Traefik
   router sharing the primary router's backend service, see labels.ts below.
   Configured on the service's Networking tab.
-- `project`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
+- `stack`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
   member service's container name and public subdomain, see Docker integration
-  below). Every project has a matching Docker network (see below), created
+  below). Every stack has a matching Docker network (see below), created
   alongside the row and removed on cascade-delete. Account deletion covers these
-  twice over: `UserService.cleanupUserResources` removes each project's Docker
-  network and then deletes the rows explicitly, and `project.userId` is
+  twice over: `UserService.cleanupUserResources` removes each stack's Docker
+  network and then deletes the rows explicitly, and `stack.userId` is
   `onDelete: "cascade"` underneath that.
 - `stat_sample`, one point on the resource graphs: `serviceId` (null = the host
   itself), CPU%, memory, the cumulative network counters and a timestamp,
   written every minute by `StatsSampler` and read back bucketed per range. See
   Recorded resource history in `observability.md` for why it's raw samples
   rather than rollup tables.
+- `image_scan`, one row per scan of a service's image: `status` (`ok` | `failed`
+  | `skipped`), `imageRef`, `digest`, `source` (which target answered: the
+  mirror, this host, a build cache registry), `counts` jsonb per severity,
+  `findings` jsonb (top 200, most severe first), `totalFindings`, `error`,
+  nullable `deploymentId` (`set null`, null for a Scan now), `serviceId`
+  cascade. `instance_settings.imageScanEnabled` (null = on) and
+  `imageScanBlockSeverity` (null = off) plus `service.imageScanEnabled` (default
+  true) are its settings.
 - `uptime_check`, one appended row per liveness probe per tick (the heartbeat
   strips read the last 40, "now" is the newest). See Uptime probes in
   `observability.md`.
 - `status_page`, a published-or-private page grouping services: `scope`
-  (`"global"` | `"project"` | `"custom"`), nullable `projectId`, unique `slug`,
-  `isPublic`. A `global`/`project` page resolves its members **live** from
+  (`"global"` | `"stack"` | `"custom"`), nullable `stackId`, unique `slug`,
+  `isPublic`. A `global`/`stack` page resolves its members **live** from
   `service` on every read, so a newly deployed service appears without editing
   the page; only a `custom` page reads `status_page_service`. See Status pages
   in `services-and-templates.md`.
@@ -197,8 +219,10 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `notification_channel`, a destination Homerun posts lifecycle events to:
   `kind` (`"webhook"` | `"discord"` | `"email"`), `target`, `enabled`, `events`
   (jsonb `NotificationEvent[]`, DB default and DTO default
-  `["build.failed","update.failed"]`), `lastError` (the last delivery failure,
-  so a silently-broken channel is visible). Account-wide, no longer scoped to a
+  `["build.failed","build.checks_failed","update.failed","deploy.unhealthy","deploy.rolled_back"]`;
+  migration 0038 appended the three new events to existing channels already
+  subscribed to a failure event), `lastError` (the last delivery failure, so a
+  silently-broken channel is visible). Account-wide, no longer scoped to a
   status page (see Outbound notification channels in `observability.md`).
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).
@@ -246,7 +270,7 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   re-adding it and re-picking it on every service that used it.
 - `service_volume`, join table: one mount of one `storage_volume` into one
   `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by
-  being mounted into more than one service, no separate project-volume concept.
+  being mounted into more than one service, no separate stack-volume concept.
 - `instance_settings.onboardingCompletedAt`, nullable timestamp, non-null once
   the onboarding wizard (see Onboarding below) has run. Not part of the
   config-override merge in `config.ts`, it's onboarding-flow state, not an
@@ -297,7 +321,7 @@ below, SQLite's `PRAGMA foreign_keys` was intentionally left off there, making
 `onDelete` decorative for row data; Postgres has no equivalent global disable,
 so it's now a genuine DB-level safety net, not just documentation.) Explicit
 app-level cascade logic still exists and is still required,
-`ProjectDTO.cascadeDelete()` and `$lib/services/user.service.ts`'s
+`StackDTO.cascadeDelete()` and `$lib/services/user.service.ts`'s
 `UserService.cleanupUserResources()` (account deletion, see User roles &
 invitations below for why that had to be pulled out of `auth.ts`'s
 `beforeDelete` into its own method rather than left inline), because a DB
@@ -337,8 +361,8 @@ read. Any SQL-side jsonb operator (`@>`, `->`, `?`) therefore silently never
 matches. Filter in code after the select instead: a real bug where
 `NotificationChannelDTO.listSubscribed` used `@>` and no channel ever received a
 deploy notification. `seed.ts`'s `onConflictDoNothing()` is idempotent on
-Postgres the same way it was on SQLite; `ProjectDTO.cascadeDelete()`'s
-child-before-parent deletion order (deployments, then services, then the project
+Postgres the same way it was on SQLite; `StackDTO.cascadeDelete()`'s
+child-before-parent deletion order (deployments, then services, then the stack
 row) was already FK-safe by inspection, so real FK enforcement doesn't break it.
 **Not carried over automatically**: any data in a pre-conversion `database.db`,
 this was a schema/dialect switch, not a data migration; a fresh Postgres

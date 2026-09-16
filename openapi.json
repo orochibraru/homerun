@@ -21,34 +21,15 @@
 	},
 	"openapi": "3.1.0",
 	"paths": {
-		"/projects": {
+		"/jobs/{jobId}": {
 			"get": {
-				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
-				"operationId": "get_projects",
+				"operationId": "get_jobs__jobId_",
 				"parameters": [
 					{
-						"description": "1-based page number (default 1)",
-						"in": "query",
-						"name": "page",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Items per page (default 100, max 100)",
-						"in": "query",
-						"name": "perPage",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Case-insensitive search term",
-						"in": "query",
-						"name": "q",
-						"required": false,
+						"description": "Job id",
+						"in": "path",
+						"name": "jobId",
+						"required": true,
 						"schema": {
 							"type": "string"
 						}
@@ -59,123 +40,6 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"items": {
-										"additionalProperties": false,
-										"properties": {
-											"createdAt": {
-												"description": "ISO 8601 timestamp",
-												"example": "2026-08-20T12:00:00.000Z",
-												"type": "string"
-											},
-											"description": {
-												"anyOf": [
-													{
-														"type": "string"
-													},
-													{
-														"type": "null"
-													}
-												]
-											},
-											"id": {
-												"type": "string"
-											},
-											"name": {
-												"type": "string"
-											},
-											"slug": {
-												"type": "string"
-											},
-											"updatedAt": {
-												"description": "ISO 8601 timestamp",
-												"example": "2026-08-20T12:00:00.000Z",
-												"type": "string"
-											},
-											"userId": {
-												"type": "string"
-											}
-										},
-										"required": [
-											"createdAt",
-											"description",
-											"id",
-											"name",
-											"slug",
-											"updatedAt",
-											"userId"
-										],
-										"type": "object"
-									},
-									"type": "array"
-								}
-							}
-						},
-						"description": "The caller's projects"
-					},
-					"401": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"additionalProperties": false,
-									"properties": {
-										"error": {
-											"type": "string"
-										},
-										"issues": {}
-									},
-									"required": ["error"],
-									"type": "object"
-								}
-							}
-						},
-						"description": "Unauthorized"
-					}
-				},
-				"security": [
-					{
-						"apiKey": []
-					},
-					{
-						"bearerAuth": []
-					}
-				],
-				"summary": "List projects",
-				"tags": ["Projects"]
-			},
-			"post": {
-				"operationId": "post_projects",
-				"parameters": [],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"additionalProperties": false,
-								"properties": {
-									"description": {
-										"type": "string"
-									},
-									"name": {
-										"maxLength": 100,
-										"minLength": 1,
-										"type": "string"
-									},
-									"slug": {
-										"pattern": "^[a-z0-9-]{1,63}$",
-										"type": "string"
-									}
-								},
-								"required": ["name", "slug"],
-								"type": "object"
-							}
-						}
-					},
-					"required": true
-				},
-				"responses": {
-					"201": {
-						"content": {
-							"application/json": {
-								"schema": {
 									"additionalProperties": false,
 									"properties": {
 										"createdAt": {
@@ -183,9 +47,21 @@
 											"example": "2026-08-20T12:00:00.000Z",
 											"type": "string"
 										},
-										"description": {
+										"error": {
 											"anyOf": [
 												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"finishedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"example": "2026-08-20T12:00:00.000Z",
 													"type": "string"
 												},
 												{
@@ -196,53 +72,76 @@
 										"id": {
 											"type": "string"
 										},
-										"name": {
+										"result": {
+											"anyOf": [
+												{
+													"additionalProperties": {},
+													"propertyNames": {
+														"type": "string"
+													},
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"serviceId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"startedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"example": "2026-08-20T12:00:00.000Z",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"status": {
+											"enum": [
+												"queued",
+												"running",
+												"succeeded",
+												"failed",
+												"cancelled"
+											],
 											"type": "string"
 										},
-										"slug": {
+										"title": {
 											"type": "string"
 										},
-										"updatedAt": {
-											"description": "ISO 8601 timestamp",
-											"example": "2026-08-20T12:00:00.000Z",
-											"type": "string"
-										},
-										"userId": {
+										"type": {
 											"type": "string"
 										}
 									},
 									"required": [
 										"createdAt",
-										"description",
+										"error",
+										"finishedAt",
 										"id",
-										"name",
-										"slug",
-										"updatedAt",
-										"userId"
+										"result",
+										"serviceId",
+										"startedAt",
+										"status",
+										"title",
+										"type"
 									],
 									"type": "object"
 								}
 							}
 						},
-						"description": "Created"
-					},
-					"400": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"additionalProperties": false,
-									"properties": {
-										"error": {
-											"type": "string"
-										},
-										"issues": {}
-									},
-									"required": ["error"],
-									"type": "object"
-								}
-							}
-						},
-						"description": "Invalid request body"
+						"description": "The job"
 					},
 					"401": {
 						"content": {
@@ -262,7 +161,7 @@
 						},
 						"description": "Unauthorized"
 					},
-					"409": {
+					"404": {
 						"content": {
 							"application/json": {
 								"schema": {
@@ -278,7 +177,7 @@
 								}
 							}
 						},
-						"description": "Slug already in use"
+						"description": "Not found"
 					}
 				},
 				"security": [
@@ -289,8 +188,8 @@
 						"bearerAuth": []
 					}
 				],
-				"summary": "Create a project",
-				"tags": ["Projects"]
+				"summary": "Get a queued job's status",
+				"tags": ["Jobs"]
 			}
 		},
 		"/services": {
@@ -359,6 +258,10 @@
 												"type": "array"
 											},
 											"authRequired": {
+												"type": "boolean"
+											},
+											"autoRollback": {
+												"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 												"type": "boolean"
 											},
 											"buildSource": {
@@ -518,11 +421,24 @@
 													}
 												]
 											},
+											"healthcheckCommand": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"id": {
 												"type": "string"
 											},
 											"image": {
 												"type": "string"
+											},
+											"imageScanEnabled": {
+												"type": "boolean"
 											},
 											"memoryLimitMb": {
 												"anyOf": [
@@ -546,16 +462,6 @@
 											"portProtocol": {
 												"enum": ["tcp", "udp", "both"],
 												"type": "string"
-											},
-											"projectId": {
-												"anyOf": [
-													{
-														"type": "string"
-													},
-													{
-														"type": "null"
-													}
-												]
 											},
 											"registryPasswordEnc": {
 												"anyOf": [
@@ -588,6 +494,16 @@
 													}
 												]
 											},
+											"requireStatusChecks": {
+												"description": "Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+												"type": "boolean"
+											},
+											"requiredStatusChecks": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"restartPolicy": {
 												"enum": [
 													"no",
@@ -599,6 +515,16 @@
 											},
 											"slug": {
 												"type": "string"
+											},
+											"stackId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
 											},
 											"tag": {
 												"type": "string"
@@ -618,6 +544,7 @@
 											"authAllowedUserIds",
 											"authProviders",
 											"authRequired",
+											"autoRollback",
 											"buildSource",
 											"containerId",
 											"containerPort",
@@ -637,16 +564,20 @@
 											"gitDockerfilePath",
 											"gitRef",
 											"gitUrl",
+											"healthcheckCommand",
 											"id",
 											"image",
+											"imageScanEnabled",
 											"memoryLimitMb",
 											"name",
 											"networkMode",
 											"portProtocol",
-											"projectId",
+											"stackId",
 											"registryPasswordEnc",
 											"registryUrl",
 											"registryUsername",
+											"requireStatusChecks",
+											"requiredStatusChecks",
 											"restartPolicy",
 											"slug",
 											"tag",
@@ -757,9 +688,6 @@
 										"minLength": 1,
 										"type": "string"
 									},
-									"projectId": {
-										"type": "string"
-									},
 									"pullPolicy": {
 										"default": "always",
 										"enum": ["always", "missing", "never"],
@@ -781,6 +709,9 @@
 									},
 									"slug": {
 										"pattern": "^[a-z0-9-]{1,63}$",
+										"type": "string"
+									},
+									"stackId": {
 										"type": "string"
 									},
 									"tag": {
@@ -837,6 +768,10 @@
 											"type": "array"
 										},
 										"authRequired": {
+											"type": "boolean"
+										},
+										"autoRollback": {
+											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 											"type": "boolean"
 										},
 										"buildSource": {
@@ -996,11 +931,24 @@
 												}
 											]
 										},
+										"healthcheckCommand": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"id": {
 											"type": "string"
 										},
 										"image": {
 											"type": "string"
+										},
+										"imageScanEnabled": {
+											"type": "boolean"
 										},
 										"memoryLimitMb": {
 											"anyOf": [
@@ -1024,16 +972,6 @@
 										"portProtocol": {
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
-										},
-										"projectId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -1066,12 +1004,32 @@
 												}
 											]
 										},
+										"requireStatusChecks": {
+											"description": "Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+											"type": "boolean"
+										},
+										"requiredStatusChecks": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
 										"slug": {
 											"type": "string"
+										},
+										"stackId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"tag": {
 											"type": "string"
@@ -1091,6 +1049,7 @@
 										"authAllowedUserIds",
 										"authProviders",
 										"authRequired",
+										"autoRollback",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -1110,16 +1069,20 @@
 										"gitDockerfilePath",
 										"gitRef",
 										"gitUrl",
+										"healthcheckCommand",
 										"id",
 										"image",
+										"imageScanEnabled",
 										"memoryLimitMb",
 										"name",
 										"networkMode",
 										"portProtocol",
-										"projectId",
+										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
+										"requireStatusChecks",
+										"requiredStatusChecks",
 										"restartPolicy",
 										"slug",
 										"tag",
@@ -1313,6 +1276,10 @@
 										"authRequired": {
 											"type": "boolean"
 										},
+										"autoRollback": {
+											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
+											"type": "boolean"
+										},
 										"buildSource": {
 											"enum": ["image", "git"],
 											"type": "string"
@@ -1470,11 +1437,24 @@
 												}
 											]
 										},
+										"healthcheckCommand": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"id": {
 											"type": "string"
 										},
 										"image": {
 											"type": "string"
+										},
+										"imageScanEnabled": {
+											"type": "boolean"
 										},
 										"memoryLimitMb": {
 											"anyOf": [
@@ -1498,16 +1478,6 @@
 										"portProtocol": {
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
-										},
-										"projectId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -1540,12 +1510,32 @@
 												}
 											]
 										},
+										"requireStatusChecks": {
+											"description": "Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+											"type": "boolean"
+										},
+										"requiredStatusChecks": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
 										"slug": {
 											"type": "string"
+										},
+										"stackId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"tag": {
 											"type": "string"
@@ -1565,6 +1555,7 @@
 										"authAllowedUserIds",
 										"authProviders",
 										"authRequired",
+										"autoRollback",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -1584,16 +1575,20 @@
 										"gitDockerfilePath",
 										"gitRef",
 										"gitUrl",
+										"healthcheckCommand",
 										"id",
 										"image",
+										"imageScanEnabled",
 										"memoryLimitMb",
 										"name",
 										"networkMode",
 										"portProtocol",
-										"projectId",
+										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
+										"requireStatusChecks",
+										"requiredStatusChecks",
 										"restartPolicy",
 										"slug",
 										"tag",
@@ -1674,6 +1669,9 @@
 								"additionalProperties": false,
 								"properties": {
 									"authRequired": {
+										"type": "boolean"
+									},
+									"autoRollback": {
 										"type": "boolean"
 									},
 									"buildSource": {
@@ -1757,9 +1755,23 @@
 											}
 										]
 									},
+									"healthcheckCommand": {
+										"anyOf": [
+											{
+												"maxLength": 1000,
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
 									"image": {
 										"minLength": 1,
 										"type": "string"
+									},
+									"imageScanEnabled": {
+										"type": "boolean"
 									},
 									"memoryLimitMb": {
 										"anyOf": [
@@ -1804,6 +1816,18 @@
 												"type": "null"
 											}
 										]
+									},
+									"requireStatusChecks": {
+										"type": "boolean"
+									},
+									"requiredStatusChecks": {
+										"items": {
+											"maxLength": 200,
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
 									},
 									"restartPolicy": {
 										"enum": ["no", "always", "on-failure", "unless-stopped"],
@@ -1852,6 +1876,10 @@
 											"type": "array"
 										},
 										"authRequired": {
+											"type": "boolean"
+										},
+										"autoRollback": {
+											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 											"type": "boolean"
 										},
 										"buildSource": {
@@ -2011,11 +2039,24 @@
 												}
 											]
 										},
+										"healthcheckCommand": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"id": {
 											"type": "string"
 										},
 										"image": {
 											"type": "string"
+										},
+										"imageScanEnabled": {
+											"type": "boolean"
 										},
 										"memoryLimitMb": {
 											"anyOf": [
@@ -2039,16 +2080,6 @@
 										"portProtocol": {
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
-										},
-										"projectId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -2081,12 +2112,32 @@
 												}
 											]
 										},
+										"requireStatusChecks": {
+											"description": "Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+											"type": "boolean"
+										},
+										"requiredStatusChecks": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
 										},
 										"slug": {
 											"type": "string"
+										},
+										"stackId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"tag": {
 											"type": "string"
@@ -2106,6 +2157,7 @@
 										"authAllowedUserIds",
 										"authProviders",
 										"authRequired",
+										"autoRollback",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -2125,16 +2177,20 @@
 										"gitDockerfilePath",
 										"gitRef",
 										"gitUrl",
+										"healthcheckCommand",
 										"id",
 										"image",
+										"imageScanEnabled",
 										"memoryLimitMb",
 										"name",
 										"networkMode",
 										"portProtocol",
-										"projectId",
+										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
+										"requireStatusChecks",
+										"requiredStatusChecks",
 										"restartPolicy",
 										"slug",
 										"tag",
@@ -2430,6 +2486,1227 @@
 				"tags": ["Services"]
 			}
 		},
+		"/services/{serviceId}/revisions": {
+			"get": {
+				"description": "Newest first, at most 50: every deploy that reached running, with the exact image it ran. current marks the one running now, previous the default rollback target.",
+				"operationId": "get_services__serviceId__revisions",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"buildSource": {
+												"anyOf": [
+													{
+														"enum": ["image", "git"],
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"current": {
+												"description": "The revision running now",
+												"type": "boolean"
+											},
+											"finishedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"example": "2026-08-20T12:00:00.000Z",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitCommit": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitRef": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"health": {
+												"anyOf": [
+													{
+														"enum": [
+															"watching",
+															"healthy",
+															"unhealthy",
+															"rolled_back"
+														],
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "null = recorded before health watching existed"
+											},
+											"id": {
+												"type": "string"
+											},
+											"imageDigest": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"imageId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"imageRef": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"previous": {
+												"description": "The default rollback target: the newest older healthy revision with a different image",
+												"type": "boolean"
+											},
+											"retained": {
+												"description": "Among the last 5 distinct images kept on the host and in the mirror",
+												"type": "boolean"
+											},
+											"rollbackOfDeploymentId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Set when this revision redeployed an older one"
+											},
+											"status": {
+												"enum": [
+													"pending",
+													"pulling",
+													"starting",
+													"running",
+													"stopped",
+													"failed",
+													"missing"
+												],
+												"type": "string"
+											}
+										},
+										"required": [
+											"buildSource",
+											"createdAt",
+											"current",
+											"finishedAt",
+											"gitCommit",
+											"gitRef",
+											"health",
+											"id",
+											"imageDigest",
+											"imageId",
+											"imageRef",
+											"previous",
+											"retained",
+											"rollbackOfDeploymentId",
+											"status"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The service's revisions"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's revisions",
+				"tags": ["Revisions"]
+			}
+		},
+		"/services/{serviceId}/revisions/{revisionId}/deploy": {
+			"post": {
+				"description": "Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target.",
+				"operationId": "post_services__serviceId__revisions__revisionId__deploy",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Revision (deployment) id, or previous",
+						"in": "path",
+						"name": "revisionId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"containerId": {
+											"type": "string"
+										},
+										"deploymentId": {
+											"type": "string"
+										},
+										"error": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["deploymentId", "success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Deploy finished"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No previous revision to roll back to"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"containerId": {
+											"type": "string"
+										},
+										"deploymentId": {
+											"type": "string"
+										},
+										"error": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["deploymentId", "success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Deploy failed"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Deploy a revision (roll back)",
+				"tags": ["Revisions"]
+			}
+		},
+		"/services/{serviceId}/scans": {
+			"get": {
+				"description": "Newest first, without findings. Paginated like the other lists: the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers. q matches the image ref, digest, status or source.",
+				"operationId": "get_services__serviceId__scans",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 100)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"counts": {
+												"additionalProperties": false,
+												"properties": {
+													"critical": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"high": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"low": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"medium": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"unknown": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													}
+												},
+												"required": [
+													"critical",
+													"high",
+													"low",
+													"medium",
+													"unknown"
+												],
+												"type": "object"
+											},
+											"deploymentId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "null = scanned on demand, not during a deploy"
+											},
+											"digest": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"error": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Why a failed or skipped scan has no findings"
+											},
+											"id": {
+												"type": "string"
+											},
+											"imageRef": {
+												"type": "string"
+											},
+											"scannedAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"serviceId": {
+												"type": "string"
+											},
+											"source": {
+												"type": "string"
+											},
+											"status": {
+												"enum": ["ok", "failed", "skipped"],
+												"type": "string"
+											},
+											"totalFindings": {
+												"description": "Every unique finding, including those beyond the stored findings cap",
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											}
+										},
+										"required": [
+											"counts",
+											"deploymentId",
+											"digest",
+											"error",
+											"id",
+											"imageRef",
+											"scannedAt",
+											"serviceId",
+											"source",
+											"status",
+											"totalFindings"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The service's image scans"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's image scans",
+				"tags": ["Image scans"]
+			},
+			"post": {
+				"description": "Queues a scan of the service's deployed image. Poll GET /jobs/{jobId} until it finishes, then read GET /services/{serviceId}/scans/latest.",
+				"operationId": "post_services__serviceId__scans",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"jobId": {
+											"type": "string"
+										},
+										"status": {
+											"enum": [
+												"queued",
+												"running",
+												"succeeded",
+												"failed",
+												"cancelled"
+											],
+											"type": "string"
+										}
+									},
+									"required": ["jobId", "status"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Scan queued"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not deployed yet"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"jobId": {
+											"description": "The scan job already in flight",
+											"type": "string"
+										}
+									},
+									"required": ["error", "jobId"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "A scan is already queued or running"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Scan a service's deployed image",
+				"tags": ["Image scans"]
+			}
+		},
+		"/services/{serviceId}/scans/latest": {
+			"get": {
+				"operationId": "get_services__serviceId__scans_latest",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"counts": {
+											"additionalProperties": false,
+											"properties": {
+												"critical": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"high": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"low": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"medium": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"unknown": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												}
+											},
+											"required": [
+												"critical",
+												"high",
+												"low",
+												"medium",
+												"unknown"
+											],
+											"type": "object"
+										},
+										"deploymentId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "null = scanned on demand, not during a deploy"
+										},
+										"digest": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"error": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Why a failed or skipped scan has no findings"
+										},
+										"findings": {
+											"description": "Sorted most severe first, capped at 200 : totalFindings has the real count",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"fixedVersion": {
+														"anyOf": [
+															{
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"id": {
+														"type": "string"
+													},
+													"installedVersion": {
+														"type": "string"
+													},
+													"pkg": {
+														"type": "string"
+													},
+													"severity": {
+														"enum": [
+															"CRITICAL",
+															"HIGH",
+															"MEDIUM",
+															"LOW",
+															"UNKNOWN"
+														],
+														"type": "string"
+													},
+													"title": {
+														"anyOf": [
+															{
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													}
+												},
+												"required": [
+													"fixedVersion",
+													"id",
+													"installedVersion",
+													"pkg",
+													"severity",
+													"title"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"id": {
+											"type": "string"
+										},
+										"imageRef": {
+											"type": "string"
+										},
+										"scannedAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"serviceId": {
+											"type": "string"
+										},
+										"source": {
+											"type": "string"
+										},
+										"status": {
+											"enum": ["ok", "failed", "skipped"],
+											"type": "string"
+										},
+										"totalFindings": {
+											"description": "Every unique finding, including those beyond the stored findings cap",
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										}
+									},
+									"required": [
+										"counts",
+										"deploymentId",
+										"digest",
+										"error",
+										"id",
+										"imageRef",
+										"scannedAt",
+										"serviceId",
+										"source",
+										"status",
+										"totalFindings",
+										"findings"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The newest scan"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found, or never scanned"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a service's latest image scan, with findings",
+				"tags": ["Image scans"]
+			}
+		},
+		"/services/{serviceId}/scans/{scanId}": {
+			"get": {
+				"operationId": "get_services__serviceId__scans__scanId_",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Scan id",
+						"in": "path",
+						"name": "scanId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"counts": {
+											"additionalProperties": false,
+											"properties": {
+												"critical": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"high": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"low": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"medium": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"unknown": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												}
+											},
+											"required": [
+												"critical",
+												"high",
+												"low",
+												"medium",
+												"unknown"
+											],
+											"type": "object"
+										},
+										"deploymentId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "null = scanned on demand, not during a deploy"
+										},
+										"digest": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"error": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Why a failed or skipped scan has no findings"
+										},
+										"findings": {
+											"description": "Sorted most severe first, capped at 200 : totalFindings has the real count",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"fixedVersion": {
+														"anyOf": [
+															{
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"id": {
+														"type": "string"
+													},
+													"installedVersion": {
+														"type": "string"
+													},
+													"pkg": {
+														"type": "string"
+													},
+													"severity": {
+														"enum": [
+															"CRITICAL",
+															"HIGH",
+															"MEDIUM",
+															"LOW",
+															"UNKNOWN"
+														],
+														"type": "string"
+													},
+													"title": {
+														"anyOf": [
+															{
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													}
+												},
+												"required": [
+													"fixedVersion",
+													"id",
+													"installedVersion",
+													"pkg",
+													"severity",
+													"title"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"id": {
+											"type": "string"
+										},
+										"imageRef": {
+											"type": "string"
+										},
+										"scannedAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"serviceId": {
+											"type": "string"
+										},
+										"source": {
+											"type": "string"
+										},
+										"status": {
+											"enum": ["ok", "failed", "skipped"],
+											"type": "string"
+										},
+										"totalFindings": {
+											"description": "Every unique finding, including those beyond the stored findings cap",
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										}
+									},
+									"required": [
+										"counts",
+										"deploymentId",
+										"digest",
+										"error",
+										"id",
+										"imageRef",
+										"scannedAt",
+										"serviceId",
+										"source",
+										"status",
+										"totalFindings",
+										"findings"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The scan"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get an image scan, with findings",
+				"tags": ["Image scans"]
+			}
+		},
 		"/services/{serviceId}/start": {
 			"post": {
 				"operationId": "post_services__serviceId__start",
@@ -2626,6 +3903,278 @@
 				],
 				"summary": "Stop a service's container",
 				"tags": ["Services"]
+			}
+		},
+		"/stacks": {
+			"get": {
+				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
+				"operationId": "get_stacks",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 100)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"description": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"id": {
+												"type": "string"
+											},
+											"name": {
+												"type": "string"
+											},
+											"slug": {
+												"type": "string"
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"userId": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"createdAt",
+											"description",
+											"id",
+											"name",
+											"slug",
+											"updatedAt",
+											"userId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The caller's stacks"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List stacks",
+				"tags": ["Stacks"]
+			},
+			"post": {
+				"operationId": "post_stacks",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"description": {
+										"type": "string"
+									},
+									"name": {
+										"maxLength": 100,
+										"minLength": 1,
+										"type": "string"
+									},
+									"slug": {
+										"pattern": "^[a-z0-9-]{1,63}$",
+										"type": "string"
+									}
+								},
+								"required": ["name", "slug"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"description": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"slug": {
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"userId": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"createdAt",
+										"description",
+										"id",
+										"name",
+										"slug",
+										"updatedAt",
+										"userId"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Created"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid request body"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Slug already in use"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Create a stack",
+				"tags": ["Stacks"]
 			}
 		},
 		"/system-stats": {

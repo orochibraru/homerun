@@ -24,6 +24,7 @@ export interface GpuStats {
 
 const DF_LINE_RE = /\s+/;
 
+/** Disk usage of the filesystem containing the app's working directory, via `df`. Returns nulls (rather than throwing) if `df`'s output can't be parsed. */
 async function getDiskUsage(): Promise<{
 	totalGb: number | null;
 	usedGb: number | null;
@@ -92,6 +93,7 @@ class SystemStatsServiceClass {
 	// OOP-correct place for that state to live.
 	#lastCpuSample: CpuSample | null = null;
 
+	/** Sums idle and total CPU time across all cores since boot, per `os.cpus()`'s cumulative counters. */
 	#sampleCpuTimes(): CpuSample {
 		const cpus = os.cpus();
 		let idle = 0;
@@ -108,6 +110,7 @@ class SystemStatsServiceClass {
 		return { idle, total };
 	}
 
+	/** CPU% since the previous call, diffing against `#lastCpuSample`. Returns 0 on the first call (no prior sample to diff against) or if the sampling window is degenerate. */
 	#getCpuPercent(): number {
 		const sample = this.#sampleCpuTimes();
 		if (!this.#lastCpuSample) {
@@ -123,6 +126,7 @@ class SystemStatsServiceClass {
 		return Math.max(0, Math.min(100, 100 * (1 - idleDelta / totalDelta)));
 	}
 
+	/** Current host CPU/RAM/disk/GPU snapshot, run for the dashboard's Host Resources panel and the stats sampler. CPU% is stateful, see `#lastCpuSample`. */
 	async getSystemStats(): Promise<SystemStats> {
 		const [disk, gpu] = await Promise.all([getDiskUsage(), getGpuStats()]);
 		const memTotalMb = os.totalmem() / 1024 / 1024;

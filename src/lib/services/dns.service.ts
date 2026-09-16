@@ -28,11 +28,12 @@ const providers = [
 	},
 ];
 
+/** The public hostname a service resolves at: `<stackSlug->slug|slug>.<baseDomain>`. */
 export function serviceHostname(
 	slug: string,
-	projectSlug: string | null | undefined,
+	stackSlug: string | null | undefined,
 ): string {
-	const host = projectSlug ? `${projectSlug}-${slug}` : slug;
+	const host = stackSlug ? `${stackSlug}-${slug}` : slug;
 	return `${host}.${config.baseDomain}`;
 }
 
@@ -72,6 +73,7 @@ async function fanOut(
 	return results.filter((result): result is DnsSyncResult => result !== null);
 }
 
+/** Syncs a DNS/routing record for each hostname across every configured provider (see `fanOut`). */
 export function syncDns(
 	hostnames: string[],
 	opts: DnsSyncOptions = {},
@@ -79,10 +81,17 @@ export function syncDns(
 	return fanOut("sync", hostnames, opts);
 }
 
+/** Deletes a DNS/routing record for each hostname across every configured provider (see `fanOut`). */
 export function deleteDns(hostnames: string[]): Promise<DnsSyncResult[]> {
 	return fanOut("delete", hostnames);
 }
 
+/**
+ * Syncs the dashboard's own hostname (derived from the configured auth
+ * origin) to any configured provider, skipping a bare IP or a hostname
+ * without a dot (nothing meaningful to route). Logs the outcome per
+ * provider rather than returning it, since nothing awaits this call.
+ */
 export async function syncDashboardDns(): Promise<void> {
 	const host = dashboardHostFrom(config.auth.origin ?? null);
 	if (!host?.includes(".") || IPV4_RE.test(host)) {

@@ -40,6 +40,10 @@ function createDb(): BunSQLDatabase<Record<string, never>> {
 export const db = createDb();
 
 // For backward compatibility and proper singleton access
+/**
+ * The shared Drizzle instance, recreating it (and its connection pool) if
+ * `resetDb` cleared it.
+ */
 export function getDb() {
 	// If instance was reset, recreate it
 	if (!globalForDb.__db_instance) {

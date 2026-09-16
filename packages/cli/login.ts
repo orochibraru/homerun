@@ -120,6 +120,7 @@ class CliLoginFlow {
 		Output.fail("Timed out waiting for approval. Run `homerun login` again.");
 	}
 
+	/** Deletes the stored config file, forgetting the API key locally. The key itself is not revoked on the server. */
 	logout(): void {
 		const existing = ConfigStore.readStoredConfig();
 		if (!existing) {

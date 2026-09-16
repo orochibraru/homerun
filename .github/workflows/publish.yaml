@@ -134,6 +134,7 @@ jobs:
       - code_quality
       - version
     with:
+      app_version: ${{ needs.version.outputs.version }}
       image_tag: ${{ needs.version.outputs.tag }}
       image_name: orochibraru/homerun
       registry_name: docker.io
@@ -218,16 +219,23 @@ jobs:
           username: orochibraru
           password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
       - name: Tag the tested images
         env:
           PR: ${{ needs.resolve.outputs.pr }}
           TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
           set -euo pipefail
-          for image in docker.io/orochibraru/homerun docker.io/orochibraru/homerun-agent; do
-            docker buildx imagetools create -t "$image:$TAG" -t "$image:latest" "$image:pr-$PR"
-            docker buildx imagetools inspect "$image:$TAG"
-          done
+          app=docker.io/orochibraru/homerun
+          printf 'FROM %s:pr-%s\nENV HOMERUN_APP_VERSION=%s\n' "$app" "$PR" "$VERSION" \
+            | docker buildx build --platform linux/amd64,linux/arm64 -t "$app:$TAG" -t "$app:latest" --push -
+          docker buildx imagetools inspect "$app:$TAG"
+          agent=docker.io/orochibraru/homerun-agent
+          docker buildx imagetools create -t "$agent:$TAG" -t "$agent:latest" "$agent:pr-$PR"
+          docker buildx imagetools inspect "$agent:$TAG"
 
   cleanup:
     name: PR Cleanup

@@ -41,6 +41,14 @@ function validate(
 	return null;
 }
 
+/**
+ * Validates a submitted cron job form and normalises it into DTO-ready fields :
+ * trims text, drops fields that don't apply to the job's kind, encrypts the
+ * registry password and defaults the tag and timeout.
+ *
+ * @param options.isAdmin Only admins may create host command (exec) jobs.
+ * @returns The parsed fields, or the first validation error message.
+ */
 export function parseCronJobForm(
 	formData: FormData,
 	options: { isAdmin: boolean },

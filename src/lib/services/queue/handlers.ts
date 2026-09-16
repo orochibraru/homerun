@@ -1,8 +1,8 @@
 import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import type { JobDTO } from "$lib/dto/job-dto";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import type { JobType } from "$lib/types";
 import { CronJobService } from "../cron-job.service.ts";
@@ -12,6 +12,12 @@ import {
 	type PruneSummary,
 	type SystemPruneSummary,
 } from "../docker.service.ts";
+import {
+	ImageMirrorGcService,
+	type MirrorGcResult,
+} from "../image-mirror-gc.service.ts";
+import { ImageScanService } from "../image-scan.service.ts";
+import { RevisionService } from "../revision.service.ts";
 import { S3BackupService } from "../s3-backup.service.ts";
 import {
 	backupJobPayload,
@@ -19,11 +25,18 @@ import {
 	type DockerCleanupAction,
 	deployJobPayload,
 	dockerCleanupJobPayload,
+	imageScanJobPayload,
 } from "./payloads.ts";
 
 export type JobResult = Record<string, unknown> | null;
 type JobHandler = (job: JobDTO) => Promise<JobResult>;
 
+/**
+ * Deploy job handler: re-fetches the service (failing the deployment record
+ * if it was deleted since the job was queued) and runs
+ * `DeploymentService.deployService`, throwing on failure so the worker's
+ * retry/failure bookkeeping applies.
+ */
 async function runDeploy(entry: JobDTO): Promise<JobResult> {
 	const { deploymentId, serviceId, trigger, userId } = deployJobPayload.parse(
 		entry.payload,
@@ -81,9 +94,19 @@ async function runCronJob(entry: JobDTO): Promise<JobResult> {
 	return { exitCode: outcome.exitCode };
 }
 
-async function reclaimProjectNetworks(): Promise<PruneSummary> {
-	const reclaimed = await DockerService.reclaimOrphanProjectNetworks(
-		await ProjectDTO.allIds(),
+async function runImageScan(entry: JobDTO): Promise<JobResult> {
+	const { serviceId, userId } = imageScanJobPayload.parse(entry.payload);
+	const svc = await ServiceDTO.get(serviceId, userId);
+	if (!svc) {
+		throw new Error("The service was deleted before its scan ran.");
+	}
+	const summary = await ImageScanService.scanDeployed(svc);
+	return { ...summary.counts, totalFindings: summary.totalFindings };
+}
+
+async function reclaimStackNetworks(): Promise<PruneSummary> {
+	const reclaimed = await DockerService.reclaimOrphanStackNetworks(
+		await StackDTO.allIds(),
 	);
 	return {
 		itemsDeleted: reclaimed.removed.length,
@@ -91,23 +114,31 @@ async function reclaimProjectNetworks(): Promise<PruneSummary> {
 	};
 }
 
-function cleanupRunner(
+/** Dispatches a Docker-cleanup job to the matching `DockerService`/`ImageMirrorGcService`/`RevisionService` call for its `action`. */
+async function cleanupRunner(
 	action: DockerCleanupAction,
 	all: boolean,
-): Promise<PruneSummary | SystemPruneSummary> {
+): Promise<MirrorGcResult | PruneSummary | SystemPruneSummary> {
 	switch (action) {
-		case "reclaimProjectNetworks":
-			return reclaimProjectNetworks();
+		case "reclaimStackNetworks":
+			return reclaimStackNetworks();
 		case "pruneBuildCache":
 			return DockerService.pruneBuildCache();
 		case "pruneContainers":
 			return DockerService.pruneContainers();
 		case "pruneImages":
-			return DockerService.pruneImages(all);
+			return DockerService.pruneImages(
+				all,
+				await RevisionService.retainedImageIds(),
+			);
+		case "pruneMirror":
+			return ImageMirrorGcService.collect();
 		case "pruneNetworks":
 			return DockerService.pruneNetworks();
 		case "pruneSystem":
-			return DockerService.pruneSystem();
+			return DockerService.pruneSystem(
+				await RevisionService.retainedImageIds(),
+			);
 		default:
 			return DockerService.pruneVolumes();
 	}
@@ -123,4 +154,5 @@ export const jobHandlers: Record<JobType, JobHandler> = {
 	cron_job: runCronJob,
 	deploy: runDeploy,
 	docker_cleanup: runDockerCleanup,
+	image_scan: runImageScan,
 };

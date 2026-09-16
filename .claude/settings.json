@@ -33,6 +33,12 @@
 						"command": "prek run",
 						"timeout": 90,
 						"statusMessage": "Running status checks..."
+					},
+					{
+						"type": "command",
+						"command": "bun run test:e2e",
+						"timeout": 12000,
+						"statusMessage": "Running e2e tests..."
 					}
 				]
 			}

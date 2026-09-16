@@ -12,10 +12,10 @@ A right-click on a service row offers **Link to…** and **group/ungroup**
 (`services/+page.server.ts`'s `link` and `group` actions). Linking writes the
 target's connection variables into the source's env — the same `buildLinkEnv`
 output the wizard's link picker produces, so a URL, a JDBC URL or separate vars
-depending on the target's image — and optionally puts both on one project
-network, since two services only reach each other by slug once they share one.
-It moves them into whichever project either is already in, and creates one named
-after the source otherwise.
+depending on the target's image — and optionally puts both on one stack network,
+since two services only reach each other by slug once they share one. It moves
+them into whichever stack either is already in, and creates one named after the
+source otherwise.
 
 ## Where creating something lands you
 
@@ -24,7 +24,7 @@ Every create path ends on the thing it just made, not on a list: the wizard's
 and a template's **Quick Deploy** does the same from both the catalog and the
 template's own detail page. The one exception is a create that produced
 _companions_ (a template pulling in its linked services, see Template links
-below): those land on `/projects/<id>`, where all of them are visible together,
+below): those land on `/stacks/<id>`, where all of them are visible together,
 which is the only view that shows the whole thing that was just created. The
 catalog's Quick Deploy used to return an `href` and offer a "View" button on its
 toast instead; the redirect now happens server-side, the same way the detail
@@ -35,15 +35,216 @@ page always did.
 `DeploymentService.deployService(svc, userId, clientDeploymentId?)` is the one
 pull-or-build→create-container→start implementation, used by the service
 Overview page's `deploy` action, `POST /api/v1/services/[serviceId]/deploy`, and
-the cron redeploy scheduler (below). Branches on `svc.buildSource` right at the
-top: `"image"` pulls as before; `"git"` calls `DockerService.buildFromGit()`
-(below) and overwrites `svc.image`/`svc.tag` with the resulting local tag
-_before_ `createAndStartContainer` runs, so the container step never needs to
-know which path produced the image. Returns
+the cron redeploy scheduler (below). Returns
 `{success, deploymentId, containerId?, error?}` rather than throwing, callers
 decide how to surface failure (a SvelteKit `fail()`, a JSON error body, a
 scheduler log line). Don't reimplement this inline in a new call site; extend
 the shared method instead.
+
+**The legal combinations are a union, resolved once up front.** The first thing
+the pipeline does (the `config` phase, before volumes, pulls, builds or any
+Docker call) is `#loadDeployPlan`: it loads the instance's `orchestrationMode`,
+the cache registry row and the build server target, then hands plain data to
+`resolveDeployPlan()` in `src/lib/services/deploy/plan.ts`, a pure function
+(covered by `tests/unit/app/deploy-plan.test.ts`) returning a `DeployPlan`:
+
+- `image: ImagePlan`, one of `pull` (`svc.image`/`tag`/`pullPolicy`),
+  `local-build` (optional cache registry as a layer cache), `docker-build` (a
+  remote Docker build server, registry required) or `agent-build` (an agent
+  build server, registry required), or `revision` (a rollback, see Revisions and
+  rollback below). Every git variant carries the `GitSource`
+  (url/ref/context/Dockerfile) with `gitUrl` already non-null.
+- `workload: WorkloadPlan`, either `container` (carries `networkMode`) or
+  `swarm` (carries `replicas`).
+
+Illegal combinations throw a `DeployPlanError` there, so they fail the
+deployment with a clear message before anything happens: a git service without a
+URL, an image service without an image, a build server without a cache registry
+or that didn't resolve, and host networking under swarm (swarm services only
+join the overlay, this used to be silently dropped). Leftover
+`buildServerRemoteHostId`/`buildCacheRegistryId` on an image-source service are
+ignored and never loaded. Each pipeline step (`#resolveImage`, `#buildGitImage`,
+`#startWorkload`) is a `switch` over the variant's `kind` with a
+`default: return unreachable(plan)` (`never`) arm, so adding a variant is a type
+error until every step handles it. This exists because the old shape branched on
+`buildSource` × build target kind × `orchestrationMode` inline and rejected bad
+combinations with a `throw` deep in the pipeline (the old remote-deploy-target +
+swarm check only ran after the image was already built or pulled). Add a new
+axis or combination to the union, not an `if` in a step.
+
+A git build writes the resulting ref back to `svc.image`/`svc.tag` _before_ the
+workload starts, so the container step never needs to know which path produced
+the image; a cross-host build (`docker-build`/`agent-build`) pushes to
+`<registry>/homerun-build-<slug>:<tag>` and pulls that published ref back onto
+this host first.
+
+## Required status checks (`$lib/status-checks.ts`, `StatusCheckService`, `deploy/status-check-step.ts`)
+
+`service.requireStatusChecks` + `requiredStatusChecks` gate a git build. In
+`#resolveImage`, before `#buildGitImage`, `enforceStatusChecks` resolves the
+branch to a SHA through the provider API, logs it, writes `gitCommit`/`gitRef`
+on the deployment and runs `waitForChecks`. Everything provider-shaped is pure
+in `$lib/status-checks.ts`, covered by `tests/unit/app/status-checks.test.ts`
+with a fake fetch: `repoPathFromGitUrl` (https, scp-style, nested GitLab groups,
+a self-hosted base path), `providerApiBase` (also what `git-provider.service.ts`
+`endpoints()` uses now), the per-provider paths (`commitsPath`, `checkSources`)
+and mappers into `CheckResult {name, state: pending|success|failure}`, and
+`StatusCheckClient` (fetch injectable, like `MirrorRegistryClient`).
+
+- GitHub: `commits?sha=<ref>&per_page=1` for the SHA, then check runs
+  (`filter=latest`; not completed is pending, `success`/`neutral`/`skipped`
+  pass, anything else fails) merged with the combined commit status.
+- GitLab: project path URL-encoded, commit job statuses (`all=false`, latest per
+  name; an `allow_failure` failure and an allowed manual job pass, other manual
+  jobs stay pending) plus the latest pipeline for the SHA as a check named
+  `pipeline`.
+- Gitea/Forgejo: `commits?sha=<ref>&limit=1`, then the combined status
+  (`warning` passes), already one row per context.
+- Bitbucket: `commits/<ref>?pagelen=1`, statuses keyed by `key` (not `name`,
+  which Pipelines rewrites per run), `STOPPED` fails.
+
+`mergeChecks` keeps the most pessimistic state for a name reported twice.
+`evaluateChecks(required, results, graceExpired)` fails on any failed required
+check, waits on pending ones, and treats a required check with no result as
+pending until everything else on the commit has finished **and**
+`STATUS_CHECK_GRACE_MS` (3 min) passed, then as failed. `waitForChecks` polls
+every 20s for up to 30 min (clock and sleep injectable), logs only when the
+summary changes, retries transient API errors, rethrows permanent ones
+(`StatusCheckApiError.permanent`: 401/403/404/422), and stops when `isCancelled`
+sees the deployment row `failed`/`stopped` or the service gone.
+
+Any failure throws `StatusChecksFailedError`, which `#recordFailure` recognises:
+the service status is re-synced from Docker instead of being set to `failed`
+(the previous revision is still running, untouched), and
+`notifyStatusChecksFailed` sends `build_checks_failed` + `build.checks_failed`
+instead of the generic build failure (nothing on cancellation). Credentials
+(`StatusCheckService.targetFor`): the provider configured for the URL's host
+plus the service owner's connection, else a token embedded in the clone URL,
+else unauthenticated for a well-known host (`inferProviderKind`). The checked
+SHA goes to `buildFromGit` as `commit`: when the shallow clone's HEAD differs (a
+push landed while waiting), `#checkoutCommit` runs
+`git fetch --depth 1 origin <sha>` and `checkout --detach` in the workspace, so
+the build is the checked commit or fails. Agent builds can't be pinned and say
+so in the log.
+
+The Source tab's picker (`status-check-picker.svelte`) loads names through
+`listStatusCheckNames` (`$lib/remote/status-checks.remote.ts`, distinct names
+over the last 5 commits of the branch) as a one-shot `$state` promise and posts
+the selection as repeated `requiredStatusChecks` hidden inputs, read with
+`formData.getAll` since the route's zod parse goes through `Object.fromEntries`.
+**Verified live**, read-only: github.com/orochibraru/homerun unauthenticated
+(real check-run names, a HEAD commit with no checks yet) and a Forgejo instance
+answering 403 without a token (a permanent error). **Not verified**: GitLab and
+Bitbucket against real instances, and a full deploy blocked by a real failing
+check.
+
+## Revisions and rollback (`$lib/revisions.ts`, `RevisionService`, `RevisionHealthService`, `deploy/revision-step.ts`)
+
+A revision is a `deployment` row (see `data-and-config.md`), recorded by
+`#recordSuccess`: `imageRef` from the resolved `image:tag` with any `@digest`
+split off into `imageDigest`, `imageId` from inspecting the run ref, and
+`health: "watching"`. Pure logic in `$lib/revisions.ts`, covered by
+`tests/unit/app/revisions.test.ts`: `previousRevision` (newest older revision
+whose image key, `imageId` then digest then ref, differs from the current one,
+skipping `unhealthy`/`rolled_back`), `retainedRevisions` (newest 5 distinct
+images per service), `revisionImageRefs` (what the Docker keep list resolves)
+and `healthVerdict`.
+
+**Rollback** is `enqueueDeploy({rollbackOfDeploymentId})`: the row carries the
+target, the job is deduped on `rollback:<id>` (so it never coalesces into a
+queued normal deploy), and `deployService` turns the row into a `RevisionSource`
+for `resolveDeployPlan`, whose `revision` input short-circuits to the `revision`
+image variant (no git URL check, no cache registry or build server load).
+`resolveRevisionImage` skips build, upstream pull and scan: with a digest it
+runs `image:tag@digest` (verified: `docker create` and a dockerode pull both
+accept that form), pulling by digest only if it's gone locally, and swarm just
+gets the pinned ref; without one it needs the local `image:tag` to still be the
+recorded `imageId`, and otherwise fails saying to redeploy. It writes the
+revision's `image`/`tag` back onto the service. Env, volumes, networking and
+resources are deliberately **not** snapshotted: a rollback undoes a bad image,
+config edits are intentional, and a snapshot would copy every secret into every
+deployment row.
+
+**Health watch.** `DeploymentService.watchHealth` hands every successful deploy
+to `RevisionHealthService.watch`, an in-process fire-and-forget loop (not a
+queue job: a 90s+ watch would hold one of the worker's 3 slots), deduplicated on
+`globalThis` so HMR doesn't double it; `hooks.server.ts` calls
+`resumeHealthWatches()` at boot for rows still `watching`. Every 5s it stops,
+clearing `health`, if the service is gone or stopped, has a newer deployment
+row, or runs a different container/swarm service; otherwise it samples
+(`containerHealthSample`/`swarmHealthSample`, the `docker/revisions.ts` mixin)
+and asks `healthVerdict`. Unhealthy at once on an exit, 2+ restarts since the
+baseline, a missing container, Docker health `unhealthy`, or 2 failed swarm
+tasks created since the deploy; healthy once `HEALTH_WINDOW.windowMs` (90s)
+passed, extended while health is `starting` or replicas are missing up to
+`maxWaitMs` (5 min), after which it's unhealthy. The service's
+`healthcheckCommand` runs every 30s with a 30s start period and 3 retries, so a
+failing one turns unhealthy after about two minutes, inside that bound. On
+unhealthy, with `autoRollback` on, the revision not itself a rollback and a
+`previousRevision` found: `rolled_back`, a rollback deploy and
+`deploy.rolled_back`. Otherwise `unhealthy` and `deploy.unhealthy`, with the
+reason nothing was rolled back. The rollback enqueuer is passed in by
+`DeploymentService` rather than imported, since `RevisionService` imports
+`deploy.service.ts`.
+
+UI: the Revisions tab (`RevisionService.annotate` adds `current`/`previous`/
+`retained`) with a per-row **Deploy this revision** (`ConfirmDialog`, a hidden
+form, the `deployRevision` action with `enhanceToast`, then Overview for the
+progress panel), and **Auto-rollback** on the Settings tab. API:
+`GET /services/{id}/revisions` and
+`POST /services/{id}/revisions/{revisionId}/deploy` (`previous` accepted, waits
+like `deploy`); CLI `services revisions` and `services rollback`.
+`tests/integration/revisions.test.ts` covers two image deploys plus a rollback
+by digest, the 404/400 cases, auto-rollback of a restart-looping revision, and
+marking without auto-rollback.
+
+## Image scanning in the pipeline (`image_scan`, `ImageScanService`, `deploy/pull-step.ts`)
+
+Scanning happens inside the `image` phase, before `#startWorkload`, on every
+path that reaches `deployService` (Overview, API/CLI, cron, stack/template
+deploys, the queue). `ImageScanService.policyFor(svc)` combines
+`instance_settings.imageScanEnabled` (null = on) with `service.imageScanEnabled`
+(default true) and carries `imageScanBlockSeverity` (null = off, `CRITICAL`,
+`HIGH`). When off, a `skipped` row is recorded and the pull is the plain one.
+
+- **Pull plans** go through `pullForDeploy` (`deploy/pull-step.ts`, split out of
+  `deploy.service.ts` to stay under the 680-line file limit). A pull policy that
+  skips the pull scans the local image (`--image-src docker`). Otherwise
+  `ImageScanService.deployThroughMirror`: `DockerService.copyToMirror` (skopeo)
+  → scan the mirror copy (`--image-src remote --insecure`) → **pull only after
+  the scan**, so a blocked image never lands in the host's image store →
+  `pullFromMirror` pulls `127.0.0.1:5055/<registry>/<repo>:<tag>` and re-tags it
+  as the upstream `image:tag`, so the container, `pullPolicy: missing` and every
+  other reader keep seeing the normal name. Swarm skips the host pull and
+  returns `tag@digest` (`pinnedToDigest`), since workers can't reach a loopback
+  registry; the swarm pre-pull and `createService` both accept that ref.
+- **Fallbacks, all logged into the deployment log**: copy fails → `null`, the
+  caller does the normal pull and a local scan. Scan succeeds but the loopback
+  pull fails → plain upstream pull, no second scan.
+- **Git plans** scan after the build and before `svc.image`/`tag` are written
+  back (`buildScanTargets`, `deploy/scan-targets.ts`): the local tag for
+  `local-build`, the pushed cache-registry ref with its credentials then the
+  local pull for `docker-build`/`agent-build`.
+- `ImageScanService.scan(ctx, targets, {blockSeverity})` tries targets in order,
+  records one `image_scan` row (`ok` with counts + top 200 findings, or `failed`
+  with every target's error), appends the summary and the first five
+  CRITICAL/HIGH findings to the log, notifies on CRITICAL (`image_scan_critical`
+  bell row + the `image.vulnerable` channel event), then throws
+  `ImageScanBlockedError` if `blockReason()` says so, which `#recordFailure`
+  turns into a normal failed deploy. **A scanner failure never blocks**, even
+  with a block policy set: only real findings do.
+- The Security tab's **Scan now** is an `image_scan` job (dedupe/lock
+  `image_scan:<serviceId>`) running `ImageScanService.scanDeployed`: Trivy with
+  `--image-src docker,remote` against `svc.image:svc.tag` and the service's
+  registry credentials, never blocking.
+
+Verified live on OrbStack against the dev database: a real deploy of
+`nginx:1.27-alpine` through the mirror (copy, scan with 2 critical/35 high,
+loopback pull, re-tag, container up), a `CRITICAL` block on `alpine:3.18.0`
+failing before the pull, a per-service opt-out, and a `missing` pull policy
+scanning the local image. **Not verified live**: swarm pinning, git-build scans,
+cross-host registry scans, rootless Docker's fallback, and the Scan now job
+through the worker.
 
 ## Compose import (`$lib/compose-import.ts`, `$lib/services/compose-import.service.ts`, `(protected)/services/import/`)
 
@@ -53,7 +254,7 @@ Docker) turning compose text into a `ComposeImportPlan`
 (`services: ComposeServiceDraft[]`, plus file-level `warnings`/`networkNames`/
 `volumeNames`), covered directly by `tests/unit/app/compose-import.test.ts`;
 `compose-import.service.ts` is the row-creating half (`ComposeImportService`, a
-plain instance singleton) that turns a plan into `ProjectDTO`/`ServiceDTO`/
+plain instance singleton) that turns a plan into `StackDTO`/`ServiceDTO`/
 `StorageVolumeDTO`/`ServiceVolumeDTO` rows. The route
 (`services/import/+page.server.ts`) has a `preview` action (parse, return the
 plan) and an `import` action that **re-parses the pasted text server-side**
@@ -76,7 +277,7 @@ Two mapping decisions worth not re-litigating: **`dnsResolvable` is true only
 when the compose service published a host port** (`ports:`), false when it only
 `expose`d one, which is the closest honest translation of "this one was meant to
 be reachable from outside"; and **one compose file maps onto one Homerun
-project**, since a project already _is_ a Docker network here, so a file's own
+stack**, since a stack already _is_ a Docker network here, so a file's own
 multiple `networks:` can't be reproduced and says so in a warning.
 
 `orderByDependencies` topologically sorts the drafts (falling back to file order
@@ -91,7 +292,7 @@ volume mounts the same row twice instead of creating a duplicate.
 ## Smart service links on create (`$lib/service-link.ts`, `service-link-picker.svelte`)
 
 The Environment step of `services/new` has a "Link a service" picker next to
-"Paste .env": pick any service the user already owns (**regardless of project**,
+"Paste .env": pick any service the user already owns (**regardless of stack**,
 which is the whole point : every bridge-mode service is on the shared network
 and reachable at `<slug>:<port>` anyway, so linking is purely about generating
 the env vars, there's no networking to set up) and it writes connection env rows
@@ -182,7 +383,9 @@ deployment's status. The markers are ordinary log lines, so the deployment
 history's raw-log panel keeps working untouched and nothing else in the pipeline
 had to learn about phases. There is deliberately **no "checking container
 health" phase**: health-gated rollout isn't built (see Planned features), and a
-phase that always passes instantly would be a lie.
+phase that always passes instantly would be a lie. Health is watched _after_ the
+deploy finishes instead (see Revisions and rollback above) and shows on the
+Revisions tab.
 
 ## Remote functions (`src/lib/remote/*.remote.ts`, `$lib/server/remote-auth.ts`)
 
@@ -312,19 +515,19 @@ substitution, no cycle detection needed.
 
 An env var on the _primary_ template can reference a linked template via
 `{{alias}}` (resolves to the linked service's generated slug, its internal DNS
-hostname on the shared network regardless of project, same
-`http://<slug>:<port>` addressing every service already gets) or
-`{{alias.ENV_KEY}}` (resolves to that linked service's own resolved value for
-that env var, e.g. `{{db.POSTGRES_PASSWORD}}`). Resolution
-(`$lib/services/template-links.ts`'s `resolveLinkTokens`) leaves an unknown
-token untouched rather than stripping it, so a typo'd alias fails loud (visible
-literally in the deployed env var) instead of silently producing an empty value.
-Linked templates' own env vars are used as-is, not further resolved : only the
-primary can reference `{{alias}}` tokens, not link-to-link.
+hostname on the shared network regardless of stack, same `http://<slug>:<port>`
+addressing every service already gets) or `{{alias.ENV_KEY}}` (resolves to that
+linked service's own resolved value for that env var, e.g.
+`{{db.POSTGRES_PASSWORD}}`). Resolution (`$lib/services/template-links.ts`'s
+`resolveLinkTokens`) leaves an unknown token untouched rather than stripping it,
+so a typo'd alias fails loud (visible literally in the deployed env var) instead
+of silently producing an empty value. Linked templates' own env vars are used
+as-is, not further resolved : only the primary can reference `{{alias}}` tokens,
+not link-to-link.
 
 Deploying from a linked template (`services/new`'s `create`/`createAndDeploy`
 actions, via `buildTemplateLinkContext`/`createLinkedServices`) : if the service
-being created has no project yet, one is auto-created (named after it) so the
+being created has no stack yet, one is auto-created (named after it) so the
 whole stack shows up grouped ; each linked service gets a deterministic slug
 (`<primary-slug>-<alias>`, de-duplicated against existing services) and deploys
 from its own template's image/tag/port/envVars/resources, created
@@ -349,7 +552,7 @@ orchestrator importing both arrays plus `BUILTIN_TEMPLATE_LINKS` (4 entries:
 WordPress→MySQL, Umami→Postgres, Miniflux→Postgres, Paperless-ngx→Redis, wiring
 the Template links feature above into real built-ins). Every image was verified
 real via `docker manifest inspect <image>:<tag>` (fast, no full pull) before
-being added, not just guessed from a project's README.
+being added, not just guessed from a stack's README.
 
 **The seed upserts rather than `onConflictDoNothing()`, and it has to.** A
 built-in is code, not user data (`ownerId` null, and `TemplateDTO.owned()`
@@ -433,8 +636,8 @@ instead of one: **Quick Deploy** (primary) calls a `quickDeploy` form action
 routes) that creates the service straight from the template's defaults
 (name/slug auto-generated via `slugify`) and deploys it immediately, no wizard;
 **Configure** (secondary) is the old single "Deploy" button, renamed since it
-only navigates into `services/new` (carrying `templateId`, and `projectId` when
-arrived at from a project) to let the user tweak first. The gallery's
+only navigates into `services/new` (carrying `templateId`, and `stackId` when
+arrived at from a stack) to let the user tweak first. The gallery's
 `quickDeploy` action returns a plain success object (not a redirect) so
 `use:enhance` can show a `toast.success` with a "View" button instead of yanking
 the user out of the grid mid-browse, letting several templates get
@@ -473,10 +676,10 @@ A status page groups services and answers one question — is this up? — for a
 audience that may not be signed in. Three shapes, set by `scope`:
 
 - `global` : every service the owner has.
-- `project` : that project's services.
+- `stack` : that stack's services.
 - `custom` : a hand-picked list, the only one that reads `status_page_service`.
 
-**`global` and `project` resolve live** (`StatusPageDTO.serviceIds()` queries
+**`global` and `stack` resolve live** (`StatusPageDTO.serviceIds()` queries
 `service` on every read) so deploying a new service puts it on the page without
 anyone re-editing it. That's the whole reason the join table isn't used for all
 three.
@@ -620,32 +823,81 @@ real callback URL, which nothing server-side can do standalone. Built carefully
 from each provider's own standard, well-documented OAuth2 + REST API shapes;
 verify the first real connect by hand once an OAuth App exists.
 
-## Migrating from Dokploy (`$lib/services/dokploy.service.ts`, `services/migrate/`)
+## Migrating from Dokploy or Coolify (`settings/migrate/`)
 
-Reads another PaaS's instance and recreates it here, **pull-only** : the one
-call it ever makes is `GET /api/project.all` with the user's `x-api-key`, and
-nothing on the Dokploy side is stopped, changed or deleted. The token isn't
-stored either, it's used for that one request and forgotten.
+Admin-only tab under `/settings`: `settings/migrate/+page.svelte` picks the
+source, `settings/migrate/dokploy/` and `settings/migrate/coolify/` are one
+route each, both rendering `$lib/components/migrate-panel.svelte` with actions
+from `migrationActions(source)` (`$lib/server/migrate-actions.ts`). One form
+carries URL + token; `?/preview` reads and returns a secret-free
+`MigrationPreview`, the "Import" button posts the same form to `?/import`
+(`formaction`) with the ticked ids as repeated `ids` fields. **The import
+re-reads the source for just those ids** rather than trusting a plan JSON sent
+back from the browser, so env values and passwords never reach the client and
+the token is never stored.
 
-Dokploy's project tree is flattened into `DokployEntry[]` : `applications`,
-`compose`, and the five database keys (`postgres`/`mysql`/`mariadb`/`mongo`/
-`redis`), each carrying whatever of name/image/port/env it has. Field names
-differ per entry type (`applicationId` vs `composeId` vs `postgresId`,
-`dockerImage` vs `image`), so the readers take a list of candidate keys rather
-than assuming one shape, and the env blob is one `KEY=value`-per-line string
-(`parseDokployEnv`, same rules as a `.env` file, an empty value kept as `""`
-since that's meaningful to Docker).
+Layering: `$lib/migrate/common.ts` (types, `MigrationHttpClient`, env/compose
+helpers, `previewEntries`), `$lib/migrate/dokploy.ts` and
+`$lib/migrate/coolify.ts` (pure raw-JSON → `MigrationEntry` mappers, no DB),
+`DokployService`/`CoolifyService` (the HTTP walk) and `MigrationService`
+(`$lib/services/migration.service.ts`, preview slug check + import). Every entry
+is expressed as `ComposeServiceDraft[]` and imported through
+`ComposeImportService.importPlan`, one call per entry, into a stack matched or
+created by the source project's name, so volumes, slug uniqueness and
+notifications are the compose importer's, not a second copy.
 
-`plan(entries, takenSlugs)` is the **dry run the user approves** : per entry,
-the slug it would get, whether that slug is already taken here, and a `blocked`
-reason when it can't be recreated (built from source on Dokploy, or a compose
-stack Dokploy returned no file for). `importPlan` then creates one service per
-application/database and hands a compose stack to the existing
-`ComposeImportService`, reusing its parser rather than a second one. Nothing is
-deployed by the import; the services sit there until the user deploys them.
+**Dokploy, verified against a live instance (Dokploy with environments):**
 
-**Not verified against a live Dokploy instance.** The endpoint, header and
-response shapes are from Dokploy's documented API, and the client is
-deliberately tolerant (it accepts a bare array or a `result.data` wrapper, and
-names the likely cause when the answer isn't a project list at all). First real
-migration is the real test.
+- `GET /api/project.all` with `x-api-key` answers a **bare array**, no
+  `result.data` wrapper. The resources are **not** on the project: they're under
+  `project.environments[]` (`applications`, `compose`, `postgres`, `mysql`,
+  `mariadb`, `mongo`, `redis`, `libsql`), and each is only a summary
+  (`applicationId`/`name`/`applicationStatus`, a database is just
+  `{ postgresId }`). The previous client read `project.applications`, found
+  nothing, and rendered an empty dry run with a disabled Import button, which is
+  the "does absolutely nothing" bug. `dokployRefs` still falls back to a flat
+  project for older versions.
+- The detail comes from `GET /api/<type>.one?<type>Id=` (`application.one`,
+  `compose.one`, `postgres.one`, ...), fetched 6 at a time.
+- Application: `sourceType` is `docker` (`dockerImage`, `username`/`registryUrl`
+  for a private registry) or `github`/`gitlab`/`gitea`/`bitbucket`/`git`, with
+  per-provider fields (`owner`/`repository`/`branch`/`buildPath` for GitHub,
+  `giteaOwner`/`giteaRepository`/`giteaBranch`/`giteaBuildPath` plus the host in
+  the nested `gitea.giteaUrl`, `customGitUrl`/`customGitBranch` for plain git).
+  `buildType` is `dockerfile`/`nixpacks`/`static`/`railpack`/..., only
+  `dockerfile` is importable (`dockerfile`, `dockerContextPath`). `env` is a
+  `.env` blob or `null`. There's no port field: the port is `domains[].port`
+  (`ports[]` is published ports). `mounts[]` is
+  `{ type: "volume"|"bind"|"file", volumeName, hostPath, mountPath }`, and a
+  read-only bind carries `:ro` inside `mountPath`. `memoryLimit`/`cpuLimit` are
+  strings or null.
+- Compose: `composeFile` holds the YAML only for `sourceType: "raw"`;
+  `domains[].serviceName` names the compose service a domain routes to, used to
+  mark it public with that port. `env` is used for `${VAR}` substitution.
+  Dokploy runs stacks as `docker compose -p <appName>`, so a named volume on
+  disk is `<appName>_<key>` : `dokployComposeVolume` rewrites each draft's
+  volume source to that, unless the top-level declaration has `name:` (used
+  as-is) or `external` (left plain). Checked against the live instance: every
+  stack had `randomize: false` and `isolatedDeployment: false`, which Dokploy
+  uses to suffix names further; those aren't handled.
+- Databases: `dockerImage`, `databaseName`/`databaseUser`/`databasePassword`/
+  `databaseRootPassword`, `externalPort`, and `mounts[]` including the
+  auto-created data volume. The Redis password is applied by Dokploy through the
+  start command, so it only produces a warning here.
+
+**Coolify is not verified against a live instance.** Built from the documented
+v4 API: `Authorization: Bearer`, `GET /api/v1/projects` (+
+`/api/v1/projects/{uuid}` for `environments[].id`, which maps an app's
+`environment_id` to its project name), `/api/v1/applications`,
+`/api/v1/services`, `/api/v1/databases`, and
+`/api/v1/{applications,services}/ {uuid}/envs` for env (non-preview rows,
+`real_value` over `value`). Application `build_pack` drives the mapping:
+`dockerimage` (`docker_registry_image_name`/`_tag`), `dockerfile` with
+`git_repository` (`base_directory`, `dockerfile_location`, a bare `owner/repo`
+is assumed to be GitHub), `dockercompose` (`docker_compose_raw`); everything
+else is blocked. Ports come from `ports_exposes`, public from `fqdn`. Services
+are compose (`docker_compose_raw`, env substituted so `SERVICE_FQDN_*` resolve).
+Databases map `database_type` +
+`postgres_*`/`mysql_*`/`mariadb_*`/`mongo_initdb_*` fields. The parsing accepts
+a bare array or a `data` wrapper. Persistent storage isn't read (warned). First
+real Coolify migration is the real test.

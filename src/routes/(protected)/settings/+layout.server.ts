@@ -14,6 +14,7 @@ const FIELD_TAB: Record<string, string> = {
 	smtpPassword: "email",
 	smtpPort: "email",
 	smtpUser: "email",
+	traefikDynamicConfigDir: "networking",
 };
 
 export const load = async ({ locals, url }) => {

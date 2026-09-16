@@ -3,6 +3,7 @@ import { config } from "$lib/config";
 import type { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { Logger } from "$lib/logger";
 import type { GitProviderConfig, GitProviderKind } from "$lib/server/db/schema";
+import { providerApiBase } from "$lib/status-checks";
 import { decryptSecret } from "./secrets.ts";
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
@@ -38,29 +39,18 @@ interface ProviderEndpoints {
 }
 
 /**
- * OAuth App client for git-hosting providers (GitHub/GitLab/Gitea/
- * Bitbucket) : lets a user connect their own account (see the Git
- * Providers page for the instance-wide OAuth App config each of these
- * needs registered on the provider's own site first) so the Source tab can
- * browse their repos and check for a Dockerfile instead of pasting a raw
- * (possibly token-embedded) URL. One standard OAuth2 authorization-code
- * flow per provider, differing mainly in endpoint URLs/request shapes :
- * see `endpoints()` below for exactly what differs.
+ * Resolves the OAuth authorize/token/API base URLs and scope string for one
+ * provider kind. Gitea has no public default instance, so a Gitea provider
+ * with no `baseUrl` throws.
  *
- * Not live-tested against a real registered OAuth App on each provider
- * (that requires the admin to actually register one on GitHub/GitLab/
- * Gitea/Bitbucket's own site first, with a real callback URL : nothing
- * this session could do on its own, unlike everything else built this
- * session). Built carefully from each provider's own standard, well-
- * documented OAuth2 + REST API shapes; verify the first real connect end
- * to end once an OAuth App is registered.
+ * @throws For a Gitea provider with no `baseUrl`, or an unknown provider kind.
  */
 function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 	const base = provider.baseUrl?.replace(/\/+$/, "") || null;
 	switch (provider.kind) {
 		case "github":
 			return {
-				api: "https://api.github.com",
+				api: providerApiBase("github", null),
 				authorize: "https://github.com/login/oauth/authorize",
 				scope: "repo read:user",
 				token: "https://github.com/login/oauth/access_token",
@@ -68,7 +58,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 		case "gitlab": {
 			const b = base ?? "https://gitlab.com";
 			return {
-				api: `${b}/api/v4`,
+				api: providerApiBase("gitlab", b),
 				authorize: `${b}/oauth/authorize`,
 				scope: "read_api read_user",
 				token: `${b}/oauth/token`,
@@ -81,7 +71,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 				throw new Error("Gitea providers require a base URL.");
 			}
 			return {
-				api: `${base}/api/v1`,
+				api: providerApiBase("gitea", base),
 				authorize: `${base}/login/oauth/authorize`,
 				scope: "read:repository read:user",
 				token: `${base}/login/oauth/access_token`,
@@ -89,7 +79,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 		}
 		case "bitbucket":
 			return {
-				api: "https://api.bitbucket.org/2.0",
+				api: providerApiBase("bitbucket", null),
 				authorize: "https://bitbucket.org/site/oauth2/authorize",
 				scope: "repository account",
 				token: "https://bitbucket.org/site/oauth2/access_token",
@@ -105,6 +95,24 @@ function authHeader(token: string): Record<string, string> {
 	return { Authorization: `Bearer ${token}` };
 }
 
+/**
+ * OAuth App client for git-hosting providers (GitHub/GitLab/Gitea/
+ * Bitbucket) : lets a user connect their own account (see the Git
+ * Providers page for the instance-wide OAuth App config each of these
+ * needs registered on the provider's own site first) so the Source tab can
+ * browse their repos and check for a Dockerfile instead of pasting a raw
+ * (possibly token-embedded) URL. One standard OAuth2 authorization-code
+ * flow per provider, differing mainly in endpoint URLs/request shapes :
+ * see `endpoints()` above for exactly what differs.
+ *
+ * Not live-tested against a real registered OAuth App on each provider
+ * (that requires the admin to actually register one on GitHub/GitLab/
+ * Gitea/Bitbucket's own site first, with a real callback URL : nothing
+ * this session could do on its own, unlike everything else built this
+ * session). Built carefully from each provider's own standard, well-
+ * documented OAuth2 + REST API shapes; verify the first real connect end
+ * to end once an OAuth App is registered.
+ */
 class GitProviderServiceClass {
 	/**
 	 * Signed, stateless CSRF state param for the OAuth redirect round-trip :
@@ -120,6 +128,12 @@ class GitProviderServiceClass {
 		return Buffer.from(`${payload}:${sig}`).toString("base64url");
 	}
 
+	/**
+	 * Verifies a state param produced by `createState`: checks its HMAC
+	 * signature, that it was minted for this `providerId`/`userId` pair, and
+	 * that it's no older than `STATE_MAX_AGE_MS`. Never throws; a malformed
+	 * or tampered state simply fails verification.
+	 */
 	verifyState(state: string, providerId: string, userId: string): boolean {
 		try {
 			const decoded = Buffer.from(state, "base64url").toString("utf8");
@@ -276,6 +290,12 @@ class GitProviderServiceClass {
 		};
 	}
 
+	/**
+	 * Fetches the connected account's own username from the provider's API,
+	 * used to label the stored connection.
+	 *
+	 * @throws When the provider's `/user` endpoint doesn't respond ok.
+	 */
 	private async fetchUsername(
 		provider: GitProviderConfig,
 		accessToken: string,
@@ -440,6 +460,7 @@ class GitProviderServiceClass {
 		}
 	}
 
+	/** The display name and whether a base URL is required, for a new provider of this kind (Gitea only, being self-hosted-only). */
 	defaultsFor(kind: GitProviderKind): {
 		name: string;
 		requiresBaseUrl: boolean;

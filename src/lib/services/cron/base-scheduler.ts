@@ -34,6 +34,7 @@ function intervalRegistry(): Map<string, ReturnType<typeof setInterval>> {
 export abstract class BaseScheduler {
 	#logger: Logger | null = null;
 
+	/** This scheduler's logger, tagged with `label`, created lazily on first use. */
 	protected get logger(): Logger {
 		this.#logger ??= new Logger(this.label);
 		return this.#logger;
@@ -54,6 +55,7 @@ export abstract class BaseScheduler {
 
 	private inFlight: Promise<void> | null = null;
 
+	/** Runs one pass of this scheduler's work. Implemented per subclass; errors are caught and logged by `#run`, not by the caller. */
 	protected abstract tick(): Promise<void>;
 
 	/** Starts this scheduler's own tick (see `intervalMs`). Idempotent : safe to call on every dev-server HMR reload. */
@@ -78,6 +80,7 @@ export abstract class BaseScheduler {
 		);
 	}
 
+	/** Fires `tick()` unless a previous tick is still in flight, logging and swallowing any error so a failed tick never kills the interval. */
 	#run(): void {
 		if (this.inFlight !== null) {
 			return;

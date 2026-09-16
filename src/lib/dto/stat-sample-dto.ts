@@ -53,6 +53,10 @@ const RETENTION_SECONDS = 31_536_000;
 
 /** Wraps `stat_sample` : the resource history behind the dashboard's and a service's own graphs. */
 export class StatSampleDTO extends BaseDTO<StatSample> {
+	/**
+	 * Inserts one resource sample, stamped now; a null `serviceId` means a
+	 * host-wide sample.
+	 */
 	static async record(input: NewStatSampleInput): Promise<void> {
 		await db.insert(statSample).values({
 			cpuPercent: input.cpuPercent,
@@ -67,6 +71,10 @@ export class StatSampleDTO extends BaseDTO<StatSample> {
 		});
 	}
 
+	/**
+	 * Inserts a batch of resource samples in one statement, all stamped with the
+	 * same time.
+	 */
 	static async recordMany(inputs: NewStatSampleInput[]): Promise<void> {
 		if (inputs.length === 0) {
 			return;
@@ -156,6 +164,7 @@ export class StatSampleDTO extends BaseDTO<StatSample> {
 		);
 	}
 
+	/** Deletes samples older than the one-year retention ceiling. */
 	static async prune(): Promise<void> {
 		await db
 			.delete(statSample)

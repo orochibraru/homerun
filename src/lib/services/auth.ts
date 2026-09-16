@@ -3,21 +3,36 @@ import { apiKey } from "@better-auth/api-key";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, bearer, genericOAuth, openAPI } from "better-auth/plugins";
+import {
+	admin,
+	bearer,
+	genericOAuth,
+	openAPI,
+	twoFactor,
+} from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { building, dev } from "$app/environment";
 import { getRequestEvent } from "$app/server";
 import { resolveAdvertisedTokenAuth } from "$lib/auth-providers";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
+import { passkeyRpId } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
 import * as schema from "$lib/server/db/schema";
 import { AdminService } from "./admin.service.ts";
+import { trustedOriginsFor } from "./auth-origins.ts";
 import { EmailService } from "./email.service.ts";
 import { UserService } from "./user.service.ts";
 
 const logger = new Logger("Auth");
 
+/**
+ * Resolves the better-auth `genericOAuth` token-endpoint auth option for one
+ * configured provider. When `tokenAuthMethod` is `"auto"`, defers to
+ * `resolveAdvertisedTokenAuth` over the provider's discovered methods;
+ * otherwise honors the explicit `"basic"`/`"post"` choice. Returns `{}` (no
+ * override) when the provider has no client secret or resolves to neither.
+ */
 function tokenAuthOptions(provider: {
 	clientSecret: string;
 	discoveredTokenAuth: string[];
@@ -84,6 +99,12 @@ function buildAuth() {
 				: {}),
 		},
 		basePath: "/api/v1/auth",
+		trustedOrigins: () =>
+			trustedOriginsFor({
+				authOrigin: config.auth.origin,
+				baseDomain: config.baseDomain,
+				envOrigin: process.env.ORIGIN,
+			}),
 		// Deliberately never pinned to config.auth.origin (the Core section's
 		// Base domain + Use HTTPS on /settings/onboarding). Real, tested-in-
 		// review bug this replaced: better-auth's svelteKitHandler only
@@ -205,7 +226,14 @@ function buildAuth() {
 			// *some* abuse protection, rather than removing rate limiting
 			// outright.
 			apiKey({ rateLimit: { maxRequests: 300, timeWindow: 60_000 } }),
-			passkey(),
+			passkey({
+				rpID: passkeyRpId(config.auth.origin),
+				rpName: "Homerun",
+			}),
+			twoFactor({
+				allowPasswordless: true,
+				issuer: "Homerun",
+			}),
 			// "developer" is the sane fallback default : every real creation
 			// path (admin-direct-create, invite-accept) always passes an
 			// explicit role, and the bootstrap-admin case is handled by the

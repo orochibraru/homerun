@@ -1,23 +1,23 @@
 # Services
 
 A **service** is one deployed container. Create one from `Services → New`,
-either standalone or pre-filled from a [project](projects-and-templates.md) or
-[template](projects-and-templates.md#templates) via
-`?projectId=`/`?templateId=`. The wizard's primary button, **Create and
-Deploy**, persists the config and immediately deploys it, landing you on the new
-service's Overview tab; **Create service**, the secondary button, just persists
-the config, the same as before, deploy later from the Overview tab yourself.
+either standalone or pre-filled from a [stack](stacks-and-templates.md) or
+[template](stacks-and-templates.md#templates) via `?stackId=`/`?templateId=`.
+The wizard's primary button, **Create and Deploy**, persists the config and
+immediately deploys it, landing you on the new service's Overview tab; **Create
+service**, the secondary button, just persists the config, the same as before,
+deploy later from the Overview tab yourself.
 
 ## The services list
 
-`Services` has a search box (matches name, image, and domain) plus Status/
-Project filters, and a list/card view toggle that remembers your choice per
-browser; both the search and filters are applied on the server, so they reach
-every service you own, not just whichever page happens to be on screen. Once you
-have more than a page's worth, a pager at the bottom shows "26–50 of 60" and
-lets you step through the rest. Check one or more services (a "select all"
-scopes to whatever's on the **current page**, paginating or changing the
-search/filters clears your selection) to bring up a bottom bar with bulk
+`Services` has a search box (matches name, image, and domain) plus Status/ Stack
+filters, and a list/card view toggle that remembers your choice per browser;
+both the search and filters are applied on the server, so they reach every
+service you own, not just whichever page happens to be on screen. Once you have
+more than a page's worth, a pager at the bottom shows "26–50 of 60" and lets you
+step through the rest. Check one or more services (a "select all" scopes to
+whatever's on the **current page**, paginating or changing the search/filters
+clears your selection) to bring up a bottom bar with bulk
 Start/Stop/Restart/Delete: bulk actions run against every selected service and
 report back which ones succeeded, so one service with no container yet doesn't
 block the rest. Bulk delete, and the single-row delete on this page and the
@@ -73,6 +73,39 @@ stored encrypted, and disconnecting removes them.
 This is only about _browsing and access_. Cloning itself is provider-agnostic,
 so any public HTTPS git URL works with no provider connected at all.
 
+### Required status checks
+
+A git-mode service can refuse to build until its CI agrees. On the **Source**
+tab, tick **Require status checks to pass before building** and pick the checks
+that must pass. The picker lists every check name reported on the latest commits
+of the service's branch, read live from the git provider: GitHub check runs and
+commit statuses, GitLab job statuses plus the pipeline itself (as `pipeline`),
+Gitea/Forgejo commit statuses, and Bitbucket build statuses (by key). A check
+that hasn't run recently can be added by name.
+
+On every deploy of that service, whatever triggered it (Deploy, the API or CLI,
+a scheduled redeploy, a stack or template deploy), Homerun first resolves the
+branch to a commit through the provider API and reads the checks for that exact
+commit:
+
+- every selected check passed (neutral and skipped count as passed): the build
+  goes ahead, pinned to that commit even if the branch moved in the meantime;
+- any selected check failed or was cancelled: the deploy stops before cloning;
+- checks still running: the deploy waits, polling every 20 seconds and logging
+  changes into the deployment log, for up to 30 minutes, then gives up;
+- a selected check that never reports, once everything else on the commit has
+  finished, is treated as failed after a 3 minute grace period.
+
+A stopped build is a failed deployment with the reason in its log, the running
+revision is left untouched, and a **Status checks failed** notification goes to
+the bell and to every notification channel subscribed to it, saying which checks
+failed and that the build won't carry on. The provider API is called with your
+connected git provider account, a token embedded in the clone URL, or
+unauthenticated for a public repository on github.com, gitlab.com or
+bitbucket.org. A self-hosted instance needs to be configured under Git
+Providers. Agent build servers clone the branch head themselves, so a build
+there isn't pinned to the checked commit.
+
 ### Build servers and build cache
 
 By default a git build runs on this host. Two optional pickers on the Source tab
@@ -115,8 +148,52 @@ Every named volume and absolute bind mount becomes a
 source matches) and is mounted into the service at its declared path. A service
 that published a host port gets a public `<slug>.<domain>` route; one that only
 `expose`d a port stays internal. You can drop individual services from the
-import, put the stack in a new or existing project, and optionally deploy
-everything straight away, in `depends_on` order.
+import, put them in a new or existing stack, and optionally deploy everything
+straight away, in `depends_on` order.
+
+## Migrating from Dokploy or Coolify
+
+**Settings → Migrate** (admin-only) reads another PaaS instance and recreates
+what it finds here. Pick Dokploy or Coolify, give it the instance URL and an API
+token, and **Read instance** lists every application, compose stack and
+database, grouped by the project it lives in. It only ever makes read requests:
+nothing on the other side is stopped, changed or deleted, and the token is sent
+with each request on that page, never stored.
+
+Tick what you want and **Import**. Each source project becomes a Homerun stack,
+and every entry goes through the same importer as
+[Importing a compose file](#importing-a-compose-file), so volumes, slugs and
+warnings behave the same way. Nothing is deployed: each imported service waits
+until you deploy it.
+
+What carries over:
+
+- **Docker image apps**: image and tag, env vars, the port of their first domain
+  (public) or internal-only when they had no domain, CPU/memory limits, and
+  named-volume and bind mounts.
+- **Git apps built from a Dockerfile**: become
+  [git-based](#deploy-source-image-or-git-repo) services with the repository,
+  branch, build context and Dockerfile path. A private repository needs a
+  [connected git provider](#connecting-a-git-provider).
+- **Compose stacks**: the stored compose file, with the stack's own variables
+  substituted in. On Dokploy, each domain's port is applied to the service it
+  targets, and named volumes keep pointing at the data Dokploy created
+  (`<appName>_<volume>`, or the volume's own `name:`/`external` declaration).
+- **Databases**: the image, the port, and the credentials turned into the
+  image's own env vars (`POSTGRES_PASSWORD`, `MYSQL_ROOT_PASSWORD`, ...), always
+  internal-only.
+
+What doesn't, and shows up as a blocked entry or a warning instead: apps built
+with Nixpacks, Railpack, Heroku buildpacks or a static build pack (Homerun only
+builds Dockerfiles), compose stacks read from a repository at deploy time,
+custom start commands (including the Redis password flag), private registry
+credentials, and Dokploy file mounts. Coolify's API doesn't list persistent
+storage, so re-attach volumes by hand after a Coolify import.
+
+For Dokploy, create the token under **Settings → Profile → API/CLI**. For
+Coolify, create it under **Keys & Tokens** with the `read` and `read:sensitive`
+permissions: without `read:sensitive`, env values and database passwords come
+back hidden.
 
 ## Deploying
 
@@ -127,9 +204,49 @@ complete, with the raw build/pull output streaming underneath. Progress arrives
 over server-sent events (the server pushes each new line and status change; if
 that stream can't be held open, the panel falls back to polling), and it resumes
 correctly if you reload the page mid-deploy, or if the deploy was started
-somewhere else entirely (a template quick-deploy, cron). Below it, deployment
-history lists every attempt with status, image digest, and an expandable full
-log.
+somewhere else entirely (a template quick-deploy, cron). Below it sit a
+**Resource usage** chart for the service's own container (CPU, memory and
+network traffic, live or over the last hour, day, week, month, year or all of
+it, sampled every minute), a **Connections** panel listing the services it
+references through env vars and the ones that reference it, and a tail of its
+live logs. Deployment history, every attempt with its status, image and full
+log, is on the [Revisions](#revisions-and-rollback) tab.
+
+### Revisions and rollback
+
+Every deploy that reaches running is a **revision**: the exact image it ran
+(`image:tag` plus the registry digest when there is one, or the local
+`homerun-build-<slug>:<tag>` for a git build), the commit and branch for a git
+build, and whether it stayed healthy. The **Revisions** tab lists them with the
+current one marked, next to failed attempts and their logs.
+
+**Deploy this revision** (confirmed in a dialog, also
+`POST /api/v1/services/:id/revisions/:revisionId/deploy` and
+`homerun services rollback`) queues a deploy that skips the build, the registry
+pull and the image scan, and starts that exact image: by digest for a pulled
+image (pulled again by digest if it was removed from the host), or the retained
+local build for a git service. The service's image and tag are set back to the
+revision's, so a later redeploy starts from there. Only the image is rolled
+back: environment variables, volumes, networking and resources are the service's
+current ones, on purpose, since those are edited deliberately and a rollback is
+for undoing a bad build.
+
+The last 5 distinct images of every service are **retained**: Docker Cleanup's
+image prune (including **Quick cleanup**) and the image mirror cleanup skip
+them, so rolling back to any of them never needs a rebuild. Older revisions stay
+listed but may need their image pulled or rebuilt.
+
+**Auto-rollback.** After each deploy the new workload is watched for 90 seconds,
+longer while its healthcheck is still starting (up to 5 minutes). It's unhealthy
+when the container exits, restarts twice or more, or its Docker healthcheck
+(including the service's own healthcheck command) reports unhealthy, or for a
+swarm service when two tasks fail or not every replica is running. An unhealthy
+revision is always marked on the Revisions tab and reported (**Revision
+unhealthy**). With **Auto-rollback when a new revision is unhealthy** turned on
+in the service's Settings tab (off by default), Homerun instead redeploys the
+previous healthy revision with a different image, marks the new one as rolled
+back and sends **Rolled back**. A rollback that is itself unhealthy isn't rolled
+back again.
 
 Clicking Deploy **queues** the deploy rather than running it inside the request
 (see [The job queue](#the-job-queue) below), so the button comes back
@@ -137,11 +254,73 @@ immediately and the progress panel narrates the rest. Same for "Create and
 Deploy" at the end of the new-service wizard: it creates the service, queues the
 deploy, and drops you straight on the service page watching it come up.
 
+## Image scanning
+
+Every deploy scans the image for known vulnerabilities with
+[Trivy](https://trivy.dev) before the workload starts. It's on by default and
+never enforced unless you ask for it.
+
+For an image-based service the pull goes through a registry mirror Homerun runs
+for itself, `homerun-mirror` (a `registry:2` container on the shared network,
+data in the `homerun-mirror-data` volume, published on `127.0.0.1:5055` only).
+The deploy:
+
+1. copies the image from its registry into the mirror with a throwaway
+   [skopeo](https://github.com/containers/skopeo) container, using the service's
+   registry credentials if it has any, without pulling it onto the host first;
+2. scans the copy in the mirror with a throwaway Trivy container (the
+   vulnerability database is cached in the `homerun-trivy-cache` volume, so only
+   the first scan downloads it);
+3. pulls the scanned image from `127.0.0.1:5055` onto the host and tags it with
+   its usual name, so the container runs exactly what was scanned.
+
+In [swarm mode](#swarm-mode) the other nodes can't reach a loopback mirror, so
+the service is deployed from the upstream registry pinned to the scanned digest
+(`image:tag@sha256:...`) instead.
+
+The mirror is created the first time it's needed. If any step of it fails
+(rootless Docker is the usual case, where the daemon can't pull from a loopback
+port), the deploy log says why and the deploy falls back to a normal pull, then
+scans the image on the host through the Docker socket. A pull policy that skips
+the pull scans the image already on the host. Git-built images are scanned once
+built: on the host for a local build, in the build cache registry (falling back
+to the host) for a build server.
+
+The mirror is garbage-collected every day at 04:00, and on demand from
+[Docker Cleanup](operations.md#image-mirror). For every service it keeps the
+image the service currently points at, the digest its last successful deploy
+ran, and its last two scanned versions (so a rollback or a rescan still finds
+them); everything else goes, including images of deleted services.
+
+The deploy log gets a summary line with counts per severity and the first few
+CRITICAL/HIGH findings. The service's **Security** tab shows the latest scan,
+the severity counts, the findings (top 200, most severe first, with the fixed
+version when there is one), the scan history, and a **Scan now** button that
+queues a scan of the deployed image. A scan that finds a CRITICAL vulnerability
+adds a bell notification and fires the **Critical vulnerabilities** event on any
+notification channel subscribed to it. The same scans are in the
+[REST API and CLI](api-and-cli.md#image-scans), including a
+`homerun services scan <id> --fail-on high` for failing a CI job on findings.
+
+Scanning is controlled in two places:
+
+- **Settings → Docker → Image scanning**, admin-only: turn it off for every
+  service, and set **Block deploys at severity** to `Off` (the default),
+  `Critical`, or `High and above`. A blocked deploy fails before its workload
+  starts, and with the mirror the image never reaches the host at all. A scanner
+  that can't run (no network for the database, a registry it can't read) never
+  blocks: the deploy goes ahead and the failed scan is recorded.
+- **Scan this service's image** on a service's Settings tab, to opt one service
+  out. An opted-out service pulls straight from its registry.
+
+Both apply to every deploy path: the Deploy button, the API and CLI, scheduled
+redeploys, and stack or template deploys.
+
 ## The job queue
 
-Deploys, git builds, volume backups and Docker cleanups all run through one
-background worker instead of inside the request that triggered them. That buys
-four things worth knowing about as an operator:
+Deploys, git builds, image scans, volume backups and Docker cleanups all run
+through one background worker instead of inside the request that triggered them.
+That buys four things worth knowing about as an operator:
 
 - **Repeats collapse.** Queueing a deploy for a service that already has one
   waiting doesn't queue a second, it joins the one that's already there. Push
@@ -174,7 +353,7 @@ can avoid it; registry passwords and similar have their own encrypted fields
 instead).
 
 **Link a service** in the new-service wizard's Environment step fills those rows
-in for you from a service you already run, in any project or none: pick it, and
+in for you from a service you already run, in any stack or none: pick it, and
 Homerun recognises what it is from its image (PostgreSQL, MySQL/MariaDB,
 MongoDB, Redis/Valkey, RabbitMQ, or a plain HTTP service) and reads the
 credentials off its own env vars. You then choose the shape you want:
@@ -188,7 +367,7 @@ credentials off its own env vars. You then choose the shape you want:
 The suggested variable name (or prefix) is a default, not a rule, rename it to
 whatever your app expects before adding it. The host in every generated value is
 the linked service's slug, which is how services already reach each other on the
-shared network, so this works across projects and needs no extra networking.
+shared network, so this works across stacks and needs no extra networking.
 
 ## Volumes
 
@@ -206,7 +385,7 @@ button for exactly that reason, use it after changing a custom domain,
 DNS-resolvability, or the login wall.
 
 - **Container port, protocol, network mode**, `bridge` (default, joins the
-  shared `homerun` plus the service's project network if any) or `host` (shares
+  shared `homerun` plus the service's stack network if any) or `host` (shares
   the host's network namespace directly, for apps needing real host-network
   access like mDNS/SSDP discovery). Homerun never publishes/maps a host port
   either way; a bridge-mode service is reachable only via its Traefik subdomain,
@@ -250,8 +429,20 @@ off:
 - **Org ID** and an **API token** for it.
 - **Main site name**: the Pangolin site (tunnel agent) whose host runs this
   instance's Traefik. It must already exist in Pangolin.
-- Optionally a **target port**, defaulting to 80, since Pangolin terminates
-  public TLS itself.
+- Optionally a **target host**, the address the Pangolin site agent reaches
+  Traefik at. Left blank it's detected: Traefik's container name when Newt runs
+  as a container on the same network, `localhost` when it runs on this host with
+  host networking. Set it when Newt runs on another machine. The page also tells
+  you whether it found a Newt tunnel container on this host; the **Newt
+  (Pangolin tunnel)** template deploys one.
+- Optionally a **target port**, defaulting to 443, where this instance's service
+  routers live. A target on 80 reaches an entrypoint with no matching router and
+  Traefik answers 404.
+- **Let Pangolin handle sign-in**, off by default. On, the Resources Homerun
+  creates keep Pangolin's own SSO and the
+  [per-app login wall](#per-app-login-wall) steps aside for anything Pangolin
+  publishes, so visitors sign in once. Off, Homerun owns access and every
+  Resource it creates has Pangolin SSO turned off.
 
 **Test connection** checks the whole set rather than just that the token
 authenticates: it confirms the site exists, and that one of your registered
@@ -318,14 +509,40 @@ being registered separately. `packages/installer/swarm-join.sh` (see
 to an existing swarm and installs the Homerun Agent on it; the swarm scheduler
 places tasks there from then on.
 
-## Logs
+## Observability
 
-The Logs tab live-streams a running container's stdout/stderr straight from the
+The **Observability** tab is where a service tells you whether it's healthy:
+uptime probes, live logs, failed deploys and the errors Homerun logged about it.
+
+### Uptime
+
+Every minute Homerun probes each deployed service two ways, and the tab draws
+the recent results as two heartbeat strips with an uptime percentage, latency,
+and the reason for the latest failure plus hints for fixing it:
+
+- **From the network**: the container's own port, reached over the Docker
+  network. It runs the service's [healthcheck command](#settings) when it has
+  one, opens a TCP connection for a database image, and makes an HTTP request
+  otherwise.
+- **From its hostname**: the public hostname Traefik publishes
+  (`<slug>.<base domain>` or the custom domain). It's skipped for a service that
+  isn't DNS-resolvable, and while the base domain is a loopback address like
+  `localhost`, since probing it from this machine proves nothing.
+
+A probe that changes from up to down, or back, fires the **Service down** or
+**Service recovered** event on any
+[notification channel](operations.md#notifications) subscribed to it. Results
+are kept for a week; **Clear heartbeats** empties the history. Uptime also feeds
+[status pages](operations.md#status-pages).
+
+### Logs
+
+The log panel live-streams a running container's stdout/stderr straight from the
 browser: the server pushes each line as the container writes it over a long-
 lived HTTP response, no polling and no WebSocket (SvelteKit 2 has no WebSocket
-route API; nothing here needs a client-to-server socket anyway). The same viewer
-is embedded on the Overview tab once a service has deployed at least once, so
-recent output is visible without switching tabs.
+route API; nothing here needs a client-to-server socket anyway). A shorter tail
+of the same viewer is on the Overview tab once a service has deployed at least
+once, so recent output is visible without switching tabs.
 
 ## Terminal
 
@@ -361,41 +578,60 @@ returns immediately and one job never runs twice concurrently. Each run's exit
 code and captured output are kept on the job's page, and enabled jobs also show
 up on the Scheduling page next to cron redeploys and backups.
 
-## Errors
+### Errors
 
-A per-service Errors tab surfaces both failed deployments and a live "container
-currently down" banner, plus an "Application errors" section, persisted
-warn/error-level app log lines that mention this service, a lightweight view of
-app-level failures alongside deploy failures. If a service's container was
-removed outside Homerun (e.g. a manual `docker rm`), the tab shows a distinct
-"container is gone" banner with a **Resolve** button instead: click it to clear
-the stale reference so the service goes back to its normal never-deployed state
-and Deploy works again.
+Below the logs, **Failed deployments** and **Application errors** (persisted
+warn/error-level app log lines that mention this service) sit alongside a
+"container currently down" banner when the container has crashed. A deploy that
+reaches running hides the errors logged before it, and **Clear errors** does the
+same by hand; a note says how many are hidden and what cleared them, with a link
+to show them again. If a service's container was removed outside Homerun (e.g. a
+manual `docker rm`), the tab shows a distinct "container is gone" banner with a
+**Resolve** button instead: click it to clear the stale reference so the service
+goes back to its normal never-deployed state and Deploy works again.
 
 ## Notifications
 
 The bell in the header shows a per-account feed of lifecycle events for your
-services, deploy succeeded or failed, service created, started or stopped, an
-auto-redeploy firing, and runtime errors. Click an entry to jump to its service.
-See [Operations](operations.md#notifications) for how it differs from the Errors
-tab's persisted log view, and for sending the same build/update/deploy/uptime
-events out to a Discord webhook, a generic webhook, or email.
+services, deploy succeeded or failed, a build stopped by failing status checks,
+an unhealthy or rolled back revision, service created, started or stopped, an
+auto-redeploy firing, an image scan finding a critical vulnerability, and
+runtime errors. Click an entry to jump to its service. See
+[Operations](operations.md#notifications) for how it differs from the
+Observability tab's persisted error view, and for sending the same
+build/update/deploy/uptime events out to a Discord webhook, a generic webhook,
+or email.
 
 ## Settings
 
-Name, slug, restart policy, which project the service belongs to, the
-[scheduled redeploy](#scheduled-redeploy) above, and a danger-zone delete
-(typed-confirm, see [The services list](#the-services-list)).
+Name, slug, restart policy, which stack the service belongs to, the
+[scheduled redeploy](#scheduled-redeploy) above, the pull policy, whether its
+image is [scanned](#image-scanning), [auto-rollback](#revisions-and-rollback),
+and a danger-zone delete (typed-confirm, see
+[The services list](#the-services-list)).
+
+**Pull policy** decides whether a deploy pulls the image: **Always** (the
+default, and the only way a moving tag like `:latest` picks up a new build),
+**If missing** (only when the image isn't on the host yet, faster redeploys but
+a moving tag goes stale), or **Never** (for an image built or loaded onto the
+host by hand, the deploy fails if it isn't there).
+
+**Healthcheck command** overrides the image's own Docker healthcheck with a
+shell command run inside the container every 30s (exit 0 = healthy). When a
+service has one, its uptime probe reports the healthcheck instead of knocking on
+the container port, which is what a portless container like Newt needs: the Newt
+template ships one that only passes while its Pangolin tunnel is connected.
+Takes effect on the next deploy.
 
 **Save as template** is here too: it snapshots this service's current image,
 tag, port, env vars and resource limits into a reusable template of your own,
 which then behaves exactly like a built-in one, including being linkable as a
 companion to another template. See
-[Projects & templates](projects-and-templates.md#templates).
+[Stacks & templates](stacks-and-templates.md#templates).
 
 ## Next steps
 
-- [Projects & templates](projects-and-templates.md)
+- [Stacks & templates](stacks-and-templates.md)
 - [Storage & backups](storage-and-backups.md)
 - [Build servers & the Homerun Agent](remote-hosts-and-agent.md)
 - [Operations & maintenance](operations.md)

@@ -9,12 +9,17 @@ mock.module("$app/environment", () => ({
 const { discordPayload, messageBody, messageSubject } = await import(
 	"../../../src/lib/services/notification-channel.service"
 );
-const { deployEvent, deployTitle } = await import(
+const { deployEvent, deployTitle, isFailureEvent } = await import(
 	"../../../src/lib/notification-events"
 );
-const { deployMessage, formatDuration, logTail, uptimeMessage } = await import(
-	"../../../src/lib/services/notification-messages"
-);
+const {
+	deployMessage,
+	formatDuration,
+	logTail,
+	revisionHealthMessage,
+	statusChecksMessage,
+	uptimeMessage,
+} = await import("../../../src/lib/services/notification-messages");
 const { validateChannelTarget } = await import(
 	"../../../src/lib/server/validation/notification-channel"
 );
@@ -152,7 +157,7 @@ describe("deploy and uptime messages", () => {
 			{
 				deployment,
 				origin: "https://homerun.example.com/",
-				projectName: "Blog",
+				stackName: "Blog",
 				publicUrl: "https://web.example.com",
 				service,
 				trigger: "cron",
@@ -167,7 +172,7 @@ describe("deploy and uptime messages", () => {
 			"https://homerun.example.com/services/svc-1/revisions",
 		);
 		expect(built.fields).toEqual([
-			{ name: "Project", value: "Blog" },
+			{ name: "Stack", value: "Blog" },
 			{ name: "Trigger", value: "Scheduled" },
 			{ name: "Image", value: "nginx:1.27" },
 			{ name: "Digest", value: "sha256:0123456789ab" },
@@ -188,7 +193,7 @@ describe("deploy and uptime messages", () => {
 					log: "\u001b[32mStep 1/3\u001b[0m\nRUN bun install\nerror: lockfile mismatch\nBuild failed.\n",
 				},
 				origin: null,
-				projectName: null,
+				stackName: null,
 				publicUrl: "https://web.example.com",
 				service: {
 					...service,
@@ -228,6 +233,71 @@ describe("deploy and uptime messages", () => {
 			name: "Host",
 			value: "web.example.com",
 		});
+	});
+
+	test("a status checks message lists what failed and says the build stops", () => {
+		const built = statusChecksMessage(
+			{
+				commit: "0123456789abcdef",
+				failed: ["test"],
+				missing: ["e2e"],
+				origin: "https://homerun.example.com",
+				pending: [],
+				reason: "Required status checks didn't pass.",
+				service: {
+					gitRef: "main",
+					gitUrl: "https://github.com/acme/api.git",
+					id: "svc-1",
+					name: "api",
+				},
+				stackName: null,
+			},
+			"2026-09-16T12:00:00Z",
+		);
+		expect(built.event).toBe("build.checks_failed");
+		expect(built.title).toBe("api was not built: status checks failed");
+		expect(built.fields).toContainEqual({
+			name: "Failed checks",
+			value: "test",
+		});
+		expect(built.fields).toContainEqual({
+			name: "Never reported",
+			value: "e2e",
+		});
+		expect(built.fields).toContainEqual({ name: "Commit", value: "0123456" });
+		expect(built.detail).toContain("The build will not carry on.");
+		expect(isFailureEvent("build.checks_failed")).toBe(true);
+	});
+
+	test("a revision health message is a rollback only when there was a target", () => {
+		const input = {
+			origin: null,
+			reason: "The container exited with code 1.",
+			revision: { gitCommit: null, id: "dep-2", imageRef: "nginx:1.28" },
+			service: { id: "svc-1", name: "web" },
+		};
+		const rolled = revisionHealthMessage(
+			{
+				...input,
+				rolledBackTo: { gitCommit: null, id: "dep-1", imageRef: "nginx:1.27" },
+				skipReason: null,
+			},
+			"2026-09-16T12:00:00Z",
+		);
+		expect(rolled.event).toBe("deploy.rolled_back");
+		expect(rolled.fields).toContainEqual({
+			name: "Rolled back to",
+			value: "nginx:1.27",
+		});
+		const left = revisionHealthMessage(
+			{ ...input, rolledBackTo: null, skipReason: "Auto-rollback is off." },
+			"2026-09-16T12:00:00Z",
+		);
+		expect(left.event).toBe("deploy.unhealthy");
+		expect(left.detail).toBe(
+			"The container exited with code 1.\n\nAuto-rollback is off.",
+		);
+		expect(isFailureEvent("deploy.rolled_back")).toBe(true);
 	});
 
 	test("durations and log tails", () => {

@@ -29,6 +29,10 @@ export type {
 	VolumeMountParams,
 } from "./docker/containers.ts";
 export type {
+	MirrorCopyResult,
+	ScanImageParams,
+} from "./docker/image-scan.ts";
+export type {
 	OneOffRunParams,
 	OneOffRunResult,
 } from "./docker/one-off.ts";
@@ -39,28 +43,34 @@ import { DockerContainerMixin } from "./docker/containers.ts";
 import { DockerCoreServicesMixin } from "./docker/core-services.ts";
 import { DockerCustomSslMixin } from "./docker/custom-ssl.ts";
 import { DockerGitBuildMixin } from "./docker/git-build.ts";
+import { DockerImageScanMixin } from "./docker/image-scan.ts";
 import { DockerNetworkMixin } from "./docker/networks.ts";
 import { DockerOneOffMixin } from "./docker/one-off.ts";
 import { DockerReconcileMixin } from "./docker/reconcile.ts";
+import { DockerRevisionMixin } from "./docker/revisions.ts";
 import { DockerSwarmMixin } from "./docker/swarm.ts";
 import { DockerTerminalMixin } from "./docker/terminal.ts";
 
 // Merge order matters only where one concern calls another's methods via
 // `this` : networks before containers (createAndStartContainer calls
-// connectToProjectNetwork), containers before swarm (createAndStartSwarmService
+// connectToStackNetwork), containers before swarm (createAndStartSwarmService
 // calls this.pullImage), containers before one-off (runOneOff calls
 // this.pullImage), containers+swarm before reconcile (syncServiceStatus
 // calls both this.inspectStatus and this.inspectSwarmServiceStatus). The
 // rest have no cross-concern dependency, so their position is arbitrary.
-class DockerServiceClass extends DockerCleanupMixin(
-	DockerOneOffMixin(
-		DockerTerminalMixin(
-			DockerCoreServicesMixin(
-				DockerCustomSslMixin(
-					DockerGitBuildMixin(
-						DockerReconcileMixin(
-							DockerSwarmMixin(
-								DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+class DockerServiceClass extends DockerRevisionMixin(
+	DockerImageScanMixin(
+		DockerCleanupMixin(
+			DockerOneOffMixin(
+				DockerTerminalMixin(
+					DockerCoreServicesMixin(
+						DockerCustomSslMixin(
+							DockerGitBuildMixin(
+								DockerReconcileMixin(
+									DockerSwarmMixin(
+										DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+									),
+								),
 							),
 						),
 					),

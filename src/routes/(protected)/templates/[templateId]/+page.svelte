@@ -29,7 +29,7 @@
 
 	const configureHref = $derived(
 		`${resolve("/services/new")}?templateId=${tmpl.id}${
-			data.project ? `&projectId=${data.project.id}` : ""
+			data.stack ? `&stackId=${data.stack.id}` : ""
 		}`,
 	);
 </script>
@@ -75,11 +75,11 @@
                 })}
                 method="POST"
             >
-                {#if data.project}
+                {#if data.stack}
                     <input
-                        name="projectId"
+                        name="stackId"
                         type="hidden"
-                        value={data.project.id}
+                        value={data.stack.id}
                     />
                 {/if}
                 <Button disabled={deploying} size="sm" type="submit">

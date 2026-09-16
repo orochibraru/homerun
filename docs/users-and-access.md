@@ -3,11 +3,13 @@
 ## Roles
 
 Homerun has two roles, **admin** and **developer**. Both get the full dashboard
-over their own data, every project/service/volume is already scoped by account,
+over their own data, every stack/service/volume is already scoped by account,
 invisible to other users, the only difference is a few admin-only pages,
-`/users`, `/settings`, and `/docker-cleanup` (see
-[Operations](operations.md#docker-cleanup)). There's no finer-grained permission
-system yet (no per-project access control, no read-only role).
+**Users**, **Authentication**, **Settings**, **System Logs** and **Docker
+Cleanup** (see [Operations](operations.md#docker-cleanup)), plus admin-only
+actions elsewhere: registering a git provider's OAuth app and host-command cron
+jobs. There's no finer-grained permission system yet (no per-stack access
+control, no read-only role).
 
 **The very first account created on a fresh instance becomes admin
 automatically.** After that, there's no public sign-up, every other account is
@@ -43,9 +45,10 @@ account:
   the address you're leaving, so it stays locked until SMTP is configured (see
   [Known, real limitations](faq-and-limitations.md#known-real-limitations-not-hypothetical)).
 - **Security**, change your password, connect or disconnect OAuth providers (see
-  [below](#connecting-a-provider-to-an-existing-account)), and delete your
-  account. Deleting stops and removes every container you own first, it isn't
-  just a row disappearing.
+  [below](#connecting-a-provider-to-an-existing-account)), set up
+  [two-factor authentication and passkeys](#two-factor-authentication-and-passkeys),
+  and delete your account. Deleting stops and removes every container you own
+  first, it isn't just a row disappearing.
 - **Sessions**, every browser currently signed in as you, with the device and
   when it was last seen. Revoke any of them, useful after signing in somewhere
   you don't control.
@@ -54,6 +57,29 @@ account:
   login. Create a key here to use the REST API or CLI without a browser session,
   and revoke one the same way. A key is shown once, at creation.
 - **Appearance**, see [below](#appearance).
+- **Notifications**, which events each of your notification channels receives,
+  see [Operations](operations.md#notifications).
+
+## Two-factor authentication and passkeys
+
+Both live under **Profile → Security**.
+
+- **Two-factor authentication** asks for a code from an authenticator app after
+  your password. Turning it on (confirm your password first, if you have one)
+  shows a QR code to scan and a set of **backup codes**; save those, each one
+  signs you in once when the app isn't to hand. The sign-in page's code step
+  accepts either. You can generate new backup codes or turn it off from the same
+  panel.
+- **Passkeys** sign you in with Touch ID, Windows Hello, a security key or your
+  password manager instead of a password. Register as many as you like, name
+  them, and remove the ones you no longer use. The sign-in page offers a passkey
+  button and your browser's passkey autofill.
+
+A passkey is bound to the **Dashboard URL**'s hostname (Settings → General), so
+it only works when you open Homerun on that host or a subdomain of it; on any
+other address the passkey option isn't offered. Set the Dashboard URL before
+anyone registers one, since changing its hostname later strands every passkey
+already registered.
 
 ## API keys
 
@@ -112,6 +138,18 @@ methods are configured for the whole instance:
 
 Register `<your-homerun-url>/api/v1/auth/callback/<provider id>` as the redirect
 URI on the provider's side. The Authentication page prints the exact URL to use.
+
+The same page has two instance-wide switches:
+
+- **Preferred sign-in methods** picks what the sign-in page shows up front,
+  among password, passkey and each enabled provider. Everything else stays
+  available behind an "Other sign-in methods" link; pick none to show every
+  method. With passkey preferred, the sign-in page prompts for one as soon as it
+  opens.
+- **Sign-in requirements**: **Require two-factor authentication** and **Require
+  a passkey**. They apply to every account, admins included. Anyone who doesn't
+  meet one is sent to a setup page on their next visit and can't use the
+  dashboard until they've enrolled. API keys and CLI tokens aren't affected.
 
 ### Base domain and Dashboard URL are two different things
 
@@ -193,8 +231,8 @@ cookie, and a cookie issued for one hostname is rejected on any other.
 
 This needs **Origin** set under Settings → General, since that's the URL
 visitors are sent to in order to sign in. Saving the setting is refused with an
-explanation if it isn't set yet. It does **not** need `AUTH_CROSS_SUBDOMAIN`,
-which is unrelated to this flow.
+explanation if it isn't set yet. It does **not** need **Cross-subdomain
+cookies** (Settings → General), which is unrelated to this flow.
 
 **Sign-in methods.** Nothing is enabled by default: pick at least one of the
 built-in login and your configured OAuth providers. Only the methods you pick

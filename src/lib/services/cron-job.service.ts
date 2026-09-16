@@ -51,6 +51,7 @@ class OutputFlusher {
 
 	constructor(private readonly run: CronJobRunDTO) {}
 
+	/** Appends `chunk` to the pending buffer, scheduling a flush in `FLUSH_INTERVAL_MS` if one isn't already scheduled. */
 	push(chunk: string): void {
 		this.#buffer += chunk;
 		this.#timer ??= setTimeout(() => {
@@ -59,6 +60,7 @@ class OutputFlusher {
 		}, FLUSH_INTERVAL_MS);
 	}
 
+	/** Writes the buffered output to the run row (`CronJobRunDTO.appendOutput`) and clears it, cancelling any pending scheduled flush. Logs and swallows a write failure rather than throwing. */
 	async flush(): Promise<void> {
 		if (this.#timer) {
 			clearTimeout(this.#timer);
@@ -73,6 +75,13 @@ class OutputFlusher {
 }
 
 class CronJobServiceClass {
+	/**
+	 * Runs an "image" kind cron job as a one-off container
+	 * (`DockerService.runOneOff`) on its resolved host, streaming its output
+	 * into `run` via an `OutputFlusher`. Fails fast with a descriptive
+	 * outcome (rather than throwing) when the job has no image, or its host
+	 * resolves to a Homerun Agent (no one-off run endpoint there).
+	 */
 	async #runImage(
 		job: CronJobDTO,
 		run: CronJobRunDTO,
@@ -134,6 +143,7 @@ class CronJobServiceClass {
 		};
 	}
 
+	/** Runs an "exec" kind cron job's command via `/bin/sh -c` on this same host, capping output at `MAX_OUTPUT_BYTES` and killing it after `job.timeoutSeconds`. Never throws: a non-zero exit or timeout is reported through the returned outcome. */
 	async #runExec(job: CronJobDTO): Promise<CronJobRunOutcome> {
 		if (!job.command) {
 			return {
@@ -173,6 +183,12 @@ class CronJobServiceClass {
 		}
 	}
 
+	/**
+	 * Runs `job` (dispatching to `#runImage` or `#runExec` by `job.kind`),
+	 * recording a `cron_job_run` row for it and stamping `job.lastRunAt`
+	 * regardless of outcome. Never throws: an unexpected error is captured
+	 * into the returned outcome instead.
+	 */
 	async runJob(job: CronJobDTO): Promise<CronJobRunOutcome> {
 		const run = await CronJobRunDTO.create(job.id);
 		logger.info(`Cron job started: job=${job.id} kind=${job.kind}`);

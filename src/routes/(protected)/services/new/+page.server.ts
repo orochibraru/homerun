@@ -5,8 +5,8 @@ import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
@@ -20,7 +20,7 @@ import { encryptSecret } from "$lib/services/secrets";
 import {
 	buildTemplateLinkContext,
 	createLinkedServices,
-	createProjectForLinkedStack,
+	createStackForLinkedServices,
 	resolveEnvVarsWithLinks,
 } from "$lib/services/template-links";
 
@@ -49,11 +49,11 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 
 export const load = async ({ url, parent }) => {
 	const { user } = await parent();
-	const projectId = url.searchParams.get("projectId");
+	const stackId = url.searchParams.get("stackId");
 	const templateId = url.searchParams.get("templateId");
 
-	const project =
-		projectId && (await ProjectDTO.get(projectId, user.id)) ? projectId : null;
+	const stack =
+		stackId && (await StackDTO.get(stackId, user.id)) ? stackId : null;
 	const template = templateId
 		? await TemplateDTO.usable(templateId, user.id)
 		: null;
@@ -85,7 +85,7 @@ export const load = async ({ url, parent }) => {
 				name: providersById.get(c.providerId)?.name ?? c.providerKind,
 				providerUsername: c.providerUsername,
 			})),
-		projectId: project,
+		stackId: stack,
 		template: template?.toJSON() ?? null,
 		templateLinks: templateLinks.map((l) => ({
 			alias: l.link.alias,
@@ -98,7 +98,7 @@ export const load = async ({ url, parent }) => {
 async function prepareLinkedStack(
 	formData: FormData,
 	userId: string,
-	primary: { name: string; projectId: string | null; slug: string },
+	primary: { name: string; stackId: string | null; slug: string },
 ) {
 	const templateId = (formData.get("templateId") as string | null) || null;
 	const template = templateId
@@ -108,25 +108,25 @@ async function prepareLinkedStack(
 		? await buildTemplateLinkContext(template.id, primary.slug)
 		: [];
 
-	const projectId =
-		links.length > 0 && !primary.projectId
-			? await createProjectForLinkedStack(primary.name, userId)
-			: primary.projectId;
+	const stackId =
+		links.length > 0 && !primary.stackId
+			? await createStackForLinkedServices(primary.name, userId)
+			: primary.stackId;
 
-	return { links, projectId };
+	return { links, stackId, template };
 }
 
 async function finishLinkedStack(
 	links: Awaited<ReturnType<typeof buildTemplateLinkContext>>,
-	projectId: string | null,
+	stackId: string | null,
 	userId: string,
 	primaryServiceId: string,
 ): Promise<ServiceDTO[]> {
-	if (links.length === 0 || !projectId) {
+	if (links.length === 0 || !stackId) {
 		return [];
 	}
 	const linkedServices = await createLinkedServices(links, {
-		projectId,
+		stackId,
 		userId,
 	});
 	logger.info(
@@ -167,11 +167,9 @@ async function takenFieldFailure(
 }
 
 async function createServiceFromForm(formData: FormData, userId: string) {
-	const rawProjectId = formData.get("projectId") as string | null;
-	const initialProjectId =
-		rawProjectId && (await ProjectDTO.get(rawProjectId, userId))
-			? rawProjectId
-			: null;
+	const rawStackId = formData.get("stackId") as string | null;
+	const initialStackId =
+		rawStackId && (await StackDTO.get(rawStackId, userId)) ? rawStackId : null;
 
 	const result = createServiceSchema.safeParse(Object.fromEntries(formData));
 
@@ -191,11 +189,15 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		return taken;
 	}
 
-	const { links, projectId } = await prepareLinkedStack(formData, userId, {
-		name: input.name,
-		projectId: initialProjectId,
-		slug: input.slug,
-	});
+	const { links, stackId, template } = await prepareLinkedStack(
+		formData,
+		userId,
+		{
+			name: input.name,
+			stackId: initialStackId,
+			slug: input.slug,
+		},
+	);
 
 	const envVars =
 		links.length > 0
@@ -214,9 +216,11 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		cpuLimit: input.cpuLimit || null,
 		dnsResolvable: input.dnsResolvable,
 		envVars,
+		healthcheckCommand:
+			input.healthcheckCommand || template?.healthcheckCommand || null,
 		memoryLimitMb: input.memoryLimitMb ?? null,
 		name: input.name,
-		projectId,
+		stackId,
 		registryPasswordEnc: input.registryPassword
 			? encryptSecret(input.registryPassword)
 			: null,
@@ -240,12 +244,12 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 
 	const linkedServices = await finishLinkedStack(
 		links,
-		projectId,
+		stackId,
 		userId,
 		svc.id,
 	);
 
-	return { linkedServices, projectId, svc } as const;
+	return { linkedServices, stackId, svc } as const;
 }
 
 export const actions = {
@@ -262,8 +266,8 @@ export const actions = {
 
 		redirect(
 			303,
-			result.projectId && result.linkedServices.length > 0
-				? `${resolve("/projects")}/${result.projectId}`
+			result.stackId && result.linkedServices.length > 0
+				? `${resolve("/stacks")}/${result.stackId}`
 				: `${resolve("/services")}/${result.svc.id}`,
 		);
 	},
@@ -287,8 +291,8 @@ export const actions = {
 
 		redirect(
 			303,
-			result.projectId && result.linkedServices.length > 0
-				? `${resolve("/projects")}/${result.projectId}`
+			result.stackId && result.linkedServices.length > 0
+				? `${resolve("/stacks")}/${result.stackId}`
 				: `${resolve("/services")}/${result.svc.id}`,
 		);
 	},

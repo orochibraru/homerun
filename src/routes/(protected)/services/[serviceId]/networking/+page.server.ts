@@ -11,7 +11,6 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { invalidateGatedService } from "$lib/server/gated-service-cache";
 import { updatePortsSchema } from "$lib/server/validation/service";
-import { DeploymentService } from "$lib/services/deploy.service";
 import { DockerService } from "$lib/services/docker.service";
 import { encryptSecret } from "$lib/services/secrets";
 import { UserService } from "$lib/services/user.service";
@@ -71,28 +70,6 @@ export const load = async () => {
 };
 
 export const actions = {
-	// Traefik discovers a service's routers from its container's own labels,
-	// which are only written when the container is created : every setting on
-	// this tab (custom domain, DNS-resolvability, the login wall) is inert on
-	// the running container until the next deploy. This is that redeploy,
-	// rather than leaving the user to guess why saving changed nothing.
-	redeploy: async ({ params, locals }) => {
-		if (!locals.user) {
-			throw redirect(302, resolve("/auth/sign-in"));
-		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
-		if (!svc) {
-			return fail(404, { error: "Service not found." });
-		}
-		const { deploymentId } = await DeploymentService.enqueueDeploy({
-			svc,
-			userId: locals.user.id,
-		});
-		logger.info(
-			`Redeploy queued from networking: service=${svc.id} deployment=${deploymentId} user=${locals.user.id}`,
-		);
-		return { redeployQueued: true, success: true };
-	},
 	updateNetworking: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

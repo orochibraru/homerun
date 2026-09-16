@@ -1,22 +1,22 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { StatusPageDTO } from "$lib/dto/status-page-dto";
 import { statusPageSchema } from "$lib/server/validation/status-page";
 
 export const load = async ({ parent }) => {
 	const { user } = await parent();
-	const [projects, services] = await Promise.all([
-		ProjectDTO.list(user.id),
+	const [stacks, services] = await Promise.all([
+		StackDTO.list(user.id),
 		ServiceDTO.list(user.id),
 	]);
 	return {
-		projects: projects.map((p) => ({ id: p.id, name: p.name })),
+		stacks: stacks.map((p) => ({ id: p.id, name: p.name })),
 		services: services.map((svc) => ({
 			id: svc.id,
 			name: svc.name,
-			projectId: svc.projectId,
+			stackId: svc.stackId,
 		})),
 	};
 };
@@ -37,8 +37,8 @@ export const actions = {
 		if (await StatusPageDTO.slugTaken(parsed.data.slug)) {
 			fieldErrors.slug = ["That slug is already taken."];
 		}
-		if (parsed.data.scope === "project" && !parsed.data.projectId) {
-			fieldErrors.projectId = ["Pick the project this page covers."];
+		if (parsed.data.scope === "stack" && !parsed.data.stackId) {
+			fieldErrors.stackId = ["Pick the stack this page covers."];
 		}
 		if (Object.keys(fieldErrors).length > 0) {
 			return fail(400, { errors: fieldErrors });
@@ -48,7 +48,7 @@ export const actions = {
 			description: parsed.data.description || null,
 			isPublic: parsed.data.isPublic,
 			name: parsed.data.name,
-			projectId: parsed.data.scope === "project" ? parsed.data.projectId : null,
+			stackId: parsed.data.scope === "stack" ? parsed.data.stackId : null,
 			scope: parsed.data.scope,
 			slug: parsed.data.slug,
 			userId: locals.user.id,

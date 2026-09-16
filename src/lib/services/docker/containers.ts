@@ -4,6 +4,7 @@ import type { ContainerStatus } from "$lib/types";
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
+import { dockerHealthcheck } from "./healthcheck.ts";
 import {
 	buildContainerLabels,
 	MANAGED_LABEL,
@@ -102,20 +103,20 @@ export interface CreateContainerParams {
 	image: string;
 	memoryLimitMb?: number | null;
 	// "bridge" (default) | "host" : shares the host's network namespace
-	// directly instead of joining the shared/project Docker networks, for
+	// directly instead of joining the shared/stack Docker networks, for
 	// apps that need it (mDNS/SSDP discovery, e.g. Home Assistant). Docker
 	// doesn't allow combining host mode with any other network attachment,
-	// so when this is "host": no shared-network alias, no project-network
+	// so when this is "host": no shared-network alias, no stack-network
 	// join, no Traefik labels regardless of dnsResolvable (there's no
 	// container-specific IP/network for Traefik's docker provider to route
 	// to) : the container is reachable only directly on the host's own
 	// network interfaces, on whatever port(s) it binds to itself.
 	networkMode?: "bridge" | "host";
-	// When set, the container also joins this project's dedicated network
-	// (see docker/networks.ts) : lets sibling services in the same project
+	// When set, the container also joins this stack's dedicated network
+	// (see docker/networks.ts) : lets sibling services in the same stack
 	// reach it, in addition to the shared Traefik network below. No effect
 	// when networkMode is "host" (see above).
-	projectId?: string | null;
+	stackId?: string | null;
 	// "tcp" (default) | "udp" | "both" : which protocol(s) containerPort is
 	// declared under (Docker's ExposedPorts). Doesn't publish/map anything by
 	// itself either way : see the Networking tab's own "no host port
@@ -123,16 +124,17 @@ export interface CreateContainerParams {
 	// only in combination with networkMode: "host" above.
 	portProtocol?: "tcp" | "udp" | "both";
 	// Prefixes the container name and public subdomain when the service
-	// belongs to a project (e.g. "<projectSlug>-<slug>.<baseDomain>").
-	projectSlug?: string | null;
+	// belongs to a stack (e.g. "<stackSlug>-<slug>.<baseDomain>").
+	stackSlug?: string | null;
 	// When set, this container is created on a remote Docker daemon instead
 	// of the local socket : see docker/client.ts's getDocker(). Note: the
-	// shared/project Docker networks and Traefik itself all live on the
+	// shared/stack Docker networks and Traefik itself all live on the
 	// *local* host, so a remote-hosted service isn't reachable through the
 	// normal internal-network or Traefik paths : only directly, if you
 	// publish a port yourself. Effectively an isolated remote workload
 	// today, not (yet) a fully integrated second node.
 	remote?: RemoteHostConnection | null;
+	healthcheckCommand?: string | null;
 	restartPolicy: string;
 	serviceId: string;
 	slug: string;
@@ -142,9 +144,9 @@ export interface CreateContainerParams {
 
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the network mixin. */
 interface RequiresNetworkMixin {
-	connectToProjectNetwork: (
+	connectToStackNetwork: (
 		containerId: string,
-		projectId: string,
+		stackId: string,
 		alias: string,
 	) => Promise<void>;
 	ensureSharedNetwork: () => Promise<void>;
@@ -155,7 +157,7 @@ interface RequiresNetworkMixin {
  * container for the same service), start/stop/restart/remove, status
  * inspection, log streaming. Requires the network mixin ahead of it in
  * the merge chain : createAndStartContainer calls
- * `this.ensureSharedNetwork` and `this.connectToProjectNetwork`.
+ * `this.ensureSharedNetwork` and `this.connectToStackNetwork`.
  */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerContainerMixin<
@@ -170,9 +172,9 @@ export function DockerContainerMixin<
 		 * found by its `homerun.service.id` label, not by name, since names
 		 * are no longer stable across deploys.
 		 */
-		#containerName(slug: string, projectSlug?: string | null): string {
+		#containerName(slug: string, stackSlug?: string | null): string {
 			const suffix = crypto.randomUUID().slice(0, 8);
-			const prefix = projectSlug ? `${projectSlug}-` : "";
+			const prefix = stackSlug ? `${stackSlug}-` : "";
 			return `homerun-${prefix}${slug}-${suffix}`;
 		}
 
@@ -216,6 +218,13 @@ export function DockerContainerMixin<
 			};
 		}
 
+		/**
+		 * Looks up the digest of an already-pulled local image, without
+		 * pulling it. Returns null when the image exists locally but carries
+		 * no digest (never pushed to/pulled from a registry), and undefined
+		 * when the image can't be inspected at all (not present locally, or
+		 * the Docker call failed).
+		 */
 		async localImageDigest(
 			ref: string,
 			remote?: RemoteHostConnection | null,
@@ -311,15 +320,6 @@ export function DockerContainerMixin<
 		}
 
 		/**
-		 * Creates and starts the container for a service, replacing any
-		 * previous container for the same service (a redeploy : see
-		 * #findServiceContainer above). Attaches to the shared Traefik
-		 * network under a DNS alias equal to the service's slug : no host
-		 * port publishing needed, Traefik reaches it over that network, and
-		 * other services can reach it at `http://<slug>:<containerPort>`
-		 * regardless of the container's own (randomized) name.
-		 */
-		/**
 		 * Removes any previous container for this service (a redeploy), found
 		 * by its service-id label rather than by name (see #containerName).
 		 */
@@ -366,6 +366,11 @@ export function DockerContainerMixin<
 			return params.remote ? undefined : config.docker.networkName;
 		}
 
+		/**
+		 * Builds the dockerode `HostConfig` for a container from its create
+		 * params: volume binds, memory/CPU limits, network mode, and restart
+		 * policy.
+		 */
 		#hostConfigFor(params: CreateContainerParams) {
 			// Docker's Binds syntax covers both a host bind-mount path and a
 			// Docker-managed named volume with the same "source:target[:ro]"
@@ -395,6 +400,12 @@ export function DockerContainerMixin<
 			};
 		}
 
+		/**
+		 * Builds the full dockerode container-creation options for a service:
+		 * env vars, exposed ports, healthcheck, `HostConfig` (via
+		 * `#hostConfigFor`), Traefik labels, and the shared-network alias when
+		 * applicable.
+		 */
 		#createContainerOptions(params: CreateContainerParams, name: string) {
 			const isHostNetwork = params.networkMode === "host";
 			const protocols =
@@ -409,6 +420,7 @@ export function DockerContainerMixin<
 				ExposedPorts: Object.fromEntries(
 					protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
 				),
+				Healthcheck: dockerHealthcheck(params.healthcheckCommand),
 				HostConfig: this.#hostConfigFor(params),
 				Image: `${params.image}:${params.tag}`,
 				// Host-mode containers never get Traefik labels regardless of
@@ -420,7 +432,7 @@ export function DockerContainerMixin<
 					containerPort: params.containerPort,
 					customDomain: params.customDomain,
 					dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
-					projectSlug: params.projectSlug,
+					stackSlug: params.stackSlug,
 					serviceId: params.serviceId,
 					slug: params.slug,
 				}),
@@ -445,26 +457,26 @@ export function DockerContainerMixin<
 			};
 		}
 
-		/** Best-effort project-network join : a failure is degraded connectivity, not a failed deploy. */
-		async #joinProjectNetwork(
+		/** Best-effort stack-network join : a failure is degraded connectivity, not a failed deploy. */
+		async #joinStackNetwork(
 			containerId: string,
 			params: CreateContainerParams,
 		): Promise<void> {
-			if (!params.projectId || params.remote || params.networkMode === "host") {
+			if (!params.stackId || params.remote || params.networkMode === "host") {
 				return;
 			}
 			try {
-				await this.connectToProjectNetwork(
+				await this.connectToStackNetwork(
 					containerId,
-					params.projectId,
+					params.stackId,
 					params.slug,
 				);
 				logger.info(
-					`Joined project network: service=${params.serviceId} project=${params.projectId}`,
+					`Joined stack network: service=${params.serviceId} stack=${params.stackId}`,
 				);
 			} catch (err) {
 				logger.warn(
-					`Could not join project network: service=${params.serviceId} project=${params.projectId}`,
+					`Could not join stack network: service=${params.serviceId} stack=${params.stackId}`,
 					err,
 				);
 			}
@@ -498,12 +510,25 @@ export function DockerContainerMixin<
 			);
 		}
 
+		/**
+		 * Creates and starts the container for a service, replacing any
+		 * previous container for the same service (a redeploy : see
+		 * `#removePreviousContainer`). Ensures the shared Traefik network
+		 * exists first (unless the container is remote or on the host
+		 * network), attaches under a DNS alias equal to the service's slug so
+		 * other services can reach it at `http://<slug>:<containerPort>`
+		 * regardless of the container's own (randomized) name, then
+		 * best-effort joins the service's stack network. Reports progress and
+		 * final reachability via `onProgress`/the logger.
+		 *
+		 * @throws When the Docker create or start call fails.
+		 */
 		async createAndStartContainer(
 			params: CreateContainerParams,
 			onProgress?: (line: string) => void,
 		): Promise<{ containerId: string }> {
 			const docker = this.getDocker(params.remote);
-			const name = this.#containerName(params.slug, params.projectSlug);
+			const name = this.#containerName(params.slug, params.stackSlug);
 
 			await this.#removePreviousContainer(params, onProgress);
 
@@ -524,12 +549,13 @@ export function DockerContainerMixin<
 				}`,
 			);
 
-			await this.#joinProjectNetwork(container.id, params);
+			await this.#joinStackNetwork(container.id, params);
 			this.#reportReachability(params, onProgress);
 
 			return { containerId: container.id };
 		}
 
+		/** Starts a stopped container via the Docker API. */
 		async startContainer(
 			containerId: string,
 			remote?: RemoteHostConnection | null,
@@ -538,6 +564,7 @@ export function DockerContainerMixin<
 			logger.info(`Container started: ${containerId}`);
 		}
 
+		/** Stops a running container via the Docker API. */
 		async stopContainer(
 			containerId: string,
 			remote?: RemoteHostConnection | null,
@@ -546,6 +573,7 @@ export function DockerContainerMixin<
 			logger.info(`Container stopped: ${containerId}`);
 		}
 
+		/** Restarts a container via the Docker API. */
 		async restartContainer(
 			containerId: string,
 			remote?: RemoteHostConnection | null,
@@ -554,6 +582,7 @@ export function DockerContainerMixin<
 			logger.info(`Container restarted: ${containerId}`);
 		}
 
+		/** Removes a container via the Docker API, forcing removal (stopping it first) by default. */
 		async removeContainer(
 			containerId: string,
 			opts?: { force?: boolean },
@@ -668,6 +697,11 @@ export function DockerContainerMixin<
 			}
 		}
 
+		/**
+		 * The container's Docker healthcheck status and the last probe's
+		 * output, or null when the container has no healthcheck configured or
+		 * can't be inspected.
+		 */
 		async containerHealth(
 			containerId: string,
 			remote?: RemoteHostConnection | null,

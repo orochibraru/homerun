@@ -74,6 +74,7 @@ function logLine(prefix: string, line: string): void {
 class AgentDockerService {
 	#docker: Docker | null = null;
 
+	/** Returns the dockerode client for the configured socket, opening it on first use and reusing it afterwards. */
 	getDocker(): Docker {
 		if (!this.#docker) {
 			this.#docker = new Docker({ socketPath: config.dockerSocketPath });
@@ -81,16 +82,12 @@ class AgentDockerService {
 		return this.#docker;
 	}
 
-	/** Ensures the shared network exists : mirrors the main app's `ensureProjectNetwork`, just one flat network here since an agent host has no notion of "projects". */
 	/**
-	 * Clones a git repo at a ref and builds its Dockerfile into a local
-	 * image tagged `input.tag`, optionally pushing it to a registry
-	 * afterward : see `buildInputSchema`'s docstring for the full picture
-	 * (why no cache-from pull, when `push` matters). Mirrors the main app's
-	 * `docker/git-build.ts`'s `buildFromGit`, this is a from-scratch,
-	 * self-contained implementation (the agent has no access to the main
-	 * app's source tree, same "keep the two in sync by hand" precedent as
-	 * `deploy()`/`createAndStartContainer` already document).
+	 * Pulls the `alpine/git` image the clone runs in, unless it's already
+	 * present locally.
+	 *
+	 * @param push Progress sink, told when a pull actually starts.
+	 * @throws When the pull fails.
 	 */
 	async #ensureGitImage(push: (line: string) => void): Promise<void> {
 		const d = this.getDocker();
@@ -108,6 +105,15 @@ class AgentDockerService {
 		});
 	}
 
+	/**
+	 * Runs a one-off `git` container with the build volume mounted at the
+	 * workspace, waits for it (bounded by the clone timeout) and always removes
+	 * it afterwards.
+	 *
+	 * @param opts.cmd Arguments passed to the `git` entrypoint.
+	 * @returns The container's combined stdout/stderr and its exit code.
+	 * @throws When the command exceeds the clone timeout.
+	 */
 	async #runInWorkspace(opts: {
 		cmd: string[];
 		volumeName: string;

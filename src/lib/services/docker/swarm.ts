@@ -7,6 +7,7 @@ import type {
 	RegistryAuth,
 	VolumeMountParams,
 } from "./containers.ts";
+import { dockerHealthcheck } from "./healthcheck.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
 
 const logger = new Logger("Swarm");
@@ -48,7 +49,8 @@ export interface CreateSwarmServiceParams {
 	image: string;
 	memoryLimitMb?: number | null;
 	portProtocol?: "tcp" | "udp" | "both";
-	projectSlug?: string | null;
+	healthcheckCommand?: string | null;
+	stackSlug?: string | null;
 	replicas: number;
 	restartPolicy: string;
 	serviceId: string;
@@ -158,7 +160,6 @@ export function DockerSwarmMixin<
 			}
 		}
 
-		/** Pulls the image, then creates (or replaces) the swarm service backing one Homerun service. */
 		/**
 		 * Best-effort pre-pull : same "warn, don't block" posture as a bad
 		 * image ref elsewhere, createService still surfaces a real error if
@@ -183,10 +184,12 @@ export function DockerSwarmMixin<
 			}
 		}
 
+		/** Builds the dockerode `TaskTemplate` for a swarm service from its create params: env, healthcheck, image, labels, bind mounts, the shared overlay network, resource limits, and restart condition. */
 		#taskTemplateFor(params: CreateSwarmServiceParams) {
 			return {
 				ContainerSpec: {
 					Env: Object.entries(params.envVars).map(([k, v]) => `${k}=${v}`),
+					Healthcheck: dockerHealthcheck(params.healthcheckCommand),
 					Image: `${params.image}:${params.tag}`,
 					Labels: {
 						[SERVICE_ID_LABEL]: params.serviceId,
@@ -216,6 +219,16 @@ export function DockerSwarmMixin<
 			};
 		}
 
+		/**
+		 * Pulls the image, then creates (or replaces) the swarm service
+		 * backing one Homerun service: ensures the shared overlay network,
+		 * removes any previous swarm service for this service id (found by
+		 * label, see `#findSwarmService`), best-effort pre-pulls the image
+		 * (`#prePullImage`), then creates the service. Reports progress via
+		 * `onProgress`.
+		 *
+		 * @throws When the Docker create-service call fails.
+		 */
 		async createAndStartSwarmService(
 			params: CreateSwarmServiceParams,
 			onProgress?: (line: string) => void,
@@ -244,12 +257,12 @@ export function DockerSwarmMixin<
 					customDomain: params.customDomain,
 					dnsResolvable: params.dnsResolvable,
 					networkName: swarmNetworkName(),
-					projectSlug: params.projectSlug,
+					stackSlug: params.stackSlug,
 					serviceId: params.serviceId,
 					slug: params.slug,
 				}),
 				Mode: { Replicated: { Replicas: params.replicas } },
-				Name: this.#swarmServiceName(params.slug, params.projectSlug),
+				Name: this.#swarmServiceName(params.slug, params.stackSlug),
 				TaskTemplate: this.#taskTemplateFor(params),
 			});
 
@@ -259,6 +272,7 @@ export function DockerSwarmMixin<
 			return { swarmServiceId: created.id ?? created.ID };
 		}
 
+		/** Removes a swarm service via the Docker API. */
 		async removeSwarmService(swarmServiceId: string): Promise<void> {
 			await this.getDocker().getService(swarmServiceId).remove();
 		}
@@ -364,12 +378,14 @@ export function DockerSwarmMixin<
 			});
 		}
 
-		#swarmServiceName(slug: string, projectSlug?: string | null): string {
+		/** Swarm-service name this app gives its services, with a random suffix so a redeploy never collides on "name already in use" (mirrors `#containerName` in containers.ts). */
+		#swarmServiceName(slug: string, stackSlug?: string | null): string {
 			const suffix = crypto.randomUUID().slice(0, 8);
-			const prefix = projectSlug ? `${projectSlug}-` : "";
+			const prefix = stackSlug ? `${stackSlug}-` : "";
 			return `homerun-${prefix}${slug}-${suffix}`;
 		}
 
+		/** The currently-running (or last) swarm service for a Homerun service, if any : found by its service-id label, not by name. */
 		async #findSwarmService(serviceId: string): Promise<{ ID: string } | null> {
 			const services = await this.getDocker().listServices({
 				filters: JSON.stringify({

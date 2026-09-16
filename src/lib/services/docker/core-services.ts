@@ -76,6 +76,11 @@ export function DockerCoreServicesMixin<
 	TBase extends Constructor<BaseDockerService & RequiresSwarmMixin>,
 >(Base: TBase) {
 	return class DockerCoreServicesService extends Base {
+		/**
+		 * Inspects the container this app is itself running in (found by
+		 * hostname, which Docker sets to the container id). Returns null when
+		 * that lookup fails, e.g. running outside Docker in dev.
+		 */
 		async selfContainer(): Promise<SelfContainer | null> {
 			const info = await this.getDocker()
 				.getContainer(hostname())
@@ -93,11 +98,17 @@ export function DockerCoreServicesMixin<
 			};
 		}
 
+		/** This app's own container labels (see `selfContainer`), or null when it can't be found. */
 		async selfContainerLabels(): Promise<Record<string, string> | null> {
 			const self = await this.selfContainer();
 			return self?.labels ?? null;
 		}
 
+		/**
+		 * The host a Pangolin tunnel should point at: the Traefik container's
+		 * name when a Newt tunnel and Traefik share a network (so the tunnel
+		 * can reach it by that name), otherwise "localhost".
+		 */
 		async tunnelTargetHost(): Promise<string> {
 			const containers = await this.getDocker()
 				.listContainers()
@@ -105,6 +116,16 @@ export function DockerCoreServicesMixin<
 			return tunnelTargetHostFrom(containers);
 		}
 
+		/**
+		 * Writes (or removes) the Traefik dynamic-config file that routes the
+		 * dashboard's own configured host to this app's container, so the
+		 * dashboard is reachable through Traefik under a custom domain rather
+		 * than only on its own port. Removes the file when there's no origin
+		 * host configured, this app's own container can't be found, or
+		 * Traefik already has a router for that host from elsewhere (e.g. the
+		 * operator's own compose labels). Writes to disk under
+		 * `config.traefik.dynamicConfigDir`; failures are logged, not thrown.
+		 */
 		async syncDashboardRouter(): Promise<void> {
 			const dir = config.traefik.dynamicConfigDir;
 			if (!dir) {

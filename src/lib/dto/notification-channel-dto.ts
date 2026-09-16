@@ -5,6 +5,7 @@ import {
 	type NotificationChannel,
 	notificationChannel,
 } from "$lib/server/db/schema";
+import { searchCondition } from "$lib/server/list-query";
 import type { NotificationChannelKind, NotificationEvent } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
@@ -24,7 +25,15 @@ export type NotificationChannelUpdateInput = Partial<
 	>
 >;
 
+/**
+ * Wraps the `notification_channel` table : an external destination (webhook,
+ * Discord or email) that selected notification events are delivered to.
+ */
 export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
+	/**
+	 * Loads one channel by id, scoped to its owner; null when missing or owned by
+	 * someone else.
+	 */
 	static async get(
 		id: string,
 		userId: string,
@@ -42,6 +51,7 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		return row ? new NotificationChannelDTO(row) : null;
 	}
 
+	/** Every channel the user owns, sorted by name. */
 	static async list(userId: string): Promise<NotificationChannelDTO[]> {
 		const rows = await db
 			.select()
@@ -51,6 +61,7 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		return rows.map((row) => new NotificationChannelDTO(row));
 	}
 
+	/** The user's enabled channels subscribed to `event`, sorted by name. */
 	static async listSubscribed(
 		userId: string,
 		event: NotificationEvent,
@@ -70,6 +81,36 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 			.map((row) => new NotificationChannelDTO(row));
 	}
 
+	/**
+	 * Up to `limit` of the user's channels whose name or kind matches `q`, for
+	 * global search.
+	 */
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<NotificationChannelDTO[]> {
+		const rows = await db
+			.select()
+			.from(notificationChannel)
+			.where(
+				and(
+					eq(notificationChannel.userId, userId),
+					searchCondition(q, [
+						notificationChannel.name,
+						notificationChannel.kind,
+					]),
+				),
+			)
+			.orderBy(asc(notificationChannel.name))
+			.limit(limit);
+		return rows.map((row) => new NotificationChannelDTO(row));
+	}
+
+	/**
+	 * Inserts a new channel, enabled and subscribed to the default events unless
+	 * told otherwise.
+	 */
 	static async create(
 		input: NewNotificationChannelInput,
 	): Promise<NotificationChannelDTO> {
@@ -90,6 +131,7 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		return new NotificationChannelDTO(row);
 	}
 
+	/** Writes the given fields to the row and mirrors them onto this instance. */
 	async update(input: NotificationChannelUpdateInput): Promise<void> {
 		await db
 			.update(notificationChannel)
@@ -98,24 +140,32 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		Object.assign(this.row, input);
 	}
 
+	/** Deletes this channel row. */
 	async delete(): Promise<void> {
 		await db
 			.delete(notificationChannel)
 			.where(eq(notificationChannel.id, this.row.id));
 	}
 
+	/** The channel's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The notification events the channel is subscribed to. */
 	get events(): NotificationEvent[] {
 		return this.row.events;
 	}
+	/** Which delivery integration the channel uses. */
 	get kind(): NotificationChannelKind {
 		return this.row.kind;
 	}
+	/** The channel's display name. */
 	get name(): string {
 		return this.row.name;
 	}
+	/**
+	 * Where the channel delivers to (a URL or address, depending on its kind).
+	 */
 	get target(): string {
 		return this.row.target;
 	}

@@ -40,6 +40,10 @@ class ProgressEmitter {
 		private readonly controller: ReadableStreamDefaultController<Uint8Array>,
 	) {}
 
+	/**
+	 * Writes one named server-sent event with a JSON payload and resets the
+	 * heartbeat clock.
+	 */
 	#send(event: string, data: unknown): void {
 		this.controller.enqueue(
 			encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
@@ -47,6 +51,10 @@ class ProgressEmitter {
 		this.#lastBeat = Date.now();
 	}
 
+	/**
+	 * Sends a `progress` event with the deployment's status and log, skipped when
+	 * nothing changed since the last one.
+	 */
 	progress(current: DeployProgressSnapshot): void {
 		const serialized = JSON.stringify(current);
 		if (serialized === this.#lastSerialized) {
@@ -56,10 +64,18 @@ class ProgressEmitter {
 		this.#send("progress", current);
 	}
 
+	/**
+	 * Sends the final `done` event carrying the deployment's terminal status, or
+	 * `missing` when its row never appeared.
+	 */
 	done(status: string): void {
 		this.#send("done", { status });
 	}
 
+	/**
+	 * Writes an SSE keep-alive comment if nothing has been sent for 15 seconds,
+	 * so proxies don't close an idle stream.
+	 */
 	beat(): void {
 		if (Date.now() - this.#lastBeat < HEARTBEAT_MS) {
 			return;
@@ -69,6 +85,12 @@ class ProgressEmitter {
 	}
 }
 
+/**
+ * Runs one poll of the deployment and emits whatever changed.
+ *
+ * @returns True once the stream should end : the deployment reached a terminal
+ * status, or its row still doesn't exist after the deadline.
+ */
 async function step(
 	emitter: ProgressEmitter,
 	deploymentId: string,
@@ -94,6 +116,13 @@ async function step(
 	return false;
 }
 
+/**
+ * An SSE stream of a deployment's live progress, polling its row every 500ms
+ * until it reaches running, stopped or failed or the client disconnects. Waits
+ * up to a minute for the row to exist, since the client may start listening
+ * before the deploy request creates it. A deployment belonging to a different
+ * service is treated as missing.
+ */
 export function deployProgressStream(
 	deploymentId: string,
 	serviceId: string,

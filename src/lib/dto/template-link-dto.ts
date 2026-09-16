@@ -26,7 +26,16 @@ export interface TemplateLinkWithTemplate {
 	linkedTemplateTag: string;
 }
 
+/**
+ * Wraps the `template_link` table : a companion template deployed alongside a
+ * primary one, addressable from its env vars as `{{alias}}`.
+ */
 export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
+	/**
+	 * Every link on a primary template, with the linked template's image,
+	 * resources and env vars joined in for display and for deploying the
+	 * companions.
+	 */
 	static async listForTemplate(
 		templateId: string,
 	): Promise<TemplateLinkWithTemplate[]> {
@@ -60,6 +69,10 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 		}));
 	}
 
+	/**
+	 * How many companion templates a template links to, used to keep links two
+	 * levels deep.
+	 */
 	static async countForTemplate(templateId: string): Promise<number> {
 		const rows = await db
 			.select({ id: templateLink.id })
@@ -68,6 +81,10 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 		return rows.length;
 	}
 
+	/**
+	 * Inserts a link from a primary template to a companion. Callers must reject
+	 * linking to a template that has links of its own.
+	 */
 	static async create(input: NewTemplateLinkInput): Promise<TemplateLinkDTO> {
 		const row: TemplateLink = {
 			alias: input.alias,
@@ -80,19 +97,24 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 		return new TemplateLinkDTO(row);
 	}
 
+	/** Deletes this link row. */
 	async remove(): Promise<void> {
 		await db.delete(templateLink).where(eq(templateLink.id, this.row.id));
 	}
 
+	/** The link's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The name the primary template's env vars reference the companion by. */
 	get alias(): string {
 		return this.row.alias;
 	}
+	/** The id of the companion template. */
 	get linkedTemplateId(): string {
 		return this.row.linkedTemplateId;
 	}
+	/** The id of the primary template the link belongs to. */
 	get templateId(): string {
 		return this.row.templateId;
 	}

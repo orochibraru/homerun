@@ -82,7 +82,7 @@ since is not a bug. Calibrate findings accordingly, see Severity below.
    delete, a primary "Save"/"Create" CTA, a secondary "Cancel") should use the
    same `Button` `variant`/`size` across pages. Grep `<Button` usages and
    compare `variant=` values for equivalent actions across a few representative
-   route files (services, projects, storage, remote-hosts follow the same
+   route files (services, stacks, storage, remote-hosts follow the same
    list/new/[id] shape, good comparison set).
 
 ## Severity, be calibrated, not exhaustive

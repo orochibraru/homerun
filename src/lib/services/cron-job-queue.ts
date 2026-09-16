@@ -2,6 +2,7 @@ import type { CronJobDTO } from "$lib/dto/cron-job-dto";
 import type { JobDTO } from "$lib/dto/job-dto";
 import { QueueService } from "./queue.service.ts";
 
+/** Enqueues a run of `job`, deduped and lock-scoped per cron job so it can't be queued (or run) more than once concurrently. */
 export function enqueueCronJobRun(job: CronJobDTO): Promise<JobDTO> {
 	return QueueService.enqueue({
 		dedupeKey: `cron_job:${job.id}`,

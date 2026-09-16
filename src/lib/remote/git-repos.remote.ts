@@ -12,6 +12,12 @@ import {
 
 const logger = new Logger("GitProviders");
 
+/**
+ * Looks up a configured git provider and the user's connection to it.
+ *
+ * @throws A 404 error when the provider doesn't exist, or 400 when the user
+ * hasn't connected to it.
+ */
 async function resolveConnection(providerId: string, userId: string) {
 	const settings = await InstanceSettingsDTO.get();
 	const provider = settings.gitProviders.find((p) => p.id === providerId);

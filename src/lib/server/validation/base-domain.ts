@@ -6,6 +6,12 @@ export interface NormalizedBaseDomain {
 	port: string | null;
 }
 
+/**
+ * Reduces what an admin typed as the base domain (possibly a full URL with a
+ * scheme or path) to a bare hostname and optional port.
+ *
+ * @returns Null when what's left isn't a valid hostname or port.
+ */
 export function normalizeBaseDomain(raw: string): NormalizedBaseDomain | null {
 	let candidate = raw.trim();
 	if (candidate.includes("://")) {

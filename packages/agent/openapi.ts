@@ -45,6 +45,12 @@ const buildResultSchema = z.object({
  * though `buildDocument` itself is a pure transform (baseUrl in, doc out).
  */
 class AgentOpenApiBuilder {
+	/**
+	 * Builds the agent's OpenAPI document describing its
+	 * `/v1` routes.
+	 *
+	 * @param baseUrl The origin written into the document's `servers` entry.
+	 */
 	buildDocument(baseUrl: string): Record<string, unknown> {
 		const jsonResponse = (
 			description: string,

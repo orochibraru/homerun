@@ -7,6 +7,12 @@ export interface TunnelContainer {
 
 const LEADING_SLASH_RE = /^\//;
 
+/**
+ * The hostname the dashboard's Traefik router should target when running
+ * behind a Pangolin tunnel : the Traefik container's own name (reachable by
+ * Docker DNS) when it and the `fosrl/newt` tunnel container share a network
+ * and newt isn't on host networking, otherwise falls back to `"localhost"`.
+ */
 export function tunnelTargetHostFrom(containers: TunnelContainer[]): string {
 	const newt = containers.find((c) => c.Image.includes("fosrl/newt"));
 	const traefik = containers.find((c) => c.Image.startsWith("traefik"));

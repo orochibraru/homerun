@@ -25,6 +25,10 @@ export interface EnhanceToastOptions extends ToastMessages {
 
 const DEFAULT_ERROR = "Something went wrong. Please try again.";
 
+/**
+ * Turns a thrown value into a toast message: the error's own message when it has
+ * one, the fallback otherwise.
+ */
 export function toastError(error: unknown, fallback = DEFAULT_ERROR): string {
 	if (error instanceof Error && error.message) {
 		return error.message;
@@ -48,6 +52,15 @@ function resultError(
 	return new Error(firstFieldError ?? data?.error ?? fallback);
 }
 
+/**
+ * Builds a `use:enhance` submit function that narrates the form action through a
+ * single promise toast (loading, then success or error) and runs the option
+ * hooks around it. Failure messages come from the action's `error` field or the
+ * first entry of its `errors` field map.
+ *
+ * @returns A SubmitFunction that calls `update()` with `reset: false` unless
+ * `options.reset` says otherwise.
+ */
 export function enhanceToast(options: EnhanceToastOptions): SubmitFunction {
 	const fallback = options.error ?? DEFAULT_ERROR;
 
@@ -88,6 +101,11 @@ export function enhanceToast(options: EnhanceToastOptions): SubmitFunction {
 	};
 }
 
+/**
+ * Shorthand `enhanceToast` for a settings-style form that saves one section.
+ *
+ * @param sectionLabel The section's display name, e.g. "Email settings".
+ */
 export function saveToast(sectionLabel: string): SubmitFunction {
 	return enhanceToast({
 		error: "Check the form for errors.",

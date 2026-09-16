@@ -1,6 +1,7 @@
 import {
 	and,
 	asc,
+	count,
 	desc,
 	eq,
 	inArray,
@@ -83,6 +84,11 @@ function exclusivityRespected() {
 	);
 }
 
+/**
+ * SQL condition that stops a non-exclusive job from being claimed while an
+ * exclusive job is already due, so the exclusive one isn't starved by a steady
+ * stream of shared work.
+ */
 function noExclusiveBarrierAhead(now: Date) {
 	const barrier = alias(job, "barrier");
 	return or(
@@ -113,12 +119,22 @@ function claimableCondition(now: Date) {
 	);
 }
 
+/**
+ * Wraps the `job` table : the persistent background job queue, claimed by the
+ * worker with row locks.
+ */
 export class JobDTO extends BaseDTO<Job> {
+	/**
+	 * Loads one job by id, unscoped : callers must check ownership themselves.
+	 */
 	static async get(id: string): Promise<JobDTO | null> {
 		const [row] = await db.select().from(job).where(eq(job.id, id)).limit(1);
 		return row ? new JobDTO(row) : null;
 	}
 
+	/**
+	 * The queued (not yet running) job of this type with this dedupe key, if any.
+	 */
 	static async findQueued(
 		type: JobType,
 		dedupeKey: string,
@@ -137,6 +153,32 @@ export class JobDTO extends BaseDTO<Job> {
 		return row ? new JobDTO(row) : null;
 	}
 
+	/** The queued or running job of this type with this dedupe key, if any. */
+	static async findActive(
+		type: JobType,
+		dedupeKey: string,
+	): Promise<JobDTO | null> {
+		const [row] = await db
+			.select()
+			.from(job)
+			.where(
+				and(
+					eq(job.type, type),
+					eq(job.dedupeKey, dedupeKey),
+					inArray(job.status, ["queued", "running"]),
+				),
+			)
+			.limit(1);
+		return row ? new JobDTO(row) : null;
+	}
+
+	/**
+	 * Enqueues a job, and on roughly 2% of writes prunes finished jobs older than
+	 * a week.
+	 *
+	 * @returns The new job, or null when a queued job with the same type and
+	 * dedupe key already exists.
+	 */
 	static async create(input: NewJobInput): Promise<JobDTO | null> {
 		const now = new Date();
 		const row: Job = {
@@ -174,6 +216,14 @@ export class JobDTO extends BaseDTO<Job> {
 		return inserted ? new JobDTO(inserted) : null;
 	}
 
+	/**
+	 * Atomically claims the highest-priority due job whose dependency has
+	 * succeeded, whose lock key is free and whose exclusivity rules allow it,
+	 * marking it running and bumping its attempt count. Uses `FOR UPDATE SKIP
+	 * LOCKED`, so concurrent workers never claim the same job.
+	 *
+	 * @returns The claimed job, or null when nothing is claimable.
+	 */
 	static async claimNext(): Promise<JobDTO | null> {
 		const now = new Date();
 
@@ -208,6 +258,53 @@ export class JobDTO extends BaseDTO<Job> {
 		});
 	}
 
+	/**
+	 * Instance-wide counts of queued-or-running deploys and of jobs running right
+	 * now, for the activity indicator.
+	 */
+	static async activitySummary(): Promise<{
+		pendingDeploys: number;
+		running: number;
+	}> {
+		const [[deploys], [running]] = await Promise.all([
+			db
+				.select({ total: count() })
+				.from(job)
+				.where(
+					and(
+						eq(job.type, "deploy"),
+						inArray(job.status, ["queued", "running"]),
+					),
+				),
+			db.select({ total: count() }).from(job).where(eq(job.status, "running")),
+		]);
+		return {
+			pendingDeploys: deploys?.total ?? 0,
+			running: running?.total ?? 0,
+		};
+	}
+
+	/**
+	 * Counts jobs of any of the given types currently in any of the given
+	 * statuses.
+	 */
+	static async countByTypes(
+		types: JobType[],
+		statuses: JobStatus[],
+	): Promise<number> {
+		const [row] = await db
+			.select({ total: count() })
+			.from(job)
+			.where(and(inArray(job.type, types), inArray(job.status, statuses)));
+		return row?.total ?? 0;
+	}
+
+	/**
+	 * Puts every job still marked running back in the queue, for jobs a previous
+	 * process died in the middle of.
+	 *
+	 * @returns How many jobs were requeued.
+	 */
 	static async requeueOrphaned(): Promise<number> {
 		const rows = await db
 			.update(job)
@@ -217,6 +314,10 @@ export class JobDTO extends BaseDTO<Job> {
 		return rows.length;
 	}
 
+	/**
+	 * Cancels every queued or running job that depends on `jobId`, directly or
+	 * transitively, recording `reason` as their error.
+	 */
 	static async cancelDependents(jobId: string, reason: string): Promise<void> {
 		let frontier = [jobId];
 		while (frontier.length > 0) {
@@ -235,6 +336,10 @@ export class JobDTO extends BaseDTO<Job> {
 		}
 	}
 
+	/**
+	 * Up to 50 of the user's running and queued jobs, running first, then by
+	 * priority and age.
+	 */
 	static async listActive(userId: string): Promise<JobDTO[]> {
 		const rows = await db
 			.select()
@@ -247,6 +352,10 @@ export class JobDTO extends BaseDTO<Job> {
 		return rows.map((row) => new JobDTO(row));
 	}
 
+	/**
+	 * The user's most recently finished jobs (succeeded, failed or cancelled),
+	 * each with its service's slug when it has one.
+	 */
 	static async listRecent(
 		userId: string,
 		limit = 15,
@@ -266,6 +375,7 @@ export class JobDTO extends BaseDTO<Job> {
 		}));
 	}
 
+	/** Deletes finished jobs that finished more than a week ago. */
 	static async prune(): Promise<void> {
 		await db
 			.delete(job)
@@ -277,50 +387,67 @@ export class JobDTO extends BaseDTO<Job> {
 			);
 	}
 
+	/** Writes the given fields to the row and mirrors them onto this instance. */
 	private async update(input: Partial<Job>): Promise<void> {
 		await db.update(job).set(input).where(eq(job.id, this.row.id));
 		Object.assign(this.row, input);
 	}
 
+	/** Marks the job succeeded now, storing its result. */
 	async markSucceeded(result: Record<string, unknown> | null): Promise<void> {
 		await this.update({ finishedAt: new Date(), result, status: "succeeded" });
 	}
 
+	/** Marks the job failed now, storing the error message. */
 	async markFailed(error: string): Promise<void> {
 		await this.update({ error, finishedAt: new Date(), status: "failed" });
 	}
 
+	/**
+	 * Puts the job back in the queue to run again at `runAt`, keeping the last
+	 * error for display.
+	 */
 	async scheduleRetry(error: string, runAt: Date): Promise<void> {
 		await this.update({ error, runAt, startedAt: null, status: "queued" });
 	}
 
+	/** How many times the job has been claimed so far. */
 	get attempts(): number {
 		return this.row.attempts;
 	}
+	/** The last error message, null when it hasn't failed. */
 	get error(): string | null {
 		return this.row.error;
 	}
+	/** The job's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** How many attempts the job gets before it is marked failed for good. */
 	get maxAttempts(): number {
 		return this.row.maxAttempts;
 	}
+	/** The job-type-specific input the handler runs with. */
 	get payload(): Record<string, unknown> {
 		return this.row.payload;
 	}
+	/** The handler's result, null until it succeeds. */
 	get result(): Record<string, unknown> | null {
 		return this.row.result;
 	}
+	/** The job's current queue status. */
 	get status(): JobStatus {
 		return this.row.status;
 	}
+	/** The human-readable title shown in the job queue. */
 	get title(): string {
 		return this.row.title;
 	}
+	/** Which handler runs the job. */
 	get type(): JobType {
 		return this.row.type;
 	}
+	/** The id of the user the job was enqueued for. */
 	get userId(): string {
 		return this.row.userId;
 	}

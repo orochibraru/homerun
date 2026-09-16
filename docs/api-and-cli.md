@@ -13,15 +13,66 @@ and external API-key clients alike.
   full pull-or-build → create → start pipeline and returns once it's done (no
   separate polling endpoint for API clients: that's dashboard-only, for its own
   progress UI)
-- `GET/POST /api/v1/projects`, `GET/POST /api/v1/templates`
+- `GET/POST /api/v1/stacks`, `GET /api/v1/templates`
+- `GET/POST /api/v1/services/:id/scans`,
+  `GET /api/v1/services/:id/scans/latest`,
+  `GET /api/v1/services/:id/scans/:scanId`: image scan results, see
+  [Image scans](#image-scans) below
+- `GET /api/v1/services/:id/revisions`,
+  `POST /api/v1/services/:id/revisions/:revisionId/deploy`: revisions and
+  rollback, see [Revisions](#revisions) below
+- `GET /api/v1/jobs/:jobId`: the status of a queued job, such as a scan
 - `GET /api/v1/system-stats`: host CPU/RAM/disk/GPU
 
-The three list `GET`s (`services`, `projects`, `templates`) are paginated:
-`?page=`, `?perPage=` (default 100, max 100), and `?q=` for a case-insensitive
-search. The response body stays a plain JSON array, on purpose, so an existing
-integration keeps working unchanged; the total row count and the page/size you
-got back come in the `x-total-count`/`x-page`/`x-per-page` response headers
-instead. Both the OpenAPI spec and the CLI (below) document these the same way.
+The list `GET`s (`services`, `stacks`, `templates`, a service's `scans`) are
+paginated: `?page=`, `?perPage=` (default 100, max 100), and `?q=` for a
+case-insensitive search. The response body stays a plain JSON array, on purpose,
+so an existing integration keeps working unchanged; the total row count and the
+page/size you got back come in the `x-total-count`/`x-page`/`x-per-page`
+response headers instead. Both the OpenAPI spec and the CLI (below) document
+these the same way.
+
+### Image scans
+
+A service's [image scans](services.md#image-scanning) are readable over the API:
+
+- `GET /api/v1/services/:id/scans` lists them newest first, without findings:
+  `id`, `deploymentId` (null for an on-demand scan), `imageRef`, `digest`,
+  `status` (`ok`, `failed`, `skipped`), `counts` per severity, `totalFindings`,
+  `scannedAt`, and `error` for a scan that didn't produce findings.
+- `GET /api/v1/services/:id/scans/latest` and
+  `GET /api/v1/services/:id/scans/:scanId` return one scan with its `findings`
+  (top 200, most severe first). `latest` is a 404 until the service has been
+  scanned once.
+- `POST /api/v1/services/:id/scans` queues a scan of the deployed image, the
+  same as the Security tab's **Scan now**, and answers `202` with a `jobId`.
+  It's a `400` for a service that was never deployed, and a `409` (with the
+  in-flight `jobId`) when a scan of that service is already queued or running.
+  Poll `GET /api/v1/jobs/:jobId` until its `status` is `succeeded`, `failed` or
+  `cancelled`, then read `scans/latest`.
+
+Only your own services' scans and jobs are visible; anything else is a 404.
+
+### Revisions
+
+- `GET /api/v1/services/:id/revisions` lists the last 50
+  [revisions](services.md#revisions-and-rollback) newest first: `id`,
+  `imageRef`, `imageDigest`, `imageId`, `buildSource`, `gitCommit`, `gitRef`,
+  `health` (`watching`, `healthy`, `unhealthy`, `rolled_back`, or null for one
+  recorded before health watching existed), `rollbackOfDeploymentId`, `status`,
+  `createdAt`/`finishedAt`, plus three markers: `current` (running now),
+  `previous` (the default rollback target) and `retained` (its image is kept on
+  the host).
+- `POST /api/v1/services/:id/revisions/:revisionId/deploy` redeploys that
+  revision's image without building, pulling from upstream or scanning, and like
+  `deploy` returns once it's done. Use `previous` as the `revisionId` for the
+  default target. A `404` means no such revision for that service, a `400` that
+  there's no previous revision with a different image.
+
+`PATCH /api/v1/services/:id` also takes `autoRollback`, `requireStatusChecks`
+and `requiredStatusChecks` (see
+[Required status checks](services.md#required-status-checks)), plus
+`healthcheckCommand` and `imageScanEnabled`.
 
 ## OpenAPI spec & Swagger UI
 
@@ -104,7 +155,12 @@ homerun services deploy <id>
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
-homerun projects list [--json]
+homerun services scans <id> [--json]
+homerun services scans get <id> [scanId] [--json]
+homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
+homerun services revisions <id> [--json]
+homerun services rollback <id> [revisionId]
+homerun stacks list [--json]
 homerun templates list [--json]
 ```
 
@@ -116,6 +172,27 @@ than letting a truncated table look complete.
 
 `homerun services deploy` returns when the deploy has actually finished, not
 when it's been queued, so it's usable as a step in a script or CI job.
+
+`homerun services scans <id>` lists a service's image scans (it takes the same
+`--page`/`--per-page`/`--search` flags as a list), and
+`homerun services scans get <id>` prints the latest scan's counts and findings
+table, or a specific one given its id. `homerun services scan <id>` queues a
+scan and prints the job id; with `--wait` it waits for the scan and prints the
+result, and `--fail-on <level>` (implies `--wait`) exits non-zero when the scan
+found anything at or above that severity, so a CI job can gate on it:
+
+```bash
+homerun services deploy "$SERVICE_ID"
+homerun services scan "$SERVICE_ID" --fail-on high
+```
+
+A scan that fails to run, or a wait that outlasts `--timeout` (default 1800
+seconds), also exits non-zero.
+
+`homerun services revisions <id>` prints a service's revisions with the current
+and previous one marked, and `homerun services rollback <id> [revisionId]`
+redeploys a revision (the previous one when no id is given) and waits for it
+like `deploy`.
 
 ### Working on the CLI itself
 

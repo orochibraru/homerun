@@ -7,7 +7,7 @@ import { DockerService } from "$lib/services/docker.service";
 
 export interface SetupStatus {
 	checks: SetupCheck[];
-	highlightFields: string[];
+	fieldsByCheck: Record<string, string[]>;
 	issuesByField: Record<string, string>;
 }
 
@@ -25,13 +25,7 @@ export const getSetupStatus = query(async (): Promise<SetupStatus> => {
 
 	return {
 		checks,
-		highlightFields: [
-			...new Set(
-				issues.flatMap(
-					(check) => AdminService.SETUP_CHECK_FIELDS[check.id] ?? [],
-				),
-			),
-		],
+		fieldsByCheck: AdminService.SETUP_CHECK_FIELDS,
 		issuesByField,
 	};
 });

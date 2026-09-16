@@ -27,6 +27,10 @@ export const serviceResponse = z.object({
 	authAllowedUserIds: z.array(z.string()),
 	authProviders: z.array(z.string()),
 	authRequired: z.boolean(),
+	autoRollback: z.boolean().meta({
+		description:
+			"Redeploy the previous healthy revision when a new one is unhealthy",
+	}),
 	buildSource: z.enum(["image", "git"]),
 	containerId: z.string().nullable(),
 	containerPort: z.number().int(),
@@ -58,19 +62,26 @@ export const serviceResponse = z.object({
 	gitDockerfilePath: z.string().nullable(),
 	gitRef: z.string().nullable(),
 	gitUrl: z.string().nullable(),
+	healthcheckCommand: z.string().nullable(),
 	id: z.string(),
 	image: z.string(),
+	imageScanEnabled: z.boolean(),
 	memoryLimitMb: z.number().int().nullable(),
 	name: z.string(),
 	networkMode: z.enum(["bridge", "host"]),
 	portProtocol: z.enum(["tcp", "udp", "both"]),
-	projectId: z.string().nullable(),
+	stackId: z.string().nullable(),
 	registryPasswordEnc: z
 		.string()
 		.nullable()
 		.meta({ description: "Ciphertext, not plaintext." }),
 	registryUrl: z.string().nullable(),
 	registryUsername: z.string().nullable(),
+	requireStatusChecks: z.boolean().meta({
+		description:
+			"Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+	}),
+	requiredStatusChecks: z.array(z.string()),
 	restartPolicy: z.enum(["no", "always", "on-failure", "unless-stopped"]),
 	slug: z.string(),
 	tag: z.string(),
@@ -78,7 +89,7 @@ export const serviceResponse = z.object({
 	userId: z.string(),
 });
 
-export const projectResponse = z.object({
+export const stackResponse = z.object({
 	createdAt: isoTimestamp,
 	description: z.string().nullable(),
 	id: z.string(),
@@ -116,6 +127,44 @@ export const deployResultResponse = z.object({
 	success: z.boolean(),
 });
 
+export const revisionResponse = z.object({
+	buildSource: z.enum(["image", "git"]).nullable(),
+	createdAt: isoTimestamp,
+	current: z.boolean().meta({ description: "The revision running now" }),
+	finishedAt: isoTimestamp.nullable(),
+	gitCommit: z.string().nullable(),
+	gitRef: z.string().nullable(),
+	health: z
+		.enum(["watching", "healthy", "unhealthy", "rolled_back"])
+		.nullable()
+		.meta({ description: "null = recorded before health watching existed" }),
+	id: z.string(),
+	imageDigest: z.string().nullable(),
+	imageId: z.string().nullable(),
+	imageRef: z.string().nullable(),
+	previous: z.boolean().meta({
+		description:
+			"The default rollback target: the newest older healthy revision with a different image",
+	}),
+	retained: z.boolean().meta({
+		description:
+			"Among the last 5 distinct images kept on the host and in the mirror",
+	}),
+	rollbackOfDeploymentId: z
+		.string()
+		.nullable()
+		.meta({ description: "Set when this revision redeployed an older one" }),
+	status: z.enum([
+		"pending",
+		"pulling",
+		"starting",
+		"running",
+		"stopped",
+		"failed",
+		"missing",
+	]),
+});
+
 export const okResponse = z.object({ ok: z.boolean() });
 
 export const successResponse = z.object({ success: z.boolean() });
@@ -136,4 +185,76 @@ export const systemStatsResponse = z.object({
 	memPercent: z.number(),
 	memTotalMb: z.number(),
 	memUsedMb: z.number(),
+});
+
+const severityCounts = z.object({
+	critical: z.number().int(),
+	high: z.number().int(),
+	low: z.number().int(),
+	medium: z.number().int(),
+	unknown: z.number().int(),
+});
+
+export const imageScanSummaryResponse = z.object({
+	counts: severityCounts,
+	deploymentId: z
+		.string()
+		.nullable()
+		.meta({ description: "null = scanned on demand, not during a deploy" }),
+	digest: z.string().nullable(),
+	error: z
+		.string()
+		.nullable()
+		.meta({ description: "Why a failed or skipped scan has no findings" }),
+	id: z.string(),
+	imageRef: z.string(),
+	scannedAt: isoTimestamp,
+	serviceId: z.string(),
+	source: z.string(),
+	status: z.enum(["ok", "failed", "skipped"]),
+	totalFindings: z.number().int().meta({
+		description:
+			"Every unique finding, including those beyond the stored findings cap",
+	}),
+});
+
+export const imageScanResponse = imageScanSummaryResponse.extend({
+	findings: z
+		.array(
+			z.object({
+				fixedVersion: z.string().nullable(),
+				id: z.string(),
+				installedVersion: z.string(),
+				pkg: z.string(),
+				severity: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]),
+				title: z.string().nullable(),
+			}),
+		)
+		.meta({
+			description:
+				"Sorted most severe first, capped at 200 : totalFindings has the real count",
+		}),
+});
+
+export const queuedJobResponse = z.object({
+	jobId: z.string(),
+	status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+});
+
+export const scanConflictResponse = z.object({
+	error: z.string(),
+	jobId: z.string().meta({ description: "The scan job already in flight" }),
+});
+
+export const jobResponse = z.object({
+	createdAt: isoTimestamp,
+	error: z.string().nullable(),
+	finishedAt: isoTimestamp.nullable(),
+	id: z.string(),
+	result: z.record(z.string(), z.unknown()).nullable(),
+	serviceId: z.string().nullable(),
+	startedAt: isoTimestamp.nullable(),
+	status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+	title: z.string(),
+	type: z.string(),
 });

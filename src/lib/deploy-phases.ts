@@ -24,15 +24,24 @@ export const DEPLOY_PHASES: DeployPhase[] = [
 
 export type DeployPhaseState = "pending" | "active" | "done" | "failed";
 
+/**
+ * Formats the marker line a deploy writes to its log when it enters a phase, so
+ * the UI can later recognise it with `currentPhase`.
+ */
 export function phaseLine(id: DeployPhaseId): string {
 	const phase = DEPLOY_PHASES.find((p) => p.id === id);
 	return `${PHASE_MARKER}${phase ? phase.label : id}`;
 }
 
+/** Whether a deploy-log line is a phase marker rather than ordinary output. */
 export function isPhaseLine(line: string): boolean {
 	return line.startsWith(PHASE_MARKER);
 }
 
+/**
+ * Scans a deploy log for phase marker lines and returns the last phase entered,
+ * or null when no marker has been written yet.
+ */
 export function currentPhase(log: string): DeployPhaseId | null {
 	const labels = new Map(DEPLOY_PHASES.map((p) => [p.label, p.id]));
 	let current: DeployPhaseId | null = null;
@@ -62,6 +71,14 @@ export function phasesFor(buildSource: "git" | "image"): DeployPhase[] {
 	);
 }
 
+/**
+ * Derives the progress state of every deploy phase from the log written so far
+ * and the service's status, for the deploy stepper.
+ *
+ * @param status The service status; `running` or `stopped` marks every phase
+ * done, `failed` marks the current phase failed.
+ * @param buildSource Picks the phase labels, see `phasesFor`.
+ */
 export function deployPhaseStates(
 	log: string,
 	status: string,

@@ -4,8 +4,10 @@
 		Clock,
 		FolderKanban,
 		LayoutGrid,
+		RotateCcw,
 		Server,
 		Settings,
+		ShieldCheck,
 		Trash2Icon,
 		TriangleAlertIcon,
 	} from "@lucide/svelte";
@@ -39,6 +41,7 @@
 
 	const values = $derived(
 		(form?.values as Record<string, string> | undefined) ?? {
+			healthcheckCommand: svc.healthcheckCommand ?? "",
 			name: svc.name,
 			pullPolicy: svc.pullPolicy,
 			restartPolicy: svc.restartPolicy,
@@ -69,9 +72,9 @@
 		PULL_POLICIES.find((opt) => opt.value === pullPolicy) ?? PULL_POLICIES[0],
 	);
 
-	let projectId = $derived(svc.projectId ?? "");
-	const projectLabel = $derived(
-		data.projects.find((p) => p.id === projectId)?.name ?? "Ungrouped",
+	let stackId = $derived(svc.stackId ?? "");
+	const stackLabel = $derived(
+		data.stacks.find((p) => p.id === stackId)?.name ?? "Ungrouped",
 	);
 </script>
 
@@ -194,6 +197,26 @@
         </SelectRoot>
       </div>
 
+      <div>
+        <label class={label} for="healthcheckCommand">Healthcheck command</label>
+        <Input
+          id="healthcheckCommand"
+          name="healthcheckCommand"
+          placeholder="curl -fsS http://127.0.0.1:8080/health"
+          type="text"
+          value={values.healthcheckCommand ?? ""}
+        />
+        <p class="text-text-subtle mt-1.5 text-xs">
+          Runs inside the container through the shell every 30s, exit 0 means
+          healthy. Overrides the image's own healthcheck and drives this
+          service's uptime probe. Leave blank to keep the image's. Redeploy for
+          changes to take effect.
+        </p>
+        {#if errors?.healthcheckCommand}
+          <p class={errorClass}>{errors.healthcheckCommand[0]}</p>
+        {/if}
+      </div>
+
       <p class="text-text-subtle text-xs">
         CPU/memory limits and autoscaling moved to the
         <a
@@ -219,7 +242,7 @@
     </form>
   </section>
 
-  <!-- ═══ Project ═══ -->
+  <!-- ═══ Stack ═══ -->
   <section class="panel rounded-md">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
@@ -227,14 +250,14 @@
           <FolderKanban class="size-4" />
         </div>
         <div>
-          <p class="text-text text-sm font-medium">Project</p>
+          <p class="text-text text-sm font-medium">Stack</p>
           <p class="text-text-muted text-xs">
-            Move this service into a different project, or ungroup it.
+            Move this service into a different stack, or ungroup it.
           </p>
         </div>
       </div>
       <form
-        action="?/moveProject"
+        action="?/moveStack"
         class="flex w-75 items-center gap-2"
         method="POST"
         use:enhance={enhanceToast({
@@ -243,14 +266,14 @@
           success: "Moved.",
         })}
       >
-        <SelectRoot name="projectId" type="single" bind:value={projectId}>
+        <SelectRoot name="stackId" type="single" bind:value={stackId}>
           <SelectTrigger class="w-full">
-            {projectLabel}
+            {stackLabel}
           </SelectTrigger>
           <SelectContent>
             <SelectItem label="Ungrouped" value="" />
-            {#each data.projects as proj (proj.id)}
-              <SelectItem label={proj.name} value={proj.id} />
+            {#each data.stacks as stack (stack.id)}
+              <SelectItem label={stack.name} value={stack.id} />
             {/each}
           </SelectContent>
         </SelectRoot>
@@ -287,6 +310,89 @@
         </Button>
       </form>
     </div>
+  </section>
+
+  <section class="panel rounded-md p-5">
+    <div class="mb-4 flex items-center gap-3">
+      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+        <RotateCcw class="size-4" />
+      </div>
+      <div>
+        <p class="text-text text-sm font-medium">Auto-rollback</p>
+        <p class="text-text-muted text-xs">
+          Every deploy is watched for 90 seconds (longer while a healthcheck is
+          still starting). A revision that exits, restart-loops or fails its
+          healthcheck is reported either way. Past revisions are on the
+          <a
+            class="text-accent underline"
+            href={resolve("/(protected)/services/[serviceId]/revisions", {
+              serviceId: svc.id,
+            })}
+          >Revisions</a>
+          tab.
+        </p>
+      </div>
+    </div>
+    <form
+      action="?/updateAutoRollback"
+      class="space-y-3"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't save auto-rollback.",
+        loading: "Saving auto-rollback",
+        success: "Saved.",
+      })}
+    >
+      <CheckBox
+        checked={svc.autoRollback}
+        helperText="When the new revision is unhealthy, redeploy the previous healthy revision automatically instead of leaving it running."
+        id="autoRollback"
+        label="Auto-rollback when a new revision is unhealthy"
+        name="autoRollback"
+      />
+      <Button type="submit" variant="outline">Save</Button>
+    </form>
+  </section>
+
+  <section class="panel rounded-md p-5">
+    <div class="mb-4 flex items-center gap-3">
+      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+        <ShieldCheck class="size-4" />
+      </div>
+      <div>
+        <p class="text-text text-sm font-medium">Image scanning</p>
+        <p class="text-text-muted text-xs">
+          Scans the image for known vulnerabilities on every deploy, through
+          Homerun's pull mirror. Results are on the
+          <a
+            class="text-accent underline"
+            href={resolve("/(protected)/services/[serviceId]/security", {
+              serviceId: svc.id,
+            })}
+          >Security</a>
+          tab.
+        </p>
+      </div>
+    </div>
+    <form
+      action="?/updateImageScan"
+      class="space-y-3"
+      method="POST"
+      use:enhance={enhanceToast({
+        error: "Couldn't save image scanning.",
+        loading: "Saving image scanning",
+        success: "Saved.",
+      })}
+    >
+      <CheckBox
+        checked={svc.imageScanEnabled}
+        helperText="Pull through the mirror and scan before this service's workload starts. Turning it off pulls straight from the registry."
+        id="imageScanEnabled"
+        label="Scan this service's image"
+        name="imageScanEnabled"
+      />
+      <Button type="submit" variant="outline">Save</Button>
+    </form>
   </section>
 
   <!-- ═══ Auto-redeploy (cron) ═══ -->

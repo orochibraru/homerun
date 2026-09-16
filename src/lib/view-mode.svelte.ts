@@ -33,15 +33,23 @@ export class ViewMode {
 	readonly #storageKey: string;
 	#value = $state<EntityViewMode>("list");
 
+	/**
+	 * Restores the view mode last chosen for this list from localStorage.
+	 *
+	 * @param key Identifies the list, so each page remembers its own mode.
+	 * @param fallback Used when nothing is stored or storage is unavailable.
+	 */
 	constructor(key: string, fallback: EntityViewMode = "list") {
 		this.#storageKey = `${STORAGE_PREFIX}${key}`;
 		this.#value = readStored(this.#storageKey) ?? fallback;
 	}
 
+	/** The active view mode, reactive. */
 	get current(): EntityViewMode {
 		return this.#value;
 	}
 
+	/** Switches the view mode and remembers it in localStorage when available. */
 	set current(next: EntityViewMode) {
 		this.#value = next;
 		writeStored(this.#storageKey, next);

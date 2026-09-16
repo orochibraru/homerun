@@ -3,6 +3,10 @@ export interface GitCredential {
 	username: string;
 }
 
+/**
+ * The lowercased host (with port) of a git URL, or null when it isn't a parseable
+ * URL, e.g. an scp-style SSH remote.
+ */
 export function hostOf(gitUrl: string): string | null {
 	try {
 		return new URL(gitUrl).host.toLowerCase();
@@ -11,6 +15,7 @@ export function hostOf(gitUrl: string): string | null {
 	}
 }
 
+/** Whether a git URL already carries a username or password. */
 export function hasEmbeddedCredentials(gitUrl: string): boolean {
 	try {
 		const url = new URL(gitUrl);
@@ -20,6 +25,11 @@ export function hasEmbeddedCredentials(gitUrl: string): boolean {
 	}
 }
 
+/**
+ * Embeds a git provider's username and token into an HTTP(S) clone URL so a
+ * private repository can be cloned non-interactively. URLs that already carry
+ * credentials, non-HTTP URLs, and calls without a credential are returned as is.
+ */
 export function authenticatedCloneUrl(
 	gitUrl: string,
 	credential: GitCredential | null,
@@ -41,6 +51,7 @@ export function authenticatedCloneUrl(
 	return url.toString();
 }
 
+/** Masks the credentials in a clone URL so it can be logged or shown. */
 export function redactCloneUrl(gitUrl: string): string {
 	try {
 		const url = new URL(gitUrl);
@@ -54,6 +65,11 @@ export function redactCloneUrl(gitUrl: string): string {
 	}
 }
 
+/**
+ * Turns git's output from a failed clone into a user-facing message, replacing
+ * authentication failures with a hint to connect a git provider or use a token
+ * URL. Other output is returned unchanged.
+ */
 export function cloneFailureHint(gitUrl: string, output: string): string {
 	if (
 		/could not read (Username|Password)|Authentication failed|terminal prompts disabled/i.test(
@@ -78,6 +94,11 @@ const DEFAULT_HOSTS: Record<string, string | null> = {
 	gitlab: "gitlab.com",
 };
 
+/**
+ * The host a git provider serves repositories from: its base URL's host for a
+ * self-hosted instance, the public host for GitHub, GitLab and Bitbucket, or null
+ * for a Gitea without a base URL.
+ */
 export function providerHost(provider: ProviderHostInput): string | null {
 	if (provider.baseUrl) {
 		return hostOf(provider.baseUrl);
@@ -85,6 +106,10 @@ export function providerHost(provider: ProviderHostInput): string | null {
 	return DEFAULT_HOSTS[provider.kind] ?? null;
 }
 
+/**
+ * Finds the connected git provider whose host matches a repository URL, so its
+ * credentials can be used for cloning and status checks.
+ */
 export function providerForGitUrl<T extends ProviderHostInput>(
 	gitUrl: string,
 	providers: T[],

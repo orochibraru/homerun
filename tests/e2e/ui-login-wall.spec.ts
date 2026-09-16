@@ -14,7 +14,9 @@ test.describe
 			page,
 		}) => {
 			await signIn(page);
-			await page.getByRole("link", { name: "Authentication" }).click();
+			await page
+				.getByRole("link", { exact: true, name: "Authentication" })
+				.click();
 			await expect(page).toHaveURL(/\/authentication$/);
 			await expect(page.getByText("No providers yet")).toBeVisible();
 			await expect(page.getByText("0 configured")).toBeVisible();
@@ -61,7 +63,7 @@ test.describe
 
 			await page.goto("/authentication");
 			await expect(page.getByText("1 configured")).toBeVisible();
-			await expect(page.getByText("My Login")).toBeVisible();
+			await expect(page.getByRole("link", { name: /My Login/ })).toBeVisible();
 		});
 
 		test("removing a provider asks for confirmation first", async ({

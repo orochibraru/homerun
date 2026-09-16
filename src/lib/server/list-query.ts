@@ -34,6 +34,17 @@ function positiveInt(
 	return Math.min(parsed, max);
 }
 
+/**
+ * Reads a list page's `page`, `perPage` (capped at 100), `q` and
+ * comma-separated filter params from the URL, falling back to defaults for
+ * anything missing or invalid.
+ *
+ * @param options.filterKeys Query params to read as multi-value filters; any
+ * other params are ignored.
+ * @param options.pageParam Name of the page param, for pages that page more
+ * than one list.
+ * @param options.perPage Default page size when the URL doesn't set one.
+ */
 export function parseListQuery(
 	url: URL,
 	options: { filterKeys?: string[]; pageParam?: string; perPage?: number } = {},
@@ -77,6 +88,12 @@ function escapeLike(value: string): string {
 	return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
+/**
+ * A case-insensitive substring match of `q` against any of the columns, with
+ * LIKE wildcards in `q` escaped.
+ *
+ * @returns Undefined when `q` is empty, so callers can skip the condition.
+ */
 export function searchCondition(
 	q: string,
 	columns: AnyPgColumn[],
@@ -88,6 +105,10 @@ export function searchCondition(
 	return or(...columns.map((column) => ilike(column, pattern)));
 }
 
+/**
+ * Keeps only the filter values found in `allowed`, so values from the URL can
+ * be used as a typed enum in a query.
+ */
 export function narrowFilter<T extends string>(
 	values: string[] | undefined,
 	allowed: readonly T[],

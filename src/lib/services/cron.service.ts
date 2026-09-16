@@ -22,6 +22,7 @@ import {
 	parseCronSchedule,
 } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
+import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { StatsSampler } from "./stats/stats-sampler.ts";
@@ -71,32 +72,46 @@ class CronServiceClass {
 
 	private readonly uptimeProbe = new UptimeProbe();
 
+	private readonly mirrorGcScheduler = new MirrorGcScheduler();
+
+	/** Parses a 5-field cron expression for schedule-input validation, see `cron-expression.ts`'s `parseCronSchedule`. */
 	parseCronSchedule(schedule: string): ParsedCron | null {
 		return parseCronSchedule(schedule);
 	}
 
+	/** Whether `schedule` is due at `date`, see `cron-expression.ts`'s `cronMatches`. */
 	cronMatches(schedule: string, date: Date): boolean {
 		return cronMatches(schedule, date);
 	}
 
+	/** Starts the per-service scheduled-redeploy scheduler (idempotent, HMR-safe, see `BaseScheduler.start`). */
 	startCronScheduler(): void {
 		this.redeployScheduler.start();
 	}
 
+	/** Starts the scheduled volume-backup scheduler. */
 	startBackupScheduler(): void {
 		this.backupScheduler.start();
 	}
 
+	/** Starts the user cron-job scheduler. */
 	startCronJobScheduler(): void {
 		this.cronJobScheduler.start();
 	}
 
+	/** Starts the per-minute stats sampler. */
 	startStatsSampler(): void {
 		this.statsSampler.start();
 	}
 
+	/** Starts the service uptime probe. */
 	startUptimeProbe(): void {
 		this.uptimeProbe.start();
+	}
+
+	/** Starts the daily mirror-registry garbage-collection scheduler. */
+	startMirrorGcScheduler(): void {
+		this.mirrorGcScheduler.start();
 	}
 }
 

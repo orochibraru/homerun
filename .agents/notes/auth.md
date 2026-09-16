@@ -26,11 +26,11 @@ roles & invitations below), don't assume better-auth's default account-deletion
 behavior is sufficient; it isn't, by design of this app's extra tables (see Data
 model above).
 
-`config.auth.crossSubdomainCookies` (env `AUTH_CROSS_SUBDOMAIN`, default off,
-also DB-editable, see Instance settings above) sets better-auth's
-`advanced.crossSubDomainCookies` to scope the session cookie to `.{baseDomain}`
-instead of the exact host, see the per-service auth gate below for why, and its
-documented, tested limitation.
+`config.auth.crossSubdomainCookies` (`auth.crossSubdomainCookies` in
+`homerun.yaml`, default off, also DB-editable, see Instance settings above) sets
+better-auth's `advanced.crossSubDomainCookies` to scope the session cookie to
+`.{baseDomain}` instead of the exact host, see the per-service auth gate below
+for why, and its documented, tested limitation.
 
 **`advanced.useSecureCookies` is set explicitly from the `ORIGIN` env var's
 scheme, and it has to be.** Real, reproduced bug, not a precaution: sign-in on
@@ -170,14 +170,27 @@ overrides a later Base domain edit — caught by a browser test, not by reading
 the code. The field renders blank whenever the stored origin equals
 `scheme://baseDomain`, and shows the placeholder as a hint.
 
-**Known dev-mode papercut, deliberately not automated**: `config.authCheckUrl`
-defaults to `http://host.docker.internal:${PORT}/api/v1/auth-check` with `PORT`
-defaulting to 3000, but `vite dev` serves on 5173 and doesn't set `PORT`, so the
-login wall's forwardAuth calls a dead port in development until Auth-check URL
-is set by hand. **Don't "fix" this by deriving the port from `auth.origin`** :
-that is only the same port in dev. Behind a reverse proxy the origin is 443
-while the app listens on 3000, so deriving would break production to fix
-development.
+**Auth-check URL default**: when the app itself runs in a container attached to
+the Docker network (installer `--mode=full`), `hooks.server.ts`'s `init()`
+resolves it via `DockerService.selfContainer()` to
+`http://<container name>:<PORT>/api/v1/auth-check` through
+`setDetectedAuthCheckUrl` (a `homerun.yaml` `authCheckUrl` still wins, a DB
+override still wins over both). Real bug this fixes: the old
+`host.docker.internal` default doesn't resolve inside a Linux Traefik container
+(`lookup host.docker.internal on 127.0.0.11:53: no such host`), so every login
+wall 500'd on a real install. The dev compose files also give Traefik
+`extra_hosts: host.docker.internal:host-gateway` for the bare-metal case.
+Services deployed before the fix keep the old URL in their labels until
+redeployed.
+
+**Known dev-mode papercut, deliberately not automated**: outside a container,
+`config.authCheckUrl` defaults to
+`http://host.docker.internal:${PORT}/api/v1/auth-check` with `PORT` defaulting
+to 3000, but `vite dev` serves on 5173 and doesn't set `PORT`, so the login
+wall's forwardAuth calls a dead port in development until Auth-check URL is set
+by hand. **Don't "fix" this by deriving the port from `auth.origin`** : that is
+only the same port in dev. Behind a reverse proxy the origin is 443 while the
+app listens on 3000, so deriving would break production to fix development.
 
 ## Authentication pages (`/authentication`, `$lib/auth-providers.ts`)
 
@@ -186,7 +199,7 @@ Admin-only, its own sidebar item under Administration. It **replaced** the old
 tabs), so there's one place editing `instance_settings.oauthProviders`.
 
 **It follows the list + `new/` + `[id]` shape every other entity uses**
-(services, projects, storage), not a single page of inline expanding forms. The
+(services, stacks, storage), not a single page of inline expanding forms. The
 first cut was that inline page and it was wrong on every axis the user cared
 about : one provider looked like _the_ provider, deleting had no confirmation,
 and the whole thing lived in one whole-array `updateOauth` action whose seven
@@ -599,3 +612,50 @@ nothing shows on initial render. The finish action reuses the exact
 `/settings` already calls, then `markOnboardingComplete()`, then the same
 `applyInstanceSettings()` + `rebuildAuth()` post-save dance `/settings`'s
 actions already do.
+
+## Trusted origins (`$lib/services/auth-origins.ts`)
+
+better-auth's `trustedOrigins` is a function reading `config` live, built by
+`trustedOriginsFor`: the `ORIGIN` env, the Dashboard URL, and `http(s)://` of
+both the Dashboard URL's host and the Base domain. Real bug this fixes: an
+install whose `ORIGIN` is its IP (installer default) rejected every sign-in
+reached through its resolved DNS name with "Invalid origin". Subdomains of the
+Base domain are deliberately **not** wildcarded: they're deployed apps, same
+site as the dashboard, and must not be able to drive its auth endpoints.
+
+## Passkeys, 2FA and sign-in requirements
+
+`twoFactor({ allowPasswordless: true })` (TOTP + backup codes) and `passkey()`
+are wired server and client side. `passkey`'s `rpID` is the hostname of
+`config.auth.origin` (`$lib/security-policy.ts`'s `passkeyRpId`): without it
+better-auth fell back to `localhost`, since `baseURL` is deliberately never set
+(see above), so passkeys could never work on a real domain. Users manage both
+from Profile → Security (`two-factor-panel.svelte`, `passkey-panel.svelte`,
+reads through `AccountSecurityService`). The sign-in page offers a passkey
+button (labelled "Continue with a passkey" because e2e selects the `Sign in`
+button by name prefix) and the TOTP/backup-code step on `twoFactorRedirect`.
+
+`instance_settings.require_two_factor` / `require_passkey`, edited on
+`/authentication`, are enforced by the `(protected)` layout load only for cookie
+sessions (`locals.session`), never for API key/bearer/CLI tokens: a user missing
+one is redirected to `/security-setup?next=…`, an `AuthShell` card outside
+`(protected)` that shows only the panels still needed. Known gaps: form actions
+and remote functions hit directly aren't gated, and better-auth only asks for
+the TOTP code on email/password sign-in, not passkey or OAuth.
+
+## Preferred sign-in methods
+
+`instance_settings.preferred_sign_in_methods` (jsonb string[], null = none),
+edited in the "Preferred sign-in methods" section of `/authentication`. Keys are
+`password`, `passkey` and `oauth:<provider name>` (`$lib/sign-in-methods.ts`,
+`oauthMethod`). The sign-in load builds the methods actually available on this
+request (passkey only when `passkeyUsableOn`, enabled OAuth providers) and
+`splitSignInMethods` puts the preferred ones up front and the rest behind an
+"Other sign-in methods" link. A preference matching nothing available (a deleted
+provider, passkey on the wrong host) falls back to showing everything, so the
+page can never render with no way in. When `passkey` is among the preferred
+methods (and usable on this host), the sign-in page prompts for a passkey on
+load instead of starting the conditional autofill request, since a second
+WebAuthn call would abort the first. Cancelling, or a browser that refuses a
+prompt without a click (Safari), fails silently and leaves the passkey button in
+place.

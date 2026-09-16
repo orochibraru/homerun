@@ -25,7 +25,7 @@
 	const SCOPE_LABEL = {
 		custom: "Selected services",
 		global: "Every service",
-		project: "One project",
+		stack: "One stack",
 	};
 
 	const down = $derived(data.services.filter((svc) => svc.health === "down"));

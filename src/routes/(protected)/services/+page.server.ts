@@ -1,8 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { parseListQuery } from "$lib/server/list-query";
 import { allowLongRequest } from "$lib/server/long-request";
@@ -20,7 +20,7 @@ const SLUG_STRIP_RE = /[^a-z0-9]+/g;
 const SLUG_TRIM_RE = /^-+|-+$/g;
 
 /**
- * Puts two linked services on one project network : into whichever project
+ * Puts two linked services on one stack network : into whichever stack
  * one of them is already in, or a new one named after the first. Two services
  * only actually reach each other by slug once they share one.
  */
@@ -29,35 +29,35 @@ async function groupPair(
 	target: ServiceDTO,
 	userId: string,
 ): Promise<string> {
-	const existing = svc.projectId ?? target.projectId;
-	const projectId =
+	const existing = svc.stackId ?? target.stackId;
+	const stackId =
 		existing ??
 		(
-			await ProjectDTO.create({
+			await StackDTO.create({
 				name: svc.name,
-				slug: await uniqueProjectSlug(slugify(svc.name)),
+				slug: await uniqueStackSlug(slugify(svc.name)),
 				userId,
 			})
 		).id;
 
 	await Promise.all(
 		[svc, target]
-			.filter((row) => row.projectId !== projectId)
-			.map((row) => row.update({ projectId })),
+			.filter((row) => row.stackId !== stackId)
+			.map((row) => row.update({ stackId })),
 	);
-	return projectId;
+	return stackId;
 }
 
 /** Appends -2, -3, … until the slug is free, so linking never fails on a name collision. */
-async function uniqueProjectSlug(base: string): Promise<string> {
-	const candidate = base || "project";
-	if (!(await ProjectDTO.slugTaken(candidate))) {
+async function uniqueStackSlug(base: string): Promise<string> {
+	const candidate = base || "stack";
+	if (!(await StackDTO.slugTaken(candidate))) {
 		return candidate;
 	}
 	const suffixed = await Promise.all(
 		[2, 3, 4, 5, 6, 7, 8, 9].map(async (n) => ({
 			n,
-			taken: await ProjectDTO.slugTaken(`${candidate}-${n}`),
+			taken: await StackDTO.slugTaken(`${candidate}-${n}`),
 		})),
 	);
 	const free = suffixed.find((entry) => !entry.taken);
@@ -84,13 +84,13 @@ const OP_PAST_TENSE: Record<BulkOp, string> = {
 };
 
 async function loadServices(userId: string, url: URL) {
-	const query = parseListQuery(url, { filterKeys: ["status", "project"] });
-	const paged = await ServiceDTO.listWithProjectNamesPaged(userId, query);
+	const query = parseListQuery(url, { filterKeys: ["status", "stack"] });
+	const paged = await ServiceDTO.listWithStackNamesPaged(userId, query);
 
 	return {
 		services: paged.items.map((r) => ({
 			...r.service.toJSON(),
-			projectName: r.projectName,
+			stackName: r.stackName,
 		})),
 		total: paged.total,
 	};
@@ -178,11 +178,11 @@ async function runBulk(formData: FormData, userId: string) {
 export const load = async ({ parent, platform, url }) => {
 	allowLongRequest(platform);
 	const { user } = await parent();
-	const query = parseListQuery(url, { filterKeys: ["status", "project"] });
-	const [{ services, total }, facets, projects] = await Promise.all([
+	const query = parseListQuery(url, { filterKeys: ["status", "stack"] });
+	const [{ services, total }, facets, stacks] = await Promise.all([
 		loadServices(user.id, url),
 		ServiceDTO.listFilterFacets(user.id),
-		ProjectDTO.list(user.id),
+		StackDTO.list(user.id),
 	]);
 
 	return {
@@ -191,7 +191,7 @@ export const load = async ({ parent, platform, url }) => {
 		filtered: query.active,
 		page: query.page,
 		perPage: query.perPage,
-		projects: projects.map((p) => ({ id: p.id, name: p.name })),
+		stacks: stacks.map((p) => ({ id: p.id, name: p.name })),
 		services,
 		total,
 	};
@@ -252,7 +252,7 @@ export const actions = {
 				: null;
 
 		logger.info(
-			`Service linked: service=${svc.id} target=${target.id} project=${groupedInto ?? "none"} user=${locals.user.id}`,
+			`Service linked: service=${svc.id} target=${target.id} stack=${groupedInto ?? "none"} user=${locals.user.id}`,
 		);
 		return {
 			grouped: groupedInto !== null,
@@ -261,32 +261,32 @@ export const actions = {
 		};
 	},
 
-	/** Moves a service into a project, creating one when `newProjectName` is given. */
+	/** Moves a service into a stack, creating one when `newStackName` is given. */
 	group: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		const formData = await request.formData();
 		const serviceIds = formData.getAll("serviceId").map(String).filter(Boolean);
-		const projectId = (formData.get("projectId") as string | null) || null;
-		const newProjectName =
-			(formData.get("newProjectName") as string | null)?.trim() || null;
+		const stackId = (formData.get("stackId") as string | null) || null;
+		const newStackName =
+			(formData.get("newStackName") as string | null)?.trim() || null;
 		if (serviceIds.length === 0) {
 			return fail(400, { error: "Nothing to move." });
 		}
 
-		let targetProjectId = projectId;
-		if (newProjectName) {
-			const slug = slugify(newProjectName);
-			if (await ProjectDTO.slugTaken(slug)) {
-				return fail(400, { error: "A project with that slug already exists." });
+		let targetStackId = stackId;
+		if (newStackName) {
+			const slug = slugify(newStackName);
+			if (await StackDTO.slugTaken(slug)) {
+				return fail(400, { error: "A stack with that slug already exists." });
 			}
-			const project = await ProjectDTO.create({
-				name: newProjectName,
+			const stack = await StackDTO.create({
+				name: newStackName,
 				slug,
 				userId: locals.user.id,
 			});
-			targetProjectId = project.id;
+			targetStackId = stack.id;
 		}
 
 		const services = await Promise.all(
@@ -295,10 +295,10 @@ export const actions = {
 		await Promise.all(
 			services
 				.filter((svc) => svc !== null)
-				.map((svc) => svc.update({ projectId: targetProjectId })),
+				.map((svc) => svc.update({ stackId: targetStackId })),
 		);
 		logger.info(
-			`Services grouped: services=${serviceIds.join(",")} project=${targetProjectId ?? "none"} user=${locals.user.id}`,
+			`Services grouped: services=${serviceIds.join(",")} stack=${targetStackId ?? "none"} user=${locals.user.id}`,
 		);
 		return { grouped: serviceIds.length, success: true };
 	},

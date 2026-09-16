@@ -61,9 +61,9 @@ app has no fallback DB.
 Postgres enforces this schema's `onDelete: "cascade"`/`"set null"` for real (no
 SQLite-style global disable). That only covers row data — it does **not**
 stop/remove a live Docker container or network. If your new table has any
-relationship to a service/project that has real infrastructure alongside its row
+relationship to a service/stack that has real infrastructure alongside its row
 (a container, a network), you still need explicit app-level cleanup code (see
-`ProjectDTO.cascadeDelete()` and `UserService.cleanupUserResources()` for the
+`StackDTO.cascadeDelete()` and `UserService.cleanupUserResources()` for the
 existing pattern of "DB cascade handles rows, explicit code handles Docker") —
 don't assume the FK constraint alone is sufficient.
 

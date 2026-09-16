@@ -1,7 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
@@ -15,9 +15,9 @@ const logger = new Logger("Services");
 
 export const load = async ({ parent }) => {
 	const { user } = await parent();
-	const projects = await ProjectDTO.list(user.id);
+	const stacks = await StackDTO.list(user.id);
 
-	return { projects: projects.map((p) => p.toJSON()) };
+	return { stacks: stacks.map((p) => p.toJSON()) };
 };
 
 export const actions = {
@@ -45,12 +45,12 @@ export const actions = {
 			}
 		}
 		if (svc.dnsResolvable) {
-			const project = svc.projectId
-				? await ProjectDTO.get(svc.projectId, locals.user.id)
+			const stack = svc.stackId
+				? await StackDTO.get(svc.stackId, locals.user.id)
 				: null;
 			const customDomain = svc.toJSON().customDomain;
 			await deleteDns([
-				serviceHostname(svc.slug, project?.slug),
+				serviceHostname(svc.slug, stack?.slug),
 				...(customDomain ? [customDomain] : []),
 			]);
 		}
@@ -58,7 +58,7 @@ export const actions = {
 		logger.info(`Service deleted: service=${svc.id} user=${locals.user.id}`);
 		throw redirect(303, resolve("/services"));
 	},
-	moveProject: async ({ request, params, locals }) => {
+	moveStack: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -68,22 +68,22 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const rawProjectId = formData.get("projectId") as string | null;
+		const rawStackId = formData.get("stackId") as string | null;
 
 		// Empty selection means "ungrouped" : otherwise confirm the target
-		// project is actually the user's own, never trust the form value alone.
-		let projectId: string | null = null;
-		if (rawProjectId) {
-			const proj = await ProjectDTO.get(rawProjectId, locals.user.id);
-			if (!proj) {
-				return fail(400, { error: "That project wasn't found." });
+		// stack is actually the user's own, never trust the form value alone.
+		let stackId: string | null = null;
+		if (rawStackId) {
+			const stack = await StackDTO.get(rawStackId, locals.user.id);
+			if (!stack) {
+				return fail(400, { error: "That stack wasn't found." });
 			}
-			projectId = proj.id;
+			stackId = stack.id;
 		}
 
-		await svc.update({ projectId });
+		await svc.update({ stackId });
 		logger.info(
-			`Service moved: service=${svc.id} project=${projectId ?? "none"} user=${locals.user.id}`,
+			`Service moved: service=${svc.id} stack=${stackId ?? "none"} user=${locals.user.id}`,
 		);
 		return { moved: true };
 	},
@@ -101,6 +101,7 @@ export const actions = {
 			cpuLimit: svc.cpuLimit,
 			description: `Saved from ${svc.name}`,
 			envVars: svc.envVars,
+			healthcheckCommand: svc.healthcheckCommand,
 			image: svc.image,
 			memoryLimitMb: svc.memoryLimitMb,
 			name: svc.name,
@@ -144,6 +145,7 @@ export const actions = {
 		}
 
 		await svc.update({
+			healthcheckCommand: input.healthcheckCommand || null,
 			name: input.name,
 			pullPolicy: input.pullPolicy,
 			restartPolicy: input.restartPolicy,
@@ -154,6 +156,38 @@ export const actions = {
 			`Service settings updated: service=${svc.id} user=${locals.user.id}`,
 		);
 		return { success: true };
+	},
+	updateAutoRollback: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		const formData = await request.formData();
+		const autoRollback = formData.get("autoRollback") === "on";
+		await svc.update({ autoRollback });
+		logger.info(
+			`Auto-rollback updated: service=${svc.id} enabled=${autoRollback} user=${locals.user.id}`,
+		);
+		return { autoRollbackSaved: true };
+	},
+	updateImageScan: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		const formData = await request.formData();
+		const imageScanEnabled = formData.get("imageScanEnabled") === "on";
+		await svc.update({ imageScanEnabled });
+		logger.info(
+			`Image scanning updated: service=${svc.id} enabled=${imageScanEnabled} user=${locals.user.id}`,
+		);
+		return { imageScanSaved: true };
 	},
 	updateCron: async ({ request, params, locals }) => {
 		if (!locals.user) {

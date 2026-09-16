@@ -231,6 +231,48 @@
 			"when": 1789556128697,
 			"tag": "0032_cold_cerise",
 			"breakpoints": true
+		},
+		{
+			"idx": 33,
+			"version": "7",
+			"when": 1789573032159,
+			"tag": "0033_sad_vertigo",
+			"breakpoints": true
+		},
+		{
+			"idx": 34,
+			"version": "7",
+			"when": 1789573479107,
+			"tag": "0034_acoustic_sharon_carter",
+			"breakpoints": true
+		},
+		{
+			"idx": 35,
+			"version": "7",
+			"when": 1789573872527,
+			"tag": "0035_rename_projects_to_stacks",
+			"breakpoints": true
+		},
+		{
+			"idx": 36,
+			"version": "7",
+			"when": 1789576248277,
+			"tag": "0036_smooth_brother_voodoo",
+			"breakpoints": true
+		},
+		{
+			"idx": 37,
+			"version": "7",
+			"when": 1789577614346,
+			"tag": "0037_right_pestilence",
+			"breakpoints": true
+		},
+		{
+			"idx": 38,
+			"version": "7",
+			"when": 1789580885886,
+			"tag": "0038_melted_omega_flight",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

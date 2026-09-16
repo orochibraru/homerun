@@ -65,6 +65,11 @@
 		formatOptions.find(([value]) => value === format)?.[1] ?? "Connection URL",
 	);
 
+	/**
+	 * Hands the previewed link variables to the parent form and closes the dialog,
+	 * refusing when no service is picked or a variable name is blank. Nothing is
+	 * saved server-side until the parent form is submitted.
+	 */
 	function apply() {
 		if (!target) {
 			toast.error("Pick a service to link to.");

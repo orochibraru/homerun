@@ -1,8 +1,8 @@
 import { config, isSmtpEnabled } from "$lib/config";
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { isFailureEvent, NOTIFICATION_EVENTS } from "$lib/notification-events";
 import { serviceHostname } from "./dns.service";
@@ -35,10 +35,12 @@ function keepHead(text: string, limit: number): string {
 	return text.length > limit ? `${text.slice(0, limit)}…` : text;
 }
 
+/** The email subject line for a channel message. */
 export function messageSubject(message: ChannelMessage): string {
 	return `[Homerun] ${message.title}`;
 }
 
+/** Renders a channel message as plain-text body lines, for email and the generic webhook payload. */
 export function messageBody(message: ChannelMessage): string {
 	const label =
 		NOTIFICATION_EVENTS.find((info) => info.event === message.event)?.label ??
@@ -60,6 +62,7 @@ export function messageBody(message: ChannelMessage): string {
 	return lines.join("\n");
 }
 
+/** Renders a channel message as a Discord webhook embed payload, truncated to Discord's own field/description limits. */
 export function discordPayload(message: ChannelMessage) {
 	const detail = message.detail
 		? keepTail(message.detail, DISCORD_DESCRIPTION_LIMIT)
@@ -88,6 +91,11 @@ export function discordPayload(message: ChannelMessage) {
 }
 
 class NotificationChannelServiceClass {
+	/**
+	 * Fire-and-forget dispatch of `message` to every channel the user has
+	 * subscribed to that event on. Failures are logged, never thrown to the
+	 * caller.
+	 */
 	notify(userId: string, message: ChannelMessage): void {
 		this.dispatch(userId, message).catch((err) => {
 			logger.warn(
@@ -96,6 +104,11 @@ class NotificationChannelServiceClass {
 		});
 	}
 
+	/**
+	 * Fire-and-forget deploy-outcome notification: builds the deploy message
+	 * (looking up the service's stack for its hostname) and dispatches it.
+	 * Failures are logged, never thrown to the caller.
+	 */
 	notifyDeploy(notification: DeployNotification): void {
 		this.#deployMessage(notification)
 			.then((message) => this.dispatch(notification.svc.userId, message))
@@ -106,23 +119,24 @@ class NotificationChannelServiceClass {
 			});
 	}
 
+	/** Builds the deploy-outcome `ChannelMessage`, resolving the service's public URL from its stack (if any) and DNS-resolvable state. */
 	async #deployMessage({
 		dep: deployment,
 		ok,
 		svc: service,
 		trigger,
 	}: DeployNotification): Promise<ChannelMessage> {
-		const project = service.projectId
-			? await ProjectDTO.get(service.projectId, service.userId)
+		const stack = service.stackId
+			? await StackDTO.get(service.stackId, service.userId)
 			: null;
 		const row = service.toJSON();
 		const host =
-			row.customDomain ?? serviceHostname(row.slug, project?.slug ?? null);
+			row.customDomain ?? serviceHostname(row.slug, stack?.slug ?? null);
 		return deployMessage(
 			{
 				deployment: deployment.toJSON(),
 				origin: config.auth.origin ?? null,
-				projectName: project?.name ?? null,
+				stackName: stack?.name ?? null,
 				publicUrl: row.dnsResolvable ? `https://${host}` : null,
 				service: row,
 				trigger,
@@ -132,6 +146,7 @@ class NotificationChannelServiceClass {
 		);
 	}
 
+	/** Delivers `message` to every channel the user has subscribed to that event on, in parallel. Per-channel failures don't reject; see `#send`. */
 	async dispatch(userId: string, message: ChannelMessage): Promise<void> {
 		const channels = await NotificationChannelDTO.listSubscribed(
 			userId,
@@ -140,6 +155,14 @@ class NotificationChannelServiceClass {
 		await Promise.all(channels.map((channel) => this.#send(channel, message)));
 	}
 
+	/**
+	 * Sends a synthetic "build failed" message directly to one channel (the
+	 * Settings page's "Send test notification" button), bypassing event
+	 * subscription filtering, and clears the channel's stored `lastError` on
+	 * success.
+	 *
+	 * @throws Whatever `#deliver` throws for that channel kind.
+	 */
 	async sendTest(channel: NotificationChannelDTO): Promise<void> {
 		await this.#deliver(channel, {
 			detail: "This is a test notification from Homerun.",
@@ -160,6 +183,12 @@ class NotificationChannelServiceClass {
 		await channel.update({ lastError: null });
 	}
 
+	/**
+	 * Delivers to one channel, recording the outcome on the channel row
+	 * itself (`lastError` cleared on success, set to the failure message
+	 * otherwise) rather than throwing, so one bad channel doesn't affect the
+	 * others in `dispatch`'s `Promise.all`.
+	 */
 	async #send(
 		channel: NotificationChannelDTO,
 		message: ChannelMessage,
@@ -174,6 +203,7 @@ class NotificationChannelServiceClass {
 		}
 	}
 
+	/** Routes delivery to the channel-kind-specific sender: Discord's embed payload, email, or the generic JSON webhook POST. */
 	#deliver(
 		channel: NotificationChannelDTO,
 		message: ChannelMessage,
@@ -188,6 +218,12 @@ class NotificationChannelServiceClass {
 		}
 	}
 
+	/**
+	 * POSTs `body` as JSON to a generic webhook URL.
+	 *
+	 * @throws When the request times out (`WEBHOOK_TIMEOUT_MS`) or the
+	 *   response isn't ok.
+	 */
 	async #post(url: string, body: unknown): Promise<void> {
 		const response = await fetch(url, {
 			body: JSON.stringify(body),
@@ -200,6 +236,11 @@ class NotificationChannelServiceClass {
 		}
 	}
 
+	/**
+	 * Sends a channel message by email.
+	 *
+	 * @throws When SMTP isn't configured on this instance.
+	 */
 	async #sendEmail(to: string, message: ChannelMessage): Promise<void> {
 		if (!isSmtpEnabled()) {
 			throw new Error(

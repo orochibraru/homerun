@@ -61,7 +61,6 @@ export interface OpenSessionParams {
 
 const HEADER_END = "\r\n\r\n";
 
-/** Interactive web terminal : open/subscribe/write/close a `docker exec` session, plus an idle reaper. */
 /**
  * Reads past the `101 UPGRADED` header block on the hand-rolled exec socket
  * before forwarding raw TTY bytes (see the module docstring for why the
@@ -100,6 +99,7 @@ function makeUpgradeReader(
 	};
 }
 
+/** Mixin adding the interactive web terminal : session open/subscribe/write/close, backed by the hand-rolled `docker exec` upgrade described above. */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerTerminalMixin<
 	TBase extends Constructor<BaseDockerService>,
@@ -107,12 +107,19 @@ export function DockerTerminalMixin<
 	return class DockerTerminalService extends Base {
 		readonly #sessions = new Map<string, TerminalSession>();
 
+		/** Starts the idle-session reaper alongside the usual mixin-chain construction. */
 		// biome-ignore lint/suspicious/noExplicitAny: TS's mixin pattern requires this exact constructor shape
 		constructor(...args: any[]) {
 			super(...args);
 			this.#startReaper();
 		}
 
+		/**
+		 * Arms the interval that closes any session idle longer than
+		 * `IDLE_TIMEOUT_MS`. Guarded by `globalForTerminal.__terminal_reaper`
+		 * so a Vite HMR reload doesn't stack a second interval on top of the
+		 * first, same pattern `cron.service.ts` uses for its schedulers.
+		 */
 		#startReaper(): void {
 			if (globalForTerminal.__terminal_reaper) {
 				return;
@@ -158,12 +165,15 @@ export function DockerTerminalMixin<
 
 			const socket = await Bun.connect({
 				socket: {
+					/** Forgets the session once the daemon closes its end of the raw exec socket. */
 					close() {
 						sessions.delete(sessionId);
 					},
+					/** Feeds each raw chunk from the daemon through the upgrade-header reader, then out to subscribed listeners. */
 					data(_s, chunk) {
 						onData(chunk);
 					},
+					/** Forgets the session on a socket error, same as a clean close. */
 					error() {
 						sessions.delete(sessionId);
 					},
@@ -230,6 +240,7 @@ export function DockerTerminalMixin<
 			this.#sessions.delete(sessionId);
 		}
 
+		/** Whether `sessionId` exists and belongs to `userId`. */
 		ownsSession(sessionId: string, userId: string): boolean {
 			return this.#sessions.get(sessionId)?.userId === userId;
 		}

@@ -66,11 +66,13 @@ function isNotFoundError(error: unknown): boolean {
 	return (error as { statusCode?: number } | null)?.statusCode === 404;
 }
 
+/** Mixin adding one-off/helper container support : running a throwaway container to completion, and extracting an archive into a named volume. */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerOneOffMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {
 	return class DockerOneOffService extends Base {
+		/** Pulls `params.image:params.tag` if it isn't already present locally on `params.remote`'s daemon. */
 		async #ensureImage(params: OneOffRunParams): Promise<void> {
 			const docker = this.getDocker(params.remote);
 			const ref = `${params.image}:${params.tag}`;
@@ -121,6 +123,14 @@ export function DockerOneOffMixin<
 			}
 		}
 
+		/**
+		 * Runs a container to completion and collects its stdout/stderr and
+		 * exit code, pulling the image first if needed. Streams live output
+		 * chunks to `params.onOutput` as they arrive if given. Kills the
+		 * container if it hasn't finished within `timeoutMs`
+		 * (`timedOut: true` in the result rather than throwing), and always
+		 * removes the container afterward regardless of outcome.
+		 */
 		async runOneOff(params: OneOffRunParams): Promise<OneOffRunResult> {
 			await this.#ensureImage(params);
 

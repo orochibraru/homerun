@@ -6,6 +6,7 @@
 		Layers,
 		Loader2,
 		Network as NetworkIcon,
+		ShieldCheck,
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
@@ -17,7 +18,8 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import {
 		getCleanupPreview,
-		getOrphanProjectNetworks,
+		getMirrorUsage,
+		getOrphanStackNetworks,
 	} from "$lib/remote/docker-infra.remote";
 	import type { CleanupItem } from "$lib/services/docker.service";
 	import { title } from "$lib/store/title";
@@ -26,7 +28,8 @@
 	const { form } = $props();
 
 	const cleanup = getCleanupPreview();
-	const orphans = getOrphanProjectNetworks();
+	const orphans = getOrphanStackNetworks();
+	const mirror = getMirrorUsage();
 
 	onMount(() => title.set("Docker Cleanup"));
 
@@ -34,10 +37,11 @@
 		| "pruneBuildCache"
 		| "pruneContainers"
 		| "pruneImages"
+		| "pruneMirror"
 		| "pruneNetworks"
 		| "pruneSystem"
 		| "pruneVolumes"
-		| "reclaimProjectNetworks";
+		| "reclaimStackNetworks";
 
 	const confirmCopy: Record<
 		CleanupAction,
@@ -61,17 +65,23 @@
 				"Removes dangling images by default. Check “Include tagged, unused images” below to remove any image not used by a container, tagged or not.",
 			title: "Prune images?",
 		},
+		pruneMirror: {
+			confirmLabel: "Clean up",
+			description:
+				"Deletes every image in the homerun-mirror registry that no service runs, keeping each service's current image and its last two scanned versions, then reclaims the space. Deploys wait until it's done.",
+			title: "Clean up the image mirror?",
+		},
 		pruneNetworks: {
 			confirmLabel: "Prune",
 			description:
 				"Removes every Docker network on this host not currently used by a container.",
 			title: "Prune unused networks?",
 		},
-		reclaimProjectNetworks: {
+		reclaimStackNetworks: {
 			confirmLabel: "Reclaim",
 			description:
-				"Removes the per-project networks whose project no longer exists. One with containers still attached is left alone. Nothing else on this host is touched.",
-			title: "Reclaim orphaned project networks?",
+				"Removes the per-stack networks whose stack no longer exists. One with containers still attached is left alone. Nothing else on this host is touched.",
+			title: "Reclaim orphaned stack networks?",
 		},
 		pruneSystem: {
 			confirmLabel: "Clean up",
@@ -374,17 +384,17 @@
           </div>
           <div class="flex items-center gap-2">
             <form
-              action="?/reclaimProjectNetworks"
+              action="?/reclaimStackNetworks"
               method="POST"
               use:enhance={enhanceToast({
                 error: "Docker cleanup action failed.",
-                loading: "Reclaiming orphaned project networks",
+                loading: "Reclaiming orphaned stack networks",
                 onComplete: () => orphans.refresh(),
                 onSettled: () => {
                   pendingAction = null;
                 },
                 onStart: () => {
-                  pendingAction = "reclaimProjectNetworks";
+                  pendingAction = "reclaimStackNetworks";
                 },
                 success: (data) =>
                   describeResult(
@@ -394,12 +404,12 @@
             >
               <Button
                 disabled={pendingAction !== null}
-                onclick={(e) => requestConfirm("reclaimProjectNetworks", e)}
+                onclick={(e) => requestConfirm("reclaimStackNetworks", e)}
                 size="sm"
                 type="button"
                 variant="outline"
               >
-                {#if pendingAction === "reclaimProjectNetworks"}
+                {#if pendingAction === "reclaimStackNetworks"}
                   <Loader2 class="size-3.5 animate-spin" />
                 {/if}
                 Reclaim orphaned
@@ -438,8 +448,8 @@
           {#if orphans.current && orphans.current.length > 0}
             <div class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
               <p class="text-xs font-medium text-amber-600 dark:text-amber-400">
-                {orphans.current.length} project network(s) outlived their
-                project
+                {orphans.current.length} stack network(s) outlived their
+                stack
               </p>
               <ul class="mt-2 space-y-1">
                 {#each orphans.current as orphan (orphan.id)}
@@ -498,6 +508,73 @@
         </div>
       </section>
     </div>
+
+  <section class="panel mt-6 rounded-md">
+    <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
+      <div class="flex items-center gap-2">
+        <ShieldCheck class="text-text-muted size-4" />
+        <div>
+          <h2 class="eyebrow">Image mirror</h2>
+          <p class="text-text-muted text-xs">
+            The <code>homerun-mirror</code> registry images are scanned in.
+            Cleaned up daily at 04:00 : anything no service runs goes, each
+            service's current image and last two scanned versions stay.
+          </p>
+        </div>
+      </div>
+      <form action="?/pruneMirror" method="POST"
+      use:enhance={enhanceToast({
+        error: "Mirror cleanup failed.",
+        loading: "Cleaning up the image mirror",
+        onComplete: () => mirror.refresh(),
+        onSettled: () => {
+          pendingAction = null;
+        },
+        onStart: () => {
+          pendingAction = "pruneMirror";
+        },
+        success: (data) =>
+          describeResult((data as { result?: unknown } | undefined)?.result),
+      })}
+      >
+        <Button
+          disabled={pendingAction !== null || !mirror.current?.running}
+          onclick={(e) => requestConfirm("pruneMirror", e)}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          {#if pendingAction === "pruneMirror"}
+            <Loader2 class="size-3.5 animate-spin" />
+          {/if}
+          Clean up mirror
+        </Button>
+      </form>
+    </div>
+    <div class="p-5">
+      {#if mirror.error}
+        <p class="text-text-subtle text-xs">Couldn't read the mirror's size.</p>
+      {:else if !mirror.current}
+        <Skeleton class="h-5 w-40 rounded-md" />
+      {:else if !mirror.current.running}
+        <p class="text-text-subtle text-xs">
+          The mirror isn't running. It's created on the first deploy with
+          image scanning on.
+        </p>
+      {:else}
+        <p class="text-text text-sm">
+          <span class="tabular-nums font-semibold">
+            {mirror.current.sizeBytes === null
+              ? "Unknown size"
+              : formatBytes(mirror.current.sizeBytes)}
+          </span>
+          <span class="text-text-subtle text-xs">
+            {mirror.current.collecting ? "cleanup in progress" : "on disk"}
+          </span>
+        </p>
+      {/if}
+    </div>
+  </section>
 
   <section class="bg-surface mt-6 rounded-md border border-red-200 dark:border-red-900/40">
     <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
