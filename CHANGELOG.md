@@ -1,3 +1,10 @@
+## [1.0.20](https://github.com/orochibraru/homerun/compare/v1.0.19...v1.0.20) (2026-09-16)
+
+### Bug Fixes
+
+- ci filters & docs
+  ([51ccaf5](https://github.com/orochibraru/homerun/commit/51ccaf52793233d45f6bbf6c93452485b6b7d0af))
+
 ## [1.0.19](https://github.com/orochibraru/homerun/compare/v1.0.18...v1.0.19) (2026-09-15)
 
 ### Bug Fixes
