@@ -1,6 +1,7 @@
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import type { ContainerStatus } from "$lib/types";
 import { DockerService } from "./docker.service.ts";
+import { GitWebhookService } from "./git-webhook.service.ts";
 
 /**
  * Container/swarm-service lifecycle operations, keyed off a `ServiceDTO`
@@ -92,6 +93,7 @@ class ServiceLifecycleServiceClass {
 	 * (a failure there doesn't stop the delete), then deletes the row.
 	 */
 	async deleteService(svc: ServiceDTO): Promise<void> {
+		await GitWebhookService.remove(svc);
 		await this.#detachWorkload(svc);
 		await svc.delete();
 	}

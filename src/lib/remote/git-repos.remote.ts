@@ -54,6 +54,26 @@ export const listProviderRepos = query(
 	},
 );
 
+export const listRepoBranches = query(
+	z.object({ providerId: z.string(), repo: z.string() }),
+	async ({ providerId, repo }): Promise<string[]> => {
+		const user = requireUser();
+		const { connection, provider } = await resolveConnection(
+			providerId,
+			user.id,
+		);
+		try {
+			return await GitProviderService.listBranches(provider, connection, repo);
+		} catch (err) {
+			logger.warn(
+				`Branch listing failed: provider=${provider.id} repo=${repo}`,
+				err,
+			);
+			error(502, "Couldn't list branches.");
+		}
+	},
+);
+
 export const hasDockerfile = query(
 	z.object({ providerId: z.string(), ref: z.string(), repo: z.string() }),
 	async ({ providerId, ref, repo }): Promise<boolean> => {

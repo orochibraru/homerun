@@ -61,32 +61,42 @@ dependency needed), Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
 
 ```bash
 bun run dev              # vite dev
-bun run build            # parallel build:app (bun run gen && vite build) + build:packages (scripts/build-packages.ts, the agent/installer/cli binaries)
+bun run preview          # vite preview, serves the last vite build (bun run start is closer to production)
+bun run build            # build:app then build:packages, sequential
+bun run build:app        # bun run gen && vite build
+bun run build:packages   # scripts/build-packages.ts, the agent/installer/cli binaries into dist/
 bun run start            # ./build/server (the binary @orochibraru/svelte-smol compiles, serve the built app)
-bun run gen              # svelte-kit sync + regenerate openapi.json, packages/cli/generated/openapi-types.ts and homerun.schema.json, runs as part of build:app
-bun run check            # parallel check:app + check:packages, the real gate, see `.agents/notes/testing.md`
+bun run gen              # svelte-kit sync + regenerate openapi.json, packages/cli/generated/openapi-types.ts and homerun.schema.json from source, CI fails if the result isn't committed
+bun run check            # check:app then check:packages, the real gate, see `.agents/notes/testing.md`
 bun run check:app        # svelte-kit sync && svelte-check --fail-on-warnings --tsgo, the SvelteKit half of the gate
-bun run check:scripts    # tsc over scripts/ (tsconfig.scripts.json), part of check:packages, scripts/ isn't covered by svelte-check's own include list
-bun run lint             # parallel lint:ts (biome check) + lint:md (markdownlint-cli2) + lint:tailwind (tailwint, Tailwind class sorting), rustywind is still a listed dependency but unwired, tailwint superseded it
-bun run lint:fix         # the --write/--fix half of all three
-bun run format:md        # prettier over **/*.md, separate from lint:md's rule checking
-bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts
+bun run check:packages   # check:installer + check:agent + check:cli + check:scripts, each a tsc --noEmit over its own tsconfig
+bun run check:agent      # tsc over packages/agent/tsconfig.json (check:cli, check:installer: same for their package)
+bun run check:scripts    # tsc over scripts/ (tsconfig.scripts.json), scripts/ isn't covered by svelte-check's own include list
+bun run lint             # lint:md (markdownlint-cli2) then lint:tailwind (tailwint, Tailwind class sorting) then lint:ts (biome check --error-on-warnings)
+bun run lint:fix         # the --write/--fix half of all three (lint:fix:md, lint:fix:tailwind, lint:fix:ts)
+bun run format           # format:md (prettier over **/*.md) + format:ts (biome format --write)
+bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts, the app applies them itself at boot
+bun run auth:db:generate # better-auth CLI `auth generate`, writes the Drizzle schema better-auth and its plugins expect, to diff against schema.ts after a better-auth upgrade
 bun run component:add    # shadcn-svelte add <name>, installs a UI primitive into src/lib/components/ui/
 bun run dev:agent        # bun run --hot packages/agent/index.ts, the Homerun Agent against the local Docker socket
-docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml), required, the app has no fallback DB, see .agents/notes/docker.md
+docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml, needs `docker network create homerun` once), required, the app has no fallback DB, see .agents/notes/docker.md
 bun run release          # semantic-release, normally CI-only (.github/workflows/publish.yaml), see .agents/notes/packages-and-release.md
 ```
 
+`preinstall` (`only-allow bun`) and `prepare` (`prek install`, wires the git
+hooks from `.pre-commit-config.yaml`) run on `bun install`.
+
 ```bash
-bun run test              # bun test --timeout 120000, the whole bun:test suite (unit + integration), never tests/e2e/ (Playwright, own runner)
-bun run test:unit         # unit tests only (packages/agent, packages/installer, packages/cli, plus tests/unit/app)
-bun run test:unit:agent   # scoped to packages/agent
-bun run test:unit:app     # scoped to tests/unit/app, the SvelteKit app's own unit/component tests
-bun run test:unit:cli     # scoped to packages/cli
-bun run test:unit:installer  # scoped to packages/installer
+bun run test              # svelte-kit sync && bun test, the whole bun:test suite (unit + integration), never tests/e2e/ (Playwright, own runner)
+bun run test:unit         # tests/unit/ only (agent, app, cli, installer), no Postgres/Docker needed
+bun run test:unit:agent   # tests/unit/agent, packages/agent
+bun run test:unit:app     # tests/unit/app, the SvelteKit app's own unit/component tests
+bun run test:unit:cli     # tests/unit/cli, packages/cli
+bun run test:unit:installer  # tests/unit/installer, packages/installer
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see .agents/notes/testing.md
 bun run test:e2e:cli      # playwright test over bootstrap + onboarding + ui-cli.spec.ts only, the CLI driven against the E2E app instance
+bun run screenshots       # playwright test --config playwright.screenshots.config.ts, regenerates the docs/ screenshots
 bun run e2e:multipass     # scripts/e2e-multipass.ts, real-infra installer/agent/CLI e2e, not wired into CI
 bun run e2e:multipass:release  # scripts/e2e-multipass-release.ts, the same but against the *published* release and the *documented* commands, also not wired into CI (`--only=docs` is the VM-free docs-drift check)
 ```
@@ -109,12 +119,20 @@ executable detail, not just prose, use them instead of re-deriving the steps by
 hand:
 
 - Skills (invoke directly, or they trigger on a matching request): `check-repo`
-  (the `bun run check`/`bun run lint`/per-subproject-typecheck gate above, as a
+  (the `bun run check`/`bun run lint`/unit-test/codegen gate above, as a
   runnable checklist), `new-dto-route` (schema → DTO → route, with the
   no-manual-typing/no-raw-Drizzle/toJSON rules below baked in),
   `new-docker-mixin` (adding a concern to `DockerService`'s mixin chain, with
   the load-bearing ordering rule), `migration-workflow` (`schema.ts` →
-  `db:generate` → apply, with the NOT-NULL-on-existing-rows gotcha).
+  `db:generate` → apply, with the NOT-NULL-on-existing-rows gotcha),
+  `new-api-route` (a route under `src/routes/api/v1/`, its zod body schema, the
+  OpenAPI registry and `bun run gen`), `new-tab-route` (one route per tab under
+  a shared `TabNav` layout), `new-remote-function` (a query/command under
+  `src/lib/remote/`), `shadcn-svelte` (adding or composing a UI primitive). A
+  skill or agent whose frontmatter isn't valid YAML silently loses its
+  description (and an agent disappears entirely): write `description: >-` with
+  the text indented below it, since a plain multi-line value breaks on the first
+  `:` inside it.
 - Subagents (`.claude/agents/*.md`): `repo-gate` (final review gate before
   calling a change done, scans for this file's own hard rules),
   `scaffold-feature` (adds a new table+DTO+route end to end), `subproject-sync`
@@ -133,7 +151,10 @@ hand:
   vars, API, CLI and installer, both directions), `doc-comments` (finds every
   class method and exported function outside route files, generated code, tests
   and `ui/` primitives with no JSDoc block, writes it, and fixes blocks that no
-  longer match their signature).
+  longer match their signature), `devex` (walks the contributor path, fresh
+  clone → setup → dev → test → gates → CI, and fixes the friction: undocumented
+  or broken scripts, `.env.example` drift, local gates that don't match CI,
+  tooling overlap, stale `.agents/notes` paths, slow or flaky tests).
 
 Skill content lives under `.agents/skills/<name>/SKILL.md` with a symlink from
 `.claude/skills/`, matching the existing `shadcn-svelte` skill's layout, keep
@@ -309,7 +330,7 @@ that pattern for any new skill.
     the class had no instance to hang it off, it's now a real private instance
     field. `BaseDockerService`/`BaseScheduler`-style abstract bases stay
     exported as classes, not instances (they're meant to be extended, e.g.
-    `BackupService`, not instantiated directly).
+    `DueScheduler`, not instantiated directly).
   - **Mixin-merge**, when several concerns need to call into each other and
     external code should keep addressing one flat symbol,
     `$lib/services/docker.service.ts`: each concern (containers, networks,
@@ -362,7 +383,7 @@ to reintroduce a fixed bug.
 | `routing.md`                | Any route under `src/routes/`, the sidebar nav, the services/stacks/templates pages, tab layouts                                                         |
 | `ui.md`                     | `layout.css`, theming/tokens, `$lib/components/`, list-page toolkit, page width, the `$derived` push/splice bug, appearance prefs                        |
 | `docker.md`                 | `DockerService` and its mixins, containers/networks/volumes, swarm mode, network mode, web terminal, build servers, custom SSL, Docker Cleanup           |
-| `auth.md`                   | better-auth, sign-in/sign-up, OAuth providers, `/authentication`, the per-app login wall, user roles/invites, onboarding, base domain vs. dashboard URL  |
+| `auth.md`                   | better-auth, sign-in/sign-up, OAuth providers, Homerun as an OIDC provider, `/authentication`, the per-app login wall, user roles/invites, onboarding    |
 | `api-and-cli.md`            | `src/routes/api/v1/`, the OpenAPI document, `packages/cli/`, long-running requests and Bun's idle timeout                                                |
 | `services-and-templates.md` | The deploy pipeline, compose import, service links, templates and template links, git-based builds, git providers, SSE deploy progress, remote functions |
 | `jobs-and-queue.md`         | The `job` table and worker, cron schedulers, user cron jobs, S3 backups                                                                                  |

@@ -4,6 +4,7 @@ import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateServiceApiBody } from "$lib/server/validation/api";
 import { DockerService } from "$lib/services/docker.service";
+import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
@@ -54,12 +55,18 @@ export const PATCH = async ({ params, request, locals }) => {
 	}
 	const { registryPassword, ...rest } = result.data;
 
+	const previousWebhook = {
+		gitProviderId: svc.gitProviderId,
+		gitRepo: svc.gitRepo,
+		gitWebhookId: svc.gitWebhookId,
+	};
 	await svc.update({
 		...rest,
 		...(registryPassword
 			? { registryPasswordEnc: encryptSecret(registryPassword) }
 			: {}),
 	});
+	await GitWebhookService.sync(svc, previousWebhook);
 
 	logger.info(
 		`Service updated via API: service=${svc.id} user=${locals.user.id}`,

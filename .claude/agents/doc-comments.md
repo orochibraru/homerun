@@ -1,6 +1,6 @@
 ---
 name: doc-comments
-description:
+description: >-
   Use when asked to check or enforce doc comments, or PROACTIVELY after a change
   adds or changes a class method or exported function outside route files.
   Sweeps src/lib/ and packages/agent/, packages/installer/, packages/cli/ for

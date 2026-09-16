@@ -70,9 +70,10 @@ Appearance preferences below for the per-user "single accent color" override):
 
 Not in the nav but real routes: `/profile/**` (reached from the profile menu,
 see Appearance preferences below), `/cli-auth` (the CLI device-code approval
-page), `/app-auth` (the sign-in screen a gated app's visitors are redirected to,
-deliberately top-level rather than under `(protected)/` since it has to render
-for signed-out visitors, see Per-app login wall below). The bell's own
+page), `/app-auth` (where a gated app's visitors land: it forwards signed-out
+ones to `/auth/sign-in?redirectTo=…` and shows the denial screen to refused
+ones, deliberately top-level rather than under `(protected)/` since it has to
+render for signed-out visitors, see Per-app login wall below). The bell's own
 read/delete endpoints used to live at `/notifications/**` and are now remote
 commands instead, see Remote functions below. `(protected)/+layout.svelte`
 filters the nav array on `data.user.role === "admin"` before rendering, a

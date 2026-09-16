@@ -8,7 +8,7 @@ import {
 	repoPathFromGitUrl,
 	StatusCheckClient,
 } from "$lib/status-checks";
-import { decryptSecret } from "./secrets.ts";
+import { GitProviderService } from "./git-provider.service.ts";
 
 function embeddedToken(gitUrl: string): string | null {
 	try {
@@ -50,7 +50,9 @@ class StatusCheckServiceClass {
 			: null;
 		const token =
 			embeddedToken(gitUrl) ??
-			(connection ? decryptSecret(connection.accessTokenEnc) : null);
+			(provider && connection
+				? await GitProviderService.accessToken(provider, connection)
+				: null);
 		return {
 			api: providerApiBase(kind, provider?.baseUrl ?? null),
 			kind,

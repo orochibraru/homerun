@@ -1,13 +1,13 @@
 ---
 name: new-api-route
-description:
-  Workflow for adding or changing a route under src/routes/api/v1/, this
-  repo's REST API: the auth check every handler needs since it sits outside
+description: >-
+  Workflow for adding or changing a route under src/routes/api/v1/, this repo's
+  REST API: the auth check every handler needs since it sits outside
   (protected)'s guard, the separate zod body schema in
-  $lib/server/validation/api.ts, keeping $lib/openapi/registry.ts and
-  schemas.ts in sync by hand, and regenerating packages/cli/'s OpenAPI-derived
-  types afterward. Use whenever a route under src/routes/api/v1/ is added,
-  removed, or has its request/response shape changed.
+  $lib/server/validation/api.ts, keeping $lib/openapi/registry.ts and schemas.ts
+  in sync by hand, and regenerating packages/cli/'s OpenAPI-derived types
+  afterward. Use whenever a route under src/routes/api/v1/ is added, removed, or
+  has its request/response shape changed.
 user-invocable: true
 ---
 
@@ -16,8 +16,8 @@ user-invocable: true
 `src/routes/api/v1/` is outside `(protected)/` — that group's guard is a page
 `load` redirect, wrong for a JSON API that should 401 instead. Every step here
 matters because nothing enforces they stay in sync at compile time; the CLI's
-generated types are a checked-in snapshot that goes stale silently if you skip
-step 5.
+generated types are a checked-in snapshot, and CI's "Codegen is current" step
+fails the PR if you skip step 6.
 
 ## 1. The route handler
 

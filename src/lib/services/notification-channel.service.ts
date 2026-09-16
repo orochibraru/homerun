@@ -1,4 +1,5 @@
 import { config, isSmtpEnabled } from "$lib/config";
+import type { DeployTrigger } from "$lib/deploy-trigger";
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
@@ -24,7 +25,7 @@ export interface DeployNotification {
 	dep: DeploymentDTO;
 	ok: boolean;
 	svc: ServiceDTO;
-	trigger: "manual" | "cron";
+	trigger: DeployTrigger;
 }
 
 function keepTail(text: string, limit: number): string {

@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { DEPLOY_TRIGGERS } from "$lib/deploy-trigger";
 
 export const deployJobPayload = z.object({
 	deploymentId: z.string(),
 	serviceId: z.string(),
-	trigger: z.enum(["manual", "cron"]).default("manual"),
+	trigger: z.enum(DEPLOY_TRIGGERS).default("manual"),
 	userId: z.string(),
 });
 

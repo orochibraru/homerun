@@ -7,6 +7,7 @@ import {
 	type CreateServiceApiInput,
 	createServiceApiBody,
 } from "$lib/server/validation/api";
+import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("API");
@@ -67,10 +68,13 @@ function toCreateInput(
 /** Where the image comes from : the git-build fields plus registry coordinates. */
 function toSourceInput(input: CreateServiceApiInput) {
 	return {
+		autoDeployOnPush: input.autoDeployOnPush,
 		buildSource: input.buildSource,
 		gitBuildContext: input.gitBuildContext || null,
 		gitDockerfilePath: input.gitDockerfilePath || null,
+		gitProviderId: input.gitProviderId || null,
 		gitRef: input.gitRef || null,
+		gitRepo: input.gitRepo || null,
 		gitUrl: input.gitUrl || null,
 		image: input.image ?? "",
 		registryPasswordEnc: input.registryPassword
@@ -109,6 +113,12 @@ export const POST = async ({ request, locals }) => {
 	const svc = await ServiceDTO.create(
 		toCreateInput(input, stackId, locals.user.id),
 	);
+
+	await GitWebhookService.sync(svc, {
+		gitProviderId: null,
+		gitRepo: null,
+		gitWebhookId: null,
+	});
 
 	logger.info(
 		`Service created via API: service=${svc.id} slug=${svc.slug} user=${locals.user.id}`,

@@ -68,7 +68,7 @@ export async function bootstrapAdmin(origin: string): Promise<Bootstrapped> {
 	// have been fixed from here even as a workaround.
 	const keyRes = await fetch(`${origin}/api/v1/auth/api-key/create`, {
 		body: JSON.stringify({ name: "integration-tests" }),
-		headers: { "content-type": "application/json", cookie },
+		headers: { "content-type": "application/json", cookie, origin },
 		method: "POST",
 	});
 	if (!keyRes.ok) {

@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { trustedOriginsFor } from "$lib/services/auth-origins";
+import {
+	directAccessOrigins,
+	trustedOriginsFor,
+} from "$lib/services/auth-origins";
 
 describe("trustedOriginsFor", () => {
 	test("trusts the configured domain alongside an IP ORIGIN", () => {
@@ -31,5 +34,27 @@ describe("trustedOriginsFor", () => {
 				envOrigin: "",
 			}),
 		).toEqual([]);
+	});
+});
+
+describe("directAccessOrigins", () => {
+	test("trusts the server's own IP or localhost, whatever the domain says", () => {
+		expect(directAccessOrigins("203.0.113.4:3000")).toEqual([
+			"http://203.0.113.4:3000",
+			"https://203.0.113.4:3000",
+		]);
+		expect(directAccessOrigins("[2001:db8::1]:3000")).toEqual([
+			"http://[2001:db8::1]:3000",
+			"https://[2001:db8::1]:3000",
+		]);
+		expect(directAccessOrigins("localhost:5173")).toContain(
+			"http://localhost:5173",
+		);
+	});
+
+	test("leaves named hosts to the configured origins", () => {
+		expect(directAccessOrigins("homerun.example.com")).toEqual([]);
+		expect(directAccessOrigins("evil.203.0.113.4.nip.io")).toEqual([]);
+		expect(directAccessOrigins(null)).toEqual([]);
 	});
 });

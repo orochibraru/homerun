@@ -1,12 +1,19 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { config } from "$lib/config";
 import type { GitConnectionDTO } from "$lib/dto/git-connection-dto";
+import {
+	createWebhookRequest,
+	deleteWebhookPath,
+	webhookIdFrom,
+} from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
 import type { GitProviderConfig, GitProviderKind } from "$lib/server/db/schema";
 import { providerApiBase } from "$lib/status-checks";
-import { decryptSecret } from "./secrets.ts";
+import { decryptSecret, encryptSecret } from "./secrets.ts";
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
+
+const TOKEN_REFRESH_MARGIN_MS = 60 * 1000;
 
 const logger = new Logger("GitProvider");
 
@@ -60,7 +67,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 			return {
 				api: providerApiBase("gitlab", b),
 				authorize: `${b}/oauth/authorize`,
-				scope: "read_api read_user",
+				scope: "api read_user",
 				token: `${b}/oauth/token`,
 			};
 		}
@@ -73,7 +80,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 			return {
 				api: providerApiBase("gitea", base),
 				authorize: `${base}/login/oauth/authorize`,
-				scope: "read:repository read:user",
+				scope: "write:repository read:user",
 				token: `${base}/login/oauth/access_token`,
 			};
 		}
@@ -81,7 +88,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 			return {
 				api: providerApiBase("bitbucket", null),
 				authorize: "https://bitbucket.org/site/oauth2/authorize",
-				scope: "repository account",
+				scope: "repository webhook account",
 				token: "https://bitbucket.org/site/oauth2/access_token",
 			};
 		default: {
@@ -89,6 +96,11 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 			throw new Error(`Unknown git provider kind: ${exhaustive}`);
 		}
 	}
+}
+
+/** When a token granted `expiresIn` seconds from now expires, null when the provider gave no lifetime. */
+function expiryFrom(expiresIn: number | null): Date | null {
+	return expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
 }
 
 function authHeader(token: string): Record<string, string> {
@@ -114,6 +126,8 @@ function authHeader(token: string): Record<string, string> {
  * to end once an OAuth App is registered.
  */
 class GitProviderServiceClass {
+	readonly #refreshing = new Map<string, Promise<string | null>>();
+
 	/**
 	 * Signed, stateless CSRF state param for the OAuth redirect round-trip :
 	 * no server-side storage/cleanup needed (unlike a DB-backed state
@@ -184,10 +198,11 @@ class GitProviderServiceClass {
 		code: string,
 		redirectUri: string,
 	): Promise<ExchangedToken> {
-		const grant =
-			provider.kind === "bitbucket"
-				? await this.exchangeBitbucketCode(provider, code)
-				: await this.exchangeStandardCode(provider, code, redirectUri);
+		const grant = await this.#requestToken(provider, {
+			code,
+			grant_type: "authorization_code",
+			redirect_uri: redirectUri,
+		});
 
 		const providerUsername = await this.fetchUsername(
 			provider,
@@ -196,74 +211,127 @@ class GitProviderServiceClass {
 
 		return {
 			accessToken: grant.accessToken,
-			expiresAt: grant.expiresIn
-				? new Date(Date.now() + grant.expiresIn * 1000)
-				: null,
+			expiresAt: expiryFrom(grant.expiresIn),
 			providerUsername,
 			refreshToken: grant.refreshToken,
 		};
 	}
 
 	/**
-	 * Bitbucket authenticates the token request itself via HTTP Basic
-	 * (client_id:client_secret), not as body params like the others.
+	 * The connection's access token, refreshed first when it has expired (or
+	 * is about to) and a refresh token is stored. Gitea, GitLab, Bitbucket and
+	 * GitHub Apps all issue short-lived tokens, so without this a connection
+	 * silently stops working an hour or so after it was authorized. The
+	 * refreshed tokens are persisted onto the connection. Concurrent callers
+	 * for the same connection share one refresh, since providers that rotate
+	 * refresh tokens reject the second use of the old one.
+	 *
+	 * @returns The usable access token, the stale one when the refresh fails
+	 * (the caller's API call then reports the failure), or null when the
+	 * stored token can't be decrypted.
 	 */
-	private async exchangeBitbucketCode(
+	async accessToken(
 		provider: GitProviderConfig,
-		code: string,
-	): Promise<TokenGrant> {
-		const { token: tokenUrl } = endpoints(provider);
-		const clientSecret = decryptSecret(provider.clientSecretEnc) ?? "";
-		const basic = Buffer.from(`${provider.clientId}:${clientSecret}`).toString(
-			"base64",
-		);
-
-		const res = await fetch(tokenUrl, {
-			body: new URLSearchParams({ code, grant_type: "authorization_code" }),
-			headers: {
-				Authorization: `Basic ${basic}`,
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
-			method: "POST",
-		});
-		if (!res.ok) {
-			throw new Error(
-				`Token exchange failed: ${res.status} ${await res.text()}`,
-			);
+		connection: GitConnectionDTO,
+	): Promise<string | null> {
+		const current = decryptSecret(connection.accessTokenEnc);
+		const expiresAt = connection.expiresAt;
+		if (
+			!(expiresAt && connection.refreshTokenEnc) ||
+			expiresAt.getTime() - TOKEN_REFRESH_MARGIN_MS > Date.now()
+		) {
+			return current;
 		}
-		const body = (await res.json()) as {
-			access_token: string;
-			expires_in?: number;
-			refresh_token?: string;
-		};
-		return {
-			accessToken: body.access_token,
-			expiresIn: body.expires_in ?? null,
-			refreshToken: body.refresh_token ?? null,
-		};
+
+		const pending = this.#refreshing.get(connection.id);
+		if (pending) {
+			return await pending;
+		}
+		const refresh = this.#refresh(provider, connection)
+			.catch((err) => {
+				logger.warn(
+					`Token refresh failed: provider=${provider.id} connection=${connection.id}`,
+					err,
+				);
+				return current;
+			})
+			.finally(() => this.#refreshing.delete(connection.id));
+		this.#refreshing.set(connection.id, refresh);
+		return await refresh;
 	}
 
-	/** The plain OAuth2 authorization-code exchange every non-Bitbucket provider uses. */
-	private async exchangeStandardCode(
+	/**
+	 * Trades the connection's refresh token for a new access token and writes
+	 * both (plus the new expiry) back onto the connection row.
+	 *
+	 * @throws When the stored refresh token can't be decrypted or the
+	 * provider rejects the refresh.
+	 */
+	async #refresh(
 		provider: GitProviderConfig,
-		code: string,
-		redirectUri: string,
+		connection: GitConnectionDTO,
+	): Promise<string> {
+		const refreshToken = connection.refreshTokenEnc
+			? decryptSecret(connection.refreshTokenEnc)
+			: null;
+		if (!refreshToken) {
+			throw new Error("Couldn't decrypt the stored refresh token.");
+		}
+
+		const params: Record<string, string> = {
+			grant_type: "refresh_token",
+			refresh_token: refreshToken,
+		};
+		if (config.auth.origin) {
+			params.redirect_uri = `${config.auth.origin.replace(/\/+$/, "")}/api/v1/git-providers/${provider.id}/callback`;
+		}
+		const grant = await this.#requestToken(provider, params);
+
+		await connection.update({
+			accessTokenEnc: encryptSecret(grant.accessToken),
+			expiresAt: expiryFrom(grant.expiresIn),
+			refreshTokenEnc: grant.refreshToken
+				? encryptSecret(grant.refreshToken)
+				: connection.refreshTokenEnc,
+		});
+		logger.info(
+			`Git provider token refreshed: provider=${provider.id} connection=${connection.id}`,
+		);
+		return grant.accessToken;
+	}
+
+	/**
+	 * POSTs a grant (authorization code or refresh token) to the provider's
+	 * token endpoint. Bitbucket authenticates the client with HTTP Basic and
+	 * takes no redirect URI; every other provider takes the client
+	 * credentials as body params.
+	 *
+	 * @throws When the endpoint responds with an error or no access token.
+	 */
+	async #requestToken(
+		provider: GitProviderConfig,
+		grant: Record<string, string>,
 	): Promise<TokenGrant> {
 		const { token: tokenUrl } = endpoints(provider);
 		const clientSecret = decryptSecret(provider.clientSecretEnc) ?? "";
+		const headers: Record<string, string> = {
+			Accept: "application/json",
+			"Content-Type": "application/x-www-form-urlencoded",
+		};
+		const params = new URLSearchParams(grant);
+		if (provider.kind === "bitbucket") {
+			params.delete("redirect_uri");
+			headers.Authorization = `Basic ${Buffer.from(
+				`${provider.clientId}:${clientSecret}`,
+			).toString("base64")}`;
+		} else {
+			params.set("client_id", provider.clientId);
+			params.set("client_secret", clientSecret);
+		}
 
 		const res = await fetch(tokenUrl, {
-			body: new URLSearchParams({
-				client_id: provider.clientId,
-				client_secret: clientSecret,
-				code,
-				grant_type: "authorization_code",
-				redirect_uri: redirectUri,
-			}),
-			headers: {
-				Accept: "application/json",
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
+			body: params,
+			headers,
 			method: "POST",
 		});
 		if (!res.ok) {
@@ -320,7 +388,7 @@ class GitProviderServiceClass {
 		connection: GitConnectionDTO,
 	): Promise<GitRepo[]> {
 		const { api } = endpoints(provider);
-		const accessToken = decryptSecret(connection.accessTokenEnc);
+		const accessToken = await this.accessToken(provider, connection);
 		if (!accessToken) {
 			throw new Error("Couldn't decrypt the stored access token.");
 		}
@@ -418,6 +486,121 @@ class GitProviderServiceClass {
 		}
 	}
 
+	/**
+	 * Calls the provider's REST API as the connection's account, refreshing
+	 * its token first when needed.
+	 *
+	 * @throws When the token can't be decrypted, or the provider answers with
+	 * an error: 401/403 almost always means the connection was authorized
+	 * before Homerun asked for the scope this call needs, so the message says
+	 * to reconnect.
+	 */
+	async #api(
+		provider: GitProviderConfig,
+		connection: GitConnectionDTO,
+		path: string,
+		init: { body?: Record<string, unknown>; method?: string } = {},
+	): Promise<Response> {
+		const accessToken = await this.accessToken(provider, connection);
+		if (!accessToken) {
+			throw new Error("Couldn't decrypt the stored access token.");
+		}
+		const res = await fetch(`${endpoints(provider).api}${path}`, {
+			body: init.body ? JSON.stringify(init.body) : undefined,
+			headers: {
+				...authHeader(accessToken),
+				Accept: "application/json",
+				...(init.body ? { "Content-Type": "application/json" } : {}),
+			},
+			method: init.method ?? "GET",
+		});
+		if (res.status === 401 || res.status === 403) {
+			throw new Error(
+				`${provider.name} refused the request (${res.status}). Reconnect it on the Git Providers page so Homerun gets repository and webhook access.`,
+			);
+		}
+		if (!res.ok) {
+			throw new Error(
+				`${provider.name} answered ${res.status}: ${(await res.text()).slice(0, 300)}`,
+			);
+		}
+		return res;
+	}
+
+	/** The branch names of `repo`, as the connection's account sees them (first 100). */
+	async listBranches(
+		provider: GitProviderConfig,
+		connection: GitConnectionDTO,
+		repo: string,
+	): Promise<string[]> {
+		const path = {
+			bitbucket: `/repositories/${repo}/refs/branches?pagelen=100`,
+			gitea: `/repos/${repo}/branches?limit=50`,
+			github: `/repos/${repo}/branches?per_page=100`,
+			gitlab: `/projects/${encodeURIComponent(repo)}/repository/branches?per_page=100`,
+		}[provider.kind];
+		const body = (await (await this.#api(provider, connection, path)).json()) as
+			| Array<{ name: string }>
+			| { values: Array<{ name: string }> };
+		const rows = Array.isArray(body) ? body : body.values;
+		return rows.map((row) => row.name);
+	}
+
+	/**
+	 * Registers a webhook on `hook.repo` that delivers push events to
+	 * `hook.url`, signed with `hook.secret`.
+	 *
+	 * @returns The provider's id for the new hook, used to delete it later.
+	 * @throws When the provider refuses (usually a connection missing the
+	 * webhook scope) or can't be reached.
+	 */
+	async createPushWebhook(
+		provider: GitProviderConfig,
+		connection: GitConnectionDTO,
+		hook: { repo: string; secret: string; url: string },
+	): Promise<string> {
+		const request = createWebhookRequest(
+			provider.kind,
+			hook.repo,
+			hook.url,
+			hook.secret,
+		);
+		const res = await this.#api(provider, connection, request.path, {
+			body: request.body,
+			method: request.method,
+		});
+		const id = webhookIdFrom(
+			provider.kind,
+			(await res.json()) as Record<string, unknown>,
+		);
+		if (!id) {
+			throw new Error(`${provider.name} didn't return an id for the webhook.`);
+		}
+		return id;
+	}
+
+	/** Removes a webhook Homerun registered. One that's already gone counts as removed. */
+	async deletePushWebhook(
+		provider: GitProviderConfig,
+		connection: GitConnectionDTO,
+		repo: string,
+		hookId: string,
+	): Promise<void> {
+		try {
+			await this.#api(
+				provider,
+				connection,
+				deleteWebhookPath(provider.kind, repo, hookId),
+				{ method: "DELETE" },
+			);
+		} catch (err) {
+			if (err instanceof Error && err.message.includes("answered 404")) {
+				return;
+			}
+			throw err;
+		}
+	}
+
 	/** Whether `repoFullName` has a Dockerfile at its root, on the given ref. */
 	async hasDockerfile(
 		provider: GitProviderConfig,
@@ -426,7 +609,7 @@ class GitProviderServiceClass {
 		ref: string,
 	): Promise<boolean> {
 		const { api } = endpoints(provider);
-		const accessToken = decryptSecret(connection.accessTokenEnc);
+		const accessToken = await this.accessToken(provider, connection);
 		if (!accessToken) {
 			return false;
 		}

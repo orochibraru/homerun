@@ -16,6 +16,7 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes("node_modules") ? undefined : true,
 			},
 			adapter: adapter(),
+			csrf: { trustedOrigins: ["*"] },
 			experimental: {
 				// Enables src/instrumentation.server.ts, which the svelte-smol
 				// adapter loads before the rest of the compiled server bundle.

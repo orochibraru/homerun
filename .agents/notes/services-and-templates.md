@@ -757,12 +757,10 @@ Any git-clone-able HTTPS URL works, this is what makes it "Git providers,
 including self-hosted Gitea" without any provider-specific API integration for
 the clone/build step itself: cloning is provider-agnostic at the URL level, so
 GitHub/GitLab/a self-hosted Gitea instance/anything else all just work the same
-way. There's still no webhook/auto-deploy-on-push, a git-mode service is
-redeployed the same way an image-mode one is (manually, or via its own
-`cronSchedule` for `:latest`-tracking-equivalent auto-rebuilds). There **is**
-now a repo-browsing UI and OAuth-based private-repo access, see Git provider
-connections below; a private repo can still fall back to a token embedded in the
-URL (`https://TOKEN@host/...`) without connecting a provider at all.
+way. Push-to-deploy is its own section below. There **is** also a repo-browsing
+UI and OAuth-based private-repo access, see Git provider connections below; a
+private repo can still fall back to a token embedded in the URL
+(`https://TOKEN@host/...`) without connecting a provider at all.
 
 **Build cache and build servers** (`build_cache_registry`,
 `service.buildCacheRegistryId`/`buildServerRemoteHostId`,
@@ -815,6 +813,21 @@ repos and checks for a `Dockerfile` at a given ref through
 functions below; both go through `GitProviderService.listRepos`/`hasDockerfile`,
 which branch per-kind the same way `endpoints()` does.
 
+**Every token read goes through `GitProviderService.accessToken()`**, never
+`decryptSecret(connection.accessTokenEnc)` directly: repo listing, the
+Dockerfile check, deploy clone credentials (`deploy/helpers.ts`'s
+`resolveGitCredential`) and status checks (`status-check.service.ts`). Gitea (1
+hour), GitLab, Bitbucket and GitHub Apps all issue short-lived access tokens
+with a refresh token; `accessToken()` refreshes one within a minute of
+`expiresAt`, persists the rotated pair onto the connection, and dedupes
+concurrent refreshes per connection (providers that rotate refresh tokens reject
+the old one's second use). Real bug this fixed: nothing ever refreshed, so a
+Gitea connection stopped listing repos an hour after it was authorized, which
+looked like "connecting GitHub breaks Gitea and vice versa" because whichever
+provider was re-authorized most recently was the only one still in its token
+lifetime. A refresh that fails falls back to the stale token, so the caller's
+API call surfaces the failure and the user reconnects.
+
 **Not live-tested against a real registered OAuth App**, unlike everything else
 in this document's "real, tested" notes, this one couldn't be verified
 end-to-end in the session that built it: doing so requires an admin to actually
@@ -822,6 +835,55 @@ register an OAuth App on GitHub/GitLab/Gitea/Bitbucket's own site first, with a
 real callback URL, which nothing server-side can do standalone. Built carefully
 from each provider's own standard, well-documented OAuth2 + REST API shapes;
 verify the first real connect by hand once an OAuth App exists.
+
+## Push-to-deploy (`service.autoDeployOnPush` + `git*` webhook columns, `$lib/git-webhooks.ts`, `GitWebhookService`, `/api/v1/webhooks/git/[serviceId]`)
+
+A git service picked from a connected account stores `gitProviderId` + `gitRepo`
+(the provider's `owner/name`, or a GitLab group path) next to `gitUrl`;
+`GitSourceFields` (`$lib/components/git-source-fields.svelte`, used by the
+wizard and the Source tab) submits them as hidden fields, with the clone URL
+only shown behind "Use a clone URL instead" and a branch `<select>` fed by
+`listRepoBranches`. Picking a repo turns `autoDeployOnPush` on.
+
+`GitWebhookService.sync(svc, previous)` runs after every save that can change
+the source (wizard create, Source tab, REST POST/PATCH), with the pre-save
+`{gitProviderId, gitRepo, gitWebhookId}`: a hook on a repo the service no longer
+builds from (or with deploy-on-push off) is deleted from the provider, a 48-hex
+secret is kept encrypted in `gitWebhookSecretEnc` whenever deploy-on-push is on
+(so a hook can always be added by hand), and a new hook is registered via
+`GitProviderService.createPushWebhook` as the **service owner's** connection.
+Any reason it couldn't (no Dashboard URL, a pasted URL, no connection, a
+provider refusal) lands in `gitWebhookError` and the Source tab shows the URL +
+secret instead; `sync` never throws. `ServiceLifecycleService.deleteService`
+calls `remove()` first.
+
+Deliveries hit `/api/v1/webhooks/git/<serviceId>` (public; no session, no API
+key). `handleDelivery` 404s unless the service is git + deploy-on-push with a
+secret, verifies the signature per provider kind (`verifyGitWebhook`: GitHub
+`X-Hub-Signature-256`, Gitea `X-Gitea-Signature` or the GitHub header, GitLab
+`X-Gitlab-Token` compared to the secret, Bitbucket `X-Hub-Signature`; kind from
+the provider row, else `inferProviderKind(gitUrl)`, else any scheme), and
+`parsePushEvent` pulls `{branch, commit}` out of each provider's payload
+(Bitbucket can carry several changes; tags, deleted branches and pings yield
+nothing). A push to `svc.gitRef` calls
+`enqueueDeploy({trigger: "push", userId: svc.userId})`, which coalesces with an
+already queued deploy like any other. Responses are 202 for both deployed and
+ignored. The path is exempt from `csrfHandler`, since some providers post form
+bodies.
+
+`DeployTrigger` (`$lib/deploy-trigger.ts`) is now the one definition of
+`manual | cron | push`, used by the queue payload, `deployService`, both
+notification modules and `deployEvent`; "Git push" is the channel label.
+
+**Scopes changed** to allow hook management: GitLab `api read_user`, Gitea
+`write:repository read:user`, Bitbucket `repository webhook account` (GitHub's
+`repo` already covers hooks). Existing connections keep their old scopes until
+reconnected, and `#api` turns a provider 401/403 into "reconnect it on the Git
+Providers page". Covered by `tests/unit/app/git-webhooks.test.ts` (signatures,
+payloads, request shapes) and `tests/integration/git-webhook.test.ts` (bad
+signature, other branch, ping, a real enqueued deploy job, unknown service).
+Registering against a real provider hasn't been live-tested, same caveat as the
+OAuth connect flow above.
 
 ## Migrating from Dokploy or Coolify (`settings/migrate/`)
 

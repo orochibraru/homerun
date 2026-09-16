@@ -70,8 +70,8 @@ services that opt in.
 - **Build servers** only build; they never run your services, and one always
   needs a build-cache registry so the image it produced can reach the host that
   deploys it. See [Build servers](remote-hosts-and-agent.md).
-- **Git-based builds** clone by branch/tag only, a bare commit SHA doesn't work,
-  and have no webhook/auto-deploy-on-push yet.
+- **Git-based builds** clone by branch/tag only, a bare commit SHA doesn't work.
+  Deploy on push needs the Dashboard URL to be reachable from your git provider.
 - **Restoring a backup unpacks over the volume, it doesn't wipe it first.**
   Files in the archive replace the ones on disk, anything else already there
   stays, and nothing stops the service using the volume for you: stop it before
@@ -141,8 +141,6 @@ services that opt in.
   that's still a manual `/settings` visit afterward.
 - **Finer-grained permissions**, today "developer" is a role label plus
   route-gating only, not a real permissions system.
-- **Auto-deploy on push**, a webhook from your git provider triggering a
-  rebuild, rather than redeploying manually or on a schedule.
 
 See the repo's [`TODO.md`](../TODO.md) for the live, granular backlog, this page
 is the "what should a self-hoster know before relying on X" summary of it.

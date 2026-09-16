@@ -10,7 +10,8 @@
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import GitRepoPicker from "$lib/components/git-repo-picker.svelte";
+	import CopyBox from "$lib/components/copy-box.svelte";
+	import GitSourceFields from "$lib/components/git-source-fields.svelte";
 	import ImageCheckWarning from "$lib/components/image-check-warning.svelte";
 	import StatusCheckPicker from "$lib/components/status-check-picker.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -40,7 +41,10 @@
 			buildSource: svc.buildSource,
 			gitBuildContext: svc.gitBuildContext ?? "",
 			gitDockerfilePath: svc.gitDockerfilePath ?? "",
+			autoDeployOnPush: svc.autoDeployOnPush ? "on" : "",
+			gitProviderId: svc.gitProviderId ?? "",
 			gitRef: svc.gitRef ?? "main",
+			gitRepo: svc.gitRepo ?? "",
 			gitUrl: svc.gitUrl ?? "",
 			image: svc.image,
 			registryUrl: svc.registryUrl ?? "",
@@ -71,6 +75,9 @@
 	let registryUrl = $derived(values.registryUrl);
 	let gitUrl = $derived(values.gitUrl);
 	let gitRef = $derived(values.gitRef);
+	let gitProviderId = $derived(values.gitProviderId ?? "");
+	let gitRepo = $derived(values.gitRepo ?? "");
+	let autoDeployOnPush = $derived(values.autoDeployOnPush === "on");
 </script>
 
 <section class="panel rounded-md">
@@ -182,53 +189,55 @@
 
       <ImageCheckWarning {image} {registryUrl} registryUsername={svc.registryUsername ?? ""} {tag} />
     {:else}
-      {#if data.connectedGitProviders.length > 0}
-        <GitRepoPicker
-          labelClass={label}
-          onpick={(repo) => {
-            gitUrl = repo.cloneUrl;
-            gitRef = repo.defaultBranch;
-          }}
-          providers={data.connectedGitProviders}
-        />
+      <GitSourceFields
+        {errorClass}
+        {errors}
+        labelClass={label}
+        providers={data.connectedGitProviders}
+        bind:autoDeployOnPush
+        bind:gitProviderId
+        bind:gitRef
+        bind:gitRepo
+        bind:gitUrl
+      />
+      {#if data.pushWebhook}
+        <div class="border-border space-y-3 rounded-md border p-4">
+          {#if data.pushWebhook.registered}
+            <p class="text-sm text-emerald-600">
+              Webhook registered on {data.pushWebhook.providerName ?? "the provider"}.
+              Pushes to {gitRef} deploy this service.
+            </p>
+          {:else}
+            {#if data.pushWebhook.error}
+              <p class="text-xs text-amber-600">{data.pushWebhook.error}</p>
+            {/if}
+            <p class="text-text-muted text-xs">
+              Add a webhook in the repository's settings with this URL and
+              secret, sending push events as JSON. GitLab calls the secret a
+              "secret token".
+            </p>
+            {#if data.pushWebhook.url}
+              <div>
+                <p class={label}>Payload URL</p>
+                <CopyBox label="webhook URL" value={data.pushWebhook.url} />
+              </div>
+            {/if}
+            <div>
+              <p class={label}>Secret</p>
+              <CopyBox label="webhook secret" value={data.pushWebhook.secret} />
+            </div>
+          {/if}
+        </div>
       {/if}
       <div>
-        <label class={label} for="gitUrl">
-          Repository URL <span class="text-red-500">*</span>
-        </label>
+        <label class={label} for="gitDockerfilePath">Dockerfile path</label>
         <Input
-          id="gitUrl"
-          name="gitUrl"
-          placeholder="https://github.com/acme/api.git"
-          required
+          id="gitDockerfilePath"
+          name="gitDockerfilePath"
+          placeholder="Dockerfile"
           type="text"
-          bind:value={gitUrl}
+          value={values.gitDockerfilePath}
         />
-        {#if errors?.gitUrl}
-          <p class={errorClass}>{errors.gitUrl[0]}</p>
-        {/if}
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class={label} for="gitRef">Branch / tag</label>
-          <Input
-            id="gitRef"
-            name="gitRef"
-            placeholder="main"
-            type="text"
-            bind:value={gitRef}
-          />
-        </div>
-        <div>
-          <label class={label} for="gitDockerfilePath">Dockerfile path</label>
-          <Input
-            id="gitDockerfilePath"
-            name="gitDockerfilePath"
-            placeholder="Dockerfile"
-            type="text"
-            value={values.gitDockerfilePath}
-          />
-        </div>
       </div>
       <div>
         <label class={label} for="gitBuildContext">

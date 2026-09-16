@@ -58,10 +58,16 @@ export const serviceResponse = z.object({
 	desiredState: z.enum(["running", "stopped"]),
 	dnsResolvable: z.boolean(),
 	envVars: z.record(z.string(), z.string()),
+	autoDeployOnPush: z.boolean(),
 	gitBuildContext: z.string().nullable(),
 	gitDockerfilePath: z.string().nullable(),
+	gitProviderId: z.string().nullable(),
 	gitRef: z.string().nullable(),
+	gitRepo: z.string().nullable(),
 	gitUrl: z.string().nullable(),
+	gitWebhookError: z.string().nullable(),
+	gitWebhookId: z.string().nullable(),
+	gitWebhookSecretEnc: z.string().nullable(),
 	healthcheckCommand: z.string().nullable(),
 	id: z.string(),
 	image: z.string(),
@@ -239,6 +245,23 @@ export const imageScanResponse = imageScanSummaryResponse.extend({
 export const queuedJobResponse = z.object({
 	jobId: z.string(),
 	status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+});
+
+export const pushWebhookResponse = z.object({
+	error: z.string().nullable().meta({
+		description:
+			"Why Homerun couldn't register the webhook itself, if it couldn't",
+	}),
+	providerName: z.string().nullable(),
+	registered: z.boolean().meta({
+		description: "Whether Homerun registered the webhook on the provider",
+	}),
+	secret: z
+		.string()
+		.meta({ description: "The secret deliveries are signed with" }),
+	url: z.string().nullable().meta({
+		description: "Where the provider should send push events",
+	}),
 });
 
 export const scanConflictResponse = z.object({

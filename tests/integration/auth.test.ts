@@ -38,6 +38,37 @@ describe("auth", () => {
 	});
 });
 
+describe("signing in from the server's own IP", () => {
+	function signInFrom(origin: string): Promise<Response> {
+		const ctx = integrationContext();
+		const port = new URL(ctx.origin).port;
+		return nativeFetch(`${ctx.origin}/api/v1/auth/sign-in/email`, {
+			body: JSON.stringify({
+				email: "admin@integration.test",
+				password: "integration-test-password-1234",
+			}),
+			headers: {
+				"content-type": "application/json",
+				cookie: "leftover=from-an-earlier-visit",
+				host: `203.0.113.7:${port}`,
+				origin,
+			},
+			method: "POST",
+		});
+	}
+
+	test("works when ORIGIN and the Dashboard URL name a different address", async () => {
+		const port = new URL(integrationContext().origin).port;
+		const res = await signInFrom(`http://203.0.113.7:${port}`);
+		expect(res.status, await res.clone().text()).toBe(200);
+	});
+
+	test("still refuses a cross-site origin", async () => {
+		const res = await signInFrom("http://evil.example.com");
+		expect(res.status).toBe(403);
+	});
+});
+
 describe("openapi.json", () => {
 	test("is public and a real, parseable OpenAPI 3.1 document", async () => {
 		const res = await nativeFetch(

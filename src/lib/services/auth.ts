@@ -1,5 +1,6 @@
 import process from "node:process";
 import { apiKey } from "@better-auth/api-key";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -7,6 +8,7 @@ import {
 	admin,
 	bearer,
 	genericOAuth,
+	jwt,
 	openAPI,
 	twoFactor,
 } from "better-auth/plugins";
@@ -16,11 +18,18 @@ import { getRequestEvent } from "$app/server";
 import { resolveAdvertisedTokenAuth } from "$lib/auth-providers";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
+import {
+	OIDC_CLAIMS,
+	OIDC_SCOPES,
+	type OidcUser,
+	oidcClaimsFor,
+	oidcIssuer,
+} from "$lib/oidc-provider";
 import { passkeyRpId } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
 import * as schema from "$lib/server/db/schema";
 import { AdminService } from "./admin.service.ts";
-import { trustedOriginsFor } from "./auth-origins.ts";
+import { directAccessOrigins, trustedOriginsFor } from "./auth-origins.ts";
 import { EmailService } from "./email.service.ts";
 import { UserService } from "./user.service.ts";
 
@@ -57,6 +66,41 @@ function tokenAuthOptions(provider: {
 	return {};
 }
 
+/**
+ * The plugins that make Homerun an OpenID Connect provider for the apps it
+ * hosts: `jwt` signs id tokens (RS256, since plenty of apps' OIDC libraries
+ * don't accept EdDSA) with keys kept in the `jwks` table, and
+ * `oauthProvider` serves authorize/token/userinfo/discovery under the auth
+ * base path. Empty until the dashboard's origin is known, because the issuer
+ * has to be an absolute URL and `baseURL` is deliberately left unset (see
+ * buildAuth); `rebuildAuth()` adds them once instance settings supply it.
+ */
+function oidcProviderPlugins(origin: string | undefined) {
+	if (!origin) {
+		return [];
+	}
+	return [
+		jwt({
+			jwks: { keyPairConfig: { alg: "RS256", modulusLength: 2048 } },
+			jwt: { issuer: oidcIssuer(origin) },
+		}),
+		oauthProvider({
+			advertisedMetadata: {
+				claims_supported: [...OIDC_CLAIMS],
+				scopes_supported: [...OIDC_SCOPES],
+			},
+			clientPrivileges: ({ user }) => user?.role === "admin",
+			consentPage: "/auth/consent",
+			customIdTokenClaims: ({ user, scopes }) =>
+				oidcClaimsFor(user as OidcUser, scopes),
+			customUserInfoClaims: ({ user, scopes }) =>
+				oidcClaimsFor(user as OidcUser, scopes),
+			loginPage: "/auth/sign-in",
+			scopes: [...OIDC_SCOPES],
+		}),
+	];
+}
+
 // Doesn't throw : ORIGIN (or the Core section's Base domain + Use HTTPS on
 // /settings, see config.ts's applyInstanceSettings) can also be supplied
 // from the DB after boot (hooks.server.ts's init() calls rebuildAuth() once
@@ -83,6 +127,7 @@ if (!(process.env.ORIGIN || dev || building)) {
 function buildAuth() {
 	return betterAuth({
 		advanced: {
+			disableOriginCheck: false,
 			...(process.env.ORIGIN
 				? { useSecureCookies: process.env.ORIGIN.startsWith("https://") }
 				: {}),
@@ -99,12 +144,14 @@ function buildAuth() {
 				: {}),
 		},
 		basePath: "/api/v1/auth",
-		trustedOrigins: () =>
-			trustedOriginsFor({
+		trustedOrigins: (request) => [
+			...trustedOriginsFor({
 				authOrigin: config.auth.origin,
 				baseDomain: config.baseDomain,
 				envOrigin: process.env.ORIGIN,
 			}),
+			...directAccessOrigins(request?.headers.get("host")),
+		],
 		// Deliberately never pinned to config.auth.origin (the Core section's
 		// Base domain + Use HTTPS on /settings/onboarding). Real, tested-in-
 		// review bug this replaced: better-auth's svelteKitHandler only
@@ -130,6 +177,7 @@ function buildAuth() {
 		// has no other consumer in this codebase (grep it), Base domain
 		// itself is still what Traefik routing (config.baseDomain) uses.
 
+		disabledPaths: ["/token"],
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
 			schema,
@@ -205,7 +253,6 @@ function buildAuth() {
 			},
 		},
 		plugins: [
-			sveltekitCookies(getRequestEvent),
 			openAPI({
 				disableDefaultReference: true,
 				path: "/openapi",
@@ -253,6 +300,8 @@ function buildAuth() {
 					...tokenAuthOptions(provider),
 				})),
 			}),
+			...oidcProviderPlugins(config.auth.origin),
+			sveltekitCookies(getRequestEvent),
 		],
 		rateLimit: {
 			// Disabled in dev for easier testing, and also when

@@ -21,7 +21,7 @@
 	import Alert from "$lib/components/alert.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
-	import GitRepoPicker from "$lib/components/git-repo-picker.svelte";
+	import GitSourceFields from "$lib/components/git-source-fields.svelte";
 	import ImageCheckWarning from "$lib/components/image-check-warning.svelte";
 	import ServiceLinkPicker from "$lib/components/service-link-picker.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
@@ -85,6 +85,9 @@
 	let registryUsername = $derived(values?.registryUsername ?? "");
 	let gitUrl = $derived(values?.gitUrl ?? "");
 	let gitRef = $derived(values?.gitRef ?? "main");
+	let gitProviderId = $derived(values?.gitProviderId ?? "");
+	let gitRepo = $derived(values?.gitRepo ?? "");
+	let autoDeployOnPush = $derived(values?.autoDeployOnPush === "on");
 	let gitDockerfilePath = $derived(values?.gitDockerfilePath ?? "");
 	let gitBuildContext = $derived(values?.gitBuildContext ?? "");
 	let buildCacheRegistryId = $derived(values?.buildCacheRegistryId ?? "");
@@ -455,60 +458,26 @@
 
               <ImageCheckWarning {image} {registryUrl} {registryUsername} {tag} />
             {:else}
-              {#if data.connectedGitProviders.length > 0}
-                <GitRepoPicker
-                  labelClass={label}
-                  onpick={(repo) => {
-                    gitUrl = repo.cloneUrl;
-                    gitRef = repo.defaultBranch;
-                  }}
-                  providers={data.connectedGitProviders}
-                />
-              {/if}
+              <GitSourceFields
+                {errorClass}
+                {errors}
+                labelClass={label}
+                providers={data.connectedGitProviders}
+                bind:autoDeployOnPush
+                bind:gitProviderId
+                bind:gitRef
+                bind:gitRepo
+                bind:gitUrl
+              />
               <div>
-                <label class={label} for="gitUrl">
-                  Repository URL <span class="text-red-500">*</span>
-                </label>
+                <label class={label} for="gitDockerfilePath">Dockerfile path</label>
                 <Input
-                  id="gitUrl"
-                  name="gitUrl"
-                  placeholder="https://github.com/acme/api.git"
-                  required
+                  id="gitDockerfilePath"
+                  name="gitDockerfilePath"
+                  placeholder="Dockerfile"
                   type="text"
-                  bind:value={gitUrl}
+                  bind:value={gitDockerfilePath}
                 />
-                <p class="mt-1.5 text-xs text-text-subtle">
-                  Any git-clone-able HTTPS URL : GitHub, GitLab, a self-hosted Gitea
-                  instance, whatever. Private repos: embed a token in the URL
-                  yourself (<code>https://TOKEN@host/...</code>), there's no
-                  separate credential field for this yet.
-                </p>
-                {#if errors?.gitUrl}
-                  <p class={errorClass}>{errors.gitUrl[0]}</p>
-                {/if}
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class={label} for="gitRef">Branch / tag</label>
-                  <Input
-                    id="gitRef"
-                    name="gitRef"
-                    placeholder="main"
-                    type="text"
-                    bind:value={gitRef}
-                  />
-                </div>
-                <div>
-                  <label class={label} for="gitDockerfilePath"
-                  >Dockerfile path</label>
-                  <Input
-                    id="gitDockerfilePath"
-                    name="gitDockerfilePath"
-                    placeholder="Dockerfile"
-                    type="text"
-                    bind:value={gitDockerfilePath}
-                  />
-                </div>
               </div>
               <div>
                 <label class={label} for="gitBuildContext">

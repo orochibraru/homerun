@@ -8,12 +8,14 @@
 	type SortKey = "cpu" | "memory" | "traffic" | "name";
 
 	interface Props {
+		/** Shows only the first `limit` rows in the current sort order; omitted means all of them. */
+		limit?: number;
 		/** Limits the table to these services; omitted means every service. */
 		serviceIds?: string[];
 		title?: string;
 	}
 
-	const { serviceIds, title = "Per-service usage" }: Props = $props();
+	const { limit, serviceIds, title = "Per-service usage" }: Props = $props();
 
 	const usage = getServiceUsage();
 
@@ -44,6 +46,8 @@
 		);
 		return descending ? items : items.reverse();
 	});
+
+	const shown = $derived(limit ? rows.slice(0, limit) : rows);
 
 	function toggle(key: SortKey) {
 		if (sort === key) {
@@ -109,7 +113,7 @@
         </tr>
       </thead>
       <tbody class="divide-border divide-y">
-        {#each rows as row (row.id)}
+        {#each shown as row (row.id)}
           <tr class="hover:bg-surface-2 transition-colors">
             <td class="px-4 py-2">
               <a
@@ -134,5 +138,15 @@
         {/each}
       </tbody>
     </table>
+    {#if shown.length < rows.length}
+      <div
+        class="border-border text-text-subtle flex items-center justify-between gap-3 border-t px-4 py-2 text-[0.6875rem]"
+      >
+        <span>Top {shown.length} of {rows.length}</span>
+        <a class="text-accent font-medium hover:underline" href={resolve("/services")}>
+          All services
+        </a>
+      </div>
+    {/if}
   {/if}
 </section>

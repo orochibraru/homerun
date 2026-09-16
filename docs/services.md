@@ -45,9 +45,30 @@ a repo-browsing picker instead of pasting a raw URL; a private repo can also
 fall back to a token embedded directly in the URL (`https://TOKEN@host/...`)
 without connecting a provider at all.
 
-There's no webhook / auto-deploy-on-push yet, redeploy a git-mode service the
-same way as an image-mode one: manually, or via its own cron schedule (below)
-for `:latest`-tracking-equivalent auto-rebuilds.
+### Deploy on push
+
+Turn on **Deploy on push** on the Source tab (or in the wizard) and every push
+to the service's branch deploys it, as its owner, without you touching the
+dashboard.
+
+- **Picked from a connected account**: Homerun adds the webhook to the repo
+  itself when you save, and removes it when you turn deploy-on-push off, switch
+  repos or delete the service. The Source tab says when it's registered.
+- **A pasted clone URL**, or when Homerun couldn't register it (the account
+  lacks webhook access, the provider couldn't be reached): the Source tab shows
+  a payload URL and a secret, with the reason. Add a webhook in the repository's
+  settings with those, sending push events as JSON. On GitLab the secret goes in
+  **Secret token**.
+
+Pushes to other branches, tags and pings are acknowledged and ignored, and a
+delivery with a wrong signature is refused. It needs the **Dashboard URL** set
+under Settings → General, and that address has to be reachable from the git
+provider: a GitHub or GitLab.com repo can't deliver to a dashboard only
+reachable on your LAN. `GET /api/v1/services/{id}/webhook` returns the same URL
+and secret.
+
+Without it, redeploy a git-mode service like an image-mode one: manually, or on
+its own cron schedule (below).
 
 ### Connecting a git provider
 
@@ -65,13 +86,20 @@ There are two steps, and they're done by different people:
    token is yours, and another user connecting to the same provider gets their
    own.
 
-Once connected, the **Browse repos** picker on a service's Source tab (and in
-the new-service wizard) lists the repositories that account can see, and checks
-the branch you pick for a `Dockerfile` before you commit to it. Tokens are
-stored encrypted, and disconnecting removes them.
+Once connected, a service's Source tab (and the new-service wizard) picks the
+repository and branch from that account instead of asking for a clone URL, and
+checks the repo for a `Dockerfile`. Picking one also turns on
+[Deploy on push](#deploy-on-push), with the webhook added for you. **Use a clone
+URL instead** is still there for any other repo. Tokens are stored encrypted,
+refreshed automatically when the provider issues short-lived ones, and
+disconnecting removes them.
 
-This is only about _browsing and access_. Cloning itself is provider-agnostic,
-so any public HTTPS git URL works with no provider connected at all.
+Cloning itself is provider-agnostic, so any public HTTPS git URL works with no
+provider connected at all.
+
+**Connections made before deploy-on-push existed** only allowed reading repos on
+GitLab, Gitea and Bitbucket. Disconnect and reconnect them once so Homerun can
+add webhooks; until then the Source tab shows the webhook to add by hand.
 
 ### Required status checks
 

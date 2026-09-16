@@ -29,15 +29,15 @@ suggestion.
    advisory. Scope is always the full tree, not just changed files — a
    pre-existing-looking failure is still in scope; read the file before
    dismissing it as unrelated.
-2. `bun run lint` — `biome check .`, must be zero errors, whole repo.
-3. `git status`/`git diff` to see what's touched. If `packages/agent/`,
-   `packages/installer/`, or `packages/cli/` changed, each has its own
-   `tsconfig.json` and is NOT covered by step 1 — run
-   `bunx tsc --noEmit -p <dir>/tsconfig.json` for each touched one (or the root
-   `check:agent`/`check:installer`/`check:cli` scripts if they exist).
-4. If a touched subproject has tests under `tests/agent`, `tests/cli`,
-   `tests/installer`, run the matching
-   `bun test:agent`/`bun test:cli`/`bun test:installer`.
+2. `bun run lint` — markdownlint-cli2, tailwint and
+   `biome check --error-on-warnings`, must be clean, whole repo.
+3. `git status`/`git diff` to see what's touched. `bun run check` already
+   typechecks `packages/agent/`, `packages/installer/`, `packages/cli/` and
+   `scripts/` (`check:packages`); if a REST API route, `$lib/openapi/` or
+   `config.ts` changed, confirm `bun run gen` leaves no diff in `openapi.json`,
+   `homerun.schema.json` or `packages/cli/generated/`.
+4. Run the unit tests for what changed: `bun run test:unit` (seconds), or
+   `test:unit:app`/`test:unit:agent`/`test:unit:cli`/`test:unit:installer`.
 
 ## What to scan the diff for (this repo's own hard rules)
 

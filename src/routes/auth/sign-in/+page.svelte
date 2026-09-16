@@ -29,13 +29,51 @@
 
 	const session = useSession();
 
-	// Redirect if already logged in
 	$effect(() => {
-		if (!$session.isPending && $session.data?.user) {
+		if (
+			!(
+				data.redirectTo ||
+				data.oauthSignIn ||
+				redirecting ||
+				$session.isPending
+			) &&
+			$session.data?.user
+		) {
 			loading = true;
 			goto(resolve("/"));
 		}
 	});
+
+	const REDIRECT_DELAY_SECONDS = 2;
+	let redirecting = $state(false);
+	let redirectCountdown = $state(REDIRECT_DELAY_SECONDS);
+	const destinationName = $derived(data.appName ?? "Homerun");
+
+	async function finishSignIn() {
+		if (data.oauthSignIn) {
+			redirecting = true;
+			return;
+		}
+		if (!data.redirectTo) {
+			await refreshAll({ includeLoadFunctions: true });
+			return;
+		}
+		const target = data.redirectTo;
+		redirecting = true;
+		redirectCountdown = REDIRECT_DELAY_SECONDS;
+		const timer = setInterval(() => {
+			redirectCountdown = Math.max(redirectCountdown - 1, 0);
+		}, 1000);
+		await new Promise((done) =>
+			setTimeout(done, REDIRECT_DELAY_SECONDS * 1000),
+		);
+		clearInterval(timer);
+		window.location.assign(target);
+	}
+
+	function signedInToast(message: string) {
+		return data.redirectTo || data.oauthSignIn ? {} : { success: message };
+	}
 
 	let twoFactorStep = $state(false);
 	let twoFactorMode = $state<"backup" | "totp">("totp");
@@ -62,7 +100,7 @@
 			loading = false;
 			return;
 		}
-		await refreshAll({ includeLoadFunctions: true });
+		await finishSignIn();
 	}
 
 	async function startPasskeyAutofill() {
@@ -79,7 +117,7 @@
 		const { error } = await authClient.signIn.passkey({ autoFill: true });
 		if (!error) {
 			loading = true;
-			await refreshAll({ includeLoadFunctions: true });
+			await finishSignIn();
 		}
 	}
 
@@ -106,7 +144,7 @@
 				twoFactorStep = true;
 				return "two-factor";
 			}
-			await refreshAll({ includeLoadFunctions: true });
+			void finishSignIn();
 			return "signed-in";
 		} catch (e) {
 			password = "";
@@ -117,12 +155,16 @@
 
 	function handleSignIn(e: SubmitEvent) {
 		return toast.promise(signIncallback(e), {
-			loading: "Signing in",
-			success: (outcome) =>
-				outcome === "two-factor"
-					? "Enter your verification code to finish signing in."
-					: "Signed in successfully",
 			error: (e) => toastError(e, "Couldn't sign you in."),
+			loading: "Signing in",
+			...(data.redirectTo || data.oauthSignIn
+				? {}
+				: {
+						success: (outcome: "signed-in" | "two-factor") =>
+							outcome === "two-factor"
+								? "Enter your verification code to finish signing in."
+								: "Signed in successfully",
+					}),
 		});
 	}
 
@@ -144,7 +186,7 @@
 			if (error) {
 				throw new Error(error.message ?? "That code didn't match.");
 			}
-			await refreshAll({ includeLoadFunctions: true });
+			void finishSignIn();
 		} catch (err) {
 			twoFactorCode = "";
 			loading = false;
@@ -156,7 +198,7 @@
 		return toast.promise(verifyTwoFactorCallback(e), {
 			error: (err) => toastError(err, "That code didn't match."),
 			loading: "Checking your code",
-			success: "Signed in successfully",
+			...signedInToast("Signed in successfully"),
 		});
 	}
 
@@ -169,7 +211,7 @@
 					error.message ?? "Couldn't sign you in with a passkey.",
 				);
 			}
-			await refreshAll({ includeLoadFunctions: true });
+			void finishSignIn();
 		} catch (err) {
 			loading = false;
 			throw err;
@@ -180,7 +222,7 @@
 		return toast.promise(passkeySignInCallback(), {
 			error: (err) => toastError(err, "Couldn't sign you in with a passkey."),
 			loading: "Waiting for your passkey",
-			success: "Signed in successfully",
+			...signedInToast("Signed in successfully"),
 		});
 	}
 
@@ -193,7 +235,7 @@
 		rememberOauthAttempt(providerId);
 		try {
 			const { error } = await signIn.social({
-				callbackURL: resolve("/"),
+				callbackURL: data.redirectTo ?? resolve("/"),
 				provider: providerId as never,
 			});
 			if (error) {
@@ -326,11 +368,36 @@
 {/snippet}
 
 <AuthShell
-    eyebrow="Sign in"
-    heading="Welcome back"
-    subheading="Sign in to manage your services."
+    eyebrow={data.oauthSignIn
+        ? "Sign in with Homerun"
+        : data.appName
+          ? "Protected app"
+          : "Sign in"}
+    heading={data.appName ? `Sign in to ${data.appName}` : "Welcome back"}
+    subheading={data.oauthSignIn
+        ? `Use your Homerun account to sign in to ${data.appName ?? "this app"}.`
+        : data.appName
+          ? `${data.appName} is behind Homerun's login. Sign in to continue.`
+          : "Sign in to manage your services."}
 >
-    {#if twoFactorStep}
+    {#if redirecting}
+        <div
+            aria-live="polite"
+            class="flex flex-col items-center gap-3 py-6 text-center"
+            role="status"
+        >
+            <Spinner class="text-accent size-6" />
+            <p class="text-text text-sm font-medium">You're signed in</p>
+            <p class="text-text-muted text-sm">
+                {#if data.oauthSignIn}
+                    Taking you back to {destinationName}…
+                {:else}
+                    Taking you to {destinationName} in {redirectCountdown}
+                    {redirectCountdown === 1 ? "second" : "seconds"}…
+                {/if}
+            </p>
+        </div>
+    {:else if twoFactorStep}
         <form class="space-y-4" novalidate onsubmit={handleVerifyTwoFactor}>
             <p class="text-text-muted text-sm">
                 {#if twoFactorMode === "totp"}

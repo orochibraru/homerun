@@ -24,7 +24,7 @@ agent has no access to the git-provider tables. `authenticatedCloneUrl` and
 line and error message goes through the redaction so a token can't reach the
 deployment log.
 
-## Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-release-binaries.ts`)
+## Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-packages.ts`)
 
 **The CI pipeline builds each image once and reuses it.** Both
 `pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
@@ -140,8 +140,8 @@ has no npm package to publish, and `npm`'s plugin still wants registry-shaped
 config even with `npmPublish: false`; a small script fits this codebase's
 existing "hand-roll a small thing rather than fight a mismatched tool" posture
 better, same instinct as the cron matcher/SigV4 client).
-`scripts/build-release-binaries.ts` cross-compiles all six
-`agent`/`installer`/`cli` Linux binaries (x64 + arm64, each sub-project's own
+`scripts/build-packages.ts` cross-compiles all six `agent`/`installer`/`cli`
+Linux binaries (x64 + arm64, each sub-project's own
 `build:linux-x64`/`build:linux-arm64` scripts) so `.releaserc.json`'s
 release-assets step has something to attach, directly serving the "installer
 (and homerun agent) in each release artifact" TODO item, with the CLI's own
@@ -166,10 +166,17 @@ fine-grained PAT scoped to this repo (Contents + Issues + Pull requests: write).
 ruleset blocks pushes from anyone but a repo admin, which `github-actions[bot]`
 isn't. It's threaded in twice, as `actions/checkout`'s `token` (git push auth)
 and as the `GH_TOKEN` env var (`@semantic-release/github`'s API calls). The
-`version` job's dry run takes it too, unlike the sibling `nuvio-web` repo this
-CI shape is shared with: here that job's output also feeds the `binaries` job's
-baked version, so it has to actually resolve rather than silently falling back
-to a commit SHA.
+`version` job's dry run takes it too, in **both** places, unlike the sibling
+`nuvio-web` repo this CI shape is shared with: here that job's output also feeds
+the `binaries` job's and the app image's baked version, so it has to actually
+resolve rather than silently falling back to a commit SHA. Real bug: that job
+passed `RELEASE_TOKEN` only as `GH_TOKEN` while `actions/checkout` persisted the
+read-only default token, so semantic-release's `git push --dry-run` check 403'd
+(`EGITNOPERMISSION`), the step's `|| true` swallowed it, the version came back
+empty, and v1.0.22 shipped reporting 1.0.21 with a permanent "update available"
+notice. The checkout now takes `RELEASE_TOKEN` too, and a failing dry run fails
+the job instead of falling back; only a successful run with no release-worthy
+commits uses the SHA.
 
 **Job ids use `-`, never `:`** (`build-app`, not `build:app`). GitHub rejects a
 colon in a job id outright and refuses to run the whole workflow file; the
@@ -188,8 +195,8 @@ is `required: false` for the same reason.
 **Not verified**: an actual release running end-to-end on GitHub Actions
 (creating a real tag/release and pushing the version bump back to `main`). The
 earlier Gitea-era verification of `scripts/bump-version.ts` and
-`scripts/build-release-binaries.ts` still stands (both were run for real
-locally, all six binaries cross-compiled), since neither is host-specific.
+`scripts/build-packages.ts` still stands (both were run for real locally, all
+six binaries cross-compiled), since neither is host-specific.
 
 ## Homerun Agent + installer (`packages/agent/`, `packages/installer/`)
 

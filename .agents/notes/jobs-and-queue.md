@@ -123,8 +123,8 @@ banner is suppressed during a first deploy.
 - Backups (`/backups`'s and `storage/[volumeId]`'s "Run now", plus the backup
   scheduler) enqueue and return : a tar-and-upload could comfortably outlive
   Bun's idle timeout, and neither route called `allowLongRequest()`. The
-  `backup_run` row is still written by `BackupService.runBackup()` when the job
-  actually starts.
+  `backup_run` row is still written by `S3BackupService.backupVolume()` when the
+  job actually starts.
 
 **Retries** are per job type (`maxAttempts`, default 1) with exponential backoff
 : backups get 2 attempts, deploys and cleanups get one, since a failed deploy is
@@ -220,30 +220,30 @@ A user-defined scheduled task that isn't tied to a service, unlike
 `CronJobService.runJob(job)` is the single entry point both the scheduler and
 the manual "Run now" funnel through, and it writes one `cron_job_run` row per
 attempt on every path including a thrown runner, same shape as
-`BackupService.runBackup`. A run keeps `exitCode`, `success`, `error`, and the
-captured stdout+stderr (`CronJobRunDTO.finish` keeps the **last** 64k characters
-rather than the first, since a failure's useful output is at the end).
+`S3BackupService.backupVolume`. A run keeps `exitCode`, `success`, `error`, and
+the captured stdout+stderr (`CronJobRunDTO.finish` keeps the **last** 64k
+characters rather than the first, since a failure's useful output is at the
+end).
 
 Wiring follows the existing patterns exactly rather than inventing anything:
 `JobType` gains `"cron_job"` (`$lib/types.ts` + `JOB_TYPE_LABELS`), with its own
 zod payload (`queue/payloads.ts`) and handler (`queue/handlers.ts`), an
 `enqueueCronJobRun` helper (`cron-job-queue.ts`, mirroring `backup-queue.ts`)
 keyed `cron_job:<id>` for both dedupe and lock so one job never runs twice
-concurrently, and a fourth `BaseScheduler` subclass
-(`cron/cron-job-scheduler.ts`, composed into `CronService` and started from
-`hooks.server.ts`) with the same due-check plus same-minute double-fire guard as
-the redeploy and backup schedulers. Routes are the usual list/new/detail trio
-(`/cron-jobs`, `new/`, `[cronJobId]/`) sharing one form component
-(`$lib/components/cron-job-fields.svelte`) and one server-side parser
-(`$lib/server/cron-job-form.ts`); enabled jobs also render on the Scheduling
-page next to cron redeploys and backups.
+concurrently, and a third `DueScheduler<T>` instance (`cronJobScheduler` in
+`cron.service.ts`, started from `hooks.server.ts`) with the same due-check plus
+same-minute double-fire guard as the redeploy and backup schedulers. Routes are
+the usual list/new/detail trio (`/cron-jobs`, `new/`, `[cronJobId]/`) sharing
+one form component (`$lib/components/cron-job-fields.svelte`) and one
+server-side parser (`$lib/server/cron-job-form.ts`); enabled jobs also render on
+the Scheduling page next to cron redeploys and backups.
 
 **Not remote-host aware**: an image job always runs on the local daemon
 (`runOneOff` takes a `remote` param, but nothing sets it here yet). **No per-run
 streaming either**: output is captured and shown once the run finishes, which is
 why a long-running job's page shows a spinner rather than a live tail.
 
-## S3 backups (`src/lib/services/backup.service.ts`, `s3-backup.service.ts`, `/backups`, `/s3-destinations`)
+## S3 backups (`src/lib/services/s3-backup.service.ts`, `/backups`, `/s3-destinations`)
 
 Per-volume, off by default. The destination itself is a separate, named,
 reusable row (`s3_destination`, `S3DestinationDTO`, managed on
@@ -254,17 +254,15 @@ Every attempt, scheduled or manual, writes a `backup_run` row (`BackupRunDTO`,
 created before the attempt and finalized on every return path, including
 validation failure), and `/backups` is the page over that history, plus a "Run
 now" action per volume, the same one `storage/[volumeId]` offers.
-`BackupService` (`backup.service.ts`) is an abstract base holding the generic
-tar-then-upload pipeline (`runBackup()`: open the run row, validate config,
-resolve+decrypt the named destination, tar the volume's `source` directory,
-finalize the run row, return the result), with a concrete subclass supplying
-only the "put these bytes at this key" transport;
-`S3BackupService extends BackupService` (`s3-backup.service.ts`) is the only
-concrete implementation, a hand-rolled AWS Signature V4 client (single-request
-PUT, no multipart, no SDK dependency, verified end-to-end against a local MinIO
-container during development) that works against any S3-compatible endpoint (AWS
-S3, MinIO, R2, B2, etc.) via path-style addressing.
-`S3BackupService.backupVolume(volume)` (a singleton instance,
+`S3BackupService` (`s3-backup.service.ts`) holds the whole tar-then-upload
+pipeline (`backupVolume()` → `attemptBackup()`: open the run row, validate
+config, resolve+decrypt the named destination, tar the volume, finalize the run
+row, return the result) plus restore (`listBackups()`/`restoreVolume()`), over a
+hand-rolled AWS Signature V4 client (`putObject`/`signedRequest`, module
+functions) (single-request PUT, no multipart, no SDK dependency, verified
+end-to-end against a local MinIO container during development) that works
+against any S3-compatible endpoint (AWS S3, MinIO, R2, B2, etc.) via path-style
+addressing. `S3BackupService.backupVolume(volume)` (a singleton instance,
 `export const S3BackupService = new S3BackupServiceClass()`) is the callable
 entry point every route/scheduler uses; it PUTs the tarball as
 `<prefix/>volumeName-<timestamp>.tar.gz`. **Both volume kinds are supported**:
@@ -273,15 +271,15 @@ entry point every route/scheduler uses; it PUTs the tarball as
 filesystem the same way) is mounted read-only into a throwaway `alpine:3`
 container that tars it to stdout, via `DockerService.runOneOff` (see the one-off
 mixin under Docker integration below). Both paths produce the same bytes, so
-only `BackupService`'s private `archive()` branches, `attemptBackup` and every
-caller are kind-agnostic. A non-zero exit from the helper fails the run with the
-helper's own stderr attached, rather than uploading a truncated/empty tarball.
-Scheduled backups are one `DueScheduler` config over
-`StorageVolumeDTO.listBackupEnabled()`, see Schedulers above. Restore is
-`S3BackupService.restoreVolume()`, called straight from the volume page's
-`restore` action (not queued): it downloads one object and unpacks it over the
-volume through Docker's archive endpoint on a stopped helper container, one path
-for both volume kinds, without wiping what's already there.
+only `S3BackupService`'s private `archiveHostPath()`/`archiveNamedVolume()`
+branch, `attemptBackup` and every caller are kind-agnostic. A non-zero exit from
+the helper fails the run with the helper's own stderr attached, rather than
+uploading a truncated/empty tarball. Scheduled backups are one `DueScheduler`
+config over `StorageVolumeDTO.listBackupEnabled()`, see Schedulers above.
+Restore is `S3BackupService.restoreVolume()`, called straight from the volume
+page's `restore` action (not queued): it downloads one object and unpacks it
+over the volume through Docker's archive endpoint on a stopped helper container,
+one path for both volume kinds, without wiping what's already there.
 
 ## Cron jobs on another daemon, and live output
 

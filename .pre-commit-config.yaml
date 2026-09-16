@@ -19,9 +19,9 @@ repos:
         args: [--fix=lf]
         exclude: &generated |-
           (?x)^(
-            src/lib/api/v1\.(json|d\.ts)|
-            openapi.json|
-            \.example\.env|
+            openapi\.json|
+            homerun\.schema\.json|
+            packages/cli/generated/|
             drizzle/|
             CHANGELOG\.md|
             bun\.lock
@@ -70,12 +70,12 @@ repos:
 
   - repo: local
     hooks:
-      - id: gen-env
-        name: Regenerate .example.env
-        entry: bun run gen:env
+      - id: gen
+        name: Regenerate OpenAPI, CLI types and config schema
+        entry: bun run gen
         language: system
         pass_filenames: false
-        files: ^(src/lib/server/config\.defaults\.ts|scripts/generate-env-example\.ts)$
+        files: ^(src/routes/api/|src/lib/openapi/|src/lib/config\.ts$|scripts/generate-)
 
       - id: format-ts
         name: Formatting (TS)
@@ -113,7 +113,7 @@ repos:
         entry: bun run test:unit
         language: system
         pass_filenames: false
-        files: ^(src/|test\.setup\.ts$|bunfig\.toml$)
+        files: ^(src/|packages/|tests/unit/|bunfig\.toml$)
 
       - id: check
         name: Type Check

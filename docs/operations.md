@@ -16,9 +16,10 @@ host from filling up.
   `nvidia-smi`, just means the GPU block doesn't render, it isn't an error.
 - **Resource usage history**, the same host CPU and memory as a chart, live or
   over the last hour, day, week, month, year or all of it, from a sample taken
-  every minute and kept for a year, next to a **per-service usage** table of
-  what each running service is using. A stack's own page has the same table for
-  its members, and a service's Overview tab has its own chart.
+  every minute and kept for a year, next to a **per-service usage** table of the
+  five services using the most (sort it by CPU, memory or traffic). A stack's
+  own page has the same table for its members, and a service's Overview tab has
+  its own chart.
 - **Recent deployments** across all your services, each linking to the service
   it belongs to.
 - **Recent errors**, the latest warn/error-level log lines, each linking to the

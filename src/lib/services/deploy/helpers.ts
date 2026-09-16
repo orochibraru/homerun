@@ -12,7 +12,7 @@ import {
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
 import { serviceHostname, syncDns } from "../dns.service.ts";
 import type { RegistryAuth } from "../docker/containers.ts";
-import { decryptSecret } from "../secrets.ts";
+import { GitProviderService } from "../git-provider.service.ts";
 import type { CacheRegistryCredentials } from "./plan.ts";
 
 const logger = new Logger(DEPLOY_LOG_SCOPE);
@@ -109,7 +109,7 @@ export async function resolveGitCredential(
 	if (!connection) {
 		return null;
 	}
-	const token = decryptSecret(connection.accessTokenEnc);
+	const token = await GitProviderService.accessToken(provider, connection);
 	if (!token) {
 		return null;
 	}

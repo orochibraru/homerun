@@ -29,7 +29,6 @@ vite.config.ts.timestamp-*
 tmp/
 *.db
 test-results/
+playwright-report/
 playwright-results.json
 coverage/
-
-/tmp/
