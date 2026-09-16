@@ -71,6 +71,19 @@ export async function startAppContainer(
 	await dockerRemove(E2E_CONTAINER_NAME);
 	const name = E2E_CONTAINER_NAME;
 
+	const hostNetwork = process.platform === "linux";
+	const networkArgs = hostNetwork
+		? ["--network", "host"]
+		: [
+				"--add-host",
+				"host.docker.internal:host-gateway",
+				"-p",
+				`${options.port}:${options.port}`,
+			];
+	const databaseUrl = hostNetwork
+		? options.databaseUrl
+		: databaseUrlForContainer(options.databaseUrl);
+
 	const proc = Bun.spawn(
 		[
 			"docker",
@@ -78,16 +91,13 @@ export async function startAppContainer(
 			"-d",
 			"--name",
 			name,
-			"--add-host",
-			"host.docker.internal:host-gateway",
-			"-p",
-			`${options.port}:${options.port}`,
+			...networkArgs,
 			"-e",
 			`AUTH_SECRET=${options.authSecret}`,
 			"-e",
 			`BASE_DOMAIN=${options.baseDomain}`,
 			"-e",
-			`DATABASE_URL=${databaseUrlForContainer(options.databaseUrl)}`,
+			`DATABASE_URL=${databaseUrl}`,
 			"-e",
 			`ORIGIN=${options.origin}`,
 			"-e",

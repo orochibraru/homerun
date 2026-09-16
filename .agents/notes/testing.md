@@ -205,16 +205,23 @@ load-bearing parts:
   than a second build of the same source, see the CI pipeline note under Release
   automation below. Everything else about the harness is unchanged : the same
   throwaway Postgres, the same migrations, the same fixed port, the same
-  health-check wait. Two details are load-bearing : the container's
-  `DATABASE_URL` has `localhost`/`127.0.0.1` rewritten to `host.docker.internal`
-  (a container's own `localhost` is itself, not the host) and it is started with
-  `--add-host=host.docker.internal:host-gateway` so that name resolves on Linux
-  too, not just Docker Desktop; and `assertAppIsBuilt()` is skipped in image
-  mode, since there is no local build to assert on. The container also runs
-  under a **fixed** name (`homerun-e2e-app`), removed before each start rather
-  than given a unique one : a container left behind by a crashed or killed run
-  otherwise holds the suite's fixed port forever, and CI's three whole-suite
-  retries all failed on
+  health-check wait. Two details are load-bearing : on Linux (CI) the container
+  runs with `--network host`, so `DATABASE_URL` and the port need no rewriting
+  and, more importantly, `docker run` creates no veth or port proxy. A bridged
+  container's new interface fires a netlink address change a second or two after
+  it starts, right as Playwright's first navigation is in flight, and Chromium
+  aborts every pending request on that with `net::ERR_NETWORK_CHANGED` : the
+  sign-up page's JS chunks failed, SvelteKit rendered its 500 page, the
+  bootstrap spec never created the admin, and ten more specs failed behind it
+  (the `main` run for PR #17, green on the PR itself). Elsewhere (Docker Desktop
+  has no host networking by default) it stays bridged, with
+  `localhost`/`127.0.0.1` in `DATABASE_URL` rewritten to `host.docker.internal`
+  and `--add-host=host.docker.internal:host-gateway`; and `assertAppIsBuilt()`
+  is skipped in image mode, since there is no local build to assert on. The
+  container also runs under a **fixed** name (`homerun-e2e-app`), removed before
+  each start rather than given a unique one : a container left behind by a
+  crashed or killed run otherwise holds the suite's fixed port forever, and CI's
+  three whole-suite retries all failed on
   `Bind for 0.0.0.0:4310 failed: port is already allocated` before the app could
   even start. Safe for the same reason the port is fixed, this suite already
   can't run twice concurrently on one machine. **Verified live**: the full suite

@@ -50,17 +50,22 @@ workflows as run artefacts, which is why they must stay in one workflow run
 `publish.yaml`'s `resolve` job looks up the merged PR and promotes its `pr-<n>`
 images straight to `vX.Y.Z` + `latest` (`promote`, a
 `docker buildx imagetools create`, no build, no e2e, no `code_quality`) when
-three things hold: the squash commit's tree is identical to the PR head's tree
-(the PR was up to date with `main`, so the image is byte-for-byte this commit's
-source; the ruleset doesn't require up-to-date branches, so this is checked
-rather than assumed), `CI Gate` passed on that head, and both `pr-<n>` tags
-exist. Anything else (a direct push, a stale PR, a fork) falls back to the full
-build → e2e → manifest chain. Binaries always rebuild, since the release version
-is baked into them. The release job accepts either path. `pr-<n>` tags of a
-merged PR are deleted by `publish.yaml`'s `cleanup` once the images are
-published, not by `pr-cleanup.yaml` (which now only handles PRs closed
-unmerged), otherwise the two would race on merge and delete the tag being
-promoted. Both call `delete-pr-images.yaml`.
+three things hold: the squash commit's tree matches the PR head's tree apart
+from `CHANGELOG.md` and `package.json`'s `version` field (the ruleset doesn't
+require up-to-date branches, so this is checked rather than assumed), `CI Gate`
+passed on that head, and both `pr-<n>` tags exist. The release-bump exclusion is
+load-bearing: every release pushes a `chore(release)` commit touching exactly
+those two, so almost every PR is behind `main` by one, and a strict tree
+comparison sent PR #17 down the rebuild path, where e2e re-ran against a fresh
+image and failed on flake the PR had never hit, blocking the release. The app
+image doesn't embed the version, so that diff can't change what ships. Anything
+else (a direct push, a stale PR, a fork) falls back to the full build → e2e →
+manifest chain. Binaries always rebuild, since the release version is baked into
+them. The release job accepts either path. `pr-<n>` tags of a merged PR are
+deleted by `publish.yaml`'s `cleanup` once the images are published, not by
+`pr-cleanup.yaml` (which now only handles PRs closed unmerged), otherwise the
+two would race on merge and delete the tag being promoted. Both call
+`delete-pr-images.yaml`.
 
 **Docs-only changes skip the expensive jobs.** `publish.yaml` has a
 `paths-ignore` for `docs/**`, `**/*.md`, `.agents/**` and `.claude/**`, so a
