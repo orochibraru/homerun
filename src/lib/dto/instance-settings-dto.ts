@@ -109,6 +109,7 @@ export interface InstanceSettingsOverride {
 		signOutOfProvider: boolean;
 		tokenAuthMethod: OauthTokenAuthMethod;
 	}>;
+	pangolinEnabled?: boolean | null;
 	pangolinOwnsAuth?: boolean | null;
 	smtpEnabled?: boolean | null;
 	smtpFrom?: string | null;
@@ -257,9 +258,9 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		return this.row.pangolinTargetPort ?? 443;
 	}
 
-	/** The host a created Target points at : "localhost" only works when the Pangolin site agent runs on this host with host networking. */
-	get pangolinTargetHost(): string {
-		return this.row.pangolinTargetHost || "localhost";
+	/** The host a created Target points at, null to detect it from where the Pangolin site agent runs (see DockerService.tunnelTargetHost). */
+	get pangolinTargetHost(): string | null {
+		return this.row.pangolinTargetHost || null;
 	}
 
 	/** Whether Pangolin's own SSO gate is left on, and this app's per-service login wall steps aside for anything it publishes. */
@@ -391,6 +392,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			baseDomain: this.row.baseDomain,
 			dockerNetworkName: this.row.dockerNetworkName,
 			dockerSocketPath: this.row.dockerSocketPath,
+			pangolinEnabled: this.pangolinConfigured,
 			pangolinOwnsAuth: this.pangolinOwnsAuth && this.pangolinConfigured,
 			oauthProviders: this.row.oauthProviders.map((p) => ({
 				clientId: p.clientId,

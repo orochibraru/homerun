@@ -15,6 +15,7 @@ import { seedBuiltinTemplates } from "$lib/server/db/seed";
 import { AdminService } from "$lib/services/admin.service";
 import { auth, rebuildAuth } from "$lib/services/auth";
 import { CronService } from "$lib/services/cron.service";
+import { syncDashboardDns } from "$lib/services/dns.service";
 import { DockerService } from "$lib/services/docker.service";
 import { JobWorker } from "$lib/services/queue/worker";
 
@@ -174,6 +175,7 @@ export const init = async () => {
 	applyInstanceSettings(settings.toConfigOverride());
 	rebuildAuth();
 	await DockerService.syncDashboardRouter();
+	void syncDashboardDns();
 
 	JobWorker.start();
 

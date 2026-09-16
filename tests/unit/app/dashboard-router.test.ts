@@ -47,8 +47,12 @@ describe("dashboardRouterConfig", () => {
 		expect(yaml).toContain("certResolver: letsencrypt");
 	});
 
-	test("asks for no certificate when the dashboard is an IP, since ACME can't issue for one", () => {
-		const yaml = dashboardRouterConfig({ ...params, host: "203.0.113.10" });
+	test("asks for no certificate when there's no resolver for that host", () => {
+		const yaml = dashboardRouterConfig({
+			...params,
+			certResolver: null,
+			host: "203.0.113.10",
+		});
 		expect(yaml).toContain("tls: {}");
 		expect(yaml).not.toContain("certResolver");
 	});

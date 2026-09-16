@@ -2,6 +2,8 @@ import { error } from "@sveltejs/kit";
 import { config } from "$lib/config";
 import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { serviceHostname } from "$lib/services/dns.service";
+import { certResolverFor } from "$lib/services/docker/cert-resolver";
 
 export const load = async ({ params, parent }) => {
 	const { user } = await parent();
@@ -17,7 +19,12 @@ export const load = async ({ params, parent }) => {
 
 	return {
 		baseDomain: config.baseDomain,
-		certResolver: config.traefik.certResolver,
+		behindPangolin: config.pangolinEnabled,
+		certResolver: certResolverFor(
+			serviceHostname(svc.slug, project?.slug),
+			config.traefik.certResolver,
+			config.pangolinEnabled,
+		),
 		projectSlug: project?.slug ?? null,
 		publicScheme: config.traefik.entrypoint === "web" ? "http" : "https",
 		service: svc.toJSON(),

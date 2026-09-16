@@ -68,9 +68,12 @@ on purpose: Pangolin for the public connection, Traefik again for the hop from
 the tunnel to the container. With DNS pointing at Pangolin rather than this
 host, Traefik's own HTTP-01 challenge can't complete, so that inner certificate
 is usually its self-signed default — which is fine, nothing verifies it, but
-it's why the inner hop is encrypted rather than trusted. The one remaining
-assumption is `ip: "localhost"`, which is only right when the newt tunnel runs
-on this host with host networking (see `TODO.md`).
+it's why the inner hop is encrypted rather than trusted. Which host the Target
+points at is detected, see below. For the same reason, no router asks for an
+ACME certificate at all while Pangolin is configured: `certResolverFor`
+(`docker/cert-resolver.ts`, used by `buildContainerLabels` and the dashboard
+router) drops the certresolver when `config.pangolinEnabled` is set, and for IP,
+`localhost` and dotless hosts, which Traefik otherwise retried forever.
 
 **Every resource Homerun creates has Pangolin's own SSO gate turned off, and
 that is what fixed "the route exists, the tunnel is up, and the service is still
@@ -94,14 +97,34 @@ gated service, so Pangolin's own login is the only one a visitor sees instead of
 two in a row. That endpoint runs on every proxied request, so it reads
 `config.pangolinOwnsAuth` rather than querying the DTO; `toConfigOverride()`
 only reports it true when Pangolin is actually configured.
-`instance_settings.pangolinTargetHost` (same card, default `localhost`) is the
-address a created Target points at : `localhost` is only right when the site
-agent (newt) runs on this host with host networking, which is why hardcoding it
-was wrong. **Diagnosed against a real instance**, not from the docs: Traefik on
-the host answered `200` for
-`curl -k -H "Host: <slug>.<domain>" https://127.0.0.1` while the public hostname
-answered `401`, with the target already correct (`localhost:443`,
-`method=https`, site online).
+`instance_settings.pangolinTargetHost` (same card) is the address a created
+Target points at. **Unset means detected, not `localhost`, and that is what
+fixed "the route exists and answers 502".** A fresh instance that deployed newt
+as a Homerun service had it on the `homerun` network, so `localhost` was newt's
+own loopback (`dial tcp [::1]:443: connection refused` in newt's log).
+`DockerService.tunnelTargetHost` (pure logic in `docker/tunnel.ts`) returns
+Traefik's container name when a running `fosrl/newt` container shares a network
+with it, and `localhost` for host networking or no local newt container. A set
+value always wins (newt on another machine). **The already-exists path heals the
+target too**, like SSO: `ensureTarget` leaves a matching target alone, adds one
+if the resource has none, and otherwise `POST /target/{id}`s the first one to
+the wanted host, so a redeploy repairs a resource created with the wrong host.
+**Diagnosed against a real instance**, not from the docs: Traefik on the host
+answered `200` for `curl -k -H "Host: <slug>.<domain>" https://127.0.0.1` while
+the public hostname answered `401`, with the target already correct
+(`localhost:443`, `method=https`, site online).
+
+**The dashboard's own hostname is synced too.** `dns.service.ts`'s
+`syncDashboardDns` runs on boot and after every settings save
+(`applyAndRebuild`), next to `syncDashboardRouter`, for the Dashboard URL's host
+(skipped for IPs and bare hostnames), always with Pangolin SSO off since the
+dashboard has its own sign-in and the CLI needs the API unauthenticated at the
+edge. Before, setting a dashboard domain created nothing in Pangolin. It also
+depends on the dashboard router file actually being written:
+`/app/traefik-dynamic` is a named volume that started root-owned while the app
+runs as `bun`, so every write failed with `EACCES`. The image now creates the
+directory `bun`-owned and `entrypoint.sh` chowns it for volumes made before
+that.
 
 Two failure modes live **outside** this client and look identical from a
 browser, worth checking before touching code again: a Pangolin domain with

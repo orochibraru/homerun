@@ -261,15 +261,15 @@
         <Input
           id="pangolinTargetHost"
           name="pangolinTargetHost"
-          placeholder="localhost"
+          placeholder="Detected automatically"
           type="text"
           value={data.settings.pangolinTargetHost ?? ""}
         />
         <p class="text-text-subtle mt-1.5 text-xs">
-          The address the Pangolin site agent reaches this host at. Unset means
-          <code>localhost</code>, which is right when that agent (Newt above)
-          runs on this host with host networking : anything else needs this
-          host's LAN address.
+          The address the Pangolin site agent reaches Traefik at. Unset means
+          detected: Traefik's container name when Newt runs as a container on
+          the same network, <code>localhost</code> when it runs on this host
+          with host networking. Set it when Newt runs on another machine.
         </p>
       </div>
 

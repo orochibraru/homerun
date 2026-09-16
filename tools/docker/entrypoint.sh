@@ -38,4 +38,8 @@ if [ -S "$SOCKET" ]; then
 	fi
 fi
 
+if [ -d /app/traefik-dynamic ]; then
+	chown -R bun:bun /app/traefik-dynamic
+fi
+
 exec su-exec bun "$@"

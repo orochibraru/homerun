@@ -13,9 +13,15 @@ const settings = {
 	pangolinMainSiteName: "site-23",
 	pangolinOrgId: "org-1",
 	pangolinOwnsAuth: false,
-	pangolinTargetHost: "localhost",
+	pangolinTargetHost: "localhost" as string | null,
 	pangolinTargetPort: 443,
 };
+
+let detectedTargetHost = "homerun-traefik-1";
+
+mock.module("$lib/services/docker.service", () => ({
+	DockerService: { tunnelTargetHost: async () => detectedTargetHost },
+}));
 
 mock.module("$lib/dto/instance-settings-dto", () => ({
 	InstanceSettingsDTO: { get: async () => settings },
@@ -59,7 +65,14 @@ interface StubWrite {
 	path: string;
 }
 
+interface StubTarget {
+	ip: string;
+	port: number;
+	targetId: number;
+}
+
 let resources: StubResource[] = [];
+let targets: StubTarget[] = [];
 let writes: StubWrite[] = [];
 let ssoUpdateStatus = 200;
 
@@ -86,8 +99,10 @@ function pageOf<T>(rows: T[], url: URL, field: string): Response {
 beforeEach(() => {
 	settings.pangolinOwnsAuth = false;
 	settings.pangolinTargetHost = "localhost";
+	detectedTargetHost = "homerun-traefik-1";
 	requested = [];
 	resources = [];
+	targets = [{ ip: "localhost", port: 443, targetId: 5 }];
 	writes = [];
 	ssoUpdateStatus = 200;
 	respondWithDashboardHtml = false;
@@ -144,6 +159,12 @@ beforeEach(() => {
 						ssoUpdateStatus,
 					);
 		}
+		if (/^\/v1\/resource\/\d+\/targets$/.test(url.pathname)) {
+			return pageOf(targets, url, "targets");
+		}
+		if (/^\/v1\/target\/\d+$/.test(url.pathname) && method === "POST") {
+			return json({ data: {}, success: true });
+		}
 		if (/^\/v1\/resource\/\d+\/target$/.test(url.pathname)) {
 			return json({ data: { targetId: 1 }, success: true });
 		}
@@ -186,6 +207,7 @@ describe("PangolinService.syncDnsRecord", () => {
 
 		expect(result?.ok).toBe(true);
 		expect(result?.detail).toContain("Pangolin SSO off");
+		expect(result?.detail).toContain("target https://localhost:443");
 		expect(writes).toEqual([
 			{ body: { sso: false }, method: "POST", path: "/v1/resource/7" },
 		]);
@@ -220,6 +242,72 @@ describe("PangolinService.syncDnsRecord", () => {
 			},
 			method: "PUT",
 			path: "/v1/resource/99/target",
+		});
+	});
+
+	test("detects the target host when none is configured", async () => {
+		settings.pangolinTargetHost = null;
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.detail).toContain("https://homerun-traefik-1:443");
+		expect(writes).toContainEqual({
+			body: {
+				enabled: true,
+				ip: "homerun-traefik-1",
+				method: "https",
+				port: 443,
+				siteId: 23,
+			},
+			method: "PUT",
+			path: "/v1/resource/99/target",
+		});
+	});
+
+	test("moves an existing resource's stale target, so a redeploy heals a 502", async () => {
+		settings.pangolinTargetHost = null;
+		resources = [{ fullDomain: "app.example.com", name: "app", resourceId: 7 }];
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.ok).toBe(true);
+		expect(result?.detail).toContain(
+			"target moved from localhost:443 to https://homerun-traefik-1:443",
+		);
+		expect(writes).toContainEqual({
+			body: {
+				enabled: true,
+				ip: "homerun-traefik-1",
+				method: "https",
+				port: 443,
+				siteId: 23,
+			},
+			method: "POST",
+			path: "/v1/target/5",
+		});
+	});
+
+	test("adds a target to an existing resource that has none", async () => {
+		resources = [{ fullDomain: "app.example.com", name: "app", resourceId: 7 }];
+		targets = [];
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.detail).toContain("target https://localhost:443 added");
+		expect(writes.map((write) => write.path)).toContain(
+			"/v1/resource/7/target",
+		);
+	});
+
+	test("lets the caller force SSO off regardless of the instance setting", async () => {
+		settings.pangolinOwnsAuth = true;
+
+		await PangolinService.syncDnsRecord("dash.example.com", { sso: false });
+
+		expect(writes).toContainEqual({
+			body: { sso: false },
+			method: "POST",
+			path: "/v1/resource/99",
 		});
 	});
 
