@@ -1,3 +1,10 @@
+## [1.0.22](https://github.com/orochibraru/homerun/compare/v1.0.21...v1.0.22) (2026-09-16)
+
+### Features
+
+- notification channels
+  ([969c11e](https://github.com/orochibraru/homerun/commit/969c11e6626f0d556c7855e56a92b71321060b56))
+
 ## [1.0.21](https://github.com/orochibraru/homerun/compare/v1.0.20...v1.0.21) (2026-09-16)
 
 ### Bug Fixes
