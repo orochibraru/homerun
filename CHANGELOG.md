@@ -1,3 +1,15 @@
+## [1.0.21](https://github.com/orochibraru/homerun/compare/v1.0.20...v1.0.21) (2026-09-16)
+
+### Bug Fixes
+
+- e2e
+  ([a4071fd](https://github.com/orochibraru/homerun/commit/a4071fd8107ae072f0db4b4ba2d5570535244d4d))
+- endless cert generation
+  ([#17](https://github.com/orochibraru/homerun/issues/17))
+  ([ad15644](https://github.com/orochibraru/homerun/commit/ad1564443a1362e33045258e38cdc39010934316))
+- release
+  ([200c1f2](https://github.com/orochibraru/homerun/commit/200c1f2fd60e8daa29d6f035baf01bbfa79da819))
+
 ## [1.0.20](https://github.com/orochibraru/homerun/compare/v1.0.19...v1.0.20) (2026-09-16)
 
 ### Bug Fixes
