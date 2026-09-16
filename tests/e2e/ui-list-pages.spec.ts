@@ -92,7 +92,7 @@ test.describe
 				.getByRole("button", { name: /Create/i })
 				.first()
 				.click();
-			await expect(page).toHaveURL(/\/cron-jobs/);
+			await expect(page).toHaveURL(/\/cron-jobs\/[0-9a-f-]{36}$/);
 
 			await page.goto("/cron-jobs");
 			await expect(page.getByText("Nightly")).toBeVisible();
