@@ -108,13 +108,13 @@ this one by `playwright.config.ts`'s `testIgnore`, so an ordinary
 `bun run test:e2e` never shoots screenshots.
 
 It reuses this suite's bootstrap wholesale, then goes further than any spec
-here: it seeds a project and three services through the REST API (the browser
+here: it seeds a stack and three services through the REST API (the browser
 context's session cookie authenticates them) and **really deploys two of them**
 against the host's Docker daemon, which is what puts live statuses, deployment
 history and streaming logs in the shots. That only works because the default
 harness spawns the app as a local process next to the daemon — don't run it with
 `E2E_IMAGE` set, where the app is containerised without the socket. Everything
-it creates is removed in `afterAll` (containers, then the project and its Docker
+it creates is removed in `afterAll` (containers, then the stack and its Docker
 network) so a failed shot can't leak either.
 
 In CI it runs on every pull request (`.github/workflows/screenshots.yaml`, wired

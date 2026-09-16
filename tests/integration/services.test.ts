@@ -4,7 +4,7 @@ import { ServiceCleanup } from "./support/cleanup";
 import type { ApiClient } from "./support/client";
 import { nativeFetch } from "./support/config";
 import { apiClient, integrationContext } from "./support/context";
-import { ProjectCleanup } from "./support/projects";
+import { StackCleanup } from "./support/stacks";
 
 // Constructed inside beforeAll, not at module top level : integrationContext()
 // only resolves once the global preload beforeAll (setup.ts) has actually
@@ -13,18 +13,18 @@ import { ProjectCleanup } from "./support/projects";
 // context.ts's own docstring.
 let client: ApiClient;
 let cleanup: ServiceCleanup;
-let projectCleanup: ProjectCleanup;
+let stackCleanup: StackCleanup;
 
 beforeAll(() => {
 	client = apiClient();
 	cleanup = new ServiceCleanup(client);
 	const ctx = integrationContext();
-	projectCleanup = new ProjectCleanup(ctx.origin, ctx.apiKey);
+	stackCleanup = new StackCleanup(ctx.origin, ctx.apiKey);
 });
 
 afterAll(async () => {
 	await cleanup.cleanupAll();
-	await projectCleanup.cleanupAll();
+	await stackCleanup.cleanupAll();
 });
 
 function slug(name: string): string {
@@ -64,7 +64,7 @@ async function waitForStatus(
 }
 
 describe("services : image-mode deploy", () => {
-	test("local target, no project", async () => {
+	test("local target, no stack", async () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,
@@ -73,7 +73,7 @@ describe("services : image-mode deploy", () => {
 				dnsResolvable: false,
 				envVars: {},
 				image: "nginx",
-				name: "IT local no project",
+				name: "IT local no stack",
 				restartPolicy: "no",
 				slug: slug("local-noproj"),
 				tag: "alpine",
@@ -95,13 +95,13 @@ describe("services : image-mode deploy", () => {
 		expect(status.containerId).toBeTruthy();
 	});
 
-	test("local target, inside a project", async () => {
-		const projRes = await client.POST("/projects", {
-			body: { name: "IT Project", slug: slug("project") },
+	test("local target, inside a stack", async () => {
+		const stackRes = await client.POST("/stacks", {
+			body: { name: "IT Stack", slug: slug("stack") },
 		});
-		const project = expectOk(projRes.data, projRes.response);
-		projectCleanup.track(project.id as string);
-		expect(projRes.response.status).toBe(201);
+		const stack = expectOk(stackRes.data, stackRes.response);
+		stackCleanup.track(stack.id as string);
+		expect(stackRes.response.status).toBe(201);
 
 		const created = await client.POST("/services", {
 			body: {
@@ -111,16 +111,16 @@ describe("services : image-mode deploy", () => {
 				dnsResolvable: false,
 				envVars: {},
 				image: "nginx",
-				name: "IT in project",
-				projectId: project.id as string,
+				name: "IT in stack",
+				stackId: stack.id as string,
 				restartPolicy: "no",
-				slug: slug("in-project"),
+				slug: slug("in-stack"),
 				tag: "alpine",
 			},
 		});
 		const svc = expectOk(created.data, created.response);
 		cleanup.track(svc.id as string);
-		expect(svc.projectId).toBe(project.id as string);
+		expect(svc.stackId).toBe(stack.id as string);
 
 		await client.POST("/services/{serviceId}/deploy", {
 			params: { path: { serviceId: svc.id as string } },

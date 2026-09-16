@@ -44,7 +44,7 @@ test.describe
 
 			// Both wizard buttons land on what they just created rather than on
 			// the list : "Create service" on the service, "Create and deploy"
-			// on the service (or the project, when companions came along).
+			// on the service (or the stack, when companions came along).
 			await expect(page).toHaveURL(/\/services\/[0-9a-f-]{36}$/);
 			await expect(
 				page.getByRole("heading", { name: "wizard-check" }),

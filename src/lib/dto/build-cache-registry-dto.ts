@@ -91,6 +91,29 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 		};
 	}
 
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<BuildCacheRegistryDTO[]> {
+		const rows = await db
+			.select()
+			.from(buildCacheRegistry)
+			.where(
+				and(
+					eq(buildCacheRegistry.userId, userId),
+					searchCondition(q, [
+						buildCacheRegistry.name,
+						buildCacheRegistry.registryUrl,
+						buildCacheRegistry.username,
+					]),
+				),
+			)
+			.orderBy(desc(buildCacheRegistry.createdAt))
+			.limit(limit);
+		return rows.map((row) => new BuildCacheRegistryDTO(row));
+	}
+
 	static async create(
 		input: NewBuildCacheRegistryInput,
 	): Promise<BuildCacheRegistryDTO> {

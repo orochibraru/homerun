@@ -47,7 +47,7 @@ import { DockerTerminalMixin } from "./docker/terminal.ts";
 
 // Merge order matters only where one concern calls another's methods via
 // `this` : networks before containers (createAndStartContainer calls
-// connectToProjectNetwork), containers before swarm (createAndStartSwarmService
+// connectToStackNetwork), containers before swarm (createAndStartSwarmService
 // calls this.pullImage), containers before one-off (runOneOff calls
 // this.pullImage), containers+swarm before reconcile (syncServiceStatus
 // calls both this.inspectStatus and this.inspectSwarmServiceStatus). The

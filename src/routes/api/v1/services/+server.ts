@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
 import {
@@ -16,7 +16,7 @@ export const GET = async ({ locals, url }) => {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const paged = await ServiceDTO.listWithProjectNamesPaged(
+	const paged = await ServiceDTO.listWithStackNamesPaged(
 		locals.user.id,
 		parseApiListQuery(url),
 	);
@@ -44,7 +44,7 @@ export const GET = async ({ locals, url }) => {
  */
 function toCreateInput(
 	input: CreateServiceApiInput,
-	projectId: string | null,
+	stackId: string | null,
 	userId: string,
 ) {
 	return {
@@ -56,7 +56,7 @@ function toCreateInput(
 		envVars: input.envVars,
 		memoryLimitMb: input.memoryLimitMb ?? null,
 		name: input.name,
-		projectId,
+		stackId,
 		pullPolicy: input.pullPolicy,
 		restartPolicy: input.restartPolicy,
 		slug: input.slug,
@@ -101,13 +101,13 @@ export const POST = async ({ request, locals }) => {
 		return json({ error: "That slug is already in use." }, { status: 409 });
 	}
 
-	const projectId =
-		input.projectId && (await ProjectDTO.get(input.projectId, locals.user.id))
-			? input.projectId
+	const stackId =
+		input.stackId && (await StackDTO.get(input.stackId, locals.user.id))
+			? input.stackId
 			: null;
 
 	const svc = await ServiceDTO.create(
-		toCreateInput(input, projectId, locals.user.id),
+		toCreateInput(input, stackId, locals.user.id),
 	);
 
 	logger.info(

@@ -12,10 +12,10 @@ A right-click on a service row offers **Link to…** and **group/ungroup**
 (`services/+page.server.ts`'s `link` and `group` actions). Linking writes the
 target's connection variables into the source's env — the same `buildLinkEnv`
 output the wizard's link picker produces, so a URL, a JDBC URL or separate vars
-depending on the target's image — and optionally puts both on one project
-network, since two services only reach each other by slug once they share one.
-It moves them into whichever project either is already in, and creates one named
-after the source otherwise.
+depending on the target's image — and optionally puts both on one stack network,
+since two services only reach each other by slug once they share one. It moves
+them into whichever stack either is already in, and creates one named after the
+source otherwise.
 
 ## Where creating something lands you
 
@@ -24,7 +24,7 @@ Every create path ends on the thing it just made, not on a list: the wizard's
 and a template's **Quick Deploy** does the same from both the catalog and the
 template's own detail page. The one exception is a create that produced
 _companions_ (a template pulling in its linked services, see Template links
-below): those land on `/projects/<id>`, where all of them are visible together,
+below): those land on `/stacks/<id>`, where all of them are visible together,
 which is the only view that shows the whole thing that was just created. The
 catalog's Quick Deploy used to return an `href` and offer a "View" button on its
 toast instead; the redirect now happens server-side, the same way the detail
@@ -35,15 +35,47 @@ page always did.
 `DeploymentService.deployService(svc, userId, clientDeploymentId?)` is the one
 pull-or-build→create-container→start implementation, used by the service
 Overview page's `deploy` action, `POST /api/v1/services/[serviceId]/deploy`, and
-the cron redeploy scheduler (below). Branches on `svc.buildSource` right at the
-top: `"image"` pulls as before; `"git"` calls `DockerService.buildFromGit()`
-(below) and overwrites `svc.image`/`svc.tag` with the resulting local tag
-_before_ `createAndStartContainer` runs, so the container step never needs to
-know which path produced the image. Returns
+the cron redeploy scheduler (below). Returns
 `{success, deploymentId, containerId?, error?}` rather than throwing, callers
 decide how to surface failure (a SvelteKit `fail()`, a JSON error body, a
 scheduler log line). Don't reimplement this inline in a new call site; extend
 the shared method instead.
+
+**The legal combinations are a union, resolved once up front.** The first thing
+the pipeline does (the `config` phase, before volumes, pulls, builds or any
+Docker call) is `#loadDeployPlan`: it loads the instance's `orchestrationMode`,
+the cache registry row and the build server target, then hands plain data to
+`resolveDeployPlan()` in `src/lib/services/deploy/plan.ts`, a pure function
+(covered by `tests/unit/app/deploy-plan.test.ts`) returning a `DeployPlan`:
+
+- `image: ImagePlan`, one of `pull` (`svc.image`/`tag`/`pullPolicy`),
+  `local-build` (optional cache registry as a layer cache), `docker-build` (a
+  remote Docker build server, registry required) or `agent-build` (an agent
+  build server, registry required). Every git variant carries the `GitSource`
+  (url/ref/context/Dockerfile) with `gitUrl` already non-null.
+- `workload: WorkloadPlan`, either `container` (carries `networkMode`) or
+  `swarm` (carries `replicas`).
+
+Illegal combinations throw a `DeployPlanError` there, so they fail the
+deployment with a clear message before anything happens: a git service without a
+URL, an image service without an image, a build server without a cache registry
+or that didn't resolve, and host networking under swarm (swarm services only
+join the overlay, this used to be silently dropped). Leftover
+`buildServerRemoteHostId`/`buildCacheRegistryId` on an image-source service are
+ignored and never loaded. Each pipeline step (`#resolveImage`, `#buildGitImage`,
+`#startWorkload`) is a `switch` over the variant's `kind` with a
+`default: return unreachable(plan)` (`never`) arm, so adding a variant is a type
+error until every step handles it. This exists because the old shape branched on
+`buildSource` × build target kind × `orchestrationMode` inline and rejected bad
+combinations with a `throw` deep in the pipeline (the old remote-deploy-target +
+swarm check only ran after the image was already built or pulled). Add a new
+axis or combination to the union, not an `if` in a step.
+
+A git build writes the resulting ref back to `svc.image`/`svc.tag` _before_ the
+workload starts, so the container step never needs to know which path produced
+the image; a cross-host build (`docker-build`/`agent-build`) pushes to
+`<registry>/homerun-build-<slug>:<tag>` and pulls that published ref back onto
+this host first.
 
 ## Compose import (`$lib/compose-import.ts`, `$lib/services/compose-import.service.ts`, `(protected)/services/import/`)
 
@@ -53,7 +85,7 @@ Docker) turning compose text into a `ComposeImportPlan`
 (`services: ComposeServiceDraft[]`, plus file-level `warnings`/`networkNames`/
 `volumeNames`), covered directly by `tests/unit/app/compose-import.test.ts`;
 `compose-import.service.ts` is the row-creating half (`ComposeImportService`, a
-plain instance singleton) that turns a plan into `ProjectDTO`/`ServiceDTO`/
+plain instance singleton) that turns a plan into `StackDTO`/`ServiceDTO`/
 `StorageVolumeDTO`/`ServiceVolumeDTO` rows. The route
 (`services/import/+page.server.ts`) has a `preview` action (parse, return the
 plan) and an `import` action that **re-parses the pasted text server-side**
@@ -76,7 +108,7 @@ Two mapping decisions worth not re-litigating: **`dnsResolvable` is true only
 when the compose service published a host port** (`ports:`), false when it only
 `expose`d one, which is the closest honest translation of "this one was meant to
 be reachable from outside"; and **one compose file maps onto one Homerun
-project**, since a project already _is_ a Docker network here, so a file's own
+stack**, since a stack already _is_ a Docker network here, so a file's own
 multiple `networks:` can't be reproduced and says so in a warning.
 
 `orderByDependencies` topologically sorts the drafts (falling back to file order
@@ -91,7 +123,7 @@ volume mounts the same row twice instead of creating a duplicate.
 ## Smart service links on create (`$lib/service-link.ts`, `service-link-picker.svelte`)
 
 The Environment step of `services/new` has a "Link a service" picker next to
-"Paste .env": pick any service the user already owns (**regardless of project**,
+"Paste .env": pick any service the user already owns (**regardless of stack**,
 which is the whole point : every bridge-mode service is on the shared network
 and reachable at `<slug>:<port>` anyway, so linking is purely about generating
 the env vars, there's no networking to set up) and it writes connection env rows
@@ -312,19 +344,19 @@ substitution, no cycle detection needed.
 
 An env var on the _primary_ template can reference a linked template via
 `{{alias}}` (resolves to the linked service's generated slug, its internal DNS
-hostname on the shared network regardless of project, same
-`http://<slug>:<port>` addressing every service already gets) or
-`{{alias.ENV_KEY}}` (resolves to that linked service's own resolved value for
-that env var, e.g. `{{db.POSTGRES_PASSWORD}}`). Resolution
-(`$lib/services/template-links.ts`'s `resolveLinkTokens`) leaves an unknown
-token untouched rather than stripping it, so a typo'd alias fails loud (visible
-literally in the deployed env var) instead of silently producing an empty value.
-Linked templates' own env vars are used as-is, not further resolved : only the
-primary can reference `{{alias}}` tokens, not link-to-link.
+hostname on the shared network regardless of stack, same `http://<slug>:<port>`
+addressing every service already gets) or `{{alias.ENV_KEY}}` (resolves to that
+linked service's own resolved value for that env var, e.g.
+`{{db.POSTGRES_PASSWORD}}`). Resolution (`$lib/services/template-links.ts`'s
+`resolveLinkTokens`) leaves an unknown token untouched rather than stripping it,
+so a typo'd alias fails loud (visible literally in the deployed env var) instead
+of silently producing an empty value. Linked templates' own env vars are used
+as-is, not further resolved : only the primary can reference `{{alias}}` tokens,
+not link-to-link.
 
 Deploying from a linked template (`services/new`'s `create`/`createAndDeploy`
 actions, via `buildTemplateLinkContext`/`createLinkedServices`) : if the service
-being created has no project yet, one is auto-created (named after it) so the
+being created has no stack yet, one is auto-created (named after it) so the
 whole stack shows up grouped ; each linked service gets a deterministic slug
 (`<primary-slug>-<alias>`, de-duplicated against existing services) and deploys
 from its own template's image/tag/port/envVars/resources, created
@@ -349,7 +381,7 @@ orchestrator importing both arrays plus `BUILTIN_TEMPLATE_LINKS` (4 entries:
 WordPress→MySQL, Umami→Postgres, Miniflux→Postgres, Paperless-ngx→Redis, wiring
 the Template links feature above into real built-ins). Every image was verified
 real via `docker manifest inspect <image>:<tag>` (fast, no full pull) before
-being added, not just guessed from a project's README.
+being added, not just guessed from a stack's README.
 
 **The seed upserts rather than `onConflictDoNothing()`, and it has to.** A
 built-in is code, not user data (`ownerId` null, and `TemplateDTO.owned()`
@@ -433,8 +465,8 @@ instead of one: **Quick Deploy** (primary) calls a `quickDeploy` form action
 routes) that creates the service straight from the template's defaults
 (name/slug auto-generated via `slugify`) and deploys it immediately, no wizard;
 **Configure** (secondary) is the old single "Deploy" button, renamed since it
-only navigates into `services/new` (carrying `templateId`, and `projectId` when
-arrived at from a project) to let the user tweak first. The gallery's
+only navigates into `services/new` (carrying `templateId`, and `stackId` when
+arrived at from a stack) to let the user tweak first. The gallery's
 `quickDeploy` action returns a plain success object (not a redirect) so
 `use:enhance` can show a `toast.success` with a "View" button instead of yanking
 the user out of the grid mid-browse, letting several templates get
@@ -473,10 +505,10 @@ A status page groups services and answers one question — is this up? — for a
 audience that may not be signed in. Three shapes, set by `scope`:
 
 - `global` : every service the owner has.
-- `project` : that project's services.
+- `stack` : that stack's services.
 - `custom` : a hand-picked list, the only one that reads `status_page_service`.
 
-**`global` and `project` resolve live** (`StatusPageDTO.serviceIds()` queries
+**`global` and `stack` resolve live** (`StatusPageDTO.serviceIds()` queries
 `service` on every read) so deploying a new service puts it on the page without
 anyone re-editing it. That's the whole reason the join table isn't used for all
 three.
@@ -620,32 +652,75 @@ real callback URL, which nothing server-side can do standalone. Built carefully
 from each provider's own standard, well-documented OAuth2 + REST API shapes;
 verify the first real connect by hand once an OAuth App exists.
 
-## Migrating from Dokploy (`$lib/services/dokploy.service.ts`, `services/migrate/`)
+## Migrating from Dokploy or Coolify (`settings/migrate/`)
 
-Reads another PaaS's instance and recreates it here, **pull-only** : the one
-call it ever makes is `GET /api/project.all` with the user's `x-api-key`, and
-nothing on the Dokploy side is stopped, changed or deleted. The token isn't
-stored either, it's used for that one request and forgotten.
+Admin-only tab under `/settings`: `settings/migrate/+page.svelte` picks the
+source, `settings/migrate/dokploy/` and `settings/migrate/coolify/` are one
+route each, both rendering `$lib/components/migrate-panel.svelte` with actions
+from `migrationActions(source)` (`$lib/server/migrate-actions.ts`). One form
+carries URL + token; `?/preview` reads and returns a secret-free
+`MigrationPreview`, the "Import" button posts the same form to `?/import`
+(`formaction`) with the ticked ids as repeated `ids` fields. **The import
+re-reads the source for just those ids** rather than trusting a plan JSON sent
+back from the browser, so env values and passwords never reach the client and
+the token is never stored.
 
-Dokploy's project tree is flattened into `DokployEntry[]` : `applications`,
-`compose`, and the five database keys (`postgres`/`mysql`/`mariadb`/`mongo`/
-`redis`), each carrying whatever of name/image/port/env it has. Field names
-differ per entry type (`applicationId` vs `composeId` vs `postgresId`,
-`dockerImage` vs `image`), so the readers take a list of candidate keys rather
-than assuming one shape, and the env blob is one `KEY=value`-per-line string
-(`parseDokployEnv`, same rules as a `.env` file, an empty value kept as `""`
-since that's meaningful to Docker).
+Layering: `$lib/migrate/common.ts` (types, `MigrationHttpClient`, env/compose
+helpers, `previewEntries`), `$lib/migrate/dokploy.ts` and
+`$lib/migrate/coolify.ts` (pure raw-JSON → `MigrationEntry` mappers, no DB),
+`DokployService`/`CoolifyService` (the HTTP walk) and `MigrationService`
+(`$lib/services/migration.service.ts`, preview slug check + import). Every entry
+is expressed as `ComposeServiceDraft[]` and imported through
+`ComposeImportService.importPlan`, one call per entry, into a stack matched or
+created by the source project's name, so volumes, slug uniqueness and
+notifications are the compose importer's, not a second copy.
 
-`plan(entries, takenSlugs)` is the **dry run the user approves** : per entry,
-the slug it would get, whether that slug is already taken here, and a `blocked`
-reason when it can't be recreated (built from source on Dokploy, or a compose
-stack Dokploy returned no file for). `importPlan` then creates one service per
-application/database and hands a compose stack to the existing
-`ComposeImportService`, reusing its parser rather than a second one. Nothing is
-deployed by the import; the services sit there until the user deploys them.
+**Dokploy, verified against a live instance (Dokploy with environments):**
 
-**Not verified against a live Dokploy instance.** The endpoint, header and
-response shapes are from Dokploy's documented API, and the client is
-deliberately tolerant (it accepts a bare array or a `result.data` wrapper, and
-names the likely cause when the answer isn't a project list at all). First real
-migration is the real test.
+- `GET /api/project.all` with `x-api-key` answers a **bare array**, no
+  `result.data` wrapper. The resources are **not** on the project: they're under
+  `project.environments[]` (`applications`, `compose`, `postgres`, `mysql`,
+  `mariadb`, `mongo`, `redis`, `libsql`), and each is only a summary
+  (`applicationId`/`name`/`applicationStatus`, a database is just
+  `{ postgresId }`). The previous client read `project.applications`, found
+  nothing, and rendered an empty dry run with a disabled Import button, which is
+  the "does absolutely nothing" bug. `dokployRefs` still falls back to a flat
+  project for older versions.
+- The detail comes from `GET /api/<type>.one?<type>Id=` (`application.one`,
+  `compose.one`, `postgres.one`, ...), fetched 6 at a time.
+- Application: `sourceType` is `docker` (`dockerImage`, `username`/`registryUrl`
+  for a private registry) or `github`/`gitlab`/`gitea`/`bitbucket`/`git`, with
+  per-provider fields (`owner`/`repository`/`branch`/`buildPath` for GitHub,
+  `giteaOwner`/`giteaRepository`/`giteaBranch`/`giteaBuildPath` plus the host in
+  the nested `gitea.giteaUrl`, `customGitUrl`/`customGitBranch` for plain git).
+  `buildType` is `dockerfile`/`nixpacks`/`static`/`railpack`/..., only
+  `dockerfile` is importable (`dockerfile`, `dockerContextPath`). `env` is a
+  `.env` blob or `null`. There's no port field: the port is `domains[].port`
+  (`ports[]` is published ports). `mounts[]` is
+  `{ type: "volume"|"bind"|"file", volumeName, hostPath, mountPath }`, and a
+  read-only bind carries `:ro` inside `mountPath`. `memoryLimit`/`cpuLimit` are
+  strings or null.
+- Compose: `composeFile` holds the YAML only for `sourceType: "raw"`;
+  `domains[].serviceName` names the compose service a domain routes to, used to
+  mark it public with that port. `env` is used for `${VAR}` substitution.
+- Databases: `dockerImage`, `databaseName`/`databaseUser`/`databasePassword`/
+  `databaseRootPassword`, `externalPort`, and `mounts[]` including the
+  auto-created data volume. The Redis password is applied by Dokploy through the
+  start command, so it only produces a warning here.
+
+**Coolify is not verified against a live instance.** Built from the documented
+v4 API: `Authorization: Bearer`, `GET /api/v1/projects` (+
+`/api/v1/projects/{uuid}` for `environments[].id`, which maps an app's
+`environment_id` to its project name), `/api/v1/applications`,
+`/api/v1/services`, `/api/v1/databases`, and
+`/api/v1/{applications,services}/ {uuid}/envs` for env (non-preview rows,
+`real_value` over `value`). Application `build_pack` drives the mapping:
+`dockerimage` (`docker_registry_image_name`/`_tag`), `dockerfile` with
+`git_repository` (`base_directory`, `dockerfile_location`, a bare `owner/repo`
+is assumed to be GitHub), `dockercompose` (`docker_compose_raw`); everything
+else is blocked. Ports come from `ports_exposes`, public from `fqdn`. Services
+are compose (`docker_compose_raw`, env substituted so `SERVICE_FQDN_*` resolve).
+Databases map `database_type` +
+`postgres_*`/`mysql_*`/`mariadb_*`/`mongo_initdb_*` fields. The parsing accepts
+a bare array or a `data` wrapper. Persistent storage isn't read (warned). First
+real Coolify migration is the real test.

@@ -15,6 +15,7 @@ export async function seedBuiltinTemplates(): Promise<void> {
 			[...BUILTIN_TEMPLATES, ...BUILTIN_TEMPLATES_APPS].map((t) => ({
 				...t,
 				createdAt: now,
+				healthcheckCommand: t.healthcheckCommand ?? null,
 				ownerId: null,
 				restartPolicy: "unless-stopped" as const,
 				updatedAt: now,
@@ -26,6 +27,7 @@ export async function seedBuiltinTemplates(): Promise<void> {
 				containerPort: sql`excluded.container_port`,
 				description: sql`excluded.description`,
 				envVars: sql`excluded.env_vars`,
+				healthcheckCommand: sql`excluded.healthcheck_command`,
 				icon: sql`excluded.icon`,
 				image: sql`excluded.image`,
 				name: sql`excluded.name`,

@@ -154,18 +154,18 @@ describe("Commands.serviceAction", () => {
 	);
 });
 
-describe("Commands.projectsList", () => {
+describe("Commands.stacksList", () => {
 	test("prints a mapped table when json=false", async () => {
 		spyOnOutput();
 		const GET = mock(async () =>
-			okResponse([{ id: "p1", name: "Project One", slug: "project-one" }]),
+			okResponse([{ id: "p1", name: "Stack One", slug: "stack-one" }]),
 		);
 		const client = fakeClient({ GET });
 
-		await Commands.projectsList(client, { json: false });
+		await Commands.stacksList(client, { json: false });
 
 		expect(printTableSpy).toHaveBeenCalledWith(
-			[{ id: "p1", name: "Project One", slug: "project-one" }],
+			[{ id: "p1", name: "Stack One", slug: "stack-one" }],
 			["id", "name", "slug"],
 		);
 	});

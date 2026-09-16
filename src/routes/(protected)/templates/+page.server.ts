@@ -1,6 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { ProjectDTO } from "$lib/dto/project-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { parseListQuery } from "$lib/server/list-query";
@@ -31,12 +31,12 @@ export const load = async ({ parent, url }) => {
 		perPage: 24,
 	});
 
-	const rawProjectId = url.searchParams.get("projectId");
-	const [builtins, mine, categories, project] = await Promise.all([
+	const rawStackId = url.searchParams.get("stackId");
+	const [builtins, mine, categories, stack] = await Promise.all([
 		TemplateDTO.listPaged(user.id, "builtin", builtinQuery),
 		TemplateDTO.listPaged(user.id, "mine", mineQuery),
 		TemplateDTO.listCategories(user.id),
-		rawProjectId ? ProjectDTO.get(rawProjectId, user.id) : null,
+		rawStackId ? StackDTO.get(rawStackId, user.id) : null,
 	]);
 
 	const [builtinItems, mineItems] = await Promise.all([
@@ -55,7 +55,7 @@ export const load = async ({ parent, url }) => {
 		minePage: mine.page,
 		minePerPage: mine.perPage,
 		mineTotal: mine.total,
-		project: project?.toJSON() ?? null,
+		stack: stack?.toJSON() ?? null,
 	};
 };
 
@@ -68,19 +68,19 @@ export const actions = {
 
 		const formData = await request.formData();
 		const templateId = formData.get("templateId") as string | null;
-		const rawProjectId = formData.get("projectId") as string | null;
+		const rawStackId = formData.get("stackId") as string | null;
 		if (!templateId) {
 			return fail(400, { error: "Missing template." });
 		}
-		const projectId =
-			rawProjectId && (await ProjectDTO.get(rawProjectId, locals.user.id))
-				? rawProjectId
+		const stackId =
+			rawStackId && (await StackDTO.get(rawStackId, locals.user.id))
+				? rawStackId
 				: null;
 
 		const result = await quickDeployFromTemplate(
 			templateId,
 			locals.user.id,
-			projectId,
+			stackId,
 		);
 		if (!result.ok) {
 			return fail(result.status, { error: result.error });
@@ -88,8 +88,8 @@ export const actions = {
 
 		redirect(
 			303,
-			result.projectId
-				? `${resolve("/projects")}/${result.projectId}`
+			result.stackId
+				? `${resolve("/stacks")}/${result.stackId}`
 				: `${resolve("/services")}/${result.serviceId}`,
 		);
 	},

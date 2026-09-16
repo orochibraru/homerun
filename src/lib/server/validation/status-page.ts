@@ -6,8 +6,8 @@ export const statusPageSchema = z.object({
 	description: z.string().trim().max(500).optional().default(""),
 	isPublic: z.coerce.boolean().default(false),
 	name: z.string().trim().min(1, "Give the status page a name.").max(100),
-	projectId: z.string().trim().optional().default(""),
-	scope: z.enum(["global", "project", "custom"]),
+	stackId: z.string().trim().optional().default(""),
+	scope: z.enum(["global", "stack", "custom"]),
 	slug: z
 		.string()
 		.trim()

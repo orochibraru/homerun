@@ -27,7 +27,7 @@ export const createServiceApiBody = z
 		image: z.string().optional(),
 		memoryLimitMb: z.number().int().positive().optional(),
 		name: z.string().min(1).max(100),
-		projectId: z.string().optional(),
+		stackId: z.string().optional(),
 		pullPolicy: z.enum(["always", "missing", "never"]).default("always"),
 		registryPassword: z.string().optional(),
 		registryUrl: z.string().optional(),
@@ -75,7 +75,7 @@ export const updateServiceApiBody = z.object({
 	tag: z.string().min(1).optional(),
 });
 
-export const createProjectApiBody = z.object({
+export const createStackApiBody = z.object({
 	description: z.string().optional(),
 	name: z.string().min(1).max(100),
 	slug: z.string().regex(SLUG_RE),

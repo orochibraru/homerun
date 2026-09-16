@@ -48,7 +48,7 @@ export const actions = {
 		);
 	},
 
-	reclaimProjectNetworks: async ({ locals, platform }) => {
+	reclaimStackNetworks: async ({ locals, platform }) => {
 		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
@@ -57,7 +57,7 @@ export const actions = {
 			throw redirect(302, resolve("/"));
 		}
 		return await runQueuedCleanup(
-			"reclaimProjectNetworks",
+			"reclaimStackNetworks",
 			false,
 			locals.user.id,
 		);

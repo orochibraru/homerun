@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { query } from "$app/server";
-import { ProjectDTO } from "$lib/dto/project-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { requireAdmin, requireUser } from "$lib/server/remote-auth";
 import type { CleanupPreview } from "$lib/services/docker/cleanup";
 import type {
@@ -20,13 +20,11 @@ export const getCleanupPreview = query(async (): Promise<CleanupPreview> => {
 	return await DockerService.getCleanupPreview();
 });
 
-/** Project networks the daemon still has but no project row does : the leak Docker's own network prune can't see while anything is attached. */
-export const getOrphanProjectNetworks = query(
+/** Stack networks the daemon still has but no stack row does : the leak Docker's own network prune can't see while anything is attached. */
+export const getOrphanStackNetworks = query(
 	async (): Promise<OrphanNetwork[]> => {
 		requireAdmin();
-		return await DockerService.findOrphanProjectNetworks(
-			await ProjectDTO.allIds(),
-		);
+		return await DockerService.findOrphanStackNetworks(await StackDTO.allIds());
 	},
 );
 

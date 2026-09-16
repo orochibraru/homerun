@@ -22,10 +22,10 @@ shared `getDocker(remote?)`); `docker.service.ts` chains all of them and
 instantiates once. A concern that calls another's method does it via real
 inheritance (`this.inspectStatus(...)`), which is also why the chain has a
 load-bearing order: networks before containers (`createAndStartContainer` calls
-`this.connectToProjectNetwork`), containers before reconcile
-(`syncServiceStatus` calls `this.inspectStatus`), containers before one-off
-(`runOneOff` calls `this.pullImage`), see the ordering comment in
-`docker.service.ts` before reordering the chain.
+`this.connectToStackNetwork`), containers before reconcile (`syncServiceStatus`
+calls `this.inspectStatus`), containers before one-off (`runOneOff` calls
+`this.pullImage`), see the ordering comment in `docker.service.ts` before
+reordering the chain.
 
 - `client.ts`, HMR-safe `dockerode` singleton, socket path from config; not a
   mixin itself, `BaseDockerService.getDocker` wraps its exported `getDocker()`
@@ -37,8 +37,8 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
   `traefik.*` at all, so it never gets a router). `listManagedContainers()` and
   any host-scanning code **must** filter on `homerun.managed=true`, this app
   must never touch a container it didn't create. When the service belongs to a
-  project, the public subdomain is `<projectSlug>-<slug>.<baseDomain>`
-  (`projectSlug` param, optional). When `customDomain` is set, a second router
+  stack, the public subdomain is `<stackSlug>-<slug>.<baseDomain>` (`stackSlug`
+  param, optional). When `customDomain` is set, a second router
   (`<slug>-custom`) is added pointing at the _same_
   `traefik.http.services.<slug>` backend, one loadbalancer config, two hostnames
   reaching it, not a duplicated service block. When `authRequired` is set, a
@@ -48,20 +48,20 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
   having to resolve `X-Forwarded-Host` back to a slug or custom domain — plus
   `authResponseHeaders` for `GATE_IDENTITY_HEADERS`. Because these are labels,
   turning the wall on or off only takes effect on the next deploy.
-- `networks.ts`, `DockerNetworkMixin`, per-project Docker networks.
-  `projectNetworkName(projectId)` is deterministic (`homerun-project-<id>`, no
+- `networks.ts`, `DockerNetworkMixin`, per-stack Docker networks.
+  `stackNetworkName(stackId)` is deterministic (`homerun-stack-<id>`, no
   separate id stored, stays a plain exported pure function).
-  `ensureProjectNetwork`/`removeProjectNetwork` (idempotent create/remove,
-  called from `ProjectDTO.create`/`cascadeDelete`) and
-  `connectToProjectNetwork(containerId, projectId, alias)` attaches a container
-  to its project's network under a DNS alias equal to the service's slug (the
-  _internal_ alias is never project-prefixed, only the container name and public
+  `ensureStackNetwork`/`removeStackNetwork` (idempotent create/remove, called
+  from `StackDTO.create`/`cascadeDelete`) and
+  `connectToStackNetwork(containerId, stackId, alias)` attaches a container to
+  its stack's network under a DNS alias equal to the service's slug (the
+  _internal_ alias is never stack-prefixed, only the container name and public
   subdomain are, sibling services keep addressing each other by plain slug) →
-  `DockerService.ensureProjectNetwork`/`removeProjectNetwork`/`connectToProjectNetwork`.
-  `connectToProjectNetwork` calls `ensureProjectNetwork` itself first, same
+  `DockerService.ensureStackNetwork`/`removeStackNetwork`/`connectToStackNetwork`.
+  `connectToStackNetwork` calls `ensureStackNetwork` itself first, same
   re-assert-on-every-deploy shape as `createAndStartContainer`'s own
   `ensureSharedNetwork()` call below: a network a prune or a Docker Cleanup run
-  removed out from under a still-live project row gets recreated, rather than
+  removed out from under a still-live stack row gets recreated, rather than
   failing every subsequent deploy with a raw dockerode 404.
 - `core-services.ts`, `DockerCoreServicesMixin`, the Traefik container itself :
   `findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`
@@ -100,16 +100,16 @@ load-bearing order: networks before containers (`createAndStartContainer` calls
     are far too chatty to log one-for-one), used to build the live
     deploy-progress log. → `DockerService.pullImage`.
   - `createAndStartContainer(params, onProgress?)`, container names include a
-    random suffix (`homerun-[<projectSlug>-]<slug>-<hex8>`) so a redeploy never
+    random suffix (`homerun-[<stackSlug>-]<slug>-<hex8>`) so a redeploy never
     collides on "name already in use"; the _previous_ container for a service is
     found by its `homerun.service.id` label (`#findServiceContainer`, a private
     method), not by name, since names are no longer stable across deploys. The
     container is aliased as its slug on the shared network
     (`NetworkingConfig.EndpointsConfig`) so other services can reach it at
     `http://<slug>:<containerPort>` regardless of the randomized name; if
-    `params.projectId` is set, it also joins that project's network under the
-    same alias (`this.connectToProjectNetwork`, inherited from the network
-    mixin). `params.volumes` (from `ServiceVolumeDTO.listForService`) becomes
+    `params.stackId` is set, it also joins that stack's network under the same
+    alias (`this.connectToStackNetwork`, inherited from the network mixin).
+    `params.volumes` (from `ServiceVolumeDTO.listForService`) becomes
     `HostConfig.Binds` (`"source:containerPath[:ro]"`, covers both bind-mounts
     and named volumes with the same syntax). Don't call this directly from a new
     route, go through `$lib/services/deploy.service.ts`'s
@@ -269,7 +269,7 @@ Docker Swarm Service (`docker.createService`,
   to point it at, `DockerSwarmMixin.getRunningTaskContainerId` resolves one
   specific task's container on demand instead (used by the Terminal tab's exec).
 - Mixin surface: `ensureSwarmNetwork` (idempotent overlay network, the
-  swarm-mode counterpart to `networks.ts`'s per-project bridge networks),
+  swarm-mode counterpart to `networks.ts`'s per-stack bridge networks),
   `createAndStartSwarmService`, `removeSwarmService`, `scaleSwarmService`
   (stop/start map to scaling to 0 / back to the configured replica count, rather
   than a real container stop/start), `restartSwarmService` (bumps `ForceUpdate`
@@ -327,8 +327,8 @@ Host mode forces `dnsResolvable` off (both in the stored row, at save time, and
 again defensively at deploy time in `createAndStartContainer`), there's no
 container-specific IP/network for Traefik's docker provider to route to in host
 mode, only the host's own interfaces, so Traefik labels are skipped entirely
-regardless of what's stored. No project-network join either (Docker containers
-in host mode can't also join a user-defined network). A host-mode service is
+regardless of what's stored. No stack-network join either (Docker containers in
+host mode can't also join a user-defined network). A host-mode service is
 reachable only directly on the host's own `containerPort`, exactly as if you'd
 run it with `docker run --network host` yourself, this app doesn't publish or
 map anything either way, matching the existing "no host port publishing by
@@ -409,27 +409,26 @@ oversight, logging raw TTY bytes verbatim would be noisy and wouldn't cleanly
 map to discrete commands anyway (arrow-key history, tab-completion, etc. all
 flow through the same input channel).
 
-## Orphaned project networks (`findOrphanProjectNetworks`, Docker Cleanup)
+## Orphaned stack networks (`findOrphanStackNetworks`, Docker Cleanup)
 
-A project's network is named from its id (`homerun-project-<id>`) and removed
-when the project is, but a project row that disappears any other way (a test run
-tearing down the database, a half-failed create) leaves the network behind
-forever. **Twenty-one of them exhausted Docker's default address pools on the
-dev box**, which fails _every_ new network with "all predefined address pools
-have been fully subnetted" : compose import, new projects and three integration
-tests broke at once, with the real cause nowhere in the error.
-`docker network prune` doesn't help while anything is attached, and it's a
-sledgehammer otherwise (it takes unrelated unused networks with it, including
-the shared one).
+A stack's network is named from its id (`homerun-stack-<id>`) and removed when
+the stack is, but a stack row that disappears any other way (a test run tearing
+down the database, a half-failed create) leaves the network behind forever.
+**Twenty-one of them exhausted Docker's default address pools on the dev box**,
+which fails _every_ new network with "all predefined address pools have been
+fully subnetted" : compose import, new stacks and three integration tests broke
+at once, with the real cause nowhere in the error. `docker network prune`
+doesn't help while anything is attached, and it's a sledgehammer otherwise (it
+takes unrelated unused networks with it, including the shared one).
 
-`DockerService.findOrphanProjectNetworks(liveProjectIds)` lists every
-`homerun-project-*` network whose id isn't in the set the caller passes
-(`ProjectDTO.allIds()`, so the DB stays out of the docker layer), and
-`reclaimOrphanProjectNetworks` removes the ones nothing is attached to,
-reporting the rest rather than tearing a network out from under running
-containers. It's a `docker_cleanup` queue action (`reclaimProjectNetworks`) like
-every other prune, with its own button and an inline list of what's orphaned on
-the Docker Cleanup page.
+`DockerService.findOrphanStackNetworks(liveStackIds)` lists every
+`homerun-stack-*` network whose id isn't in the set the caller passes
+(`StackDTO.allIds()`, so the DB stays out of the docker layer), and
+`reclaimOrphanStackNetworks` removes the ones nothing is attached to, reporting
+the rest rather than tearing a network out from under running containers. It's a
+`docker_cleanup` queue action (`reclaimStackNetworks`) like every other prune,
+with its own button and an inline list of what's orphaned on the Docker Cleanup
+page.
 
 ## Custom SSL certificates (`src/lib/services/docker/custom-ssl.ts`)
 

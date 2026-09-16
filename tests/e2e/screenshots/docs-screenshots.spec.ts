@@ -10,11 +10,10 @@ const EMAIL = "ada@example.com";
 const PASSWORD = "a-real-strong-password-123";
 const BASE_DOMAIN = "example.com";
 
-const seeded: { projectId: string | null; serviceIds: Record<string, string> } =
-	{
-		projectId: null,
-		serviceIds: {},
-	};
+const seeded: { stackId: string | null; serviceIds: Record<string, string> } = {
+	stackId: null,
+	serviceIds: {},
+};
 
 interface Seed {
 	containerPort: number;
@@ -127,10 +126,10 @@ const SHOTS: Shot[] = [
 		path: () => "/templates",
 	},
 	{
-		doc: "/projects/:id",
+		doc: "/stacks/:id",
 		expect: /Acme/i,
-		name: "project",
-		path: () => `/projects/${seeded.projectId}`,
+		name: "stack",
+		path: () => `/stacks/${seeded.stackId}`,
 	},
 	{
 		doc: "/settings",
@@ -158,7 +157,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async ({ browser }) => {
-	if (!seeded.projectId) {
+	if (!seeded.stackId) {
 		return;
 	}
 	const page = await browser.newPage({ storageState: AUTH_STATE });
@@ -168,16 +167,16 @@ test.afterAll(async ({ browser }) => {
 		});
 		expect(removed.ok(), `removing service ${id}`).toBeTruthy();
 	}
-	const project = await page.request.post(
-		`/projects/${seeded.projectId}/settings?/delete`,
+	const stack = await page.request.post(
+		`/stacks/${seeded.stackId}/settings?/delete`,
 		{
 			form: {},
 			headers: { origin: E2E_BASE_URL, "x-sveltekit-action": "true" },
 		},
 	);
 	expect(
-		project.ok(),
-		`deleting project ${seeded.projectId}: ${project.status()}`,
+		stack.ok(),
+		`deleting stack ${seeded.stackId}: ${stack.status()}`,
 	).toBeTruthy();
 	await page.close();
 });
@@ -204,16 +203,16 @@ test("bootstraps a blank instance", async ({ page }) => {
 test.describe("signed in", () => {
 	test.use({ storageState: AUTH_STATE });
 
-	test("seeds a project and one service of each state", async ({ page }) => {
-		const project = await page.request.post("/api/v1/projects", {
+	test("seeds a stack and one service of each state", async ({ page }) => {
+		const stack = await page.request.post("/api/v1/stacks", {
 			data: {
 				description: "Everything the marketing site needs to serve traffic.",
 				name: "Acme",
 				slug: "acme",
 			},
 		});
-		expect(project.ok()).toBeTruthy();
-		seeded.projectId = (await project.json()).id;
+		expect(stack.ok()).toBeTruthy();
+		seeded.stackId = (await stack.json()).id;
 
 		for (const seed of SEEDS) {
 			const created = await page.request.post("/api/v1/services", {
@@ -223,7 +222,7 @@ test.describe("signed in", () => {
 					image: seed.image,
 					memoryLimitMb: seed.memoryLimitMb,
 					name: seed.name,
-					projectId: seeded.projectId,
+					stackId: seeded.stackId,
 					slug: seed.slug,
 					tag: seed.tag,
 				},

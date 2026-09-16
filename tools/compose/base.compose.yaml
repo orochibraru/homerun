@@ -14,6 +14,8 @@ services:
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
       - --providers.file.directory=/etc/traefik/dynamic
       - --providers.file.watch=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "80:80"
       - "443:443"

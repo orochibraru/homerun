@@ -39,6 +39,7 @@
 
 	const values = $derived(
 		(form?.values as Record<string, string> | undefined) ?? {
+			healthcheckCommand: svc.healthcheckCommand ?? "",
 			name: svc.name,
 			pullPolicy: svc.pullPolicy,
 			restartPolicy: svc.restartPolicy,
@@ -69,9 +70,9 @@
 		PULL_POLICIES.find((opt) => opt.value === pullPolicy) ?? PULL_POLICIES[0],
 	);
 
-	let projectId = $derived(svc.projectId ?? "");
-	const projectLabel = $derived(
-		data.projects.find((p) => p.id === projectId)?.name ?? "Ungrouped",
+	let stackId = $derived(svc.stackId ?? "");
+	const stackLabel = $derived(
+		data.stacks.find((p) => p.id === stackId)?.name ?? "Ungrouped",
 	);
 </script>
 
@@ -194,6 +195,26 @@
         </SelectRoot>
       </div>
 
+      <div>
+        <label class={label} for="healthcheckCommand">Healthcheck command</label>
+        <Input
+          id="healthcheckCommand"
+          name="healthcheckCommand"
+          placeholder="curl -fsS http://127.0.0.1:8080/health"
+          type="text"
+          value={values.healthcheckCommand ?? ""}
+        />
+        <p class="text-text-subtle mt-1.5 text-xs">
+          Runs inside the container through the shell every 30s, exit 0 means
+          healthy. Overrides the image's own healthcheck and drives this
+          service's uptime probe. Leave blank to keep the image's. Redeploy for
+          changes to take effect.
+        </p>
+        {#if errors?.healthcheckCommand}
+          <p class={errorClass}>{errors.healthcheckCommand[0]}</p>
+        {/if}
+      </div>
+
       <p class="text-text-subtle text-xs">
         CPU/memory limits and autoscaling moved to the
         <a
@@ -219,7 +240,7 @@
     </form>
   </section>
 
-  <!-- ═══ Project ═══ -->
+  <!-- ═══ Stack ═══ -->
   <section class="panel rounded-md">
     <div class="flex items-center justify-between gap-4 p-5">
       <div class="flex items-center gap-3">
@@ -227,14 +248,14 @@
           <FolderKanban class="size-4" />
         </div>
         <div>
-          <p class="text-text text-sm font-medium">Project</p>
+          <p class="text-text text-sm font-medium">Stack</p>
           <p class="text-text-muted text-xs">
-            Move this service into a different project, or ungroup it.
+            Move this service into a different stack, or ungroup it.
           </p>
         </div>
       </div>
       <form
-        action="?/moveProject"
+        action="?/moveStack"
         class="flex w-75 items-center gap-2"
         method="POST"
         use:enhance={enhanceToast({
@@ -243,14 +264,14 @@
           success: "Moved.",
         })}
       >
-        <SelectRoot name="projectId" type="single" bind:value={projectId}>
+        <SelectRoot name="stackId" type="single" bind:value={stackId}>
           <SelectTrigger class="w-full">
-            {projectLabel}
+            {stackLabel}
           </SelectTrigger>
           <SelectContent>
             <SelectItem label="Ungrouped" value="" />
-            {#each data.projects as proj (proj.id)}
-              <SelectItem label={proj.name} value={proj.id} />
+            {#each data.stacks as stack (stack.id)}
+              <SelectItem label={stack.name} value={stack.id} />
             {/each}
           </SelectContent>
         </SelectRoot>

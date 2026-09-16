@@ -7,7 +7,7 @@ const logger = new Logger("DockerCleanup");
 
 const titles: Record<DockerCleanupAction, string> = {
 	pruneBuildCache: "Prune build cache",
-	reclaimProjectNetworks: "Reclaim orphaned project networks",
+	reclaimStackNetworks: "Reclaim orphaned stack networks",
 	pruneContainers: "Prune stopped containers",
 	pruneImages: "Prune images",
 	pruneNetworks: "Prune unused networks",
@@ -17,7 +17,7 @@ const titles: Record<DockerCleanupAction, string> = {
 
 const failureMessages: Record<DockerCleanupAction, string> = {
 	pruneBuildCache: "Failed to prune build cache.",
-	reclaimProjectNetworks: "Failed to reclaim orphaned project networks.",
+	reclaimStackNetworks: "Failed to reclaim orphaned stack networks.",
 	pruneContainers: "Failed to prune containers.",
 	pruneImages: "Failed to prune images.",
 	pruneNetworks: "Failed to prune networks.",

@@ -5,28 +5,28 @@ import { MANAGED_LABEL } from "./labels.ts";
 
 const logger = new Logger("Docker");
 
-/** Deterministic : no need to persist a network id anywhere, it's derived from the project id. */
-export function projectNetworkName(projectId: string): string {
-	return `${PROJECT_NETWORK_PREFIX}${projectId}`;
+/** Deterministic : no need to persist a network id anywhere, it's derived from the stack id. */
+export function stackNetworkName(stackId: string): string {
+	return `${STACK_NETWORK_PREFIX}${stackId}`;
 }
 
-export const PROJECT_NETWORK_PREFIX = "homerun-project-";
+export const STACK_NETWORK_PREFIX = "homerun-stack-";
 
 export interface OrphanNetwork {
 	containersAttached: number;
 	id: string;
 	name: string;
-	projectId: string;
+	stackId: string;
 }
 
-/** The project id a project network's name encodes, or null for any other network. */
-export function projectIdFromNetworkName(name: string): string | null {
-	return name.startsWith(PROJECT_NETWORK_PREFIX)
-		? name.slice(PROJECT_NETWORK_PREFIX.length) || null
+/** The stack id a stack network's name encodes, or null for any other network. */
+export function stackIdFromNetworkName(name: string): string | null {
+	return name.startsWith(STACK_NETWORK_PREFIX)
+		? name.slice(STACK_NETWORK_PREFIX.length) || null
 		: null;
 }
 
-/** Per-project Docker network lifecycle : create/remove/attach. */
+/** Per-stack Docker network lifecycle : create/remove/attach. */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerNetworkMixin<
 	TBase extends Constructor<BaseDockerService>,
@@ -66,46 +66,46 @@ export function DockerNetworkMixin<
 			}
 		}
 
-		/** Creates the project's dedicated network if it doesn't already exist. Idempotent. */
-		async ensureProjectNetwork(projectId: string): Promise<void> {
-			const name = projectNetworkName(projectId);
+		/** Creates the stack's dedicated network if it doesn't already exist. Idempotent. */
+		async ensureStackNetwork(stackId: string): Promise<void> {
+			const name = stackNetworkName(stackId);
 			if (await this.#ensureNetwork(name)) {
-				logger.info(`Project network created: ${name}`);
+				logger.info(`Stack network created: ${name}`);
 			}
 		}
 
-		/** Removes the project's dedicated network. Safe to call even if it's already gone. */
-		async removeProjectNetwork(projectId: string): Promise<void> {
-			const name = projectNetworkName(projectId);
+		/** Removes the stack's dedicated network. Safe to call even if it's already gone. */
+		async removeStackNetwork(stackId: string): Promise<void> {
+			const name = stackNetworkName(stackId);
 			try {
 				await this.getDocker().getNetwork(name).remove();
-				logger.info(`Project network removed: ${name}`);
+				logger.info(`Stack network removed: ${name}`);
 			} catch {
 				// Already gone, or never existed : nothing to clean up.
 			}
 		}
 
 		/**
-		 * Project networks whose project row is gone : every
-		 * `homerun-project-*` network on the daemon minus the ids still in
-		 * `liveProjectIds`. Read-only, so a caller can show them before
+		 * Stack networks whose stack row is gone : every
+		 * `homerun-stack-*` network on the daemon minus the ids still in
+		 * `liveStackIds`. Read-only, so a caller can show them before
 		 * removing any.
 		 */
-		async findOrphanProjectNetworks(
-			liveProjectIds: Set<string>,
+		async findOrphanStackNetworks(
+			liveStackIds: Set<string>,
 		): Promise<OrphanNetwork[]> {
 			const networks = await this.getDocker().listNetworks();
 			const orphans: OrphanNetwork[] = [];
 			for (const net of networks) {
-				const projectId = projectIdFromNetworkName(net.Name ?? "");
-				if (!projectId || liveProjectIds.has(projectId)) {
+				const stackId = stackIdFromNetworkName(net.Name ?? "");
+				if (!stackId || liveStackIds.has(stackId)) {
 					continue;
 				}
 				orphans.push({
 					containersAttached: Object.keys(net.Containers ?? {}).length,
 					id: net.Id,
 					name: net.Name,
-					projectId,
+					stackId,
 				});
 			}
 			return orphans;
@@ -117,10 +117,10 @@ export function DockerNetworkMixin<
 		 * are orphans too, and tearing their network out from under them
 		 * would be a worse surprise than the leak.
 		 */
-		async reclaimOrphanProjectNetworks(
-			liveProjectIds: Set<string>,
+		async reclaimOrphanStackNetworks(
+			liveStackIds: Set<string>,
 		): Promise<{ removed: string[]; skipped: OrphanNetwork[] }> {
-			const orphans = await this.findOrphanProjectNetworks(liveProjectIds);
+			const orphans = await this.findOrphanStackNetworks(liveStackIds);
 			const removed: string[] = [];
 			const skipped: OrphanNetwork[] = [];
 			for (const orphan of orphans) {
@@ -145,25 +145,25 @@ export function DockerNetworkMixin<
 			}
 			if (removed.length > 0) {
 				logger.info(
-					`Reclaimed ${removed.length} orphan project network(s): ${removed.join(", ")}`,
+					`Reclaimed ${removed.length} orphan stack network(s): ${removed.join(", ")}`,
 				);
 			}
 			return { removed, skipped };
 		}
 
 		/**
-		 * Attaches a container to its project's network under a stable DNS
+		 * Attaches a container to its stack's network under a stable DNS
 		 * alias (the service's slug) : so other containers in the same
-		 * project can reach it as `http://<slug>:<port>` regardless of the
+		 * stack can reach it as `http://<slug>:<port>` regardless of the
 		 * container's own (randomized, see docker/containers.ts) name.
 		 */
-		async connectToProjectNetwork(
+		async connectToStackNetwork(
 			containerId: string,
-			projectId: string,
+			stackId: string,
 			alias: string,
 		): Promise<void> {
-			await this.ensureProjectNetwork(projectId);
-			const name = projectNetworkName(projectId);
+			await this.ensureStackNetwork(stackId);
+			const name = stackNetworkName(stackId);
 			await this.getDocker()
 				.getNetwork(name)
 				.connect({

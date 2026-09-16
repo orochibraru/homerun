@@ -45,8 +45,8 @@ export function buildContainerLabels(params: {
 	// absent "traefik.enable" label means the container never gets a
 	// router: no public <slug>.<baseDomain>, subnet-only reachability.
 	dnsResolvable?: boolean;
-	// When set, prefixes the public subdomain: "<projectSlug>-<slug>.<baseDomain>".
-	projectSlug?: string | null;
+	// When set, prefixes the public subdomain: "<stackSlug>-<slug>.<baseDomain>".
+	stackSlug?: string | null;
 	// Optional second hostname routed to the same backend : its own router,
 	// sharing the primary router's Traefik service (no duplicated backend
 	// config). Only applied when dnsResolvable is true.
@@ -66,7 +66,7 @@ export function buildContainerLabels(params: {
 		slug,
 		containerPort,
 		dnsResolvable = true,
-		projectSlug,
+		stackSlug,
 		customDomain,
 		authRequired,
 		networkName = config.docker.networkName,
@@ -81,7 +81,7 @@ export function buildContainerLabels(params: {
 		return baseLabels;
 	}
 
-	const host = projectSlug ? `${projectSlug}-${slug}` : slug;
+	const host = stackSlug ? `${stackSlug}-${slug}` : slug;
 	const hostname = `${host}.${config.baseDomain}`;
 	const resolverFor = (name: string) =>
 		certResolverFor(name, config.traefik.certResolver, config.pangolinEnabled);

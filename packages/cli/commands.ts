@@ -69,23 +69,23 @@ class CliCommands {
 		Output.printJson(result);
 	}
 
-	async projectsList(client: Client, args: ListArgs): Promise<void> {
-		const { data: projects, response } = await this.#unwrapWithResponse(
-			client.GET("/projects", { params: { query: listQuery(args) } }),
+	async stacksList(client: Client, args: ListArgs): Promise<void> {
+		const { data: stacks, response } = await this.#unwrapWithResponse(
+			client.GET("/stacks", { params: { query: listQuery(args) } }),
 		);
 		if (args.json) {
-			Output.printJson(projects);
+			Output.printJson(stacks);
 			return;
 		}
 		Output.printTable(
-			(projects as Record<string, unknown>[]).map((p) => ({
+			(stacks as Record<string, unknown>[]).map((p) => ({
 				id: p.id,
 				name: p.name,
 				slug: p.slug,
 			})),
 			["id", "name", "slug"],
 		);
-		Output.printPageFooter(response, (projects as unknown[]).length);
+		Output.printPageFooter(response, (stacks as unknown[]).length);
 	}
 
 	async templatesList(client: Client, args: ListArgs): Promise<void> {

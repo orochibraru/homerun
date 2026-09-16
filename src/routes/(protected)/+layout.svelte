@@ -29,7 +29,9 @@
 	import { fly } from "svelte/transition";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import AppVersion from "$lib/components/app-version.svelte";
 	import ErrorBoundary from "$lib/components/error-boundary.svelte";
+	import GlobalSearch from "$lib/components/global-search.svelte";
 	import NotificationBell from "$lib/components/notification-bell.svelte";
 	import ProfileMenu from "$lib/components/profile-menu.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -82,9 +84,9 @@
 			adminOnly: false,
 			category: "Workspace",
 			exact: false,
-			href: resolve("/projects"),
+			href: resolve("/stacks"),
 			icon: FolderKanban,
-			label: "Projects",
+			label: "Stacks",
 		},
 		{
 			adminOnly: false,
@@ -299,7 +301,7 @@
 
 	// Users/Settings/System Logs are instance-wide admin controls : hidden
 	// from developers, who otherwise get the same dashboard (their own
-	// services/projects, already isolated per-user).
+	// services/stacks, already isolated per-user).
 	const mainNavGroups = $derived(
 		groupByCategory(allNavItems.filter((item) => !item.adminOnly)),
 	);
@@ -370,6 +372,7 @@
       {@render navGroups(mainNavGroups)}
       {@render navGroups(adminNavGroups)}
     </nav>
+    <AppVersion admin={data.user?.role === "admin"} />
   </aside>
 
   <!-- ── Mobile sidebar overlay ────────────────────────────────── -->
@@ -396,6 +399,7 @@
           sidebarOpen = false;
         })}
       </nav>
+      <AppVersion admin={data.user?.role === "admin"} />
     </div>
   {/if}
 
@@ -423,6 +427,7 @@
       <span class="text-text flex-1 truncate text-sm font-medium">
         {$title || "Dashboard"}
       </span>
+      <GlobalSearch isAdmin={data.user?.role === "admin"} />
       <NotificationBell />
       <ProfileMenu user={data.user} />
     </header>

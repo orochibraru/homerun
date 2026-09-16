@@ -1,6 +1,7 @@
 import {
 	and,
 	asc,
+	count,
 	desc,
 	eq,
 	inArray,
@@ -206,6 +207,28 @@ export class JobDTO extends BaseDTO<Job> {
 				.where(eq(job.id, candidate.id));
 			return new JobDTO(claimed);
 		});
+	}
+
+	static async activitySummary(): Promise<{
+		pendingDeploys: number;
+		running: number;
+	}> {
+		const [[deploys], [running]] = await Promise.all([
+			db
+				.select({ total: count() })
+				.from(job)
+				.where(
+					and(
+						eq(job.type, "deploy"),
+						inArray(job.status, ["queued", "running"]),
+					),
+				),
+			db.select({ total: count() }).from(job).where(eq(job.status, "running")),
+		]);
+		return {
+			pendingDeploys: deploys?.total ?? 0,
+			running: running?.total ?? 0,
+		};
 	}
 
 	static async requeueOrphaned(): Promise<number> {

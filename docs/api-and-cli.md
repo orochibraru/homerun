@@ -13,10 +13,10 @@ and external API-key clients alike.
   full pull-or-build → create → start pipeline and returns once it's done (no
   separate polling endpoint for API clients: that's dashboard-only, for its own
   progress UI)
-- `GET/POST /api/v1/projects`, `GET/POST /api/v1/templates`
+- `GET/POST /api/v1/stacks`, `GET/POST /api/v1/templates`
 - `GET /api/v1/system-stats`: host CPU/RAM/disk/GPU
 
-The three list `GET`s (`services`, `projects`, `templates`) are paginated:
+The three list `GET`s (`services`, `stacks`, `templates`) are paginated:
 `?page=`, `?perPage=` (default 100, max 100), and `?q=` for a case-insensitive
 search. The response body stays a plain JSON array, on purpose, so an existing
 integration keeps working unchanged; the total row count and the page/size you
@@ -104,7 +104,7 @@ homerun services deploy <id>
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
-homerun projects list [--json]
+homerun stacks list [--json]
 homerun templates list [--json]
 ```
 

@@ -17,7 +17,7 @@ const logger = new Logger("UserCleanup");
 class UserServiceClass {
 	/**
 	 * Stops/removes a user's actual Docker containers and networks and deletes
-	 * their app-owned rows (deployments/services/projects/storage volumes)
+	 * their app-owned rows (deployments/services/stacks/storage volumes)
 	 * before* the user row itself goes away. Postgres enforces the schema's
 	 * `onDelete: "cascade"`/`"set null"` FK constraints for real (unlike the
 	 * previous SQLite setup, where `PRAGMA foreign_keys` was intentionally
@@ -70,21 +70,21 @@ class UserServiceClass {
 		await db.delete(schema.service).where(eq(schema.service.userId, userId));
 
 		// Same explicit-cleanup precedent as services above : FK cascade alone
-		// would leave the project's Docker network dangling.
-		const projects = await db
+		// would leave the stack's Docker network dangling.
+		const stacks = await db
 			.select()
-			.from(schema.project)
-			.where(eq(schema.project.userId, userId));
+			.from(schema.stack)
+			.where(eq(schema.stack.userId, userId));
 		await Promise.all(
-			projects.map((proj) =>
-				DockerService.removeProjectNetwork(proj.id).catch(() => {
+			stacks.map((stack) =>
+				DockerService.removeStackNetwork(stack.id).catch(() => {
 					// Already gone : fine, keep cleaning up.
 				}),
 			),
 		);
-		await db.delete(schema.project).where(eq(schema.project.userId, userId));
+		await db.delete(schema.stack).where(eq(schema.stack.userId, userId));
 
-		// Row-only : no host-side resource (unlike services/projects, nothing was
+		// Row-only : no host-side resource (unlike services/stacks, nothing was
 		// ever created on the user's behalf just by defining a storage volume
 		// source). Delete the join rows first (no userId column of its own to
 		// filter by directly).
@@ -146,6 +146,15 @@ class UserServiceClass {
 			perPage: query.perPage,
 			total: totals[0]?.total ?? 0,
 		};
+	}
+
+	async searchUsers(q: string, limit: number): Promise<User[]> {
+		return await db
+			.select()
+			.from(userTable)
+			.where(searchCondition(q, [userTable.name, userTable.email]))
+			.orderBy(desc(userTable.createdAt))
+			.limit(limit);
 	}
 
 	async countAdmins(): Promise<number> {

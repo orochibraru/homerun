@@ -34,7 +34,7 @@ export interface DeployMessageInput {
 		| "startedAt"
 	>;
 	origin: string | null;
-	projectName: string | null;
+	stackName: string | null;
 	publicUrl: string | null;
 	service: Pick<
 		Service,
@@ -122,8 +122,8 @@ export function deployMessage(
 	const { deployment, service } = input;
 	const event = deployEvent(service.buildSource, input.trigger, ok);
 	const fields: MessageField[] = [];
-	if (input.projectName) {
-		fields.push({ name: "Project", value: input.projectName });
+	if (input.stackName) {
+		fields.push({ name: "Stack", value: input.stackName });
 	}
 	fields.push({
 		name: "Trigger",

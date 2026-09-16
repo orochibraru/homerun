@@ -180,7 +180,7 @@ payload builders (`messageSubject`/`messageBody`/`discordPayload`) and
 **A message is built once, in `notification-messages.ts`, and every channel
 renders the same shape**: `title`, `detail`, a list of `fields` (name/value) and
 a dashboard `link` (only when `auth.origin` is set). `deployMessage` fills the
-fields from the finished deployment row: project, trigger (Manual/ Scheduled),
+fields from the finished deployment row: stack, trigger (Manual/ Scheduled),
 image and short digest or repository/branch/short commit, duration, and the
 public URL on success; a failure's `detail` is the error plus the last 15 log
 lines (ANSI and phase markers stripped), since the error alone is often just
@@ -188,7 +188,7 @@ lines (ANSI and phase markers stripped), since the error alone is often just
 probe, the host. Discord shows the fields as embed fields (inline when short)
 and keeps the _end_ of an oversized detail, where the error is; email lists them
 as `Name: value` lines; a generic webhook gets the message object as-is.
-`notifyDeploy` loads the project itself, so both deploy exits pass the same
+`notifyDeploy` loads the stack itself, so both deploy exits pass the same
 `{dep, ok, svc, trigger}`.
 
 ## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `$lib/services/uptime/uptime-probe.ts`)

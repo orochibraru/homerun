@@ -102,6 +102,29 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 		return rows.map((row) => new StorageVolumeDTO(row));
 	}
 
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<StorageVolumeDTO[]> {
+		const rows = await db
+			.select()
+			.from(storageVolume)
+			.where(
+				and(
+					eq(storageVolume.userId, userId),
+					searchCondition(q, [
+						storageVolume.name,
+						storageVolume.source,
+						storageVolume.description,
+					]),
+				),
+			)
+			.orderBy(desc(storageVolume.createdAt))
+			.limit(limit);
+		return rows.map((row) => new StorageVolumeDTO(row));
+	}
+
 	static async create(input: NewStorageVolumeInput): Promise<StorageVolumeDTO> {
 		const now = new Date();
 		const row: StorageVolume = {

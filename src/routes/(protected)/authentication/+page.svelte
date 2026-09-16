@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { ExternalLink, KeyRound, LockKeyhole, Plus } from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import CheckBox from "$lib/components/check-box.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { title } from "$lib/store/title";
+	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
 
@@ -50,6 +53,71 @@
         Manage users
       </Button>
     </div>
+  </section>
+
+  <section class="panel rounded-md">
+    <div class="border-border border-b px-5 py-4">
+      <h2 class="eyebrow">Preferred sign-in methods</h2>
+      <p class="text-text-muted text-xs">
+        What the sign-in page shows up front. Everything else stays available
+        behind an "Other sign-in methods" link. Pick none to show every method.
+      </p>
+    </div>
+    <form
+      class="space-y-3 p-5"
+      action="?/preferredSignIn"
+      method="POST"
+      use:enhance={saveToast("Preferred sign-in methods")}
+    >
+      {#each data.signInMethods as option (option.method)}
+        <CheckBox
+          checked={data.preferredSignInMethods.includes(option.method)}
+          helperText={option.helperText}
+          id="preferred-{option.method}"
+          label={option.label}
+          name="preferred:{option.method}"
+        />
+      {/each}
+      <div class="flex justify-end">
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel rounded-md">
+    <div class="border-border border-b px-5 py-4">
+      <h2 class="eyebrow">Sign-in requirements</h2>
+      <p class="text-text-muted text-xs">
+        Applies to every account, admins included. Anyone who doesn't meet a
+        requirement is sent to a setup page on their next visit and can't use
+        the dashboard until they've enrolled. API keys and CLI tokens aren't
+        affected.
+      </p>
+    </div>
+    <form
+      class="space-y-3 p-5"
+      action="?/securityPolicy"
+      method="POST"
+      use:enhance={saveToast("Sign-in requirements")}
+    >
+      <CheckBox
+        checked={data.securityPolicy.requireTwoFactor}
+        helperText="Every account must set up an authenticator app. Signing in with a password then asks for a code."
+        id="requireTwoFactor"
+        label="Require two-factor authentication"
+        name="requireTwoFactor"
+      />
+      <CheckBox
+        checked={data.securityPolicy.requirePasskey}
+        helperText="Every account must register at least one passkey."
+        id="requirePasskey"
+        label="Require a passkey"
+        name="requirePasskey"
+      />
+      <div class="flex justify-end">
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
   </section>
 
   <!-- ═══ Providers ═══ -->

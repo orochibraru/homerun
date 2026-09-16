@@ -30,7 +30,7 @@ row.
 
 - Static finders: `get(id, userId)`, `list(userId)`, and whatever
   listing/filtering shapes the route actually needs (look at
-  `service-dto.ts`/`project-dto.ts` for the pattern of a `listWithX` join helper
+  `service-dto.ts`/`stack-dto.ts` for the pattern of a `listWithX` join helper
   vs a plain `list`).
 - **Scope every query by `userId` unless the operation is genuinely cross-user**
   (a scheduler tick, e.g. `ServiceDTO.listCronEnabled()`,

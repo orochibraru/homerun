@@ -18,7 +18,7 @@
 		desiredState: string;
 		id: string;
 		name: string;
-		projectId: string | null;
+		stackId: string | null;
 	}
 
 	interface Props {
@@ -66,9 +66,9 @@
     </ContextMenu.Item>
     <ContextMenu.Item onSelect={() => ongroup(service)}>
       <Wrench class="size-4" />
-      {service.projectId ? "Move to project…" : "Group into project…"}
+      {service.stackId ? "Move to stack…" : "Group into stack…"}
     </ContextMenu.Item>
-    {#if service.projectId}
+    {#if service.stackId}
       <ContextMenu.Item onSelect={() => onungroup(service)}>
         <Wrench class="size-4" />
         Ungroup

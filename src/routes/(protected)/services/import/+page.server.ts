@@ -5,7 +5,7 @@ import {
 	type ComposeServiceDraft,
 	parseComposeFile,
 } from "$lib/compose-import";
-import { ProjectDTO } from "$lib/dto/project-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { ComposeImportService } from "$lib/services/compose-import.service";
@@ -14,10 +14,10 @@ const logger = new Logger("ComposeImport");
 
 export const load = async ({ url, parent }) => {
 	const { user } = await parent();
-	const projects = await ProjectDTO.list(user.id);
+	const stacks = await StackDTO.list(user.id);
 	return {
-		projectId: url.searchParams.get("projectId"),
-		projects: projects.map((p) => p.toJSON()),
+		stackId: url.searchParams.get("stackId"),
+		stacks: stacks.map((p) => p.toJSON()),
 	};
 };
 
@@ -87,14 +87,14 @@ export const actions = {
 			});
 		}
 
-		const projectId = (formData.get("projectId") as string | null) || null;
-		const projectName =
-			(formData.get("projectName") as string | null)?.trim() || null;
+		const stackId = (formData.get("stackId") as string | null) || null;
+		const stackName =
+			(formData.get("stackName") as string | null)?.trim() || null;
 
 		const result = await ComposeImportService.importPlan({
 			drafts,
-			projectId,
-			projectName: projectId ? null : projectName,
+			stackId,
+			stackName: stackId ? null : stackName,
 			userId: locals.user.id,
 		});
 
@@ -110,8 +110,8 @@ export const actions = {
 		);
 		redirect(
 			303,
-			result.projectId
-				? `${resolve("/projects")}/${result.projectId}`
+			result.stackId
+				? `${resolve("/stacks")}/${result.stackId}`
 				: resolve("/services"),
 		);
 	},

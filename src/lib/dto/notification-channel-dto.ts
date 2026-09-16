@@ -5,6 +5,7 @@ import {
 	type NotificationChannel,
 	notificationChannel,
 } from "$lib/server/db/schema";
+import { searchCondition } from "$lib/server/list-query";
 import type { NotificationChannelKind, NotificationEvent } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
@@ -68,6 +69,28 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		return rows
 			.filter((row) => row.events.includes(event))
 			.map((row) => new NotificationChannelDTO(row));
+	}
+
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<NotificationChannelDTO[]> {
+		const rows = await db
+			.select()
+			.from(notificationChannel)
+			.where(
+				and(
+					eq(notificationChannel.userId, userId),
+					searchCondition(q, [
+						notificationChannel.name,
+						notificationChannel.kind,
+					]),
+				),
+			)
+			.orderBy(asc(notificationChannel.name))
+			.limit(limit);
+		return rows.map((row) => new NotificationChannelDTO(row));
 	}
 
 	static async create(

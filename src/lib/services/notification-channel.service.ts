@@ -1,8 +1,8 @@
 import { config, isSmtpEnabled } from "$lib/config";
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { isFailureEvent, NOTIFICATION_EVENTS } from "$lib/notification-events";
 import { serviceHostname } from "./dns.service";
@@ -112,17 +112,17 @@ class NotificationChannelServiceClass {
 		svc: service,
 		trigger,
 	}: DeployNotification): Promise<ChannelMessage> {
-		const project = service.projectId
-			? await ProjectDTO.get(service.projectId, service.userId)
+		const stack = service.stackId
+			? await StackDTO.get(service.stackId, service.userId)
 			: null;
 		const row = service.toJSON();
 		const host =
-			row.customDomain ?? serviceHostname(row.slug, project?.slug ?? null);
+			row.customDomain ?? serviceHostname(row.slug, stack?.slug ?? null);
 		return deployMessage(
 			{
 				deployment: deployment.toJSON(),
 				origin: config.auth.origin ?? null,
-				projectName: project?.name ?? null,
+				stackName: stack?.name ?? null,
 				publicUrl: row.dnsResolvable ? `https://${host}` : null,
 				service: row,
 				trigger,

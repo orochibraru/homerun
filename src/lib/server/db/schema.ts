@@ -31,6 +31,7 @@ export const user = pgTable("user", {
 	image: text("image"),
 	name: text("name").notNull(),
 	role: text("role"),
+	twoFactorEnabled: boolean("two_factor_enabled").default(false),
 	updatedAt: timestamp("updated_at", { mode: "date" })
 		.$onUpdate(() => new Date())
 		.notNull(),
@@ -162,17 +163,36 @@ export const passkey = pgTable(
 	],
 );
 
+export const twoFactor = pgTable(
+	"two_factor",
+	{
+		backupCodes: text("backup_codes").notNull(),
+		failedVerificationCount: integer("failed_verification_count").default(0),
+		id: text("id").primaryKey(),
+		lockedUntil: timestamp("locked_until", { mode: "date" }),
+		secret: text("secret").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		verified: boolean("verified").default(true),
+	},
+	(table) => [
+		index("twoFactor_secret_idx").on(table.secret),
+		index("twoFactor_userId_idx").on(table.userId),
+	],
+);
+
 // ─── PaaS Domain ────────────────────────────────────────────────────────────
 
-export const project = pgTable(
-	"project",
+export const stack = pgTable(
+	"stack",
 	{
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
 		id: text("id").primaryKey(),
 		name: text("name").notNull(),
 		// DNS-safe prefix applied to every member service's container name and
-		// subdomain (e.g. "<projectSlug>-<serviceSlug>.<baseDomain>") : see
+		// subdomain (e.g. "<stackSlug>-<serviceSlug>.<baseDomain>") : see
 		// docker/service.ts's containerName() and docker/labels.ts.
 		slug: text("slug").notNull().unique(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -182,7 +202,7 @@ export const project = pgTable(
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 	},
-	(table) => [index("project_userId_idx").on(table.userId)],
+	(table) => [index("stack_userId_idx").on(table.userId)],
 );
 
 export const remoteHost = pgTable(
@@ -364,6 +384,9 @@ export const instanceSettings = pgTable("instance_settings", {
 	// layer owns TLS, Traefik doesn't need to" posture as the Cloudflare
 	// integration's plain, unproxied CNAME).
 	pangolinTargetPort: integer("pangolin_target_port"),
+	preferredSignInMethods: jsonb("preferred_sign_in_methods").$type<string[]>(),
+	requirePasskey: boolean("require_passkey"),
+	requireTwoFactor: boolean("require_two_factor"),
 	smtpEnabled: boolean("smtp_enabled"),
 	smtpFrom: text("smtp_from"),
 	smtpHost: text("smtp_host"),
@@ -442,6 +465,7 @@ export const template = pgTable(
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
 		envVars: jsonb("env_vars").$type<Record<string, string>>().default({}),
+		healthcheckCommand: text("healthcheck_command"),
 		icon: text("icon"), // lucide icon name, looked up the same way SERVICE_STATUS_CONFIG maps a key to an icon component
 		id: text("id").primaryKey(),
 		image: text("image").notNull(),
@@ -535,6 +559,7 @@ export const service = pgTable(
 		containerId: text("container_id"),
 		containerPort: integer("container_port").notNull(),
 		cpuLimit: text("cpu_limit"),
+		healthcheckCommand: text("healthcheck_command"),
 		// Errors older than this are hidden on the Observability tab. Set by
 		// the "Clear errors" button, and automatically by a deploy that goes
 		// live : errorsDismissedByDeploymentId is that revision.
@@ -571,7 +596,7 @@ export const service = pgTable(
 		// When false, no Traefik router/service labels are attached at deploy
 		// time : the container never gets a public <slug>.<baseDomain>, only
 		// reachable over the internal network(s) it's attached to (the shared
-		// network by slug alias, plus its project's network if any).
+		// network by slug alias, plus its stack's network if any).
 		dnsResolvable: boolean("dns_resolvable").default(true).notNull(),
 		envVars: jsonb("env_vars").$type<Record<string, string>>().default({}),
 		// Relative to gitBuildContext. Defaults to "Dockerfile" when unset.
@@ -586,7 +611,7 @@ export const service = pgTable(
 		image: text("image").notNull(),
 		memoryLimitMb: integer("memory_limit_mb"),
 		name: text("name").notNull(),
-		// "bridge" (default : the shared homerun + project network,
+		// "bridge" (default : the shared homerun + stack network,
 		// Traefik-routed) | "host" (shares the host's network namespace
 		// directly, e.g. for mDNS/SSDP-dependent apps like Home Assistant :
 		// no Traefik routing, no internal slug alias, not on any Docker
@@ -607,7 +632,7 @@ export const service = pgTable(
 			.default("tcp")
 			.notNull(),
 		// nullable : grouping is opt-in, ungrouped services stay valid
-		projectId: text("project_id").references(() => project.id, {
+		stackId: text("stack_id").references(() => stack.id, {
 			onDelete: "set null",
 		}),
 		// AES-256-GCM ciphertext : see $lib/services/secrets
@@ -646,7 +671,7 @@ export const service = pgTable(
 	(table) => [
 		index("service_userId_idx").on(table.userId),
 		index("service_slug_idx").on(table.slug),
-		index("service_projectId_idx").on(table.projectId),
+		index("service_stackId_idx").on(table.stackId),
 	],
 );
 
@@ -756,7 +781,7 @@ export const storageVolume = pgTable(
 );
 
 // One storage volume can be mounted into several services : that's what
-// makes it "shared" across a project, no separate project-level concept
+// makes it "shared" across a stack, no separate stack-level concept
 // needed (see TODO.md).
 export const serviceVolume = pgTable(
 	"service_volume",
@@ -1124,16 +1149,16 @@ export const userRelations = relations(user, ({ many }) => ({
 	accounts: many(account),
 	deployments: many(deployment),
 	passkeys: many(passkey),
-	projects: many(project),
+	stacks: many(stack),
 	services: many(service),
 	sessions: many(session),
 	storageVolumes: many(storageVolume),
 	templates: many(template),
 }));
 
-export const projectRelations = relations(project, ({ one, many }) => ({
+export const stackRelations = relations(stack, ({ one, many }) => ({
 	services: many(service),
-	user: one(user, { fields: [project.userId], references: [user.id] }),
+	user: one(user, { fields: [stack.userId], references: [user.id] }),
 }));
 
 export const templateRelations = relations(template, ({ one, many }) => ({
@@ -1155,9 +1180,9 @@ export const templateLinkRelations = relations(templateLink, ({ one }) => ({
 
 export const serviceRelations = relations(service, ({ one, many }) => ({
 	deployments: many(deployment),
-	project: one(project, {
-		fields: [service.projectId],
-		references: [project.id],
+	stack: one(stack, {
+		fields: [service.stackId],
+		references: [stack.id],
 	}),
 	user: one(user, { fields: [service.userId], references: [user.id] }),
 	volumeMounts: many(serviceVolume),
@@ -1199,7 +1224,7 @@ export const statusPage = pgTable(
 		id: text("id").primaryKey(),
 		isPublic: boolean("is_public").notNull().default(false),
 		name: text("name").notNull(),
-		projectId: text("project_id").references(() => project.id, {
+		stackId: text("stack_id").references(() => stack.id, {
 			onDelete: "cascade",
 		}),
 		scope: text("scope").$type<StatusPageScope>().notNull(),
@@ -1258,7 +1283,7 @@ export const notificationChannel = pgTable(
 	(table) => [index("notificationChannel_userId_idx").on(table.userId)],
 );
 
-export type Project = typeof project.$inferSelect;
+export type Stack = typeof stack.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type TemplateLink = typeof templateLink.$inferSelect;
 export type Service = typeof service.$inferSelect;
@@ -1306,6 +1331,13 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const passkeyRelations = relations(passkey, ({ one }) => ({
 	user: one(user, {
 		fields: [passkey.userId],
+		references: [user.id],
+	}),
+}));
+
+export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
+	user: one(user, {
+		fields: [twoFactor.userId],
 		references: [user.id],
 	}),
 }));

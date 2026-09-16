@@ -25,9 +25,9 @@ dashboard's own `fetch` calls and external API-key clients alike.
   the full pull→create→start pipeline via `deployService()` (see below) and
   returns once it's done, no separate polling endpoint for API clients (the
   dashboard's own progress-polling UI is unrelated, cookie-session only).
-- `projects/`, `templates/`, read/create, same pattern, thinner (no lifecycle
+- `stacks/`, `templates/`, read/create, same pattern, thinner (no lifecycle
   actions).
-- `services/`, `projects/`, and `templates/`'s `GET`s are paginated
+- `services/`, `stacks/`, and `templates/`'s `GET`s are paginated
   (`parseApiListQuery`/`jsonPage`, see Server-side list pagination above):
   `page`, `perPage` (default 100, max 100), `q`. The response body is
   deliberately still a plain JSON array, not an envelope, so an existing client
@@ -95,10 +95,10 @@ cut at 10s too. `start` is deliberately not wired, it can't reach 10s.
 hand-written) from `$lib/openapi/build.ts` + `registry.ts`. Request bodies are
 the _actual_ zod schemas that validate each request at runtime
 (`$lib/server/validation/api.ts`,
-`createServiceApiBody`/`updateServiceApiBody`/`createProjectApiBody`, imported
-by both the route files and `registry.ts`), converted to JSON Schema via zod
-v4's native `z.toJSONSchema()`, one schema instance drives both validation and
-docs, so they can't silently drift apart the way a hand-maintained spec would.
+`createServiceApiBody`/`updateServiceApiBody`/`createStackApiBody`, imported by
+both the route files and `registry.ts`), converted to JSON Schema via zod v4's
+native `z.toJSONSchema()`, one schema instance drives both validation and docs,
+so they can't silently drift apart the way a hand-maintained spec would.
 `$lib/server/validation/api.ts` is deliberately separate from
 `$lib/server/validation/service.ts`, that one's checkbox/`envKey[]`/`envValue[]`
 preprocessing is FormData-specific, these are the JSON-body shapes the REST API
@@ -154,7 +154,7 @@ REST API route change or it silently goes stale, `openapi-fetch` itself has no
 way to detect a stale-spec mismatch at compile time). Auth is
 `x-api-key`/`--api-key`, same header the REST API's own hooks check first for a
 non-cookie caller. Commands: `services {list,get,deploy,start,stop,restart}`,
-`projects list`, `templates list`, no `create`/`update`/`delete` yet,
+`stacks list`, `templates list`, no `create`/`update`/`delete` yet,
 straightforward to add the same way. See `packages/cli/README.md` for the full
 command reference and what's verified.
 

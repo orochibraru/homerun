@@ -4,9 +4,9 @@ import {
 	slugifyComposeKey,
 } from "$lib/compose-import";
 import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
 import { DeploymentService } from "./deploy.service.ts";
@@ -15,13 +15,13 @@ const logger = new Logger("ComposeImport");
 
 export interface ComposeImportInput {
 	drafts: ComposeServiceDraft[];
-	projectId: string | null;
-	projectName: string | null;
+	stackId: string | null;
+	stackName: string | null;
 	userId: string;
 }
 
 export interface ComposeImportResult {
-	projectId: string | null;
+	stackId: string | null;
 	services: ServiceDTO[];
 }
 
@@ -36,12 +36,12 @@ async function uniqueServiceSlug(slug: string): Promise<string> {
 	return candidate;
 }
 
-async function uniqueProjectSlug(name: string): Promise<string> {
+async function uniqueStackSlug(name: string): Promise<string> {
 	const base = slugifyComposeKey(name) || "imported-stack";
 	let candidate = base;
 	let attempt = 2;
 	// biome-ignore lint/performance/noAwaitInLoops: each candidate can only be checked once the previous one came back taken
-	while (await ProjectDTO.slugTaken(candidate)) {
+	while (await StackDTO.slugTaken(candidate)) {
 		candidate = `${base.slice(0, 58)}-${attempt}`;
 		attempt += 1;
 	}
@@ -49,17 +49,17 @@ async function uniqueProjectSlug(name: string): Promise<string> {
 }
 
 class ComposeImportServiceClass {
-	async #resolveProjectId(input: ComposeImportInput): Promise<string | null> {
-		if (input.projectId) {
-			const existing = await ProjectDTO.get(input.projectId, input.userId);
+	async #resolveStackId(input: ComposeImportInput): Promise<string | null> {
+		if (input.stackId) {
+			const existing = await StackDTO.get(input.stackId, input.userId);
 			return existing ? existing.id : null;
 		}
-		if (!input.projectName) {
+		if (!input.stackName) {
 			return null;
 		}
-		const created = await ProjectDTO.create({
-			name: input.projectName,
-			slug: await uniqueProjectSlug(input.projectName),
+		const created = await StackDTO.create({
+			name: input.stackName,
+			slug: await uniqueStackSlug(input.stackName),
 			userId: input.userId,
 		});
 		return created.id;
@@ -94,7 +94,7 @@ class ComposeImportServiceClass {
 
 	async #createService(
 		draft: ComposeServiceDraft,
-		projectId: string | null,
+		stackId: string | null,
 		userId: string,
 		volumes: StorageVolumeDTO[],
 	): Promise<ServiceDTO> {
@@ -113,7 +113,7 @@ class ComposeImportServiceClass {
 			name: draft.name,
 			networkMode: draft.networkMode,
 			portProtocol: draft.portProtocol,
-			projectId,
+			stackId,
 			restartPolicy: draft.restartPolicy,
 			slug: await uniqueServiceSlug(draft.slug),
 			tag: draft.tag,
@@ -145,7 +145,7 @@ class ComposeImportServiceClass {
 	}
 
 	async importPlan(input: ComposeImportInput): Promise<ComposeImportResult> {
-		const projectId = await this.#resolveProjectId(input);
+		const stackId = await this.#resolveStackId(input);
 		const volumes = await StorageVolumeDTO.list(input.userId);
 		const ordered = orderByDependencies(input.drafts);
 
@@ -154,7 +154,7 @@ class ComposeImportServiceClass {
 			// biome-ignore lint/performance/noAwaitInLoops: slug uniqueness is checked against rows the previous iteration just inserted
 			const created = await this.#createService(
 				draft,
-				projectId,
+				stackId,
 				input.userId,
 				volumes,
 			);
@@ -162,9 +162,9 @@ class ComposeImportServiceClass {
 		}
 
 		logger.info(
-			`Compose stack imported: services=${services.length} project=${projectId ?? "none"} user=${input.userId}`,
+			`Compose stack imported: services=${services.length} stack=${stackId ?? "none"} user=${input.userId}`,
 		);
-		return { projectId, services };
+		return { stackId, services };
 	}
 
 	async deployImported(services: ServiceDTO[], userId: string): Promise<void> {

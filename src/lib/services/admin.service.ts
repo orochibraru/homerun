@@ -1,7 +1,10 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { dev } from "$app/env";
 import { config, isSmtpEnabled } from "$lib/config";
 import { db } from "$lib/server/db/lib";
 import { user as userTable } from "$lib/server/db/schema";
+import { DASHBOARD_ROUTER_FILE } from "./docker/dashboard.ts";
 import { hasTraefikRouterFor } from "./docker/labels.ts";
 import { DockerService } from "./docker.service.ts";
 
@@ -28,6 +31,7 @@ class AdminServiceClass {
 		// baseDomain + the Use HTTPS toggle right next to it (General
 		// section of /settings), so both checks point at the same field.
 		"base-domain": ["baseDomain"],
+		"dashboard-router": ["traefikDynamicConfigDir"],
 		docker: ["dockerSocketPath"],
 		origin: ["baseDomain"],
 		smtp: ["smtpHost", "smtpPort", "smtpUser", "smtpPassword", "smtpFrom"],
@@ -168,8 +172,17 @@ class AdminServiceClass {
 				severity: "ok",
 			};
 		}
+		const dir = config.traefik.dynamicConfigDir;
+		if (dir && existsSync(join(dir, DASHBOARD_ROUTER_FILE))) {
+			return {
+				detail: `Traefik routes ${host} to this container through the dynamic config file Homerun publishes.`,
+				id: "dashboard-router",
+				label: "Dashboard routing",
+				severity: "ok",
+			};
+		}
 		return {
-			detail: `Nothing routes ${host} to this container, so the dashboard answers only on its published port and Traefik returns 404 for that hostname. Its compose file needs Traefik labels on this service : the installer generates them from DASHBOARD_DOMAIN, but a compose file written before that was added has none, and labels are only read when a container is created.`,
+			detail: `Nothing routes ${host} to this container, so the dashboard answers only on its published port and Traefik returns 404 (and serves no certificate) for that hostname. Either set the Traefik dynamic config directory under Settings → Networking so Homerun publishes a router for it, or add Traefik labels to this service in its compose file (the installer generates them from DASHBOARD_DOMAIN) and recreate the container.`,
 			envVar: "DASHBOARD_DOMAIN",
 			id: "dashboard-router",
 			label: "Dashboard routing",

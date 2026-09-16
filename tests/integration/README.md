@@ -111,8 +111,8 @@ process. Tracked here instead, by scenario/endpoint.
 
 ### Service deployment (the core target)
 
-- [x] Image-mode deploy, local target, no project
-- [x] Image-mode deploy, local target, inside a project
+- [x] Image-mode deploy, local target, no stack
+- [x] Image-mode deploy, local target, inside a stack
 - [x] Git-build deploy, local target (a real clone, from a fixture repo served
       over `git://` by a container — see below)
 - [x] Env vars land in the deployed container
@@ -156,7 +156,7 @@ process. Tracked here instead, by scenario/endpoint.
       (`name`/`envVars`), `POST /services/{id}/deploy`, `/start`, `/stop`,
       `/restart`, `DELETE /services/{id}` (asserted directly : 204, then a 404
       on the next `GET`, not just relied on via cleanup)
-- [x] `POST /projects`, `GET /projects`, slug-conflict 409
+- [x] `POST /stacks`, `GET /stacks`, slug-conflict 409
 - [x] `GET /templates`
 - [x] `GET /system-stats`
 - [x] `GET /openapi.json` (public, real valid OpenAPI 3.1)

@@ -20,7 +20,7 @@ export type JobStatus =
 
 export type JobType = "backup" | "cron_job" | "deploy" | "docker_cleanup";
 
-export type StatusPageScope = "global" | "project" | "custom";
+export type StatusPageScope = "global" | "stack" | "custom";
 
 export type NotificationChannelKind = "webhook" | "discord" | "email";
 

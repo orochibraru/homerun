@@ -24,6 +24,7 @@ export interface NewTemplateInput {
 	cpuLimit?: string | null;
 	description?: string | null;
 	envVars: Record<string, string>;
+	healthcheckCommand?: string | null;
 	icon?: string | null;
 	image: string;
 	memoryLimitMb?: number | null;
@@ -141,6 +142,32 @@ export class TemplateDTO extends BaseDTO<Template> {
 			.sort();
 	}
 
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<TemplateDTO[]> {
+		const rows = await db
+			.select()
+			.from(template)
+			.where(
+				and(
+					or(isNull(template.ownerId), eq(template.ownerId, userId)),
+					or(
+						searchCondition(q, [
+							template.name,
+							template.description,
+							template.image,
+						]),
+						tagSearchCondition(q),
+					),
+				),
+			)
+			.orderBy(asc(template.name))
+			.limit(limit);
+		return rows.map((row) => new TemplateDTO(row));
+	}
+
 	static async create(input: NewTemplateInput): Promise<TemplateDTO> {
 		const now = new Date();
 		const row: Template = {
@@ -150,6 +177,7 @@ export class TemplateDTO extends BaseDTO<Template> {
 			createdAt: now,
 			description: input.description ?? null,
 			envVars: input.envVars,
+			healthcheckCommand: input.healthcheckCommand ?? null,
 			icon: input.icon ?? null,
 			id: crypto.randomUUID(),
 			image: input.image,
@@ -169,6 +197,9 @@ export class TemplateDTO extends BaseDTO<Template> {
 
 	get id(): string {
 		return this.row.id;
+	}
+	get healthcheckCommand(): string | null {
+		return this.row.healthcheckCommand;
 	}
 	get ownerId(): string | null {
 		return this.row.ownerId;

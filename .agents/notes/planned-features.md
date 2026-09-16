@@ -42,7 +42,7 @@ re-litigating design decisions.
 - **User roles**: admin/developer roles, admin-managed direct-create and email
   invites exist (see User roles & admin-managed accounts above), "developer" is
   a label plus route-gating only, no finer-grained permissions (e.g. no
-  per-project access control, no read-only role) built yet.
+  per-stack access control, no read-only role) built yet.
 - **Notifications / webhooks**: the in-app lifecycle event feed exists (see
   In-app notifications above), and outbound notification channels now exist too
   (`notification_channel`, `NotificationChannelService`, see Outbound

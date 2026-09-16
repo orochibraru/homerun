@@ -1,0 +1,1 @@
+ALTER TABLE "instance_settings" ADD COLUMN "preferred_sign_in_methods" jsonb;

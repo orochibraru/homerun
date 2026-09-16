@@ -111,6 +111,29 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		return RemoteHostDTO.list(userId);
 	}
 
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<RemoteHostDTO[]> {
+		const rows = await db
+			.select()
+			.from(remoteHost)
+			.where(
+				and(
+					eq(remoteHost.userId, userId),
+					searchCondition(q, [
+						remoteHost.name,
+						remoteHost.dockerHost,
+						remoteHost.agentUrl,
+					]),
+				),
+			)
+			.orderBy(desc(remoteHost.createdAt))
+			.limit(limit);
+		return rows.map((row) => new RemoteHostDTO(row));
+	}
+
 	static async create(input: NewRemoteHostInput): Promise<RemoteHostDTO> {
 		const now = new Date();
 		const kind = input.kind ?? "docker";

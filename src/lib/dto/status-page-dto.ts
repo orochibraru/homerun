@@ -6,6 +6,7 @@ import {
 	statusPage,
 	statusPageService,
 } from "$lib/server/db/schema";
+import { searchCondition } from "$lib/server/list-query";
 import type { StatusPageScope } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
@@ -13,7 +14,7 @@ export interface NewStatusPageInput {
 	description?: string | null;
 	isPublic?: boolean;
 	name: string;
-	projectId?: string | null;
+	stackId?: string | null;
 	scope: StatusPageScope;
 	slug: string;
 	userId: string;
@@ -22,7 +23,7 @@ export interface NewStatusPageInput {
 export type StatusPageUpdateInput = Partial<
 	Pick<
 		StatusPage,
-		"description" | "isPublic" | "name" | "projectId" | "scope" | "slug"
+		"description" | "isPublic" | "name" | "stackId" | "scope" | "slug"
 	>
 >;
 
@@ -63,6 +64,29 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 		return rows.map((row) => new StatusPageDTO(row));
 	}
 
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<StatusPageDTO[]> {
+		const rows = await db
+			.select()
+			.from(statusPage)
+			.where(
+				and(
+					eq(statusPage.userId, userId),
+					searchCondition(q, [
+						statusPage.name,
+						statusPage.slug,
+						statusPage.description,
+					]),
+				),
+			)
+			.orderBy(asc(statusPage.name))
+			.limit(limit);
+		return rows.map((row) => new StatusPageDTO(row));
+	}
+
 	static async create(input: NewStatusPageInput): Promise<StatusPageDTO> {
 		const now = new Date();
 		const row: StatusPage = {
@@ -71,7 +95,7 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 			id: crypto.randomUUID(),
 			isPublic: input.isPublic ?? false,
 			name: input.name,
-			projectId: input.projectId ?? null,
+			stackId: input.stackId ?? null,
 			scope: input.scope,
 			slug: input.slug,
 			updatedAt: now,
@@ -101,8 +125,8 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 				.where(eq(service.userId, this.row.userId));
 			return rows.map((r) => r.id);
 		}
-		if (this.row.scope === "project") {
-			if (!this.row.projectId) {
+		if (this.row.scope === "stack") {
+			if (!this.row.stackId) {
 				return [];
 			}
 			const rows = await db
@@ -111,7 +135,7 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 				.where(
 					and(
 						eq(service.userId, this.row.userId),
-						eq(service.projectId, this.row.projectId),
+						eq(service.stackId, this.row.stackId),
 					),
 				);
 			return rows.map((r) => r.id);
@@ -142,7 +166,7 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 	static async listCovering(
 		userId: string,
 		serviceId: string,
-		projectId: string | null,
+		stackId: string | null,
 	): Promise<StatusPageDTO[]> {
 		const pages = await StatusPageDTO.list(userId);
 		if (pages.length === 0) {
@@ -165,8 +189,8 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 			if (page.scope === "global") {
 				return true;
 			}
-			if (page.scope === "project") {
-				return projectId !== null && page.projectId === projectId;
+			if (page.scope === "stack") {
+				return stackId !== null && page.stackId === stackId;
 			}
 			return custom.has(page.id);
 		});
@@ -184,8 +208,8 @@ export class StatusPageDTO extends BaseDTO<StatusPage> {
 	get scope(): StatusPageScope {
 		return this.row.scope;
 	}
-	get projectId(): string | null {
-		return this.row.projectId;
+	get stackId(): string | null {
+		return this.row.stackId;
 	}
 	get isPublic(): boolean {
 		return this.row.isPublic;

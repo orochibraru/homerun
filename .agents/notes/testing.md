@@ -266,7 +266,7 @@ reason, and the screenshot config's `testDir` points at the subfolder.
 - **It bootstraps its own world.** A blank instance means signing up, clicking
   through onboarding (with Base domain set to `example.com`, so the hostnames in
   the shots read like a real deployment rather than `127.0.0.1`), then seeding a
-  project and three services through `POST /api/v1/projects` and
+  stack and three services through `POST /api/v1/stacks` and
   `POST /api/v1/services` : `page.request` shares the browser context's cookie
   jar, so the session authenticates the API calls with no key to mint.
 - **Two of those services are really deployed**, through
@@ -278,11 +278,11 @@ reason, and the screenshot config's `testDir` points at the subfolder.
   don't set that variable for this pipeline.
 - **It cleans up after itself in `afterAll`, not in a final test.** Playwright's
   serial mode skips the rest of the file after a failure, so a teardown written
-  as the last `test()` leaks the containers _and_ the project's Docker network
-  the moment any single shot fails — which is the exact leak behind "Reclaim
-  project networks whose project row is gone" in `TODO.md`. `afterAll` runs
-  either way. (The project is deleted by POSTing its `?/delete` form action with
-  an `x-sveltekit-action` header, since projects have no REST DELETE.)
+  as the last `test()` leaks the containers _and_ the stack's Docker network the
+  moment any single shot fails — which is the exact leak behind "Reclaim stack
+  networks whose stack row is gone" in `TODO.md`. `afterAll` runs either way.
+  (The stack is deleted by POSTing its `?/delete` form action with an
+  `x-sveltekit-action` header, since stacks have no REST DELETE.)
 - **Dark mode is `page.emulateMedia({ colorScheme })`**, which works only
   because the account's theme preference defaults to `system` and the browser
   context is fresh, so `mode-watcher` has no `localStorage` override to prefer.
@@ -333,9 +333,9 @@ the next regeneration forever.
 `onboarding.spec.ts`**, hence the `ui-` prefix on the ones that do: Playwright
 runs files in discovery order with one shared app, so a spec landing before
 onboarding finishes is bounced to `/onboarding` by the layout's own gate.
-Anything Docker-touching is still out : importing a compose file into a
-_project_ creates a Docker network, so `ui-form-state.spec.ts` imports ungrouped
-on purpose.
+Anything Docker-touching is still out : importing a compose file into a _stack_
+creates a Docker network, so `ui-form-state.spec.ts` imports ungrouped on
+purpose.
 
 **An error toast can deadlock a click, and it took a CI failure to find out.**
 The toaster is `bottom-right` (`+layout.svelte`) and so is the wizard's step

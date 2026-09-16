@@ -17,7 +17,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import {
 		getCleanupPreview,
-		getOrphanProjectNetworks,
+		getOrphanStackNetworks,
 	} from "$lib/remote/docker-infra.remote";
 	import type { CleanupItem } from "$lib/services/docker.service";
 	import { title } from "$lib/store/title";
@@ -26,7 +26,7 @@
 	const { form } = $props();
 
 	const cleanup = getCleanupPreview();
-	const orphans = getOrphanProjectNetworks();
+	const orphans = getOrphanStackNetworks();
 
 	onMount(() => title.set("Docker Cleanup"));
 
@@ -37,7 +37,7 @@
 		| "pruneNetworks"
 		| "pruneSystem"
 		| "pruneVolumes"
-		| "reclaimProjectNetworks";
+		| "reclaimStackNetworks";
 
 	const confirmCopy: Record<
 		CleanupAction,
@@ -67,11 +67,11 @@
 				"Removes every Docker network on this host not currently used by a container.",
 			title: "Prune unused networks?",
 		},
-		reclaimProjectNetworks: {
+		reclaimStackNetworks: {
 			confirmLabel: "Reclaim",
 			description:
-				"Removes the per-project networks whose project no longer exists. One with containers still attached is left alone. Nothing else on this host is touched.",
-			title: "Reclaim orphaned project networks?",
+				"Removes the per-stack networks whose stack no longer exists. One with containers still attached is left alone. Nothing else on this host is touched.",
+			title: "Reclaim orphaned stack networks?",
 		},
 		pruneSystem: {
 			confirmLabel: "Clean up",
@@ -374,17 +374,17 @@
           </div>
           <div class="flex items-center gap-2">
             <form
-              action="?/reclaimProjectNetworks"
+              action="?/reclaimStackNetworks"
               method="POST"
               use:enhance={enhanceToast({
                 error: "Docker cleanup action failed.",
-                loading: "Reclaiming orphaned project networks",
+                loading: "Reclaiming orphaned stack networks",
                 onComplete: () => orphans.refresh(),
                 onSettled: () => {
                   pendingAction = null;
                 },
                 onStart: () => {
-                  pendingAction = "reclaimProjectNetworks";
+                  pendingAction = "reclaimStackNetworks";
                 },
                 success: (data) =>
                   describeResult(
@@ -394,12 +394,12 @@
             >
               <Button
                 disabled={pendingAction !== null}
-                onclick={(e) => requestConfirm("reclaimProjectNetworks", e)}
+                onclick={(e) => requestConfirm("reclaimStackNetworks", e)}
                 size="sm"
                 type="button"
                 variant="outline"
               >
-                {#if pendingAction === "reclaimProjectNetworks"}
+                {#if pendingAction === "reclaimStackNetworks"}
                   <Loader2 class="size-3.5 animate-spin" />
                 {/if}
                 Reclaim orphaned
@@ -438,8 +438,8 @@
           {#if orphans.current && orphans.current.length > 0}
             <div class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
               <p class="text-xs font-medium text-amber-600 dark:text-amber-400">
-                {orphans.current.length} project network(s) outlived their
-                project
+                {orphans.current.length} stack network(s) outlived their
+                stack
               </p>
               <ul class="mt-2 space-y-1">
                 {#each orphans.current as orphan (orphan.id)}

@@ -1,23 +1,23 @@
 # Services
 
 A **service** is one deployed container. Create one from `Services → New`,
-either standalone or pre-filled from a [project](projects-and-templates.md) or
-[template](projects-and-templates.md#templates) via
-`?projectId=`/`?templateId=`. The wizard's primary button, **Create and
-Deploy**, persists the config and immediately deploys it, landing you on the new
-service's Overview tab; **Create service**, the secondary button, just persists
-the config, the same as before, deploy later from the Overview tab yourself.
+either standalone or pre-filled from a [stack](stacks-and-templates.md) or
+[template](stacks-and-templates.md#templates) via `?stackId=`/`?templateId=`.
+The wizard's primary button, **Create and Deploy**, persists the config and
+immediately deploys it, landing you on the new service's Overview tab; **Create
+service**, the secondary button, just persists the config, the same as before,
+deploy later from the Overview tab yourself.
 
 ## The services list
 
-`Services` has a search box (matches name, image, and domain) plus Status/
-Project filters, and a list/card view toggle that remembers your choice per
-browser; both the search and filters are applied on the server, so they reach
-every service you own, not just whichever page happens to be on screen. Once you
-have more than a page's worth, a pager at the bottom shows "26–50 of 60" and
-lets you step through the rest. Check one or more services (a "select all"
-scopes to whatever's on the **current page**, paginating or changing the
-search/filters clears your selection) to bring up a bottom bar with bulk
+`Services` has a search box (matches name, image, and domain) plus Status/ Stack
+filters, and a list/card view toggle that remembers your choice per browser;
+both the search and filters are applied on the server, so they reach every
+service you own, not just whichever page happens to be on screen. Once you have
+more than a page's worth, a pager at the bottom shows "26–50 of 60" and lets you
+step through the rest. Check one or more services (a "select all" scopes to
+whatever's on the **current page**, paginating or changing the search/filters
+clears your selection) to bring up a bottom bar with bulk
 Start/Stop/Restart/Delete: bulk actions run against every selected service and
 report back which ones succeeded, so one service with no container yet doesn't
 block the rest. Bulk delete, and the single-row delete on this page and the
@@ -115,8 +115,51 @@ Every named volume and absolute bind mount becomes a
 source matches) and is mounted into the service at its declared path. A service
 that published a host port gets a public `<slug>.<domain>` route; one that only
 `expose`d a port stays internal. You can drop individual services from the
-import, put the stack in a new or existing project, and optionally deploy
-everything straight away, in `depends_on` order.
+import, put them in a new or existing stack, and optionally deploy everything
+straight away, in `depends_on` order.
+
+## Migrating from Dokploy or Coolify
+
+**Settings → Migrate** (admin-only) reads another PaaS instance and recreates
+what it finds here. Pick Dokploy or Coolify, give it the instance URL and an API
+token, and **Read instance** lists every application, compose stack and
+database, grouped by the project it lives in. It only ever makes read requests:
+nothing on the other side is stopped, changed or deleted, and the token is sent
+with each request on that page, never stored.
+
+Tick what you want and **Import**. Each source project becomes a Homerun stack,
+and every entry goes through the same importer as
+[Importing a compose file](#importing-a-compose-file), so volumes, slugs and
+warnings behave the same way. Nothing is deployed: each imported service waits
+until you deploy it.
+
+What carries over:
+
+- **Docker image apps**: image and tag, env vars, the port of their first domain
+  (public) or internal-only when they had no domain, CPU/memory limits, and
+  named-volume and bind mounts.
+- **Git apps built from a Dockerfile**: become
+  [git-based](#deploy-source-image-or-git-repo) services with the repository,
+  branch, build context and Dockerfile path. A private repository needs a
+  [connected git provider](#connecting-a-git-provider).
+- **Compose stacks**: the stored compose file, with the stack's own variables
+  substituted in. On Dokploy, each domain's port is applied to the service it
+  targets.
+- **Databases**: the image, the port, and the credentials turned into the
+  image's own env vars (`POSTGRES_PASSWORD`, `MYSQL_ROOT_PASSWORD`, ...), always
+  internal-only.
+
+What doesn't, and shows up as a blocked entry or a warning instead: apps built
+with Nixpacks, Railpack, Heroku buildpacks or a static build pack (Homerun only
+builds Dockerfiles), compose stacks read from a repository at deploy time,
+custom start commands (including the Redis password flag), private registry
+credentials, and Dokploy file mounts. Coolify's API doesn't list persistent
+storage, so re-attach volumes by hand after a Coolify import.
+
+For Dokploy, create the token under **Settings → Profile → API/CLI**. For
+Coolify, create it under **Keys & Tokens** with the `read` and `read:sensitive`
+permissions: without `read:sensitive`, env values and database passwords come
+back hidden.
 
 ## Deploying
 
@@ -174,7 +217,7 @@ can avoid it; registry passwords and similar have their own encrypted fields
 instead).
 
 **Link a service** in the new-service wizard's Environment step fills those rows
-in for you from a service you already run, in any project or none: pick it, and
+in for you from a service you already run, in any stack or none: pick it, and
 Homerun recognises what it is from its image (PostgreSQL, MySQL/MariaDB,
 MongoDB, Redis/Valkey, RabbitMQ, or a plain HTTP service) and reads the
 credentials off its own env vars. You then choose the shape you want:
@@ -188,7 +231,7 @@ credentials off its own env vars. You then choose the shape you want:
 The suggested variable name (or prefix) is a default, not a rule, rename it to
 whatever your app expects before adding it. The host in every generated value is
 the linked service's slug, which is how services already reach each other on the
-shared network, so this works across projects and needs no extra networking.
+shared network, so this works across stacks and needs no extra networking.
 
 ## Volumes
 
@@ -206,7 +249,7 @@ button for exactly that reason, use it after changing a custom domain,
 DNS-resolvability, or the login wall.
 
 - **Container port, protocol, network mode**, `bridge` (default, joins the
-  shared `homerun` plus the service's project network if any) or `host` (shares
+  shared `homerun` plus the service's stack network if any) or `host` (shares
   the host's network namespace directly, for apps needing real host-network
   access like mDNS/SSDP discovery). Homerun never publishes/maps a host port
   either way; a bridge-mode service is reachable only via its Traefik subdomain,
@@ -383,19 +426,26 @@ events out to a Discord webhook, a generic webhook, or email.
 
 ## Settings
 
-Name, slug, restart policy, which project the service belongs to, the
+Name, slug, restart policy, which stack the service belongs to, the
 [scheduled redeploy](#scheduled-redeploy) above, and a danger-zone delete
 (typed-confirm, see [The services list](#the-services-list)).
+
+**Healthcheck command** overrides the image's own Docker healthcheck with a
+shell command run inside the container every 30s (exit 0 = healthy). When a
+service has one, its uptime probe reports the healthcheck instead of knocking on
+the container port, which is what a portless container like Newt needs: the Newt
+template ships one that only passes while its Pangolin tunnel is connected.
+Takes effect on the next deploy.
 
 **Save as template** is here too: it snapshots this service's current image,
 tag, port, env vars and resource limits into a reusable template of your own,
 which then behaves exactly like a built-in one, including being linkable as a
 companion to another template. See
-[Projects & templates](projects-and-templates.md#templates).
+[Stacks & templates](stacks-and-templates.md#templates).
 
 ## Next steps
 
-- [Projects & templates](projects-and-templates.md)
+- [Stacks & templates](stacks-and-templates.md)
 - [Storage & backups](storage-and-backups.md)
 - [Build servers & the Homerun Agent](remote-hosts-and-agent.md)
 - [Operations & maintenance](operations.md)

@@ -4,7 +4,6 @@
 		Globe,
 		LockKeyhole,
 		Network,
-		RefreshCw,
 		ShieldCheck,
 	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
@@ -28,14 +27,12 @@
 	const { data, form } = $props();
 	const svc = $derived(data.service);
 	const publicHost = $derived(
-		data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug,
+		data.stackSlug ? `${data.stackSlug}-${svc.slug}` : svc.slug,
 	);
 
 	onMount(() => title.set(`${svc.name} · Networking`));
 
 	let submitting = $state(false);
-	let redeploying = $state(false);
-	const deployed = $derived(!!(svc.containerId || svc.swarmServiceId));
 
 	const portsValues = $derived(
 		(form?.portsValues as Record<string, string> | undefined) ?? {
@@ -92,6 +89,10 @@
 	}
 </script>
 
+{#snippet applyNote()}
+  <p class="text-text-subtle text-xs">Redeploy for changes to take effect.</p>
+{/snippet}
+
 <div class="space-y-6">
   <!-- ═══ DNS / public routing ═══ -->
   <section class="panel rounded-md p-5">
@@ -116,39 +117,6 @@
       </div>
     </div>
 
-    {#if deployed}
-      <form
-        action="?/redeploy"
-        class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2"
-        method="POST"
-        use:enhance={enhanceToast({
-          error: "Couldn't queue the redeploy.",
-          loading: "Queueing a redeploy",
-          onSettled: () => {
-            redeploying = false;
-          },
-          onStart: () => {
-            redeploying = true;
-          },
-          success: "Redeploy queued : routing changes take effect once it finishes.",
-        })}
-      >
-        <p class="text-xs text-amber-600 dark:text-amber-400">
-          Everything on this tab is written onto the container as Traefik
-          labels when it's created, so saving here changes nothing for the
-          <em>running</em> container. Redeploy to apply it.
-        </p>
-        <Button disabled={redeploying} size="sm" type="submit" variant="outline">
-          {#if redeploying}
-            <Spinner />
-          {:else}
-            <RefreshCw class="size-4" />
-          {/if}
-          Redeploy
-        </Button>
-      </form>
-    {/if}
-
     {#if svc.dnsResolvable}
       <form
         action="?/updateNetworking"
@@ -163,7 +131,7 @@
           onStart: () => {
             submitting = true;
           },
-          success: "Saved.",
+          success: "Saved. Redeploy for it to take effect.",
         })}
       >
         {#if form?.error}
@@ -186,14 +154,17 @@
           </p>
         </div>
 
-        <Button disabled={submitting} type="submit" variant="outline">
-          {#if submitting}
-            <Spinner />
-          {:else}
-            <Check class="size-4" />
-          {/if}
-          Save
-        </Button>
+        <div class="flex flex-wrap items-center gap-3">
+          <Button disabled={submitting} type="submit" variant="outline">
+            {#if submitting}
+              <Spinner />
+            {:else}
+              <Check class="size-4" />
+            {/if}
+            Save
+          </Button>
+          {@render applyNote()}
+        </div>
       </form>
     {/if}
   </section>
@@ -237,7 +208,7 @@
           onStart: () => {
             submittingAuth = true;
           },
-          success: "Saved. Redeploy this service for it to take effect.",
+          success: "Saved. Redeploy for it to take effect.",
         })}
       >
         {#if form?.authError}
@@ -372,14 +343,17 @@
           </div>
         {/if}
 
-        <Button disabled={submittingAuth} type="submit" variant="outline">
-          {#if submittingAuth}
-            <Spinner />
-          {:else}
-            <Check class="size-4" />
-          {/if}
-          Save
-        </Button>
+        <div class="flex flex-wrap items-center gap-3">
+          <Button disabled={submittingAuth} type="submit" variant="outline">
+            {#if submittingAuth}
+              <Spinner />
+            {:else}
+              <Check class="size-4" />
+            {/if}
+            Save
+          </Button>
+          {@render applyNote()}
+        </div>
       </form>
     {/if}
   </section>
@@ -426,7 +400,7 @@
           onStart: () => {
             submitting = true;
           },
-          success: "Saved.",
+          success: "Saved. Redeploy for it to take effect.",
         })}
       >
         <p class="text-text-muted text-xs">
@@ -471,18 +445,21 @@
             name="clearSsl"
           />
         {/if}
-        <button
-          class="border-border text-text hover:bg-surface-2 flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={submitting}
-          type="submit"
-        >
-          {#if submitting}
-            <Spinner />
-          {:else}
-            <Check class="size-4" />
-          {/if}
-          Save certificate
-        </button>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            class="border-border text-text hover:bg-surface-2 flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={submitting}
+            type="submit"
+          >
+            {#if submitting}
+              <Spinner />
+            {:else}
+              <Check class="size-4" />
+            {/if}
+            Save certificate
+          </button>
+          {@render applyNote()}
+        </div>
       </form>
     {/if}
   </section>
@@ -521,12 +498,12 @@
         error: "Check the form for errors.",
         loading: "Saving network settings",
         onSettled: () => {
-          submitting = false;
+          submittingPorts = false;
         },
         onStart: () => {
-          submitting = true;
+          submittingPorts = true;
         },
-        success: "Saved.",
+        success: "Saved. Redeploy for it to take effect.",
       })}
     >
       <div>
@@ -566,10 +543,10 @@
           {#if networkMode === "host"}
             Shares this machine's network namespace directly : for apps that
             need real host-network access (mDNS/SSDP discovery, e.g. Home
-            Assistant). No shared/project network, no Traefik routing, no public
+            Assistant). No shared/stack network, no Traefik routing, no public
             DNS route regardless of the setting below.
           {:else}
-            Joins the shared Traefik network (plus its project's network, if
+            Joins the shared Traefik network (plus its stack's network, if
             any) : the normal mode for anything that doesn't specifically need
             host networking.
           {/if}
@@ -625,14 +602,17 @@
         />
       {/if}
 
-      <Button disabled={submittingPorts} type="submit" variant="outline">
-        {#if submittingPorts}
-          <Spinner />
-        {:else}
-          <Check class="size-4" />
-        {/if}
-        Save
-      </Button>
+      <div class="flex flex-wrap items-center gap-3">
+        <Button disabled={submittingPorts} type="submit" variant="outline">
+          {#if submittingPorts}
+            <Spinner />
+          {:else}
+            <Check class="size-4" />
+          {/if}
+          Save
+        </Button>
+        {@render applyNote()}
+      </div>
     </form>
   </section>
 </div>

@@ -1,6 +1,6 @@
 import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
@@ -102,29 +102,29 @@ export function resolveEnvVarsWithLinks(
 	);
 }
 
-async function uniqueProjectSlug(baseSlug: string): Promise<string> {
+async function uniqueStackSlug(baseSlug: string): Promise<string> {
 	let candidate = baseSlug;
 	let suffix = 1;
 	// biome-ignore lint/performance/noAwaitInLoops: retry loop, each check depends on the previous candidate being rejected
-	while (await ProjectDTO.slugTaken(candidate)) {
+	while (await StackDTO.slugTaken(candidate)) {
 		suffix += 1;
 		candidate = slugify(`${baseSlug}-${suffix}`);
 	}
 	return candidate;
 }
 
-export async function createProjectForLinkedStack(
+export async function createStackForLinkedServices(
 	name: string,
 	userId: string,
 ): Promise<string> {
-	const slug = await uniqueProjectSlug(slugify(name));
-	const project = await ProjectDTO.create({ name, slug, userId });
-	return project.id;
+	const slug = await uniqueStackSlug(slugify(name));
+	const stack = await StackDTO.create({ name, slug, userId });
+	return stack.id;
 }
 
 export async function createLinkedServices(
 	links: ResolvedTemplateLink[],
-	params: { projectId: string; userId: string },
+	params: { stackId: string; userId: string },
 ): Promise<ServiceDTO[]> {
 	const created: ServiceDTO[] = [];
 	for (const link of links) {
@@ -136,7 +136,7 @@ export async function createLinkedServices(
 			envVars: link.envVars,
 			memoryLimitMb: link.memoryLimitMb,
 			name: link.templateName,
-			projectId: params.projectId,
+			stackId: params.stackId,
 			restartPolicy: link.restartPolicy,
 			slug: link.slug,
 			tag: link.tag,
@@ -162,20 +162,20 @@ async function uniqueServiceSlug(baseSlug: string): Promise<string> {
 export async function createServiceFromTemplate(
 	template: TemplateDTO,
 	userId: string,
-	projectId: string | null,
+	stackId: string | null,
 ): Promise<{
 	linkedServices: ServiceDTO[];
-	projectId: string | null;
+	stackId: string | null;
 	svc: ServiceDTO;
 }> {
 	const row = template.toJSON();
 	const slug = await uniqueServiceSlug(slugify(row.name));
 	const links = await buildTemplateLinkContext(row.id, slug);
 
-	const finalProjectId =
-		links.length > 0 && !projectId
-			? await createProjectForLinkedStack(row.name, userId)
-			: projectId;
+	const finalStackId =
+		links.length > 0 && !stackId
+			? await createStackForLinkedServices(row.name, userId)
+			: stackId;
 
 	const envVars =
 		links.length > 0
@@ -192,7 +192,7 @@ export async function createServiceFromTemplate(
 		image: row.image,
 		memoryLimitMb: row.memoryLimitMb,
 		name: row.name,
-		projectId: finalProjectId,
+		stackId: finalStackId,
 		restartPolicy: row.restartPolicy,
 		slug,
 		tag: row.tag,
@@ -200,24 +200,24 @@ export async function createServiceFromTemplate(
 	});
 
 	const linkedServices =
-		links.length > 0 && finalProjectId
+		links.length > 0 && finalStackId
 			? await createLinkedServices(links, {
-					projectId: finalProjectId,
+					stackId: finalStackId,
 					userId,
 				})
 			: [];
 
-	return { linkedServices, projectId: finalProjectId, svc };
+	return { linkedServices, stackId: finalStackId, svc };
 }
 
 export type QuickDeployResult =
-	| { ok: true; projectId: string | null; serviceId: string }
+	| { ok: true; stackId: string | null; serviceId: string }
 	| { error: string; ok: false; status: number };
 
 export async function quickDeployFromTemplate(
 	templateId: string,
 	userId: string,
-	projectId: string | null,
+	stackId: string | null,
 ): Promise<QuickDeployResult> {
 	const template = await TemplateDTO.usable(templateId, userId);
 	if (!template) {
@@ -226,9 +226,9 @@ export async function quickDeployFromTemplate(
 
 	const {
 		linkedServices,
-		projectId: finalProjectId,
+		stackId: finalStackId,
 		svc,
-	} = await createServiceFromTemplate(template, userId, projectId);
+	} = await createServiceFromTemplate(template, userId, stackId);
 
 	logger.info(
 		`Quick-deployed from template: template=${templateId} service=${svc.id} user=${userId}`,
@@ -253,7 +253,7 @@ export async function quickDeployFromTemplate(
 
 	return {
 		ok: true,
-		projectId: linkedServices.length > 0 ? finalProjectId : null,
+		stackId: linkedServices.length > 0 ? finalStackId : null,
 		serviceId: svc.id,
 	};
 }

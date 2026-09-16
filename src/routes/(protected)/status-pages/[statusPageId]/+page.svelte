@@ -29,7 +29,7 @@
 	let slug = $state(untrack(() => data.statusPage.slug));
 	let description = $state(untrack(() => data.statusPage.description ?? ""));
 	let scope = $state<StatusPageScope>(untrack(() => data.statusPage.scope));
-	let projectId = $state(untrack(() => data.statusPage.projectId ?? ""));
+	let stackId = $state(untrack(() => data.statusPage.stackId ?? ""));
 	let isPublic = $state(untrack(() => data.statusPage.isPublic));
 	let selectedServiceIds = $state<string[]>(untrack(() => [...data.memberIds]));
 	let saving = $state(false);
@@ -149,11 +149,11 @@
       bind:slug
       bind:description
       bind:scope
-      bind:projectId
+      bind:stackId
       bind:isPublic
       bind:selectedServiceIds
       errors={form?.errors}
-      projects={data.projects}
+      stacks={data.stacks}
       services={data.services}
     />
 

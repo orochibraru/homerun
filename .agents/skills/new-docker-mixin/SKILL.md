@@ -45,7 +45,7 @@ don't reintroduce a `class Foo { static bar() {...} }` barrel.
    load-bearing** — read the ordering comment already in that file before
    inserting yours. The existing precedent:
    - **networks before containers** (`createAndStartContainer` calls
-     `this.connectToProjectNetwork`)
+     `this.connectToStackNetwork`)
    - **containers before reconcile** (`syncServiceStatus` calls
      `this.inspectStatus`)
 

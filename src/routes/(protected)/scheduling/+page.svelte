@@ -45,7 +45,7 @@
         />
       {:else}
         <div class="space-y-2.5">
-          {#each data.cronServices as { projectName, service } (service.id)}
+          {#each data.cronServices as { stackName, service } (service.id)}
             <a
               class="panel hover:border-accent/40 flex items-center gap-4 rounded-md p-4 transition-colors"
               href="{resolve('/services')}/{service.id}/settings"
@@ -53,8 +53,8 @@
               <div class="min-w-0 flex-1">
                 <p class="text-text truncate text-sm font-semibold">
                   {service.name}
-                  {#if projectName}
-                    <span class="text-text-muted font-normal">· {projectName}</span>
+                  {#if stackName}
+                    <span class="text-text-muted font-normal">· {stackName}</span>
                   {/if}
                 </p>
                 <p class="text-text-muted mt-0.5 truncate text-xs">

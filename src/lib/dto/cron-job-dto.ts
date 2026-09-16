@@ -124,6 +124,30 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 		return rows.map((row) => new CronJobDTO(row));
 	}
 
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<CronJobDTO[]> {
+		const rows = await db
+			.select()
+			.from(cronJob)
+			.where(
+				and(
+					eq(cronJob.userId, userId),
+					searchCondition(q, [
+						cronJob.name,
+						cronJob.description,
+						cronJob.image,
+						cronJob.command,
+					]),
+				),
+			)
+			.orderBy(desc(cronJob.createdAt))
+			.limit(limit);
+		return rows.map((row) => new CronJobDTO(row));
+	}
+
 	static async create(input: NewCronJobInput): Promise<CronJobDTO> {
 		const now = new Date();
 		const row: CronJob = {

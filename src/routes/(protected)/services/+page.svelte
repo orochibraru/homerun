@@ -3,7 +3,6 @@
 		FileUp,
 		LayoutGridIcon,
 		Link2,
-		MoveRight,
 		Play,
 		Plus,
 		RotateCw,
@@ -76,21 +75,21 @@
 			})),
 		},
 		{
-			key: "project",
-			label: "Project",
-			options: data.facets.projects.map((name) => ({
+			key: "stack",
+			label: "Stack",
+			options: data.facets.stacks.map((name) => ({
 				label: name,
 				value: name,
 			})),
 		},
 	]);
 
-	// Group by project name, "Ungrouped" last : order of first appearance
+	// Group by stack name, "Ungrouped" last : order of first appearance
 	// otherwise, matching the underlying createdAt-desc query order.
 	const groups = $derived.by(() => {
 		const byLabel = new Map<string, Svc[]>();
 		for (const svc of data.services) {
-			const label = svc.projectName ?? UNGROUPED_LABEL;
+			const label = svc.stackName ?? UNGROUPED_LABEL;
 			const bucket = byLabel.get(label);
 			if (bucket) {
 				bucket.push(svc);
@@ -231,28 +230,28 @@
 	let menuService = $state<Svc | null>(null);
 	let linkTargetId = $state("");
 	let linkFormat = $state<"url" | "jdbc" | "vars">("url");
-	let groupProjectId = $state("");
-	let newProjectName = $state("");
+	let groupStackId = $state("");
+	let newStackName = $state("");
 	let linkForm = $state<HTMLFormElement | null>(null);
 	let groupForm = $state<HTMLFormElement | null>(null);
 	let ungroupForm = $state<HTMLFormElement | null>(null);
 
 	let alsoGroup = $state(true);
 
-	// Names the project they'd land in, so the checkbox says what it does
+	// Names the stack they'd land in, so the checkbox says what it does
 	// rather than making you guess which one wins.
 	const groupHint = $derived.by(() => {
 		const target = data.services.find((svc) => svc.id === linkTargetId);
-		const existingId = menuService?.projectId ?? target?.projectId ?? null;
+		const existingId = menuService?.stackId ?? target?.stackId ?? null;
 		if (existingId) {
 			const name =
-				data.projects.find((proj) => proj.id === existingId)?.name ??
-				"that project";
+				data.stacks.find((stack) => stack.id === existingId)?.name ??
+				"that stack";
 			return `Moves both into ${name}, where they reach each other by slug.`;
 		}
 		return menuService
-			? `Creates a project named "${menuService.name}" and moves both into it, so they reach each other by slug.`
-			: "They only reach each other by slug once they share a project network.";
+			? `Creates a stack named "${menuService.name}" and moves both into it, so they reach each other by slug.`
+			: "They only reach each other by slug once they share a stack network.";
 	});
 
 	const linkCandidates = $derived(
@@ -268,8 +267,8 @@
 
 	function openGroup(svc: { id: string }) {
 		menuService = byId(svc.id) ?? null;
-		groupProjectId = menuService?.projectId ?? "";
-		newProjectName = "";
+		groupStackId = menuService?.stackId ?? "";
+		newStackName = "";
 		groupOpen = true;
 	}
 
@@ -320,10 +319,6 @@
       >
         <FileUp class="size-4" />
         Import compose
-      </Button>
-      <Button href={resolve("/services/migrate")} size="sm" variant="outline">
-        <MoveRight class="size-4" />
-        Migrate from Dokploy
       </Button>
       <Button href={resolve("/services/new")} size="sm">
         <Plus class="size-4" />
@@ -675,11 +670,11 @@
   use:enhance={enhanceToast({
     error: "Couldn't ungroup the service.",
     loading: "Ungrouping",
-    success: "Removed from its project.",
+    success: "Removed from its stack.",
   })}
 >
   <input name="serviceId" type="hidden" value={menuService?.id ?? ""}>
-  <input name="projectId" type="hidden" value="">
+  <input name="stackId" type="hidden" value="">
 </form>
 
 <ResponsiveDialog
@@ -744,7 +739,7 @@
     <CheckBox
       helperText={groupHint}
       id="alsoGroup"
-      label="Also put them in the same project"
+      label="Also put them in the same stack"
       name="alsoGroup"
       bind:checked={alsoGroup}
     />
@@ -759,7 +754,7 @@
 </ResponsiveDialog>
 
 <ResponsiveDialog
-  description="Services in one project share a Docker network and reach each other by slug."
+  description="Services in one stack share a Docker network and reach each other by slug."
   size="sm"
   title="Group {menuService?.name ?? 'service'}"
   bind:open={groupOpen}
@@ -779,17 +774,17 @@
     })}
   >
     <input name="serviceId" type="hidden" value={menuService?.id ?? ""}>
-    {#if data.projects.length > 0}
+    {#if data.stacks.length > 0}
       <div>
-        <label class={label} for="projectId">Existing project</label>
-        <SelectRoot name="projectId" type="single" bind:value={groupProjectId}>
-          <SelectTrigger class="w-full" id="projectId">
-            {data.projects.find((proj) => proj.id === groupProjectId)?.name
-            ?? "Select a project"}
+        <label class={label} for="stackId">Existing stack</label>
+        <SelectRoot name="stackId" type="single" bind:value={groupStackId}>
+          <SelectTrigger class="w-full" id="stackId">
+            {data.stacks.find((stack) => stack.id === groupStackId)?.name
+            ?? "Select a stack"}
           </SelectTrigger>
           <SelectContent>
-            {#each data.projects as proj (proj.id)}
-              <SelectItem label={proj.name} value={proj.id} />
+            {#each data.stacks as stack (stack.id)}
+              <SelectItem label={stack.name} value={stack.id} />
             {/each}
           </SelectContent>
         </SelectRoot>
@@ -797,17 +792,17 @@
       <p class="text-text-subtle text-center text-xs">or</p>
     {/if}
     <div>
-      <label class={label} for="newProjectName">New project</label>
+      <label class={label} for="newStackName">New stack</label>
       <Input
-        id="newProjectName"
-        name="newProjectName"
+        id="newStackName"
+        name="newStackName"
         placeholder="Acme"
         type="text"
-        bind:value={newProjectName}
+        bind:value={newStackName}
       />
     </div>
     <div class="flex justify-end gap-2">
-      <Button disabled={!(groupProjectId || newProjectName)} type="submit">
+      <Button disabled={!(groupStackId || newStackName)} type="submit">
         Move
       </Button>
     </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Container, Globe, Mail, Network } from "@lucide/svelte";
+	import { Container, Globe, Mail, MoveRight, Network } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -39,6 +39,7 @@
 		smtpPassword: "email",
 		smtpPort: "email",
 		smtpUser: "email",
+		traefikDynamicConfigDir: "networking",
 	};
 
 	interface RouteTab extends NavTab {
@@ -75,6 +76,13 @@
 				icon: Mail,
 				id: "email",
 				label: "Email",
+			},
+			{
+				exact: false,
+				href: resolve("/settings/migrate"),
+				icon: MoveRight,
+				id: "migrate",
+				label: "Migrate",
 			},
 		].map((tab) => ({
 			...tab,

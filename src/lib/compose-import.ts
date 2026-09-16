@@ -468,7 +468,7 @@ export function parseComposeFile(text: string): ComposeImportPlan {
 	const networkNames = isRecord(doc.networks) ? Object.keys(doc.networks) : [];
 	if (networkNames.length > 1) {
 		warnings.push(
-			"Every imported service joins one project network : the file's separate networks aren't reproduced.",
+			"Every imported service joins one stack network : the file's separate networks aren't reproduced.",
 		);
 	}
 	if (isRecord(doc.configs) || isRecord(doc.secrets)) {

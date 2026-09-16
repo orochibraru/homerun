@@ -70,6 +70,7 @@ const baseServiceSchema = z.object({
 	// Swarm mode only (instanceSettings.orchestrationMode) : ignored entirely
 	// in standalone mode.
 	replicas: optionalNumber(z.coerce.number().int().min(0).max(50)),
+	healthcheckCommand: z.string().trim().max(2000).optional(),
 	pullPolicy: z.enum(["always", "missing", "never"]).default("always"),
 	restartPolicy: z
 		.enum(["no", "always", "on-failure", "unless-stopped"])
@@ -120,6 +121,7 @@ export type CreateServiceInput = z.infer<typeof createServiceSchema>;
 // each validated against only its own subset of baseServiceSchema rather
 // than the full create-time shape.
 export const updateGeneralSchema = baseServiceSchema.pick({
+	healthcheckCommand: true,
 	name: true,
 	pullPolicy: true,
 	restartPolicy: true,

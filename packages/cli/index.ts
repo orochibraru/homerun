@@ -125,17 +125,17 @@ for (const action of ["deploy", "start", "stop", "restart"] as const) {
 		});
 }
 
-const projects = program.command("projects").description("manage projects");
+const stacks = program.command("stacks").description("manage stacks");
 
-projects
+stacks
 	.command("list")
-	.description("list projects")
+	.description("list stacks")
 	.option("--json", "print raw JSON instead of a table")
 	.option("--page <n>", "1-based page number (default 1)")
 	.option("--per-page <n>", "items per page (default 100, max 100)")
 	.option("--search <term>", "only rows matching this term")
 	.action(async (options: ListOptions) => {
-		await Commands.projectsList(requireClient(), toListArgs(options));
+		await Commands.stacksList(requireClient(), toListArgs(options));
 	});
 
 const templates = program.command("templates").description("manage templates");

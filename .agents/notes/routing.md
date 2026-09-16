@@ -51,9 +51,9 @@ in `(protected)/+layout.svelte`'s nav array, color-coded per category, see
 Appearance preferences below for the per-user "single accent color" override):
 
 - **Workspace**: **Overview** (dashboard stats + recent deployments),
-  **Services**, **Projects**, **Templates**, **Cron Jobs** (user-defined
-  scheduled tasks, see Cron jobs below), **Status Page** (service health and the
-  public pages themselves, see Status pages in `services-and-templates.md`).
+  **Services**, **Stacks**, **Templates**, **Cron Jobs** (user-defined scheduled
+  tasks, see Cron jobs below), **Status Page** (service health and the public
+  pages themselves, see Status pages in `services-and-templates.md`).
 - **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",
   see S3 backups below), **S3 Destinations** (reusable, named backup targets),
   **Remote Hosts**, **Scheduling** (one instance-wide view of every cron
@@ -76,20 +76,20 @@ for signed-out visitors, see Per-app login wall below). The bell's own
 read/delete endpoints used to live at `/notifications/**` and are now remote
 commands instead, see Remote functions below. `(protected)/+layout.svelte`
 filters the nav array on `data.user.role === "admin"` before rendering, a
-developer sees everything else unchanged (their own services/projects, already
+developer sees everything else unchanged (their own services/stacks, already
 isolated per-user by every DTO's `userId` scoping). `/setup` was removed (see
 Setup diagnostics below) in favor of the dashboard banner deep-linking into
 `/settings`.
 
 `src/routes/(protected)/services/`:
 
-- `+page.svelte`, list, grouped by project (with an "Ungrouped" bucket when more
-  than one group exists), server-side search/status/project filters and a
+- `+page.svelte`, list, grouped by stack (with an "Ungrouped" bucket when more
+  than one group exists), server-side search/status/stack filters and a
   list/card view toggle (`entity-toolbar.svelte`/`ViewMode`, see Shared UI
   components above) plus a `<Pagination>` footer (see Server-side list
   pagination above; `+page.server.ts`'s `load` calls
-  `ServiceDTO.listWithProjectNamesPaged` and `ServiceDTO.listFilterFacets` for
-  the pills, so the filter options stay stable across pages), inline per-row
+  `ServiceDTO.listWithStackNamesPaged` and `ServiceDTO.listFilterFacets` for the
+  pills, so the filter options stay stable across pages), inline per-row
   start/stop/restart/delete actions plus a checkbox-driven multi-select
   (select-all scoped to whatever's on the **current page**, a sticky bottom bar
   with Start/Stop/Restart/Delete/Clear; paginating or changing the
@@ -114,19 +114,23 @@ Setup diagnostics below) in favor of the dashboard banner deep-linking into
 - `import/+page.svelte`, paste a compose file, preview what it maps onto, then
   create (and optionally deploy) the stack : see Compose import below. Reached
   from the "Import compose" button next to "Deploy a Service" on the list.
+- There is no `services/migrate` any more: migrating from Dokploy/Coolify is the
+  admin-only `settings/migrate/` tab (source picker, then one nested route per
+  source), see "Migrating from Dokploy or Coolify" in
+  `services-and-templates.md`.
 - `new/+page.svelte`, click-config create form, a 4-step wizard (Basic info /
   Networking / Environment / Compute, one `<form>` throughout, steps hidden via
   a CSS class rather than `{#if}` so field state survives navigating between
-  them); accepts `?projectId=` and/or `?templateId=` query params to pre-fill
-  from a project or template context. "Deploy from" toggles between a Docker
-  image and a git repo (see Git-based builds below), same toggle repeated on the
-  service's own Source tab for editing after creation. Two submit actions share
-  one `createServiceFromForm()` helper (`new/+page.server.ts`) that validates +
+  them); accepts `?stackId=` and/or `?templateId=` query params to pre-fill from
+  a stack or template context. "Deploy from" toggles between a Docker image and
+  a git repo (see Git-based builds below), same toggle repeated on the service's
+  own Source tab for editing after creation. Two submit actions share one
+  `createServiceFromForm()` helper (`new/+page.server.ts`) that validates +
   creates the row: `create` (secondary button, "Create service", persists config
   only, same as before) and `createAndDeploy` (primary button, "Create and
   Deploy", calls `allowLongRequest(platform)` then
   `DeploymentService.deployService()` before redirecting straight to the new
-  service's Overview tab instead of the services/project list). A min-height
+  service's Overview tab instead of the services/stack list). A min-height
   wrapper around the step content keeps the Next/Back button row's vertical
   position stable as steps of different heights swap in.
 - `[serviceId]/+layout.server.ts`, ownership guard (id **and** userId must
@@ -165,7 +169,7 @@ Setup diagnostics below) in favor of the dashboard banner deep-linking into
   stale `containerId`/`swarmServiceId` and put the row back to a clean,
   never-deployed shape so Deploy works again, see the `"missing"`
   `ContainerStatus` note under Docker integration below), **Settings**
-  (name/slug/restart-policy, move between projects, save-as-template,
+  (name/slug/restart-policy, move between stacks, save-as-template,
   auto-redeploy cron schedule, danger-zone delete, image/git/registry,
   port/network and cpu/memory fields all moved to their own tabs, see
   Source/Networking/Compute above)
@@ -194,7 +198,7 @@ Setup diagnostics below) in favor of the dashboard banner deep-linking into
   work, `onMount` checks the latest deployment's status and `svc.currentStatus`
   and reattaches if either is still in-flight.
 
-`src/routes/(protected)/projects/`, `templates/`, `storage/`, `authentication/`
+`src/routes/(protected)/stacks/`, `templates/`, `storage/`, `authentication/`
 mirror this pattern (list + `new/` create route + `[id]` detail where
 applicable). `system-logs/` streams the Traefik container's own logs (see Docker
 integration below).

@@ -36,19 +36,17 @@
 		},
 	]);
 
-	const projectQuery = $derived(
-		data.project ? `?projectId=${data.project.id}` : "",
-	);
+	const stackQuery = $derived(data.stack ? `?stackId=${data.stack.id}` : "");
 
 	function detailsHref(tmpl: Template): string {
 		return `${resolve("/(protected)/templates/[templateId]", {
 			templateId: tmpl.id,
-		})}${projectQuery}`;
+		})}${stackQuery}`;
 	}
 
 	function configureHref(tmpl: Template): string {
 		return `${resolve("/services/new")}?templateId=${tmpl.id}${
-			data.project ? `&projectId=${data.project.id}` : ""
+			data.stack ? `&stackId=${data.stack.id}` : ""
 		}`;
 	}
 
@@ -80,8 +78,8 @@
     use:enhance={quickDeployEnhance(tmpl)}
   >
     <input name="templateId" type="hidden" value={tmpl.id} />
-    {#if data.project}
-      <input name="projectId" type="hidden" value={data.project.id} />
+    {#if data.stack}
+      <input name="stackId" type="hidden" value={data.stack.id} />
     {/if}
     <Button
       class="w-full"

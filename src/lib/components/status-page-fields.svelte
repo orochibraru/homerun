@@ -4,7 +4,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import type { StatusPageScope } from "$lib/types";
 
-	interface ProjectOption {
+	interface StackOption {
 		id: string;
 		name: string;
 	}
@@ -12,29 +12,29 @@
 	interface ServiceOption {
 		id: string;
 		name: string;
-		projectId: string | null;
+		stackId: string | null;
 	}
 
 	let {
-		projects,
+		stacks,
 		services,
 		errors,
 		name = $bindable(""),
 		slug = $bindable(""),
 		description = $bindable(""),
 		scope = $bindable("global" as StatusPageScope),
-		projectId = $bindable(""),
+		stackId = $bindable(""),
 		isPublic = $bindable(false),
 		selectedServiceIds = $bindable([] as string[]),
 	}: {
-		projects: ProjectOption[];
+		stacks: StackOption[];
 		services: ServiceOption[];
 		errors?: Record<string, string[] | undefined> | null;
 		name?: string;
 		slug?: string;
 		description?: string;
 		scope?: StatusPageScope;
-		projectId?: string;
+		stackId?: string;
 		isPublic?: boolean;
 		selectedServiceIds?: string[];
 	} = $props();
@@ -86,7 +86,7 @@
       <label class={label} for="scope">Covers</label>
       <select bind:value={scope} class={inputClass} id="scope" name="scope">
         <option value="global">Every service I own</option>
-        <option value="project">One project</option>
+        <option value="stack">One stack</option>
         <option value="custom">Services I pick</option>
       </select>
       <p class="text-text-subtle mt-1.5 text-xs">
@@ -95,22 +95,22 @@
           : "Resolved live, so a newly deployed service appears on its own."}
       </p>
     </div>
-    {#if scope === "project"}
+    {#if scope === "stack"}
       <div>
-        <label class={label} for="projectId">Project</label>
+        <label class={label} for="stackId">Stack</label>
         <select
-          bind:value={projectId}
+          bind:value={stackId}
           class={inputClass}
-          id="projectId"
-          name="projectId"
+          id="stackId"
+          name="stackId"
         >
-          <option value="">Pick a project…</option>
-          {#each projects as project (project.id)}
-            <option value={project.id}>{project.name}</option>
+          <option value="">Pick a stack…</option>
+          {#each stacks as stack (stack.id)}
+            <option value={stack.id}>{stack.name}</option>
           {/each}
         </select>
-        {#if errors?.projectId}
-          <p class="mt-1.5 text-xs text-red-500">{errors.projectId[0]}</p>
+        {#if errors?.stackId}
+          <p class="mt-1.5 text-xs text-red-500">{errors.stackId[0]}</p>
         {/if}
       </div>
     {/if}

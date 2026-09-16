@@ -4,10 +4,10 @@ import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import {
 	type GitCredential,
 	hasEmbeddedCredentials,
@@ -17,7 +17,19 @@ import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
 import { shouldSkipPull } from "$lib/pull-policy";
 import { decryptSecret } from "$lib/services/secrets";
 import { AgentClientService } from "./agent-client.service.ts";
+import {
+	type BuildServer,
+	type CacheRegistryCredentials,
+	type DeployPlan,
+	type GitBuildPlan,
+	type GitSource,
+	type ImagePlan,
+	resolveDeployPlan,
+	unreachable,
+	type WorkloadPlan,
+} from "./deploy/plan.ts";
 import { serviceHostname, syncDns } from "./dns.service.ts";
+import type { RegistryAuth } from "./docker/containers.ts";
 import { DockerService, type RemoteHostConnection } from "./docker.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
@@ -25,7 +37,6 @@ import { QueueService } from "./queue.service.ts";
 
 const logger = new Logger(DEPLOY_LOG_SCOPE);
 
-type BuildTarget = Awaited<ReturnType<typeof RemoteHostDTO.resolveBuildTarget>>;
 type ServiceMounts = Awaited<
 	ReturnType<typeof ServiceVolumeDTO.listForService>
 >;
@@ -34,15 +45,6 @@ interface DeployContext {
 	dep: DeploymentDTO;
 	svc: ServiceDTO;
 	userId: string;
-}
-
-interface BuildPlan {
-	auth?: { password: string; serveraddress: string; username: string };
-	buildRemote: RemoteHostConnection | undefined;
-	buildTarget: BuildTarget;
-	cacheRegistryRow: Awaited<ReturnType<typeof BuildCacheRegistryDTO.get>>;
-	crossHostBuild: boolean;
-	publishedImage: string | null;
 }
 
 interface GitBuildOutcome {
@@ -60,9 +62,9 @@ interface WorkloadContext {
 	dep: DeploymentDTO;
 	image: string;
 	mounts: ServiceMounts;
-	project: ProjectDTO | null;
+	plan: WorkloadPlan;
+	stack: StackDTO | null;
 	svc: ServiceDTO;
-	swarmMode: boolean;
 	tag: string;
 }
 
@@ -76,7 +78,7 @@ interface WorkloadContext {
  */
 async function syncAutoDns(
 	svc: ServiceDTO,
-	project: ProjectDTO | null,
+	stack: StackDTO | null,
 	dep: DeploymentDTO,
 ): Promise<void> {
 	if (!svc.dnsResolvable) {
@@ -84,7 +86,7 @@ async function syncAutoDns(
 	}
 	const row = svc.toJSON();
 	const hostnames = [
-		serviceHostname(svc.slug, project?.slug),
+		serviceHostname(svc.slug, stack?.slug),
 		...(row.customDomain ? [row.customDomain] : []),
 	];
 	const results = await syncDns(hostnames);
@@ -115,6 +117,14 @@ function toVolumeParams(mounts: ServiceMounts) {
 		readOnly: m.mount.toJSON().readOnly,
 		source: m.volumeSource,
 	}));
+}
+
+function registryAuth(registry: CacheRegistryCredentials): RegistryAuth {
+	return {
+		password: registry.password,
+		serveraddress: registry.registryUrl,
+		username: registry.username,
+	};
 }
 
 export interface EnqueueDeployInput {
@@ -176,125 +186,59 @@ async function resolveGitCredential(
 }
 
 class DeploymentServiceClass {
-	/**
-	 * Resolves where the build runs and how its result gets to the deploy
-	 * target : the build server (defaulting to the deploy target), the cache
-	 * registry credentials, and the published ref when the two differ.
-	 */
-	async #resolveBuildPlan(
-		svc: ServiceDTO,
-		userId: string,
-		image: string,
-	): Promise<BuildPlan> {
-		const cacheRegistryRow = svc.buildCacheRegistryId
-			? await BuildCacheRegistryDTO.get(svc.buildCacheRegistryId, userId)
+	async #loadDeployPlan(svc: ServiceDTO, userId: string): Promise<DeployPlan> {
+		const settings = await InstanceSettingsDTO.get();
+		const isGitBuild = svc.buildSource === "git";
+
+		const cacheRegistryRow =
+			isGitBuild && svc.buildCacheRegistryId
+				? await BuildCacheRegistryDTO.get(svc.buildCacheRegistryId, userId)
+				: null;
+		const cacheRegistry: CacheRegistryCredentials | null = cacheRegistryRow
+			? {
+					password: cacheRegistryRow.decryptPassword(),
+					registryUrl: cacheRegistryRow.registryUrl,
+					username: cacheRegistryRow.username,
+				}
 			: null;
 
-		const buildServerId = svc.buildServerRemoteHostId;
-		const crossHostBuild = !!buildServerId;
-		if (crossHostBuild && !cacheRegistryRow) {
-			throw new Error(
-				"A build server needs a build cache registry configured, to publish the built image through.",
+		let buildServer: BuildServer | null = null;
+		if (isGitBuild && svc.buildServerRemoteHostId && cacheRegistry) {
+			const target = await RemoteHostDTO.resolveBuildTarget(
+				svc.buildServerRemoteHostId,
+				userId,
 			);
+			buildServer = target.kind === "local" ? null : target;
 		}
 
-		const buildTarget: BuildTarget = buildServerId
-			? await RemoteHostDTO.resolveBuildTarget(buildServerId, userId)
-			: { kind: "local" };
-
-		return {
-			auth: cacheRegistryRow
-				? {
-						password: cacheRegistryRow.decryptPassword(),
-						serveraddress: cacheRegistryRow.registryUrl,
-						username: cacheRegistryRow.username,
-					}
-				: undefined,
-			buildRemote:
-				buildTarget.kind === "docker" ? buildTarget.connection : undefined,
-			buildTarget,
-			cacheRegistryRow,
-			crossHostBuild,
-			publishedImage: cacheRegistryRow
-				? `${cacheRegistryRow.registryUrl}/${image}`
-				: null,
-		};
-	}
-
-	/**
-	 * The agent builds and pushes in one call : no separate pushImage step
-	 * the way the docker/local path needs, see agent/schemas.ts's
-	 * buildInputSchema docstring.
-	 */
-	async #runAgentBuild(
-		ctx: DeployContext,
-		plan: BuildPlan,
-		ref: string,
-		tag: string,
-	): Promise<void> {
-		const { dep, svc } = ctx;
-		const { cacheRegistryRow, crossHostBuild, publishedImage } = plan;
-		if (plan.buildTarget.kind !== "agent" || !svc.gitUrl) {
-			throw new Error("Agent build called without an agent build target.");
-		}
-
-		const push =
-			crossHostBuild && cacheRegistryRow && publishedImage
-				? {
-						password: cacheRegistryRow.decryptPassword(),
-						registryUrl: cacheRegistryRow.registryUrl,
-						tag: `${publishedImage}:${tag}`,
-						username: cacheRegistryRow.username,
-					}
-				: null;
-
-		const result = await AgentClientService.build(plan.buildTarget.connection, {
-			buildContext: svc.gitBuildContext,
-			credential: await resolveGitCredential(svc.gitUrl, ctx.userId),
-			dockerfilePath: svc.gitDockerfilePath,
-			gitRef: svc.gitRef,
-			gitUrl: svc.gitUrl,
-			push,
-			tag: ref,
+		return resolveDeployPlan({
+			buildServer,
+			cacheRegistry,
+			orchestrationMode: settings.orchestrationMode,
+			service: svc.toJSON(),
 		});
-		if (!result.success) {
-			throw new Error(result.error ?? "Build failed.");
-		}
-
-		// No live progress from the agent (a single response once it's done,
-		// not a stream) : one summary line instead of the line-by-line log
-		// the local/docker build path gets.
-		await dep.appendLog(`Build finished on agent ${plan.buildTarget.hostId}.`);
 	}
 
-	/** Clone + build on the local socket or a docker remote, then publish through the cache registry if the build server isn't the deploy target. */
+	/** Clone + build on the local socket or a docker remote. */
 	async #runDockerBuild(
 		ctx: DeployContext,
-		plan: BuildPlan,
+		git: GitSource,
+		target: {
+			cacheRegistry: CacheRegistryCredentials | null;
+			remote?: RemoteHostConnection;
+		},
 		ref: string,
-		tag: string,
 	): Promise<void> {
-		const { dep, svc } = ctx;
-		const { auth, buildRemote, cacheRegistryRow, publishedImage } = plan;
-		if (!svc.gitUrl) {
-			throw new Error("No git repository URL configured.");
-		}
-
+		const { dep } = ctx;
 		const result = await DockerService.buildFromGit(
 			{
-				buildContext: svc.gitBuildContext,
-				cacheRegistry: cacheRegistryRow
-					? {
-							password: cacheRegistryRow.decryptPassword(),
-							registryUrl: cacheRegistryRow.registryUrl,
-							username: cacheRegistryRow.username,
-						}
-					: null,
-				credential: await resolveGitCredential(svc.gitUrl, ctx.userId),
-				dockerfilePath: svc.gitDockerfilePath,
-				gitRef: svc.gitRef,
-				gitUrl: svc.gitUrl,
-				remote: buildRemote,
+				buildContext: git.buildContext,
+				cacheRegistry: target.cacheRegistry,
+				credential: await resolveGitCredential(git.gitUrl, ctx.userId),
+				dockerfilePath: git.dockerfilePath,
+				gitRef: git.gitRef,
+				gitUrl: git.gitUrl,
+				remote: target.remote,
 				tag: ref,
 			},
 			(line) => dep.appendLog(line),
@@ -304,20 +248,46 @@ class DeploymentServiceClass {
 		}
 		await dep.update({
 			gitCommit: result.commit ?? null,
-			gitRef: svc.gitRef ?? null,
+			gitRef: git.gitRef ?? null,
 		});
+	}
 
-		if (plan.crossHostBuild && cacheRegistryRow && publishedImage && auth) {
-			await dep.appendLog(
-				`Publishing built image to ${cacheRegistryRow.registryUrl}...`,
-			);
-			await DockerService.pushImage(
-				ref,
-				`${publishedImage}:${tag}`,
-				auth,
-				buildRemote,
-			);
+	/**
+	 * The agent builds and pushes in one call : no separate pushImage step
+	 * the way the docker/local path needs, see agent/schemas.ts's
+	 * buildInputSchema docstring.
+	 */
+	async #runAgentBuild(
+		ctx: DeployContext,
+		plan: Extract<GitBuildPlan, { kind: "agent-build" }>,
+		ref: string,
+		publishedRef: string,
+	): Promise<void> {
+		const { dep } = ctx;
+		const { git, registry, server } = plan;
+
+		const result = await AgentClientService.build(server.connection, {
+			buildContext: git.buildContext,
+			credential: await resolveGitCredential(git.gitUrl, ctx.userId),
+			dockerfilePath: git.dockerfilePath,
+			gitRef: git.gitRef,
+			gitUrl: git.gitUrl,
+			push: {
+				password: registry.password,
+				registryUrl: registry.registryUrl,
+				tag: publishedRef,
+				username: registry.username,
+			},
+			tag: ref,
+		});
+		if (!result.success) {
+			throw new Error(result.error ?? "Build failed.");
 		}
+
+		// No live progress from the agent (a single response once it's done,
+		// not a stream) : one summary line instead of the line-by-line log
+		// the local/docker build path gets.
+		await dep.appendLog(`Build finished on agent ${server.hostId}.`);
 	}
 
 	/**
@@ -327,17 +297,15 @@ class DeploymentServiceClass {
 	 */
 	async #pullPublishedImage(
 		ctx: DeployContext,
-		plan: BuildPlan,
+		registry: CacheRegistryCredentials,
+		publishedImage: string,
 		tag: string,
 	): Promise<void> {
 		const { dep } = ctx;
-		if (!plan.publishedImage) {
-			return;
-		}
 		await dep.appendLog("Pulling published image onto this host...");
 		await DockerService.pullImage({
-			auth: plan.auth,
-			image: plan.publishedImage,
+			auth: registryAuth(registry),
+			image: publishedImage,
 			onProgress: (line) => dep.appendLog(line),
 			tag,
 		});
@@ -349,136 +317,165 @@ class DeploymentServiceClass {
 	 * build server isn't the deploy target, and resolve the image ref the
 	 * deploy step should actually use.
 	 */
-	async #buildGitImage(ctx: DeployContext): Promise<GitBuildOutcome> {
-		const { svc, userId } = ctx;
-		if (!svc.gitUrl) {
-			throw new Error("No git repository URL configured.");
-		}
-
+	async #buildGitImage(
+		ctx: DeployContext,
+		plan: GitBuildPlan,
+	): Promise<GitBuildOutcome> {
 		// A fresh tag per build, same "never reuse a name across deploys"
 		// precedent as container names (containers.ts's containerName()), so
 		// a build failure never leaves a stale image masquerading as current.
-		let image = `homerun-build-${svc.slug}`;
+		const image = `homerun-build-${ctx.svc.slug}`;
 		const tag = Date.now().toString(36);
-
-		const plan = await this.#resolveBuildPlan(svc, userId, image);
 		const ref = `${image}:${tag}`;
 
-		if (plan.buildTarget.kind === "agent") {
-			await this.#runAgentBuild(ctx, plan, ref, tag);
-		} else {
-			await this.#runDockerBuild(ctx, plan, ref, tag);
+		switch (plan.kind) {
+			case "local-build":
+				await this.#runDockerBuild(
+					ctx,
+					plan.git,
+					{ cacheRegistry: plan.cacheRegistry },
+					ref,
+				);
+				return { image, tag };
+			case "docker-build": {
+				const publishedImage = `${plan.registry.registryUrl}/${image}`;
+				await this.#runDockerBuild(
+					ctx,
+					plan.git,
+					{ cacheRegistry: plan.registry, remote: plan.server.connection },
+					ref,
+				);
+				await ctx.dep.appendLog(
+					`Publishing built image to ${plan.registry.registryUrl}...`,
+				);
+				await DockerService.pushImage(
+					ref,
+					`${publishedImage}:${tag}`,
+					registryAuth(plan.registry),
+					plan.server.connection,
+				);
+				await this.#pullPublishedImage(ctx, plan.registry, publishedImage, tag);
+				return { image: publishedImage, tag };
+			}
+			case "agent-build": {
+				const publishedImage = `${plan.registry.registryUrl}/${image}`;
+				await this.#runAgentBuild(ctx, plan, ref, `${publishedImage}:${tag}`);
+				await this.#pullPublishedImage(ctx, plan.registry, publishedImage, tag);
+				return { image: publishedImage, tag };
+			}
+			default:
+				return unreachable(plan);
 		}
-
-		if (plan.crossHostBuild && plan.publishedImage && plan.auth) {
-			await this.#pullPublishedImage(ctx, plan, tag);
-			image = plan.publishedImage;
-		}
-
-		return { image, tag };
 	}
 
-	/** Creates and starts the actual workload : a swarm service, an agent deploy, or a plain local/remote container. */
+	/** Creates and starts the actual workload : a swarm service or a plain container. */
 	async #startWorkload(
 		ctx: WorkloadContext,
 	): Promise<{ containerId?: string; swarmServiceId?: string }> {
-		const { dep, image, mounts, project, svc, tag } = ctx;
+		const { dep, image, mounts, plan, stack, svc, tag } = ctx;
+		const shared = {
+			authRequired: svc.authRequired,
+			containerPort: svc.containerPort,
+			cpuLimit: svc.cpuLimit,
+			customDomain: svc.customDomain,
+			dnsResolvable: svc.dnsResolvable,
+			envVars: svc.envVars ?? {},
+			healthcheckCommand: svc.healthcheckCommand,
+			image,
+			memoryLimitMb: svc.memoryLimitMb,
+			portProtocol: svc.portProtocol,
+			restartPolicy: svc.restartPolicy,
+			serviceId: svc.id,
+			slug: svc.slug,
+			stackSlug: stack?.slug,
+			tag,
+			volumes: toVolumeParams(mounts),
+		};
+		const onLog = (line: string) => dep.appendLog(line);
 
-		if (ctx.swarmMode) {
-			const result = await DockerService.createAndStartSwarmService(
-				{
-					auth: DockerService.buildAuthConfig(svc),
-					authRequired: svc.authRequired,
-					containerPort: svc.containerPort,
-					cpuLimit: svc.cpuLimit,
-					customDomain: svc.customDomain,
-					dnsResolvable: svc.dnsResolvable,
-					envVars: svc.envVars ?? {},
-					image,
-					memoryLimitMb: svc.memoryLimitMb,
-					portProtocol: svc.portProtocol,
-					projectSlug: project?.slug,
-					replicas: svc.replicas,
-					restartPolicy: svc.restartPolicy,
-					serviceId: svc.id,
-					slug: svc.slug,
-					tag,
-					volumes: toVolumeParams(mounts),
-				},
-				(line) => dep.appendLog(line),
-			);
-			return { swarmServiceId: result.swarmServiceId };
+		switch (plan.kind) {
+			case "swarm": {
+				const result = await DockerService.createAndStartSwarmService(
+					{
+						...shared,
+						auth: DockerService.buildAuthConfig(svc),
+						replicas: plan.replicas,
+					},
+					onLog,
+				);
+				return { swarmServiceId: result.swarmServiceId };
+			}
+			case "container": {
+				const result = await DockerService.createAndStartContainer(
+					{ ...shared, networkMode: plan.networkMode, stackId: svc.stackId },
+					onLog,
+				);
+				return { containerId: result.containerId };
+			}
+			default:
+				return unreachable(plan);
 		}
-
-		const result = await DockerService.createAndStartContainer(
-			{
-				authRequired: svc.authRequired,
-				containerPort: svc.containerPort,
-				cpuLimit: svc.cpuLimit,
-				customDomain: svc.customDomain,
-				dnsResolvable: svc.dnsResolvable,
-				envVars: svc.envVars ?? {},
-				image,
-				memoryLimitMb: svc.memoryLimitMb,
-				networkMode: svc.networkMode,
-				portProtocol: svc.portProtocol,
-				projectId: svc.projectId,
-				projectSlug: project?.slug,
-				restartPolicy: svc.restartPolicy,
-				serviceId: svc.id,
-				slug: svc.slug,
-				tag,
-				volumes: toVolumeParams(mounts),
-			},
-			(line) => dep.appendLog(line),
-		);
-		return { containerId: result.containerId };
 	}
 
-	/**
-	 * Resolves the image ref the deploy step should use : a git build, an
-	 * agent target that pulls for itself, or an explicit pull here.
-	 */
-	async #resolveImage(ctx: DeployContext): Promise<ResolvedImage> {
+	async #pullImage(
+		ctx: DeployContext,
+		plan: Extract<ImagePlan, { kind: "pull" }>,
+	): Promise<ResolvedImage> {
 		const { dep, svc } = ctx;
-
-		if (svc.buildSource === "git") {
-			const built = await this.#buildGitImage(ctx);
-			// Persist the resolved tag immediately : createAndStartContainer,
-			// and any future redeploy that reads svc.image/tag before this
-			// deploy returns, must see the image that actually exists.
-			await svc.update({ image: built.image, tag: built.tag });
-			return { digest: "", ...built };
-		}
-
-		const ref = `${svc.image}:${svc.tag}`;
+		const { image, pullPolicy, tag } = plan;
+		const ref = `${image}:${tag}`;
 		const local = await DockerService.localImageDigest(ref);
-		const skip = shouldSkipPull(svc.pullPolicy, local !== undefined);
+		const skip = shouldSkipPull(pullPolicy, local !== undefined);
 		if (skip) {
 			await dep.appendLog(skip);
 			logger.info(
-				`Image pull skipped (${svc.pullPolicy}): ${ref} service=${svc.id}`,
+				`Image pull skipped (${pullPolicy}): ${ref} service=${svc.id}`,
 			);
 			if (local === undefined) {
 				throw new Error(
 					`Pull policy is "never" and ${ref} isn't on this host.`,
 				);
 			}
-			return { digest: local, image: svc.image, tag: svc.tag };
+			return { digest: local, image, tag };
 		}
 
 		const { digest } = await DockerService.pullImage({
 			auth: DockerService.buildAuthConfig(svc),
-			image: svc.image,
+			image,
 			onProgress: (line) => dep.appendLog(line),
-			tag: svc.tag,
+			tag,
 		});
 		logger.info(
 			`Image pulled: ${ref} digest=${digest ?? "unknown"} service=${svc.id}`,
 		);
-		return { digest, image: svc.image, tag: svc.tag };
+		return { digest, image, tag };
 	}
 
+	/**
+	 * Resolves the image ref the deploy step should use : a git build
+	 * (local, docker build server, or agent) or a pull here.
+	 */
+	async #resolveImage(
+		ctx: DeployContext,
+		plan: ImagePlan,
+	): Promise<ResolvedImage> {
+		switch (plan.kind) {
+			case "pull":
+				return await this.#pullImage(ctx, plan);
+			case "local-build":
+			case "docker-build":
+			case "agent-build": {
+				const built = await this.#buildGitImage(ctx, plan);
+				// Persist the resolved tag immediately : createAndStartContainer,
+				// and any future redeploy that reads svc.image/tag before this
+				// deploy returns, must see the image that actually exists.
+				await ctx.svc.update({ image: built.image, tag: built.tag });
+				return { digest: "", ...built };
+			}
+			default:
+				return unreachable(plan);
+		}
+	}
 	/** Marks the service and deployment failed, notifies, and shapes the caller's DeployResult. */
 	async #recordFailure(
 		ctx: DeployContext,
@@ -520,7 +517,7 @@ class DeploymentServiceClass {
 		ctx: DeployContext,
 		ids: { containerId?: string; swarmServiceId?: string },
 		digest: string | null,
-		project: ProjectDTO | null,
+		stack: StackDTO | null,
 	): Promise<void> {
 		const { dep, svc } = ctx;
 		const { containerId, swarmServiceId } = ids;
@@ -546,7 +543,7 @@ class DeploymentServiceClass {
 			`Deploy succeeded: service=${svc.id} container=${containerId ?? swarmServiceId} deployment=${dep.id}`,
 		);
 
-		await syncAutoDns(svc, project, dep);
+		await syncAutoDns(svc, stack, dep);
 	}
 
 	async enqueueDeploy(input: EnqueueDeployInput): Promise<EnqueueDeployResult> {
@@ -613,11 +610,6 @@ class DeploymentServiceClass {
 		});
 	}
 
-	async #swarmMode(): Promise<boolean> {
-		const instanceSettings = await InstanceSettingsDTO.get();
-		return instanceSettings.orchestrationMode === "swarm";
-	}
-
 	async deployService(
 		svc: ServiceDTO,
 		userId: string,
@@ -650,34 +642,33 @@ class DeploymentServiceClass {
 		try {
 			await dep.appendLog(phaseLine("config"));
 			const ctx: DeployContext = { dep, svc, userId };
+			const plan = await this.#loadDeployPlan(svc, userId);
 
 			await dep.appendLog(phaseLine("volumes"));
 			const mounts = await ServiceVolumeDTO.listForService(svc.id);
 
 			await dep.appendLog(phaseLine("image"));
-			const { digest, image, tag } = await this.#resolveImage(ctx);
+			const { digest, image, tag } = await this.#resolveImage(ctx, plan.image);
 
 			await svc.update({ currentStatus: "starting" });
 
-			const project = svc.projectId
-				? await ProjectDTO.get(svc.projectId, userId)
+			const stack = svc.stackId
+				? await StackDTO.get(svc.stackId, userId)
 				: null;
-
-			const swarmMode = await this.#swarmMode();
 
 			await dep.appendLog(phaseLine("container"));
 			const ids = await this.#startWorkload({
 				dep,
 				image,
 				mounts,
-				project,
+				plan: plan.workload,
+				stack,
 				svc,
-				swarmMode,
 				tag,
 			});
 
 			await dep.appendLog(phaseLine("network"));
-			await this.#recordSuccess(ctx, ids, digest, project);
+			await this.#recordSuccess(ctx, ids, digest, stack);
 
 			NotificationDTO.notify({
 				message:

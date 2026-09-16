@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import type { SecurityPolicy } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
 import {
 	type GitProviderConfig,
@@ -165,6 +166,9 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			pangolinOwnsAuth: null,
 			pangolinTargetHost: null,
 			pangolinTargetPort: null,
+			preferredSignInMethods: null,
+			requirePasskey: null,
+			requireTwoFactor: null,
 			smtpEnabled: null,
 			smtpFrom: null,
 			smtpHost: null,
@@ -189,6 +193,25 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	async markOnboardingComplete(): Promise<void> {
 		await this.persist({ onboardingCompletedAt: new Date() });
+	}
+
+	get securityPolicy(): SecurityPolicy {
+		return {
+			requirePasskey: this.row.requirePasskey ?? false,
+			requireTwoFactor: this.row.requireTwoFactor ?? false,
+		};
+	}
+
+	async updateSecurityPolicy(input: SecurityPolicy): Promise<void> {
+		await this.persist(input);
+	}
+
+	get preferredSignInMethods(): string[] {
+		return this.row.preferredSignInMethods ?? [];
+	}
+
+	async updatePreferredSignInMethods(methods: string[]): Promise<void> {
+		await this.persist({ preferredSignInMethods: [...new Set(methods)] });
 	}
 
 	async updateCore(input: InstanceSettingsCoreInput): Promise<void> {

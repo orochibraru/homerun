@@ -1,8 +1,8 @@
 import { error, fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
-import { ProjectDTO } from "$lib/dto/project-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { StatusPageDTO } from "$lib/dto/status-page-dto";
 import { BEAT_WINDOW, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 import { statusPageSchema } from "$lib/server/validation/status-page";
@@ -15,8 +15,8 @@ export const load = async ({ params, parent }) => {
 		error(404, "Status page not found");
 	}
 
-	const [projects, allServices, memberIds] = await Promise.all([
-		ProjectDTO.list(user.id),
+	const [stacks, allServices, memberIds] = await Promise.all([
+		StackDTO.list(user.id),
 		ServiceDTO.list(user.id),
 		page.serviceIds(),
 	]);
@@ -39,11 +39,11 @@ export const load = async ({ params, parent }) => {
 		baseDomain: config.baseDomain,
 		beatWindow: BEAT_WINDOW,
 		memberIds,
-		projects: projects.map((p) => ({ id: p.id, name: p.name })),
+		stacks: stacks.map((p) => ({ id: p.id, name: p.name })),
 		services: allServices.map((svc) => ({
 			id: svc.id,
 			name: svc.name,
-			projectId: svc.projectId,
+			stackId: svc.stackId,
 		})),
 		statusPage: page.toJSON(),
 		tracked: beats,
@@ -71,8 +71,8 @@ export const actions = {
 		if (await StatusPageDTO.slugTaken(parsed.data.slug, page.id)) {
 			fieldErrors.slug = ["That slug is already taken."];
 		}
-		if (parsed.data.scope === "project" && !parsed.data.projectId) {
-			fieldErrors.projectId = ["Pick the project this page covers."];
+		if (parsed.data.scope === "stack" && !parsed.data.stackId) {
+			fieldErrors.stackId = ["Pick the stack this page covers."];
 		}
 		if (Object.keys(fieldErrors).length > 0) {
 			return fail(400, { errors: fieldErrors });
@@ -82,7 +82,7 @@ export const actions = {
 			description: parsed.data.description || null,
 			isPublic: parsed.data.isPublic,
 			name: parsed.data.name,
-			projectId: parsed.data.scope === "project" ? parsed.data.projectId : null,
+			stackId: parsed.data.scope === "stack" ? parsed.data.stackId : null,
 			scope: parsed.data.scope,
 			slug: parsed.data.slug,
 		});

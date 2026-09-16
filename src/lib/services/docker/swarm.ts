@@ -7,6 +7,7 @@ import type {
 	RegistryAuth,
 	VolumeMountParams,
 } from "./containers.ts";
+import { dockerHealthcheck } from "./healthcheck.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
 
 const logger = new Logger("Swarm");
@@ -48,7 +49,8 @@ export interface CreateSwarmServiceParams {
 	image: string;
 	memoryLimitMb?: number | null;
 	portProtocol?: "tcp" | "udp" | "both";
-	projectSlug?: string | null;
+	healthcheckCommand?: string | null;
+	stackSlug?: string | null;
 	replicas: number;
 	restartPolicy: string;
 	serviceId: string;
@@ -187,6 +189,7 @@ export function DockerSwarmMixin<
 			return {
 				ContainerSpec: {
 					Env: Object.entries(params.envVars).map(([k, v]) => `${k}=${v}`),
+					Healthcheck: dockerHealthcheck(params.healthcheckCommand),
 					Image: `${params.image}:${params.tag}`,
 					Labels: {
 						[SERVICE_ID_LABEL]: params.serviceId,
@@ -244,12 +247,12 @@ export function DockerSwarmMixin<
 					customDomain: params.customDomain,
 					dnsResolvable: params.dnsResolvable,
 					networkName: swarmNetworkName(),
-					projectSlug: params.projectSlug,
+					stackSlug: params.stackSlug,
 					serviceId: params.serviceId,
 					slug: params.slug,
 				}),
 				Mode: { Replicated: { Replicas: params.replicas } },
-				Name: this.#swarmServiceName(params.slug, params.projectSlug),
+				Name: this.#swarmServiceName(params.slug, params.stackSlug),
 				TaskTemplate: this.#taskTemplateFor(params),
 			});
 
@@ -364,9 +367,9 @@ export function DockerSwarmMixin<
 			});
 		}
 
-		#swarmServiceName(slug: string, projectSlug?: string | null): string {
+		#swarmServiceName(slug: string, stackSlug?: string | null): string {
 			const suffix = crypto.randomUUID().slice(0, 8);
-			const prefix = projectSlug ? `${projectSlug}-` : "";
+			const prefix = stackSlug ? `${stackSlug}-` : "";
 			return `homerun-${prefix}${slug}-${suffix}`;
 		}
 

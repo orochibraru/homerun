@@ -350,7 +350,7 @@ Three audiences, three places, keep them apart:
   user-facing.
 - **`docs/*.md`**: the operator-facing guides (`getting-started`,
   `configuration`, `services`, `remote-hosts-and-agent`, `storage-and-backups`,
-  `projects-and-templates`, `users-and-access`, `api-and-cli`,
+  `stacks-and-templates`, `users-and-access`, `api-and-cli`,
   `faq-and-limitations`, `operations`, indexed by `docs/README.md`), plus the
   root `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These are
   the source of truth, plain Markdown, readable straight from the repo. The
@@ -371,3 +371,66 @@ Three audiences, three places, keep them apart:
   wrapper, the `dev:docs`/`build:docs`/`check:docs` scripts, the `docs`
   Dockerfile stage and bake target, and every CI job building or publishing it
   are all gone. Don't reintroduce a docs site under `packages/`.
+
+## Self-update from the sidebar (`$lib/services/self-update.service.ts`, `$lib/remote/self-update.remote.ts`, `app-version.svelte`)
+
+The sidebar prints the running version for everyone; admins also get a "vX is
+available" notice that opens the update dialog. All of it loads through remote
+queries (`getAppVersion`, `getReleaseStatus`, `getUpdatePreflight`) and one
+`startSelfUpdate` command, so the layout never waits on GitHub or Docker.
+
+**The version is `HOMERUN_APP_VERSION`, falling back to `package.json`**
+(`$lib/server/app-version.ts`). Reading `package.json` alone is always one
+release behind in a published image: `semantic-release` bumps it in the
+`release` job, after the image was built, and the promote path retags a PR image
+that was built before the merge. So `docker.yaml` takes an `app_version` input
+(the `version` job's dry-run result) and bakes it as a build arg
+(`docker-bake.hcl` → `Dockerfile` `ARG`/`ENV`), and `publish.yaml`'s `promote`
+job no longer `imagetools create`s the app image: it builds
+`FROM homerun:pr-<n>` + `ENV HOMERUN_APP_VERSION=<version>` for both platforms
+(no `RUN`, so no QEMU) and pushes that as `vX.Y.Z` + `latest`. The agent image
+is still a plain retag. Without this the notice would never go away after an
+update.
+
+**Latest release** is `GET /repos/orochibraru/homerun/releases/latest`, cached
+on the service instance for an hour (five minutes after a failure, which returns
+`null` rather than an error). Comparison is `self-update/version.ts`'s small
+semver compare, a leading `v` is ignored and a non-version never counts as
+newer.
+
+**Finding its own compose project.** The service inspects its own container
+(`os.hostname()` first, then the 64-hex id out of `/proc/self/mountinfo`) and
+reads `com.docker.compose.project`/`.service`/`.project.working_dir`/
+`.project.config_files` (`self-update/compose-target.ts`). No labels, or no
+container at all (dev), means "not supported" and the dialog says so. The host
+path of the Docker socket comes from the container's own mount whose destination
+is `config.docker.socketPath`, so the rootless installer layout
+(`/run/user/<uid>/docker.sock` on both sides) and `compose.prod.yaml`
+(`/var/run/docker.sock`) both work.
+
+**Start sequence** (`SelfUpdateService.start`): refuse unless a newer release
+exists, `JobWorker.hold()`, re-run the preflight (no `deploy` job queued or
+running, no job of any type running, the worker has nothing in flight), pull
+`docker:cli`, force-remove any stale `homerun-updater`, then create and start it
+with the socket at `/var/run/docker.sock` and the working dir plus every config
+file's dir bind-mounted at their host paths. Any throw releases the hold. The
+helper is a plain container with restart policy `no` and no auto-remove,
+independent of the app container, so stopping the app doesn't take it down and
+its logs survive a failed run. Its script (`updaterScript`) bumps a pinned tag
+first when the running image isn't `:latest` (`sed` over the config files for
+`<repo>:<oldtag>`, and `HOMERUN_VERSION=<oldtag>` in `.env`, keeping the `v`
+prefix style), then `docker compose -p <project> -f … pull <service>` and
+`up -d --no-deps <service>`. Verified by running the generated `sed` lines in a
+real `alpine:3` container against a sample compose file and `.env`, and
+`docker:cli` does ship the compose plugin. **Not verified**: a real end-to-end
+update on an installed instance, and the CI changes above (nothing here can run
+GitHub Actions).
+
+**The hold is in memory, not a DB column**, on purpose: it lives exactly as long
+as the process that's about to be replaced, so the new container boots with the
+worker running and there's no stale flag to clear if an update dies halfway.
+It's on `globalThis` so an HMR-reloaded worker module sees the same flag.
+`JobWorker.tick()` and `#pump()` both return early while held, jobs that get
+enqueued meanwhile (schedulers, the API) just wait in `queued` and run after the
+restart, and anything left `running` is requeued by the existing orphan recovery
+on boot. Covered by `tests/unit/app/self-update.test.ts`.

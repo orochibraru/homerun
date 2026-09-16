@@ -349,6 +349,17 @@ export const config: AppConfig = structuredClone(fileDefaults);
  * this module for `databaseUrl`, so this module must stay a leaf to avoid a
  * circular import.
  */
+const authCheckUrlPinnedByFile = Boolean(
+	yamlConfigSchema.safeParse(readYamlConfig()).data?.authCheckUrl,
+);
+
+export function setDetectedAuthCheckUrl(url: string): void {
+	if (authCheckUrlPinnedByFile) {
+		return;
+	}
+	fileDefaults.authCheckUrl = url;
+}
+
 export function applyInstanceSettings(
 	override: InstanceSettingsOverride = {},
 ): void {

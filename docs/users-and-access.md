@@ -3,11 +3,11 @@
 ## Roles
 
 Homerun has two roles, **admin** and **developer**. Both get the full dashboard
-over their own data, every project/service/volume is already scoped by account,
+over their own data, every stack/service/volume is already scoped by account,
 invisible to other users, the only difference is a few admin-only pages,
 `/users`, `/settings`, and `/docker-cleanup` (see
 [Operations](operations.md#docker-cleanup)). There's no finer-grained permission
-system yet (no per-project access control, no read-only role).
+system yet (no per-stack access control, no read-only role).
 
 **The very first account created on a fresh instance becomes admin
 automatically.** After that, there's no public sign-up, every other account is

@@ -33,19 +33,19 @@
 	let text = $state("");
 	let parsing = $state(false);
 	let importing = $state(false);
-	let projectId = $state(untrack(() => data.projectId ?? ""));
-	let projectName = $state("");
+	let stackId = $state(untrack(() => data.stackId ?? ""));
+	let stackName = $state("");
 	let deploy = $state(false);
 	let selected = $state<Record<string, boolean>>({});
 
 	$effect(() => {
 		const services = plan?.services ?? [];
 		selected = Object.fromEntries(services.map((svc) => [svc.key, true]));
-		projectName = services.length > 1 ? "Imported stack" : "";
+		stackName = services.length > 1 ? "Imported stack" : "";
 	});
 
-	const projectLabel = $derived(
-		data.projects.find((p) => p.id === projectId)?.name ?? "Create a new one",
+	const stackLabel = $derived(
+		data.stacks.find((p) => p.id === stackId)?.name ?? "Create a new one",
 	);
 	const selectedCount = $derived(
 		Object.values(selected).filter(Boolean).length,
@@ -198,31 +198,31 @@
 
       <section class="panel space-y-4 rounded-md p-5">
         <div>
-          <label class={labelClass} for="projectId">Project</label>
-          <SelectRoot name="projectId" type="single" bind:value={projectId}>
-            <SelectTrigger class="w-full" id="projectId">
-              {projectLabel}
+          <label class={labelClass} for="stackId">Stack</label>
+          <SelectRoot name="stackId" type="single" bind:value={stackId}>
+            <SelectTrigger class="w-full" id="stackId">
+              {stackLabel}
             </SelectTrigger>
             <SelectContent>
               <SelectItem label="Create a new one" value="" />
-              {#each data.projects as project (project.id)}
-                <SelectItem label={project.name} value={project.id} />
+              {#each data.stacks as stack (stack.id)}
+                <SelectItem label={stack.name} value={stack.id} />
               {/each}
             </SelectContent>
           </SelectRoot>
         </div>
 
-        {#if !projectId}
+        {#if !stackId}
           <div>
-            <label class={labelClass} for="projectName">
-              New project name (leave blank to import ungrouped)
+            <label class={labelClass} for="stackName">
+              New stack name (leave blank to import ungrouped)
             </label>
             <Input
-              id="projectName"
-              name="projectName"
+              id="stackName"
+              name="stackName"
               placeholder="Imported stack"
               type="text"
-              bind:value={projectName}
+              bind:value={stackName}
             />
           </div>
         {/if}

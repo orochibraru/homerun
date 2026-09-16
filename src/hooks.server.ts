@@ -6,7 +6,11 @@ import { svelteKitHandler } from "better-auth/svelte-kit";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
 import { building } from "$app/environment";
-import { applyInstanceSettings } from "$lib/config";
+import {
+	applyInstanceSettings,
+	config,
+	setDetectedAuthCheckUrl,
+} from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
 import { db as appDb, getDb, resetDb } from "$lib/server/db";
@@ -173,6 +177,13 @@ export const init = async () => {
 	// not just after a settings-page save.
 	const settings = await InstanceSettingsDTO.get();
 	applyInstanceSettings(settings.toConfigOverride());
+	const self = await DockerService.selfContainer();
+	if (self?.name && self.networkAddress) {
+		setDetectedAuthCheckUrl(
+			`http://${self.name}:${config.port}/api/v1/auth-check`,
+		);
+		applyInstanceSettings(settings.toConfigOverride());
+	}
 	rebuildAuth();
 	await DockerService.syncDashboardRouter();
 	void syncDashboardDns();

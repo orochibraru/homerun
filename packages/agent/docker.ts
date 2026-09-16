@@ -81,7 +81,7 @@ class AgentDockerService {
 		return this.#docker;
 	}
 
-	/** Ensures the shared network exists : mirrors the main app's `ensureProjectNetwork`, just one flat network here since an agent host has no notion of "projects". */
+	/** Ensures the shared network exists : mirrors the main app's `ensureStackNetwork`, just one flat network here since an agent host has no notion of "stacks". */
 	/**
 	 * Clones a git repo at a ref and builds its Dockerfile into a local
 	 * image tagged `input.tag`, optionally pushing it to a registry

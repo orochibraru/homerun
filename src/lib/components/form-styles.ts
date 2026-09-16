@@ -1,6 +1,6 @@
 /**
  * The Tailwind class strings every form page in this app redefines
- * identically (services/new, service settings, project/storage/remote-host
+ * identically (services/new, service settings, stack/storage/remote-host
  * create forms, etc.) : one shared source instead of copy-pasted literals
  * that'd drift out of sync. Import and use directly as a class string
  * (`class={inputClass}`), not a component : most of these pages predate

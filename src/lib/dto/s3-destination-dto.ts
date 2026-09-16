@@ -85,6 +85,30 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 		};
 	}
 
+	static async search(
+		userId: string,
+		q: string,
+		limit: number,
+	): Promise<S3DestinationDTO[]> {
+		const rows = await db
+			.select()
+			.from(s3Destination)
+			.where(
+				and(
+					eq(s3Destination.userId, userId),
+					searchCondition(q, [
+						s3Destination.name,
+						s3Destination.endpoint,
+						s3Destination.bucket,
+						s3Destination.region,
+					]),
+				),
+			)
+			.orderBy(desc(s3Destination.createdAt))
+			.limit(limit);
+		return rows.map((row) => new S3DestinationDTO(row));
+	}
+
 	static async create(input: NewS3DestinationInput): Promise<S3DestinationDTO> {
 		const now = new Date();
 		const row: S3Destination = {

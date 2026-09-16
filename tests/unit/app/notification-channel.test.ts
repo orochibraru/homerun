@@ -152,7 +152,7 @@ describe("deploy and uptime messages", () => {
 			{
 				deployment,
 				origin: "https://homerun.example.com/",
-				projectName: "Blog",
+				stackName: "Blog",
 				publicUrl: "https://web.example.com",
 				service,
 				trigger: "cron",
@@ -167,7 +167,7 @@ describe("deploy and uptime messages", () => {
 			"https://homerun.example.com/services/svc-1/revisions",
 		);
 		expect(built.fields).toEqual([
-			{ name: "Project", value: "Blog" },
+			{ name: "Stack", value: "Blog" },
 			{ name: "Trigger", value: "Scheduled" },
 			{ name: "Image", value: "nginx:1.27" },
 			{ name: "Digest", value: "sha256:0123456789ab" },
@@ -188,7 +188,7 @@ describe("deploy and uptime messages", () => {
 					log: "\u001b[32mStep 1/3\u001b[0m\nRUN bun install\nerror: lockfile mismatch\nBuild failed.\n",
 				},
 				origin: null,
-				projectName: null,
+				stackName: null,
 				publicUrl: "https://web.example.com",
 				service: {
 					...service,

@@ -16,16 +16,16 @@ practice, and it's also the layer a future REST/CLI API would sit on top of (not
 yet built).
 
 - `service-dto.ts`, `ServiceDTO`:
-  `get`/`list`/`listByProject`/`listWithProjectNames` (joins in `project.name`
-  for the grouped services list)/`listWithProjectNamesPaged`/
+  `get`/`list`/`listByStack`/`listWithStackNames` (joins in `stack.name` for the
+  grouped services list)/`listWithStackNamesPaged`/
   `listFilterFacets`/`slugTaken`/`create`/`update`/`delete`. See Server-side
   list pagination below for the paged/faceted pair.
-- `project-dto.ts`, `ProjectDTO`:
+- `stack-dto.ts`, `StackDTO`:
   `get`/`list`/`listWithServiceCounts`/`listWithServiceCountsPaged`/`create`/
   `update`/`delete` (row-only) /`cascadeDelete()` (stops+removes every member
-  container, deletes deployments/services, deletes the project row, then removes
-  the project's Docker network, the real "delete a project" operation, see
-  `projects/[projectId]/+page.server.ts`'s `delete` action).
+  container, deletes deployments/services, deletes the stack row, then removes
+  the stack's Docker network, the real "delete a stack" operation, see
+  `stacks/[stackId]/+page.server.ts`'s `delete` action).
 - `template-dto.ts`, `TemplateDTO`: `usable(id, userId)` (built-in OR owned, for
   deploy-from-template), `owned(id, userId)` (owned only), `listForUser`,
   `listPaged(userId, "builtin" | "mine", query)`, `listCategories`, `create`.
@@ -108,9 +108,9 @@ paging through.
   why the body itself stays a plain array rather than growing an envelope.
 - Every paged DTO finder does its search/filter/count in SQL, not in memory, the
   row query and a `count()` query run in one `Promise.all`:
-  `ServiceDTO.listWithProjectNamesPaged` (+ `ServiceDTO.listFilterFacets`, every
-  distinct status/project the user actually has, so the filter pills stay stable
-  no matter which page you're on), `ProjectDTO.listWithServiceCountsPaged`,
+  `ServiceDTO.listWithStackNamesPaged` (+ `ServiceDTO.listFilterFacets`, every
+  distinct status/stack the user actually has, so the filter pills stay stable
+  no matter which page you're on), `StackDTO.listWithServiceCountsPaged`,
   `TemplateDTO.listPaged(userId, "builtin" | "mine", query)` (+
   `TemplateDTO.listCategories`), `StorageVolumeDTO.listPaged`,
   `RemoteHostDTO.listPaged`, `S3DestinationDTO.listPaged`,
@@ -143,7 +143,7 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `service`, image/tag, registry creds (`registryPasswordEnc`, AES-256-GCM),
   envVars (JSON), port/restart-policy/resource limits, `desiredState` (user
   intent) vs `currentStatus` (live reconciled Docker state), `containerId`,
-  `projectId` (nullable FK, `onDelete: "set null"`),
+  `stackId` (nullable FK, `onDelete: "set null"`),
   `cronEnabled`/`cronSchedule`/`cronLastRunAt` (opt-in scheduled redeploy, see
   below), `authRequired` + `authProviders`/`authAllowedUserIds`/
   `authAllowedEmails`/`authAllowedGroups` (the per-app login wall and its access
@@ -171,12 +171,12 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `service.customDomain`, optional second hostname (unique), a second Traefik
   router sharing the primary router's backend service, see labels.ts below.
   Configured on the service's Networking tab.
-- `project`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
+- `stack`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
   member service's container name and public subdomain, see Docker integration
-  below). Every project has a matching Docker network (see below), created
+  below). Every stack has a matching Docker network (see below), created
   alongside the row and removed on cascade-delete. Account deletion covers these
-  twice over: `UserService.cleanupUserResources` removes each project's Docker
-  network and then deletes the rows explicitly, and `project.userId` is
+  twice over: `UserService.cleanupUserResources` removes each stack's Docker
+  network and then deletes the rows explicitly, and `stack.userId` is
   `onDelete: "cascade"` underneath that.
 - `stat_sample`, one point on the resource graphs: `serviceId` (null = the host
   itself), CPU%, memory, the cumulative network counters and a timestamp,
@@ -187,8 +187,8 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   strips read the last 40, "now" is the newest). See Uptime probes in
   `observability.md`.
 - `status_page`, a published-or-private page grouping services: `scope`
-  (`"global"` | `"project"` | `"custom"`), nullable `projectId`, unique `slug`,
-  `isPublic`. A `global`/`project` page resolves its members **live** from
+  (`"global"` | `"stack"` | `"custom"`), nullable `stackId`, unique `slug`,
+  `isPublic`. A `global`/`stack` page resolves its members **live** from
   `service` on every read, so a newly deployed service appears without editing
   the page; only a `custom` page reads `status_page_service`. See Status pages
   in `services-and-templates.md`.
@@ -246,7 +246,7 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   re-adding it and re-picking it on every service that used it.
 - `service_volume`, join table: one mount of one `storage_volume` into one
   `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by
-  being mounted into more than one service, no separate project-volume concept.
+  being mounted into more than one service, no separate stack-volume concept.
 - `instance_settings.onboardingCompletedAt`, nullable timestamp, non-null once
   the onboarding wizard (see Onboarding below) has run. Not part of the
   config-override merge in `config.ts`, it's onboarding-flow state, not an
@@ -297,7 +297,7 @@ below, SQLite's `PRAGMA foreign_keys` was intentionally left off there, making
 `onDelete` decorative for row data; Postgres has no equivalent global disable,
 so it's now a genuine DB-level safety net, not just documentation.) Explicit
 app-level cascade logic still exists and is still required,
-`ProjectDTO.cascadeDelete()` and `$lib/services/user.service.ts`'s
+`StackDTO.cascadeDelete()` and `$lib/services/user.service.ts`'s
 `UserService.cleanupUserResources()` (account deletion, see User roles &
 invitations below for why that had to be pulled out of `auth.ts`'s
 `beforeDelete` into its own method rather than left inline), because a DB
@@ -337,8 +337,8 @@ read. Any SQL-side jsonb operator (`@>`, `->`, `?`) therefore silently never
 matches. Filter in code after the select instead: a real bug where
 `NotificationChannelDTO.listSubscribed` used `@>` and no channel ever received a
 deploy notification. `seed.ts`'s `onConflictDoNothing()` is idempotent on
-Postgres the same way it was on SQLite; `ProjectDTO.cascadeDelete()`'s
-child-before-parent deletion order (deployments, then services, then the project
+Postgres the same way it was on SQLite; `StackDTO.cascadeDelete()`'s
+child-before-parent deletion order (deployments, then services, then the stack
 row) was already FK-safe by inspection, so real FK enforcement doesn't break it.
 **Not carried over automatically**: any data in a pre-conversion `database.db`,
 this was a schema/dialect switch, not a data migration; a fresh Postgres

@@ -2,6 +2,10 @@ variable "TAG" {
   default = "latest"
 }
 
+variable "HOMERUN_APP_VERSION" {
+  default = ""
+}
+
 group "default" {
   targets = ["app", "agent"]
 }
@@ -25,6 +29,7 @@ target "ci-base" {
 
 target "app-base" {
   target = "app"
+  args       = { HOMERUN_APP_VERSION = HOMERUN_APP_VERSION }
   tags       = ["docker.io/orochibraru/homerun:latest", "docker.io/orochibraru/homerun:${TAG}"]
   cache-from = ["type=gha,scope=app"]
   cache-to   = ["type=gha,mode=max,scope=app"]

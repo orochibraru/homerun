@@ -92,7 +92,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return row?.total ?? 0;
 	}
 
-	/** Recent deployments across a set of services, for a project's own summary. */
+	/** Recent deployments across a set of services, for a stack's own summary. */
 	static async listRecentForServices(
 		serviceIds: string[],
 		limit = 5,

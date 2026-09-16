@@ -18,7 +18,7 @@
 	let slug = $state("");
 	let description = $state("");
 	let scope = $state<StatusPageScope>("global");
-	let projectId = $state("");
+	let stackId = $state("");
 	let isPublic = $state(false);
 	let selectedServiceIds = $state<string[]>([]);
 	let saving = $state(false);
@@ -71,11 +71,11 @@
       bind:slug
       bind:description
       bind:scope
-      bind:projectId
+      bind:stackId
       bind:isPublic
       bind:selectedServiceIds
       errors={form?.errors}
-      projects={data.projects}
+      stacks={data.stacks}
       services={data.services}
     />
 

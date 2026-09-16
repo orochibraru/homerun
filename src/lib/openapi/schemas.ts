@@ -64,7 +64,7 @@ export const serviceResponse = z.object({
 	name: z.string(),
 	networkMode: z.enum(["bridge", "host"]),
 	portProtocol: z.enum(["tcp", "udp", "both"]),
-	projectId: z.string().nullable(),
+	stackId: z.string().nullable(),
 	registryPasswordEnc: z
 		.string()
 		.nullable()
@@ -78,7 +78,7 @@ export const serviceResponse = z.object({
 	userId: z.string(),
 });
 
-export const projectResponse = z.object({
+export const stackResponse = z.object({
 	createdAt: isoTimestamp,
 	description: z.string().nullable(),
 	id: z.string(),

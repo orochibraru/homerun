@@ -30,9 +30,9 @@ const providers = [
 
 export function serviceHostname(
 	slug: string,
-	projectSlug: string | null | undefined,
+	stackSlug: string | null | undefined,
 ): string {
-	const host = projectSlug ? `${projectSlug}-${slug}` : slug;
+	const host = stackSlug ? `${stackSlug}-${slug}` : slug;
 	return `${host}.${config.baseDomain}`;
 }
 

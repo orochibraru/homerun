@@ -25,7 +25,7 @@ sync by hand.
    service to another, volumes, networking and DNS automation, the login wall,
    compute limits, swarm mode, cron redeploys, cron jobs, logs, and the web
    terminal.
-4. **[Projects & templates](projects-and-templates.md)**: grouping services on a
+4. **[Stacks & templates](stacks-and-templates.md)**: grouping services on a
    shared network, the built-in app catalog, quick deploys, linked companion
    containers, and saving your own.
 5. **[Storage & backups](storage-and-backups.md)**: bind-mount and

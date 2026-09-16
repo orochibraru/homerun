@@ -6,13 +6,36 @@ const POLL_MS = 1000;
 const MAX_CONCURRENT_JOBS = 3;
 const RETRY_BASE_MS = 10_000;
 
+const holdState = globalThis as unknown as { __job_worker_held?: boolean };
+
 class JobWorkerClass extends BaseScheduler {
 	protected readonly label = "Queue";
 	protected readonly intervalMs = POLL_MS;
 	readonly #inFlight = new Set<string>();
 	#orphanCheck: Promise<void> | null = null;
 
+	get held(): boolean {
+		return holdState.__job_worker_held === true;
+	}
+
+	get busy(): boolean {
+		return this.#inFlight.size > 0;
+	}
+
+	hold(): void {
+		holdState.__job_worker_held = true;
+		this.logger.warn("Job worker held: no new jobs will start.");
+	}
+
+	release(): void {
+		holdState.__job_worker_held = false;
+		this.logger.info("Job worker released.");
+	}
+
 	protected async tick(): Promise<void> {
+		if (this.held) {
+			return;
+		}
 		await this.#recoverOrphans();
 		await this.#pump();
 	}
@@ -32,7 +55,7 @@ class JobWorkerClass extends BaseScheduler {
 	}
 
 	async #pump(): Promise<void> {
-		if (this.#inFlight.size >= MAX_CONCURRENT_JOBS) {
+		if (this.held || this.#inFlight.size >= MAX_CONCURRENT_JOBS) {
 			return;
 		}
 		const claimed = await JobDTO.claimNext();

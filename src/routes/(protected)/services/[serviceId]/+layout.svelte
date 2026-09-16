@@ -30,7 +30,7 @@
 			svc.currentStatus,
 	);
 	const publicHost = $derived(
-		data.projectSlug ? `${data.projectSlug}-${svc.slug}` : svc.slug,
+		data.stackSlug ? `${data.stackSlug}-${svc.slug}` : svc.slug,
 	);
 	const publicDomains = $derived(
 		svc.dnsResolvable

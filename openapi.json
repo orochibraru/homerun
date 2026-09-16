@@ -21,278 +21,6 @@
 	},
 	"openapi": "3.1.0",
 	"paths": {
-		"/projects": {
-			"get": {
-				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
-				"operationId": "get_projects",
-				"parameters": [
-					{
-						"description": "1-based page number (default 1)",
-						"in": "query",
-						"name": "page",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Items per page (default 100, max 100)",
-						"in": "query",
-						"name": "perPage",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Case-insensitive search term",
-						"in": "query",
-						"name": "q",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"additionalProperties": false,
-										"properties": {
-											"createdAt": {
-												"description": "ISO 8601 timestamp",
-												"example": "2026-08-20T12:00:00.000Z",
-												"type": "string"
-											},
-											"description": {
-												"anyOf": [
-													{
-														"type": "string"
-													},
-													{
-														"type": "null"
-													}
-												]
-											},
-											"id": {
-												"type": "string"
-											},
-											"name": {
-												"type": "string"
-											},
-											"slug": {
-												"type": "string"
-											},
-											"updatedAt": {
-												"description": "ISO 8601 timestamp",
-												"example": "2026-08-20T12:00:00.000Z",
-												"type": "string"
-											},
-											"userId": {
-												"type": "string"
-											}
-										},
-										"required": [
-											"createdAt",
-											"description",
-											"id",
-											"name",
-											"slug",
-											"updatedAt",
-											"userId"
-										],
-										"type": "object"
-									},
-									"type": "array"
-								}
-							}
-						},
-						"description": "The caller's projects"
-					},
-					"401": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"additionalProperties": false,
-									"properties": {
-										"error": {
-											"type": "string"
-										},
-										"issues": {}
-									},
-									"required": ["error"],
-									"type": "object"
-								}
-							}
-						},
-						"description": "Unauthorized"
-					}
-				},
-				"security": [
-					{
-						"apiKey": []
-					},
-					{
-						"bearerAuth": []
-					}
-				],
-				"summary": "List projects",
-				"tags": ["Projects"]
-			},
-			"post": {
-				"operationId": "post_projects",
-				"parameters": [],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"additionalProperties": false,
-								"properties": {
-									"description": {
-										"type": "string"
-									},
-									"name": {
-										"maxLength": 100,
-										"minLength": 1,
-										"type": "string"
-									},
-									"slug": {
-										"pattern": "^[a-z0-9-]{1,63}$",
-										"type": "string"
-									}
-								},
-								"required": ["name", "slug"],
-								"type": "object"
-							}
-						}
-					},
-					"required": true
-				},
-				"responses": {
-					"201": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"additionalProperties": false,
-									"properties": {
-										"createdAt": {
-											"description": "ISO 8601 timestamp",
-											"example": "2026-08-20T12:00:00.000Z",
-											"type": "string"
-										},
-										"description": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
-										"id": {
-											"type": "string"
-										},
-										"name": {
-											"type": "string"
-										},
-										"slug": {
-											"type": "string"
-										},
-										"updatedAt": {
-											"description": "ISO 8601 timestamp",
-											"example": "2026-08-20T12:00:00.000Z",
-											"type": "string"
-										},
-										"userId": {
-											"type": "string"
-										}
-									},
-									"required": [
-										"createdAt",
-										"description",
-										"id",
-										"name",
-										"slug",
-										"updatedAt",
-										"userId"
-									],
-									"type": "object"
-								}
-							}
-						},
-						"description": "Created"
-					},
-					"400": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"additionalProperties": false,
-									"properties": {
-										"error": {
-											"type": "string"
-										},
-										"issues": {}
-									},
-									"required": ["error"],
-									"type": "object"
-								}
-							}
-						},
-						"description": "Invalid request body"
-					},
-					"401": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"additionalProperties": false,
-									"properties": {
-										"error": {
-											"type": "string"
-										},
-										"issues": {}
-									},
-									"required": ["error"],
-									"type": "object"
-								}
-							}
-						},
-						"description": "Unauthorized"
-					},
-					"409": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"additionalProperties": false,
-									"properties": {
-										"error": {
-											"type": "string"
-										},
-										"issues": {}
-									},
-									"required": ["error"],
-									"type": "object"
-								}
-							}
-						},
-						"description": "Slug already in use"
-					}
-				},
-				"security": [
-					{
-						"apiKey": []
-					},
-					{
-						"bearerAuth": []
-					}
-				],
-				"summary": "Create a project",
-				"tags": ["Projects"]
-			}
-		},
 		"/services": {
 			"get": {
 				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
@@ -547,16 +275,6 @@
 												"enum": ["tcp", "udp", "both"],
 												"type": "string"
 											},
-											"projectId": {
-												"anyOf": [
-													{
-														"type": "string"
-													},
-													{
-														"type": "null"
-													}
-												]
-											},
 											"registryPasswordEnc": {
 												"anyOf": [
 													{
@@ -599,6 +317,16 @@
 											},
 											"slug": {
 												"type": "string"
+											},
+											"stackId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
 											},
 											"tag": {
 												"type": "string"
@@ -643,7 +371,7 @@
 											"name",
 											"networkMode",
 											"portProtocol",
-											"projectId",
+											"stackId",
 											"registryPasswordEnc",
 											"registryUrl",
 											"registryUsername",
@@ -757,9 +485,6 @@
 										"minLength": 1,
 										"type": "string"
 									},
-									"projectId": {
-										"type": "string"
-									},
 									"pullPolicy": {
 										"default": "always",
 										"enum": ["always", "missing", "never"],
@@ -781,6 +506,9 @@
 									},
 									"slug": {
 										"pattern": "^[a-z0-9-]{1,63}$",
+										"type": "string"
+									},
+									"stackId": {
 										"type": "string"
 									},
 									"tag": {
@@ -1025,16 +753,6 @@
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
 										},
-										"projectId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"registryPasswordEnc": {
 											"anyOf": [
 												{
@@ -1072,6 +790,16 @@
 										},
 										"slug": {
 											"type": "string"
+										},
+										"stackId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"tag": {
 											"type": "string"
@@ -1116,7 +844,7 @@
 										"name",
 										"networkMode",
 										"portProtocol",
-										"projectId",
+										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
@@ -1499,16 +1227,6 @@
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
 										},
-										"projectId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"registryPasswordEnc": {
 											"anyOf": [
 												{
@@ -1546,6 +1264,16 @@
 										},
 										"slug": {
 											"type": "string"
+										},
+										"stackId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"tag": {
 											"type": "string"
@@ -1590,7 +1318,7 @@
 										"name",
 										"networkMode",
 										"portProtocol",
-										"projectId",
+										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
@@ -2040,16 +1768,6 @@
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
 										},
-										"projectId": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"registryPasswordEnc": {
 											"anyOf": [
 												{
@@ -2087,6 +1805,16 @@
 										},
 										"slug": {
 											"type": "string"
+										},
+										"stackId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"tag": {
 											"type": "string"
@@ -2131,7 +1859,7 @@
 										"name",
 										"networkMode",
 										"portProtocol",
-										"projectId",
+										"stackId",
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
@@ -2626,6 +2354,278 @@
 				],
 				"summary": "Stop a service's container",
 				"tags": ["Services"]
+			}
+		},
+		"/stacks": {
+			"get": {
+				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
+				"operationId": "get_stacks",
+				"parameters": [
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 100)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"description": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"id": {
+												"type": "string"
+											},
+											"name": {
+												"type": "string"
+											},
+											"slug": {
+												"type": "string"
+											},
+											"updatedAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"userId": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"createdAt",
+											"description",
+											"id",
+											"name",
+											"slug",
+											"updatedAt",
+											"userId"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The caller's stacks"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List stacks",
+				"tags": ["Stacks"]
+			},
+			"post": {
+				"operationId": "post_stacks",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"description": {
+										"type": "string"
+									},
+									"name": {
+										"maxLength": 100,
+										"minLength": 1,
+										"type": "string"
+									},
+									"slug": {
+										"pattern": "^[a-z0-9-]{1,63}$",
+										"type": "string"
+									}
+								},
+								"required": ["name", "slug"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"description": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"id": {
+											"type": "string"
+										},
+										"name": {
+											"type": "string"
+										},
+										"slug": {
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"userId": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"createdAt",
+										"description",
+										"id",
+										"name",
+										"slug",
+										"updatedAt",
+										"userId"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Created"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Invalid request body"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Slug already in use"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Create a stack",
+				"tags": ["Stacks"]
 			}
 		},
 		"/system-stats": {

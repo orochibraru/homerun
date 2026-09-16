@@ -4,27 +4,6 @@
  */
 
 export interface paths {
-	"/projects": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * List projects
-		 * @description Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.
-		 */
-		get: operations["get_projects"];
-		put?: never;
-		/** Create a project */
-		post: operations["post_projects"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/services": {
 		parameters: {
 			query?: never;
@@ -142,6 +121,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/stacks": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List stacks
+		 * @description Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.
+		 */
+		get: operations["get_stacks"];
+		put?: never;
+		/** Create a stack */
+		post: operations["post_stacks"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/system-stats": {
 		parameters: {
 			query?: never;
@@ -191,141 +191,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-	get_projects: {
-		parameters: {
-			query?: {
-				/** @description 1-based page number (default 1) */
-				page?: string;
-				/** @description Items per page (default 100, max 100) */
-				perPage?: string;
-				/** @description Case-insensitive search term */
-				q?: string;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description The caller's projects */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						/**
-						 * @description ISO 8601 timestamp
-						 * @example 2026-08-20T12:00:00.000Z
-						 */
-						createdAt: string;
-						description: string | null;
-						id: string;
-						name: string;
-						slug: string;
-						/**
-						 * @description ISO 8601 timestamp
-						 * @example 2026-08-20T12:00:00.000Z
-						 */
-						updatedAt: string;
-						userId: string;
-					}[];
-				};
-			};
-			/** @description Unauthorized */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						error: string;
-						issues?: unknown;
-					};
-				};
-			};
-		};
-	};
-	post_projects: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": {
-					description?: string;
-					name: string;
-					slug: string;
-				};
-			};
-		};
-		responses: {
-			/** @description Created */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						/**
-						 * @description ISO 8601 timestamp
-						 * @example 2026-08-20T12:00:00.000Z
-						 */
-						createdAt: string;
-						description: string | null;
-						id: string;
-						name: string;
-						slug: string;
-						/**
-						 * @description ISO 8601 timestamp
-						 * @example 2026-08-20T12:00:00.000Z
-						 */
-						updatedAt: string;
-						userId: string;
-					};
-				};
-			};
-			/** @description Invalid request body */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						error: string;
-						issues?: unknown;
-					};
-				};
-			};
-			/** @description Unauthorized */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						error: string;
-						issues?: unknown;
-					};
-				};
-			};
-			/** @description Slug already in use */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": {
-						error: string;
-						issues?: unknown;
-					};
-				};
-			};
-		};
-	};
 	get_services: {
 		parameters: {
 			query?: {
@@ -397,7 +262,6 @@ export interface operations {
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
-						projectId: string | null;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -405,6 +269,7 @@ export interface operations {
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
+						stackId: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -461,7 +326,6 @@ export interface operations {
 					image?: string;
 					memoryLimitMb?: number;
 					name: string;
-					projectId?: string;
 					/**
 					 * @default always
 					 * @enum {string}
@@ -476,6 +340,7 @@ export interface operations {
 					 */
 					restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 					slug: string;
+					stackId?: string;
 					tag?: string;
 				};
 			};
@@ -536,7 +401,6 @@ export interface operations {
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
-						projectId: string | null;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -544,6 +408,7 @@ export interface operations {
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
+						stackId: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -659,7 +524,6 @@ export interface operations {
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
-						projectId: string | null;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -667,6 +531,7 @@ export interface operations {
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
+						stackId: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -845,7 +710,6 @@ export interface operations {
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
-						projectId: string | null;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -853,6 +717,7 @@ export interface operations {
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
+						stackId: string | null;
 						tag: string;
 						/**
 						 * @description ISO 8601 timestamp
@@ -1138,6 +1003,141 @@ export interface operations {
 			};
 			/** @description Not found */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_stacks: {
+		parameters: {
+			query?: {
+				/** @description 1-based page number (default 1) */
+				page?: string;
+				/** @description Items per page (default 100, max 100) */
+				perPage?: string;
+				/** @description Case-insensitive search term */
+				q?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The caller's stacks */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						name: string;
+						slug: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						updatedAt: string;
+						userId: string;
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_stacks: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					description?: string;
+					name: string;
+					slug: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						description: string | null;
+						id: string;
+						name: string;
+						slug: string;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						updatedAt: string;
+						userId: string;
+					};
+				};
+			};
+			/** @description Invalid request body */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Slug already in use */
+			409: {
 				headers: {
 					[name: string]: unknown;
 				};

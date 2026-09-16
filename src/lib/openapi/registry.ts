@@ -1,14 +1,14 @@
 import type { z } from "zod";
 import {
-	createProjectApiBody,
 	createServiceApiBody,
+	createStackApiBody,
 	updateServiceApiBody,
 } from "$lib/server/validation/api";
 import {
 	deployResultResponse,
 	errorResponse,
-	projectResponse,
 	serviceResponse,
+	stackResponse,
 	successResponse,
 	systemStatsResponse,
 	templateResponse,
@@ -202,31 +202,31 @@ export const routes: RouteDef[] = [
 		description:
 			"Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
 		method: "get",
-		path: "/projects",
+		path: "/stacks",
 		queryParams: listQueryParams,
 		responses: {
 			200: {
-				description: "The caller's projects",
+				description: "The caller's stacks",
 				isArray: true,
-				schema: projectResponse,
+				schema: stackResponse,
 			},
 			401: unauthorized,
 		},
-		summary: "List projects",
-		tags: ["Projects"],
+		summary: "List stacks",
+		tags: ["Stacks"],
 	},
 	{
 		method: "post",
-		path: "/projects",
-		requestBody: createProjectApiBody,
+		path: "/stacks",
+		requestBody: createStackApiBody,
 		responses: {
-			201: { description: "Created", schema: projectResponse },
+			201: { description: "Created", schema: stackResponse },
 			400: badRequest,
 			401: unauthorized,
 			409: { description: "Slug already in use", schema: errorResponse },
 		},
-		summary: "Create a project",
-		tags: ["Projects"],
+		summary: "Create a stack",
+		tags: ["Stacks"],
 	},
 	{
 		description:

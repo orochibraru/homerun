@@ -3,6 +3,7 @@ export interface BuiltinTemplate {
 	containerPort: number;
 	description: string;
 	envVars: Record<string, string>;
+	healthcheckCommand?: string;
 	icon: string;
 	id: string;
 	image: string;

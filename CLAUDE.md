@@ -348,7 +348,7 @@ to reintroduce a fixed bug.
 | Note                        | Read it when you're touching                                                                                                                             |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data-and-config.md`        | `schema.ts`, a table/column, a DTO under `$lib/dto/`, list pagination, `config.ts`, instance settings, `/settings`                                       |
-| `routing.md`                | Any route under `src/routes/`, the sidebar nav, the services/projects/templates pages, tab layouts                                                       |
+| `routing.md`                | Any route under `src/routes/`, the sidebar nav, the services/stacks/templates pages, tab layouts                                                         |
 | `ui.md`                     | `layout.css`, theming/tokens, `$lib/components/`, list-page toolkit, page width, the `$derived` push/splice bug, appearance prefs                        |
 | `docker.md`                 | `DockerService` and its mixins, containers/networks/volumes, swarm mode, network mode, web terminal, build servers, custom SSL, Docker Cleanup           |
 | `auth.md`                   | better-auth, sign-in/sign-up, OAuth providers, `/authentication`, the per-app login wall, user roles/invites, onboarding, base domain vs. dashboard URL  |

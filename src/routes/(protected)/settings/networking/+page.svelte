@@ -1,17 +1,26 @@
 <script lang="ts">
 	import { enhance } from "$app/forms";
+	import { page } from "$app/state";
 	import AsyncBlock from "$lib/components/async-block.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
-	import { getNewtContainer } from "$lib/remote/setup.remote";
+	import { getNewtContainer, getSetupStatus } from "$lib/remote/setup.remote";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data } = $props();
 
 	const newt = getNewtContainer();
+	const setup = getSetupStatus();
+	const dynamicDirIssue = $derived(
+		(page.url.searchParams.get("highlight") ?? "")
+			.split(",")
+			.includes("traefikDynamicConfigDir")
+			? setup.current?.issuesByField.traefikDynamicConfigDir
+			: undefined,
+	);
 </script>
 
 <div class="space-y-6">
@@ -77,7 +86,7 @@
         <label class={label} for="traefikDynamicConfigDir"
         >Dynamic config directory</label>
         <Input
-          class=""
+          class={dynamicDirIssue ? "ring-2 ring-amber-400" : ""}
           id="traefikDynamicConfigDir"
           name="traefikDynamicConfigDir"
           placeholder={data.envDefaults.traefikDynamicConfigDir
@@ -90,6 +99,11 @@
           compose.yaml's commented-out example. Unset means per-service custom
           SSL certs are stored but never written anywhere.
         </p>
+        {#if dynamicDirIssue}
+          <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+            ⚠ {dynamicDirIssue}
+          </p>
+        {/if}
       </div>
       <div class="flex justify-end">
         <Button type="submit">Save</Button>

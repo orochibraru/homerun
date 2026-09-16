@@ -72,7 +72,7 @@ homerun services deploy <id>
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
-homerun projects list [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
 
