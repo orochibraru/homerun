@@ -44,12 +44,14 @@ re-litigating design decisions.
   a label plus route-gating only, no finer-grained permissions (e.g. no
   per-project access control, no read-only role) built yet.
 - **Notifications / webhooks**: the in-app lifecycle event feed exists (see
-  In-app notifications above), and outbound **generic HTTP webhooks and email**
-  now exist too, but only on **uptime state changes**, wired to status pages
-  (`notification_channel`, `status-alert.service.ts`, see
-  `services-and-templates.md`). Webhooks on _deploy_ lifecycle events, and
-  provider-shaped payloads (Telegram/Discord/Slack rather than a generic JSON
-  POST), are still unbuilt.
+  In-app notifications above), and outbound notification channels now exist too
+  (`notification_channel`, `NotificationChannelService`, see Outbound
+  notification channels in `observability.md`) : generic JSON webhook, Discord
+  embed, or email, each subscribed per-channel to any mix of build/update/
+  deploy/uptime events, account-wide rather than tied to a status page.
+  Provider-shaped payloads beyond Discord (Telegram, Slack) are still unbuilt,
+  and there's no delivery retry, a failure is caught, logged and surfaced on
+  `notification_channel.lastError`, not retried.
 
 `TODO.md` at the repo root tracks open follow-up items separately from this
 intentional-gaps list.

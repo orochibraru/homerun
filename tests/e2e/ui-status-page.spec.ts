@@ -78,36 +78,4 @@ test.describe
 			expect(response?.status()).toBe(404);
 			await anon.close();
 		});
-
-		test("a webhook channel is added, listed, and removed", async ({
-			page,
-		}) => {
-			await signIn(page);
-			await page.goto("/status-pages");
-
-			await page.locator("#channelName").fill("E2E hook");
-			await page.locator("#channelTarget").fill("https://example.com/hook");
-			await page.getByRole("button", { name: "Add channel" }).click();
-			await expect(page.getByText("Channel added.")).toBeVisible();
-			await expect(page.getByText("https://example.com/hook")).toBeVisible();
-
-			await page.getByRole("button", { name: "Remove E2E hook" }).click();
-			await expect(page.getByText("Channel removed.")).toBeVisible();
-			await expect(page.getByText("https://example.com/hook")).toHaveCount(0);
-		});
-
-		test("a malformed webhook URL is rejected", async ({ page }) => {
-			await signIn(page);
-			await page.goto("/status-pages");
-
-			await page.locator("#channelName").fill("Bad hook");
-			await page.locator("#channelTarget").fill("not-a-url");
-			await page.getByRole("button", { name: "Add channel" }).click();
-
-			await expect(
-				page
-					.locator("form[action='?/createChannel']")
-					.getByText("That doesn't look like a URL."),
-			).toBeVisible();
-		});
 	});

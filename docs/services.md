@@ -378,7 +378,8 @@ The bell in the header shows a per-account feed of lifecycle events for your
 services, deploy succeeded or failed, service created, started or stopped, an
 auto-redeploy firing, and runtime errors. Click an entry to jump to its service.
 See [Operations](operations.md#notifications) for how it differs from the Errors
-tab's persisted log view.
+tab's persisted log view, and for sending the same build/update/deploy/uptime
+events out to a Discord webhook, a generic webhook, or email.
 
 ## Settings
 

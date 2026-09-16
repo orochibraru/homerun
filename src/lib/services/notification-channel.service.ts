@@ -1,0 +1,217 @@
+import { config, isSmtpEnabled } from "$lib/config";
+import type { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
+import { ProjectDTO } from "$lib/dto/project-dto";
+import type { ServiceDTO } from "$lib/dto/service-dto";
+import { Logger } from "$lib/logger";
+import { isFailureEvent, NOTIFICATION_EVENTS } from "$lib/notification-events";
+import { serviceHostname } from "./dns.service";
+import { EmailService } from "./email.service";
+import { type ChannelMessage, deployMessage } from "./notification-messages";
+
+const logger = new Logger("NotificationChannels");
+
+const WEBHOOK_TIMEOUT_MS = 10_000;
+
+const DISCORD_DESCRIPTION_LIMIT = 4000;
+const DISCORD_FIELD_LIMIT = 1024;
+const DISCORD_INLINE_MAX = 40;
+
+const DISCORD_RED = 0xef_44_44;
+const DISCORD_GREEN = 0x10_b9_81;
+
+export interface DeployNotification {
+	dep: DeploymentDTO;
+	ok: boolean;
+	svc: ServiceDTO;
+	trigger: "manual" | "cron";
+}
+
+function keepTail(text: string, limit: number): string {
+	return text.length > limit ? `…${text.slice(-limit)}` : text;
+}
+
+function keepHead(text: string, limit: number): string {
+	return text.length > limit ? `${text.slice(0, limit)}…` : text;
+}
+
+export function messageSubject(message: ChannelMessage): string {
+	return `[Homerun] ${message.title}`;
+}
+
+export function messageBody(message: ChannelMessage): string {
+	const label =
+		NOTIFICATION_EVENTS.find((info) => info.event === message.event)?.label ??
+		message.event;
+	const lines = [
+		message.title,
+		"",
+		`Service: ${message.serviceName}`,
+		`Event: ${label}`,
+		...message.fields.map((field) => `${field.name}: ${field.value}`),
+		`At: ${message.timestamp}`,
+	];
+	if (message.link) {
+		lines.push(`Open: ${message.link}`);
+	}
+	if (message.detail) {
+		lines.push("", message.detail);
+	}
+	return lines.join("\n");
+}
+
+export function discordPayload(message: ChannelMessage) {
+	const detail = message.detail
+		? keepTail(message.detail, DISCORD_DESCRIPTION_LIMIT)
+		: "";
+	return {
+		embeds: [
+			{
+				color: isFailureEvent(message.event) ? DISCORD_RED : DISCORD_GREEN,
+				description: detail ? `\`\`\`\n${detail}\n\`\`\`` : undefined,
+				fields: [
+					{ name: "Service", value: message.serviceName },
+					...message.fields,
+				].map((field) => ({
+					inline: field.value.length <= DISCORD_INLINE_MAX,
+					name: field.name,
+					value: keepHead(field.value, DISCORD_FIELD_LIMIT),
+				})),
+				footer: { text: message.event },
+				timestamp: message.timestamp,
+				title: message.title,
+				url: message.link ?? undefined,
+			},
+		],
+		username: "Homerun",
+	};
+}
+
+class NotificationChannelServiceClass {
+	notify(userId: string, message: ChannelMessage): void {
+		this.dispatch(userId, message).catch((err) => {
+			logger.warn(
+				`Channel dispatch failed: event=${message.event} : ${err instanceof Error ? err.message : String(err)}`,
+			);
+		});
+	}
+
+	notifyDeploy(notification: DeployNotification): void {
+		this.#deployMessage(notification)
+			.then((message) => this.dispatch(notification.svc.userId, message))
+			.catch((err) => {
+				logger.warn(
+					`Deploy notification failed: service=${notification.svc.id} : ${err instanceof Error ? err.message : String(err)}`,
+				);
+			});
+	}
+
+	async #deployMessage({
+		dep: deployment,
+		ok,
+		svc: service,
+		trigger,
+	}: DeployNotification): Promise<ChannelMessage> {
+		const project = service.projectId
+			? await ProjectDTO.get(service.projectId, service.userId)
+			: null;
+		const row = service.toJSON();
+		const host =
+			row.customDomain ?? serviceHostname(row.slug, project?.slug ?? null);
+		return deployMessage(
+			{
+				deployment: deployment.toJSON(),
+				origin: config.auth.origin ?? null,
+				projectName: project?.name ?? null,
+				publicUrl: row.dnsResolvable ? `https://${host}` : null,
+				service: row,
+				trigger,
+			},
+			ok,
+			new Date().toISOString(),
+		);
+	}
+
+	async dispatch(userId: string, message: ChannelMessage): Promise<void> {
+		const channels = await NotificationChannelDTO.listSubscribed(
+			userId,
+			message.event,
+		);
+		await Promise.all(channels.map((channel) => this.#send(channel, message)));
+	}
+
+	async sendTest(channel: NotificationChannelDTO): Promise<void> {
+		await this.#deliver(channel, {
+			detail: "This is a test notification from Homerun.",
+			event: "build.failed",
+			fields: [
+				{ name: "Trigger", value: "Manual" },
+				{ name: "Repository", value: "https://github.com/example/app.git" },
+				{ name: "Branch", value: "main" },
+				{ name: "Commit", value: "0000000" },
+				{ name: "Duration", value: "42s" },
+			],
+			link: null,
+			serviceId: "test",
+			serviceName: "Test service",
+			timestamp: new Date().toISOString(),
+			title: "Test service failed to build",
+		});
+		await channel.update({ lastError: null });
+	}
+
+	async #send(
+		channel: NotificationChannelDTO,
+		message: ChannelMessage,
+	): Promise<void> {
+		try {
+			await this.#deliver(channel, message);
+			await channel.update({ lastError: null });
+		} catch (err) {
+			const reason = err instanceof Error ? err.message : String(err);
+			logger.warn(`Channel "${channel.name}" failed: ${reason}`);
+			await channel.update({ lastError: reason });
+		}
+	}
+
+	#deliver(
+		channel: NotificationChannelDTO,
+		message: ChannelMessage,
+	): Promise<void> {
+		switch (channel.kind) {
+			case "discord":
+				return this.#post(channel.target, discordPayload(message));
+			case "email":
+				return this.#sendEmail(channel.target, message);
+			default:
+				return this.#post(channel.target, message);
+		}
+	}
+
+	async #post(url: string, body: unknown): Promise<void> {
+		const response = await fetch(url, {
+			body: JSON.stringify(body),
+			headers: { "content-type": "application/json" },
+			method: "POST",
+			signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
+		});
+		if (!response.ok) {
+			throw new Error(`Webhook returned HTTP ${response.status}`);
+		}
+	}
+
+	async #sendEmail(to: string, message: ChannelMessage): Promise<void> {
+		if (!isSmtpEnabled()) {
+			throw new Error(
+				"SMTP isn't configured, so email notifications can't be sent.",
+			);
+		}
+		await new EmailService({
+			content: messageBody(message),
+			subject: messageSubject(message),
+			to,
+		}).send();
+	}
+}
+
+export const NotificationChannelService = new NotificationChannelServiceClass();

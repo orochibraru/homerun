@@ -124,7 +124,18 @@ warn or error level is persisted separately and shown on the relevant service's
 [Errors tab](services.md#errors). Old notifications are trimmed automatically,
 so the feed doesn't grow without bound.
 
-Outbound notifications (Discord, Telegram, a generic webhook) aren't built yet,
+**Notification channels** send the same kind of events outside the dashboard.
+Add a Discord webhook, a generic webhook, or an email address under
+**Notification Channels** in the sidebar, then pick which events each one gets
+under **Profile → Notifications**: build succeeded/failed, scheduled update
+succeeded/failed, manual deploy succeeded/failed, and a service going down or
+recovering. A new channel starts subscribed to build and update failures only,
+turn on the rest you want from that matrix. A **Send test** button on each
+channel fires a sample notification so you can check the destination actually
+works before relying on it; a delivery failure is shown right on the channel
+(and isn't retried automatically) rather than failing silently. Email channels
+need SMTP configured first, see [Configuration](configuration.md).
+Provider-shaped notifications beyond Discord (Telegram, Slack) aren't built yet,
 see [FAQ & limitations](faq-and-limitations.md#planned-not-yet-built).
 
 ## Upgrading Homerun itself

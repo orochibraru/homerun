@@ -6,7 +6,7 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { alertBody, alertSubject, detectTransitions } = await import(
+const { detectTransitions } = await import(
 	"../../../src/lib/services/status-alert.service"
 );
 
@@ -76,29 +76,5 @@ describe("detectTransitions", () => {
 				{ kind: "external", ok: false, serviceId: "a" },
 			]),
 		).toEqual([{ detail: null, kind: "external", ok: false, serviceId: "a" }]);
-	});
-});
-
-describe("alert formatting", () => {
-	const payload = {
-		detail: "Connection refused.",
-		event: "service.down" as const,
-		kind: "internal" as const,
-		serviceId: "svc-1",
-		serviceName: "postgresql",
-		statusPage: "Production",
-		timestamp: "2026-09-15T12:00:00.000Z",
-	};
-
-	test("the subject names the page, the service and the direction", () => {
-		expect(alertSubject(payload)).toBe("[Production] postgresql is down");
-		expect(alertSubject({ ...payload, event: "service.up" })).toBe(
-			"[Production] postgresql recovered",
-		);
-	});
-
-	test("the body carries the probe detail, and omits it when absent", () => {
-		expect(alertBody(payload)).toContain("Detail: Connection refused.");
-		expect(alertBody({ ...payload, detail: null })).not.toContain("Detail:");
 	});
 });

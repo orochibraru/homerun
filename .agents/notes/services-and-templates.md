@@ -467,7 +467,7 @@ is crafted to exploit gaps in GitHub's own rendering; sanitizing server-side
 means the client only ever receives an already-restricted tag/attribute
 allowlist, regardless of what GitHub returned.
 
-## Status pages and alerting (`status_page`, `notification_channel`, `status-alert.service.ts`)
+## Status pages (`status_page`)
 
 A status page groups services and answers one question — is this up? — for an
 audience that may not be signed in. Three shapes, set by `scope`:
@@ -481,27 +481,22 @@ audience that may not be signed in. Three shapes, set by `scope`:
 anyone re-editing it. That's the whole reason the join table isn't used for all
 three.
 
-`/status-pages` is the operator's view: health of every service, the pages
-themselves, and the notification channels. `/status/<slug>` is the public one,
-and the routing and disclosure rules for it are in `routing.md` — read that
-before touching either.
+`/status-pages` is the operator's view: health of every service and the pages
+themselves, with a link out to `/notification-channels`. `/status/<slug>` is the
+public one, and the routing and disclosure rules for it are in `routing.md`:
+read that before touching either.
 
 **Alerts fire on a state change, not on a state.** `uptime-probe.ts`'s tick
 reads the previous beat per probe before recording the new one and
 `detectTransitions` diffs them, so a service that's been down for an hour
 doesn't re-alert every minute, and a probe with no previous beat never alerts at
 all (otherwise the first tick after a deploy, or after `prune()` cleared the
-window, would alert on everything at once). Each transition reaches the channels
-of every page covering that service : `listForStatusPage` returns that page's
-own channels plus every account-wide one (`statusPageId` null).
-
-A channel is a generic JSON `POST` or an email. Failures are contained — caught
-per channel, logged, and stored on `notification_channel.lastError` so a
-silently-broken webhook is visible in the UI instead of just never firing. Email
-needs SMTP configured and says so rather than failing opaquely. The payload
-shape and the two formatters (`alertSubject`/`alertBody`) are pure and
-unit-tested in `tests/unit/app/status-alert.test.ts`, along with the transition
-logic.
+window, would alert on everything at once). A transition no longer needs a
+status page at all : it's dispatched straight to every account-wide channel
+subscribed to `service.down`/`service.up`, see Outbound notification channels in
+`observability.md` for the channel model (`notification_channel`,
+`NotificationChannelService`) and `tests/unit/app/status-alert.test.ts` for the
+transition logic itself.
 
 ## Git-based builds (`src/lib/services/docker/git-build.ts`)
 

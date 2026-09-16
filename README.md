@@ -71,7 +71,10 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   preview before you prune
 - **DNS automation**: optional Cloudflare or self-hosted Pangolin integration
   auto-manages a deployed service's DNS record for you
-- **In-app notifications**: a per-user feed of deploy/service lifecycle events
+- **Notifications**: a per-user in-app feed of deploy/service lifecycle events,
+  plus outbound notification channels (Discord, generic webhook, email) you can
+  subscribe to build, update, deploy and uptime events, see
+  [docs/operations.md](docs/operations.md#notifications)
 - **Scheduled redeploys, cron jobs & S3 backups**: cron-style auto-redeploy per
   service, standalone cron jobs (a throwaway container, or an admin-only host
   command) with their own run history, and cron-style volume backups, bind

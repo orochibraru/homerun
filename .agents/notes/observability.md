@@ -132,8 +132,64 @@ markup as its own component alongside this feature).
   routes each followed by a full-page `refreshAll()`.
 
 This closes the "in-app lifecycle event feed" half of what Planned features
-below used to list as unbuilt; outbound webhooks (Telegram/Discord/generic HTTP)
-on the same events are still unbuilt, see below.
+below used to list as unbuilt; outbound channels on the same events now exist
+too, see Outbound notification channels next.
+
+## Outbound notification channels (`notification_channel`, `NotificationChannelDTO`, `notification-channel.service.ts`)
+
+The account-wide counterpart to the in-app feed above: a `notification_channel`
+row is a `kind` (`"webhook"` generic JSON POST, `"discord"` embed, or `"email"`)
+plus a `target` and an `events` jsonb column (`NotificationEvent[]`, DB default
+and DTO default `["build.failed","update.failed"]`), managed on
+`/notification-channels` (create/test/delete) with the events matrix itself
+edited on `/profile/notifications`.
+
+`NotificationEvent` (`$lib/types.ts`) and its catalog
+(`$lib/notification-events.ts`, `NOTIFICATION_EVENTS`,
+labels/groups/descriptions for the settings matrix) cover four pairs:
+`build.failed`/`build.succeeded` (a git-source service, any trigger),
+`update.failed`/`update.succeeded` (an image service redeployed by its own cron
+schedule, i.e. pull + restart), `deploy.failed`/`deploy.succeeded` (a manual
+image deploy), and `service.down`/`service.up` (an uptime probe transition, see
+Uptime probes below). `deployEvent(buildSource, trigger, ok)` picks the right
+one of the first three from what `deploy.service.ts` already knows;
+`isFailureEvent` is what colors a Discord embed red vs. green.
+
+`NotificationChannelService.dispatch(userId, message)` fans a message out to
+every enabled channel subscribed to that event
+(`NotificationChannelDTO.listSubscribed`, filtered in code, not with jsonb `@>`,
+see the jsonb trap in `data-and-config.md`), one delivery attempt per channel
+via `Promise.all`; a channel that throws is caught, logged and written to its
+own `lastError` rather than aborting the others, same posture as
+`status-alert.service.ts` below and no retry beyond that. `notify`/
+`notifyDeploy` are fire-and-forget (never awaited) so a channel outage can't
+fail the deploy or probe tick that triggered it. `deploy.service.ts` calls
+`notifyDeploy` from both `#recordFailure` and its success path;
+`status-alert.service.ts`'s `StatusAlertService.dispatch` calls the shared
+`dispatch` directly for uptime transitions, it no longer has its own delivery
+code (that used to be scoped to a status page's channels, see Status pages in
+`services-and-templates.md` for why it isn't anymore). Email requires SMTP
+configured and says so instead of failing opaquely; a Discord target is
+validated to look like `https://discord.com/api/webhooks/...` (or the
+`discordapp.com`/`canary`/`ptb` variants) before it's saved
+(`validateChannelTarget`, `$lib/server/validation/notification-channel.ts`). The
+payload builders (`messageSubject`/`messageBody`/`discordPayload`) and
+`deployEvent`/`isFailureEvent` are pure and unit-tested in
+`tests/unit/app/notification-channel.test.ts`.
+
+**A message is built once, in `notification-messages.ts`, and every channel
+renders the same shape**: `title`, `detail`, a list of `fields` (name/value) and
+a dashboard `link` (only when `auth.origin` is set). `deployMessage` fills the
+fields from the finished deployment row: project, trigger (Manual/ Scheduled),
+image and short digest or repository/branch/short commit, duration, and the
+public URL on success; a failure's `detail` is the error plus the last 15 log
+lines (ANSI and phase markers stripped), since the error alone is often just
+"Build failed.". `uptimeMessage` adds the probe kind and, for the external
+probe, the host. Discord shows the fields as embed fields (inline when short)
+and keeps the _end_ of an oversized detail, where the error is; email lists them
+as `Name: value` lines; a generic webhook gets the message object as-is.
+`notifyDeploy` loads the project itself, so both deploy exits pass the same
+`{dep, ok, svc, trigger}`.
 
 ## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `$lib/services/uptime/uptime-probe.ts`)
 
@@ -227,7 +283,8 @@ is the shared strip, also used by both status-page surfaces.
 `detectTransitions` compares the two: a probe with no previous beat is
 deliberately not a transition, or the first tick after a deploy (or after
 `prune()` cleared the window) would alert on every service at once. Each
-transition fans out to the channels attached to any status page covering that
-service — see `status-and-notifications` in
-`.agents/notes/services-and-templates.md`. A channel that throws is caught,
-logged and written to its own `lastError`, never allowed to abort the tick.
+transition is handed to `NotificationChannelService.dispatch` (`service.down`/
+`service.up`), which fans it out to every channel account-wide subscribed to
+that event, see Outbound notification channels above, no longer scoped to a
+status page. A channel that throws is caught, logged and written to its own
+`lastError`, never allowed to abort the tick.

@@ -93,6 +93,11 @@ services that opt in.
   just the credentials, and every deploy writes what each provider did into that
   deploy's own log, so verify the first real sync by reading it. See
   [Services: DNS automation](services.md#dns-automation).
+- **Notification channels don't retry a failed delivery.** A channel that errors
+  (a dead webhook, a Discord URL that got revoked, SMTP misconfigured) is
+  caught, logged, and its error shown right on the channel, but the notification
+  itself is dropped, not queued for a later attempt. See
+  [Operations: Notifications](operations.md#notifications).
 - **Pruning Docker volumes deletes data.** `/docker-cleanup` is host-wide and
   deliberately not limited to containers Homerun created; an "unreferenced"
   volume includes one belonging to a service you stopped and meant to restart.
@@ -124,9 +129,10 @@ services that opt in.
   a new deploy passes a health check, roll back if it doesn't.
 - **Per-container resource stats**, `docker stats`-style observability beyond
   the host-level dashboard numbers.
-- **Outbound webhooks**, Discord/Telegram/generic HTTP notifications on deploy
-  success/failure. The in-app notification feed (the bell icon) already exists,
-  see [Services: Notifications](services.md#notifications).
+- **Provider-shaped outbound notifications beyond Discord**, Telegram and Slack
+  in particular. Discord embeds, generic webhooks and email already work on
+  build/update/deploy/uptime events, see
+  [Operations: Notifications](operations.md#notifications).
 - **DNS automation during onboarding**, Cloudflare and Pangolin sync now exist
   (see [Services: DNS automation](services.md#dns-automation)), but the
   onboarding wizard doesn't walk a new admin through configuring either one,

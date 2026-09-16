@@ -19,6 +19,7 @@ import { decryptSecret } from "$lib/services/secrets";
 import { AgentClientService } from "./agent-client.service.ts";
 import { serviceHostname, syncDns } from "./dns.service.ts";
 import { DockerService, type RemoteHostConnection } from "./docker.service.ts";
+import { NotificationChannelService } from "./notification-channel.service.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
 
@@ -482,6 +483,7 @@ class DeploymentServiceClass {
 	async #recordFailure(
 		ctx: DeployContext,
 		err: unknown,
+		trigger: "manual" | "cron",
 	): Promise<DeployResult> {
 		const { dep, svc, userId } = ctx;
 		const errorMessage = err instanceof Error ? err.message : String(err);
@@ -509,6 +511,7 @@ class DeploymentServiceClass {
 			type: "deploy_failure",
 			userId,
 		});
+		NotificationChannelService.notifyDeploy({ dep, ok: false, svc, trigger });
 		return { deploymentId: dep.id, error: errorMessage, success: false };
 	}
 
@@ -685,6 +688,7 @@ class DeploymentServiceClass {
 				type: trigger === "cron" ? "auto_redeploy" : "deploy_success",
 				userId,
 			});
+			NotificationChannelService.notifyDeploy({ dep, ok: true, svc, trigger });
 
 			return {
 				containerId: ids.containerId,
@@ -692,7 +696,7 @@ class DeploymentServiceClass {
 				success: true,
 			};
 		} catch (err) {
-			return await this.#recordFailure({ dep, svc, userId }, err);
+			return await this.#recordFailure({ dep, svc, userId }, err, trigger);
 		}
 	}
 }
