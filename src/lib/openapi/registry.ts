@@ -10,6 +10,7 @@ import {
 	imageScanResponse,
 	imageScanSummaryResponse,
 	jobResponse,
+	pushWebhookResponse,
 	queuedJobResponse,
 	revisionResponse,
 	scanConflictResponse,
@@ -284,6 +285,23 @@ export const routes: RouteDef[] = [
 		},
 		summary: "Scan a service's deployed image",
 		tags: ["Image scans"],
+	},
+	{
+		description:
+			"The URL and secret a git provider sends push events to when deploy-on-push is on, and whether Homerun registered the webhook itself. Add it by hand in the repository's settings when registered is false.",
+		method: "get",
+		path: "/services/{serviceId}/webhook",
+		pathParams: [{ description: "Service id", name: "serviceId" }],
+		responses: {
+			200: { description: "The push webhook", schema: pushWebhookResponse },
+			401: unauthorized,
+			404: {
+				description: "Service not found, or deploy-on-push is off",
+				schema: errorResponse,
+			},
+		},
+		summary: "Get a service's push-to-deploy webhook",
+		tags: ["Services"],
 	},
 	{
 		method: "get",

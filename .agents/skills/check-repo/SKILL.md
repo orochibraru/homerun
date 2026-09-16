@@ -1,16 +1,18 @@
 ---
 name: check-repo
-description:
+description: >-
   Run this before considering any change to this repo done. Executes the real
-  gates this codebase enforces: bun run check (svelte-check --fail-on-warnings,
-  0 errors AND 0 warnings across the whole src/ tree, not just touched files)
-  and bun run lint (biome check ., 0 errors), plus bunx tsc --noEmit for any of
-  packages/agent/, packages/installer/, packages/cli/ that were touched (separate tsconfig.json, not
-  covered by the root check script). Use whenever finishing an edit to this
-  codebase, before saying a change is "done", or after any change under src/,
-  packages/agent/, packages/installer/, or packages/cli/.
+  gates this codebase enforces: bun run check (svelte-check --fail-on-warnings
+  over src/ plus tsc over packages/* and scripts/, 0 errors AND 0 warnings) and
+  bun run lint (markdownlint-cli2, tailwint, biome check --error-on-warnings),
+  plus the matching unit tests. Use whenever finishing an edit to this codebase,
+  before saying a change is "done", or after any change under src/, packages/,
+  scripts/ or tests/.
 user-invocable: true
-allowed-tools: Bash(bun run check), Bash(bun run lint), Bash(bunx tsc --noEmit *), Bash(bunx biome check *), Bash(git diff *), Bash(git status *)
+allowed-tools:
+  Bash(bun run check), Bash(bun run check:*), Bash(bun run lint), Bash(bun run
+  lint:*), Bash(bun run test:unit*), Bash(bun run gen), Bash(bunx biome check
+  *), Bash(git diff *), Bash(git status *)
 ---
 
 # check-repo
@@ -22,35 +24,31 @@ actually reading the failing file first.
 
 ## Steps
 
-1. **`bun run check`** — svelte-kit sync + svelte-check with
-   `--fail-on-warnings`. This is the hard gate: 0 errors, 0 warnings, full
-   `src/` tree. A warning fails it exactly like an error. Scope is always the
-   whole tree regardless of which files were edited, so a failure anywhere is in
-   scope, not just in files this change touched.
+1. **`bun run check`** — `check:app` (svelte-kit sync + svelte-check with
+   `--fail-on-warnings`, full `src/` tree) then `check:packages` (`tsc --noEmit`
+   over `packages/installer`, `packages/agent`, `packages/cli` and `scripts/`,
+   each with its own tsconfig). This is the hard gate: 0 errors, 0 warnings. A
+   warning fails it exactly like an error. Scope is always the whole repo
+   regardless of which files were edited, so a failure anywhere is in scope, not
+   just in files this change touched.
 
-2. **`bun run lint`** — `biome check .`, must be 0 errors, whole repo. If
-   anything is fixable, `bun run lint:fix` (`biome check . --write --unsafe`)
-   before re-checking. Note: `.claude/settings.json` already runs
-   `bun run fix --skip=correctness/noUnusedImports` as a PostToolUse hook on
-   every Write/Edit, so most formatting drift is caught immediately — this step
-   is the final confirmation, not the first line of defense.
+2. **`bun run lint`** — `lint:md` (markdownlint-cli2), `lint:tailwind`
+   (tailwint) and `lint:ts` (`biome check --error-on-warnings`), must be clean,
+   whole repo. If anything is fixable, `bun run lint:fix` (the `--fix`/`--write`
+   half of all three) before re-checking. Note: `.claude/settings.json` already
+   runs `biome check --write` on every edited code file and `prettier --write`
+   on every edited markdown file as PostToolUse hooks, so most formatting drift
+   is caught immediately — this step is the final confirmation, not the first
+   line of defense.
 
-3. **If `packages/agent/`, `packages/installer/`, or `packages/cli/` were
-   touched** (check with `git status`/`git diff`): each is a standalone
-   Bun/TypeScript sub-project with its own `tsconfig.json`, not covered by the
-   root `bun run check`. Run its own typecheck:
-   - `packages/agent/` touched →
-     `bunx tsc --noEmit -p packages/agent/tsconfig.json`
-   - `packages/installer/` touched →
-     `bunx tsc --noEmit -p packages/installer/tsconfig.json`
-   - `packages/cli/` touched → `bunx tsc --noEmit -p packages/cli/tsconfig.json`
+3. **If a REST API route under `src/routes/api/v1/`, `$lib/openapi/` or
+   `src/lib/config.ts` changed**: `bun run gen`, and keep the regenerated
+   `openapi.json`, `homerun.schema.json` and `packages/cli/generated/` in the
+   change. CI fails when they're stale.
 
-   (Or use the root `check:agent`/`check:installer`/`check:cli` scripts if
-   present in `package.json` — check first, they wrap the same command.)
-
-4. **If `packages/agent/`, `packages/installer/`, or `packages/cli/` tests were
-   touched, or their source changed in a way that could affect behavior**: run
-   the matching `bun test:agent` / `bun test:cli` / `bun test:installer`.
+4. **Run the unit tests that cover what changed**: `bun run test:unit` for
+   everything (a few seconds), or `bun run test:unit:app` / `test:unit:agent` /
+   `test:unit:cli` / `test:unit:installer` for one area.
 
 5. **IDE diagnostics are not ground truth in this repo.** If an inline IDE error
    looks suspicious or doesn't match what `bun run check` reports, trust

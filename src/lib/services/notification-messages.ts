@@ -1,5 +1,6 @@
 import { stripAnsi } from "$lib/ansi";
 import { isPhaseLine } from "$lib/deploy-phases";
+import { type DeployTrigger, deployTriggerLabel } from "$lib/deploy-trigger";
 import {
 	countsLine,
 	type ImageScanFinding,
@@ -45,7 +46,7 @@ export interface DeployMessageInput {
 		Service,
 		"buildSource" | "gitRef" | "gitUrl" | "id" | "image" | "name" | "tag"
 	>;
-	trigger: "manual" | "cron";
+	trigger: DeployTrigger;
 }
 
 export interface UptimeMessageInput {
@@ -137,7 +138,7 @@ export function deployMessage(
 	}
 	fields.push({
 		name: "Trigger",
-		value: input.trigger === "cron" ? "Scheduled" : "Manual",
+		value: deployTriggerLabel(input.trigger),
 	});
 	fields.push(...sourceFields(service, deployment));
 	const duration = formatDuration(deployment.startedAt, deployment.finishedAt);

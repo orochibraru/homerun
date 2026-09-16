@@ -94,10 +94,11 @@ making you copy-paste, and it shows up in this list like any other.
 ## Git provider accounts
 
 Separate from signing in to Homerun: connecting a GitHub, GitLab, Gitea or
-Bitbucket account on the **Git Providers** page lets a git-based service browse
-your repositories instead of pasting a URL, and reach private ones without a
-token in the clone URL. An admin registers the OAuth app once for the instance;
-each person connects their own account to it. See
+Bitbucket account on the **Git Providers** page lets a git-based service pick
+its repository and branch instead of pasting a URL, reach private ones without a
+token in the clone URL, and deploy on every push through a webhook Homerun adds
+for you. An admin registers the OAuth app once for the instance; each person
+connects their own account to it. See
 [Services](services.md#connecting-a-git-provider).
 
 ## Appearance
@@ -166,6 +167,13 @@ while services are routed by Traefik on 443 as `<slug>.localhost`. If you type a
 port into Base domain it's moved to the Dashboard URL for you rather than into
 your service hostnames.
 
+**Locked out after a typo?** If a wrong Base domain or Dashboard URL means the
+dashboard's domain no longer reaches Homerun, open it on the server's IP and
+port instead (`http://<server IP>:3000` for a standard install) and fix the
+setting from there. Homerun always accepts sign-ins on its own IP address,
+whatever the domain settings say. That works as long as `ORIGIN` in `.env` isn't
+an `https` address, which the installer doesn't set.
+
 ### Signing out
 
 Signing out of Homerun signs you out of Homerun only. If you also want it to end
@@ -223,11 +231,14 @@ Access.
 
 **How it works.** Traefik's forwardAuth middleware asks Homerun about every
 request to that hostname. A visitor without a valid session for that app is
-redirected to Homerun's own sign-in screen, signs in there, and is sent back to
-the page they originally asked for. Homerun then sets a session cookie scoped to
-that app's own hostname, so the app stays reachable for eight hours without
-signing in again. Nothing is shared with your other apps: each one gets its own
-cookie, and a cookie issued for one hostname is rejected on any other.
+redirected to Homerun's own sign-in page, the same one as the dashboard's, so
+passkeys, two-factor codes and your preferred sign-in methods all work there.
+The page names the app they're signing in to, and once they're in it shows a
+short "taking you to …" screen before sending them back to the page they
+originally asked for. Homerun then sets a session cookie scoped to that app's
+own hostname, so the app stays reachable for eight hours without signing in
+again. Nothing is shared with your other apps: each one gets its own cookie, and
+a cookie issued for one hostname is rejected on any other.
 
 This needs **Origin** set under Settings → General, since that's the URL
 visitors are sent to in order to sign in. Saving the setting is refused with an
@@ -235,10 +246,11 @@ explanation if it isn't set yet. It does **not** need **Cross-subdomain
 cookies** (Settings → General), which is unrelated to this flow.
 
 **Sign-in methods.** Nothing is enabled by default: pick at least one of the
-built-in login and your configured OAuth providers. Only the methods you pick
-are offered on that app's login screen, and only an account linked to one of
-them is let through. Turning the wall on with nothing picked is refused, so you
-can't lock yourself out by accident.
+built-in login and your configured OAuth providers. Only an account linked to
+one of the methods you pick is let through; someone who signs in another way
+sees a "you don't have access" screen with a button to sign in as someone else.
+Turning the wall on with nothing picked is refused, so you can't lock yourself
+out by accident.
 
 **Who's allowed.** Three optional lists narrow access further:
 
@@ -267,6 +279,53 @@ service that isn't publicly routed has no router to gate. Access is re-checked
 when the app cookie is issued and whenever the rules change, but deleting a user
 or changing their groups at the provider takes effect at the next sign-in, or
 within the eight-hour cookie lifetime at the latest.
+
+## Sign in with Homerun
+
+Homerun is also an OpenID Connect (OIDC) provider. Apps you host can offer "Sign
+in with Homerun" using the same accounts as the dashboard, so you don't need to
+run Pocket ID, Authentik or Keycloak just to give Grafana or Outline a login.
+Whatever the dashboard requires (passkeys, two-factor codes, your preferred
+sign-in methods) applies to these sign-ins too.
+
+It needs the **Dashboard URL** set under Settings → General: Homerun signs
+tokens as that address, and apps discover everything else from it.
+
+**Registering an app.** On the Authentication page, under **Sign in with
+Homerun**, click **Register app**:
+
+- **Name**: shown on the consent screen.
+- **Redirect URIs**: the callback URL from the app's own OIDC settings, one per
+  line. They must use `https`, which every app Homerun routes already has.
+- **Client type**: **Confidential** for server-side apps (almost every
+  self-hosted app), **Public** for a browser or mobile app that can't keep a
+  secret.
+- **Require PKCE**: leave off unless you know the app sends a PKCE challenge.
+- **Skip the consent screen**: on by default for apps you host yourself. Turn it
+  off to have users approve sharing their details the first time.
+- **Allow single sign-out**: lets the app sign the user out of Homerun too.
+
+Registering shows the client ID and client secret. **The secret is shown only
+once**; if you lose it, open the app and use **Rotate secret**, then paste the
+new one into the app.
+
+**Configuring the app.** Most apps only need three values:
+
+| Setting       | Value                                                              |
+| ------------- | ------------------------------------------------------------------ |
+| Discovery URL | `https://<dashboard>/api/v1/auth/.well-known/openid-configuration` |
+| Client ID     | from the registration screen                                       |
+| Client secret | from the registration screen                                       |
+
+If an app asks for individual endpoints instead, the app's page in Homerun lists
+the issuer, authorization, token, userinfo and JWKS URLs. Request the scopes
+`openid profile email`, plus `groups` if the app maps groups to roles: the
+`groups` claim holds the user's Homerun role (`admin` or `developer`). Tokens
+are signed with RS256.
+
+**Turning an app off or deleting it.** **Turn off** stops new sign-ins through
+the app. **Delete app** also revokes every token it holds, so users are signed
+out of it the next time it checks.
 
 ## Onboarding
 

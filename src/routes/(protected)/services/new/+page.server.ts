@@ -16,6 +16,7 @@ import {
 	parseEnvVars,
 } from "$lib/server/validation/service";
 import { DeploymentService } from "$lib/services/deploy.service";
+import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
 import {
 	buildTemplateLinkContext,
@@ -29,18 +30,24 @@ const logger = new Logger("Services");
 function buildSourceFields(input: CreateServiceInput, slug: string) {
 	if (input.buildSource !== "git") {
 		return {
+			autoDeployOnPush: false,
 			gitBuildContext: null,
 			gitDockerfilePath: null,
+			gitProviderId: null,
 			gitRef: null,
+			gitRepo: null,
 			gitUrl: null,
 			image: input.image as string,
 			tag: input.tag || "latest",
 		};
 	}
 	return {
+		autoDeployOnPush: input.autoDeployOnPush,
 		gitBuildContext: input.gitBuildContext || null,
 		gitDockerfilePath: input.gitDockerfilePath || null,
+		gitProviderId: (input.gitRepo && input.gitProviderId) || null,
 		gitRef: input.gitRef || null,
+		gitRepo: (input.gitProviderId && input.gitRepo) || null,
 		gitUrl: input.gitUrl || null,
 		image: `homerun-build-${slug}`,
 		tag: "pending",
@@ -230,6 +237,12 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		slug: input.slug,
 		userId,
 		...buildSourceFields(input, input.slug),
+	});
+
+	await GitWebhookService.sync(svc, {
+		gitProviderId: null,
+		gitRepo: null,
+		gitWebhookId: null,
 	});
 
 	logger.info(

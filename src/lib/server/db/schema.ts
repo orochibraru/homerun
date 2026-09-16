@@ -189,6 +189,206 @@ export const twoFactor = pgTable(
 	],
 );
 
+export const jwks = pgTable("jwks", {
+	alg: text("alg"),
+	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+	crv: text("crv"),
+	expiresAt: timestamp("expires_at", { mode: "date" }),
+	id: text("id").primaryKey(),
+	privateKey: text("private_key").notNull(),
+	publicKey: text("public_key").notNull(),
+});
+
+export const oauthClient = pgTable(
+	"oauth_client",
+	{
+		applicationType: text("application_type"),
+		backchannelLogoutSessionRequired: boolean(
+			"backchannel_logout_session_required",
+		),
+		backchannelLogoutUri: text("backchannel_logout_uri"),
+		clientCredentialsScopes: text("client_credentials_scopes").default("[]"),
+		clientDiscoveryId: text("client_discovery_id"),
+		clientId: text("client_id").notNull().unique(),
+		clientSecret: text("client_secret"),
+		contacts: text("contacts"),
+		createdAt: timestamp("created_at", { mode: "date" }),
+		disabled: boolean("disabled").default(false),
+		dpopBoundAccessTokens: boolean("dpop_bound_access_tokens").default(false),
+		enableEndSession: boolean("enable_end_session"),
+		grantTypes: text("grant_types"),
+		icon: text("icon"),
+		id: text("id").primaryKey(),
+		jwks: text("jwks"),
+		jwksUri: text("jwks_uri"),
+		metadata: text("metadata"),
+		name: text("name"),
+		policy: text("policy"),
+		postLogoutRedirectUris: text("post_logout_redirect_uris"),
+		redirectUris: text("redirect_uris").notNull(),
+		referenceId: text("reference_id"),
+		requirePKCE: boolean("require_pkce"),
+		responseTypes: text("response_types"),
+		scopes: text("scopes"),
+		skipConsent: boolean("skip_consent"),
+		softwareId: text("software_id"),
+		softwareStatement: text("software_statement"),
+		softwareVersion: text("software_version"),
+		subjectType: text("subject_type"),
+		tokenEndpointAuthMethod: text("token_endpoint_auth_method"),
+		tos: text("tos"),
+		updatedAt: timestamp("updated_at", { mode: "date" }),
+		uri: text("uri"),
+		userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [index("oauthClient_userId_idx").on(table.userId)],
+);
+
+export const oauthResource = pgTable("oauth_resource", {
+	accessTokenTtl: integer("access_token_ttl"),
+	allowedScopes: text("allowed_scopes"),
+	createdAt: timestamp("created_at", { mode: "date" }),
+	customClaims: text("custom_claims"),
+	disabled: boolean("disabled").default(false),
+	dpopBoundAccessTokensRequired: boolean(
+		"dpop_bound_access_tokens_required",
+	).default(false),
+	id: text("id").primaryKey(),
+	identifier: text("identifier").notNull().unique(),
+	metadata: text("metadata"),
+	name: text("name").notNull(),
+	policyVersion: integer("policy_version").default(1),
+	refreshTokenTtl: integer("refresh_token_ttl"),
+	signingAlgorithm: text("signing_algorithm"),
+	signingKeyId: text("signing_key_id"),
+	updatedAt: timestamp("updated_at", { mode: "date" }),
+});
+
+export const oauthClientResource = pgTable(
+	"oauth_client_resource",
+	{
+		clientId: text("client_id")
+			.notNull()
+			.references(() => oauthClient.clientId, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { mode: "date" }),
+		id: text("id").primaryKey(),
+		metadata: text("metadata"),
+		resourceId: text("resource_id")
+			.notNull()
+			.references(() => oauthResource.identifier, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("oauthClientResource_clientId_idx").on(table.clientId),
+		index("oauthClientResource_resourceId_idx").on(table.resourceId),
+		uniqueIndex("oauthClientResource_clientId_resourceId_uidx").on(
+			table.clientId,
+			table.resourceId,
+		),
+	],
+);
+
+export const oauthRefreshToken = pgTable(
+	"oauth_refresh_token",
+	{
+		authTime: timestamp("auth_time", { mode: "date" }),
+		authorizationCodeId: text("authorization_code_id"),
+		clientId: text("client_id")
+			.notNull()
+			.references(() => oauthClient.clientId, { onDelete: "cascade" }),
+		confirmation: text("confirmation"),
+		createdAt: timestamp("created_at", { mode: "date" }),
+		expiresAt: timestamp("expires_at", { mode: "date" }),
+		id: text("id").primaryKey(),
+		referenceId: text("reference_id"),
+		requestedUserInfoClaims: text("requested_user_info_claims"),
+		resources: text("resources"),
+		revoked: timestamp("revoked", { mode: "date" }),
+		rotatedAt: timestamp("rotated_at", { mode: "date" }),
+		rotationReplayExpiresAt: timestamp("rotation_replay_expires_at", {
+			mode: "date",
+		}),
+		rotationReplayResponse: text("rotation_replay_response"),
+		scopes: text("scopes").notNull(),
+		sessionId: text("session_id").references(() => session.id, {
+			onDelete: "set null",
+		}),
+		token: text("token").notNull().unique(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("oauthRefreshToken_clientId_idx").on(table.clientId),
+		index("oauthRefreshToken_sessionId_idx").on(table.sessionId),
+		index("oauthRefreshToken_userId_idx").on(table.userId),
+		index("oauthRefreshToken_authorizationCodeId_idx").on(
+			table.authorizationCodeId,
+		),
+	],
+);
+
+export const oauthAccessToken = pgTable(
+	"oauth_access_token",
+	{
+		authorizationCodeId: text("authorization_code_id"),
+		clientId: text("client_id")
+			.notNull()
+			.references(() => oauthClient.clientId, { onDelete: "cascade" }),
+		confirmation: text("confirmation"),
+		createdAt: timestamp("created_at", { mode: "date" }),
+		expiresAt: timestamp("expires_at", { mode: "date" }),
+		id: text("id").primaryKey(),
+		referenceId: text("reference_id"),
+		refreshId: text("refresh_id").references(() => oauthRefreshToken.id, {
+			onDelete: "set null",
+		}),
+		requestedUserInfoClaims: text("requested_user_info_claims"),
+		resources: text("resources"),
+		revoked: timestamp("revoked", { mode: "date" }),
+		scopes: text("scopes").notNull(),
+		sessionId: text("session_id").references(() => session.id, {
+			onDelete: "set null",
+		}),
+		token: text("token").unique(),
+		userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("oauthAccessToken_clientId_idx").on(table.clientId),
+		index("oauthAccessToken_sessionId_idx").on(table.sessionId),
+		index("oauthAccessToken_userId_idx").on(table.userId),
+		index("oauthAccessToken_authorizationCodeId_idx").on(
+			table.authorizationCodeId,
+		),
+		index("oauthAccessToken_refreshId_idx").on(table.refreshId),
+	],
+);
+
+export const oauthConsent = pgTable(
+	"oauth_consent",
+	{
+		clientId: text("client_id")
+			.notNull()
+			.references(() => oauthClient.clientId, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { mode: "date" }),
+		id: text("id").primaryKey(),
+		referenceId: text("reference_id"),
+		requestedUserInfoClaims: text("requested_user_info_claims"),
+		resources: text("resources"),
+		scopes: text("scopes").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" }),
+		userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("oauthConsent_clientId_idx").on(table.clientId),
+		index("oauthConsent_userId_idx").on(table.userId),
+	],
+);
+
+export const oauthClientAssertion = pgTable("oauth_client_assertion", {
+	expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+	id: text("id").primaryKey(),
+});
+
 // ─── PaaS Domain ────────────────────────────────────────────────────────────
 
 export const stack = pgTable(
@@ -618,6 +818,12 @@ export const service = pgTable(
 		// SHA needs a full, non-shallow clone, not supported here).
 		gitRef: text("git_ref"),
 		gitUrl: text("git_url"),
+		gitProviderId: text("git_provider_id"),
+		gitRepo: text("git_repo"),
+		autoDeployOnPush: boolean("auto_deploy_on_push").default(false).notNull(),
+		gitWebhookId: text("git_webhook_id"),
+		gitWebhookSecretEnc: text("git_webhook_secret_enc"),
+		gitWebhookError: text("git_webhook_error"),
 		id: text("id").primaryKey(),
 		// e.g. "ghcr.io/acme/api"
 		image: text("image").notNull(),
@@ -1346,6 +1552,7 @@ export const notificationChannel = pgTable(
 );
 
 export type Stack = typeof stack.$inferSelect;
+export type OauthClient = typeof oauthClient.$inferSelect;
 export type Template = typeof template.$inferSelect;
 export type TemplateLink = typeof templateLink.$inferSelect;
 export type Service = typeof service.$inferSelect;

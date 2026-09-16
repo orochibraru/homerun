@@ -1,13 +1,13 @@
 ---
 name: new-tab-route
-description:
-  Workflow for adding a tab to an existing tabbed dashboard page, or splitting
-  a growing page into tabs, following this repo's one-route-per-tab
-  convention: a shared +layout.svelte owning TabNav, a +layout.server.ts
-  holding the common guard/load, the default tab as a bare +page.svelte, every
-  other tab as its own subfolder. Use when adding a section to
-  services/[serviceId], settings/, profile/, or any page shaped like them —
-  never a client-side activeTab switch in one file.
+description: >-
+  Workflow for adding a tab to an existing tabbed dashboard page, or splitting a
+  growing page into tabs, following this repo's one-route-per-tab convention: a
+  shared +layout.svelte owning TabNav, a +layout.server.ts holding the common
+  guard/load, the default tab as a bare +page.svelte, every other tab as its own
+  subfolder. Use when adding a section to services/[serviceId], settings/,
+  profile/, or any page shaped like them — never a client-side activeTab switch
+  in one file.
 user-invocable: true
 ---
 

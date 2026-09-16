@@ -27,9 +27,9 @@ re-litigating design decisions.
   revocation than the 8h cookie lifetime for a user deleted or re-grouped at the
   provider. Custom SSL cert handling exists too (see below) but genuinely
   requires the admin's own one-time Traefik config change to take effect.
-- **Source integration**: git-based builds exist (see Git-based builds above),
-  no webhook/auto-deploy-on-push. Build servers exist too (see Build servers
-  above); adding capacity for _deploys_ is Swarm's job, and
+- **Source integration**: git-based builds and push-to-deploy webhooks exist
+  (see Git-based builds and Push-to-deploy). Build servers exist too (see Build
+  servers above); adding capacity for _deploys_ is Swarm's job, and
   `packages/installer/swarm-join.sh` (joining a node as a worker) is still
   unverified against a real swarm.
 - **Onboarding**: the forced first-run wizard now exists (`/onboarding`, see

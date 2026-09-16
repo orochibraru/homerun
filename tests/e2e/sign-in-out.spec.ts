@@ -38,6 +38,19 @@ test.describe
 			).toBeVisible();
 		});
 
+		test("signing in with a redirect target shows the countdown, then follows it", async ({
+			page,
+		}) => {
+			await page.goto("/auth/sign-in?redirectTo=%2Fsettings");
+			await page.locator("#email").fill("ada@example.com");
+			await page.locator("#password").fill("a-real-strong-password-123");
+			await page.getByRole("button", { name: "Sign in" }).click();
+
+			await expect(page.getByText(/Taking you to Homerun in/)).toBeVisible();
+			await expect(page.locator("#email")).toHaveCount(0);
+			await expect(page).toHaveURL(/\/settings$/, { timeout: 10_000 });
+		});
+
 		test("signing out from the account menu returns you to the sign-in page", async ({
 			page,
 		}) => {

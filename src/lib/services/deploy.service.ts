@@ -1,4 +1,5 @@
 import { phaseLine } from "$lib/deploy-phases";
+import type { DeployTrigger } from "$lib/deploy-trigger";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
@@ -75,7 +76,7 @@ export interface EnqueueDeployInput {
 	dependsOnJobId?: string | null;
 	rollbackOfDeploymentId?: string | null;
 	svc: ServiceDTO;
-	trigger?: "cron" | "manual";
+	trigger?: DeployTrigger;
 	userId: string;
 }
 
@@ -423,7 +424,7 @@ class DeploymentServiceClass {
 	async #recordFailure(
 		ctx: DeployContext,
 		err: unknown,
-		trigger: "manual" | "cron",
+		trigger: DeployTrigger,
 	): Promise<DeployResult> {
 		const { dep, svc, userId } = ctx;
 		const errorMessage = err instanceof Error ? err.message : String(err);
@@ -629,7 +630,7 @@ class DeploymentServiceClass {
 		svc: ServiceDTO,
 		userId: string,
 		clientDeploymentId?: string | null,
-		trigger: "manual" | "cron" = "manual",
+		trigger: DeployTrigger = "manual",
 	): Promise<DeployResult> {
 		const isGitBuild = svc.buildSource === "git";
 		logger.info(

@@ -49,9 +49,15 @@ const baseServiceSchema = z.object({
 		(val) => val === "on" || val === true,
 		z.boolean(),
 	),
+	autoDeployOnPush: z.preprocess(
+		(val) => val === "on" || val === true,
+		z.boolean(),
+	),
 	gitBuildContext: z.string().optional(),
 	gitDockerfilePath: z.string().optional(),
+	gitProviderId: z.string().optional(),
 	gitRef: z.string().optional(),
+	gitRepo: z.string().optional(),
 	gitUrl: z.string().optional(),
 	image: z.string().optional(),
 	memoryLimitMb: optionalNumber(z.coerce.number().int().positive()),
@@ -154,12 +160,15 @@ export type UpdatePortsInput = z.infer<typeof updatePortsSchema>;
 // credential unchanged", not "clear it" (see source/+page.server.ts).
 export const updateSourceSchema = baseServiceSchema
 	.pick({
+		autoDeployOnPush: true,
 		buildCacheRegistryId: true,
 		buildServerRemoteHostId: true,
 		buildSource: true,
 		gitBuildContext: true,
 		gitDockerfilePath: true,
+		gitProviderId: true,
 		gitRef: true,
+		gitRepo: true,
 		gitUrl: true,
 		image: true,
 		registryPassword: true,

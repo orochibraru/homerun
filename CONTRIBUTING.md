@@ -19,16 +19,17 @@ git clone https://github.com/orochibraru/homerun.git && cd homerun
 bun install
 docker network create homerun
 docker compose up -d          # Traefik + Postgres, see compose.yaml
-cp .env.example .env          # see docs/configuration.md, or edit env vars directly
-bun run db:generate
+cp .env.example .env          # set AUTH_SECRET, and ORIGIN=http://localhost:5173 for bun run dev
 bun run dev
 ```
 
-Open `http://localhost:5173`. The app runs directly on the host (not in a
-container) so it can reach `/var/run/docker.sock` without any socket-forwarding;
-see the top comment in [`compose.yaml`](compose.yaml). The first account you
-create becomes admin automatically; signing in for the first time drops you into
-the onboarding wizard (base domain / Docker / Traefik / email).
+Open `http://localhost:5173`. Migrations in `drizzle/` apply themselves at boot;
+`bun run db:generate` is only for when you change `src/lib/server/db/schema.ts`.
+The app runs directly on the host (not in a container) so it can reach the
+Docker socket without any socket-forwarding; [`compose.yaml`](compose.yaml) only
+runs Traefik and Postgres. The first account you create becomes admin
+automatically; signing in for the first time drops you into the onboarding
+wizard (base domain / Docker / Traefik / email).
 
 `bun run build && bun run start` runs the built app instead of the Vite dev
 server, closer to how the production Docker image runs it, still directly on the
@@ -51,22 +52,25 @@ rejected for "files were modified by this hook" just needs `git add` and a
 re-commit.
 
 ```sh
-bun run check   # svelte-kit sync && svelte-check --fail-on-warnings, zero errors AND zero warnings, whole repo
-bun run lint    # biome check ., zero errors, whole repo
+bun run check   # svelte-check --fail-on-warnings over src/, then tsc over packages/* and scripts/, zero errors AND zero warnings
+bun run lint    # markdownlint-cli2, tailwint and biome check --error-on-warnings, whole repo
 ```
 
 Run both after _every_ change, not just once at the end. `bun run check`'s scope
-is already the whole `src/` tree regardless of which files you touched, so a red
-result elsewhere in the repo is still your problem to look at, not something to
-wave off as unrelated without actually checking. If you touch `packages/agent/`,
-`packages/installer/`, or `packages/cli/`, also typecheck that sub-project
-specifically: `bun run check:agent` / `check:installer` / `check:cli` (or
-`bun run check:packages` for all three). They're not covered by the
-SvelteKit-scoped `check:app` half of `bun run check`.
+is already the whole repo regardless of which files you touched, so a red result
+elsewhere is still your problem to look at, not something to wave off as
+unrelated without actually checking. `bun run check` includes the
+`packages/agent/`, `packages/installer/`, `packages/cli/` and `scripts/`
+typechecks (`check:packages`); `bun run check:agent` / `check:installer` /
+`check:cli` / `check:scripts` run one of them alone. If you changed a REST API
+route or `config.ts`, also run `bun run gen` and commit the regenerated
+`openapi.json`, `homerun.schema.json` and `packages/cli/generated/`: CI fails
+when they're stale.
 
-`bun run test` runs the real test suite (`bun:test`, unit + integration, see
+`bun run test:unit` is the fast suite (seconds, no Postgres or Docker needed).
+`bun run test` runs the whole `bun:test` suite, unit + integration, see
 `CLAUDE.md`'s "Commands" section for the full breakdown of `test`/`test:*`
-scripts).
+scripts and `.agents/notes/testing.md` for what integration and E2E need.
 
 Two real-infrastructure suites live outside that (Multipass + Docker locally,
 never in CI): `bun run e2e:multipass` drives the installer/agent/CLI built from
@@ -102,6 +106,8 @@ commit. Only `feat`, `fix`, `perf`, `refactor`, `docs` and breaking changes
 ## Releases
 
 Don't run `bun run release` yourself; it's CI-only, triggered on push to `main`.
-See CLAUDE.md's "Release automation" section for what it does (binaries for
+See the "Release automation" section of
+[`.agents/notes/packages-and-release.md`](.agents/notes/packages-and-release.md)
+for what it does (binaries for
 `packages/agent`/`packages/installer`/`packages/cli`, the Docker image, the
 GitHub release).

@@ -32,16 +32,16 @@ integration bootstrap (real Postgres container) doesn't run for a unit-only
 invocation. `tests/integration/` is a separate suite with its own
 `beforeAll`/`afterAll` (real Postgres/Docker/agent, see
 `tests/integration/README.md`), and `tests/e2e/` is a third, Playwright, outside
-`bun test` entirely (see E2E browser tests below). `tests/README.md` is this
-section's counterpart living next to the code.
+`bun test` entirely (see E2E browser tests below). `tests/integration/README.md`
+and `tests/e2e/README.md` are the counterparts living next to the code.
 
 **Where Postgres comes from, `HOMERUN_TEST_POSTGRES_URL`.**
 `tests/integration/support/postgres.ts`'s `startTestPostgres()` is the one entry
 point both `tests/integration/` and `tests/e2e/` resolve their database through,
 and it branches on that env var alone: **set** (CI, where
-`.github/workflows/code_quality.yaml`'s `ts-test` and `e2e` jobs each declare a
-job-level `services: postgres:` container) means connect to that server and
-`create database` a uniquely-named per-run database on it, dropped
+`.github/workflows/code_quality.yaml`'s `ts-test` and `e2e.yaml`'s `e2e` jobs
+each declare a job-level `services: postgres:` container) means connect to that
+server and `create database` a uniquely-named per-run database on it, dropped
 `with (force)` in teardown; **unset** (local dev, the default) means the
 original behavior, a throwaway `postgres:18-alpine` container this suite
 `docker run`s itself on a random host port (`support/postgres-container.ts`,

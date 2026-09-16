@@ -163,9 +163,10 @@ building locally is only for iterating on the installer itself.
 
 **Verified**: the full command sequence via `--dry-run` (every step's exact
 command line, for both `--mode=agent` and `--mode=full`, including the generated
-`compose.yaml` content), and that both the source (`bun run index.ts`) and the
-compiled binary (`bun run scripts/build-packages.ts` →
-`./dist/homerun-installer-<arch>`) produce identical dry-run output.
+`compose.yaml` content), and that both the source
+(`bun run packages/installer/index.ts`) and the compiled binary
+(`bun run scripts/build-packages.ts` → `./dist/homerun-installer-<arch>`)
+produce identical dry-run output.
 
 **The real, mutating steps are now verified too**, against two real disposable
 Multipass Ubuntu 24.04 VMs (superseding this section's earlier "needs a

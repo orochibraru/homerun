@@ -193,13 +193,11 @@ users, backups):
   `trailing` snippet slot (where a page renders `ViewModeToggle`); the old
   bindable `search`/`selected` props and the exported `FilterSelection` type are
   gone, filtering moved server-side (see Server-side list pagination above), so
-  there's no client state left to bind. `$lib/filtering.ts` (`matchesQuery`/
-  `matchesFilter`) still exists but is no longer used by any list page. Replaced
-  the bespoke search-input-plus-category-`Drawer` that used to be inlined in the
-  templates gallery only (see Built-in template catalog and gallery below);
-  pages without a card view (remote-hosts, s3-destinations,
-  build-cache-registries, users, backups) use it for search/filter alone, with
-  no `trailing` snippet.
+  there's no client state left to bind. Replaced the bespoke
+  search-input-plus-category-`Drawer` that used to be inlined in the templates
+  gallery only (see Built-in template catalog and gallery below); pages without
+  a card view (remote-hosts, s3-destinations, build-cache-registries, users,
+  backups) use it for search/filter alone, with no `trailing` snippet.
 - `pagination.svelte`: Previous/Next plus "26–50 of 60 services" and "Page 2 of
   3", also URL-driven (`goto()`, same as the toolbar), rendered only when
   `total > perPage`. Takes `page`/`perPage`/`total` (a page's `PagedResult`, see
@@ -211,19 +209,18 @@ users, backups):
   page's list/card preference, persisted in `localStorage` under
   `homerun:view:<key>` (`new ViewMode("services")`, optional 2nd arg is the
   fallback mode, e.g. `new ViewMode("templates", "card")`). Deliberately its own
-  module rather than living inside `entity-list-view.svelte`, specifically so
-  one page can render several `EntityListView`s sharing a single toggle
-  (services groups its rows by stack, one `EntityListView` per group); before
-  this, each group toggled independently, a real pre-existing bug this fixes,
-  not just a refactor.
-- `entity-list-view.svelte` now takes `view: ViewMode` plus an optional
-  `cardGridClass` (defaults to a 3-column grid; templates passes a 4-column
-  one). Its old `viewKey` string prop and its module-block `EntityViewMode`
-  export are gone, that type now lives on `$lib/view-mode.svelte.ts`. Every list
-  page now renders straight from `data` (already one page, already
-  filtered/searched) rather than deriving a client-side `filtered` array, and
-  tells a true empty state apart from a no-match one via
-  `data.total === 0 && !data.filtered`.
+  module rather than living inside `entity-list.svelte`, specifically so one
+  page can render several `EntityList`s sharing a single toggle (services groups
+  its rows by stack, one `EntityList` per group); before this, each group
+  toggled independently, a real pre-existing bug this fixes, not just a
+  refactor.
+- `entity-list.svelte` takes `view: ViewMode` plus an optional `cardGridClass`
+  (defaults to a 3-column grid; templates passes a 4-column one). Its old
+  `viewKey` string prop and its module-block `EntityViewMode` export are gone,
+  that type now lives on `$lib/view-mode.svelte.ts`. Every list page now renders
+  straight from `data` (already one page, already filtered/searched) rather than
+  deriving a client-side `filtered` array, and tells a true empty state apart
+  from a no-match one via `data.total === 0 && !data.filtered`.
 
 **The signed-out surfaces** (`auth/sign-in`, `auth/sign-up`,
 `auth/sign-up/confirm`, `auth/accept-invite`, `auth/error`) all render through

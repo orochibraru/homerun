@@ -1,12 +1,12 @@
 ---
 name: docs-audit
-description:
+description: >-
   Use when asked to check that the documentation reflects what's actually built,
   or for a periodic full sweep. Unlike docs-sync (which starts from a diff),
   this agent starts from the app itself and audits every operator-facing page,
-  docs/*.md, root README.md, packages/agent|installer|cli/README.md, against
-  the real code — routes and sidebar nav, settings pages, schema.ts, config.ts
-  env vars, the REST API/OpenAPI document, CLI commands and flags, installer
+  docs/*.md, root README.md, packages/agent|installer|cli/README.md, against the
+  real code — routes and sidebar nav, settings pages, schema.ts, config.ts env
+  vars, the REST API/OpenAPI document, CLI commands and flags, installer
   options, templates, job types — and fixes what's wrong: features documented
   but not built, features built but undocumented, wrong names, defaults, paths,
   commands, env vars or UI labels, and stale "planned / not yet built" claims.

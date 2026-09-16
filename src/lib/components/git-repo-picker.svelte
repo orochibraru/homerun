@@ -18,18 +18,33 @@
 	}
 
 	const {
+		initialProviderId = null,
+		initialRepo = null,
 		labelClass,
 		onpick,
 		providers,
 	}: {
+		initialProviderId?: string | null;
+		initialRepo?: string | null;
 		labelClass: string;
-		onpick: (repo: GitRepo) => void;
+		onpick: (repo: GitRepo, providerId: string) => void;
 		providers: ConnectedProvider[];
 	} = $props();
 
-	let providerId = $state(untrack(() => providers[0]?.id ?? ""));
+	let providerId = $state(
+		untrack(
+			() =>
+				providers.find((p) => p.id === initialProviderId)?.id ??
+				providers[0]?.id ??
+				"",
+		),
+	);
 	let reposPromise = $state<Promise<GitRepo[]> | null>(null);
-	let selectedRepo = $state("");
+	let selectedRepo = $state(
+		untrack(() =>
+			providerId === initialProviderId ? (initialRepo ?? "") : "",
+		),
+	);
 	let dockerfilePromise = $state<Promise<boolean> | null>(null);
 	let open = $state(false);
 
@@ -38,7 +53,9 @@
 	// picking the repo is the whole point of connecting one.
 	$effect(() => {
 		const id = providerId;
-		selectedRepo = "";
+		if (id !== untrack(() => initialProviderId)) {
+			selectedRepo = "";
+		}
 		dockerfilePromise = null;
 		reposPromise = id ? listProviderRepos(id) : null;
 	});
@@ -51,7 +68,7 @@
 		if (!repo) {
 			return;
 		}
-		onpick(repo);
+		onpick(repo, providerId);
 		dockerfilePromise = hasDockerfile({
 			providerId,
 			ref: repo.defaultBranch,

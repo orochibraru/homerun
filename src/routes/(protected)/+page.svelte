@@ -167,7 +167,7 @@
 
   <div class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
     <UsageChart title="Host resources" />
-    <ServiceUsageTable />
+    <ServiceUsageTable limit={5} />
   </div>
 
   <div class="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-3">

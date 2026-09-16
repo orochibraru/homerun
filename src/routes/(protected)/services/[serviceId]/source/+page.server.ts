@@ -10,12 +10,14 @@ import {
 	type UpdateSourceInput,
 	updateSourceSchema,
 } from "$lib/server/validation/service";
+import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("Services");
 
-export const load = async ({ parent }) => {
+export const load = async ({ parent, params }) => {
 	const { user } = await parent();
+	const svc = await ServiceDTO.get(params.serviceId, user.id);
 	const [settings, connections, cacheRegistries, buildServers] =
 		await Promise.all([
 			InstanceSettingsDTO.get(),
@@ -26,6 +28,7 @@ export const load = async ({ parent }) => {
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
+		pushWebhook: svc ? await GitWebhookService.describe(svc) : null,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
 		buildServers: buildServers.map((r) => r.toJSON()),
 		// Only providers this user has actually connected : see the Git
@@ -102,15 +105,21 @@ function sourcePatch(input: UpdateSourceInput, isGitBuild: boolean) {
 			: {}),
 		...(isGitBuild
 			? {
+					autoDeployOnPush: input.autoDeployOnPush,
 					gitBuildContext: input.gitBuildContext || null,
 					gitDockerfilePath: input.gitDockerfilePath || null,
+					gitProviderId: (input.gitRepo && input.gitProviderId) || null,
 					gitRef: input.gitRef || null,
+					gitRepo: (input.gitProviderId && input.gitRepo) || null,
 					gitUrl: input.gitUrl || null,
 				}
 			: {
+					autoDeployOnPush: false,
 					gitBuildContext: null,
 					gitDockerfilePath: null,
+					gitProviderId: null,
 					gitRef: null,
+					gitRepo: null,
 					gitUrl: null,
 					image: input.image,
 					tag: input.tag,
@@ -171,12 +180,18 @@ export const actions = {
 			});
 		}
 
+		const previousWebhook = {
+			gitProviderId: svc.gitProviderId,
+			gitRepo: svc.gitRepo,
+			gitWebhookId: svc.gitWebhookId,
+		};
 		await svc.update({
 			buildCacheRegistryId,
 			buildServerRemoteHostId,
 			...checks,
 			...sourcePatch(input, isGitBuild),
 		});
+		await GitWebhookService.sync(svc, previousWebhook);
 
 		logger.info(
 			`Service source updated: service=${svc.id} buildSource=${input.buildSource} user=${locals.user.id}`,

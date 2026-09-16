@@ -15,6 +15,7 @@ const SLUG_RE = /^[a-z0-9-]{1,63}$/;
 export const createServiceApiBody = z
 	.object({
 		authRequired: z.boolean().default(false),
+		autoDeployOnPush: z.boolean().default(false),
 		buildSource: z.enum(["image", "git"]).default("image"),
 		containerPort: z.number().int().min(1).max(65_535),
 		cpuLimit: z.string().optional(),
@@ -22,7 +23,9 @@ export const createServiceApiBody = z
 		envVars: z.record(z.string(), z.string()).default({}),
 		gitBuildContext: z.string().optional(),
 		gitDockerfilePath: z.string().optional(),
+		gitProviderId: z.string().optional(),
 		gitRef: z.string().optional(),
+		gitRepo: z.string().optional(),
 		gitUrl: z.string().optional(),
 		image: z.string().optional(),
 		memoryLimitMb: z.number().int().positive().optional(),
@@ -52,6 +55,7 @@ export type CreateServiceApiInput = z.infer<typeof createServiceApiBody>;
 
 export const updateServiceApiBody = z.object({
 	authRequired: z.boolean().optional(),
+	autoDeployOnPush: z.boolean().optional(),
 	autoRollback: z.boolean().optional(),
 	buildSource: z.enum(["image", "git"]).optional(),
 	containerPort: z.number().int().min(1).max(65_535).optional(),
@@ -61,7 +65,9 @@ export const updateServiceApiBody = z.object({
 	envVars: z.record(z.string(), z.string()).optional(),
 	gitBuildContext: z.string().nullable().optional(),
 	gitDockerfilePath: z.string().nullable().optional(),
+	gitProviderId: z.string().nullable().optional(),
 	gitRef: z.string().nullable().optional(),
+	gitRepo: z.string().nullable().optional(),
 	gitUrl: z.string().nullable().optional(),
 	healthcheckCommand: z.string().max(1000).nullable().optional(),
 	image: z.string().min(1).optional(),

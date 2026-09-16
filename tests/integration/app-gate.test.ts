@@ -151,6 +151,38 @@ describe("per-app auth gate", () => {
 		expect(callback.searchParams.get("token")).toBeTruthy();
 	});
 
+	test("a signed-out visitor is sent to the real sign-in page, which names the app and returns to /app-auth", async () => {
+		const challenge = await gateCheck("/private");
+		const rd = new URL(
+			challenge.headers.get("location") ?? "",
+		).searchParams.get("rd");
+		const appAuthPath = `/app-auth?rd=${encodeURIComponent(rd ?? "")}`;
+
+		const res = await nativeFetch(`${fixture.origin}${appAuthPath}`, {
+			redirect: "manual",
+		});
+		expect(res.status).toBe(302);
+		const signIn = new URL(res.headers.get("location") ?? "", fixture.origin);
+		expect(signIn.pathname).toBe("/auth/sign-in");
+		const redirectTo = signIn.searchParams.get("redirectTo") ?? "";
+		expect(new URL(redirectTo, fixture.origin).searchParams.get("rd")).toBe(rd);
+
+		const page = await (
+			await nativeFetch(`${fixture.origin}${signIn.pathname}${signIn.search}`)
+		).text();
+		expect(page).toContain('appName:"IT gate check"');
+		expect(page).toContain(`redirectTo:${JSON.stringify(redirectTo)}`);
+	});
+
+	test("the sign-in page drops a redirectTo that would leave the origin", async () => {
+		const page = await (
+			await nativeFetch(
+				`${fixture.origin}/auth/sign-in?redirectTo=${encodeURIComponent("//evil.example.com")}`,
+			)
+		).text();
+		expect(page).toContain("redirectTo:null");
+	});
+
 	test("the callback mints a host-scoped cookie and returns the visitor to the original URL", async () => {
 		const challenge = await gateCheck("/deep/link?a=b");
 		const rd = new URL(

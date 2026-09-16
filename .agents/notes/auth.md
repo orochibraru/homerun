@@ -216,9 +216,9 @@ as the typed phrase, same as the service danger zone.
 
 **`label` vs `name`.** `name` is the machine id (lowercase, hyphens, part of the
 redirect URI and of `oauth:<name>`); `label` is the human name shown on the
-"Continue with …" button, the app-auth screen, the per-service Access checkbox
-list and the provider list. `label` falls back to `name` everywhere it's read,
-so providers stored before it existed keep working.
+"Continue with …" button, the per-service Access checkbox list and the provider
+list. `label` falls back to `name` everywhere it's read, so providers stored
+before it existed keep working.
 
 **Signing out of the provider is opt-in, off by default** (`signOutOfProvider`).
 better-auth picks `end_session_endpoint` straight out of the discovery document
@@ -399,10 +399,21 @@ The round trip, all of it through the one forwardAuth channel:
    URL, the host and the service id, HMAC-signed with a 10-minute TTL, so it
    can't be used as an open redirect.
 2. `/app-auth` (its own top-level route, outside `(protected)/` — it has to
-   render for signed-out visitors) resolves the service, and either renders a
-   sign-in screen restricted to that app's allowed methods, or, for an
-   already-signed-in allowed user, `302`s to
-   `app.example.com/__homerun_auth/callback?token=<60s grant>`.
+   render for signed-out visitors) resolves the service. A signed-out visitor is
+   `302`ed to the real `/auth/sign-in?redirectTo=/app-auth?rd=…`
+   (`$lib/redirect-target.ts` keeps `redirectTo` same-origin), so passkeys, 2FA
+   and the instance's preferred and enforced sign-in methods all apply exactly
+   as for the dashboard; the sign-in page names the app
+   (`$lib/server/app-gate-return.ts`), and once signed in shows a two-second
+   "taking you to X" screen and returns with `window.location.assign`. It has to
+   be a full page load: `/app-auth` answers an allowed user with a `302` to the
+   app's own host, and a client-side `invalidateAll`/`goto` can't follow a
+   cross-origin redirect, which is the real bug the old in-page form had (sign
+   in, "redirecting…" toast, then nothing, fields disabled). An allowed user
+   gets `302`ed to `app.example.com/__homerun_auth/callback?token=<60s grant>`;
+   a signed-in user the app's policy refuses (including one who signed in with a
+   method the app doesn't allow) gets the denial screen with "Sign in as someone
+   else".
 3. That callback path is itself gated, so it lands back in auth-check, which
    verifies the grant and answers `302` + `Set-Cookie` for the session cookie
    (`homerun_app_session`, `HttpOnly`/`SameSite=Lax`/`Secure` over https, **no
@@ -623,6 +634,25 @@ reached through its resolved DNS name with "Invalid origin". Subdomains of the
 Base domain are deliberately **not** wildcarded: they're deployed apps, same
 site as the dashboard, and must not be able to drive its auth endpoints.
 
+**The server's own address is always trusted** (`directAccessOrigins`): when a
+request's `Host` header is an IP literal or `localhost`, `http(s)://<Host>` is
+added per request. Real lockout this fixes: changing the Base domain / Dashboard
+URL to a wrong domain moved Traefik's routing, and signing back in at
+`http://<ip>:3000` (the published port still answers) failed with "Invalid
+origin", because SvelteKit rewrites `event.url` to `ORIGIN` and the IP was in no
+trusted list. It's a same-origin check (a cross-site page can't make a browser
+send another site's `Host`), limited to IP literals so DNS rebinding can't use
+it. `csrfHandler` got the matching rule: an `Origin` whose host equals `Host`
+passes. better-auth only enforces origins on requests carrying a cookie, and
+**skips the check entirely when `NODE_ENV=test`**, which is what the integration
+suite's spawned app inherits, so `advanced.disableOriginCheck: false` is set
+explicitly; the suite now exercises the production behaviour
+(`tests/integration/auth.test.ts` signs in from an IP `Host` that isn't
+`ORIGIN`, and refuses a cross-site one). Session cookies are only `Secure` when
+`ORIGIN` is `https`, and the installer writes `http://<ip>:3000`, so the cookie
+sticks over plain http too; an instance with an `https` `ORIGIN` still can't
+keep a session over `http://<ip>`.
+
 ## Passkeys, 2FA and sign-in requirements
 
 `twoFactor({ allowPasswordless: true })` (TOTP + backup codes) and `passkey()`
@@ -659,3 +689,67 @@ load instead of starting the conditional autofill request, since a second
 WebAuthn call would abort the first. Cancelling, or a browser that refuses a
 prompt without a click (Safari), fails silently and leaves the passkey button in
 place.
+
+## Homerun as an OIDC provider (`@better-auth/oauth-provider`, `$lib/oidc-provider.ts`, `/authentication/apps`, `/auth/consent`)
+
+`oidcProviderPlugins()` in `auth.ts` adds better-auth's `jwt` plugin (RS256 key
+pairs in the `jwks` table, since plenty of apps' OIDC libraries reject the EdDSA
+default) and `oauthProvider` (`loginPage: "/auth/sign-in"`,
+`consentPage: "/auth/consent"`, scopes
+`openid profile email offline_access groups`, claims from `oidcClaimsFor`:
+`groups` is `[user.role]`, `preferred_username` the email's local part).
+`@better-auth/oauth-provider` is pinned to the installed better-auth version
+(1.7.1); the two move together. Issuer is `<config.auth.origin>/api/v1/auth`,
+discovery at `/api/v1/auth/.well-known/openid-configuration`, which
+`svelteKitHandler` already forwards. **The plugins are only added when
+`config.auth.origin` is set**: `baseURL` is deliberately unset (see the
+`buildAuth` comment), and the provider's `init()` builds
+`new URL(issuer ?? baseURL)`, which throws on an empty base; `rebuildAuth()`
+adds them once settings supply the origin. `sveltekitCookies` must stay the
+**last** plugin, better-auth warns otherwise and the provider's after-hooks set
+cookies.
+
+**Tables** (`jwks`, `oauth_client`, `oauth_access_token`, `oauth_refresh_token`,
+`oauth_consent`, `oauth_client_assertion`, plus the unused `oauth_resource` /
+`oauth_client_resource`) are hand-written from `getAuthTables()` output. Every
+`string[]`/`json` field is a `text` column: the drizzle adapter is configured
+with `provider: "sqlite"`, which makes better-auth JSON-encode arrays itself.
+`OauthClientDTO` reads them back with a tolerant JSON parse. Token and consent
+rows cascade from the client's `client_id`.
+
+**Client management goes through better-auth, reads don't.** Create, update and
+rotate call `auth.api.adminCreateOAuthClient` / `adminUpdateOAuthClient` /
+`rotateClientSecret` via `OauthAppService`, so secrets get generated and hashed
+the way the token endpoint expects. Real, tested finding: the "admin",
+server-only create endpoint still loads the session and runs `clientPrivileges`
+(`user.role === "admin"`), and answers a bare 401 with no body without request
+`headers`. Its `APIError`s carry an empty `message` too, the text lives in
+`body.error_description`; `authErrorMessage()` digs it out. Redirect URIs must
+be `https` and not loopback for web clients (the plugin rejects
+`http://localhost`), `parseOauthAppForm` refuses non-https up front with a
+readable message.
+
+**Three request-path changes the provider needed**, all verified by
+`tests/e2e/ui-oidc-provider.spec.ts` (register, signed-out authorize → sign-in →
+code, token exchange, id_token claims, userinfo, consent):
+
+1. **CSRF.** SvelteKit's `csrf.checkOrigin` runs before any hook and 403s
+   `application/x-www-form-urlencoded` POSTs without a same-origin `Origin`,
+   which is exactly what an app's server sends to `/oauth2/token`. It's turned
+   off (`csrf: { trustedOrigins: ["*"] }` in `vite.config.ts`) and reimplemented
+   as `csrfHandler`, first in `hooks.server.ts`'s sequence
+   (`$lib/server/csrf.ts`), exempting only the token, introspect, revoke and
+   end-session paths. Remote-function origin checks are separate in SvelteKit
+   and unaffected.
+2. **API keys.** `applyApiKeyAuth` treats any `Authorization: Bearer` without a
+   session as an API key and 401s it; `isOidcProviderPath` skips that fallback
+   for `/oauth2/*`, `/.well-known/*` and `/jwks`, since userinfo is called with
+   an OAuth access token.
+3. **Sign-in resume.** `/oauth2/authorize` without a session redirects to
+   `/auth/sign-in?<original params>&sig=…`; `oauthProviderClient()` in
+   `auth-client.ts` adds the signed query to every non-GET auth call from that
+   page, and the provider's after-hook answers the sign-in (password, 2FA
+   verify, passkey) with a redirect back into authorize. The sign-in page
+   detects the flow (`sig` + `client_id`), names the app, shows "taking you
+   back", and must not navigate itself (no `goto("/")`, no `redirectTo`), and
+   its load doesn't bounce an already-signed-in user so `prompt=login` works.

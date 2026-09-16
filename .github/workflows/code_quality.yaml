@@ -61,7 +61,7 @@ jobs:
       - name: Run prek
         uses: j178/prek-action@v3.0.0
         env:
-          SKIP: lint-ts,lint-tailwind,test-unit,check
+          SKIP: gen,lint-ts,lint-tailwind,test-unit,check
         with:
           extra-args: --all-files --no-fail-fast
 

@@ -245,9 +245,9 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   on `/s3-destinations`.
 - `backup_run` (`BackupRunDTO`), one row per backup attempt (scheduled or manual
   "Run now"): `volumeId`, `startedAt`/`finishedAt`, `success` (null while still
-  running), `sizeBytes`, `error`. Written from `BackupService.runBackup()`, the
-  one place both the scheduler and the manual action funnel through, so every
-  path gets a log entry including validation failures. Backs `/backups`;
+  running), `sizeBytes`, `error`. Written from `S3BackupService.backupVolume()`,
+  the one place both the scheduler and the manual action funnel through, so
+  every path gets a log entry including validation failures. Backs `/backups`;
   `storage_volume.backupLastRunAt` alone only ever remembered a timestamp.
 - `cron_job` (`CronJobDTO`), a user-defined scheduled task, independent of
   `service.cronSchedule`: `name`/`description`/`schedule` (5-field cron)/

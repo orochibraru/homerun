@@ -1,3 +1,4 @@
+import type { DeployTrigger } from "$lib/deploy-trigger";
 import type { NotificationEvent } from "$lib/types";
 
 export interface NotificationEventInfo {
@@ -128,7 +129,7 @@ export function isFailureEvent(event: NotificationEvent): boolean {
  */
 export function deployEvent(
 	buildSource: string,
-	trigger: "manual" | "cron",
+	trigger: DeployTrigger,
 	ok: boolean,
 ): NotificationEvent {
 	const outcome = ok ? "succeeded" : "failed";

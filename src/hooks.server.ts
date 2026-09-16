@@ -12,7 +12,10 @@ import {
 	setDetectedAuthCheckUrl,
 } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { GIT_WEBHOOK_PATH } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
+import { OIDC_BASE_PATH } from "$lib/oidc-provider";
+import { isForbiddenCrossSiteForm } from "$lib/server/csrf";
 import { db as appDb, getDb, resetDb } from "$lib/server/db";
 import { user as userTable } from "$lib/server/db/schema";
 import { seedBuiltinTemplates } from "$lib/server/db/seed";
@@ -126,14 +129,13 @@ async function waitForDatabase() {
 			return;
 		} catch (error) {
 			if (i === maxRetries - 1) {
-				logger.error("Database not ready after maximum retries. Exiting.");
+				logger.error(
+					`Could not reach Postgres after ${maxRetries} attempts. Check DATABASE_URL in .env, and for local dev start it with "docker compose up -d". Exiting.`,
+				);
 				logger.error(`Last error: ${error}`);
 				process.exit(1);
 			}
-			const isFirstAttempt = i === 0;
-			if (isFirstAttempt || i % 10 === 0) {
-				logger.info(`Waiting for database... (attempt ${i + 1}/${maxRetries})`);
-			}
+			logger.info(`Waiting for database... (attempt ${i + 1}/${maxRetries})`);
 			await sleep(retryDelay);
 		}
 	}
@@ -279,6 +281,20 @@ function readApiKey(event: RequestEvent): string | null {
 }
 
 /**
+ * Whether `pathname` is one of the OAuth/OIDC provider endpoints apps call
+ * with their own `Authorization: Bearer <access token>` (userinfo,
+ * introspection, revocation) or read anonymously (JWKS, discovery). Those
+ * tokens aren't Homerun API keys, so the API-key fallback must not 401 them.
+ */
+function isOidcProviderPath(pathname: string): boolean {
+	return (
+		pathname.startsWith(`${OIDC_BASE_PATH}/oauth2/`) ||
+		pathname.startsWith(`${OIDC_BASE_PATH}/.well-known/`) ||
+		pathname === `${OIDC_BASE_PATH}/jwks`
+	);
+}
+
+/**
  * API-key fallback for a request with no cookie session : populates
  * `locals.user` on success, and returns a 401 response when a key was sent
  * but doesn't verify. Returns null when there's nothing to do.
@@ -340,7 +356,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		// Make session and user available on server
 		event.locals.session = session.session;
 		event.locals.user = session.user;
-	} else {
+	} else if (!isOidcProviderPath(event.url.pathname)) {
 		const rejected = await applyApiKeyAuth(event);
 		if (rejected) {
 			return rejected;
@@ -411,4 +427,35 @@ const generalHandler: Handle = async ({ event, resolve }) => {
 	return res;
 };
 
-export const handle = sequence(generalHandler, authHandler);
+const OIDC_SERVER_TO_SERVER_PATHS = new Set(
+	["token", "introspect", "revoke", "end-session"].map(
+		(endpoint) => `${OIDC_BASE_PATH}/oauth2/${endpoint}`,
+	),
+);
+
+/**
+ * Refuses cross-site form posts, in place of SvelteKit's built-in check
+ * (turned off in vite.config.ts), except on the OAuth endpoints apps call
+ * from their own servers and on git push webhooks, which arrive with a form
+ * body (depending on the provider) and no `Origin` header.
+ */
+const csrfHandler: Handle = async ({ event, resolve }) => {
+	if (
+		!building &&
+		isForbiddenCrossSiteForm(
+			event.request,
+			event.url,
+			(pathname) =>
+				OIDC_SERVER_TO_SERVER_PATHS.has(pathname) ||
+				pathname.startsWith(`${GIT_WEBHOOK_PATH}/`),
+		)
+	) {
+		return new Response(
+			`Cross-site ${event.request.method} form submissions are forbidden`,
+			{ status: 403 },
+		);
+	}
+	return await resolve(event);
+};
+
+export const handle = sequence(csrfHandler, generalHandler, authHandler);

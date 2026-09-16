@@ -236,6 +236,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/services/{serviceId}/webhook": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get a service's push-to-deploy webhook
+		 * @description The URL and secret a git provider sends push events to when deploy-on-push is on, and whether Homerun registered the webhook itself. Add it by hand in the repository's settings when registered is false.
+		 */
+		get: operations["get_services__serviceId__webhook"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/stacks": {
 		parameters: {
 			query?: never;
@@ -399,6 +419,7 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						autoDeployOnPush: boolean;
 						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
 						autoRollback: boolean;
 						/** @enum {string} */
@@ -434,8 +455,13 @@ export interface operations {
 						};
 						gitBuildContext: string | null;
 						gitDockerfilePath: string | null;
+						gitProviderId: string | null;
 						gitRef: string | null;
+						gitRepo: string | null;
 						gitUrl: string | null;
+						gitWebhookError: string | null;
+						gitWebhookId: string | null;
+						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						id: string;
 						image: string;
@@ -493,6 +519,8 @@ export interface operations {
 				"application/json": {
 					/** @default false */
 					authRequired: boolean;
+					/** @default false */
+					autoDeployOnPush: boolean;
 					/**
 					 * @default image
 					 * @enum {string}
@@ -508,7 +536,9 @@ export interface operations {
 					};
 					gitBuildContext?: string;
 					gitDockerfilePath?: string;
+					gitProviderId?: string;
 					gitRef?: string;
+					gitRepo?: string;
 					gitUrl?: string;
 					image?: string;
 					memoryLimitMb?: number;
@@ -545,6 +575,7 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						autoDeployOnPush: boolean;
 						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
 						autoRollback: boolean;
 						/** @enum {string} */
@@ -580,8 +611,13 @@ export interface operations {
 						};
 						gitBuildContext: string | null;
 						gitDockerfilePath: string | null;
+						gitProviderId: string | null;
 						gitRef: string | null;
+						gitRepo: string | null;
 						gitUrl: string | null;
+						gitWebhookError: string | null;
+						gitWebhookId: string | null;
+						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						id: string;
 						image: string;
@@ -675,6 +711,7 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						autoDeployOnPush: boolean;
 						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
 						autoRollback: boolean;
 						/** @enum {string} */
@@ -710,8 +747,13 @@ export interface operations {
 						};
 						gitBuildContext: string | null;
 						gitDockerfilePath: string | null;
+						gitProviderId: string | null;
 						gitRef: string | null;
+						gitRepo: string | null;
 						gitUrl: string | null;
+						gitWebhookError: string | null;
+						gitWebhookId: string | null;
+						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						id: string;
 						image: string;
@@ -828,6 +870,7 @@ export interface operations {
 			content: {
 				"application/json": {
 					authRequired?: boolean;
+					autoDeployOnPush?: boolean;
 					autoRollback?: boolean;
 					/** @enum {string} */
 					buildSource?: "image" | "git";
@@ -840,7 +883,9 @@ export interface operations {
 					};
 					gitBuildContext?: string | null;
 					gitDockerfilePath?: string | null;
+					gitProviderId?: string | null;
 					gitRef?: string | null;
+					gitRepo?: string | null;
 					gitUrl?: string | null;
 					healthcheckCommand?: string | null;
 					image?: string;
@@ -873,6 +918,7 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						autoDeployOnPush: boolean;
 						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
 						autoRollback: boolean;
 						/** @enum {string} */
@@ -908,8 +954,13 @@ export interface operations {
 						};
 						gitBuildContext: string | null;
 						gitDockerfilePath: string | null;
+						gitProviderId: string | null;
 						gitRef: string | null;
+						gitRepo: string | null;
 						gitUrl: string | null;
+						gitWebhookError: string | null;
+						gitWebhookId: string | null;
+						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						id: string;
 						image: string;
@@ -1701,6 +1752,63 @@ export interface operations {
 				};
 			};
 			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__webhook: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The push webhook */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Why Homerun couldn't register the webhook itself, if it couldn't */
+						error: string | null;
+						providerName: string | null;
+						/** @description Whether Homerun registered the webhook on the provider */
+						registered: boolean;
+						/** @description The secret deliveries are signed with */
+						secret: string;
+						/** @description Where the provider should send push events */
+						url: string | null;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Service not found, or deploy-on-push is off */
 			404: {
 				headers: {
 					[name: string]: unknown;

@@ -37,6 +37,9 @@ export interface NewServiceInput {
 	gitDockerfilePath?: string | null;
 	gitRef?: string | null;
 	gitUrl?: string | null;
+	gitProviderId?: string | null;
+	gitRepo?: string | null;
+	autoDeployOnPush?: boolean;
 	healthcheckCommand?: string | null;
 	image: string;
 	memoryLimitMb?: number | null;
@@ -87,6 +90,12 @@ export type ServiceUpdateInput = Partial<
 		| "gitDockerfilePath"
 		| "gitRef"
 		| "gitUrl"
+		| "gitProviderId"
+		| "gitRepo"
+		| "autoDeployOnPush"
+		| "gitWebhookId"
+		| "gitWebhookSecretEnc"
+		| "gitWebhookError"
 		| "healthcheckCommand"
 		| "image"
 		| "imageScanEnabled"
@@ -141,6 +150,15 @@ export class ServiceDTO extends BaseDTO<Service> {
 			.where(eq(service.id, id))
 			.limit(1);
 		return row ? new ServiceDTO(row) : null;
+	}
+
+	/**
+	 * Loads one service by id without an owner check, for an incoming git push
+	 * webhook, which is authenticated by the service's own webhook secret
+	 * rather than a user session.
+	 */
+	static async getForWebhook(id: string): Promise<ServiceDTO | null> {
+		return await ServiceDTO.getForGate(id);
 	}
 
 	/** Every service the user owns, newest first. */
@@ -349,6 +367,12 @@ export class ServiceDTO extends BaseDTO<Service> {
 			gitDockerfilePath: input.gitDockerfilePath ?? null,
 			gitRef: input.gitRef ?? null,
 			gitUrl: input.gitUrl ?? null,
+			gitProviderId: input.gitProviderId ?? null,
+			gitRepo: input.gitRepo ?? null,
+			autoDeployOnPush: input.autoDeployOnPush ?? false,
+			gitWebhookId: null,
+			gitWebhookSecretEnc: null,
+			gitWebhookError: null,
 			registryPasswordEnc: input.registryPasswordEnc ?? null,
 			registryUrl: input.registryUrl ?? null,
 			registryUsername: input.registryUsername ?? null,
@@ -647,6 +671,30 @@ export class ServiceDTO extends BaseDTO<Service> {
 	/** The branch or tag to build. */
 	get gitRef(): string | null {
 		return this.row.gitRef;
+	}
+	/** The configured git provider the repo was picked from, null for a pasted URL. */
+	get gitProviderId(): string | null {
+		return this.row.gitProviderId;
+	}
+	/** The repo's path on its provider (`owner/name`, or a GitLab group path). */
+	get gitRepo(): string | null {
+		return this.row.gitRepo;
+	}
+	/** Whether a push to the service's branch deploys it. */
+	get autoDeployOnPush(): boolean {
+		return this.row.autoDeployOnPush;
+	}
+	/** The provider's id for the push webhook Homerun registered, null when none is. */
+	get gitWebhookId(): string | null {
+		return this.row.gitWebhookId;
+	}
+	/** The encrypted secret the push webhook signs its deliveries with. */
+	get gitWebhookSecretEnc(): string | null {
+		return this.row.gitWebhookSecretEnc;
+	}
+	/** Why registering the push webhook last failed, null when it didn't. */
+	get gitWebhookError(): string | null {
+		return this.row.gitWebhookError;
 	}
 	/** The build context directory inside the repo, if not the root. */
 	get gitBuildContext(): string | null {

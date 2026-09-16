@@ -1,13 +1,12 @@
 ---
 name: new-remote-function
-description:
+description: >-
   Workflow for adding a query/command under src/lib/remote/*.remote.ts
   (SvelteKit remote functions): requireUser() auth, zod-validated args, the
   refresh-in-place vs. one-shot consumption split, and which data belongs here
-  vs. in a route's load. Use when adding a panel that loads behind a skeleton,
-  a poll, a picker's on-demand lookup, or a small mutation the bell/a
-  self-loading component fires — not for data a page's own correctness
-  depends on.
+  vs. in a route's load. Use when adding a panel that loads behind a skeleton, a
+  poll, a picker's on-demand lookup, or a small mutation the bell/a self-loading
+  component fires — not for data a page's own correctness depends on.
 user-invocable: true
 ---
 

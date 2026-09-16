@@ -12,14 +12,5 @@
 		"target": "ESNext",
 		"types": ["bun-types"]
 	},
-	"include": [
-		"client.ts",
-		"commands.ts",
-		"config.ts",
-		"index.ts",
-		"login.ts",
-		"output.ts",
-		"update.ts",
-		"version.ts"
-	]
+	"include": ["./**/*.ts"]
 }

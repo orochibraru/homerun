@@ -97,6 +97,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
@@ -114,7 +115,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          output="$(bun run semantic-release --dry-run 2>&1)" || true
+          if ! output="$(bun run semantic-release --dry-run 2>&1)"; then
+            echo "$output"
+            echo "::error::semantic-release dry run failed, refusing to build images stamped with the wrong version"
+            exit 1
+          fi
           echo "$output"
           version="$(echo "$output" | grep -oE 'release version is [0-9]+\.[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -n1)"
           if [ -n "$version" ]; then

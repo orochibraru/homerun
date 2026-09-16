@@ -273,6 +273,20 @@
 			"when": 1789580885886,
 			"tag": "0038_melted_omega_flight",
 			"breakpoints": true
+		},
+		{
+			"idx": 39,
+			"version": "7",
+			"when": 1789588262367,
+			"tag": "0039_sturdy_slayback",
+			"breakpoints": true
+		},
+		{
+			"idx": 40,
+			"version": "7",
+			"when": 1789589873080,
+			"tag": "0040_dark_eddie_brock",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

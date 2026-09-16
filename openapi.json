@@ -260,6 +260,9 @@
 											"authRequired": {
 												"type": "boolean"
 											},
+											"autoDeployOnPush": {
+												"type": "boolean"
+											},
 											"autoRollback": {
 												"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 												"type": "boolean"
@@ -401,6 +404,16 @@
 													}
 												]
 											},
+											"gitProviderId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"gitRef": {
 												"anyOf": [
 													{
@@ -411,7 +424,47 @@
 													}
 												]
 											},
+											"gitRepo": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"gitUrl": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitWebhookError": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitWebhookId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitWebhookSecretEnc": {
 												"anyOf": [
 													{
 														"type": "string"
@@ -560,10 +613,16 @@
 											"desiredState",
 											"dnsResolvable",
 											"envVars",
+											"autoDeployOnPush",
 											"gitBuildContext",
 											"gitDockerfilePath",
+											"gitProviderId",
 											"gitRef",
+											"gitRepo",
 											"gitUrl",
+											"gitWebhookError",
+											"gitWebhookId",
+											"gitWebhookSecretEnc",
 											"healthcheckCommand",
 											"id",
 											"image",
@@ -636,6 +695,10 @@
 										"default": false,
 										"type": "boolean"
 									},
+									"autoDeployOnPush": {
+										"default": false,
+										"type": "boolean"
+									},
 									"buildSource": {
 										"default": "image",
 										"enum": ["image", "git"],
@@ -669,7 +732,13 @@
 									"gitDockerfilePath": {
 										"type": "string"
 									},
+									"gitProviderId": {
+										"type": "string"
+									},
 									"gitRef": {
+										"type": "string"
+									},
+									"gitRepo": {
 										"type": "string"
 									},
 									"gitUrl": {
@@ -721,6 +790,7 @@
 								},
 								"required": [
 									"authRequired",
+									"autoDeployOnPush",
 									"buildSource",
 									"containerPort",
 									"dnsResolvable",
@@ -768,6 +838,9 @@
 											"type": "array"
 										},
 										"authRequired": {
+											"type": "boolean"
+										},
+										"autoDeployOnPush": {
 											"type": "boolean"
 										},
 										"autoRollback": {
@@ -911,6 +984,16 @@
 												}
 											]
 										},
+										"gitProviderId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"gitRef": {
 											"anyOf": [
 												{
@@ -921,7 +1004,47 @@
 												}
 											]
 										},
+										"gitRepo": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"gitUrl": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookError": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookSecretEnc": {
 											"anyOf": [
 												{
 													"type": "string"
@@ -1065,10 +1188,16 @@
 										"desiredState",
 										"dnsResolvable",
 										"envVars",
+										"autoDeployOnPush",
 										"gitBuildContext",
 										"gitDockerfilePath",
+										"gitProviderId",
 										"gitRef",
+										"gitRepo",
 										"gitUrl",
+										"gitWebhookError",
+										"gitWebhookId",
+										"gitWebhookSecretEnc",
 										"healthcheckCommand",
 										"id",
 										"image",
@@ -1276,6 +1405,9 @@
 										"authRequired": {
 											"type": "boolean"
 										},
+										"autoDeployOnPush": {
+											"type": "boolean"
+										},
 										"autoRollback": {
 											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 											"type": "boolean"
@@ -1417,6 +1549,16 @@
 												}
 											]
 										},
+										"gitProviderId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"gitRef": {
 											"anyOf": [
 												{
@@ -1427,7 +1569,47 @@
 												}
 											]
 										},
+										"gitRepo": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"gitUrl": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookError": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookSecretEnc": {
 											"anyOf": [
 												{
 													"type": "string"
@@ -1571,10 +1753,16 @@
 										"desiredState",
 										"dnsResolvable",
 										"envVars",
+										"autoDeployOnPush",
 										"gitBuildContext",
 										"gitDockerfilePath",
+										"gitProviderId",
 										"gitRef",
+										"gitRepo",
 										"gitUrl",
+										"gitWebhookError",
+										"gitWebhookId",
+										"gitWebhookSecretEnc",
 										"healthcheckCommand",
 										"id",
 										"image",
@@ -1671,6 +1859,9 @@
 									"authRequired": {
 										"type": "boolean"
 									},
+									"autoDeployOnPush": {
+										"type": "boolean"
+									},
 									"autoRollback": {
 										"type": "boolean"
 									},
@@ -1735,7 +1926,27 @@
 											}
 										]
 									},
+									"gitProviderId": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
 									"gitRef": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"gitRepo": {
 										"anyOf": [
 											{
 												"type": "string"
@@ -1878,6 +2089,9 @@
 										"authRequired": {
 											"type": "boolean"
 										},
+										"autoDeployOnPush": {
+											"type": "boolean"
+										},
 										"autoRollback": {
 											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 											"type": "boolean"
@@ -2019,6 +2233,16 @@
 												}
 											]
 										},
+										"gitProviderId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"gitRef": {
 											"anyOf": [
 												{
@@ -2029,7 +2253,47 @@
 												}
 											]
 										},
+										"gitRepo": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"gitUrl": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookError": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitWebhookSecretEnc": {
 											"anyOf": [
 												{
 													"type": "string"
@@ -2173,10 +2437,16 @@
 										"desiredState",
 										"dnsResolvable",
 										"envVars",
+										"autoDeployOnPush",
 										"gitBuildContext",
 										"gitDockerfilePath",
+										"gitProviderId",
 										"gitRef",
+										"gitRepo",
 										"gitUrl",
+										"gitWebhookError",
+										"gitWebhookId",
+										"gitWebhookSecretEnc",
 										"healthcheckCommand",
 										"id",
 										"image",
@@ -3902,6 +4172,131 @@
 					}
 				],
 				"summary": "Stop a service's container",
+				"tags": ["Services"]
+			}
+		},
+		"/services/{serviceId}/webhook": {
+			"get": {
+				"description": "The URL and secret a git provider sends push events to when deploy-on-push is on, and whether Homerun registered the webhook itself. Add it by hand in the repository's settings when registered is false.",
+				"operationId": "get_services__serviceId__webhook",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Why Homerun couldn't register the webhook itself, if it couldn't"
+										},
+										"providerName": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"registered": {
+											"description": "Whether Homerun registered the webhook on the provider",
+											"type": "boolean"
+										},
+										"secret": {
+											"description": "The secret deliveries are signed with",
+											"type": "string"
+										},
+										"url": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Where the provider should send push events"
+										}
+									},
+									"required": [
+										"error",
+										"providerName",
+										"registered",
+										"secret",
+										"url"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The push webhook"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found, or deploy-on-push is off"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a service's push-to-deploy webhook",
 				"tags": ["Services"]
 			}
 		},
