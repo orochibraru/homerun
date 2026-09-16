@@ -73,6 +73,39 @@ stored encrypted, and disconnecting removes them.
 This is only about _browsing and access_. Cloning itself is provider-agnostic,
 so any public HTTPS git URL works with no provider connected at all.
 
+### Required status checks
+
+A git-mode service can refuse to build until its CI agrees. On the **Source**
+tab, tick **Require status checks to pass before building** and pick the checks
+that must pass. The picker lists every check name reported on the latest commits
+of the service's branch, read live from the git provider: GitHub check runs and
+commit statuses, GitLab job statuses plus the pipeline itself (as `pipeline`),
+Gitea/Forgejo commit statuses, and Bitbucket build statuses (by key). A check
+that hasn't run recently can be added by name.
+
+On every deploy of that service, whatever triggered it (Deploy, the API or CLI,
+a scheduled redeploy, a stack or template deploy), Homerun first resolves the
+branch to a commit through the provider API and reads the checks for that exact
+commit:
+
+- every selected check passed (neutral and skipped count as passed): the build
+  goes ahead, pinned to that commit even if the branch moved in the meantime;
+- any selected check failed or was cancelled: the deploy stops before cloning;
+- checks still running: the deploy waits, polling every 20 seconds and logging
+  changes into the deployment log, for up to 30 minutes, then gives up;
+- a selected check that never reports, once everything else on the commit has
+  finished, is treated as failed after a 3 minute grace period.
+
+A stopped build is a failed deployment with the reason in its log, the running
+revision is left untouched, and a **Status checks failed** notification goes to
+the bell and to every notification channel subscribed to it, saying which checks
+failed and that the build won't carry on. The provider API is called with your
+connected git provider account, a token embedded in the clone URL, or
+unauthenticated for a public repository on github.com, gitlab.com or
+bitbucket.org. A self-hosted instance needs to be configured under Git
+Providers. Agent build servers clone the branch head themselves, so a build
+there isn't pinned to the checked commit.
+
 ### Build servers and build cache
 
 By default a git build runs on this host. Two optional pickers on the Source tab
@@ -174,6 +207,42 @@ correctly if you reload the page mid-deploy, or if the deploy was started
 somewhere else entirely (a template quick-deploy, cron). Below it, deployment
 history lists every attempt with status, image digest, and an expandable full
 log.
+
+### Revisions and rollback
+
+Every deploy that reaches running is a **revision**: the exact image it ran
+(`image:tag` plus the registry digest when there is one, or the local
+`homerun-build-<slug>:<tag>` for a git build), the commit and branch for a git
+build, and whether it stayed healthy. The **Revisions** tab lists them with the
+current one marked, next to failed attempts and their logs.
+
+**Deploy this revision** (confirmed in a dialog, also
+`POST /api/v1/services/:id/revisions/:revisionId/deploy` and
+`homerun services rollback`) queues a deploy that skips the build, the registry
+pull and the image scan, and starts that exact image: by digest for a pulled
+image (pulled again by digest if it was removed from the host), or the retained
+local build for a git service. The service's image and tag are set back to the
+revision's, so a later redeploy starts from there. Only the image is rolled
+back: environment variables, volumes, networking and resources are the service's
+current ones, on purpose, since those are edited deliberately and a rollback is
+for undoing a bad build.
+
+The last 5 distinct images of every service are **retained**: Docker Cleanup's
+image prune (including Clean up Docker host) and the image mirror cleanup skip
+them, so rolling back to any of them never needs a rebuild. Older revisions stay
+listed but may need their image pulled or rebuilt.
+
+**Auto-rollback.** After each deploy the new workload is watched for 90 seconds,
+longer while its healthcheck is still starting (up to 5 minutes). It's unhealthy
+when the container exits, restarts twice or more, or its Docker healthcheck
+(including the service's own healthcheck command) reports unhealthy, or for a
+swarm service when two tasks fail or not every replica is running. An unhealthy
+revision is always marked on the Revisions tab and reported (**Revision
+unhealthy**). With **Auto-rollback when a new revision is unhealthy** turned on
+in the service's Settings tab (off by default), Homerun instead redeploys the
+previous healthy revision with a different image, marks the new one as rolled
+back and sends **Rolled back**. A rollback that is itself unhealthy isn't rolled
+back again.
 
 Clicking Deploy **queues** the deploy rather than running it inside the request
 (see [The job queue](#the-job-queue) below), so the button comes back
@@ -481,7 +550,8 @@ and Deploy works again.
 ## Notifications
 
 The bell in the header shows a per-account feed of lifecycle events for your
-services, deploy succeeded or failed, service created, started or stopped, an
+services, deploy succeeded or failed, a build stopped by failing status checks,
+an unhealthy or rolled back revision, service created, started or stopped, an
 auto-redeploy firing, an image scan finding a critical vulnerability, and
 runtime errors. Click an entry to jump to its service. See
 [Operations](operations.md#notifications) for how it differs from the Errors
@@ -492,8 +562,8 @@ events out to a Discord webhook, a generic webhook, or email.
 
 Name, slug, restart policy, which stack the service belongs to, the
 [scheduled redeploy](#scheduled-redeploy) above, whether its image is
-[scanned](#image-scanning), and a danger-zone delete (typed-confirm, see
-[The services list](#the-services-list)).
+[scanned](#image-scanning), [auto-rollback](#revisions-and-rollback), and a
+danger-zone delete (typed-confirm, see [The services list](#the-services-list)).
 
 **Healthcheck command** overrides the image's own Docker healthcheck with a
 shell command run inside the container every 30s (exit 0 = healthy). When a

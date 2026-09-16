@@ -27,6 +27,10 @@ export const serviceResponse = z.object({
 	authAllowedUserIds: z.array(z.string()),
 	authProviders: z.array(z.string()),
 	authRequired: z.boolean(),
+	autoRollback: z.boolean().meta({
+		description:
+			"Redeploy the previous healthy revision when a new one is unhealthy",
+	}),
 	buildSource: z.enum(["image", "git"]),
 	containerId: z.string().nullable(),
 	containerPort: z.number().int(),
@@ -58,8 +62,10 @@ export const serviceResponse = z.object({
 	gitDockerfilePath: z.string().nullable(),
 	gitRef: z.string().nullable(),
 	gitUrl: z.string().nullable(),
+	healthcheckCommand: z.string().nullable(),
 	id: z.string(),
 	image: z.string(),
+	imageScanEnabled: z.boolean(),
 	memoryLimitMb: z.number().int().nullable(),
 	name: z.string(),
 	networkMode: z.enum(["bridge", "host"]),
@@ -71,6 +77,11 @@ export const serviceResponse = z.object({
 		.meta({ description: "Ciphertext, not plaintext." }),
 	registryUrl: z.string().nullable(),
 	registryUsername: z.string().nullable(),
+	requireStatusChecks: z.boolean().meta({
+		description:
+			"Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+	}),
+	requiredStatusChecks: z.array(z.string()),
 	restartPolicy: z.enum(["no", "always", "on-failure", "unless-stopped"]),
 	slug: z.string(),
 	tag: z.string(),
@@ -114,6 +125,44 @@ export const deployResultResponse = z.object({
 	deploymentId: z.string(),
 	error: z.string().optional(),
 	success: z.boolean(),
+});
+
+export const revisionResponse = z.object({
+	buildSource: z.enum(["image", "git"]).nullable(),
+	createdAt: isoTimestamp,
+	current: z.boolean().meta({ description: "The revision running now" }),
+	finishedAt: isoTimestamp.nullable(),
+	gitCommit: z.string().nullable(),
+	gitRef: z.string().nullable(),
+	health: z
+		.enum(["watching", "healthy", "unhealthy", "rolled_back"])
+		.nullable()
+		.meta({ description: "null = recorded before health watching existed" }),
+	id: z.string(),
+	imageDigest: z.string().nullable(),
+	imageId: z.string().nullable(),
+	imageRef: z.string().nullable(),
+	previous: z.boolean().meta({
+		description:
+			"The default rollback target: the newest older healthy revision with a different image",
+	}),
+	retained: z.boolean().meta({
+		description:
+			"Among the last 5 distinct images kept on the host and in the mirror",
+	}),
+	rollbackOfDeploymentId: z
+		.string()
+		.nullable()
+		.meta({ description: "Set when this revision redeployed an older one" }),
+	status: z.enum([
+		"pending",
+		"pulling",
+		"starting",
+		"running",
+		"stopped",
+		"failed",
+		"missing",
+	]),
 });
 
 export const okResponse = z.object({ ok: z.boolean() });

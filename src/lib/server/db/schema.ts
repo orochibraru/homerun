@@ -23,6 +23,7 @@ import type {
 	NotificationChannelKind,
 	NotificationEvent,
 	PullPolicy,
+	RevisionHealth,
 	StatusPageScope,
 } from "$lib/types";
 
@@ -542,6 +543,7 @@ export const service = pgTable(
 			.default([])
 			.notNull(),
 		authRequired: boolean("auth_required").default(false).notNull(),
+		autoRollback: boolean("auto_rollback").default(false).notNull(),
 		// Registry to use as a git-build layer cache (git mode only, see
 		// docker/git-build.ts) : null means no cache-from/cache-to, every
 		// build is from scratch, same as before this existed.
@@ -650,6 +652,13 @@ export const service = pgTable(
 		registryPasswordEnc: text("registry_password_enc"),
 		registryUrl: text("registry_url"),
 		registryUsername: text("registry_username"),
+		requireStatusChecks: boolean("require_status_checks")
+			.default(false)
+			.notNull(),
+		requiredStatusChecks: jsonb("required_status_checks")
+			.$type<string[]>()
+			.default([])
+			.notNull(),
 		// Desired replica count, swarm-mode only (instanceSettings.orchestrationMode
 		// = "swarm") : ignored entirely in standalone mode, always 1 container.
 		// Editable on the Compute tab.
@@ -689,6 +698,7 @@ export const service = pgTable(
 export const deployment = pgTable(
 	"deployment",
 	{
+		buildSource: text("build_source").$type<"image" | "git">(),
 		containerId: text("container_id"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		errorMessage: text("error_message"),
@@ -697,8 +707,10 @@ export const deployment = pgTable(
 		// "latest" on a branch says nothing about what ran, the SHA does.
 		gitCommit: text("git_commit"),
 		gitRef: text("git_ref"),
+		health: text("health").$type<RevisionHealth>(),
 		id: text("id").primaryKey(),
 		imageDigest: text("image_digest"),
+		imageId: text("image_id"),
 		// The image:tag this revision ran, recorded at deploy time so a later
 		// retag doesn't rewrite history.
 		imageRef: text("image_ref"),
@@ -706,6 +718,7 @@ export const deployment = pgTable(
 		// "Starting container...") : polled by the Overview tab while a deploy
 		// is in flight, kept around after for a lightweight audit trail.
 		log: text("log").default(""),
+		rollbackOfDeploymentId: text("rollback_of_deployment_id"),
 		serviceId: text("service_id")
 			.notNull()
 			.references(() => service.id, { onDelete: "cascade" }),
@@ -959,6 +972,9 @@ export const notification = pgTable(
 				| "auto_redeploy"
 				| "app_runtime_error"
 				| "image_scan_critical"
+				| "build_checks_failed"
+				| "deploy_unhealthy"
+				| "deploy_rolled_back"
 			>()
 			.notNull(),
 		userId: text("user_id")
@@ -1307,7 +1323,13 @@ export const notificationChannel = pgTable(
 		events: jsonb("events")
 			.$type<NotificationEvent[]>()
 			.notNull()
-			.default(["build.failed", "update.failed"]),
+			.default([
+				"build.failed",
+				"build.checks_failed",
+				"update.failed",
+				"deploy.unhealthy",
+				"deploy.rolled_back",
+			]),
 		id: text("id").primaryKey(),
 		kind: text("kind").$type<NotificationChannelKind>().notNull(),
 		lastError: text("last_error"),

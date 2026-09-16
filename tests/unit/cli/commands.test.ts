@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { ClientFactory } from "../../../packages/cli/client";
-import { Commands, findingsAtOrAbove } from "../../../packages/cli/commands";
+import {
+	Commands,
+	findingsAtOrAbove,
+	revisionRow,
+} from "../../../packages/cli/commands";
 import { Output } from "../../../packages/cli/output";
 
 type Client = ReturnType<typeof ClientFactory.makeClient>;
@@ -226,6 +230,71 @@ describe("findingsAtOrAbove", () => {
 		expect(findingsAtOrAbove(counts, "high")).toBe(3);
 		expect(findingsAtOrAbove(counts, "medium")).toBe(6);
 		expect(findingsAtOrAbove(counts, "low")).toBe(10);
+	});
+});
+
+function revisionFixture(overrides: Record<string, unknown> = {}) {
+	return {
+		buildSource: "image" as const,
+		createdAt: "2026-09-16T12:00:00.000Z",
+		current: false,
+		finishedAt: "2026-09-16T12:00:10.000Z",
+		gitCommit: null,
+		gitRef: null,
+		health: "healthy" as const,
+		id: "rev-1",
+		imageDigest: `sha256:${"b".repeat(64)}`,
+		imageId: null,
+		imageRef: "nginx:1.27",
+		previous: true,
+		retained: true,
+		rollbackOfDeploymentId: null,
+		status: "running" as const,
+		...overrides,
+	};
+}
+
+describe("Commands.revisionsList / serviceRollback", () => {
+	test("marks the current and previous revisions in the table", async () => {
+		spyOnOutput();
+		const GET = mock(async () =>
+			okResponse([
+				revisionFixture({ current: true, id: "rev-2", previous: false }),
+				revisionFixture({ gitCommit: "0123456789" }),
+				revisionFixture({ id: "rev-0", previous: false, retained: false }),
+			]),
+		);
+		await Commands.revisionsList(fakeClient({ GET }), "svc-1", false);
+		expect(GET).toHaveBeenCalledWith("/services/{serviceId}/revisions", {
+			params: { path: { serviceId: "svc-1" } },
+		});
+		const rows = printTableSpy.mock.calls[0]?.[0] as Record<string, string>[];
+		expect(rows.map((row) => row.marker)).toEqual([
+			"current",
+			"previous",
+			"(not retained)",
+		]);
+		expect(rows[1]?.commit).toBe("0123456");
+	});
+
+	test("rollback without a revision id targets the previous revision", async () => {
+		spyOnOutput();
+		const POST = mock(async () =>
+			okResponse({ deploymentId: "dep-9", success: true }),
+		);
+		await Commands.serviceRollback(fakeClient({ POST }), "svc-1", undefined);
+		expect(POST).toHaveBeenCalledWith(
+			"/services/{serviceId}/revisions/{revisionId}/deploy",
+			{ params: { path: { revisionId: "previous", serviceId: "svc-1" } } },
+		);
+		await Commands.serviceRollback(fakeClient({ POST }), "svc-1", "rev-1");
+		expect(POST).toHaveBeenLastCalledWith(
+			"/services/{serviceId}/revisions/{revisionId}/deploy",
+			{ params: { path: { revisionId: "rev-1", serviceId: "svc-1" } } },
+		);
+		expect(revisionRow(revisionFixture()).digest).toBe(
+			`sha256:${"b".repeat(12)}`,
+		);
 	});
 });
 

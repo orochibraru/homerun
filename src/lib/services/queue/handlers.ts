@@ -17,6 +17,7 @@ import {
 	type MirrorGcResult,
 } from "../image-mirror-gc.service.ts";
 import { ImageScanService } from "../image-scan.service.ts";
+import { RevisionService } from "../revision.service.ts";
 import { S3BackupService } from "../s3-backup.service.ts";
 import {
 	backupJobPayload,
@@ -107,7 +108,7 @@ async function reclaimStackNetworks(): Promise<PruneSummary> {
 	};
 }
 
-function cleanupRunner(
+async function cleanupRunner(
 	action: DockerCleanupAction,
 	all: boolean,
 ): Promise<MirrorGcResult | PruneSummary | SystemPruneSummary> {
@@ -119,13 +120,18 @@ function cleanupRunner(
 		case "pruneContainers":
 			return DockerService.pruneContainers();
 		case "pruneImages":
-			return DockerService.pruneImages(all);
+			return DockerService.pruneImages(
+				all,
+				await RevisionService.retainedImageIds(),
+			);
 		case "pruneMirror":
 			return ImageMirrorGcService.collect();
 		case "pruneNetworks":
 			return DockerService.pruneNetworks();
 		case "pruneSystem":
-			return DockerService.pruneSystem();
+			return DockerService.pruneSystem(
+				await RevisionService.retainedImageIds(),
+			);
 		default:
 			return DockerService.pruneVolumes();
 	}

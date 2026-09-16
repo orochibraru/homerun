@@ -3,6 +3,7 @@ import { config } from "$lib/config";
 import type { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { Logger } from "$lib/logger";
 import type { GitProviderConfig, GitProviderKind } from "$lib/server/db/schema";
+import { providerApiBase } from "$lib/status-checks";
 import { decryptSecret } from "./secrets.ts";
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
@@ -60,7 +61,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 	switch (provider.kind) {
 		case "github":
 			return {
-				api: "https://api.github.com",
+				api: providerApiBase("github", null),
 				authorize: "https://github.com/login/oauth/authorize",
 				scope: "repo read:user",
 				token: "https://github.com/login/oauth/access_token",
@@ -68,7 +69,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 		case "gitlab": {
 			const b = base ?? "https://gitlab.com";
 			return {
-				api: `${b}/api/v4`,
+				api: providerApiBase("gitlab", b),
 				authorize: `${b}/oauth/authorize`,
 				scope: "read_api read_user",
 				token: `${b}/oauth/token`,
@@ -81,7 +82,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 				throw new Error("Gitea providers require a base URL.");
 			}
 			return {
-				api: `${base}/api/v1`,
+				api: providerApiBase("gitea", base),
 				authorize: `${base}/login/oauth/authorize`,
 				scope: "read:repository read:user",
 				token: `${base}/login/oauth/access_token`,
@@ -89,7 +90,7 @@ function endpoints(provider: GitProviderConfig): ProviderEndpoints {
 		}
 		case "bitbucket":
 			return {
-				api: "https://api.bitbucket.org/2.0",
+				api: providerApiBase("bitbucket", null),
 				authorize: "https://bitbucket.org/site/oauth2/authorize",
 				scope: "repository account",
 				token: "https://bitbucket.org/site/oauth2/access_token",

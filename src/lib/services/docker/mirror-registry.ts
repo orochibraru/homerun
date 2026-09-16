@@ -44,7 +44,7 @@ export interface MirrorGcPlan {
 }
 
 export interface ServiceMirrorReference {
-	deployed: ImageDigestRef | null;
+	deployed: ImageDigestRef[];
 	image: string;
 	scans: ImageDigestRef[];
 	tag: string;
@@ -92,8 +92,8 @@ export function mirrorKeepSet(
 			repository: mirrorRepository(reference.image, reference.tag),
 			tag: reference.tag,
 		});
-		if (reference.deployed) {
-			digests.push(digestRepository(reference.deployed));
+		for (const revision of reference.deployed) {
+			digests.push(digestRepository(revision));
 		}
 		const recent = new Set<string>();
 		for (const scan of reference.scans) {

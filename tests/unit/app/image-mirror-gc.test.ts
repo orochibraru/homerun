@@ -31,11 +31,14 @@ describe("mirror keep set", () => {
 		});
 	});
 
-	test("keeps the current tag, the deployed digest and the last N distinct scans", () => {
+	test("keeps the current tag, every retained revision digest and the last N distinct scans", () => {
 		const keep = mirrorKeepSet(
 			[
 				{
-					deployed: { digest: digest("d"), imageRef: "alpine:3.20" },
+					deployed: [
+						{ digest: digest("d"), imageRef: "alpine:3.20" },
+						{ digest: digest("f"), imageRef: "alpine:3.19" },
+					],
 					image: "alpine",
 					scans: [
 						{ digest: digest("a"), imageRef: `alpine:3.20@${digest("a")}` },
@@ -46,13 +49,13 @@ describe("mirror keep set", () => {
 					tag: "3.20",
 				},
 				{
-					deployed: { digest: digest("e"), imageRef: "" },
+					deployed: [{ digest: digest("e"), imageRef: "" }],
 					image: "redis",
 					scans: [],
 					tag: "7",
 				},
 				{
-					deployed: { digest: "not-a-digest", imageRef: "nginx:1" },
+					deployed: [{ digest: "not-a-digest", imageRef: "nginx:1" }],
 					image: "nginx",
 					scans: [],
 					tag: "1",
@@ -67,6 +70,7 @@ describe("mirror keep set", () => {
 		]);
 		expect(keep.digests).toEqual([
 			{ digest: digest("d"), repository: ALPINE },
+			{ digest: digest("f"), repository: ALPINE },
 			{ digest: digest("a"), repository: ALPINE },
 			{ digest: digest("b"), repository: ALPINE },
 		]);

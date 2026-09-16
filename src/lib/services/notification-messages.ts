@@ -228,3 +228,96 @@ export function uptimeMessage(
 		title: `${service.name} ${input.ok ? "recovered" : "is down"}`,
 	};
 }
+
+export interface StatusChecksMessageInput {
+	commit: string | null;
+	failed: string[];
+	missing: string[];
+	origin: string | null;
+	pending: string[];
+	reason: string;
+	service: Pick<Service, "gitRef" | "gitUrl" | "id" | "name">;
+	stackName: string | null;
+}
+
+export function statusChecksMessage(
+	input: StatusChecksMessageInput,
+	timestamp: string,
+): ChannelMessage {
+	const { service } = input;
+	const fields: MessageField[] = [];
+	if (input.stackName) {
+		fields.push({ name: "Stack", value: input.stackName });
+	}
+	fields.push(
+		{ name: "Repository", value: service.gitUrl ?? "unknown" },
+		{ name: "Branch", value: service.gitRef ?? "main" },
+	);
+	if (input.commit) {
+		fields.push({ name: "Commit", value: input.commit.slice(0, 7) });
+	}
+	const checks: Array<[string, string[]]> = [
+		["Failed checks", input.failed],
+		["Never reported", input.missing],
+		["Still running", input.pending],
+	];
+	for (const [name, names] of checks) {
+		if (names.length > 0) {
+			fields.push({ name, value: names.join(", ") });
+		}
+	}
+	return {
+		detail: `${input.reason}\n\nThe build will not carry on. Fix the checks and redeploy.`,
+		event: "build.checks_failed",
+		fields,
+		link: dashboardLink(input.origin, `/services/${service.id}/revisions`),
+		serviceId: service.id,
+		serviceName: service.name,
+		timestamp,
+		title: `${service.name} was not built: status checks failed`,
+	};
+}
+
+export interface RevisionHealthMessageInput {
+	origin: string | null;
+	reason: string;
+	revision: Pick<Deployment, "gitCommit" | "id" | "imageRef">;
+	rolledBackTo: Pick<Deployment, "gitCommit" | "id" | "imageRef"> | null;
+	service: Pick<Service, "id" | "name">;
+	skipReason: string | null;
+}
+
+function revisionLabel(
+	revision: Pick<Deployment, "gitCommit" | "id" | "imageRef">,
+): string {
+	const commit = revision.gitCommit
+		? ` @ ${revision.gitCommit.slice(0, 7)}`
+		: "";
+	return `${revision.imageRef ?? revision.id.slice(0, 8)}${commit}`;
+}
+
+export function revisionHealthMessage(
+	input: RevisionHealthMessageInput,
+	timestamp: string,
+): ChannelMessage {
+	const { rolledBackTo, service } = input;
+	const fields: MessageField[] = [
+		{ name: "Unhealthy revision", value: revisionLabel(input.revision) },
+	];
+	if (rolledBackTo) {
+		fields.push({ name: "Rolled back to", value: revisionLabel(rolledBackTo) });
+	}
+	const detail = [input.reason, input.skipReason].filter(Boolean).join("\n\n");
+	return {
+		detail,
+		event: rolledBackTo ? "deploy.rolled_back" : "deploy.unhealthy",
+		fields,
+		link: dashboardLink(input.origin, `/services/${service.id}/revisions`),
+		serviceId: service.id,
+		serviceName: service.name,
+		timestamp,
+		title: rolledBackTo
+			? `${service.name} was rolled back: the new revision is unhealthy`
+			: `${service.name}'s new revision is unhealthy`,
+	};
+}

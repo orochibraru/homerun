@@ -52,6 +52,7 @@ export type CreateServiceApiInput = z.infer<typeof createServiceApiBody>;
 
 export const updateServiceApiBody = z.object({
 	authRequired: z.boolean().optional(),
+	autoRollback: z.boolean().optional(),
 	buildSource: z.enum(["image", "git"]).optional(),
 	containerPort: z.number().int().min(1).max(65_535).optional(),
 	cpuLimit: z.string().nullable().optional(),
@@ -62,13 +63,17 @@ export const updateServiceApiBody = z.object({
 	gitDockerfilePath: z.string().nullable().optional(),
 	gitRef: z.string().nullable().optional(),
 	gitUrl: z.string().nullable().optional(),
+	healthcheckCommand: z.string().max(1000).nullable().optional(),
 	image: z.string().min(1).optional(),
+	imageScanEnabled: z.boolean().optional(),
 	memoryLimitMb: z.number().int().positive().nullable().optional(),
 	name: z.string().min(1).max(100).optional(),
 	pullPolicy: z.enum(["always", "missing", "never"]).optional(),
 	registryPassword: z.string().optional(),
 	registryUrl: z.string().nullable().optional(),
 	registryUsername: z.string().nullable().optional(),
+	requireStatusChecks: z.boolean().optional(),
+	requiredStatusChecks: z.array(z.string().min(1).max(200)).max(50).optional(),
 	restartPolicy: z
 		.enum(["no", "always", "on-failure", "unless-stopped"])
 		.optional(),

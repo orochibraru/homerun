@@ -139,10 +139,11 @@ service's Settings tab, the cron job's own page, the volume's page).
 ## Notifications
 
 The bell in the header is a per-account feed of lifecycle events, deploy
-succeeded or failed, service created, started, stopped, an auto-redeploy firing,
-and runtime errors attributed to one of your services. Click an entry to jump to
-its service, mark everything read from the dropdown, or hover a row and use the
-`x` to drop it.
+succeeded or failed, a build stopped by status checks, an unhealthy or rolled
+back revision, service created, started, stopped, an auto-redeploy firing, and
+runtime errors attributed to one of your services. Click an entry to jump to its
+service, mark everything read from the dropdown, or hover a row and use the `x`
+to drop it.
 
 It's deliberately a short curated list, not a log: everything Homerun logs at
 warn or error level is persisted separately and shown on the relevant service's
@@ -152,16 +153,19 @@ so the feed doesn't grow without bound.
 **Notification channels** send the same kind of events outside the dashboard.
 Add a Discord webhook, a generic webhook, or an email address under
 **Notification Channels** in the sidebar, then pick which events each one gets
-under **Profile → Notifications**: build succeeded/failed, scheduled update
-succeeded/failed, manual deploy succeeded/failed, and a service going down or
-recovering. A new channel starts subscribed to build and update failures only,
-turn on the rest you want from that matrix. A **Send test** button on each
-channel fires a sample notification so you can check the destination actually
-works before relying on it; a delivery failure is shown right on the channel
-(and isn't retried automatically) rather than failing silently. Email channels
-need SMTP configured first, see [Configuration](configuration.md).
-Provider-shaped notifications beyond Discord (Telegram, Slack) aren't built yet,
-see [FAQ & limitations](faq-and-limitations.md#planned-not-yet-built).
+under **Profile → Notifications**: build succeeded/failed, a build stopped by
+failing [status checks](services.md#required-status-checks), scheduled update
+succeeded/failed, manual deploy succeeded/failed, a new revision found unhealthy
+or [rolled back](services.md#revisions-and-rollback), and a service going down
+or recovering. A new channel starts subscribed to build and update failures,
+status checks failures, unhealthy revisions and rollbacks; turn on the rest you
+want from that matrix. A **Send test** button on each channel fires a sample
+notification so you can check the destination actually works before relying on
+it; a delivery failure is shown right on the channel (and isn't retried
+automatically) rather than failing silently. Email channels need SMTP configured
+first, see [Configuration](configuration.md). Provider-shaped notifications
+beyond Discord (Telegram, Slack) aren't built yet, see
+[FAQ & limitations](faq-and-limitations.md#planned-not-yet-built).
 
 ## Upgrading Homerun itself
 

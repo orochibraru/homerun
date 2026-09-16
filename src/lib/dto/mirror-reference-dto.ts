@@ -1,16 +1,29 @@
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
-import { deployment, imageScan, service } from "$lib/server/db/schema";
+import { imageScan, service } from "$lib/server/db/schema";
 import { MIRROR_SCAN_SOURCE } from "$lib/services/docker/image-scan-refs";
 import type {
 	ImageDigestRef,
 	ServiceMirrorReference,
 } from "$lib/services/docker/mirror-registry";
+import { DeploymentDTO } from "./deployment-dto";
+
+function groupByService(
+	rows: Array<ImageDigestRef & { serviceId: string }>,
+): Map<string, ImageDigestRef[]> {
+	const grouped = new Map<string, ImageDigestRef[]>();
+	for (const row of rows) {
+		const list = grouped.get(row.serviceId) ?? [];
+		list.push({ digest: row.digest, imageRef: row.imageRef });
+		grouped.set(row.serviceId, list);
+	}
+	return grouped;
+}
 
 export async function listMirrorReferences(): Promise<
 	ServiceMirrorReference[]
 > {
-	const [services, scans, deployments] = await Promise.all([
+	const [services, scans, revisions] = await Promise.all([
 		db
 			.select({ id: service.id, image: service.image, tag: service.tag })
 			.from(service),
@@ -28,46 +41,40 @@ export async function listMirrorReferences(): Promise<
 				),
 			)
 			.orderBy(desc(imageScan.scannedAt)),
-		db
-			.selectDistinctOn([deployment.serviceId], {
-				digest: deployment.imageDigest,
-				imageRef: deployment.imageRef,
-				serviceId: deployment.serviceId,
-			})
-			.from(deployment)
-			.where(
-				and(
-					isNotNull(deployment.imageDigest),
-					isNotNull(deployment.imageRef),
-					inArray(deployment.status, ["running", "stopped"]),
-				),
-			)
-			.orderBy(deployment.serviceId, desc(deployment.createdAt)),
+		DeploymentDTO.listRetainedRevisions(),
 	]);
 
-	const scansByService = new Map<string, ImageDigestRef[]>();
-	for (const scan of scans) {
-		if (!scan.digest) {
-			continue;
-		}
-		const list = scansByService.get(scan.serviceId) ?? [];
-		list.push({ digest: scan.digest, imageRef: scan.imageRef });
-		scansByService.set(scan.serviceId, list);
-	}
-	const deployedByService = new Map(
-		deployments.map((row) => [row.serviceId, row]),
+	const scansByService = groupByService(
+		scans.flatMap((scan) =>
+			scan.digest
+				? [
+						{
+							digest: scan.digest,
+							imageRef: scan.imageRef,
+							serviceId: scan.serviceId,
+						},
+					]
+				: [],
+		),
+	);
+	const revisionsByService = groupByService(
+		revisions.flatMap((revision) =>
+			revision.imageDigest && revision.imageRef
+				? [
+						{
+							digest: revision.imageDigest,
+							imageRef: revision.imageRef,
+							serviceId: revision.serviceId,
+						},
+					]
+				: [],
+		),
 	);
 
-	return services.map((row) => {
-		const deployed = deployedByService.get(row.id);
-		return {
-			deployed:
-				deployed?.digest && deployed.imageRef
-					? { digest: deployed.digest, imageRef: deployed.imageRef }
-					: null,
-			image: row.image,
-			scans: scansByService.get(row.id) ?? [],
-			tag: row.tag,
-		};
-	});
+	return services.map((row) => ({
+		deployed: revisionsByService.get(row.id) ?? [],
+		image: row.image,
+		scans: scansByService.get(row.id) ?? [],
+		tag: row.tag,
+	}));
 }

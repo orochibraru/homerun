@@ -9,6 +9,9 @@ type ImageScan =
 
 type SeverityCounts = ImageScan["counts"];
 
+type Revision =
+	paths["/services/{serviceId}/revisions"]["get"]["responses"][200]["content"]["application/json"][number];
+
 type JobStatusBody =
 	paths["/jobs/{jobId}"]["get"]["responses"][200]["content"]["application/json"];
 
@@ -65,6 +68,24 @@ function listQuery(args: ListArgs): Record<string, string> {
 	return query;
 }
 
+export function revisionRow(revision: Revision): Record<string, string> {
+	let marker = "";
+	if (revision.current) {
+		marker = "current";
+	} else if (revision.previous) {
+		marker = "previous";
+	}
+	return {
+		commit: revision.gitCommit?.slice(0, 7) ?? "",
+		createdAt: revision.createdAt,
+		digest: revision.imageDigest?.slice(0, 19) ?? "",
+		health: revision.health ?? "",
+		id: revision.id,
+		image: revision.imageRef ?? "",
+		marker: revision.retained ? marker : `${marker} (not retained)`.trim(),
+	};
+}
+
 /** Every command takes the already-built `Client` as an argument rather than owning one itself : this class holds no client of its own, it's grouped for consistency with every other cli/ module, not because it carries state. */
 class CliCommands {
 	async servicesList(client: Client, args: ListArgs): Promise<void> {
@@ -106,6 +127,46 @@ class CliCommands {
 		const result = await this.#unwrap(
 			// biome-ignore lint/suspicious/noExplicitAny: the four action paths share an identical {params:{path:{serviceId}}} shape but openapi-fetch's generated overloads don't unify across a template-literal path union.
 			(client.POST as any)(path, { params: { path: { serviceId: id } } }),
+		);
+		Output.printJson(result);
+	}
+
+	async revisionsList(
+		client: Client,
+		serviceId: string,
+		json: boolean,
+	): Promise<void> {
+		const revisions = await this.#unwrap(
+			client.GET("/services/{serviceId}/revisions", {
+				params: { path: { serviceId } },
+			}),
+		);
+		if (json) {
+			Output.printJson(revisions);
+			return;
+		}
+		Output.printTable(revisions.map(revisionRow), [
+			"id",
+			"createdAt",
+			"marker",
+			"health",
+			"image",
+			"commit",
+			"digest",
+		]);
+	}
+
+	async serviceRollback(
+		client: Client,
+		serviceId: string,
+		revisionId: string | undefined,
+	): Promise<void> {
+		const result = await this.#unwrap(
+			client.POST("/services/{serviceId}/revisions/{revisionId}/deploy", {
+				params: {
+					path: { revisionId: revisionId ?? "previous", serviceId },
+				},
+			}),
 		);
 		Output.printJson(result);
 	}

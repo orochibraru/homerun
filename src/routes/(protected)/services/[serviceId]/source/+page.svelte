@@ -12,6 +12,7 @@
 	import { resolve } from "$app/paths";
 	import GitRepoPicker from "$lib/components/git-repo-picker.svelte";
 	import ImageCheckWarning from "$lib/components/image-check-warning.svelte";
+	import StatusCheckPicker from "$lib/components/status-check-picker.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -306,6 +307,14 @@
           </p>
         {/if}
       </div>
+      <StatusCheckPicker
+        enabled={svc.requireStatusChecks}
+        error={errors?.requiredStatusChecks?.[0]}
+        {gitRef}
+        {gitUrl}
+        labelClass={label}
+        selected={svc.requiredStatusChecks}
+      />
     {/if}
 
     <div class="border-border rounded-md border">

@@ -64,6 +64,7 @@ export type ServiceUpdateInput = Partial<
 		| "authAllowedUserIds"
 		| "authProviders"
 		| "authRequired"
+		| "autoRollback"
 		| "buildCacheRegistryId"
 		| "buildServerRemoteHostId"
 		| "buildSource"
@@ -99,6 +100,8 @@ export type ServiceUpdateInput = Partial<
 		| "registryUrl"
 		| "registryUsername"
 		| "replicas"
+		| "requireStatusChecks"
+		| "requiredStatusChecks"
 		| "restartPolicy"
 		| "slug"
 		| "swarmServiceId"
@@ -386,6 +389,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		const row: Service = {
 			...ServiceDTO.#buildColumns(input),
 			...ServiceDTO.#runtimeColumns(input),
+			autoRollback: false,
 			containerId: null,
 			containerPort: input.containerPort,
 			createdAt: now,
@@ -405,6 +409,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 			image: input.image,
 			imageScanEnabled: true,
 			name: input.name,
+			requireStatusChecks: false,
+			requiredStatusChecks: [],
 			restartPolicy: input.restartPolicy,
 			slug: input.slug,
 			swarmServiceId: null,

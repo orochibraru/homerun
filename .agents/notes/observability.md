@@ -140,9 +140,10 @@ too, see Outbound notification channels next.
 The account-wide counterpart to the in-app feed above: a `notification_channel`
 row is a `kind` (`"webhook"` generic JSON POST, `"discord"` embed, or `"email"`)
 plus a `target` and an `events` jsonb column (`NotificationEvent[]`, DB default
-and DTO default `["build.failed","update.failed"]`), managed on
-`/notification-channels` (create/test/delete) with the events matrix itself
-edited on `/profile/notifications`.
+and DTO default
+`["build.failed","build.checks_failed","update.failed","deploy.unhealthy","deploy.rolled_back"]`),
+managed on `/notification-channels` (create/test/delete) with the events matrix
+itself edited on `/profile/notifications`.
 
 `NotificationEvent` (`$lib/types.ts`) and its catalog
 (`$lib/notification-events.ts`, `NOTIFICATION_EVENTS`,
@@ -151,9 +152,16 @@ labels/groups/descriptions for the settings matrix) cover four pairs:
 `update.failed`/`update.succeeded` (an image service redeployed by its own cron
 schedule, i.e. pull + restart), `deploy.failed`/`deploy.succeeded` (a manual
 image deploy), and `service.down`/`service.up` (an uptime probe transition, see
-Uptime probes below). `deployEvent(buildSource, trigger, ok)` picks the right
-one of the first three from what `deploy.service.ts` already knows;
-`isFailureEvent` is what colors a Discord embed red vs. green.
+Uptime probes below), plus three that aren't pairs: `build.checks_failed`
+(`statusChecksMessage`, sent by `notifyStatusChecksFailed` in
+`deploy/status-check-step.ts` _instead of_ `build.failed` when a git build is
+stopped by required status checks), `deploy.unhealthy` and `deploy.rolled_back`
+(`revisionHealthMessage`, sent by `RevisionHealthService`). The bell gets the
+matching `build_checks_failed`/`deploy_unhealthy`/`deploy_rolled_back` rows.
+`isFailureEvent` lists all three explicitly, since `build.checks_failed` doesn't
+end in `.failed`. `deployEvent(buildSource, trigger, ok)` picks the right one of
+the first three from what `deploy.service.ts` already knows; `isFailureEvent` is
+what colors a Discord embed red vs. green.
 
 `NotificationChannelService.dispatch(userId, message)` fans a message out to
 every enabled channel subscribed to that event

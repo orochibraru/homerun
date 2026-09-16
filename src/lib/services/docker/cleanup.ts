@@ -89,6 +89,27 @@ function shortId(id: string | undefined): string {
 	return (id ?? "").replace(/^sha256:/, "").slice(0, 12);
 }
 
+function imageCategory(
+	images: DockerDfImage[],
+	keep: Set<string>,
+): CleanupCategory {
+	return {
+		items: images
+			.filter((img) => (img.Containers ?? 0) <= 0 && !keep.has(img.Id ?? ""))
+			.map((img) => ({
+				dangling: isDanglingImage(img.RepoTags),
+				detail: isDanglingImage(img.RepoTags)
+					? "dangling"
+					: (img.RepoTags ?? []).join(", "),
+				id: img.Id ?? "",
+				label: img.RepoTags?.[0] || shortId(img.Id),
+				sizeBytes: img.Size ?? 0,
+			})),
+		totalCount: images.length,
+		totalSizeBytes: images.reduce((sum, img) => sum + (img.Size ?? 0), 0),
+	};
+}
+
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerCleanupMixin<
 	TBase extends Constructor<BaseDockerService>,
@@ -108,7 +129,10 @@ export function DockerCleanupMixin<
 				.sort((a, b) => a.localeCompare(b));
 		}
 
-		async getCleanupPreview(): Promise<CleanupPreview> {
+		async getCleanupPreview(
+			keepImageIds: string[] = [],
+		): Promise<CleanupPreview> {
+			const keep = new Set(keepImageIds);
 			const docker = this.getDocker();
 			const [df, networks] = await Promise.all([
 				docker.df() as Promise<DockerDfResponse>,
@@ -155,21 +179,7 @@ export function DockerCleanupMixin<
 						0,
 					),
 				},
-				images: {
-					items: images
-						.filter((img) => (img.Containers ?? 0) <= 0)
-						.map((img) => ({
-							dangling: isDanglingImage(img.RepoTags),
-							detail: isDanglingImage(img.RepoTags)
-								? "dangling"
-								: (img.RepoTags ?? []).join(", "),
-							id: img.Id ?? "",
-							label: img.RepoTags?.[0] || shortId(img.Id),
-							sizeBytes: img.Size ?? 0,
-						})),
-					totalCount: images.length,
-					totalSizeBytes: images.reduce((sum, img) => sum + (img.Size ?? 0), 0),
-				},
+				images: imageCategory(images, keep),
 				networks: {
 					items: networks
 						.filter(
@@ -213,7 +223,13 @@ export function DockerCleanupMixin<
 			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
 		}
 
-		async pruneImages(all = false): Promise<PruneSummary> {
+		async pruneImages(
+			all = false,
+			keepImageIds: string[] = [],
+		): Promise<PruneSummary> {
+			if (keepImageIds.length > 0) {
+				return await this.#pruneImagesKeeping(all, new Set(keepImageIds));
+			}
 			const result = await this.getDocker().pruneImages(
 				all ? { filters: { dangling: ["false"] } } : {},
 			);
@@ -222,6 +238,37 @@ export function DockerCleanupMixin<
 				`Pruned ${itemsDeleted} unused image(s)${all ? " (including tagged)" : ""}, reclaimed ${result.SpaceReclaimed ?? 0} bytes`,
 			);
 			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
+		}
+
+		async #pruneImagesKeeping(
+			all: boolean,
+			keep: Set<string>,
+		): Promise<PruneSummary> {
+			const docker = this.getDocker();
+			const df = (await docker.df()) as DockerDfResponse;
+			const candidates = (df.Images ?? []).filter(
+				(image) =>
+					image.Id &&
+					!keep.has(image.Id) &&
+					(image.Containers ?? 0) <= 0 &&
+					(all || isDanglingImage(image.RepoTags)),
+			);
+			let itemsDeleted = 0;
+			let spaceReclaimedBytes = 0;
+			for (const image of candidates) {
+				try {
+					// biome-ignore lint/performance/noAwaitInLoops: images are removed one at a time so a parent/child conflict only skips that one
+					await docker.getImage(image.Id ?? "").remove({ force: false });
+					itemsDeleted += 1;
+					spaceReclaimedBytes += image.Size ?? 0;
+				} catch (err) {
+					logger.warn(`Skipped image ${shortId(image.Id)} during prune`, err);
+				}
+			}
+			logger.info(
+				`Pruned ${itemsDeleted} unused image(s)${all ? " (including tagged)" : ""}, kept ${keep.size} retained revision image(s), reclaimed ${spaceReclaimedBytes} bytes`,
+			);
+			return { itemsDeleted, spaceReclaimedBytes };
 		}
 
 		async pruneNetworks(): Promise<PruneSummary> {
@@ -253,9 +300,11 @@ export function DockerCleanupMixin<
 			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
 		}
 
-		async pruneSystem(): Promise<SystemPruneSummary> {
+		async pruneSystem(
+			keepImageIds: string[] = [],
+		): Promise<SystemPruneSummary> {
 			const containers = await this.pruneContainers();
-			const images = await this.pruneImages(false);
+			const images = await this.pruneImages(false, keepImageIds);
 			const networks = await this.pruneNetworks();
 			const buildCache = await this.pruneBuildCache();
 			return { buildCache, containers, images, networks };

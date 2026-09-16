@@ -260,6 +260,10 @@
 											"authRequired": {
 												"type": "boolean"
 											},
+											"autoRollback": {
+												"description": "Redeploy the previous healthy revision when a new one is unhealthy",
+												"type": "boolean"
+											},
 											"buildSource": {
 												"enum": ["image", "git"],
 												"type": "string"
@@ -417,11 +421,24 @@
 													}
 												]
 											},
+											"healthcheckCommand": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"id": {
 												"type": "string"
 											},
 											"image": {
 												"type": "string"
+											},
+											"imageScanEnabled": {
+												"type": "boolean"
 											},
 											"memoryLimitMb": {
 												"anyOf": [
@@ -477,6 +494,16 @@
 													}
 												]
 											},
+											"requireStatusChecks": {
+												"description": "Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+												"type": "boolean"
+											},
+											"requiredStatusChecks": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"restartPolicy": {
 												"enum": [
 													"no",
@@ -517,6 +544,7 @@
 											"authAllowedUserIds",
 											"authProviders",
 											"authRequired",
+											"autoRollback",
 											"buildSource",
 											"containerId",
 											"containerPort",
@@ -536,8 +564,10 @@
 											"gitDockerfilePath",
 											"gitRef",
 											"gitUrl",
+											"healthcheckCommand",
 											"id",
 											"image",
+											"imageScanEnabled",
 											"memoryLimitMb",
 											"name",
 											"networkMode",
@@ -546,6 +576,8 @@
 											"registryPasswordEnc",
 											"registryUrl",
 											"registryUsername",
+											"requireStatusChecks",
+											"requiredStatusChecks",
 											"restartPolicy",
 											"slug",
 											"tag",
@@ -738,6 +770,10 @@
 										"authRequired": {
 											"type": "boolean"
 										},
+										"autoRollback": {
+											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
+											"type": "boolean"
+										},
 										"buildSource": {
 											"enum": ["image", "git"],
 											"type": "string"
@@ -895,11 +931,24 @@
 												}
 											]
 										},
+										"healthcheckCommand": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"id": {
 											"type": "string"
 										},
 										"image": {
 											"type": "string"
+										},
+										"imageScanEnabled": {
+											"type": "boolean"
 										},
 										"memoryLimitMb": {
 											"anyOf": [
@@ -955,6 +1004,16 @@
 												}
 											]
 										},
+										"requireStatusChecks": {
+											"description": "Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+											"type": "boolean"
+										},
+										"requiredStatusChecks": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
@@ -990,6 +1049,7 @@
 										"authAllowedUserIds",
 										"authProviders",
 										"authRequired",
+										"autoRollback",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -1009,8 +1069,10 @@
 										"gitDockerfilePath",
 										"gitRef",
 										"gitUrl",
+										"healthcheckCommand",
 										"id",
 										"image",
+										"imageScanEnabled",
 										"memoryLimitMb",
 										"name",
 										"networkMode",
@@ -1019,6 +1081,8 @@
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
+										"requireStatusChecks",
+										"requiredStatusChecks",
 										"restartPolicy",
 										"slug",
 										"tag",
@@ -1212,6 +1276,10 @@
 										"authRequired": {
 											"type": "boolean"
 										},
+										"autoRollback": {
+											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
+											"type": "boolean"
+										},
 										"buildSource": {
 											"enum": ["image", "git"],
 											"type": "string"
@@ -1369,11 +1437,24 @@
 												}
 											]
 										},
+										"healthcheckCommand": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"id": {
 											"type": "string"
 										},
 										"image": {
 											"type": "string"
+										},
+										"imageScanEnabled": {
+											"type": "boolean"
 										},
 										"memoryLimitMb": {
 											"anyOf": [
@@ -1429,6 +1510,16 @@
 												}
 											]
 										},
+										"requireStatusChecks": {
+											"description": "Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+											"type": "boolean"
+										},
+										"requiredStatusChecks": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
@@ -1464,6 +1555,7 @@
 										"authAllowedUserIds",
 										"authProviders",
 										"authRequired",
+										"autoRollback",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -1483,8 +1575,10 @@
 										"gitDockerfilePath",
 										"gitRef",
 										"gitUrl",
+										"healthcheckCommand",
 										"id",
 										"image",
+										"imageScanEnabled",
 										"memoryLimitMb",
 										"name",
 										"networkMode",
@@ -1493,6 +1587,8 @@
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
+										"requireStatusChecks",
+										"requiredStatusChecks",
 										"restartPolicy",
 										"slug",
 										"tag",
@@ -1573,6 +1669,9 @@
 								"additionalProperties": false,
 								"properties": {
 									"authRequired": {
+										"type": "boolean"
+									},
+									"autoRollback": {
 										"type": "boolean"
 									},
 									"buildSource": {
@@ -1656,9 +1755,23 @@
 											}
 										]
 									},
+									"healthcheckCommand": {
+										"anyOf": [
+											{
+												"maxLength": 1000,
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
 									"image": {
 										"minLength": 1,
 										"type": "string"
+									},
+									"imageScanEnabled": {
+										"type": "boolean"
 									},
 									"memoryLimitMb": {
 										"anyOf": [
@@ -1703,6 +1816,18 @@
 												"type": "null"
 											}
 										]
+									},
+									"requireStatusChecks": {
+										"type": "boolean"
+									},
+									"requiredStatusChecks": {
+										"items": {
+											"maxLength": 200,
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
 									},
 									"restartPolicy": {
 										"enum": ["no", "always", "on-failure", "unless-stopped"],
@@ -1751,6 +1876,10 @@
 											"type": "array"
 										},
 										"authRequired": {
+											"type": "boolean"
+										},
+										"autoRollback": {
+											"description": "Redeploy the previous healthy revision when a new one is unhealthy",
 											"type": "boolean"
 										},
 										"buildSource": {
@@ -1910,11 +2039,24 @@
 												}
 											]
 										},
+										"healthcheckCommand": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"id": {
 											"type": "string"
 										},
 										"image": {
 											"type": "string"
+										},
+										"imageScanEnabled": {
+											"type": "boolean"
 										},
 										"memoryLimitMb": {
 											"anyOf": [
@@ -1970,6 +2112,16 @@
 												}
 											]
 										},
+										"requireStatusChecks": {
+											"description": "Git builds only: every check in requiredStatusChecks must pass on the commit before it's built",
+											"type": "boolean"
+										},
+										"requiredStatusChecks": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"restartPolicy": {
 											"enum": ["no", "always", "on-failure", "unless-stopped"],
 											"type": "string"
@@ -2005,6 +2157,7 @@
 										"authAllowedUserIds",
 										"authProviders",
 										"authRequired",
+										"autoRollback",
 										"buildSource",
 										"containerId",
 										"containerPort",
@@ -2024,8 +2177,10 @@
 										"gitDockerfilePath",
 										"gitRef",
 										"gitUrl",
+										"healthcheckCommand",
 										"id",
 										"image",
+										"imageScanEnabled",
 										"memoryLimitMb",
 										"name",
 										"networkMode",
@@ -2034,6 +2189,8 @@
 										"registryPasswordEnc",
 										"registryUrl",
 										"registryUsername",
+										"requireStatusChecks",
+										"requiredStatusChecks",
 										"restartPolicy",
 										"slug",
 										"tag",
@@ -2327,6 +2484,381 @@
 				],
 				"summary": "Restart a service's container",
 				"tags": ["Services"]
+			}
+		},
+		"/services/{serviceId}/revisions": {
+			"get": {
+				"description": "Newest first, at most 50: every deploy that reached running, with the exact image it ran. current marks the one running now, previous the default rollback target.",
+				"operationId": "get_services__serviceId__revisions",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"buildSource": {
+												"anyOf": [
+													{
+														"enum": ["image", "git"],
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"current": {
+												"description": "The revision running now",
+												"type": "boolean"
+											},
+											"finishedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"example": "2026-08-20T12:00:00.000Z",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitCommit": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitRef": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"health": {
+												"anyOf": [
+													{
+														"enum": [
+															"watching",
+															"healthy",
+															"unhealthy",
+															"rolled_back"
+														],
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "null = recorded before health watching existed"
+											},
+											"id": {
+												"type": "string"
+											},
+											"imageDigest": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"imageId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"imageRef": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"previous": {
+												"description": "The default rollback target: the newest older healthy revision with a different image",
+												"type": "boolean"
+											},
+											"retained": {
+												"description": "Among the last 5 distinct images kept on the host and in the mirror",
+												"type": "boolean"
+											},
+											"rollbackOfDeploymentId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Set when this revision redeployed an older one"
+											},
+											"status": {
+												"enum": [
+													"pending",
+													"pulling",
+													"starting",
+													"running",
+													"stopped",
+													"failed",
+													"missing"
+												],
+												"type": "string"
+											}
+										},
+										"required": [
+											"buildSource",
+											"createdAt",
+											"current",
+											"finishedAt",
+											"gitCommit",
+											"gitRef",
+											"health",
+											"id",
+											"imageDigest",
+											"imageId",
+											"imageRef",
+											"previous",
+											"retained",
+											"rollbackOfDeploymentId",
+											"status"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The service's revisions"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's revisions",
+				"tags": ["Revisions"]
+			}
+		},
+		"/services/{serviceId}/revisions/{revisionId}/deploy": {
+			"post": {
+				"description": "Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target.",
+				"operationId": "post_services__serviceId__revisions__revisionId__deploy",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Revision (deployment) id, or previous",
+						"in": "path",
+						"name": "revisionId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"containerId": {
+											"type": "string"
+										},
+										"deploymentId": {
+											"type": "string"
+										},
+										"error": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["deploymentId", "success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Deploy finished"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "No previous revision to roll back to"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"containerId": {
+											"type": "string"
+										},
+										"deploymentId": {
+											"type": "string"
+										},
+										"error": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["deploymentId", "success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Deploy failed"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Deploy a revision (roll back)",
+				"tags": ["Revisions"]
 			}
 		},
 		"/services/{serviceId}/scans": {

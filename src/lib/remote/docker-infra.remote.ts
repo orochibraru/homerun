@@ -13,6 +13,7 @@ import {
 	ImageMirrorGcService,
 	type MirrorUsage,
 } from "$lib/services/image-mirror-gc.service";
+import { RevisionService } from "$lib/services/revision.service";
 
 export interface InfraStatus {
 	infra: InfraContainer[];
@@ -21,7 +22,9 @@ export interface InfraStatus {
 
 export const getCleanupPreview = query(async (): Promise<CleanupPreview> => {
 	requireAdmin();
-	return await DockerService.getCleanupPreview();
+	return await DockerService.getCleanupPreview(
+		await RevisionService.retainedImageIds(),
+	);
 });
 
 /** Stack networks the daemon still has but no stack row does : the leak Docker's own network prune can't see while anything is attached. */

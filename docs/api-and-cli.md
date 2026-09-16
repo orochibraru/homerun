@@ -18,6 +18,9 @@ and external API-key clients alike.
   `GET /api/v1/services/:id/scans/latest`,
   `GET /api/v1/services/:id/scans/:scanId`: image scan results, see
   [Image scans](#image-scans) below
+- `GET /api/v1/services/:id/revisions`,
+  `POST /api/v1/services/:id/revisions/:revisionId/deploy`: revisions and
+  rollback, see [Revisions](#revisions) below
 - `GET /api/v1/jobs/:jobId`: the status of a queued job, such as a scan
 - `GET /api/v1/system-stats`: host CPU/RAM/disk/GPU
 
@@ -49,6 +52,27 @@ A service's [image scans](services.md#image-scanning) are readable over the API:
   `cancelled`, then read `scans/latest`.
 
 Only your own services' scans and jobs are visible; anything else is a 404.
+
+### Revisions
+
+- `GET /api/v1/services/:id/revisions` lists the last 50
+  [revisions](services.md#revisions-and-rollback) newest first: `id`,
+  `imageRef`, `imageDigest`, `imageId`, `buildSource`, `gitCommit`, `gitRef`,
+  `health` (`watching`, `healthy`, `unhealthy`, `rolled_back`, or null for one
+  recorded before health watching existed), `rollbackOfDeploymentId`, `status`,
+  `createdAt`/`finishedAt`, plus three markers: `current` (running now),
+  `previous` (the default rollback target) and `retained` (its image is kept on
+  the host).
+- `POST /api/v1/services/:id/revisions/:revisionId/deploy` redeploys that
+  revision's image without building, pulling from upstream or scanning, and like
+  `deploy` returns once it's done. Use `previous` as the `revisionId` for the
+  default target. A `404` means no such revision for that service, a `400` that
+  there's no previous revision with a different image.
+
+`PATCH /api/v1/services/:id` also takes `autoRollback`, `requireStatusChecks`
+and `requiredStatusChecks` (see
+[Required status checks](services.md#required-status-checks)), plus
+`healthcheckCommand` and `imageScanEnabled`.
 
 ## OpenAPI spec & Swagger UI
 
@@ -134,6 +158,8 @@ homerun services restart <id>
 homerun services scans <id> [--json]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
+homerun services revisions <id> [--json]
+homerun services rollback <id> [revisionId]
 homerun stacks list [--json]
 homerun templates list [--json]
 ```
@@ -162,6 +188,11 @@ homerun services scan "$SERVICE_ID" --fail-on high
 
 A scan that fails to run, or a wait that outlasts `--timeout` (default 1800
 seconds), also exits non-zero.
+
+`homerun services revisions <id>` prints a service's revisions with the current
+and previous one marked, and `homerun services rollback <id> [revisionId]`
+redeploys a revision (the previous one when no id is given) and waits for it
+like `deploy`.
 
 ### Working on the CLI itself
 

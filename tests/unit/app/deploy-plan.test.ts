@@ -75,6 +75,23 @@ describe("resolveDeployPlan, legal combinations", () => {
 		});
 	});
 
+	test("a revision skips the build and the pull, and ignores missing git settings", () => {
+		const revision = {
+			buildSource: "git" as const,
+			digest: null,
+			gitCommit: "abc",
+			gitRef: "main",
+			id: "dep-1",
+			imageId: "sha256:1",
+			imageRef: "homerun-build-api:m1",
+		};
+		expect(
+			resolveDeployPlan(
+				input({ revision, service: gitService({ gitUrl: null }) }),
+			).image,
+		).toEqual({ kind: "revision", revision });
+	});
+
 	test("image source, swarm : a pull into a swarm service carrying replicas", () => {
 		const plan = resolveDeployPlan(input({ orchestrationMode: "swarm" }));
 		expect(plan.workload).toEqual({ kind: "swarm", replicas: 3 });

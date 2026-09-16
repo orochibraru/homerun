@@ -1,4 +1,5 @@
-import { and, count, desc, eq, gt, inArray, lte } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNotNull, lte } from "drizzle-orm";
+import { type RevisionLike, retainedRevisions } from "$lib/revisions";
 import { db } from "$lib/server/db/lib";
 import { type Deployment, deployment, service } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -8,6 +9,7 @@ export interface NewDeploymentInput {
 	// polling the progress endpoint before the create-deployment request
 	// even resolves) : falls back to a fresh one when omitted.
 	id?: string;
+	rollbackOfDeploymentId?: string | null;
 	serviceId: string;
 	status: Deployment["status"];
 	userId: string;
@@ -16,12 +18,15 @@ export interface NewDeploymentInput {
 export type DeploymentUpdateInput = Partial<
 	Pick<
 		Deployment,
+		| "buildSource"
 		| "containerId"
 		| "errorMessage"
 		| "finishedAt"
 		| "gitCommit"
 		| "gitRef"
+		| "health"
 		| "imageDigest"
+		| "imageId"
 		| "imageRef"
 		| "log"
 		| "startedAt"
@@ -51,6 +56,70 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			.orderBy(desc(deployment.createdAt))
 			.limit(limit);
 		return rows.map((row) => new DeploymentDTO(row));
+	}
+
+	static async listRevisions(
+		serviceId: string,
+		limit = 50,
+	): Promise<DeploymentDTO[]> {
+		const rows = await db
+			.select()
+			.from(deployment)
+			.where(
+				and(
+					eq(deployment.serviceId, serviceId),
+					isNotNull(deployment.imageRef),
+					inArray(deployment.status, ["running", "stopped"]),
+				),
+			)
+			.orderBy(desc(deployment.createdAt))
+			.limit(limit);
+		return rows.map((row) => new DeploymentDTO(row));
+	}
+
+	static async listWatching(): Promise<DeploymentDTO[]> {
+		const rows = await db
+			.select()
+			.from(deployment)
+			.where(eq(deployment.health, "watching"));
+		return rows.map((row) => new DeploymentDTO(row));
+	}
+
+	static async getForService(
+		serviceId: string,
+		id: string,
+	): Promise<DeploymentDTO | null> {
+		const [row] = await db
+			.select()
+			.from(deployment)
+			.where(and(eq(deployment.id, id), eq(deployment.serviceId, serviceId)))
+			.limit(1);
+		return row ? new DeploymentDTO(row) : null;
+	}
+
+	static async listRetainedRevisions(): Promise<RevisionLike[]> {
+		const rows = await db
+			.select({
+				buildSource: deployment.buildSource,
+				createdAt: deployment.createdAt,
+				health: deployment.health,
+				id: deployment.id,
+				imageDigest: deployment.imageDigest,
+				imageId: deployment.imageId,
+				imageRef: deployment.imageRef,
+				rollbackOfDeploymentId: deployment.rollbackOfDeploymentId,
+				serviceId: deployment.serviceId,
+				status: deployment.status,
+			})
+			.from(deployment)
+			.where(
+				and(
+					isNotNull(deployment.imageRef),
+					inArray(deployment.status, ["running", "stopped"]),
+				),
+			)
+			.orderBy(desc(deployment.createdAt));
+		return retainedRevisions(rows);
 	}
 
 	/** Every failed deployment attempt for a service, newest first : for the Errors tab. */
@@ -156,16 +225,20 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	static async create(input: NewDeploymentInput): Promise<DeploymentDTO> {
 		const now = new Date();
 		const row: Deployment = {
+			buildSource: null,
 			containerId: null,
 			createdAt: now,
 			errorMessage: null,
 			finishedAt: null,
 			gitCommit: null,
 			gitRef: null,
+			health: null,
 			id: input.id || crypto.randomUUID(),
 			imageDigest: null,
+			imageId: null,
 			imageRef: null,
 			log: "",
+			rollbackOfDeploymentId: input.rollbackOfDeploymentId ?? null,
 			serviceId: input.serviceId,
 			startedAt: now,
 			status: input.status,
@@ -194,5 +267,8 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	}
 	get log(): string {
 		return this.row.log ?? "";
+	}
+	get rollbackOfDeploymentId(): string | null {
+		return this.row.rollbackOfDeploymentId;
 	}
 }

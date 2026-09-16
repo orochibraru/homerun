@@ -66,6 +66,7 @@ export interface GitBuildParams {
 	// cache this time). Undefined/null : no cache-from/cache-to at all, same
 	// behavior as before this existed.
 	cacheRegistry?: BuildCacheRegistryConfig | null;
+	commit?: string | null;
 	// Credentials for a private repo, when a git provider is connected for
 	// the repo's host : injected into the clone URL rather than relying on a
 	// credential helper, since the clone runs in a container with no tty (git
@@ -195,10 +196,48 @@ export function DockerGitBuildMixin<
 				remote: params.remote,
 				volumeName,
 			}).catch(() => null);
+			const head = rev?.statusCode === 0 ? extractCommitSha(rev.output) : null;
 			const commit =
-				rev?.statusCode === 0 ? extractCommitSha(rev.output) : null;
+				params.commit && head !== params.commit
+					? await this.#checkoutCommit(
+							params,
+							params.commit,
+							volumeName,
+							onProgress,
+						)
+					: head;
 			if (commit) {
 				onProgress?.(`Building commit ${commit.slice(0, 7)}`);
+			}
+			return commit;
+		}
+
+		async #checkoutCommit(
+			params: GitBuildParams,
+			commit: string,
+			volumeName: string,
+			onProgress?: (line: string) => void,
+		): Promise<string> {
+			onProgress?.(
+				`The branch moved since its status checks were read, checking out the checked commit ${commit.slice(0, 7)}...`,
+			);
+			const steps = [
+				["-C", REPO_DIR, "fetch", "--depth", "1", "origin", commit],
+				["-C", REPO_DIR, "checkout", "--detach", commit],
+			];
+			for (const cmd of steps) {
+				// biome-ignore lint/performance/noAwaitInLoops: the checkout depends on the fetch before it
+				const step = await this.#runInWorkspace({
+					cmd,
+					entrypoint: ["git"],
+					remote: params.remote,
+					volumeName,
+				});
+				if (step.statusCode !== 0) {
+					throw new Error(
+						`Couldn't check out the checked commit ${commit.slice(0, 7)}: ${redactCloneUrl(step.output || `git exited ${step.statusCode}`)}`,
+					);
+				}
 			}
 			return commit;
 		}

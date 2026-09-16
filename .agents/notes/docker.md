@@ -204,8 +204,10 @@ reordering the chain.
   (postponed while deploy/image_scan jobs are queued or running). Keep set is
   pure in `docker/mirror-registry.ts` (`mirrorKeepSet` + `planMirrorGc`, from
   `listMirrorReferences` in `$lib/dto/mirror-reference-dto.ts`): per service the
-  current `image:tag`, the last running/stopped deployment's `imageDigest`, and
-  the last `MIRROR_GC_SCANS_PER_SERVICE` (2) distinct mirror-scan digests.
+  current `image:tag`, the digest of every **retained revision**
+  (`DeploymentDTO.listRetainedRevisions`, the newest `RETAINED_REVISIONS` (5)
+  distinct images per service, `$lib/revisions.ts`), and the last
+  `MIRROR_GC_SCANS_PER_SERVICE` (2) distinct mirror-scan digests.
   `MirrorRegistryClient` there does catalog (Link paging) → tags → HEAD with an
   index/list-aware Accept → DELETE by digest, fetch injected so
   `tests/unit/app/image-mirror-gc.test.ts` mocks it. The mixin reaches the API
@@ -418,6 +420,18 @@ actions, each a thin call into one `DockerCleanupMixin` method
 and returning one combined summary), every one independently re-checking
 `locals.isAdmin` the same as `load` does. No confirmation-dialog/dry-run step in
 the UI itself, the preview list is the only "are you sure" a prune action gets.
+
+**Retained revisions are never pruned.** `pruneImages(all, keepImageIds)` and
+`pruneSystem(keepImageIds)` take the image ids of every retained revision
+(`RevisionService.retainedImageIds()`: `revisionImageRefs` per revision, the
+recorded `imageId`, `image@digest`, and the unique `homerun-build-*` tag for a
+git build, resolved through `DockerService.existingImageIds`), and the preview
+hides them too. With a non-empty keep list the prune doesn't call Docker's
+`POST /images/prune` (whose only filters are labels and age, and a pulled image
+can't be labelled) but walks `docker.df()`'s unused images and removes each one
+not kept, skipping any the daemon refuses. That matters for dangling-only prunes
+as well: a pulled revision whose tag moved on is untagged, i.e. dangling, but
+still exactly what a rollback by digest needs.
 
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 

@@ -138,6 +138,23 @@ for (const action of ["deploy", "start", "stop", "restart"] as const) {
 }
 
 services
+	.command("revisions <id>")
+	.description("list a service's revisions, newest first")
+	.option("--json", "print raw JSON instead of a table")
+	.action(async (id: string, options: { json?: boolean }) => {
+		await Commands.revisionsList(requireClient(), id, options.json ?? false);
+	});
+
+services
+	.command("rollback <id> [revisionId]")
+	.description(
+		"redeploy a revision's exact image and wait for it (default: the previous revision)",
+	)
+	.action(async (id: string, revisionId: string | undefined) => {
+		await Commands.serviceRollback(requireClient(), id, revisionId);
+	});
+
+services
 	.command("scan <id>")
 	.description("queue a vulnerability scan of a service's deployed image")
 	.option("--wait", "wait for the scan to finish and print its findings")

@@ -155,13 +155,15 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   below, `image`/`tag` hold the resolved local build tag when `buildSource` is
   `"git"`, not user-editable directly in that mode),
   `customSslCertEnc`/`customSslKeyEnc` (see Custom SSL certificates below),
-  `networkMode` (`"bridge"` default | `"host"`) + `portProtocol` (`"tcp"`
-  default | `"udp"` | `"both"`) (see Network mode below), `buildCacheRegistryId`
-  (nullable FK to `build_cache_registry`) + `buildServerRemoteHostId` (nullable
-  FK to `remote_host`, build this service's image somewhere other than where it
-  runs; `deploy.service.ts` rejects that unless a cache registry is also set,
-  since a cross-host build has no other way to hand the built image over), both
-  see Git-based builds below.
+  `requireStatusChecks` + `requiredStatusChecks` (jsonb `string[]`, git builds
+  only, see Required status checks in `services-and-templates.md`),
+  `autoRollback` (default false), `networkMode` (`"bridge"` default |
+  `"host"`) + `portProtocol` (`"tcp"` default | `"udp"` | `"both"`) (see Network
+  mode below), `buildCacheRegistryId` (nullable FK to `build_cache_registry`) +
+  `buildServerRemoteHostId` (nullable FK to `remote_host`, build this service's
+  image somewhere other than where it runs; `deploy.service.ts` rejects that
+  unless a cache registry is also set, since a cross-host build has no other way
+  to hand the built image over), both see Git-based builds below.
 - `remote_host`, a registered build server: `kind` (`"docker"` | `"agent"`),
   `dockerHost` (`tcp://...` or `ssh://...`) plus optional
   `tlsCaEnc`/`tlsCertEnc`/`tlsKeyEnc` for the former, `agentUrl`/`agentTokenEnc`
@@ -170,7 +172,16 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `deployment`, history of deploy attempts: status, image digest, error message,
   timestamps, and `log` (text, default `""`), the live-appended progress log
   described above, kept after the deploy completes as an audit trail (shown as
-  an expandable panel per row in the deployment history).
+  an expandable panel per row in the deployment history). A row that reached
+  `running`/`stopped` with an `imageRef` is a **revision** (no separate table):
+  `imageRef` (plain `image:tag`, never `@digest`), `imageDigest`, `imageId`
+  (local image id, what the cleanup keep list resolves), `buildSource`,
+  `gitCommit`/`gitRef`, `health` (`watching`/`healthy`/`unhealthy`/
+  `rolled_back`, null before the watcher existed) and `rollbackOfDeploymentId`
+  (the revision a rollback redeployed, also what makes `deployService` take the
+  `revision` plan). Migration 0038 backfilled `imageRef`/`buildSource` on each
+  service's latest running row from the service's current image. See Revisions
+  and rollback in `services-and-templates.md`.
 - `service.customDomain`, optional second hostname (unique), a second Traefik
   router sharing the primary router's backend service, see labels.ts below.
   Configured on the service's Networking tab.
@@ -208,8 +219,10 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `notification_channel`, a destination Homerun posts lifecycle events to:
   `kind` (`"webhook"` | `"discord"` | `"email"`), `target`, `enabled`, `events`
   (jsonb `NotificationEvent[]`, DB default and DTO default
-  `["build.failed","update.failed"]`), `lastError` (the last delivery failure,
-  so a silently-broken channel is visible). Account-wide, no longer scoped to a
+  `["build.failed","build.checks_failed","update.failed","deploy.unhealthy","deploy.rolled_back"]`;
+  migration 0038 appended the three new events to existing channels already
+  subscribed to a failure event), `lastError` (the last delivery failure, so a
+  silently-broken channel is visible). Account-wide, no longer scoped to a
   status page (see Outbound notification channels in `observability.md`).
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).

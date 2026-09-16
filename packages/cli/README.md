@@ -75,6 +75,8 @@ homerun services restart <id>
 homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
+homerun services revisions <id> [--json]
+homerun services rollback <id> [revisionId]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
@@ -102,6 +104,15 @@ as an error when waiting. `--fail-on <level>` implies `--wait` and exits 1 when
 the scan's counts at or above that severity are non-zero (`findingsAtOrAbove()`
 in `commands.ts`); a failed or cancelled job, or a wait past
 `--timeout <seconds>` (default 1800), exits 1 too.
+
+`homerun services revisions <id>` calls `GET /services/{serviceId}/revisions`
+and prints a table of the service's revisions (id, date, a `current`/`previous`
+marker, health, image, commit, digest), `--json` for the raw list.
+`homerun services rollback <id> [revisionId]` calls
+`POST /services/{serviceId}/revisions/{revisionId}/deploy` with `previous` when
+no revision id is given, which deploys the default rollback target (the newest
+older healthy revision with a different image), and prints the deploy result
+once it's finished, same contract as `homerun services deploy`.
 
 `homerun update` self-updates the installed binary in place: it checks the
 latest GitHub release, downloads the `homerun-cli-<arch>` asset for your

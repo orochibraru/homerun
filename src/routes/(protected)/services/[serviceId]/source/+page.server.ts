@@ -40,6 +40,18 @@ export const load = async ({ parent }) => {
 	};
 };
 
+function statusCheckPatch(formData: FormData, isGitBuild: boolean) {
+	const names = formData
+		.getAll("requiredStatusChecks")
+		.map((value) => String(value).trim())
+		.filter((value) => value.length > 0 && value.length <= 200);
+	return {
+		requireStatusChecks:
+			isGitBuild && formData.get("requireStatusChecks") === "on",
+		requiredStatusChecks: [...new Set(names)].slice(0, 50),
+	};
+}
+
 interface BuildTargets {
 	buildCacheRegistryId: string | null;
 	buildServerRemoteHostId: string | null;
@@ -133,6 +145,21 @@ export const actions = {
 			? input.buildCacheRegistryId || null
 			: null;
 
+		const checks = statusCheckPatch(formData, isGitBuild);
+		if (
+			checks.requireStatusChecks &&
+			checks.requiredStatusChecks.length === 0
+		) {
+			return fail(400, {
+				errors: {
+					requiredStatusChecks: [
+						"Pick at least one check to require, or turn status checks off.",
+					],
+				},
+				values: Object.fromEntries(formData),
+			});
+		}
+
 		const buildServerError = await checkBuildServer(
 			{ buildCacheRegistryId, buildServerRemoteHostId },
 			locals.user.id,
@@ -147,6 +174,7 @@ export const actions = {
 		await svc.update({
 			buildCacheRegistryId,
 			buildServerRemoteHostId,
+			...checks,
 			...sourcePatch(input, isGitBuild),
 		});
 

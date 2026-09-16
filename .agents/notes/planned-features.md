@@ -14,7 +14,10 @@ re-litigating design decisions.
 - **Health-gated rollout**: opt-in health check (path + expected status/timeout)
   gating whether a newly-deployed container receives traffic, blue-green style,
   keep the old container alive/routable until the new one passes, roll back
-  (never route to it) if it doesn't.
+  (never route to it) if it doesn't. What exists today is post-hoc: the new
+  revision takes traffic immediately, and the health watch plus opt-in
+  auto-rollback (Revisions and rollback in `services-and-templates.md`) replace
+  it with the previous revision after the fact.
 - **Storage**: S3 backup now covers both volume kinds (a Docker-managed named
   volume is read out through a throwaway helper container, see S3 backups
   above), but there's still no restore flow, upload only.

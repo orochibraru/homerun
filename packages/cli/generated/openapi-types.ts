@@ -104,6 +104,46 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/services/{serviceId}/revisions": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's revisions
+		 * @description Newest first, at most 50: every deploy that reached running, with the exact image it ran. current marks the one running now, previous the default rollback target.
+		 */
+		get: operations["get_services__serviceId__revisions"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/revisions/{revisionId}/deploy": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Deploy a revision (roll back)
+		 * @description Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target.
+		 */
+		post: operations["post_services__serviceId__revisions__revisionId__deploy"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/scans": {
 		parameters: {
 			query?: never;
@@ -359,6 +399,8 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
+						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -394,8 +436,10 @@ export interface operations {
 						gitDockerfilePath: string | null;
 						gitRef: string | null;
 						gitUrl: string | null;
+						healthcheckCommand: string | null;
 						id: string;
 						image: string;
+						imageScanEnabled: boolean;
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
@@ -406,6 +450,9 @@ export interface operations {
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
+						requireStatusChecks: boolean;
+						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
@@ -498,6 +545,8 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
+						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -533,8 +582,10 @@ export interface operations {
 						gitDockerfilePath: string | null;
 						gitRef: string | null;
 						gitUrl: string | null;
+						healthcheckCommand: string | null;
 						id: string;
 						image: string;
+						imageScanEnabled: boolean;
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
@@ -545,6 +596,9 @@ export interface operations {
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
+						requireStatusChecks: boolean;
+						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
@@ -621,6 +675,8 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
+						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -656,8 +712,10 @@ export interface operations {
 						gitDockerfilePath: string | null;
 						gitRef: string | null;
 						gitUrl: string | null;
+						healthcheckCommand: string | null;
 						id: string;
 						image: string;
+						imageScanEnabled: boolean;
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
@@ -668,6 +726,9 @@ export interface operations {
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
+						requireStatusChecks: boolean;
+						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
@@ -767,6 +828,7 @@ export interface operations {
 			content: {
 				"application/json": {
 					authRequired?: boolean;
+					autoRollback?: boolean;
 					/** @enum {string} */
 					buildSource?: "image" | "git";
 					containerPort?: number;
@@ -780,7 +842,9 @@ export interface operations {
 					gitDockerfilePath?: string | null;
 					gitRef?: string | null;
 					gitUrl?: string | null;
+					healthcheckCommand?: string | null;
 					image?: string;
+					imageScanEnabled?: boolean;
 					memoryLimitMb?: number | null;
 					name?: string;
 					/** @enum {string} */
@@ -788,6 +852,8 @@ export interface operations {
 					registryPassword?: string;
 					registryUrl?: string | null;
 					registryUsername?: string | null;
+					requireStatusChecks?: boolean;
+					requiredStatusChecks?: string[];
 					/** @enum {string} */
 					restartPolicy?: "no" | "always" | "on-failure" | "unless-stopped";
 					tag?: string;
@@ -807,6 +873,8 @@ export interface operations {
 						authAllowedUserIds: string[];
 						authProviders: string[];
 						authRequired: boolean;
+						/** @description Redeploy the previous healthy revision when a new one is unhealthy */
+						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
 						containerId: string | null;
@@ -842,8 +910,10 @@ export interface operations {
 						gitDockerfilePath: string | null;
 						gitRef: string | null;
 						gitUrl: string | null;
+						healthcheckCommand: string | null;
 						id: string;
 						image: string;
+						imageScanEnabled: boolean;
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
@@ -854,6 +924,9 @@ export interface operations {
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
 						registryUsername: string | null;
+						/** @description Git builds only: every check in requiredStatusChecks must pass on the commit before it's built */
+						requireStatusChecks: boolean;
+						requiredStatusChecks: string[];
 						/** @enum {string} */
 						restartPolicy: "no" | "always" | "on-failure" | "unless-stopped";
 						slug: string;
@@ -1028,6 +1101,168 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__revisions: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's revisions */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						buildSource: ("image" | "git") | null;
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						/** @description The revision running now */
+						current: boolean;
+						finishedAt: string | null;
+						gitCommit: string | null;
+						gitRef: string | null;
+						/** @description null = recorded before health watching existed */
+						health:
+							| ("watching" | "healthy" | "unhealthy" | "rolled_back")
+							| null;
+						id: string;
+						imageDigest: string | null;
+						imageId: string | null;
+						imageRef: string | null;
+						/** @description The default rollback target: the newest older healthy revision with a different image */
+						previous: boolean;
+						/** @description Among the last 5 distinct images kept on the host and in the mirror */
+						retained: boolean;
+						/** @description Set when this revision redeployed an older one */
+						rollbackOfDeploymentId: string | null;
+						/** @enum {string} */
+						status:
+							| "pending"
+							| "pulling"
+							| "starting"
+							| "running"
+							| "stopped"
+							| "failed"
+							| "missing";
+					}[];
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_services__serviceId__revisions__revisionId__deploy: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+				/** @description Revision (deployment) id, or previous */
+				revisionId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Deploy finished */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						containerId?: string;
+						deploymentId: string;
+						error?: string;
+						success: boolean;
+					};
+				};
+			};
+			/** @description No previous revision to roll back to */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Deploy failed */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						containerId?: string;
+						deploymentId: string;
+						error?: string;
+						success: boolean;
 					};
 				};
 			};

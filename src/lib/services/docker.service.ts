@@ -47,6 +47,7 @@ import { DockerImageScanMixin } from "./docker/image-scan.ts";
 import { DockerNetworkMixin } from "./docker/networks.ts";
 import { DockerOneOffMixin } from "./docker/one-off.ts";
 import { DockerReconcileMixin } from "./docker/reconcile.ts";
+import { DockerRevisionMixin } from "./docker/revisions.ts";
 import { DockerSwarmMixin } from "./docker/swarm.ts";
 import { DockerTerminalMixin } from "./docker/terminal.ts";
 
@@ -57,16 +58,18 @@ import { DockerTerminalMixin } from "./docker/terminal.ts";
 // this.pullImage), containers+swarm before reconcile (syncServiceStatus
 // calls both this.inspectStatus and this.inspectSwarmServiceStatus). The
 // rest have no cross-concern dependency, so their position is arbitrary.
-class DockerServiceClass extends DockerImageScanMixin(
-	DockerCleanupMixin(
-		DockerOneOffMixin(
-			DockerTerminalMixin(
-				DockerCoreServicesMixin(
-					DockerCustomSslMixin(
-						DockerGitBuildMixin(
-							DockerReconcileMixin(
-								DockerSwarmMixin(
-									DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+class DockerServiceClass extends DockerRevisionMixin(
+	DockerImageScanMixin(
+		DockerCleanupMixin(
+			DockerOneOffMixin(
+				DockerTerminalMixin(
+					DockerCoreServicesMixin(
+						DockerCustomSslMixin(
+							DockerGitBuildMixin(
+								DockerReconcileMixin(
+									DockerSwarmMixin(
+										DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+									),
 								),
 							),
 						),

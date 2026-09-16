@@ -24,6 +24,13 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 	},
 	{
 		description:
+			"A git build was stopped before cloning because a required status check failed or never finished.",
+		event: "build.checks_failed",
+		group: "Builds",
+		label: "Status checks failed",
+	},
+	{
+		description:
 			"A scheduled redeploy couldn't pull the image or restart the container.",
 		event: "update.failed",
 		group: "Updates",
@@ -50,6 +57,20 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 	},
 	{
 		description:
+			"A new revision exited, restart-looped or failed its healthcheck, and auto-rollback is off.",
+		event: "deploy.unhealthy",
+		group: "Deploys",
+		label: "Revision unhealthy",
+	},
+	{
+		description:
+			"A new revision was unhealthy, so the previous healthy revision was redeployed automatically.",
+		event: "deploy.rolled_back",
+		group: "Deploys",
+		label: "Rolled back",
+	},
+	{
+		description:
 			"An image scan found at least one CRITICAL vulnerability in a service's image.",
 		event: "image.vulnerable",
 		group: "Security",
@@ -71,7 +92,10 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 
 export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
 	"build.failed",
+	"build.checks_failed",
 	"update.failed",
+	"deploy.unhealthy",
+	"deploy.rolled_back",
 ];
 
 const EVENT_SET = new Set<string>(
@@ -86,6 +110,9 @@ export function isFailureEvent(event: NotificationEvent): boolean {
 	return (
 		event.endsWith(".failed") ||
 		event === "service.down" ||
+		event === "build.checks_failed" ||
+		event === "deploy.unhealthy" ||
+		event === "deploy.rolled_back" ||
 		event === "image.vulnerable"
 	);
 }

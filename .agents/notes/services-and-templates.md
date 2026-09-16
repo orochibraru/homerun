@@ -51,7 +51,8 @@ the cache registry row and the build server target, then hands plain data to
 - `image: ImagePlan`, one of `pull` (`svc.image`/`tag`/`pullPolicy`),
   `local-build` (optional cache registry as a layer cache), `docker-build` (a
   remote Docker build server, registry required) or `agent-build` (an agent
-  build server, registry required). Every git variant carries the `GitSource`
+  build server, registry required), or `revision` (a rollback, see Revisions and
+  rollback below). Every git variant carries the `GitSource`
   (url/ref/context/Dockerfile) with `gitUrl` already non-null.
 - `workload: WorkloadPlan`, either `container` (carries `networkMode`) or
   `swarm` (carries `replicas`).
@@ -76,6 +77,126 @@ workload starts, so the container step never needs to know which path produced
 the image; a cross-host build (`docker-build`/`agent-build`) pushes to
 `<registry>/homerun-build-<slug>:<tag>` and pulls that published ref back onto
 this host first.
+
+## Required status checks (`$lib/status-checks.ts`, `StatusCheckService`, `deploy/status-check-step.ts`)
+
+`service.requireStatusChecks` + `requiredStatusChecks` gate a git build. In
+`#resolveImage`, before `#buildGitImage`, `enforceStatusChecks` resolves the
+branch to a SHA through the provider API, logs it, writes `gitCommit`/`gitRef`
+on the deployment and runs `waitForChecks`. Everything provider-shaped is pure
+in `$lib/status-checks.ts`, covered by `tests/unit/app/status-checks.test.ts`
+with a fake fetch: `repoPathFromGitUrl` (https, scp-style, nested GitLab groups,
+a self-hosted base path), `providerApiBase` (also what `git-provider.service.ts`
+`endpoints()` uses now), the per-provider paths (`commitsPath`, `checkSources`)
+and mappers into `CheckResult {name, state: pending|success|failure}`, and
+`StatusCheckClient` (fetch injectable, like `MirrorRegistryClient`).
+
+- GitHub: `commits?sha=<ref>&per_page=1` for the SHA, then check runs
+  (`filter=latest`; not completed is pending, `success`/`neutral`/`skipped`
+  pass, anything else fails) merged with the combined commit status.
+- GitLab: project path URL-encoded, commit job statuses (`all=false`, latest per
+  name; an `allow_failure` failure and an allowed manual job pass, other manual
+  jobs stay pending) plus the latest pipeline for the SHA as a check named
+  `pipeline`.
+- Gitea/Forgejo: `commits?sha=<ref>&limit=1`, then the combined status
+  (`warning` passes), already one row per context.
+- Bitbucket: `commits/<ref>?pagelen=1`, statuses keyed by `key` (not `name`,
+  which Pipelines rewrites per run), `STOPPED` fails.
+
+`mergeChecks` keeps the most pessimistic state for a name reported twice.
+`evaluateChecks(required, results, graceExpired)` fails on any failed required
+check, waits on pending ones, and treats a required check with no result as
+pending until everything else on the commit has finished **and**
+`STATUS_CHECK_GRACE_MS` (3 min) passed, then as failed. `waitForChecks` polls
+every 20s for up to 30 min (clock and sleep injectable), logs only when the
+summary changes, retries transient API errors, rethrows permanent ones
+(`StatusCheckApiError.permanent`: 401/403/404/422), and stops when `isCancelled`
+sees the deployment row `failed`/`stopped` or the service gone.
+
+Any failure throws `StatusChecksFailedError`, which `#recordFailure` recognises:
+the service status is re-synced from Docker instead of being set to `failed`
+(the previous revision is still running, untouched), and
+`notifyStatusChecksFailed` sends `build_checks_failed` + `build.checks_failed`
+instead of the generic build failure (nothing on cancellation). Credentials
+(`StatusCheckService.targetFor`): the provider configured for the URL's host
+plus the service owner's connection, else a token embedded in the clone URL,
+else unauthenticated for a well-known host (`inferProviderKind`). The checked
+SHA goes to `buildFromGit` as `commit`: when the shallow clone's HEAD differs (a
+push landed while waiting), `#checkoutCommit` runs
+`git fetch --depth 1 origin <sha>` and `checkout --detach` in the workspace, so
+the build is the checked commit or fails. Agent builds can't be pinned and say
+so in the log.
+
+The Source tab's picker (`status-check-picker.svelte`) loads names through
+`listStatusCheckNames` (`$lib/remote/status-checks.remote.ts`, distinct names
+over the last 5 commits of the branch) as a one-shot `$state` promise and posts
+the selection as repeated `requiredStatusChecks` hidden inputs, read with
+`formData.getAll` since the route's zod parse goes through `Object.fromEntries`.
+**Verified live**, read-only: github.com/orochibraru/homerun unauthenticated
+(real check-run names, a HEAD commit with no checks yet) and a Forgejo instance
+answering 403 without a token (a permanent error). **Not verified**: GitLab and
+Bitbucket against real instances, and a full deploy blocked by a real failing
+check.
+
+## Revisions and rollback (`$lib/revisions.ts`, `RevisionService`, `RevisionHealthService`, `deploy/revision-step.ts`)
+
+A revision is a `deployment` row (see `data-and-config.md`), recorded by
+`#recordSuccess`: `imageRef` from the resolved `image:tag` with any `@digest`
+split off into `imageDigest`, `imageId` from inspecting the run ref, and
+`health: "watching"`. Pure logic in `$lib/revisions.ts`, covered by
+`tests/unit/app/revisions.test.ts`: `previousRevision` (newest older revision
+whose image key, `imageId` then digest then ref, differs from the current one,
+skipping `unhealthy`/`rolled_back`), `retainedRevisions` (newest 5 distinct
+images per service), `revisionImageRefs` (what the Docker keep list resolves)
+and `healthVerdict`.
+
+**Rollback** is `enqueueDeploy({rollbackOfDeploymentId})`: the row carries the
+target, the job is deduped on `rollback:<id>` (so it never coalesces into a
+queued normal deploy), and `deployService` turns the row into a `RevisionSource`
+for `resolveDeployPlan`, whose `revision` input short-circuits to the `revision`
+image variant (no git URL check, no cache registry or build server load).
+`resolveRevisionImage` skips build, upstream pull and scan: with a digest it
+runs `image:tag@digest` (verified: `docker create` and a dockerode pull both
+accept that form), pulling by digest only if it's gone locally, and swarm just
+gets the pinned ref; without one it needs the local `image:tag` to still be the
+recorded `imageId`, and otherwise fails saying to redeploy. It writes the
+revision's `image`/`tag` back onto the service. Env, volumes, networking and
+resources are deliberately **not** snapshotted: a rollback undoes a bad image,
+config edits are intentional, and a snapshot would copy every secret into every
+deployment row.
+
+**Health watch.** `DeploymentService.watchHealth` hands every successful deploy
+to `RevisionHealthService.watch`, an in-process fire-and-forget loop (not a
+queue job: a 90s+ watch would hold one of the worker's 3 slots), deduplicated on
+`globalThis` so HMR doesn't double it; `hooks.server.ts` calls
+`resumeHealthWatches()` at boot for rows still `watching`. Every 5s it stops,
+clearing `health`, if the service is gone or stopped, has a newer deployment
+row, or runs a different container/swarm service; otherwise it samples
+(`containerHealthSample`/`swarmHealthSample`, the `docker/revisions.ts` mixin)
+and asks `healthVerdict`. Unhealthy at once on an exit, 2+ restarts since the
+baseline, a missing container, Docker health `unhealthy`, or 2 failed swarm
+tasks created since the deploy; healthy once `HEALTH_WINDOW.windowMs` (90s)
+passed, extended while health is `starting` or replicas are missing up to
+`maxWaitMs` (5 min), after which it's unhealthy. The service's
+`healthcheckCommand` runs every 30s with a 30s start period and 3 retries, so a
+failing one turns unhealthy after about two minutes, inside that bound. On
+unhealthy, with `autoRollback` on, the revision not itself a rollback and a
+`previousRevision` found: `rolled_back`, a rollback deploy and
+`deploy.rolled_back`. Otherwise `unhealthy` and `deploy.unhealthy`, with the
+reason nothing was rolled back. The rollback enqueuer is passed in by
+`DeploymentService` rather than imported, since `RevisionService` imports
+`deploy.service.ts`.
+
+UI: the Revisions tab (`RevisionService.annotate` adds `current`/`previous`/
+`retained`) with a per-row **Deploy this revision** (`ConfirmDialog`, a hidden
+form, the `deployRevision` action with `enhanceToast`, then Overview for the
+progress panel), and **Auto-rollback** on the Settings tab. API:
+`GET /services/{id}/revisions` and
+`POST /services/{id}/revisions/{revisionId}/deploy` (`previous` accepted, waits
+like `deploy`); CLI `services revisions` and `services rollback`.
+`tests/integration/revisions.test.ts` covers two image deploys plus a rollback
+by digest, the 404/400 cases, auto-rollback of a restart-looping revision, and
+marking without auto-rollback.
 
 ## Image scanning in the pipeline (`image_scan`, `ImageScanService`, `deploy/pull-step.ts`)
 
@@ -262,7 +383,9 @@ deployment's status. The markers are ordinary log lines, so the deployment
 history's raw-log panel keeps working untouched and nothing else in the pipeline
 had to learn about phases. There is deliberately **no "checking container
 health" phase**: health-gated rollout isn't built (see Planned features), and a
-phase that always passes instantly would be a lie.
+phase that always passes instantly would be a lie. Health is watched _after_ the
+deploy finishes instead (see Revisions and rollback above) and shows on the
+Revisions tab.
 
 ## Remote functions (`src/lib/remote/*.remote.ts`, `$lib/server/remote-auth.ts`)
 

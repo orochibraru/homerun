@@ -17,8 +17,19 @@ export interface GitSource {
 	gitUrl: string;
 }
 
+export interface RevisionSource {
+	buildSource: "image" | "git";
+	digest: string | null;
+	gitCommit: string | null;
+	gitRef: string | null;
+	id: string;
+	imageId: string | null;
+	imageRef: string;
+}
+
 export type ImagePlan =
 	| { image: string; kind: "pull"; pullPolicy: PullPolicy; tag: string }
+	| { kind: "revision"; revision: RevisionSource }
 	| {
 			cacheRegistry: CacheRegistryCredentials | null;
 			git: GitSource;
@@ -37,7 +48,7 @@ export type ImagePlan =
 			server: Extract<BuildServer, { kind: "agent" }>;
 	  };
 
-export type GitBuildPlan = Exclude<ImagePlan, { kind: "pull" }>;
+export type GitBuildPlan = Exclude<ImagePlan, { kind: "pull" | "revision" }>;
 
 export type WorkloadPlan =
 	| { kind: "container"; networkMode: Service["networkMode"] }
@@ -67,6 +78,7 @@ export interface DeployPlanInput {
 	buildServer: BuildServer | null;
 	cacheRegistry: CacheRegistryCredentials | null;
 	orchestrationMode: "standalone" | "swarm";
+	revision?: RevisionSource | null;
 	service: DeployPlanService;
 }
 
@@ -124,7 +136,10 @@ function resolveGitBuild(input: DeployPlanInput): GitBuildPlan {
 }
 
 function resolveImage(input: DeployPlanInput): ImagePlan {
-	const { service } = input;
+	const { revision, service } = input;
+	if (revision) {
+		return { kind: "revision", revision };
+	}
 	switch (service.buildSource) {
 		case "image":
 			if (!service.image) {
