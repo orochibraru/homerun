@@ -137,3 +137,75 @@ export const systemStatsResponse = z.object({
 	memTotalMb: z.number(),
 	memUsedMb: z.number(),
 });
+
+const severityCounts = z.object({
+	critical: z.number().int(),
+	high: z.number().int(),
+	low: z.number().int(),
+	medium: z.number().int(),
+	unknown: z.number().int(),
+});
+
+export const imageScanSummaryResponse = z.object({
+	counts: severityCounts,
+	deploymentId: z
+		.string()
+		.nullable()
+		.meta({ description: "null = scanned on demand, not during a deploy" }),
+	digest: z.string().nullable(),
+	error: z
+		.string()
+		.nullable()
+		.meta({ description: "Why a failed or skipped scan has no findings" }),
+	id: z.string(),
+	imageRef: z.string(),
+	scannedAt: isoTimestamp,
+	serviceId: z.string(),
+	source: z.string(),
+	status: z.enum(["ok", "failed", "skipped"]),
+	totalFindings: z.number().int().meta({
+		description:
+			"Every unique finding, including those beyond the stored findings cap",
+	}),
+});
+
+export const imageScanResponse = imageScanSummaryResponse.extend({
+	findings: z
+		.array(
+			z.object({
+				fixedVersion: z.string().nullable(),
+				id: z.string(),
+				installedVersion: z.string(),
+				pkg: z.string(),
+				severity: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]),
+				title: z.string().nullable(),
+			}),
+		)
+		.meta({
+			description:
+				"Sorted most severe first, capped at 200 : totalFindings has the real count",
+		}),
+});
+
+export const queuedJobResponse = z.object({
+	jobId: z.string(),
+	status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+});
+
+export const scanConflictResponse = z.object({
+	error: z.string(),
+	jobId: z.string().meta({ description: "The scan job already in flight" }),
+});
+
+export const jobResponse = z.object({
+	createdAt: isoTimestamp,
+	error: z.string().nullable(),
+	finishedAt: isoTimestamp.nullable(),
+	id: z.string(),
+	result: z.record(z.string(), z.unknown()).nullable(),
+	serviceId: z.string().nullable(),
+	startedAt: isoTimestamp.nullable(),
+	status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+	title: z.string(),
+	type: z.string(),
+});

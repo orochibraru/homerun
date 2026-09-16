@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+import type { JobDTO } from "$lib/dto/job-dto";
 import { Logger } from "$lib/logger";
 import type { DockerCleanupAction } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
@@ -10,6 +11,7 @@ const titles: Record<DockerCleanupAction, string> = {
 	reclaimStackNetworks: "Reclaim orphaned stack networks",
 	pruneContainers: "Prune stopped containers",
 	pruneImages: "Prune images",
+	pruneMirror: "Clean up the image mirror",
 	pruneNetworks: "Prune unused networks",
 	pruneSystem: "Clean up Docker host",
 	pruneVolumes: "Prune unused volumes",
@@ -20,6 +22,7 @@ const failureMessages: Record<DockerCleanupAction, string> = {
 	reclaimStackNetworks: "Failed to reclaim orphaned stack networks.",
 	pruneContainers: "Failed to prune containers.",
 	pruneImages: "Failed to prune images.",
+	pruneMirror: "Failed to clean up the image mirror.",
 	pruneNetworks: "Failed to prune networks.",
 	pruneSystem: "Failed to run system prune.",
 	pruneVolumes: "Failed to prune volumes.",
@@ -33,12 +36,12 @@ const failureMessages: Record<DockerCleanupAction, string> = {
  * JobDTO.claimNext). The caller still waits for the outcome, since the
  * Docker Cleanup page renders the reclaimed-space summary it returns.
  */
-export async function runQueuedCleanup(
+export function enqueueCleanup(
 	action: DockerCleanupAction,
 	all: boolean,
 	userId: string,
-) {
-	const entry = await QueueService.enqueue({
+): Promise<JobDTO> {
+	return QueueService.enqueue({
 		dedupeKey: `docker-cleanup:${action}`,
 		exclusive: true,
 		payload: { action, all },
@@ -47,6 +50,14 @@ export async function runQueuedCleanup(
 		type: "docker_cleanup",
 		userId,
 	});
+}
+
+export async function runQueuedCleanup(
+	action: DockerCleanupAction,
+	all: boolean,
+	userId: string,
+) {
+	const entry = await enqueueCleanup(action, all, userId);
 	const finished = await QueueService.wait(entry.id);
 
 	if (finished.status !== "succeeded") {

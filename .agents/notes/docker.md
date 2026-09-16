@@ -196,8 +196,33 @@ reordering the chain.
   a loopback registry as insecure with no daemon config (verified on OrbStack);
   skopeo copies only the host platform's manifest, so the recorded digest is the
   platform manifest digest, not the upstream index digest;
-  `--digestfile /dev/stdout` works and `--quiet` keeps progress off stdout. The
-  mirror's storage is never garbage-collected.
+  `--digestfile /dev/stdout` works and `--quiet` keeps progress off stdout.
+- Mirror GC: `ImageMirrorGcService` (`$lib/services/image-mirror-gc.service.ts`)
+  runs as the `pruneMirror` Docker Cleanup action (exclusive `docker_cleanup`
+  job, button + size panel on `/docker-cleanup` via `getMirrorUsage`), queued
+  daily at 04:00 by `cron/mirror-gc-scheduler.ts` under the first admin's id
+  (postponed while deploy/image_scan jobs are queued or running). Keep set is
+  pure in `docker/mirror-registry.ts` (`mirrorKeepSet` + `planMirrorGc`, from
+  `listMirrorReferences` in `$lib/dto/mirror-reference-dto.ts`): per service the
+  current `image:tag`, the last running/stopped deployment's `imageDigest`, and
+  the last `MIRROR_GC_SCANS_PER_SERVICE` (2) distinct mirror-scan digests.
+  `MirrorRegistryClient` there does catalog (Link paging) → tags → HEAD with an
+  index/list-aware Accept → DELETE by digest, fetch injected so
+  `tests/unit/app/image-mirror-gc.test.ts` mocks it. The mixin reaches the API
+  at `127.0.0.1:5055` or `homerun-mirror:5000` (first that answers `/v2/`,
+  container name first when this app runs in one) and `docker exec`s `du`,
+  `registry garbage-collect --delete-untagged`, `rm -rf` of emptied repo dirs.
+  **Real, tested findings**: `--delete-untagged` sweeps every manifest with no
+  tag, so a kept older digest must be re-tagged first (`homerun-keep-<digest>`,
+  a GET + PUT of the same manifest bytes/content type) or the rollback copy
+  vanishes; deleting a manifest by digest drops every tag pointing at it; the
+  registry needs a restart after GC or its `blobdescriptor: inmemory` cache can
+  claim deleted blobs still exist; a collected image re-copies fine after the
+  restart. `ensureImageMirror` recreates a `homerun-mirror` lacking
+  `REGISTRY_STORAGE_DELETE_ENABLED=true` (volume persists). An in-process flag
+  (`ImageMirrorGcService.running`, on `globalThis`) makes `deployThroughMirror`
+  fall back to a direct pull while GC runs; the handler also refuses to start
+  while a deploy/image_scan job is running.
 
 `src/lib/services/secrets.ts` (not under `docker/`, it's a generic AES-256-GCM
 utility, not Docker-specific, also used by SMTP/OAuth/S3-backup secrets),

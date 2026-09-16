@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { ClientFactory } from "../../../packages/cli/client";
-import { Commands } from "../../../packages/cli/commands";
+import { Commands, findingsAtOrAbove } from "../../../packages/cli/commands";
 import { Output } from "../../../packages/cli/output";
 
 type Client = ReturnType<typeof ClientFactory.makeClient>;
@@ -184,6 +184,336 @@ describe("Commands.templatesList", () => {
 		expect(printTableSpy).toHaveBeenCalledWith(
 			[{ id: "t1", image: "redis:7", name: "Redis" }],
 			["id", "name", "image"],
+		);
+	});
+});
+
+function scanFixture(overrides: Record<string, unknown> = {}) {
+	return {
+		counts: { critical: 0, high: 2, low: 1, medium: 0, unknown: 0 },
+		deploymentId: null,
+		digest: "sha256:abc",
+		error: null,
+		findings: [
+			{
+				fixedVersion: "1.2.4",
+				id: "CVE-2026-0001",
+				installedVersion: "1.2.3",
+				pkg: "openssl",
+				severity: "HIGH",
+				title: "A bad one",
+			},
+		],
+		id: "scan-1",
+		imageRef: "nginx:alpine",
+		scannedAt: "2026-09-16T12:00:00.000Z",
+		serviceId: "svc-1",
+		source: "the deployed image",
+		status: "ok",
+		totalFindings: 3,
+		...overrides,
+	};
+}
+
+function silenceConsole() {
+	spyOn(console, "log").mockImplementation(() => undefined);
+}
+
+describe("findingsAtOrAbove", () => {
+	test("sums every severity at or above the level", () => {
+		const counts = { critical: 1, high: 2, low: 4, medium: 3, unknown: 5 };
+		expect(findingsAtOrAbove(counts, "critical")).toBe(1);
+		expect(findingsAtOrAbove(counts, "high")).toBe(3);
+		expect(findingsAtOrAbove(counts, "medium")).toBe(6);
+		expect(findingsAtOrAbove(counts, "low")).toBe(10);
+	});
+});
+
+describe("Commands.scansList", () => {
+	test("passes the service id and list query, prints a table", async () => {
+		spyOnOutput();
+		const GET = mock(async () => okResponse([scanFixture()]));
+		const client = fakeClient({ GET });
+
+		await Commands.scansList(client, "svc-1", { json: false, perPage: 5 });
+
+		expect(GET).toHaveBeenCalledWith("/services/{serviceId}/scans", {
+			params: { path: { serviceId: "svc-1" }, query: { perPage: "5" } },
+		});
+		expect(printTableSpy).toHaveBeenCalledWith(
+			[
+				{
+					critical: 0,
+					high: 2,
+					id: "scan-1",
+					image: "nginx:alpine",
+					low: 1,
+					medium: 0,
+					scannedAt: "2026-09-16T12:00:00.000Z",
+					status: "ok",
+				},
+			],
+			[
+				"id",
+				"scannedAt",
+				"status",
+				"critical",
+				"high",
+				"medium",
+				"low",
+				"image",
+			],
+		);
+	});
+
+	test("prints JSON when json=true", async () => {
+		spyOnOutput();
+		const GET = mock(async () => okResponse([]));
+
+		await Commands.scansList(fakeClient({ GET }), "svc-1", { json: true });
+
+		expect(printJsonSpy).toHaveBeenCalledWith([]);
+		expect(printTableSpy).not.toHaveBeenCalled();
+	});
+});
+
+describe("Commands.scanGet", () => {
+	test("latest hits the latest endpoint and prints a findings table", async () => {
+		spyOnOutput();
+		silenceConsole();
+		const GET = mock(async () => okResponse(scanFixture()));
+
+		await Commands.scanGet(fakeClient({ GET }), "svc-1", "latest", false);
+
+		expect(GET).toHaveBeenCalledWith("/services/{serviceId}/scans/latest", {
+			params: { path: { serviceId: "svc-1" } },
+		});
+		expect(printTableSpy).toHaveBeenCalledWith(
+			[
+				{
+					fixed: "1.2.4",
+					id: "CVE-2026-0001",
+					installed: "1.2.3",
+					package: "openssl",
+					severity: "HIGH",
+					title: "A bad one",
+				},
+			],
+			["severity", "id", "package", "installed", "fixed", "title"],
+		);
+	});
+
+	test("a scan id hits the by-id endpoint", async () => {
+		spyOnOutput();
+		const GET = mock(async () => okResponse(scanFixture()));
+
+		await Commands.scanGet(fakeClient({ GET }), "svc-1", "scan-1", true);
+
+		expect(GET).toHaveBeenCalledWith("/services/{serviceId}/scans/{scanId}", {
+			params: { path: { scanId: "scan-1", serviceId: "svc-1" } },
+		});
+		expect(printJsonSpy).toHaveBeenCalledWith(scanFixture());
+	});
+
+	test("a never-scanned service fails with the API's 404", async () => {
+		const failSpy = spyOn(Output, "fail").mockImplementation(() => {
+			throw new FailCalled();
+		});
+		const GET = mock(async () =>
+			errResponse(404, "Not Found", {
+				error: "This service hasn't been scanned yet.",
+			}),
+		);
+
+		await expect(
+			Commands.scanGet(fakeClient({ GET }), "svc-1", "latest", true),
+		).rejects.toThrow(FailCalled);
+		expect(failSpy).toHaveBeenCalledWith(
+			'404 Not Found: {"error":"This service hasn\'t been scanned yet."}',
+		);
+	});
+});
+
+describe("Commands.serviceScan", () => {
+	function jobs(...statuses: string[]) {
+		let call = 0;
+		return (path: string) => {
+			if (path === "/jobs/{jobId}") {
+				const status = statuses[Math.min(call, statuses.length - 1)];
+				call += 1;
+				return Promise.resolve(
+					okResponse({
+						error: status === "failed" ? "trivy exploded" : null,
+						id: "job-1",
+						status,
+					}),
+				);
+			}
+			return Promise.resolve(okResponse(scanFixture()));
+		};
+	}
+
+	test("without --wait prints the queued job and returns", async () => {
+		spyOnOutput();
+		const POST = mock(async () =>
+			okResponse({ jobId: "job-1", status: "queued" }),
+		);
+		const GET = mock();
+
+		await Commands.serviceScan(fakeClient({ GET, POST }), "svc-1", {
+			json: false,
+			wait: false,
+		});
+
+		expect(POST).toHaveBeenCalledWith("/services/{serviceId}/scans", {
+			params: { path: { serviceId: "svc-1" } },
+		});
+		expect(GET).not.toHaveBeenCalled();
+		expect(printJsonSpy).toHaveBeenCalledWith({
+			jobId: "job-1",
+			status: "queued",
+		});
+	});
+
+	test("--wait polls the job, then prints the latest scan", async () => {
+		spyOnOutput();
+		const POST = mock(async () =>
+			okResponse({ jobId: "job-1", status: "queued" }),
+		);
+		const GET = mock(jobs("queued", "running", "succeeded"));
+
+		await Commands.serviceScan(fakeClient({ GET, POST }), "svc-1", {
+			json: true,
+			pollMs: 0,
+			wait: true,
+		});
+
+		const paths = GET.mock.calls.map((call) => call[0]);
+		expect(paths).toEqual([
+			"/jobs/{jobId}",
+			"/jobs/{jobId}",
+			"/jobs/{jobId}",
+			"/services/{serviceId}/scans/latest",
+		]);
+		expect(printJsonSpy).toHaveBeenCalledWith(scanFixture());
+	});
+
+	test("--wait on a 409 follows the scan already in flight", async () => {
+		spyOnOutput();
+		const POST = mock(async () =>
+			errResponse(409, "Conflict", { error: "busy", jobId: "job-1" }),
+		);
+		const GET = mock(jobs("succeeded"));
+
+		await Commands.serviceScan(fakeClient({ GET, POST }), "svc-1", {
+			json: true,
+			pollMs: 0,
+			wait: true,
+		});
+
+		expect(GET).toHaveBeenCalledWith("/jobs/{jobId}", {
+			params: { path: { jobId: "job-1" } },
+		});
+	});
+
+	test("a 409 without --wait fails", async () => {
+		const failSpy = spyOn(Output, "fail").mockImplementation(() => {
+			throw new FailCalled();
+		});
+		const POST = mock(async () =>
+			errResponse(409, "Conflict", { error: "busy", jobId: "job-1" }),
+		);
+
+		await expect(
+			Commands.serviceScan(fakeClient({ POST }), "svc-1", {
+				json: true,
+				wait: false,
+			}),
+		).rejects.toThrow(FailCalled);
+		expect(failSpy).toHaveBeenCalledWith(
+			'409 Conflict: {"error":"busy","jobId":"job-1"}',
+		);
+	});
+
+	test("a failed job exits non-zero with its error", async () => {
+		const failSpy = spyOn(Output, "fail").mockImplementation(() => {
+			throw new FailCalled();
+		});
+		const POST = mock(async () =>
+			okResponse({ jobId: "job-1", status: "queued" }),
+		);
+		const GET = mock(jobs("failed"));
+
+		await expect(
+			Commands.serviceScan(fakeClient({ GET, POST }), "svc-1", {
+				json: true,
+				pollMs: 0,
+				wait: true,
+			}),
+		).rejects.toThrow(FailCalled);
+		expect(failSpy).toHaveBeenCalledWith("Scan failed: trivy exploded");
+	});
+
+	test("--fail-on exits non-zero when findings reach the level", async () => {
+		spyOnOutput();
+		const failSpy = spyOn(Output, "fail").mockImplementation(() => {
+			throw new FailCalled();
+		});
+		const POST = mock(async () =>
+			okResponse({ jobId: "job-1", status: "queued" }),
+		);
+		const GET = mock(jobs("succeeded"));
+
+		await expect(
+			Commands.serviceScan(fakeClient({ GET, POST }), "svc-1", {
+				failOn: "high",
+				json: true,
+				pollMs: 0,
+				wait: true,
+			}),
+		).rejects.toThrow(FailCalled);
+		expect(failSpy).toHaveBeenCalledWith(
+			"2 findings at or above HIGH (--fail-on high).",
+		);
+	});
+
+	test("--fail-on passes when nothing reaches the level", async () => {
+		spyOnOutput();
+		const failSpy = spyOn(Output, "fail");
+		const POST = mock(async () =>
+			okResponse({ jobId: "job-1", status: "queued" }),
+		);
+		const GET = mock(jobs("succeeded"));
+
+		await Commands.serviceScan(fakeClient({ GET, POST }), "svc-1", {
+			failOn: "critical",
+			json: true,
+			pollMs: 0,
+			wait: true,
+		});
+
+		expect(failSpy).not.toHaveBeenCalled();
+	});
+
+	test("gives up after the timeout", async () => {
+		const failSpy = spyOn(Output, "fail").mockImplementation(() => {
+			throw new FailCalled();
+		});
+		const POST = mock(async () =>
+			okResponse({ jobId: "job-1", status: "queued" }),
+		);
+		const GET = mock(jobs("running"));
+
+		await expect(
+			Commands.serviceScan(fakeClient({ GET, POST }), "svc-1", {
+				json: true,
+				pollMs: 0,
+				timeoutMs: 0,
+				wait: true,
+			}),
+		).rejects.toThrow(FailCalled);
+		expect(failSpy).toHaveBeenCalledWith(
+			"Timed out waiting for scan job job-1 (still running).",
 		);
 	});
 });

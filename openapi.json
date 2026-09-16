@@ -21,6 +21,177 @@
 	},
 	"openapi": "3.1.0",
 	"paths": {
+		"/jobs/{jobId}": {
+			"get": {
+				"operationId": "get_jobs__jobId_",
+				"parameters": [
+					{
+						"description": "Job id",
+						"in": "path",
+						"name": "jobId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"createdAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"error": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"finishedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"example": "2026-08-20T12:00:00.000Z",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"id": {
+											"type": "string"
+										},
+										"result": {
+											"anyOf": [
+												{
+													"additionalProperties": {},
+													"propertyNames": {
+														"type": "string"
+													},
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"serviceId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"startedAt": {
+											"anyOf": [
+												{
+													"description": "ISO 8601 timestamp",
+													"example": "2026-08-20T12:00:00.000Z",
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"status": {
+											"enum": [
+												"queued",
+												"running",
+												"succeeded",
+												"failed",
+												"cancelled"
+											],
+											"type": "string"
+										},
+										"title": {
+											"type": "string"
+										},
+										"type": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"createdAt",
+										"error",
+										"finishedAt",
+										"id",
+										"result",
+										"serviceId",
+										"startedAt",
+										"status",
+										"title",
+										"type"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The job"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a queued job's status",
+				"tags": ["Jobs"]
+			}
+		},
 		"/services": {
 			"get": {
 				"description": "Paginated. The response body is the page's items; the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers.",
@@ -2156,6 +2327,852 @@
 				],
 				"summary": "Restart a service's container",
 				"tags": ["Services"]
+			}
+		},
+		"/services/{serviceId}/scans": {
+			"get": {
+				"description": "Newest first, without findings. Paginated like the other lists: the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers. q matches the image ref, digest, status or source.",
+				"operationId": "get_services__serviceId__scans",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "1-based page number (default 1)",
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Items per page (default 100, max 100)",
+						"in": "query",
+						"name": "perPage",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Case-insensitive search term",
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"counts": {
+												"additionalProperties": false,
+												"properties": {
+													"critical": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"high": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"low": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"medium": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													"unknown": {
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													}
+												},
+												"required": [
+													"critical",
+													"high",
+													"low",
+													"medium",
+													"unknown"
+												],
+												"type": "object"
+											},
+											"deploymentId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "null = scanned on demand, not during a deploy"
+											},
+											"digest": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"error": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Why a failed or skipped scan has no findings"
+											},
+											"id": {
+												"type": "string"
+											},
+											"imageRef": {
+												"type": "string"
+											},
+											"scannedAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"serviceId": {
+												"type": "string"
+											},
+											"source": {
+												"type": "string"
+											},
+											"status": {
+												"enum": ["ok", "failed", "skipped"],
+												"type": "string"
+											},
+											"totalFindings": {
+												"description": "Every unique finding, including those beyond the stored findings cap",
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											}
+										},
+										"required": [
+											"counts",
+											"deploymentId",
+											"digest",
+											"error",
+											"id",
+											"imageRef",
+											"scannedAt",
+											"serviceId",
+											"source",
+											"status",
+											"totalFindings"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The service's image scans"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's image scans",
+				"tags": ["Image scans"]
+			},
+			"post": {
+				"description": "Queues a scan of the service's deployed image. Poll GET /jobs/{jobId} until it finishes, then read GET /services/{serviceId}/scans/latest.",
+				"operationId": "post_services__serviceId__scans",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"jobId": {
+											"type": "string"
+										},
+										"status": {
+											"enum": [
+												"queued",
+												"running",
+												"succeeded",
+												"failed",
+												"cancelled"
+											],
+											"type": "string"
+										}
+									},
+									"required": ["jobId", "status"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Scan queued"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not deployed yet"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"jobId": {
+											"description": "The scan job already in flight",
+											"type": "string"
+										}
+									},
+									"required": ["error", "jobId"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "A scan is already queued or running"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Scan a service's deployed image",
+				"tags": ["Image scans"]
+			}
+		},
+		"/services/{serviceId}/scans/latest": {
+			"get": {
+				"operationId": "get_services__serviceId__scans_latest",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"counts": {
+											"additionalProperties": false,
+											"properties": {
+												"critical": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"high": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"low": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"medium": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"unknown": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												}
+											},
+											"required": [
+												"critical",
+												"high",
+												"low",
+												"medium",
+												"unknown"
+											],
+											"type": "object"
+										},
+										"deploymentId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "null = scanned on demand, not during a deploy"
+										},
+										"digest": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"error": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Why a failed or skipped scan has no findings"
+										},
+										"findings": {
+											"description": "Sorted most severe first, capped at 200 : totalFindings has the real count",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"fixedVersion": {
+														"anyOf": [
+															{
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"id": {
+														"type": "string"
+													},
+													"installedVersion": {
+														"type": "string"
+													},
+													"pkg": {
+														"type": "string"
+													},
+													"severity": {
+														"enum": [
+															"CRITICAL",
+															"HIGH",
+															"MEDIUM",
+															"LOW",
+															"UNKNOWN"
+														],
+														"type": "string"
+													},
+													"title": {
+														"anyOf": [
+															{
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													}
+												},
+												"required": [
+													"fixedVersion",
+													"id",
+													"installedVersion",
+													"pkg",
+													"severity",
+													"title"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"id": {
+											"type": "string"
+										},
+										"imageRef": {
+											"type": "string"
+										},
+										"scannedAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"serviceId": {
+											"type": "string"
+										},
+										"source": {
+											"type": "string"
+										},
+										"status": {
+											"enum": ["ok", "failed", "skipped"],
+											"type": "string"
+										},
+										"totalFindings": {
+											"description": "Every unique finding, including those beyond the stored findings cap",
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										}
+									},
+									"required": [
+										"counts",
+										"deploymentId",
+										"digest",
+										"error",
+										"id",
+										"imageRef",
+										"scannedAt",
+										"serviceId",
+										"source",
+										"status",
+										"totalFindings",
+										"findings"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The newest scan"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Service not found, or never scanned"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get a service's latest image scan, with findings",
+				"tags": ["Image scans"]
+			}
+		},
+		"/services/{serviceId}/scans/{scanId}": {
+			"get": {
+				"operationId": "get_services__serviceId__scans__scanId_",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Scan id",
+						"in": "path",
+						"name": "scanId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"counts": {
+											"additionalProperties": false,
+											"properties": {
+												"critical": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"high": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"low": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"medium": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												"unknown": {
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												}
+											},
+											"required": [
+												"critical",
+												"high",
+												"low",
+												"medium",
+												"unknown"
+											],
+											"type": "object"
+										},
+										"deploymentId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "null = scanned on demand, not during a deploy"
+										},
+										"digest": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"error": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Why a failed or skipped scan has no findings"
+										},
+										"findings": {
+											"description": "Sorted most severe first, capped at 200 : totalFindings has the real count",
+											"items": {
+												"additionalProperties": false,
+												"properties": {
+													"fixedVersion": {
+														"anyOf": [
+															{
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													},
+													"id": {
+														"type": "string"
+													},
+													"installedVersion": {
+														"type": "string"
+													},
+													"pkg": {
+														"type": "string"
+													},
+													"severity": {
+														"enum": [
+															"CRITICAL",
+															"HIGH",
+															"MEDIUM",
+															"LOW",
+															"UNKNOWN"
+														],
+														"type": "string"
+													},
+													"title": {
+														"anyOf": [
+															{
+																"type": "string"
+															},
+															{
+																"type": "null"
+															}
+														]
+													}
+												},
+												"required": [
+													"fixedVersion",
+													"id",
+													"installedVersion",
+													"pkg",
+													"severity",
+													"title"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"id": {
+											"type": "string"
+										},
+										"imageRef": {
+											"type": "string"
+										},
+										"scannedAt": {
+											"description": "ISO 8601 timestamp",
+											"example": "2026-08-20T12:00:00.000Z",
+											"type": "string"
+										},
+										"serviceId": {
+											"type": "string"
+										},
+										"source": {
+											"type": "string"
+										},
+										"status": {
+											"enum": ["ok", "failed", "skipped"],
+											"type": "string"
+										},
+										"totalFindings": {
+											"description": "Every unique finding, including those beyond the stored findings cap",
+											"maximum": 9007199254740991,
+											"minimum": -9007199254740991,
+											"type": "integer"
+										}
+									},
+									"required": [
+										"counts",
+										"deploymentId",
+										"digest",
+										"error",
+										"id",
+										"imageRef",
+										"scannedAt",
+										"serviceId",
+										"source",
+										"status",
+										"totalFindings",
+										"findings"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The scan"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Get an image scan, with findings",
+				"tags": ["Image scans"]
 			}
 		},
 		"/services/{serviceId}/start": {

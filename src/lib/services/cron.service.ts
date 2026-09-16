@@ -22,6 +22,7 @@ import {
 	parseCronSchedule,
 } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
+import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { StatsSampler } from "./stats/stats-sampler.ts";
@@ -71,6 +72,8 @@ class CronServiceClass {
 
 	private readonly uptimeProbe = new UptimeProbe();
 
+	private readonly mirrorGcScheduler = new MirrorGcScheduler();
+
 	parseCronSchedule(schedule: string): ParsedCron | null {
 		return parseCronSchedule(schedule);
 	}
@@ -97,6 +100,10 @@ class CronServiceClass {
 
 	startUptimeProbe(): void {
 		this.uptimeProbe.start();
+	}
+
+	startMirrorGcScheduler(): void {
+		this.mirrorGcScheduler.start();
 	}
 }
 

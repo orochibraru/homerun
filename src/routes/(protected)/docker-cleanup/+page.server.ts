@@ -48,6 +48,17 @@ export const actions = {
 		);
 	},
 
+	pruneMirror: async ({ locals, platform }) => {
+		allowLongRequest(platform);
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		return await runQueuedCleanup("pruneMirror", false, locals.user.id);
+	},
+
 	reclaimStackNetworks: async ({ locals, platform }) => {
 		allowLongRequest(platform);
 		if (!locals.user) {

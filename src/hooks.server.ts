@@ -195,6 +195,7 @@ export const init = async () => {
 	CronService.startCronJobScheduler();
 	CronService.startStatsSampler();
 	CronService.startUptimeProbe();
+	CronService.startMirrorGcScheduler();
 };
 
 /**

@@ -213,13 +213,21 @@ the pull scans the image already on the host. Git-built images are scanned once
 built: on the host for a local build, in the build cache registry (falling back
 to the host) for a build server.
 
+The mirror is garbage-collected every day at 04:00, and on demand from
+[Docker Cleanup](operations.md#image-mirror). For every service it keeps the
+image the service currently points at, the digest its last successful deploy
+ran, and its last two scanned versions (so a rollback or a rescan still finds
+them); everything else goes, including images of deleted services.
+
 The deploy log gets a summary line with counts per severity and the first few
 CRITICAL/HIGH findings. The service's **Security** tab shows the latest scan,
 the severity counts, the findings (top 200, most severe first, with the fixed
 version when there is one), the scan history, and a **Scan now** button that
 queues a scan of the deployed image. A scan that finds a CRITICAL vulnerability
 adds a bell notification and fires the **Critical vulnerabilities** event on any
-notification channel subscribed to it.
+notification channel subscribed to it. The same scans are in the
+[REST API and CLI](api-and-cli.md#image-scans), including a
+`homerun services scan <id> --fail-on high` for failing a CI job on findings.
 
 Scanning is controlled in two places:
 

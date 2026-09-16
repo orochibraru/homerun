@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, count, desc, eq, lt, type SQL } from "drizzle-orm";
 import {
 	emptyCounts,
 	type ImageScanFinding,
@@ -7,6 +7,11 @@ import {
 } from "$lib/image-scan";
 import { db } from "$lib/server/db/lib";
 import { type ImageScan, imageScan } from "$lib/server/db/schema";
+import {
+	type ListQuery,
+	type PagedResult,
+	searchCondition,
+} from "$lib/server/list-query";
 import { BaseDTO } from "./base-dto";
 
 const KEEP_PER_SERVICE = 25;
@@ -23,6 +28,8 @@ export interface NewImageScanInput {
 	status: ImageScanStatus;
 	totalFindings?: number;
 }
+
+export type ImageScanSummary = Omit<ImageScan, "findings">;
 
 export class ImageScanDTO extends BaseDTO<ImageScan> {
 	static async create(input: NewImageScanInput): Promise<ImageScanDTO> {
@@ -58,6 +65,58 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 		return rows.map((row) => new ImageScanDTO(row));
 	}
 
+	static async listForServicePaged(
+		serviceId: string,
+		query: ListQuery,
+	): Promise<PagedResult<ImageScanDTO>> {
+		const conditions: SQL[] = [eq(imageScan.serviceId, serviceId)];
+		const search = searchCondition(query.q, [
+			imageScan.imageRef,
+			imageScan.digest,
+			imageScan.status,
+			imageScan.source,
+		]);
+		if (search) {
+			conditions.push(search);
+		}
+		const where = and(...conditions);
+		const [rows, totals] = await Promise.all([
+			db
+				.select()
+				.from(imageScan)
+				.where(where)
+				.orderBy(desc(imageScan.scannedAt))
+				.limit(query.limit)
+				.offset(query.offset),
+			db.select({ total: count() }).from(imageScan).where(where),
+		]);
+		return {
+			items: rows.map((row) => new ImageScanDTO(row)),
+			page: query.page,
+			perPage: query.perPage,
+			total: totals[0]?.total ?? 0,
+		};
+	}
+
+	static async getForService(
+		serviceId: string,
+		scanId: string,
+	): Promise<ImageScanDTO | null> {
+		const [row] = await db
+			.select()
+			.from(imageScan)
+			.where(and(eq(imageScan.serviceId, serviceId), eq(imageScan.id, scanId)))
+			.limit(1);
+		return row ? new ImageScanDTO(row) : null;
+	}
+
+	static async latestForService(
+		serviceId: string,
+	): Promise<ImageScanDTO | null> {
+		const [latest] = await ImageScanDTO.listForService(serviceId, 1);
+		return latest ?? null;
+	}
+
 	static async prune(serviceId: string): Promise<void> {
 		const [cutoff] = await db
 			.select({ scannedAt: imageScan.scannedAt })
@@ -85,5 +144,10 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 
 	get counts(): SeverityCounts {
 		return this.row.counts;
+	}
+
+	toSummary(): ImageScanSummary {
+		const { findings: _findings, ...summary } = this.row;
+		return summary;
 	}
 }

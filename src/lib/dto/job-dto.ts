@@ -249,6 +249,17 @@ export class JobDTO extends BaseDTO<Job> {
 		};
 	}
 
+	static async countByTypes(
+		types: JobType[],
+		statuses: JobStatus[],
+	): Promise<number> {
+		const [row] = await db
+			.select({ total: count() })
+			.from(job)
+			.where(and(inArray(job.type, types), inArray(job.status, statuses)));
+		return row?.total ?? 0;
+	}
+
 	static async requeueOrphaned(): Promise<number> {
 		const rows = await db
 			.update(job)

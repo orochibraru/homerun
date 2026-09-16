@@ -12,6 +12,10 @@ import {
 	type PruneSummary,
 	type SystemPruneSummary,
 } from "../docker.service.ts";
+import {
+	ImageMirrorGcService,
+	type MirrorGcResult,
+} from "../image-mirror-gc.service.ts";
 import { ImageScanService } from "../image-scan.service.ts";
 import { S3BackupService } from "../s3-backup.service.ts";
 import {
@@ -106,7 +110,7 @@ async function reclaimStackNetworks(): Promise<PruneSummary> {
 function cleanupRunner(
 	action: DockerCleanupAction,
 	all: boolean,
-): Promise<PruneSummary | SystemPruneSummary> {
+): Promise<MirrorGcResult | PruneSummary | SystemPruneSummary> {
 	switch (action) {
 		case "reclaimStackNetworks":
 			return reclaimStackNetworks();
@@ -116,6 +120,8 @@ function cleanupRunner(
 			return DockerService.pruneContainers();
 		case "pruneImages":
 			return DockerService.pruneImages(all);
+		case "pruneMirror":
+			return ImageMirrorGcService.collect();
 		case "pruneNetworks":
 			return DockerService.pruneNetworks();
 		case "pruneSystem":

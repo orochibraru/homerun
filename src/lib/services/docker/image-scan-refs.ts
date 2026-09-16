@@ -13,6 +13,11 @@ export const TRIVY_TAG = "0.74.0";
 export const TRIVY_CACHE_VOLUME = "homerun-trivy-cache";
 
 export const REGISTRY_AUTH_ENV = "HOMERUN_REGISTRY_AUTH";
+export const MIRROR_SCAN_SOURCE = "the Homerun mirror";
+export const MIRROR_DELETE_ENV = "REGISTRY_STORAGE_DELETE_ENABLED=true";
+export const MIRROR_STORAGE_DIR = "/var/lib/registry";
+export const MIRROR_REPOSITORIES_DIR = `${MIRROR_STORAGE_DIR}/docker/registry/v2/repositories`;
+export const MIRROR_CONFIG_PATH = "/etc/docker/registry/config.yml";
 
 const DOCKER_HUB = "docker.io";
 const DIGEST_RE = /sha256:[0-9a-f]{64}/g;
@@ -58,6 +63,10 @@ export function normalizeImageRef(
 
 function mirrorPath(ref: NormalizedImageRef): string {
 	return `${ref.registry}/${ref.repository}`.toLowerCase().replaceAll(":", "-");
+}
+
+export function mirrorRepository(image: string, tag: string): string {
+	return mirrorPath(normalizeImageRef(image, tag));
 }
 
 export function mirrorRefs(image: string, tag: string): MirrorRefs {

@@ -7,6 +7,11 @@ import {
 import {
 	deployResultResponse,
 	errorResponse,
+	imageScanResponse,
+	imageScanSummaryResponse,
+	jobResponse,
+	queuedJobResponse,
+	scanConflictResponse,
 	serviceResponse,
 	stackResponse,
 	successResponse,
@@ -197,6 +202,86 @@ export const routes: RouteDef[] = [
 		},
 		summary: "Restart a service's container",
 		tags: ["Services"],
+	},
+	{
+		description:
+			"Newest first, without findings. Paginated like the other lists: the total row count, current page and page size come back in the x-total-count, x-page and x-per-page headers. q matches the image ref, digest, status or source.",
+		method: "get",
+		path: "/services/{serviceId}/scans",
+		pathParams: [{ description: "Service id", name: "serviceId" }],
+		queryParams: listQueryParams,
+		responses: {
+			200: {
+				description: "The service's image scans",
+				isArray: true,
+				schema: imageScanSummaryResponse,
+			},
+			401: unauthorized,
+			404: notFound,
+		},
+		summary: "List a service's image scans",
+		tags: ["Image scans"],
+	},
+	{
+		description:
+			"Queues a scan of the service's deployed image. Poll GET /jobs/{jobId} until it finishes, then read GET /services/{serviceId}/scans/latest.",
+		method: "post",
+		path: "/services/{serviceId}/scans",
+		pathParams: [{ description: "Service id", name: "serviceId" }],
+		responses: {
+			202: { description: "Scan queued", schema: queuedJobResponse },
+			400: { description: "Not deployed yet", schema: errorResponse },
+			401: unauthorized,
+			404: notFound,
+			409: {
+				description: "A scan is already queued or running",
+				schema: scanConflictResponse,
+			},
+		},
+		summary: "Scan a service's deployed image",
+		tags: ["Image scans"],
+	},
+	{
+		method: "get",
+		path: "/services/{serviceId}/scans/latest",
+		pathParams: [{ description: "Service id", name: "serviceId" }],
+		responses: {
+			200: { description: "The newest scan", schema: imageScanResponse },
+			401: unauthorized,
+			404: {
+				description: "Service not found, or never scanned",
+				schema: errorResponse,
+			},
+		},
+		summary: "Get a service's latest image scan, with findings",
+		tags: ["Image scans"],
+	},
+	{
+		method: "get",
+		path: "/services/{serviceId}/scans/{scanId}",
+		pathParams: [
+			{ description: "Service id", name: "serviceId" },
+			{ description: "Scan id", name: "scanId" },
+		],
+		responses: {
+			200: { description: "The scan", schema: imageScanResponse },
+			401: unauthorized,
+			404: notFound,
+		},
+		summary: "Get an image scan, with findings",
+		tags: ["Image scans"],
+	},
+	{
+		method: "get",
+		path: "/jobs/{jobId}",
+		pathParams: [{ description: "Job id", name: "jobId" }],
+		responses: {
+			200: { description: "The job", schema: jobResponse },
+			401: unauthorized,
+			404: notFound,
+		},
+		summary: "Get a queued job's status",
+		tags: ["Jobs"],
 	},
 	{
 		description:

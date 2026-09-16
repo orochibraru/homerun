@@ -320,6 +320,37 @@ test.describe
 			});
 		});
 
+		test("services scans on a never-scanned service", async () => {
+			const table = await cli(["services", "scans", serviceIds[0]], { home });
+			expect(table.code).toBe(0);
+			expect(table.stdout.trim()).toBe("(none)");
+
+			const json = await cli(
+				["services", "scans", "list", serviceIds[0], "--json"],
+				{ home },
+			);
+			expect(json.code).toBe(0);
+			expect(JSON.parse(json.stdout)).toEqual([]);
+
+			const latest = await cli(["services", "scans", "get", serviceIds[0]], {
+				home,
+			});
+			expect(latest.code).toBe(1);
+			expect(latest.stderr).toMatch(
+				/^error: 404 .*This service hasn't been scanned yet/,
+			);
+
+			const queued = await cli(["services", "scan", serviceIds[0]], { home });
+			expect(queued.code).toBe(1);
+			expect(queued.stderr).toMatch(/^error: 400 .*Deploy the service first/);
+
+			const unknown = await cli(["services", "scans", "does-not-exist"], {
+				home,
+			});
+			expect(unknown.code).toBe(1);
+			expect(unknown.stderr).toMatch(/^error: 404 .*Not found/);
+		});
+
 		test("templates list includes the builtin catalogue", async () => {
 			const json = await cli(["templates", "list", "--json"], { home });
 			expect(json.code).toBe(0);

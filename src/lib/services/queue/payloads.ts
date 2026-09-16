@@ -27,6 +27,7 @@ export const dockerCleanupActions = [
 	"pruneBuildCache",
 	"pruneContainers",
 	"pruneImages",
+	"pruneMirror",
 	"pruneNetworks",
 	"pruneSystem",
 	"pruneVolumes",

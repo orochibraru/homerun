@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
@@ -114,6 +115,9 @@
         then pulls it onto this host. If the mirror can't be used the deploy
         pulls directly and scans the local image instead. Git builds are
         scanned once built. Each service can opt out on its own Settings tab.
+        The mirror is garbage-collected daily; its size and a manual cleanup
+        are on <a class="underline" href={resolve("/docker-cleanup")}
+        >Docker Cleanup</a>.
       </p>
     </div>
     <form

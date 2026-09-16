@@ -72,6 +72,9 @@ homerun services deploy <id>
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
+homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun services scans get <id> [scanId] [--json]
+homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
@@ -85,6 +88,20 @@ is printed when everything fit on one page. There's no resource
 `create`/`update`/`delete` yet (`homerun update` below is the CLI self-updater,
 unrelated), out of scope for this first pass, straightforward to add the same
 way (`commands.ts` already has the `unwrap()` helper every command uses).
+
+`homerun services scans <id>` is an alias for `homerun services scans list <id>`
+(`list` is the group's default subcommand): a table of the service's image
+scans, newest first, with per-severity counts. `homerun services scans get <id>`
+prints the latest scan (`GET /services/{serviceId}/scans/latest`), or the one
+named by a second `scanId` argument, as a header plus a findings table; `--json`
+prints the raw scan instead. `homerun services scan <id>` calls
+`POST /services/{serviceId}/scans` and prints `{jobId, status}`. With `--wait`
+it polls `GET /jobs/{jobId}` every 2s until the job finishes, then prints the
+latest scan; a `409` (a scan already in flight) is followed rather than treated
+as an error when waiting. `--fail-on <level>` implies `--wait` and exits 1 when
+the scan's counts at or above that severity are non-zero (`findingsAtOrAbove()`
+in `commands.ts`); a failed or cancelled job, or a wait past
+`--timeout <seconds>` (default 1800), exits 1 too.
 
 `homerun update` self-updates the installed binary in place: it checks the
 latest GitHub release, downloads the `homerun-cli-<arch>` asset for your

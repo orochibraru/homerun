@@ -25,6 +25,20 @@ dashboard's own `fetch` calls and external API-key clients alike.
   the full pull→create→start pipeline via `deployService()` (see below) and
   returns once it's done, no separate polling endpoint for API clients (the
   dashboard's own progress-polling UI is unrelated, cookie-session only).
+- `services/[serviceId]/scans/`, `GET` (paged `ImageScanDTO.toSummary()`s,
+  newest first, no `findings`), `POST` (queues `ImageScanService.enqueueScan`,
+  202 `{jobId, status}`; 400 when neither `containerId` nor `swarmServiceId` is
+  set, same guard as the Security tab's `scan` action; 409 `{error, jobId}` when
+  `JobDTO.findActive("image_scan", "image_scan:<id>")` finds one, where the tab
+  itself just coalesces through the queue's dedupe key, since an API client
+  wants to know it didn't start a new one). `scans/latest/` and
+  `scans/[scanId]/`, `GET`, the full row with `findings`; `latest` 404s with
+  "This service hasn't been scanned yet." Every scan query goes through
+  `ServiceDTO.get(serviceId, userId)` first, `image_scan` has no `userId` of its
+  own.
+- `jobs/[jobId]/`, `GET`, a trimmed job row (no `payload`) for polling a queued
+  job, 404 unless `job.userId` is the caller. Exists for
+  `homerun services scan --wait`, generic on purpose.
 - `stacks/`, `templates/`, read/create, same pattern, thinner (no lifecycle
   actions).
 - `services/`, `stacks/`, and `templates/`'s `GET`s are paginated
@@ -52,6 +66,13 @@ API surface or the OpenAPI document.
 
 This is deliberately a thin JSON wrapper over the DTO layer, not a new
 abstraction, the `packages/cli/` sub-project talks to this (see below).
+
+`homerun services scan <id> --wait` polls `GET /jobs/{jobId}` (2s) then reads
+`scans/latest`; `--fail-on <critical|high|medium|low>` implies `--wait` and
+exits 1 via `Output.fail` when `findingsAtOrAbove(counts, level)` is non-zero,
+meant as a CI gate. A 409 is followed (its `jobId`) when waiting, fatal
+otherwise. `latest` after the job can in principle be a concurrent deploy's scan
+rather than the queued one, accepted, the job result doesn't carry a scan id.
 
 ## Long-running requests and Bun's idle timeout (`$lib/server/long-request.ts`)
 
@@ -153,10 +174,12 @@ and runs as part of `build:app`; checked in as a snapshot, regenerate after any
 REST API route change or it silently goes stale, `openapi-fetch` itself has no
 way to detect a stale-spec mismatch at compile time). Auth is
 `x-api-key`/`--api-key`, same header the REST API's own hooks check first for a
-non-cookie caller. Commands: `services {list,get,deploy,start,stop,restart}`,
-`stacks list`, `templates list`, no `create`/`update`/`delete` yet,
-straightforward to add the same way. See `packages/cli/README.md` for the full
-command reference and what's verified.
+non-cookie caller. Commands:
+`services {list,get,deploy,start,stop,restart,scan}`,
+`services scans {list,get}` (`list` is the group's `isDefault` subcommand, so
+`services scans <id>` works), `stacks list`, `templates list`, no
+`create`/`update`/`delete` yet, straightforward to add the same way. See
+`packages/cli/README.md` for the full command reference and what's verified.
 
 Every `list` command also takes `--page <n>`, `--per-page <n>` (default 100, max
 100, same clamp as the API) and `--search <term>`, threaded through as the same

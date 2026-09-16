@@ -19,8 +19,12 @@ import {
 	type ScanTarget,
 } from "./deploy/scan-targets.ts";
 import type { RegistryAuth } from "./docker/containers.ts";
-import { pinnedToDigest } from "./docker/image-scan-refs.ts";
+import {
+	MIRROR_SCAN_SOURCE,
+	pinnedToDigest,
+} from "./docker/image-scan-refs.ts";
 import { DockerService } from "./docker.service.ts";
+import { ImageMirrorGcService } from "./image-mirror-gc.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { imageScanMessage } from "./notification-messages.ts";
 import { QueueService } from "./queue.service.ts";
@@ -253,6 +257,13 @@ class ImageScanServiceClass {
 	): Promise<MirroredImage | null> {
 		const { image, tag } = input;
 		const ref = `${image}:${tag}`;
+		if (ImageMirrorGcService.running) {
+			await this.#log(
+				ctx,
+				"The Homerun mirror is being cleaned up. Pulling directly; the image is scanned on this host instead.",
+			);
+			return null;
+		}
 		await this.#log(
 			ctx,
 			`Copying ${ref} into the Homerun mirror for scanning...`,
@@ -280,7 +291,7 @@ class ImageScanServiceClass {
 			[
 				{
 					display: copied.digest ? `${ref}@${copied.digest}` : ref,
-					label: "the Homerun mirror",
+					label: MIRROR_SCAN_SOURCE,
 					ref: copied.refs.internalRef,
 					source: { insecure: true, kind: "remote" },
 				},

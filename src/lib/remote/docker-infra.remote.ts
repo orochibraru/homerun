@@ -9,6 +9,10 @@ import type {
 } from "$lib/services/docker/core-services";
 import type { OrphanNetwork } from "$lib/services/docker/networks";
 import { DockerService } from "$lib/services/docker.service";
+import {
+	ImageMirrorGcService,
+	type MirrorUsage,
+} from "$lib/services/image-mirror-gc.service";
 
 export interface InfraStatus {
 	infra: InfraContainer[];
@@ -27,6 +31,11 @@ export const getOrphanStackNetworks = query(
 		return await DockerService.findOrphanStackNetworks(await StackDTO.allIds());
 	},
 );
+
+export const getMirrorUsage = query(async (): Promise<MirrorUsage> => {
+	requireAdmin();
+	return await ImageMirrorGcService.usage();
+});
 
 export const getInfraStatus = query(async (): Promise<InfraStatus> => {
 	requireAdmin();

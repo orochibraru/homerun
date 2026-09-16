@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import type { User } from "$lib/server/db/schema";
@@ -155,6 +155,16 @@ class UserServiceClass {
 			.where(searchCondition(q, [userTable.name, userTable.email]))
 			.orderBy(desc(userTable.createdAt))
 			.limit(limit);
+	}
+
+	async firstAdminId(): Promise<string | null> {
+		const [row] = await db
+			.select({ id: userTable.id })
+			.from(userTable)
+			.where(eq(userTable.role, "admin"))
+			.orderBy(asc(userTable.createdAt))
+			.limit(1);
+		return row?.id ?? null;
 	}
 
 	async countAdmins(): Promise<number> {
