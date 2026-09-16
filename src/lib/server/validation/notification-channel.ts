@@ -14,6 +14,12 @@ export const notificationChannelSchema = z.object({
 	target: z.string().trim().min(1, "Give the channel a destination."),
 });
 
+/**
+ * Checks a channel's destination fits its kind : an email address, an https
+ * Discord webhook URL, or any http(s) URL for a plain webhook.
+ *
+ * @returns An error message, or null when the target is valid.
+ */
 export function validateChannelTarget(
 	kind: NotificationChannelKind,
 	target: string,

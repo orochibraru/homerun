@@ -1,5 +1,6 @@
 const SECOND_NS = 1_000_000_000;
 
+/** Builds a container's `Healthcheck` spec from the service's configured healthcheck command, or undefined when none is set (no healthcheck attached). */
 export function dockerHealthcheck(command: string | null | undefined) {
 	const trimmed = command?.trim();
 	if (!trimmed) {

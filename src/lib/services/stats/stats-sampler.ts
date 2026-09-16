@@ -20,6 +20,12 @@ export class StatsSampler extends BaseScheduler {
 
 	#ticks = 0;
 
+	/**
+	 * Samples host stats and every running service's container stats in
+	 * parallel and writes them as one batch of `stat_sample` rows
+	 * (`StatSampleDTO.recordMany`). Every `PRUNE_EVERY_TICKS`th tick also
+	 * prunes old samples (`StatSampleDTO.prune`).
+	 */
 	protected async tick(): Promise<void> {
 		this.#ticks += 1;
 

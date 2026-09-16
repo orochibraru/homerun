@@ -10,6 +10,11 @@ import {
 	trimPath,
 } from "./common";
 
+/**
+ * Indexes Coolify projects by the id and uuid of each of their environments, so
+ * a resource that only carries an environment id can be attributed to its
+ * project.
+ */
 export function coolifyEnvironmentProjects(
 	projects: RawRow[],
 ): Map<string, string> {
@@ -28,6 +33,11 @@ export function coolifyEnvironmentProjects(
 	return byEnvironment;
 }
 
+/**
+ * Resolves the project a Coolify resource belongs to, trying its embedded
+ * environment's project, a `project_name` field, then the environment index from
+ * `coolifyEnvironmentProjects`, and falling back to "Coolify".
+ */
 export function coolifyProjectName(
 	row: RawRow,
 	byEnvironment: Map<string, string>,
@@ -44,6 +54,10 @@ export function coolifyProjectName(
 	);
 }
 
+/**
+ * Converts Coolify's env var list into a key/value map, skipping preview-only
+ * variables and preferring the resolved `real_value` over the raw `value`.
+ */
 export function coolifyEnv(list: unknown): Record<string, string> {
 	const env: Record<string, string> = {};
 	for (const row of rows(list)) {
@@ -59,6 +73,10 @@ export function coolifyEnv(list: unknown): Record<string, string> {
 	return env;
 }
 
+/**
+ * Converts a Coolify memory limit (`512m`, `2g`, `1024k`, or bare bytes) to
+ * whole megabytes, or null when unparseable or under 1 MB.
+ */
 export function coolifyMemoryMb(raw: unknown): number | null {
 	const text =
 		typeof raw === "number"
@@ -100,6 +118,10 @@ function firstPort(row: RawRow): number | null {
 	return Number.isFinite(port) && port > 0 ? port : null;
 }
 
+/**
+ * Normalises Coolify's `git_repository` into a cloneable URL: full URLs and SSH
+ * remotes pass through, a bare `owner/repo` is assumed to be on GitHub.
+ */
 export function coolifyGitUrl(repository: string | null): string | null {
 	if (!repository) {
 		return null;
@@ -130,6 +152,10 @@ function blockedApp(blocked: string, summary: string): AppOutcome {
 	return { blocked, drafts: [], kind: "application", summary, warnings: [] };
 }
 
+/**
+ * Drafts a Coolify application deployed from a registry image and tag. Blocked
+ * when no image is set.
+ */
 function imageApp(row: RawRow, base: ReturnType<typeof appBase>): AppOutcome {
 	const image = str(row, "docker_registry_image_name");
 	if (!image) {
@@ -149,6 +175,10 @@ function imageApp(row: RawRow, base: ReturnType<typeof appBase>): AppOutcome {
 	};
 }
 
+/**
+ * Drafts a Coolify Docker Compose application from its stored compose file.
+ * Blocked when no file is stored or it can't be parsed.
+ */
 function composeApp(row: RawRow, env: Record<string, string>): AppOutcome {
 	const file = str(row, "docker_compose_raw");
 	if (!file) {
@@ -170,6 +200,10 @@ function composeApp(row: RawRow, env: Record<string, string>): AppOutcome {
 	};
 }
 
+/**
+ * Drafts a Coolify git application as a git-based service. Blocked when it isn't
+ * built with a Dockerfile (e.g. nixpacks) or has no repository behind it.
+ */
 function dockerfileApp(
 	row: RawRow,
 	base: ReturnType<typeof appBase>,
@@ -207,6 +241,11 @@ function dockerfileApp(
 	};
 }
 
+/**
+ * Converts a Coolify application into a migration entry, picking the image,
+ * compose or Dockerfile path from its build pack and warning about custom run
+ * options and volumes, which the API doesn't expose.
+ */
 export function coolifyApplication(
 	row: RawRow,
 	projectName: string,
@@ -241,6 +280,10 @@ export function coolifyApplication(
 	};
 }
 
+/**
+ * Converts a Coolify one-click service into a compose migration entry from its
+ * compose file. Blocked when Coolify returned no file or it can't be parsed.
+ */
 export function coolifyService(
 	row: RawRow,
 	projectName: string,
@@ -329,6 +372,12 @@ const DATABASES: Array<{
 	},
 ];
 
+/**
+ * Converts a Coolify standalone database into a single private service draft,
+ * mapping its stored credentials onto the image's standard env vars and warning
+ * about start-command passwords, public ports and volumes, which don't carry
+ * over. Blocked when no image is set.
+ */
 export function coolifyDatabase(
 	row: RawRow,
 	projectName: string,

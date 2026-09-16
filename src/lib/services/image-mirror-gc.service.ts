@@ -29,10 +29,12 @@ export interface MirrorGcResult {
 }
 
 class ImageMirrorGcServiceClass {
+	/** Whether a garbage-collection pass is currently in progress. */
 	get running(): boolean {
 		return lockState.__mirror_gc_running === true;
 	}
 
+	/** The mirror registry's running state and current disk usage, plus whether GC is in progress. */
 	async usage(): Promise<MirrorUsage> {
 		const running = await DockerService.imageMirrorRunning();
 		return {
@@ -42,6 +44,7 @@ class ImageMirrorGcServiceClass {
 		};
 	}
 
+	/** Why cleanup shouldn't run right now (a deploy or scan job may be pulling through the mirror), or null when it's safe to proceed. */
 	async busyReason(): Promise<string | null> {
 		const active = await JobDTO.countByTypes(
 			["deploy", "image_scan"],
@@ -52,6 +55,7 @@ class ImageMirrorGcServiceClass {
 			: null;
 	}
 
+	/** Walks every repository in the mirror registry's catalog and collects their full tag inventory. */
 	async #inventory(client: MirrorRegistryClient): Promise<{
 		inventory: MirrorTag[];
 		repositories: string[];
@@ -65,6 +69,13 @@ class ImageMirrorGcServiceClass {
 		return { inventory, repositories };
 	}
 
+	/**
+	 * Applies a GC plan against the mirror registry: re-tags every manifest
+	 * that must be pinned, then deletes every manifest the plan marked for
+	 * removal.
+	 *
+	 * @returns The number of manifests actually deleted.
+	 */
 	async #apply(
 		client: MirrorRegistryClient,
 		plan: MirrorGcPlan,
@@ -87,6 +98,12 @@ class ImageMirrorGcServiceClass {
 		return deleted;
 	}
 
+	/**
+	 * Runs one garbage-collection pass over the mirror registry, guarded by a
+	 * process-global lock so only one collection runs at a time.
+	 *
+	 * @throws When a collection is already running.
+	 */
 	async collect(): Promise<MirrorGcResult> {
 		if (this.running) {
 			throw new Error("The mirror is already being cleaned up.");
@@ -99,6 +116,15 @@ class ImageMirrorGcServiceClass {
 		}
 	}
 
+	/**
+	 * Computes and applies the GC plan: inventories the mirror, plans which
+	 * manifests to keep versus delete against every referenced image, deletes
+	 * the losers, then triggers the mirror registry's own storage GC, removes
+	 * emptied repositories, and restarts the mirror container.
+	 *
+	 * @throws When the mirror container isn't running, or when a deploy/scan
+	 *   job is currently using it (see `busyReason`).
+	 */
 	async #collect(): Promise<MirrorGcResult> {
 		if (!(await DockerService.imageMirrorRunning())) {
 			throw new Error(

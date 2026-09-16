@@ -8,6 +8,7 @@ export interface ParsedVersion {
 	prerelease: string | null;
 }
 
+/** Parses a semver-ish version string (optional leading `v`, optional prerelease, build metadata ignored), or null if it doesn't match. */
 export function parseVersion(input: string): ParsedVersion | null {
 	const match = VERSION_RE.exec(input.trim());
 	if (!match) {
@@ -21,6 +22,7 @@ export function parseVersion(input: string): ParsedVersion | null {
 	};
 }
 
+/** Reformats a version string to bare `major.minor.patch[-prerelease]`, stripping any `v` prefix and build metadata, or null if it doesn't parse. */
 export function normalizeVersion(input: string): string | null {
 	const parsed = parseVersion(input);
 	if (!parsed) {
@@ -43,6 +45,11 @@ function comparePrerelease(a: string | null, b: string | null): number {
 	return a.localeCompare(b, "en", { numeric: true });
 }
 
+/**
+ * Compares two version strings by major/minor/patch then prerelease
+ * (a release beats any of its prereleases; two prereleases compare
+ * lexically/numerically). Returns -1/0/1, or null if either fails to parse.
+ */
 export function compareVersions(a: string, b: string): number | null {
 	const left = parseVersion(a);
 	const right = parseVersion(b);
@@ -59,6 +66,7 @@ export function compareVersions(a: string, b: string): number | null {
 	return Math.sign(comparePrerelease(left.prerelease, right.prerelease));
 }
 
+/** Whether `candidate` is a strictly newer version than `current`; false (not an error) if either fails to parse. */
 export function isNewerVersion(candidate: string, current: string): boolean {
 	return (compareVersions(candidate, current) ?? 0) > 0;
 }

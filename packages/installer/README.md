@@ -1,10 +1,10 @@
 # Homerun installer
 
 Single-command server setup: Docker Engine, a dedicated **rootless** Docker
-user, the `homerun`, and either the Homerun Agent or the full Homerun stack
-(Traefik + Postgres + the app itself), entirely from prebuilt release binaries
-and Docker images. Nothing is built from source, and neither Bun nor `git` need
-to exist on the target host at any point.
+user, the `homerun` Docker network, and either the Homerun Agent or the full
+Homerun stack (Traefik + Postgres + the app itself), entirely from prebuilt
+release binaries and Docker images. Nothing is built from source, and neither
+Bun nor `git` need to exist on the target host at any point.
 
 ## The one-liner
 
@@ -57,9 +57,10 @@ is documented in
    `docker.io/orochibraru/homerun` app image, see `steps/full-stack.ts`) and
    runs `docker compose pull && ...up -d` against it under that same
    account/daemon. Either way, every artifact involved is something CI already
-   published (see Release automation in the root `CLAUDE.md`), this installer's
-   own job is wiring rootless Docker up and pulling the right thing into it, not
-   building anything.
+   published (see Release automation in
+   `.agents/notes/packages-and-release.md`), this installer's own job is wiring
+   rootless Docker up and pulling the right thing into it, not building
+   anything.
 
 ## Flags
 
@@ -102,8 +103,8 @@ next to `compose.yaml`, or on `/settings`.
 Separate one-off script, not part of the TypeScript installer above : joins this
 host to an existing Docker Swarm as a worker (on its own rootless Docker daemon)
 and installs the Homerun Agent as a `systemd --user` unit against that same
-daemon. This is what makes a remote box usable once the main instance's
-Settings > Orchestration is switched to `"swarm"` (see
+daemon. This is what makes a remote box usable once the main instance's Settings
+→ Docker → Orchestration is switched to Swarm (see
 `$lib/services/docker/swarm.ts`) : a swarm-mode service only schedules onto
 nodes that are actually members of the swarm, plain Remote Hosts (a
 separately-reachable Docker daemon) don't automatically become that.
@@ -117,15 +118,15 @@ docker swarm join-token worker
 Then, on the node you want to add:
 
 ```bash
-curl -fsSL https://<wherever swarm-join.sh is hosted>/swarm-join.sh | sudo bash -s -- \
-  --token <SWMTKN-...> --manager <manager-ip>:2377
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/swarm-join.sh \
+  | sudo bash -s -- --token=<SWMTKN-...> --manager=<manager-ip>:2377
 ```
 
-Same "no hosted copy exists yet" caveat as `bootstrap.sh` above applies :
-download `packages/installer/swarm-join.sh` directly and run it with `sudo bash`
-until it's hosted somewhere. `--user=` (default `homerun`) and `--version=`
-(agent binary release tag, default `latest`) are both optional, same meaning as
-the main installer's flags.
+Same "only while the repo is public" caveat as `bootstrap.sh` above applies :
+otherwise download `packages/installer/swarm-join.sh` directly and run it with
+`sudo bash`. `--user=` (default `homerun`) and `--version=` (agent binary
+release tag, default `latest`) are both optional, same meaning as the main
+installer's flags.
 
 Deliberately a standalone bash script, not a mode of the TypeScript installer :
 a narrower job (join + agent only, no `homerun`/compose-stack setup) that
@@ -163,8 +164,8 @@ building locally is only for iterating on the installer itself.
 **Verified**: the full command sequence via `--dry-run` (every step's exact
 command line, for both `--mode=agent` and `--mode=full`, including the generated
 `compose.yaml` content), and that both the source (`bun run index.ts`) and the
-compiled binary (`bun run build` → `./dist/homerun-install`) produce identical
-dry-run output.
+compiled binary (`bun run scripts/build-packages.ts` →
+`./dist/homerun-installer-<arch>`) produce identical dry-run output.
 
 **The real, mutating steps are now verified too**, against two real disposable
 Multipass Ubuntu 24.04 VMs (superseding this section's earlier "needs a
@@ -183,7 +184,10 @@ disposable VM/CI runner this environment doesn't have" note):
   `--mode=agent` VM as a real `agent`-kind Remote Host, token-verified live,
   then deployed a real `nginx:alpine` service through it, confirmed via
   `docker ps` that the container landed on the agent VM (not locally), and
-  round-tripped stop/start through the agent successfully.
+  round-tripped stop/start through the agent successfully. That run predates
+  remote hosts becoming build-only: today an agent host builds images and never
+  runs services, see
+  [`docs/remote-hosts-and-agent.md`](../../docs/remote-hosts-and-agent.md).
 
 This run found and fixed five real bugs, all in
 `packages/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts` (see

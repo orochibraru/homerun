@@ -31,7 +31,15 @@ export interface NewImageScanInput {
 
 export type ImageScanSummary = Omit<ImageScan, "findings">;
 
+/**
+ * Wraps the `image_scan` table : one vulnerability scan of a service's image,
+ * keeping only the newest 25 per service.
+ */
 export class ImageScanDTO extends BaseDTO<ImageScan> {
+	/**
+	 * Inserts a scan result, then prunes the service's history down to its newest
+	 * 25 scans.
+	 */
 	static async create(input: NewImageScanInput): Promise<ImageScanDTO> {
 		const row: ImageScan = {
 			counts: input.counts ?? emptyCounts(),
@@ -52,6 +60,7 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 		return new ImageScanDTO(row);
 	}
 
+	/** Most recent scans of one service's images, newest first. */
 	static async listForService(
 		serviceId: string,
 		limit = 10,
@@ -65,6 +74,10 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 		return rows.map((row) => new ImageScanDTO(row));
 	}
 
+	/**
+	 * One page of a service's scans, searched by image ref, digest, status or
+	 * source server-side, plus the unpaged total.
+	 */
 	static async listForServicePaged(
 		serviceId: string,
 		query: ListQuery,
@@ -98,6 +111,7 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 		};
 	}
 
+	/** Loads one scan by id only if it belongs to the given service. */
 	static async getForService(
 		serviceId: string,
 		scanId: string,
@@ -110,6 +124,7 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 		return row ? new ImageScanDTO(row) : null;
 	}
 
+	/** The service's newest scan, null when it has never been scanned. */
 	static async latestForService(
 		serviceId: string,
 	): Promise<ImageScanDTO | null> {
@@ -117,6 +132,7 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 		return latest ?? null;
 	}
 
+	/** Deletes everything but the service's newest 25 scans. */
 	static async prune(serviceId: string): Promise<void> {
 		const [cutoff] = await db
 			.select({ scannedAt: imageScan.scannedAt })
@@ -138,14 +154,20 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 			);
 	}
 
+	/** The scan's id. */
 	get id(): string {
 		return this.row.id;
 	}
 
+	/** Finding counts per severity. */
 	get counts(): SeverityCounts {
 		return this.row.counts;
 	}
 
+	/**
+	 * The row without its (potentially large) findings list, for list views and
+	 * API responses.
+	 */
 	toSummary(): ImageScanSummary {
 		const { findings: _findings, ...summary } = this.row;
 		return summary;

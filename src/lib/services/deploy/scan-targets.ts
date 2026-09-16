@@ -13,6 +13,7 @@ export interface ScanTarget {
 	source: TrivySource;
 }
 
+/** A Trivy scan target for an image already on this Docker daemon, scanned via the local socket rather than a registry. */
 export function localScanTarget(ref: string): ScanTarget {
 	return { label: "the image on this host", ref, source: { kind: "docker" } };
 }
@@ -33,6 +34,12 @@ function registryTarget(
 	};
 }
 
+/**
+ * The Trivy scan targets to check for a just-built git image : a
+ * local-build plan only ever has the local daemon copy to scan, while a
+ * docker-build/agent-build plan scans both the pushed registry copy and the
+ * local copy pulled back onto this host.
+ */
 export function buildScanTargets(
 	plan: GitBuildPlan,
 	built: { image: string; tag: string },

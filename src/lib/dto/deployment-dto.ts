@@ -36,6 +36,10 @@ export type DeploymentUpdateInput = Partial<
 
 /** Wraps the `deployment` table : see ServiceDTO for the pattern this follows. */
 export class DeploymentDTO extends BaseDTO<Deployment> {
+	/**
+	 * Loads one deployment by id, unscoped : callers must check ownership
+	 * themselves.
+	 */
 	static async get(id: string): Promise<DeploymentDTO | null> {
 		const [row] = await db
 			.select()
@@ -45,6 +49,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return row ? new DeploymentDTO(row) : null;
 	}
 
+	/** Most recent deployments of one service, newest first. */
 	static async listForService(
 		serviceId: string,
 		limit = 10,
@@ -58,6 +63,10 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return rows.map((row) => new DeploymentDTO(row));
 	}
 
+	/**
+	 * A service's rollback candidates : deployments that produced an image and
+	 * reached running or stopped, newest first.
+	 */
 	static async listRevisions(
 		serviceId: string,
 		limit = 50,
@@ -77,6 +86,10 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return rows.map((row) => new DeploymentDTO(row));
 	}
 
+	/**
+	 * Every deployment whose health is still being watched after rollout, for the
+	 * auto-rollback checker.
+	 */
 	static async listWatching(): Promise<DeploymentDTO[]> {
 		const rows = await db
 			.select()
@@ -85,6 +98,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return rows.map((row) => new DeploymentDTO(row));
 	}
 
+	/** Loads one deployment by id only if it belongs to the given service. */
 	static async getForService(
 		serviceId: string,
 		id: string,
@@ -97,6 +111,10 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return row ? new DeploymentDTO(row) : null;
 	}
 
+	/**
+	 * The revisions kept across every service (the newest few distinct images per
+	 * service), whose images must survive cleanup and mirror garbage collection.
+	 */
 	static async listRetainedRevisions(): Promise<RevisionLike[]> {
 		const rows = await db
 			.select({
@@ -144,6 +162,10 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return rows.map((row) => new DeploymentDTO(row));
 	}
 
+	/**
+	 * Counts a service's failed deployments created at or before `until`, so the
+	 * Errors tab can say how many a dismissal is hiding.
+	 */
 	static async countFailedForServiceUpTo(
 		serviceId: string,
 		until: Date,
@@ -222,6 +244,10 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		}));
 	}
 
+	/**
+	 * Inserts a new deployment row with an empty log, using the caller's
+	 * pre-generated id when one is given.
+	 */
 	static async create(input: NewDeploymentInput): Promise<DeploymentDTO> {
 		const now = new Date();
 		const row: Deployment = {
@@ -248,6 +274,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		return new DeploymentDTO(row);
 	}
 
+	/** Writes the given fields to the row and mirrors them onto this instance. */
 	async update(input: DeploymentUpdateInput): Promise<void> {
 		await db
 			.update(deployment)
@@ -262,12 +289,17 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		await this.update({ log: next });
 	}
 
+	/** The deployment's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/**
+	 * The live progress log accumulated so far, empty when nothing was written.
+	 */
 	get log(): string {
 		return this.row.log ?? "";
 	}
+	/** The deployment this one rolled back to, null when it wasn't a rollback. */
 	get rollbackOfDeploymentId(): string | null {
 		return this.row.rollbackOfDeploymentId;
 	}

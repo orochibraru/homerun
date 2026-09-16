@@ -71,6 +71,7 @@ class CliAuthServiceClass {
 		}
 	}
 
+	/** Starts a new device-auth flow: generates a device code (for the CLI to poll with) and a human-typeable, collision-checked user code (for the approval page), storing them pending for `CODE_TTL_MS`. */
 	startDeviceAuth(): {
 		deviceCode: string;
 		expiresIn: number;
@@ -115,6 +116,12 @@ class CliAuthServiceClass {
 		return null;
 	}
 
+	/**
+	 * Approves a pending device-auth request as `userId`: creates a real
+	 * better-auth API key (`auth.api.createApiKey`) and stores it on the
+	 * entry so the CLI's next poll picks it up.
+	 * @returns False if no pending entry matches `userCode`.
+	 */
 	async approve(userCode: string, userId: string): Promise<boolean> {
 		const entry = this.findByUserCode(userCode);
 		if (!entry) {
@@ -135,6 +142,7 @@ class CliAuthServiceClass {
 		return true;
 	}
 
+	/** Marks a pending device-auth request denied. @returns False if no pending entry matches `userCode`. */
 	deny(userCode: string): boolean {
 		this.#prune();
 		const normalized = userCode.trim().toUpperCase();
@@ -148,6 +156,7 @@ class CliAuthServiceClass {
 		return false;
 	}
 
+	/** What the CLI's polling loop asks: current status for `deviceCode`, plus the created API key once approved. */
 	poll(deviceCode: string): {
 		apiKey?: string;
 		status: CliAuthStatus | "not_found";

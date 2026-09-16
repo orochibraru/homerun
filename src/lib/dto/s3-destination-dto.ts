@@ -28,6 +28,10 @@ export type S3DestinationUpdateInput = Partial<
 
 /** Wraps the `s3_destination` table : see ServiceDTO for the pattern this follows. */
 export class S3DestinationDTO extends BaseDTO<S3Destination> {
+	/**
+	 * Loads one S3 destination by id, scoped to its owner; null when missing or
+	 * owned by someone else.
+	 */
 	static async get(
 		id: string,
 		userId: string,
@@ -40,6 +44,7 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 		return row ? new S3DestinationDTO(row) : null;
 	}
 
+	/** Every S3 destination the user owns, newest first. */
 	static async list(userId: string): Promise<S3DestinationDTO[]> {
 		const rows = await db
 			.select()
@@ -85,6 +90,10 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 		};
 	}
 
+	/**
+	 * Up to `limit` of the user's destinations whose name, endpoint, bucket or
+	 * region matches `q`, newest first, for global search.
+	 */
 	static async search(
 		userId: string,
 		q: string,
@@ -109,6 +118,10 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 		return rows.map((row) => new S3DestinationDTO(row));
 	}
 
+	/**
+	 * Inserts a new destination, encrypting its secret access key before it is
+	 * stored.
+	 */
 	static async create(input: NewS3DestinationInput): Promise<S3DestinationDTO> {
 		const now = new Date();
 		const row: S3Destination = {
@@ -127,6 +140,10 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 		return new S3DestinationDTO(row);
 	}
 
+	/**
+	 * Saves edited destination fields; a blank secret access key keeps the stored
+	 * one, anything else is re-encrypted.
+	 */
 	async update(input: S3DestinationUpdateInput): Promise<void> {
 		const { secretAccessKey, ...rest } = input;
 		const patch = {
@@ -142,25 +159,32 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 		Object.assign(this.row, patch);
 	}
 
+	/** Deletes this destination row. */
 	async delete(): Promise<void> {
 		await db.delete(s3Destination).where(eq(s3Destination.id, this.row.id));
 	}
 
+	/** The destination's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The destination's display name. */
 	get name(): string {
 		return this.row.name;
 	}
+	/** The S3-compatible endpoint URL. */
 	get endpoint(): string {
 		return this.row.endpoint;
 	}
+	/** The bucket backups are uploaded to. */
 	get bucket(): string {
 		return this.row.bucket;
 	}
+	/** The bucket's region. */
 	get region(): string {
 		return this.row.region;
 	}
+	/** The access key id used to authenticate (not secret). */
 	get accessKeyId(): string {
 		return this.row.accessKeyId;
 	}

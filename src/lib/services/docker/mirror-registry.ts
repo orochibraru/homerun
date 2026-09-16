@@ -55,14 +55,21 @@ export interface ImageDigestRef {
 	imageRef: string;
 }
 
+/** Whether `name` matches the Docker Distribution repository-name grammar (lowercase, `/`-separated path segments). */
 export function isValidRepository(name: string): boolean {
 	return REPOSITORY_RE.test(name);
 }
 
+/** Whether `digest` is a well-formed `sha256:<64 hex chars>` content digest. */
 export function isValidDigest(digest: string): boolean {
 	return DIGEST_RE.test(digest);
 }
 
+/**
+ * Splits an image reference into its `image` and `tag` parts, ignoring any
+ * `@digest` suffix and defaulting the tag to "latest" when the reference
+ * carries none.
+ */
 export function splitImageRef(ref: string): { image: string; tag: string } {
 	const bare = ref.split("@")[0] ?? ref;
 	const colon = bare.lastIndexOf(":");
@@ -72,6 +79,12 @@ export function splitImageRef(ref: string): { image: string; tag: string } {
 	return { image: bare, tag: "latest" };
 }
 
+/**
+ * The synthetic tag name a kept-but-otherwise-untagged manifest is pinned
+ * under during garbage collection, so the mirror registry's own GC (which
+ * only understands tags, not this app's own deployed/scanned references)
+ * doesn't reap it. See `planMirrorGc`.
+ */
 export function keepTagFor(digest: string): string {
 	return `${KEEP_TAG_PREFIX}${digest.replace("sha256:", "").slice(0, 32)}`;
 }
@@ -81,6 +94,12 @@ function digestRepository(ref: ImageDigestRef): MirrorDigest {
 	return { digest: ref.digest, repository: mirrorRepository(image, tag) };
 }
 
+/**
+ * Computes what a mirror garbage-collection pass must keep, across a set of
+ * services: each service's currently-deployed tag and digests, plus its
+ * `scansPerService` most recent distinct scanned digests. Entries with a
+ * malformed digest or repository name are dropped.
+ */
 export function mirrorKeepSet(
 	references: ServiceMirrorReference[],
 	scansPerService = MIRROR_GC_SCANS_PER_SERVICE,
@@ -119,6 +138,13 @@ function key(repository: string, value: string): string {
 	return `${repository}@${value}`;
 }
 
+/**
+ * Diffs the mirror's actual `inventory` against a `MirrorKeepSet` to build a
+ * garbage-collection plan: which manifests to delete, which kept-but-untagged
+ * digests need a synthetic pin tag (`keepTagFor`) so the registry's own GC
+ * doesn't reap them, and which of the known `repositories` end up with
+ * nothing surviving in them at all.
+ */
 export function planMirrorGc(
 	inventory: MirrorTag[],
 	repositories: string[],
@@ -173,6 +199,7 @@ export function planMirrorGc(
 	};
 }
 
+/** The next page's path+query from a `Link: <...>; rel="next"` response header, or null when there's no next page. */
 export function nextCatalogPath(link: string | null): string | null {
 	const next = NEXT_LINK_RE.exec(link ?? "")?.[1];
 	if (!next) {
@@ -182,6 +209,7 @@ export function nextCatalogPath(link: string | null): string | null {
 	return `${url.pathname}${url.search}`;
 }
 
+/** Parses the leading number from `du -sk`-style output and converts it to bytes; null when it isn't parseable. */
 export function parseDuKilobytes(output: string): number | null {
 	const value = Number.parseInt(output.trim().split(/\s+/)[0] ?? "", 10);
 	return Number.isFinite(value) ? value * 1024 : null;
@@ -196,6 +224,7 @@ export class MirrorRegistryClient {
 		this.#fetch = fetchImpl;
 	}
 
+	/** Issues a fetch against the mirror's base URL, defaulting to a 30s abort timeout when `init` doesn't supply its own signal. */
 	async #request(path: string, init?: RequestInit): Promise<Response> {
 		return await this.#fetch(`${this.#baseUrl}${path}`, {
 			...init,
@@ -203,6 +232,10 @@ export class MirrorRegistryClient {
 		});
 	}
 
+	/**
+	 * @throws Always: an Error describing `what` failed, folding in the
+	 *   response's status and (truncated) body text.
+	 */
 	async #fail(response: Response, what: string): Promise<never> {
 		const body = await response.text().catch(() => "");
 		throw new Error(
@@ -210,6 +243,7 @@ export class MirrorRegistryClient {
 		);
 	}
 
+	/** Whether the mirror's registry API answers `/v2/` within a short (3s) timeout. */
 	async ping(): Promise<boolean> {
 		try {
 			const response = await this.#request("/v2/", {
@@ -221,6 +255,12 @@ export class MirrorRegistryClient {
 		}
 	}
 
+	/**
+	 * Lists every repository in the mirror, paging through `_catalog` via
+	 * its `Link` header, filtered to well-formed repository names.
+	 *
+	 * @throws When a catalog page request fails.
+	 */
 	async catalog(): Promise<string[]> {
 		const repositories: string[] = [];
 		let path: string | null = `/v2/_catalog?n=${CATALOG_PAGE_SIZE}`;
@@ -239,6 +279,12 @@ export class MirrorRegistryClient {
 		return repositories.filter(isValidRepository);
 	}
 
+	/**
+	 * A repository's tags. Returns an empty array for a repository that
+	 * doesn't exist (404) rather than throwing.
+	 *
+	 * @throws On any other failed response.
+	 */
 	async tags(repository: string): Promise<string[]> {
 		const response = await this.#request(`/v2/${repository}/tags/list`);
 		if (response.status === 404) {
@@ -251,6 +297,12 @@ export class MirrorRegistryClient {
 		return body.tags ?? [];
 	}
 
+	/**
+	 * Resolves `repository:reference` to its content digest via a manifest
+	 * HEAD request. Null when the reference doesn't exist (404).
+	 *
+	 * @throws On any other failed response.
+	 */
 	async digest(repository: string, reference: string): Promise<string | null> {
 		const response = await this.#request(
 			`/v2/${repository}/manifests/${reference}`,
@@ -265,6 +317,11 @@ export class MirrorRegistryClient {
 		return response.headers.get("docker-content-digest");
 	}
 
+	/**
+	 * Resolves every tag of `repository` to its digest, one HEAD request at
+	 * a time (kept sequential to be idle-friendly to the registry), skipping
+	 * any tag whose digest couldn't be resolved.
+	 */
 	async inventory(repository: string): Promise<MirrorTag[]> {
 		const entries: MirrorTag[] = [];
 		for (const tag of await this.tags(repository)) {
@@ -277,6 +334,13 @@ export class MirrorRegistryClient {
 		return entries;
 	}
 
+	/**
+	 * Copies an existing manifest (read by digest) onto `entry.tag` within
+	 * the same repository (a GET then a PUT). Returns false when the source
+	 * manifest doesn't exist (404) rather than throwing.
+	 *
+	 * @throws On any other failed read or write.
+	 */
 	async tagManifest(entry: MirrorTag): Promise<boolean> {
 		const source = await this.#request(
 			`/v2/${entry.repository}/manifests/${entry.digest}`,
@@ -307,6 +371,12 @@ export class MirrorRegistryClient {
 		return true;
 	}
 
+	/**
+	 * Deletes a manifest by digest. Returns false when it's already gone
+	 * (404) rather than throwing.
+	 *
+	 * @throws On any other failed response.
+	 */
 	async deleteManifest(entry: MirrorDigest): Promise<boolean> {
 		const response = await this.#request(
 			`/v2/${entry.repository}/manifests/${entry.digest}`,

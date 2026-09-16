@@ -204,9 +204,13 @@ complete, with the raw build/pull output streaming underneath. Progress arrives
 over server-sent events (the server pushes each new line and status change; if
 that stream can't be held open, the panel falls back to polling), and it resumes
 correctly if you reload the page mid-deploy, or if the deploy was started
-somewhere else entirely (a template quick-deploy, cron). Below it, deployment
-history lists every attempt with status, image digest, and an expandable full
-log.
+somewhere else entirely (a template quick-deploy, cron). Below it sit a
+**Resource usage** chart for the service's own container (CPU, memory and
+network traffic, live or over the last hour, day, week, month, year or all of
+it, sampled every minute), a **Connections** panel listing the services it
+references through env vars and the ones that reference it, and a tail of its
+live logs. Deployment history, every attempt with its status, image and full
+log, is on the [Revisions](#revisions-and-rollback) tab.
 
 ### Revisions and rollback
 
@@ -228,7 +232,7 @@ current ones, on purpose, since those are edited deliberately and a rollback is
 for undoing a bad build.
 
 The last 5 distinct images of every service are **retained**: Docker Cleanup's
-image prune (including Clean up Docker host) and the image mirror cleanup skip
+image prune (including **Quick cleanup**) and the image mirror cleanup skip
 them, so rolling back to any of them never needs a rebuild. Older revisions stay
 listed but may need their image pulled or rebuilt.
 
@@ -425,8 +429,20 @@ off:
 - **Org ID** and an **API token** for it.
 - **Main site name**: the Pangolin site (tunnel agent) whose host runs this
   instance's Traefik. It must already exist in Pangolin.
-- Optionally a **target port**, defaulting to 80, since Pangolin terminates
-  public TLS itself.
+- Optionally a **target host**, the address the Pangolin site agent reaches
+  Traefik at. Left blank it's detected: Traefik's container name when Newt runs
+  as a container on the same network, `localhost` when it runs on this host with
+  host networking. Set it when Newt runs on another machine. The page also tells
+  you whether it found a Newt tunnel container on this host; the **Newt
+  (Pangolin tunnel)** template deploys one.
+- Optionally a **target port**, defaulting to 443, where this instance's service
+  routers live. A target on 80 reaches an entrypoint with no matching router and
+  Traefik answers 404.
+- **Let Pangolin handle sign-in**, off by default. On, the Resources Homerun
+  creates keep Pangolin's own SSO and the
+  [per-app login wall](#per-app-login-wall) steps aside for anything Pangolin
+  publishes, so visitors sign in once. Off, Homerun owns access and every
+  Resource it creates has Pangolin SSO turned off.
 
 **Test connection** checks the whole set rather than just that the token
 authenticates: it confirms the site exists, and that one of your registered
@@ -493,14 +509,40 @@ being registered separately. `packages/installer/swarm-join.sh` (see
 to an existing swarm and installs the Homerun Agent on it; the swarm scheduler
 places tasks there from then on.
 
-## Logs
+## Observability
 
-The Logs tab live-streams a running container's stdout/stderr straight from the
+The **Observability** tab is where a service tells you whether it's healthy:
+uptime probes, live logs, failed deploys and the errors Homerun logged about it.
+
+### Uptime
+
+Every minute Homerun probes each deployed service two ways, and the tab draws
+the recent results as two heartbeat strips with an uptime percentage, latency,
+and the reason for the latest failure plus hints for fixing it:
+
+- **From the network**: the container's own port, reached over the Docker
+  network. It runs the service's [healthcheck command](#settings) when it has
+  one, opens a TCP connection for a database image, and makes an HTTP request
+  otherwise.
+- **From its hostname**: the public hostname Traefik publishes
+  (`<slug>.<base domain>` or the custom domain). It's skipped for a service that
+  isn't DNS-resolvable, and while the base domain is a loopback address like
+  `localhost`, since probing it from this machine proves nothing.
+
+A probe that changes from up to down, or back, fires the **Service down** or
+**Service recovered** event on any
+[notification channel](operations.md#notifications) subscribed to it. Results
+are kept for a week; **Clear heartbeats** empties the history. Uptime also feeds
+[status pages](operations.md#status-pages).
+
+### Logs
+
+The log panel live-streams a running container's stdout/stderr straight from the
 browser: the server pushes each line as the container writes it over a long-
 lived HTTP response, no polling and no WebSocket (SvelteKit 2 has no WebSocket
-route API; nothing here needs a client-to-server socket anyway). The same viewer
-is embedded on the Overview tab once a service has deployed at least once, so
-recent output is visible without switching tabs.
+route API; nothing here needs a client-to-server socket anyway). A shorter tail
+of the same viewer is on the Overview tab once a service has deployed at least
+once, so recent output is visible without switching tabs.
 
 ## Terminal
 
@@ -536,16 +578,17 @@ returns immediately and one job never runs twice concurrently. Each run's exit
 code and captured output are kept on the job's page, and enabled jobs also show
 up on the Scheduling page next to cron redeploys and backups.
 
-## Errors
+### Errors
 
-A per-service Errors tab surfaces both failed deployments and a live "container
-currently down" banner, plus an "Application errors" section, persisted
-warn/error-level app log lines that mention this service, a lightweight view of
-app-level failures alongside deploy failures. If a service's container was
-removed outside Homerun (e.g. a manual `docker rm`), the tab shows a distinct
-"container is gone" banner with a **Resolve** button instead: click it to clear
-the stale reference so the service goes back to its normal never-deployed state
-and Deploy works again.
+Below the logs, **Failed deployments** and **Application errors** (persisted
+warn/error-level app log lines that mention this service) sit alongside a
+"container currently down" banner when the container has crashed. A deploy that
+reaches running hides the errors logged before it, and **Clear errors** does the
+same by hand; a note says how many are hidden and what cleared them, with a link
+to show them again. If a service's container was removed outside Homerun (e.g. a
+manual `docker rm`), the tab shows a distinct "container is gone" banner with a
+**Resolve** button instead: click it to clear the stale reference so the service
+goes back to its normal never-deployed state and Deploy works again.
 
 ## Notifications
 
@@ -554,16 +597,24 @@ services, deploy succeeded or failed, a build stopped by failing status checks,
 an unhealthy or rolled back revision, service created, started or stopped, an
 auto-redeploy firing, an image scan finding a critical vulnerability, and
 runtime errors. Click an entry to jump to its service. See
-[Operations](operations.md#notifications) for how it differs from the Errors
-tab's persisted log view, and for sending the same build/update/deploy/uptime
-events out to a Discord webhook, a generic webhook, or email.
+[Operations](operations.md#notifications) for how it differs from the
+Observability tab's persisted error view, and for sending the same
+build/update/deploy/uptime events out to a Discord webhook, a generic webhook,
+or email.
 
 ## Settings
 
 Name, slug, restart policy, which stack the service belongs to, the
-[scheduled redeploy](#scheduled-redeploy) above, whether its image is
-[scanned](#image-scanning), [auto-rollback](#revisions-and-rollback), and a
-danger-zone delete (typed-confirm, see [The services list](#the-services-list)).
+[scheduled redeploy](#scheduled-redeploy) above, the pull policy, whether its
+image is [scanned](#image-scanning), [auto-rollback](#revisions-and-rollback),
+and a danger-zone delete (typed-confirm, see
+[The services list](#the-services-list)).
+
+**Pull policy** decides whether a deploy pulls the image: **Always** (the
+default, and the only way a moving tag like `:latest` picks up a new build),
+**If missing** (only when the image isn't on the host yet, faster redeploys but
+a moving tag goes stale), or **Never** (for an image built or loaded onto the
+host by hand, the deploy fails if it isn't there).
 
 **Healthcheck command** overrides the image's own Docker healthcheck with a
 shell command run inside the container every 30s (exit 0 = healthy). When a

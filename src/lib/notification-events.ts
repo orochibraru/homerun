@@ -102,10 +102,15 @@ const EVENT_SET = new Set<string>(
 	NOTIFICATION_EVENTS.map((info) => info.event),
 );
 
+/** Whether a string is a known notification event name. */
 export function isNotificationEvent(value: string): value is NotificationEvent {
 	return EVENT_SET.has(value);
 }
 
+/**
+ * Whether an event reports something going wrong, used to colour channel
+ * messages red rather than green.
+ */
 export function isFailureEvent(event: NotificationEvent): boolean {
 	return (
 		event.endsWith(".failed") ||
@@ -117,6 +122,10 @@ export function isFailureEvent(event: NotificationEvent): boolean {
 	);
 }
 
+/**
+ * Picks the notification event for a finished deploy: `build.*` for git-based
+ * services, `update.*` for scheduled image updates, `deploy.*` otherwise.
+ */
 export function deployEvent(
 	buildSource: string,
 	trigger: "manual" | "cron",
@@ -138,6 +147,10 @@ const DEPLOY_TITLES: Partial<Record<NotificationEvent, string>> = {
 	"update.succeeded": "was updated",
 };
 
+/**
+ * Builds a deploy notification title such as "api failed to deploy", falling
+ * back to the raw event name for events without a phrase.
+ */
 export function deployTitle(
 	event: NotificationEvent,
 	serviceName: string,

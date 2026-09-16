@@ -13,6 +13,7 @@ import { ComposeImportService } from "./compose-import.service.ts";
 const logger = new Logger("Migration");
 
 class MigrationServiceClass {
+	/** Annotates raw migration entries (from a Coolify/Dokploy read) with slug-collision/blocked state against the user's existing services, for the Migrate tab's review step. */
 	async preview(
 		entries: MigrationEntry[],
 		userId: string,
@@ -21,6 +22,13 @@ class MigrationServiceClass {
 		return previewEntries(entries, new Set(services.map((svc) => svc.slug)));
 	}
 
+	/**
+	 * Imports every non-blocked entry, resolving (or creating) one stack per
+	 * distinct source project name (`#stackFor`) and delegating each entry's
+	 * services to `ComposeImportService.importPlan`. Never throws: a
+	 * per-entry failure is recorded under `skipped` rather than aborting the
+	 * rest of the batch.
+	 */
 	async importEntries(
 		entries: MigrationEntry[],
 		userId: string,
@@ -67,6 +75,7 @@ class MigrationServiceClass {
 		return result;
 	}
 
+	/** Resolves the stack id for a source project name: an existing stack of the same name, a newly created one, or a cached id from an earlier entry in the same import batch. */
 	async #stackFor(
 		name: string,
 		userId: string,
@@ -94,6 +103,7 @@ class MigrationServiceClass {
 		return id;
 	}
 
+	/** Appends a numeric suffix to `slug` until it doesn't collide with an existing stack. */
 	async #uniqueStackSlug(slug: string): Promise<string> {
 		let candidate = slug;
 		let attempt = 2;

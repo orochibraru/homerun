@@ -56,6 +56,12 @@ class SelfUpdateServiceClass {
 	#release: { expiresAt: number; value: LatestRelease | null } | null = null;
 	#inFlightRelease: Promise<LatestRelease | null> | null = null;
 
+	/**
+	 * The latest GitHub release, cached in `#release` for `RELEASE_CACHE_MS`
+	 * (or `RELEASE_FAILURE_CACHE_MS` after a failed check, so a GitHub outage
+	 * doesn't hammer the API every call). Concurrent calls during a refresh
+	 * share the same in-flight fetch via `#inFlightRelease`.
+	 */
 	async latestRelease(): Promise<LatestRelease | null> {
 		if (this.#release && this.#release.expiresAt > Date.now()) {
 			return this.#release.value;
@@ -66,6 +72,11 @@ class SelfUpdateServiceClass {
 		return await this.#inFlightRelease;
 	}
 
+	/**
+	 * Fetches and caches the latest GitHub release, writing to `#release`
+	 * either way. Never throws: logs and caches a null result on any network
+	 * error, non-2xx response, or unparseable tag.
+	 */
 	async #fetchLatestRelease(): Promise<LatestRelease | null> {
 		try {
 			const res = await fetch(RELEASES_URL, {
@@ -104,6 +115,7 @@ class SelfUpdateServiceClass {
 		}
 	}
 
+	/** The current vs. latest version and whether an update is available, for the settings page's update card. */
 	async releaseStatus(): Promise<ReleaseStatus> {
 		const latest = await this.latestRelease();
 		return {
@@ -114,6 +126,7 @@ class SelfUpdateServiceClass {
 		};
 	}
 
+	/** Candidate container ids this process might be running in: the container's own hostname, plus one recovered from `/proc/self/mountinfo` if readable, deduplicated. */
 	async #ownContainerIds(): Promise<string[]> {
 		const mountinfo = await readFile("/proc/self/mountinfo", "utf8").catch(
 			() => "",
@@ -124,6 +137,14 @@ class SelfUpdateServiceClass {
 		];
 	}
 
+	/**
+	 * Inspects `#ownContainerIds()`'s candidates via the Docker API and, for
+	 * the first one that exists, derives its Compose target
+	 * (`composeTargetFrom`) and the host path its Docker socket bind mount
+	 * comes from. Returns null if no candidate inspects successfully, or the
+	 * first one that does has no usable Compose labels (i.e. this process
+	 * isn't running as a Compose-managed container).
+	 */
 	async #resolveSelf(): Promise<ResolvedSelf | null> {
 		const docker = DockerService.getDocker();
 		for (const id of await this.#ownContainerIds()) {
@@ -150,6 +171,12 @@ class SelfUpdateServiceClass {
 		return null;
 	}
 
+	/**
+	 * Checks whether a self-update can safely start: the app must resolve to
+	 * a Compose service (`#resolveSelf`), and no deploy or job may be
+	 * queued/running. Never throws: a `#resolveSelf` failure is logged and
+	 * treated as "unsupported" rather than propagated.
+	 */
 	async preflight(): Promise<UpdatePreflight> {
 		const [self, activity] = await Promise.all([
 			this.#resolveSelf().catch((err) => {
@@ -188,6 +215,17 @@ class SelfUpdateServiceClass {
 		return { ...base, ready: true, reason: null };
 	}
 
+	/**
+	 * Starts a self-update: holds the job worker (`JobWorker.hold()`) so no
+	 * new job starts mid-update, re-checks `preflight()` and that no job is
+	 * still running, then launches the updater container (`#launchUpdater`)
+	 * which pulls and recreates this app's own compose service. Releases the
+	 * hold and rethrows on any failure before the updater launches; once it
+	 * launches, the hold is left in place (this process is about to be
+	 * replaced).
+	 * @throws When already on the latest release, an update is already in
+	 * progress, or `preflight`/business checks fail.
+	 */
 	async start(): Promise<{ version: string }> {
 		const status = await this.releaseStatus();
 		if (!(status.latest && status.updateAvailable)) {
@@ -221,6 +259,12 @@ class SelfUpdateServiceClass {
 		}
 	}
 
+	/**
+	 * Pulls the `docker` CLI image, removes any leftover updater container
+	 * from a previous run, then creates and starts a fresh one bound to the
+	 * host Docker socket and compose directories, running `updaterScript` to
+	 * pull and recreate this app's own service.
+	 */
 	async #launchUpdater(self: ResolvedSelf, version: string): Promise<void> {
 		await DockerService.pullImage({
 			image: UPDATER_IMAGE,

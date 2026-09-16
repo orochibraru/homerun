@@ -63,6 +63,12 @@ const VALUED_ARGS: Record<string, (opts: Options, value: string) => void> = {
 
 /** argv parsing, grouped as a class for consistency with the rest of installer/ : neither method carries instance state, both are pure/one-shot over the given argv. */
 class InstallerOptionsParser {
+	/**
+	 * Parses installer flags over the defaults.
+	 *
+	 * @param argv The arguments after the binary name.
+	 * @returns The resolved options. Exits the process on `--help` or an unknown argument.
+	 */
 	parseArgs(argv: string[]): Options {
 		const opts: Options = { ...DEFAULTS };
 		for (const arg of argv) {
@@ -94,6 +100,7 @@ class InstallerOptionsParser {
 		process.exit(1);
 	}
 
+	/** Prints the installer's usage and flag reference to stdout. */
 	printHelp(): void {
 		console.log(`
 homerun-install : sets up Docker (rootless), the homerun, and the

@@ -26,11 +26,11 @@ roles & invitations below), don't assume better-auth's default account-deletion
 behavior is sufficient; it isn't, by design of this app's extra tables (see Data
 model above).
 
-`config.auth.crossSubdomainCookies` (env `AUTH_CROSS_SUBDOMAIN`, default off,
-also DB-editable, see Instance settings above) sets better-auth's
-`advanced.crossSubDomainCookies` to scope the session cookie to `.{baseDomain}`
-instead of the exact host, see the per-service auth gate below for why, and its
-documented, tested limitation.
+`config.auth.crossSubdomainCookies` (`auth.crossSubdomainCookies` in
+`homerun.yaml`, default off, also DB-editable, see Instance settings above) sets
+better-auth's `advanced.crossSubDomainCookies` to scope the session cookie to
+`.{baseDomain}` instead of the exact host, see the per-service auth gate below
+for why, and its documented, tested limitation.
 
 **`advanced.useSecureCookies` is set explicitly from the `ORIGIN` env var's
 scheme, and it has to be.** Real, reproduced bug, not a precaution: sign-in on

@@ -248,6 +248,14 @@ function readYamlConfig(): unknown {
 	return parsed ?? {};
 }
 
+/**
+ * Builds the file+env configuration: validates the YAML config file, then layers
+ * the env-only values (`DATABASE_URL`, `PORT`, `AUTH_SECRET`, `ORIGIN`) and the
+ * default forwardAuth check URL over it.
+ *
+ * @throws When the config file fails schema validation, or the merged config
+ * does (e.g. a missing auth secret or database URL).
+ */
 export const parseConfig = (): AppConfig => {
 	const path = configFilePath();
 	const yamlResult = yamlConfigSchema.safeParse(readYamlConfig());
@@ -309,6 +317,11 @@ export function envDefaultsForDisplay() {
 	};
 }
 
+/**
+ * Whether outgoing email can be sent: SMTP is enabled and host, port, user,
+ * password and from address are all set. Logs a console warning when it's
+ * enabled but incomplete.
+ */
 export function isSmtpEnabled(): boolean {
 	const enabledInConfig = config.smtp?.enabled;
 	const configuredProperly =
@@ -340,6 +353,22 @@ const fileDefaults = parseConfig();
 // settings change is visible everywhere without re-importing anything.
 export const config: AppConfig = structuredClone(fileDefaults);
 
+const authCheckUrlPinnedByFile = Boolean(
+	yamlConfigSchema.safeParse(readYamlConfig()).data?.authCheckUrl,
+);
+
+/**
+ * Replaces the default forwardAuth check URL with one detected at boot (the
+ * dashboard's own container name on the Docker network), unless the config file
+ * pins `authCheckUrl`. Takes effect on the next `applyInstanceSettings`.
+ */
+export function setDetectedAuthCheckUrl(url: string): void {
+	if (authCheckUrlPinnedByFile) {
+		return;
+	}
+	fileDefaults.authCheckUrl = url;
+}
+
 /**
  * Merges DB-backed instance settings (see InstanceSettingsDTO) over the
  * file+env defaults, in place. Called once at boot (hooks.server.ts's
@@ -349,17 +378,6 @@ export const config: AppConfig = structuredClone(fileDefaults);
  * this module for `databaseUrl`, so this module must stay a leaf to avoid a
  * circular import.
  */
-const authCheckUrlPinnedByFile = Boolean(
-	yamlConfigSchema.safeParse(readYamlConfig()).data?.authCheckUrl,
-);
-
-export function setDetectedAuthCheckUrl(url: string): void {
-	if (authCheckUrlPinnedByFile) {
-		return;
-	}
-	fileDefaults.authCheckUrl = url;
-}
-
 export function applyInstanceSettings(
 	override: InstanceSettingsOverride = {},
 ): void {
@@ -370,7 +388,7 @@ export function applyInstanceSettings(
 	applyTraefikOverride(override);
 }
 
-/** Instance-wide addressing : the base domain and the forwardAuth check URL. */
+/** Instance-wide addressing : the base domain, the forwardAuth check URL and the Pangolin flags. */
 function applyCoreOverride(override: InstanceSettingsOverride): void {
 	config.authCheckUrl = override.authCheckUrl ?? fileDefaults.authCheckUrl;
 	config.pangolinEnabled = override.pangolinEnabled ?? false;

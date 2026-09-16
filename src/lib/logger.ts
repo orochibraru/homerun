@@ -123,10 +123,12 @@ export class Logger {
 	logLevel: LogLevel;
 
 	/**
-	 * Initializes a new instance of the Logger class.
-	 * @param prefix Optional string to be used as a prefix for log messages.
-	 * Sets the log format based on the LOG_FORMAT environment variable. If the environment variable
-	 * is not set, defaults to 'console'. Throws an error if the format is invalid.
+	 * Creates a scoped logger. Format and level come from `config`; in dev
+	 * (outside a build) the level is forced to DEBUG.
+	 *
+	 * @param prefix Scope name shown in brackets on every line and stored as
+	 * the `scope` of persisted warn/error logs.
+	 * @throws When the console format is used with an unknown `config.logLevel`.
 	 */
 	constructor(prefix?: string) {
 		this.prefix = prefix;
@@ -148,6 +150,14 @@ export class Logger {
 		}
 	}
 
+	/**
+	 * Logs a message at an explicit level, persisting it to `app_log` when the
+	 * level is warn or error. Unlike the per-level methods it ignores the logger's
+	 * configured minimum level.
+	 *
+	 * @param metadata Extra values appended to the console line or spread into the
+	 * JSON object.
+	 */
 	log({
 		level,
 		message,
@@ -201,15 +211,13 @@ export class Logger {
 	}
 
 	/**
-	 * Logs an HTTP request and response information.
-	 * @param {HttpLog} log - An object containing details of the HTTP request/response.
-	 * @param {Request} log.req - The HTTP request object.
-	 * @param {Response} log.res - The HTTP response object.
-	 * @param {number} log.duration - The duration of the request in milliseconds.
-	 * @param {string} log.path - The path of the request.
-	 * @param {'pre' | 'post'} log.type - The type of log, either 'pre' for request or 'post' for response.
-	 * If `this.logFormat` is set to 'console', logs formatted information to the console.
-	 * Otherwise, logs a JSON object with relevant HTTP details.
+	 * Logs an HTTP request line, as coloured console output or a JSON object
+	 * depending on the configured format. Not filtered by log level.
+	 *
+	 * @param log.duration Request duration in milliseconds; 0 is shown as pending in JSON.
+	 * @param log.url The request URL, used for protocol, path and query.
+	 * @param log.type `pre` logs the incoming request only, `post` adds the
+	 * response status (red above 307) and duration.
 	 */
 	http({ req, res, duration, url, type }: HttpLog) {
 		if (this.logFormat === "console") {
@@ -290,8 +298,9 @@ export class Logger {
 	}
 
 	/**
-	 * Logs a WARN level message to the console.
-	 * @param input The input to log. Can be any type. If an object, it will be stringified.
+	 * Logs a WARN level message to the console and, best-effort in the
+	 * background, persists it to the `app_log` table.
+	 * @param input The input to log. Can be any type; stringified only for persistence.
 	 * @param optionalParams Any additional parameters to log.
 	 * If `this.logFormat` is set to 'console', the message will be logged as a console.log with a yellow prefix.
 	 * Otherwise, it will be logged as a JSON object with the level set to 'warn'.
@@ -328,7 +337,10 @@ export class Logger {
 	}
 
 	/**
-	 * Logs an ERROR level message to the console.
+	 * Logs an ERROR level message to the console and, best-effort in the
+	 * background, persists it to the `app_log` table. When the message names a
+	 * `service=<uuid>` outside the Deploy scope, also raises a service error
+	 * notification.
 	 * @param err The error to log.
 	 * @param optionalParams Any additional parameters to log.
 	 * If `this.logFormat` is set to 'console', logs an error to the console with a red prefix.
@@ -401,10 +413,9 @@ export class Logger {
 	 * Logs a TRACE level message to the console.
 	 * @param input The input to log. Can be any type. If an object, it will be stringified.
 	 * @param optionalParams Any additional parameters to log.
-	 * If `this.logFormat` is set to 'console', the message will be logged as a console.log with a cyan prefix.
+	 * If `this.logFormat` is set to 'console', the message will be logged as a console.log with a white prefix, preceded by a blank line.
 	 * Otherwise, it will be logged as a JSON object with the level set to 'trace'.
 	 */
-
 	trace(input: unknown, ...optionalParams: unknown[]) {
 		const acceptedLogLevels = [logLevels.TRACE];
 		// @ts-expect-error Completely normal we're catching this behaviour

@@ -54,6 +54,11 @@ function run(cmd: string, args: string[]): Promise<string | null> {
 class AgentSystemStatsService {
 	#lastCpuSample: CpuSample | null = null;
 
+	/**
+	 * Samples host CPU, memory, disk and GPU usage. CPU% is the delta against
+	 * the previous call's sample, so the first call reports 0 and every call
+	 * replaces the stored sample.
+	 */
 	async getSystemStats(): Promise<SystemStats> {
 		const sample = this.#sampleCpu();
 		let cpuPercent = 0;
@@ -87,6 +92,7 @@ class AgentSystemStatsService {
 		};
 	}
 
+	/** Sums idle and total CPU time across every core, as a point-in-time sample to diff against. */
 	#sampleCpu(): CpuSample {
 		let idle = 0;
 		let total = 0;
@@ -102,6 +108,7 @@ class AgentSystemStatsService {
 		return { idle, total };
 	}
 
+	/** Reads usage of the filesystem holding the working directory via `df`, or null when `df` fails or its output can't be parsed. */
 	async #diskStats(): Promise<{
 		totalMb: number;
 		usedMb: number;
@@ -131,6 +138,7 @@ class AgentSystemStatsService {
 		};
 	}
 
+	/** Reads the first NVIDIA GPU's name, memory and utilisation via `nvidia-smi`, or null when it isn't available. */
 	async #gpuStats(): Promise<SystemStats["gpu"]> {
 		const out = await run("nvidia-smi", [
 			"--query-gpu=name,memory.total,memory.used,utilization.gpu",

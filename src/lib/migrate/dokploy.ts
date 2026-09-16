@@ -49,6 +49,10 @@ const LIST_KEYS: Record<string, DokployResourceType> = {
 	redis: "redis",
 };
 
+/**
+ * The id field name Dokploy uses for a resource type (`applicationId`,
+ * `postgresId`, ...).
+ */
 export function dokployIdKey(type: DokployResourceType): string {
 	return type === "application" ? "applicationId" : `${type}Id`;
 }
@@ -62,6 +66,11 @@ function refsIn(container: RawRow, projectName: string): DokployRef[] {
 	);
 }
 
+/**
+ * Flattens Dokploy's `project.all` response into references to every
+ * application, compose stack and database, reading them from each environment
+ * when the project has environments and from the project itself otherwise.
+ */
 export function dokployRefs(projects: unknown[]): DokployRef[] {
 	return projects.filter(isRow).flatMap((project) => {
 		const projectName = str(project, "name") ?? "Dokploy";
@@ -71,6 +80,12 @@ export function dokployRefs(projects: unknown[]): DokployRef[] {
 	});
 }
 
+/**
+ * Converts a Dokploy resource's mounts into volume drafts: named volumes stay
+ * named, bind mounts get a generated volume name, and other mount types (file
+ * mounts and the like) are skipped with a warning. A `:ro` suffix marks the
+ * mount read-only.
+ */
 function mountsFor(
 	row: RawRow,
 	slug: string,
@@ -156,6 +171,14 @@ export interface DokployGitSource {
 	url: string | null;
 }
 
+/**
+ * Resolves the repository URL, branch and build path of a Dokploy application
+ * from the provider-specific fields of its source type (GitHub, GitLab, Gitea,
+ * Bitbucket or custom git).
+ *
+ * @returns null for a non-git source type; `url` is null when the fields needed
+ * to build it are missing.
+ */
 export function dokployGitSource(row: RawRow): DokployGitSource | null {
 	const sourceType = str(row, "sourceType");
 	const repoPath = (owner: string | null, repo: string | null) =>
@@ -240,6 +263,10 @@ function blockedOutcome(blocked: string, summary: string): AppOutcome {
 	return { blocked, drafts: [], summary };
 }
 
+/**
+ * Drafts a Dokploy application deployed from a Docker image, warning when it
+ * pulled from a private registry. Blocked when no image is set.
+ */
 function imageApp({ base, row, slug, warnings }: AppContext): AppOutcome {
 	const image = str(row, "dockerImage");
 	if (!image) {
@@ -262,6 +289,11 @@ function imageApp({ base, row, slug, warnings }: AppContext): AppOutcome {
 	return { blocked: null, drafts: [draft], summary: imageSummary(draft) };
 }
 
+/**
+ * Drafts a Dokploy application built from a git source as a git-based service.
+ * Blocked when the source has nothing to clone, isn't a Dockerfile build, or has
+ * no repository URL.
+ */
 function gitApp(
 	{ base, row, slug, warnings }: AppContext,
 	sourceType: string,
@@ -308,6 +340,11 @@ function gitApp(
 
 const PROJECT_VARIABLE_RE = /\$\{\{/;
 
+/**
+ * Converts a Dokploy application detail row into a migration entry with one
+ * service draft, built from its image or git source, warning about settings that
+ * don't carry over (custom command, project-level variable references).
+ */
 export function dokployApplication(
 	row: RawRow,
 	projectName: string,
@@ -356,6 +393,10 @@ interface DeclaredComposeVolume {
 	name: string | null;
 }
 
+/**
+ * Reads the top-level `volumes:` block of a compose file into a map of each
+ * volume's explicit `name` and `external` flag. Invalid YAML yields an empty map.
+ */
 function declaredComposeVolumes(
 	file: string,
 ): Map<string, DeclaredComposeVolume> {
@@ -377,6 +418,12 @@ function declaredComposeVolumes(
 	return declared;
 }
 
+/**
+ * Rewrites a compose named volume to the real Docker volume Dokploy created, so
+ * the imported service reuses its data: an explicit `name:` wins, external
+ * volumes keep their name, and anything else gets Dokploy's `<appName>_` project
+ * prefix. Bind mounts pass through.
+ */
 export function dokployComposeVolume(
 	volume: ComposeVolumeDraft,
 	appName: string,
@@ -411,6 +458,12 @@ function prefixComposeVolumes(
 	}
 }
 
+/**
+ * Converts a Dokploy compose stack into a migration entry by parsing its stored
+ * compose file, remapping volume names to Dokploy's, and marking services that
+ * have a Dokploy domain as public on that domain's port. Blocked when no compose
+ * file is stored or the file can't be parsed.
+ */
 export function dokployCompose(
 	row: RawRow,
 	projectName: string,
@@ -492,6 +545,12 @@ const DATABASES: Record<string, { env: Record<string, string>; port: number }> =
 		redis: { env: {}, port: 6379 },
 	};
 
+/**
+ * Converts a Dokploy database into a single private service draft, mapping its
+ * stored credentials onto the image's standard env vars and warning about the
+ * Redis password and host port exposure, which don't carry over. Blocked when no
+ * image is set.
+ */
 export function dokployDatabase(
 	row: RawRow,
 	type: DokployResourceType,
@@ -541,6 +600,7 @@ export function dokployDatabase(
 	};
 }
 
+/** Dispatches a Dokploy resource detail to the converter for its type. */
 export function dokployEntry(ref: DokployRef, detail: RawRow): MigrationEntry {
 	if (ref.type === "application") {
 		return dokployApplication(detail, ref.projectName);

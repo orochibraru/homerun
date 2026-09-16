@@ -21,6 +21,7 @@ const CONCURRENCY = 6;
 class DokployServiceClass {
 	readonly label = "Dokploy";
 
+	/** An API-key-authenticated HTTP client scoped to this Dokploy connection. */
 	#client(connection: MigrationConnection): MigrationHttpClient {
 		return new MigrationHttpClient(connection.baseUrl, {
 			headers: { "x-api-key": connection.token },
@@ -28,6 +29,7 @@ class DokployServiceClass {
 		});
 	}
 
+	/** Fetches a single project/application/etc.'s detail row by its ref. @throws When Dokploy's response isn't an object. */
 	async #detail(client: MigrationHttpClient, ref: DokployRef) {
 		const query = new URLSearchParams({ [dokployIdKey(ref.type)]: ref.id });
 		const body = await client.get(`/api/${ref.type}.one?${query}`);
@@ -39,6 +41,13 @@ class DokployServiceClass {
 		return body;
 	}
 
+	/**
+	 * Reads every project from a Dokploy instance, resolves each into a ref
+	 * (`dokployRefs`) and fetches its detail (`#detail`, `CONCURRENCY`-limited
+	 * in parallel), and normalizes them into this app's generic
+	 * `MigrationEntry` shape for the Migrate tab. When `only` is given,
+	 * entries are filtered to just those ids.
+	 */
 	async listEntries(
 		connection: MigrationConnection,
 		only?: Set<string>,

@@ -70,6 +70,7 @@ const SEVERITY_RANK: Record<ScanSeverity, number> = {
 	UNKNOWN: 4,
 };
 
+/** A fresh per-severity vulnerability count with every severity at zero. */
 export function emptyCounts(): SeverityCounts {
 	return { critical: 0, high: 0, low: 0, medium: 0, unknown: 0 };
 }
@@ -95,6 +96,10 @@ function asText(value: unknown): string | null {
 	return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+/**
+ * Extracts the vulnerability findings from one Trivy result entry, skipping
+ * malformed entries and normalising unknown severities.
+ */
 function findingsOf(result: unknown): ImageScanFinding[] {
 	const vulnerabilities = asRecord(result)?.Vulnerabilities;
 	if (!Array.isArray(vulnerabilities)) {
@@ -119,6 +124,14 @@ function findingsOf(result: unknown): ImageScanFinding[] {
 	});
 }
 
+/**
+ * Summarises a Trivy JSON report into per-severity counts and a capped list of
+ * findings, de-duplicated by vulnerability, package and version and sorted by
+ * severity with fixable findings first.
+ *
+ * @param limit Maximum number of findings kept; `totalFindings` still counts all.
+ * @throws When the output isn't a JSON object.
+ */
 export function summarizeTrivyReport(
 	raw: string,
 	limit = MAX_STORED_FINDINGS,
@@ -164,6 +177,12 @@ export function summarizeTrivyReport(
 	};
 }
 
+/**
+ * Checks scan counts against the deploy blocking policy.
+ *
+ * @returns The user-facing reason the deploy is blocked, or null when no policy
+ * is set or no vulnerability at or above the policy's severity was found.
+ */
 export function blockReason(
 	counts: SeverityCounts,
 	policy: BlockSeverity | null,
@@ -180,10 +199,12 @@ export function blockReason(
 	return `Blocked by the image scan policy: ${blocking} ${scope} ${blocking === 1 ? "vulnerability" : "vulnerabilities"} found. Fix the image, or change the policy under Settings → Docker.`;
 }
 
+/** Formats severity counts as a one-line summary for logs and notifications. */
 export function countsLine(counts: SeverityCounts): string {
 	return `${counts.critical} critical, ${counts.high} high, ${counts.medium} medium, ${counts.low} low, ${counts.unknown} unknown`;
 }
 
+/** Whether a value is a valid scan blocking policy (`CRITICAL` or `HIGH`). */
 export function isBlockSeverity(value: unknown): value is BlockSeverity {
 	return value === "CRITICAL" || value === "HIGH";
 }

@@ -347,10 +347,15 @@ export const SEARCH_PAGES: SearchPage[] = [
 	},
 ];
 
+/** Trims and lowercases a search query for case-insensitive matching. */
 export function normalizeSearch(value: string): string {
 	return value.trim().toLowerCase();
 }
 
+/**
+ * Whether any of the given fields contains the query as a case-insensitive
+ * substring. A blank query matches nothing.
+ */
 export function matchesSearch(
 	q: string,
 	fields: Array<string | null | undefined>,
@@ -362,6 +367,10 @@ export function matchesSearch(
 	return fields.some((field) => field?.toLowerCase().includes(term));
 }
 
+/**
+ * Filters the static page list for global search, hiding admin-only pages from
+ * non-admins. A blank query returns every visible page.
+ */
 export function filterPages(
 	pages: SearchPage[],
 	q: string,
@@ -376,6 +385,10 @@ export function filterPages(
 	);
 }
 
+/**
+ * Groups search results by kind, in order of each kind's first appearance, with
+ * the display heading for each group.
+ */
 export function groupResults(results: SearchResult[]): SearchGroup[] {
 	const groups: SearchGroup[] = [];
 	for (const result of results) {

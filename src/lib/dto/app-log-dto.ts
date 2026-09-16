@@ -40,6 +40,10 @@ export class AppLogDTO extends BaseDTO<AppLog> {
 		return rows.map((row) => new AppLogDTO(row));
 	}
 
+	/**
+	 * Counts one service's logged warn/error entries written at or before
+	 * `until`, so the Errors tab can say how many entries a dismissal is hiding.
+	 */
 	static async countForServiceUpTo(
 		serviceId: string,
 		until: Date,
@@ -63,6 +67,10 @@ export class AppLogDTO extends BaseDTO<AppLog> {
 		return rows.map((row) => new AppLogDTO(row));
 	}
 
+	/**
+	 * Inserts one log entry and, on roughly 2% of writes, prunes the table back
+	 * down to its newest 5000 rows.
+	 */
 	static async create(input: NewAppLogInput): Promise<AppLogDTO> {
 		const row: AppLog = {
 			createdAt: new Date(),
@@ -96,21 +104,27 @@ export class AppLogDTO extends BaseDTO<AppLog> {
 		await db.delete(appLog).where(lt(appLog.createdAt, cutoff.createdAt));
 	}
 
+	/** The log entry's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The severity the entry was logged at. */
 	get level(): AppLog["level"] {
 		return this.row.level;
 	}
+	/** The Logger scope that wrote the entry, if any. */
 	get scope(): string | null {
 		return this.row.scope;
 	}
+	/** The logged message text. */
 	get message(): string {
 		return this.row.message;
 	}
+	/** Serialized structured metadata attached to the entry, if any. */
 	get metadata(): string | null {
 		return this.row.metadata;
 	}
+	/** When the entry was written. */
 	get createdAt(): Date {
 		return this.row.createdAt;
 	}

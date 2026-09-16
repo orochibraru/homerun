@@ -21,6 +21,14 @@ function embeddedToken(gitUrl: string): string | null {
 }
 
 class StatusCheckServiceClass {
+	/**
+	 * Resolves what a status check needs to call a git provider's API for
+	 * `gitUrl`: the provider kind (from a configured Git Provider connection
+	 * or inferred from the URL), the repo path, and an access token, preferring
+	 * one embedded in the URL itself over the user's stored connection.
+	 * @throws When no provider kind can be resolved, or the repo path can't
+	 * be read from the URL.
+	 */
 	async targetFor(gitUrl: string, userId: string): Promise<CheckTarget> {
 		const settings = await InstanceSettingsDTO.get();
 		const provider = providerForGitUrl(
@@ -51,10 +59,12 @@ class StatusCheckServiceClass {
 		};
 	}
 
+	/** A `StatusCheckClient` wired up for `gitUrl`, see `targetFor`. */
 	async clientFor(gitUrl: string, userId: string): Promise<StatusCheckClient> {
 		return new StatusCheckClient(await this.targetFor(gitUrl, userId));
 	}
 
+	/** The required-status-check names reported for `gitRef` by the repo's git provider. */
 	async checkNames(
 		gitUrl: string,
 		gitRef: string,

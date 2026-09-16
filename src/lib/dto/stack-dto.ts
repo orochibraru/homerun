@@ -1,4 +1,5 @@
 import { and, count, desc, eq, inArray, ne, type SQL, sql } from "drizzle-orm";
+import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import { deployment, type Stack, service, stack } from "$lib/server/db/schema";
 import {
@@ -9,6 +10,8 @@ import {
 import { DockerService } from "$lib/services/docker.service";
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
+
+const logger = new Logger("StackDTO");
 
 export interface NewStackInput {
 	description?: string | null;
@@ -23,6 +26,10 @@ export type StackUpdateInput = Partial<
 
 /** Wraps the `stack` table : see ServiceDTO for the pattern this follows. */
 export class StackDTO extends BaseDTO<Stack> {
+	/**
+	 * Loads one stack by id, scoped to its owner; null when missing or owned by
+	 * someone else.
+	 */
 	static async get(id: string, userId: string): Promise<StackDTO | null> {
 		const [row] = await db
 			.select()
@@ -38,6 +45,7 @@ export class StackDTO extends BaseDTO<Stack> {
 		return new Set(rows.map((row) => row.id));
 	}
 
+	/** Every stack the user owns, newest first. */
 	static async list(userId: string): Promise<StackDTO[]> {
 		const rows = await db
 			.select()
@@ -119,6 +127,10 @@ export class StackDTO extends BaseDTO<Stack> {
 		return Boolean(row);
 	}
 
+	/**
+	 * Up to `limit` of the user's stacks whose name, slug or description matches
+	 * `q`, newest first, for global search.
+	 */
 	static async search(
 		userId: string,
 		q: string,
@@ -138,6 +150,10 @@ export class StackDTO extends BaseDTO<Stack> {
 		return rows.map((row) => new StackDTO(row));
 	}
 
+	/**
+	 * Inserts a new stack and tries to create its Docker network straight away; a
+	 * network failure is only logged, since the first deploy creates it anyway.
+	 */
 	static async create(input: NewStackInput): Promise<StackDTO> {
 		const now = new Date();
 		const row: Stack = {
@@ -150,10 +166,16 @@ export class StackDTO extends BaseDTO<Stack> {
 			userId: input.userId,
 		};
 		await db.insert(stack).values(row);
-		await DockerService.ensureStackNetwork(row.id);
+		await DockerService.ensureStackNetwork(row.id).catch((err) => {
+			logger.warn(
+				`Stack network for ${row.id} not created yet, it will be on first deploy`,
+				err,
+			);
+		});
 		return new StackDTO(row);
 	}
 
+	/** Writes the given fields to the row and mirrors them onto this instance. */
 	async update(input: StackUpdateInput): Promise<void> {
 		await db.update(stack).set(input).where(eq(stack.id, this.row.id));
 		Object.assign(this.row, input);
@@ -167,9 +189,9 @@ export class StackDTO extends BaseDTO<Stack> {
 	/**
 	 * Deletes this stack and everything in it : stops/removes every member
 	 * service's container, deletes their deployment history, deletes the
-	 * services, then the stack itself. Same explicit-cleanup precedent as
-	 * account deletion (src/lib/services/auth.ts's beforeDelete hook): DB-level
-	 * cascade alone would leak running containers.
+	 * services, then the stack itself and its Docker network. Same
+	 * explicit-cleanup precedent as account deletion (src/lib/services/auth.ts's
+	 * beforeDelete hook): DB-level cascade alone would leak running containers.
 	 */
 	async cascadeDelete(): Promise<void> {
 		const services = await ServiceDTO.listByStack(this.row.id, this.row.userId);
@@ -197,18 +219,23 @@ export class StackDTO extends BaseDTO<Stack> {
 		await DockerService.removeStackNetwork(this.row.id);
 	}
 
+	/** The stack's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The id of the user who owns the stack. */
 	get userId(): string {
 		return this.row.userId;
 	}
+	/** The stack's display name. */
 	get name(): string {
 		return this.row.name;
 	}
+	/** The stack's free-text description, if any. */
 	get description(): string | null {
 		return this.row.description;
 	}
+	/** The stack's URL-safe slug. */
 	get slug(): string {
 		return this.row.slug;
 	}

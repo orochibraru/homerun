@@ -31,6 +31,12 @@ import {
 export type JobResult = Record<string, unknown> | null;
 type JobHandler = (job: JobDTO) => Promise<JobResult>;
 
+/**
+ * Deploy job handler: re-fetches the service (failing the deployment record
+ * if it was deleted since the job was queued) and runs
+ * `DeploymentService.deployService`, throwing on failure so the worker's
+ * retry/failure bookkeeping applies.
+ */
 async function runDeploy(entry: JobDTO): Promise<JobResult> {
 	const { deploymentId, serviceId, trigger, userId } = deployJobPayload.parse(
 		entry.payload,
@@ -108,6 +114,7 @@ async function reclaimStackNetworks(): Promise<PruneSummary> {
 	};
 }
 
+/** Dispatches a Docker-cleanup job to the matching `DockerService`/`ImageMirrorGcService`/`RevisionService` call for its `action`. */
 async function cleanupRunner(
 	action: DockerCleanupAction,
 	all: boolean,

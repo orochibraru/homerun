@@ -9,6 +9,13 @@ function originOf(value: string | null | undefined): string | null {
 	}
 }
 
+/**
+ * The origins better-auth should trust for this instance: the env-configured
+ * origin and the auth origin themselves, plus both `http://` and `https://`
+ * variants of the auth origin's host and the base domain (skipping
+ * `localhost`, which is trusted implicitly). Used to build better-auth's
+ * `trustedOrigins` list.
+ */
 export function trustedOriginsFor(params: {
 	authOrigin: string | null | undefined;
 	baseDomain: string;

@@ -86,10 +86,26 @@ export class DeployPlanError extends Error {
 	override name = "DeployPlanError";
 }
 
+/**
+ * Exhaustiveness helper for the discriminated-union switches over
+ * `ImagePlan`/`WorkloadPlan` variants : a `default` branch calling this with
+ * the switched-on value makes TypeScript flag any variant left unhandled at
+ * compile time, and throws if one somehow reaches here at runtime anyway.
+ */
 export function unreachable(value: never): never {
 	throw new Error(`Unhandled deploy plan variant: ${JSON.stringify(value)}`);
 }
 
+/**
+ * Builds the `GitBuildPlan` for a `buildSource: "git"` service : a local
+ * build when no build server is configured, otherwise a docker-remote or
+ * agent build depending on the build server's kind, publishing through the
+ * configured cache registry.
+ *
+ * @throws When the service has no `gitUrl`, when a build server is
+ *   configured but has no cache registry to publish through, or when the
+ *   configured build server id doesn't resolve to one.
+ */
 function resolveGitBuild(input: DeployPlanInput): GitBuildPlan {
 	const { buildServer, cacheRegistry, service } = input;
 	if (!service.gitUrl) {
@@ -135,6 +151,14 @@ function resolveGitBuild(input: DeployPlanInput): GitBuildPlan {
 	}
 }
 
+/**
+ * Picks the `ImagePlan` variant for a deploy : a rollback's revision when
+ * `input.revision` is set, otherwise a registry pull or a git build
+ * depending on the service's own `buildSource`.
+ *
+ * @throws When `buildSource` is `"image"` but the service has no `image`
+ *   configured, or via `resolveGitBuild`'s own checks for the git path.
+ */
 function resolveImage(input: DeployPlanInput): ImagePlan {
 	const { revision, service } = input;
 	if (revision) {
@@ -175,6 +199,15 @@ function resolveWorkload(input: DeployPlanInput): WorkloadPlan {
 	}
 }
 
+/**
+ * Entry point for the deploy pipeline's planning step : combines the image
+ * source decision (`resolveImage`) and the workload shape decision
+ * (`resolveWorkload`, standalone container vs. swarm service) into one
+ * `DeployPlan` for `deploy.service.ts` to execute.
+ *
+ * @throws Via `resolveImage`/`resolveWorkload`, e.g. a misconfigured build
+ *   server, a missing image, or host networking requested under swarm mode.
+ */
 export function resolveDeployPlan(input: DeployPlanInput): DeployPlan {
 	return { image: resolveImage(input), workload: resolveWorkload(input) };
 }

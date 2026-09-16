@@ -35,8 +35,13 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   vars, CPU/memory limits, restart policy, private registry auth
 - **Live deploy progress**: pull/build/create/start streamed to the UI in real
   time, resumes correctly if you reload mid-deploy
-- **Deployment history**: every attempt recorded with status, image digest, and
-  its full log
+- **Revisions & rollback**: every attempt recorded with status, image digest,
+  and its full log; redeploy any earlier revision's exact image, with opt-in
+  auto-rollback when a new one comes up unhealthy
+- **Image scanning**: every deploy scanned with Trivy before it starts, with an
+  optional block on critical or high findings
+- **Required status checks**: a git-based service can wait for its CI checks to
+  pass before it builds
 - **Search, filters, pagination & bulk actions**: every list page (services,
   stacks, templates, storage, and more) gets server-side search/filters, a
   list/card view toggle, and paging once you have more than a screenful;
@@ -44,13 +49,15 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   confirmation before anything destructive runs
 - **Stacks**: group services under one Docker network so they reach each other
   by slug (`http://api:8080`), independent of the shared Traefik network
-- **Templates**: a built-in catalog of ~58 common self-hosted apps (Jellyfin,
+- **Templates**: a built-in catalog of ~70 common self-hosted apps (Jellyfin,
   the *arr stack, Pi-hole, Vaultwarden, Grafana, Uptime Kuma, PostgreSQL, Redis,
   n8n and more) with real app logos, one-click **Quick Deploy**, companion
   containers that come along with the primary (WordPress pulls MySQL), plus save
   any service's config as your own reusable template
 - **Storage volumes**: define bind-mount paths or Docker-managed volumes once,
   mount into one or more services
+- **Migrate from Dokploy or Coolify**: read another instance's apps, compose
+  stacks and databases and recreate them here
 - **Compose import**: paste a `docker-compose.yaml` and turn its services,
   volumes and dependency order into Homerun rows, with an up-front preview of
   everything that doesn't map across
@@ -59,6 +66,10 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   variable per value) filled in for you, with names you can rename
 - **Live log streaming & a web terminal**: tail stdout/stderr or open an
   interactive shell into a running container, all from the browser
+- **Uptime, resource history & status pages**: every service probed from the
+  Docker network and from its public hostname, CPU/memory/network history per
+  service and for the host, and public or private status pages built from those
+  probes
 - **Custom domains & SSL**: a second hostname per service, plus bring-your-own
   cert/key for domains outside Traefik's automatic ACME coverage
 - **Build servers**: build a git-based service's image on another Docker daemon
@@ -78,19 +89,23 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **Scheduled redeploys, cron jobs & S3 backups**: cron-style auto-redeploy per
   service, standalone cron jobs (a throwaway container, or an admin-only host
   command) with their own run history, and cron-style volume backups, bind
-  mounts and Docker-managed volumes alike, to any S3-compatible endpoint
+  mounts and Docker-managed volumes alike, to any S3-compatible endpoint, with
+  restore from the dashboard
 - **REST API, OpenAPI docs, and a CLI**: everything above is also a typed JSON
   API (`/api/v1`), with a live Swagger UI and a proper
   [`homerun` CLI](packages/cli/README.md) built against the generated OpenAPI
   types
 - **Users, roles & invites**: admin/developer roles, email or direct-create
-  invites, and OAuth/OIDC sign-in with one-click presets for Pocket ID,
-  Keycloak, Authelia, Authentik, Logto, Zitadel and Kanidm
+  invites, OAuth/OIDC sign-in with one-click presets for Pocket ID, Keycloak,
+  Authelia, Authentik, Logto, Zitadel and Kanidm, and passkeys and two-factor
+  authentication, which an admin can require for every account
 - **Git provider accounts**: connect GitHub, GitLab, self-hosted Gitea or
   Bitbucket and browse your repos from the service form instead of pasting URLs
-- **Operations**: live Traefik logs with restart/update from the dashboard, a
-  job-queue and scheduling overview, and setup diagnostics that deep-link
-  straight to the setting that's wrong
+- **Operations**: live logs for Traefik and the rest of the instance's own
+  stack, Traefik restart/update from the dashboard, a job-queue and scheduling
+  overview, setup diagnostics that deep-link straight to the setting that's
+  wrong, a `⌘K` search across pages and everything you own, and one-click
+  self-update to the latest release
 - **Per-service auth gate & account isolation**: optionally require a Homerun
   login to reach a deployed service; every container is labeled
   `homerun.managed=true` so this app never touches anything it didn't create

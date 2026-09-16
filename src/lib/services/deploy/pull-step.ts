@@ -8,6 +8,17 @@ import type { ImagePlan, WorkloadPlan } from "./plan.ts";
 
 const logger = new Logger(DEPLOY_LOG_SCOPE);
 
+/**
+ * Resolves the image for a `buildSource: "image"` deploy : honors the
+ * service's pull policy (skipping the pull entirely when the image is
+ * already local and the policy allows it), routes the pull through the
+ * mirror registry when an image-scan policy is enabled for the service, and
+ * falls back to a direct registry pull otherwise. Appends progress to the
+ * deployment's log and triggers a post-pull image scan before returning.
+ *
+ * @throws When the pull policy is `"never"` and the image isn't already on
+ *   this host.
+ */
 export async function pullForDeploy(
 	ctx: { dep: DeploymentDTO; svc: ServiceDTO },
 	plan: Extract<ImagePlan, { kind: "pull" }>,

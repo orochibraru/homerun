@@ -49,6 +49,7 @@ async function uniqueStackSlug(name: string): Promise<string> {
 }
 
 class ComposeImportServiceClass {
+	/** Resolves which stack imported services belong to: the given `stackId` if it exists, a newly created stack from `stackName`, or null (no stack) if neither is given. */
 	async #resolveStackId(input: ComposeImportInput): Promise<string | null> {
 		if (input.stackId) {
 			const existing = await StackDTO.get(input.stackId, input.userId);
@@ -65,6 +66,12 @@ class ComposeImportServiceClass {
 		return created.id;
 	}
 
+	/**
+	 * Maps each of `draft`'s volume mounts to a storage volume id, reusing an
+	 * existing volume with the same kind/source or creating a new one
+	 * (appended to `existing` so a later draft in the same import can reuse
+	 * it too).
+	 */
 	async #resolveVolumes(
 		draft: ComposeServiceDraft,
 		userId: string,
@@ -92,6 +99,11 @@ class ComposeImportServiceClass {
 		return byMount;
 	}
 
+	/**
+	 * Creates one service row from a parsed compose draft, resolves and
+	 * attaches its volume mounts (`#resolveVolumes`), and fires a
+	 * `service_created` notification.
+	 */
 	async #createService(
 		draft: ComposeServiceDraft,
 		stackId: string | null,
@@ -144,6 +156,12 @@ class ComposeImportServiceClass {
 		return svc;
 	}
 
+	/**
+	 * Creates every service (and their stack, if any) from a parsed compose
+	 * file, in dependency order (`orderByDependencies`) so a `depends_on`
+	 * target already exists by the time a dependent service references it.
+	 * Does not deploy anything, see `deployImported` for that.
+	 */
 	async importPlan(input: ComposeImportInput): Promise<ComposeImportResult> {
 		const stackId = await this.#resolveStackId(input);
 		const volumes = await StorageVolumeDTO.list(input.userId);
@@ -167,6 +185,7 @@ class ComposeImportServiceClass {
 		return { stackId, services };
 	}
 
+	/** Enqueues a stack deploy for freshly imported services, deploying the last one (by import order) as primary with the rest as its dependencies. No-op if `services` is empty. */
 	async deployImported(services: ServiceDTO[], userId: string): Promise<void> {
 		if (services.length === 0) {
 			return;

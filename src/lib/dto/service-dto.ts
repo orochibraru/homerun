@@ -117,6 +117,10 @@ export type ServiceUpdateInput = Partial<
  * `ownedService` convention: never trust a route param alone.
  */
 export class ServiceDTO extends BaseDTO<Service> {
+	/**
+	 * Loads one service by id, scoped to its owner; null when missing or owned by
+	 * someone else.
+	 */
 	static async get(id: string, userId: string): Promise<ServiceDTO | null> {
 		const [row] = await db
 			.select()
@@ -126,6 +130,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return row ? new ServiceDTO(row) : null;
 	}
 
+	/**
+	 * Loads one service by id without an owner check, for the per-app login wall,
+	 * which has to look up whichever service a request is for.
+	 */
 	static async getForGate(id: string): Promise<ServiceDTO | null> {
 		const [row] = await db
 			.select()
@@ -135,6 +143,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return row ? new ServiceDTO(row) : null;
 	}
 
+	/** Every service the user owns, newest first. */
 	static async list(userId: string): Promise<ServiceDTO[]> {
 		const rows = await db
 			.select()
@@ -144,6 +153,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return rows.map((row) => new ServiceDTO(row));
 	}
 
+	/** Every service the user owns in one stack, newest first. */
 	static async listByStack(
 		stackId: string,
 		userId: string,
@@ -176,6 +186,11 @@ export class ServiceDTO extends BaseDTO<Service> {
 		}));
 	}
 
+	/**
+	 * Builds the WHERE clause for the paged services list : owner scope, the
+	 * search box (name, slug, image, tag), status pills, and stack pills where
+	 * the Ungrouped label means no stack.
+	 */
 	static #listFilters(userId: string, query: ListQuery): SQL | undefined {
 		const conditions: SQL[] = [eq(service.userId, userId)];
 
@@ -359,6 +374,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 		} satisfies Partial<Service>;
 	}
 
+	/**
+	 * Up to `limit` of the user's services whose name, slug, image, custom domain
+	 * or git URL matches `q`, newest first, for global search.
+	 */
 	static async search(
 		userId: string,
 		q: string,
@@ -384,6 +403,11 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return rows.map((row) => new ServiceDTO(row));
 	}
 
+	/**
+	 * Inserts a new service row as pending and stopped, with cron, auto-rollback
+	 * and status checks off and uptime checks and image scanning on. Nothing is
+	 * deployed.
+	 */
 	static async create(input: NewServiceInput): Promise<ServiceDTO> {
 		const now = new Date();
 		const row: Service = {
@@ -423,11 +447,16 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return new ServiceDTO(row);
 	}
 
+	/** Writes the given fields to the row and mirrors them onto this instance. */
 	async update(input: ServiceUpdateInput): Promise<void> {
 		await db.update(service).set(input).where(eq(service.id, this.row.id));
 		Object.assign(this.row, input);
 	}
 
+	/**
+	 * Hides every error up to now from the Observability tab, recording which
+	 * deployment (if any) triggered the dismissal.
+	 */
 	async dismissErrors(deploymentId: string | null): Promise<void> {
 		await this.update({
 			errorsDismissedAt: new Date(),
@@ -435,6 +464,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 		});
 	}
 
+	/**
+	 * Clears a container or swarm service reference that no longer exists on the
+	 * host, resetting the service to pending and stopped so it can be redeployed.
+	 */
 	async resolveOrphan(): Promise<void> {
 		await this.update({
 			containerId: null,
@@ -444,147 +477,220 @@ export class ServiceDTO extends BaseDTO<Service> {
 		});
 	}
 
+	/**
+	 * Row-only delete : doesn't remove the container, callers must do that first.
+	 */
 	async delete(): Promise<void> {
 		await db.delete(service).where(eq(service.id, this.row.id));
 	}
 
+	/** The service's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The id of the user who owns the service. */
 	get userId(): string {
 		return this.row.userId;
 	}
+	/** The service's display name. */
 	get name(): string {
 		return this.row.name;
 	}
+	/**
+	 * The unique slug, used as the `<slug>.<baseDomain>` subdomain and the
+	 * internal hostname.
+	 */
 	get slug(): string {
 		return this.row.slug;
 	}
+	/** The image repository, without the tag. */
 	get image(): string {
 		return this.row.image;
 	}
+	/** The image tag to deploy. */
 	get tag(): string {
 		return this.row.tag;
 	}
+	/**
+	 * The live container's id in standalone mode, null when not deployed or under
+	 * swarm.
+	 */
 	get containerId(): string | null {
 		return this.row.containerId;
 	}
+	/** The port the app listens on inside the container. */
 	get containerPort(): number {
 		return this.row.containerPort;
 	}
+	/** The service's environment variables, empty when none are stored. */
 	get envVars(): Record<string, string> {
 		return this.row.envVars ?? {};
 	}
+	/** The container healthcheck command, if one is set. */
 	get healthcheckCommand(): string | null {
 		return this.row.healthcheckCommand;
 	}
 
+	/** The Docker restart policy. */
 	get restartPolicy(): string {
 		return this.row.restartPolicy;
 	}
+	/** The CPU limit in cores, null for unlimited. */
 	get cpuLimit(): string | null {
 		return this.row.cpuLimit;
 	}
+	/** The memory limit in MB, null for unlimited. */
 	get memoryLimitMb(): number | null {
 		return this.row.memoryLimitMb;
 	}
+	/** The private registry to pull the image from, if any. */
 	get registryUrl(): string | null {
 		return this.row.registryUrl;
 	}
+	/** The username for the private registry, if any. */
 	get registryUsername(): string | null {
 		return this.row.registryUsername;
 	}
+	/**
+	 * The encrypted registry password, still encrypted : decrypt it only for a
+	 * pull.
+	 */
 	get registryPasswordEnc(): string | null {
 		return this.row.registryPasswordEnc;
 	}
+	/** Whether the user wants the service running or stopped. */
 	get desiredState(): Service["desiredState"] {
 		return this.row.desiredState;
 	}
+	/** The last observed state of the service's container. */
 	get currentStatus(): Service["currentStatus"] {
 		return this.row.currentStatus;
 	}
+	/**
+	 * When the image is pulled before a deploy : always, only if missing, or
+	 * never.
+	 */
 	get pullPolicy(): PullPolicy {
 		return this.row.pullPolicy;
 	}
+	/** Errors from before this time are hidden on the Observability tab. */
 	get errorsDismissedAt(): Date | null {
 		return this.row.errorsDismissedAt;
 	}
+	/** The stack the service belongs to, null when ungrouped. */
 	get stackId(): string | null {
 		return this.row.stackId;
 	}
+	/**
+	 * Whether Traefik routes a public hostname to the service; false keeps it
+	 * internal-only.
+	 */
 	get dnsResolvable(): boolean {
 		return this.row.dnsResolvable;
 	}
+	/** Whether scheduled redeploys are on. */
 	get cronEnabled(): boolean {
 		return this.row.cronEnabled;
 	}
+	/** The cron expression for scheduled redeploys, if set. */
 	get cronSchedule(): string | null {
 		return this.row.cronSchedule;
 	}
+	/** An extra hostname routed to the service, if set. */
 	get customDomain(): string | null {
 		return this.row.customDomain;
 	}
+	/**
+	 * The encrypted custom TLS certificate for the custom domain, if uploaded.
+	 */
 	get customSslCertEnc(): string | null {
 		return this.row.customSslCertEnc;
 	}
+	/**
+	 * The encrypted custom TLS private key for the custom domain, if uploaded.
+	 */
 	get customSslKeyEnc(): string | null {
 		return this.row.customSslKeyEnc;
 	}
+	/** When the last scheduled redeploy ran, null if never. */
 	get cronLastRunAt(): Date | null {
 		return this.row.cronLastRunAt;
 	}
+	/** Whether the per-app login wall guards the service. */
 	get authRequired(): boolean {
 		return this.row.authRequired;
 	}
+	/** The sign-in providers the login wall accepts. */
 	get authProviders(): string[] {
 		return this.row.authProviders;
 	}
+	/** User ids allowed through the login wall. */
 	get authAllowedUserIds(): string[] {
 		return this.row.authAllowedUserIds;
 	}
+	/** Email addresses allowed through the login wall. */
 	get authAllowedEmails(): string[] {
 		return this.row.authAllowedEmails;
 	}
+	/** Identity provider groups allowed through the login wall. */
 	get authAllowedGroups(): string[] {
 		return this.row.authAllowedGroups;
 	}
+	/** Whether the service deploys a registry image or builds from a git repo. */
 	get buildSource(): Service["buildSource"] {
 		return this.row.buildSource;
 	}
+	/** The git repository to build from, for git-built services. */
 	get gitUrl(): string | null {
 		return this.row.gitUrl;
 	}
+	/** The branch or tag to build. */
 	get gitRef(): string | null {
 		return this.row.gitRef;
 	}
+	/** The build context directory inside the repo, if not the root. */
 	get gitBuildContext(): string | null {
 		return this.row.gitBuildContext;
 	}
+	/** The Dockerfile path relative to the build context, if not `Dockerfile`. */
 	get gitDockerfilePath(): string | null {
 		return this.row.gitDockerfilePath;
 	}
+	/** The registry used as a build layer cache, null for uncached builds. */
 	get buildCacheRegistryId(): string | null {
 		return this.row.buildCacheRegistryId;
 	}
+	/** The remote host builds run on, null to build locally. */
 	get buildServerRemoteHostId(): string | null {
 		return this.row.buildServerRemoteHostId;
 	}
+	/** The desired replica count, only used in swarm mode. */
 	get replicas(): number {
 		return this.row.replicas;
 	}
+	/**
+	 * The Docker Swarm service id when deployed in swarm mode, otherwise null.
+	 */
 	get swarmServiceId(): string | null {
 		return this.row.swarmServiceId;
 	}
 
+	/** Whether uptime probes run against the service. */
 	get uptimeEnabled(): boolean {
 		return this.row.uptimeEnabled;
 	}
+	/**
+	 * Whether the container uses the shared bridge networks or the host's network
+	 * namespace.
+	 */
 	get networkMode(): Service["networkMode"] {
 		return this.row.networkMode;
 	}
+	/** Which protocol(s) the container port is exposed under. */
 	get portProtocol(): Service["portProtocol"] {
 		return this.row.portProtocol;
 	}
+	/** Whether the service's images are vulnerability-scanned. */
 	get imageScanEnabled(): boolean {
 		return this.row.imageScanEnabled;
 	}

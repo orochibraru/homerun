@@ -128,6 +128,12 @@ function extendedColorSpan(codes: number[], index: number): number {
 	return 0;
 }
 
+/**
+ * Applies a sequence of SGR codes to the running style state: attribute codes
+ * toggle bold/dim/italic/underline or reset, basic colour codes set the
+ * foreground or background, and extended 256/truecolour codes are skipped along
+ * with their parameters.
+ */
 function applyCodes(state: SgrState, codes: number[]): void {
 	let i = 0;
 	while (i < codes.length) {
@@ -146,6 +152,10 @@ function applyCodes(state: SgrState, codes: number[]): void {
 	}
 }
 
+/**
+ * Converts the current SGR style state to the Tailwind classes a text span is
+ * rendered with.
+ */
 function classForState(state: SgrState): string {
 	const classes: string[] = [];
 	if (state.fg) {

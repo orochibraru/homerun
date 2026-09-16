@@ -22,6 +22,7 @@ const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Wraps `uptime_check` : the appended liveness history behind the heartbeat strips, see schema.ts. */
 export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
+	/** Appends one probe result, stamped now. */
 	static async record(result: ProbeResult): Promise<void> {
 		await db.insert(uptimeCheck).values({
 			checkedAt: new Date(),
@@ -35,6 +36,10 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 		});
 	}
 
+	/**
+	 * Appends a batch of probe results in one statement, all stamped with the
+	 * same time.
+	 */
 	static async recordMany(results: ProbeResult[]): Promise<void> {
 		if (results.length === 0) {
 			return;
@@ -99,6 +104,10 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 			);
 	}
 
+	/**
+	 * The newest beat of every probe on the given services, keyed
+	 * `serviceId:kind`.
+	 */
 	static async latestByProbe(
 		serviceIds: string[],
 	): Promise<Map<string, UptimeCheck>> {
@@ -117,10 +126,12 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 		return new Map(rows.map((row) => [`${row.serviceId}:${row.kind}`, row]));
 	}
 
+	/** Deletes a service's whole uptime history. */
 	static async clearForService(serviceId: string): Promise<void> {
 		await db.delete(uptimeCheck).where(eq(uptimeCheck.serviceId, serviceId));
 	}
 
+	/** Deletes beats older than a week. */
 	static async prune(): Promise<void> {
 		await db
 			.delete(uptimeCheck)

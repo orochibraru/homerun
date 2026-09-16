@@ -7,6 +7,11 @@ import { BUILTIN_TEMPLATES_APPS } from "$lib/server/db/builtin-templates-apps";
 import { db } from "$lib/server/db/lib";
 import { template, templateLink } from "$lib/server/db/schema";
 
+/**
+ * Upserts every built-in template, overwriting their stored fields with the
+ * current definitions, then inserts any built-in template links not already
+ * present. Safe to run on every boot.
+ */
 export async function seedBuiltinTemplates(): Promise<void> {
 	const now = new Date();
 	await db

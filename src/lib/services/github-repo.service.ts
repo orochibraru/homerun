@@ -31,6 +31,7 @@ function getCache() {
 	return globalForGithub.__github_repo_cache;
 }
 
+/** Extracts `{owner, repo}` from a github.com URL, or null if it isn't one (a non-GitHub git host, or an unparseable URL). */
 function parseGitHubRepo(
 	sourceUrl: string,
 ): { owner: string; repo: string } | null {
@@ -76,6 +77,13 @@ async function fetchReadme(
 		: json.content;
 }
 
+/**
+ * Renders a repo's README markdown to sanitized HTML for embedding in the
+ * template detail page: relative image sources are rewritten to
+ * `raw.githubusercontent.com` and relative links to `github.com/.../blob/...`
+ * so they resolve outside the repo's own context, and the result is passed
+ * through `sanitize-html` with an explicit tag/attribute allowlist.
+ */
 function renderReadme(
 	markdown: string,
 	owner: string,
@@ -152,6 +160,12 @@ function renderReadme(
 	});
 }
 
+/**
+ * Fetches a repo's description/stars/push date, its latest release (if any),
+ * and its rendered README from the GitHub API. Returns null (rather than
+ * throwing) if the base repo lookup itself fails, e.g. a private or
+ * nonexistent repo.
+ */
 async function fetchRepoInfo(
 	owner: string,
 	repo: string,
@@ -204,6 +218,12 @@ async function fetchRepoInfo(
 	};
 }
 
+/**
+ * Repo metadata and rendered README for a template's `sourceUrl`, cached
+ * in-process per owner/repo for `CACHE_TTL_MS` (including a cached `null`
+ * on failure, so a broken/private repo doesn't get re-fetched on every
+ * template page view). Returns null for a non-GitHub or unparseable URL.
+ */
 export async function getGitHubRepoInfo(
 	sourceUrl: string | null,
 ): Promise<GitHubRepoInfo | null> {

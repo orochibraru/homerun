@@ -115,6 +115,10 @@ export function parseBuild(raw: unknown): ComposeBuildDraft | null {
 	};
 }
 
+/**
+ * Turns a compose service key or container name into a DNS-safe service slug:
+ * lowercase, dash-separated, trimmed of edge dashes and capped at 63 characters.
+ */
 export function slugifyComposeKey(value: string): string {
 	return value
 		.toLowerCase()
@@ -129,6 +133,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Splits an image reference into repository and tag, dropping any `@digest` and
+ * defaulting the tag to `latest`. A colon before the last slash is treated as a
+ * registry port, not a tag.
+ */
 export function splitImageRef(ref: string): { image: string; tag: string } {
 	const withoutDigest = ref.split("@")[0] ?? ref;
 	const lastColon = withoutDigest.lastIndexOf(":");
@@ -142,6 +151,10 @@ export function splitImageRef(ref: string): { image: string; tag: string } {
 	};
 }
 
+/**
+ * Reads a compose `environment:` block in either list (`KEY=value`) or map form;
+ * null map values become empty strings and list entries without `=` are dropped.
+ */
 function parseEnvironment(raw: unknown): Record<string, string> {
 	const env: Record<string, string> = {};
 	if (Array.isArray(raw)) {
@@ -167,6 +180,11 @@ interface PortMapping {
 	protocol: "tcp" | "udp";
 }
 
+/**
+ * Extracts the container-side port and protocol from one `ports:`/`expose:` entry
+ * in any compose shape (number, `host:container/proto` string, range, or long
+ * form object). A range yields its first port.
+ */
 function parsePortEntry(raw: unknown): PortMapping | null {
 	if (typeof raw === "number") {
 		return { port: raw, protocol: "tcp" };
@@ -202,6 +220,10 @@ function protocolFor(mappings: PortMapping[]): "tcp" | "udp" | "both" {
 	return hasUdp ? "udp" : "tcp";
 }
 
+/**
+ * Converts a compose memory limit (bytes as a number, or a string like `512m` or
+ * `1.5g`) to whole megabytes, or null when unparseable or under 1 MB.
+ */
 function parseMemoryLimit(raw: unknown): number | null {
 	if (typeof raw === "number") {
 		return Math.round(raw / (1024 * 1024)) || null;
@@ -257,6 +279,11 @@ function volumeNameFor(serviceSlug: string, containerPath: string): string {
 	return `${serviceSlug}-${suffix}`.slice(0, 63);
 }
 
+/**
+ * Converts a long-form compose volume object into a volume draft, pushing a
+ * warning and returning null for mount types other than bind and volume or
+ * entries missing a source or target.
+ */
 function parseLongVolume(
 	raw: Record<string, unknown>,
 	serviceSlug: string,
@@ -278,6 +305,11 @@ function parseLongVolume(
 	};
 }
 
+/**
+ * Converts a `source:target[:mode]` compose volume string into a volume draft.
+ * Anonymous volumes and relative bind mounts are skipped with a warning; an
+ * absolute or `~` path is a bind, anything else a named volume.
+ */
 function parseShortVolume(
 	raw: string,
 	serviceSlug: string,
@@ -349,6 +381,13 @@ function unsupportedWarnings(raw: Record<string, unknown>): string[] {
 	return warnings;
 }
 
+/**
+ * Collects port mappings from a compose service's `ports:` and `expose:`, warning
+ * when none are found or when host port mappings get dropped.
+ *
+ * @returns `published` is true when the service had host `ports:`, which the
+ * import treats as meaning it should be publicly routed.
+ */
 function portsFor(
 	raw: Record<string, unknown>,
 	warnings: string[],
@@ -372,6 +411,10 @@ function portsFor(
 	return { mappings, published: portEntries.length > 0 };
 }
 
+/**
+ * Reads CPU and memory limits from `deploy.resources.limits`, falling back to the
+ * legacy top-level `cpus` and `mem_limit` keys.
+ */
 function limitsFor(raw: Record<string, unknown>): {
 	cpuLimit: string | null;
 	memoryLimitMb: number | null;
@@ -391,6 +434,11 @@ function limitsFor(raw: Record<string, unknown>): {
 	};
 }
 
+/**
+ * Builds the service draft for one compose service entry, claiming a unique slug
+ * in `usedSlugs` and collecting warnings for anything that can't be reproduced.
+ * A service without an image gets `<slug>:latest`.
+ */
 function draftFor(
 	key: string,
 	raw: Record<string, unknown>,
@@ -433,6 +481,14 @@ function draftFor(
 	};
 }
 
+/**
+ * Parses a compose YAML file into an import plan: one service draft per usable
+ * service (with unique slugs), the named volumes and networks it references, and
+ * warnings for everything that isn't reproduced.
+ *
+ * @throws ComposeParseError When the text isn't YAML, has no `services:` block,
+ * or contains no usable service definitions.
+ */
 export function parseComposeFile(text: string): ComposeImportPlan {
 	let doc: unknown;
 	try {
@@ -486,6 +542,11 @@ export function parseComposeFile(text: string): ComposeImportPlan {
 	return { networkNames, services, volumeNames, warnings };
 }
 
+/**
+ * Orders service drafts so each one comes after the services it `depends_on`,
+ * keeping the original order otherwise. Unknown dependencies are ignored and
+ * cycles are broken rather than rejected.
+ */
 export function orderByDependencies(
 	services: ComposeServiceDraft[],
 ): ComposeServiceDraft[] {

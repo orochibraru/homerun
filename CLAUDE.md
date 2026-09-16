@@ -127,7 +127,13 @@ hand:
   `TODO.md`/sub-project READMEs, for exactly the kind of staleness this bullet
   list itself just had two live examples of: `ui-consistency` missing from here,
   and three shipped features still marked unbuilt under planned features, both
-  fixed in the same session `docs-sync` was added).
+  fixed in the same session `docs-sync` was added), `docs-audit` (the full sweep
+  `docs-sync` isn't: starts from the code, not a diff, and checks every `docs/`
+  page, root `README.md` and sub-project README against routes, settings, env
+  vars, API, CLI and installer, both directions), `doc-comments` (finds every
+  class method and exported function outside route files, generated code, tests
+  and `ui/` primitives with no JSDoc block, writes it, and fixes blocks that no
+  longer match their signature).
 
 Skill content lives under `.agents/skills/<name>/SKILL.md` with a symlink from
 `.claude/skills/`, matching the existing `shadcn-svelte` skill's layout, keep
@@ -278,7 +284,11 @@ that pattern for any new skill.
   in `docs/` or this file, and code that needs a comment to be understood needs
   a better name instead. Existing comments in files you aren't otherwise
   touching stay put, don't do sweeping comment-deletion passes, just never add
-  one.
+  one. **The one exception is a JSDoc block (`/** ... */`) directly above a
+  class method or exported function**, which is required, not just allowed: it's
+  what a contributor sees on hover. It says what the function does, its
+  non-obvious side effects and throws, never restates the TS types. The
+  `doc-comments` agent enforces it.
 - **Prefer real OOP over a static-only class that just re-exports imported
   functions (or is `static` throughout for no reason beyond habit).** A
   `class Foo { static bar = importedBar; }` barrel (the shape

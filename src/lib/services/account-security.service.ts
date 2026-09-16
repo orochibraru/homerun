@@ -17,6 +17,7 @@ export interface PasskeySummary {
 }
 
 class AccountSecurityServiceClass {
+	/** The user's registered passkeys, newest first. */
 	async listPasskeys(userId: string): Promise<PasskeySummary[]> {
 		return await db
 			.select({
@@ -31,6 +32,7 @@ class AccountSecurityServiceClass {
 			.orderBy(desc(passkey.createdAt));
 	}
 
+	/** The OAuth/credential accounts (better-auth's `account` table) linked to this user, one per sign-in provider. */
 	async linkedAccounts(
 		userId: string,
 	): Promise<{ accountId: string; providerId: string }[]> {
@@ -40,6 +42,7 @@ class AccountSecurityServiceClass {
 			.where(eq(account.userId, userId));
 	}
 
+	/** Whether the user has a credential (email/password) account with a password set, as opposed to only OAuth accounts. */
 	async hasPassword(userId: string): Promise<boolean> {
 		const [row] = await db
 			.select({ id: account.id })
@@ -55,6 +58,7 @@ class AccountSecurityServiceClass {
 		return !!row;
 	}
 
+	/** The user's current 2FA enrollment and passkey count, the state `unmetSecurityRequirements` checks a `SecurityPolicy` against. */
 	async state(userId: string): Promise<UserSecurityState> {
 		const [[userRow], [passkeyRow]] = await Promise.all([
 			db
@@ -73,6 +77,7 @@ class AccountSecurityServiceClass {
 		};
 	}
 
+	/** The subset of `policy`'s requirements (passkey/2FA) the user hasn't satisfied yet; empty if the policy requires neither. */
 	async unmetRequirements(
 		userId: string,
 		policy: SecurityPolicy,

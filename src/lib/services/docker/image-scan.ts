@@ -99,11 +99,25 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 }
 
+/**
+ * Manages this app's built-in image mirror (a local registry container that
+ * scanning and cross-host builds pull from instead of the original
+ * registry) and runs Trivy vulnerability scans against images. Requires the
+ * one-off mixin ahead of it in the merge chain (see docker.service.ts):
+ * mirror copies and scans both run as one-off containers via `runOneOff`.
+ */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerImageScanMixin<
 	TBase extends Constructor<BaseDockerService & RequiresOneOffMixin>,
 >(Base: TBase) {
 	return class DockerImageScanService extends Base {
+		/**
+		 * Pulls the mirror registry image if it isn't already present, then
+		 * creates and starts its container: bound to the mirror's storage
+		 * volume, on the shared network, published on a loopback-only host
+		 * port, with deletes enabled and an `unless-stopped` restart policy.
+		 * Waits a short grace period for it to come up before returning.
+		 */
 		async #createMirror(): Promise<void> {
 			const docker = this.getDocker();
 			try {
@@ -135,6 +149,13 @@ export function DockerImageScanMixin<
 			await sleep(MIRROR_START_GRACE_MS);
 		}
 
+		/**
+		 * Idempotently makes sure the image mirror is up and correctly
+		 * configured: creates it (via `#createMirror`) if missing, recreates
+		 * it if it predates delete support (the storage volume, and so its
+		 * data, survives that recreation), reattaches it to the shared
+		 * network if needed, and starts it if it's stopped.
+		 */
 		async ensureImageMirror(): Promise<void> {
 			await this.ensureSharedNetwork();
 			const container = this.getDocker().getContainer(MIRROR_CONTAINER_NAME);
@@ -167,6 +188,7 @@ export function DockerImageScanMixin<
 			}
 		}
 
+		/** Whether the image mirror container exists and is currently running. */
 		async imageMirrorRunning(): Promise<boolean> {
 			const info = await this.getDocker()
 				.getContainer(MIRROR_CONTAINER_NAME)
@@ -180,6 +202,16 @@ export function DockerImageScanMixin<
 			return info?.State?.Running === true;
 		}
 
+		/**
+		 * A `MirrorRegistryClient` pointed at whichever of the mirror's two
+		 * addresses (loopback host port, or its in-network container name)
+		 * actually answers a ping from here. Tries the loopback address
+		 * first, unless this app is itself running in a container (see
+		 * `selfContainer`), in which case the in-network address is tried
+		 * first.
+		 *
+		 * @throws When neither address responds.
+		 */
 		async imageMirrorClient(): Promise<MirrorRegistryClient> {
 			const candidates = [
 				`http://127.0.0.1:${MIRROR_HOST_PORT}`,
@@ -200,6 +232,7 @@ export function DockerImageScanMixin<
 			);
 		}
 
+		/** Runs `cmd` inside the running mirror container via `docker exec`, returning its demuxed stdout/stderr and exit code. */
 		async execInImageMirror(cmd: string[]): Promise<MirrorExecResult> {
 			const docker = this.getDocker();
 			const exec = await docker.getContainer(MIRROR_CONTAINER_NAME).exec({
@@ -231,6 +264,11 @@ export function DockerImageScanMixin<
 			};
 		}
 
+		/**
+		 * The mirror's storage directory disk usage in bytes, via `du -sk`
+		 * run inside the mirror container. Null when the mirror isn't
+		 * running or `du` failed.
+		 */
 		async imageMirrorUsageBytes(): Promise<number | null> {
 			if (!(await this.imageMirrorRunning())) {
 				return null;
@@ -243,6 +281,14 @@ export function DockerImageScanMixin<
 			return result.exitCode === 0 ? parseDuKilobytes(result.stdout) : null;
 		}
 
+		/**
+		 * Runs the mirror registry's own `garbage-collect --delete-untagged`
+		 * inside the mirror container, reclaiming blobs left behind by
+		 * deleted or untagged manifests. Returns the command's combined
+		 * output.
+		 *
+		 * @throws When the command exits non-zero.
+		 */
 		async garbageCollectImageMirror(): Promise<string> {
 			const result = await this.execInImageMirror([
 				"registry",
@@ -258,6 +304,14 @@ export function DockerImageScanMixin<
 			return `${result.stdout}${result.stderr}`;
 		}
 
+		/**
+		 * Deletes the given repositories' on-disk directories inside the
+		 * mirror (silently skipping any name that doesn't look like a valid
+		 * repository path), then prunes any parent directories left empty by
+		 * that removal.
+		 *
+		 * @throws When the initial removal fails.
+		 */
 		async removeImageMirrorRepositories(names: string[]): Promise<void> {
 			const paths = names
 				.filter(isValidRepository)
@@ -283,11 +337,22 @@ export function DockerImageScanMixin<
 			]);
 		}
 
+		/** Restarts the mirror container and waits the usual startup grace period. */
 		async restartImageMirror(): Promise<void> {
 			await this.getDocker().getContainer(MIRROR_CONTAINER_NAME).restart();
 			await sleep(MIRROR_START_GRACE_MS);
 		}
 
+		/**
+		 * Ensures the image mirror is up, then runs `skopeo copy` in a
+		 * one-off container to copy `image:tag` from its source registry
+		 * into the mirror under a derived internal ref, optionally
+		 * authenticating against the source registry.
+		 *
+		 * @returns The copied image's digest (when skopeo reported one) and
+		 *   the computed mirror refs.
+		 * @throws When the copy times out or exits non-zero.
+		 */
 		async copyToMirror(params: MirrorCopyParams): Promise<MirrorCopyResult> {
 			await this.ensureImageMirror();
 			const refs = mirrorRefs(params.image, params.tag);
@@ -323,6 +388,11 @@ export function DockerImageScanMixin<
 			return { digest: extractDigest(result.stdout.toString("utf8")), refs };
 		}
 
+		/**
+		 * Pulls an image back out of the mirror via its loopback ref, then
+		 * re-tags it locally as `target.image:target.tag` so callers can
+		 * address it by its real name rather than the mirror's internal one.
+		 */
 		async pullFromMirror(
 			refs: MirrorRefs,
 			target: { image: string; tag: string },
@@ -339,6 +409,15 @@ export function DockerImageScanMixin<
 			return pulled;
 		}
 
+		/**
+		 * The Docker socket path as it exists on the real host, resolved by
+		 * inspecting this app's own container's mounts for wherever
+		 * `config.docker.socketPath` is bound from. Needed because
+		 * `scanImage` bind-mounts the socket into a scanner container, and
+		 * when this app is itself containerized the path visible inside its
+		 * own container can differ from the real host path. Falls back to
+		 * `config.docker.socketPath` unchanged when it can't be resolved.
+		 */
 		async #hostSocketPath(): Promise<string> {
 			const info = await this.getDocker()
 				.getContainer(hostname())
@@ -350,6 +429,14 @@ export function DockerImageScanMixin<
 			return mount?.Source ?? config.docker.socketPath;
 		}
 
+		/**
+		 * Runs Trivy against an image reference in a one-off container on
+		 * the shared network, bind-mounting the host Docker socket unless
+		 * scanning a remote-source image, with registry credentials (if any)
+		 * passed via env vars. Returns the summarized vulnerability report.
+		 *
+		 * @throws When the scan times out or Trivy exits non-zero.
+		 */
 		async scanImage(params: ScanImageParams): Promise<TrivySummary> {
 			const binds = [`${TRIVY_CACHE_VOLUME}:/root/.cache`];
 			if (params.source.kind !== "remote") {

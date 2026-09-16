@@ -194,10 +194,14 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		return this.row.onboardingCompletedAt !== null;
 	}
 
+	/** Stamps onboarding as completed now, so the wizard stops being shown. */
 	async markOnboardingComplete(): Promise<void> {
 		await this.persist({ onboardingCompletedAt: new Date() });
 	}
 
+	/**
+	 * Whether sign-in must use a passkey or two-factor auth, both off when unset.
+	 */
 	get securityPolicy(): SecurityPolicy {
 		return {
 			requirePasskey: this.row.requirePasskey ?? false,
@@ -205,26 +209,40 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		};
 	}
 
+	/** Persists the passkey and two-factor requirements. */
 	async updateSecurityPolicy(input: SecurityPolicy): Promise<void> {
 		await this.persist(input);
 	}
 
+	/**
+	 * The sign-in methods the sign-in page features, in order, empty when unset.
+	 */
 	get preferredSignInMethods(): string[] {
 		return this.row.preferredSignInMethods ?? [];
 	}
 
+	/**
+	 * Persists the featured sign-in methods, dropping duplicates while keeping
+	 * order.
+	 */
 	async updatePreferredSignInMethods(methods: string[]): Promise<void> {
 		await this.persist({ preferredSignInMethods: [...new Set(methods)] });
 	}
 
+	/** Persists the base domain and auth origin/cookie overrides. */
 	async updateCore(input: InstanceSettingsCoreInput): Promise<void> {
 		await this.persist(input);
 	}
 
+	/** Persists the Docker socket path and network name overrides. */
 	async updateDocker(input: InstanceSettingsDockerInput): Promise<void> {
 		await this.persist(input);
 	}
 
+	/**
+	 * Persists the Traefik entrypoint, cert resolver, ACME email and dynamic
+	 * config dir overrides.
+	 */
 	async updateTraefik(input: InstanceSettingsTraefikInput): Promise<void> {
 		await this.persist(input);
 	}
@@ -234,18 +252,27 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		return this.row.orchestrationMode ?? "standalone";
 	}
 
+	/** Persists whether services deploy as plain containers or swarm services. */
 	async updateOrchestrationMode(mode: "standalone" | "swarm"): Promise<void> {
 		await this.persist({ orchestrationMode: mode });
 	}
 
+	/**
+	 * Whether images are vulnerability-scanned, on unless explicitly disabled.
+	 */
 	get imageScanEnabled(): boolean {
 		return this.row.imageScanEnabled ?? true;
 	}
 
+	/**
+	 * The severity at or above which a scan finding blocks a deploy, null to
+	 * never block.
+	 */
 	get imageScanBlockSeverity(): BlockSeverity | null {
 		return this.row.imageScanBlockSeverity ?? null;
 	}
 
+	/** Persists the image scanning toggle and blocking severity. */
 	async updateImageScan(input: {
 		imageScanBlockSeverity: BlockSeverity | null;
 		imageScanEnabled: boolean;
@@ -253,6 +280,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		await this.persist(input);
 	}
 
+	/** The Cloudflare zone DNS records are managed in, if configured. */
 	get cloudflareZoneId(): string | null {
 		return this.row.cloudflareZoneId;
 	}
@@ -269,6 +297,10 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			: null;
 	}
 
+	/**
+	 * Persists the Cloudflare zone id and, when a new token was typed, the
+	 * re-encrypted API token; a blank token keeps the stored one.
+	 */
 	async updateCloudflare(
 		input: InstanceSettingsCloudflareInput,
 	): Promise<void> {
@@ -283,18 +315,22 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		});
 	}
 
+	/** The Pangolin API base URL, if configured. */
 	get pangolinApiBaseUrl(): string | null {
 		return this.row.pangolinApiBaseUrl;
 	}
 
+	/** The Pangolin organisation resources are created in, if configured. */
 	get pangolinOrgId(): string | null {
 		return this.row.pangolinOrgId;
 	}
 
+	/** The Pangolin site new resources are attached to, if configured. */
 	get pangolinMainSiteName(): string | null {
 		return this.row.pangolinMainSiteName;
 	}
 
+	/** The port a created Pangolin target points at, 443 when unset. */
 	get pangolinTargetPort(): number {
 		return this.row.pangolinTargetPort ?? 443;
 	}
@@ -326,6 +362,10 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			: null;
 	}
 
+	/**
+	 * Persists the Pangolin settings and, when a new token was typed, the
+	 * re-encrypted API token; a blank token keeps the stored one.
+	 */
 	async updatePangolin(input: InstanceSettingsPangolinInput): Promise<void> {
 		const { pangolinApiToken, ...rest } = input;
 		await this.persist({
@@ -338,6 +378,10 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		});
 	}
 
+	/**
+	 * Persists the SMTP settings and, when a new password was typed, the
+	 * re-encrypted password; a blank password keeps the stored one.
+	 */
 	async updateSmtp(input: InstanceSettingsSmtpInput): Promise<void> {
 		const { smtpPassword, ...rest } = input;
 		await this.persist({
@@ -349,10 +393,16 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		});
 	}
 
+	/** The configured git providers, with client secrets still encrypted. */
 	get gitProviders(): GitProviderConfig[] {
 		return this.row.gitProviders;
 	}
 
+	/**
+	 * Replaces the whole git provider list with the submitted one. New providers
+	 * get a fresh id; a blank client secret keeps the stored secret of the
+	 * provider with the same id.
+	 */
 	async updateGitProviders(providers: GitProviderInput[]): Promise<void> {
 		const existingById = new Map(this.row.gitProviders.map((p) => [p.id, p]));
 		const rows: GitProviderConfig[] = providers.map((p) => ({
@@ -369,6 +419,10 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		await this.persist({ gitProviders: rows });
 	}
 
+	/**
+	 * Converts a submitted OAuth provider into its stored shape, encrypting a
+	 * newly typed client secret or keeping `existing`'s when it was left blank.
+	 */
 	#toRow(
 		input: OauthProviderInput,
 		existing?: InstanceOauthProvider,
@@ -390,15 +444,21 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		};
 	}
 
+	/** The stored OAuth provider with this name, null when none matches. */
 	oauthProvider(name: string): InstanceOauthProvider | null {
 		return this.row.oauthProviders.find((p) => p.name === name) ?? null;
 	}
 
+	/** Appends a new OAuth provider and persists the list. */
 	async addOauthProvider(input: OauthProviderInput): Promise<void> {
 		const rows = [...this.row.oauthProviders, this.#toRow(input)];
 		await this.persist({ oauthProviders: rows });
 	}
 
+	/**
+	 * Replaces the OAuth provider named `name` with the submitted one, keeping
+	 * its stored secret when none was typed.
+	 */
 	async updateOauthProvider(
 		name: string,
 		input: OauthProviderInput,
@@ -409,11 +469,16 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		await this.persist({ oauthProviders: rows });
 	}
 
+	/** Removes the OAuth provider named `name` and persists the list. */
 	async deleteOauthProvider(name: string): Promise<void> {
 		const rows = this.row.oauthProviders.filter((p) => p.name !== name);
 		await this.persist({ oauthProviders: rows });
 	}
 
+	/**
+	 * Writes a partial update to the singleton row and mirrors it onto this
+	 * instance.
+	 */
 	private async persist(
 		input: Partial<Omit<InstanceSettings, "createdAt" | "id" | "updatedAt">>,
 	): Promise<void> {

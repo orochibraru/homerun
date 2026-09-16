@@ -26,6 +26,13 @@ import { UserService } from "./user.service.ts";
 
 const logger = new Logger("Auth");
 
+/**
+ * Resolves the better-auth `genericOAuth` token-endpoint auth option for one
+ * configured provider. When `tokenAuthMethod` is `"auto"`, defers to
+ * `resolveAdvertisedTokenAuth` over the provider's discovered methods;
+ * otherwise honors the explicit `"basic"`/`"post"` choice. Returns `{}` (no
+ * override) when the provider has no client secret or resolves to neither.
+ */
 function tokenAuthOptions(provider: {
 	clientSecret: string;
 	discoveredTokenAuth: string[];

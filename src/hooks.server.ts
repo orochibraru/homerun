@@ -56,6 +56,12 @@ function makeErrorId(): string {
 	return crypto.randomUUID().replace(/-/g, "").slice(0, 24);
 }
 
+/**
+ * Logs an uncaught server error under a fresh error id and turns it into the
+ * plain `App.Error` object the error page renders. 404s are skipped, and an
+ * unreachable database gets a `DATABASE_UNAVAILABLE` code with a
+ * reload-in-a-moment message instead of the driver's.
+ */
 export function handleError({ event, error, status }) {
 	if (status === 404) {
 		return;
@@ -94,6 +100,11 @@ function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Blocks boot until Postgres answers a trivial query, retrying up to 10 times 2
+ * seconds apart with a fresh connection pool each time, and exits the process
+ * once retries run out.
+ */
 async function waitForDatabase() {
 	const maxRetries = 10;
 	const retryDelay = 2000;
@@ -128,6 +139,11 @@ async function waitForDatabase() {
 	}
 }
 
+/**
+ * Applies pending Drizzle migrations from `drizzle/`, retrying up to 10 times 3
+ * seconds apart with a fresh connection pool, and exits the process if they
+ * still fail.
+ */
 async function runMigrations() {
 	logger.info("Migrating database...");
 	let retries = 10;
@@ -166,6 +182,13 @@ async function runMigrations() {
 	}
 }
 
+/**
+ * Server boot sequence, run once before the first request : waits for the
+ * database, migrates and seeds built-in templates, applies DB-backed instance
+ * settings (plus the auto-detected forward-auth URL when running in a
+ * container), rebuilds auth, syncs the dashboard's Traefik router and DNS, then
+ * starts the job worker, rollout health watches and every scheduler.
+ */
 export const init = async () => {
 	await waitForDatabase();
 	await runMigrations();
@@ -294,6 +317,12 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 	return null;
 }
 
+/**
+ * Resolves the request's user from the better-auth session cookie, falling back
+ * to an API key, and sets `locals.isAdmin`. Rejects closed sign-up and bad API
+ * keys up front, and passes auth API paths to better-auth except the few
+ * SvelteKit routes that live under its base path.
+ */
 const authHandler: Handle = async ({ event, resolve }) => {
 	const signUpClosed = await signUpClosedResponse(event);
 	if (signUpClosed) {
@@ -330,6 +359,12 @@ const authHandler: Handle = async ({ event, resolve }) => {
 	return svelteKitHandler({ auth, building, event, resolve });
 };
 
+/**
+ * Resolves the request with only content-length and content-type exposed to
+ * serialized fetches, then logs it : an error line for 4xx/5xx page responses
+ * other than 404, an info line otherwise. Well-known paths and the favicon skip
+ * logging.
+ */
 const generalHandler: Handle = async ({ event, resolve }) => {
 	const isUpload =
 		event.request.method === "POST" &&

@@ -24,10 +24,12 @@ class CliConfigStore {
 	readonly #dir = join(homedir(), ".config", "homerun");
 	readonly #file = join(this.#dir, "config.json");
 
+	/** Absolute path of the stored config file, `~/.config/homerun/config.json`. */
 	configPath(): string {
 		return this.#file;
 	}
 
+	/** Reads the stored base URL and API key, or null when the file is missing, unparseable or lacks either field. */
 	readStoredConfig(): StoredConfig | null {
 		if (!existsSync(this.#file)) {
 			return null;
@@ -55,6 +57,7 @@ class CliConfigStore {
 		chmodSync(this.#file, 0o600);
 	}
 
+	/** Deletes the stored config file if it exists. */
 	clearStoredConfig(): void {
 		if (existsSync(this.#file)) {
 			rmSync(this.#file);

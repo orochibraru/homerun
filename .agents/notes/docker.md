@@ -355,7 +355,7 @@ and installs the Homerun Agent there via `systemd --user`, the same install
 shape `packages/installer/steps/agent.ts` uses locally, hand-mirrored rather
 than sharing the TS installer's dry-run machinery so the two scripts stay in
 lockstep by inspection. Usage:
-`curl -fsSL .../swarm-join.sh | sudo bash -s -- --token <SWMTKN-...> --manager <ip>:2377`
+`curl -fsSL .../swarm-join.sh | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377`
 (token/manager address come from `docker swarm join-token worker` on the
 manager). Once joined, the node is schedulable by the swarm itself, nothing in
 this app has to register it. **Not verified against a real second host or a real

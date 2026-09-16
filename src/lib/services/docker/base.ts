@@ -20,6 +20,7 @@ export type { RemoteHostConnection } from "./client.ts";
  * docker.service.ts.
  */
 export class BaseDockerService {
+	/** Gets (or opens and caches) the dockerode client for `remote`, or the local socket when omitted. See `client.ts`'s `getDocker`. */
 	getDocker(remote?: RemoteHostConnection | null): Docker {
 		return getDocker(remote);
 	}

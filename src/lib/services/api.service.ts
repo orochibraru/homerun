@@ -44,6 +44,7 @@ interface WwwAuthenticate {
 	service?: string;
 }
 
+/** Parses a registry's `WWW-Authenticate: Bearer realm=..., service=..., scope=...` challenge header, or null if it isn't a Bearer challenge or has no `realm`. */
 function parseWwwAuthenticate(header: string): WwwAuthenticate | null {
 	const match = header.match(BEARER_CHALLENGE_RE);
 	if (!match) {
@@ -62,6 +63,12 @@ function parseWwwAuthenticate(header: string): WwwAuthenticate | null {
 	return { realm: params.realm, scope: params.scope, service: params.service };
 }
 
+/**
+ * Fetches an anonymous (or Basic-auth-backed, when `auth` is given) bearer
+ * token from the registry's token realm, per the Docker Registry v2 auth
+ * flow. Makes a network request to `challenge.realm`; returns null on any
+ * non-2xx response or a missing token in the body, never throws.
+ */
 async function fetchBearerToken(
 	challenge: WwwAuthenticate,
 	auth?: RegistryAuth,

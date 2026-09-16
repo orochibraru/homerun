@@ -36,6 +36,7 @@ interface CloudflareWriteResponse {
  * caching here.
  */
 class CloudflareServiceClass {
+	/** Shared authenticated fetch against the Cloudflare v4 API. @throws When the response isn't ok, with Cloudflare's own JSON body in the message. */
 	private async request<T>(
 		token: string,
 		path: string,
@@ -56,6 +57,7 @@ class CloudflareServiceClass {
 		return body;
 	}
 
+	/** The id of the existing CNAME record for `hostname` in the given zone, or null if there isn't one. */
 	private async findRecordId(
 		token: string,
 		zoneId: string,

@@ -33,6 +33,7 @@ class AgentConfig {
 		process.env.AGENT_TOKEN_FILE ??
 		`${AgentConfig.homeDir()}/.homerun-agent/token`;
 
+	/** The current user's home directory from HOME or USERPROFILE, falling back to `/root`. */
 	private static homeDir(): string {
 		return process.env.HOME ?? process.env.USERPROFILE ?? "/root";
 	}

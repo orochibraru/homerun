@@ -7,6 +7,7 @@ export const GATE_IDENTITY_HEADERS = [
 	"X-Homerun-Name",
 ];
 
+/** The forwardAuth address Traefik should call to gate a service's router, `config.authCheckUrl` with `service` appended as a query param. */
 export function authCheckUrlFor(serviceId: string): string {
 	const separator = config.authCheckUrl.includes("?") ? "&" : "?";
 	return `${config.authCheckUrl}${separator}service=${encodeURIComponent(serviceId)}`;
@@ -36,6 +37,14 @@ export function hasTraefikRouterFor(
 export const MANAGED_LABEL = "homerun.managed";
 export const SERVICE_ID_LABEL = "homerun.service.id";
 
+/**
+ * Builds the full label set for a container/swarm service : always the
+ * `homerun.managed`/`homerun.service.id` tracking labels, plus (when
+ * `dnsResolvable`) the Traefik router/service/TLS labels that give it its
+ * public `<slug>.<baseDomain>` route, a second router for `customDomain`
+ * sharing the same backend, and a forwardAuth middleware when `authRequired`
+ * is set.
+ */
 export function buildContainerLabels(params: {
 	serviceId: string;
 	slug: string;

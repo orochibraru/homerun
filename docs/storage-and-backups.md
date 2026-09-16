@@ -77,10 +77,23 @@ long-running instance with hundreds of past runs can page all the way back
 through them instead of only ever seeing the newest handful. The same "Run now"
 button is available here as on a volume's own page.
 
-**There's no restore flow yet**, uploads only. Retrieve a backup from your S3
-destination directly (`aws s3 cp`, `rclone`, your provider's console) and unpack
-it into the bind-mount path (or into a named volume, through a helper container
-of your own) by hand.
+## Restoring a backup
+
+A volume with a destination has a **Restore** panel on its own page. **List
+backups** reads what's in the bucket for that volume (under its key prefix),
+newest first with date and size, and **Restore** on one of them downloads it and
+unpacks it back into the volume, for both volume kinds, through the same kind of
+short-lived `alpine` helper container.
+
+A restore unpacks _over_ the volume rather than wiping it first: files in the
+archive replace the ones on disk, and anything else already there is left alone.
+Nothing is stopped for you, so **stop every service using the volume before
+restoring**, or it can end up with half-old, half-new data. A restore runs in
+the request rather than through the job queue, so the page waits until it's
+done, and it isn't recorded in the backup history.
+
+You can still fetch a backup from the bucket yourself (`aws s3 cp`, `rclone`,
+your provider's console) if you'd rather unpack it somewhere else.
 
 ## Next steps
 

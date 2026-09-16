@@ -26,12 +26,20 @@ interface StatusCheckFailure {
 	evaluation: CheckEvaluation | null;
 }
 
+/**
+ * Thrown when required git status checks block a git build from proceeding
+ * (missing/unreadable checks, a timeout, a failing check, or the deploy
+ * being cancelled while checks were still pending). Carries enough detail
+ * (`commit`, `evaluation`, `cancelled`) for the caller to notify without
+ * re-deriving it.
+ */
 export class StatusChecksFailedError extends Error {
 	override name = "StatusChecksFailedError";
 	readonly cancelled: boolean;
 	readonly commit: string | null;
 	readonly evaluation: CheckEvaluation | null;
 
+	/** @param failure Carries the resolved commit and check evaluation so the caller can notify without re-deriving them. */
 	constructor(message: string, failure: StatusCheckFailure) {
 		super(message);
 		this.cancelled = failure.cancelled ?? false;
@@ -57,6 +65,19 @@ async function isCancelled(ctx: StatusCheckContext): Promise<boolean> {
 	);
 }
 
+/**
+ * Blocks a git build until the service's required status checks all pass on
+ * the ref's resolved commit, polling the git provider (`StatusCheckService`)
+ * until they settle, time out, or the deploy is cancelled out from under
+ * them. Appends progress to the deployment's log and records the resolved
+ * commit onto the deployment row along the way.
+ *
+ * @returns The resolved commit sha the checks passed on, for the build step
+ *   to actually check out.
+ * @throws `StatusChecksFailedError` when no checks are configured, the
+ *   checks can't be read, they fail, they time out, or the deploy is
+ *   cancelled while waiting.
+ */
 export async function enforceStatusChecks(
 	ctx: StatusCheckContext,
 	git: GitSource,
@@ -103,6 +124,10 @@ export async function enforceStatusChecks(
 	}
 }
 
+/**
+ * Turns a `waitForChecks` outcome into either the resolved commit (on pass)
+ * or a `StatusChecksFailedError` describing why the build can't proceed.
+ */
 async function settle(
 	ctx: StatusCheckContext,
 	result: Awaited<ReturnType<typeof waitForChecks>>,
@@ -134,6 +159,12 @@ async function settle(
 	}
 }
 
+/**
+ * Notifies the user that a build was blocked by failing status checks : an
+ * in-app `NotificationDTO` plus any configured notification channel. No-op
+ * when the failure was because the deploy itself was cancelled, since that's
+ * an intentional user action, not something to alert on.
+ */
 export async function notifyStatusChecksFailed(
 	svc: ServiceDTO,
 	userId: string,

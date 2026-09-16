@@ -21,6 +21,13 @@ export type ServiceMounts = Awaited<
 	ReturnType<typeof ServiceVolumeDTO.listForService>
 >;
 
+/**
+ * Syncs DNS for a service's hostname (and its custom domain, if set) through
+ * whichever DNS provider is configured, after a successful deploy. No-op
+ * when the service isn't DNS-resolvable. Appends a result line per hostname
+ * to the deployment's log, and logs a warning for any provider failure
+ * rather than throwing : DNS sync is best-effort, it never fails the deploy.
+ */
 export async function syncAutoDns(
 	svc: ServiceDTO,
 	stack: StackDTO | null,
@@ -55,6 +62,7 @@ export async function syncAutoDns(
 	}
 }
 
+/** Shapes a service's resolved volume mounts into the params `DockerService`'s container/swarm create calls expect. */
 export function toVolumeParams(mounts: ServiceMounts) {
 	return mounts.map((m) => ({
 		containerPath: m.mount.toJSON().containerPath,
@@ -63,6 +71,7 @@ export function toVolumeParams(mounts: ServiceMounts) {
 	}));
 }
 
+/** Reshapes cache registry credentials into the `RegistryAuth` shape dockerode's pull/push calls expect. */
 export function registryAuth(registry: CacheRegistryCredentials): RegistryAuth {
 	return {
 		password: registry.password,
@@ -71,6 +80,13 @@ export function registryAuth(registry: CacheRegistryCredentials): RegistryAuth {
 	};
 }
 
+/**
+ * Resolves the credential a git build/clone of `gitUrl` should use. Returns
+ * null when the URL already embeds credentials, when no enabled git provider
+ * matches the host, when the user has no connection to that provider, or
+ * when the connection's stored token can't be decrypted : any of those mean
+ * the clone is attempted without auth (fine for a public repo).
+ */
 export async function resolveGitCredential(
 	gitUrl: string,
 	userId: string,

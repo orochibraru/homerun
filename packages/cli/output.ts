@@ -2,6 +2,7 @@ import process from "node:process";
 
 /** No dependency, matches this codebase's generally dependency-light posture (see the main app's hand-rolled cron matcher/SigV4 client for the same instinct). */
 class CliOutput {
+	/** Prints rows as a padded, left-aligned text table with a header and dashed rule, or `(none)` when empty. Missing cells print blank. */
 	printTable(rows: Record<string, unknown>[], columns: string[]): void {
 		if (rows.length === 0) {
 			console.log("(none)");
@@ -19,10 +20,12 @@ class CliOutput {
 		}
 	}
 
+	/** Pretty-prints a value as two-space-indented JSON to stdout. */
 	printJson(value: unknown): void {
 		console.log(JSON.stringify(value, null, 2));
 	}
 
+	/** Prints `error: <message>` to stderr and exits the process with status 1. */
 	fail(message: string): never {
 		console.error(`error: ${message}`);
 		process.exit(1);

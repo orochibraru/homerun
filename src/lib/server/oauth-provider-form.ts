@@ -17,6 +17,13 @@ function parseTokenAuthMethod(raw: string | null): OauthTokenAuthMethod {
 	return raw === "basic" || raw === "post" ? raw : "auto";
 }
 
+/**
+ * Fetches an OpenID discovery document (5 second timeout) to check it is real
+ * and read which token endpoint auth methods it advertises.
+ *
+ * @returns An error message when it can't be reached or has no issuer,
+ * otherwise the advertised methods.
+ */
 async function inspectDiscoveryUrl(url: string): Promise<DiscoveryResult> {
 	try {
 		const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
@@ -57,6 +64,15 @@ function text(formData: FormData, key: string): string {
 	return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Validates a submitted OAuth provider form : the id must be a lowercase slug
+ * not in `takenNames`, client id and discovery URL are required, and the
+ * discovery URL is fetched live to confirm it works. A blank label falls back
+ * to the id, and a blank client secret is left undefined so an edit keeps the
+ * stored one.
+ *
+ * @returns The provider input, or the first validation error.
+ */
 export async function parseOauthProviderForm(
 	formData: FormData,
 	takenNames: string[],

@@ -89,6 +89,7 @@ function shortId(id: string | undefined): string {
 	return (id ?? "").replace(/^sha256:/, "").slice(0, 12);
 }
 
+/** Shapes the images half of a `docker system df` response into a `CleanupCategory`, excluding images still in use by a container or in `keep`. */
 function imageCategory(
 	images: DockerDfImage[],
 	keep: Set<string>,
@@ -110,6 +111,7 @@ function imageCategory(
 	};
 }
 
+/** Mixin adding the "Docker Cleanup" surface : previewing and pruning unused containers/images/networks/volumes/build cache. */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerCleanupMixin<
 	TBase extends Constructor<BaseDockerService>,
@@ -129,6 +131,17 @@ export function DockerCleanupMixin<
 				.sort((a, b) => a.localeCompare(b));
 		}
 
+		/**
+		 * Builds the full "Docker Cleanup" preview : containers, images,
+		 * networks, volumes and build cache the daemon would remove on a
+		 * prune, without actually removing anything. Backed by a single
+		 * `docker system df` call plus `listNetworks`, so it's cheap enough to
+		 * call on every page load.
+		 *
+		 * @param keepImageIds Image ids to exclude from the images category
+		 *   even if otherwise unused, e.g. retained revision images a rollback
+		 *   might still need.
+		 */
 		async getCleanupPreview(
 			keepImageIds: string[] = [],
 		): Promise<CleanupPreview> {
@@ -214,6 +227,7 @@ export function DockerCleanupMixin<
 			};
 		}
 
+		/** Removes every stopped container on the host via `docker container prune`. Not scoped to Homerun-managed containers. */
 		async pruneContainers(): Promise<PruneSummary> {
 			const result = await this.getDocker().pruneContainers();
 			const itemsDeleted = result.ContainersDeleted?.length ?? 0;
@@ -223,6 +237,14 @@ export function DockerCleanupMixin<
 			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
 		}
 
+		/**
+		 * Removes unused images host-wide (not scoped to Homerun-managed
+		 * ones). Dangling-only by default; `all` also removes tagged images
+		 * with no container using them. When `keepImageIds` is non-empty,
+		 * delegates to `#pruneImagesKeeping` instead of the daemon's own
+		 * prune, since dockerode's `pruneImages` has no way to exclude
+		 * specific image ids.
+		 */
 		async pruneImages(
 			all = false,
 			keepImageIds: string[] = [],
@@ -240,6 +262,13 @@ export function DockerCleanupMixin<
 			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
 		}
 
+		/**
+		 * `pruneImages`'s path when specific image ids must survive : removes
+		 * unused images one at a time (skipping anything in `keep`) rather
+		 * than the daemon's own bulk prune, logging and continuing past any
+		 * individual removal failure (e.g. a parent/child image conflict)
+		 * instead of aborting the whole batch.
+		 */
 		async #pruneImagesKeeping(
 			all: boolean,
 			keep: Set<string>,
@@ -271,6 +300,7 @@ export function DockerCleanupMixin<
 			return { itemsDeleted, spaceReclaimedBytes };
 		}
 
+		/** Removes every unused network on the host via `docker network prune`. Not scoped to Homerun-managed networks. */
 		async pruneNetworks(): Promise<PruneSummary> {
 			const result = await this.getDocker().pruneNetworks();
 			const itemsDeleted = result.NetworksDeleted?.length ?? 0;
@@ -278,6 +308,7 @@ export function DockerCleanupMixin<
 			return { itemsDeleted, spaceReclaimedBytes: 0 };
 		}
 
+		/** Clears the daemon's build cache via `docker builder prune`. `itemsDeleted` is always 0 : the daemon's response only reports reclaimed space, not an item count. */
 		async pruneBuildCache(): Promise<PruneSummary> {
 			const result = await this.getDocker().pruneBuilder();
 			logger.info(
@@ -289,6 +320,7 @@ export function DockerCleanupMixin<
 			};
 		}
 
+		/** Removes every unused volume on the host, including named ones (`filters: { all: true }`), via `docker volume prune`. Not scoped to Homerun-managed volumes. */
 		async pruneVolumes(): Promise<PruneSummary> {
 			const result = await this.getDocker().pruneVolumes({
 				filters: { all: ["true"] },
@@ -300,6 +332,12 @@ export function DockerCleanupMixin<
 			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
 		}
 
+		/**
+		 * Runs containers/images/networks/build-cache prunes in sequence, as
+		 * the "prune everything" bulk action. Deliberately excludes
+		 * `pruneVolumes` : a volume can hold real data, so that one stays an
+		 * explicit, separate action rather than bundled into a broad sweep.
+		 */
 		async pruneSystem(
 			keepImageIds: string[] = [],
 		): Promise<SystemPruneSummary> {

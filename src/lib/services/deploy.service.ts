@@ -91,6 +91,14 @@ export interface DeployResult {
 	success: boolean;
 }
 
+/**
+ * Builds the `RevisionSource` a rollback deploy should reuse, by loading the
+ * deployment being rolled back to. Returns null when `dep` isn't a rollback
+ * (`rollbackOfDeploymentId` unset).
+ *
+ * @throws When the target deployment's row is gone or never recorded an
+ *   image ref, since there's nothing left to roll back to.
+ */
 async function revisionSourceFor(
 	dep: DeploymentDTO,
 ): Promise<RevisionSource | null> {
@@ -114,6 +122,15 @@ async function revisionSourceFor(
 }
 
 class DeploymentServiceClass {
+	/**
+	 * Assembles the `DeployPlan` for a deploy: loads instance settings, the
+	 * build cache registry and build server the service is configured to use
+	 * (only relevant for a fresh git build, not a rollback), then delegates
+	 * the actual image/workload decision to `resolveDeployPlan`.
+	 *
+	 * @param revision When set (a rollback), skips build-server/cache-registry
+	 *   resolution entirely and the plan reuses that revision's image.
+	 */
 	async #loadDeployPlan(
 		svc: ServiceDTO,
 		userId: string,
@@ -363,8 +380,12 @@ class DeploymentServiceClass {
 	}
 
 	/**
-	 * Resolves the image ref the deploy step should use : a git build
-	 * (local, docker build server, or agent) or a pull here.
+	 * Resolves the image ref the deploy step should use : a plain registry
+	 * pull, a rollback's already-built revision image, or a fresh git build
+	 * (local, docker build server, or agent). A git build also runs required
+	 * status checks first when configured, triggers an image scan on the
+	 * result, and persists the resolved image/tag onto the service row
+	 * immediately so a concurrent redeploy sees it.
 	 */
 	async #resolveImage(
 		ctx: DeployContext,
@@ -443,7 +464,13 @@ class DeploymentServiceClass {
 		return { deploymentId: dep.id, error: errorMessage, success: false };
 	}
 
-	/** Post-start bookkeeping : persist the running state, close out the deployment row, sync DNS, notify. */
+	/**
+	 * Post-start bookkeeping once the container/swarm service is running :
+	 * marks the service and deployment rows running, clears any dismissed
+	 * error state on the service, appends the closing log line, and syncs
+	 * DNS for the service's hostname(s). Doesn't notify : the caller
+	 * (`deployService`) does that itself once this returns.
+	 */
 	async #recordSuccess(
 		ctx: DeployContext,
 		ids: { containerId?: string; swarmServiceId?: string },
@@ -483,6 +510,12 @@ class DeploymentServiceClass {
 		await syncAutoDns(svc, stack, dep);
 	}
 
+	/**
+	 * Starts watching a just-deployed revision for health, so an unhealthy
+	 * container/swarm service can trigger an automatic rollback. Wires the
+	 * rollback callback back through `enqueueDeploy`, so an auto-rollback goes
+	 * through the same queue/coalescing path a manual deploy does.
+	 */
 	watchHealth(deploymentId: string, serviceId: string, userId: string): void {
 		RevisionHealthService.watch({
 			deploymentId,
@@ -492,10 +525,19 @@ class DeploymentServiceClass {
 		});
 	}
 
+	/** Re-arms health watches for every deployment still mid-watch after a restart, same rollback wiring as `watchHealth`. */
 	resumeHealthWatches(): Promise<void> {
 		return RevisionHealthService.resume((input) => this.enqueueDeploy(input));
 	}
 
+	/**
+	 * Queues a deploy (or rollback, when `rollbackOfDeploymentId` is set):
+	 * creates the `DeploymentDTO` row, marks the service pending, and enqueues
+	 * a `deploy` job. Concurrent enqueues for the same service coalesce onto
+	 * one queued job (`dedupeKey`/`lockKey` scoped to `service:${svc.id}`); when
+	 * that happens this deployment's own row is marked `stopped` as superseded
+	 * and the coalesced job's deployment id is returned instead.
+	 */
 	async enqueueDeploy(input: EnqueueDeployInput): Promise<EnqueueDeployResult> {
 		const { svc, userId } = input;
 		const rollbackOf = input.rollbackOfDeploymentId ?? null;
@@ -540,6 +582,14 @@ class DeploymentServiceClass {
 		return { deploymentId: coalesced, jobId: entry.id };
 	}
 
+	/**
+	 * Enqueues a stack deploy: every linked service first, each one's job
+	 * chained (`dependsOnJobId`) after the previous so they deploy in order,
+	 * then the primary service last, depending on the final linked job.
+	 *
+	 * @returns The primary service's enqueue result; linked services' own
+	 *   deployment/job ids aren't surfaced to the caller.
+	 */
 	async enqueueStackDeploy(
 		primary: ServiceDTO,
 		linked: ServiceDTO[],
@@ -562,6 +612,19 @@ class DeploymentServiceClass {
 		});
 	}
 
+	/**
+	 * Runs an entire deploy end to end: loads the deploy plan, resolves (pulls
+	 * or builds) the image, starts the container/swarm service, records the
+	 * result, and arms the post-deploy health watch. This is the job worker's
+	 * actual `deploy` job handler, invoked with the deployment id `enqueueDeploy`
+	 * already created (or reuses `clientDeploymentId`'s row if it already
+	 * exists, so a job retry doesn't create a duplicate one). Appends
+	 * phase-by-phase progress to the deployment's log throughout, and sends a
+	 * success/failure notification (both an in-app `NotificationDTO` and any
+	 * configured notification channel) before returning. Never throws: any
+	 * error is caught and turned into a `{ success: false }` result via
+	 * `#recordFailure`.
+	 */
 	async deployService(
 		svc: ServiceDTO,
 		userId: string,

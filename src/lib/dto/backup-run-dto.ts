@@ -14,6 +14,10 @@ import { BaseDTO } from "./base-dto";
 
 /** Wraps the `backup_run` table : see ServiceDTO for the pattern this follows. */
 export class BackupRunDTO extends BaseDTO<BackupRun> {
+	/**
+	 * Inserts a new in-progress backup run for a volume, stamped as started now
+	 * with no outcome yet.
+	 */
 	static async create(volumeId: string): Promise<BackupRunDTO> {
 		const row: BackupRun = {
 			error: null,
@@ -28,6 +32,10 @@ export class BackupRunDTO extends BaseDTO<BackupRun> {
 		return new BackupRunDTO(row);
 	}
 
+	/**
+	 * Records a run's outcome and finish time, updating both the row and this
+	 * instance.
+	 */
 	async finish(result: {
 		error?: string;
 		sizeBytes?: number;

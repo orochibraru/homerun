@@ -90,6 +90,7 @@ class AdminServiceClass {
 		return checks;
 	}
 
+	/** Warns when `baseDomain` is still the `localhost` default outside dev, since deployed services would only be reachable from this machine. */
 	#baseDomainCheck(): SetupCheck {
 		if (config.baseDomain === "localhost" && !dev) {
 			return {
@@ -109,6 +110,7 @@ class AdminServiceClass {
 		};
 	}
 
+	/** Flags the built-in placeholder auth secret as a danger-severity finding outside dev, since it means sessions aren't safe against a compromised install. */
 	#authSecretCheck(): SetupCheck {
 		if (config.auth.secret === "default-secret" && !dev) {
 			return {
@@ -128,6 +130,7 @@ class AdminServiceClass {
 		};
 	}
 
+	/** Warns when no origin is configured outside dev, since it's then derived per-request, which can misbehave behind a proxy. */
 	#originCheck(): SetupCheck {
 		if (config.auth.origin || dev) {
 			return {
@@ -147,6 +150,7 @@ class AdminServiceClass {
 		};
 	}
 
+	/** The dashboard's hostname derived from the configured origin, or null if there's no origin or it carries an explicit port (routing checks below don't apply to a bare `host:port` origin). */
 	#dashboardHost(): string | null {
 		if (!config.auth.origin) {
 			return null;
@@ -159,6 +163,13 @@ class AdminServiceClass {
 		}
 	}
 
+	/**
+	 * Whether something actually routes `host` to this container: either a
+	 * Traefik router label already on it, or a router file Homerun itself
+	 * publishes to the Traefik dynamic config directory
+	 * (`DASHBOARD_ROUTER_FILE`). Returns null (no check to show) if this
+	 * container's own labels can't be read at all.
+	 */
 	async #dashboardRouterCheck(host: string): Promise<SetupCheck | null> {
 		const labels = await DockerService.selfContainerLabels().catch(() => null);
 		if (!labels) {
@@ -190,6 +201,7 @@ class AdminServiceClass {
 		};
 	}
 
+	/** Whether a Traefik container is currently running on this host, checked via `DockerService.findTraefikContainer`. */
 	async #traefikCheck(): Promise<SetupCheck> {
 		const traefik = await DockerService.findTraefikContainer().catch(
 			() => null,
@@ -211,6 +223,7 @@ class AdminServiceClass {
 		};
 	}
 
+	/** Whether the configured Docker socket answers a ping, since nothing can deploy without it. */
 	async #dockerCheck(): Promise<SetupCheck> {
 		const dockerOk = await DockerService.getDocker()
 			.ping()
@@ -233,6 +246,7 @@ class AdminServiceClass {
 		};
 	}
 
+	/** Whether SMTP is fully configured (`isSmtpEnabled`), given it's already been turned on. */
 	#smtpCheck(): SetupCheck {
 		if (isSmtpEnabled()) {
 			return {

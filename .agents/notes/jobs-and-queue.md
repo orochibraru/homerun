@@ -277,8 +277,11 @@ only `BackupService`'s private `archive()` branches, `attemptBackup` and every
 caller are kind-agnostic. A non-zero exit from the helper fails the run with the
 helper's own stderr attached, rather than uploading a truncated/empty tarball.
 Scheduled backups are one `DueScheduler` config over
-`StorageVolumeDTO.listBackupEnabled()`, see Schedulers above. No restore flow,
-upload-only.
+`StorageVolumeDTO.listBackupEnabled()`, see Schedulers above. Restore is
+`S3BackupService.restoreVolume()`, called straight from the volume page's
+`restore` action (not queued): it downloads one object and unpacks it over the
+volume through Docker's archive endpoint on a stopped helper container, one path
+for both volume kinds, without wiping what's already there.
 
 ## Cron jobs on another daemon, and live output
 

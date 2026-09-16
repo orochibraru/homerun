@@ -15,7 +15,9 @@ history and service rows, deletes the stack row itself, and finally removes the
 stack's Docker network, in that order.
 
 Assign a service to a stack on the New Service wizard, or move it later from the
-service's Settings tab.
+service's Settings tab. A stack's page lists its services with what each one is
+using right now; its **Settings** tab renames it (name, slug, description) and
+deletes it.
 
 `/stacks` has a search box, a list/card view toggle, and a pager once you have
 more than a page's worth, same as the
@@ -29,7 +31,7 @@ A template is a saved service config (image, tag, container port, env vars, CPU/
 memory) you can deploy from repeatedly without re-entering everything. Two
 kinds:
 
-- **Built-in**, a catalog of ~58 common self-hosted apps, media (Jellyfin,
+- **Built-in**, a catalog of ~70 common self-hosted apps, media (Jellyfin,
   Navidrome, the *arr stack, qBittorrent), databases and caches (PostgreSQL,
   MySQL, MongoDB, Redis), networking (Pi-hole, AdGuard Home, Nginx Proxy
   Manager), monitoring (Uptime Kuma, Grafana, Gatus, Healthchecks), dashboards
@@ -76,10 +78,10 @@ down just means the panel doesn't render.
 ### Linked containers
 
 A template can pull its companions along with it. WordPress ships linked to
-MySQL, Umami and Miniflux to PostgreSQL, and you can link your own the same way
-from the "Linked containers" section on `Templates → New`: tick any other
-template, give it an alias (defaults to a slug of its name), and deploying the
-primary deploys the companions too.
+MySQL, Umami and Miniflux to PostgreSQL, Paperless-ngx to Redis, and you can
+link your own the same way from the "Linked containers" section on
+`Templates → New`: tick any other template, give it an alias (defaults to a slug
+of its name), and deploying the primary deploys the companions too.
 
 Env vars on the primary template can then reference a companion:
 

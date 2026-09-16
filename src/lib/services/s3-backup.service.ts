@@ -14,14 +14,6 @@ const ARCHIVE_HELPER_IMAGE = "alpine";
 const ARCHIVE_HELPER_TAG = "3";
 const ARCHIVE_MOUNT_PATH = "/homerun-backup-source";
 
-/**
- * Minimal AWS Signature V4 client : just enough to PUT one object to an
- * S3-compatible endpoint (AWS S3, MinIO, R2, Backblaze B2, etc.). No SDK
- * dependency, deliberately: this app stays dependency-light (see also
- * CronService's hand-rolled matcher). Single-request PUT only : no
- * multipart upload, so there's a practical size ceiling (comfortably fine
- * for typical home-lab bind-mount backups, not for huge datasets).
- */
 export interface BackupResult {
 	error?: string;
 	key?: string;
@@ -66,7 +58,16 @@ function signingKey(
 	return hmac(kService, "aws4_request");
 }
 
-/** Uploads `body` to `key` under the configured bucket. Throws on any non-2xx response. */
+/**
+ * Minimal AWS Signature V4 PUT : just enough to upload one object to an
+ * S3-compatible endpoint (AWS S3, MinIO, R2, Backblaze B2, etc.). No SDK
+ * dependency, deliberately: this app stays dependency-light (see also
+ * CronService's hand-rolled matcher). Single-request PUT only : no
+ * multipart upload, so there's a practical size ceiling (comfortably fine
+ * for typical home-lab bind-mount backups, not for huge datasets).
+ *
+ * @throws On any non-2xx response.
+ */
 async function putObject(
 	config: S3Config,
 	key: string,
@@ -284,6 +285,12 @@ class S3BackupServiceClass {
 		return result;
 	}
 
+	/**
+	 * Validates the volume's S3 destination, archives it (`archive`), and
+	 * uploads the archive under a timestamped key. Never throws: every
+	 * failure (missing/deleted destination, undecryptable secret, archive or
+	 * upload error) comes back as `{ success: false, error }`.
+	 */
 	private async attemptBackup(volume: StorageVolumeDTO): Promise<BackupResult> {
 		if (!volume.s3DestinationId) {
 			return {
@@ -369,6 +376,12 @@ class S3BackupServiceClass {
 		}
 	}
 
+	/**
+	 * Resolves and decrypts a volume's S3 destination into an `S3Config`.
+	 *
+	 * @throws When the volume has no destination picked, the destination row
+	 *   no longer exists, or its secret key can't be decrypted.
+	 */
 	async #destinationFor(volume: StorageVolumeDTO): Promise<S3Config> {
 		if (!volume.s3DestinationId) {
 			throw new Error("No S3 destination picked for this volume.");
@@ -410,12 +423,14 @@ class S3BackupServiceClass {
 		});
 	}
 
+	/** Tars up a volume's contents: a host path directly, or a named volume through a helper container. */
 	private archive(volume: StorageVolumeDTO): Promise<Buffer> {
 		return volume.kind === "bind"
 			? this.archiveHostPath(volume.source)
 			: this.archiveNamedVolume(volume.source);
 	}
 
+	/** Runs `tar` on the host directly against a bind mount's real filesystem path. */
 	private async archiveHostPath(source: string): Promise<Buffer> {
 		const { stdout } = await execFileAsync(
 			"tar",
@@ -425,6 +440,13 @@ class S3BackupServiceClass {
 		return stdout;
 	}
 
+	/**
+	 * Tars a Docker-managed named volume by mounting it read-only into a
+	 * short-lived Alpine helper container and running `tar` there, since a
+	 * named volume isn't directly visible on the host filesystem.
+	 *
+	 * @throws When the helper container exits non-zero.
+	 */
 	private async archiveNamedVolume(name: string): Promise<Buffer> {
 		const result = await DockerService.runOneOff({
 			binds: [`${name}:${ARCHIVE_MOUNT_PATH}:ro`],

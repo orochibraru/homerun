@@ -20,6 +20,7 @@ export class RevisionError extends Error {
 	override name = "RevisionError";
 	readonly status: number;
 
+	/** @param status The HTTP status a route should respond with for this error. */
 	constructor(message: string, status: number) {
 		super(message);
 		this.status = status;
@@ -27,6 +28,7 @@ export class RevisionError extends Error {
 }
 
 class RevisionServiceClass {
+	/** A service's revision history, annotated with which one is current/previous/retained. */
 	async list(svc: ServiceDTO): Promise<RevisionView[]> {
 		const rows = (await DeploymentDTO.listRevisions(svc.id)).map((dep) =>
 			dep.toJSON(),
@@ -34,6 +36,11 @@ class RevisionServiceClass {
 		return this.annotate(svc.toJSON(), rows);
 	}
 
+	/**
+	 * Marks each deployment row as `current` (the deployed revision, only
+	 * when the service actually has a running workload), `previous` (the
+	 * rollback target), and `retained` (kept from image-pruning).
+	 */
 	annotate(
 		svc: Pick<Service, "containerId" | "swarmServiceId">,
 		rows: Deployment[],
@@ -51,6 +58,7 @@ class RevisionServiceClass {
 		}));
 	}
 
+	/** The Docker image ids backing every retained revision across all services, for the pruner to skip. */
 	async retainedImageIds(): Promise<string[]> {
 		const revisions = await DeploymentDTO.listRetainedRevisions();
 		return await DockerService.existingImageIds(
@@ -58,6 +66,15 @@ class RevisionServiceClass {
 		);
 	}
 
+	/**
+	 * Resolves the deployment to roll back to: an explicit `revisionId` if
+	 * given (validated as a real successful revision), otherwise the
+	 * service's previous revision.
+	 *
+	 * @throws `RevisionError` when the requested revision doesn't exist or
+	 *   never ran successfully, or when there's no previous revision to fall
+	 *   back to.
+	 */
 	async resolveTarget(
 		svc: ServiceDTO,
 		revisionId: string | null,
@@ -86,6 +103,7 @@ class RevisionServiceClass {
 		return revision;
 	}
 
+	/** Non-throwing wrapper over `resolveTarget`, for a route to turn straight into an error response. */
 	async findTarget(
 		svc: ServiceDTO,
 		revisionId: string | null,
@@ -106,6 +124,7 @@ class RevisionServiceClass {
 		}
 	}
 
+	/** Enqueues a redeploy of `input.revision` as a rollback. */
 	async enqueueRollback(input: {
 		revision: DeploymentDTO;
 		svc: ServiceDTO;

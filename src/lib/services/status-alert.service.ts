@@ -15,6 +15,7 @@ export interface ProbeTransition {
 	serviceId: string;
 }
 
+/** Diffs a fresh batch of probe results against each check's previous `ok` state, returning only the ones whose state actually flipped (a new check with no prior state is not a transition). */
 export function detectTransitions(
 	previous: Map<string, Pick<UptimeCheck, "ok">>,
 	results: ProbeResult[],
@@ -36,6 +37,7 @@ export function detectTransitions(
 }
 
 class StatusAlertServiceClass {
+	/** Sends an uptime notification for each transition to its service's owner via `NotificationChannelService`. Per-transition failures are logged and don't stop the others from dispatching. */
 	async dispatch(
 		transitions: ProbeTransition[],
 		servicesById: Map<string, { host: string | null; svc: ServiceDTO }>,

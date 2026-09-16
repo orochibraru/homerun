@@ -28,6 +28,11 @@
 	let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 	let cancelled = false;
 
+	/**
+	 * Opens the container's log stream and appends complete lines as they arrive,
+	 * keeping the panel scrolled to the bottom. Sets `errored` when the request
+	 * fails or the stream breaks, unless the stream was cancelled deliberately.
+	 */
 	async function connect() {
 		if (!containerId) {
 			return;

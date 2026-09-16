@@ -48,6 +48,15 @@ WantedBy=default.target
 `;
 	}
 
+	/**
+	 * Writes the agent's `systemd --user` unit into the rootless user's config
+	 * directory, hands it to that user, then reloads and enables it with
+	 * `--now` so the agent starts immediately.
+	 *
+	 * @param dockerSocket The rootless daemon's socket path the agent should talk to.
+	 * @param port The agent's HTTP port.
+	 * @throws When any of the underlying commands fails.
+	 */
 	async installAgentSystemdUnit(
 		run: StepRunner,
 		username: string,
@@ -84,6 +93,7 @@ WantedBy=default.target
 		});
 	}
 
+	/** Looks up a user's numeric uid for its `XDG_RUNTIME_DIR`, falling back to `1000` when `id` prints nothing (as under --dry-run). */
 	async #uidOf(run: StepRunner, username: string): Promise<string> {
 		const result = await run.run(["id", "-u", username]);
 		return result.stdout.trim() || "1000";

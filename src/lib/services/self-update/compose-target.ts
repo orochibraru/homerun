@@ -28,6 +28,14 @@ export interface ImageRef {
 	tag: string | null;
 }
 
+/**
+ * Reads a running container's own Docker Compose labels to recover the
+ * project/service/working-dir/config-files it was launched from, so the
+ * updater can run `docker compose ... pull && up -d` against that same
+ * project. Returns null if any required label is missing or the working
+ * directory isn't an absolute path (i.e. the container wasn't launched via
+ * Compose, or the label set is unusable).
+ */
 export function composeTargetFrom(
 	labels: Record<string, string> | null | undefined,
 	image: string,
@@ -46,10 +54,12 @@ export function composeTargetFrom(
 	return { configFiles, image, project, service, workingDir };
 }
 
+/** Extracts this container's own 64-char id from `/proc/self/mountinfo`'s content, or null if none of its mount paths look like a container overlay path. */
 export function containerIdFromMountinfo(mountinfo: string): string | null {
 	return MOUNTINFO_CONTAINER_RE.exec(mountinfo)?.[1] ?? null;
 }
 
+/** Splits an image reference into repository and tag, defaulting to `"latest"` when untagged and digest-less, or `null` when pinned by digest (`@sha256:...`). */
 export function splitImageRef(ref: string): ImageRef {
 	const withoutDigest = ref.split("@")[0] ?? ref;
 	const lastColon = withoutDigest.lastIndexOf(":");
@@ -66,6 +76,12 @@ export function splitImageRef(ref: string): ImageRef {
 	};
 }
 
+/**
+ * The tag to rewrite the compose file/`.env` to for `latestVersion`,
+ * preserving the current tag's `v` prefix style. Returns null when the
+ * current tag is `null`/`"latest"` (nothing to pin, `docker compose pull`
+ * already gets the newest image) or already matches the target version.
+ */
 export function pinnedTagFor(
 	currentTag: string | null,
 	latestVersion: string,
@@ -86,6 +102,13 @@ function escapeRegex(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\/#]/g, "\\$&");
 }
 
+/**
+ * Builds the shell script the updater container runs: when the current tag
+ * is a pinnable version tag, rewrites it in-place across the compose files
+ * and `.env` (via `sed`) before `docker compose pull`/`up -d --no-deps` for
+ * just this service, so a version-pinned deployment tracks the new release
+ * rather than silently staying pinned to the old tag.
+ */
 export function updaterScript(
 	target: ComposeTarget,
 	latestVersion: string,
@@ -120,6 +143,7 @@ export function updaterScript(
 	return lines.join("\n");
 }
 
+/** Bind mounts the updater container needs: the host Docker socket, plus every compose working/config directory so the rewritten files and `docker compose` invocation land on the host's real paths. */
 export function updaterBinds(
 	target: ComposeTarget,
 	hostSocketPath: string,

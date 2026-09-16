@@ -20,6 +20,11 @@ function groupByService(
 	return grouped;
 }
 
+/**
+ * Collects, per service, every image digest the mirror registry must keep : its
+ * configured image and tag, digests recorded by mirror scans, and the digests
+ * of its retained revisions. Feeds the mirror garbage collector's keep set.
+ */
 export async function listMirrorReferences(): Promise<
 	ServiceMirrorReference[]
 > {

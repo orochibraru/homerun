@@ -25,6 +25,7 @@ const CONCURRENCY = 6;
 class CoolifyServiceClass {
 	readonly label = "Coolify";
 
+	/** A bearer-authenticated HTTP client scoped to this Coolify connection. */
 	#client(connection: MigrationConnection): MigrationHttpClient {
 		return new MigrationHttpClient(connection.baseUrl, {
 			headers: { authorization: `Bearer ${connection.token}` },
@@ -32,6 +33,7 @@ class CoolifyServiceClass {
 		});
 	}
 
+	/** GETs `path` and normalizes its body to a row list. @throws When the response doesn't look like a list, which usually means the configured URL isn't actually a Coolify dashboard. */
 	async #list(client: MigrationHttpClient, path: string): Promise<RawRow[]> {
 		const list = listFrom(await client.get(path));
 		if (!list) {
@@ -42,6 +44,7 @@ class CoolifyServiceClass {
 		return rows(list);
 	}
 
+	/** Fetches and parses an application's or service's env vars, or `{}` if `uuid` is null or the request fails. */
 	async #env(
 		client: MigrationHttpClient,
 		kind: "applications" | "services",
@@ -56,6 +59,13 @@ class CoolifyServiceClass {
 		return coolifyEnv(listFrom(body) ?? []);
 	}
 
+	/**
+	 * Reads a Coolify instance's projects, applications, services, and
+	 * databases (concurrently, `CONCURRENCY`-limited) and normalizes them
+	 * into this app's generic `MigrationEntry` shape for the Migrate tab,
+	 * fetching each application's/service's env vars along the way. When
+	 * `only` is given, entries are filtered to just those uuids/ids.
+	 */
 	async listEntries(
 		connection: MigrationConnection,
 		only?: Set<string>,

@@ -27,15 +27,17 @@ bulk.
 ![The services list, dark](images/services-dark.png)
 
 A single service: its live status, the hostname Traefik routes to it, the
-actions that matter, its log tail, and the history of every deploy attempt.
+actions that matter, its resource usage over time, the services it connects to,
+and its log tail.
 
 ![A service's overview](images/service.png)
 ![A service's overview, dark](images/service-dark.png)
 
 ## Live logs
 
-`stdout`/`stderr` streamed from the container as it runs, ANSI colours intact.
-The same viewer backs the tail on the overview page.
+`stdout`/`stderr` streamed from the container as it runs, ANSI colours intact,
+on the Observability tab next to its uptime probes and errors. The same viewer
+backs the tail on the overview page.
 
 ![Streaming container logs](images/logs.png)
 ![Streaming container logs, dark](images/logs-dark.png)

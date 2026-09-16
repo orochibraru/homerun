@@ -71,14 +71,23 @@ export type RawRow = Record<string, unknown>;
 
 const DEFAULT_PORT = 80;
 
+/** Whether a value from a source platform's API is a plain object row. */
 export function isRow(value: unknown): value is RawRow {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Coerces an untrusted API value to its object rows, dropping anything else;
+ * non-arrays become an empty list.
+ */
 export function rows(value: unknown): RawRow[] {
 	return Array.isArray(value) ? value.filter(isRow) : [];
 }
 
+/**
+ * Reads the first of the given keys that holds a non-blank string (trimmed) or a
+ * finite number (stringified), for API rows whose field names vary by version.
+ */
 export function str(row: RawRow, ...keys: string[]): string | null {
 	for (const key of keys) {
 		const value = row[key];
@@ -92,6 +101,10 @@ export function str(row: RawRow, ...keys: string[]): string | null {
 	return null;
 }
 
+/**
+ * Reads the first of the given keys that holds a finite number or a numeric
+ * string.
+ */
 export function num(row: RawRow, ...keys: string[]): number | null {
 	for (const key of keys) {
 		const value = row[key];
@@ -108,6 +121,12 @@ export function num(row: RawRow, ...keys: string[]): number | null {
 	return null;
 }
 
+/**
+ * Extracts the list from an API response that may be a bare array, a `{ data }`
+ * envelope, or a tRPC-style `{ result: { data } }` envelope.
+ *
+ * @returns null when the body matches none of those shapes.
+ */
 export function listFrom(body: unknown): unknown[] | null {
 	if (Array.isArray(body)) {
 		return body;
@@ -124,6 +143,10 @@ export function listFrom(body: unknown): unknown[] | null {
 	return null;
 }
 
+/**
+ * Parses a dotenv-style text blob as stored by the source platform into a
+ * key/value map; anything that isn't a non-blank string yields an empty map.
+ */
 export function parseEnvBlob(raw: unknown): Record<string, string> {
 	if (typeof raw !== "string" || !raw.trim()) {
 		return {};
@@ -133,6 +156,11 @@ export function parseEnvBlob(raw: unknown): Record<string, string> {
 	);
 }
 
+/**
+ * Substitutes `${VAR}`, `${VAR-default}` and `${VAR:-default}` references in a
+ * compose file from the given env. A variable that is empty or missing falls back
+ * to its default, or is left untouched when there is none.
+ */
 export function interpolate(text: string, env: Record<string, string>): string {
 	return text.replace(
 		/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::?-([^}]*))?\}/g,
@@ -145,11 +173,19 @@ export function interpolate(text: string, env: Record<string, string>): string {
 	);
 }
 
+/**
+ * Strips leading `./` or `/` and trailing slashes from a repo-relative path,
+ * returning null when nothing meaningful is left.
+ */
 export function trimPath(path: string | null): string | null {
 	const cleaned = (path ?? "").replace(/^\.?\/+/, "").replace(/\/+$/, "");
 	return cleaned && cleaned !== "." ? cleaned : null;
 }
 
+/**
+ * Joins repo-relative path segments with `/`, skipping empty ones, or null when
+ * every segment is empty.
+ */
 export function joinPaths(...parts: Array<string | null>): string | null {
 	return trimPath(
 		parts
@@ -159,10 +195,18 @@ export function joinPaths(...parts: Array<string | null>): string | null {
 	);
 }
 
+/**
+ * Slugifies a source resource name for use as a Homerun service slug, falling
+ * back to `service` when nothing survives slugification.
+ */
 export function sourceSlug(name: string): string {
 	return slugifyComposeKey(name) || "service";
 }
 
+/**
+ * Names the Docker volume that replaces a source bind mount, from the service
+ * slug and the container mount path, capped at 63 characters.
+ */
 export function bindVolumeName(slug: string, containerPath: string): string {
 	const suffix = slugifyComposeKey(containerPath.replace(/^\//, "")) || "data";
 	return `${slug}-${suffix}`.slice(0, 63);
@@ -180,6 +224,12 @@ export interface SingleDraftInput {
 	volumes?: ComposeVolumeDraft[];
 }
 
+/**
+ * Builds a compose-import service draft for a single-container source resource
+ * (an application or database), with the default port, bridge networking and an
+ * `unless-stopped` restart policy. Without an image it falls back to
+ * `<slug>:latest`, which suits git-built services.
+ */
 export function singleDraft(input: SingleDraftInput): ComposeServiceDraft {
 	const slug = sourceSlug(input.name);
 	const ref = input.image
@@ -206,6 +256,13 @@ export function singleDraft(input: SingleDraftInput): ComposeServiceDraft {
 	};
 }
 
+/**
+ * Parses a source compose file into service drafts after interpolating the
+ * resource's env into it, collecting the parse warnings (prefixed per service)
+ * and a warning when variables are still unresolved.
+ *
+ * @returns `error` set, and no drafts, when the file can't be parsed.
+ */
 export function composeDrafts(
 	file: string,
 	env: Record<string, string>,
@@ -242,6 +299,10 @@ export function composeDrafts(
 	}
 }
 
+/**
+ * One-line description of where a draft's image comes from: the git repo and ref
+ * for a build, `image:tag` otherwise.
+ */
 export function imageSummary(draft: ComposeServiceDraft): string {
 	if (draft.build) {
 		const ref = draft.build.gitRef ? `@${draft.build.gitRef}` : "";
@@ -250,6 +311,11 @@ export function imageSummary(draft: ComposeServiceDraft): string {
 	return `${draft.image}:${draft.tag}`;
 }
 
+/**
+ * Shapes migration entries into the preview the migrate form renders, flagging
+ * drafts whose slug is already used by an existing service and listing the
+ * distinct project names.
+ */
 export function previewEntries(
 	entries: MigrationEntry[],
 	takenSlugs: Set<string>,
@@ -277,6 +343,10 @@ export function previewEntries(
 	};
 }
 
+/**
+ * Maps items through an async function with at most `limit` calls in flight,
+ * preserving input order in the results. Rejects on the first failure.
+ */
 export async function mapLimit<T, R>(
 	items: T[],
 	limit: number,
@@ -315,6 +385,13 @@ export class MigrationHttpClient {
 		this.#options = options;
 	}
 
+	/**
+	 * Fetches and JSON-parses a path on the source platform's API with a 20s timeout
+	 * and the client's auth headers.
+	 *
+	 * @throws With a user-facing message when the host is unreachable, rejects the
+	 * token (401/403), answers with another non-2xx status, or returns non-JSON.
+	 */
 	async get(path: string): Promise<unknown> {
 		const url = `${this.#baseUrl}${path}`;
 		const res = await fetch(url, {

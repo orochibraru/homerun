@@ -91,6 +91,7 @@ export class StepRunner {
 		await Bun.write(path, `${existing}${sep}${line}\n`);
 	}
 
+	/** Echoes the command about to run, prefixed `[dry-run]` or `[run]`, with its working directory when one is set. */
 	private log(cmd: string[], opts?: { cwd?: string }): void {
 		const prefix = this.dryRun ? "[dry-run]" : "[run]";
 		const cwd = opts?.cwd ? ` (cwd=${opts.cwd})` : "";
@@ -98,6 +99,7 @@ export class StepRunner {
 	}
 }
 
+/** Whether `cmd` resolves on PATH, checked with `which`. Runs for real even under --dry-run, since it only reads. */
 export async function commandExists(cmd: string): Promise<boolean> {
 	const proc = Bun.spawn(["which", cmd], {
 		stderr: "ignore",

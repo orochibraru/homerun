@@ -52,6 +52,12 @@ export function enqueueCleanup(
 	});
 }
 
+/**
+ * Enqueues a cleanup job and blocks (via `QueueService.wait`) until it
+ * finishes, returning a SvelteKit action-shaped result: `fail(500, ...)` on
+ * failure, or `{ action, result, success: true }` on success. Meant to be
+ * called from a form action, not awaited fire-and-forget.
+ */
 export async function runQueuedCleanup(
 	action: DockerCleanupAction,
 	all: boolean,

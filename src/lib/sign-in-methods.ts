@@ -6,6 +6,11 @@ export interface SignInMethodSplit {
 	primary: string[];
 }
 
+/**
+ * Splits the available sign-in methods into the preferred ones shown prominently
+ * and the rest. When none of the preferred methods is available, every method is
+ * treated as primary.
+ */
 export function splitSignInMethods(
 	available: string[],
 	preferred: string[],

@@ -12,7 +12,15 @@ export interface CronJobRunResult {
 	success: boolean;
 }
 
+/**
+ * Wraps the `cron_job_run` table : one execution of a cron job, with its
+ * captured output and outcome.
+ */
 export class CronJobRunDTO extends BaseDTO<CronJobRun> {
+	/**
+	 * Inserts a new in-progress run for a cron job, stamped as started now with
+	 * empty output.
+	 */
 	static async create(cronJobId: string): Promise<CronJobRunDTO> {
 		const row: CronJobRun = {
 			cronJobId,
@@ -45,10 +53,15 @@ export class CronJobRunDTO extends BaseDTO<CronJobRun> {
 		this.row.output = output;
 	}
 
+	/** The run's captured output so far, trimmed to the newest 64k characters. */
 	get output(): string {
 		return this.row.output ?? "";
 	}
 
+	/**
+	 * Records a run's outcome, exit code and final output (trimmed to its newest
+	 * 64k characters) and stamps it finished.
+	 */
 	async finish(result: CronJobRunResult): Promise<void> {
 		const output = result.output ?? "";
 		const patch = {
@@ -68,6 +81,7 @@ export class CronJobRunDTO extends BaseDTO<CronJobRun> {
 		Object.assign(this.row, patch);
 	}
 
+	/** Most recent runs of one cron job, newest first. */
 	static async listForJob(
 		cronJobId: string,
 		limit = 20,
@@ -81,6 +95,10 @@ export class CronJobRunDTO extends BaseDTO<CronJobRun> {
 		return rows.map((row) => new CronJobRunDTO(row));
 	}
 
+	/**
+	 * Most recent runs across every cron job the user owns, newest first, each
+	 * paired with its job's name.
+	 */
 	static async listForUser(
 		userId: string,
 		limit = 20,
@@ -98,6 +116,7 @@ export class CronJobRunDTO extends BaseDTO<CronJobRun> {
 		}));
 	}
 
+	/** The run's id. */
 	get id(): string {
 		return this.row.id;
 	}

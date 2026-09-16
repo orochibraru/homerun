@@ -110,6 +110,7 @@ export class AgentHttpServer {
 		};
 	}
 
+	/** Whether the request carries a `Bearer` token matching the agent's own, compared in constant time. */
 	#checkAuth(req: Request): boolean {
 		const header = req.headers.get("authorization") ?? "";
 		const presented = header.startsWith("Bearer ") ? header.slice(7) : "";

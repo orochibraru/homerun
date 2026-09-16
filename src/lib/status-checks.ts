@@ -53,11 +53,19 @@ export class StatusCheckApiError extends Error {
 		this.status = status;
 	}
 
+	/**
+	 * Whether retrying can't help (bad credentials, no access, unknown repo or ref),
+	 * so polling should stop rather than try again.
+	 */
 	get permanent(): boolean {
 		return [401, 403, 404, 422].includes(this.status);
 	}
 }
 
+/**
+ * Infers the provider kind from a git URL's host, for the public GitHub, GitLab
+ * and Bitbucket hosts only; self-hosted instances yield null.
+ */
 export function inferProviderKind(
 	gitUrl: string,
 ): StatusCheckProviderKind | null {
@@ -78,6 +86,15 @@ function parseGitUrl(gitUrl: string): { host: string; path: string } | null {
 	}
 }
 
+/**
+ * Extracts the `owner/repo` (or GitLab `group/subgroup/repo`) path from an HTTPS
+ * or scp-style git URL, stripping `.git`, any `/-/...` suffix and a self-hosted
+ * instance's base path.
+ *
+ * @param baseUrl The provider's base URL, whose path is removed when the
+ * instance is served under a subpath.
+ * @returns null when the URL can't be parsed or has no owner segment.
+ */
 export function repoPathFromGitUrl(
 	gitUrl: string,
 	baseUrl: string | null = null,
@@ -99,6 +116,12 @@ export function repoPathFromGitUrl(
 	return repo.includes("/") ? repo : null;
 }
 
+/**
+ * The REST API root for a provider, accounting for GitHub Enterprise and
+ * self-hosted GitLab base URLs.
+ *
+ * @throws For a Gitea provider without a base URL.
+ */
 export function providerApiBase(
 	kind: StatusCheckProviderKind,
 	baseUrl: string | null,
@@ -164,6 +187,10 @@ interface BitbucketStatus {
 
 const GITHUB_PASSING = new Set(["success", "neutral", "skipped"]);
 
+/**
+ * Maps a GitHub check-runs response to check results; anything not completed is
+ * pending, and neutral or skipped conclusions count as success.
+ */
 export function mapGitHubCheckRuns(body: unknown): CheckResult[] {
 	const runs = (body as { check_runs?: GitHubCheckRun[] } | null)?.check_runs;
 	return (runs ?? []).map((run) => {
@@ -181,6 +208,10 @@ export function mapGitHubCheckRuns(body: unknown): CheckResult[] {
 	});
 }
 
+/**
+ * Maps a GitHub combined commit status response to check results, one per status
+ * context.
+ */
 export function mapGitHubStatuses(body: unknown): CheckResult[] {
 	const statuses = (body as { statuses?: GitHubStatus[] } | null)?.statuses;
 	return (statuses ?? []).map((status) => ({
@@ -218,6 +249,10 @@ function gitLabJobState(status: GitLabStatus): CheckState {
 	return "pending";
 }
 
+/**
+ * Maps GitLab commit statuses (CI jobs) to check results; skipped jobs and
+ * failed or manual jobs that are allowed to fail count as success.
+ */
 export function mapGitLabStatuses(body: unknown): CheckResult[] {
 	const rows = Array.isArray(body) ? (body as GitLabStatus[]) : [];
 	return rows.map((status) => ({
@@ -227,6 +262,10 @@ export function mapGitLabStatuses(body: unknown): CheckResult[] {
 	}));
 }
 
+/**
+ * Maps GitLab's pipeline list for a commit to a single check named `pipeline`
+ * reflecting the latest pipeline, or nothing when there is none.
+ */
 export function mapGitLabPipelines(body: unknown): CheckResult[] {
 	const latest = Array.isArray(body)
 		? (body as GitLabPipeline[])[0]
@@ -246,6 +285,10 @@ export function mapGitLabPipelines(body: unknown): CheckResult[] {
 	];
 }
 
+/**
+ * Maps a Gitea combined commit status response to check results; a warning
+ * counts as success.
+ */
 export function mapGiteaStatuses(body: unknown): CheckResult[] {
 	const statuses = (body as { statuses?: GiteaStatus[] | null } | null)
 		?.statuses;
@@ -262,6 +305,10 @@ export function mapGiteaStatuses(body: unknown): CheckResult[] {
 	});
 }
 
+/**
+ * Maps Bitbucket commit build statuses to check results, one per status key;
+ * stopped builds count as failures.
+ */
 export function mapBitbucketStatuses(body: unknown): CheckResult[] {
 	const values = (body as { values?: BitbucketStatus[] } | null)?.values;
 	return (values ?? []).map((status) => ({
@@ -274,6 +321,10 @@ export function mapBitbucketStatuses(body: unknown): CheckResult[] {
 	}));
 }
 
+/**
+ * De-duplicates checks by name, keeping the worst state reported for each
+ * (failure over pending over success).
+ */
 export function mergeChecks(results: CheckResult[]): CheckResult[] {
 	const byName = new Map<string, CheckResult>();
 	for (const result of results) {
@@ -285,6 +336,14 @@ export function mergeChecks(results: CheckResult[]): CheckResult[] {
 	return [...byName.values()];
 }
 
+/**
+ * Classifies each required check as passed, failed, pending or missing and
+ * derives the overall outcome.
+ *
+ * @param graceExpired Whether the grace period for checks to appear is over; a
+ * missing check only fails the evaluation once it is and nothing else is still
+ * running.
+ */
 export function evaluateChecks(
 	required: string[],
 	results: CheckResult[],
@@ -314,6 +373,11 @@ export function evaluateChecks(
 	return evaluation;
 }
 
+/**
+ * Derives the overall outcome of an evaluation: any failure fails, anything
+ * pending waits, and missing checks keep waiting until the grace period is over
+ * and every reported check has finished.
+ */
 function outcomeOf(
 	evaluation: CheckEvaluation,
 	results: CheckResult[],
@@ -333,6 +397,10 @@ function outcomeOf(
 	return everythingFinished && graceExpired ? "fail" : "pending";
 }
 
+/**
+ * Summarises an evaluation for the build log, listing failed, never-reported,
+ * still-running and passed checks.
+ */
 export function describeEvaluation(evaluation: CheckEvaluation): string {
 	const parts: string[] = [];
 	if (evaluation.failed.length > 0) {
@@ -361,6 +429,11 @@ function encodedRepo(target: CheckTarget): string {
 		: target.repo;
 }
 
+/**
+ * The provider API path listing the latest commits on a branch or ref.
+ *
+ * @param count How many commits to request.
+ */
 export function commitsPath(
 	target: CheckTarget,
 	ref: string,
@@ -384,6 +457,7 @@ export function commitsPath(
 	}
 }
 
+/** Extracts commit SHAs, newest first, from a provider's commit list response. */
 export function shasFromCommits(
 	kind: StatusCheckProviderKind,
 	body: unknown,
@@ -404,6 +478,11 @@ export function shasFromCommits(
 	});
 }
 
+/**
+ * The API endpoints to read a commit's checks from on a provider, each with the
+ * mapper for its response: check runs and statuses on GitHub, job statuses and
+ * pipelines on GitLab, and commit statuses on Gitea and Bitbucket.
+ */
 export function checkSources(target: CheckTarget, sha: string): CheckSource[] {
 	const repo = encodedRepo(target);
 	switch (target.kind) {
@@ -450,6 +529,10 @@ export function checkSources(target: CheckTarget, sha: string): CheckSource[] {
 	}
 }
 
+/**
+ * Request headers for a provider API call, with GitHub's JSON media type and a
+ * bearer token when the target has one.
+ */
 export function authHeaders(target: CheckTarget): Record<string, string> {
 	const headers: Record<string, string> = { Accept: "application/json" };
 	if (target.kind === "github") {
@@ -470,6 +553,11 @@ export class StatusCheckClient {
 		this.#fetch = fetchImpl;
 	}
 
+	/**
+	 * GETs a path on the provider API with a 15s timeout and parses the JSON body.
+	 *
+	 * @throws StatusCheckApiError On a non-2xx response, carrying the status code.
+	 */
 	async #get(path: string): Promise<unknown> {
 		const response = await this.#fetch(`${this.#target.api}${path}`, {
 			headers: authHeaders(this.#target),
@@ -485,6 +573,7 @@ export class StatusCheckClient {
 		return await response.json();
 	}
 
+	/** Lists the SHAs of the latest commits on a ref, newest first. */
 	async recentCommits(ref: string, count: number): Promise<string[]> {
 		return shasFromCommits(
 			this.#target.kind,
@@ -492,6 +581,11 @@ export class StatusCheckClient {
 		);
 	}
 
+	/**
+	 * Resolves a branch or ref to the SHA of its head commit.
+	 *
+	 * @throws StatusCheckApiError With a 404 status when the ref has no commits.
+	 */
 	async resolveCommit(ref: string): Promise<string> {
 		const [sha] = await this.recentCommits(ref, 1);
 		if (!sha) {
@@ -503,6 +597,10 @@ export class StatusCheckClient {
 		return sha;
 	}
 
+	/**
+	 * Fetches every check reported on a commit from all of the provider's sources,
+	 * merged by name.
+	 */
 	async checks(sha: string): Promise<CheckResult[]> {
 		const sources = checkSources(this.#target, sha);
 		const lists = await Promise.all(
@@ -511,6 +609,12 @@ export class StatusCheckClient {
 		return mergeChecks(lists.flat());
 	}
 
+	/**
+	 * Lists the distinct check names reported on the latest commits of a ref, sorted,
+	 * so the UI can offer them when picking required checks.
+	 *
+	 * @param commits How many recent commits to sample.
+	 */
 	async checkNames(ref: string, commits = 5): Promise<string[]> {
 		const shas = await this.recentCommits(ref, commits);
 		const lists = await Promise.all(shas.map((sha) => this.checks(sha)));
@@ -552,6 +656,12 @@ function emptyEvaluation(required: string[]): CheckEvaluation {
 	};
 }
 
+/**
+ * Fetches and evaluates checks once. Transient errors are logged and yield null
+ * so the caller retries.
+ *
+ * @throws StatusCheckApiError When the error is permanent.
+ */
 async function pollOnce(
 	options: WaitForChecksOptions,
 	graceExpired: boolean,
@@ -573,6 +683,13 @@ async function pollOnce(
 	}
 }
 
+/**
+ * Polls a commit's checks until every required one passes, one fails (or goes
+ * missing past the grace period), the timeout elapses, or the build is
+ * cancelled, writing a log line whenever the summary changes.
+ *
+ * @throws StatusCheckApiError When the provider API fails permanently.
+ */
 export async function waitForChecks(
 	options: WaitForChecksOptions,
 ): Promise<WaitForChecksResult> {

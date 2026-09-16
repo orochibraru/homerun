@@ -160,7 +160,6 @@ export function DockerSwarmMixin<
 			}
 		}
 
-		/** Pulls the image, then creates (or replaces) the swarm service backing one Homerun service. */
 		/**
 		 * Best-effort pre-pull : same "warn, don't block" posture as a bad
 		 * image ref elsewhere, createService still surfaces a real error if
@@ -185,6 +184,7 @@ export function DockerSwarmMixin<
 			}
 		}
 
+		/** Builds the dockerode `TaskTemplate` for a swarm service from its create params: env, healthcheck, image, labels, bind mounts, the shared overlay network, resource limits, and restart condition. */
 		#taskTemplateFor(params: CreateSwarmServiceParams) {
 			return {
 				ContainerSpec: {
@@ -219,6 +219,16 @@ export function DockerSwarmMixin<
 			};
 		}
 
+		/**
+		 * Pulls the image, then creates (or replaces) the swarm service
+		 * backing one Homerun service: ensures the shared overlay network,
+		 * removes any previous swarm service for this service id (found by
+		 * label, see `#findSwarmService`), best-effort pre-pulls the image
+		 * (`#prePullImage`), then creates the service. Reports progress via
+		 * `onProgress`.
+		 *
+		 * @throws When the Docker create-service call fails.
+		 */
 		async createAndStartSwarmService(
 			params: CreateSwarmServiceParams,
 			onProgress?: (line: string) => void,
@@ -262,6 +272,7 @@ export function DockerSwarmMixin<
 			return { swarmServiceId: created.id ?? created.ID };
 		}
 
+		/** Removes a swarm service via the Docker API. */
 		async removeSwarmService(swarmServiceId: string): Promise<void> {
 			await this.getDocker().getService(swarmServiceId).remove();
 		}
@@ -367,12 +378,14 @@ export function DockerSwarmMixin<
 			});
 		}
 
+		/** Swarm-service name this app gives its services, with a random suffix so a redeploy never collides on "name already in use" (mirrors `#containerName` in containers.ts). */
 		#swarmServiceName(slug: string, stackSlug?: string | null): string {
 			const suffix = crypto.randomUUID().slice(0, 8);
 			const prefix = stackSlug ? `${stackSlug}-` : "";
 			return `homerun-${prefix}${slug}-${suffix}`;
 		}
 
+		/** The currently-running (or last) swarm service for a Homerun service, if any : found by its service-id label, not by name. */
 		async #findSwarmService(serviceId: string): Promise<{ ID: string } | null> {
 			const services = await this.getDocker().listServices({
 				filters: JSON.stringify({

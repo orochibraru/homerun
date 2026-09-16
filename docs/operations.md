@@ -14,9 +14,26 @@ host from filling up.
   every five seconds. It loads behind a placeholder rather than blocking the
   page, so a slow `df` never holds the dashboard up. No card, or no
   `nvidia-smi`, just means the GPU block doesn't render, it isn't an error.
+- **Resource usage history**, the same host CPU and memory as a chart, live or
+  over the last hour, day, week, month, year or all of it, from a sample taken
+  every minute and kept for a year, next to a **per-service usage** table of
+  what each running service is using. A stack's own page has the same table for
+  its members, and a service's Overview tab has its own chart.
 - **Recent deployments** across all your services, each linking to the service
   it belongs to.
+- **Recent errors**, the latest warn/error-level log lines, each linking to the
+  service it mentions (or to System Logs when it mentions none).
+- **Quick actions**, shortcuts to deploy a service and to the services list.
 - **A setup-issues banner**, when applicable, see below.
+
+## Search
+
+The **Search…** button in the header, or `⌘K` / `Ctrl+K` anywhere, opens a
+command palette. It jumps to any dashboard page by name, and once you've typed
+two characters it also searches your services, stacks, templates, cron jobs,
+storage volumes, S3 destinations, remote hosts, build cache registries, git
+providers, notification channels and status pages, plus users and authentication
+providers for an admin.
 
 ## Setup diagnostics
 
@@ -36,21 +53,23 @@ flow.
 
 ## System Logs
 
-`/system-logs` live-streams the **Traefik** container's own stdout/stderr, the
-same push-based stream the per-service [Logs tab](services.md#logs) uses. This
-is where routing problems show up: a service that deployed fine but returns 404,
-a certificate that won't issue, a middleware that isn't attaching.
+`/system-logs` (admin-only) live-streams the logs of the infrastructure Homerun
+depends on, with the same push-based viewer the per-service
+[logs panel](services.md#logs) uses.
 
-Homerun's own server logs are deliberately **not** here. In the compose and
-installer layouts the app runs as a container like any other, but in development
-it runs directly on the host, so its output is whatever your process manager,
-`docker compose logs`, systemd, or the terminal you started it from, is already
-capturing. App-level warnings and errors that mention a specific service are
-persisted and surfaced on that service's [Errors tab](services.md#errors)
-instead.
+- **This instance's stack** lists every container your compose file starts,
+  Homerun itself, Postgres and Traefik included, with its state. Click one to
+  open its live log. It only appears when Homerun runs as a Docker Compose
+  service; run from source, the app's own output is whatever your terminal or
+  process manager is already capturing.
+- **Traefik** streams the Traefik container's stdout/stderr. This is where
+  routing problems show up: a service that deployed fine but returns 404, a
+  certificate that won't issue, a middleware that isn't attaching.
 
-Two admin-only buttons sit on the Traefik panel, both behind a confirmation
-dialog:
+App-level warnings and errors that mention a specific service are also persisted
+and surfaced on that service's [Observability tab](services.md#errors).
+
+Two buttons sit on the Traefik panel, both behind a confirmation dialog:
 
 - **Restart**, restarts the Traefik container in place. Useful after a change
   Traefik only reads at startup (its static config/flags).
@@ -76,10 +95,21 @@ The page previews what's actually reclaimable before you commit, unused images,
 stopped containers, unreferenced volumes, unused networks (excluding Docker's
 own three defaults and anything still attached), and unused build cache, with
 the space each category would free. You can then prune each category on its own,
-or run all of them in sequence with **Run system prune**.
+or use **Quick cleanup → Clean up now**, which prunes stopped containers,
+dangling images, unused networks and build cache together, the same set as
+`docker system prune`, and never touches volumes. Every action asks for
+confirmation first.
 
-There is no confirmation dialog beyond that preview, so read what's listed
-before clicking. Two things worth knowing:
+- **Images** prunes only dangling images by default. Tick **Include tagged,
+  unused images** to remove any image no container uses. The last few images of
+  every service are kept either way, see
+  [Revisions and rollback](services.md#revisions-and-rollback).
+- **Networks** also offers **Reclaim orphaned stack networks**: the per-stack
+  networks whose stack no longer exists, which Docker's own prune can't see
+  while anything is still attached. A network with containers attached is left
+  alone.
+
+Two things worth knowing:
 
 - **Pruning volumes deletes data.** An unreferenced Docker-managed volume is one
   no container currently mounts, which includes a volume belonging to a service
@@ -140,15 +170,15 @@ service's Settings tab, the cron job's own page, the volume's page).
 
 The bell in the header is a per-account feed of lifecycle events, deploy
 succeeded or failed, a build stopped by status checks, an unhealthy or rolled
-back revision, service created, started, stopped, an auto-redeploy firing, and
-runtime errors attributed to one of your services. Click an entry to jump to its
-service, mark everything read from the dropdown, or hover a row and use the `x`
-to drop it.
+back revision, service created, started, stopped, an auto-redeploy firing, an
+image scan finding a critical vulnerability, and runtime errors attributed to
+one of your services. Click an entry to jump to its service, mark everything
+read from the dropdown, or hover a row and use the `x` to drop it.
 
 It's deliberately a short curated list, not a log: everything Homerun logs at
 warn or error level is persisted separately and shown on the relevant service's
-[Errors tab](services.md#errors). Old notifications are trimmed automatically,
-so the feed doesn't grow without bound.
+[Observability tab](services.md#errors). Old notifications are trimmed
+automatically, so the feed doesn't grow without bound.
 
 **Notification channels** send the same kind of events outside the dashboard.
 Add a Discord webhook, a generic webhook, or an email address under
@@ -156,16 +186,32 @@ Add a Discord webhook, a generic webhook, or an email address under
 under **Profile → Notifications**: build succeeded/failed, a build stopped by
 failing [status checks](services.md#required-status-checks), scheduled update
 succeeded/failed, manual deploy succeeded/failed, a new revision found unhealthy
-or [rolled back](services.md#revisions-and-rollback), and a service going down
-or recovering. A new channel starts subscribed to build and update failures,
-status checks failures, unhealthy revisions and rollbacks; turn on the rest you
-want from that matrix. A **Send test** button on each channel fires a sample
-notification so you can check the destination actually works before relying on
-it; a delivery failure is shown right on the channel (and isn't retried
-automatically) rather than failing silently. Email channels need SMTP configured
-first, see [Configuration](configuration.md). Provider-shaped notifications
-beyond Discord (Telegram, Slack) aren't built yet, see
+or [rolled back](services.md#revisions-and-rollback), an image scan finding
+[critical vulnerabilities](services.md#image-scanning), and a service going down
+or recovering (from its [uptime probe](services.md#uptime)). A new channel
+starts subscribed to build and update failures, status checks failures,
+unhealthy revisions and rollbacks; turn on the rest you want from that matrix. A
+**Send test** button on each channel fires a sample notification so you can
+check the destination actually works before relying on it; a delivery failure is
+shown right on the channel (and isn't retried automatically) rather than failing
+silently. Email channels need SMTP configured first, see
+[Configuration](configuration.md). Provider-shaped notifications beyond Discord
+(Telegram, Slack) aren't built yet, see
 [FAQ & limitations](faq-and-limitations.md#planned-not-yet-built).
+
+## Status pages
+
+**Status Page** in the sidebar builds an uptime page out of your services'
+[uptime probes](services.md#uptime). Each page has a name, a slug and an
+optional description, and covers one of three sets: **every service you own**,
+**one stack**, or **services you pick**. Its page in the dashboard shows each
+service's recent heartbeats and uptime percentage.
+
+Tick **Publish this page** to make it readable without signing in at
+`/status/<slug>` on your dashboard's address; the page shows the copyable link.
+A public page shows only service names, up/down, and uptime over the last 40
+checks from the network probe: never images, ports, hostnames or probe errors.
+An unpublished page is a 404 there.
 
 ## Upgrading Homerun itself
 

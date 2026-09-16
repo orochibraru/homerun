@@ -56,6 +56,12 @@ function reason(err: unknown): string {
 }
 
 class RevisionHealthServiceClass {
+	/**
+	 * Starts a background health watch for a deployment (deduplicated by
+	 * deployment id, so re-watching an already-watched one is a no-op).
+	 * Runs until it decides healthy/unhealthy or the workload stops being
+	 * current; failures are logged, never thrown to the caller.
+	 */
 	watch(input: RevisionWatch): void {
 		if (watches().has(input.deploymentId)) {
 			return;
@@ -72,6 +78,12 @@ class RevisionHealthServiceClass {
 			});
 	}
 
+	/**
+	 * Re-starts a `watch` for every deployment the DB still marks as being
+	 * health-watched, called on boot since in-memory watches don't survive a
+	 * restart. A failure listing them is logged and treated as no pending
+	 * watches.
+	 */
 	async resume(enqueueRollback: RollbackEnqueuer): Promise<void> {
 		const pending = await DeploymentDTO.listWatching().catch((err) => {
 			logger.warn(`Couldn't resume health watches: ${reason(err)}`);
@@ -89,6 +101,7 @@ class RevisionHealthServiceClass {
 		}
 	}
 
+	/** A point-in-time health sample for a workload: swarm task health since `since`, or the container's own health sample. */
 	async #sample(
 		workload: Workload,
 		since: Date,
@@ -104,6 +117,12 @@ class RevisionHealthServiceClass {
 		);
 	}
 
+	/**
+	 * Whether the watched deployment is still the service's latest deployment,
+	 * running the same workload (container/swarm service), and not desired
+	 * stopped. Returns the service when so, so the caller doesn't have to
+	 * re-fetch it; null otherwise (the watch should stop).
+	 */
 	async #stillCurrent(
 		input: RevisionWatch,
 		workload: Workload,
@@ -124,6 +143,13 @@ class RevisionHealthServiceClass {
 		return svc;
 	}
 
+	/**
+	 * The watch loop itself: polls the workload's health every `POLL_MS`
+	 * against a baseline sample until `healthVerdict` returns healthy or
+	 * unhealthy (or the deployment stops being current, in which case its
+	 * `health` is cleared and the watch just exits). Records the healthy
+	 * outcome, or hands off to `#unhealthy` for the failure path.
+	 */
 	async #run(input: RevisionWatch): Promise<void> {
 		const dep = await DeploymentDTO.get(input.deploymentId);
 		const svc = await ServiceDTO.get(input.serviceId, input.userId);
@@ -164,6 +190,12 @@ class RevisionHealthServiceClass {
 		await this.#unhealthy({ current, dep, input, reason: verdict.reason });
 	}
 
+	/**
+	 * Decides the auto-rollback target for an unhealthy revision, or why none
+	 * was chosen: auto-rollback is off, the revision was itself a rollback
+	 * (never rolled back again), or there's no previous revision to fall
+	 * back to.
+	 */
 	async #rollbackTarget(
 		svc: ServiceDTO,
 		dep: DeploymentDTO,
@@ -194,6 +226,12 @@ class RevisionHealthServiceClass {
 		};
 	}
 
+	/**
+	 * Handles a revision that failed its health check: logs it, resolves and
+	 * enqueues an auto-rollback when eligible (else records why not), records
+	 * an in-app notification, and dispatches it through notification
+	 * channels.
+	 */
 	async #unhealthy(context: {
 		current: ServiceDTO;
 		dep: DeploymentDTO;

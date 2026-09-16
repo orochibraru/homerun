@@ -28,6 +28,10 @@ function withQuery(path: string, q: string): string {
 	return `${path}?${new URLSearchParams({ q })}`;
 }
 
+/**
+ * Global search over the user's services, stacks, templates, cron jobs and
+ * status pages, each mapped to a result linking to its page.
+ */
 async function searchWorkspace(
 	userId: string,
 	q: string,
@@ -101,6 +105,11 @@ async function searchWorkspace(
 	];
 }
 
+/**
+ * Global search over the user's remote hosts, storage volumes, S3 destinations,
+ * build cache registries and notification channels, each mapped to a result
+ * linking to its page.
+ */
 async function searchInfrastructure(
 	userId: string,
 	q: string,
@@ -166,6 +175,10 @@ async function searchInfrastructure(
 	];
 }
 
+/**
+ * Global search over instance-level configuration : git providers for everyone,
+ * plus users and sign-in OAuth providers for admins only.
+ */
 async function searchInstance(
 	q: string,
 	limit: number,

@@ -40,6 +40,12 @@
 	const secret = $derived(totpUri ? totpSecretFromUri(totpUri) : null);
 	const passwordMissing = $derived(hasPassword && !password);
 
+	/**
+	 * Starts TOTP enrolment with better-auth using the entered password, storing the
+	 * authenticator URI and backup codes for display. Always clears the password.
+	 *
+	 * @throws When better-auth rejects the request or returns no TOTP URI.
+	 */
 	async function startCallback() {
 		busy = true;
 		try {

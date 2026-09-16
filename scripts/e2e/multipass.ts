@@ -12,15 +12,24 @@ export const arch = process.arch === "arm64" ? "arm64" : "amd64";
 
 let step = 0;
 
+/** Prints a numbered step heading, bumping the module-wide step counter. */
 export function log(message: string): void {
 	step += 1;
 	console.log(`\n[${step}] ${message}`);
 }
 
+/** Echoes a command as `$ <cmd>` without running it; `exec` calls it before spawning. */
 export function run(cmd: string): void {
 	console.log(`  $ ${cmd}`);
 }
 
+/**
+ * Runs a local command with stdin closed, echoing it and streaming its
+ * captured stdout/stderr back to this process once it exits.
+ *
+ * @param opts.allowFailure Return a non-zero exit instead of throwing.
+ * @throws When the command exits non-zero and `allowFailure` isn't set.
+ */
 export async function exec(
 	cmd: string[],
 	opts?: { allowFailure?: boolean },
@@ -61,6 +70,14 @@ export class Vm {
 
 	constructor(readonly name: string) {}
 
+	/**
+	 * Deletes and purges any existing VM of this name, then launches a fresh
+	 * Ubuntu 24.04 one. Launches are queued so only one runs at a time across
+	 * every VM.
+	 *
+	 * @param memory Multipass size string, e.g. `4G`.
+	 * @param disk Multipass size string, e.g. `20G`.
+	 */
 	async recreate(cpus: number, memory: string, disk: string): Promise<void> {
 		await serializeLaunch(async () => {
 			await exec(["multipass", "delete", this.name, "--purge"], {
@@ -82,6 +99,11 @@ export class Vm {
 		});
 	}
 
+	/**
+	 * The VM's first IPv4 address, from `multipass info`.
+	 *
+	 * @throws When multipass reports no address for it.
+	 */
 	async ip(): Promise<string> {
 		const { stdout } = await exec([
 			"multipass",
@@ -100,6 +122,7 @@ export class Vm {
 		return address;
 	}
 
+	/** Runs a command inside the VM via `multipass exec` and returns its stdout. Throws on a non-zero exit unless `allowFailure` is set. */
 	async exec(
 		cmd: string[],
 		opts?: { allowFailure?: boolean },
@@ -111,6 +134,7 @@ export class Vm {
 		return stdout;
 	}
 
+	/** Copies a local file to a path inside the VM with `multipass transfer`. */
 	async transfer(localPath: string, remotePath: string): Promise<void> {
 		await exec([
 			"multipass",
@@ -120,6 +144,7 @@ export class Vm {
 		]);
 	}
 
+	/** Writes content to a path inside the VM by staging it in a local temp file, transferring it and deleting the temp file. */
 	async writeFile(remotePath: string, content: string): Promise<void> {
 		const local = `${tmpdir()}/homerun-e2e-${randomUUID()}`;
 		await Bun.write(local, content);
@@ -130,6 +155,15 @@ export class Vm {
 		}
 	}
 
+	/**
+	 * Uploads a bash script to a temp path in the VM and runs it under
+	 * `set -euo pipefail`.
+	 *
+	 * @param opts.cwd Directory created and entered before the script body runs.
+	 * @param opts.env Variables passed through `env`, so they survive `sudo`.
+	 * @param opts.sudo Run the script as root.
+	 * @returns The script's stdout.
+	 */
 	async runScript(
 		script: string,
 		opts?: {
@@ -156,12 +190,14 @@ export class Vm {
 		);
 	}
 
+	/** Deletes and purges the VM, ignoring failure when it doesn't exist. */
 	async delete(): Promise<void> {
 		await exec(["multipass", "delete", this.name, "--purge"], {
 			allowFailure: true,
 		});
 	}
 
+	/** The rootless Docker user's uid inside the VM, looked up once and cached on the instance. */
 	async uid(): Promise<string> {
 		if (!this.#uid) {
 			this.#uid = (await this.exec(["sudo", "id", "-u", ROOTLESS_USER])).trim();
@@ -169,6 +205,7 @@ export class Vm {
 		return this.#uid;
 	}
 
+	/** Runs a `docker` command as the rootless user against its own daemon socket and returns stdout. */
 	async docker(
 		args: string[],
 		opts?: { allowFailure?: boolean },
@@ -189,6 +226,7 @@ export class Vm {
 		);
 	}
 
+	/** Runs a `docker` command with sudo against the VM's rootful daemon and returns stdout. */
 	async dockerRoot(
 		args: string[],
 		opts?: { allowFailure?: boolean },
@@ -202,6 +240,7 @@ export class AppClient {
 
 	constructor(readonly baseUrl: string) {}
 
+	/** Stores the name/value of every `Set-Cookie` header in the jar, ignoring attributes, expiry and deletion. */
 	#applyCookies(headers: Headers): void {
 		for (const raw of headers.getSetCookie()) {
 			const pair = raw.split(";", 1)[0] ?? "";
@@ -213,6 +252,7 @@ export class AppClient {
 		}
 	}
 
+	/** The jar serialised as a `Cookie` header value, or null when it's empty. */
 	#cookieHeader(): string | null {
 		if (this.#cookies.size === 0) {
 			return null;
@@ -220,6 +260,7 @@ export class AppClient {
 		return [...this.#cookies].map(([k, v]) => `${k}=${v}`).join("; ");
 	}
 
+	/** Fetches a path on the app with the jar's cookies and an `Origin` of the base URL (unless one is given), then records any cookies it sets. */
 	async request(path: string, init: RequestInit = {}): Promise<Response> {
 		const headers = new Headers(init.headers);
 		const cookie = this.#cookieHeader();
@@ -234,6 +275,12 @@ export class AppClient {
 		return res;
 	}
 
+	/**
+	 * Posts fields as multipart form data, the way a SvelteKit form action
+	 * expects them, and returns the parsed JSON response.
+	 *
+	 * @throws When the response isn't 2xx or the action returned `type: "failure"`.
+	 */
 	async postForm(
 		path: string,
 		fields: Record<string, string>,
@@ -257,6 +304,11 @@ export class AppClient {
 		return json;
 	}
 
+	/**
+	 * Posts a JSON body and returns the parsed JSON response.
+	 *
+	 * @throws When the response isn't 2xx.
+	 */
 	async postJson(path: string, body: unknown): Promise<unknown> {
 		const res = await this.request(path, {
 			body: JSON.stringify(body),
@@ -271,6 +323,13 @@ export class AppClient {
 	}
 }
 
+/**
+ * Reads one top-level field out of a form action's devalue-serialised `data`
+ * string, where the first array entry maps field names to value indices. Only
+ * primitive fields come back intact; a nested value would be a raw index.
+ *
+ * @throws When the field isn't present.
+ */
 export function parseActionData<T = unknown>(dataStr: string, key: string): T {
 	const arr = JSON.parse(dataStr) as unknown[];
 	const shape = arr[0] as Record<string, number> | undefined;
@@ -281,6 +340,14 @@ export function parseActionData<T = unknown>(dataStr: string, key: string): T {
 	return arr[index] as T;
 }
 
+/**
+ * Polls `check` until it returns a truthy value, treating a thrown error as
+ * not ready yet.
+ *
+ * @param label What's being waited for, used in the timeout error.
+ * @returns The first truthy result.
+ * @throws When `timeoutMs` passes first.
+ */
 export async function waitFor<T>(
 	label: string,
 	check: () => Promise<T | null | undefined | false>,
@@ -297,12 +364,14 @@ export async function waitFor<T>(
 	throw new Error(`Timed out waiting for: ${label}`);
 }
 
+/** Throws `message` when `condition` is falsy, narrowing it for the caller. */
 export function assert(condition: unknown, message: string): asserts condition {
 	if (!condition) {
 		throw new Error(message);
 	}
 }
 
+/** Exits the process with an error when any of the given commands isn't on the local PATH. */
 export async function preflight(commands: string[]): Promise<void> {
 	for (const cmd of commands) {
 		const found = await exec(["which", cmd], { allowFailure: true });

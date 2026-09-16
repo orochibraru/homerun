@@ -121,6 +121,13 @@ export function targetScheme(port: number): "http" | "https" {
  * here.
  */
 class PangolinServiceClass {
+	/**
+	 * Issues one authenticated call against the Pangolin Integration API and
+	 * parses the JSON response body.
+	 *
+	 * @throws When the body isn't valid JSON (including an HTML dashboard
+	 *   response mistaken for the API), or when the response status isn't ok.
+	 */
 	private async request<T>(
 		baseUrl: string,
 		token: string,
@@ -193,6 +200,7 @@ class PangolinServiceClass {
 		return done ? items : this.listAll<T>(query, items, page + 1);
 	}
 
+	/** Lists every domain registered to the org, following pagination. */
 	private listDomains(
 		baseUrl: string,
 		token: string,
@@ -208,6 +216,7 @@ class PangolinServiceClass {
 		});
 	}
 
+	/** Lists every resource in the org, following pagination. */
 	private listResources(
 		baseUrl: string,
 		token: string,
@@ -223,6 +232,7 @@ class PangolinServiceClass {
 		});
 	}
 
+	/** Lists every site in the org, following pagination. */
 	private listSites(
 		baseUrl: string,
 		token: string,
@@ -238,6 +248,12 @@ class PangolinServiceClass {
 		});
 	}
 
+	/**
+	 * Creates a Pangolin Resource (a subdomain under `params.domainId`) for
+	 * `params.name`.
+	 *
+	 * @throws When Pangolin's response carries no resource id.
+	 */
 	private async createResource(
 		baseUrl: string,
 		token: string,
@@ -269,6 +285,7 @@ class PangolinServiceClass {
 		return res.data;
 	}
 
+	/** Turns Pangolin's own SSO gate on or off for a resource. */
 	private setResourceSso(
 		baseUrl: string,
 		token: string,
@@ -281,6 +298,7 @@ class PangolinServiceClass {
 		});
 	}
 
+	/** Adds a new Target (host:port behind a site's tunnel) to a resource. */
 	private createResourceTarget(
 		baseUrl: string,
 		token: string,
@@ -326,6 +344,12 @@ class PangolinServiceClass {
 		return { domain, subdomain };
 	}
 
+	/**
+	 * Loads instance settings and returns the resolved Pangolin call
+	 * parameters, or `null` when Pangolin integration isn't fully configured.
+	 * Decrypts the stored API token, and when no explicit target host is set,
+	 * resolves one via `DockerService.tunnelTargetHost()`.
+	 */
 	private async settingsOrNull(): Promise<{
 		baseUrl: string;
 		mainSiteName: string;
@@ -358,6 +382,7 @@ class PangolinServiceClass {
 		};
 	}
 
+	/** Lists every Target currently attached to a resource, following pagination. */
 	private listTargets(
 		baseUrl: string,
 		token: string,
@@ -373,6 +398,13 @@ class PangolinServiceClass {
 		});
 	}
 
+	/**
+	 * Makes the resource's target point at `cfg.targetHost`:`cfg.port`,
+	 * creating one if the resource has none yet, or moving the existing
+	 * (stale) target instead of creating a second one.
+	 *
+	 * @returns A human-readable summary of what changed, for the deploy log.
+	 */
 	private async ensureTarget(
 		cfg: { baseUrl: string; port: number; targetHost: string; token: string },
 		resourceId: number | string,

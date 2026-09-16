@@ -8,8 +8,9 @@ This exists as an alternative to registering a build server by raw
 `tcp://`/`ssh://` Docker socket: instead of exposing (or SSH-tunneling into) the
 daemon itself, the build server runs this agent and the main app only ever talks
 to it over plain HTTP with a bearer token. It's wired into the main app as a
-build-server connection kind (`remote_host.kind: "agent"`), see `CLAUDE.md`'s
-"Homerun Agent + installer" and "Build servers" sections for how it plugs in.
+build-server connection kind (`remote_host.kind: "agent"`), see
+[`docs/remote-hosts-and-agent.md`](../../docs/remote-hosts-and-agent.md) for how
+it plugs in.
 
 ## Running it
 
@@ -78,20 +79,22 @@ bun run build:packages       # builds cli/installer/agent binaries for both arch
 
 ## Env vars
 
-| Var                      | Default                  | Meaning                                                                                                                                                                                                                              |
-| ------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PORT`                   | `7420`                   | HTTP listen port                                                                                                                                                                                                                     |
-| `AGENT_TOKEN`            | _(generated)_            | Bearer token every non-health request must present. Set this explicitly for a reproducible deploy (e.g. via the installer or a systemd unit); otherwise the agent generates one on first boot and persists it to `AGENT_TOKEN_FILE`. |
-| `AGENT_TOKEN_FILE`       | `~/.homerun-agent/token` | Where a generated token is persisted across restarts.                                                                                                                                                                                |
-| `DOCKER_SOCKET_PATH`     | `/var/run/docker.sock`   | Point this at a rootless Docker socket (e.g. `/run/user/<uid>/docker.sock`) when installed via `packages/installer/`'s rootless setup.                                                                                               |
-| `AGENT_SHUTDOWN_TIMEOUT` | `120`                    | Seconds SIGINT/SIGTERM waits for in-flight requests (a `/v1/build` clone+build in progress) to finish before forcing the shutdown.                                                                                                   |
+| Var                      | Default                  | Meaning                                                                                                                                                                                                                                                                                                          |
+| ------------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                   | `7420`                   | HTTP listen port                                                                                                                                                                                                                                                                                                 |
+| `AGENT_TOKEN`            | _(generated)_            | Bearer token every non-health request must present. Set this explicitly for a reproducible deploy (e.g. via the installer or a systemd unit); otherwise the agent generates one on first boot and persists it to `AGENT_TOKEN_FILE`.                                                                             |
+| `AGENT_TOKEN_FILE`       | `~/.homerun-agent/token` | Where a generated token is persisted across restarts.                                                                                                                                                                                                                                                            |
+| `DOCKER_SOCKET_PATH`     | _(detected)_             | Point this at a rootless Docker socket (e.g. `/run/user/<uid>/docker.sock`) when installed via `packages/installer/`'s rootless setup. Unset, it uses a `unix://` `DOCKER_HOST`, then the `docker` CLI's current context, then the first common socket path that exists, falling back to `/var/run/docker.sock`. |
+| `AGENT_SHUTDOWN_TIMEOUT` | `120`                    | Seconds SIGINT/SIGTERM waits for in-flight requests (a `/v1/build` clone+build in progress) to finish before forcing the shutdown.                                                                                                                                                                               |
 
 ## HTTP surface
 
-Every route below requires `Authorization: Bearer <token>` except `/v1/health`.
+Every route below requires `Authorization: Bearer <token>` except `/v1/health`
+and `/v1/openapi.json`.
 
 - `GET /v1/health`, `{status, version}`, unauthenticated (for a load
   balancer/monitor probe).
+- `GET /v1/openapi.json`, the agent's own OpenAPI document, unauthenticated.
 - `GET /v1/stats`, host CPU/RAM/disk/GPU, same shape as the main app's
   `SystemStatsService`.
 - `POST /v1/build`, body is a `BuildInput` (see `schemas.ts`): clones a git repo

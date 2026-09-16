@@ -142,6 +142,10 @@ export class TemplateDTO extends BaseDTO<Template> {
 			.sort();
 	}
 
+	/**
+	 * Up to `limit` built-in or user-owned templates whose name, description,
+	 * image or search tags match `q`, sorted by name, for global search.
+	 */
 	static async search(
 		userId: string,
 		q: string,
@@ -168,6 +172,7 @@ export class TemplateDTO extends BaseDTO<Template> {
 		return rows.map((row) => new TemplateDTO(row));
 	}
 
+	/** Inserts a new template owned by `input.ownerId`. */
 	static async create(input: NewTemplateInput): Promise<TemplateDTO> {
 		const now = new Date();
 		const row: Template = {
@@ -195,18 +200,26 @@ export class TemplateDTO extends BaseDTO<Template> {
 		return new TemplateDTO(row);
 	}
 
+	/** The template's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/**
+	 * The healthcheck command services created from the template start with, if
+	 * any.
+	 */
 	get healthcheckCommand(): string | null {
 		return this.row.healthcheckCommand;
 	}
+	/** The id of the user who owns the template, null for a built-in. */
 	get ownerId(): string | null {
 		return this.row.ownerId;
 	}
+	/** The template's display name. */
 	get name(): string {
 		return this.row.name;
 	}
+	/** Whether the template ships with Homerun rather than being user-created. */
 	get isBuiltin(): boolean {
 		return this.row.ownerId === null;
 	}

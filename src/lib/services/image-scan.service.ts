@@ -65,6 +65,7 @@ function reason(err: unknown): string {
 }
 
 class ImageScanServiceClass {
+	/** The effective scan policy for a service: instance-wide scanning and severity gate, AND with the service's own opt-in. */
 	async policyFor(svc: ServiceDTO): Promise<ScanPolicy> {
 		const settings = await InstanceSettingsDTO.get();
 		return {
@@ -73,10 +74,12 @@ class ImageScanServiceClass {
 		};
 	}
 
+	/** Appends a line to the deployment's log, when the scan is running as part of one. */
 	async #log(ctx: ScanContext, line: string): Promise<void> {
 		await ctx.dep?.appendLog(line);
 	}
 
+	/** Logs a scan's finding counts, plus up to `LOGGED_FINDINGS` critical/high findings, to the deployment log. */
 	async #logSummary(
 		ctx: ScanContext,
 		ref: string,
@@ -104,6 +107,11 @@ class ImageScanServiceClass {
 		}
 	}
 
+	/**
+	 * When a scan found critical vulnerabilities, records an in-app
+	 * notification and dispatches it through the user's configured
+	 * notification channels. No-op when `summary.counts.critical` is 0.
+	 */
 	#notifyCritical(ctx: ScanContext, ref: string, summary: TrivySummary): void {
 		if (summary.counts.critical === 0) {
 			return;
@@ -130,6 +138,17 @@ class ImageScanServiceClass {
 		);
 	}
 
+	/**
+	 * Tries each scan target in order until one scans successfully, recording
+	 * the result (`ImageScanDTO.create`) and logging/notifying on it. A
+	 * scanner failure on a target falls through to the next one rather than
+	 * failing the deploy; only an actual policy violation does.
+	 *
+	 * @returns The successful scan's summary, or `null` when every target
+	 *   failed to scan (recorded as `status: "failed"`).
+	 * @throws `ImageScanBlockedError` when the result violates
+	 *   `options.blockSeverity`.
+	 */
 	async scan(
 		ctx: ScanContext,
 		targets: ScanTarget[],
@@ -199,6 +218,7 @@ class ImageScanServiceClass {
 		return null;
 	}
 
+	/** Scans a freshly pulled bring-your-own-image, or records it as skipped when `policy` is disabled. */
 	async scanPulled(
 		ctx: ScanContext,
 		ref: string,
@@ -215,6 +235,7 @@ class ImageScanServiceClass {
 		});
 	}
 
+	/** Scans a freshly built git-based image against `plan`'s scan targets, or records it as skipped when scanning is disabled. */
 	async scanBuilt(
 		ctx: ScanContext,
 		plan: GitBuildPlan,
@@ -234,6 +255,7 @@ class ImageScanServiceClass {
 		});
 	}
 
+	/** Records a scan history row with `status: "skipped"`, for a deploy that didn't scan at all. */
 	async recordSkipped(
 		ctx: ScanContext,
 		imageRef: string,
@@ -249,6 +271,17 @@ class ImageScanServiceClass {
 		});
 	}
 
+	/**
+	 * Copies the image into the local Homerun mirror registry, scans it from
+	 * there, and then either pins the swarm service to the scanned digest or
+	 * pulls the scanned image onto this host. Falls back to a direct pull
+	 * (scanned on this host instead) when the mirror is being cleaned up,
+	 * can't take the copy, or a pull from it fails.
+	 *
+	 * @returns The resulting image/tag (and digest, when known), or `null`
+	 *   when it fell back to a direct pull without going through this method's
+	 *   own scan step.
+	 */
 	async deployThroughMirror(
 		ctx: ScanContext & { dep: DeploymentDTO },
 		input: MirrorDeployInput,
@@ -343,6 +376,7 @@ class ImageScanServiceClass {
 		}
 	}
 
+	/** Whether an `image_scan` job for this service is currently active in the queue. */
 	async isScanning(serviceId: string): Promise<boolean> {
 		return (
 			(await JobDTO.findActive("image_scan", `image_scan:${serviceId}`)) !==
@@ -350,6 +384,7 @@ class ImageScanServiceClass {
 		);
 	}
 
+	/** Enqueues an on-demand `image_scan` job for a service, deduplicated so only one runs at a time per service. */
 	enqueueScan(svc: ServiceDTO, userId: string): Promise<JobDTO> {
 		return QueueService.enqueue({
 			dedupeKey: `image_scan:${svc.id}`,
@@ -362,6 +397,12 @@ class ImageScanServiceClass {
 		});
 	}
 
+	/**
+	 * Runs an on-demand scan of a service's already-deployed image, outside
+	 * any deploy or block policy (`blockSeverity: null`).
+	 *
+	 * @throws When the image can't be scanned at all.
+	 */
 	async scanDeployed(svc: ServiceDTO): Promise<TrivySummary> {
 		const ref = `${svc.image}:${svc.tag}`;
 		const target = localScanTarget(ref);

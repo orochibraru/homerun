@@ -26,6 +26,12 @@ function describeRevision(revision: RevisionSource): string {
 	return `${revision.imageRef}${digest}${commit}`;
 }
 
+/**
+ * Resolves a digest-pinned revision's image : a swarm deploy just references
+ * the digest directly (the daemon pulls it), but a standalone container
+ * needs the image actually present locally first, so this pulls it by
+ * digest when it isn't already on this host.
+ */
 async function pinnedByDigest(
 	ctx: RevisionContext,
 	revision: RevisionSource & { digest: string },
@@ -58,6 +64,16 @@ async function pinnedByDigest(
 	return pinned;
 }
 
+/**
+ * Locates the exact image a rollback revision should reuse : pulls by digest
+ * via `pinnedByDigest` when the revision has one, otherwise requires the
+ * plain `image:tag` to already be present locally and (when the revision
+ * recorded an image id) unchanged since that revision ran.
+ *
+ * @throws When the revision has no digest and either the image is gone from
+ *   this host, or it's still present but now points at a different image id
+ *   than the one this revision actually ran.
+ */
 async function locateRevisionImage(
 	ctx: RevisionContext,
 	revision: RevisionSource,
@@ -80,6 +96,13 @@ async function locateRevisionImage(
 	);
 }
 
+/**
+ * Resolves the image for a rollback deploy : logs that the build, registry
+ * pull and image scan are all being skipped (this exact image already ran
+ * here), copies the revision's build metadata onto the deployment row, then
+ * locates the actual image via `locateRevisionImage` and updates the
+ * service's `image`/`tag` to match.
+ */
 export async function resolveRevisionImage(
 	ctx: RevisionContext,
 	revision: RevisionSource,

@@ -32,6 +32,7 @@ class AuthSecretInstallerService {
 		await run.run(["chown", `${username}:${username}`, envPath]);
 	}
 
+	/** Whether the env file exists and already has an `AUTH_SECRET=` line. */
 	async #hasAuthSecret(envPath: string): Promise<boolean> {
 		const file = Bun.file(envPath);
 		if (!(await file.exists())) {

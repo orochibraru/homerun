@@ -92,7 +92,7 @@ there. Run it with the join token/manager address from
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/swarm-join.sh \
-  | sudo bash -s -- --token <SWMTKN-...> --manager <ip>:2377
+  | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377
 ```
 
 Unlike the main installer's `--mode=agent`/`--mode=full` (now verified live

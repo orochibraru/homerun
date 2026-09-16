@@ -18,6 +18,15 @@ export class MirrorGcScheduler extends BaseScheduler {
 
 	#lastRunDay: string | null = null;
 
+	/**
+	 * Once per calendar day, at `RUN_HOUR`, enqueues a mirror-registry pruning
+	 * cleanup job (`enqueueCleanup("pruneMirror", ...)`) run as the first admin
+	 * user. If the mirror registry container isn't running, the day is marked
+	 * done anyway (no retry until tomorrow). If a deploy or image-scan job is
+	 * currently queued/running, the day is left unmarked so it retries on a
+	 * later tick within the same hour. No-op outside `RUN_HOUR` or once already
+	 * run today.
+	 */
 	protected async tick(): Promise<void> {
 		const now = new Date();
 		if (now.getHours() !== RUN_HOUR || this.#lastRunDay === dayKey(now)) {

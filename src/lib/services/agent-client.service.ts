@@ -10,6 +10,7 @@ export interface AgentConnection {
 class AgentRequestError extends Error {
 	status: number;
 
+	/** An error thrown by `#request` for a non-2xx agent response, carrying the HTTP status alongside the message. */
 	constructor(message: string, status: number) {
 		super(message);
 		this.status = status;
@@ -136,6 +137,14 @@ class AgentClientServiceClass {
 		});
 	}
 
+	/**
+	 * Shared fetch plumbing for every authenticated agent call: bearer auth,
+	 * a longer timeout when a body is sent (a build/deploy can run for
+	 * minutes with no progress streaming, see `build`), and translating a
+	 * JSON `{ error }` body or non-2xx status into an `AgentRequestError`.
+	 * @throws `AgentRequestError` on a non-2xx response, or a plain `Error`
+	 * if the agent can't be reached at all.
+	 */
 	async #request<T>(
 		connection: AgentConnection,
 		method: string,

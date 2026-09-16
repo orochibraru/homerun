@@ -161,10 +161,18 @@ export const TEMPLATE_CATEGORY_COLORS: Record<
 	},
 };
 
+/**
+ * The Lucide icon for a template category, or a generic box for unknown or
+ * missing categories.
+ */
 export function templateCategoryIcon(category: string | null): typeof Database {
 	return (category && TEMPLATE_CATEGORY_ICONS[category]) || Box;
 }
 
+/**
+ * The background and text colour classes for a template category's badge, or
+ * the accent colours for unknown or missing categories.
+ */
 export function templateCategoryColor(category: string | null): {
 	bg: string;
 	text: string;

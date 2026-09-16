@@ -57,6 +57,7 @@ export interface UptimeMessageInput {
 	service: Pick<Service, "id" | "name">;
 }
 
+/** Joins `origin` and `path` into an absolute dashboard link, or null when no origin is configured to link back to. */
 export function dashboardLink(
 	origin: string | null,
 	path: string,
@@ -64,6 +65,7 @@ export function dashboardLink(
 	return origin ? `${origin.replace(/\/$/, "")}${path}` : null;
 }
 
+/** Formats the elapsed time between two timestamps as `"1m 05s"`/`"42s"`, or null when either is missing. */
 export function formatDuration(
 	startedAt: Date | null,
 	finishedAt: Date | null,
@@ -82,6 +84,7 @@ export function formatDuration(
 		: `${seconds}s`;
 }
 
+/** The last `LOG_TAIL_LINES` lines of a deploy log, ANSI-stripped and with phase markers and the error message line itself filtered out. */
 export function logTail(log: string | null, errorMessage: string | null) {
 	const lines = stripAnsi(log ?? "")
 		.split("\n")
@@ -90,6 +93,7 @@ export function logTail(log: string | null, errorMessage: string | null) {
 	return lines.slice(-LOG_TAIL_LINES).join("\n");
 }
 
+/** The repository/branch/commit fields for a git-built service, or the image/digest fields for a bring-your-own-image one. */
 function sourceFields(
 	service: DeployMessageInput["service"],
 	deployment: DeployMessageInput["deployment"],
@@ -119,6 +123,7 @@ function sourceFields(
 	return fields;
 }
 
+/** Builds the notification channel message for a deploy's outcome, with source/duration/URL fields and, on failure, a log-tail detail. */
 export function deployMessage(
 	input: DeployMessageInput,
 	ok: boolean,
@@ -173,6 +178,7 @@ export interface ImageScanMessageInput {
 
 const TOP_CRITICAL_LINES = 10;
 
+/** Builds the notification channel message for a scan that found critical vulnerabilities, listing up to `TOP_CRITICAL_LINES` of them. */
 export function imageScanMessage(
 	input: ImageScanMessageInput,
 	timestamp: string,
@@ -200,6 +206,7 @@ export function imageScanMessage(
 	};
 }
 
+/** Builds the notification channel message for an uptime probe's up/down transition. */
 export function uptimeMessage(
 	input: UptimeMessageInput,
 	timestamp: string,
@@ -240,6 +247,7 @@ export interface StatusChecksMessageInput {
 	stackName: string | null;
 }
 
+/** Builds the notification channel message for a git build that was stopped by failing/missing/pending required status checks. */
 export function statusChecksMessage(
 	input: StatusChecksMessageInput,
 	timestamp: string,
@@ -296,6 +304,7 @@ function revisionLabel(
 	return `${revision.imageRef ?? revision.id.slice(0, 8)}${commit}`;
 }
 
+/** Builds the notification channel message for a revision that failed its health checks, noting the rollback target if one was applied. */
 export function revisionHealthMessage(
 	input: RevisionHealthMessageInput,
 	timestamp: string,

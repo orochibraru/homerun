@@ -31,6 +31,7 @@ const DEFAULT_POLL_MS = 2000;
 const DEFAULT_SCAN_TIMEOUT_MS = 30 * 60 * 1000;
 const FINISHED_JOB_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
 
+/** Counts scan findings at `level` or any more severe level, which is what `--fail-on` gates on. `unknown` severity never counts. */
 export function findingsAtOrAbove(
 	counts: SeverityCounts,
 	level: FailOnLevel,
@@ -68,6 +69,7 @@ function listQuery(args: ListArgs): Record<string, string> {
 	return query;
 }
 
+/** Flattens a revision into a table row, shortening the commit and digest and marking it current/previous and whether its image is still retained. */
 export function revisionRow(revision: Revision): Record<string, string> {
 	let marker = "";
 	if (revision.current) {
@@ -88,6 +90,7 @@ export function revisionRow(revision: Revision): Record<string, string> {
 
 /** Every command takes the already-built `Client` as an argument rather than owning one itself : this class holds no client of its own, it's grouped for consistency with every other cli/ module, not because it carries state. */
 class CliCommands {
+	/** Lists services as JSON or a table, with a footer when the page is truncated. Exits on an API error. */
 	async servicesList(client: Client, args: ListArgs): Promise<void> {
 		const { data: services, response } = await this.#unwrapWithResponse(
 			client.GET("/services", { params: { query: listQuery(args) } }),
@@ -109,6 +112,7 @@ class CliCommands {
 		Output.printPageFooter(response, (services as unknown[]).length);
 	}
 
+	/** Fetches one service and prints it as JSON. Exits on an API error. */
 	async serviceGet(client: Client, id: string): Promise<void> {
 		const svc = await this.#unwrap(
 			client.GET("/services/{serviceId}", {
@@ -118,6 +122,7 @@ class CliCommands {
 		Output.printJson(svc);
 	}
 
+	/** Triggers a deploy, start, stop or restart on a service and prints the API's result as JSON. Exits on an API error. */
 	async serviceAction(
 		client: Client,
 		action: "deploy" | "start" | "stop" | "restart",
@@ -131,6 +136,7 @@ class CliCommands {
 		Output.printJson(result);
 	}
 
+	/** Lists a service's deployed revisions as JSON or a table. Exits on an API error. */
 	async revisionsList(
 		client: Client,
 		serviceId: string,
@@ -156,6 +162,11 @@ class CliCommands {
 		]);
 	}
 
+	/**
+	 * Redeploys a service from one of its revisions.
+	 *
+	 * @param revisionId The revision to roll back to; omitted means the previous one.
+	 */
 	async serviceRollback(
 		client: Client,
 		serviceId: string,
@@ -171,6 +182,7 @@ class CliCommands {
 		Output.printJson(result);
 	}
 
+	/** Lists a service's image scans with per-severity counts, as JSON or a table. Exits on an API error. */
 	async scansList(
 		client: Client,
 		serviceId: string,
@@ -210,6 +222,12 @@ class CliCommands {
 		Output.printPageFooter(response, scans.length);
 	}
 
+	/**
+	 * Fetches and prints one image scan, its summary and findings table or raw JSON.
+	 *
+	 * @param scanId A scan id, or `latest` for the service's most recent scan.
+	 * @returns The scan, so `serviceScan` can check it against `--fail-on`.
+	 */
 	async scanGet(
 		client: Client,
 		serviceId: string,
@@ -221,6 +239,12 @@ class CliCommands {
 		return scan;
 	}
 
+	/**
+	 * Queues an image scan. Without `wait` it prints the job id and returns;
+	 * with it, polls the job to completion, prints the latest scan and exits
+	 * non-zero when the job didn't succeed, it timed out, or `failOn` findings
+	 * were found.
+	 */
 	async serviceScan(
 		client: Client,
 		serviceId: string,
@@ -252,6 +276,7 @@ class CliCommands {
 		}
 	}
 
+	/** Fetches a scan by id, or the service's latest scan when `scanId` is `latest`. Exits on an API error. */
 	async #fetchScan(
 		client: Client,
 		serviceId: string,
@@ -271,6 +296,7 @@ class CliCommands {
 		);
 	}
 
+	/** Prints a scan as JSON, or as a summary header followed by its findings table and a note when the API truncated the list. */
 	#printScan(scan: ImageScan, json: boolean): void {
 		if (json) {
 			Output.printJson(scan);
@@ -304,6 +330,12 @@ class CliCommands {
 		}
 	}
 
+	/**
+	 * Asks the API to queue a scan job.
+	 *
+	 * @param wait When set, a 409 for a scan already in flight is accepted and that job is reused instead of failing.
+	 * @returns The job id to poll.
+	 */
 	async #queueScan(
 		client: Client,
 		serviceId: string,
@@ -324,6 +356,7 @@ class CliCommands {
 		);
 	}
 
+	/** Polls a job every `pollMs` until it reaches a terminal status, exiting the process once `timeoutMs` has passed. */
 	async #waitForJob(
 		client: Client,
 		jobId: string,
@@ -348,6 +381,7 @@ class CliCommands {
 		}
 	}
 
+	/** Lists stacks as JSON or a table, with a footer when the page is truncated. Exits on an API error. */
 	async stacksList(client: Client, args: ListArgs): Promise<void> {
 		const { data: stacks, response } = await this.#unwrapWithResponse(
 			client.GET("/stacks", { params: { query: listQuery(args) } }),
@@ -367,6 +401,7 @@ class CliCommands {
 		Output.printPageFooter(response, (stacks as unknown[]).length);
 	}
 
+	/** Lists templates as JSON or a table, with a footer when the page is truncated. Exits on an API error. */
 	async templatesList(client: Client, args: ListArgs): Promise<void> {
 		const { data: templates, response } = await this.#unwrapWithResponse(
 			client.GET("/templates", { params: { query: listQuery(args) } }),
@@ -386,6 +421,7 @@ class CliCommands {
 		Output.printPageFooter(response, (templates as unknown[]).length);
 	}
 
+	/** Like `#unwrap`, but also hands back the raw response so a list command can read its pagination headers. */
 	async #unwrapWithResponse<T>(
 		promise: Promise<{ data?: T; error?: unknown; response: Response }>,
 	): Promise<{ data: T; response: Response }> {
@@ -398,6 +434,7 @@ class CliCommands {
 		return { data: data as T, response };
 	}
 
+	/** Awaits an openapi-fetch call and returns its data, exiting with the status and error body on any error or non-2xx response. */
 	async #unwrap<T>(
 		promise: Promise<{ data?: T; error?: unknown; response: Response }>,
 	): Promise<T> {

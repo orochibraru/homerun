@@ -26,6 +26,7 @@ export type GitConnectionUpdateInput = Partial<
 
 /** Wraps the `git_connection` table : one user's OAuth connection to one configured git provider, see schema.ts's docstring. */
 export class GitConnectionDTO extends BaseDTO<GitConnection> {
+	/** Every git provider connection the user has made. */
 	static async listForUser(userId: string): Promise<GitConnectionDTO[]> {
 		const rows = await db
 			.select()
@@ -34,6 +35,10 @@ export class GitConnectionDTO extends BaseDTO<GitConnection> {
 		return rows.map((row) => new GitConnectionDTO(row));
 	}
 
+	/**
+	 * The user's connection to one configured git provider, null when they
+	 * haven't connected it.
+	 */
 	static async getForUserAndProvider(
 		userId: string,
 		providerId: string,
@@ -84,6 +89,10 @@ export class GitConnectionDTO extends BaseDTO<GitConnection> {
 		return new GitConnectionDTO(row);
 	}
 
+	/**
+	 * Writes the given token/username fields to the row and mirrors them onto
+	 * this instance.
+	 */
 	async update(input: GitConnectionUpdateInput): Promise<void> {
 		await db
 			.update(gitConnection)
@@ -92,28 +101,38 @@ export class GitConnectionDTO extends BaseDTO<GitConnection> {
 		Object.assign(this.row, input);
 	}
 
+	/** Deletes this connection row, disconnecting the user from the provider. */
 	async delete(): Promise<void> {
 		await db.delete(gitConnection).where(eq(gitConnection.id, this.row.id));
 	}
 
+	/** The connection's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The id of the configured git provider this connection belongs to. */
 	get providerId(): string {
 		return this.row.providerId;
 	}
+	/** Which kind of git host the provider is. */
 	get providerKind(): GitProviderKind {
 		return this.row.providerKind;
 	}
+	/** The user's account name on the git provider. */
 	get providerUsername(): string {
 		return this.row.providerUsername;
 	}
+	/** The encrypted OAuth access token, still encrypted. */
 	get accessTokenEnc(): string {
 		return this.row.accessTokenEnc;
 	}
+	/**
+	 * The encrypted OAuth refresh token, null when the provider didn't issue one.
+	 */
 	get refreshTokenEnc(): string | null {
 		return this.row.refreshTokenEnc;
 	}
+	/** When the access token expires, null when it doesn't. */
 	get expiresAt(): Date | null {
 		return this.row.expiresAt;
 	}

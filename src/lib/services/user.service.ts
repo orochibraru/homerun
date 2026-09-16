@@ -148,6 +148,7 @@ class UserServiceClass {
 		};
 	}
 
+	/** Users matching `q` against name/email, newest first, capped at `limit`. Used by lookups that need a short candidate list rather than a full paged listing (e.g. an owner picker). */
 	async searchUsers(q: string, limit: number): Promise<User[]> {
 		return await db
 			.select()
@@ -157,6 +158,7 @@ class UserServiceClass {
 			.limit(limit);
 	}
 
+	/** The oldest admin user's id, or null if there is none. Used to attribute system-initiated actions (e.g. the scheduled mirror cleanup) to a real user. */
 	async firstAdminId(): Promise<string | null> {
 		const [row] = await db
 			.select({ id: userTable.id })
@@ -167,6 +169,7 @@ class UserServiceClass {
 		return row?.id ?? null;
 	}
 
+	/** How many users currently hold the `admin` role. */
 	async countAdmins(): Promise<number> {
 		const [row] = await db
 			.select({ total: count() })

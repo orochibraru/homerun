@@ -12,6 +12,11 @@ function makeid(length: number) {
 	return result;
 }
 
+/**
+ * Logs an uncaught client-side error to the console and gives it a random
+ * 24-character id. The real message is only shown in dev; production shows a
+ * generic one.
+ */
 export const handleError: HandleClientError = ({ error, event, message }) => {
 	const errorId = makeid(24);
 

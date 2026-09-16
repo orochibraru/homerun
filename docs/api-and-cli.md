@@ -13,7 +13,7 @@ and external API-key clients alike.
   full pull-or-build → create → start pipeline and returns once it's done (no
   separate polling endpoint for API clients: that's dashboard-only, for its own
   progress UI)
-- `GET/POST /api/v1/stacks`, `GET/POST /api/v1/templates`
+- `GET/POST /api/v1/stacks`, `GET /api/v1/templates`
 - `GET/POST /api/v1/services/:id/scans`,
   `GET /api/v1/services/:id/scans/latest`,
   `GET /api/v1/services/:id/scans/:scanId`: image scan results, see

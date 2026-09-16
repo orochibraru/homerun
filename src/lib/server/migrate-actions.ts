@@ -42,6 +42,16 @@ function message(err: unknown): string {
 	return err instanceof Error ? err.message : String(err);
 }
 
+/**
+ * Builds the admin-only `preview` and `import` form actions for a
+ * migrate-from-another-platform tab. Both read the source instance's URL and
+ * API token from the form and allow long-running requests; `import` only brings
+ * over the picked entry ids. Failures come back as `fail(400)` with the typed
+ * URL preserved.
+ *
+ * @param source How to label the other platform and list its importable
+ * entries.
+ */
 export function migrationActions(source: MigrationSource) {
 	return {
 		import: async (event: RequestEvent) => {

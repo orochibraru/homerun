@@ -38,10 +38,12 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 		return new UserPreferencesDTO(row);
 	}
 
+	/** Persists the user's light/dark/system theme choice. */
 	async updateTheme(theme: ThemePreference): Promise<void> {
 		await this.persist({ theme });
 	}
 
+	/** Persists how strongly the sidebar is tinted with the accent colour. */
 	async updateSidebarColorIntensity(
 		sidebarColorIntensity: SidebarColorIntensity,
 	): Promise<void> {

@@ -18,24 +18,41 @@ export interface RevisionLike {
 const REVISION_STATUSES = new Set<ContainerStatus>(["running", "stopped"]);
 const UNHEALTHY = new Set<RevisionHealth>(["unhealthy", "rolled_back"]);
 
+/**
+ * Whether a deployment row counts as a revision that can be rolled back to: it
+ * recorded an image reference and ended up running or stopped.
+ */
 export function isRevision(row: RevisionLike): boolean {
 	return Boolean(row.imageRef) && REVISION_STATUSES.has(row.status);
 }
 
+/**
+ * Identifies the image a revision ran, preferring the local image id, then the
+ * digest, then the reference, so redeploys of the same image collapse to one key.
+ */
 export function revisionImageKey(row: RevisionLike): string {
 	return row.imageId ?? row.imageDigest ?? row.imageRef ?? row.id;
 }
 
+/** Returns a copy of the rows sorted by creation time, newest first. */
 export function newestFirst<T extends RevisionLike>(rows: T[]): T[] {
 	return [...rows].sort(
 		(a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
 	);
 }
 
+/** The newest deployment row that is a revision, or null when there is none. */
 export function currentRevision<T extends RevisionLike>(rows: T[]): T | null {
 	return newestFirst(rows).find(isRevision) ?? null;
 }
 
+/**
+ * Finds the rollback target: the newest revision older than the current one that
+ * ran a different image and isn't marked unhealthy or rolled back.
+ *
+ * @param currentId The revision to treat as current; defaults to the newest.
+ * @returns null when the current revision isn't found or nothing qualifies.
+ */
 export function previousRevision<T extends RevisionLike>(
 	rows: T[],
 	currentId: string | null = null,
@@ -58,6 +75,10 @@ export function previousRevision<T extends RevisionLike>(
 	);
 }
 
+/**
+ * Selects the revisions whose images are kept on the host: per service, the
+ * newest revision of each distinct image, up to `limit` distinct images.
+ */
 export function retainedRevisions<T extends RevisionLike>(
 	rows: T[],
 	limit = RETAINED_REVISIONS,
@@ -83,6 +104,10 @@ export function retainedRevisions<T extends RevisionLike>(
 	return kept;
 }
 
+/**
+ * Splits a recorded image reference into repository and tag, dropping any
+ * `@digest` and defaulting the tag to `latest`.
+ */
 export function splitRevisionRef(imageRef: string): {
 	image: string;
 	tag: string;
@@ -95,6 +120,11 @@ export function splitRevisionRef(imageRef: string): {
 	return { image: bare, tag: "latest" };
 }
 
+/**
+ * Lists every reference a revision's image may still be found under on the
+ * host (image id, `image@digest`, and `image:tag` for git builds or undigested
+ * images), so image cleanup can tell which images a retained revision needs.
+ */
 export function revisionImageRefs(row: RevisionLike): string[] {
 	if (!row.imageRef) {
 		return row.imageId ? [row.imageId] : [];
@@ -148,6 +178,12 @@ export type HealthVerdict =
 	| { verdict: "healthy" }
 	| { verdict: "pending" };
 
+/**
+ * Judges a single container's health after a deploy: unhealthy at once if it
+ * vanished, exited, fails its healthcheck or restarted repeatedly since the
+ * baseline; pending until the observation window ends, and while it's still
+ * starting up to the max wait; healthy otherwise.
+ */
 function containerVerdict(
 	baseline: Extract<WorkloadHealthSample, { kind: "container" }>,
 	sample: Extract<WorkloadHealthSample, { kind: "container" }>,
@@ -190,6 +226,11 @@ function containerVerdict(
 	return { verdict: "healthy" };
 }
 
+/**
+ * Judges a swarm service's health after a deploy: unhealthy once enough tasks
+ * have failed, pending until the observation window ends, healthy when all
+ * desired tasks run, and unhealthy if they still don't by the max wait.
+ */
 function swarmVerdict(
 	sample: Extract<WorkloadHealthSample, { kind: "swarm" }>,
 	elapsedMs: number,
@@ -215,6 +256,15 @@ function swarmVerdict(
 			};
 }
 
+/**
+ * Decides whether a freshly deployed workload is healthy, unhealthy (with a
+ * reason, which triggers auto-rollback) or still pending, by comparing a sample
+ * against the one taken right after the deploy.
+ *
+ * @param baseline The sample taken at deploy time; restart counts are measured
+ * relative to it.
+ * @param elapsedMs Time since the deploy.
+ */
 export function healthVerdict(
 	baseline: WorkloadHealthSample,
 	sample: WorkloadHealthSample,

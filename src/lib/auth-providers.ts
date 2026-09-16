@@ -83,32 +83,50 @@ export const OAUTH_PRESETS: OauthPreset[] = [
 	},
 ];
 
+/** Builds the sign-in method id (`oauth:<name>`) for a configured OAuth provider. */
 export function oauthMethod(providerName: string): string {
 	return `${OAUTH_METHOD_PREFIX}${providerName}`;
 }
 
+/** Whether a sign-in method id refers to an OAuth provider rather than password. */
 export function isOauthMethod(method: string): boolean {
 	return method.startsWith(OAUTH_METHOD_PREFIX);
 }
 
+/**
+ * Extracts the provider name from an `oauth:<name>` method id, or null for a
+ * non-OAuth method.
+ */
 export function oauthProviderName(method: string): string | null {
 	return isOauthMethod(method)
 		? method.slice(OAUTH_METHOD_PREFIX.length)
 		: null;
 }
 
+/**
+ * Maps a sign-in method id to the `providerId` better-auth stores on the account
+ * row: `credential` for password, the bare provider name for OAuth.
+ */
 export function accountProviderIdFor(method: string): string {
 	return method === PASSWORD_METHOD
 		? "credential"
 		: (oauthProviderName(method) ?? method);
 }
 
+/**
+ * Inverse of `accountProviderIdFor`: maps a better-auth account `providerId` back
+ * to a sign-in method id.
+ */
 export function methodForAccountProviderId(providerId: string): string {
 	return providerId === "credential"
 		? PASSWORD_METHOD
 		: oauthMethod(providerId);
 }
 
+/**
+ * Case-insensitively matches an email against an allow-list pattern, either an
+ * exact address or a `*@domain` wildcard. Blank inputs never match.
+ */
 export function emailMatchesPattern(email: string, pattern: string): boolean {
 	const normalizedEmail = email.trim().toLowerCase();
 	const normalizedPattern = pattern.trim().toLowerCase();
@@ -121,6 +139,12 @@ export function emailMatchesPattern(email: string, pattern: string): boolean {
 	return normalizedEmail === normalizedPattern;
 }
 
+/**
+ * Picks the token endpoint client authentication style from the methods an OIDC
+ * discovery document advertises, preferring `client_secret_basic`.
+ *
+ * @returns null when neither secret-based method is advertised.
+ */
 export function resolveAdvertisedTokenAuth(
 	methods: string[],
 ): "basic" | "post" | null {

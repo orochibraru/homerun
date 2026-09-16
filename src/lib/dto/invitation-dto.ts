@@ -56,6 +56,7 @@ export class InvitationDTO extends BaseDTO<Invitation> {
 		return new InvitationDTO(row as Invitation);
 	}
 
+	/** Every invite not yet accepted, including expired ones. */
 	static async listPending(): Promise<InvitationDTO[]> {
 		const rows = await db
 			.select()
@@ -69,10 +70,12 @@ export class InvitationDTO extends BaseDTO<Invitation> {
 		await db.delete(invitation).where(eq(invitation.id, id));
 	}
 
+	/** Deletes this invite row. */
 	async delete(): Promise<void> {
 		await db.delete(invitation).where(eq(invitation.id, this.row.id));
 	}
 
+	/** Stamps the invite as accepted now, so its token stops working. */
 	async markAccepted(): Promise<void> {
 		const acceptedAt = new Date();
 		await db

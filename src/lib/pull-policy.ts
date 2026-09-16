@@ -25,6 +25,14 @@ export const PULL_POLICIES: ReadonlyArray<{
 	},
 ];
 
+/**
+ * Decides whether a deploy should skip pulling the image under the service's
+ * pull policy.
+ *
+ * @param presentLocally Whether the image already exists on the Docker host.
+ * @returns The deploy-log line explaining why the pull is skipped, or null when
+ * the image should be pulled.
+ */
 export function shouldSkipPull(
 	policy: PullPolicy,
 	presentLocally: boolean,

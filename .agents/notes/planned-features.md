@@ -18,21 +18,17 @@ re-litigating design decisions.
   revision takes traffic immediately, and the health watch plus opt-in
   auto-rollback (Revisions and rollback in `services-and-templates.md`) replace
   it with the previous revision after the fact.
-- **Storage**: S3 backup now covers both volume kinds (a Docker-managed named
-  volume is read out through a throwaway helper container, see S3 backups
-  above), but there's still no restore flow, upload only.
-- **Observability**: system stats beyond the dashboard's host-level
-  CPU/RAM/GPU/disk, no per-container `docker stats` view yet (swarm mode's
-  `inspectSwarmServiceStatus` aggregates task state, not per-task resource
-  usage, see Swarm mode above).
+- **Observability**: per-service resource history (`stat_sample`) samples a
+  standalone service's one container; swarm mode's `inspectSwarmServiceStatus`
+  aggregates task state, not per-task resource usage, so there's no per-replica
+  view.
 - **Security**: the per-app login wall is built and works end to end (see
   Per-app login wall above); what's still missing there is finer-grained
   revocation than the 8h cookie lifetime for a user deleted or re-grouped at the
   provider. Custom SSL cert handling exists too (see below) but genuinely
   requires the admin's own one-time Traefik config change to take effect.
 - **Source integration**: git-based builds exist (see Git-based builds above),
-  no private-repo credential field beyond a token in the clone URL, no
-  webhook/auto-deploy-on-push. Build servers exist too (see Build servers
+  no webhook/auto-deploy-on-push. Build servers exist too (see Build servers
   above); adding capacity for _deploys_ is Swarm's job, and
   `packages/installer/swarm-join.sh` (joining a node as a worker) is still
   unverified against a real swarm.

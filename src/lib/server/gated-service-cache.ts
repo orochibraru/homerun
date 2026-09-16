@@ -16,6 +16,11 @@ function getCache() {
 	return globalForGate.__homerun_gate_cache;
 }
 
+/**
+ * Looks up a service for the login wall's forward-auth check, caching the
+ * result (including a miss) for 10 seconds, since that check runs on every
+ * request to a gated app.
+ */
 export async function gatedService(
 	serviceId: string,
 ): Promise<ServiceDTO | null> {
@@ -29,6 +34,10 @@ export async function gatedService(
 	return service;
 }
 
+/**
+ * Drops a service's cached login-wall lookup, so a policy change applies
+ * immediately instead of after the cache expires.
+ */
 export function invalidateGatedService(serviceId: string): void {
 	getCache().delete(serviceId);
 }

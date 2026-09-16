@@ -30,6 +30,10 @@ export interface UpdateBuildCacheRegistryInput {
 
 /** Wraps the `build_cache_registry` table : see ServiceDTO for the pattern this follows. */
 export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
+	/**
+	 * Loads one build cache registry by id, scoped to its owner; null when it
+	 * doesn't exist or belongs to someone else.
+	 */
 	static async get(
 		id: string,
 		userId: string,
@@ -47,6 +51,7 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 		return row ? new BuildCacheRegistryDTO(row) : null;
 	}
 
+	/** Every build cache registry the user owns, newest first. */
 	static async list(userId: string): Promise<BuildCacheRegistryDTO[]> {
 		const rows = await db
 			.select()
@@ -91,6 +96,10 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 		};
 	}
 
+	/**
+	 * Up to `limit` of the user's registries whose name, URL or username matches
+	 * `q`, newest first, for global search.
+	 */
 	static async search(
 		userId: string,
 		q: string,
@@ -114,6 +123,7 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 		return rows.map((row) => new BuildCacheRegistryDTO(row));
 	}
 
+	/** Inserts a new registry, encrypting its password before it is stored. */
 	static async create(
 		input: NewBuildCacheRegistryInput,
 	): Promise<BuildCacheRegistryDTO> {
@@ -132,6 +142,10 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 		return new BuildCacheRegistryDTO(row);
 	}
 
+	/**
+	 * Saves edited registry fields; a blank password keeps the stored one,
+	 * anything else is re-encrypted.
+	 */
 	async update(input: UpdateBuildCacheRegistryInput): Promise<void> {
 		const patch: Partial<BuildCacheRegistry> = {
 			name: input.name,
@@ -149,21 +163,26 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 		Object.assign(this.row, patch);
 	}
 
+	/** Deletes this registry row. */
 	async delete(): Promise<void> {
 		await db
 			.delete(buildCacheRegistry)
 			.where(eq(buildCacheRegistry.id, this.row.id));
 	}
 
+	/** The registry's id. */
 	get id(): string {
 		return this.row.id;
 	}
+	/** The registry's display name. */
 	get name(): string {
 		return this.row.name;
 	}
+	/** The registry host the build cache is pushed to. */
 	get registryUrl(): string {
 		return this.row.registryUrl;
 	}
+	/** The username used to authenticate against the registry. */
 	get username(): string {
 		return this.row.username;
 	}

@@ -24,6 +24,7 @@ class InstallerDetector {
 		);
 	}
 
+	/** @throws When not running on Linux, since the install relies on systemd and rootless Docker. */
 	requireLinux(): void {
 		if (process.platform !== "linux") {
 			throw new Error(
@@ -32,6 +33,7 @@ class InstallerDetector {
 		}
 	}
 
+	/** @throws When the effective uid isn't root, since the install creates users, installs packages and writes units. */
 	requireRoot(): void {
 		// Bun exposes process.getuid on Linux/macOS (not Windows, which requireLinux already rejects).
 		if (typeof process.getuid === "function" && process.getuid() !== 0) {
@@ -66,6 +68,7 @@ class InstallerDetector {
 		);
 	}
 
+	/** Runs a command and returns its stdout, or null when it exits non-zero or can't be spawned. Bypasses `StepRunner`, so it runs even under --dry-run. */
 	async #output(cmd: string[]): Promise<string | null> {
 		try {
 			const proc = Bun.spawn(cmd, { stderr: "ignore", stdout: "pipe" });

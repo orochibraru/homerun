@@ -35,6 +35,11 @@ function consumeQuoted(state: SplitState, char: string): void {
 	state.current += char;
 }
 
+/**
+ * Feeds one unescaped character into the shell-style splitter: opens or closes a
+ * quote, ends the current argument on unquoted whitespace, and otherwise appends
+ * to it.
+ */
 function consume(state: SplitState, char: string): void {
 	if (state.quote) {
 		consumeQuoted(state, char);
@@ -53,6 +58,14 @@ function consume(state: SplitState, char: string): void {
 	state.started = true;
 }
 
+/**
+ * Parses a user-entered command into an argv array. Accepts either a JSON array
+ * (`["sh", "-c", "..."]`) or a shell-like string with single/double quotes and
+ * backslash escapes (literal inside single quotes). No variable expansion or
+ * globbing is done.
+ *
+ * @returns An empty array for blank input.
+ */
 export function parseCommand(input: string): string[] {
 	const trimmed = input.trim();
 	if (trimmed === "") {

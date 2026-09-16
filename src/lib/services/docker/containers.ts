@@ -218,6 +218,13 @@ export function DockerContainerMixin<
 			};
 		}
 
+		/**
+		 * Looks up the digest of an already-pulled local image, without
+		 * pulling it. Returns null when the image exists locally but carries
+		 * no digest (never pushed to/pulled from a registry), and undefined
+		 * when the image can't be inspected at all (not present locally, or
+		 * the Docker call failed).
+		 */
 		async localImageDigest(
 			ref: string,
 			remote?: RemoteHostConnection | null,
@@ -313,15 +320,6 @@ export function DockerContainerMixin<
 		}
 
 		/**
-		 * Creates and starts the container for a service, replacing any
-		 * previous container for the same service (a redeploy : see
-		 * #findServiceContainer above). Attaches to the shared Traefik
-		 * network under a DNS alias equal to the service's slug : no host
-		 * port publishing needed, Traefik reaches it over that network, and
-		 * other services can reach it at `http://<slug>:<containerPort>`
-		 * regardless of the container's own (randomized) name.
-		 */
-		/**
 		 * Removes any previous container for this service (a redeploy), found
 		 * by its service-id label rather than by name (see #containerName).
 		 */
@@ -368,6 +366,11 @@ export function DockerContainerMixin<
 			return params.remote ? undefined : config.docker.networkName;
 		}
 
+		/**
+		 * Builds the dockerode `HostConfig` for a container from its create
+		 * params: volume binds, memory/CPU limits, network mode, and restart
+		 * policy.
+		 */
 		#hostConfigFor(params: CreateContainerParams) {
 			// Docker's Binds syntax covers both a host bind-mount path and a
 			// Docker-managed named volume with the same "source:target[:ro]"
@@ -397,6 +400,12 @@ export function DockerContainerMixin<
 			};
 		}
 
+		/**
+		 * Builds the full dockerode container-creation options for a service:
+		 * env vars, exposed ports, healthcheck, `HostConfig` (via
+		 * `#hostConfigFor`), Traefik labels, and the shared-network alias when
+		 * applicable.
+		 */
 		#createContainerOptions(params: CreateContainerParams, name: string) {
 			const isHostNetwork = params.networkMode === "host";
 			const protocols =
@@ -501,6 +510,19 @@ export function DockerContainerMixin<
 			);
 		}
 
+		/**
+		 * Creates and starts the container for a service, replacing any
+		 * previous container for the same service (a redeploy : see
+		 * `#removePreviousContainer`). Ensures the shared Traefik network
+		 * exists first (unless the container is remote or on the host
+		 * network), attaches under a DNS alias equal to the service's slug so
+		 * other services can reach it at `http://<slug>:<containerPort>`
+		 * regardless of the container's own (randomized) name, then
+		 * best-effort joins the service's stack network. Reports progress and
+		 * final reachability via `onProgress`/the logger.
+		 *
+		 * @throws When the Docker create or start call fails.
+		 */
 		async createAndStartContainer(
 			params: CreateContainerParams,
 			onProgress?: (line: string) => void,
@@ -533,6 +555,7 @@ export function DockerContainerMixin<
 			return { containerId: container.id };
 		}
 
+		/** Starts a stopped container via the Docker API. */
 		async startContainer(
 			containerId: string,
 			remote?: RemoteHostConnection | null,
@@ -541,6 +564,7 @@ export function DockerContainerMixin<
 			logger.info(`Container started: ${containerId}`);
 		}
 
+		/** Stops a running container via the Docker API. */
 		async stopContainer(
 			containerId: string,
 			remote?: RemoteHostConnection | null,
@@ -549,6 +573,7 @@ export function DockerContainerMixin<
 			logger.info(`Container stopped: ${containerId}`);
 		}
 
+		/** Restarts a container via the Docker API. */
 		async restartContainer(
 			containerId: string,
 			remote?: RemoteHostConnection | null,
@@ -557,6 +582,7 @@ export function DockerContainerMixin<
 			logger.info(`Container restarted: ${containerId}`);
 		}
 
+		/** Removes a container via the Docker API, forcing removal (stopping it first) by default. */
 		async removeContainer(
 			containerId: string,
 			opts?: { force?: boolean },
@@ -671,6 +697,11 @@ export function DockerContainerMixin<
 			}
 		}
 
+		/**
+		 * The container's Docker healthcheck status and the last probe's
+		 * output, or null when the container has no healthcheck configured or
+		 * can't be inspected.
+		 */
 		async containerHealth(
 			containerId: string,
 			remote?: RemoteHostConnection | null,

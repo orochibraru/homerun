@@ -22,6 +22,7 @@ export interface ResolvedTemplateLink {
 	templateName: string;
 }
 
+/** Normalizes a name into a DNS-label-safe slug: lowercased, non-alphanumeric runs collapsed to a single hyphen, trimmed, capped to 63 characters. */
 export function slugify(value: string): string {
 	return value
 		.toLowerCase()
@@ -32,6 +33,11 @@ export function slugify(value: string): string {
 		.slice(0, 63);
 }
 
+/**
+ * Substitutes `{{alias}}` (linked service's slug) and `{{alias.KEY}}`
+ * (linked service's env var) tokens in `value` using `context`. A token
+ * whose alias or key doesn't resolve is left untouched.
+ */
 export function resolveLinkTokens(
 	value: string,
 	context: Record<string, { envVars: Record<string, string>; slug: string }>,
@@ -62,6 +68,11 @@ async function uniqueLinkSlug(baseSlug: string): Promise<string> {
 	return candidate;
 }
 
+/**
+ * Resolves every service linked to a template into a `ResolvedTemplateLink`,
+ * assigning each a unique slug derived from `primarySlug` and the link's
+ * alias (checked against `ServiceDTO.slugTaken`, not yet persisted).
+ */
 export async function buildTemplateLinkContext(
 	templateId: string,
 	primarySlug: string,
@@ -87,6 +98,7 @@ export async function buildTemplateLinkContext(
 	return resolved;
 }
 
+/** Resolves every `{{alias}}`/`{{alias.KEY}}` token in `envVars`' values against the given resolved links. */
 export function resolveEnvVarsWithLinks(
 	envVars: Record<string, string>,
 	links: ResolvedTemplateLink[],
@@ -113,6 +125,7 @@ async function uniqueStackSlug(baseSlug: string): Promise<string> {
 	return candidate;
 }
 
+/** Creates a new stack (with a unique slug derived from `name`) to hold a template's primary service and its linked services. */
 export async function createStackForLinkedServices(
 	name: string,
 	userId: string,
@@ -122,6 +135,7 @@ export async function createStackForLinkedServices(
 	return stack.id;
 }
 
+/** Creates one service per resolved template link inside `params.stackId`, not DNS-resolvable by default since these back the primary service. */
 export async function createLinkedServices(
 	links: ResolvedTemplateLink[],
 	params: { stackId: string; userId: string },
@@ -159,6 +173,12 @@ async function uniqueServiceSlug(baseSlug: string): Promise<string> {
 	return candidate;
 }
 
+/**
+ * Instantiates a template as a real service: resolves its linked services
+ * (creating a stack for them if none was given), resolves `{{alias}}` env
+ * var tokens against those links, then creates the primary service and its
+ * linked services.
+ */
 export async function createServiceFromTemplate(
 	template: TemplateDTO,
 	userId: string,
@@ -214,6 +234,14 @@ export type QuickDeployResult =
 	| { ok: true; stackId: string | null; serviceId: string }
 	| { error: string; ok: false; status: number };
 
+/**
+ * One-click template deploy: creates the service(s) via
+ * `createServiceFromTemplate`, records a "service created" notification for
+ * each, and enqueues the stack deploy job.
+ *
+ * @returns An error result (404) when the template isn't usable by this
+ *   user, otherwise the created service/stack ids.
+ */
 export async function quickDeployFromTemplate(
 	templateId: string,
 	userId: string,
