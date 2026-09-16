@@ -17,6 +17,7 @@
 		Network,
 		Plus,
 		ScrollText,
+		Send,
 		Server,
 		Settings,
 		Trash2,
@@ -164,6 +165,14 @@
 			href: resolve("/build-cache-registries"),
 			icon: Container,
 			label: "Build Cache",
+		},
+		{
+			adminOnly: false,
+			category: "Integrations",
+			exact: false,
+			href: resolve("/notification-channels"),
+			icon: Send,
+			label: "Notification Channels",
 		},
 		{
 			adminOnly: false,

@@ -224,6 +224,13 @@
 			"when": 1789508073910,
 			"tag": "0031_cynical_paibok",
 			"breakpoints": true
+		},
+		{
+			"idx": 32,
+			"version": "7",
+			"when": 1789556128697,
+			"tag": "0032_cold_cerise",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

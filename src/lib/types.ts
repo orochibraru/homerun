@@ -22,7 +22,17 @@ export type JobType = "backup" | "cron_job" | "deploy" | "docker_cleanup";
 
 export type StatusPageScope = "global" | "project" | "custom";
 
-export type NotificationChannelKind = "webhook" | "email";
+export type NotificationChannelKind = "webhook" | "discord" | "email";
+
+export type NotificationEvent =
+	| "build.failed"
+	| "build.succeeded"
+	| "update.failed"
+	| "update.succeeded"
+	| "deploy.failed"
+	| "deploy.succeeded"
+	| "service.down"
+	| "service.up";
 
 export type ServiceHealth = "up" | "down" | "unknown";
 

@@ -194,10 +194,12 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   in `services-and-templates.md`.
 - `status_page_service`, the explicit membership join for a `custom` page only,
   with a unique index on (`statusPageId`, `serviceId`).
-- `notification_channel`, a webhook URL or email address alerted on an uptime
-  state change: `kind`, `target`, `enabled`, `lastError` (the last failure, so a
-  silently-broken channel is visible), and a nullable `statusPageId` — null
-  means "every status page", set means just that one.
+- `notification_channel`, a destination Homerun posts lifecycle events to:
+  `kind` (`"webhook"` | `"discord"` | `"email"`), `target`, `enabled`, `events`
+  (jsonb `NotificationEvent[]`, DB default and DTO default
+  `["build.failed","update.failed"]`), `lastError` (the last delivery failure,
+  so a silently-broken channel is visible). Account-wide, no longer scoped to a
+  status page (see Outbound notification channels in `observability.md`).
 - `template`, image/tag/port/envVars/etc., `ownerId` nullable (null = built-in,
   seeded, immutable).
 - `template_link`, a template linking to another template (a database, a cache,
@@ -328,14 +330,20 @@ returned real `Date` objects and real `boolean`s (not the `0`/`1`/epoch-int
 values `bun:sqlite` mode-typed columns produced); `jsonb` columns
 (`instanceSettings.oauthProviders`, `template.envVars`, `service.envVars`)
 round-tripped as parsed objects/arrays with no manual `JSON.parse`/`stringify`
-needed on either side, same as before; `seed.ts`'s `onConflictDoNothing()` is
-idempotent on Postgres the same way it was on SQLite;
-`ProjectDTO.cascadeDelete()`'s child-before-parent deletion order (deployments,
-then services, then the project row) was already FK-safe by inspection, so real
-FK enforcement doesn't break it. **Not carried over automatically**: any data in
-a pre-conversion `database.db`, this was a schema/dialect switch, not a data
-migration; a fresh Postgres database starts empty (migrations +
-`seedBuiltinTemplates()` on first boot, same as before).
+needed on either side, same as before. **That round-trip hides a trap**: the
+bun-sql driver double-encodes on write, so every `jsonb` value is stored as a
+JSON _string_ (`jsonb_typeof` is `string`), and Drizzle only parses it back on
+read. Any SQL-side jsonb operator (`@>`, `->`, `?`) therefore silently never
+matches. Filter in code after the select instead: a real bug where
+`NotificationChannelDTO.listSubscribed` used `@>` and no channel ever received a
+deploy notification. `seed.ts`'s `onConflictDoNothing()` is idempotent on
+Postgres the same way it was on SQLite; `ProjectDTO.cascadeDelete()`'s
+child-before-parent deletion order (deployments, then services, then the project
+row) was already FK-safe by inspection, so real FK enforcement doesn't break it.
+**Not carried over automatically**: any data in a pre-conversion `database.db`,
+this was a schema/dialect switch, not a data migration; a fresh Postgres
+database starts empty (migrations + `seedBuiltinTemplates()` on first boot, same
+as before).
 
 `src/lib/server/db/seed.ts`, `seedBuiltinTemplates()`, called from
 `hooks.server.ts`'s `init()` on every boot (idempotent, fixed ids like

@@ -15,6 +15,7 @@ import type {
 	JobStatus,
 	JobType,
 	NotificationChannelKind,
+	NotificationEvent,
 	PullPolicy,
 	StatusPageScope,
 } from "$lib/types";
@@ -1238,13 +1239,14 @@ export const notificationChannel = pgTable(
 	{
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		enabled: boolean("enabled").notNull().default(true),
+		events: jsonb("events")
+			.$type<NotificationEvent[]>()
+			.notNull()
+			.default(["build.failed", "update.failed"]),
 		id: text("id").primaryKey(),
 		kind: text("kind").$type<NotificationChannelKind>().notNull(),
 		lastError: text("last_error"),
 		name: text("name").notNull(),
-		statusPageId: text("status_page_id").references(() => statusPage.id, {
-			onDelete: "cascade",
-		}),
 		target: text("target").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
 			.$onUpdate(() => new Date())

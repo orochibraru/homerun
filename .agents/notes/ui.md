@@ -301,10 +301,11 @@ now-fixed three), never `$derived`.
 Per-account, not instance-wide (contrast `instance_settings`, which every other
 "live-editable config" section in this document is about): a new "Appearance"
 tab on the profile layout (`profile/+layout.svelte`, alongside Personal
-Information/Security/Sessions/Authorized Clients), backed by
-`profile/appearance/+page.server.ts`'s three actions
-(`updateTheme`/`updateSidebar`/`updateAccent`, each validated by its own zod
-schema in `$lib/server/validation/appearance.ts`) calling
+Information/Security/Sessions/Authorized Clients/Notifications, the last of
+which sets the event x channel matrix for Outbound notification channels, see
+`observability.md`), backed by `profile/appearance/+page.server.ts`'s three
+actions (`updateTheme`/`updateSidebar`/`updateAccent`, each validated by its own
+zod schema in `$lib/server/validation/appearance.ts`) calling
 `UserPreferencesDTO.get(userId)`'s `updateTheme`/`updateSidebarColorIntensity`/
 `updateAccentColor`, which share `InstanceSettingsDTO`'s private-`persist()`
 -per-section shape but per-user instead of a singleton row.

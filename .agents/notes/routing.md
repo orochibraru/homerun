@@ -52,14 +52,17 @@ Appearance preferences below for the per-user "single accent color" override):
 
 - **Workspace**: **Overview** (dashboard stats + recent deployments),
   **Services**, **Projects**, **Templates**, **Cron Jobs** (user-defined
-  scheduled tasks, see Cron jobs below), **Status Page** (service health,
-  notification channels, and the public pages themselves).
+  scheduled tasks, see Cron jobs below), **Status Page** (service health and the
+  public pages themselves, see Status pages in `services-and-templates.md`).
 - **Infrastructure**: **Storage**, **Backups** (backup-run history + "Run now",
   see S3 backups below), **S3 Destinations** (reusable, named backup targets),
   **Remote Hosts**, **Scheduling** (one instance-wide view of every cron
   redeploy, enabled cron job and backup schedule, plus the job queue).
 - **Integrations**: **Git Providers**, **Build Cache** (registry credentials for
-  cross-build cache reuse, see Git-based builds below), **API Docs**.
+  cross-build cache reuse, see Git-based builds below), **Notification
+  Channels** (webhook/Discord/email destinations, see Outbound notification
+  channels in `observability.md`; which events each channel gets is set on
+  `/profile/notifications` instead, not in this nav), **API Docs**.
 - **Administration**: **Users** (admin-only), **Authentication** (admin-only,
   sign-in methods for the instance and the per-app login wall, see
   Authentication page below), **Settings** (admin-only), **System Logs**,

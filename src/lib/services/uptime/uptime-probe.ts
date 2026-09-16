@@ -162,7 +162,9 @@ export class UptimeProbe extends BaseScheduler {
 		if (transitions.length > 0) {
 			await StatusAlertService.dispatch(
 				transitions,
-				new Map(services.map((svc) => [svc.id, svc])),
+				new Map(
+					services.map((svc) => [svc.id, { host: externalHostFor(svc), svc }]),
+				),
 			);
 		}
 

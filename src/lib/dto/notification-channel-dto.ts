@@ -1,17 +1,18 @@
-import { and, asc, eq, isNull, or } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
+import { DEFAULT_NOTIFICATION_EVENTS } from "$lib/notification-events";
 import { db } from "$lib/server/db/lib";
 import {
 	type NotificationChannel,
 	notificationChannel,
 } from "$lib/server/db/schema";
-import type { NotificationChannelKind } from "$lib/types";
+import type { NotificationChannelKind, NotificationEvent } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
 export interface NewNotificationChannelInput {
 	enabled?: boolean;
+	events?: NotificationEvent[];
 	kind: NotificationChannelKind;
 	name: string;
-	statusPageId?: string | null;
 	target: string;
 	userId: string;
 }
@@ -19,7 +20,7 @@ export interface NewNotificationChannelInput {
 export type NotificationChannelUpdateInput = Partial<
 	Pick<
 		NotificationChannel,
-		"enabled" | "kind" | "lastError" | "name" | "statusPageId" | "target"
+		"enabled" | "events" | "kind" | "lastError" | "name" | "target"
 	>
 >;
 
@@ -50,9 +51,9 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		return rows.map((row) => new NotificationChannelDTO(row));
 	}
 
-	static async listForStatusPage(
+	static async listSubscribed(
 		userId: string,
-		statusPageId: string,
+		event: NotificationEvent,
 	): Promise<NotificationChannelDTO[]> {
 		const rows = await db
 			.select()
@@ -61,14 +62,12 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 				and(
 					eq(notificationChannel.userId, userId),
 					eq(notificationChannel.enabled, true),
-					or(
-						isNull(notificationChannel.statusPageId),
-						eq(notificationChannel.statusPageId, statusPageId),
-					),
 				),
 			)
 			.orderBy(asc(notificationChannel.name));
-		return rows.map((row) => new NotificationChannelDTO(row));
+		return rows
+			.filter((row) => row.events.includes(event))
+			.map((row) => new NotificationChannelDTO(row));
 	}
 
 	static async create(
@@ -78,11 +77,11 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		const row: NotificationChannel = {
 			createdAt: now,
 			enabled: input.enabled ?? true,
+			events: input.events ?? [...DEFAULT_NOTIFICATION_EVENTS],
 			id: crypto.randomUUID(),
 			kind: input.kind,
 			lastError: null,
 			name: input.name,
-			statusPageId: input.statusPageId ?? null,
 			target: input.target,
 			updatedAt: now,
 			userId: input.userId,
@@ -107,6 +106,9 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 
 	get id(): string {
 		return this.row.id;
+	}
+	get events(): NotificationEvent[] {
+		return this.row.events;
 	}
 	get kind(): NotificationChannelKind {
 		return this.row.kind;
