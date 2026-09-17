@@ -1,4 +1,8 @@
-import type { WorkloadHealthSample } from "$lib/revisions";
+import {
+	type SwarmTaskLike,
+	swarmSampleFromTasks,
+	type WorkloadHealthSample,
+} from "$lib/revisions";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import {
 	type ContainerHealthSample,
@@ -52,9 +56,9 @@ export function DockerRevisionMixin<
 
 		/**
 		 * Samples a swarm service's current health for `RevisionHealthService`
-		 * : desired replica count and how many of the tasks created since
-		 * `since` are running vs. failed/rejected, plus the most recent
-		 * failure's error message, if any.
+		 * : desired replica count, how many tasks are running, how many
+		 * created since `since` failed or were rejected, and the most recent
+		 * failure's error (see `swarmSampleFromTasks`).
 		 */
 		async swarmHealthSample(
 			swarmServiceId: string,
@@ -66,24 +70,12 @@ export function DockerRevisionMixin<
 			};
 			const tasks = (await docker.listTasks({
 				filters: JSON.stringify({ service: [swarmServiceId] }),
-			})) as Array<{
-				CreatedAt?: string;
-				Status?: { Err?: string; State?: string };
-			}>;
-			const recent = tasks.filter(
-				(task) => new Date(task.CreatedAt ?? 0).getTime() >= since.getTime(),
+			})) as SwarmTaskLike[];
+			return swarmSampleFromTasks(
+				tasks,
+				spec.Mode?.Replicated?.Replicas ?? 1,
+				since,
 			);
-			const failed = recent.filter((task) =>
-				["failed", "rejected"].includes(task.Status?.State ?? ""),
-			);
-			return {
-				desired: spec.Mode?.Replicated?.Replicas ?? 1,
-				failed: failed.length,
-				kind: "swarm",
-				lastError: failed.at(-1)?.Status?.Err ?? null,
-				running: recent.filter((task) => task.Status?.State === "running")
-					.length,
-			};
 		}
 	};
 }

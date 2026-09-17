@@ -10,6 +10,7 @@ import {
 	revisionImageRefs,
 	revisionRoot,
 	supersededHealth,
+	swarmSampleFromTasks,
 	type WorkloadHealthSample,
 } from "../../../src/lib/revisions";
 
@@ -364,5 +365,64 @@ describe("healthVerdict", () => {
 		expect(
 			healthVerdict(swarm(0, 0), swarm(1, 0), HEALTH_WINDOW.maxWaitMs).verdict,
 		).toBe("unhealthy");
+	});
+});
+
+describe("swarmSampleFromTasks", () => {
+	const since = new Date("2026-09-17T16:05:14.598Z");
+
+	test("counts a running task created during the rollout, before the watch started", () => {
+		const sample = swarmSampleFromTasks(
+			[
+				{
+					CreatedAt: "2026-09-17T16:04:50.553Z",
+					DesiredState: "running",
+					Status: { State: "running" },
+				},
+				{
+					CreatedAt: "2026-09-17T14:04:00.000Z",
+					DesiredState: "shutdown",
+					Status: { State: "shutdown" },
+				},
+			],
+			1,
+			since,
+		);
+		expect(sample.running).toBe(1);
+		expect(sample.failed).toBe(0);
+	});
+
+	test("doesn't count a task swarm is shutting down as running", () => {
+		const sample = swarmSampleFromTasks(
+			[
+				{
+					CreatedAt: "2026-09-17T16:06:00.000Z",
+					DesiredState: "shutdown",
+					Status: { State: "running" },
+				},
+			],
+			1,
+			since,
+		);
+		expect(sample.running).toBe(0);
+	});
+
+	test("only counts failures since the watch started, with the latest error", () => {
+		const rejected = (createdAt: string, err: string) => ({
+			CreatedAt: createdAt,
+			DesiredState: "shutdown",
+			Status: { Err: err, State: "rejected" },
+		});
+		const sample = swarmSampleFromTasks(
+			[
+				rejected("2026-09-17T13:32:20.000Z", "old revision"),
+				rejected("2026-09-17T16:06:00.000Z", "mount missing"),
+				rejected("2026-09-17T16:06:10.000Z", "mount still missing"),
+			],
+			1,
+			since,
+		);
+		expect(sample.failed).toBe(2);
+		expect(sample.lastError).toBe("mount still missing");
 	});
 });

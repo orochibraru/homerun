@@ -23,6 +23,10 @@ Concretely:
   so, move on.
 - The conventions below (types, DTOs, toasts, no comments, `bun run check`
   clean) still apply. Being fast isn't licence to leave the repo broken.
+- **End every turn that edited files with a suggested one-line commit message**,
+  in a code block, conventional-commit style (`feat: ...`, `fix: ...`). One
+  line, even for a large batch of unrelated changes: summarise, don't list. Only
+  suggest it, never commit.
 
 **Work out of `TODO.md`.** It's the backlog, and it's the only one. Don't write
 a plan in chat, don't keep a task list somewhere else, don't hand back a

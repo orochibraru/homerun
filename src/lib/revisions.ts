@@ -255,6 +255,42 @@ export type WorkloadHealthSample =
 			running: number;
 	  };
 
+export interface SwarmTaskLike {
+	CreatedAt?: string;
+	DesiredState?: string;
+	Status?: { Err?: string; State?: string };
+}
+
+/**
+ * Builds a swarm health sample from a service's tasks. Running counts every
+ * task swarm still wants running, whenever it was created: a rolling update
+ * starts the new task before the deploy is recorded as finished, which is
+ * when the watch starts, so filtering those by creation time would never see
+ * the live task. Failures only count tasks created since `since`, so a
+ * previous revision's rejected tasks don't count against this one.
+ */
+export function swarmSampleFromTasks(
+	tasks: SwarmTaskLike[],
+	desired: number,
+	since: Date,
+): Extract<WorkloadHealthSample, { kind: "swarm" }> {
+	const failed = tasks.filter(
+		(task) =>
+			new Date(task.CreatedAt ?? 0).getTime() >= since.getTime() &&
+			["failed", "rejected"].includes(task.Status?.State ?? ""),
+	);
+	return {
+		desired,
+		failed: failed.length,
+		kind: "swarm",
+		lastError: failed.at(-1)?.Status?.Err ?? null,
+		running: tasks.filter(
+			(task) =>
+				task.DesiredState === "running" && task.Status?.State === "running",
+		).length,
+	};
+}
+
 export interface HealthWindow {
 	maxWaitMs: number;
 	windowMs: number;
