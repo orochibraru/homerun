@@ -23,7 +23,9 @@ host from filling up.
 - **Recent deployments** across all your services, each linking to the service
   it belongs to.
 - **Recent errors**, the latest warn/error-level log lines, each linking to the
-  service it mentions (or to System Logs when it mentions none).
+  service it mentions (or to System Logs when it mentions none). An admin sees
+  the instance's most recent errors regardless of whose service they're about; a
+  developer only sees ones that mention one of their own services.
 - **Quick actions**, shortcuts to deploy a service and to the services list.
 - **A setup-issues banner**, when applicable, see below.
 

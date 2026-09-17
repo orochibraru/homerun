@@ -136,6 +136,41 @@ class CliCommands {
 		Output.printJson(result);
 	}
 
+	/**
+	 * Deletes a service, the same danger-zone action as the Settings tab's
+	 * Delete button. Exits on an API error, including the 409 the API answers
+	 * (without `force`) when the container or swarm service couldn't be
+	 * removed.
+	 *
+	 * @param force Delete Homerun's record even when the workload itself
+	 *   couldn't be torn down.
+	 */
+	async serviceDelete(
+		client: Client,
+		id: string,
+		force: boolean,
+	): Promise<void> {
+		await this.#unwrap(
+			client.DELETE("/services/{serviceId}", {
+				params: {
+					path: { serviceId: id },
+					query: force ? { force: "true" } : {},
+				},
+			}),
+		);
+		Output.printJson({ deleted: true, id });
+	}
+
+	/** Fetches a service's push-to-deploy webhook URL and secret and prints it as JSON. Exits on an API error, including the 404 when deploy on push isn't turned on. */
+	async serviceWebhook(client: Client, id: string): Promise<void> {
+		const webhook = await this.#unwrap(
+			client.GET("/services/{serviceId}/webhook", {
+				params: { path: { serviceId: id } },
+			}),
+		);
+		Output.printJson(webhook);
+	}
+
 	/** Lists a service's deployed revisions as JSON or a table. Exits on an API error. */
 	async revisionsList(
 		client: Client,

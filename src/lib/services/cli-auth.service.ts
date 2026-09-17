@@ -152,14 +152,17 @@ class CliAuthServiceClass {
 	 * `POST /api-key/delete`: that endpoint requires a session
 	 * (`sessionMiddleware`), which an API-key-only caller revoking itself
 	 * never has. `auth.api.verifyApiKey` is the same server-only lookup
-	 * `hooks.server.ts`'s `applyApiKeyAuth` uses.
-	 * @returns False when `rawKey` was already invalid/expired, true once deleted.
+	 * `hooks.server.ts`'s `applyApiKeyAuth` uses. Only a key owned by `userId`
+	 * is deleted, so a caller can't revoke someone else's key by sending its
+	 * value.
+	 * @returns False when `rawKey` was already invalid/expired or belongs to
+	 * another user, true once deleted.
 	 */
-	async revokeApiKey(rawKey: string): Promise<boolean> {
+	async revokeApiKey(rawKey: string, userId: string): Promise<boolean> {
 		const result = await auth.api
 			.verifyApiKey({ body: { key: rawKey } })
 			.catch(() => null);
-		if (!(result?.valid && result.key)) {
+		if (!(result?.valid && result.key && result.key.referenceId === userId)) {
 			return false;
 		}
 		await db.delete(apikey).where(eq(apikey.id, result.key.id));

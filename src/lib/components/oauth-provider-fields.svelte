@@ -2,6 +2,7 @@
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 
 	export interface ProviderFieldValues {
 		clientId: string;
@@ -16,6 +17,12 @@
 		templateHint: string;
 		tokenAuthMethod: string;
 	}
+
+	const TOKEN_AUTH_LABELS: Record<string, string> = {
+		auto: "Automatic (follow the provider)",
+		basic: "HTTP Basic header (basic)",
+		post: "Client secret in body (post)",
+	};
 
 	const {
 		callbackBase,
@@ -110,16 +117,20 @@
     </div>
     <div>
       <label class={label} for="tokenAuthMethod">Client authentication</label>
-      <select
-        bind:value={values.tokenAuthMethod}
-        class="panel w-full rounded-lg px-3 py-2 text-sm"
-        id="tokenAuthMethod"
+      <Select.Root
         name="tokenAuthMethod"
+        type="single"
+        bind:value={values.tokenAuthMethod}
       >
-        <option value="auto">Automatic (follow the provider)</option>
-        <option value="post">Client secret in body (post)</option>
-        <option value="basic">HTTP Basic header (basic)</option>
-      </select>
+        <Select.Trigger class="w-full" id="tokenAuthMethod">
+          {TOKEN_AUTH_LABELS[values.tokenAuthMethod] ?? values.tokenAuthMethod}
+        </Select.Trigger>
+        <Select.Content>
+          {#each Object.entries(TOKEN_AUTH_LABELS) as [value, text] (value)}
+            <Select.Item label={text} {value} />
+          {/each}
+        </Select.Content>
+      </Select.Root>
       <p class="text-text-subtle mt-1.5 text-xs">
         Automatic reads the provider's discovery document and prefers the HTTP
         Basic header when offered, which is what OpenID Connect defaults to.

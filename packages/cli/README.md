@@ -72,6 +72,8 @@ homerun services deploy <id>
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
+homerun services delete <id> [--force]
+homerun services webhook <id>
 homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
@@ -86,10 +88,18 @@ the raw JSON response. Listings are paginated: `--per-page` defaults to 100 (its
 maximum), `--page` selects a page, and `--search <term>` filters server-side.
 When a listing is only part of the total, a trailing line says so
 (`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.`); nothing
-is printed when everything fit on one page. There's no resource
-`create`/`update`/`delete` yet (`homerun update` below is the CLI self-updater,
-unrelated), out of scope for this first pass, straightforward to add the same
-way (`commands.ts` already has the `unwrap()` helper every command uses).
+is printed when everything fit on one page. There's no `create`/`update` for a
+service yet (`homerun update` above is the CLI self-updater, unrelated),
+straightforward to add the same way (`commands.ts` already has the `unwrap()`
+helper every command uses).
+
+`homerun services delete <id>` calls `DELETE /services/{serviceId}`, the same
+danger-zone action as the Settings tab's Delete button; `--force` adds
+`?force=true`, which deletes Homerun's record even when the container or swarm
+service itself couldn't be removed (without it, that case answers a 409 and
+deletes nothing). `homerun services webhook <id>` calls
+`GET /services/{serviceId}/webhook` and prints the push-to-deploy URL and secret
+for that service (a 404 when Deploy on push isn't turned on).
 
 `homerun services scans <id>` is an alias for `homerun services scans list <id>`
 (`list` is the group's default subcommand): a table of the service's image

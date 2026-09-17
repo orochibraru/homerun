@@ -63,8 +63,7 @@
 				"noFloatingPromises": "error",
 				"noMisusedPromises": "error",
 				"recommended": true,
-				"useExplicitType": "off",
-				"useSortedClasses": "error"
+				"useExplicitType": "off"
 			},
 			"performance": {
 				"noAwaitInLoops": "error",

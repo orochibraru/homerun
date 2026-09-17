@@ -2,6 +2,7 @@
 	import CheckBox from "$lib/components/check-box.svelte";
 	import GitRepoPicker from "$lib/components/git-repo-picker.svelte";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { listRepoBranches } from "$lib/remote/git-repos.remote";
 
@@ -129,19 +130,17 @@
         </p>
         <input name="gitRef" type="hidden" value={gitRef}>
       {:then branches}
-        <select
-          class="panel w-full rounded-lg px-3 py-2 text-sm"
-          id="gitRef"
-          name="gitRef"
-          bind:value={gitRef}
-        >
-          {#if !branches?.includes(gitRef)}
-            <option value={gitRef}>{gitRef}</option>
-          {/if}
-          {#each branches ?? [] as branch (branch)}
-            <option value={branch}>{branch}</option>
-          {/each}
-        </select>
+        <Select.Root name="gitRef" type="single" bind:value={gitRef}>
+          <Select.Trigger class="w-full" id="gitRef">{gitRef}</Select.Trigger>
+          <Select.Content>
+            {#if !branches?.includes(gitRef)}
+              <Select.Item label={gitRef} value={gitRef} />
+            {/if}
+            {#each branches ?? [] as branch (branch)}
+              <Select.Item label={branch} value={branch} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
       {:catch}
         <Input
           id="gitRef"

@@ -28,6 +28,6 @@ export const DELETE = async ({ request, locals }) => {
 		);
 	}
 
-	const revoked = await CliAuthService.revokeApiKey(rawKey);
+	const revoked = await CliAuthService.revokeApiKey(rawKey, locals.user.id);
 	return json({ success: revoked });
 };

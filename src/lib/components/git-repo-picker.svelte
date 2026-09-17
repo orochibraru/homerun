@@ -4,6 +4,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Command from "$lib/components/ui/command/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import {
 		hasDockerfile,
@@ -40,6 +41,10 @@
 		),
 	);
 	let reposPromise = $state<Promise<GitRepo[]> | null>(null);
+	const providerLabel = $derived.by(() => {
+		const current = providers.find((p) => p.id === providerId);
+		return current ? `${current.name} (${current.providerUsername})` : "";
+	});
 	let selectedRepo = $state(
 		untrack(() =>
 			providerId === initialProviderId ? (initialRepo ?? "") : "",
@@ -81,11 +86,14 @@
   <p class={labelClass}>Browse repos</p>
   <div class="flex flex-wrap gap-2">
     {#if providers.length > 1}
-      <select bind:value={providerId} class="panel rounded-lg px-3 py-2 text-sm">
-        {#each providers as p (p.id)}
-          <option value={p.id}>{p.name} ({p.providerUsername})</option>
-        {/each}
-      </select>
+      <Select.Root type="single" bind:value={providerId}>
+        <Select.Trigger>{providerLabel}</Select.Trigger>
+        <Select.Content>
+          {#each providers as p (p.id)}
+            <Select.Item label="{p.name} ({p.providerUsername})" value={p.id} />
+          {/each}
+        </Select.Content>
+      </Select.Root>
     {/if}
   </div>
 

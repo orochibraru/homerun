@@ -19,8 +19,14 @@ dashboard's own `fetch` calls and external API-key clients alike.
   FormData-shaped schema `$lib/server/validation/service.ts`, that one's
   checkbox/`envKey[]`/`envValue[]` preprocessing is form-specific).
 - `services/[serviceId]/`, `GET`, `PATCH` (partial update; `registryPassword` in
-  the body re-encrypts, omitted means unchanged), `DELETE` (stops/removes the
-  container first, same as the Settings danger-zone action).
+  the body re-encrypts, omitted means unchanged; changing the git source fields
+  re-syncs the push webhook, see below), `DELETE` (`?force=true`,
+  `ServiceLifecycleService.deleteService`, same contract as the Settings
+  danger-zone action: a workload removal failure 409s with `{error}` and deletes
+  nothing unless `force`).
+- `services/[serviceId]/webhook/`, `GET`, the push-to-deploy webhook's URL,
+  secret and registration status (`GitWebhookService.describe`); 404 when
+  `autoDeployOnPush` is off. See Push-to-deploy in `services-and-templates.md`.
 - `services/[serviceId]/{deploy,start,stop,restart}/`, `POST`. `deploy` awaits
   the full pull→create→start pipeline via `deployService()` (see below) and
   returns once it's done, no separate polling endpoint for API clients (the
@@ -58,6 +64,20 @@ dashboard's own `fetch` calls and external API-key clients alike.
 - `openapi.json/`, `GET`, public/unauthenticated (the spec describes shapes, not
   data; every documented route still enforces its own auth independently).
   Serves the OpenAPI 3.1 document built by `$lib/openapi/build.ts`, see below.
+- `auth-token/`, `DELETE`, revokes the API key that authenticated the request
+  itself (`CliAuthService.revokeApiKey`, deletes the `apikey` row directly since
+  better-auth's own `POST /api-key/delete` needs a session an API-key-only
+  caller doesn't have), `homerun logout`'s server-side counterpart to clearing
+  `~/.config/homerun/config.json`. Deliberately **not** under `/api/v1/auth/`:
+  `hooks.server.ts`'s `customAuthPaths` routes everything there to better-auth's
+  own catch-all first, which 404s an undeclared path, the same real bug the
+  CLI's device-code endpoints hit (see below). `400` when the request wasn't
+  API-key-authenticated at all.
+- `webhooks/git/[serviceId]/`, `POST`, public/unauthenticated: where a git
+  provider delivers push events for push-to-deploy
+  (`GitWebhookService.handleDelivery`), signature-verified per service rather
+  than session/API-key gated, exempted from `csrfHandler` since some providers
+  post form bodies. See Push-to-deploy in `services-and-templates.md`.
 
 `GET /api/health` sits outside `v1/` entirely, a one-line unauthenticated
 `new Response("OK")` used as a readiness probe (the compose healthcheck, and
@@ -222,7 +242,12 @@ the pre-existing `/api/v1/auth/providers` entry.
 The CLI also has a standing end-to-end suite, `tests/e2e/ui-cli.spec.ts`, which
 runs it against the Playwright suite's built app on every E2E run (device login
 approved in a real browser, every list/get command, overrides, 401/404 exits,
-logout), see `.agents/notes/testing.md`.
+logout), see `.agents/notes/testing.md`. `homerun logout` now revokes the API
+key server-side (`DELETE /auth-token`, best-effort: any error or non-ok response
+just means the local logout proceeds anyway) before clearing the local config,
+rather than only ever clearing the local file; verified live in that same suite,
+which re-uses the revoked key against `GET /services` afterwards and asserts
+`401`.
 
 ## API Docs page (`(protected)/api-docs/`)
 
