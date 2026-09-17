@@ -250,7 +250,12 @@ class RevisionHealthServiceClass {
 	}): Promise<void> {
 		const { current: svc, dep, input } = context;
 		const { skipReason, target } = await this.#rollbackTarget(svc, dep);
-		if (!(await dep.settleHealth(target ? "rolled_back" : "unhealthy"))) {
+		if (
+			!(await dep.settleHealth(
+				target ? "rolled_back" : "unhealthy",
+				context.reason,
+			))
+		) {
 			return;
 		}
 		await dep.appendLog(`Revision unhealthy: ${context.reason}`);

@@ -23,6 +23,9 @@ that `403` on every write.
   full pull-or-build → create → start pipeline and returns once it's done (no
   separate polling endpoint for API clients: that's dashboard-only, for its own
   progress UI)
+- `GET /api/v1/services/:id/logs`: the service's container or swarm service logs
+  as plain text, the last `?tail=` lines (default 200, max 10000), or a live
+  stream with `?follow=true`; a `400` for a service that was never deployed
 - `GET /api/v1/services/:id/webhook`: the [push-to-deploy](deploy-on-push.md)
   payload URL and secret for that service, whether the branch is polled instead
   and which provider to reconnect when it refused the webhook, a 404 when
@@ -81,9 +84,10 @@ Every account sees every service's scans and jobs; an unknown id is a 404.
   `gitRef`, `status`, `createdAt` (first deployed), `lastDeployedAt` (last went
   live), `latestDeploymentId` and `redeployCount`, `health` of its latest run
   (`watching` and `healthy` only on the current revision, `unhealthy` and
-  `rolled_back` kept as history, otherwise null), plus three markers: `current`
-  (running now), `previous` (the default rollback target) and `retained` (its
-  image is kept on the host).
+  `rolled_back` kept as history, otherwise null), `healthReason` (why it was
+  judged unhealthy, such as the failing swarm tasks' error, otherwise null),
+  plus three markers: `current` (running now), `previous` (the default rollback
+  target) and `retained` (its image is kept on the host).
 - `POST /api/v1/services/:id/revisions/:revisionId/deploy` redeploys that
   revision's image without building, pulling from upstream or scanning, and like
   `deploy` returns once it's done. Use `previous` as the `revisionId` for the
@@ -190,6 +194,7 @@ homerun services webhook <id>
 homerun services scans <id> [--json]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
+homerun services logs <id> [--tail <lines>] [--follow]
 homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
 homerun stacks list [--json]
@@ -230,11 +235,15 @@ homerun services scan "$SERVICE_ID" --fail-on high
 A scan that fails to run, or a wait that outlasts `--timeout` (default 1800
 seconds), also exits non-zero.
 
+`homerun services logs <id>` prints the last 200 lines of a service's logs
+(`--tail <lines>` for more or fewer), and `--follow` keeps streaming until you
+interrupt it.
+
 `homerun services revisions <id>` prints a service's revisions with the current
-and previous one marked, and `homerun services rollback <id> [revisionId]`
-redeploys a revision (the previous one when no id is given) and waits for it
-like `deploy`; `--restore-config` also restores that revision's env vars,
-resources and networking.
+and previous one marked and, for an unhealthy one, the reason, and
+`homerun services rollback <id> [revisionId]` redeploys a revision (the previous
+one when no id is given) and waits for it like `deploy`; `--restore-config` also
+restores that revision's env vars, resources and networking.
 
 ### Working on the CLI itself
 

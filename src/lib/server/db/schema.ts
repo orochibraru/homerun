@@ -965,6 +965,7 @@ export const deployment = pgTable(
 		gitCommit: text("git_commit"),
 		gitRef: text("git_ref"),
 		health: text("health").$type<RevisionHealth>(),
+		healthReason: text("health_reason"),
 		id: text("id").primaryKey(),
 		imageDigest: text("image_digest"),
 		imageId: text("image_id"),

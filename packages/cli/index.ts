@@ -166,6 +166,20 @@ services
 	});
 
 services
+	.command("logs <id>")
+	.description(
+		"print a service's container or swarm service logs (the last 200 lines by default)",
+	)
+	.option("--tail <lines>", "how many lines of backlog to print, 1 to 10000")
+	.option("-f, --follow", "keep streaming new lines until interrupted")
+	.action(async (id: string, options: { follow?: boolean; tail?: string }) => {
+		await Commands.serviceLogs(requireClient(), id, {
+			follow: Boolean(options.follow),
+			tail: options.tail === undefined ? undefined : Number(options.tail),
+		});
+	});
+
+services
 	.command("rollback <id> [revisionId]")
 	.description(
 		"redeploy a revision's exact image and wait for it (default: the previous revision)",

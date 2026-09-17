@@ -1,3 +1,4 @@
+import process from "node:process";
 import type { ClientFactory } from "./client";
 import type { paths } from "./generated/openapi-types";
 import { Output } from "./output";
@@ -69,7 +70,7 @@ function listQuery(args: ListArgs): Record<string, string> {
 	return query;
 }
 
-/** Flattens a revision into a table row, shortening the commit and digest, adding when it last went live, and marking it current/previous and whether its image is still retained. */
+/** Flattens a revision into a table row, shortening the commit and digest, adding when it last went live, marking it current/previous and whether its image is still retained, and why it was judged unhealthy. */
 export function revisionRow(revision: Revision): Record<string, string> {
 	let marker = "";
 	if (revision.current) {
@@ -86,6 +87,7 @@ export function revisionRow(revision: Revision): Record<string, string> {
 		image: revision.imageRef ?? "",
 		lastDeployedAt: revision.lastDeployedAt ?? "",
 		marker: revision.retained ? marker : `${marker} (not retained)`.trim(),
+		reason: revision.healthReason ?? "",
 	};
 }
 
@@ -196,7 +198,39 @@ class CliCommands {
 			"image",
 			"commit",
 			"digest",
+			"reason",
 		]);
+	}
+
+	/**
+	 * Writes a service's logs to stdout: the last `tail` lines, or with
+	 * `follow` a live stream that only ends when the connection does. Exits on
+	 * an API error, including the 400 for a service that was never deployed.
+	 */
+	async serviceLogs(
+		client: Client,
+		id: string,
+		args: { follow: boolean; tail?: number },
+	): Promise<void> {
+		const query: Record<string, string> = {};
+		if (args.tail !== undefined) {
+			query.tail = String(args.tail);
+		}
+		if (args.follow) {
+			query.follow = "true";
+		}
+		const body = await this.#unwrap(
+			client.GET("/services/{serviceId}/logs", {
+				params: { path: { serviceId: id }, query },
+				parseAs: "stream",
+			}),
+		);
+		if (!body) {
+			return;
+		}
+		for await (const chunk of body) {
+			process.stdout.write(chunk);
+		}
 	}
 
 	/**

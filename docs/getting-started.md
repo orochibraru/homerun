@@ -43,8 +43,8 @@ This downloads the prebuilt `homerun-installer-<arch>` release binary for your
 host's architecture and runs it, which:
 
 1. Installs Docker Engine and enables the **system (rootful)** daemon.
-2. Creates a dedicated system user (`homerun` by default) that owns the install
-   directory, `/home/homerun/homerun`.
+2. Creates a dedicated system user (`homerun` by default), in the `docker`
+   group, that owns the install directory, `/home/homerun/homerun`.
 3. Runs `docker swarm init`, advertising the address of the host's default route
    (`--advertise-addr=<ip>` to pick another one on a multi-interface host), and
    creates the `homerun` bridge network plus the attachable `homerun-swarm`

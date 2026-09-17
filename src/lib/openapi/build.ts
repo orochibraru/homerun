@@ -48,7 +48,7 @@ export function buildOpenApiDocument(baseUrl: string): Record<string, unknown> {
 			responses[status] = {
 				content: def.schema
 					? {
-							"application/json": {
+							[def.contentType ?? "application/json"]: {
 								schema: def.isArray
 									? { items: toEmbeddedSchema(def.schema), type: "array" }
 									: toEmbeddedSchema(def.schema),

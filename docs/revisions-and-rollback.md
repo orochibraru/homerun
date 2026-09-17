@@ -50,8 +50,9 @@ when the container exits, restarts twice or more, or its Docker healthcheck
 (including the service's own healthcheck command) reports unhealthy, or for a
 swarm service when two tasks fail or not every replica is running. An unhealthy
 revision is always marked on the Revisions tab and reported (**Revision
-unhealthy**). With **Auto-rollback when a new revision is unhealthy** turned on
-in the service's Settings tab (off by default), Homerun instead redeploys the
-previous healthy revision with a different image, marks the new one as rolled
-back and sends **Rolled back**. A rollback that is itself unhealthy isn't rolled
-back again.
+unhealthy**), and the reason is kept on the revision, so
+`homerun services revisions <id>` shows it too. With **Auto-rollback when a new
+revision is unhealthy** turned on in the service's Settings tab (off by
+default), Homerun instead redeploys the previous healthy revision with a
+different image, marks the new one as rolled back and sends **Rolled back**. A
+rollback that is itself unhealthy isn't rolled back again.

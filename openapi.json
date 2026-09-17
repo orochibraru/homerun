@@ -3732,6 +3732,117 @@
 				"tags": ["Services"]
 			}
 		},
+		"/services/{serviceId}/logs": {
+			"get": {
+				"description": "The service's combined stdout/stderr as plain text, from its container or every task of its swarm service. Returns the last tail lines and closes, unless follow=true, which keeps the response open and streams new lines as they're written.",
+				"operationId": "get_services__serviceId__logs",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "How many lines of backlog to return, 1 to 10000 (default 200)",
+						"in": "query",
+						"name": "tail",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "true to keep streaming new lines (default false)",
+						"in": "query",
+						"name": "follow",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						},
+						"description": "The service's logs"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not deployed yet, or an invalid tail"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Read a service's logs",
+				"tags": ["Services"]
+			}
+		},
 		"/services/{serviceId}/restart": {
 			"post": {
 				"operationId": "post_services__serviceId__restart",
@@ -3928,6 +4039,17 @@
 												],
 												"description": "Health of its latest run. watching and healthy only ever appear on the current revision; unhealthy and rolled_back are kept as history; null otherwise"
 											},
+											"healthReason": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Why the health watch judged it unhealthy or rolled it back (a failing healthcheck, a restart loop, failed swarm tasks and their error), null otherwise"
+											},
 											"id": {
 												"description": "The revision's original deployment id, what POST /services/{serviceId}/revisions/{revisionId}/deploy takes",
 												"type": "string"
@@ -4013,6 +4135,7 @@
 											"gitCommit",
 											"gitRef",
 											"health",
+											"healthReason",
 											"id",
 											"imageDigest",
 											"imageId",

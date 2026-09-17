@@ -107,6 +107,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/services/{serviceId}/logs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Read a service's logs
+		 * @description The service's combined stdout/stderr as plain text, from its container or every task of its swarm service. Returns the last tail lines and closes, unless follow=true, which keeps the response open and streams new lines as they're written.
+		 */
+		get: operations["get_services__serviceId__logs"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/services/{serviceId}/restart": {
 		parameters: {
 			query?: never;
@@ -1414,6 +1434,70 @@ export interface operations {
 			};
 		};
 	};
+	get_services__serviceId__logs: {
+		parameters: {
+			query?: {
+				/** @description How many lines of backlog to return, 1 to 10000 (default 200) */
+				tail?: string;
+				/** @description true to keep streaming new lines (default false) */
+				follow?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's logs */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"text/plain": string;
+				};
+			};
+			/** @description Not deployed yet, or an invalid tail */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	post_services__serviceId__restart: {
 		parameters: {
 			query?: never;
@@ -1520,6 +1604,8 @@ export interface operations {
 						health:
 							| ("watching" | "healthy" | "unhealthy" | "rolled_back")
 							| null;
+						/** @description Why the health watch judged it unhealthy or rolled it back (a failing healthcheck, a restart loop, failed swarm tasks and their error), null otherwise */
+						healthReason: string | null;
 						/** @description The revision's original deployment id, what POST /services/{serviceId}/revisions/{revisionId}/deploy takes */
 						id: string;
 						imageDigest: string | null;

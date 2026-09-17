@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
+import process from "node:process";
 import type { ClientFactory } from "../../../packages/cli/client";
 import {
 	Commands,
@@ -329,6 +330,7 @@ function revisionFixture(overrides: Record<string, unknown> = {}) {
 		gitCommit: null,
 		gitRef: null,
 		health: "healthy" as const,
+		healthReason: null,
 		id: "rev-1",
 		imageDigest: `sha256:${"b".repeat(64)}`,
 		imageId: null,
@@ -401,6 +403,54 @@ describe("Commands.revisionsList / serviceRollback", () => {
 		expect(revisionRow(revisionFixture()).digest).toBe(
 			`sha256:${"b".repeat(12)}`,
 		);
+	});
+
+	test("shows why a revision was judged unhealthy", () => {
+		const row = revisionRow(
+			revisionFixture({
+				health: "unhealthy",
+				healthReason: "2 swarm tasks failed: bind source path does not exist",
+			}),
+		);
+		expect(row.reason).toBe(
+			"2 swarm tasks failed: bind source path does not exist",
+		);
+		expect(revisionRow(revisionFixture()).reason).toBe("");
+	});
+});
+
+describe("Commands.serviceLogs", () => {
+	test("passes tail and follow and writes the stream to stdout", async () => {
+		const written: string[] = [];
+		spyOn(process.stdout, "write").mockImplementation((chunk) => {
+			written.push(new TextDecoder().decode(chunk as Uint8Array));
+			return true;
+		});
+		const GET = mock(async () =>
+			okResponse(
+				new ReadableStream<Uint8Array>({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("line 1\n"));
+						controller.enqueue(new TextEncoder().encode("line 2\n"));
+						controller.close();
+					},
+				}),
+			),
+		);
+
+		await Commands.serviceLogs(fakeClient({ GET }), "svc-1", {
+			follow: true,
+			tail: 50,
+		});
+
+		expect(GET).toHaveBeenCalledWith("/services/{serviceId}/logs", {
+			params: {
+				path: { serviceId: "svc-1" },
+				query: { follow: "true", tail: "50" },
+			},
+			parseAs: "stream",
+		});
+		expect(written.join("")).toBe("line 1\nline 2\n");
 	});
 });
 

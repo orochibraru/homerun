@@ -145,6 +145,7 @@ async function installDocker(
 		};
 	}
 	const dockerSocket = await RootlessDockerInstaller.enableRootfulDocker(run);
+	await RootlessDockerInstaller.addUserToDockerGroup(run, opts.rootlessUser);
 	await SwarmSetup.ensureManager(run, await advertiseAddressFor(opts));
 	return { dockerSocket, host };
 }

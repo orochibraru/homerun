@@ -9,6 +9,7 @@ import type {
 	ContainerRolloutInput,
 } from "./container-rollout.ts";
 import { buildContainerLabels, MANAGED_LABEL } from "./labels.ts";
+import { toLogStream } from "./log-stream.ts";
 import {
 	READINESS_LABEL,
 	type ReadinessCheck,
@@ -605,39 +606,26 @@ export function DockerContainerMixin<
 			}
 		}
 
-		/** Streams a container's combined stdout/stderr as a web ReadableStream. */
+		/**
+		 * A container's combined stdout/stderr as a web ReadableStream: live
+		 * and never-ending unless `follow` is false, in which case it's the
+		 * last `tail` lines (default 200) and closes.
+		 */
 		async streamLogs(
 			containerId: string,
-			// follow is always true : this function only supports live-tailing
-			// (dockerode's `follow: false` shape resolves to a Buffer, not a
-			// stream, which doesn't fit this function's return type).
-			opts?: { tail?: number; follow?: true },
+			opts?: { tail?: number; follow?: boolean },
 			remote?: RemoteHostConnection | null,
 		): Promise<ReadableStream<Uint8Array>> {
 			const container = this.getDocker(remote).getContainer(containerId);
-			// dockerode's NodeJS.ReadableStream return type is the old
-			// vestigial "streams2" interface (no `destroy`), but the actual
-			// object is a real Node Readable (from the underlying HTTP
-			// response) which does have one.
-			const nodeStream = (await container.logs({
-				follow: true,
-				stderr: true,
-				stdout: true,
-				tail: opts?.tail ?? 200,
-			})) as NodeJS.ReadableStream & { destroy: () => void };
-
-			return new ReadableStream<Uint8Array>({
-				cancel() {
-					nodeStream.destroy();
-				},
-				start(controller) {
-					nodeStream.on("data", (chunk: Buffer) => {
-						controller.enqueue(new Uint8Array(chunk));
-					});
-					nodeStream.on("end", () => controller.close());
-					nodeStream.on("error", (err: Error) => controller.error(err));
-				},
-			});
+			const base = { stderr: true, stdout: true, tail: opts?.tail ?? 200 };
+			return opts?.follow === false
+				? toLogStream(await container.logs({ ...base, follow: false }))
+				: toLogStream(
+						(await container.logs({
+							...base,
+							follow: true,
+						})) as NodeJS.ReadableStream & { destroy: () => void },
+					);
 		}
 
 		/**

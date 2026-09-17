@@ -111,6 +111,11 @@ class RootlessDockerInstallerService {
 		return "/var/run/docker.sock";
 	}
 
+	/** Adds the install user to the `docker` group get.docker.com creates, so it can reach the system daemon's socket without sudo. Idempotent. */
+	async addUserToDockerGroup(run: StepRunner, username: string): Promise<void> {
+		await run.run(["usermod", "-aG", "docker", username]);
+	}
+
 	/**
 	 * Real, tested-live finding (a real disposable Multipass Ubuntu 24.04 VM,
 	 * `--mode=agent`): Ubuntu 23.10+ restricts unprivileged user namespaces by

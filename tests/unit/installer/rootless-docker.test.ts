@@ -191,3 +191,14 @@ describe("RootlessDockerInstaller.enableRootfulDocker", () => {
 		]);
 	});
 });
+
+describe("RootlessDockerInstaller.addUserToDockerGroup", () => {
+	test("adds the user to the docker group", async () => {
+		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
+		const runner = fakeRunner({ run });
+
+		await RootlessDockerInstaller.addUserToDockerGroup(runner, "homerun");
+
+		expect(run).toHaveBeenCalledWith(["usermod", "-aG", "docker", "homerun"]);
+	});
+});

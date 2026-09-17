@@ -45,7 +45,9 @@ is documented in
 1. Installs Docker Engine (the official `get.docker.com` convenience script) and
    enables the system daemon (`systemctl enable --now docker`).
 2. Creates a dedicated system user (`--user=`, default `homerun`) if one doesn't
-   already exist; it owns `/home/<user>/homerun/`, where the compose files live.
+   already exist and adds it to the `docker` group
+   (`usermod -aG docker <user>`); it owns `/home/<user>/homerun/`, where the
+   compose files live.
 3. Makes the daemon a swarm manager: `docker swarm init --advertise-addr <ip>`,
    the address being `--advertise-addr=` or the source address of the host's
    default route (passed explicitly because `docker swarm init` refuses to guess
@@ -129,7 +131,8 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/i
 For a `--mode=full` install made rootless (the default before swarm was),
 `steps/migrate-rootful.ts`:
 
-1. Enables the system daemon (installing Docker Engine if it's missing).
+1. Enables the system daemon (installing Docker Engine if it's missing) and adds
+   the user to the `docker` group.
 2. Starts the rootless daemon if it isn't running, records what's on it, and
    stops every running container (the stack, every service, the registry mirror,
    anything else).

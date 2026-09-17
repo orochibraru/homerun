@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import {
 	createServiceApiBody,
 	createStackApiBody,
@@ -25,6 +25,7 @@ export interface ResponseDef {
 	description: string;
 	schema?: z.ZodType;
 	isArray?: boolean;
+	contentType?: "application/json" | "text/plain";
 }
 
 export interface ParamDef {
@@ -227,6 +228,39 @@ export const routes: RouteDef[] = [
 		},
 		summary: "Deploy a revision (roll back)",
 		tags: ["Revisions"],
+	},
+	{
+		description:
+			"The service's combined stdout/stderr as plain text, from its container or every task of its swarm service. Returns the last tail lines and closes, unless follow=true, which keeps the response open and streams new lines as they're written.",
+		method: "get",
+		path: "/services/{serviceId}/logs",
+		pathParams: [{ description: "Service id", name: "serviceId" }],
+		queryParams: [
+			{
+				description:
+					"How many lines of backlog to return, 1 to 10000 (default 200)",
+				name: "tail",
+			},
+			{
+				description: "true to keep streaming new lines (default false)",
+				name: "follow",
+			},
+		],
+		responses: {
+			200: {
+				contentType: "text/plain",
+				description: "The service's logs",
+				schema: z.string(),
+			},
+			400: {
+				description: "Not deployed yet, or an invalid tail",
+				schema: errorResponse,
+			},
+			401: unauthorized,
+			404: notFound,
+		},
+		summary: "Read a service's logs",
+		tags: ["Services"],
 	},
 	{
 		method: "post",

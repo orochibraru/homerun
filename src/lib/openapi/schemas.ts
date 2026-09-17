@@ -181,6 +181,10 @@ export const revisionResponse = z.object({
 			description:
 				"Health of its latest run. watching and healthy only ever appear on the current revision; unhealthy and rolled_back are kept as history; null otherwise",
 		}),
+	healthReason: z.string().nullable().meta({
+		description:
+			"Why the health watch judged it unhealthy or rolled it back (a failing healthcheck, a restart loop, failed swarm tasks and their error), null otherwise",
+	}),
 	id: z.string().meta({
 		description:
 			"The revision's original deployment id, what POST /services/{serviceId}/revisions/{revisionId}/deploy takes",

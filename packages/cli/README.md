@@ -83,6 +83,7 @@ homerun services webhook <id>
 homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
+homerun services logs <id> [--tail <lines>] [--follow]
 homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
@@ -122,11 +123,17 @@ the scan's counts at or above that severity are non-zero (`findingsAtOrAbove()`
 in `commands.ts`); a failed or cancelled job, or a wait past
 `--timeout <seconds>` (default 1800), exits 1 too.
 
+`homerun services logs <id>` calls `GET /services/{serviceId}/logs` and writes
+the plain-text body to stdout as it arrives: the last 200 lines by default,
+`--tail <lines>` adds `?tail=`, and `-f`/`--follow` adds `?follow=true`, which
+keeps streaming until the connection ends or you interrupt it.
+
 `homerun services revisions <id>` calls `GET /services/{serviceId}/revisions`
 and prints a table of the service's revisions, one row per revision with
 rollbacks folded into the revision they redeployed (id, first deployed, last
-deployed, a `current`/`previous` marker, health, image, commit, digest),
-`--json` for the raw list. `homerun services rollback <id> [revisionId]` calls
+deployed, a `current`/`previous` marker, health, image, commit, digest, and the
+reason an unhealthy revision was judged so), `--json` for the raw list.
+`homerun services rollback <id> [revisionId]` calls
 `POST /services/{serviceId}/revisions/{revisionId}/deploy` with `previous` when
 no revision id is given, which deploys the default rollback target (the newest
 older healthy revision with a different image), and prints the deploy result

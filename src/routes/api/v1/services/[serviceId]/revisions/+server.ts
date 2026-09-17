@@ -19,6 +19,7 @@ export const GET = async ({ params, locals }) => {
 			gitCommit: revision.gitCommit,
 			gitRef: revision.gitRef,
 			health: revision.health,
+			healthReason: revision.healthReason,
 			id: revision.id,
 			imageDigest: revision.imageDigest,
 			imageId: revision.imageId,

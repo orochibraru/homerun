@@ -22,6 +22,7 @@ export interface RevisionView {
 	gitRef: string | null;
 	hasConfigSnapshot: boolean;
 	health: RevisionHealth | null;
+	healthReason: string | null;
 	id: string;
 	imageDigest: string | null;
 	imageId: string | null;
@@ -147,6 +148,10 @@ class RevisionServiceClass {
 				gitRef: revision.gitRef,
 				hasConfigSnapshot: revision.hasConfigSnapshot,
 				health: entry.health,
+				healthReason:
+					entry.health === "unhealthy" || entry.health === "rolled_back"
+						? (entry.lastDeployed?.healthReason ?? null)
+						: null,
 				id: revision.id,
 				imageDigest: revision.imageDigest,
 				imageId: revision.imageId,

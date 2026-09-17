@@ -168,6 +168,7 @@ class RootfulMigrationService {
 		console.log("\n== 1/6 System Docker daemon ==");
 		await RootlessDockerInstaller.installDockerEngine(run);
 		await RootlessDockerInstaller.enableRootfulDocker(run);
+		await RootlessDockerInstaller.addUserToDockerGroup(run, username);
 
 		console.log("\n== 2/6 Stop everything on the rootless daemon ==");
 		const volumesFile = `${stateDir}/volumes.json`;

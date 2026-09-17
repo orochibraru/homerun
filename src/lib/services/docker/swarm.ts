@@ -9,6 +9,7 @@ import type {
 	VolumeMountParams,
 } from "./containers.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
+import { toLogStream } from "./log-stream.ts";
 import {
 	type ReadinessCheck,
 	readinessHealthcheck,
@@ -574,32 +575,22 @@ export function DockerSwarmMixin<
 			return running?.Status?.ContainerStatus?.ContainerID ?? null;
 		}
 
-		/** Same Web ReadableStream shape as containers.ts's streamLogs, so the Logs tab's route handler doesn't need to know which mode it's in. */
+		/** Same Web ReadableStream shape and options as containers.ts's streamLogs, so a logs route doesn't need to know which mode it's in. */
 		async streamSwarmServiceLogs(
 			swarmServiceId: string,
-			tail = 200,
+			opts?: { tail?: number; follow?: boolean },
 		): Promise<ReadableStream<Uint8Array>> {
-			const nodeStream = (await this.getDocker()
+			const logs = await this.getDocker()
 				.getService(swarmServiceId)
 				.logs({
-					follow: true,
+					follow: opts?.follow !== false,
 					stderr: true,
 					stdout: true,
-					tail,
-				})) as NodeJS.ReadableStream & { destroy: () => void };
-
-			return new ReadableStream<Uint8Array>({
-				cancel() {
-					nodeStream.destroy();
-				},
-				start(controller) {
-					nodeStream.on("data", (chunk: Buffer) => {
-						controller.enqueue(new Uint8Array(chunk));
-					});
-					nodeStream.on("end", () => controller.close());
-					nodeStream.on("error", (err: Error) => controller.error(err));
-				},
-			});
+					tail: opts?.tail ?? 200,
+				});
+			return toLogStream(
+				logs as Buffer | (NodeJS.ReadableStream & { destroy: () => void }),
+			);
 		}
 
 		/** Swarm-service name this app gives its services, with a random suffix so a redeploy never collides on "name already in use" (mirrors `#containerName` in containers.ts). */

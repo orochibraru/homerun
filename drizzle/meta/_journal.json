@@ -329,6 +329,13 @@
 			"when": 1789645871075,
 			"tag": "0046_silly_true_believers",
 			"breakpoints": true
+		},
+		{
+			"idx": 47,
+			"version": "7",
+			"when": 1789656882052,
+			"tag": "0047_fearless_hex",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

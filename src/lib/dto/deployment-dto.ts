@@ -320,6 +320,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			gitCommit: null,
 			gitRef: null,
 			health: null,
+			healthReason: null,
 			id: input.id || crypto.randomUUID(),
 			imageDigest: null,
 			imageId: null,
@@ -350,12 +351,16 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	 * row is still `watching`: once a newer deploy cleared it, the write is
 	 * dropped so a superseded watch can't bring back a stale state.
 	 *
+	 * @param reason Why the watch judged it unhealthy, kept for the API and CLI.
 	 * @returns Whether the row was still being watched and got updated.
 	 */
-	async settleHealth(health: RevisionHealth | null): Promise<boolean> {
+	async settleHealth(
+		health: RevisionHealth | null,
+		reason: string | null = null,
+	): Promise<boolean> {
 		const updated = await db
 			.update(deployment)
-			.set({ health })
+			.set({ health, healthReason: reason })
 			.where(
 				and(eq(deployment.id, this.row.id), eq(deployment.health, "watching")),
 			)
@@ -364,6 +369,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			return false;
 		}
 		this.row.health = health;
+		this.row.healthReason = reason;
 		return true;
 	}
 
