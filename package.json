@@ -126,5 +126,5 @@
 		"test:unit:installer": "HOMERUN_SKIP_INTEGRATION_SETUP=1 bun test tests/unit/installer --timeout 120000"
 	},
 	"type": "module",
-	"version": "1.0.30"
+	"version": "1.0.31"
 }
