@@ -32,6 +32,16 @@ const svelteClientEntry = join(
 // tests/README.md's "Mocks are process-global"), works reliably instead.
 mock.module("svelte", async () => await import(svelteClientEntry));
 
+// `$app/paths` is generated into .svelte-kit/ by SvelteKit itself, so a
+// component that links anywhere (resolve(...)) can't even be imported under
+// `bun test` without this. The identity stand-in is enough: these tests assert
+// on rendered content, never on a resolved href.
+mock.module("$app/paths", () => ({
+	asset: (path: string) => path,
+	base: "",
+	resolve: (path: string) => path,
+}));
+
 beforeEach(async () => {
 	GlobalRegistrator.register();
 });

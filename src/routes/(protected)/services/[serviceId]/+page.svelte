@@ -27,6 +27,7 @@
 	import { deployPhaseStates } from "$lib/deploy-phases";
 	import { timeAgo } from "$lib/formatting";
 	import { randomId } from "$lib/random-id";
+	import { isDeployed, workloadId } from "$lib/service-state";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -424,7 +425,7 @@
     </div>
 {/if}
 
-{#if !(svc.containerId || pendingAction === "deploy")}
+{#if !(isDeployed(svc) || pendingAction === "deploy")}
     <div
         class="border-border bg-surface-2 text-text-muted mb-6 rounded-md border p-4 text-sm"
     >
@@ -440,9 +441,9 @@
        live output for that. -->
     <div class="mb-6">
         <LiveLogViewer
-            containerId={svc.containerId}
             heightClass="h-56"
             serviceId={svc.id}
+            workloadId={workloadId(svc)}
         />
         <a
             class="text-accent mt-2 inline-block text-xs underline"

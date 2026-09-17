@@ -177,10 +177,10 @@
                 </div>
               {/if}
               <LiveLogViewer
-                containerId={container.id}
                 heightClass="h-96"
                 logsUrl="{resolve('/system-logs')}/containers/{container.id}/logs"
                 serviceId={container.id}
+                workloadId={container.id}
               />
             </div>
           {/if}

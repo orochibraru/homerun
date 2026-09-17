@@ -16,6 +16,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import UptimePanel from "$lib/components/uptime-panel.svelte";
 	import { timeAgo } from "$lib/formatting";
+	import { workloadId } from "$lib/service-state";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -109,7 +110,7 @@
 </div>
 
 <div class="mb-4">
-  <LiveLogViewer containerId={data.service.containerId} serviceId={data.service.id} heightClass="h-96" />
+  <LiveLogViewer workloadId={workloadId(data.service)} serviceId={data.service.id} heightClass="h-96" />
 </div>
 
 {#if data.service.currentStatus === "failed"}

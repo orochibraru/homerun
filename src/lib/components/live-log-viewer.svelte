@@ -10,12 +10,13 @@
 	// form-styles.ts, just for a whole panel instead of class strings.
 	const {
 		serviceId,
-		containerId,
+		workloadId,
 		heightClass = "h-[28rem]",
 		logsUrl,
 	}: {
 		serviceId: string;
-		containerId: string | null;
+		/** The container or swarm service to stream from, null when there's nothing deployed : see $lib/service-state.ts. Never gated on health, a failed workload's logs are exactly what's wanted. */
+		workloadId: string | null;
 		heightClass?: string;
 		/** Overrides the per-service stream, for a container that isn't one (see System Logs). */
 		logsUrl?: string;
@@ -34,7 +35,7 @@
 	 * fails or the stream breaks, unless the stream was cancelled deliberately.
 	 */
 	async function connect() {
-		if (!containerId) {
+		if (!workloadId) {
 			return;
 		}
 		lines = [];
@@ -80,14 +81,14 @@
 		}
 	}
 
-	// Reconnects whenever the service (or its container) changes, not just on
+	// Reconnects whenever the service (or its workload) changes, not just on
 	// mount. Navigating between two services keeps this component instance
 	// alive — SvelteKit reuses it across the same route — so a mount-only
 	// connect left the previous container's stream running under the new
 	// service's page, which is what "clicking a linked service doesn't refresh
 	// the logs" was.
 	$effect(() => {
-		const target = `${serviceId}:${containerId ?? ""}`;
+		const target = `${serviceId}:${workloadId ?? ""}`;
 		void target;
 		cancelled = true;
 		reader?.cancel();
@@ -126,7 +127,7 @@
     </div>
     <button
       class="text-text-muted hover:bg-surface-2 hover:text-text flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
-      disabled={!containerId}
+      disabled={!workloadId}
       onclick={reconnect}
       type="button"
     >
@@ -139,7 +140,7 @@
     class="{heightClass} overflow-y-auto log-output"
     bind:this={logEl}
   >
-    {#if !containerId}
+    {#if !workloadId}
       <p class="text-zinc-500">This service hasn't been deployed yet.</p>
     {:else if errored}
       <p class="text-red-400">
