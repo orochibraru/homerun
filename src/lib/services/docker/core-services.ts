@@ -18,7 +18,7 @@ import {
 	type NewtCredentials,
 	newtContainerSpec,
 } from "./newt.ts";
-import { swarmNetworkName } from "./swarm.ts";
+import { SWARM_REFRESH_SECONDS, swarmNetworkName } from "./swarm.ts";
 import { tunnelTargetHostFrom } from "./tunnel.ts";
 
 const LEADING_SLASH_RE = /^\//;
@@ -475,6 +475,7 @@ export function DockerCoreServicesMixin<
 				"providers.swarm": "true",
 				"providers.swarm.exposedByDefault": "false",
 				"providers.swarm.network": network,
+				"providers.swarm.refreshSeconds": String(SWARM_REFRESH_SECONDS),
 			});
 			steps.push(applied.message);
 			return steps;
@@ -494,6 +495,7 @@ export function DockerCoreServicesMixin<
 				"providers.swarm": null,
 				"providers.swarm.exposedByDefault": null,
 				"providers.swarm.network": null,
+				"providers.swarm.refreshSeconds": null,
 			});
 			return [
 				applied.message,

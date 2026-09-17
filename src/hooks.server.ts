@@ -14,7 +14,7 @@ import {
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { GIT_WEBHOOK_PATH } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
-import { OIDC_BASE_PATH } from "$lib/oidc-provider";
+import { OIDC_BASE_PATH, rebaseOnOrigin } from "$lib/oidc-provider";
 import { apiKeyScopeOf, isReadOnly } from "$lib/permissions";
 import { isForbiddenCrossSiteForm } from "$lib/server/csrf";
 import { db as appDb, getDb, resetDb } from "$lib/server/db";
@@ -398,6 +398,14 @@ const authHandler: Handle = async ({ event, resolve }) => {
 	// Skip better-auth handler for custom SvelteKit-managed auth routes
 	if (customAuthPaths.has(event.url.pathname)) {
 		return resolve(event);
+	}
+
+	if (
+		!building &&
+		config.auth.origin &&
+		isOidcProviderPath(event.url.pathname)
+	) {
+		return auth.handler(rebaseOnOrigin(event.request, config.auth.origin));
 	}
 
 	return svelteKitHandler({ auth, building, event, resolve });

@@ -95,16 +95,16 @@
         </span>
       </label>
     </fieldset>
+  {/if}
 
-    {#if values.confidential}
-      <CheckBox
-        helperText="Reject sign-ins that don't send a PKCE challenge. Leave off unless you know the app supports PKCE: many self-hosted apps don't."
-        id="requirePkce"
-        label="Require PKCE"
-        name="requirePkce"
-        bind:checked={values.requirePkce}
-      />
-    {/if}
+  {#if values.confidential}
+    <CheckBox
+      helperText="Reject sign-ins that don't send a PKCE challenge. Leave off unless you know the app supports PKCE: many self-hosted apps don't."
+      id="requirePkce"
+      label="Require PKCE"
+      name="requirePkce"
+      bind:checked={values.requirePkce}
+    />
   {/if}
 
   <CheckBox

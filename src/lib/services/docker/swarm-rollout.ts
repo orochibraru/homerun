@@ -84,7 +84,7 @@ export function DockerSwarmRolloutMixin<
 				inspected.UpdateStatus?.StartedAt ?? null,
 			);
 			onProgress?.(
-				"Swarm finished rolling out the new tasks; Traefik picks them up on its next swarm poll (every 15s by default).",
+				"Swarm finished rolling out the new tasks; Traefik picks them up on its next swarm poll, within 2 seconds.",
 			);
 			logger.info(`Swarm service updated in place: id=${swarmServiceId}`);
 			return { swarmServiceId };

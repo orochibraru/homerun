@@ -45,9 +45,8 @@ backs the tail on the overview page.
 ## Networking
 
 The public hostname, custom domains, the container port and protocol, bridge or
-host networking, and the per-service login wall. Most of these are Traefik
-labels, so the tab tells you plainly that changing them needs a redeploy; the
-login wall applies as soon as you save.
+host networking. Most of these are Traefik labels, so the tab tells you plainly
+that changing them needs a redeploy.
 
 ![The networking tab](images/networking.png)
 ![The networking tab, dark](images/networking-dark.png)

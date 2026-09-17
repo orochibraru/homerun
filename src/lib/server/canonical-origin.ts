@@ -53,3 +53,25 @@ export function dashboardOrigin(request: Request, url: URL): string {
 	}
 	return browserOrigin(request, url);
 }
+
+/**
+ * `link` moved onto the configured Dashboard URL, keeping its path and query.
+ * better-auth builds email links from the request URL, which the server
+ * adapter pins to the `ORIGIN` env var (the IP the installer detected), so a
+ * link mailed after onboarding set a domain would otherwise point at the IP.
+ *
+ * @returns `link` unchanged when no Dashboard URL is set or either URL can't
+ * be parsed.
+ */
+export function withDashboardOrigin(link: string): string {
+	if (!config.auth.origin) {
+		return link;
+	}
+	try {
+		const target = new URL(config.auth.origin);
+		const parsed = new URL(link);
+		return `${target.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+	} catch {
+		return link;
+	}
+}

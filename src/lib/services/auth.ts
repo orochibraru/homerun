@@ -26,6 +26,7 @@ import {
 	oidcIssuer,
 } from "$lib/oidc-provider";
 import { passkeyRpId } from "$lib/security-policy";
+import { withDashboardOrigin } from "$lib/server/canonical-origin";
 import { db } from "$lib/server/db/lib";
 import * as schema from "$lib/server/db/schema";
 import { forgetGateAccess } from "$lib/server/gate-access-cache";
@@ -249,14 +250,8 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 					);
 					return;
 				}
-				const fullUrl = new URL(params.url);
-				// If not hostname, add it
-				if (!fullUrl.hostname) {
-					fullUrl.hostname = "localhost:5173"; // Change this to your frontend domain
-					fullUrl.protocol = "http:"; // or 'https:' in production
-				}
 				const email = new EmailService({
-					content: `Click the link to verify your email: ${fullUrl.toString()}`,
+					content: `Click the link to verify your email: ${withDashboardOrigin(params.url)}`,
 					subject: "Verify your email address",
 					to: params.user.email,
 				});
@@ -361,7 +356,7 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 						return;
 					}
 					const email = new EmailService({
-						content: `Confirm changing your Homerun account email to ${newEmail}: ${url}`,
+						content: `Confirm changing your Homerun account email to ${newEmail}: ${withDashboardOrigin(url)}`,
 						subject: "Confirm your new email address",
 						to: user.email,
 					});

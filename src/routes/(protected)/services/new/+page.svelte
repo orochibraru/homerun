@@ -716,7 +716,7 @@
               </div>
 
               <CheckBox
-                helperText="Visitors have to sign in to this Homerun instance before they reach the service. Fine-grained rules (emails, groups, OAuth providers) are on the Networking tab once it exists."
+                helperText="Visitors have to sign in to this Homerun instance before they reach the service. Fine-grained rules (emails, groups, OAuth providers) are on the Security tab once it exists."
                 id="authRequired"
                 label="Require login to access this app"
                 name="authRequired"

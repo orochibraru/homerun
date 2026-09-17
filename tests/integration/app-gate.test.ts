@@ -22,7 +22,7 @@ async function updateAppAuth(
 		}
 	}
 	return await nativeFetch(
-		`${fixture.origin}/services/${fixture.serviceId}/networking?/updateAppAuth`,
+		`${fixture.origin}/services/${fixture.serviceId}/security?/updateAppAuth`,
 		{
 			body: form,
 			headers: {

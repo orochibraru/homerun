@@ -61,7 +61,8 @@ is documented in
    Traefik mounts `/var/run/docker.sock`, joins both networks and runs both
    providers, its command ending in exactly the `--providers.swarm=true`,
    `--providers.swarm.exposedByDefault=false`,
-   `--providers.swarm.network=homerun-swarm` flags the app's `enableSwarmMode`
+   `--providers.swarm.network=homerun-swarm`,
+   `--providers.swarm.refreshSeconds=2` flags the app's `enableSwarmMode`
    applies, so the app's boot-time check finds nothing to change and never
    recreates Traefik. The app gets `DOCKER_SOCKET_PATH: /var/run/docker.sock`.
 

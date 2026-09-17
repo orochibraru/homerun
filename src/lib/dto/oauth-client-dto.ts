@@ -78,6 +78,19 @@ export class OauthClientDTO extends BaseDTO<OauthClient> {
 	}
 
 	/**
+	 * Sets whether sign-ins must send a PKCE challenge. Written here rather
+	 * than through better-auth, whose update endpoint doesn't take it. A public
+	 * app always needs PKCE whatever this says.
+	 */
+	async setRequirePkce(requirePkce: boolean): Promise<void> {
+		await db
+			.update(oauthClient)
+			.set({ requirePKCE: requirePkce, updatedAt: new Date() })
+			.where(eq(oauthClient.id, this.row.id));
+		this.row.requirePKCE = requirePkce;
+	}
+
+	/**
 	 * Deletes the app. Its tokens and consents cascade with it, so anyone
 	 * signed in to it through Homerun loses access at their next token use.
 	 */

@@ -207,7 +207,8 @@ traefik:
 			? `
       - --providers.swarm=true
       - --providers.swarm.exposedByDefault=false
-      - --providers.swarm.network=${SWARM_NETWORK}`
+      - --providers.swarm.network=${SWARM_NETWORK}
+      - --providers.swarm.refreshSeconds=2`
 			: "";
 		const traefikSwarmNetwork = swarm
 			? `

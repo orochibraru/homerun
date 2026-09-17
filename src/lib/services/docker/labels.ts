@@ -34,6 +34,9 @@ export function hasTraefikRouterFor(
 	);
 }
 
+export const RETRY_ATTEMPTS = 4;
+export const RETRY_INITIAL_INTERVAL = "100ms";
+
 export const MANAGED_LABEL = "homerun.managed";
 export const SERVICE_ID_LABEL = "homerun.service.id";
 
@@ -45,7 +48,9 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
  * sharing the same backend, and the login wall's forwardAuth middleware on every
  * router. The middleware is attached whether or not the wall is on: auth-check
  * lets requests through for a service whose wall is off, so toggling it applies
- * without a redeploy.
+ * without a redeploy. A retry middleware follows it, so a request that reaches
+ * a container or swarm task that just went away during a rollout is sent to
+ * another one; Traefik only retries when no request bytes reached the backend.
  */
 export function buildContainerLabels(params: {
 	serviceId: string;
@@ -134,9 +139,15 @@ export function buildContainerLabels(params: {
 	labels[
 		`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`
 	] = GATE_IDENTITY_HEADERS.join(",");
-	labels[`traefik.http.routers.${slug}.middlewares`] = authMiddleware;
+	const retryMiddleware = `${slug}-retry`;
+	labels[`traefik.http.middlewares.${retryMiddleware}.retry.attempts`] =
+		String(RETRY_ATTEMPTS);
+	labels[`traefik.http.middlewares.${retryMiddleware}.retry.initialinterval`] =
+		RETRY_INITIAL_INTERVAL;
+	const middlewares = `${authMiddleware},${retryMiddleware}`;
+	labels[`traefik.http.routers.${slug}.middlewares`] = middlewares;
 	if (customDomain) {
-		labels[`traefik.http.routers.${slug}-custom.middlewares`] = authMiddleware;
+		labels[`traefik.http.routers.${slug}-custom.middlewares`] = middlewares;
 	}
 
 	return labels;

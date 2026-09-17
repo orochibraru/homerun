@@ -37,7 +37,7 @@ export const ACCESS_DENIAL_MESSAGES: Record<AccessDenialReason, string> = {
 	"method-not-linked":
 		"Your account isn't linked to a sign-in method this app accepts.",
 	"no-method-configured":
-		"This app has no sign-in method configured yet, so nobody can be let through. An admin needs to pick one on its Networking tab.",
+		"This app has no sign-in method configured yet, so nobody can be let through. An admin needs to pick one on its Security tab.",
 	"user-not-allowed": "You're not on this app's allowed user list.",
 };
 

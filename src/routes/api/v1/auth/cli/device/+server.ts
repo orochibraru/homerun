@@ -1,4 +1,5 @@
 import { json } from "@sveltejs/kit";
+import { browserOrigin } from "$lib/server/canonical-origin";
 import { CliAuthService } from "$lib/services/cli-auth.service";
 
 /**
@@ -6,7 +7,8 @@ import { CliAuthService } from "$lib/services/cli-auth.service";
  * the caller has no credentials yet (that's the whole point). Nothing
  * sensitive is handed back, just a pair of random codes.
  */
-export const POST = ({ url }) => {
+export const POST = ({ request, url }) => {
+	const origin = browserOrigin(request, url);
 	const { deviceCode, userCode, expiresIn, interval } =
 		CliAuthService.startDeviceAuth();
 
@@ -15,7 +17,7 @@ export const POST = ({ url }) => {
 		expiresIn,
 		interval,
 		userCode,
-		verificationUri: `${url.origin}/cli-auth`,
-		verificationUriComplete: `${url.origin}/cli-auth?code=${encodeURIComponent(userCode)}`,
+		verificationUri: `${origin}/cli-auth`,
+		verificationUriComplete: `${origin}/cli-auth?code=${encodeURIComponent(userCode)}`,
 	});
 };

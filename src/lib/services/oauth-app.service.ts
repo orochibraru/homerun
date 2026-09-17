@@ -75,8 +75,9 @@ class OauthAppServiceClass {
 
 	/**
 	 * Saves an app's name, redirect URIs and consent/logout options. Whether
-	 * it's confidential and its PKCE requirement are fixed at creation. Runs
-	 * as the admin whose request `headers` are passed.
+	 * it's confidential is fixed at creation, and its PKCE requirement is
+	 * changed through `OauthClientDTO.setRequirePkce`. Runs as the admin whose
+	 * request `headers` are passed.
 	 *
 	 * @throws When better-auth rejects the update.
 	 */

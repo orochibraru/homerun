@@ -24,10 +24,26 @@ describe("login wall middleware labels", () => {
 		expect(
 			labels["traefik.http.middlewares.app-auth.forwardauth.address"],
 		).toContain("service=svc-1");
-		expect(labels["traefik.http.routers.app.middlewares"]).toBe("app-auth");
-		expect(labels["traefik.http.routers.app-custom.middlewares"]).toBe(
-			"app-auth",
+		expect(labels["traefik.http.routers.app.middlewares"]).toBe(
+			"app-auth,app-retry",
 		);
+		expect(labels["traefik.http.routers.app-custom.middlewares"]).toBe(
+			"app-auth,app-retry",
+		);
+	});
+
+	test("every routed service retries requests that reach a workload that just went away", () => {
+		const labels = buildContainerLabels({
+			containerPort: 80,
+			serviceId: "svc-1",
+			slug: "app",
+		});
+		expect(labels["traefik.http.middlewares.app-retry.retry.attempts"]).toBe(
+			"4",
+		);
+		expect(
+			labels["traefik.http.middlewares.app-retry.retry.initialinterval"],
+		).toBe("100ms");
 	});
 
 	test("a service that isn't publicly routed has no middleware to attach", () => {

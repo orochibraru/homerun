@@ -44,6 +44,9 @@ export const actions = {
 		}
 		try {
 			await OauthAppService.update(app.clientId, parsed.input, request.headers);
+			if (app.summary().confidential) {
+				await app.setRequirePkce(parsed.input.requirePkce);
+			}
 		} catch (err) {
 			return fail(400, {
 				error: authErrorMessage(err, "Couldn't save the app."),

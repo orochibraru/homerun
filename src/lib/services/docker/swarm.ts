@@ -23,6 +23,8 @@ import type { SwarmServiceSpec } from "./swarm-rollout.ts";
 
 const logger = new Logger("Swarm");
 
+export const SWARM_REFRESH_SECONDS = 2;
+
 /**
  * Swarm services can only join an **overlay** network, and the shared
  * network standalone containers use (`config.docker.networkName`) already

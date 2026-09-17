@@ -2,9 +2,10 @@ import { redirect } from "@sveltejs/kit";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { GIT_CONNECT_RETURN_COOKIE } from "$lib/git-webhooks";
 import { safeRedirectTarget } from "$lib/redirect-target";
+import { browserOrigin } from "$lib/server/canonical-origin";
 import { GitProviderService } from "$lib/services/git-provider.service";
 
-export const GET = async ({ cookies, params, locals, url }) => {
+export const GET = async ({ cookies, params, locals, request, url }) => {
 	if (!locals.user) {
 		return new Response("Unauthorized", { status: 401 });
 	}
@@ -27,7 +28,7 @@ export const GET = async ({ cookies, params, locals, url }) => {
 		});
 	}
 
-	const redirectUri = `${url.origin}/api/v1/git-providers/${provider.id}/callback`;
+	const redirectUri = `${browserOrigin(request, url)}/api/v1/git-providers/${provider.id}/callback`;
 	const state = GitProviderService.createState(provider.id, locals.user.id);
 	const authorizeUrl = GitProviderService.authorizeUrl(
 		provider,

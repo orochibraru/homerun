@@ -262,8 +262,8 @@ takes effect immediately, without a restart.
 ## Per-app login wall
 
 A deployed service can require a login before anyone reaches it. Turn on
-**Require login to access this app** on the service's **Networking** tab, under
-Access.
+**Require login to access this app** on the service's **Security** tab, under
+Login wall.
 
 **How it works.** Traefik's forwardAuth middleware asks Homerun about every
 request to that hostname. A visitor without a valid session for that app is
@@ -351,7 +351,11 @@ Homerun**, click **Register app**:
 - **Client type**: **Confidential** for server-side apps (almost every
   self-hosted app), **Public** for a browser or mobile app that can't keep a
   secret.
-- **Require PKCE**: leave off unless you know the app sends a PKCE challenge.
+- **Require PKCE**: confidential apps only, leave off unless you know the app
+  sends a PKCE challenge. Change it later from the app's own page, for an app
+  that fails with "pkce is required for this client". A public app always needs
+  PKCE, and so does a sign-in asking for `offline_access` without an OIDC nonce,
+  whatever this says.
 - **Skip the consent screen**: on by default for apps you host yourself. Turn it
   off to have users approve sharing their details the first time.
 - **Allow single sign-out**: lets the app sign the user out of Homerun too.

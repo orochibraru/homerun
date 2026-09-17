@@ -92,3 +92,19 @@ export function describeScopes(scope: string | null): string[] {
 		.filter(Boolean)
 		.map((entry) => SCOPE_DESCRIPTIONS[entry] ?? entry);
 }
+
+/**
+ * `request` with its origin swapped for the dashboard's, keeping path, query,
+ * method, headers and body. better-auth builds the discovery document's
+ * endpoints from the request URL, which the server adapter pins to the
+ * `ORIGIN` env var (the IP the installer detected), so without this an app
+ * signing in through the domain is sent to the IP.
+ */
+export function rebaseOnOrigin(request: Request, origin: string): Request {
+	const url = new URL(request.url);
+	const target = new URL(origin);
+	if (url.origin === target.origin) {
+		return request;
+	}
+	return new Request(`${target.origin}${url.pathname}${url.search}`, request);
+}

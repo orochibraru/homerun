@@ -279,21 +279,21 @@
       <h2 class="eyebrow">Protected apps</h2>
       <p class="text-text-muted text-xs">
         Services with "Require login" turned on. Which methods each one accepts,
-        and who's allowed through, is configured on that service's Networking
+        and who's allowed through, is configured on that service's Security
         tab.
       </p>
     </div>
     {#if data.gatedServices.length === 0}
       <p class="text-text-muted p-5 text-sm">
         No app is behind the login wall yet. Turn on "Require login" on a
-        service's Networking tab to add one.
+        service's Security tab to add one.
       </p>
     {:else}
       <div class="divide-border divide-y">
         {#each data.gatedServices as svc (svc.id)}
           <a
             class="hover:bg-surface-2 flex items-center gap-3 px-5 py-3"
-            href="{resolve('/services')}/{svc.id}/networking"
+            href="{resolve('/services')}/{svc.id}/security"
           >
             <LockKeyhole class="text-accent size-4 shrink-0" />
             <div class="min-w-0 flex-1">

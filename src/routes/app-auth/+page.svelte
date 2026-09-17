@@ -67,7 +67,7 @@
           <p class="text-text-muted text-sm">
             This app is gated, but no sign-in method has been enabled for it
             yet, so nobody can be let through. An admin needs to pick one on the
-            service's Networking tab.
+            service's Security tab.
           </p>
         {:else if data.denial}
           <p class="text-text-muted mb-4 text-sm">{data.denial}</p>

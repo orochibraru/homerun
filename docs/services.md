@@ -408,9 +408,15 @@ fail until the new one listens. Services that aren't published through Traefik
 services reaching this one by its slug on the Docker network aren't gated in
 standalone mode: Docker's DNS resolves the name to the new container as soon as
 it starts. In swarm mode the service name only resolves to tasks that passed
-their healthcheck. Traefik reads swarm every 15 seconds rather than reacting to
-events, so when swarm stops an old task a few requests can still reach it before
-Traefik notices, gate or not.
+their healthcheck.
+
+**Requests racing a removed copy are retried.** Every published service's router
+carries a retry middleware: a request that reaches a container or swarm task
+that just went away, before Traefik has dropped it, is retried on another copy,
+up to four times with a short backoff. Traefik only retries when nothing of the
+request reached the app, so a form post is never sent twice. Traefik reads swarm
+every 2 seconds rather than reacting to events, which is how long an old task
+can stay in its list; the retry covers that window.
 
 ### Revisions and rollback
 
@@ -580,6 +586,18 @@ The service's **Security** tab shows the current policy and whether its latest
 scan passes it, so you can see before the next deploy whether it would be
 blocked.
 
+## Per-app login wall
+
+The Security tab's **Login wall** section puts a login wall in front of the
+service. An anonymous visitor is redirected to this instance's own sign-in
+screen, and sent back to the page they asked for once they're through. Pick
+which sign-in methods that app accepts (built-in login, and any OAuth provider
+configured on the Authentication page), and optionally restrict access to
+specific users, email addresses or provider groups. Turning the wall on or off
+applies immediately, without a redeploy. Full detail, including what the app
+receives about the signed-in visitor, is in
+[Users & access](users-and-access.md#per-app-login-wall).
+
 ## The job queue
 
 Deploys, git builds, image scans, volume backups and Docker cleanups all run
@@ -656,8 +674,8 @@ Everything on this tab is written onto the container as Traefik labels at
 **create** time, so saving a change here doesn't affect the container that's
 already running. Once a service has been deployed, the tab shows a **Redeploy**
 button for exactly that reason, use it after changing a custom domain or
-DNS-resolvability. The login wall is the exception: it applies as soon as you
-save.
+DNS-resolvability. The per-app login wall lives on the
+[Security tab](#per-app-login-wall).
 
 - **Container port, protocol, network mode**, `bridge` (default, joins the
   shared `homerun` plus the service's stack network if any) or `host` (shares
@@ -779,18 +797,6 @@ Traefik's file provider picks them up on its own (no restart per certificate).
 An instance started from an older compose file without that volume and those
 flags has to add them once; until then, saving a cert does nothing.
 
-### Per-app login wall
-
-The Networking tab's **Access** section puts a login wall in front of the
-service. An anonymous visitor is redirected to this instance's own sign-in
-screen, and sent back to the page they asked for once they're through. Pick
-which sign-in methods that app accepts (built-in login, and any OAuth provider
-configured on the Authentication page), and optionally restrict access to
-specific users, email addresses or provider groups. Turning the wall on or off
-applies immediately, without a redeploy. Full detail, including what the app
-receives about the signed-in visitor, is in
-[Users & access](users-and-access.md#per-app-login-wall).
-
 ## Runtime
 
 The **Runtime** tab changes how the container starts and what it can reach on
@@ -898,7 +904,7 @@ It installs Docker if needed, joins the swarm on the system daemon and installs
 the Homerun Agent; the swarm scheduler places tasks there from then on and
 Traefik on the manager routes to them over the overlay network. The machines
 need to reach each other on 2377/tcp, 7946/tcp+udp and 4789/udp. Traefik picks
-up new replicas within about 15 seconds. See
+up new replicas within about 2 seconds. See
 [`packages/installer/README.md`](../packages/installer/README.md) for the flags.
 
 ## Observability

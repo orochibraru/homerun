@@ -244,7 +244,7 @@ describe("FullStackInstaller.bringUpFullStack in swarm mode", () => {
 		});
 		const compose = composeFrom(writeFile);
 		expect(compose).toContain(
-			"acme.json\n      - --providers.swarm=true\n      - --providers.swarm.exposedByDefault=false\n      - --providers.swarm.network=homerun-swarm\n",
+			"acme.json\n      - --providers.swarm=true\n      - --providers.swarm.exposedByDefault=false\n      - --providers.swarm.network=homerun-swarm\n      - --providers.swarm.refreshSeconds=2\n",
 		);
 		expect(compose).toContain("- --providers.docker=true");
 		expect(compose).toContain("- /var/run/docker.sock:/var/run/docker.sock:ro");

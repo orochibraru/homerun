@@ -468,7 +468,8 @@ became rootful by default. Verified end to end on two Multipass VMs: rootful
 manager, worker joined through the script, a 3-replica service with tasks on
 both nodes, Traefik answering from every replica over the overlay
 (`bun run e2e:multipass --swarm` replays it). Traefik's swarm provider polls
-every 15s by default, so new replicas take that long to join the load balancer.
+every `providers.swarm.refreshSeconds`, set to 2 (`SWARM_REFRESH_SECONDS`) by
+`enableSwarmMode` and the installer, so new replicas join within 2s.
 
 ## Readiness gate (`docker/readiness.ts`, `planReadiness` in `docker/container-rollout.ts`)
 
@@ -506,7 +507,14 @@ providers is a **Docker healthcheck**. Verified facts, from source and live:
   right away on SIGTERM gave about 4s of errors before Traefik's next poll
   dropped it. `traefik.docker.lbswarm=true` (VIP, which swarm updates instantly)
   would close that, but VIP routing didn't work at all on the OrbStack test
-  daemon, so it's unverified and not used.
+  daemon, so it's unverified and not used. Instead the poll is 2s
+  (`SWARM_REFRESH_SECONDS`) and every router gets a `<slug>-retry` middleware
+  (`labels.ts`, 4 attempts from 100ms): Traefik's retry
+  (`pkg/middlewares/retry`) only retries a network error when no request bytes
+  reached the backend, and never after response headers or on an upgrade, so a
+  request dialing a removed container or task is replayed on the next server and
+  a POST is never sent twice. It covers standalone's old container being removed
+  while Traefik still lists it too. Not re-measured live.
 - **Rejected alternatives**: starting the container off the Traefik network and
   connecting it after a probe (Traefik never sees the `connect`, and when the
   labelled network is missing it falls back to the container's first network

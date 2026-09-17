@@ -292,7 +292,7 @@ a local sign-out and the redirect only happens when an admin ticks the box.
   service that referenced it as `oauth:<name>`, so the save action rejects
   duplicates and the UI shows a per-provider "used by N apps" count.
 - A "Protected apps" panel lists services with the wall on, flagging any with no
-  sign-in method picked, and deep-links to each one's Networking tab.
+  sign-in method picked, and deep-links to each one's Security tab.
 
 **The OAuth redirect URI comes from the request, and both halves of the exchange
 must agree.** better-auth builds the authorize step's `redirect_uri` from the
@@ -417,6 +417,22 @@ plugin's own types), so the client calls
 there is no `genericOAuthClient` export in this version to add. `provider` is
 typed as a union of the built-in social providers, so a custom provider id needs
 a cast at that one call site.
+
+**OIDC provider requests are rebased onto the Dashboard URL.** The server
+adapter builds every request URL from the `ORIGIN` env var when it's set, and
+the installer sets it to the host's IP. better-auth builds the discovery
+document's `authorization_endpoint`/`token_endpoint`/... from the request URL
+while the issuer comes from `config.auth.origin`, so after onboarding set a
+domain an app signing in was sent to the IP. `authHandler` in `hooks.server.ts`
+hands OIDC provider paths to `auth.handler` with
+`rebaseOnOrigin(request, config.auth.origin)` instead of going through
+`svelteKitHandler`. The same pinning reaches every URL built from `url.origin`:
+better-auth's verification and change-email links go through
+`withDashboardOrigin` (`canonical-origin.ts`), and the git provider OAuth
+`redirect_uri`, the CLI device-login URLs and the OpenAPI server URL use
+`browserOrigin(request, url)`, the `Host`/`X-Forwarded-*` the caller actually
+used, which is also what the Git Providers page shows as the callback to
+register.
 
 ## Per-app login wall (`service.authRequired` + policy columns, `/api/v1/auth-check`, `/app-auth`, `$lib/server/app-gate.ts`)
 
