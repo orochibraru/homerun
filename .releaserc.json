@@ -53,48 +53,13 @@
 		[
 			"@semantic-release/github",
 			{
-				"assets": [
-					{
-						"label": "homerun-agent (linux/amd64)",
-						"path": "dist/homerun-agent-amd64"
-					},
-					{
-						"label": "homerun-agent (linux/arm64)",
-						"path": "dist/homerun-agent-arm64"
-					},
-					{
-						"label": "homerun-install (linux/amd64)",
-						"path": "dist/homerun-installer-amd64"
-					},
-					{
-						"label": "homerun-install (linux/arm64)",
-						"path": "dist/homerun-installer-arm64"
-					},
-					{
-						"label": "homerun CLI (linux/amd64)",
-						"path": "dist/homerun-cli-amd64"
-					},
-					{
-						"label": "homerun CLI (linux/arm64)",
-						"path": "dist/homerun-cli-arm64"
-					},
-					{
-						"label": "homerun-agent (darwin/amd64)",
-						"path": "dist/homerun-agent-darwin-amd64"
-					},
-					{
-						"label": "homerun-agent (darwin/arm64)",
-						"path": "dist/homerun-agent-darwin-arm64"
-					},
-					{
-						"label": "homerun CLI (darwin/amd64)",
-						"path": "dist/homerun-cli-darwin-amd64"
-					},
-					{
-						"label": "homerun CLI (darwin/arm64)",
-						"path": "dist/homerun-cli-darwin-arm64"
-					}
-				]
+				"draftRelease": true
+			}
+		],
+		[
+			"@semantic-release/exec",
+			{
+				"successCmd": "echo ${nextRelease.gitTag} > .release-tag"
 			}
 		]
 	],

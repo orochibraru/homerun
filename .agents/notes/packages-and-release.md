@@ -153,6 +153,20 @@ previously lived on a self-hosted Gitea and used
 `@saithodev/semantic-release-gitea`; that migration is done, so don't
 reintroduce Gitea-specific release/CI config.
 
+**The binaries aren't uploaded by `@semantic-release/github`.** It creates the
+release as a draft (`draftRelease: true`), a second `@semantic-release/exec`
+entry's `successCmd` writes the tag to `.release-tag`, and the release job's
+next step runs `scripts/upload-release-assets.ts <tag>`: one
+`gh release upload --clobber` per binary with retries, skipping any already
+uploaded at the same size, then `gh release edit --draft=false --latest`. Real
+failure it replaced: the plugin uploads all ten ~80MB binaries in one go with no
+retry, uploads took minutes each, and a 504 from `uploads.github.com` on the
+tenth left v1.0.32 a draft with the tag pushed and no way to resume. Since a
+draft isn't `releases/latest`, `install.sh` and `homerun update` never see a
+release until every binary is on it. A failed upload step is finished by hand:
+download the run's `binaries-*` artifacts into `dist/` and run the script with
+that tag.
+
 **Container images go to Docker Hub, not GHCR**, deliberately:
 `docker.io/orochibraru/homerun{,-agent,-docs}`. That's the one piece of the
 pipeline that does _not_ follow the code host, so `docker.yaml`'s login takes a

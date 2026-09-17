@@ -313,3 +313,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: bun run release
+
+      - name: Upload binaries and publish the release
+        if: ${{ hashFiles('.release-tag') != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: bun scripts/upload-release-assets.ts "$(cat .release-tag)"
