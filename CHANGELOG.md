@@ -1,3 +1,11 @@
+## [1.0.30](https://github.com/orochibraru/homerun/compare/v1.0.29...v1.0.30) (2026-09-17)
+
+### Features
+
+- unhealthy reason and service logs over API and CLI, docker group for install
+  user
+  ([bc17e48](https://github.com/orochibraru/homerun/commit/bc17e48c231d4ffc9f032eac85c58cbb22dc598f))
+
 ## [1.0.29](https://github.com/orochibraru/homerun/compare/v1.0.28...v1.0.29) (2026-09-17)
 
 ### Features
