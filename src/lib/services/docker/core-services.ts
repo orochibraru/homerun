@@ -11,6 +11,13 @@ import {
 	dashboardRouterConfig,
 } from "./dashboard.ts";
 import { hasTraefikRouterFor, MANAGED_LABEL } from "./labels.ts";
+import {
+	CORE_HASH_LABEL,
+	CORE_LABEL,
+	NEWT_CONTAINER_NAME,
+	type NewtCredentials,
+	newtContainerSpec,
+} from "./newt.ts";
 import { swarmNetworkName } from "./swarm.ts";
 import { tunnelTargetHostFrom } from "./tunnel.ts";
 
@@ -67,6 +74,7 @@ export function applyFlags(
 /** What this mixin needs from the swarm mixin, which is merged ahead of it (see docker.service.ts). */
 interface RequiresSwarmMixin {
 	assertSwarmCapableDaemon: () => Promise<void>;
+	ensureSharedNetwork: () => Promise<void>;
 	ensureSwarmNetwork: (name: string) => Promise<void>;
 	initSwarm: () => Promise<boolean>;
 }
@@ -294,7 +302,8 @@ export function DockerCoreServicesMixin<
 				.filter(
 					(container) =>
 						!container.Labels?.[MANAGED_LABEL] &&
-						container.Labels?.["com.docker.compose.project"],
+						(container.Labels?.["com.docker.compose.project"] ||
+							container.Labels?.[CORE_LABEL]),
 				)
 				.map((container) => ({
 					id: container.Id,
@@ -302,8 +311,13 @@ export function DockerCoreServicesMixin<
 					name:
 						container.Names[0]?.replace(LEADING_SLASH_RE, "") ??
 						container.Id.slice(0, 12),
-					project: container.Labels["com.docker.compose.project"] ?? "",
-					service: container.Labels["com.docker.compose.service"] ?? "",
+					project:
+						container.Labels["com.docker.compose.project"] ??
+						(container.Labels[CORE_LABEL] ? "homerun" : ""),
+					service:
+						container.Labels["com.docker.compose.service"] ??
+						container.Labels[CORE_LABEL] ??
+						"",
 					state: container.State,
 				}))
 				.sort((a, b) => a.name.localeCompare(b.name));
@@ -317,9 +331,10 @@ export function DockerCoreServicesMixin<
 		 */
 		async findNewtContainer(): Promise<InfraContainer | null> {
 			const containers = await this.getDocker().listContainers({ all: true });
-			const match = containers.find((container) =>
-				container.Image.includes("newt"),
-			);
+			const match =
+				containers.find(
+					(container) => container.Labels?.[CORE_LABEL] === "newt",
+				) ?? containers.find((container) => container.Image.includes("newt"));
 			if (!match) {
 				return null;
 			}
@@ -330,9 +345,74 @@ export function DockerCoreServicesMixin<
 					match.Names[0]?.replace(LEADING_SLASH_RE, "") ??
 					match.Id.slice(0, 12),
 				project: match.Labels?.["com.docker.compose.project"] ?? "",
-				service: match.Labels?.["com.docker.compose.service"] ?? "",
+				service:
+					match.Labels?.["com.docker.compose.service"] ??
+					match.Labels?.[CORE_LABEL] ??
+					"",
 				state: match.State,
 			};
+		}
+
+		/**
+		 * Converges Homerun's own Newt container onto `credentials`: removes it
+		 * when they're null, leaves it alone when the running one was created
+		 * from the same spec (starting it if it stopped), and otherwise pulls
+		 * the image and recreates it on the shared network, next to Traefik.
+		 * It's core infrastructure, never a service, so it carries the core
+		 * label rather than the managed one. Failures are logged, not thrown.
+		 */
+		async syncNewtContainer(
+			credentials: NewtCredentials | null,
+		): Promise<void> {
+			try {
+				await this.#convergeNewt(credentials);
+			} catch (err) {
+				logger.warn("Couldn't sync the Newt container", err);
+			}
+		}
+
+		/** The body of `syncNewtContainer`, throwing on any Docker failure. */
+		async #convergeNewt(credentials: NewtCredentials | null): Promise<void> {
+			const docker = this.getDocker();
+			const existing = await docker
+				.getContainer(NEWT_CONTAINER_NAME)
+				.inspect()
+				.catch(() => null);
+
+			if (!credentials) {
+				if (existing) {
+					await docker.getContainer(existing.Id).remove({ force: true });
+					logger.info("Newt container removed");
+				}
+				return;
+			}
+
+			await this.ensureSharedNetwork();
+			const spec = newtContainerSpec(credentials, config.docker.networkName);
+			if (
+				existing &&
+				existing.Config.Labels?.[CORE_HASH_LABEL] ===
+					spec.Labels?.[CORE_HASH_LABEL]
+			) {
+				if (!existing.State.Running) {
+					await docker.getContainer(NEWT_CONTAINER_NAME).start();
+					logger.info("Newt container started");
+				}
+				return;
+			}
+
+			const stream = await docker.pull(spec.Image ?? "");
+			await new Promise<void>((resolvePromise, reject) => {
+				docker.modem.followProgress(stream, (err: Error | null) =>
+					err ? reject(err) : resolvePromise(),
+				);
+			});
+			if (existing) {
+				await docker.getContainer(existing.Id).remove({ force: true });
+			}
+			const container = await docker.createContainer(spec);
+			await container.start();
+			logger.info("Newt container created");
 		}
 
 		/** Attaches Traefik to one more network, ignoring "already attached". */

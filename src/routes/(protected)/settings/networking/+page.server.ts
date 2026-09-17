@@ -5,6 +5,7 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
 import {
 	cloudflareInputFromForm,
+	newtFieldsError,
 	pangolinInputFromForm,
 	testCloudflareFromForm,
 	testPangolinFromForm,
@@ -85,7 +86,12 @@ export const actions = {
 		}
 		const formData = await request.formData();
 		const settings = await InstanceSettingsDTO.get();
+		const newtError = newtFieldsError(formData, settings);
+		if (newtError) {
+			return fail(400, { error: newtError });
+		}
 		await settings.updatePangolin(pangolinInputFromForm(formData));
+		applyAndRebuild(settings);
 		logger.info(`Pangolin instance settings updated: user=${locals.user.id}`);
 		return { savedSection: "pangolin", success: true };
 	},

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { BUILTIN_TEMPLATES_APPS } from "$lib/server/db/builtin-templates-apps";
 import { dockerHealthcheck } from "$lib/services/docker/healthcheck";
+import { NEWT_HEALTHCHECK } from "$lib/services/docker/newt";
 
 describe("dockerHealthcheck", () => {
 	test("blank keeps the image's own healthcheck", () => {
@@ -16,8 +16,7 @@ describe("dockerHealthcheck", () => {
 	});
 
 	test("the Newt command only passes on a connected websocket", async () => {
-		const newt = BUILTIN_TEMPLATES_APPS.find((t) => t.id === "builtin-newt");
-		const command = newt?.healthcheckCommand ?? "";
+		const command = NEWT_HEALTHCHECK;
 		const grep = command.slice(command.indexOf("grep"));
 		const run = async (metrics: string) => {
 			const proc = Bun.spawn(["sh", "-c", grep], { stdin: "pipe" });

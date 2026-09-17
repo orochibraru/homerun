@@ -244,6 +244,43 @@
           and no resource is ever created.
         </p>
       </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class={label} for="pangolinNewtEndpoint">Newt endpoint</label>
+          <Input
+            id="pangolinNewtEndpoint"
+            name="pangolinNewtEndpoint"
+            placeholder="https://pangolin.example.com"
+            type="text"
+            value={data.settings.pangolinNewtEndpoint ?? ""}
+          />
+          <p class="text-text-subtle mt-1.5 text-xs">
+            Fill in the endpoint, ID and secret from the site's page in Pangolin
+            and Homerun runs its own Newt tunnel client on this host, next to
+            Traefik. It isn't a service, so it doesn't appear in your services
+            list, and saving here recreates it. Leave all three blank when Newt
+            runs somewhere else.
+          </p>
+        </div>
+        <div>
+          <label class={label} for="pangolinNewtId">Newt ID</label>
+          <Input
+            id="pangolinNewtId"
+            name="pangolinNewtId"
+            type="text"
+            value={data.settings.pangolinNewtId ?? ""}
+          />
+        </div>
+        <div>
+          <label class={label} for="pangolinNewtSecret">Newt secret</label>
+          <Input
+            id="pangolinNewtSecret"
+            name="pangolinNewtSecret"
+            placeholder={data.settings.pangolinNewtSecretEnc ? "Unchanged" : ""}
+            type="password"
+          />
+        </div>
+      </div>
       <AsyncBlock
         errorTitle="Couldn't check this host for a tunnel client."
         query={newt}
@@ -257,14 +294,16 @@
               <span class="size-1.5 rounded-full {container.state === 'running'
               ? 'bg-emerald-500'
               : 'bg-amber-500'}"></span>
-              A Pangolin tunnel client is on this host
+              {container.service === "newt"
+              ? "Homerun's Newt tunnel client"
+              : "A Pangolin tunnel client"} is on this host
               (<code class="font-mono">{container.image}</code>, {container.state}).
             </p>
           {:else}
             <p class="text-text-subtle rounded-lg border border-border px-3 py-2 text-xs">
               No Newt tunnel container found on this host. Pangolin can only
-              reach services here through one : deploy the
-              <strong>Newt (Pangolin tunnel)</strong> template, or run your own.
+              reach services here through one : fill in the Newt fields above,
+              or run your own.
             </p>
           {/if}
         {/snippet}

@@ -579,6 +579,9 @@ export const instanceSettings = pgTable("instance_settings", {
 	// to : must already exist in Pangolin, matched by name, this app never
 	// creates a site itself.
 	pangolinMainSiteName: text("pangolin_main_site_name"),
+	pangolinNewtEndpoint: text("pangolin_newt_endpoint"),
+	pangolinNewtId: text("pangolin_newt_id"),
+	pangolinNewtSecretEnc: text("pangolin_newt_secret_enc"),
 	pangolinOrgId: text("pangolin_org_id"),
 	// When true, a created Resource keeps Pangolin's own SSO gate and this
 	// app's per-service login wall steps aside for anything published through

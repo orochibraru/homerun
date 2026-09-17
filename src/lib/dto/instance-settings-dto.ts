@@ -11,6 +11,7 @@ import {
 	instanceSettings,
 	type OauthTokenAuthMethod,
 } from "$lib/server/db/schema";
+import type { NewtCredentials } from "$lib/services/docker/newt";
 import { decryptSecret, encryptSecret } from "$lib/services/secrets";
 import { BaseDTO } from "./base-dto";
 
@@ -49,6 +50,10 @@ export interface InstanceSettingsPangolinInput {
 	/** Blank/undefined means "keep the currently stored token". */
 	pangolinApiToken?: string;
 	pangolinMainSiteName: string | null;
+	pangolinNewtEndpoint: string | null;
+	pangolinNewtId: string | null;
+	/** Blank/undefined means "keep the currently stored secret". */
+	pangolinNewtSecret?: string;
 	pangolinOrgId: string | null;
 	pangolinTargetPort: number | null;
 }
@@ -180,6 +185,9 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			pangolinApiBaseUrl: null,
 			pangolinApiTokenEnc: null,
 			pangolinMainSiteName: null,
+			pangolinNewtEndpoint: null,
+			pangolinNewtId: null,
+			pangolinNewtSecretEnc: null,
 			pangolinOrgId: null,
 			pangolinOwnsAuth: null,
 			pangolinTargetHost: null,
@@ -438,7 +446,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	 * re-encrypted API token; a blank token keeps the stored one.
 	 */
 	async updatePangolin(input: InstanceSettingsPangolinInput): Promise<void> {
-		const { pangolinApiToken, ...rest } = input;
+		const { pangolinApiToken, pangolinNewtSecret, ...rest } = input;
 		await this.persist({
 			...rest,
 			// Blank token field means "leave unchanged" : same convention as
@@ -446,7 +454,27 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			...(pangolinApiToken
 				? { pangolinApiTokenEnc: encryptSecret(pangolinApiToken) }
 				: {}),
+			...(pangolinNewtSecret
+				? { pangolinNewtSecretEnc: encryptSecret(pangolinNewtSecret) }
+				: {}),
 		});
+	}
+
+	/**
+	 * The credentials Homerun's own Newt container runs with, or null when
+	 * Pangolin isn't configured or any of endpoint, id and secret is missing,
+	 * meaning the tunnel client runs somewhere else (or not at all).
+	 */
+	newtCredentials(): NewtCredentials | null {
+		const secret = this.row.pangolinNewtSecretEnc
+			? decryptSecret(this.row.pangolinNewtSecretEnc)
+			: null;
+		const endpoint = this.row.pangolinNewtEndpoint;
+		const id = this.row.pangolinNewtId;
+		if (!(this.pangolinConfigured && endpoint && id && secret)) {
+			return null;
+		}
+		return { endpoint, id, secret };
 	}
 
 	/**

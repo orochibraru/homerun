@@ -18,11 +18,13 @@ export function checkbox(formData: FormData, key: string): boolean {
 /**
  * Applies freshly saved instance settings to the running process : merges them
  * into the live config, rebuilds the auth instance, and resyncs the dashboard's
- * Traefik router and DNS record in the background without waiting for either.
+ * Traefik router, DNS record and Newt container in the background without
+ * waiting for any of them.
  */
 export function applyAndRebuild(settings: InstanceSettingsDTO) {
 	applyInstanceSettings(settings.toConfigOverride());
 	rebuildAuth();
 	void DockerService.syncDashboardRouter();
 	void syncDashboardDns();
+	void DockerService.syncNewtContainer(settings.newtCredentials());
 }

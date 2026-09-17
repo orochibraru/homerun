@@ -157,10 +157,11 @@ Settings → Docker.
 Signing in for the first time drops you into a six-step wizard (Core / Docker /
 Traefik / Email / DNS / Review) that sets exactly the fields above, once. The
 DNS step turns on Cloudflare or Pangolin automation with the same fields and
-**Test** checks as Settings → Networking; Pangolin's target host, target port
-and sign-in option keep their defaults there. It calls the same code `/settings`
-does, so there's nothing it can set that you can't change afterwards, and
-nothing it leaves out that you have to go find in a file.
+**Test** checks as Settings → Networking, including the optional Newt
+credentials that have Homerun run the tunnel client itself; Pangolin's target
+host, target port and sign-in option keep their defaults there. It calls the
+same code `/settings` does, so there's nothing it can set that you can't change
+afterwards, and nothing it leaves out that you have to go find in a file.
 
 ## A note on lockout
 

@@ -719,13 +719,14 @@ whichever DNS integration the DNS step switched on, then
 `/settings` uses, so the dashboard DNS record is synced too). The DNS step
 shares its form parsing and "Test connection" checks with Settings → Networking
 through `$lib/server/validation/dns-settings-form.ts`; Pangolin's target
-host/port and `pangolinOwnsAuth` aren't shown and are preserved. Its Test
-buttons post `?/testCloudflare`/`?/testPangolin` from the same wizard form, and
-the page's submit function routes those through their own promise toast
-**without calling `update()`**: a successful action result invalidates `data`,
-and every wizard field is a writable `$derived` over `data`, so `update()` would
-reset everything typed so far. Secrets (`smtpPassword`, both API tokens) are
-stripped from the `values` echoed back on a failed finish.
+host/port and `pangolinOwnsAuth` aren't shown and are preserved; the Newt fields
+are shown and validated with the same `newtFieldsError`. Its Test buttons post
+`?/testCloudflare`/`?/testPangolin` from the same wizard form, and the page's
+submit function routes those through their own promise toast **without calling
+`update()`**: a successful action result invalidates `data`, and every wizard
+field is a writable `$derived` over `data`, so `update()` would reset everything
+typed so far. Secrets (`smtpPassword`, both API tokens) are stripped from the
+`values` echoed back on a failed finish.
 
 ## Trusted origins (`$lib/services/auth-origins.ts`)
 

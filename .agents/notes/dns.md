@@ -116,6 +116,22 @@ answered `200` for `curl -k -H "Host: <slug>.<domain>" https://127.0.0.1` while
 the public hostname answered `401`, with the target already correct
 (`localhost:443`, `method=https`, site online).
 
+**Newt is core infrastructure, not a service.** It used to be a `builtin-newt`
+template the admin deployed as an ordinary service, so it sat in the services
+list and could be redeployed, scaled or deleted like an app.
+`instance_settings.pangolinNewtEndpoint`/`pangolinNewtId`/`pangolinNewtSecretEnc`
+(Pangolin card and the onboarding DNS step, all three or none, checked by
+`newtFieldsError` in `dns-settings-form.ts`) now drive
+`DockerService.syncNewtContainer`, which converges one `homerun-newt` container
+(spec in `docker/newt.ts`) on the shared network: labelled `homerun.core=newt`
+rather than the managed label, so no service list or reconcile sees it, while
+`listInfraContainers` does (System logs). A `homerun.core.hash` label of the
+spec makes the sync a no-op unless something changed. It runs on boot and from
+`applyAndRebuild`, and `InstanceSettingsDTO.newtCredentials()` is null (so the
+container is removed) whenever Pangolin itself isn't fully configured. Seeding
+deletes the retired template row; a service an admin already deployed from it
+stays and has to be deleted by hand.
+
 **The dashboard's own hostname is synced too.** `dns.service.ts`'s
 `syncDashboardDns` runs on boot and after every settings save
 (`applyAndRebuild`), next to `syncDashboardRouter`, for the Dashboard URL's host

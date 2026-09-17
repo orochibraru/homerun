@@ -210,6 +210,17 @@
 			"",
 	);
 	let pangolinApiToken = $state("");
+	let pangolinNewtEndpoint = $derived(
+		(form?.values?.pangolinNewtEndpoint as string | undefined) ??
+			settings?.pangolinNewtEndpoint ??
+			"",
+	);
+	let pangolinNewtId = $derived(
+		(form?.values?.pangolinNewtId as string | undefined) ??
+			settings?.pangolinNewtId ??
+			"",
+	);
+	let pangolinNewtSecret = $state("");
 
 	type FieldErrors = Record<string, string>;
 	let errors = $state<FieldErrors>({});
@@ -294,8 +305,26 @@
 		return next;
 	}
 
+	function validateNewt(): FieldErrors {
+		const typed = [pangolinNewtEndpoint, pangolinNewtId, pangolinNewtSecret];
+		if (!(pangolinEnabled && typed.some((value) => value.trim()))) {
+			return {};
+		}
+		return requireDnsFields(true, "Newt", [
+			["pangolinNewtEndpoint", "Newt endpoint", pangolinNewtEndpoint],
+			["pangolinNewtId", "Newt ID", pangolinNewtId],
+			[
+				"pangolinNewtSecret",
+				"Newt secret",
+				pangolinNewtSecret,
+				!!settings?.pangolinNewtSecretEnc,
+			],
+		]);
+	}
+
 	function validateDns(): FieldErrors {
 		return {
+			...validateNewt(),
 			...requireDnsFields(cloudflareEnabled, "Cloudflare", [
 				["cloudflareZoneId", "Zone ID", cloudflareZoneId],
 				[
@@ -332,6 +361,9 @@
 			"pangolinOrgId",
 			"pangolinMainSiteName",
 			"pangolinApiToken",
+			"pangolinNewtEndpoint",
+			"pangolinNewtId",
+			"pangolinNewtSecret",
 		],
 	];
 	const STEP_VALIDATORS = [
@@ -929,6 +961,57 @@
                   {/if}
                 </div>
               </div>
+              <div class="grid gap-5 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <label class={label} for="pangolinNewtEndpoint">Newt endpoint</label>
+                  <input
+                    class={input}
+                    id="pangolinNewtEndpoint"
+                    name="pangolinNewtEndpoint"
+                    placeholder="https://pangolin.example.com"
+                    type="text"
+                    bind:value={pangolinNewtEndpoint}
+                  >
+                  <p class="mt-1.5 text-xs text-text-subtle">
+                    Optional. With the endpoint, ID and secret from the site's
+                    page in Pangolin, Homerun runs its own Newt tunnel client on
+                    this host, kept out of your services list. Leave blank when
+                    Newt runs somewhere else.
+                  </p>
+                  {#if showError("pangolinNewtEndpoint")}
+                    <p class={errorClass}>{showError("pangolinNewtEndpoint")}</p>
+                  {/if}
+                </div>
+                <div>
+                  <label class={label} for="pangolinNewtId">Newt ID</label>
+                  <input
+                    class={input}
+                    id="pangolinNewtId"
+                    name="pangolinNewtId"
+                    type="text"
+                    bind:value={pangolinNewtId}
+                  >
+                  {#if showError("pangolinNewtId")}
+                    <p class={errorClass}>{showError("pangolinNewtId")}</p>
+                  {/if}
+                </div>
+                <div>
+                  <label class={label} for="pangolinNewtSecret">Newt secret</label>
+                  <input
+                    class={input}
+                    id="pangolinNewtSecret"
+                    name="pangolinNewtSecret"
+                    placeholder={settings?.pangolinNewtSecretEnc
+                    ? "Leave blank to keep current"
+                    : ""}
+                    type="password"
+                    bind:value={pangolinNewtSecret}
+                  >
+                  {#if showError("pangolinNewtSecret")}
+                    <p class={errorClass}>{showError("pangolinNewtSecret")}</p>
+                  {/if}
+                </div>
+              </div>
               <p class="text-xs text-text-subtle">
                 Target host, target port and Pangolin sign-in live on Settings →
                 Networking, where they default to detected values.
@@ -998,7 +1081,11 @@
                 "DNS automation",
                 [
                   cloudflareEnabled ? "Cloudflare" : null,
-                  pangolinEnabled ? "Pangolin" : null,
+                  pangolinEnabled
+                    ? pangolinNewtId.trim()
+                      ? "Pangolin (Newt on this host)"
+                      : "Pangolin"
+                    : null,
                 ]
                   .filter(Boolean)
                   .join(", ") || "Not configured",

@@ -727,8 +727,15 @@ off:
   Traefik at. Left blank it's detected: Traefik's container name when Newt runs
   as a container on the same network, `localhost` when it runs on this host with
   host networking. Set it when Newt runs on another machine. The page also tells
-  you whether it found a Newt tunnel container on this host; the **Newt
-  (Pangolin tunnel)** template deploys one.
+  you whether it found a Newt tunnel container on this host.
+- Optionally the **Newt endpoint**, **Newt ID** and **Newt secret** from the
+  site's page in Pangolin. With all three set, Homerun runs its own Newt tunnel
+  client as a container named `homerun-newt` on the shared network next to
+  Traefik. It isn't a service: it doesn't show up in your services list, it's
+  recreated whenever you save these settings, and its logs are under System
+  logs. Clear the fields to remove it. Leave them blank if Newt runs somewhere
+  else. If you previously deployed Newt as a service yourself, delete that
+  service first, two clients with the same credentials fight over the tunnel.
 - Optionally a **target port**, defaulting to 443, where this instance's service
   routers live. A target on 80 reaches an entrypoint with no matching router and
   Traefik answers 404.
@@ -1014,10 +1021,9 @@ host by hand, the deploy fails if it isn't there).
 **Healthcheck command** overrides the image's own Docker healthcheck with a
 shell command run inside the container every 30s (exit 0 = healthy). When a
 service has one, its uptime probe reports the healthcheck instead of knocking on
-the container port, which is what a portless container like Newt needs: the Newt
-template ships one that only passes while its Pangolin tunnel is connected. It
-is also the service's [readiness check](#deploying): a new container or swarm
-task gets no traffic until it passes. Takes effect on the next deploy.
+the container port, which is what a portless container needs. It is also the
+service's [readiness check](#deploying): a new container or swarm task gets no
+traffic until it passes. Takes effect on the next deploy.
 
 **Save as template** is here too: it snapshots this service's current image,
 tag, port, env vars, resource limits, healthcheck and

@@ -21,6 +21,36 @@ function secretField(formData: FormData, key: string): string | undefined {
 	return (formData.get(key) as string | null)?.trim() || undefined;
 }
 
+/**
+ * What's wrong with the Newt fields of a settings or onboarding form, or null
+ * when they're fine: all blank (the tunnel client runs elsewhere) or
+ * endpoint, id and secret all set, the secret either typed or already stored.
+ */
+export function newtFieldsError(
+	formData: FormData,
+	settings: InstanceSettingsDTO,
+): string | null {
+	const endpoint = nullableText(formData, "pangolinNewtEndpoint");
+	const id = nullableText(formData, "pangolinNewtId");
+	const typedSecret = secretField(formData, "pangolinNewtSecret");
+	if (!(endpoint || id || typedSecret)) {
+		return null;
+	}
+	if (!endpoint) {
+		return "Newt endpoint is required to run Newt on this host.";
+	}
+	if (!URL.canParse(endpoint)) {
+		return "Newt endpoint must be a full URL, like https://pangolin.example.com.";
+	}
+	if (!id) {
+		return "Newt ID is required to run Newt on this host.";
+	}
+	if (!(typedSecret || settings.toJSON().pangolinNewtSecretEnc)) {
+		return "Newt secret is required to run Newt on this host.";
+	}
+	return null;
+}
+
 /** The Cloudflare section of a settings or onboarding form, ready for `updateCloudflare`. */
 export function cloudflareInputFromForm(
 	formData: FormData,
@@ -46,6 +76,9 @@ export function pangolinInputFromForm(
 		pangolinApiBaseUrl: nullableText(formData, "pangolinApiBaseUrl"),
 		pangolinApiToken: secretField(formData, "pangolinApiToken"),
 		pangolinMainSiteName: nullableText(formData, "pangolinMainSiteName"),
+		pangolinNewtEndpoint: nullableText(formData, "pangolinNewtEndpoint"),
+		pangolinNewtId: nullableText(formData, "pangolinNewtId"),
+		pangolinNewtSecret: secretField(formData, "pangolinNewtSecret"),
 		pangolinOrgId: nullableText(formData, "pangolinOrgId"),
 		...(preserve ?? {
 			pangolinOwnsAuth: checkbox(formData, "pangolinOwnsAuth"),

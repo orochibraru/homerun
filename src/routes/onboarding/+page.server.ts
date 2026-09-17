@@ -10,6 +10,7 @@ import { Logger } from "$lib/logger";
 import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
 import {
 	cloudflareInputFromForm,
+	newtFieldsError,
 	pangolinInputFromForm,
 	testCloudflareFromForm,
 	testPangolinFromForm,
@@ -56,6 +57,7 @@ function wizardBaseDomain(formData: FormData): string {
 const SECRET_FIELDS = [
 	"cloudflareApiToken",
 	"pangolinApiToken",
+	"pangolinNewtSecret",
 	"smtpPassword",
 ];
 
@@ -68,9 +70,10 @@ function echoedValues(formData: FormData): Record<string, FormDataEntryValue> {
 	return values;
 }
 
-/** The DNS integrations switched on without an API token typed or already stored, as a zod-shaped field error map, or null when none are. */
+/** The DNS integrations switched on without an API token typed or already stored, or with half-filled Newt fields, as a zod-shaped field error map, or null when none are. */
 function missingDnsTokens(
 	input: OnboardingInput,
+	formData: FormData,
 	settings: InstanceSettingsDTO,
 ): Record<string, string[]> | null {
 	const current = settings.toJSON();
@@ -90,6 +93,12 @@ function missingDnsTokens(
 		errors.pangolinApiToken = [
 			"API token is required when Pangolin is enabled.",
 		];
+	}
+	const newtError = input.pangolinEnabled
+		? newtFieldsError(formData, settings)
+		: null;
+	if (newtError) {
+		errors.pangolinNewtEndpoint = [newtError];
 	}
 	return Object.keys(errors).length > 0 ? errors : null;
 }
@@ -196,7 +205,7 @@ export const actions = {
 		}${normalized.port ? `:${normalized.port}` : ""}`;
 
 		const settings = await InstanceSettingsDTO.get();
-		const missingTokens = missingDnsTokens(input, settings);
+		const missingTokens = missingDnsTokens(input, formData, settings);
 		if (missingTokens) {
 			return fail(400, {
 				errors: missingTokens,

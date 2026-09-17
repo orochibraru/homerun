@@ -188,7 +188,9 @@ Signing in for the first time drops you into a six-step onboarding wizard:
 4. **Email**, optional SMTP, only needed for invite emails.
 5. **DNS**, optional Cloudflare or Pangolin automation, so every service you
    deploy gets its DNS record or tunnel route created for you. Each has a
-   **Test** button that checks the credentials before you finish.
+   **Test** button that checks the credentials before you finish. For Pangolin,
+   paste the site's Newt endpoint, ID and secret and Homerun runs the Newt
+   tunnel client for you.
 6. **Review**, confirm and finish.
 
 Everything it asks is also editable afterwards from `/settings`, and nothing it

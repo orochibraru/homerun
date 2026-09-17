@@ -220,6 +220,7 @@ export const init = async () => {
 	rebuildAuth();
 	await DockerService.syncDashboardRouter();
 	void syncDashboardDns();
+	void DockerService.syncNewtContainer(settings.newtCredentials());
 	await OrchestrationService.applyOnBoot(settings, created).catch((err) => {
 		logger.warn("Couldn't apply the orchestration mode on boot", err);
 	});

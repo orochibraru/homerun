@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import {
 	BUILTIN_TEMPLATE_LINKS,
 	BUILTIN_TEMPLATES,
@@ -8,13 +8,17 @@ import { db } from "$lib/server/db/lib";
 import { template, templateLink } from "$lib/server/db/schema";
 import { runtimeOptionsFrom } from "$lib/service-runtime";
 
+const RETIRED_BUILTIN_IDS = ["builtin-newt"];
+
 /**
  * Upserts every built-in template, overwriting their stored fields with the
  * current definitions, then inserts any built-in template links not already
- * present. Safe to run on every boot.
+ * present, and deletes built-in templates that no longer exist. Safe to run on
+ * every boot.
  */
 export async function seedBuiltinTemplates(): Promise<void> {
 	const now = new Date();
+	await db.delete(template).where(inArray(template.id, RETIRED_BUILTIN_IDS));
 	await db
 		.insert(template)
 		.values(
