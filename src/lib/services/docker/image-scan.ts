@@ -1,23 +1,27 @@
 import { hostname } from "node:os";
 import { PassThrough, type Readable } from "node:stream";
 import { config } from "$lib/config";
+import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { summarizeTrivyReport, type TrivySummary } from "$lib/image-scan";
 import { Logger } from "$lib/logger";
+import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { PullImageParams, RegistryAuth } from "./containers.ts";
 import type { SelfContainer } from "./core-services.ts";
 import {
 	extractDigest,
+	isMirrorRef,
 	isRootlessDaemon,
 	lastErrorLine,
+	MIRROR_AUTH_DIR,
+	MIRROR_AUTH_FILE,
+	MIRROR_AUTH_VOLUME,
 	MIRROR_CONFIG_PATH,
 	MIRROR_CONTAINER_NAME,
-	MIRROR_DELETE_ENV,
 	MIRROR_HOST_PORT,
 	MIRROR_IMAGE,
 	MIRROR_IMAGE_TAG,
 	MIRROR_INTERNAL_PORT,
-	MIRROR_LABEL,
 	MIRROR_REPOSITORIES_DIR,
 	MIRROR_STORAGE_DIR,
 	MIRROR_VOLUME,
@@ -25,7 +29,8 @@ import {
 	mirrorRefs,
 	normalizeImageRef,
 	REGISTRY_AUTH_ENV,
-	registryAuthFile,
+	REGISTRY_INTERNAL_USERNAME,
+	registryAuthFileFor,
 	SKOPEO_IMAGE,
 	SKOPEO_TAG,
 	skopeoArchiveCommand,
@@ -43,6 +48,12 @@ import {
 	parseDuKilobytes,
 } from "./mirror-registry.ts";
 import type { OneOffRunParams, OneOffRunResult } from "./one-off.ts";
+import {
+	type RegistryDesiredState,
+	registryEnv,
+	registryLabels,
+	registryMatches,
+} from "./registry-container.ts";
 
 const logger = new Logger("ImageScan");
 
@@ -121,18 +132,22 @@ export function DockerImageScanMixin<
 		 * port, with deletes enabled and an `unless-stopped` restart policy.
 		 * Waits a short grace period for it to come up before returning.
 		 */
-		async #createMirror(): Promise<void> {
+		async #createMirror(desired?: RegistryDesiredState): Promise<void> {
 			const docker = this.getDocker();
 			try {
 				await docker.getImage(`${MIRROR_IMAGE}:${MIRROR_IMAGE_TAG}`).inspect();
 			} catch {
 				await this.pullImage({ image: MIRROR_IMAGE, tag: MIRROR_IMAGE_TAG });
 			}
+			const state = desired ?? (await this.registryDesiredState());
 			const container = await docker.createContainer({
-				Env: [MIRROR_DELETE_ENV],
+				Env: registryEnv(state),
 				ExposedPorts: { [`${MIRROR_INTERNAL_PORT}/tcp`]: {} },
 				HostConfig: {
-					Binds: [`${MIRROR_VOLUME}:${MIRROR_STORAGE_DIR}`],
+					Binds: [
+						`${MIRROR_VOLUME}:${MIRROR_STORAGE_DIR}`,
+						`${MIRROR_AUTH_VOLUME}:${MIRROR_AUTH_DIR}`,
+					],
 					NetworkMode: config.docker.networkName,
 					PortBindings: {
 						[`${MIRROR_INTERNAL_PORT}/tcp`]: [
@@ -142,7 +157,7 @@ export function DockerImageScanMixin<
 					RestartPolicy: { Name: "unless-stopped" },
 				},
 				Image: `${MIRROR_IMAGE}:${MIRROR_IMAGE_TAG}`,
-				Labels: { [MIRROR_LABEL]: "mirror" },
+				Labels: registryLabels(state),
 				name: MIRROR_CONTAINER_NAME,
 			});
 			await container.start();
@@ -150,6 +165,100 @@ export function DockerImageScanMixin<
 				`Image mirror created: ${MIRROR_CONTAINER_NAME} on 127.0.0.1:${MIRROR_HOST_PORT}`,
 			);
 			await sleep(MIRROR_START_GRACE_MS);
+		}
+
+		/**
+		 * The credentials Homerun's own mirror copies, pulls and scans use once
+		 * the registry requires auth, or null while it's still anonymous. Read
+		 * from instance settings rather than through RegistryService, which sits
+		 * above this mixin and would make the import circular.
+		 */
+		async registryInternalAuth(): Promise<RegistryAuth | null> {
+			const settings = (await InstanceSettingsDTO.get()).toJSON();
+			if (
+				settings.registryAuthEnabled !== true ||
+				!settings.registryInternalSecretEnc
+			) {
+				return null;
+			}
+			const password = decryptSecret(settings.registryInternalSecretEnc);
+			return password
+				? { password, username: REGISTRY_INTERNAL_USERNAME }
+				: null;
+		}
+
+		/**
+		 * The registry settings the container should currently be running with.
+		 * Read from the instance settings rather than passed in, so any caller
+		 * that just wants the mirror up (a scan, a deploy) keeps whatever the
+		 * Registry page configured.
+		 */
+		async registryDesiredState(): Promise<RegistryDesiredState> {
+			const settings = (await InstanceSettingsDTO.get()).toJSON();
+			return {
+				authEnabled: settings.registryAuthEnabled === true,
+				publicHost: settings.registryPublicHost ?? null,
+			};
+		}
+
+		/**
+		 * Writes the registry's htpasswd file into its auth volume, through a
+		 * one-off container: the app can't write into another container's volume
+		 * directly, and the file has to outlive the registry container itself.
+		 * Empty content removes the file, which is how auth gets turned off.
+		 */
+		async writeRegistryHtpasswd(content: string): Promise<void> {
+			await this.runOneOff({
+				binds: [`${MIRROR_AUTH_VOLUME}:${MIRROR_AUTH_DIR}`],
+				cmd: [
+					"sh",
+					"-c",
+					content
+						? `printf '%s\\n' "$HTPASSWD" > ${MIRROR_AUTH_FILE}`
+						: `rm -f ${MIRROR_AUTH_FILE}`,
+				],
+				envVars: { HTPASSWD: content },
+				image: "alpine",
+				tag: "3",
+			});
+		}
+
+		/**
+		 * Brings the registry container in line with `desired`, recreating it
+		 * when its auth env or Traefik labels have changed. The storage volume
+		 * isn't touched, so every image in the registry survives.
+		 */
+		async reconcileRegistry(desired: RegistryDesiredState): Promise<void> {
+			await this.ensureSharedNetwork();
+			const container = this.getDocker().getContainer(MIRROR_CONTAINER_NAME);
+			const info = await container.inspect().catch((err) => {
+				if (isNotFoundError(err)) {
+					return null;
+				}
+				throw err;
+			});
+			if (!info) {
+				await this.#createMirror(desired);
+				return;
+			}
+			if (
+				registryMatches(
+					info.Config?.Env ?? [],
+					info.Config?.Labels ?? {},
+					desired,
+				)
+			) {
+				if (!info.State?.Running) {
+					await container.start();
+					await sleep(MIRROR_START_GRACE_MS);
+				}
+				return;
+			}
+			logger.info(
+				`Recreating ${MIRROR_CONTAINER_NAME} (auth=${desired.authEnabled}, host=${desired.publicHost ?? "internal"}); ${MIRROR_VOLUME} keeps its data.`,
+			);
+			await container.remove({ force: true });
+			await this.#createMirror(desired);
 		}
 
 		/**
@@ -172,12 +281,19 @@ export function DockerImageScanMixin<
 				await this.#createMirror();
 				return;
 			}
-			if (!info.Config?.Env?.includes(MIRROR_DELETE_ENV)) {
+			const desired = await this.registryDesiredState();
+			if (
+				!registryMatches(
+					info.Config?.Env ?? [],
+					info.Config?.Labels ?? {},
+					desired,
+				)
+			) {
 				logger.info(
-					`Recreating ${MIRROR_CONTAINER_NAME} with deletes enabled; ${MIRROR_VOLUME} keeps its data.`,
+					`Recreating ${MIRROR_CONTAINER_NAME} to match its settings; ${MIRROR_VOLUME} keeps its data.`,
 				);
 				await container.remove({ force: true });
-				await this.#createMirror();
+				await this.#createMirror(desired);
 				return;
 			}
 			if (!info.NetworkSettings?.Networks?.[config.docker.networkName]) {
@@ -360,22 +476,38 @@ export function DockerImageScanMixin<
 			await this.ensureImageMirror();
 			const refs = mirrorRefs(params.image, params.tag);
 			const auth = params.auth;
+			const mirrorAuth = await this.registryInternalAuth();
 			const command = skopeoCopyCommand({
+				destAuth: mirrorAuth !== null,
 				destination: refs.internalRef,
 				source: refs.sourceRef,
 				withAuth: auth !== undefined,
 			});
+			const authEntries = [
+				...(auth
+					? [
+							{
+								credentials: auth,
+								registry: normalizeImageRef(params.image, params.tag).registry,
+							},
+						]
+					: []),
+				...(mirrorAuth
+					? [
+							{
+								credentials: mirrorAuth,
+								registry: `${MIRROR_CONTAINER_NAME}:${MIRROR_INTERNAL_PORT}`,
+							},
+						]
+					: []),
+			];
 			const result = await this.runOneOff({
 				cmd: command.cmd,
 				entrypoint: command.entrypoint,
-				envVars: auth
-					? {
-							[REGISTRY_AUTH_ENV]: registryAuthFile(
-								normalizeImageRef(params.image, params.tag).registry,
-								auth,
-							),
-						}
-					: undefined,
+				envVars:
+					authEntries.length > 0
+						? { [REGISTRY_AUTH_ENV]: registryAuthFileFor(authEntries) }
+						: undefined,
 				image: SKOPEO_IMAGE,
 				networkName: config.docker.networkName,
 				tag: SKOPEO_TAG,
@@ -402,6 +534,7 @@ export function DockerImageScanMixin<
 			onProgress?: (line: string) => void,
 		): Promise<{ digest: string | null }> {
 			const pulled = await this.pullImage({
+				auth: (await this.registryInternalAuth()) ?? undefined,
 				image: refs.loopbackImage,
 				onProgress,
 				tag: refs.loopbackTag,
@@ -555,6 +688,9 @@ export function DockerImageScanMixin<
 		 * @throws When the scan times out or Trivy exits non-zero.
 		 */
 		async scanImage(params: ScanImageParams): Promise<TrivySummary> {
+			const auth = isMirrorRef(params.ref)
+				? ((await this.registryInternalAuth()) ?? params.auth)
+				: params.auth;
 			const binds = [`${TRIVY_CACHE_VOLUME}:/root/.cache`];
 			if (params.source.kind !== "remote") {
 				binds.push(`${await this.#hostSocketPath()}:/var/run/docker.sock`);
@@ -563,10 +699,10 @@ export function DockerImageScanMixin<
 			const result = await this.runOneOff({
 				binds,
 				cmd: trivyImageCommand(params.ref, params.source),
-				envVars: params.auth
+				envVars: auth
 					? {
-							TRIVY_PASSWORD: params.auth.password,
-							TRIVY_USERNAME: params.auth.username,
+							TRIVY_PASSWORD: auth.password,
+							TRIVY_USERNAME: auth.username,
 						}
 					: undefined,
 				image: TRIVY_IMAGE,

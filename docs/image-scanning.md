@@ -34,11 +34,16 @@ images are scanned once built: on the host for a local build, in the build cache
 registry (falling back to the host) for a build server with one, on the host for
 a build server without one.
 
+The same mirror can be turned into a real push/pull private registry, with its
+own tokens and an optional public hostname, see [Registry](registry.md).
+
 The mirror is garbage-collected every day at 04:00, and on demand from
-[Docker Cleanup](docker-cleanup.md#image-mirror). For every service it keeps the
-image the service currently points at, the digest its last successful deploy
-ran, and its last two scanned versions (so a rollback or a rescan still finds
-them); everything else goes, including images of deleted services.
+[Docker Cleanup](docker-cleanup.md#image-mirror) or the
+[Registry](registry.md#images) page's own **Collect garbage** button. For every
+service it keeps the image the service currently points at, the digest its last
+successful deploy ran, and its last two scanned versions (so a rollback or a
+rescan still finds them); everything else goes, including images of deleted
+services.
 
 The deploy log gets a summary line with counts per severity and the first few
 CRITICAL/HIGH findings. The service's **Security** tab shows the latest scan,

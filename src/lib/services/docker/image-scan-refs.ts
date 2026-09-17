@@ -19,6 +19,17 @@ export const MIRROR_STORAGE_DIR = "/var/lib/registry";
 export const MIRROR_REPOSITORIES_DIR = `${MIRROR_STORAGE_DIR}/docker/registry/v2/repositories`;
 export const MIRROR_CONFIG_PATH = "/etc/docker/registry/config.yml";
 
+export const MIRROR_AUTH_VOLUME = "homerun-registry-auth";
+export const MIRROR_AUTH_DIR = "/auth";
+export const MIRROR_AUTH_FILE = `${MIRROR_AUTH_DIR}/htpasswd`;
+export const MIRROR_AUTH_ENV = [
+	"REGISTRY_AUTH=htpasswd",
+	"REGISTRY_AUTH_HTPASSWD_REALM=Homerun registry",
+	`REGISTRY_AUTH_HTPASSWD_PATH=${MIRROR_AUTH_FILE}`,
+];
+export const MIRROR_ROUTER = "homerun-registry";
+export const REGISTRY_INTERNAL_USERNAME = "homerun-internal";
+
 const DOCKER_HUB = "docker.io";
 const DIGEST_RE = /sha256:[0-9a-f]{64}/g;
 
@@ -120,14 +131,40 @@ export function registryAuthFile(
 	registry: string,
 	credentials: RegistryCredentials,
 ): string {
-	const auth = Buffer.from(
-		`${credentials.username}:${credentials.password}`,
-	).toString("base64");
-	const keys =
-		registry === DOCKER_HUB ? [DOCKER_HUB, "index.docker.io"] : [registry];
-	return JSON.stringify({
-		auths: Object.fromEntries(keys.map((key) => [key, { auth }])),
-	});
+	return registryAuthFileFor([{ credentials, registry }]);
+}
+
+/**
+ * Builds a Docker-style `config.json` auth file covering several registries at
+ * once, for skopeo to read via `REGISTRY_AUTH_ENV`. A mirror copy needs exactly
+ * this when the built-in registry has auth on: one file authenticating both the
+ * upstream source and the mirror it's being written to.
+ */
+export function registryAuthFileFor(
+	entries: Array<{ credentials: RegistryCredentials; registry: string }>,
+): string {
+	const auths: Record<string, { auth: string }> = {};
+	for (const entry of entries) {
+		const auth = Buffer.from(
+			`${entry.credentials.username}:${entry.credentials.password}`,
+		).toString("base64");
+		const keys =
+			entry.registry === DOCKER_HUB
+				? [DOCKER_HUB, "index.docker.io"]
+				: [entry.registry];
+		for (const key of keys) {
+			auths[key] = { auth };
+		}
+	}
+	return JSON.stringify({ auths });
+}
+
+/** Whether `ref` addresses the built-in registry, by either of the two names it answers on. */
+export function isMirrorRef(ref: string): boolean {
+	return (
+		ref.startsWith(`${MIRROR_CONTAINER_NAME}:${MIRROR_INTERNAL_PORT}/`) ||
+		ref.startsWith(`127.0.0.1:${MIRROR_HOST_PORT}/`)
+	);
 }
 
 /**
@@ -140,6 +177,7 @@ export function registryAuthFile(
  */
 export function skopeoCopyCommand(input: {
 	destination: string;
+	destAuth?: boolean;
 	source: string;
 	withAuth: boolean;
 }): { cmd: string[]; entrypoint: string[] } {
@@ -151,11 +189,15 @@ export function skopeoCopyCommand(input: {
 		"/dev/stdout",
 	];
 	const refs = [`docker://${input.source}`, `docker://${input.destination}`];
-	if (!input.withAuth) {
+	if (!(input.withAuth || input.destAuth)) {
 		return { cmd: [...copy, ...refs], entrypoint: ["skopeo"] };
 	}
+	const authFlags = [
+		...(input.withAuth ? ["--src-authfile", "/tmp/auth.json"] : []),
+		...(input.destAuth ? ["--dest-authfile", "/tmp/auth.json"] : []),
+	];
 	return {
-		cmd: ["skopeo", ...copy, "--src-authfile", "/tmp/auth.json", ...refs],
+		cmd: ["skopeo", ...copy, ...authFlags, ...refs],
 		entrypoint: [
 			"sh",
 			"-c",

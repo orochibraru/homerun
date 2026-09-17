@@ -194,6 +194,9 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			pangolinTargetPort: null,
 			pendingServiceRedeploy: null,
 			preferredSignInMethods: null,
+			registryAuthEnabled: null,
+			registryInternalSecretEnc: null,
+			registryPublicHost: null,
 			requirePasskey: null,
 			requireTwoFactor: null,
 			retainedImagesPerService: null,
@@ -266,6 +269,20 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 
 	/** Persists the base domain and auth origin/cookie overrides. */
 	async updateCore(input: InstanceSettingsCoreInput): Promise<void> {
+		await this.persist(input);
+	}
+
+	/** Persists the built-in registry's own settings (auth, public hostname, internal token). */
+	async persistRegistry(
+		input: Partial<
+			Pick<
+				InstanceSettings,
+				| "registryAuthEnabled"
+				| "registryInternalSecretEnc"
+				| "registryPublicHost"
+			>
+		>,
+	): Promise<void> {
 		await this.persist(input);
 	}
 

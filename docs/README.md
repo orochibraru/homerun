@@ -97,6 +97,8 @@ sync by hand.
   Traefik, and restarting or updating Traefik.
 - **[Docker Cleanup](docker-cleanup.md)**: previewing and pruning what Docker
   can reclaim, and the image mirror cleanup.
+- **[Registry](registry.md)**: turning the image mirror into a real private
+  registry, push/pull tokens, and publishing it at a hostname.
 - **[Notifications](notifications.md)**: the bell, and sending events to
   Discord, Slack, Telegram, a webhook or email.
 - **[Status pages](status-pages.md)**: private or public uptime pages.

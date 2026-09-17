@@ -493,6 +493,32 @@ export const buildCacheRegistry = pgTable(
 	(table) => [index("buildCacheRegistry_userId_idx").on(table.userId)],
 );
 
+// Push/pull credentials for the built-in registry (the `homerun-mirror`
+// container, see services/docker/image-scan-refs.ts). Each row becomes one
+// bcrypt line in the registry's htpasswd file, which is the only auth
+// mechanism registry:2 supports without a separate token server : every
+// token can both push and pull, and revoking one means removing its line and
+// reloading the registry.
+export const registryToken = pgTable(
+	"registry_token",
+	{
+		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
+		id: text("id").primaryKey(),
+		lastUsedAt: timestamp("last_used_at", { mode: "date" }),
+		// bcrypt, the only hash registry:2's htpasswd auth accepts. The
+		// plaintext secret is shown once at creation and never stored.
+		secretHash: text("secret_hash").notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date" })
+			.$onUpdate(() => new Date())
+			.notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		username: text("username").notNull().unique(),
+	},
+	(table) => [index("registryToken_userId_idx").on(table.userId)],
+);
+
 // Singleton row (id is always "default") holding DB overrides for
 // instance-level config that otherwise defaults from env vars (see
 // $lib/config.ts's envDefaults + applyInstanceSettings()). Every column is
@@ -518,6 +544,17 @@ export const instanceSettings = pgTable("instance_settings", {
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 	dockerNetworkName: text("docker_network_name"),
 	dockerSocketPath: text("docker_socket_path"),
+	// The built-in registry's own settings. `registryAuthEnabled` turns on
+	// htpasswd auth (see the registry_token table); `registryPublicHost` is
+	// the hostname Traefik routes to it, null meaning it stays internal.
+	// Exposing it without auth is refused, so a public registry is always a
+	// closed one. `registryInternalSecretEnc` is the secret of the reserved
+	// token Homerun itself pulls and pushes with once auth is on, so its own
+	// scan pipeline keeps working : AES-256-GCM, same scheme as
+	// service.registryPasswordEnc.
+	registryAuthEnabled: boolean("registry_auth_enabled"),
+	registryInternalSecretEnc: text("registry_internal_secret_enc"),
+	registryPublicHost: text("registry_public_host"),
 	// {id, kind, name, baseUrl, clientId, clientSecretEnc, enabled}[] : OAuth
 	// App registrations for git-hosting providers (see the Git Providers
 	// page and $lib/services/git-provider.service.ts), separate from
@@ -1630,6 +1667,7 @@ export type CronJob = typeof cronJob.$inferSelect;
 export type CronJobRun = typeof cronJobRun.$inferSelect;
 export type RemoteHost = typeof remoteHost.$inferSelect;
 export type BuildCacheRegistry = typeof buildCacheRegistry.$inferSelect;
+export type RegistryToken = typeof registryToken.$inferSelect;
 export type AppLog = typeof appLog.$inferSelect;
 export type Notification = typeof notification.$inferSelect;
 export type StatSample = typeof statSample.$inferSelect;

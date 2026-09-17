@@ -340,6 +340,13 @@ export const SEARCH_PAGES: SearchPage[] = [
 	},
 	{
 		adminOnly: true,
+		href: "/registry",
+		keywords: ["registry", "images", "tokens", "push", "pull", "mirror"],
+		label: "Registry",
+		section: "Administration",
+	},
+	{
+		adminOnly: true,
 		href: "/docker-cleanup",
 		keywords: ["prune", "images", "disk"],
 		label: "Docker Cleanup",

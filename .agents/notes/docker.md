@@ -255,6 +255,48 @@ reordering the chain.
   (`ImageMirrorGcService.running`, on `globalThis`) makes `deployThroughMirror`
   fall back to a direct pull while GC runs; the handler also refuses to start
   while a deploy/image_scan job is running.
+- Registry (`/registry`, admin-only, sidebar under Administration): turns
+  `homerun-mirror` into a real push/pull registry rather than just a scan cache.
+  `RegistryService` (`$lib/services/registry.service.ts`) owns
+  `status()`/`authEnabled()`/`internalCredentials()`/`createToken()`/
+  `revokeToken()`/`setAuthEnabled()`/`setPublicHost()`/`syncAuth()`/`catalog()`/
+  `deleteTag()`/`deleteRepository()`. Tokens are `registry_token` rows
+  (`RegistryTokenDTO`, `$lib/dto/registry-token-dto.ts`): `username` plus a
+  bcrypt `secretHash` (`Bun.password.hash`, cost 10), the plaintext returned
+  only once from `createToken`. `syncAuth()` rewrites the htpasswd file
+  (`writeRegistryHtpasswd`, a one-off `alpine` container writing into the
+  `homerun-registry-auth` volume, since the app can't reach into another
+  container's volume directly) from every token plus a reserved
+  `homerun-internal` token (`REGISTRY_INTERNAL_USERNAME`, minted the moment auth
+  turns on and stored as `instance_settings.registryInternalSecretEnc`, same
+  AES-256-GCM scheme as `registryPasswordEnc`), then calls `reconcileRegistry`,
+  which diffs the container's env/labels against a `RegistryDesiredState`
+  (`docker/registry-container.ts`'s pure
+  `registryEnv`/`registryLabels`/`registryMatches`) and only recreates the
+  container, never the `homerun-mirror-data` volume, when they've actually
+  changed. `instance_settings.registryAuthEnabled`/`registryPublicHost` back the
+  Settings tab's toggle and Traefik hostname (router `homerun-registry`, no
+  buffering middleware since `docker push` streams whole layers);
+  `setAuthEnabled`/`setPublicHost` enforce the safety rule both ways, in the
+  service and not just the UI: auth can't turn off while `registryPublicHost` is
+  set, and a host can't be set while auth is off, so a registry reachable from
+  the internet always requires a token. Once auth is on,
+  `DockerImageScanMixin.registryInternalAuth()` (reads the same secret) is
+  threaded through every internal caller so none of them changed shape:
+  `copyToMirror`'s skopeo auth file gets a second entry via the renamed
+  `registryAuthFileFor` (now a list, `skopeoCopyCommand` gained a `destAuth`
+  flag), `pullFromMirror`'s daemon pull passes an authconfig, and `scanImage`
+  swaps in the same credentials whenever `params.ref` is `isMirrorRef`. The
+  Images tab's delete/garbage-collect actions go through the same
+  `MirrorRegistryClient`/`ImageMirrorGcService` as Docker Cleanup's "prune
+  mirror" above, same keep-set rules; a registry delete is by manifest digest,
+  so deleting one tag drops every other tag pointing at the same digest.
+  **Verified live**: a real `registry:2` with a Bun bcrypt htpasswd rejected an
+  anonymous request and a wrong password (401 both), accepted the right token,
+  and a real `docker login`/`docker push` landed in `/v2/_catalog`. **Not
+  verified**: a push through a published Traefik hostname with a real
+  certificate. Tests: `tests/unit/app/registry-container.test.ts`,
+  `tests/unit/app/registry-auth-file.test.ts`, `tests/e2e/ui-registry.spec.ts`.
 
 `src/lib/services/secrets.ts` (not under `docker/`, it's a generic AES-256-GCM
 utility, not Docker-specific, also used by SMTP/OAuth/S3-backup secrets),
@@ -654,6 +696,32 @@ data volume looking unused and `docker volume prune --all` took it. With a
 non-empty keep list the prune walks `docker.df()`'s unreferenced volumes
 (`prunableVolumes`, unit-tested in `tests/unit/app/docker-cleanup.test.ts`) and
 removes each one not kept, same shape as the image keep list above.
+
+## Registry (`/registry`, admin-only, `src/routes/(protected)/registry/`)
+
+Turns `homerun-mirror` (see the Registry bullet under Docker integration above)
+into a real push/pull-able private registry. Admin-only (nav item,
+Administration category), four tabs, one route each: bare `+page.svelte` =
+Images (the default), `tokens/`, `credentials/`, `settings/`.
+`+layout.server.ts` guards on `user.role !== "admin"` and loads
+`RegistryService.status()` once for every tab; `+layout.svelte` owns the
+`TabNav`.
+
+- **Images**: `catalog()` (repository/tag/digest, plus which `ServiceDTO`s
+  reference each repository, cross-referenced through
+  `mirrorRepository(image, tag)`) and its delete-tag/delete-repository/
+  garbage-collect form actions.
+- **Tokens**: `listTokens()`/`createToken()`/`revokeToken()`, with a one-time
+  `docker login` snippet shown on creation (`form.created`, never re-derivable,
+  the plaintext secret isn't stored).
+- **Credentials**: read-only, `BuildCacheRegistryDTO.list()` plus every
+  `ServiceDTO` with its own `registryUsername` set, each linking to where it's
+  actually edited (`/build-cache-registries` or the service's Source tab). No
+  storage of its own.
+- **Settings**: `status()`, `setAuthEnabled()`, `setPublicHost()`.
+
+See the Registry bullet under Docker integration above for `RegistryService`,
+the schema, and the container reconciliation this page drives.
 
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 

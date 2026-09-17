@@ -116,6 +116,15 @@ are dropped with a warning. See [Importing a compose file](compose-import.md).
 - **Changing your own verified email needs SMTP configured**, since the change
   is confirmed from the current address. Without SMTP, an admin can change it
   directly from `/users`. See [Your profile](your-profile.md).
+- **Every registry token can both push and pull.** The built-in registry's
+  htpasswd auth has no concept of scopes or read-only access without running a
+  separate token server, so there's no pull-only credential to hand out. See
+  [Registry](registry.md#tokens).
+- **Publishing the registry through a real Traefik hostname hasn't been pushed
+  to yet.** Only the container's own htpasswd auth was verified directly
+  (anonymous/wrong-password rejected, correct token accepted, a real
+  `docker push` landed in the catalogue); a push over a published hostname with
+  a real certificate is untested. See [Registry](registry.md#whats-verified).
 
 The live backlog is [`TODO.md`](../TODO.md).
 

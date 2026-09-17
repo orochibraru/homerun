@@ -2,6 +2,7 @@
 	import {
 		Activity,
 		BookOpen,
+		Boxes,
 		CalendarClock,
 		Clock,
 		CloudUpload,
@@ -215,6 +216,14 @@
 			href: resolve("/system-logs"),
 			icon: ScrollText,
 			label: "System Logs",
+		},
+		{
+			adminOnly: true,
+			category: "Administration",
+			exact: false,
+			href: resolve("/registry"),
+			icon: Boxes,
+			label: "Registry",
 		},
 		{
 			adminOnly: true,

@@ -121,6 +121,13 @@ repos:
         pass_filenames: false
         files: ^(src/|packages/|tests/unit/|bunfig\.toml$)
 
+      - id: lint-go
+        name: Lint (Go)
+        entry: golangci-lint run ./packages/...
+        language: system
+        pass_filenames: false
+        files: (^packages/.*\.go$|^go\.mod$|^\.golangci\.yml$)
+
       - id: test-go
         name: Unit Tests (Go)
         entry: go test ./packages/...

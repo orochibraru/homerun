@@ -72,7 +72,8 @@ Appearance preferences below for the per-user "single accent color" override):
   Authentication page below), **Settings** (admin-only), **System Logs**
   (admin-only: its `load` and the Traefik-log `GET` both 403/redirect a
   developer, it used to be readable by any signed-in user), **Docker Cleanup**
-  (admin-only, see below).
+  (admin-only, see below), **Registry** (admin-only, turns the image mirror into
+  a real push/pull registry, see Registry in `docker.md`).
 
 Not in the nav but real routes: `/profile/**` (reached from the profile menu,
 see Appearance preferences below), `/cli-auth` (the CLI device-code approval

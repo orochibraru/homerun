@@ -220,6 +220,9 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[Docker Cleanup](docs/docker-cleanup.md)**: admin-only
   `docker system df`/prune from the dashboard with a preview before anything
   goes, plus automatic garbage collection of the scan mirror
+- **[Registry](docs/registry.md)**: turn the internal image mirror into a real
+  private registry, `docker push` included, with push/pull tokens and an
+  optional public hostname through Traefik
 - **[`⌘K` search](docs/dashboard.md#search)**: jump to any page, or to anything
   on the instance, from anywhere
 - **[Appearance](docs/your-profile.md#appearance)**: light/dark/system theme,

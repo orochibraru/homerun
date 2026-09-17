@@ -300,6 +300,11 @@ OIDC provider in `auth.md`) plus:
 - `service_volume`, join table: one mount of one `storage_volume` into one
   `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by
   being mounted into more than one service, no separate stack-volume concept.
+- `registry_token` (`RegistryTokenDTO`), a push/pull credential for the built-in
+  registry (`homerun-mirror`, see Registry in `docker.md`): `username` (unique)
+  plus a bcrypt `secretHash` (`Bun.password.hash`), the only hash registry:2's
+  htpasswd auth accepts. The plaintext secret is returned once from
+  `RegistryService.createToken()` and never stored.
 - `instance_settings.onboardingCompletedAt`, nullable timestamp, non-null once
   the onboarding wizard (see Onboarding below) has run. Not part of the
   config-override merge in `config.ts`, it's onboarding-flow state, not an
@@ -340,6 +345,10 @@ OIDC provider in `auth.md`) plus:
   `pangolinApiBaseUrl`/`pangolinApiTokenEnc`/`pangolinOrgId`/
   `pangolinMainSiteName`/`pangolinTargetPort`, optional DNS automation, see DNS
   automation below.
+- `instance_settings.registryAuthEnabled`/`registryPublicHost`/
+  `registryInternalSecretEnc` (AES-256-GCM, same scheme as
+  `service.registryPasswordEnc`), the built-in registry's own auth toggle,
+  Traefik hostname and reserved internal token, see Registry in `docker.md`.
 - `user_preferences` (`UserPreferencesDTO`), one row per user, `userId` itself
   as the primary key (a genuine 1:1 extension of `user`, not a singleton like
   `instance_settings`): `theme` (`"light"` | `"dark"` | `"system"` default),

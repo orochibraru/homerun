@@ -336,6 +336,13 @@
 			"when": 1789656882052,
 			"tag": "0047_fearless_hex",
 			"breakpoints": true
+		},
+		{
+			"idx": 48,
+			"version": "7",
+			"when": 1789676707015,
+			"tag": "0048_elite_lilandra",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

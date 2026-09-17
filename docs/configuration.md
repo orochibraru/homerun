@@ -30,6 +30,8 @@ Sign-in methods, and the instance-wide two-factor and passkey requirements, live
 on their own **Authentication** page rather than a `/settings` tab, see
 [Authentication providers](authentication-providers.md). Git hosting accounts
 live on **Git Providers**, see [Connecting a git provider](git-providers.md).
+The built-in registry's own auth toggle and public hostname live on its own
+**Registry** page's Settings tab, see [Registry](registry.md#settings).
 Per-account preferences (theme, accent colour) live on your profile, not here.
 
 Secrets you enter here, SMTP passwords, OAuth client secrets, Cloudflare and
