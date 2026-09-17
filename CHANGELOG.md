@@ -1,3 +1,11 @@
+## [1.0.27](https://github.com/orochibraru/homerun/compare/v1.0.26...v1.0.27) (2026-09-17)
+
+### Features
+
+- swarm by default with rootful migration, readiness gate, BuildKit/Bake builds,
+  stable revisions list, copyable build logs
+  ([1ecadc1](https://github.com/orochibraru/homerun/commit/1ecadc1b09adffc50ff666822aed50a20bebda0f))
+
 ## [1.0.26](https://github.com/orochibraru/homerun/compare/v1.0.25...v1.0.26) (2026-09-17)
 
 ### Features
