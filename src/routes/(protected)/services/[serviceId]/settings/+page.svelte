@@ -211,9 +211,11 @@
         />
         <p class="text-text-subtle mt-1.5 text-xs">
           Runs inside the container through the shell every 30s, exit 0 means
-          healthy. Overrides the image's own healthcheck and drives this
-          service's uptime probe. Leave blank to keep the image's. Redeploy for
-          changes to take effect.
+          healthy. Overrides the image's own healthcheck, drives this service's
+          uptime probe and gates traffic: a new container or swarm task only
+          gets traffic once it passes. Leave blank to keep the image's; with
+          neither, Homerun waits for the port to be listening instead. Redeploy
+          for changes to take effect.
         </p>
         {#if errors?.healthcheckCommand}
           <p class={errorClass}>{errors.healthcheckCommand[0]}</p>

@@ -180,7 +180,7 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Newest first, at most 50: every deploy that reached running, with the exact image it ran. current marks the one running now, previous the default rollback target.",
+			"One entry per revision, newest first by when it was first deployed, from the last 50 deploys that reached running, with the exact image it ran. A rollback folds into the revision it redeployed (lastDeployedAt, latestDeploymentId, redeployCount) instead of adding an entry, so the order never changes. current marks the one running now, previous the default rollback target.",
 		method: "get",
 		path: "/services/{serviceId}/revisions",
 		pathParams: [{ description: "Service id", name: "serviceId" }],

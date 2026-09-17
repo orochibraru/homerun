@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Bell, CheckCheck, Trash2, X } from "@lucide/svelte";
 	import { resolve } from "$app/paths";
+	import { headerControlClass } from "$lib/components/header-styles";
 	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
@@ -33,9 +34,9 @@
   <div class="relative">
     <Popover.Trigger>
       {#snippet child({ props })}
-        <Button {...props} aria-label="Notifications" size="icon-sm" variant="ghost">
-          <Bell class="size-4" />
-        </Button>
+        <button {...props} aria-label="Notifications" class="{headerControlClass} w-8" type="button">
+          <Bell class="size-3.5" />
+        </button>
       {/snippet}
     </Popover.Trigger>
     {#if unreadCount > 0}

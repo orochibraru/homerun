@@ -553,15 +553,12 @@ export const instanceSettings = pgTable("instance_settings", {
 	onboardingCompletedAt: timestamp("onboarding_completed_at", {
 		mode: "date",
 	}),
-	// "standalone" (default, dockerode createContainer, one container per
-	// service, this app's original model) | "swarm" (dockerode
-	// createService against a Docker Swarm : replicas, rolling force-update
-	// restarts, overlay networking). Opt-in, off by default : same
-	// "background automation defaults inert" posture as autoscaling. The
-	// host's own daemon must already be swarm-active (`docker swarm init`,
-	// the admin's own one-time step, this app never runs that itself) before
-	// switching this on. See $lib/services/docker/swarm.ts.
+	// "standalone" (dockerode createContainer, one container per service) |
+	// "swarm" (dockerode createService : replicas, rolling updates, overlay
+	// networking). A fresh instance picks swarm when its daemon is already a
+	// rootful swarm manager, see hooks.server.ts and docker/swarm.ts.
 	orchestrationMode: text("orchestration_mode").$type<"standalone" | "swarm">(),
+	pendingServiceRedeploy: boolean("pending_service_redeploy"),
 	// Self-hosted Pangolin (https://api.pangolin.net/v1/docs/, a tunnel/
 	// reverse-proxy manager, not a plain DNS API) : an alternative to the
 	// Cloudflare integration above for instances that front themselves with

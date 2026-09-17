@@ -12,6 +12,10 @@ import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("InstanceSettings");
 
+export const load = async () => ({
+	swarmUnavailableReason: await DockerService.swarmModeUnavailableReason(),
+});
+
 export const actions = {
 	updateDocker: async ({ request, locals }) => {
 		if (!locals.user) {
@@ -98,17 +102,16 @@ export const actions = {
 		if (mode !== "standalone" && mode !== "swarm") {
 			return fail(400, { error: "Invalid orchestration mode." });
 		}
-		const settings = await InstanceSettingsDTO.get();
-		await settings.updateOrchestrationMode(mode);
-		logger.info(
-			`Orchestration mode updated: mode=${mode} user=${locals.user.id}`,
-		);
-
 		try {
 			const steps =
 				mode === "swarm"
 					? await DockerService.enableSwarmMode()
 					: await DockerService.disableSwarmMode();
+			const settings = await InstanceSettingsDTO.get();
+			await settings.updateOrchestrationMode(mode);
+			logger.info(
+				`Orchestration mode updated: mode=${mode} user=${locals.user.id}`,
+			);
 			return {
 				orchestrationSteps: steps,
 				savedSection: "orchestration",
@@ -118,7 +121,7 @@ export const actions = {
 			const detail = err instanceof Error ? err.message : String(err);
 			logger.error(`Applying orchestration mode failed: ${detail}`);
 			return fail(500, {
-				error: `Mode saved, but the host couldn't be prepared: ${detail}`,
+				error: `The host couldn't be prepared, so the mode wasn't changed: ${detail}`,
 			});
 		}
 	},

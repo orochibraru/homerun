@@ -69,7 +69,7 @@ function listQuery(args: ListArgs): Record<string, string> {
 	return query;
 }
 
-/** Flattens a revision into a table row, shortening the commit and digest and marking it current/previous and whether its image is still retained. */
+/** Flattens a revision into a table row, shortening the commit and digest, adding when it last went live, and marking it current/previous and whether its image is still retained. */
 export function revisionRow(revision: Revision): Record<string, string> {
 	let marker = "";
 	if (revision.current) {
@@ -84,6 +84,7 @@ export function revisionRow(revision: Revision): Record<string, string> {
 		health: revision.health ?? "",
 		id: revision.id,
 		image: revision.imageRef ?? "",
+		lastDeployedAt: revision.lastDeployedAt ?? "",
 		marker: revision.retained ? marker : `${marker} (not retained)`.trim(),
 	};
 }
@@ -171,7 +172,7 @@ class CliCommands {
 		Output.printJson(webhook);
 	}
 
-	/** Lists a service's deployed revisions as JSON or a table. Exits on an API error. */
+	/** Lists a service's deployed revisions, one row per revision with redeploys folded in, as JSON or a table. Exits on an API error. */
 	async revisionsList(
 		client: Client,
 		serviceId: string,
@@ -189,6 +190,7 @@ class CliCommands {
 		Output.printTable(revisions.map(revisionRow), [
 			"id",
 			"createdAt",
+			"lastDeployedAt",
 			"marker",
 			"health",
 			"image",

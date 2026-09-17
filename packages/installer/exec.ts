@@ -58,7 +58,7 @@ export class StepRunner {
 	/** Like `run`, but a non-zero exit is reported and swallowed rather than thrown : for idempotency checks ("does this user already exist?") where failure just means "not yet, keep going". */
 	async runOk(
 		cmd: string[],
-		opts?: { as?: string; cwd?: string },
+		opts?: { as?: string; cwd?: string; env?: Record<string, string> },
 	): Promise<boolean> {
 		try {
 			await this.run(cmd, opts);

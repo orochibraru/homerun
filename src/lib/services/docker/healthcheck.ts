@@ -9,6 +9,7 @@ export function dockerHealthcheck(command: string | null | undefined) {
 	return {
 		Interval: 30 * SECOND_NS,
 		Retries: 3,
+		StartInterval: SECOND_NS,
 		StartPeriod: 30 * SECOND_NS,
 		Test: ["CMD-SHELL", trimmed],
 		Timeout: 10 * SECOND_NS,

@@ -1,10 +1,13 @@
 # Homerun installer
 
-Single-command server setup: Docker Engine, a dedicated **rootless** Docker
-user, the `homerun` Docker network, and either the Homerun Agent or the full
-Homerun stack (Traefik + Postgres + the app itself), entirely from prebuilt
-release binaries and Docker images. Nothing is built from source, and neither
-Bun nor `git` need to exist on the target host at any point.
+Single-command server setup: Docker Engine, a dedicated `homerun` user, the
+Docker networks, and either the Homerun Agent or the full Homerun stack
+(Traefik + Postgres + the app itself), entirely from prebuilt release binaries
+and Docker images. Nothing is built from source, and neither Bun nor `git` need
+to exist on the target host at any point. The full stack runs on the **system
+(rootful)** Docker daemon as a swarm manager by default, so the instance starts
+in swarm mode; `--docker=rootless` keeps the older rootless, standalone-only
+setup, and `--migrate-to-rootful` moves such an install over.
 
 ## The one-liner
 
@@ -37,49 +40,137 @@ is documented in
 
 ## What it does
 
-1. Installs Docker Engine (the official `get.docker.com` convenience script)
-   plus `uidmap`/`dbus-user-session`, the host-level prerequisites rootless
-   Docker's subuid/subgid mapping needs.
+`--mode=full` (the default daemon, `--docker=rootful`):
+
+1. Installs Docker Engine (the official `get.docker.com` convenience script) and
+   enables the system daemon (`systemctl enable --now docker`).
 2. Creates a dedicated system user (`--user=`, default `homerun`) if one doesn't
-   already exist.
+   already exist; it owns `/home/<user>/homerun/`, where the compose files live.
+3. Makes the daemon a swarm manager: `docker swarm init --advertise-addr <ip>`,
+   the address being `--advertise-addr=` or the source address of the host's
+   default route (passed explicitly because `docker swarm init` refuses to guess
+   on a host with several interfaces, "could not choose an IP address to
+   advertise"). A host that's already a manager is left alone, a worker in
+   another swarm is refused.
+4. Creates the `homerun` bridge network (the app, Postgres, Traefik and
+   standalone containers) and the attachable `homerun-swarm` overlay, the same
+   name and shape the app's own `ensureSwarmNetwork` uses
+   (`<networkName>-swarm`), so Traefik's compose container can join it.
+5. Writes `compose.yaml` under `/home/<user>/homerun/` (see
+   `steps/full-stack.ts`) and runs `docker compose pull && ...up -d` as root.
+   Traefik mounts `/var/run/docker.sock`, joins both networks and runs both
+   providers, its command ending in exactly the `--providers.swarm=true`,
+   `--providers.swarm.exposedByDefault=false`,
+   `--providers.swarm.network=homerun-swarm` flags the app's `enableSwarmMode`
+   applies, so the app's boot-time check finds nothing to change and never
+   recreates Traefik. The app gets `DOCKER_SOCKET_PATH: /var/run/docker.sock`.
+
+The app picks swarm mode on its own the first time it boots against a fresh
+database on a rootful swarm manager (see `OrchestrationService.applyOnBoot`);
+nothing is seeded by the installer, and an existing database keeps its mode.
+
+The trade-off: the Docker daemon runs as root, so anything that reaches its
+socket, the app included, is root on the host.
+
+`--docker=rootless` (`--mode=full`) and `--mode=agent`:
+
+1. Installs Docker Engine plus `uidmap`/`dbus-user-session`, the host-level
+   prerequisites rootless Docker's subuid/subgid mapping needs.
+2. Creates the dedicated user.
 3. Installs **rootless** Docker for that user via Docker's own documented flow
    (`get.docker.com/rootless` → `dockerd-rootless-setuptool.sh`), enables
    `loginctl enable-linger` so the daemon survives without an active login
-   session, and starts it as a `systemd --user` service. Every container this
-   installer (or the agent it installs) creates runs under this account's
-   rootless permissions, never as root.
+   session, and starts it as a `systemd --user` service. Every container runs
+   under this account's rootless permissions, never as root.
 4. Creates the `homerun` Docker network on that rootless daemon.
-5. `--mode=agent` (default): downloads the prebuilt `homerun-agent-<arch>`
-   release binary straight to `/usr/local/bin/homerun-agent` and runs it as a
-   `systemd --user` unit under the rootless account, pointed at the rootless
-   socket. `--mode=full`: instead writes a standalone `compose.yaml` under
-   `/home/<user>/homerun/` (Traefik + Postgres + the published
-   `docker.io/orochibraru/homerun` app image, see `steps/full-stack.ts`) and
-   runs `docker compose pull && ...up -d` against it under that same
-   account/daemon. Either way, every artifact involved is something CI already
-   published (see Release automation in
-   `.agents/notes/packages-and-release.md`), this installer's own job is wiring
-   rootless Docker up and pulling the right thing into it, not building
-   anything.
+5. `--mode=agent` (the default mode): downloads the prebuilt
+   `homerun-agent-<arch>` release binary straight to
+   `/usr/local/bin/homerun-agent` and runs it as a `systemd --user` unit under
+   the rootless account, pointed at the rootless socket. The agent always gets a
+   rootless daemon, `--docker=` doesn't apply to it.
+   `--mode=full --docker=rootless`: writes the same compose file without the
+   swarm provider or the overlay, pointed at the rootless socket, and runs
+   compose as that user. The app starts in standalone mode there, and Settings →
+   Docker shows swarm as unavailable with the reason.
+
+Either way, every artifact involved is something CI already published (see
+Release automation in `.agents/notes/packages-and-release.md`); this installer's
+own job is wiring Docker up and pulling the right thing into it, not building
+anything.
 
 ## Flags
 
 See `--help`. Notable ones: `--version=` (a release tag like `v1.2.3`, default
 `latest`), `--mode=agent|full`, `--domain=` (the domain or IP this instance is
-reached at, see below), `--user=` (rootless account name), `--port=` (agent
-port), `--dry-run` (prints every command instead of running it, see below),
+reached at, see below), `--docker=rootful|rootless` (`--mode=full` only, default
+`rootful`), `--advertise-addr=` (rootful only), `--migrate-to-rootful` (see
+below), `--image=` (run another app image, e.g. a locally loaded build; its pull
+failing is tolerated), `--user=` (install account name), `--port=` (agent port),
+`--dry-run` (prints every command instead of running it, see below),
 `--yes`/`-y` (no confirmation prompt, needed for a non-interactive
-`curl | bash`), `--docker=rootless|rootful` (`--mode=full` only, see below).
+`curl | bash`).
 
-`--docker=rootful` skips step 3 above and runs the `--mode=full` stack on the
-system Docker daemon (`/var/run/docker.sock`, compose run as root) instead of
-the rootless one. [Swarm mode](../../docs/services.md#swarm-mode) needs it:
-rootless Docker can't create overlay networks. Verified live on a Multipass VM:
-on a rootless install, switching to Swarm left the daemon failing the overlay
-attach with "context deadline exceeded" and the task with
+Why rootful is the default: [swarm mode](../../docs/services.md#swarm-mode)
+can't run on rootless Docker. Verified live on a Multipass VM: on a rootless
+install, switching to Swarm left the daemon failing the overlay attach with
+"context deadline exceeded" and the task with
 `mkdir /var/lib/docker/network: permission denied`; the same stack on the system
 daemon initialised the swarm, attached Traefik and served replicas from a second
-node. The dashboard now refuses Swarm up front on a rootless daemon.
+node. The dashboard refuses Swarm up front on a rootless daemon.
+
+## Migrating a rootless install (`--migrate-to-rootful`)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
+  | sudo bash -s -- --migrate-to-rootful --yes
+```
+
+For a `--mode=full` install made rootless (the default before swarm was),
+`steps/migrate-rootful.ts`:
+
+1. Enables the system daemon (installing Docker Engine if it's missing).
+2. Starts the rootless daemon if it isn't running, records what's on it, and
+   stops every running container (the stack, every service, the registry mirror,
+   anything else).
+3. Copies every named volume (anonymous ones are skipped) to a same-named volume
+   on the system daemon, labels and driver options included so compose still
+   owns its own. Data streams through `tar --numeric-owner` in an `alpine:3`
+   container on each side, so ownership is what the containers saw (Postgres'
+   uid 70 stays 70), not the subuid it was stored under on disk. A `local`
+   volume with a `device` option is recreated without copying.
+4. Makes the system daemon a swarm manager and creates both networks.
+5. Keeps the old compose file as `compose.rootless.yaml`, points
+   `homerun.yaml`'s `socketPath` at `/var/run/docker.sock`, and writes and
+   starts the rootful + swarm compose file. `.env` is kept as is. The address
+   comes from `--domain=`, else the old compose file's `ORIGIN` default, else
+   `homerun.yaml`'s `baseDomain`, else detection.
+6. Waits for the app, then in Postgres sets `orchestration_mode = 'swarm'`,
+   `pending_service_redeploy = true` and clears a `/run/user/...` socket
+   override, and restarts the app. On boot the app queues a redeploy of every
+   deployed service under the first admin, and they come back as swarm services.
+7. Disables the rootless daemon (`systemctl --user disable --now docker`),
+   leaving its data in `~homerun/.local/share/docker`, and prints the commands
+   that remove it, the containers it didn't move (not the stack, not a Homerun
+   service) and the host paths services bind-mount (their files keep the
+   ownership the subuid mapping gave them).
+
+**Verified** on disposable Multipass Ubuntu 24.04 VMs
+(`bun run e2e:multipass --fresh-swarm --migrate --local-image`): a default
+`--mode=full` install booted in swarm mode with no settings change and Traefik
+served a 2-replica service from both replicas; a real v1.0.26 rootless install
+with an nginx service whose named volume held a marker file (uid 101) was
+migrated, after which the admin user and service rows were intact, the instance
+was in swarm mode, the service had been redeployed as a swarm service on its
+own, the marker was still owned by 101:101 and served through Traefik, and the
+rootless daemon was stopped. A second run of the same command skipped every
+finished step and left the running service alone. That run found that every
+swarm mount used to be `Type: bind`, so a service with a named volume couldn't
+deploy in swarm mode at all (fixed in the app's `swarmMount`).
+
+Re-running after a failure is safe: `/home/<user>/homerun/.rootful-migration/`
+records the volume list, each finished copy and the instance switch, and a
+re-run redoes only what's missing (a half-copied volume is removed and copied
+again, the redeploy is never queued twice).
 
 `--mode=full` needs to know **where this instance will be reached**, and it is
 never allowed to be `localhost`. `--domain=` sets it outright (a full URL is
@@ -97,9 +188,10 @@ an insecure default (the installer itself generates this automatically into
 `.env`, this only matters if running the compose file standalone, outside the
 installer). Put it (and anything else you want to override, `POSTGRES_PASSWORD`,
 `ORIGIN`, `ACME_EMAIL`) in a `.env` file next to that `compose.yaml`, then
-`docker compose -f compose.yaml up -d` as the rootless user. Set `ORIGIN` there
-if the instance moves to another address after install (the compose file's own
-default is whatever `--domain=`/detection resolved to). Getting it wrong is not
+`sudo docker compose -f compose.yaml up -d` (as the rootless user with its
+`DOCKER_HOST` on a `--docker=rootless` install). Set `ORIGIN` there if the
+instance moves to another address after install (the compose file's own default
+is whatever `--domain=`/detection resolved to). Getting it wrong is not
 cosmetic, real, reported finding: better-auth's trusted origins are derived from
 `ORIGIN` alone, so a stale one makes every sign-in and the very first sign-up
 403 with "Invalid origin" from the address you are actually using, and absolute
@@ -113,9 +205,9 @@ next to `compose.yaml`, or on `/settings`.
 Separate script, not part of the TypeScript installer above: joins this host to
 an existing Homerun swarm as a worker, on the **system (rootful)** Docker
 daemon, then installs the Homerun Agent by downloading the installer binary and
-running it with `--mode=agent`. The manager has to be on the system daemon too
-(`--docker=rootful`, see Flags): rootless Docker can't create the overlay
-networks swarm services join.
+running it with `--mode=agent`. The manager is on the system daemon too (the
+`--mode=full` default): rootless Docker can't create the overlay networks swarm
+services join.
 
 Get the join token and manager address from the swarm manager itself first:
 
@@ -160,10 +252,10 @@ endpoint reachable on the worker. That run found and fixed:
    is now skipped when present, the binary is downloaded next to its target and
    renamed over it, and the agent unit is restarted rather than only started.
 
-`bun run e2e:multipass --swarm` replays this scenario (manager install, swarm
-switch, `swarm-join.sh` on a second VM, replicated deploy, Traefik check). It
-runs the local script and installer, but the agent on the worker comes from the
-latest published release.
+`bun run e2e:multipass --swarm` replays this scenario (default manager install,
+swarm switch, `swarm-join.sh` on a second VM, replicated deploy, Traefik check).
+It runs the local script and installer, but the agent on the worker comes from
+the latest published release.
 
 ## Building the installer itself to a binary
 

@@ -59,7 +59,7 @@ export function DockerSwarmRolloutMixin<
 			);
 			onProgress?.(
 				order === "start-first"
-					? "Updating the swarm service : new tasks start and pass their healthcheck before the old ones stop..."
+					? "Updating the swarm service : each new task starts first, and swarm stops the old one once the new one is running (healthy, when it has a healthcheck)..."
 					: "Updating the swarm service : a writable volume means each old task stops before its replacement starts...",
 			);
 			await service.update({
@@ -83,7 +83,9 @@ export function DockerSwarmRolloutMixin<
 				swarmServiceId,
 				inspected.UpdateStatus?.StartedAt ?? null,
 			);
-			onProgress?.("Swarm finished rolling out the new tasks.");
+			onProgress?.(
+				"Swarm finished rolling out the new tasks; Traefik picks them up on its next swarm poll (every 15s by default).",
+			);
 			logger.info(`Swarm service updated in place: id=${swarmServiceId}`);
 			return { swarmServiceId };
 		}

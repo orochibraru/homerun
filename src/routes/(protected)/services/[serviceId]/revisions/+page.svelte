@@ -18,11 +18,20 @@
 
 	onMount(() => title.set(`${data.service.name} · Revisions`));
 
-	let expandedDeploymentId = $state<string | null>(
-		untrack(() => page.url.searchParams.get("deployment")),
+	let expandedRevisionId = $state<string | null>(
+		untrack(() => {
+			const deploymentId = page.url.searchParams.get("deployment");
+			return (
+				data.revisions.find(
+					(revision) =>
+						revision.id === deploymentId ||
+						revision.latestDeploymentId === deploymentId,
+				)?.id ?? null
+			);
+		}),
 	);
 	let confirmOpen = $state(false);
-	let pendingRevision = $state<(typeof data.deployments)[number] | null>(null);
+	let pendingRevision = $state<(typeof data.revisions)[number] | null>(null);
 	let revisionForm = $state<HTMLFormElement | null>(null);
 	let deploying = $state(false);
 	let restoreConfig = $state(false);
@@ -51,20 +60,8 @@
 		return `${url.replace(/\.git$/, "").replace(/\/$/, "")}/commit/${commit}`;
 	}
 
-	function isRevision(dep: (typeof data.deployments)[number]): boolean {
-		return (
-			Boolean(dep.imageRef) &&
-			(dep.status === "running" || dep.status === "stopped")
-		);
-	}
-
-	function rollbackLabel(id: string): string {
-		const target = data.deployments.find((dep) => dep.id === id);
-		return target?.imageRef ?? id.slice(0, 8);
-	}
-
-	function askDeploy(dep: (typeof data.deployments)[number]) {
-		pendingRevision = dep;
+	function askDeploy(revision: (typeof data.revisions)[number]) {
+		pendingRevision = revision;
 		restoreConfig = false;
 		confirmOpen = true;
 	}
@@ -79,7 +76,7 @@
         </p>
     </div>
 
-    {#if data.deployments.length === 0}
+    {#if data.revisions.length === 0}
         <div
             class="flex flex-col items-center justify-center py-12 text-center"
         >
@@ -89,40 +86,40 @@
         </div>
     {:else}
         <div class="divide-border divide-y">
-            {#each data.deployments as dep (dep.id)}
+            {#each data.revisions as revision (revision.id)}
                 <div>
                     <div class="flex w-full items-center gap-4 px-5 py-3">
                         <button
                             class="flex min-w-0 flex-1 items-center gap-4 text-left"
                             onclick={() => {
-                                expandedDeploymentId =
-                                    expandedDeploymentId === dep.id ? null : dep.id;
+                                expandedRevisionId =
+                                    expandedRevisionId === revision.id ? null : revision.id;
                             }}
                             type="button"
                         >
-                            <StatusBadge status={dep.status} />
+                            <StatusBadge status={revision.status} />
                             <div class="min-w-0 flex-1">
                                 <p class="text-text flex flex-wrap items-center gap-2 truncate text-xs font-medium">
                                     <span class="truncate">
-                                        {dep.imageRef ?? `${data.service.image}:${data.service.tag}`}
+                                        {revision.imageRef ?? `${data.service.image}:${data.service.tag}`}
                                     </span>
-                                    {#if dep.current}
+                                    {#if revision.current}
                                         <span class="border-accent/40 text-accent rounded-sm border px-1.5 py-px text-[0.625rem] font-semibold tracking-[0.08em] uppercase">
                                             Current
                                         </span>
                                     {/if}
-                                    {#if dep.health}
-                                        <span class="rounded-sm border px-1.5 py-px text-[0.625rem] font-semibold tracking-[0.08em] uppercase {HEALTH_LABELS[dep.health].class}">
-                                            {HEALTH_LABELS[dep.health].label}
+                                    {#if revision.health}
+                                        <span class="rounded-sm border px-1.5 py-px text-[0.625rem] font-semibold tracking-[0.08em] uppercase {HEALTH_LABELS[revision.health].class}">
+                                            {HEALTH_LABELS[revision.health].label}
                                         </span>
                                     {/if}
-                                    {#if dep.startedAt && dep.finishedAt}
+                                    {#if revision.startedAt && revision.finishedAt}
                                         <span class="text-text-subtle font-normal">
                                             took {Math.max(
                                                 1,
                                                 Math.round(
-                                                    (new Date(dep.finishedAt).getTime() -
-                                                        new Date(dep.startedAt).getTime()) /
+                                                    (new Date(revision.finishedAt).getTime() -
+                                                        new Date(revision.startedAt).getTime()) /
                                                         1000,
                                                 ),
                                             )}s
@@ -130,55 +127,55 @@
                                     {/if}
                                 </p>
                                 <p class="text-text-muted truncate text-xs">
-                                    {timeAgo(dep.createdAt)}
-                                    {#if dep.imageDigest}
-                                        · {dep.imageDigest.slice(0, 19)}
+                                    deployed {timeAgo(revision.createdAt)}
+                                    {#if revision.redeployCount > 0 && revision.lastDeployedAt}
+                                        · redeployed {timeAgo(revision.lastDeployedAt)}
                                     {/if}
-                                    {#if dep.gitCommit}
+                                    {#if revision.imageDigest}
+                                        · {revision.imageDigest.slice(0, 19)}
+                                    {/if}
+                                    {#if revision.gitCommit}
                                         ·
-                                        {#if commitHref(dep.gitCommit)}
+                                        {#if commitHref(revision.gitCommit)}
                                             <a
                                                 class="text-accent underline"
-                                                href={commitHref(dep.gitCommit)}
+                                                href={commitHref(revision.gitCommit)}
                                                 rel="noreferrer"
                                                 target="_blank"
                                             >
-                                                {dep.gitRef ? `${dep.gitRef}@` : ""}{dep.gitCommit.slice(0, 7)}
+                                                {revision.gitRef ? `${revision.gitRef}@` : ""}{revision.gitCommit.slice(0, 7)}
                                             </a>
                                         {:else}
-                                            {dep.gitRef ? `${dep.gitRef}@` : ""}{dep.gitCommit.slice(0, 7)}
+                                            {revision.gitRef ? `${revision.gitRef}@` : ""}{revision.gitCommit.slice(0, 7)}
                                         {/if}
                                     {/if}
-                                    {#if dep.rollbackOfDeploymentId}
-                                        · rollback to {rollbackLabel(dep.rollbackOfDeploymentId)}
-                                    {/if}
-                                    {#if isRevision(dep) && !dep.retained}
+                                    {#if revision.deployable && !revision.retained}
                                         · image not retained
                                     {/if}
                                 </p>
-                                {#if dep.errorMessage}
+                                {#if revision.errorMessage}
                                     <p class="mt-0.5 truncate text-xs text-red-500">
-                                        {dep.errorMessage}
+                                        {revision.errorMessage}
                                     </p>
                                 {/if}
                             </div>
-                            {#if dep.log}
+                            {#if revision.log}
                                 <ChevronDown
                                     class="
-                      text-text-muted size-4 shrink-0 transition-transform {expandedDeploymentId ===
-                                    dep.id
+                      text-text-muted size-4 shrink-0 transition-transform {expandedRevisionId ===
+                                    revision.id
                                         ? 'rotate-180'
                                         : ''}
                    "
                                 />
                             {/if}
                         </button>
-                        {#if isRevision(dep) && !dep.current}
+                        {#if revision.deployable && !revision.current}
                             <Button
-                                aria-label="Deploy revision {dep.imageRef}"
+                                aria-label="Deploy revision {revision.imageRef}"
                                 class="shrink-0"
                                 disabled={deploying}
-                                onclick={() => askDeploy(dep)}
+                                onclick={() => askDeploy(revision)}
                                 size="sm"
                                 type="button"
                                 variant="outline"
@@ -188,8 +185,8 @@
                             </Button>
                         {/if}
                     </div>
-                    {#if expandedDeploymentId === dep.id && dep.log}
-                        <DeployLogPanel errorMessage={dep.errorMessage} log={dep.log} />
+                    {#if expandedRevisionId === revision.id && revision.log}
+                        <DeployLogPanel errorMessage={revision.errorMessage} log={revision.log} />
                     {/if}
                 </div>
             {/each}

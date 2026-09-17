@@ -2,13 +2,18 @@ import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
 import type { BaseDockerService, Constructor } from "./base.ts";
+import type { ReadinessPlanInput } from "./container-rollout.ts";
 import type {
 	PullImageParams,
 	RegistryAuth,
 	VolumeMountParams,
 } from "./containers.ts";
-import { dockerHealthcheck } from "./healthcheck.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
+import {
+	type ReadinessCheck,
+	readinessHealthcheck,
+	readinessLabels,
+} from "./readiness.ts";
 import {
 	type ContainerRuntimeParams,
 	capabilityName,
@@ -45,8 +50,89 @@ export function isRootlessDaemon(
 	);
 }
 
+/**
+ * Why swarm mode can't run on the daemon `docker info` describes, or null
+ * when it can. A rootless daemon can't create the overlay network a swarm
+ * service joins.
+ */
+export function swarmUnavailableReason(
+	securityOptions: string[] | undefined,
+): string | null {
+	if (!isRootlessDaemon(securityOptions)) {
+		return null;
+	}
+	return "This Docker daemon runs rootless, and rootless Docker can't create the overlay networks swarm services need. Move Homerun onto the system (rootful) daemon first: sudo homerun-installer --migrate-to-rootful.";
+}
+
+/**
+ * The orchestration mode a brand new instance starts in: swarm when this
+ * daemon is already a swarm manager and isn't rootless (what the default
+ * installer sets up), standalone otherwise.
+ */
+export function initialOrchestrationMode(info: {
+	SecurityOptions?: string[];
+	Swarm?: { ControlAvailable?: boolean; LocalNodeState?: string };
+}): "standalone" | "swarm" {
+	const manager =
+		info.Swarm?.LocalNodeState === "active" &&
+		info.Swarm.ControlAvailable === true;
+	return manager && swarmUnavailableReason(info.SecurityOptions) === null
+		? "swarm"
+		: "standalone";
+}
+
+/**
+ * A service volume as a swarm mount: an absolute source is a bind mount of
+ * that host path, anything else is a named volume, the same rule Docker's
+ * `Binds` syntax applies to a standalone container.
+ */
+export function swarmMount(volume: VolumeMountParams): {
+	ReadOnly: boolean;
+	Source: string;
+	Target: string;
+	Type: "bind" | "volume";
+} {
+	return {
+		ReadOnly: volume.readOnly,
+		Source: volume.source,
+		Target: volume.containerPath,
+		Type: volume.source.startsWith("/") ? "bind" : "volume",
+	};
+}
+
+/**
+ * The networks a swarm service's tasks attach to: the host's own network
+ * stack for host networking, otherwise the shared overlay with the slug as
+ * an alias, so other services reach it at `http://<slug>:<port>` the same
+ * way they reach a standalone container.
+ */
+export function swarmNetworksFor(
+	networkMode: "bridge" | "host" | undefined,
+	overlay: string,
+	slug: string,
+): { Aliases?: string[]; Target: string }[] {
+	if (networkMode === "host") {
+		return [{ Target: "host" }];
+	}
+	return [{ Aliases: [slug], Target: overlay }];
+}
+
+/** Swarm's restart conditions for this app's restart policy values: "no" never restarts, "on-failure" only after a non-zero exit, anything else always. */
+export function swarmRestartCondition(
+	restartPolicy: string,
+): "any" | "none" | "on-failure" {
+	if (restartPolicy === "no") {
+		return "none";
+	}
+	return restartPolicy === "on-failure" ? "on-failure" : "any";
+}
+
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pullImage and the swarm rollout mixin. */
 interface RequiresContainerMixin {
+	planReadiness: (
+		input: ReadinessPlanInput,
+		onProgress?: (line: string) => void,
+	) => Promise<ReadinessCheck>;
 	rollOutSwarmService: (
 		swarmServiceId: string,
 		spec: SwarmServiceSpec,
@@ -72,6 +158,7 @@ export interface CreateSwarmServiceParams {
 	envVars: Record<string, string>;
 	image: string;
 	memoryLimitMb?: number | null;
+	networkMode?: "bridge" | "host";
 	portProtocol?: "tcp" | "udp" | "both";
 	healthcheckCommand?: string | null;
 	runtime?: ContainerRuntimeParams;
@@ -119,11 +206,34 @@ export function DockerSwarmMixin<
 		 */
 		async assertSwarmCapableDaemon(): Promise<void> {
 			const info = await this.getDocker().info();
-			if (isRootlessDaemon(info?.SecurityOptions)) {
-				throw new Error(
-					"This Docker daemon runs rootless, and rootless Docker can't create the overlay networks swarm services need. Run Homerun on the system (rootful) daemon to use swarm mode: reinstall with --docker=rootful.",
-				);
+			const reason = swarmUnavailableReason(info?.SecurityOptions);
+			if (reason) {
+				throw new Error(reason);
 			}
+		}
+
+		/**
+		 * Why swarm mode can't be switched on for this daemon, for the settings
+		 * page to show before anyone submits. Null when it can, and also when
+		 * the daemon can't be reached, since that isn't a reason to refuse.
+		 */
+		async swarmModeUnavailableReason(): Promise<string | null> {
+			const info = await this.getDocker()
+				.info()
+				.catch(() => null);
+			return info ? swarmUnavailableReason(info.SecurityOptions) : null;
+		}
+
+		/**
+		 * The mode a fresh instance should start in, from the live daemon (see
+		 * `initialOrchestrationMode`). Standalone when the daemon can't be
+		 * reached.
+		 */
+		async detectInitialOrchestrationMode(): Promise<"standalone" | "swarm"> {
+			const info = await this.getDocker()
+				.info()
+				.catch(() => null);
+			return info ? initialOrchestrationMode(info) : "standalone";
 		}
 
 		/**
@@ -221,8 +331,11 @@ export function DockerSwarmMixin<
 			}
 		}
 
-		/** Builds the dockerode `TaskTemplate` for a swarm service from its create params: env, healthcheck, image, labels, bind mounts, the shared overlay network, resource limits, and restart condition. */
-		#taskTemplateFor(params: CreateSwarmServiceParams) {
+		/** Builds the dockerode `TaskTemplate` for a swarm service from its create params: env, healthcheck, image, labels, bind and named-volume mounts, its networks (`swarmNetworksFor`), resource limits, and restart condition. */
+		#taskTemplateFor(
+			params: CreateSwarmServiceParams,
+			readiness: ReadinessCheck,
+		) {
 			return {
 				ContainerSpec: {
 					Args: params.runtime?.command ?? undefined,
@@ -231,20 +344,23 @@ export function DockerSwarmMixin<
 						: undefined,
 					Command: params.runtime?.entrypoint ?? undefined,
 					Env: Object.entries(params.envVars).map(([k, v]) => `${k}=${v}`),
-					Healthcheck: dockerHealthcheck(params.healthcheckCommand),
+					Healthcheck: readinessHealthcheck(
+						readiness,
+						params.healthcheckCommand,
+					),
 					Image: `${params.image}:${params.tag}`,
 					Labels: mergeLabels(params.runtime?.labels, {
 						[SERVICE_ID_LABEL]: params.serviceId,
 						"homerun.managed": "true",
+						...readinessLabels(readiness),
 					}),
-					Mounts: (params.volumes ?? []).map((v) => ({
-						ReadOnly: v.readOnly ?? false,
-						Source: v.source,
-						Target: v.containerPath,
-						Type: "bind" as const,
-					})),
+					Mounts: (params.volumes ?? []).map(swarmMount),
 				},
-				Networks: [{ Target: swarmNetworkName() }],
+				Networks: swarmNetworksFor(
+					params.networkMode,
+					swarmNetworkName(),
+					params.slug,
+				),
 				Resources: {
 					Limits: {
 						MemoryBytes: params.memoryLimitMb
@@ -256,7 +372,7 @@ export function DockerSwarmMixin<
 					},
 				},
 				RestartPolicy: {
-					Condition: params.restartPolicy === "no" ? "none" : "any",
+					Condition: swarmRestartCondition(params.restartPolicy),
 				},
 			};
 		}
@@ -267,7 +383,8 @@ export function DockerSwarmMixin<
 		 * pre-pulls the image (`#prePullImage`), then either rolls the existing
 		 * swarm service for this service id (found by label, see
 		 * `#findSwarmService`) onto the new spec in place, health-gated
-		 * (`rollOutSwarmService`), or creates it. Reports progress via
+		 * (`rollOutSwarmService`, with the readiness check `planReadiness`
+		 * picks), or creates it. Reports progress via
 		 * `onProgress`.
 		 *
 		 * @throws When the Docker create-service call fails, or
@@ -288,13 +405,25 @@ export function DockerSwarmMixin<
 					"Swarm services can't run privileged or map devices : those settings are ignored under swarm mode.",
 				);
 			}
+			for (const line of await this.#multiNodeWarnings(params)) {
+				onProgress?.(line);
+			}
+			const readiness = await this.planReadiness(
+				{
+					...params,
+					image: `${params.image}:${params.tag}`,
+					workload: "task",
+				},
+				onProgress,
+			);
 			const spec = {
 				Labels: mergeLabels(
 					params.runtime?.labels,
 					buildContainerLabels({
 						containerPort: params.containerPort,
 						customDomain: params.customDomain,
-						dnsResolvable: params.dnsResolvable,
+						dnsResolvable:
+							params.networkMode === "host" ? false : params.dnsResolvable,
 						networkName: swarmNetworkName(),
 						stackSlug: params.stackSlug,
 						serviceId: params.serviceId,
@@ -303,7 +432,7 @@ export function DockerSwarmMixin<
 				),
 				Mode: { Replicated: { Replicas: params.replicas } },
 				Name: this.#swarmServiceName(params.slug, params.stackSlug),
-				TaskTemplate: this.#taskTemplateFor(params),
+				TaskTemplate: this.#taskTemplateFor(params, readiness),
 			};
 			if (existing) {
 				return await this.rollOutSwarmService(existing.ID, spec, onProgress);
@@ -320,6 +449,36 @@ export function DockerSwarmMixin<
 				`Swarm service created: id=${created.id ?? created.ID} service=${params.serviceId}`,
 			);
 			return { swarmServiceId: created.id ?? created.ID };
+		}
+
+		/**
+		 * What stops working once the swarm has more than one node: an image
+		 * built on this host has no registry for another node to pull it from,
+		 * and a named volume or bind path only exists on the node a replica
+		 * lands on. Empty on a single-node swarm, or when the nodes can't be
+		 * listed.
+		 */
+		async #multiNodeWarnings(
+			params: CreateSwarmServiceParams,
+		): Promise<string[]> {
+			const nodes = await this.getDocker()
+				.listNodes()
+				.catch(() => []);
+			if (nodes.length < 2) {
+				return [];
+			}
+			const warnings: string[] = [];
+			if (params.image.startsWith("homerun-build-")) {
+				warnings.push(
+					"This image was built on this host and never pushed to a registry : replicas placed on another swarm node can't pull it. Set a build cache registry on the Source tab.",
+				);
+			}
+			if ((params.volumes ?? []).length > 0) {
+				warnings.push(
+					"Volumes are local to each swarm node : a replica placed on another node gets its own empty copy.",
+				);
+			}
+			return warnings;
 		}
 
 		/** Removes a swarm service via the Docker API. */
@@ -385,18 +544,31 @@ export function DockerSwarmMixin<
 			return "starting";
 		}
 
-		/** The container id backing the service's one running task, for the Terminal tab's exec (swarm has no service-level exec, only container-level). */
+		/**
+		 * The container id of one running task of the service on this node, for
+		 * the Terminal tab's exec and pre-backup commands (swarm has no
+		 * service-level exec, only container-level, and this app only reaches
+		 * the local daemon). Null when every running replica is on another node.
+		 */
 		async getRunningTaskContainerId(
 			swarmServiceId: string,
 		): Promise<string | null> {
 			const docker = this.getDocker();
-			const tasks = await docker.listTasks({
-				filters: JSON.stringify({
-					"desired-state": ["running"],
-					service: [swarmServiceId],
+			const [tasks, info] = await Promise.all([
+				docker.listTasks({
+					filters: JSON.stringify({
+						"desired-state": ["running"],
+						service: [swarmServiceId],
+					}),
 				}),
-			});
-			const running = tasks.find((t) => t.Status?.State === "running");
+				docker.info(),
+			]);
+			const localNodeId = info?.Swarm?.NodeID;
+			const running = tasks.find(
+				(task) =>
+					task.Status?.State === "running" &&
+					(!localNodeId || task.NodeID === localNodeId),
+			);
 			return running?.Status?.ContainerStatus?.ContainerID ?? null;
 		}
 

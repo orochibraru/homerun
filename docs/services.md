@@ -367,21 +367,50 @@ log, is on the [Revisions](#revisions-and-rollback) tab.
 
 **Redeploys are health-gated.** When the service already has a running
 container, the new one starts next to it and the old one keeps serving until the
-new one is ready: its healthcheck (the image's own `HEALTHCHECK` or the
-service's healthcheck command) passes, or, with no healthcheck, it has kept
-running for 5 seconds. Traefik doesn't route to a container whose healthcheck
-hasn't passed yet, so traffic only moves once it's ready; then the old container
-is removed. If the new container exits, restarts, reports unhealthy or isn't
-ready within 5 minutes, it's removed instead, its last log lines go into the
-deploy log, the deploy is marked failed and the old container carries on
-untouched. Without a healthcheck the new container starts taking traffic next to
-the old one as soon as it runs, so add one for a real gate. Two cases still stop
-the old container first: **host networking** (both copies would bind the same
-ports) and a **writable volume** (two copies writing the same data, a database's
-data directory for instance). In [swarm mode](#swarm-mode) the same happens
-through swarm's own rolling update: the service is updated in place,
-start-first, waits for each new task's healthcheck and rolls back to the
-previous tasks on its own when one fails.
+new one is ready; then the old container is removed. If the new container exits,
+restarts, reports unhealthy or isn't ready within 5 minutes, it's removed
+instead, its last log lines go into the deploy log, the deploy is marked failed
+and the old container carries on untouched. Two cases stop the old container
+first: **host networking** (both copies would bind the same ports) and a
+**writable volume** (two copies writing the same data, a database's data
+directory for instance). In [swarm mode](#swarm-mode) the service is updated in
+place through swarm's own rolling update, start-first, and swarm rolls back to
+the previous tasks on its own when a new one fails.
+
+**Readiness: no traffic before the new copy is ready.** Like a Kubernetes
+readiness probe, a new container or swarm task gets no traffic from Traefik
+until its readiness check passes. Both are built on Docker's healthcheck:
+Traefik skips a container whose health isn't `healthy` yet, and swarm keeps a
+task out of `running` (so out of Traefik and out of the service's own DNS) until
+its healthcheck passes. The deploy log says which check applies:
+
+- the service's **healthcheck command**, when set;
+- otherwise the image's own `HEALTHCHECK`;
+- otherwise a check Homerun adds itself, which passes once something in the
+  container listens on the container port (on any address but loopback). It only
+  needs `/bin/sh` in the image, not curl, wget or nc, and after a crash or a
+  restart it holds traffic back again until the port is listening.
+
+A healthcheck is readiness and liveness at once: after the first pass it keeps
+running every 30 seconds, and three failures in a row mark the container
+unhealthy, which takes it out of Traefik, fails the revision's health watch, and
+in swarm mode gets the task replaced. Homerun's own listening check is ignored
+by the uptime probe, which keeps probing the port over HTTP or TCP.
+
+There's no readiness gate, and the new copy gets traffic as soon as it runs,
+when the port is UDP only or the image has neither a healthcheck nor `/bin/sh`
+(`scratch` and distroless images). Add a `HEALTHCHECK` to such an image for a
+real gate. A standalone container then shares traffic with the old one from the
+moment it starts, and counts as ready after running 5 seconds. A swarm task is
+worse off: swarm stops the old task as soon as the new one runs, so requests
+fail until the new one listens. Services that aren't published through Traefik
+(not DNS-resolvable, host networking) have no traffic to hold back. Other
+services reaching this one by its slug on the Docker network aren't gated in
+standalone mode: Docker's DNS resolves the name to the new container as soon as
+it starts. In swarm mode the service name only resolves to tasks that passed
+their healthcheck. Traefik reads swarm every 15 seconds rather than reacting to
+events, so when swarm stops an old task a few requests can still reach it before
+Traefik notices, gate or not.
 
 ### Revisions and rollback
 
@@ -390,6 +419,17 @@ Every deploy that reaches running is a **revision**: the exact image it ran
 `homerun-build-<slug>:<tag>` for a git build), the commit and branch for a git
 build, and whether it stayed healthy. The **Revisions** tab lists them with the
 current one marked, next to failed attempts and their logs.
+
+The list is in the order revisions were first deployed and deploying one never
+moves it: a rollback to an existing revision updates that revision's row in
+place, which becomes **Current** and shows when it was redeployed, and its
+expandable log, status and error are the latest attempt's (a failed rollback
+shows its error there while the revision that's still running stays Current).
+The API and CLI list revisions the same way.
+
+The **Healthy** and **Checking health** badges only ever sit on the current
+revision: once another revision is deployed they're cleared from the one it
+replaced. **Unhealthy** and **Rolled back** stay on the revision as history.
 
 **Deploy this revision** (confirmed in a dialog, also
 `POST /api/v1/services/:id/revisions/:revisionId/deploy` and
@@ -774,21 +814,27 @@ is always one container.
 
 ## Swarm mode
 
-Instance-wide, opt-in (`/settings` → Docker → Orchestration mode → `swarm`), an
-alternative to the default one-container-per-service model: once enabled, every
-**local** deploy creates a real Docker Swarm Service instead of a plain
-container, and the Compute tab gets a **replicas** field (default 1) controlling
-how many copies Docker runs and load-balances across via its own routing mesh.
-Start/ stop map to scaling to 0/back up rather than a real container stop/start,
-and restart force-updates every task (recreating them) instead of restarting one
-container.
+Instance-wide (`/settings` → Docker → Orchestration mode), and what the one-line
+installer sets up: the installer makes the system Docker daemon a swarm manager,
+and a brand new instance on a rootful swarm manager starts in swarm mode (an
+existing instance keeps whatever mode it has, and a rootless or non-swarm daemon
+starts in standalone). In swarm mode every **local** deploy creates a real
+Docker Swarm Service instead of a plain container, and the Compute tab gets a
+**replicas** field (default 1) controlling how many copies Docker runs and
+load-balances across via its own routing mesh. Start/ stop map to scaling to
+0/back up rather than a real container stop/start, and restart force-updates
+every task (recreating them) instead of restarting one container.
 
 Swarm mode needs Homerun on the **system (rootful)** Docker daemon: rootless
 Docker can't create overlay networks, so saving **Swarm** on an instance running
 on a rootless daemon fails straight away with a message saying so, before
-anything on the host changes. The one-line installer sets up rootless Docker by
-default; add `--docker=rootful` to put the stack on the system daemon instead
-(see [Getting started](getting-started.md)).
+anything on the host changes, and the Docker settings tab greys the option out
+with that reason before you try. The one-line installer uses the system daemon
+unless you pass `--docker=rootless`, and `--migrate-to-rootful` moves an
+existing rootless install over (see
+[Getting started](getting-started.md#moving-a-rootless-install-to-rootful--swarm)).
+The mode is only saved once the host has been prepared: if preparing it fails,
+the error is shown and the previous mode stays.
 
 Saving **Swarm** prepares the host for you: Homerun runs `docker swarm init` if
 the daemon isn't a swarm manager yet, creates an attachable overlay network
@@ -801,8 +847,31 @@ recreates Traefik from your compose file doesn't silently drop the provider.
 Switching back to **Standalone** turns the provider off again and leaves the
 swarm itself running; run `docker swarm leave --force` yourself if you want it
 gone. On a host with several network interfaces `docker swarm init` can refuse
-to pick an address to advertise: run `docker swarm init --advertise-addr <ip>`
-once by hand, then save the setting again.
+to pick an address to advertise: the installer passes the default-route address
+(or `--advertise-addr=`), and on a host you set up yourself run
+`docker swarm init --advertise-addr <ip>` once by hand, then save the setting
+again.
+
+Services reach each other at `http://<slug>:<port>` in both modes: a swarm
+service joins the overlay with its slug as a network alias. Named volumes and
+bind mounts work the same way as in standalone mode, and
+[host networking](#networking) attaches the service to the host's network
+instead of the overlay. What swarm mode doesn't do, and the Docker settings tab
+lists too:
+
+- **Privileged mode and device mappings** are ignored (the swarm API has
+  neither, the deploy log says so). Added capabilities do apply.
+- **Stack networks**: swarm services don't join their stack's own network, every
+  one of them shares the `-swarm` overlay.
+- **Terminal, pre-backup commands, per-replica usage**: only replicas running on
+  this host, since Homerun only talks to this daemon. The Terminal tab picks a
+  local replica and says so when there isn't one.
+- **Uptime**: the "from its hostname" probe runs, the "from the network" probe
+  doesn't.
+- **More than one node**: a volume exists separately on every node, so a replica
+  placed elsewhere starts with an empty one, and an image built on this host (a
+  git build without a build cache registry) can't be pulled by other nodes. The
+  deploy log warns about both once the swarm has a second node.
 
 The service's Overview tab lists every replica with its node, state and live CPU
 and memory use. A replica scheduled on another node shows its state but no
@@ -946,8 +1015,9 @@ host by hand, the deploy fails if it isn't there).
 shell command run inside the container every 30s (exit 0 = healthy). When a
 service has one, its uptime probe reports the healthcheck instead of knocking on
 the container port, which is what a portless container like Newt needs: the Newt
-template ships one that only passes while its Pangolin tunnel is connected.
-Takes effect on the next deploy.
+template ships one that only passes while its Pangolin tunnel is connected. It
+is also the service's [readiness check](#deploying): a new container or swarm
+task gets no traffic until it passes. Takes effect on the next deploy.
 
 **Save as template** is here too: it snapshots this service's current image,
 tag, port, env vars, resource limits, healthcheck and

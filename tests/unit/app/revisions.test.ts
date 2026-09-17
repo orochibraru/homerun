@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
+	CLEARED_ON_SUPERSEDE,
 	HEALTH_WINDOW,
 	healthVerdict,
 	previousRevision,
 	type RevisionLike,
 	retainedRevisions,
+	revisionEntries,
 	revisionImageRefs,
+	revisionRoot,
+	supersededHealth,
 	type WorkloadHealthSample,
 } from "../../../src/lib/revisions";
 
@@ -80,6 +84,165 @@ describe("retainedRevisions", () => {
 			"sha256:3",
 			"sha256:2",
 		]);
+	});
+});
+
+describe("revisionEntries", () => {
+	const options = { deployed: true, retainedLimit: 5 };
+
+	function summary(rows: RevisionLike[], deployed = true) {
+		return revisionEntries(rows, { ...options, deployed }).map((entry) => ({
+			current: entry.current,
+			health: entry.health,
+			id: entry.revision.id,
+			latest: entry.latest.id,
+			previous: entry.previous,
+			redeployCount: entry.redeployCount,
+		}));
+	}
+
+	test("a rollback folds into the revision it redeployed, which keeps its place and becomes current", () => {
+		const first = revision({ health: null, imageId: "sha256:a" });
+		const second = revision({ health: null, imageId: "sha256:b" });
+		const rollback = revision({
+			health: "watching",
+			imageId: "sha256:a",
+			rollbackOfDeploymentId: first.id,
+		});
+		expect(summary([rollback, second, first])).toEqual([
+			{
+				current: false,
+				health: null,
+				id: second.id,
+				latest: second.id,
+				previous: true,
+				redeployCount: 0,
+			},
+			{
+				current: true,
+				health: "watching",
+				id: first.id,
+				latest: rollback.id,
+				previous: false,
+				redeployCount: 1,
+			},
+		]);
+		const entry = revisionEntries([rollback, second, first], options)[1];
+		expect(entry?.lastDeployed?.id).toBe(rollback.id);
+	});
+
+	test("a redeploy of a redeploy still resolves to the original revision", () => {
+		const first = revision({ imageId: "sha256:a" });
+		const second = revision({ imageId: "sha256:b" });
+		const back = revision({
+			imageId: "sha256:a",
+			rollbackOfDeploymentId: first.id,
+		});
+		const forward = revision({
+			imageId: "sha256:b",
+			rollbackOfDeploymentId: second.id,
+		});
+		const backAgain = revision({
+			imageId: "sha256:a",
+			rollbackOfDeploymentId: back.id,
+		});
+		const rows = [first, second, back, forward, backAgain];
+		expect(revisionRoot(rows, backAgain).id).toBe(first.id);
+		expect(summary(rows).map((entry) => [entry.id, entry.current])).toEqual([
+			[second.id, false],
+			[first.id, true],
+		]);
+		expect(summary(rows)[0]?.previous).toBe(true);
+		expect(summary(rows)[1]?.redeployCount).toBe(2);
+	});
+
+	test("a failed rollback shows on its target as the latest attempt, without moving current", () => {
+		const first = revision({ imageId: "sha256:a" });
+		const second = revision({ health: "healthy", imageId: "sha256:b" });
+		const failed = revision({
+			health: null,
+			imageId: null,
+			imageRef: null,
+			rollbackOfDeploymentId: first.id,
+			status: "failed",
+		});
+		const entries = revisionEntries([first, second, failed], options);
+		expect(entries.map((entry) => entry.revision.id)).toEqual([
+			second.id,
+			first.id,
+		]);
+		expect(entries[0]?.current).toBe(true);
+		expect(entries[0]?.health).toBe("healthy");
+		expect(entries[1]?.latest.status).toBe("failed");
+		expect(entries[1]?.lastDeployed?.id).toBe(first.id);
+	});
+
+	test("a rollback whose target isn't loaded is its own entry, and cycles don't hang", () => {
+		const orphan = revision({ rollbackOfDeploymentId: "gone" });
+		const loopA = revision({ rollbackOfDeploymentId: "loop-b" });
+		const loopB = revision({ id: "loop-b", rollbackOfDeploymentId: loopA.id });
+		expect(revisionRoot([orphan], orphan).id).toBe(orphan.id);
+		expect(revisionRoot([loopA, loopB], loopA).id).toBe(loopB.id);
+		expect(summary([orphan]).map((entry) => entry.id)).toEqual([orphan.id]);
+	});
+
+	test("a superseded revision never shows a live health state, a failure outcome stays", () => {
+		const stale = revision({ health: "healthy", imageId: "sha256:a" });
+		const bad = revision({ health: "rolled_back", imageId: "sha256:b" });
+		const current = revision({ health: "healthy", imageId: "sha256:c" });
+		expect(summary([stale, bad, current]).map((entry) => entry.health)).toEqual(
+			["healthy", "rolled_back", null],
+		);
+		expect(
+			summary([stale, bad, current], false).map((entry) => entry.health),
+		).toEqual([null, "rolled_back", null]);
+	});
+
+	test("failed deploys are entries of their own, nothing is current while the service isn't deployed", () => {
+		const good = revision({ imageId: "sha256:a" });
+		const failed = revision({
+			imageId: null,
+			imageRef: null,
+			status: "failed",
+		});
+		const entries = revisionEntries([good, failed], {
+			deployed: false,
+			retainedLimit: 5,
+		});
+		expect(entries.map((entry) => entry.revision.id)).toEqual([
+			failed.id,
+			good.id,
+		]);
+		expect(entries.some((entry) => entry.current || entry.previous)).toBe(
+			false,
+		);
+		expect(entries.map((entry) => entry.retained)).toEqual([false, true]);
+	});
+
+	test("retained follows the image, so an older deploy of a kept image counts as retained", () => {
+		const old = revision({ imageId: "sha256:a" });
+		const again = revision({ imageId: "sha256:a" });
+		const other = revision({ imageId: "sha256:b" });
+		const entries = revisionEntries([old, again, other], {
+			deployed: true,
+			retainedLimit: 1,
+		});
+		expect(entries.map((entry) => entry.retained)).toEqual([
+			true,
+			false,
+			false,
+		]);
+	});
+});
+
+describe("supersededHealth", () => {
+	test("clears only the live states, and the bulk clear uses the same set", () => {
+		expect(supersededHealth("healthy")).toBeNull();
+		expect(supersededHealth("watching")).toBeNull();
+		expect(supersededHealth("unhealthy")).toBe("unhealthy");
+		expect(supersededHealth("rolled_back")).toBe("rolled_back");
+		expect(supersededHealth(null)).toBeNull();
+		expect([...CLEARED_ON_SUPERSEDE].sort()).toEqual(["healthy", "watching"]);
 	});
 });
 

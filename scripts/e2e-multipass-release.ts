@@ -271,7 +271,7 @@ async function provisionFull(
 		"-c",
 		`echo 'ORIGIN=${baseUrl}' >> /home/${ROOTLESS_USER}/homerun/.env`,
 	]);
-	await vm.docker([
+	await vm.dockerRoot([
 		"compose",
 		"-f",
 		composePath,
@@ -292,7 +292,7 @@ async function provisionFull(
 		`GET /api/health returned ${health.status}, docs promise a plain 200.`,
 	);
 
-	const images = await vm.docker(["ps", "--format", "{{.Image}}"]);
+	const images = await vm.dockerRoot(["ps", "--format", "{{.Image}}"]);
 	assert(
 		images.includes(APP_IMAGE),
 		`Expected the published ${APP_IMAGE} image to be running, found:\n${images}`,
@@ -340,7 +340,7 @@ async function testLocalDeploy(client: AppClient, vm: Vm): Promise<string> {
 	)) as { containerId?: string; error?: string; success: boolean };
 	assert(result.success, `Local deploy failed: ${JSON.stringify(result)}`);
 
-	const running = await vm.docker([
+	const running = await vm.dockerRoot([
 		"ps",
 		"--filter",
 		"name=e2e-release-local",

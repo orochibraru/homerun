@@ -8,6 +8,7 @@ import {
 	type HealthVerdict,
 	healthVerdict,
 	previousRevision,
+	revisionRoot,
 	type WorkloadHealthSample,
 } from "$lib/revisions";
 import type { Deployment } from "$lib/server/db/schema";
@@ -148,7 +149,9 @@ class RevisionHealthServiceClass {
 	 * against a baseline sample until `healthVerdict` returns healthy or
 	 * unhealthy (or the deployment stops being current, in which case its
 	 * `health` is cleared and the watch just exits). Records the healthy
-	 * outcome, or hands off to `#unhealthy` for the failure path.
+	 * outcome, or hands off to `#unhealthy` for the failure path. Every
+	 * outcome is written through `settleHealth`, so a watch whose deployment
+	 * a newer deploy already superseded (and cleared) records nothing.
 	 */
 	async #run(input: RevisionWatch): Promise<void> {
 		const dep = await DeploymentDTO.get(input.deploymentId);
@@ -169,7 +172,7 @@ class RevisionHealthServiceClass {
 			await sleep(POLL_MS);
 			current = await this.#stillCurrent(input, workload);
 			if (!current) {
-				await dep.update({ health: null });
+				await dep.settleHealth(null);
 				return;
 			}
 			const sample = await this.#sample(workload, startedAt);
@@ -181,7 +184,9 @@ class RevisionHealthServiceClass {
 			);
 		}
 		if (verdict.verdict === "healthy") {
-			await dep.update({ health: "healthy" });
+			if (!(await dep.settleHealth("healthy"))) {
+				return;
+			}
 			await dep.appendLog(
 				`Revision healthy after ${Math.round((Date.now() - startedAt.getTime()) / 1000)}s.`,
 			);
@@ -194,7 +199,9 @@ class RevisionHealthServiceClass {
 	 * Decides the auto-rollback target for an unhealthy revision, or why none
 	 * was chosen: auto-rollback is off, the revision was itself a rollback
 	 * (never rolled back again), or there's no previous revision to fall
-	 * back to.
+	 * back to. The target is the original deploy of that revision, never one
+	 * of its redeploys, so the rollback folds into its row on the Revisions
+	 * list.
 	 */
 	async #rollbackTarget(
 		svc: ServiceDTO,
@@ -217,7 +224,8 @@ class RevisionHealthServiceClass {
 		const revisions = (await DeploymentDTO.listRevisions(svc.id)).map((row) =>
 			row.toJSON(),
 		);
-		const target = previousRevision(revisions, dep.id);
+		const previous = previousRevision(revisions, dep.id);
+		const target = previous ? revisionRoot(revisions, previous) : null;
 		return {
 			skipReason: target
 				? null
@@ -227,10 +235,12 @@ class RevisionHealthServiceClass {
 	}
 
 	/**
-	 * Handles a revision that failed its health check: logs it, resolves and
-	 * enqueues an auto-rollback when eligible (else records why not), records
-	 * an in-app notification, and dispatches it through notification
-	 * channels.
+	 * Handles a revision that failed its health check: resolves the
+	 * auto-rollback target, marks the row `rolled_back` or `unhealthy` (and
+	 * stops there, doing nothing else, when a newer deploy already superseded
+	 * it), logs it, enqueues the rollback when eligible (else records why
+	 * not), records an in-app notification, and dispatches it through
+	 * notification channels.
 	 */
 	async #unhealthy(context: {
 		current: ServiceDTO;
@@ -239,13 +249,15 @@ class RevisionHealthServiceClass {
 		reason: string;
 	}): Promise<void> {
 		const { current: svc, dep, input } = context;
+		const { skipReason, target } = await this.#rollbackTarget(svc, dep);
+		if (!(await dep.settleHealth(target ? "rolled_back" : "unhealthy"))) {
+			return;
+		}
 		await dep.appendLog(`Revision unhealthy: ${context.reason}`);
 		logger.warn(
 			`Revision unhealthy: service=${svc.id} deployment=${dep.id} : ${context.reason}`,
 		);
-		const { skipReason, target } = await this.#rollbackTarget(svc, dep);
 		if (target) {
-			await dep.update({ health: "rolled_back" });
 			await dep.appendLog(
 				`Auto-rollback: redeploying revision ${target.id.slice(0, 8)} (${target.imageRef}).`,
 			);
@@ -254,11 +266,8 @@ class RevisionHealthServiceClass {
 				svc,
 				userId: input.userId,
 			});
-		} else {
-			await dep.update({ health: "unhealthy" });
-			if (skipReason) {
-				await dep.appendLog(skipReason);
-			}
+		} else if (skipReason) {
+			await dep.appendLog(skipReason);
 		}
 		NotificationDTO.notify({
 			message: target

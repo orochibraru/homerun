@@ -161,7 +161,7 @@ export class UptimeProbe extends BaseScheduler {
 		this.#ticks += 1;
 
 		const services = (await ServiceDTO.listRunningWithContainers()).filter(
-			(svc) => svc.uptimeEnabled && svc.containerId,
+			(svc) => svc.uptimeEnabled && (svc.containerId || svc.swarmServiceId),
 		);
 		const previous = await UptimeCheckDTO.latestByProbe(
 			services.map((svc) => svc.id),
@@ -192,8 +192,8 @@ export class UptimeProbe extends BaseScheduler {
 	/**
 	 * Probes a service from inside the Docker network: its own healthcheck if
 	 * it has one, else TCP or HTTP against its container address. Returns
-	 * null when the service has no container or the container has no network
-	 * address to probe.
+	 * null when the service has no container, which includes a swarm service
+	 * (only the external probe runs for those).
 	 */
 	async #internal(svc: ServiceDTO): Promise<ProbeResult | null> {
 		if (!svc.containerId) {

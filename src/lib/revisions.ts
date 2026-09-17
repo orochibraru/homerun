@@ -78,6 +78,114 @@ export function previousRevision<T extends RevisionLike>(
 	);
 }
 
+const SUPERSEDED_HEALTH = new Set<RevisionHealth>(["healthy", "watching"]);
+
+/**
+ * The health a deployment row keeps once another revision of its service has
+ * become current: `healthy` and `watching` only ever describe the running
+ * revision, so they're cleared, while `unhealthy` and `rolled_back` stay as
+ * history (and keep the row out of `previousRevision`).
+ */
+export function supersededHealth(
+	health: RevisionHealth | null,
+): RevisionHealth | null {
+	return health && SUPERSEDED_HEALTH.has(health) ? null : health;
+}
+
+/** The health states `supersededHealth` clears, for the query that clears them in bulk once a deploy succeeds. */
+export const CLEARED_ON_SUPERSEDE: RevisionHealth[] = [...SUPERSEDED_HEALTH];
+
+/**
+ * Follows a row's `rollbackOfDeploymentId` chain to the original deploy it
+ * redeployed, so every redeploy of one revision resolves to the same row.
+ * Stops at the last row it can find in `rows` (a rollback whose target isn't
+ * loaded is its own root) and never loops on a cycle.
+ */
+export function revisionRoot<T extends RevisionLike>(rows: T[], row: T): T {
+	const byId = new Map(rows.map((candidate) => [candidate.id, candidate]));
+	const seen = new Set<string>([row.id]);
+	let root = row;
+	while (root.rollbackOfDeploymentId) {
+		const parent = byId.get(root.rollbackOfDeploymentId);
+		if (!parent || seen.has(parent.id)) {
+			break;
+		}
+		seen.add(parent.id);
+		root = parent;
+	}
+	return root;
+}
+
+export interface RevisionEntry<T extends RevisionLike> {
+	current: boolean;
+	health: RevisionHealth | null;
+	lastDeployed: T | null;
+	latest: T;
+	previous: boolean;
+	redeployCount: number;
+	retained: boolean;
+	revision: T;
+}
+
+/**
+ * Collapses deployment rows into one entry per revision for the Revisions
+ * list: a rollback or redeploy folds into the revision it redeployed instead
+ * of becoming a new entry, so the list keeps the order revisions were first
+ * deployed in (newest first) and only the markers move. Each entry carries its
+ * original row, its latest attempt (whose status, log and error the list
+ * shows) and its latest successful run (when it last went live). Its health
+ * is that run's, passed through `supersededHealth` unless it's the current
+ * revision, so a row recorded before superseded health was cleared in the
+ * database still never shows a stale `healthy`.
+ *
+ * @param options.deployed Whether the service has a running workload; without
+ *   one nothing is current.
+ * @param options.retainedLimit How many distinct images per service are kept.
+ */
+export function revisionEntries<T extends RevisionLike>(
+	rows: T[],
+	options: { deployed: boolean; retainedLimit: number },
+): RevisionEntry<T>[] {
+	const ordered = newestFirst(rows);
+	const groups = new Map<string, { root: T; runs: T[] }>();
+	for (const row of ordered) {
+		const root = revisionRoot(ordered, row);
+		const group = groups.get(root.id) ?? { root, runs: [] };
+		group.runs.push(row);
+		groups.set(root.id, group);
+	}
+	const revisions = ordered.filter(isRevision);
+	const currentRow = options.deployed ? (revisions[0] ?? null) : null;
+	const currentRoot = currentRow ? revisionRoot(ordered, currentRow) : null;
+	const previousRow = currentRow
+		? previousRevision(revisions, currentRow.id)
+		: null;
+	const previousRoot = previousRow ? revisionRoot(ordered, previousRow) : null;
+	const retainedKeys = new Set(
+		retainedRevisions(revisions, options.retainedLimit).map(revisionImageKey),
+	);
+	return [...groups.values()]
+		.sort((a, b) => b.root.createdAt.getTime() - a.root.createdAt.getTime())
+		.map(({ root, runs }) => {
+			const lastDeployed = runs.find(isRevision) ?? null;
+			const current = root.id === currentRoot?.id;
+			const health = lastDeployed?.health ?? null;
+			return {
+				current,
+				health: current ? health : supersededHealth(health),
+				lastDeployed,
+				latest: runs[0] ?? root,
+				previous:
+					root.id === previousRoot?.id && previousRoot.id !== currentRoot?.id,
+				redeployCount: runs.filter((run) => run.id !== root.id).length,
+				retained: lastDeployed
+					? retainedKeys.has(revisionImageKey(lastDeployed))
+					: false,
+				revision: root,
+			};
+		});
+}
+
 /**
  * Selects the revisions whose images are kept on the host: per service, the
  * newest revision of each distinct image, up to `limit` distinct images.

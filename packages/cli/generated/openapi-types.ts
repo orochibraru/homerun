@@ -133,7 +133,7 @@ export interface paths {
 		};
 		/**
 		 * List a service's revisions
-		 * @description Newest first, at most 50: every deploy that reached running, with the exact image it ran. current marks the one running now, previous the default rollback target.
+		 * @description One entry per revision, newest first by when it was first deployed, from the last 50 deploys that reached running, with the exact image it ran. A rollback folds into the revision it redeployed (lastDeployedAt, latestDeploymentId, redeployCount) instead of adding an entry, so the order never changes. current marks the one running now, previous the default rollback target.
 		 */
 		get: operations["get_services__serviceId__revisions"];
 		put?: never;
@@ -1508,29 +1508,33 @@ export interface operations {
 					"application/json": {
 						buildSource: ("image" | "git") | null;
 						/**
-						 * @description ISO 8601 timestamp
+						 * @description When this revision was first deployed
 						 * @example 2026-08-20T12:00:00.000Z
 						 */
 						createdAt: string;
 						/** @description The revision running now */
 						current: boolean;
-						finishedAt: string | null;
 						gitCommit: string | null;
 						gitRef: string | null;
-						/** @description null = recorded before health watching existed */
+						/** @description Health of its latest run. watching and healthy only ever appear on the current revision; unhealthy and rolled_back are kept as history; null otherwise */
 						health:
 							| ("watching" | "healthy" | "unhealthy" | "rolled_back")
 							| null;
+						/** @description The revision's original deployment id, what POST /services/{serviceId}/revisions/{revisionId}/deploy takes */
 						id: string;
 						imageDigest: string | null;
 						imageId: string | null;
 						imageRef: string | null;
+						/** @description When this revision last went live, later than createdAt once it was redeployed */
+						lastDeployedAt: string | null;
+						/** @description The deployment row of its latest run, id itself unless it was redeployed */
+						latestDeploymentId: string;
 						/** @description The default rollback target: the newest older healthy revision with a different image */
 						previous: boolean;
-						/** @description Among the last 5 distinct images kept on the host and in the mirror */
+						/** @description How many times it was redeployed (rolled back to) */
+						redeployCount: number;
+						/** @description Its image is among the last distinct images kept on the host and in the mirror */
 						retained: boolean;
-						/** @description Set when this revision redeployed an older one */
-						rollbackOfDeploymentId: string | null;
 						/** @enum {string} */
 						status:
 							| "pending"

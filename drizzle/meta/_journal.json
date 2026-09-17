@@ -315,6 +315,13 @@
 			"when": 1789638885814,
 			"tag": "0044_orange_jamie_braddock",
 			"breakpoints": true
+		},
+		{
+			"idx": 45,
+			"version": "7",
+			"when": 1789643310078,
+			"tag": "0045_spooky_nightcrawler",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

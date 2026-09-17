@@ -88,9 +88,10 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[Build servers](docs/remote-hosts-and-agent.md)**: build a git-based
   service's image on another Docker daemon (`tcp://`/`ssh://`, or the
   lightweight [Homerun Agent](packages/agent/README.md)) instead of this host
-- **[Swarm mode](docs/services.md#swarm-mode)**: opt-in Docker Swarm deploys for
-  real replica scaling and load balancing across one service, instead of the
-  default one-container model
+- **[Swarm mode](docs/services.md#swarm-mode)**: the installer's default, every
+  service is a Docker Swarm service with real replica scaling and load
+  balancing, and more machines join as workers; standalone (one container per
+  service) remains available
 - **[Docker Cleanup](docs/operations.md#docker-cleanup)**: admin-only host-wide
   `docker system df`/prune from the dashboard, unused
   images/containers/volumes/networks/build cache and the scan image mirror, with
@@ -173,6 +174,7 @@ binary or build output):
   HTTP server that lets a second machine build images for this one, without
   exposing its Docker daemon
 - [`packages/installer/`](packages/installer/README.md): the one-liner installer
-  used above (Docker + rootless setup + the agent or full stack)
+  used above (Docker as a swarm manager, or rootless, plus the agent or full
+  stack, and `--migrate-to-rootful` for older rootless installs)
 - [`packages/cli/`](packages/cli/README.md): a typed CLI
   (`homerun services deploy <id>`, etc.) against the REST API

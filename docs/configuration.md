@@ -18,7 +18,7 @@ for people who'd rather manage settings as code.
 | Tab            | What's on it                                                                                                                                                                               |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **General**    | Base domain, Use HTTPS, Dashboard URL, the login wall's auth-check URL, cross-subdomain cookies                                                                                            |
-| **Docker**     | Docker socket path, the shared network name, [image scanning](services.md#image-scanning) and its block policy, orchestration mode (standalone or [swarm](services.md#swarm-mode))         |
+| **Docker**     | Docker socket path, the shared network name, [image scanning](services.md#image-scanning) and its block policy, orchestration mode ([swarm](services.md#swarm-mode) or standalone)         |
 | **Networking** | Traefik entrypoint, cert resolver, ACME email, the dynamic-config directory, and [DNS automation](services.md#dns-automation) (Cloudflare, Pangolin, and whether Pangolin handles sign-in) |
 | **Email**      | SMTP host/port/user/password/TLS/from address, used for invite emails and email-change confirmations, with a "Send test email" button once saved                                           |
 | **Migrate**    | Import applications, compose stacks and databases from Dokploy or Coolify, see [Services](services.md#migrating-from-dokploy-or-coolify)                                                   |
@@ -147,7 +147,10 @@ mode, DNS automation (Cloudflare and Pangolin), and OAuth/OIDC sign-in
 providers. They hold secrets or live state that belongs in the encrypted
 database row rather than a plaintext file on disk. An `auth.oauthProviders` key
 left in `homerun.yaml` from an older version is ignored; add those providers on
-the Authentication page instead.
+the Authentication page instead. A brand new instance starts in swarm mode when
+its Docker daemon is already a rootful swarm manager (what the installer sets
+up) and in standalone mode otherwise; after that the mode only changes from
+Settings → Docker.
 
 ## The first-run wizard
 

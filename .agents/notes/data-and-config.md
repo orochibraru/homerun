@@ -200,8 +200,9 @@ OIDC provider in `auth.md`) plus:
   `imageRef` (plain `image:tag`, never `@digest`), `imageDigest`, `imageId`
   (local image id, what the cleanup keep list resolves), `buildSource`,
   `gitCommit`/`gitRef`, `health` (`watching`/`healthy`/`unhealthy`/
-  `rolled_back`, null before the watcher existed) and `rollbackOfDeploymentId`
-  (the revision a rollback redeployed, also what makes `deployService` take the
+  `rolled_back`, null before the watcher existed or once a newer deploy
+  superseded a `healthy`/`watching` row) and `rollbackOfDeploymentId` (the
+  revision a rollback redeployed, also what makes `deployService` take the
   `revision` plan). Migration 0038 backfilled `imageRef`/`buildSource` on each
   service's latest running row from the service's current image. See Revisions
   and rollback in `services-and-templates.md`.
@@ -330,9 +331,11 @@ OIDC provider in `auth.md`) plus:
   per account (deploy success/failure, service created/started/stopped,
   auto-redeploy, runtime error), deliberately separate from `app_log` above, see
   In-app notifications below.
-- `instance_settings.orchestrationMode` (`"standalone"` default | `"swarm"`),
-  plus `service.replicas`/`swarmServiceId`, opt-in Docker Swarm mode, see Swarm
-  mode below.
+- `instance_settings.orchestrationMode` (`"standalone"` | `"swarm"`, null reads
+  as standalone; a fresh database stores swarm when the daemon is a rootful
+  swarm manager, see Swarm mode in `docker.md`), plus
+  `service.replicas`/`swarmServiceId`. `pendingServiceRedeploy` is set by the
+  installer's `--migrate-to-rootful` and consumed on boot.
 - `instance_settings.cloudflareApiTokenEnc`/`cloudflareZoneId` and
   `pangolinApiBaseUrl`/`pangolinApiTokenEnc`/`pangolinOrgId`/
   `pangolinMainSiteName`/`pangolinTargetPort`, optional DNS automation, see DNS

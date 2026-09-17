@@ -115,23 +115,23 @@ reordering the chain.
     minutes), then removes the old ones in `completeContainerRollout`. On
     failure it logs the new container's last 20 lines, removes it and throws
     `RolloutFailedError`, which `#recordFailure` treats like a scan block
-    (`syncServiceStatus`, service not marked failed). The gate relies on
-    Traefik's docker provider skipping containers whose health isn't `healthy`;
-    with no healthcheck both copies briefly share the router (same router and
-    service names, merged when their labels match), and the shared-network slug
-    alias resolves to both during the overlap. `containerSampleFromInspect` is
-    shared with `DockerRevisionMixin.containerHealthSample`. The container is
-    aliased as its slug on the shared network
-    (`NetworkingConfig.EndpointsConfig`) so other services can reach it at
-    `http://<slug>:<containerPort>` regardless of the randomized name; if
-    `params.stackId` is set, it also joins that stack's network under the same
-    alias (`this.connectToStackNetwork`, inherited from the network mixin).
-    `params.volumes` (from `ServiceVolumeDTO.listForService`) becomes
-    `HostConfig.Binds` (`"source:containerPath[:ro]"`, covers both bind-mounts
-    and named volumes with the same syntax). Don't call this directly from a new
-    route, go through `$lib/services/deploy.service.ts`'s
-    `DeploymentService.deployService()` instead (see above), which wraps it with
-    deployment-row bookkeeping. → `DockerService.createAndStartContainer`.
+    (`syncServiceStatus`, service not marked failed). What keeps traffic off the
+    new container until it's ready is its Docker healthcheck, picked by
+    `planReadiness`, see "Readiness gate" below. The shared-network slug alias
+    resolves to both copies during the overlap, health or not.
+    `containerSampleFromInspect` is shared with
+    `DockerRevisionMixin.containerHealthSample`. The container is aliased as its
+    slug on the shared network (`NetworkingConfig.EndpointsConfig`) so other
+    services can reach it at `http://<slug>:<containerPort>` regardless of the
+    randomized name; if `params.stackId` is set, it also joins that stack's
+    network under the same alias (`this.connectToStackNetwork`, inherited from
+    the network mixin). `params.volumes` (from
+    `ServiceVolumeDTO.listForService`) becomes `HostConfig.Binds`
+    (`"source:containerPath[:ro]"`, covers both bind-mounts and named volumes
+    with the same syntax). Don't call this directly from a new route, go through
+    `$lib/services/deploy.service.ts`'s `DeploymentService.deployService()`
+    instead (see above), which wraps it with deployment-row bookkeeping. →
+    `DockerService.createAndStartContainer`.
   - `start/stop/restartContainer`, `removeContainer`, `inspectStatus` →
     `ContainerStatus`, `containerHealth` → the container's own `State.Health`
     verdict (`null` when the image declares no `HEALTHCHECK`, which is the
@@ -331,9 +331,10 @@ reusing any of these.
 
 ## Swarm mode (`instance_settings.orchestrationMode`, `service.replicas`/`swarmServiceId`, `src/lib/services/docker/swarm.ts`)
 
-Instance-wide, opt-in alternative to the single-container-per-service model
-described above: `instanceSettings.orchestrationMode` (`"standalone"` default |
-`"swarm"`, `/settings`) switches every **local** deploy from
+Instance-wide alternative to the single-container-per-service model described
+above, and the default on an installer-made instance:
+`instanceSettings.orchestrationMode` (`"standalone"` | `"swarm"`, null reads as
+standalone, `/settings`) switches every **local** deploy from
 `createAndStartContainer` to `DockerService.createAndStartSwarmService`
 (`DockerSwarmMixin`, `docker/swarm.ts`, chained into the same `DockerService`
 mixin merge as the other concerns, see the ordering note above), creating a real
@@ -363,6 +364,21 @@ Docker Swarm Service (`docker.createService`,
   routes (`src/routes/api/v1/services/`) branch the same way, swarm-mode
   services are controllable via the API, not just the dashboard.
 
+**Default mode and how it's picked.** The installer's `--mode=full` now runs the
+stack on the system daemon,
+`docker swarm init --advertise-addr <default-route ip>`, creates `homerun`
+(bridge) and `homerun-swarm` (attachable overlay), and writes Traefik's compose
+command ending in exactly the three flags `enableSwarmMode` applies, in the same
+key order, because `applyTraefikFlags` compares the whole argv and would
+otherwise recreate Traefik on every boot. Nothing is seeded into the database:
+`InstanceSettingsDTO.getOrCreate()` reports whether this boot created the
+singleton row, and `OrchestrationService.applyOnBoot`
+(`$lib/services/orchestration.service.ts`, called from `hooks.server.ts`'s
+`init()`) stores `detectInitialOrchestrationMode()` on a fresh row only (pure
+`initialOrchestrationMode`: swarm on an active manager with control available
+that isn't rootless, standalone otherwise). An existing row is never flipped.
+`--docker=rootless` keeps the old rootless install, which boots standalone.
+
 **The host is prepared by the app, not by hand.** Saving Swarm on Settings →
 Docker calls `DockerService.enableSwarmMode()` (see `core-services.ts` above):
 `swarmInit` when the daemon isn't a manager, the `<networkName>-swarm` overlay,
@@ -371,10 +387,46 @@ the live container via `applyTraefikFlags`. `hooks.server.ts`'s `init()` calls
 it again (fire and forget) whenever the stored mode is `swarm`, since a
 `docker compose up` recreating Traefik from the compose file drops flags the app
 added; `applyTraefikFlags` no-ops when they already hold, so a normal boot never
-bounces the proxy. Not handled: a multi-interface host where `swarmInit` can't
-pick an advertise address, the admin runs
-`docker swarm init --advertise-addr <ip>` once and saves again (documented in
-`docs/services.md`).
+bounces the proxy. The action persists the mode **only after** host preparation
+succeeded (it used to save first and report "Mode saved, but the host couldn't
+be prepared", leaving a rootless instance stored as swarm with every deploy
+failing), and the page's `load` asks `swarmModeUnavailableReason()` so a
+rootless daemon shows the reason and a disabled Swarm option before submit. Not
+handled by the app: a multi-interface host where `swarmInit` can't pick an
+advertise address (the installer passes one; by hand, run
+`docker swarm init --advertise-addr <ip>` once and save again).
+
+**Migrating a rootless install** (`--migrate-to-rootful`,
+`packages/installer/steps/migrate-rootful.ts`): stops every container on the
+rootless daemon, copies each named volume through `tar --numeric-owner` in
+`alpine:3` on both daemons (ownership as the container saw it, not the subuid on
+disk), recreates volumes with their labels so compose keeps owning them, sets up
+swarm + networks, rewrites `homerun.yaml`'s `socketPath` and the compose file,
+starts the stack, then waits for the app (so its migrations have run) and sets
+`orchestration_mode = 'swarm'` plus `instance_settings.pendingServiceRedeploy`
+in psql and restarts the app. `applyOnBoot` sees the flag, queues
+`DeploymentService.enqueueDeploy` for every service with a `containerId` or
+`swarmServiceId` under the first admin, and clears it. Progress markers live in
+`<compose dir>/.rootful-migration`, so a re-run skips finished copies and never
+queues the redeploys twice. Verified end to end on a Multipass VM from a real
+v1.0.26 rootless install, see `packages/installer/README.md`.
+
+**Swarm spec details, and what swarm mode can't do.** Pure helpers in
+`swarm.ts`, tested in `tests/unit/app/swarm-spec.test.ts`: `swarmMount` (an
+absolute source is a bind mount, anything else `Type: "volume"`; every mount
+used to be `bind`, so a service with a named volume couldn't deploy in swarm
+mode at all), `swarmNetworksFor` (the overlay with the slug as an alias, so
+`http://<slug>:<port>` works like in standalone, or `Target: "host"` for host
+networking, which the deploy plan used to reject), `swarmRestartCondition`
+(`on-failure` now maps to swarm's `on-failure`). `getRunningTaskContainerId`
+only returns a task on this node (`info.Swarm.NodeID`), since exec and
+pre-backup commands only reach the local daemon. The uptime probe runs its
+hostname probe for swarm services (the network probe needs a container id). A
+deploy log warns, once the swarm has a second node, that a `homerun-build-*`
+image without a registry and any volume are per node. Still not supported:
+privileged and devices (no swarm API), per-stack networks (everything shares the
+overlay), terminal/stats/pre-backup on remote replicas. The Settings → Docker
+page lists these.
 
 **Per-replica stats.** `DockerSwarmMixin.listSwarmReplicas(swarmServiceId)`
 lists the service's tasks (slot, node hostname, state, container id) and samples
@@ -403,21 +455,95 @@ Once joined, the node is schedulable by the swarm itself, nothing in this app
 has to register it.
 
 **Real, tested finding: swarm mode can't run on rootless Docker.** On a rootless
-install (the installer's default), saving Swarm initialised the swarm and
-created the overlay, then `connect` for Traefik failed with "attaching to
-network failed ... context deadline exceeded" and the daemon logged the task
+install (the installer's default at the time), saving Swarm initialised the
+swarm and created the overlay, then `connect` for Traefik failed with "attaching
+to network failed ... context deadline exceeded" and the daemon logged the task
 failing with `mkdir /var/lib/docker/network: permission denied` (plus a missing
 `br_netfilter` for the ingress network). Docker documents overlay networks as
 unsupported in rootless mode. So `enableSwarmMode` calls
 `assertSwarmCapableDaemon` first, which throws before touching the host when
 `docker info`'s `SecurityOptions` carry `name=rootless` (`isRootlessDaemon`,
-unit-tested in `tests/unit/app/swarm-rootless.test.ts`), and the installer has
-`--docker=rootful` to run the full stack on the system daemon. Verified end to
-end on two Multipass VMs: rootful manager, worker joined through the script, a
-3-replica service with tasks on both nodes, Traefik answering from every replica
-over the overlay (`bun run e2e:multipass --swarm` replays it). Traefik's swarm
-provider polls every 15s by default, so new replicas take that long to join the
-load balancer.
+unit-tested in `tests/unit/app/swarm-rootless.test.ts`), and the installer
+became rootful by default. Verified end to end on two Multipass VMs: rootful
+manager, worker joined through the script, a 3-replica service with tasks on
+both nodes, Traefik answering from every replica over the overlay
+(`bun run e2e:multipass --swarm` replays it). Traefik's swarm provider polls
+every 15s by default, so new replicas take that long to join the load balancer.
+
+## Readiness gate (`docker/readiness.ts`, `planReadiness` in `docker/container-rollout.ts`)
+
+A new container or swarm task gets no Traefik traffic before it's ready, like a
+Kubernetes readiness probe, and the only lever that provably does that for both
+providers is a **Docker healthcheck**. Verified facts, from source and live:
+
+- **Traefik docker provider**: `keepContainer` (`pkg/provider/docker/config.go`
+  in traefik/traefik, v3.7) drops a container whose `State.Status` isn't
+  `running`, and one whose `State.Health.Status` is set and isn't `healthy`
+  (unless `providers.docker.allowEmptyServices`). No healthcheck means `Health`
+  is empty and a running container is routed at once. The provider rebuilds only
+  on container events `start`, `die` and `health_status*`
+  (`pkg/provider/docker/pdocker.go`), no polling, so network `connect` or
+  `disconnect` is never noticed on its own. Live, behind a throwaway Traefik
+  v3.7.13: a slow-starting second container with no healthcheck took 50% of
+  requests as 502 for its whole startup; with a healthcheck (an image-style
+  `wget` one, and the generated one below) every request went to the old
+  container until the new one turned healthy, then both, zero errors.
+- **Traefik swarm provider**: lists tasks with `desired-state=running` and keeps
+  only `Status.State == running` (`listTasks` in
+  `pkg/provider/docker/pswarm.go`), polling every
+  `providers.swarm.refreshSeconds` (15s default), no events.
+- **Swarm**: the executor's `Start`
+  (`daemon/cluster/executor/container/controller.go` in moby/moby) returns, and
+  the task becomes `running`, right after the container starts when there's no
+  healthcheck; with one, only on the `health_status: healthy` event, and it
+  activates the service binding (VIP and DNS) only then; an `unhealthy` event
+  shuts the task down. Start-first (`manager/orchestrator/update/updater.go` in
+  moby/swarmkit) removes the old task as soon as the new one reaches `running`.
+  Live on a throwaway swarm: without a healthcheck an update to a task needing
+  8s to listen gave about 6s of 100% 502 (old task stopped, Traefik then only
+  knew the not-yet-listening one); with the generated healthcheck, zero errors
+  from the gate itself. What's left is the poll lag: an old task that exits
+  right away on SIGTERM gave about 4s of errors before Traefik's next poll
+  dropped it. `traefik.docker.lbswarm=true` (VIP, which swarm updates instantly)
+  would close that, but VIP routing didn't work at all on the OrbStack test
+  daemon, so it's unverified and not used.
+- **Rejected alternatives**: starting the container off the Traefik network and
+  connecting it after a probe (Traefik never sees the `connect`, and when the
+  labelled network is missing it falls back to the container's first network
+  address, routing to something it can't reach); Traefik's own load balancer
+  healthcheck (a new server starts as up, and a path check fails on login-walled
+  or 404-at-root apps); file-provider config (the routers come from labels).
+
+`readinessCheck` picks, in order: the service's `healthcheckCommand`; nothing
+when the workload isn't routed by Traefik (`dnsResolvable` false, host
+networking, remote host); the image's own `HEALTHCHECK`; nothing for a UDP-only
+port; nothing when the image can't be inspected or has no `/bin/sh`; otherwise
+the generated **listening** check (`listeningScript`): a `CMD-SHELL` loop over
+`/proc/net/tcp` and `/proc/net/tcp6` using only shell builtins, passing once a
+socket is in `LISTEN` (`0A`) on the container port on a non-loopback address. It
+works without nc/curl/wget/bash, verified on busybox ash and Debian dash (a
+loopback-only listener fails it, as it should: Traefik couldn't reach it
+either). `/bin/sh` is detected by creating a never-started throwaway container
+from the image (`homerun-readiness-<hex>`) and `infoArchive`-ing `/bin/sh`,
+which follows `/bin -> usr/bin` and busybox symlinks; `scratch` images
+(`traefik/whoami`, `hello-world`) come back without one. The generated check
+starts probing every second (`StartInterval`, Engine API 1.44+) for a start
+period as long as `ROLLOUT_WINDOW.maxWaitMs`, then every 30s with 3 retries, so
+it's liveness too: a crash-restart resets health to `starting`, which takes the
+container out of Traefik again until it listens (verified). The service
+healthcheck spec (`dockerHealthcheck`) got the same 1s `StartInterval`, so a
+rollout no longer waits 30s for its first probe. Containers and task specs with
+the generated check carry `homerun.readiness=listening`, and `containerHealth`
+returns null for them so the uptime probe keeps its own HTTP/TCP probe rather
+than reporting the generated check as the image's.
+
+The deploy log gets one `Readiness: ...` line from `readinessDescription` on
+every deploy, standalone and swarm, and the blue-green completion line says
+whether Traefik only now routes to the new container or already was. Known gaps:
+`scratch`/distroless images without a `HEALTHCHECK` (no gate; the service's
+healthcheck command can't help either, it's `CMD-SHELL`); stopping the old
+standalone container still races Traefik's `die` handling, one request timed out
+in the live run when a SIGTERM-ignoring old container was killed.
 
 ## Runtime options (`service.command`/`entrypoint`/`envFiles`/`labels`/`capAdd`/`devices`/`privileged`, Runtime tab)
 

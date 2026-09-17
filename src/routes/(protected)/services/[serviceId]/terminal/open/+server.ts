@@ -26,7 +26,10 @@ export const POST = async ({ params, locals }) => {
 		: svc.containerId;
 	if (!containerId) {
 		return json(
-			{ error: "No running container found for this service." },
+			{
+				error:
+					"No running container found for this service on this host. In swarm mode the terminal only reaches replicas running on the manager.",
+			},
 			{ status: 400 },
 		);
 	}

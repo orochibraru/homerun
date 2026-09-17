@@ -267,24 +267,33 @@ drives a target machine's shell, not this app's own runtime).
   OpenAPI above).
 - **`packages/installer/`**, a single-binary installer
   (`packages/installer/index.ts`) meant to be the target of a `curl | bash`
-  one-liner (`packages/installer/bootstrap.sh`) on a fresh Linux server:
-  installs Docker Engine + rootless prerequisites
-  (`uidmap`/`dbus-user-session`), creates a dedicated non-root system user,
-  installs **rootless** Docker for that user via Docker's own documented flow
-  (`get.docker.com/rootless` → `dockerd-rootless-setuptool.sh`,
+  one-liner (`packages/installer/bootstrap.sh`) on a fresh Linux server.
+  `--mode=full` defaults to the **system (rootful)** daemon (`options.ts`'s
+  `dockerFlavourOf`): enables it, makes it a swarm manager (`steps/swarm.ts`,
+  `--advertise-addr=` or the default-route address), creates the `homerun`
+  bridge and the attachable `homerun-swarm` overlay, and writes a compose file
+  whose Traefik runs the swarm provider too, so the app boots in swarm mode (see
+  Swarm mode in `docker.md`). The trade-off is a root daemon.
+  `--docker=rootless` (and `--mode=agent`, always) installs Docker Engine +
+  rootless prerequisites (`uidmap`/`dbus-user-session`), creates a dedicated
+  non-root system user, installs **rootless** Docker for it via Docker's own
+  documented flow (`get.docker.com/rootless` → `dockerd-rootless-setuptool.sh`,
   `loginctl enable-linger` + a `systemd --user` unit so the daemon survives a
-  headless reboot without an active login session), creates the `homerun` on
-  that rootless daemon, then installs either just the Agent (`--mode=agent`,
-  default, own `systemd --user` unit) or the full stack (`--mode=full`), all
-  under that same rootless account, never as root. **Binaries and Docker images
-  only, nothing built from source on the target host** (superseding an earlier
-  draft that cloned the repo and ran `bun run build` there): `bootstrap.sh`
-  downloads the `homerun-installer-<arch>` release binary itself and `exec`s it
-  (no Bun, no git); `--mode=agent` downloads the matching `homerun-agent-<arch>`
-  release binary straight to `/usr/local/bin/homerun-agent`; `--mode=full`
-  writes a standalone `compose.yaml` (`packages/installer/steps/full-stack.ts`,
-  distinct from the root dev `compose.yaml`; see Docker integration above)
-  pulling the published `docker.io/orochibraru/homerun` app image alongside
+  headless reboot without an active login session), creates `homerun` on that
+  daemon, then installs the Agent (`--mode=agent`, default, own `systemd --user`
+  unit) or the standalone full stack under that account, never as root.
+  `--migrate-to-rootful` (`steps/migrate-rootful.ts`) moves a rootless full
+  install onto the system daemon in swarm mode, volumes and all, and is
+  re-runnable; `--image=` swaps the app image (the e2e suite uses it to run a
+  locally built one). **Binaries and Docker images only, nothing built from
+  source on the target host** (superseding an earlier draft that cloned the repo
+  and ran `bun run build` there): `bootstrap.sh` downloads the
+  `homerun-installer-<arch>` release binary itself and `exec`s it (no Bun, no
+  git); `--mode=agent` downloads the matching `homerun-agent-<arch>` release
+  binary straight to `/usr/local/bin/homerun-agent`; `--mode=full` writes a
+  standalone `compose.yaml` (`packages/installer/steps/full-stack.ts`, distinct
+  from the root dev `compose.yaml`; see Docker integration above) pulling the
+  published `docker.io/orochibraru/homerun` app image alongside
   Traefik/Postgres, then `docker compose pull && ...up -d`.
 
   **`--mode=full` resolves an address for the instance and it is never
@@ -337,6 +346,13 @@ drives a target machine's shell, not this app's own runtime).
   `packages/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts`).
   `packages/installer/swarm-join.sh` has since had its own real two-VM run (see
   Swarm mode in `docker.md`), replayable with `bun run e2e:multipass --swarm`.
+  `--fresh-swarm` checks a default install boots in swarm mode and routes a
+  2-replica service, `--migrate` installs the previous release rootless, deploys
+  a service with a named volume holding a marker, runs `--migrate-to-rootful`
+  and checks users, mode, the redeploy, the marker's ownership and routing.
+  `--local-image` builds the app image from the checkout and loads it into each
+  VM, which app-side changes need since the installer otherwise pulls the
+  published image.
 
   This whole run is reproducible, not a one-off: `scripts/e2e-multipass.ts`
   (`bun run e2e:multipass`) automates exactly this, builds the

@@ -157,7 +157,9 @@ services
 
 services
 	.command("revisions <id>")
-	.description("list a service's revisions, newest first")
+	.description(
+		"list a service's revisions, newest first by first deploy (a rollback updates its revision in place)",
+	)
 	.option("--json", "print raw JSON instead of a table")
 	.action(async (id: string, options: { json?: boolean }) => {
 		await Commands.revisionsList(requireClient(), id, options.json ?? false);

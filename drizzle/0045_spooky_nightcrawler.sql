@@ -1,0 +1,1 @@
+ALTER TABLE "instance_settings" ADD COLUMN "pending_service_redeploy" boolean;

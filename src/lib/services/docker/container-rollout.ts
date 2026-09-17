@@ -3,6 +3,16 @@ import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
 import { SERVICE_ID_LABEL } from "./labels.ts";
 import {
+	type ImageReadinessFacts,
+	imageDeclaresHealthcheck,
+	type ReadinessCheck,
+	type ReadinessInput,
+	type ReadinessWorkload,
+	readinessCheck,
+	readinessDescription,
+	readinessNeedsImage,
+} from "./readiness.ts";
+import {
 	containerSampleFromInspect,
 	type ReadinessVerdict,
 	ROLLOUT_POLL_MS,
@@ -16,19 +26,37 @@ const logger = new Logger("Docker");
 
 export interface ContainerRollout {
 	previous: Array<{ Id: string; State: string }>;
+	readiness: ReadinessCheck;
 	remote: RemoteHostConnection | null | undefined;
 	strategy: RolloutStrategy;
 }
 
-export interface ContainerRolloutInput {
-	networkMode?: "bridge" | "host";
+export interface ContainerRolloutInput extends Omit<ReadinessInput, "remote"> {
+	image: string;
 	remote?: RemoteHostConnection | null;
 	serviceId: string;
+	tag: string;
 	volumes?: Array<{ readOnly: boolean }>;
+}
+
+export interface ReadinessPlanInput extends Omit<ReadinessInput, "remote"> {
+	image: string;
+	remote?: RemoteHostConnection | null;
+	workload: ReadinessWorkload;
 }
 
 function isNotFoundError(error: unknown): boolean {
 	return (error as { statusCode?: number } | null)?.statusCode === 404;
+}
+
+function readyLine(readiness: ReadinessCheck, seconds: number): string {
+	if (readiness.kind === "none" && readiness.reason === "not-routed") {
+		return `New container kept running for ${seconds}s, removing the previous one.`;
+	}
+	if (readiness.kind === "none") {
+		return `New container kept running for ${seconds}s, removing the previous one (Traefik was already sending it traffic).`;
+	}
+	return `New container passed its readiness check after ${seconds}s: Traefik now routes to it, removing the previous one.`;
 }
 
 /**
@@ -43,14 +71,23 @@ export function DockerContainerRolloutMixin<
 >(Base: TBase) {
 	return class DockerContainerRolloutService extends Base {
 		/**
-		 * Finds the service's existing containers (by label, not name) and
-		 * picks the rollout strategy. A recreate removes them right away and
-		 * says why when there is a reason worth reading.
+		 * Picks the new container's readiness check (`planReadiness`), finds
+		 * the service's existing containers (by label, not name) and picks the
+		 * rollout strategy. A recreate removes them right away and says why
+		 * when there is a reason worth reading.
 		 */
 		async beginContainerRollout(
 			input: ContainerRolloutInput,
 			onProgress?: (line: string) => void,
 		): Promise<ContainerRollout> {
+			const readiness = await this.planReadiness(
+				{
+					...input,
+					image: `${input.image}:${input.tag}`,
+					workload: "container",
+				},
+				onProgress,
+			);
 			const previous = await this.getDocker(input.remote).listContainers({
 				all: true,
 				filters: JSON.stringify({
@@ -63,7 +100,12 @@ export function DockerContainerRolloutMixin<
 				networkMode: input.networkMode,
 				volumes: input.volumes,
 			});
-			const rollout = { previous, remote: input.remote, strategy };
+			const rollout = {
+				previous,
+				readiness,
+				remote: input.remote,
+				strategy,
+			};
 			if (strategy.kind === "recreate") {
 				if (strategy.reason) {
 					onProgress?.(strategy.reason);
@@ -75,6 +117,61 @@ export function DockerContainerRolloutMixin<
 				);
 			}
 			return rollout;
+		}
+
+		/**
+		 * Picks the readiness check for a new container or swarm task (see
+		 * `readinessCheck`) and reports it on the deploy log. Only inspects
+		 * the image when the answer depends on it; checking for `/bin/sh`
+		 * creates a throwaway, never-started container from the image and
+		 * removes it right away.
+		 */
+		async planReadiness(
+			input: ReadinessPlanInput,
+			onProgress?: (line: string) => void,
+		): Promise<ReadinessCheck> {
+			const facts = { ...input, remote: !!input.remote };
+			const image = readinessNeedsImage(facts)
+				? await this.#imageReadinessFacts(input.image, input.remote)
+				: undefined;
+			const check = readinessCheck(facts, image);
+			onProgress?.(readinessDescription(check, input.workload));
+			return check;
+		}
+
+		/** Whether `imageRef` declares its own healthcheck and, when it doesn't, whether it ships `/bin/sh`; null when the image can't be inspected. */
+		async #imageReadinessFacts(
+			imageRef: string,
+			remote: RemoteHostConnection | null | undefined,
+		): Promise<ImageReadinessFacts | null> {
+			const docker = this.getDocker(remote);
+			const image = await docker
+				.getImage(imageRef)
+				.inspect()
+				.catch(() => null);
+			if (!image) {
+				return null;
+			}
+			if (imageDeclaresHealthcheck(image.Config?.Healthcheck?.Test)) {
+				return { hasHealthcheck: true };
+			}
+			const probe = await docker
+				.createContainer({
+					Entrypoint: ["/bin/sh"],
+					Image: imageRef,
+					NetworkDisabled: true,
+					name: `homerun-readiness-${crypto.randomUUID().slice(0, 8)}`,
+				})
+				.catch(() => null);
+			if (!probe) {
+				return null;
+			}
+			const hasShell = await probe
+				.infoArchive({ path: "/bin/sh" })
+				.then(() => true)
+				.catch(() => false);
+			await probe.remove({ force: true }).catch(() => undefined);
+			return { hasHealthcheck: false, hasShell };
 		}
 
 		/**
@@ -172,7 +269,10 @@ export function DockerContainerRolloutMixin<
 			}
 			if (verdict.verdict === "ready") {
 				onProgress?.(
-					`New container ready after ${Math.round((Date.now() - startedAt) / 1000)}s, switching traffic to it.`,
+					readyLine(
+						rollout.readiness,
+						Math.round((Date.now() - startedAt) / 1000),
+					),
 				);
 				return;
 			}

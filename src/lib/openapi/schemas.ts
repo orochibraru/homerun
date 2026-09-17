@@ -168,31 +168,45 @@ export const deployResultResponse = z.object({
 
 export const revisionResponse = z.object({
 	buildSource: z.enum(["image", "git"]).nullable(),
-	createdAt: isoTimestamp,
+	createdAt: isoTimestamp.meta({
+		description: "When this revision was first deployed",
+	}),
 	current: z.boolean().meta({ description: "The revision running now" }),
-	finishedAt: isoTimestamp.nullable(),
 	gitCommit: z.string().nullable(),
 	gitRef: z.string().nullable(),
 	health: z
 		.enum(["watching", "healthy", "unhealthy", "rolled_back"])
 		.nullable()
-		.meta({ description: "null = recorded before health watching existed" }),
-	id: z.string(),
+		.meta({
+			description:
+				"Health of its latest run. watching and healthy only ever appear on the current revision; unhealthy and rolled_back are kept as history; null otherwise",
+		}),
+	id: z.string().meta({
+		description:
+			"The revision's original deployment id, what POST /services/{serviceId}/revisions/{revisionId}/deploy takes",
+	}),
 	imageDigest: z.string().nullable(),
 	imageId: z.string().nullable(),
 	imageRef: z.string().nullable(),
+	lastDeployedAt: isoTimestamp.nullable().meta({
+		description:
+			"When this revision last went live, later than createdAt once it was redeployed",
+	}),
+	latestDeploymentId: z.string().meta({
+		description:
+			"The deployment row of its latest run, id itself unless it was redeployed",
+	}),
 	previous: z.boolean().meta({
 		description:
 			"The default rollback target: the newest older healthy revision with a different image",
 	}),
+	redeployCount: z.number().int().meta({
+		description: "How many times it was redeployed (rolled back to)",
+	}),
 	retained: z.boolean().meta({
 		description:
-			"Among the last 5 distinct images kept on the host and in the mirror",
+			"Its image is among the last distinct images kept on the host and in the mirror",
 	}),
-	rollbackOfDeploymentId: z
-		.string()
-		.nullable()
-		.meta({ description: "Set when this revision redeployed an older one" }),
 	status: z.enum([
 		"pending",
 		"pulling",

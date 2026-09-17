@@ -8,8 +8,13 @@ import type {
 	ContainerRollout,
 	ContainerRolloutInput,
 } from "./container-rollout.ts";
-import { dockerHealthcheck } from "./healthcheck.ts";
 import { buildContainerLabels, MANAGED_LABEL } from "./labels.ts";
+import {
+	READINESS_LABEL,
+	type ReadinessCheck,
+	readinessHealthcheck,
+	readinessLabels,
+} from "./readiness.ts";
 import {
 	type ContainerRuntimeParams,
 	mergeLabels,
@@ -378,7 +383,11 @@ export function DockerContainerMixin<
 		 * `#hostConfigFor`), Traefik labels, and the shared-network alias when
 		 * applicable.
 		 */
-		#createContainerOptions(params: CreateContainerParams, name: string) {
+		#createContainerOptions(
+			params: CreateContainerParams,
+			name: string,
+			readiness: ReadinessCheck,
+		) {
 			const isHostNetwork = params.networkMode === "host";
 			const protocols =
 				params.portProtocol === "both"
@@ -393,16 +402,15 @@ export function DockerContainerMixin<
 				ExposedPorts: Object.fromEntries(
 					protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
 				),
-				Healthcheck: dockerHealthcheck(params.healthcheckCommand),
+				Healthcheck: readinessHealthcheck(readiness, params.healthcheckCommand),
 				HostConfig: this.#hostConfigFor(params),
 				Image: `${params.image}:${params.tag}`,
 				// Host-mode containers never get Traefik labels regardless of
 				// dnsResolvable : there's no container-specific IP/network for
 				// Traefik's docker provider to route to in host mode, only the
 				// host's own interfaces (see CreateContainerParams.networkMode).
-				Labels: mergeLabels(
-					params.runtime?.labels,
-					buildContainerLabels({
+				Labels: mergeLabels(params.runtime?.labels, {
+					...buildContainerLabels({
 						containerPort: params.containerPort,
 						customDomain: params.customDomain,
 						dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
@@ -410,7 +418,8 @@ export function DockerContainerMixin<
 						serviceId: params.serviceId,
 						slug: params.slug,
 					}),
-				),
+					...readinessLabels(readiness),
+				}),
 				// Alias the container as its slug on the shared network, so
 				// other services can reach it at a stable hostname even though
 				// the container's own name carries a random per-deploy suffix.
@@ -491,8 +500,9 @@ export function DockerContainerMixin<
 		 * running (and neither host networking nor a writable volume rules it
 		 * out, see `rolloutStrategy`), the new container starts next to it and
 		 * the previous one is only removed once the new one is ready, so
-		 * Traefik (which skips a container whose healthcheck hasn't passed)
-		 * keeps routing to the old one meanwhile; otherwise the previous
+		 * Traefik (which skips a container whose healthcheck hasn't passed,
+		 * see `planReadiness` for the check it gets) keeps routing to the old
+		 * one meanwhile; otherwise the previous
 		 * container is removed first. Ensures the shared Traefik network
 		 * exists first (unless the container is remote or on the host
 		 * network), attaches under a DNS alias equal to the service's slug so
@@ -519,7 +529,7 @@ export function DockerContainerMixin<
 
 			onProgress?.("Creating container...");
 			const container = await docker.createContainer(
-				this.#createContainerOptions(params, name),
+				this.#createContainerOptions(params, name, rollout.readiness),
 			);
 
 			onProgress?.("Starting container...");
@@ -685,8 +695,8 @@ export function DockerContainerMixin<
 
 		/**
 		 * The container's Docker healthcheck status and the last probe's
-		 * output, or null when the container has no healthcheck configured or
-		 * can't be inspected.
+		 * output, or null when the container has no healthcheck configured,
+		 * only has Homerun's generated readiness check, or can't be inspected.
 		 */
 		async containerHealth(
 			containerId: string,
@@ -697,7 +707,7 @@ export function DockerContainerMixin<
 					.getContainer(containerId)
 					.inspect();
 				const health = info.State?.Health;
-				if (!health?.Status) {
+				if (!health?.Status || info.Config?.Labels?.[READINESS_LABEL]) {
 					return null;
 				}
 				return {

@@ -53,6 +53,7 @@ async function patch(
 	serviceId: string,
 	body: {
 		autoRollback?: boolean;
+		dnsResolvable?: boolean;
 		healthcheckCommand?: string | null;
 		image?: string;
 		imageScanEnabled?: boolean;
@@ -149,10 +150,19 @@ describe("revisions : list and roll back", () => {
 		);
 		expect(expectOk(rolled.data, rolled.response).success).toBe(true);
 
+		const rollbackId = expectOk(rolled.data, rolled.response).deploymentId;
 		const after = await revisions(id);
-		expect(after[0]?.rollbackOfDeploymentId).toBe(first);
-		expect(after[0]?.current).toBe(true);
-		expect(after[0]?.imageDigest).toBe(listed[1]?.imageDigest ?? "");
+		expect(after.map((row) => row.id)).toEqual([second, first]);
+		expect(after[0]?.current).toBe(false);
+		expect(after[0]?.previous).toBe(true);
+		expect(
+			after[0]?.health === "healthy" || after[0]?.health === "watching",
+		).toBe(false);
+		expect(after[1]?.current).toBe(true);
+		expect(after[1]?.latestDeploymentId).toBe(rollbackId);
+		expect(after[1]?.redeployCount).toBe(1);
+		expect(after[1]?.health).toBe("watching");
+		expect(after[1]?.imageDigest).toBe(listed[1]?.imageDigest ?? "");
 		expect(await containerImage(id)).toBe(
 			`nginx:1.27-alpine@${listed[1]?.imageDigest}`,
 		);
@@ -189,6 +199,32 @@ describe("revisions : health-gated rollout", () => {
 		expect(res.response.status).toBe(500);
 		expect(await containerImage(id)).toBe("nginx:1.27-alpine");
 	}, 240_000);
+
+	test("a routed service without a healthcheck gets the listening readiness check and only switches once it passes", async () => {
+		const id = await createService("IT readiness", "1.27-alpine");
+		await patch(id, { dnsResolvable: true });
+		await deploy(id);
+		await patch(id, { tag: "1.26-alpine" });
+		await deploy(id);
+
+		const res = await client.GET("/services/{serviceId}", {
+			params: { path: { serviceId: id } },
+		});
+		const svc = expectOk(res.data, res.response);
+		const proc = Bun.spawn(
+			[
+				"docker",
+				"inspect",
+				"--format",
+				'{{index .Config.Labels "homerun.readiness"}} {{.State.Health.Status}} {{.Config.Image}}',
+				svc.containerId ?? "",
+			],
+			{ stdout: "pipe" },
+		);
+		expect((await new Response(proc.stdout).text()).trim()).toStartWith(
+			"listening healthy nginx:1.26-alpine",
+		);
+	}, 240_000);
 });
 
 describe("revisions : auto-rollback", () => {
@@ -205,9 +241,12 @@ describe("revisions : auto-rollback", () => {
 
 		const settled = await waitFor(
 			() => revisions(id),
-			(rows) => rows[0]?.rollbackOfDeploymentId === good,
+			(rows) =>
+				rows.find((row) => row.id === good)?.redeployCount === 1 &&
+				rows.find((row) => row.id === good)?.current === true,
 			120_000,
 		);
+		expect(settled.map((row) => row.id)).toEqual([bad, good]);
 		expect(settled.find((row) => row.id === bad)?.health).toBe("rolled_back");
 		expect(await containerImage(id)).toStartWith("nginx:1.27-alpine@sha256:");
 	}, 240_000);

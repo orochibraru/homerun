@@ -205,16 +205,40 @@ reason nothing was rolled back. The rollback enqueuer is passed in by
 `DeploymentService` rather than imported, since `RevisionService` imports
 `deploy.service.ts`.
 
-UI: the Revisions tab (`RevisionService.annotate` adds `current`/`previous`/
-`retained`) with a per-row **Deploy this revision** (`ConfirmDialog`, a hidden
-form, the `deployRevision` action with `enhanceToast`, then Overview for the
-progress panel), and **Auto-rollback** on the Settings tab. API:
-`GET /services/{id}/revisions` and
+**Superseded health.** `health` only describes the running revision:
+`#recordSuccess` calls `DeploymentDTO.clearSupersededHealth`, nulling
+`healthy`/`watching` (`CLEARED_ON_SUPERSEDE`) on every other row of the service,
+while `unhealthy`/`rolled_back` stay as history (and keep `previousRevision`
+skipping them). Every write from the watch goes through `settleHealth`, an
+`UPDATE ... WHERE health = 'watching'`, so a watch whose row a newer deploy
+already cleared can't write `healthy`, and its unhealthy path returns before
+logging, rolling back or notifying. `revisionEntries` also passes a non-current
+entry's health through `supersededHealth`, for rows written before this.
+
+**One entry per revision.** A rollback targets the revision's original row,
+never a redeploy (`RevisionService.resolveTarget` and the auto-rollback's
+`#rollbackTarget` both follow `rollbackOfDeploymentId` up with `revisionRoot`),
+and `revisionEntries` folds each rollback row into that root: entries are
+ordered by the root's `createdAt` so deploying a revision never moves it, only
+`current`/`previous` move. An entry's status, log, error and timings are its
+latest attempt's, `lastDeployedAt` and health its latest successful run's, and
+`retained` follows the image key. The deployment rows themselves are unchanged
+(dashboards, Errors, the SSE progress panel still read them). Both
+`RevisionService.history` (the tab: the last 30 deployments, failed attempts
+included) and `list` (the API/CLI: the last 50 revisions) load any root that
+fell outside that window.
+
+UI: the Revisions tab (`RevisionService.annotate` builds `RevisionView`s with
+`current`/`previous`/`retained`) with a per-row **Deploy this revision**
+(`ConfirmDialog`, a hidden form, the `deployRevision` action with
+`enhanceToast`, then Overview for the progress panel), and **Auto-rollback** on
+the Settings tab. API: `GET /services/{id}/revisions` and
 `POST /services/{id}/revisions/{revisionId}/deploy` (`previous` accepted, waits
 like `deploy`); CLI `services revisions` and `services rollback`.
 `tests/integration/revisions.test.ts` covers two image deploys plus a rollback
-by digest, the 404/400 cases, auto-rollback of a restart-looping revision, and
-marking without auto-rollback.
+by digest (the list order unchanged, the superseded revision's health cleared),
+the 404/400 cases, auto-rollback of a restart-looping revision, and marking
+without auto-rollback.
 
 ## Image scanning in the pipeline (`image_scan`, `ImageScanService`, `deploy/pull-step.ts`)
 
@@ -447,10 +471,11 @@ a raw log tail: `deployService` appends a marker line (`phaseLine(id)`, rendered
 deployment's status. The markers are ordinary log lines, so the deployment
 history's raw-log panel keeps working untouched and nothing else in the pipeline
 had to learn about phases. There is deliberately **no "checking container
-health" phase**: health-gated rollout isn't built (see Planned features), and a
-phase that always passes instantly would be a lie. Health is watched _after_ the
-deploy finishes instead (see Revisions and rollback above) and shows on the
-Revisions tab.
+health" phase**: the rollout's readiness wait happens inside the `container`
+phase and logs its own `Readiness: ...` line (see "Readiness gate" in
+`docker.md`), and a phase that passes instantly for every service without a gate
+would be a lie. Longer-term health is watched _after_ the deploy finishes (see
+Revisions and rollback above) and shows on the Revisions tab.
 
 ## Remote functions (`src/lib/remote/*.remote.ts`, `$lib/server/remote-auth.ts`)
 

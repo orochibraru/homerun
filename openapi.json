@@ -3850,7 +3850,7 @@
 		},
 		"/services/{serviceId}/revisions": {
 			"get": {
-				"description": "Newest first, at most 50: every deploy that reached running, with the exact image it ran. current marks the one running now, previous the default rollback target.",
+				"description": "One entry per revision, newest first by when it was first deployed, from the last 50 deploys that reached running, with the exact image it ran. A rollback folds into the revision it redeployed (lastDeployedAt, latestDeploymentId, redeployCount) instead of adding an entry, so the order never changes. current marks the one running now, previous the default rollback target.",
 				"operationId": "get_services__serviceId__revisions",
 				"parameters": [
 					{
@@ -3883,25 +3883,13 @@
 												]
 											},
 											"createdAt": {
-												"description": "ISO 8601 timestamp",
+												"description": "When this revision was first deployed",
 												"example": "2026-08-20T12:00:00.000Z",
 												"type": "string"
 											},
 											"current": {
 												"description": "The revision running now",
 												"type": "boolean"
-											},
-											"finishedAt": {
-												"anyOf": [
-													{
-														"description": "ISO 8601 timestamp",
-														"example": "2026-08-20T12:00:00.000Z",
-														"type": "string"
-													},
-													{
-														"type": "null"
-													}
-												]
 											},
 											"gitCommit": {
 												"anyOf": [
@@ -3938,9 +3926,10 @@
 														"type": "null"
 													}
 												],
-												"description": "null = recorded before health watching existed"
+												"description": "Health of its latest run. watching and healthy only ever appear on the current revision; unhealthy and rolled_back are kept as history; null otherwise"
 											},
 											"id": {
+												"description": "The revision's original deployment id, what POST /services/{serviceId}/revisions/{revisionId}/deploy takes",
 												"type": "string"
 											},
 											"imageDigest": {
@@ -3973,24 +3962,36 @@
 													}
 												]
 											},
-											"previous": {
-												"description": "The default rollback target: the newest older healthy revision with a different image",
-												"type": "boolean"
-											},
-											"retained": {
-												"description": "Among the last 5 distinct images kept on the host and in the mirror",
-												"type": "boolean"
-											},
-											"rollbackOfDeploymentId": {
+											"lastDeployedAt": {
 												"anyOf": [
 													{
+														"description": "ISO 8601 timestamp",
+														"example": "2026-08-20T12:00:00.000Z",
 														"type": "string"
 													},
 													{
 														"type": "null"
 													}
 												],
-												"description": "Set when this revision redeployed an older one"
+												"description": "When this revision last went live, later than createdAt once it was redeployed"
+											},
+											"latestDeploymentId": {
+												"description": "The deployment row of its latest run, id itself unless it was redeployed",
+												"type": "string"
+											},
+											"previous": {
+												"description": "The default rollback target: the newest older healthy revision with a different image",
+												"type": "boolean"
+											},
+											"redeployCount": {
+												"description": "How many times it was redeployed (rolled back to)",
+												"maximum": 9007199254740991,
+												"minimum": -9007199254740991,
+												"type": "integer"
+											},
+											"retained": {
+												"description": "Its image is among the last distinct images kept on the host and in the mirror",
+												"type": "boolean"
 											},
 											"status": {
 												"enum": [
@@ -4009,7 +4010,6 @@
 											"buildSource",
 											"createdAt",
 											"current",
-											"finishedAt",
 											"gitCommit",
 											"gitRef",
 											"health",
@@ -4017,9 +4017,11 @@
 											"imageDigest",
 											"imageId",
 											"imageRef",
+											"lastDeployedAt",
+											"latestDeploymentId",
 											"previous",
+											"redeployCount",
 											"retained",
-											"rollbackOfDeploymentId",
 											"status"
 										],
 										"type": "object"

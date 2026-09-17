@@ -63,7 +63,7 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 			"/home/homerun/homerun",
 		]);
 		expect(run).toHaveBeenCalledWith(
-			["docker", "compose", "-f", composePath, "pull"],
+			["docker", "compose", "-f", composePath, "pull", "--quiet"],
 			expect.objectContaining({ as: "homerun", cwd: "/home/homerun/homerun" }),
 		);
 		expect(run).toHaveBeenCalledWith(
@@ -186,7 +186,7 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 			(call) => call[0][0] === "docker",
 		);
 		expect(composeCalls.map((call) => call[0])).toEqual([
-			["docker", "compose", "-f", composePath, "pull"],
+			["docker", "compose", "-f", composePath, "pull", "--quiet"],
 			["docker", "compose", "-f", composePath, "up", "-d"],
 		]);
 		for (const call of composeCalls) {
@@ -206,5 +206,95 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 			]
 		)[1];
 		expect(compose).toContain("- /var/run/docker.sock:/var/run/docker.sock:ro");
+	});
+});
+
+describe("FullStackInstaller.bringUpFullStack in swarm mode", () => {
+	function fakeRunner() {
+		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
+		const writeFile = mock(
+			async (_path: string, _content: string) => undefined,
+		);
+		const appendLine = mock(async (_path: string, _line: string) => undefined);
+		return {
+			run,
+			runner: { appendLine, run, writeFile } as unknown as StepRunner,
+			writeFile,
+		};
+	}
+
+	function composeFrom(writeFile: ReturnType<typeof mock>): string {
+		return (
+			writeFile.mock.calls.find(
+				(call) => call[0] === "/home/homerun/homerun/compose.yaml",
+			) as [string, string]
+		)[1];
+	}
+
+	test("ends Traefik's command with the exact swarm flags the app applies, and joins the overlay", async () => {
+		const { runner, writeFile } = fakeRunner();
+		await FullStackInstaller.bringUpFullStack({
+			dockerSocket: "/var/run/docker.sock",
+			host: "203.0.113.10",
+			rootful: true,
+			run: runner,
+			swarm: true,
+			username: "homerun",
+			version: "latest",
+		});
+		const compose = composeFrom(writeFile);
+		expect(compose).toContain(
+			"acme.json\n      - --providers.swarm=true\n      - --providers.swarm.exposedByDefault=false\n      - --providers.swarm.network=homerun-swarm\n",
+		);
+		expect(compose).toContain("- --providers.docker=true");
+		expect(compose).toContain("- /var/run/docker.sock:/var/run/docker.sock:ro");
+		expect(compose).toContain("DOCKER_SOCKET_PATH: /var/run/docker.sock");
+		expect(compose).toContain(
+			"    networks:\n      - homerun\n      - homerun-swarm\n",
+		);
+		expect(compose).toContain(
+			"  homerun-swarm:\n    name: homerun-swarm\n    external: true",
+		);
+	});
+
+	test("a standalone install has no swarm provider or overlay", async () => {
+		const { runner, writeFile } = fakeRunner();
+		await FullStackInstaller.bringUpFullStack({
+			dockerSocket: "/run/user/1000/docker.sock",
+			host: "203.0.113.10",
+			run: runner,
+			username: "homerun",
+			version: "latest",
+		});
+		const compose = composeFrom(writeFile);
+		expect(compose).not.toContain("providers.swarm");
+		expect(compose).not.toContain("homerun-swarm");
+	});
+
+	test("runs a given image and tolerates it not being pullable", async () => {
+		const { run, runner, writeFile } = fakeRunner();
+		await FullStackInstaller.bringUpFullStack({
+			dockerSocket: "/var/run/docker.sock",
+			host: "203.0.113.10",
+			image: "homerun-e2e:local",
+			rootful: true,
+			run: runner,
+			swarm: true,
+			username: "homerun",
+			version: "latest",
+		});
+		expect(composeFrom(writeFile)).toContain("image: homerun-e2e:local");
+		expect(run).toHaveBeenCalledWith(
+			[
+				"docker",
+				"compose",
+				"-f",
+				"/home/homerun/homerun/compose.yaml",
+				"pull",
+				"--quiet",
+				"--ignore-pull-failures",
+			],
+			expect.objectContaining({ cwd: "/home/homerun/homerun" }),
+		);
 	});
 });

@@ -1,13 +1,15 @@
 import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import { StepRunner } from "./exec";
-import type { Options } from "./options";
-import { OptionsParser } from "./options";
+import type { DockerFlavour, Options } from "./options";
+import { dockerFlavourOf, OptionsParser } from "./options";
 import { AgentInstaller } from "./steps/agent";
-import { Detector } from "./steps/detect";
+import { Detector, type PackageManager } from "./steps/detect";
 import { FullStackInstaller } from "./steps/full-stack";
+import { RootfulMigration } from "./steps/migrate-rootful";
 import { NetworkSetup } from "./steps/network";
 import { RootlessDockerInstaller } from "./steps/rootless-docker";
+import { SwarmSetup } from "./steps/swarm";
 
 /**
  * Where this instance will actually be reached, in order: --domain=, an
@@ -84,44 +86,102 @@ async function main() {
 	}
 
 	const run = new StepRunner(opts.dryRun);
+	const docker = dockerFlavourOf(opts);
 
 	console.log(
-		`Target: mode=${opts.mode} docker=${opts.docker} user=${opts.rootlessUser} arch=${Detector.arch()} version=${opts.version} dryRun=${opts.dryRun}\n`,
+		`Target: mode=${opts.mode} docker=${docker} migrate=${opts.migrateToRootful} user=${opts.rootlessUser} arch=${Detector.arch()} version=${opts.version} dryRun=${opts.dryRun}\n`,
 	);
 
+	if (opts.migrateToRootful) {
+		await migrateToRootful(opts, run);
+		return;
+	}
+
+	const { dockerSocket, host } = await installDocker(opts, run, docker);
+	await installStack(opts, run, { dockerSocket, docker, host });
+
+	console.log("\nDone.");
+	printNextSteps(opts, dockerSocket, host);
+}
+
+/**
+ * Steps 1 to 3 of a fresh install: Docker Engine, the install user, then the
+ * system daemon as a swarm manager or a rootless daemon for that user.
+ *
+ * @returns The daemon's socket and the instance's address (empty for an agent install).
+ */
+async function installDocker(
+	opts: Options,
+	run: StepRunner,
+	docker: DockerFlavour,
+): Promise<{ dockerSocket: string; host: string }> {
 	const host = opts.mode === "full" ? await resolveHost(opts) : "";
+	const rootful = docker === "rootful";
 
-	console.log("\n== 1/5 Docker engine + rootless prerequisites ==");
-	// --dry-run is also how this installer's own logic gets exercised outside
-	// a real Debian/RHEL box (e.g. from a macOS dev machine) : fall back to a
-	// fake apt manager there instead of failing before anything else runs.
-	const pm = opts.dryRun
-		? await Detector.detectPackageManager().catch(() => ({
-				install: ["apt-get", "install", "-y"],
-				kind: "apt" as const,
-			}))
-		: await Detector.detectPackageManager();
+	console.log(
+		`\n== 1/5 Docker engine${rootful ? "" : " + rootless prerequisites"} ==`,
+	);
 	await RootlessDockerInstaller.installDockerEngine(run);
-	await RootlessDockerInstaller.installRootlessPrereqs(run, pm);
+	if (!rootful) {
+		await RootlessDockerInstaller.installRootlessPrereqs(
+			run,
+			await packageManagerFor(opts),
+		);
+	}
 
-	console.log("\n== 2/5 Rootless user ==");
+	console.log(`\n== 2/5 ${rootful ? "Install" : "Rootless"} user ==`);
 	await RootlessDockerInstaller.ensureRootlessUser(run, opts.rootlessUser);
 
-	const rootful = opts.docker === "rootful";
-	console.log(`\n== 3/5 ${rootful ? "System" : "Rootless"} Docker daemon ==`);
-	const dockerSocket = rootful
-		? await RootlessDockerInstaller.enableRootfulDocker(run)
-		: await RootlessDockerInstaller.installRootlessDocker(
+	console.log(
+		`\n== 3/5 ${rootful ? "System Docker daemon + swarm manager" : "Rootless Docker daemon"} ==`,
+	);
+	if (!rootful) {
+		return {
+			dockerSocket: await RootlessDockerInstaller.installRootlessDocker(
 				run,
 				opts.rootlessUser,
-			);
+			),
+			host,
+		};
+	}
+	const dockerSocket = await RootlessDockerInstaller.enableRootfulDocker(run);
+	await SwarmSetup.ensureManager(run, await advertiseAddressFor(opts));
+	return { dockerSocket, host };
+}
 
-	console.log("\n== 4/5 homerun ==");
+/**
+ * The host's package manager. --dry-run is also how this installer's own
+ * logic gets exercised outside a real Debian/RHEL box (e.g. from a macOS dev
+ * machine), so there it falls back to apt instead of failing before anything
+ * else runs.
+ */
+async function packageManagerFor(opts: Options): Promise<PackageManager> {
+	if (!opts.dryRun) {
+		return await Detector.detectPackageManager();
+	}
+	return await Detector.detectPackageManager().catch(() => ({
+		install: ["apt-get", "install", "-y"],
+		kind: "apt" as const,
+	}));
+}
+
+/** Steps 4 and 5 of a fresh install: the networks on the chosen daemon, then the agent or the full stack. */
+async function installStack(
+	opts: Options,
+	run: StepRunner,
+	target: { dockerSocket: string; docker: DockerFlavour; host: string },
+): Promise<void> {
+	const { dockerSocket, host } = target;
+	const rootful = target.docker === "rootful";
+	console.log("\n== 4/5 Networks ==");
 	await NetworkSetup.ensureHomerunNetwork(
 		run,
 		rootful ? null : opts.rootlessUser,
 		dockerSocket,
 	);
+	if (rootful) {
+		await SwarmSetup.ensureOverlayNetwork(run);
+	}
 
 	console.log("\n== 5/5 Install ==");
 	if (opts.mode === "agent") {
@@ -132,19 +192,69 @@ async function main() {
 			dockerSocket,
 			opts.agentPort,
 		);
-	} else {
-		await FullStackInstaller.bringUpFullStack({
-			dockerSocket,
-			host,
-			rootful,
-			run,
-			username: opts.rootlessUser,
-			version: opts.version,
-		});
+		return;
 	}
+	await FullStackInstaller.bringUpFullStack({
+		dockerSocket,
+		host,
+		image: opts.image,
+		rootful,
+		run,
+		swarm: rootful,
+		username: opts.rootlessUser,
+		version: opts.version,
+	});
+}
 
-	console.log("\nDone.");
-	printNextSteps(opts, dockerSocket, host);
+/** `--advertise-addr=`, else this host's default-route address, else null to let `docker swarm init` pick. */
+async function advertiseAddressFor(opts: Options): Promise<string | null> {
+	return opts.advertiseAddress ?? (await Detector.hostAddress());
+}
+
+/** `--migrate-to-rootful`: runs the migration, then prints what's left for the operator. */
+async function migrateToRootful(opts: Options, run: StepRunner): Promise<void> {
+	const report = await RootfulMigration.migrate({
+		advertiseAddress: await advertiseAddressFor(opts),
+		domain: opts.domain,
+		dryRun: opts.dryRun,
+		image: opts.image,
+		resolveHost: () => resolveHost(opts),
+		run,
+		username: opts.rootlessUser,
+		version: opts.version,
+	});
+
+	console.log(
+		"\nDone. Homerun now runs on the system Docker daemon in swarm mode.",
+	);
+	console.log(
+		"Every deployed service has been queued for a redeploy as a swarm service : follow them on the dashboard's Services page.",
+	);
+	console.log(
+		`Check the stack with: sudo docker compose -f ${report.composePath} ps`,
+	);
+	if (report.otherContainers.length > 0) {
+		console.log(
+			"\nThese containers weren't created by Homerun and weren't moved, recreate them on the system daemon yourself:",
+		);
+		for (const container of report.otherContainers) {
+			console.log(`  ${container}`);
+		}
+	}
+	if (report.bindMounts.length > 0) {
+		console.log(
+			"\nServices bind-mount these host paths. Files there are still owned by the rootless user's mapped ids, so a container running as a non-root user may need a chown:",
+		);
+		for (const path of report.bindMounts) {
+			console.log(`  ${path}`);
+		}
+	}
+	console.log(
+		`\nThe rootless daemon is stopped and disabled, its data is untouched. Once you're happy, remove it with:
+  sudo -u ${opts.rootlessUser} env XDG_RUNTIME_DIR=/run/user/${report.uid} /home/${opts.rootlessUser}/bin/dockerd-rootless-setuptool.sh uninstall
+  sudo rm -rf /home/${opts.rootlessUser}/.local/share/docker /home/${opts.rootlessUser}/bin
+  sudo rm -f /home/${opts.rootlessUser}/homerun/compose.rootless.yaml /etc/sysctl.d/90-homerun-rootless-ports.conf`,
+	);
 }
 
 function printNextSteps(
@@ -170,7 +280,7 @@ function printNextSteps(
 		`The full stack should be coming up under ${composePath}, check with:`,
 	);
 	const asUser =
-		opts.docker === "rootful"
+		dockerFlavourOf(opts) === "rootful"
 			? "sudo"
 			: `sudo -u ${opts.rootlessUser} env DOCKER_HOST=unix://${dockerSocket}`;
 	console.log(`  ${asUser} docker compose -f ${composePath} ps`);

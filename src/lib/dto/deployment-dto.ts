@@ -1,8 +1,23 @@
-import { and, count, desc, eq, gt, inArray, isNotNull, lte } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNotNull,
+	lte,
+	ne,
+} from "drizzle-orm";
 import type { RevisionConfig } from "$lib/revision-config";
-import { type RevisionLike, retainedRevisions } from "$lib/revisions";
+import {
+	CLEARED_ON_SUPERSEDE,
+	type RevisionLike,
+	retainedRevisions,
+} from "$lib/revisions";
 import { db } from "$lib/server/db/lib";
 import { type Deployment, deployment, service } from "$lib/server/db/schema";
+import type { RevisionHealth } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 import { InstanceSettingsDTO } from "./instance-settings-dto";
 
@@ -88,6 +103,49 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			.orderBy(desc(deployment.createdAt))
 			.limit(limit);
 		return rows.map((row) => new DeploymentDTO(row));
+	}
+
+	/**
+	 * Loads the given deployments of one service, in no particular order;
+	 * ids that don't exist or belong to another service are skipped.
+	 */
+	static async listByIdsForService(
+		serviceId: string,
+		ids: string[],
+	): Promise<DeploymentDTO[]> {
+		if (ids.length === 0) {
+			return [];
+		}
+		const rows = await db
+			.select()
+			.from(deployment)
+			.where(
+				and(eq(deployment.serviceId, serviceId), inArray(deployment.id, ids)),
+			);
+		return rows.map((row) => new DeploymentDTO(row));
+	}
+
+	/**
+	 * Clears `healthy`/`watching` on every other deployment of the service,
+	 * called once a deploy of it succeeds so only the revision now running
+	 * carries a live health state; `unhealthy`/`rolled_back` stay as history.
+	 * A health watch still running for one of those rows then fails its
+	 * `settleHealth` and can't write back.
+	 */
+	static async clearSupersededHealth(
+		serviceId: string,
+		currentDeploymentId: string,
+	): Promise<void> {
+		await db
+			.update(deployment)
+			.set({ health: null })
+			.where(
+				and(
+					eq(deployment.serviceId, serviceId),
+					ne(deployment.id, currentDeploymentId),
+					inArray(deployment.health, CLEARED_ON_SUPERSEDE),
+				),
+			);
 	}
 
 	/**
@@ -285,6 +343,28 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			.set(input)
 			.where(eq(deployment.id, this.row.id));
 		Object.assign(this.row, input);
+	}
+
+	/**
+	 * Records the outcome of this deployment's health watch, only while the
+	 * row is still `watching`: once a newer deploy cleared it, the write is
+	 * dropped so a superseded watch can't bring back a stale state.
+	 *
+	 * @returns Whether the row was still being watched and got updated.
+	 */
+	async settleHealth(health: RevisionHealth | null): Promise<boolean> {
+		const updated = await db
+			.update(deployment)
+			.set({ health })
+			.where(
+				and(eq(deployment.id, this.row.id), eq(deployment.health, "watching")),
+			)
+			.returning({ id: deployment.id });
+		if (updated.length === 0) {
+			return false;
+		}
+		this.row.health = health;
+		return true;
 	}
 
 	/** Appends one line to the live progress log (see the `deployment.log` column). */

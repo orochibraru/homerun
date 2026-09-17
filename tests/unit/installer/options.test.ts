@@ -8,14 +8,17 @@ import {
 	test,
 } from "bun:test";
 import process from "node:process";
-import { OptionsParser } from "../../../packages/installer/options";
+import {
+	dockerFlavourOf,
+	OptionsParser,
+} from "../../../packages/installer/options";
 
 describe("OptionsParser.parseArgs", () => {
 	test("defaults when no flags are given", () => {
 		expect(OptionsParser.parseArgs([])).toEqual({
 			agentPort: 7420,
-			docker: "rootless",
 			dryRun: false,
+			migrateToRootful: false,
 			mode: "agent",
 			rootlessUser: "homerun",
 			version: "latest",
@@ -73,8 +76,8 @@ describe("OptionsParser.parseArgs", () => {
 		]);
 		expect(opts).toEqual({
 			agentPort: 8080,
-			docker: "rootless",
 			dryRun: true,
+			migrateToRootful: false,
 			mode: "full",
 			rootlessUser: "alice",
 			version: "v2.0.0",
@@ -131,6 +134,9 @@ describe("OptionsParser.printHelp", () => {
 			"--version=",
 			"--mode=agent|full",
 			"--docker=rootless|rootful",
+			"--advertise-addr=",
+			"--migrate-to-rootful",
+			"--image=",
 			"--user=",
 			"--port=",
 			"--dry-run",
@@ -150,6 +156,43 @@ describe("OptionsParser.parseArgs --domain", () => {
 	});
 });
 
+describe("OptionsParser.parseArgs swarm and migration flags", () => {
+	test("--advertise-addr and --image take their values", () => {
+		const opts = OptionsParser.parseArgs([
+			"--advertise-addr=10.0.0.5",
+			"--image=homerun:local",
+		]);
+		expect(opts.advertiseAddress).toBe("10.0.0.5");
+		expect(opts.image).toBe("homerun:local");
+	});
+
+	test("--migrate-to-rootful implies a full install", () => {
+		const opts = OptionsParser.parseArgs(["--migrate-to-rootful"]);
+		expect(opts.migrateToRootful).toBe(true);
+		expect(opts.mode).toBe("full");
+	});
+});
+
+describe("dockerFlavourOf", () => {
+	test("a full install defaults to the system daemon", () => {
+		expect(dockerFlavourOf(OptionsParser.parseArgs(["--mode=full"]))).toBe(
+			"rootful",
+		);
+	});
+
+	test("a full install can opt into rootless", () => {
+		expect(
+			dockerFlavourOf(
+				OptionsParser.parseArgs(["--mode=full", "--docker=rootless"]),
+			),
+		).toBe("rootless");
+	});
+
+	test("the agent always runs rootless", () => {
+		expect(dockerFlavourOf(OptionsParser.parseArgs([]))).toBe("rootless");
+	});
+});
+
 describe("OptionsParser.validate", () => {
 	test("accepts rootful Docker for a full install", () => {
 		expect(
@@ -159,13 +202,44 @@ describe("OptionsParser.validate", () => {
 		).toBeNull();
 	});
 
-	test("rejects rootful Docker for an agent install", () => {
+	test("rejects an explicit daemon for an agent install", () => {
 		expect(
 			OptionsParser.validate(OptionsParser.parseArgs(["--docker=rootful"])),
 		).toContain("--docker=rootful only applies to --mode=full");
+		expect(
+			OptionsParser.validate(OptionsParser.parseArgs(["--docker=rootless"])),
+		).toContain("--docker=rootless only applies to --mode=full");
 	});
 
-	test("accepts the defaults", () => {
+	test("rejects migrating to rootful while asking for rootless", () => {
+		expect(
+			OptionsParser.validate(
+				OptionsParser.parseArgs(["--migrate-to-rootful", "--docker=rootless"]),
+			),
+		).toContain("drop --docker=rootless");
+	});
+
+	test("rejects --advertise-addr without a swarm to advertise", () => {
+		expect(
+			OptionsParser.validate(
+				OptionsParser.parseArgs([
+					"--mode=full",
+					"--docker=rootless",
+					"--advertise-addr=10.0.0.5",
+				]),
+			),
+		).toContain("--advertise-addr only applies");
+		expect(
+			OptionsParser.validate(
+				OptionsParser.parseArgs(["--mode=full", "--advertise-addr=10.0.0.5"]),
+			),
+		).toBeNull();
+	});
+
+	test("accepts the defaults and a plain migration", () => {
 		expect(OptionsParser.validate(OptionsParser.parseArgs([]))).toBeNull();
+		expect(
+			OptionsParser.validate(OptionsParser.parseArgs(["--migrate-to-rootful"])),
+		).toBeNull();
 	});
 });

@@ -123,9 +123,10 @@ in `commands.ts`); a failed or cancelled job, or a wait past
 `--timeout <seconds>` (default 1800), exits 1 too.
 
 `homerun services revisions <id>` calls `GET /services/{serviceId}/revisions`
-and prints a table of the service's revisions (id, date, a `current`/`previous`
-marker, health, image, commit, digest), `--json` for the raw list.
-`homerun services rollback <id> [revisionId]` calls
+and prints a table of the service's revisions, one row per revision with
+rollbacks folded into the revision they redeployed (id, first deployed, last
+deployed, a `current`/`previous` marker, health, image, commit, digest),
+`--json` for the raw list. `homerun services rollback <id> [revisionId]` calls
 `POST /services/{serviceId}/revisions/{revisionId}/deploy` with `previous` when
 no revision id is given, which deploys the default rollback target (the newest
 older healthy revision with a different image), and prints the deploy result

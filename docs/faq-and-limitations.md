@@ -62,12 +62,20 @@ are dropped with a warning. See
 
 ## Known, real limitations (not hypothetical)
 
-- **Swarm mode only sees this host's replicas.** Homerun sets up the swarm and
-  Traefik itself, but per-replica usage is only shown for replicas running on
-  this machine.
-- **Swarm mode needs rootful Docker.** Rootless Docker can't create overlay
-  networks, so a swarm manager (and every node `swarm-join.sh` joins) runs on
-  the system daemon. Install with `--docker=rootful` if you plan to use it.
+- **The default install runs Docker as root.** Swarm mode, the default, needs
+  the system Docker daemon because rootless Docker can't create overlay
+  networks, and anything that can reach that daemon's socket is root on the
+  host. `--docker=rootless` keeps Docker under an unprivileged user at the cost
+  of swarm (standalone mode only). A rootless install moves over with
+  `--migrate-to-rootful`, see
+  [Getting started](getting-started.md#moving-a-rootless-install-to-rootful--swarm).
+- **Swarm mode only sees this host's replicas.** Per-replica usage, the Terminal
+  tab and pre-backup commands only reach replicas running on this machine, and
+  the uptime "from the network" probe doesn't run for swarm services.
+- **Swarm mode ignores privileged mode and devices** and doesn't give a stack
+  its own network. With several nodes, volumes are per node and locally built
+  images need a build cache registry. See
+  [Services: swarm mode](services.md#swarm-mode).
 - **Cloudflare and Pangolin DNS automation haven't been tried against real
   accounts.** Every deploy writes what each provider did into its log, so read
   the first one. Point Pangolin at its **Integration API** (its own port, base

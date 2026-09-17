@@ -27,6 +27,7 @@ import { CronService } from "$lib/services/cron.service";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { syncDashboardDns } from "$lib/services/dns.service";
 import { DockerService } from "$lib/services/docker.service";
+import { OrchestrationService } from "$lib/services/orchestration.service";
 import { JobWorker } from "$lib/services/queue/worker";
 
 const logger = new Logger("Hooks");
@@ -191,8 +192,10 @@ async function runMigrations() {
  * database, migrates and seeds built-in templates, applies DB-backed instance
  * settings (plus the auto-detected forward-auth URL when running in a
  * container), rebuilds auth, syncs the dashboard's Traefik router and DNS,
- * re-asserts swarm mode on the host (a `docker compose up` recreating Traefik
- * drops its swarm provider flags) when that's the orchestration mode, then
+ * picks the orchestration mode for a brand new instance and queues the
+ * redeploys `--migrate-to-rootful` asked for, re-asserts swarm mode on the
+ * host (a `docker compose up` recreating Traefik drops its swarm provider
+ * flags) when that's the orchestration mode, then
  * starts the job worker, rollout health watches and every scheduler.
  */
 export const init = async () => {
@@ -205,7 +208,7 @@ export const init = async () => {
 	// reconstructs the better-auth singleton so OAuth providers configured
 	// in the DB (rather than env) are present from the very first request,
 	// not just after a settings-page save.
-	const settings = await InstanceSettingsDTO.get();
+	const { created, settings } = await InstanceSettingsDTO.getOrCreate();
 	applyInstanceSettings(settings.toConfigOverride());
 	const self = await DockerService.selfContainer();
 	if (self?.name && self.networkAddress) {
@@ -217,6 +220,9 @@ export const init = async () => {
 	rebuildAuth();
 	await DockerService.syncDashboardRouter();
 	void syncDashboardDns();
+	await OrchestrationService.applyOnBoot(settings, created).catch((err) => {
+		logger.warn("Couldn't apply the orchestration mode on boot", err);
+	});
 	if (settings.orchestrationMode === "swarm") {
 		void DockerService.enableSwarmMode().catch((err) => {
 			logger.warn("Couldn't re-assert swarm mode on this host", err);

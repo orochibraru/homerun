@@ -80,9 +80,12 @@ agent's HTTP API instead of a raw Docker connection.
 
 ## Installer
 
-`packages/installer/` automates standing up a fresh Linux box with rootless
-Docker plus either the Agent or the full stack, this is what
-`docs/getting-started.md`'s one-liner runs. See
+`packages/installer/` automates standing up a fresh Linux box with either the
+full stack, on the system Docker daemon as a swarm manager (or on rootless
+Docker in standalone mode with `--docker=rootless`), or the Agent alone, on its
+own rootless daemon. This is what `docs/getting-started.md`'s one-liner runs,
+and `--migrate-to-rootful` moves an older rootless install onto the system
+daemon in swarm mode. See
 [`packages/installer/README.md`](../packages/installer/README.md) for flags and
 what's verified.
 
@@ -100,9 +103,9 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/i
 ```
 
 The node joins on the **system (rootful)** Docker daemon, same as the manager
-has to run on (see [swarm mode](services.md#swarm-mode)): rootless Docker can't
-create the overlay networks swarm services use. Nodes need to reach each other
-on 2377/tcp, 7946/tcp+udp and 4789/udp. On a host with several network
-interfaces add `--advertise-addr=<ip>`. Verified against two real disposable
-VMs: the worker joins, replicas get scheduled on it and Traefik on the manager
-serves them over the overlay network.
+runs on (see [swarm mode](services.md#swarm-mode)): rootless Docker can't create
+the overlay networks swarm services use. Nodes need to reach each other on
+2377/tcp, 7946/tcp+udp and 4789/udp. On a host with several network interfaces
+add `--advertise-addr=<ip>`. Verified against two real disposable VMs: the
+worker joins, replicas get scheduled on it and Traefik on the manager serves
+them over the overlay network.

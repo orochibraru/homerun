@@ -3,6 +3,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
+	import Alert from "$lib/components/alert.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -225,21 +226,21 @@
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Orchestration</h2>
       <p class="text-text-muted text-xs">
-        "Standalone" is a single container per service (this app's original
-        model). "Swarm" deploys every service as a replicated, self-healing
-        Docker Swarm service instead : scale via the Replicas field on a
-        service's Compute tab, restarts are rolling force-updates. Saving
-        <strong>Swarm</strong> prepares this host for it : <code
-        >docker swarm init</code
-        > if the daemon isn't a manager yet, an attachable overlay network
-        (<code>{data.settings.dockerNetworkName
-        ?? data.envDefaults.dockerNetworkName}-swarm</code
-        >, since the shared bridge network can't be converted in place),
-        Traefik attached to it, and Traefik's swarm provider turned on. That
-        last step recreates the Traefik container, so this page may blink if
-        you reach it through Traefik. Switching back turns the provider off
-        again and leaves the swarm itself alone. Remote Hosts aren't part of
-        the cluster : a swarm-mode service can only deploy locally.
+        "Swarm" (what the installer sets up) deploys every service as a
+        replicated, self-healing Docker Swarm service : scale via the Replicas
+        field on a service's Compute tab, restarts are rolling updates, and
+        other machines can join as workers. "Standalone" is a single container
+        per service. Saving <strong>Swarm</strong> prepares this host for it :
+        <code>docker swarm init</code> if the daemon isn't a manager yet, an
+        attachable overlay network (<code>{data.settings.dockerNetworkName
+        ?? data.envDefaults.dockerNetworkName}-swarm</code>, since the shared
+        bridge network can't be converted in place), Traefik attached to it,
+        and Traefik's swarm provider turned on. That last step recreates the
+        Traefik container, so this page may blink if you reach it through
+        Traefik. Switching back turns the provider off again and leaves the
+        swarm itself alone. Either way the mode only changes once the host is
+        ready. Services keep running under the old mode until they're
+        redeployed.
       </p>
     </div>
     <form
@@ -249,11 +250,19 @@
       use:enhance={enhanceToast({
         error: "Couldn't apply the orchestration mode.",
         loading: "Applying the orchestration mode",
+        onFailure: () => {
+          orchestrationMode = data.settings.orchestrationMode ?? "standalone";
+        },
         success: (data) =>
           (data?.orchestrationSteps as string[] | undefined)?.at(-1) ??
           "Orchestration settings saved.",
       })}
     >
+      {#if data.swarmUnavailableReason}
+        <Alert title="Swarm isn't available on this daemon" variant="warning">
+          {data.swarmUnavailableReason}
+        </Alert>
+      {/if}
       <div>
         <label class={label} for="orchestrationMode">Mode</label>
         <SelectRoot
@@ -266,9 +275,37 @@
           </SelectTrigger>
           <SelectContent>
             <SelectItem label="Standalone" value="standalone" />
-            <SelectItem label="Swarm" value="swarm" />
+            <SelectItem
+              disabled={Boolean(data.swarmUnavailableReason)}
+              label={data.swarmUnavailableReason
+              ? "Swarm (needs rootful Docker)"
+              : "Swarm"}
+              value="swarm"
+            />
           </SelectContent>
         </SelectRoot>
+      </div>
+      <div class="text-text-subtle space-y-1 text-xs">
+        <p class="text-text-muted font-medium">What swarm mode doesn't do</p>
+        <ul class="list-disc space-y-1 pl-4">
+          <li>
+            Privileged mode and device mappings (Runtime tab) are ignored :
+            the swarm API has neither.
+          </li>
+          <li>
+            Services don't join their stack's own network : every swarm service
+            shares the <code>-swarm</code> overlay and is reached at its slug.
+          </li>
+          <li>
+            The Terminal tab, pre-backup commands and per-replica stats only
+            reach replicas on this host, and the "from the network" uptime probe
+            doesn't run (the hostname probe does).
+          </li>
+          <li>
+            With more than one node, volumes are per node and an image built on
+            this host needs a build cache registry for other nodes to pull it.
+          </li>
+        </ul>
       </div>
       <div class="flex justify-end">
         <Button type="submit">Save</Button>

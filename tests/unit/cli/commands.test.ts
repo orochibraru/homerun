@@ -326,7 +326,6 @@ function revisionFixture(overrides: Record<string, unknown> = {}) {
 		buildSource: "image" as const,
 		createdAt: "2026-09-16T12:00:00.000Z",
 		current: false,
-		finishedAt: "2026-09-16T12:00:10.000Z",
 		gitCommit: null,
 		gitRef: null,
 		health: "healthy" as const,
@@ -334,9 +333,11 @@ function revisionFixture(overrides: Record<string, unknown> = {}) {
 		imageDigest: `sha256:${"b".repeat(64)}`,
 		imageId: null,
 		imageRef: "nginx:1.27",
+		lastDeployedAt: "2026-09-16T12:00:10.000Z",
+		latestDeploymentId: "rev-1",
 		previous: true,
+		redeployCount: 0,
 		retained: true,
-		rollbackOfDeploymentId: null,
 		status: "running" as const,
 		...overrides,
 	};
@@ -363,6 +364,8 @@ describe("Commands.revisionsList / serviceRollback", () => {
 			"(not retained)",
 		]);
 		expect(rows[1]?.commit).toBe("0123456");
+		expect(rows[1]?.lastDeployedAt).toBe("2026-09-16T12:00:10.000Z");
+		expect(printTableSpy.mock.calls[0]?.[1]).toContain("lastDeployedAt");
 	});
 
 	test("rollback without a revision id targets the previous revision", async () => {

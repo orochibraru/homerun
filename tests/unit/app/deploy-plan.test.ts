@@ -97,7 +97,25 @@ describe("resolveDeployPlan, legal combinations", () => {
 
 	test("image source, swarm : a pull into a swarm service carrying replicas", () => {
 		const plan = resolveDeployPlan(input({ orchestrationMode: "swarm" }));
-		expect(plan.workload).toEqual({ kind: "swarm", replicas: 3 });
+		expect(plan.workload).toEqual({
+			kind: "swarm",
+			networkMode: "bridge",
+			replicas: 3,
+		});
+	});
+
+	test("host networking carries through to a swarm service", () => {
+		const plan = resolveDeployPlan(
+			input({
+				orchestrationMode: "swarm",
+				service: service({ networkMode: "host" }),
+			}),
+		);
+		expect(plan.workload).toEqual({
+			kind: "swarm",
+			networkMode: "host",
+			replicas: 3,
+		});
 	});
 
 	test("host networking stays legal in standalone mode", () => {
@@ -271,16 +289,5 @@ describe("resolveDeployPlan, illegal combinations", () => {
 				}),
 			),
 		).toThrow("Build server gone not found.");
-	});
-
-	test("host networking under swarm", () => {
-		expect(() =>
-			resolveDeployPlan(
-				input({
-					orchestrationMode: "swarm",
-					service: service({ networkMode: "host" }),
-				}),
-			),
-		).toThrow(DeployPlanError);
 	});
 });

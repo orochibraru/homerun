@@ -136,13 +136,25 @@ export interface InstanceSettingsOverride {
 export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	/** Selects the singleton row, creating a blank default one on first read. */
 	static async get(): Promise<InstanceSettingsDTO> {
+		return (await InstanceSettingsDTO.getOrCreate()).settings;
+	}
+
+	/**
+	 * Selects the singleton row, creating a blank default one on first read,
+	 * and says whether this call is the one that created it : true only on a
+	 * brand new database.
+	 */
+	static async getOrCreate(): Promise<{
+		created: boolean;
+		settings: InstanceSettingsDTO;
+	}> {
 		const [existing] = await db
 			.select()
 			.from(instanceSettings)
 			.where(eq(instanceSettings.id, SINGLETON_ID))
 			.limit(1);
 		if (existing) {
-			return new InstanceSettingsDTO(existing);
+			return { created: false, settings: new InstanceSettingsDTO(existing) };
 		}
 
 		const now = new Date();
@@ -172,6 +184,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			pangolinOwnsAuth: null,
 			pangolinTargetHost: null,
 			pangolinTargetPort: null,
+			pendingServiceRedeploy: null,
 			preferredSignInMethods: null,
 			requirePasskey: null,
 			requireTwoFactor: null,
@@ -189,8 +202,18 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			traefikEntrypoint: null,
 			updatedAt: now,
 		};
-		await db.insert(instanceSettings).values(row).onConflictDoNothing();
-		return new InstanceSettingsDTO(row);
+		const inserted = await db
+			.insert(instanceSettings)
+			.values(row)
+			.onConflictDoNothing()
+			.returning({ id: instanceSettings.id });
+		if (inserted.length === 0) {
+			return {
+				created: false,
+				settings: await InstanceSettingsDTO.get(),
+			};
+		}
+		return { created: true, settings: new InstanceSettingsDTO(row) };
 	}
 
 	/** Whether the onboarding wizard has been completed on this instance. */
@@ -259,6 +282,20 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	/** Persists whether services deploy as plain containers or swarm services. */
 	async updateOrchestrationMode(mode: "standalone" | "swarm"): Promise<void> {
 		await this.persist({ orchestrationMode: mode });
+	}
+
+	/**
+	 * Whether every deployed service should be redeployed on the next boot,
+	 * set by the installer's `--migrate-to-rootful` once the stack runs on a
+	 * new daemon that has none of the old containers.
+	 */
+	get pendingServiceRedeploy(): boolean {
+		return this.row.pendingServiceRedeploy ?? false;
+	}
+
+	/** Clears the redeploy-on-boot request once its deploys are queued. */
+	async clearPendingServiceRedeploy(): Promise<void> {
+		await this.persist({ pendingServiceRedeploy: false });
 	}
 
 	/**

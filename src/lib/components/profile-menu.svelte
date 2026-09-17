@@ -4,6 +4,7 @@
 	import { goto, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { signOut } from "$lib/auth-client";
+	import { headerControlClass } from "$lib/components/header-styles";
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
 
 	interface ProfileUser {
@@ -36,17 +37,17 @@
       <button
         {...props}
         aria-label="Account menu"
-        class="hover:bg-surface-2 flex size-8 shrink-0 items-center justify-center rounded-md transition-colors"
+        class="{headerControlClass} w-8"
         type="button"
       >
         {#if user?.image}
           <img
             alt={user.name ?? ""}
-            class="size-6 rounded-full object-cover"
+            class="size-5 rounded-full object-cover"
             src={user.image}
           >
         {:else}
-          <span class="bg-accent text-bg flex size-6 items-center justify-center rounded-full text-[0.6875rem] font-semibold">
+          <span class="bg-accent text-bg flex size-5 items-center justify-center rounded-full text-[0.625rem] font-semibold">
             {userInitial}
           </span>
         {/if}

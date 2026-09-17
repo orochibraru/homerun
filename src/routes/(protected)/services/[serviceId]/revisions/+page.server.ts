@@ -1,26 +1,14 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { RevisionService } from "$lib/services/revision.service";
 
 const logger = new Logger("Revisions");
 
-export const load = async ({ params, parent }) => {
+export const load = async ({ parent }) => {
 	const { service } = await parent();
-	const [deployments, settings] = await Promise.all([
-		DeploymentDTO.listForService(params.serviceId, 30),
-		InstanceSettingsDTO.get(),
-	]);
-	return {
-		deployments: RevisionService.annotate(
-			service,
-			deployments.map((d) => d.toJSON()),
-			settings.retainedImagesPerService,
-		),
-	};
+	return { revisions: await RevisionService.history(service) };
 };
 
 export const actions = {

@@ -73,14 +73,18 @@ Every account sees every service's scans and jobs; an unknown id is a 404.
 
 ### Revisions
 
-- `GET /api/v1/services/:id/revisions` lists the last 50
-  [revisions](services.md#revisions-and-rollback) newest first: `id`,
-  `imageRef`, `imageDigest`, `imageId`, `buildSource`, `gitCommit`, `gitRef`,
-  `health` (`watching`, `healthy`, `unhealthy`, `rolled_back`, or null for one
-  recorded before health watching existed), `rollbackOfDeploymentId`, `status`,
-  `createdAt`/`finishedAt`, plus three markers: `current` (running now),
-  `previous` (the default rollback target) and `retained` (its image is kept on
-  the host).
+- `GET /api/v1/services/:id/revisions` lists the
+  [revisions](services.md#revisions-and-rollback) among the last 50 deploys that
+  reached running, one entry per revision, newest first by when it was first
+  deployed. A rollback doesn't add an entry, it updates the revision it
+  redeployed. Fields: `id` (the revision's original deployment, what the deploy
+  endpoint below takes), `imageRef`, `imageDigest`, `imageId`, `buildSource`,
+  `gitCommit`, `gitRef`, `status`, `createdAt` (first deployed),
+  `lastDeployedAt` (last went live), `latestDeploymentId` and `redeployCount`,
+  `health` of its latest run (`watching` and `healthy` only on the current
+  revision, `unhealthy` and `rolled_back` kept as history, otherwise null), plus
+  three markers: `current` (running now), `previous` (the default rollback
+  target) and `retained` (its image is kept on the host).
 - `POST /api/v1/services/:id/revisions/:revisionId/deploy` redeploys that
   revision's image without building, pulling from upstream or scanning, and like
   `deploy` returns once it's done. Use `previous` as the `revisionId` for the

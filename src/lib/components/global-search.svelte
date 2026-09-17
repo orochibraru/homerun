@@ -18,6 +18,7 @@
 	} from "@lucide/svelte";
 	import type { Component } from "svelte";
 	import { goto } from "$app/navigation";
+	import { headerControlClass } from "$lib/components/header-styles";
 	import * as Command from "$lib/components/ui/command/index.js";
 	import { searchContent } from "$lib/remote/search.remote";
 	import {
@@ -85,7 +86,7 @@
 <svelte:window onkeydown={onWindowKeydown} />
 
 <button
-  class="border-border bg-surface-2/50 text-text-muted hover:bg-surface-2 hover:text-text flex h-8 items-center gap-2 rounded-lg border px-2.5 text-xs transition-colors"
+  class="{headerControlClass} px-2.5"
   aria-label="Search"
   onclick={() => {
     open = true;

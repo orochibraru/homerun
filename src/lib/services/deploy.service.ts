@@ -350,6 +350,7 @@ class DeploymentServiceClass {
 					{
 						...shared,
 						auth: DockerService.buildAuthConfig(svc),
+						networkMode: plan.networkMode,
 						replicas: plan.replicas,
 					},
 					onLog,
@@ -459,7 +460,8 @@ class DeploymentServiceClass {
 	/**
 	 * Post-start bookkeeping once the container/swarm service is running :
 	 * marks the service and deployment rows running, clears any dismissed
-	 * error state on the service, appends the closing log line, and syncs
+	 * error state on the service, clears the live health state of every
+	 * revision this one supersedes, appends the closing log line, and syncs
 	 * DNS for the service's hostname(s). Doesn't notify : the caller
 	 * (`deployService`) does that itself once this returns.
 	 */
@@ -494,6 +496,7 @@ class DeploymentServiceClass {
 			imageRef: `${resolved.image}:${plainTag}`,
 			status: "running",
 		});
+		await DeploymentDTO.clearSupersededHealth(svc.id, dep.id);
 		await dep.appendLog(phaseLine("ready"));
 		logger.info(
 			`Deploy succeeded: service=${svc.id} container=${containerId ?? swarmServiceId} deployment=${dep.id}`,

@@ -56,7 +56,11 @@ export type GitBuildPlan = Exclude<ImagePlan, { kind: "pull" | "revision" }>;
 
 export type WorkloadPlan =
 	| { kind: "container"; networkMode: Service["networkMode"] }
-	| { kind: "swarm"; replicas: number };
+	| {
+			kind: "swarm";
+			networkMode: Service["networkMode"];
+			replicas: number;
+	  };
 
 export interface DeployPlan {
 	image: ImagePlan;
@@ -193,12 +197,11 @@ function resolveWorkload(input: DeployPlanInput): WorkloadPlan {
 		case "standalone":
 			return { kind: "container", networkMode: service.networkMode };
 		case "swarm":
-			if (service.networkMode === "host") {
-				throw new DeployPlanError(
-					"Host networking isn't available in swarm mode : swarm services only join the overlay network. Switch this service back to bridge networking, or the instance back to standalone.",
-				);
-			}
-			return { kind: "swarm", replicas: service.replicas };
+			return {
+				kind: "swarm",
+				networkMode: service.networkMode,
+				replicas: service.replicas,
+			};
 		default:
 			return unreachable(orchestrationMode);
 	}
@@ -210,8 +213,8 @@ function resolveWorkload(input: DeployPlanInput): WorkloadPlan {
  * (`resolveWorkload`, standalone container vs. swarm service) into one
  * `DeployPlan` for `deploy.service.ts` to execute.
  *
- * @throws Via `resolveImage`/`resolveWorkload`, e.g. a misconfigured build
- *   server, a missing image, or host networking requested under swarm mode.
+ * @throws Via `resolveImage`, e.g. a misconfigured build server or a missing
+ *   image.
  */
 export function resolveDeployPlan(input: DeployPlanInput): DeployPlan {
 	return { image: resolveImage(input), workload: resolveWorkload(input) };
