@@ -1,3 +1,12 @@
+## [1.0.32](https://github.com/orochibraru/homerun/compare/v1.0.31...v1.0.32) (2026-09-17)
+
+### Bug Fixes
+
+- duplicate traefik logs
+  ([856cc35](https://github.com/orochibraru/homerun/commit/856cc35a5b52b2b87f5243870680c93ed1572ea7))
+- handle cli api errors
+  ([1aea7b7](https://github.com/orochibraru/homerun/commit/1aea7b718cb68dac53cf709b2ec61532466160c9))
+
 ## [1.0.31](https://github.com/orochibraru/homerun/compare/v1.0.30...v1.0.31) (2026-09-17)
 
 ### Features
