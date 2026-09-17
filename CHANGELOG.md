@@ -1,3 +1,10 @@
+## [1.0.25](https://github.com/orochibraru/homerun/compare/v1.0.24...v1.0.25) (2026-09-17)
+
+### Bug Fixes
+
+- two factor cookies & macos cli
+  ([0d2b969](https://github.com/orochibraru/homerun/commit/0d2b9699f9607a0841414ca13ed4404086385d4c))
+
 ## [1.0.24](https://github.com/orochibraru/homerun/compare/v1.0.23...v1.0.24) (2026-09-17)
 
 ### Features
