@@ -125,7 +125,7 @@ func pollForApproval(baseURL string, start deviceStart) {
 			fail(fmt.Sprintf("Login failed: %s", err))
 		}
 		body, readErr := io.ReadAll(response.Body)
-		response.Body.Close()
+		_ = response.Body.Close()
 		if response.StatusCode < 200 || response.StatusCode >= 300 {
 			fail(fmt.Sprintf(
 				"Login failed: %d %s",
@@ -185,7 +185,7 @@ func logout() {
 // revokeAPIKey is best-effort: any transport error or non-ok response just
 // means the local logout proceeds without server-side revocation.
 func revokeAPIKey(config StoredConfig) bool {
-	client := newClient(ClientConfig{APIKey: config.APIKey, BaseURL: config.BaseURL})
+	client := newClient(ClientConfig(config))
 	response, err := client.send("DELETE", "/auth-token", nil)
 	if err != nil {
 		return false

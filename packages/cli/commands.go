@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -145,10 +146,11 @@ func countsLine(counts SeverityCounts) string {
 }
 
 func shorten(value string, length int) string {
-	if len(value) <= length {
+	runes := []rune(value)
+	if len(runes) <= length {
 		return value
 	}
-	return value[:length]
+	return string(runes[:length])
 }
 
 // revisionRow flattens a revision into a table row, shortening the commit and
@@ -427,7 +429,7 @@ func queueScan(client *Client, serviceID string, wait bool) string {
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return queued.JobID
 	}
-	if wait && response.StatusCode == 409 && queued.JobID != "" {
+	if wait && response.StatusCode == http.StatusConflict && queued.JobID != "" {
 		return queued.JobID
 	}
 	fail(apiErrorMessage(response.StatusCode, body))
@@ -516,6 +518,10 @@ func instanceUpdate(client *Client, wait bool, timeout time.Duration) {
 		Version string `json:"version"`
 	}
 	client.decode("POST", "/instance/update", nil, &started)
+	if started.Version == "" {
+		fail("The instance didn't say which version it's updating to.")
+		return
+	}
 	fmt.Printf("Updating to v%s.\n", started.Version)
 	if !wait {
 		return

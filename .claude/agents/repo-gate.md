@@ -5,10 +5,10 @@ description:
   complete, or when explicitly asked to review/verify a diff against this repo's
   own conventions. Runs bun run check (svelte-check --fail-on-warnings, 0
   errors/0 warnings, whole src/ and tests/ trees) and bun run lint (biome, 0
-  errors), plus per-subproject typechecks for packages/agent/,
-  packages/installer/ (tsc) and packages/cli/ (go vet) if touched, and scans the
-  diff for violations of this repo's hard rules (manual typing in route files,
-  raw Drizzle in routes, $derived push/splice, bare toast.success/error on async
+  errors), plus per-subproject typechecks for packages/agent/ (tsc) and
+  packages/installer/ and packages/cli/ (go vet) if touched, and scans the diff
+  for violations of this repo's hard rules (manual typing in route files, raw
+  Drizzle in routes, $derived push/splice, bare toast.success/error on async
   actions, nested (protected) loads re-checking !locals.user, static-barrel
   classes, personal-data DTO queries missing their userId scope). Reports
   findings; does not silently fix them unless asked.
@@ -33,8 +33,8 @@ suggestion.
 2. `bun run lint` — markdownlint-cli2, tailwint and
    `biome check --error-on-warnings`, must be clean, whole repo.
 3. `git status`/`git diff` to see what's touched. `bun run check` already
-   typechecks `packages/agent/`, `packages/installer/` and `scripts/` (`tsc`)
-   plus `packages/cli/` (`go vet`, `check:packages`); if a REST API route,
+   typechecks `packages/agent/` and `scripts/` (`tsc`) plus `packages/cli/` and
+   `packages/installer/` (`go vet`, `check:packages`); if a REST API route,
    `$lib/openapi/` or `config.ts` changed, confirm `bun run gen` leaves no diff
    in `openapi.json`, `homerun.schema.json` or
    `tests/integration/support/openapi-types.ts`.

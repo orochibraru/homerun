@@ -70,7 +70,7 @@ func printValue(value any) {
 }
 
 // fail prints "error: <message>" to stderr and exits the process with status 1.
-func fail(message string) {
+var fail = func(message string) {
 	fmt.Fprintf(os.Stderr, "error: %s\n", message)
 	os.Exit(1)
 }

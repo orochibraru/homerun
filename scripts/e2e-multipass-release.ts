@@ -200,11 +200,13 @@ async function resolveRelease(): Promise<PublishedRelease> {
 		"homerun-agent-arm64.gz",
 		"homerun-cli-amd64.gz",
 		"homerun-cli-arm64.gz",
+		"homerun-cli-darwin-amd64.gz",
+		"homerun-cli-darwin-arm64.gz",
 		"homerun-installer-amd64.gz",
 		"homerun-installer-arm64.gz",
 	]);
 	console.log(
-		`  ${release.repo} ${release.tag}, all six binaries published (this host pulls the ${arch} ones).`,
+		`  ${release.repo} ${release.tag}, all eight binaries published (this host pulls the linux/${arch} ones).`,
 	);
 	return release;
 }

@@ -58,10 +58,10 @@ is documented in
    standalone containers) and the attachable `homerun-swarm` overlay, the same
    name and shape the app's own `ensureSwarmNetwork` uses
    (`<networkName>-swarm`), so Traefik's compose container can join it.
-5. Writes `compose.yaml` under `/home/<user>/homerun/` (see
-   `steps/full-stack.ts`) and runs `docker compose pull && ...up -d` as root.
-   Traefik mounts `/var/run/docker.sock`, joins both networks and runs both
-   providers, its command ending in exactly the `--providers.swarm=true`,
+5. Writes `compose.yaml` under `/home/<user>/homerun/` (see `fullstack.go`) and
+   runs `docker compose pull && ...up -d` as root. Traefik mounts
+   `/var/run/docker.sock`, joins both networks and runs both providers, its
+   command ending in exactly the `--providers.swarm=true`,
    `--providers.swarm.exposedByDefault=false`,
    `--providers.swarm.network=homerun-swarm`,
    `--providers.swarm.refreshSeconds=2` flags the app's `enableSwarmMode`
@@ -129,7 +129,7 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/i
 ```
 
 For a `--mode=full` install made rootless (the default before swarm was),
-`steps/migrate-rootful.ts`:
+`migrate.go`'s `Migrate`:
 
 1. Enables the system daemon (installing Docker Engine if it's missing) and adds
    the user to the `docker` group.
@@ -200,16 +200,16 @@ cosmetic, real, reported finding: better-auth's trusted origins are derived from
 `ORIGIN` alone, so a stale one makes every sign-in and the very first sign-up
 403 with "Invalid origin" from the address you are actually using, and absolute
 URLs this app constructs (e.g. the CLI login flow's own approval link) point at
-the wrong host too. See `steps/full-stack.ts`'s own docstring. Base domain is
-seeded from the same answer, and is still editable afterward in `homerun.yaml`
-next to `compose.yaml`, or on `/settings`.
+the wrong host too. See `fullstack.go`'s own doc comment. Base domain is seeded
+from the same answer, and is still editable afterward in `homerun.yaml` next to
+`compose.yaml`, or on `/settings`.
 
 ## Joining a host to a swarm (`swarm-join.sh`)
 
-Separate script, not part of the TypeScript installer above: joins this host to
-an existing Homerun swarm as a worker, on the **system (rootful)** Docker
-daemon, then installs the Homerun Agent by downloading the installer binary and
-running it with `--mode=agent`. The manager is on the system daemon too (the
+Separate script, not part of the Go installer above: joins this host to an
+existing Homerun swarm as a worker, on the **system (rootful)** Docker daemon,
+then installs the Homerun Agent by downloading the installer binary and running
+it with `--mode=agent`. The manager is on the system daemon too (the
 `--mode=full` default): rootless Docker can't create the overlay networks swarm
 services join.
 
@@ -263,18 +263,16 @@ the latest published release.
 
 ## Building the installer itself to a binary
 
-There's no separate `packages/installer/package.json`: `packages/agent/` and
-`packages/installer/` share the repo root's `bun install`/`node_modules`.
-`packages/cli/` is a separate Go module instead (`go.mod` at the repo root, no
-`bun install` needed for it). From the repo root:
+`packages/installer/` is a Go package in the repo-root `go.mod` (the same module
+`packages/cli/` lives in), not part of the root `bun install`/ `node_modules` at
+all any more. From the repo root:
 
 ```bash
-bun install
-bun run packages/installer/index.ts --help   # from source
-bun run scripts/build-packages.ts amd64   # or arm64/darwin-amd64/darwin-arm64; builds the
-                                           # agent/installer Bun binaries for a Linux arch plus
-                                           # the matching Go cli binary (cli alone also
-                                           # cross-compiles cleanly to the darwin targets)
+go run ./packages/installer --help   # from source
+bun run scripts/build-packages.ts amd64   # or arm64; cross-compiles the installer
+                                           # (Linux only, it never runs anywhere
+                                           # else) and the matching Go cli binary,
+                                           # plus the agent's Bun binary
 ```
 
 Output lands in `dist/homerun-installer-<arch>` (plus the agent/cli binaries
@@ -287,9 +285,21 @@ building locally is only for iterating on the installer itself.
 **Verified**: the full command sequence via `--dry-run` (every step's exact
 command line, for both `--mode=agent` and `--mode=full`, including the generated
 `compose.yaml` content), and that both the source
-(`bun run packages/installer/index.ts`) and the compiled binary
+(`go run ./packages/installer`) and the compiled binary
 (`bun run scripts/build-packages.ts` → `./dist/homerun-installer-<arch>`)
 produce identical dry-run output.
+
+**The installer was rewritten from Bun/TypeScript to Go** in the same session
+these notes were last touched, to cut the release binary from ~81MB (a
+`bun build --compile` binary embeds the whole Bun runtime) to ~2.7MB. Behaviour,
+flags and output are unchanged: `--dry-run` output was diffed old-vs-new for
+`--mode=agent`, `--mode=full --domain=...` and
+`--mode=full --docker=rootless --domain=<ip>` — both `--mode=full` variants came
+back byte-identical, and the only `--mode=agent` difference was cosmetic (the
+old code printed a literal `<uid>` placeholder in one dry-run step where the new
+one prints `1000` consistently). No VM install was run in that session; the
+real-infra verification below predates the rewrite and hasn't been re-run
+against the Go binary yet.
 
 **The real, mutating steps are now verified too**, against two real disposable
 Multipass Ubuntu 24.04 VMs (superseding this section's earlier "needs a
@@ -313,9 +323,11 @@ disposable VM/CI runner this environment doesn't have" note):
   runs services, see
   [`docs/remote-hosts-and-agent.md`](../../docs/remote-hosts-and-agent.md).
 
-This run found and fixed five real bugs, all in
-`packages/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts` (see
-each file's own doc comments for the full detail):
+This run found and fixed five real bugs, originally in
+`packages/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts` (the
+old TypeScript installer); the fixes carried forward and now live in `docker.go`
+and `fullstack.go` after the Go rewrite (see each file's own doc comments for
+the full detail):
 
 1. Ubuntu 23.10+ (including 24.04) restricts unprivileged user namespaces by
    default, which broke `dockerd-rootless-setuptool.sh` outright
@@ -327,7 +339,9 @@ each file's own doc comments for the full detail):
    0-byte size via `stat`, which appears to fool Bun's file reader, while
    `node:fs/promises`' `readFile` reads them correctly. Fixed by switching to
    `readFile`. Same class of Bun-vs-`node:fs` quirk as the already-documented
-   `Bun.write` mode-option bug in the root `CLAUDE.md`.
+   `Bun.write` mode-option bug in the root `CLAUDE.md`. Moot since the Go
+   rewrite: `docker.go` reads the sysctl with `os.ReadFile`, which has no such
+   quirk, see its own doc comment.
 3. Rootless Docker's port driver can't bind ports below 1024 by default (a
    Linux/rootless constraint, not a Docker bug), so Traefik's `80:80`/`443:443`
    publish failed with a permission error and `--mode=full` could never actually

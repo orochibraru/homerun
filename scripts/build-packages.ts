@@ -23,27 +23,39 @@ interface GoTarget {
 	packages: string[];
 }
 
-// The agent and installer are still Bun programs, and a Bun binary embeds the
-// whole runtime (~81MB on linux/x64, of which ~1MB is ours), so they're only
-// built for the Linux hosts that actually run them.
+// The agent is still a Bun program, and a Bun binary embeds the whole runtime
+// (~81MB on linux/x64, of which ~1MB is ours), so it's only built for the Linux
+// hosts that actually run it.
 const bunTargets: BunTarget[] = [
 	{
 		name: "arm64",
-		packages: ["installer", "agent"],
+		packages: ["agent"],
 		target: "bun-linux-arm64",
 	},
 	{
 		name: "amd64",
-		packages: ["installer", "agent"],
+		packages: ["agent"],
 		target: "bun-linux-x64",
 	},
 ];
 
-// The CLI is Go: ~6MB instead of ~81MB, and cross-compiling is exact, so every
-// target builds from whichever runner CI happens to use.
+// The CLI and installer are Go: ~6MB and ~4MB instead of ~81MB each, and
+// cross-compiling is exact, so every target builds from whichever runner CI
+// happens to use. The installer only ever runs on the Linux box it's
+// installing, so it gets no darwin build.
 const goTargets: GoTarget[] = [
-	{ goarch: "amd64", goos: "linux", name: "amd64", packages: ["cli"] },
-	{ goarch: "arm64", goos: "linux", name: "arm64", packages: ["cli"] },
+	{
+		goarch: "amd64",
+		goos: "linux",
+		name: "amd64",
+		packages: ["cli", "installer"],
+	},
+	{
+		goarch: "arm64",
+		goos: "linux",
+		name: "arm64",
+		packages: ["cli", "installer"],
+	},
 	{
 		goarch: "amd64",
 		goos: "darwin",

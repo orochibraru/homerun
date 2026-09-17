@@ -39,11 +39,11 @@ The ground truth to check them against:
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Pages, tabs, nav entries, UI labels | `src/routes/(protected)/**` directory tree, `src/lib/nav.ts`, sidebar component, button/label text                  |
 | Settings and their defaults         | `src/routes/(protected)/settings/**`, `src/lib/dto/instance-settings-dto.ts`, `schema.ts` defaults                  |
-| Env vars and config file keys       | `src/lib/config.ts`, `homerun.schema.json`, `compose.yaml`, installer `options.ts`                                  |
+| Env vars and config file keys       | `src/lib/config.ts`, `homerun.schema.json`, `compose.yaml`, installer `options.go`                                  |
 | Data the app stores                 | `src/lib/server/db/schema.ts`                                                                                       |
 | REST API endpoints, auth, payloads  | `src/routes/api/v1/**`, `openapi.json` (regenerate with `bun run gen` if stale)                                     |
 | CLI commands, flags, output         | `packages/cli/main.go`, `commands.go`, `login.go`, `update.go` (Go, not TypeScript); `go run ./packages/cli --help` |
-| Installer steps and flags           | `packages/installer/index.ts`, `options.ts`, `steps/**`, `bootstrap.sh`                                             |
+| Installer steps and flags           | `packages/installer/main.go`, `options.go`, `*.go` (Go, not TypeScript); `go run ./packages/installer --help`       |
 | Agent endpoints and config          | `packages/agent/index.ts`, `http.ts`, `config.ts`, `openapi.ts`                                                     |
 | Built-in templates                  | the template catalog under `src/lib` (grep `TemplateDTO` / seed data)                                               |
 | Background jobs, schedules, cleanup | `src/lib/services/queue/**`, `cron/**`, `cron.service.ts`, `docker-cleanup-queue.ts`                                |

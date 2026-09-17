@@ -3,9 +3,9 @@ name: subproject-sync
 description:
   Use when working in packages/agent/, packages/installer/, or packages/cli/ —
   the three standalone sub-projects at the repo root, not part of the SvelteKit
-  build (not covered by the root bun run check). agent/ and installer/ are
-  Bun/TypeScript (own tsconfig.json); cli/ is a separate Go module (go.mod at
-  the repo root). Handles keeping packages/agent/'s hand-reimplemented logic
+  build (not covered by the root bun run check). agent/ is Bun/TypeScript (own
+  tsconfig.json); installer/ and cli/ are both Go packages sharing one go.mod at
+  the repo root. Handles keeping packages/agent/'s hand-reimplemented logic
   (packages/agent/docker.ts, packages/agent/stats.ts) in sync with the main
   app's equivalents (src/lib/services/docker/containers.ts,
   system-stats.service.ts) after either changes, regenerating
@@ -20,12 +20,12 @@ model: sonnet
 
 You maintain the three standalone sub-projects that live alongside `src/` in
 this repo but are NOT part of the SvelteKit build: `packages/agent/`,
-`packages/installer/`, `packages/cli/`. `packages/agent/` and
-`packages/installer/` share the root `package.json`/`bun install`, each with its
-**own `tsconfig.json`**, typechecked separately
-(`check:agent`/`check:installer`). `packages/cli/` is a separate Go module
-instead (`go.mod` at the repo root, no `tsconfig.json`, no shared
-`bun install`), typechecked with `check:cli` = `go vet ./packages/cli/...`.
+`packages/installer/`, `packages/cli/`. `packages/agent/` shares the root
+`package.json`/`bun install`, with its **own `tsconfig.json`**, typechecked
+separately (`check:agent`). `packages/installer/` and `packages/cli/` are both
+Go packages instead (one `go.mod` at the repo root, no `tsconfig.json`, no
+shared `bun install`), typechecked with `check:installer` =
+`go vet ./packages/installer/...` and `check:cli` = `go vet ./packages/cli/...`.
 `bun run check` runs all three through `check:packages` after the SvelteKit
 `check:app`.
 
@@ -53,14 +53,14 @@ same schema) together — same "one schema, two purposes" pattern as the main ap
 
 ## `packages/cli/` — the Homerun CLI
 
-A Go program (single Go module, `go.mod` at the repo root), not a Bun/TypeScript
-sub-project like the other two — rewritten from TypeScript to cut release size
-(a `bun build --compile` binary embeds the whole Bun runtime, ~81MB; the Go
-binary is ~6MB). It hand-rolls arg parsing and talks to the main app's REST API
-(`src/routes/api/v1/`) over Go's stdlib `net/http`, not
-Commander/`openapi-fetch`, and has no generated types: it defines small structs
-for only the fields it formats (`commands.go`/`client.go`) and passes everything
-else through as raw JSON.
+A Go program (a package in the repo-root `go.mod`, shared with
+`packages/installer/`), not Bun/TypeScript like `packages/agent/` — rewritten
+from TypeScript to cut release size (a `bun build --compile` binary embeds the
+whole Bun runtime, ~81MB; the Go binary is ~6MB). It hand-rolls arg parsing and
+talks to the main app's REST API (`src/routes/api/v1/`) over Go's stdlib
+`net/http`, not Commander/`openapi-fetch`, and has no generated types: it
+defines small structs for only the fields it formats (`commands.go`/`client.go`)
+and passes everything else through as raw JSON.
 
 `bun run gen` still regenerates OpenAPI types from the root `openapi.json`
 (which `scripts/generate-openapi.ts` builds from source,
@@ -81,19 +81,23 @@ catch a mismatch here.
 ## `packages/installer/`
 
 Single-binary installer targeting a fresh Linux server (rootless Docker setup,
-systemd units, `--mode=agent`/`--mode=full`). Every shell-out goes through one
-`StepRunner` (`packages/installer/exec.ts`) so `--dry-run` stays a single
-interception point — don't add a step that shells out directly, route it through
-the runner. Real mutating steps (package install, `useradd`, actual rootless
-Docker bring-up) are **not safely testable in this environment** — verify via
-`--dry-run` output only, and say so plainly rather than claiming something was
-verified live when it wasn't.
+systemd units, `--mode=agent`/`--mode=full`), also a Go package in the repo-root
+`go.mod` (rewritten from Bun/TypeScript for the same release-size reason as the
+CLI, ~81MB down to ~2.7MB; behaviour and `--dry-run` output are unchanged,
+diffed old-vs-new for both modes). Every shell-out goes through one `StepRunner`
+(`packages/installer/exec.go`, a `Runner` interface) so `--dry-run` stays a
+single interception point — don't add a step that shells out directly, route it
+through the runner. Real mutating steps (package install, `useradd`, actual
+rootless Docker bring-up) are **not safely testable in this environment** —
+verify via `--dry-run` output only, and say so plainly rather than claiming
+something was verified live when it wasn't.
 
 ## Always finish with
 
-- The touched sub-project's own typecheck: `bun run check:agent` /
-  `check:installer` (tsc) / `check:cli` (`go vet`, all three also run inside
+- The touched sub-project's own typecheck: `bun run check:agent` (tsc) /
+  `check:installer` / `check:cli` (both `go vet`, all three also run inside
   `bun run check`).
-- Its unit tests: `bun run test:unit:agent` / `test:unit:installer` (`bun:test`)
-  / `test:unit:cli` (`go test ./packages/cli/...`).
+- Its unit tests: `bun run test:unit:agent` (`bun:test`) / `test:unit:installer`
+  (`go test ./packages/installer/...`) / `test:unit:cli`
+  (`go test ./packages/cli/...`).
 - `bun run lint` (biome covers the whole repo including these directories).

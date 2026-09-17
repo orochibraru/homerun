@@ -71,6 +71,7 @@ func requireClient(flagBaseURL, flagAPIKey string) *Client {
 	config := resolveConfig(flagBaseURL, flagAPIKey)
 	if config == nil {
 		fail("Not logged in. Run `homerun login` to get started.")
+		return nil
 	}
 	return newClient(*config)
 }
@@ -138,6 +139,6 @@ func apiErrorMessage(status int, body []byte) string {
 	return fmt.Sprintf("%s: the instance answered with a non-JSON body.", statusLine)
 }
 
-func sleep(d time.Duration) {
+var sleep = func(d time.Duration) {
 	time.Sleep(d)
 }

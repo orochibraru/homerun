@@ -73,9 +73,10 @@ bun run start            # ./build/server (the binary @orochibraru/svelte-smol c
 bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts and homerun.schema.json from source, CI fails if the result isn't committed
 bun run check            # check:app then check:packages, the real gate, see `.agents/notes/testing.md`
 bun run check:app        # svelte-kit sync && svelte-check --fail-on-warnings --tsgo, the SvelteKit half of the gate
-bun run check:packages   # check:installer + check:agent + check:cli + check:scripts, tsc --noEmit over each TS sub-project's own tsconfig plus check:cli (see below)
-bun run check:agent      # tsc over packages/agent/tsconfig.json (check:installer: same for its package)
-bun run check:cli        # go vet ./packages/cli/..., the CLI is a separate Go module (go.mod at the repo root), no tsconfig.json
+bun run check:packages   # check:installer + check:agent + check:cli + check:scripts, tsc over the one remaining TS sub-project (agent) plus go vet over installer and cli (see below)
+bun run check:agent      # tsc over packages/agent/tsconfig.json, the only sub-project still Bun/TypeScript
+bun run check:cli        # go vet ./packages/cli/..., the CLI is a Go package in the repo-root go.mod, no tsconfig.json
+bun run check:installer  # go vet ./packages/installer/..., same repo-root go.mod as the CLI, no tsconfig.json
 bun run check:scripts    # tsc over scripts/ (tsconfig.scripts.json), scripts/ isn't covered by svelte-check's own include list
 bun run lint             # lint:md (markdownlint-cli2) then lint:tailwind (scripts/lint-tailwind.ts, tailwint in chunks, Tailwind class sorting) then lint:ts (biome check --error-on-warnings)
 bun run lint:fix         # the --write/--fix half of all three (lint:fix:md, lint:fix:tailwind, lint:fix:ts)
@@ -92,12 +93,12 @@ bun run release          # semantic-release, normally CI-only (.github/workflows
 hooks from `.pre-commit-config.yaml`) run on `bun install`.
 
 ```bash
-bun run test              # svelte-kit sync && bun test (unit + integration) then go test ./packages/cli/..., never tests/e2e/ (Playwright, own runner)
-bun run test:unit         # tests/unit/ only (agent, app, installer), no Postgres/Docker needed; packages/cli/'s own Go tests are a separate command, below
+bun run test              # svelte-kit sync && bun test (unit + integration) then go test ./packages/..., never tests/e2e/ (Playwright, own runner)
+bun run test:unit         # tests/unit/ only (agent, app), no Postgres/Docker needed; packages/cli/ and packages/installer/'s own Go tests are separate commands, below
 bun run test:unit:agent   # tests/unit/agent, packages/agent
 bun run test:unit:app     # tests/unit/app, the SvelteKit app's own unit/component tests
 bun run test:unit:cli     # go test ./packages/cli/..., packages/cli/cli_test.go, not under tests/unit/ and not bun:test
-bun run test:unit:installer  # tests/unit/installer, packages/installer
+bun run test:unit:installer  # go test ./packages/installer/..., its own *_test.go files, not under tests/unit/ and not bun:test
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see .agents/notes/testing.md
 bun run test:e2e:cli      # playwright test over bootstrap + onboarding + ui-cli.spec.ts only, the CLI driven against the E2E app instance
@@ -106,16 +107,17 @@ bun run e2e:multipass     # scripts/e2e-multipass.ts, real-infra installer/agent
 bun run e2e:multipass:release  # scripts/e2e-multipass-release.ts, the same but against the *published* release and the *documented* commands, also not wired into CI (`--only=docs` is the VM-free docs-drift check)
 ```
 
-`packages/agent/` and `packages/installer/` are separate standalone
-Bun/TypeScript sub-projects (their own `tsconfig.json`, checked via the root
-`check:agent`/`check:installer` scripts, **not** their own
-`package.json`/`bun install`, they share the root one), not part of the
-SvelteKit app above. `packages/cli/` is a standalone Go program instead (a
-single Go module at the repo root, `go.mod`, checked via `check:cli` =
-`go vet ./packages/cli/...`); all three still compile via
+`packages/agent/` is the one remaining standalone Bun/TypeScript sub-project
+(its own `tsconfig.json`, checked via the root `check:agent` script, **not** its
+own `package.json`/`bun install`, it shares the root one), not part of the
+SvelteKit app above. `packages/cli/` and `packages/installer/` are both
+standalone Go programs instead (a single Go module at the repo root, `go.mod`,
+checked via `check:cli` = `go vet ./packages/cli/...` and `check:installer` =
+`go vet ./packages/installer/...`); all three still compile via
 `scripts/build-packages.ts`, but because Go's `GOOS`/`GOARCH` cross-compilation
 is exact (unlike Bun's), the CLI's macOS binaries are cross-compiled from a
-Linux runner too, with no macOS runner in CI at all (see
+Linux runner too, with no macOS runner in CI at all — the installer gets no
+macOS build at all, it only ever runs on the Linux box it's installing (see
 `.agents/notes/packages-and-release.md`). See that note and
 `.agents/notes/api-and-cli.md` for what each sub-project is.
 

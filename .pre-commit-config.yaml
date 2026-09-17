@@ -21,7 +21,7 @@ repos:
           (?x)^(
             openapi\.json|
             homerun\.schema\.json|
-            packages/cli/generated/|
+            tests/integration/support/openapi-types\.ts|
             drizzle/|
             CHANGELOG\.md|
             bun\.lock
@@ -89,6 +89,12 @@ repos:
         language: system
         files: \.(md|mdx)$
 
+      - id: format-go
+        name: Formatting (Go)
+        entry: gofmt -w
+        language: system
+        files: \.go$
+
       - id: markdownlint
         name: Markdown Lint
         entry: bun run markdownlint-cli2 --fix
@@ -114,6 +120,13 @@ repos:
         language: system
         pass_filenames: false
         files: ^(src/|packages/|tests/unit/|bunfig\.toml$)
+
+      - id: test-go
+        name: Unit Tests (Go)
+        entry: go test ./packages/...
+        language: system
+        pass_filenames: false
+        files: (^packages/.*\.go$|^go\.mod$)
 
       - id: check
         name: Type Check

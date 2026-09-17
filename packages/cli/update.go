@@ -13,10 +13,10 @@ import (
 	"strings"
 )
 
-const (
-	githubAPI  = "api.github.com"
-	githubHost = "github.com"
-	githubRepo = "orochibraru/homerun"
+var (
+	githubAPIBase      = "https://api.github.com"
+	githubDownloadBase = "https://github.com"
+	githubRepo         = "orochibraru/homerun"
 )
 
 // selfUpdate replaces the running binary with the latest GitHub release when
@@ -27,6 +27,7 @@ func selfUpdate() {
 	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		fail("`homerun update` only supports Linux and macOS, the platforms prebuilt binaries are published for.")
 	}
+	suffix := assetSuffix()
 	dest, err := os.Executable()
 	if err != nil {
 		fail(err.Error())
@@ -41,7 +42,7 @@ func selfUpdate() {
 	}
 
 	fmt.Printf("Updating v%s -> v%s...\n", version, latestVersion)
-	tmpPath := downloadRelease(tag, dest)
+	tmpPath := downloadRelease(tag, suffix, dest)
 
 	if err := os.Rename(tmpPath, dest); err != nil {
 		// Cross-device (tmp on a different filesystem) or a permission error on
@@ -55,7 +56,7 @@ func selfUpdate() {
 
 // latestReleaseTag asks GitHub for the newest release's tag.
 func latestReleaseTag() string {
-	response, err := http.Get(fmt.Sprintf("https://%s/repos/%s/releases/latest", githubAPI, githubRepo))
+	response, err := http.Get(fmt.Sprintf("%s/repos/%s/releases/latest", githubAPIBase, githubRepo))
 	if err != nil {
 		fail(fmt.Sprintf("Couldn't check for updates: %s", err))
 	}
@@ -78,10 +79,10 @@ func latestReleaseTag() string {
 // downloadRelease fetches this platform's gzipped release asset, unpacks it
 // next to dest (so the replacing rename stays on one filesystem) and returns
 // the staged path.
-func downloadRelease(tag, dest string) string {
+func downloadRelease(tag, suffix, dest string) string {
 	url := fmt.Sprintf(
-		"https://%s/%s/releases/download/%s/homerun-cli-%s.gz",
-		githubHost, githubRepo, tag, assetSuffix(),
+		"%s/%s/releases/download/%s/homerun-cli-%s.gz",
+		githubDownloadBase, githubRepo, tag, suffix,
 	)
 	response, err := http.Get(url)
 	if err != nil {
@@ -98,8 +99,9 @@ func downloadRelease(tag, dest string) string {
 	unpacked, err := gzip.NewReader(response.Body)
 	if err != nil {
 		fail(fmt.Sprintf("Download failed: %s", err))
+		return ""
 	}
-	defer unpacked.Close()
+	defer func() { _ = unpacked.Close() }()
 
 	staged, err := os.CreateTemp(filepath.Dir(dest), ".homerun-update-")
 	if err != nil {
@@ -109,10 +111,10 @@ func downloadRelease(tag, dest string) string {
 		fail(err.Error())
 	}
 	if _, err := io.Copy(staged, unpacked); err != nil {
-		staged.Close()
+		_ = staged.Close()
 		fail(err.Error())
 	}
-	staged.Close()
+	_ = staged.Close()
 	if err := os.Chmod(staged.Name(), 0o755); err != nil {
 		fail(err.Error())
 	}
@@ -121,7 +123,8 @@ func downloadRelease(tag, dest string) string {
 
 // assetSuffix maps this platform onto the release-asset suffix (amd64, arm64,
 // darwin-amd64, darwin-arm64), exiting on anything other than x86-64 or arm64.
-// Mirrored by packages/installer/steps/detect.ts's arch().
+// Mirrored by packages/installer/detect.go's Arch(), which needs no darwin
+// prefix since the installer only ever runs on the Linux box it installs.
 func assetSuffix() string {
 	prefix := ""
 	if runtime.GOOS == "darwin" {

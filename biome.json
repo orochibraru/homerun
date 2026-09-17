@@ -178,7 +178,7 @@
 			}
 		},
 		{
-			"includes": ["packages/agent/**", "packages/installer/**"],
+			"includes": ["packages/agent/**"],
 			"linter": {
 				"rules": {
 					"suspicious": {

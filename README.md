@@ -246,9 +246,9 @@ readable straight from the file browser. Start with
 ## Sub-projects
 
 Three standalone tools live under `packages/` alongside the main app, each
-compiling to its own binary. `packages/agent/` and `packages/installer/` are
-Bun/TypeScript, sharing the root `package.json`/`bun install`; `packages/cli/`
-is a separate Go module instead:
+compiling to its own binary. `packages/agent/` is Bun/TypeScript, sharing the
+root `package.json`/`bun install`; `packages/installer/` and `packages/cli/` are
+Go packages instead, sharing one `go.mod` at the repo root:
 
 - [`packages/agent/`](packages/agent/README.md): a small token-authenticated
   HTTP server that lets a second machine build images for this one, without

@@ -11,34 +11,39 @@ than in this one.
 `bun:test`, run directly by Bun — `bun test --timeout 120000` (every
 `test`/`test:*` script passes `--timeout` explicitly since `bunfig.toml`'s
 `[test].timeout` key is silently unhonored on Bun 1.4.0). Covers
-`packages/agent/` and `packages/installer/`. Tests live under
+`packages/agent/`, the one sub-project still Bun/TypeScript. Tests live under
 `tests/unit/<package>/`, not next to the source files they cover
 (`tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`, etc.).
-`packages/cli/` is a separate Go module and isn't part of this at all: its tests
-are `packages/cli/cli_test.go`, run by `go test ./packages/cli/...`
-(`bun run test:unit:cli`), not `bun:test`. `tests/unit/app/` covers the
-SvelteKit app itself, a couple of component tests plus the pure modules under
-`$lib` that are worth pinning down directly (`long-request.test.ts`, see
-Long-running requests below; `queue.test.ts`; `toast.test.ts`;
-`compose-import.test.ts`; `service-link.test.ts`; `deploy-phases.test.ts`;
-`command-parse.test.ts`; `auth-providers.test.ts`; `app-gate.test.ts`, the login
-wall's token signing/expiry/tampering, its cookie parsing, and OIDC group-claim
-extraction) : anything that's a real transform with no DB or Docker dependency
-belongs here rather than in `tests/integration/`, which is still where most of
-`src/` is exercised.
+`packages/cli/` and `packages/installer/` are both separate Go packages (one
+repo-root `go.mod`) and aren't part of this at all: their tests are
+`packages/cli/cli_test.go` and `packages/installer/*_test.go`, run by
+`go test ./packages/cli/...` (`bun run test:unit:cli`) and
+`go test ./packages/installer/...` (`bun run test:unit:installer`), not
+`bun:test`. `packages/installer/`'s tests used to live under
+`tests/unit/installer/`, mirroring `packages/agent/`'s shape, before its Go
+rewrite moved them next to the source; `tests/unit/installer/` no longer exists.
+`tests/unit/app/` covers the SvelteKit app itself, a couple of component tests
+plus the pure modules under `$lib` that are worth pinning down directly
+(`long-request.test.ts`, see Long-running requests below; `queue.test.ts`;
+`toast.test.ts`; `compose-import.test.ts`; `service-link.test.ts`;
+`deploy-phases.test.ts`; `command-parse.test.ts`; `auth-providers.test.ts`;
+`app-gate.test.ts`, the login wall's token signing/expiry/tampering, its cookie
+parsing, and OIDC group-claim extraction) : anything that's a real transform
+with no DB or Docker dependency belongs here rather than in
+`tests/integration/`, which is still where most of `src/` is exercised.
 
 Run everything: `bun run test` (bare `bun test` also works for the `bun:test`
 half, no wrapper script — `bunfig.toml`'s `[test].preload` handles the rest —
-but `bun run test` also runs `go test ./packages/cli/...` afterward). Scoped:
-`bun run test:unit`, `test:unit:agent`, `test:unit:app`, `test:unit:installer`
-all set `HOMERUN_SKIP_INTEGRATION_SETUP=1` so the preloaded integration
-bootstrap (real Postgres container) doesn't run for a unit-only invocation;
-`test:unit:cli` is plain `go test`, no Bun preload involved at all.
-`tests/integration/` is a separate suite with its own `beforeAll`/`afterAll`
-(real Postgres/Docker/agent, see `tests/integration/README.md`), and
-`tests/e2e/` is a third, Playwright, outside `bun test` entirely (see E2E
-browser tests below). `tests/integration/README.md` and `tests/e2e/README.md`
-are the counterparts living next to the code.
+but `bun run test` also runs `go test ./packages/...` afterward, covering both
+`packages/cli/` and `packages/installer/`). Scoped: `bun run test:unit`,
+`test:unit:agent`, `test:unit:app` all set `HOMERUN_SKIP_INTEGRATION_SETUP=1` so
+the preloaded integration bootstrap (real Postgres container) doesn't run for a
+unit-only invocation; `test:unit:cli` and `test:unit:installer` are both plain
+`go test`, no Bun preload involved at all. `tests/integration/` is a separate
+suite with its own `beforeAll`/`afterAll` (real Postgres/Docker/agent, see
+`tests/integration/README.md`), and `tests/e2e/` is a third, Playwright, outside
+`bun test` entirely (see E2E browser tests below). `tests/integration/README.md`
+and `tests/e2e/README.md` are the counterparts living next to the code.
 
 **Where Postgres comes from, `HOMERUN_TEST_POSTGRES_URL`.**
 `tests/integration/support/postgres.ts`'s `startTestPostgres()` is the one entry
@@ -129,11 +134,14 @@ rerun policy checked in here.
 
 ## Fakes over mocking libraries
 
-Where a function takes a `StepRunner`-shaped collaborator
-(`packages/installer/exec.ts`) or a small client object, tests pass a plain
-object literal with `mock()`-wrapped methods instead of instantiating the real
-class. See `tests/unit/installer/network.test.ts` / `release.test.ts` /
-`full-stack.test.ts` / `agent-step.test.ts`.
+`packages/installer/exec.go`'s `Runner` is a real Go interface (`StepRunner`
+implements it), so its Go tests (`steps_test.go`, `fullstack_test.go`,
+`migrate_test.go`, `flow_test.go`, `main_test.go`, sharing a `fakeRunner` from
+`support_test.go`) pass a fake implementation instead of the real one, no
+mocking library needed. Before the Go rewrite, the same collaborator was a
+TypeScript interface and its `bun:test` tests (`tests/unit/installer/`, now
+gone) took the equivalent shortcut with a plain object literal and
+`mock()`-wrapped methods.
 
 ## Real bugs this suite caught
 
@@ -162,11 +170,13 @@ class. See `tests/unit/installer/network.test.ts` / `release.test.ts` /
 
 This section is scoped to what `tests/` itself caught; a sibling finding from
 the same "Bun's own APIs quietly diverge from `node:fs`" family, but caught by
-manual live installer testing rather than this suite, lives in
-`packages/installer/steps/rootless-docker.ts`'s own doc comment instead:
-`Bun.file(path).exists()` can return `true` for a `/proc` pseudo-file while
-`.text()` silently returns `""`, `node:fs/promises`' `readFile` reads it
-correctly. See Homerun Agent + installer below.
+manual live installer testing rather than this suite, lived in the old
+TypeScript installer's `steps/rootless-docker.ts` doc comment:
+`Bun.file(path).exists()` could return `true` for a `/proc` pseudo-file while
+`.text()` silently returned `""`, `node:fs/promises`' `readFile` read it
+correctly. Moot since the installer's Go rewrite — Go's `os.ReadFile` has no
+such quirk, and `packages/installer/docker.go`'s doc comment on
+`allowRootlessUserns` records the history. See Homerun Agent + installer below.
 
 ## E2E browser tests (`tests/e2e/`, `playwright.config.ts`)
 

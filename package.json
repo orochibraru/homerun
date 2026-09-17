@@ -87,7 +87,7 @@
 		"check:agent": "tsc --noEmit --project packages/agent/tsconfig.json",
 		"check:app": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --tsgo",
 		"check:cli": "go vet ./packages/cli/...",
-		"check:installer": "tsc --noEmit --project packages/installer/tsconfig.json",
+		"check:installer": "go vet ./packages/installer/...",
 		"check:scripts": "tsc --noEmit --project tsconfig.scripts.json",
 		"check:packages": "bun run check:installer && bun run check:agent && bun run check:cli && bun run check:scripts",
 		"component:add": "shadcn-svelte add",
@@ -113,7 +113,7 @@
 		"preview": "vite preview",
 		"release": "semantic-release",
 		"start": "./build/server",
-		"test": "svelte-kit sync && bun test --timeout 120000 && go test ./packages/cli/...",
+		"test": "svelte-kit sync && bun test --timeout 120000 && go test ./packages/...",
 		"screenshots": "playwright test --config playwright.screenshots.config.ts",
 		"test:e2e": "playwright test",
 		"test:e2e:cli": "playwright test tests/e2e/bootstrap.spec.ts tests/e2e/onboarding.spec.ts tests/e2e/ui-cli.spec.ts",
@@ -122,7 +122,7 @@
 		"test:unit:agent": "HOMERUN_SKIP_INTEGRATION_SETUP=1 bun test tests/unit/agent --timeout 120000",
 		"test:unit:app": "svelte-kit sync && HOMERUN_SKIP_INTEGRATION_SETUP=1 bun test tests/unit/app --timeout 120000",
 		"test:unit:cli": "go test ./packages/cli/...",
-		"test:unit:installer": "HOMERUN_SKIP_INTEGRATION_SETUP=1 bun test tests/unit/installer --timeout 120000"
+		"test:unit:installer": "go test ./packages/installer/..."
 	},
 	"type": "module",
 	"version": "1.0.33"

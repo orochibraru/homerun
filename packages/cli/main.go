@@ -116,12 +116,13 @@ func splitGlobalFlags(args []string) (globalFlags, []string) {
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
 		value := ""
+		inline := false
 		name := arg
 		if equals := strings.Index(arg, "="); strings.HasPrefix(arg, "--") && equals != -1 {
-			name, value = arg[:equals], arg[equals+1:]
+			name, value, inline = arg[:equals], arg[equals+1:], true
 		}
 		takeValue := func() string {
-			if value != "" {
+			if inline {
 				return value
 			}
 			if index+1 < len(args) {
@@ -186,6 +187,14 @@ func listFlags(set *flag.FlagSet) *ListArgs {
 	set.IntVar(&args.PerPage, "per-page", 0, "items per page")
 	set.StringVar(&args.Search, "search", "", "only rows matching this term")
 	return args
+}
+
+// requirePositiveTimeout rejects a negative --timeout, which would otherwise
+// silently fall back to the default wait rather than failing.
+func requirePositiveTimeout(seconds int) {
+	if seconds < 0 {
+		fail("--timeout can't be negative.")
+	}
 }
 
 // requireArg returns the positional argument at index, failing with what the command expected.
@@ -266,6 +275,7 @@ func runServiceScan(client func() *Client, args []string) {
 	if *failOn != "" && !slices.Contains(failOnLevels, *failOn) {
 		fail(fmt.Sprintf("--fail-on must be one of %s", strings.Join(failOnLevels, ", ")))
 	}
+	requirePositiveTimeout(*timeout)
 	id := requireArg(rest, 0, "id")
 	serviceScan(client(), id, ScanArgs{
 		FailOn:  *failOn,
@@ -335,6 +345,7 @@ func runInstance(global globalFlags, args []string) {
 		wait := set.Bool("wait", false, "wait until the instance is back on the new version")
 		timeout := set.Int("timeout", 0, "with --wait, how long to wait before giving up, in seconds")
 		parse(set, args[1:])
+		requirePositiveTimeout(*timeout)
 		instanceUpdate(
 			requireClient(global.baseURL, global.apiKey),
 			*wait,

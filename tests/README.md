@@ -2,26 +2,31 @@
 
 `bun:test`, run directly by Bun (`bun test --timeout 120000` — see the root
 `CLAUDE.md`'s note on why `--timeout` is passed explicitly), covering
-`packages/agent/` and `packages/installer/`. Tests live here, under
-`tests/unit/<package>/`, mirroring the source tree —
-`tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`,
-`tests/unit/installer/detect.test.ts` tests
-`packages/installer/steps/detect.ts`, etc. `tests/unit/app/` is component tests
-for the SvelteKit app itself (a Svelte-compiling Bun plugin + happy-dom setup,
-`@testing-library/svelte`), see its own README. `packages/cli/` is a separate Go
-module and isn't part of this suite at all: its own tests are
-`packages/cli/cli_test.go`, run with `go test ./packages/cli/...`
-(`bun run test:unit:cli`), not `bun:test`.
+`packages/agent/`, the one remaining Bun/TypeScript sub-project. Tests live
+here, under `tests/unit/<package>/`, mirroring the source tree —
+`tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`, etc.
+`tests/unit/app/` is component tests for the SvelteKit app itself (a
+Svelte-compiling Bun plugin + happy-dom setup, `@testing-library/svelte`), see
+its own README. `packages/cli/` and `packages/installer/` are both Go packages
+in the repo-root `go.mod` and aren't part of this suite at all: their own tests
+are `packages/cli/cli_test.go` and `packages/installer/*_test.go`, run with
+`go test ./packages/cli/...` (`bun run test:unit:cli`) and
+`go test ./packages/installer/...` (`bun run test:unit:installer`), not
+`bun:test`. There used to be a `tests/unit/installer/`, mirroring the same
+`packages/agent/` shape, before the installer's Go rewrite moved its tests next
+to the Go source.
 
 Run everything: `bun run test` (a bare `bun test` also works for the `bun:test`
 half — no wrapper script, `bunfig.toml`'s `[test].preload` handles the rest —
-but `bun run test` also runs `go test ./packages/cli/...` afterward). Scoped:
-`bun run test:unit` (agent/app/installer only, no Postgres/Docker needed),
-`bun run test:unit:agent`, `bun run test:unit:app`, `bun run test:unit:cli` (the
-Go tests, above), `bun run test:unit:installer`. See
-`tests/integration/README.md` for the separate `tests/integration/` suite, and
-`tests/e2e/README.md` for the real-browser Playwright suite (its own runner,
-`bun run test:e2e`, not part of `bun run test`'s `bun test` invocation).
+but `bun run test` also runs `go test ./packages/...` afterward, covering both
+`packages/cli/` and `packages/installer/`). Scoped: `bun run test:unit`
+(agent/app only, no Postgres/Docker needed), `bun run test:unit:agent`,
+`bun run test:unit:app`, `bun run test:unit:cli` and
+`bun run test:unit:installer` (the Go tests, above, plain `go test`, no Bun
+preload involved). See `tests/integration/README.md` for the separate
+`tests/integration/` suite, and `tests/e2e/README.md` for the real-browser
+Playwright suite (its own runner, `bun run test:e2e`, not part of
+`bun run test`'s `bun test` invocation).
 
 ## Mocks are process-global
 
@@ -54,13 +59,13 @@ enforced yet.
 
 ## Fakes over mocking libraries
 
-Where a function takes a `StepRunner`-shaped collaborator
-(`packages/installer/exec.ts`) or a small client object, tests pass a plain
-object literal with `mock()`-wrapped methods instead of instantiating the real
-class — TypeScript's structural types are erased at runtime, so this is a valid
-`StepRunner` etc. as far as the code under test can tell. See
-`tests/unit/installer/network.test.ts` / `release.test.ts` /
-`full-stack.test.ts` / `agent-step.test.ts`.
+`packages/installer/exec.go`'s `Runner` is a real Go interface, so its own Go
+tests (`steps_test.go`, `fullstack_test.go`, `migrate_test.go`, `flow_test.go`,
+`main_test.go`, `support_test.go`) pass a fake implementation instead of the
+real `StepRunner`, no mocking library involved — the same "fake over mock"
+posture the old `bun:test` suite used to take with plain object literals for
+this same collaborator, before the installer's Go rewrite moved these tests out
+of `tests/unit/installer/` entirely.
 
 ## Real bugs this suite caught
 
@@ -87,7 +92,7 @@ back to `bun:test` rather than keep the extra dependency around for that.
 `tsconfig.json` excludes `tests/` from `svelte-check` (`bun run check`'s
 `check:app`) — `bun:test`'s `mock()` return type hits real overload-resolution
 errors under svelte-check's TS resolution that don't happen under
-`tsc`/`bun test` directly. `tests/unit/agent/` and `tests/unit/installer/` are
-type-checked per-package instead (`bun run check:agent`/`check:installer`);
-`packages/cli/`'s own tests aren't under `tests/` at all, `check:cli` is
-`go vet`, not `tsc`.
+`tsc`/`bun test` directly. `tests/unit/agent/` is type-checked per-package
+instead (`bun run check:agent`); `packages/cli/`'s and `packages/installer/`'s
+own tests aren't under `tests/` at all, `check:cli` and `check:installer` are
+both `go vet`, not `tsc`.

@@ -1,0 +1,74 @@
+name: Go
+# The Go half of the repo: packages/cli and packages/installer, one module at
+# the root. Separate from code_quality.yaml (which is Bun/SvelteKit) so a Go
+# failure says so by name, and so this can run without installing node_modules.
+
+on:
+  workflow_call:
+    outputs:
+      result:
+        description: "Result of the Go test + lint jobs"
+        value: ${{ jobs.test.outputs.result }}
+
+permissions:
+  contents: read
+
+env:
+  TZ: Europe/Paris
+  CI: "true"
+  NO_COLOR: "1"
+
+jobs:
+  test:
+    name: Tests (Go)
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.done.outputs.result }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      # -race catches a data race the ordinary run would report as a pass;
+      # nothing here is concurrent yet, but the CLI's polling loops and the
+      # installer's runner are exactly where one would first appear.
+      - name: Test
+        run: go test -race -coverprofile=coverage.out ./packages/...
+
+      - name: Coverage summary
+        run: go tool cover -func=coverage.out | tail -1
+
+      - name: Formatting
+        run: |
+          unformatted="$(gofmt -l ./packages)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt would rewrite: $unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./packages/...
+
+      - name: Record result
+        id: done
+        if: always()
+        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"
+
+  lint:
+    name: Lint (golangci-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.6.2

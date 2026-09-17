@@ -297,8 +297,8 @@ all in any compose file, so Homerun itself was reachable on `:3000` and nowhere
 else no matter how carefully `baseDomain` was configured, while every service it
 deployed got a routed hostname. The labels live in
 `tools/compose/app.compose.yaml`, `compose.prod.yaml` and the installer's
-generated compose (`packages/installer/steps/full-stack.ts`), and the shape they
-take is the result of testing three candidates against the real dev Traefik:
+generated compose (`packages/installer/fullstack.go`), and the shape they take
+is the result of testing three candidates against the real dev Traefik:
 
 - `traefik.enable` set to an empty string (what `${DASHBOARD_DOMAIN:+true}`
   expands to when the variable is unset) is **not** silently ignored: Traefik
@@ -398,7 +398,7 @@ advertise address (the installer passes one; by hand, run
 `docker swarm init --advertise-addr <ip>` once and save again).
 
 **Migrating a rootless install** (`--migrate-to-rootful`,
-`packages/installer/steps/migrate-rootful.ts`): stops every container on the
+`packages/installer/migrate.go`'s `Migrate`): stops every container on the
 rootless daemon, copies each named volume through `tar --numeric-owner` in
 `alpine:3` on both daemons (ownership as the container saw it, not the subuid on
 disk), recreates volumes with their labels so compose keeps owning them, sets up

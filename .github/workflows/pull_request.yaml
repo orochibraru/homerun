@@ -61,6 +61,13 @@ jobs:
       tests: ${{ needs.changes.outputs.code == 'true' }}
     secrets: inherit
 
+  go:
+    name: Go
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/go.yaml
+    secrets: inherit
+
   release-dry-run:
     name: Release Dry Run
     needs: [changes]
@@ -339,6 +346,7 @@ jobs:
     needs:
       - changes
       - code_quality
+      - go
       - release-dry-run
       - binaries
       - build-app
@@ -354,6 +362,7 @@ jobs:
           results=(
             "${{ needs.changes.result }}"
             "${{ needs.code_quality.result }}"
+            "${{ needs.go.result }}"
             "${{ needs.release-dry-run.result }}"
             "${{ needs.binaries.result }}"
             "${{ needs.build-app.result }}"
