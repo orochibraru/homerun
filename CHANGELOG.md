@@ -1,3 +1,21 @@
+## [1.0.24](https://github.com/orochibraru/homerun/compare/v1.0.23...v1.0.24) (2026-09-17)
+
+### Features
+
+- night sesh ([#19](https://github.com/orochibraru/homerun/issues/19))
+  ([d95d325](https://github.com/orochibraru/homerun/commit/d95d325b4b995e664b415e25cbe15f731f31da43))
+- scan policy, fix bugs, safe delete, cli security, code cleanup, tooling
+  ([5b3c01a](https://github.com/orochibraru/homerun/commit/5b3c01a3a388342e8b19f302433b5173be044770))
+- so much stuff
+  ([0c28e26](https://github.com/orochibraru/homerun/commit/0c28e2654456f4096484a825a8e29b90068bdf8e))
+
+### Bug Fixes
+
+- release night session
+  ([bef8141](https://github.com/orochibraru/homerun/commit/bef8141d3ddd7f60ebe3fed8815c47019180ec45))
+- revocation, dropdownws tooling
+  ([b0c852a](https://github.com/orochibraru/homerun/commit/b0c852a888f56ee98b17fa195c70e8a838441605))
+
 ## [1.0.23](https://github.com/orochibraru/homerun/compare/v1.0.22...v1.0.23) (2026-09-16)
 
 ### Features
