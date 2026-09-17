@@ -1,0 +1,112 @@
+{
+	"$schema": "https://orochibraru.com/docs-config.schema.json",
+	"categories": [
+		{
+			"title": "Getting started",
+			"description": "Install, first boot, first deploy.",
+			"icon": "rocket",
+			"pages": [
+				{ "slug": "getting-started", "icon": "rocket" },
+				{ "slug": "showcase", "icon": "images" },
+				{ "slug": "configuration", "icon": "settings-2" },
+				{
+					"slug": "faq-and-limitations",
+					"title": "FAQ",
+					"icon": "circle-question-mark"
+				}
+			]
+		},
+		{
+			"title": "Services",
+			"description": "Sources, builds, deploys, networking and runtime for a single service.",
+			"icon": "container",
+			"pages": [
+				{ "slug": "services", "icon": "container" },
+				{
+					"slug": "deploy-source-and-builds",
+					"title": "Source and builds",
+					"icon": "package"
+				},
+				{
+					"slug": "git-providers",
+					"title": "Git providers",
+					"icon": "git-branch"
+				},
+				{ "slug": "deploy-on-push", "icon": "webhook" },
+				{
+					"slug": "pull-request-previews",
+					"title": "PR previews",
+					"icon": "git-pull-request"
+				},
+				{ "slug": "status-checks", "icon": "circle-check" },
+				{
+					"slug": "compose-import",
+					"title": "Compose import",
+					"icon": "file-input"
+				},
+				{
+					"slug": "migrating-from-dokploy-or-coolify",
+					"title": "Migrating",
+					"icon": "arrow-right-left"
+				},
+				{ "slug": "deploying", "icon": "rocket" },
+				{ "slug": "revisions-and-rollback", "icon": "undo-2" },
+				{ "slug": "image-scanning", "icon": "shield-check" },
+				{ "slug": "env-vars", "icon": "variable" },
+				{ "slug": "networking", "icon": "network" },
+				{ "slug": "dns-automation", "icon": "globe" },
+				{ "slug": "runtime-and-compute", "icon": "cpu" },
+				{ "slug": "swarm-mode", "icon": "layers" },
+				{ "slug": "observability", "icon": "activity" },
+				{ "slug": "scheduling", "icon": "calendar-clock" }
+			]
+		},
+		{
+			"title": "Stacks, templates and storage",
+			"description": "Grouping services, the app catalog, volumes, backups and build servers.",
+			"icon": "boxes",
+			"pages": [
+				{ "slug": "stacks", "icon": "boxes" },
+				{ "slug": "templates", "icon": "layout-grid" },
+				{ "slug": "storage-volumes", "icon": "hard-drive" },
+				{ "slug": "backups", "icon": "archive" },
+				{
+					"slug": "remote-hosts-and-agent",
+					"title": "Build servers & agent",
+					"icon": "server"
+				}
+			]
+		},
+		{
+			"title": "Users and access",
+			"description": "Accounts, roles, sign-in methods and protecting your apps.",
+			"icon": "users",
+			"pages": [
+				{ "slug": "users-and-roles", "icon": "users" },
+				{ "slug": "authentication-providers", "icon": "key-round" },
+				{ "slug": "your-profile", "icon": "user" },
+				{
+					"slug": "two-factor-and-passkeys",
+					"title": "2FA and passkeys",
+					"icon": "scan-face"
+				},
+				{ "slug": "login-wall", "title": "Login wall", "icon": "lock" },
+				{ "slug": "sign-in-with-homerun", "icon": "log-in" }
+			]
+		},
+		{
+			"title": "Operations and maintenance",
+			"description": "Keeping the instance healthy, informed and up to date.",
+			"icon": "wrench",
+			"pages": [
+				{ "slug": "dashboard", "icon": "layout-dashboard" },
+				{ "slug": "system-logs", "icon": "scroll-text" },
+				{ "slug": "docker-cleanup", "icon": "brush-cleaning" },
+				{ "slug": "notifications", "icon": "bell" },
+				{ "slug": "status-pages", "icon": "heart-pulse" },
+				{ "slug": "upgrading", "icon": "circle-arrow-up" },
+				{ "slug": "api-and-cli", "icon": "terminal" }
+			]
+		}
+	]
+}
