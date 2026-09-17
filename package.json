@@ -125,5 +125,5 @@
 		"test:unit:installer": "go test ./packages/installer/..."
 	},
 	"type": "module",
-	"version": "1.0.33"
+	"version": "1.0.34"
 }
