@@ -113,7 +113,7 @@
       </button>
       {#if i < steps.length - 1}
         <div
-          class="mt-[1.0625rem] h-0.5 flex-1 rounded-full transition-colors duration-300 {i
+          class="mt-4.25 h-0.5 flex-1 rounded-full transition-colors duration-300 {i
           < activeStep
             ? 'bg-accent/50'
             : 'bg-surface-3'}"

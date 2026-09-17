@@ -7,8 +7,7 @@ import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateGeneralSchema } from "$lib/server/validation/service";
 import { CronService } from "$lib/services/cron.service";
-import { deleteDns, serviceHostname } from "$lib/services/dns.service";
-import { DockerService } from "$lib/services/docker.service";
+import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Services");
@@ -21,7 +20,7 @@ export const load = async ({ parent }) => {
 };
 
 export const actions = {
-	delete: async ({ params, locals, platform }) => {
+	delete: async ({ request, params, locals, platform }) => {
 		allowLongRequest(platform);
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
@@ -31,31 +30,18 @@ export const actions = {
 			return fail(404, { error: "Service not found." });
 		}
 
-		if (svc.swarmServiceId) {
-			try {
-				await DockerService.removeSwarmService(svc.swarmServiceId);
-			} catch {
-				// Service may already be gone on the swarm : proceed regardless.
+		const force = (await request.formData()).get("force") === "true";
+		try {
+			await ServiceLifecycleService.deleteService(svc, { force });
+		} catch (error) {
+			if (error instanceof WorkloadDetachError) {
+				return fail(409, { detachFailed: true, error: error.message });
 			}
-		} else if (svc.containerId) {
-			try {
-				await ServiceLifecycleService.remove(svc.containerId);
-			} catch {
-				// Container may already be gone proceed with deleting the record.
-			}
+			throw error;
 		}
-		if (svc.dnsResolvable) {
-			const stack = svc.stackId
-				? await StackDTO.get(svc.stackId, locals.user.id)
-				: null;
-			const customDomain = svc.toJSON().customDomain;
-			await deleteDns([
-				serviceHostname(svc.slug, stack?.slug),
-				...(customDomain ? [customDomain] : []),
-			]);
-		}
-		await svc.delete();
-		logger.info(`Service deleted: service=${svc.id} user=${locals.user.id}`);
+		logger.info(
+			`Service deleted: service=${svc.id} force=${force} user=${locals.user.id}`,
+		);
 		throw redirect(303, resolve("/services"));
 	},
 	moveStack: async ({ request, params, locals }) => {

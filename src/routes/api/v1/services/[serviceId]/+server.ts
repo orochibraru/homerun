@@ -3,6 +3,7 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateServiceApiBody } from "$lib/server/validation/api";
+import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { DockerService } from "$lib/services/docker.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
@@ -74,7 +75,7 @@ export const PATCH = async ({ params, request, locals }) => {
 	return json(svc.toJSON());
 };
 
-export const DELETE = async ({ params, locals, platform }) => {
+export const DELETE = async ({ params, locals, platform, url }) => {
 	allowLongRequest(platform);
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
@@ -84,22 +85,17 @@ export const DELETE = async ({ params, locals, platform }) => {
 		return json({ error: "Not found" }, { status: 404 });
 	}
 
-	if (svc.swarmServiceId) {
-		try {
-			await DockerService.removeSwarmService(svc.swarmServiceId);
-		} catch {
-			// Already gone on the swarm : proceed with deleting the record.
+	const force = url.searchParams.get("force") === "true";
+	try {
+		await ServiceLifecycleService.deleteService(svc, { force });
+	} catch (error) {
+		if (error instanceof WorkloadDetachError) {
+			return json({ error: error.message }, { status: 409 });
 		}
-	} else if (svc.containerId) {
-		try {
-			await ServiceLifecycleService.remove(svc.containerId);
-		} catch {
-			// Already gone on the host : proceed with deleting the record.
-		}
+		throw error;
 	}
-	await svc.delete();
 	logger.info(
-		`Service deleted via API: service=${svc.id} user=${locals.user.id}`,
+		`Service deleted via API: service=${svc.id} force=${force} user=${locals.user.id}`,
 	);
 	return new Response(null, { status: 204 });
 };

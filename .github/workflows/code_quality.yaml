@@ -39,6 +39,8 @@ jobs:
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       # The hooks shell out to the repo's own tooling (bun run gen, biome,
       # prettier, markdownlint, tailwint, svelte-check), so deps have to exist
@@ -117,6 +119,8 @@ jobs:
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
 
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts

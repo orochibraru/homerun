@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
-	blockReason,
 	countsLine,
+	describeBlockPolicy,
 	emptyCounts,
+	evaluateScanPolicy,
 	isBlockSeverity,
+	severitiesAtOrAbove,
 	summarizeTrivyReport,
 } from "../../../src/lib/image-scan";
 import type { GitBuildPlan } from "../../../src/lib/services/deploy/plan";
@@ -74,6 +76,29 @@ describe("summarizeTrivyReport", () => {
 			unknown: 1,
 		});
 		expect(summary.totalFindings).toBe(5);
+		expect(summary.fixableCounts).toEqual({
+			critical: 1,
+			high: 1,
+			low: 1,
+			medium: 1,
+			unknown: 1,
+		});
+	});
+
+	test("counts only findings with a fixed version as fixable", () => {
+		const summary = summarizeTrivyReport(
+			report([
+				{
+					Vulnerabilities: [
+						vulnerability("CVE-1", "CRITICAL", "a", null),
+						vulnerability("CVE-2", "CRITICAL", "b"),
+						vulnerability("CVE-3", "HIGH", "c", null),
+					],
+				},
+			]),
+		);
+		expect(summary.counts).toEqual({ ...emptyCounts(), critical: 2, high: 1 });
+		expect(summary.fixableCounts).toEqual({ ...emptyCounts(), critical: 1 });
 	});
 
 	test("de-duplicates a CVE reported twice for the same package version", () => {
@@ -139,35 +164,134 @@ describe("summarizeTrivyReport", () => {
 	});
 });
 
-describe("blockReason", () => {
-	const counts = { ...emptyCounts(), high: 2 };
+describe("evaluateScanPolicy", () => {
+	const counts = { ...emptyCounts(), high: 2, low: 4, medium: 3, unknown: 7 };
+	const scan = { counts, fixableCounts: null };
+	const policy = (
+		severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | null,
+		fixableOnly = false,
+	) => ({ fixableOnly, severity });
 
 	test("never blocks with the policy off", () => {
-		expect(blockReason({ ...counts, critical: 5 }, null)).toBeNull();
+		const verdict = evaluateScanPolicy(
+			{ counts: { ...counts, critical: 5 }, fixableCounts: null },
+			policy(null),
+		);
+		expect(verdict).toEqual({
+			blocked: false,
+			blocking: emptyCounts(),
+			reason: null,
+		});
 	});
 
-	test("CRITICAL ignores HIGH findings", () => {
-		expect(blockReason(counts, "CRITICAL")).toBeNull();
-		expect(blockReason({ ...counts, critical: 1 }, "CRITICAL")).toContain(
-			"1 CRITICAL vulnerability",
+	test("CRITICAL ignores HIGH and below", () => {
+		expect(evaluateScanPolicy(scan, policy("CRITICAL")).blocked).toBe(false);
+		const verdict = evaluateScanPolicy(
+			{ counts: { ...counts, critical: 1 }, fixableCounts: null },
+			policy("CRITICAL"),
+		);
+		expect(verdict.blocked).toBe(true);
+		expect(verdict.blocking).toEqual({ ...emptyCounts(), critical: 1 });
+		expect(verdict.reason).toContain("block at CRITICAL");
+		expect(verdict.reason).toContain(
+			"1 vulnerability at or above the threshold (1 critical)",
 		);
 	});
 
 	test("HIGH blocks on HIGH or CRITICAL", () => {
-		expect(blockReason(counts, "HIGH")).toContain(
-			"2 HIGH or CRITICAL vulnerabilities",
-		);
-		expect(blockReason(emptyCounts(), "HIGH")).toBeNull();
+		const verdict = evaluateScanPolicy(scan, policy("HIGH"));
+		expect(verdict.blocked).toBe(true);
+		expect(verdict.blocking).toEqual({ ...emptyCounts(), high: 2 });
+		expect(verdict.reason).toContain("block at HIGH or above");
+		expect(
+			evaluateScanPolicy(
+				{ counts: { ...emptyCounts(), medium: 9 }, fixableCounts: null },
+				policy("HIGH"),
+			).blocked,
+		).toBe(false);
 	});
 
-	test("validates a stored policy value", () => {
+	test("MEDIUM and LOW count everything at or above, never UNKNOWN", () => {
+		expect(evaluateScanPolicy(scan, policy("MEDIUM")).blocking).toEqual({
+			...emptyCounts(),
+			high: 2,
+			medium: 3,
+		});
+		const low = evaluateScanPolicy(scan, policy("LOW"));
+		expect(low.blocking).toEqual({
+			...emptyCounts(),
+			high: 2,
+			low: 4,
+			medium: 3,
+		});
+		expect(low.reason).toContain(
+			"9 vulnerabilities at or above the threshold (2 high, 3 medium, 4 low)",
+		);
+		expect(
+			evaluateScanPolicy(
+				{ counts: { ...emptyCounts(), unknown: 3 }, fixableCounts: null },
+				policy("LOW"),
+			).blocked,
+		).toBe(false);
+	});
+
+	test("the reason lists the whole scan's counts", () => {
+		expect(evaluateScanPolicy(scan, policy("HIGH")).reason).toContain(
+			`Full scan: ${countsLine(counts)}.`,
+		);
+	});
+
+	test("fixable only counts findings that have a fix", () => {
+		const withFixes = {
+			counts: { ...emptyCounts(), critical: 3, high: 1 },
+			fixableCounts: { ...emptyCounts(), high: 1 },
+		};
+		expect(
+			evaluateScanPolicy(withFixes, policy("CRITICAL", true)).blocked,
+		).toBe(false);
+		const verdict = evaluateScanPolicy(withFixes, policy("HIGH", true));
+		expect(verdict.blocking).toEqual({ ...emptyCounts(), high: 1 });
+		expect(verdict.reason).toContain("fixable only");
+		expect(verdict.reason).toContain(
+			"1 fixable vulnerability at or above the threshold (1 high)",
+		);
+		expect(evaluateScanPolicy(withFixes, policy("CRITICAL")).blocked).toBe(
+			true,
+		);
+	});
+
+	test("fixable only falls back to every finding on an older scan", () => {
+		expect(
+			evaluateScanPolicy(
+				{ counts: { ...emptyCounts(), critical: 1 }, fixableCounts: null },
+				policy("CRITICAL", true),
+			).blocked,
+		).toBe(true);
+	});
+
+	test("orders severities and describes a policy", () => {
+		expect(severitiesAtOrAbove("CRITICAL")).toEqual(["CRITICAL"]);
+		expect(severitiesAtOrAbove("MEDIUM")).toEqual([
+			"CRITICAL",
+			"HIGH",
+			"MEDIUM",
+		]);
+		expect(describeBlockPolicy(policy(null, true))).toBe("off");
+		expect(describeBlockPolicy(policy("LOW", true))).toBe(
+			"LOW or above, fixable only",
+		);
+	});
+
+	test("validates a stored severity value", () => {
 		expect(isBlockSeverity("HIGH")).toBe(true);
+		expect(isBlockSeverity("LOW")).toBe(true);
+		expect(isBlockSeverity("UNKNOWN")).toBe(false);
 		expect(isBlockSeverity("off")).toBe(false);
 		expect(isBlockSeverity(null)).toBe(false);
 	});
 
 	test("summarizes counts in one line", () => {
-		expect(countsLine({ ...counts, critical: 1 })).toBe(
+		expect(countsLine({ ...emptyCounts(), critical: 1, high: 2 })).toBe(
 			"1 critical, 2 high, 0 medium, 0 low, 0 unknown",
 		);
 	});

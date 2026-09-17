@@ -8,7 +8,7 @@ import { ImageScanService } from "$lib/services/image-scan.service";
 
 const logger = new Logger("ImageScan");
 
-export const load = async ({ params, parent }) => {
+export const load = async ({ locals, params, parent }) => {
 	await parent();
 	const [scans, scanning, settings] = await Promise.all([
 		ImageScanDTO.listForService(params.serviceId, 15),
@@ -16,8 +16,9 @@ export const load = async ({ params, parent }) => {
 		InstanceSettingsDTO.get(),
 	]);
 	return {
-		blockSeverity: settings.imageScanBlockSeverity,
+		blockPolicy: settings.imageScanBlockPolicy,
 		instanceScanEnabled: settings.imageScanEnabled,
+		isAdmin: locals.isAdmin,
 		scanning,
 		scans: scans.map((scan) => scan.toJSON()),
 	};

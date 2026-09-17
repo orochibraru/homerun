@@ -1,7 +1,7 @@
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
+import { splitImageRef } from "$lib/image-ref";
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
-import { splitRevisionRef } from "$lib/revisions";
 import { DockerService } from "../docker.service.ts";
 import type { RevisionSource, WorkloadPlan } from "./plan.ts";
 
@@ -37,7 +37,7 @@ async function pinnedByDigest(
 	revision: RevisionSource & { digest: string },
 	workload: WorkloadPlan,
 ): Promise<RevisionImage> {
-	const { image, tag } = splitRevisionRef(revision.imageRef);
+	const { image, tag } = splitImageRef(revision.imageRef);
 	const pinned = {
 		digest: revision.digest,
 		image,
@@ -83,7 +83,7 @@ async function locateRevisionImage(
 	if (digest) {
 		return await pinnedByDigest(ctx, { ...revision, digest }, workload);
 	}
-	const { image, tag } = splitRevisionRef(revision.imageRef);
+	const { image, tag } = splitImageRef(revision.imageRef);
 	const localId = await DockerService.localImageId(`${image}:${tag}`);
 	if (localId && (!revision.imageId || localId === revision.imageId)) {
 		await ctx.dep.appendLog(`Found ${image}:${tag} on this host.`);
@@ -121,7 +121,7 @@ export async function resolveRevisionImage(
 		gitRef: revision.gitRef,
 	});
 	const resolved = await locateRevisionImage(ctx, revision, workload);
-	const { image, tag } = splitRevisionRef(revision.imageRef);
+	const { image, tag } = splitImageRef(revision.imageRef);
 	await svc.update({ image, tag });
 	logger.info(
 		`Revision image resolved: service=${svc.id} revision=${revision.id} ref=${resolved.image}:${resolved.tag}`,

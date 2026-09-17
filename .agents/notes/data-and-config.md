@@ -25,7 +25,15 @@ yet built).
   `update`/`delete` (row-only) /`cascadeDelete()` (stops+removes every member
   container, deletes deployments/services, deletes the stack row, then removes
   the stack's Docker network, the real "delete a stack" operation, see
-  `stacks/[stackId]/+page.server.ts`'s `delete` action).
+  `stacks/[stackId]/settings/+page.server.ts`'s `delete` action). Removing a
+  workload goes through `docker/workload-removal.ts`'s `tryRemoveWorkload` (a
+  Docker 404 counts as gone); any other failure throws `WorkloadDetachError`
+  before a row is touched unless `{ force: true }`.
+  `ServiceLifecycleService.deleteService(svc, { force })` has the same contract,
+  and is what the service Settings delete, the services list's single/bulk
+  delete and `DELETE /api/v1/services/:id` (`?force=true`) all call; the two
+  Settings pages turn the action's `fail(409, { detachFailed })` into a "Delete
+  anyway" confirm.
 - `template-dto.ts`, `TemplateDTO`: `usable(id, userId)` (built-in OR owned, for
   deploy-from-template), `owned(id, userId)` (owned only), `listForUser`,
   `listPaged(userId, "builtin" | "mine", query)`, `listCategories`, `create`.
@@ -200,11 +208,13 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
 - `image_scan`, one row per scan of a service's image: `status` (`ok` | `failed`
   | `skipped`), `imageRef`, `digest`, `source` (which target answered: the
   mirror, this host, a build cache registry), `counts` jsonb per severity,
-  `findings` jsonb (top 200, most severe first), `totalFindings`, `error`,
-  nullable `deploymentId` (`set null`, null for a Scan now), `serviceId`
-  cascade. `instance_settings.imageScanEnabled` (null = on) and
-  `imageScanBlockSeverity` (null = off) plus `service.imageScanEnabled` (default
-  true) are its settings.
+  nullable `fixableCounts` jsonb (same shape, findings with a fixed version,
+  null on rows from before it existed), `findings` jsonb (top 200, most severe
+  first), `totalFindings`, `error`, nullable `deploymentId` (`set null`, null
+  for a Scan now), `serviceId` cascade. `instance_settings.imageScanEnabled`
+  (null = on), `imageScanBlockSeverity` (null = off, `CRITICAL`/`HIGH`/
+  `MEDIUM`/`LOW`) and `imageScanBlockFixableOnly` (null = false) plus
+  `service.imageScanEnabled` (default true) are its settings.
 - `uptime_check`, one appended row per liveness probe per tick (the heartbeat
   strips read the last 40, "now" is the newest). See Uptime probes in
   `observability.md`.
@@ -400,7 +410,13 @@ groups: `docker.{socketPath,networkName}`, `baseDomain`,
 
 `config.auth.secret` reads `AUTH_SECRET` **falling back to
 `BETTER_AUTH_SECRET`**, don't collapse this to one var without checking both are
-honored.
+honored. Env values go through `firstNonBlank()`, so an empty `AUTH_SECRET=` (as
+`.env.example` ships it) falls through to `BETTER_AUTH_SECRET` and then the
+`default-secret` placeholder rather than signing with an empty key;
+`isPlaceholderAuthSecret()` is what the setup check and onboarding test against.
+`auth.oauthProviders` is deliberately **not** in the YAML schema: the
+Authentication page edits the DB column only, so a file value could never be
+removed from the UI.
 
 `config` is a single stable object every other module imports and reads
 properties off live, the file+env-parsed values are captured once into a private

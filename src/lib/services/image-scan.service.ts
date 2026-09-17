@@ -6,9 +6,9 @@ import { JobDTO } from "$lib/dto/job-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import {
-	type BlockSeverity,
-	blockReason,
 	countsLine,
+	evaluateScanPolicy,
+	type ScanBlockPolicy,
 	type TrivySummary,
 } from "$lib/image-scan";
 import { Logger } from "$lib/logger";
@@ -34,7 +34,7 @@ const logger = new Logger("ImageScan");
 const LOGGED_FINDINGS = 5;
 
 export interface ScanPolicy {
-	blockSeverity: BlockSeverity | null;
+	block: ScanBlockPolicy;
 	enabled: boolean;
 }
 
@@ -65,11 +65,11 @@ function reason(err: unknown): string {
 }
 
 class ImageScanServiceClass {
-	/** The effective scan policy for a service: instance-wide scanning and severity gate, AND with the service's own opt-in. */
+	/** The effective scan policy for a service: instance-wide scanning and block policy, AND with the service's own opt-in. */
 	async policyFor(svc: ServiceDTO): Promise<ScanPolicy> {
 		const settings = await InstanceSettingsDTO.get();
 		return {
-			blockSeverity: settings.imageScanBlockSeverity,
+			block: settings.imageScanBlockPolicy,
 			enabled: settings.imageScanEnabled && svc.imageScanEnabled,
 		};
 	}
@@ -147,12 +147,12 @@ class ImageScanServiceClass {
 	 * @returns The successful scan's summary, or `null` when every target
 	 *   failed to scan (recorded as `status: "failed"`).
 	 * @throws `ImageScanBlockedError` when the result violates
-	 *   `options.blockSeverity`.
+	 *   `options.block`, after logging the reason to the deployment log.
 	 */
 	async scan(
 		ctx: ScanContext,
 		targets: ScanTarget[],
-		options: { blockSeverity: BlockSeverity | null; digest?: string | null },
+		options: { block: ScanBlockPolicy | null; digest?: string | null },
 	): Promise<TrivySummary | null> {
 		const failures: string[] = [];
 		for (const target of targets) {
@@ -182,6 +182,7 @@ class ImageScanServiceClass {
 				deploymentId: ctx.dep?.id ?? null,
 				digest: options.digest ?? null,
 				findings: summary.findings,
+				fixableCounts: summary.fixableCounts,
 				imageRef: shown,
 				serviceId: ctx.svc.id,
 				source: target.label,
@@ -193,9 +194,15 @@ class ImageScanServiceClass {
 				`Image scanned: service=${ctx.svc.id} ref=${shown} ${countsLine(summary.counts)}`,
 			);
 			this.#notifyCritical(ctx, shown, summary);
-			const blocked = blockReason(summary.counts, options.blockSeverity);
-			if (blocked) {
-				throw new ImageScanBlockedError(blocked);
+			const verdict = options.block
+				? evaluateScanPolicy(summary, options.block)
+				: null;
+			if (verdict?.reason) {
+				await this.#log(ctx, verdict.reason);
+				logger.warn(
+					`Deploy blocked by the image scan policy: service=${ctx.svc.id} ref=${shown}`,
+				);
+				throw new ImageScanBlockedError(verdict.reason);
 			}
 			return summary;
 		}
@@ -230,7 +237,7 @@ class ImageScanServiceClass {
 			return;
 		}
 		await this.scan(ctx, [localScanTarget(ref)], {
-			blockSeverity: policy.blockSeverity,
+			block: policy.block,
 			digest,
 		});
 	}
@@ -251,7 +258,7 @@ class ImageScanServiceClass {
 			return;
 		}
 		await this.scan(ctx, buildScanTargets(plan, built), {
-			blockSeverity: policy.blockSeverity,
+			block: policy.block,
 		});
 	}
 
@@ -329,7 +336,7 @@ class ImageScanServiceClass {
 					source: { insecure: true, kind: "remote" },
 				},
 			],
-			{ blockSeverity: policy.blockSeverity, digest: copied.digest },
+			{ block: policy.block, digest: copied.digest },
 		);
 
 		if (input.swarm) {
@@ -399,7 +406,7 @@ class ImageScanServiceClass {
 
 	/**
 	 * Runs an on-demand scan of a service's already-deployed image, outside
-	 * any deploy or block policy (`blockSeverity: null`).
+	 * any deploy or block policy (`block: null`).
 	 *
 	 * @throws When the image can't be scanned at all.
 	 */
@@ -416,7 +423,7 @@ class ImageScanServiceClass {
 					source: { kind: "any" },
 				},
 			],
-			{ blockSeverity: null },
+			{ block: null },
 		);
 		if (!summary) {
 			throw new Error(

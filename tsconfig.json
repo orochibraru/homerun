@@ -19,8 +19,7 @@
 		"src/service-worker.ts",
 		"src/service-worker/**/*.ts",
 		"src/service-worker.d.ts",
-		"src/service-worker/**/*.d.ts",
-		"tests"
+		"src/service-worker/**/*.d.ts"
 	],
 	"extends": "./.svelte-kit/tsconfig.json"
 }

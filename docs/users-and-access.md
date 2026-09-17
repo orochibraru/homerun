@@ -19,7 +19,9 @@ created by an admin from `/users`:
   setup.
 - **Email invite**, only shown once SMTP is configured (see
   [Configuration](configuration.md)); sends a link to
-  `/auth/accept-invite/<token>`, valid for 7 days.
+  `/auth/accept-invite/<token>`, valid for 7 days. The pending list on `/users`
+  shows only invites that can still be accepted; an expired one drops off, and
+  inviting the same address again replaces it.
 
 An admin can change a user's role or remove them from `/users`, with two guards:
 you can't remove yourself, and you can't demote/remove the last remaining admin.

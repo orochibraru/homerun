@@ -36,7 +36,10 @@ import {
 	StatusChecksFailedError,
 } from "./deploy/status-check-step.ts";
 import { DockerService, type RemoteHostConnection } from "./docker.service.ts";
-import { ImageScanService } from "./image-scan.service.ts";
+import {
+	ImageScanBlockedError,
+	ImageScanService,
+} from "./image-scan.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
@@ -420,7 +423,7 @@ class DeploymentServiceClass {
 				return unreachable(imagePlan);
 		}
 	}
-	/** Marks the service and deployment failed, notifies, and shapes the caller's DeployResult. */
+	/** Marks the deployment failed (and the service too, unless a status-check or image-scan block left its previous workload running), notifies, and shapes the caller's DeployResult. */
 	async #recordFailure(
 		ctx: DeployContext,
 		err: unknown,
@@ -429,7 +432,8 @@ class DeploymentServiceClass {
 		const { dep, svc, userId } = ctx;
 		const errorMessage = err instanceof Error ? err.message : String(err);
 		const checksFailed = err instanceof StatusChecksFailedError;
-		if (checksFailed && (svc.containerId || svc.swarmServiceId)) {
+		const keptRunning = checksFailed || err instanceof ImageScanBlockedError;
+		if (keptRunning && (svc.containerId || svc.swarmServiceId)) {
 			await DockerService.syncServiceStatus(svc.id);
 		} else {
 			await svc.update({ currentStatus: "failed" });

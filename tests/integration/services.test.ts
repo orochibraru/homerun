@@ -68,10 +68,12 @@ describe("services : image-mode deploy", () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,
+				autoDeployOnPush: false,
 				buildSource: "image",
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
+				pullPolicy: "always",
 				image: "nginx",
 				name: "IT local no stack",
 				restartPolicy: "no",
@@ -106,10 +108,12 @@ describe("services : image-mode deploy", () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,
+				autoDeployOnPush: false,
 				buildSource: "image",
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
+				pullPolicy: "always",
 				image: "nginx",
 				name: "IT in stack",
 				stackId: stack.id as string,
@@ -132,10 +136,12 @@ describe("services : image-mode deploy", () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,
+				autoDeployOnPush: false,
 				buildSource: "image",
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: { IT_MARKER: "hello-from-integration-test" },
+				pullPolicy: "always",
 				image: "nginx",
 				name: "IT env vars",
 				restartPolicy: "no",
@@ -164,10 +170,12 @@ describe("services : image-mode deploy", () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,
+				autoDeployOnPush: false,
 				buildSource: "image",
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
+				pullPolicy: "always",
 				image: "this-image-definitely-does-not-exist-anywhere",
 				name: "IT bad image",
 				restartPolicy: "no",
@@ -200,10 +208,12 @@ describe("services : lifecycle", () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,
+				autoDeployOnPush: false,
 				buildSource: "image",
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
+				pullPolicy: "always",
 				image: "nginx",
 				name: "IT lifecycle",
 				restartPolicy: "no",
@@ -244,6 +254,7 @@ describe("services : git-build deploy", () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,
+				autoDeployOnPush: false,
 				buildSource: "git",
 				// containerPort is required unconditionally by
 				// createServiceApiBody (not just for buildSource: "image"),
@@ -254,6 +265,7 @@ describe("services : git-build deploy", () => {
 				envVars: {},
 				gitUrl: ctx.gitBuildFixtureUrl,
 				name: "IT git build",
+				pullPolicy: "always",
 				restartPolicy: "no",
 				slug: slug("gitbuild"),
 			},
@@ -276,10 +288,12 @@ describe("services : update and delete", () => {
 		const created = await client.POST("/services", {
 			body: {
 				authRequired: false,
+				autoDeployOnPush: false,
 				buildSource: "image",
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
+				pullPolicy: "always",
 				image: "nginx",
 				name: "IT patch-delete",
 				restartPolicy: "no",

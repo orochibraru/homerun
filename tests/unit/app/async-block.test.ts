@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { RemoteQuery } from "@sveltejs/kit";
 import { render } from "@testing-library/svelte";
 import { createRawSnippet } from "svelte";
 import AsyncBlock from "../../../src/lib/components/async-block.svelte";
@@ -7,11 +8,14 @@ const pending = createRawSnippet(() => ({
 	render: () => "<p>loading…</p>",
 }));
 
-const children = createRawSnippet((value: () => string) => ({
-	render: () => `<p>${value()}</p>`,
+const children = createRawSnippet((value: () => unknown) => ({
+	render: () => `<p>${value() as string}</p>`,
 }));
 
-function fakeQuery(state: { current?: string; error?: unknown }) {
+function fakeQuery(state: {
+	current?: string;
+	error?: unknown;
+}): RemoteQuery<string> {
 	return {
 		current: state.current,
 		error: state.error,
@@ -20,7 +24,7 @@ function fakeQuery(state: { current?: string; error?: unknown }) {
 		refresh: async () => {},
 		set: () => {},
 		withOverride: () => ({}),
-	} as never;
+	} as unknown as RemoteQuery<string>;
 }
 
 describe("AsyncBlock", () => {

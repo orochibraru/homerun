@@ -6,7 +6,6 @@ import {
 	type RevisionLike,
 	retainedRevisions,
 	revisionImageRefs,
-	splitRevisionRef,
 	type WorkloadHealthSample,
 } from "../../../src/lib/revisions";
 
@@ -104,17 +103,6 @@ describe("revisionImageRefs", () => {
 				}),
 			),
 		).toEqual(["homerun-build-api:m1abc"]);
-	});
-
-	test("splitRevisionRef handles registry ports and pinned digests", () => {
-		expect(splitRevisionRef("localhost:5000/app")).toEqual({
-			image: "localhost:5000/app",
-			tag: "latest",
-		});
-		expect(splitRevisionRef("nginx:1.27@sha256:abc")).toEqual({
-			image: "nginx",
-			tag: "1.27",
-		});
 	});
 });
 

@@ -3,6 +3,7 @@ import {
 	beforeEach,
 	describe,
 	expect,
+	type Mock,
 	mock,
 	spyOn,
 	test,
@@ -13,7 +14,7 @@ import { join } from "node:path";
 import { commandExists, StepRunner } from "../../../packages/installer/exec";
 
 describe("StepRunner dry-run mode", () => {
-	let logSpy: ReturnType<typeof spyOn>;
+	let logSpy: Mock<typeof console.log>;
 
 	beforeEach(() => {
 		logSpy = spyOn(console, "log").mockImplementation(() => undefined);

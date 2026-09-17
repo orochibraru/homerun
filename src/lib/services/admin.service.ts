@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { dev } from "$app/env";
-import { config, isSmtpEnabled } from "$lib/config";
+import { config, isPlaceholderAuthSecret, isSmtpEnabled } from "$lib/config";
 import { db } from "$lib/server/db/lib";
 import { user as userTable } from "$lib/server/db/schema";
 import { DASHBOARD_ROUTER_FILE } from "./docker/dashboard.ts";
@@ -110,12 +110,12 @@ class AdminServiceClass {
 		};
 	}
 
-	/** Flags the built-in placeholder auth secret as a danger-severity finding outside dev, since it means sessions aren't safe against a compromised install. */
+	/** Flags a missing, blank or built-in placeholder auth secret as a danger-severity finding outside dev, since it means sessions aren't safe against a compromised install. */
 	#authSecretCheck(): SetupCheck {
-		if (config.auth.secret === "default-secret" && !dev) {
+		if (isPlaceholderAuthSecret(config.auth.secret) && !dev) {
 			return {
 				detail:
-					"Using the built-in placeholder auth secret : sessions aren't safe against a compromised install. Generate a real one (e.g. `openssl rand -base64 32`).",
+					"No real auth secret is set (AUTH_SECRET is empty or unset), so the built-in placeholder is in use : sessions aren't safe against a compromised install. Generate a real one (e.g. `openssl rand -base64 32`).",
 				envVar: "AUTH_SECRET (or BETTER_AUTH_SECRET)",
 				id: "auth-secret",
 				label: "Auth secret",

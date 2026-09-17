@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+	"/auth-token": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/**
+		 * Revoke the current API key
+		 * @description Revokes the API key that authenticated this request (x-api-key or Authorization: Bearer), what homerun logout calls server-side before clearing its local config. success is false when the key was already invalid.
+		 */
+		delete: operations["delete_auth_token"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/jobs/{jobId}": {
 		parameters: {
 			query?: never;
@@ -58,7 +78,7 @@ export interface paths {
 		post?: never;
 		/**
 		 * Delete a service
-		 * @description Stops/removes the container first, same as the Settings danger-zone action.
+		 * @description Removes the container or swarm service first, same as the Settings danger-zone action. One Docker reports as already gone counts as removed; any other removal failure answers 409 and deletes nothing, unless force=true.
 		 */
 		delete: operations["delete_services__serviceId_"];
 		options?: never;
@@ -326,6 +346,52 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+	delete_auth_token: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Revoked (or already invalid) */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						success: boolean;
+					};
+				};
+			};
+			/** @description Not authenticated with an API key */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
 	get_jobs__jobId_: {
 		parameters: {
 			query?: never;
@@ -489,6 +555,8 @@ export interface operations {
 						 * @example 2026-08-20T12:00:00.000Z
 						 */
 						updatedAt: string;
+						/** @description Whether the per-minute internal and external uptime probes run for this service */
+						uptimeEnabled: boolean;
 						userId: string;
 					}[];
 				};
@@ -645,6 +713,8 @@ export interface operations {
 						 * @example 2026-08-20T12:00:00.000Z
 						 */
 						updatedAt: string;
+						/** @description Whether the per-minute internal and external uptime probes run for this service */
+						uptimeEnabled: boolean;
 						userId: string;
 					};
 				};
@@ -781,6 +851,8 @@ export interface operations {
 						 * @example 2026-08-20T12:00:00.000Z
 						 */
 						updatedAt: string;
+						/** @description Whether the per-minute internal and external uptime probes run for this service */
+						uptimeEnabled: boolean;
 						userId: string;
 					};
 				};
@@ -813,7 +885,10 @@ export interface operations {
 	};
 	delete_services__serviceId_: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** @description true deletes the service record even when its container or swarm service couldn't be removed */
+				force?: string;
+			};
 			header?: never;
 			path: {
 				/** @description Service id */
@@ -844,6 +919,18 @@ export interface operations {
 			};
 			/** @description Not found */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description The container or swarm service couldn't be removed, nothing was deleted */
+			409: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -902,6 +989,7 @@ export interface operations {
 					/** @enum {string} */
 					restartPolicy?: "no" | "always" | "on-failure" | "unless-stopped";
 					tag?: string;
+					uptimeEnabled?: boolean;
 				};
 			};
 		};
@@ -988,6 +1076,8 @@ export interface operations {
 						 * @example 2026-08-20T12:00:00.000Z
 						 */
 						updatedAt: string;
+						/** @description Whether the per-minute internal and external uptime probes run for this service */
+						uptimeEnabled: boolean;
 						userId: string;
 					};
 				};
@@ -1357,6 +1447,14 @@ export interface operations {
 						digest: string | null;
 						/** @description Why a failed or skipped scan has no findings */
 						error: string | null;
+						/** @description Findings that have a fixed version, per severity. null on scans recorded before this was tracked */
+						fixableCounts: {
+							critical: number;
+							high: number;
+							low: number;
+							medium: number;
+							unknown: number;
+						} | null;
 						id: string;
 						imageRef: string;
 						/**
@@ -1516,6 +1614,14 @@ export interface operations {
 							severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 							title: string | null;
 						}[];
+						/** @description Findings that have a fixed version, per severity. null on scans recorded before this was tracked */
+						fixableCounts: {
+							critical: number;
+							high: number;
+							low: number;
+							medium: number;
+							unknown: number;
+						} | null;
 						id: string;
 						imageRef: string;
 						/**
@@ -1601,6 +1707,14 @@ export interface operations {
 							severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 							title: string | null;
 						}[];
+						/** @description Findings that have a fixed version, per severity. null on scans recorded before this was tracked */
+						fixableCounts: {
+							critical: number;
+							high: number;
+							low: number;
+							medium: number;
+							unknown: number;
+						} | null;
 						id: string;
 						imageRef: string;
 						/**

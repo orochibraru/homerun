@@ -225,8 +225,17 @@ drives a target machine's shell, not this app's own runtime).
   This is the alternative to registering a build server by raw `tcp://`/`ssh://`
   Docker socket : instead of exposing the daemon itself, the build server runs
   this agent and the main app only ever talks HTTP-plus-bearer-token to it.
-  **Wired into the main app**: `remote_host.kind` (`"docker"` | `"agent"`) +
-  `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
+  **Arch detection is mirrored, not shared**:
+  `packages/installer/steps/detect.ts`'s `Detector.arch()` and
+  `packages/cli/update.ts`'s `#currentArch()` both map Node's `process.arch`
+  (`x64`/`arm64`) onto this repo's release-asset naming (`amd64`/`arm64`),
+  throwing/exiting with a readable message on anything else. They can't import a
+  shared module : each sub-project's `tsconfig.json` scopes its own `include` to
+  its own directory (`./**/*.ts`, resolved relative to that tsconfig), so a
+  module outside `packages/installer/` or `packages/cli/` respectively isn't
+  visible to either's typecheck. Keep both in sync by hand if the mapping ever
+  changes. **Wired into the main app**: `remote_host.kind` (`"docker"` |
+  `"agent"`) + `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
   (`$lib/services/agent-client.service.ts`, a thin HTTP client over
   `build`/`stats`/`health`), and the Remote Hosts "new host" form's
   connection-type toggle; `deploy.service.ts` branches on

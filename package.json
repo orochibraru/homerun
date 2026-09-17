@@ -74,6 +74,7 @@
 	"overrides": {
 		"conventional-changelog-writer": "^9.2.1"
 	},
+	"packageManager": "bun@1.4.2",
 	"patchedDependencies": {
 		"cpu-features@0.0.10": "patches/cpu-features@0.0.10.patch"
 	},
@@ -103,10 +104,10 @@
 		"lint": "bun run lint:md && bun run lint:tailwind && bun run lint:ts",
 		"lint:fix": "bun run lint:fix:md && bun run lint:fix:tailwind && bun run lint:fix:ts",
 		"lint:fix:md": "markdownlint-cli2 --fix \"**/*.md\"",
-		"lint:fix:tailwind": "tailwint --fix",
+		"lint:fix:tailwind": "bun run scripts/lint-tailwind.ts --fix",
 		"lint:fix:ts": "biome check --write --unsafe",
 		"lint:md": "markdownlint-cli2 \"**/*.md\"",
-		"lint:tailwind": "tailwint",
+		"lint:tailwind": "bun run scripts/lint-tailwind.ts",
 		"lint:ts": "biome check --error-on-warnings",
 		"preinstall": "bunx only-allow bun",
 		"prepare": "prek install --allow-missing-config || true",

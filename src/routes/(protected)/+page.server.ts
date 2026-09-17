@@ -3,22 +3,26 @@ import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 
-export const load = async ({ parent }) => {
+export const load = async ({ locals, parent }) => {
 	// (protected)/+layout.server.ts already redirects unauthenticated users
 	// before this load runs : parent() gives the already-guaranteed user.
 	const { user } = await parent();
 
-	const [services, recentDeployments, recentErrors, uptime] = await Promise.all(
-		[
-			ServiceDTO.list(user.id),
-			DeploymentDTO.listRecentForUser(user.id),
-			AppLogDTO.listRecent(5),
-			UptimeCheckDTO.latestForUser(user.id),
-		],
-	);
+	const [services, recentDeployments, uptime] = await Promise.all([
+		ServiceDTO.list(user.id),
+		DeploymentDTO.listRecentForUser(user.id),
+		UptimeCheckDTO.latestForUser(user.id),
+	]);
+	const recentErrors = locals.isAdmin
+		? await AppLogDTO.listRecent(5)
+		: await AppLogDTO.listRecentForServices(
+				services.map((svc) => svc.id),
+				5,
+			);
 	const serviceNames = new Map(services.map((svc) => [svc.id, svc.name]));
 
 	return {
+		isAdmin: locals.isAdmin,
 		recentDeployments: recentDeployments.map((r) => ({
 			...r.deployment.toJSON(),
 			serviceName: r.serviceName,

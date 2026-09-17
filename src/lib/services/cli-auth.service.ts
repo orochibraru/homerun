@@ -1,5 +1,8 @@
 import { randomBytes, randomInt } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { Logger } from "$lib/logger";
+import { db } from "$lib/server/db/lib";
+import { apikey } from "$lib/server/db/schema";
 import { auth } from "./auth.ts";
 
 const logger = new Logger("CliAuth");
@@ -138,6 +141,31 @@ class CliAuthServiceClass {
 		logger.info("CLI device auth approved", {
 			userCode: entry.userCode,
 			userId,
+		});
+		return true;
+	}
+
+	/**
+	 * Revokes the API key identified by its raw value, e.g. the one
+	 * `homerun logout` (`packages/cli/login.ts`) authenticated with, deleting
+	 * its row directly rather than going through better-auth's own
+	 * `POST /api-key/delete`: that endpoint requires a session
+	 * (`sessionMiddleware`), which an API-key-only caller revoking itself
+	 * never has. `auth.api.verifyApiKey` is the same server-only lookup
+	 * `hooks.server.ts`'s `applyApiKeyAuth` uses.
+	 * @returns False when `rawKey` was already invalid/expired, true once deleted.
+	 */
+	async revokeApiKey(rawKey: string): Promise<boolean> {
+		const result = await auth.api
+			.verifyApiKey({ body: { key: rawKey } })
+			.catch(() => null);
+		if (!(result?.valid && result.key)) {
+			return false;
+		}
+		await db.delete(apikey).where(eq(apikey.id, result.key.id));
+		logger.info("API key revoked", {
+			keyId: result.key.id,
+			userId: result.key.referenceId,
 		});
 		return true;
 	}

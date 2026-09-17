@@ -2,12 +2,14 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
+import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
+import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Stacks");
 const SLUG_RE = /^[a-z0-9-]{1,63}$/;
 
 export const actions = {
-	delete: async ({ params, locals }) => {
+	delete: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -15,9 +17,17 @@ export const actions = {
 		if (!stack) {
 			return fail(404, { error: "Stack not found." });
 		}
-		await stack.cascadeDelete();
+		const force = (await request.formData()).get("force") === "true";
+		try {
+			await ServiceLifecycleService.deleteStack(stack, { force });
+		} catch (error) {
+			if (error instanceof WorkloadDetachError) {
+				return fail(409, { detachFailed: true, error: error.message });
+			}
+			throw error;
+		}
 		logger.info(
-			`Stack deleted: stack=${params.stackId} user=${locals.user.id}`,
+			`Stack deleted: stack=${params.stackId} force=${force} user=${locals.user.id}`,
 		);
 		redirect(303, resolve("/stacks"));
 	},

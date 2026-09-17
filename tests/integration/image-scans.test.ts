@@ -24,12 +24,14 @@ async function createService(name: string): Promise<string> {
 	const created = await client.POST("/services", {
 		body: {
 			authRequired: false,
+			autoDeployOnPush: false,
 			buildSource: "image",
 			containerPort: 80,
 			dnsResolvable: false,
 			envVars: {},
 			image: "nginx",
 			name,
+			pullPolicy: "always",
 			restartPolicy: "no",
 			slug: slug(name.toLowerCase().replaceAll(" ", "-")),
 			tag: "alpine",

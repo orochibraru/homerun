@@ -1,3 +1,4 @@
+import { splitImageRef } from "$lib/image-ref";
 import type { ContainerStatus, RevisionHealth } from "$lib/types";
 
 export const RETAINED_REVISIONS = 5;
@@ -105,22 +106,6 @@ export function retainedRevisions<T extends RevisionLike>(
 }
 
 /**
- * Splits a recorded image reference into repository and tag, dropping any
- * `@digest` and defaulting the tag to `latest`.
- */
-export function splitRevisionRef(imageRef: string): {
-	image: string;
-	tag: string;
-} {
-	const bare = imageRef.split("@")[0] ?? imageRef;
-	const colon = bare.lastIndexOf(":");
-	if (colon > bare.lastIndexOf("/")) {
-		return { image: bare.slice(0, colon), tag: bare.slice(colon + 1) };
-	}
-	return { image: bare, tag: "latest" };
-}
-
-/**
  * Lists every reference a revision's image may still be found under on the
  * host (image id, `image@digest`, and `image:tag` for git builds or undigested
  * images), so image cleanup can tell which images a retained revision needs.
@@ -129,7 +114,7 @@ export function revisionImageRefs(row: RevisionLike): string[] {
 	if (!row.imageRef) {
 		return row.imageId ? [row.imageId] : [];
 	}
-	const { image, tag } = splitRevisionRef(row.imageRef);
+	const { image, tag } = splitImageRef(row.imageRef);
 	const refs: string[] = [];
 	if (row.imageId) {
 		refs.push(row.imageId);

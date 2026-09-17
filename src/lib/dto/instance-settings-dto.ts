@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { BlockSeverity } from "$lib/image-scan";
+import type { BlockSeverity, ScanBlockPolicy } from "$lib/image-scan";
 import type { SecurityPolicy } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
 import {
@@ -157,6 +157,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			dockerSocketPath: null,
 			gitProviders: [],
 			id: SINGLETON_ID,
+			imageScanBlockFixableOnly: null,
 			imageScanBlockSeverity: null,
 			imageScanEnabled: null,
 			oauthProviders: [],
@@ -272,8 +273,22 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		return this.row.imageScanBlockSeverity ?? null;
 	}
 
-	/** Persists the image scanning toggle and blocking severity. */
+	/** Whether the block policy only counts findings that have a fixed version. */
+	get imageScanBlockFixableOnly(): boolean {
+		return this.row.imageScanBlockFixableOnly ?? false;
+	}
+
+	/** The deploy block policy as one value, for `evaluateScanPolicy`. */
+	get imageScanBlockPolicy(): ScanBlockPolicy {
+		return {
+			fixableOnly: this.imageScanBlockFixableOnly,
+			severity: this.imageScanBlockSeverity,
+		};
+	}
+
+	/** Persists the image scanning toggle and deploy block policy. */
 	async updateImageScan(input: {
+		imageScanBlockFixableOnly: boolean;
 		imageScanBlockSeverity: BlockSeverity | null;
 		imageScanEnabled: boolean;
 	}): Promise<void> {

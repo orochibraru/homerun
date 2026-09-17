@@ -204,8 +204,10 @@ Scanning happens inside the `image` phase, before `#startWorkload`, on every
 path that reaches `deployService` (Overview, API/CLI, cron, stack/template
 deploys, the queue). `ImageScanService.policyFor(svc)` combines
 `instance_settings.imageScanEnabled` (null = on) with `service.imageScanEnabled`
-(default true) and carries `imageScanBlockSeverity` (null = off, `CRITICAL`,
-`HIGH`). When off, a `skipped` row is recorded and the pull is the plain one.
+(default true) and carries `block: ScanBlockPolicy`
+(`InstanceSettingsDTO.imageScanBlockPolicy`: `imageScanBlockSeverity`, null =
+off, `CRITICAL`/`HIGH`/`MEDIUM`/`LOW`, plus `imageScanBlockFixableOnly`). When
+off, a `skipped` row is recorded and the pull is the plain one.
 
 - **Pull plans** go through `pullForDeploy` (`deploy/pull-step.ts`, split out of
   `deploy.service.ts` to stay under the 680-line file limit). A pull policy that
@@ -229,10 +231,21 @@ deploys, the queue). `ImageScanService.policyFor(svc)` combines
   records one `image_scan` row (`ok` with counts + top 200 findings, or `failed`
   with every target's error), appends the summary and the first five
   CRITICAL/HIGH findings to the log, notifies on CRITICAL (`image_scan_critical`
-  bell row + the `image.vulnerable` channel event), then throws
-  `ImageScanBlockedError` if `blockReason()` says so, which `#recordFailure`
-  turns into a normal failed deploy. **A scanner failure never blocks**, even
-  with a block policy set: only real findings do.
+  bell row + the `image.vulnerable` channel event), then evaluates
+  `evaluateScanPolicy()` (`$lib/image-scan.ts`, pure, unit-tested; also used by
+  the Security tab's "would the last scan pass" banner). Blocked: logs the
+  verdict's reason (policy, blocking counts per severity, full counts) and
+  throws `ImageScanBlockedError`, which `#recordFailure` turns into a normal
+  failed deploy (deploy_failure bell + `notifyDeploy`) **without** marking the
+  service failed when a workload already exists, same as a status-check failure:
+  it `syncServiceStatus`es instead, since the old container is still up.
+  `fixableOnly` counts `image_scan.fixable_counts` (findings with a
+  `FixedVersion`); rows from before that column (null) fall back to `counts`.
+  Unknown severity never blocks. **A scanner failure never blocks**, even with a
+  block policy set: only real findings do. Rollbacks (`revision-step.ts`) skip
+  the scan and the policy entirely, deliberately, so auto-rollback can always
+  recover. The git `docker-build`/`agent-build` paths push to the cache registry
+  before the scan; the gate is before `#startWorkload`, not before the push.
 - The Security tab's **Scan now** is an `image_scan` job (dedupe/lock
   `image_scan:<serviceId>`) running `ImageScanService.scanDeployed`: Trivy with
   `--image-src docker,remote` against `svc.image:svc.tag` and the service's
@@ -855,7 +868,7 @@ secret is kept encrypted in `gitWebhookSecretEnc` whenever deploy-on-push is on
 Any reason it couldn't (no Dashboard URL, a pasted URL, no connection, a
 provider refusal) lands in `gitWebhookError` and the Source tab shows the URL +
 secret instead; `sync` never throws. `ServiceLifecycleService.deleteService`
-calls `remove()` first.
+calls `remove()` once the workload is gone.
 
 Deliveries hit `/api/v1/webhooks/git/<serviceId>` (public; no session, no API
 key). `handleDelivery` 404s unless the service is git + deploy-on-push with a

@@ -97,8 +97,8 @@ program
 program
 	.command("logout")
 	.description("clear the saved login")
-	.action(() => {
-		LoginFlow.logout();
+	.action(async () => {
+		await LoginFlow.logout();
 	});
 
 program

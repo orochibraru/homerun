@@ -1,10 +1,10 @@
 import { parse as parseYaml } from "yaml";
-import type {
-	ComposeServiceDraft,
-	ComposeVolumeDraft,
-} from "$lib/compose-import";
 import {
 	bindVolumeName,
+	type ComposeServiceDraft,
+	type ComposeVolumeDraft,
+} from "$lib/compose-import";
+import {
 	composeDrafts,
 	imageSummary,
 	isRow,

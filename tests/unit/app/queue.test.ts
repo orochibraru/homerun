@@ -57,6 +57,12 @@ const { QueueService } = await import(
 );
 const { JobWorker } = await import("../../../src/lib/services/queue/worker");
 
+type EnqueuedJob = Awaited<ReturnType<typeof QueueService.enqueue>>;
+
+function fakeEnqueuedJob(overrides: Partial<FakeJob> = {}): EnqueuedJob {
+	return fakeJob(overrides) as unknown as EnqueuedJob;
+}
+
 const baseInput = {
 	payload: { serviceId: "svc-1" },
 	title: "Deploy web",
@@ -80,7 +86,7 @@ beforeEach(() => {
 
 describe("QueueService.enqueue", () => {
 	test("coalesces into an already-queued job with the same dedupe key", async () => {
-		const existing = fakeJob({ id: "already-queued" });
+		const existing = fakeEnqueuedJob({ id: "already-queued" });
 		findQueued.mockResolvedValueOnce(existing);
 
 		const result = await QueueService.enqueue({
@@ -93,7 +99,7 @@ describe("QueueService.enqueue", () => {
 	});
 
 	test("creates a new job when nothing is queued for that key", async () => {
-		const created = fakeJob({ id: "fresh" });
+		const created = fakeEnqueuedJob({ id: "fresh" });
 		findQueued.mockResolvedValueOnce(null);
 		create.mockResolvedValueOnce(created);
 
@@ -107,7 +113,7 @@ describe("QueueService.enqueue", () => {
 	});
 
 	test("re-reads the winner when the unique index rejects a racing insert", async () => {
-		const winner = fakeJob({ id: "winner" });
+		const winner = fakeEnqueuedJob({ id: "winner" });
 		findQueued.mockResolvedValueOnce(null).mockResolvedValueOnce(winner);
 		create.mockResolvedValueOnce(null);
 
@@ -121,7 +127,7 @@ describe("QueueService.enqueue", () => {
 	});
 
 	test("never coalesces a job that has no dedupe key", async () => {
-		const created = fakeJob();
+		const created = fakeEnqueuedJob();
 		create.mockResolvedValueOnce(created);
 
 		await QueueService.enqueue(baseInput);
@@ -176,7 +182,10 @@ describe("JobWorker.runJob", () => {
 
 		expect(entry.markFailed).not.toHaveBeenCalled();
 		expect(entry.scheduleRetry).toHaveBeenCalledTimes(1);
-		const [message, runAt] = entry.scheduleRetry.mock.calls[0] as [Date, Date];
+		const [message, runAt] = entry.scheduleRetry.mock.calls[0] as [
+			string,
+			Date,
+		];
 		expect(message).toBe("s3 timed out");
 		expect((runAt as Date).getTime()).toBeGreaterThan(before);
 		expect(cancelDependents).not.toHaveBeenCalled();

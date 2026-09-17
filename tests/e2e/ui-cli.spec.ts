@@ -414,11 +414,18 @@ test.describe
 			expect(deploy.stderr).toMatch(/^error: 404 .*Not found/);
 		});
 
-		test("logout clears the saved login", async () => {
+		test("logout revokes the API key and clears the saved login", async () => {
 			const out = await cli(["logout"], { home });
 			expect(out.code).toBe(0);
-			expect(out.stdout).toContain(`Logged out of ${E2E_BASE_URL}.`);
+			expect(out.stdout).toContain(
+				`Logged out of ${E2E_BASE_URL} and revoked the API key.`,
+			);
 			expect(existsSync(configFile(home))).toBe(false);
+
+			const stale = await fetch(`${E2E_BASE_URL}/api/v1/services`, {
+				headers: { "x-api-key": apiKey },
+			});
+			expect(stale.status).toBe(401);
 
 			const again = await cli(["logout"], { home });
 			expect(again.code).toBe(0);

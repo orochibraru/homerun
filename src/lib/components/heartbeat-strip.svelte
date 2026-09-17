@@ -31,10 +31,10 @@
 	}
 </script>
 
-<div class={cn("flex items-end gap-[3px]", className)}>
+<div class={cn("flex items-end gap-0.75", className)}>
   {#each beats as beat, i (i)}
     <span
-      class="h-5 w-[5px] shrink-0 rounded-[2px] {beat.ok
+      class="h-5 w-1.25 shrink-0 rounded-[2px] {beat.ok
       ? 'bg-emerald-500'
       : 'bg-red-500'}"
       title={tooltip(beat)}

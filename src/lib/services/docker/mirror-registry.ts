@@ -1,3 +1,4 @@
+import { splitImageRef } from "$lib/image-ref";
 import { mirrorRepository } from "./image-scan-refs.ts";
 
 export const MANIFEST_ACCEPT = [
@@ -63,20 +64,6 @@ export function isValidRepository(name: string): boolean {
 /** Whether `digest` is a well-formed `sha256:<64 hex chars>` content digest. */
 export function isValidDigest(digest: string): boolean {
 	return DIGEST_RE.test(digest);
-}
-
-/**
- * Splits an image reference into its `image` and `tag` parts, ignoring any
- * `@digest` suffix and defaulting the tag to "latest" when the reference
- * carries none.
- */
-export function splitImageRef(ref: string): { image: string; tag: string } {
-	const bare = ref.split("@")[0] ?? ref;
-	const colon = bare.lastIndexOf(":");
-	if (colon > bare.lastIndexOf("/")) {
-		return { image: bare.slice(0, colon), tag: bare.slice(colon + 1) };
-	}
-	return { image: bare, tag: "latest" };
 }
 
 /**

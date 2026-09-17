@@ -8,6 +8,7 @@ import {
 	previewEntries,
 	sourceSlug,
 } from "$lib/migrate/common";
+import { uniqueSlug } from "$lib/slug";
 import { ComposeImportService } from "./compose-import.service.ts";
 
 const logger = new Logger("Migration");
@@ -95,24 +96,14 @@ class MigrationServiceClass {
 				await StackDTO.create({
 					description: `Imported from ${sourceLabel}.`,
 					name,
-					slug: await this.#uniqueStackSlug(sourceSlug(name)),
+					slug: await uniqueSlug(sourceSlug(name), (slug) =>
+						StackDTO.slugTaken(slug),
+					),
 					userId,
 				})
 			).id;
 		cache.set(name, id);
 		return id;
-	}
-
-	/** Appends a numeric suffix to `slug` until it doesn't collide with an existing stack. */
-	async #uniqueStackSlug(slug: string): Promise<string> {
-		let candidate = slug;
-		let attempt = 2;
-		// biome-ignore lint/performance/noAwaitInLoops: each candidate can only be checked once the previous one came back taken
-		while (await StackDTO.slugTaken(candidate)) {
-			candidate = `${slug.slice(0, 55)}-${attempt}`;
-			attempt += 1;
-		}
-		return candidate;
 	}
 }
 

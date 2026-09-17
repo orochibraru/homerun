@@ -11,7 +11,7 @@
 		Trash2Icon,
 		TriangleAlertIcon,
 	} from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -54,6 +54,9 @@
 	let deleteDialogOpen = $state(false);
 	let deleteForm = $state<HTMLFormElement | null>(null);
 	let deleting = $state(false);
+	let forceDelete = $state(false);
+	let forceDeleteDialogOpen = $state(false);
+	let detachError = $state("");
 
 	const restartPolicyOptions: [string, string][] = [
 		["unless-stopped", "Unless stopped"],
@@ -478,8 +481,13 @@
         use:enhance={enhanceToast({
           error: "Couldn't delete the service.",
           loading: "Deleting the service",
-          onFailure: () => {
+          onFailure: (result) => {
             deleting = false;
+            if (result?.detachFailed && !forceDelete) {
+              detachError = String(result.error ?? "");
+              forceDeleteDialogOpen = true;
+            }
+            forceDelete = false;
           },
           onStart: () => {
             deleting = true;
@@ -487,6 +495,7 @@
           success: "Service deleted.",
         })}
       >
+        <input name="force" type="hidden" value={forceDelete ? "true" : "false"} />
         <div>
           <p class="text-text text-sm font-medium">Delete this service</p>
           <p class="text-text-muted mt-0.5 text-xs">
@@ -521,4 +530,16 @@
   description={`Deleting "${svc.name}" stops and removes its container and erases its deployment history. This can't be undone.`}
   onConfirm={() => deleteForm?.requestSubmit()}
   title="Delete service"
+/>
+
+<ConfirmDialog
+  bind:open={forceDeleteDialogOpen}
+  confirmLabel="Delete anyway"
+  description={`${detachError} Deleting anyway removes only Homerun's record of "${svc.name}" : if its workload still exists on the host, remove it yourself.`}
+  onConfirm={async () => {
+    forceDelete = true;
+    await tick();
+    deleteForm?.requestSubmit();
+  }}
+  title="Delete the record anyway?"
 />

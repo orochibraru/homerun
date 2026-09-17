@@ -6,6 +6,7 @@
 		MinusCircle,
 		Network,
 	} from "@lucide/svelte";
+	import type { Snippet } from "svelte";
 	import HeartbeatStrip from "$lib/components/heartbeat-strip.svelte";
 	import { timeAgo } from "$lib/formatting";
 
@@ -23,9 +24,16 @@
 		enabled: boolean;
 		/** Why the external probe is skipped, when it is. */
 		externalSkipped?: string | null;
+		/** Rendered at the end of the panel header, e.g. the on/off toggle. */
+		headerAction?: Snippet;
 	}
 
-	const { beats, enabled, externalSkipped = null }: Props = $props();
+	const {
+		beats,
+		enabled,
+		externalSkipped = null,
+		headerAction,
+	}: Props = $props();
 
 	/** What to actually try, per probe, when it's failing. */
 	const HINTS: Record<"internal" | "external", string[]> = {
@@ -128,7 +136,12 @@
 <section class="panel rounded-xl">
   <div class="panel-head">
     <h2 class="eyebrow">Uptime</h2>
-    <span class="text-text-subtle text-[0.6875rem]">Probed every minute</span>
+    <div class="flex items-center gap-3">
+      <span class="text-text-subtle text-[0.6875rem]">
+        {enabled ? "Probed every minute" : "Paused"}
+      </span>
+      {@render headerAction?.()}
+    </div>
   </div>
   {#if enabled}
     <div class="divide-border divide-y">

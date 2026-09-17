@@ -15,7 +15,7 @@ describe("allowLongRequest", () => {
 		const request = new Request("http://localhost/api/v1/services/x/stop");
 		allowLongRequest({
 			request,
-			server: { timeout } as unknown as Bun.Server,
+			server: { timeout } as unknown as Bun.Server<undefined>,
 		});
 		expect(timeout).toHaveBeenCalledWith(request, 0);
 	});

@@ -92,7 +92,14 @@ class CliUpdateService {
 		return base !== "bun" && base !== "bun-debug";
 	}
 
-	/** Maps `process.arch` onto the release-asset arch names, exiting on anything other than x64 or arm64. */
+	/**
+	 * Maps `process.arch` onto the release-asset arch names, exiting on
+	 * anything other than x64 or arm64. Mirrored by
+	 * `packages/installer/steps/detect.ts`'s `arch()` : the two sub-projects
+	 * can't share a module (each `tsconfig.json`'s `include` is scoped to its
+	 * own directory), so keep both in sync by hand, see
+	 * `.agents/notes/packages-and-release.md`.
+	 */
 	#currentArch(): "amd64" | "arm64" {
 		if (process.arch === "x64") {
 			return "amd64";

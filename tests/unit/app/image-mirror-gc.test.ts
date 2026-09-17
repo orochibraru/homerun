@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { splitImageRef } from "../../../src/lib/image-ref";
 import { mirrorRepository } from "../../../src/lib/services/docker/image-scan-refs";
 import {
 	isValidRepository,
@@ -10,7 +11,6 @@ import {
 	nextCatalogPath,
 	parseDuKilobytes,
 	planMirrorGc,
-	splitImageRef,
 } from "../../../src/lib/services/docker/mirror-registry";
 
 const digest = (char: string) => `sha256:${char.repeat(64)}`;

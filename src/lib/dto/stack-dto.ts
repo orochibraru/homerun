@@ -7,6 +7,10 @@ import {
 	type PagedResult,
 	searchCondition,
 } from "$lib/server/list-query";
+import {
+	tryRemoveWorkload,
+	WorkloadDetachError,
+} from "$lib/services/docker/workload-removal";
 import { DockerService } from "$lib/services/docker.service";
 import { BaseDTO } from "./base-dto";
 import { ServiceDTO } from "./service-dto";
@@ -187,26 +191,34 @@ export class StackDTO extends BaseDTO<Stack> {
 	}
 
 	/**
-	 * Deletes this stack and everything in it : stops/removes every member
-	 * service's container, deletes their deployment history, deletes the
-	 * services, then the stack itself and its Docker network. Same
+	 * Deletes this stack and everything in it : removes every member
+	 * service's container or swarm service, deletes their deployment history,
+	 * deletes the services, then the stack itself and its Docker network. Same
 	 * explicit-cleanup precedent as account deletion (src/lib/services/auth.ts's
 	 * beforeDelete hook): DB-level cascade alone would leak running containers.
+	 * A workload Docker reports as already gone counts as removed.
+	 *
+	 * @param options.force Deletes the rows even when some workloads couldn't be
+	 * removed.
+	 * @throws {WorkloadDetachError} When a workload couldn't be removed and
+	 * `force` isn't set; no row is deleted then.
 	 */
-	async cascadeDelete(): Promise<void> {
+	async cascadeDelete(options: { force?: boolean } = {}): Promise<void> {
 		const services = await ServiceDTO.listByStack(this.row.id, this.row.userId);
 
-		await Promise.all(
-			services
-				.filter((svc) => svc.containerId)
-				.map((svc) =>
-					DockerService.removeContainer(svc.containerId as string, {
-						force: true,
-					}).catch(() => {
-						// Already gone on the host : proceed with deleting the record.
-					}),
-				),
-		);
+		const failures = (
+			await Promise.all(
+				services.map(async (svc) => {
+					const failure = await StackDTO.#removeWorkload(svc);
+					return failure ? `"${svc.name}" (${failure})` : null;
+				}),
+			)
+		).filter((failure): failure is string => failure !== null);
+		if (failures.length > 0 && !options.force) {
+			throw new WorkloadDetachError(
+				`Couldn't remove the workload for ${failures.join(", ")}. The stack and its services were kept.`,
+			);
+		}
 
 		const serviceIds = services.map((svc) => svc.id);
 		if (serviceIds.length > 0) {
@@ -217,6 +229,26 @@ export class StackDTO extends BaseDTO<Stack> {
 		await db.delete(service).where(eq(service.stackId, this.row.id));
 		await this.delete();
 		await DockerService.removeStackNetwork(this.row.id);
+	}
+
+	/**
+	 * Removes a member service's swarm service or container, if it has one.
+	 *
+	 * @returns Null when it's gone, else why the removal failed.
+	 */
+	static #removeWorkload(svc: ServiceDTO): Promise<string | null> {
+		const { containerId, swarmServiceId } = svc;
+		if (swarmServiceId) {
+			return tryRemoveWorkload(() =>
+				DockerService.removeSwarmService(swarmServiceId),
+			);
+		}
+		if (containerId) {
+			return tryRemoveWorkload(() =>
+				DockerService.removeContainer(containerId, { force: true }),
+			);
+		}
+		return Promise.resolve(null);
 	}
 
 	/** The stack's id. */

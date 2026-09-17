@@ -4,9 +4,9 @@ import {
 	type ComposeVolumeDraft,
 	parseComposeFile,
 	slugifyComposeKey,
-	splitImageRef,
 } from "$lib/compose-import";
 import { parseDotEnv } from "$lib/env-parse";
+import { splitImageRef } from "$lib/image-ref";
 
 export type MigrationEntryKind = "application" | "compose" | "database";
 
@@ -201,15 +201,6 @@ export function joinPaths(...parts: Array<string | null>): string | null {
  */
 export function sourceSlug(name: string): string {
 	return slugifyComposeKey(name) || "service";
-}
-
-/**
- * Names the Docker volume that replaces a source bind mount, from the service
- * slug and the container mount path, capped at 63 characters.
- */
-export function bindVolumeName(slug: string, containerPath: string): string {
-	const suffix = slugifyComposeKey(containerPath.replace(/^\//, "")) || "data";
-	return `${slug}-${suffix}`.slice(0, 63);
 }
 
 export interface SingleDraftInput {

@@ -245,9 +245,11 @@
           <AlertTriangle class="size-3" />
           Recent errors
         </h2>
-        <a class="text-accent text-xs font-medium hover:underline" href={resolve("/system-logs")}>
-          System logs
-        </a>
+        {#if data.isAdmin}
+          <a class="text-accent text-xs font-medium hover:underline" href={resolve("/system-logs")}>
+            System logs
+          </a>
+        {/if}
       </div>
       {#if data.recentErrors.length === 0}
         <p class="text-text-muted px-4 py-6 text-center text-xs">
