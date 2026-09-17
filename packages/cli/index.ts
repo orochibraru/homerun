@@ -274,6 +274,38 @@ stacks
 		await Commands.stacksList(requireClient(), toListArgs(options));
 	});
 
+const instance = program
+	.command("instance")
+	.description("manage the Homerun instance itself (admins only)");
+
+instance
+	.command("status")
+	.description(
+		"show the running version, the latest release and whether an update can start",
+	)
+	.option("--json", "print raw JSON instead of a summary")
+	.action(async (options: { json?: boolean }) => {
+		await Commands.instanceStatus(requireClient(), options.json ?? false);
+	});
+
+instance
+	.command("update")
+	.description(
+		"update the instance to the latest release, without the dashboard (not the CLI itself, see `homerun update`)",
+	)
+	.option("--wait", "wait until the instance is back on the new version")
+	.option(
+		"--timeout <seconds>",
+		"with --wait, how long to wait before giving up (default 600)",
+	)
+	.action(async (options: { timeout?: string; wait?: boolean }) => {
+		const seconds = positive(options.timeout);
+		await Commands.instanceUpdate(requireClient(), {
+			timeoutMs: seconds === undefined ? undefined : seconds * 1000,
+			wait: Boolean(options.wait),
+		});
+	});
+
 const templates = program.command("templates").description("manage templates");
 
 templates

@@ -13,6 +13,15 @@ type SeverityCounts = ImageScan["counts"];
 type Revision =
 	paths["/services/{serviceId}/revisions"]["get"]["responses"][200]["content"]["application/json"][number];
 
+type InstanceUpdateStatus =
+	paths["/instance/update"]["get"]["responses"][200]["content"]["application/json"];
+
+export interface InstanceUpdateArgs {
+	pollMs?: number;
+	timeoutMs?: number;
+	wait: boolean;
+}
+
 type JobStatusBody =
 	paths["/jobs/{jobId}"]["get"]["responses"][200]["content"]["application/json"];
 
@@ -30,6 +39,8 @@ export interface ScanArgs {
 
 const DEFAULT_POLL_MS = 2000;
 const DEFAULT_SCAN_TIMEOUT_MS = 30 * 60 * 1000;
+const DEFAULT_UPDATE_POLL_MS = 3000;
+const DEFAULT_UPDATE_TIMEOUT_MS = 10 * 60 * 1000;
 const FINISHED_JOB_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
 
 /** Counts scan findings at `level` or any more severe level, which is what `--fail-on` gates on. `unknown` severity never counts. */
@@ -89,6 +100,26 @@ export function revisionRow(revision: Revision): Record<string, string> {
 		marker: revision.retained ? marker : `${marker} (not retained)`.trim(),
 		reason: revision.healthReason ?? "",
 	};
+}
+
+/** Summarises an instance update status in a few lines: the running and latest versions, then whether an update can start and why not. */
+export function instanceStatusText(status: InstanceUpdateStatus): string {
+	const lines = [`Running:  v${status.current}`];
+	if (!status.latest) {
+		lines.push("Latest:   unknown (couldn't reach GitHub)");
+		return lines.join("\n");
+	}
+	lines.push(`Latest:   v${status.latest.version}`);
+	if (!status.updateAvailable) {
+		lines.push("Up to date.");
+	} else if (status.preflight.ready) {
+		lines.push("Update available: run `homerun instance update`.");
+	} else {
+		lines.push(
+			`Update available, but it can't start now: ${status.preflight.reason ?? "unknown reason"}`,
+		);
+	}
+	return lines.join("\n");
 }
 
 /** Every command takes the already-built `Client` as an argument rather than owning one itself : this class holds no client of its own, it's grouped for consistency with every other cli/ module, not because it carries state. */
@@ -428,6 +459,51 @@ class CliCommands {
 		return Output.fail(
 			`${response.status} ${response.statusText}: ${JSON.stringify(error ?? {})}`,
 		);
+	}
+
+	/** Prints the instance's running version, the latest release and whether an update could start now, as JSON or a short summary. Exits on an API error. */
+	async instanceStatus(client: Client, json: boolean): Promise<void> {
+		const status = await this.#unwrap(client.GET("/instance/update"));
+		if (json) {
+			Output.printJson(status);
+			return;
+		}
+		console.log(instanceStatusText(status));
+	}
+
+	/**
+	 * Starts a self-update of the instance, the same as the sidebar's Update
+	 * now. With `wait`, polls until the instance answers with the new version,
+	 * treating failed requests as the restart in progress. Exits on an API
+	 * error (a 409 carries why it can't update) or once the wait times out.
+	 */
+	async instanceUpdate(
+		client: Client,
+		args: InstanceUpdateArgs,
+	): Promise<void> {
+		const { version } = await this.#unwrap(client.POST("/instance/update"));
+		console.log(`Updating to v${version}.`);
+		if (!args.wait) {
+			return;
+		}
+		const deadline = Date.now() + (args.timeoutMs ?? DEFAULT_UPDATE_TIMEOUT_MS);
+		for (;;) {
+			// biome-ignore lint/performance/noAwaitInLoops: polling until the restarted instance answers is sequential by definition
+			await sleep(args.pollMs ?? DEFAULT_UPDATE_POLL_MS);
+			const current = await client
+				.GET("/instance/update")
+				.then((result) => result.data?.current ?? null)
+				.catch(() => null);
+			if (current === version) {
+				console.log(`Homerun is now on v${version}.`);
+				return;
+			}
+			if (Date.now() >= deadline) {
+				return Output.fail(
+					`Timed out waiting for v${version}. Check \`docker logs homerun-updater\` on the host.`,
+				);
+			}
+		}
 	}
 
 	/** Polls a job every `pollMs` until it reaches a terminal status, exiting the process once `timeoutMs` has passed. */

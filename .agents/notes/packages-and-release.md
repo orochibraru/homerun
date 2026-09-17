@@ -442,10 +442,15 @@ is still a plain retag. Without this the notice would never go away after an
 update.
 
 **Latest release** is `GET /repos/orochibraru/homerun/releases/latest`, cached
-on the service instance for an hour (five minutes after a failure, which returns
-`null` rather than an error). Comparison is `self-update/version.ts`'s small
-semver compare, a leading `v` is ignored and a non-version never counts as
-newer.
+on the service instance for ten minutes (five minutes after a failure, which
+returns `null` rather than an error). Comparison is `self-update/version.ts`'s
+small semver compare, a leading `v` is ignored and a non-version never counts as
+newer. The sidebar refreshes `getReleaseStatus` on the same ten-minute interval,
+so a release shows up without reloading the page or restarting the container.
+The same status and start are exposed to admins as
+`GET/POST /api/v1/instance/update` (`homerun instance status`/`update`), for
+when the dashboard itself is unreachable; a refused start is a `409` carrying
+`start()`'s message.
 
 **Finding its own compose project.** The service inspects its own container
 (`os.hostname()` first, then the 64-hex id out of `/proc/self/mountinfo`) and

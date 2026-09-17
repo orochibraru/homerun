@@ -110,6 +110,246 @@
 				"tags": ["Meta"]
 			}
 		},
+		"/instance/update": {
+			"get": {
+				"description": "The running version, the latest GitHub release, and whether a self-update could start now (the same checks as the sidebar's update dialog). Admins only.",
+				"operationId": "get_instance_update",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"current": {
+											"description": "The running version",
+											"type": "string"
+										},
+										"latest": {
+											"anyOf": [
+												{
+													"additionalProperties": false,
+													"properties": {
+														"publishedAt": {
+															"anyOf": [
+																{
+																	"description": "ISO 8601 timestamp",
+																	"example": "2026-08-20T12:00:00.000Z",
+																	"type": "string"
+																},
+																{
+																	"type": "null"
+																}
+															]
+														},
+														"url": {
+															"type": "string"
+														},
+														"version": {
+															"type": "string"
+														}
+													},
+													"required": ["publishedAt", "url", "version"],
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The latest GitHub release, null when it couldn't be checked"
+										},
+										"preflight": {
+											"additionalProperties": false,
+											"properties": {
+												"pendingDeploys": {
+													"type": "number"
+												},
+												"ready": {
+													"type": "boolean"
+												},
+												"reason": {
+													"anyOf": [
+														{
+															"type": "string"
+														},
+														{
+															"type": "null"
+														}
+													],
+													"description": "Why an update can't start right now, null when ready"
+												},
+												"runningJobs": {
+													"type": "number"
+												},
+												"supported": {
+													"description": "Whether this instance runs as a Docker Compose service it can recreate",
+													"type": "boolean"
+												}
+											},
+											"required": [
+												"pendingDeploys",
+												"reason",
+												"ready",
+												"runningJobs",
+												"supported"
+											],
+											"type": "object"
+										},
+										"updateAvailable": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"current",
+										"latest",
+										"preflight",
+										"updateAvailable"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Update status"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not an admin"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Instance update status",
+				"tags": ["Meta"]
+			},
+			"post": {
+				"description": "Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; poll GET /instance/update until current is the returned version. Admins only.",
+				"operationId": "post_instance_update",
+				"parameters": [],
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"version": {
+											"description": "The version being installed",
+											"type": "string"
+										}
+									},
+									"required": ["version"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Update started"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not an admin"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Already on the latest release, not running under Docker Compose, or a deploy or job is in flight"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Update the instance",
+				"tags": ["Meta"]
+			}
+		},
 		"/jobs/{jobId}": {
 			"get": {
 				"operationId": "get_jobs__jobId_",

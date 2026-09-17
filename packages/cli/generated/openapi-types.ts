@@ -24,6 +24,30 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/instance/update": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Instance update status
+		 * @description The running version, the latest GitHub release, and whether a self-update could start now (the same checks as the sidebar's update dialog). Admins only.
+		 */
+		get: operations["get_instance_update"];
+		put?: never;
+		/**
+		 * Update the instance
+		 * @description Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; poll GET /instance/update until current is the returned version. Admins only.
+		 */
+		post: operations["post_instance_update"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/jobs/{jobId}": {
 		parameters: {
 			query?: never;
@@ -419,6 +443,128 @@ export interface operations {
 					"application/json": {
 						/** @example This account or API key is read-only: it can view everything but can't change anything. */
 						error: string;
+					};
+				};
+			};
+		};
+	};
+	get_instance_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Update status */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The running version */
+						current: string;
+						/** @description The latest GitHub release, null when it couldn't be checked */
+						latest: {
+							publishedAt: string | null;
+							url: string;
+							version: string;
+						} | null;
+						preflight: {
+							pendingDeploys: number;
+							ready: boolean;
+							/** @description Why an update can't start right now, null when ready */
+							reason: string | null;
+							runningJobs: number;
+							/** @description Whether this instance runs as a Docker Compose service it can recreate */
+							supported: boolean;
+						};
+						updateAvailable: boolean;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not an admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	post_instance_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Update started */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The version being installed */
+						version: string;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not an admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Already on the latest release, not running under Docker Compose, or a deploy or job is in flight */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};

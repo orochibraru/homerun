@@ -226,6 +226,38 @@ export const okResponse = z.object({ ok: z.boolean() });
 
 export const successResponse = z.object({ success: z.boolean() });
 
+export const instanceUpdateStatusResponse = z.object({
+	current: z.string().meta({ description: "The running version" }),
+	latest: z
+		.object({
+			publishedAt: isoTimestamp.nullable(),
+			url: z.string(),
+			version: z.string(),
+		})
+		.nullable()
+		.meta({
+			description:
+				"The latest GitHub release, null when it couldn't be checked",
+		}),
+	preflight: z.object({
+		pendingDeploys: z.number(),
+		reason: z.string().nullable().meta({
+			description: "Why an update can't start right now, null when ready",
+		}),
+		ready: z.boolean(),
+		runningJobs: z.number(),
+		supported: z.boolean().meta({
+			description:
+				"Whether this instance runs as a Docker Compose service it can recreate",
+		}),
+	}),
+	updateAvailable: z.boolean(),
+});
+
+export const instanceUpdateStartResponse = z.object({
+	version: z.string().meta({ description: "The version being installed" }),
+});
+
 export const systemStatsResponse = z.object({
 	cpuPercent: z.number(),
 	diskPercent: z.number().nullable(),

@@ -42,6 +42,9 @@ that `403` on every write.
   rollback, see [Revisions](#revisions) below
 - `GET /api/v1/jobs/:jobId`: the status of a queued job, such as a scan
 - `GET /api/v1/system-stats`: host CPU/RAM/disk/GPU
+- `GET/POST /api/v1/instance/update`: the running version, the latest release
+  and whether an update can start, and starting one, see
+  [Upgrading](upgrading.md#without-the-dashboard); admins only
 
 The list `GET`s (`services`, `stacks`, `templates`, a service's `scans`) are
 paginated: `?page=`, `?perPage=` (default 100, max 100), and `?q=` for a
@@ -199,6 +202,8 @@ homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
 homerun stacks list [--json]
 homerun templates list [--json]
+homerun instance status [--json]
+homerun instance update [--wait] [--timeout <seconds>]
 ```
 
 No `create`/`update` yet (`homerun update` above is the CLI's own self-updater,

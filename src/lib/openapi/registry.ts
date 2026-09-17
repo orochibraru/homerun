@@ -9,6 +9,8 @@ import {
 	errorResponse,
 	imageScanResponse,
 	imageScanSummaryResponse,
+	instanceUpdateStartResponse,
+	instanceUpdateStatusResponse,
 	jobResponse,
 	pushWebhookResponse,
 	queuedJobResponse,
@@ -444,6 +446,43 @@ export const routes: RouteDef[] = [
 		},
 		summary: "List templates usable by the caller",
 		tags: ["Templates"],
+	},
+	{
+		description:
+			"The running version, the latest GitHub release, and whether a self-update could start now (the same checks as the sidebar's update dialog). Admins only.",
+		method: "get",
+		path: "/instance/update",
+		responses: {
+			200: {
+				description: "Update status",
+				schema: instanceUpdateStatusResponse,
+			},
+			401: unauthorized,
+			403: { description: "Not an admin", schema: errorResponse },
+		},
+		summary: "Instance update status",
+		tags: ["Meta"],
+	},
+	{
+		description:
+			"Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; poll GET /instance/update until current is the returned version. Admins only.",
+		method: "post",
+		path: "/instance/update",
+		responses: {
+			202: {
+				description: "Update started",
+				schema: instanceUpdateStartResponse,
+			},
+			401: unauthorized,
+			403: { description: "Not an admin", schema: errorResponse },
+			409: {
+				description:
+					"Already on the latest release, not running under Docker Compose, or a deploy or job is in flight",
+				schema: errorResponse,
+			},
+		},
+		summary: "Update the instance",
+		tags: ["Meta"],
 	},
 	{
 		method: "get",

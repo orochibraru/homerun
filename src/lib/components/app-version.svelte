@@ -19,6 +19,7 @@
 	const { admin }: { admin: boolean } = $props();
 
 	const POLL_MS = 3000;
+	const RELEASE_POLL_MS = 10 * 60 * 1000;
 
 	const version = getAppVersion();
 	const release = $derived(admin ? getReleaseStatus() : null);
@@ -32,6 +33,16 @@
 	let timer: ReturnType<typeof setInterval> | null = null;
 
 	const preflight = $derived(open && !updatingTo ? getUpdatePreflight() : null);
+
+	$effect(() => {
+		if (!release) {
+			return;
+		}
+		const releaseTimer = setInterval(() => {
+			release.refresh().catch(() => undefined);
+		}, RELEASE_POLL_MS);
+		return () => clearInterval(releaseTimer);
+	});
 
 	function waitForNewVersion(from: string | undefined) {
 		timer = setInterval(async () => {

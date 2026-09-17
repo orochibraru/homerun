@@ -20,7 +20,7 @@ import { isNewerVersion, normalizeVersion } from "./self-update/version.ts";
 
 const RELEASES_URL =
 	"https://api.github.com/repos/orochibraru/homerun/releases/latest";
-const RELEASE_CACHE_MS = 60 * 60 * 1000;
+const RELEASE_CACHE_MS = 10 * 60 * 1000;
 const RELEASE_FAILURE_CACHE_MS = 5 * 60 * 1000;
 const RELEASE_TIMEOUT_MS = 5000;
 

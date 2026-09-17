@@ -44,6 +44,13 @@ describe("toastError", () => {
 		blank.message = "";
 		expect(toastError(blank, "fallback")).toBe("fallback");
 	});
+
+	test("reads the message of a remote function's HttpError", () => {
+		const httpError = { body: { message: "Forbidden" }, status: 403 };
+		expect(toastError(httpError, "fallback")).toBe("Forbidden");
+		expect(toastError({ body: {}, status: 500 }, "fallback")).toBe("fallback");
+		expect(toastError(null, "fallback")).toBe("fallback");
+	});
 });
 
 describe("enhanceToast", () => {

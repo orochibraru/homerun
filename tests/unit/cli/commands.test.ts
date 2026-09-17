@@ -4,6 +4,7 @@ import type { ClientFactory } from "../../../packages/cli/client";
 import {
 	Commands,
 	findingsAtOrAbove,
+	instanceStatusText,
 	revisionRow,
 } from "../../../packages/cli/commands";
 import { Output } from "../../../packages/cli/output";
@@ -740,5 +741,92 @@ describe("Commands.serviceScan", () => {
 		expect(failSpy).toHaveBeenCalledWith(
 			"Timed out waiting for scan job job-1 (still running).",
 		);
+	});
+});
+
+function instanceStatusFixture(overrides: Record<string, unknown> = {}) {
+	return {
+		current: "1.0.29",
+		latest: {
+			publishedAt: "2026-09-17T12:00:00.000Z",
+			url: "https://github.com/orochibraru/homerun/releases/tag/v1.0.30",
+			version: "1.0.30",
+		},
+		preflight: {
+			pendingDeploys: 0,
+			reason: null,
+			ready: true,
+			runningJobs: 0,
+			supported: true,
+		},
+		updateAvailable: true,
+		...overrides,
+	};
+}
+
+describe("instanceStatusText", () => {
+	test("points at the update command when one can start", () => {
+		expect(instanceStatusText(instanceStatusFixture())).toContain(
+			"homerun instance update",
+		);
+	});
+
+	test("explains why an available update can't start", () => {
+		const text = instanceStatusText(
+			instanceStatusFixture({
+				preflight: {
+					pendingDeploys: 1,
+					reason: "1 deployment(s) are queued or running.",
+					ready: false,
+					runningJobs: 0,
+					supported: true,
+				},
+			}),
+		);
+		expect(text).toContain("1 deployment(s) are queued or running.");
+	});
+
+	test("says up to date, or that GitHub couldn't be reached", () => {
+		expect(
+			instanceStatusText(instanceStatusFixture({ updateAvailable: false })),
+		).toContain("Up to date.");
+		expect(
+			instanceStatusText(instanceStatusFixture({ latest: null })),
+		).toContain("unknown");
+	});
+});
+
+describe("Commands.instanceUpdate", () => {
+	test("starts the update and waits through the restart for the new version", async () => {
+		spyOn(console, "log").mockImplementation(() => undefined);
+		const POST = mock(async () => okResponse({ version: "1.0.30" }));
+		let polls = 0;
+		const GET = mock(async () => {
+			polls += 1;
+			if (polls === 1) {
+				throw new TypeError("fetch failed");
+			}
+			return okResponse(
+				instanceStatusFixture({ current: polls === 2 ? "1.0.29" : "1.0.30" }),
+			);
+		});
+
+		await Commands.instanceUpdate(fakeClient({ GET, POST }), {
+			pollMs: 1,
+			wait: true,
+		});
+
+		expect(POST).toHaveBeenCalledWith("/instance/update");
+		expect(polls).toBe(3);
+	});
+
+	test("doesn't poll without --wait", async () => {
+		spyOn(console, "log").mockImplementation(() => undefined);
+		const POST = mock(async () => okResponse({ version: "1.0.30" }));
+		const GET = mock();
+
+		await Commands.instanceUpdate(fakeClient({ GET, POST }), { wait: false });
+
+		expect(GET).not.toHaveBeenCalled();
 	});
 });

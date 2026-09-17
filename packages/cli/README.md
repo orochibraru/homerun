@@ -87,6 +87,8 @@ homerun services logs <id> [--tail <lines>] [--follow]
 homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
+homerun instance status [--json]
+homerun instance update [--wait] [--timeout <seconds>]
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
 
@@ -140,6 +142,16 @@ older healthy revision with a different image), and prints the deploy result
 once it's finished, same contract as `homerun services deploy`.
 `--restore-config` adds `?restoreConfig=true`, which also restores the env vars,
 resources and networking that revision ran with.
+
+`homerun instance status` calls `GET /instance/update` and prints the running
+version, the latest release and whether an update can start now (with the reason
+when it can't), `--json` for the raw body. `homerun instance update` calls
+`POST /instance/update`, which starts the same self-update as the dashboard's
+**Update now** and answers `202` with the target version, or `409` with why it
+can't. `--wait` then polls `GET /instance/update` every 3s, ignoring failed
+requests while the container is recreated, until `current` is the new version,
+exiting 1 after `--timeout <seconds>` (default 600). Both are admin-only.
+`homerun update` is unrelated: it updates the CLI binary itself.
 
 `homerun update` self-updates the installed binary in place: it checks the
 latest GitHub release, downloads the `homerun-cli-<arch>` asset for your

@@ -1,7 +1,7 @@
 # Upgrading Homerun
 
 The sidebar shows the version you're running. Admins also see a notice there
-when a newer GitHub release exists (checked at most once an hour). Clicking it
+when a newer GitHub release exists (checked every ten minutes). Clicking it
 opens the update dialog:
 
 - It refuses while a deployment is queued or running, or while any other job
@@ -17,6 +17,22 @@ opens the update dialog:
 - The dashboard is down for a few seconds and the page reloads itself once the
   new version answers. Jobs that were waiting run once it's back. If it doesn't
   come back, run `docker logs homerun-updater` on the host.
+
+## Without the dashboard
+
+If you can't reach the dashboard, the same update runs from the
+[CLI](api-and-cli.md#cli), logged in as an admin:
+
+```bash
+homerun instance status             # running and latest version, and whether it can update now
+homerun instance update --wait      # start the update and wait until the new version answers
+```
+
+It goes through the same checks and the same `homerun-updater` container as
+**Update now**, and prints the reason when it refuses. Scripts can call
+`GET /api/v1/instance/update` and `POST /api/v1/instance/update` directly.
+
+## When it can't update itself
 
 This only works when Homerun runs as a Docker Compose service, since it reads
 its own container's compose labels to find the project. Anywhere else the dialog

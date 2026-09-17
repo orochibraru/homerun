@@ -27,11 +27,16 @@ const DEFAULT_ERROR = "Something went wrong. Please try again.";
 
 /**
  * Turns a thrown value into a toast message: the error's own message when it has
- * one, the fallback otherwise.
+ * one, the message in a SvelteKit `HttpError`'s body (what a failed remote
+ * function throws on the client, which isn't an `Error`), the fallback otherwise.
  */
 export function toastError(error: unknown, fallback = DEFAULT_ERROR): string {
 	if (error instanceof Error && error.message) {
 		return error.message;
+	}
+	const body = (error as { body?: { message?: unknown } } | null)?.body;
+	if (typeof body?.message === "string" && body.message) {
+		return body.message;
 	}
 	return fallback;
 }
