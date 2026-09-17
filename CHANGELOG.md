@@ -1,3 +1,11 @@
+## [1.0.31](https://github.com/orochibraru/homerun/compare/v1.0.30...v1.0.31) (2026-09-17)
+
+### Features
+
+- update the instance from the CLI, poll for releases, show remote function
+  errors
+  ([81e3caf](https://github.com/orochibraru/homerun/commit/81e3caf6dfdcda94315a48016547a9bdc6a32c8d))
+
 ## [1.0.30](https://github.com/orochibraru/homerun/compare/v1.0.29...v1.0.30) (2026-09-17)
 
 ### Features
