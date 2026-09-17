@@ -2,12 +2,35 @@ import process from "node:process";
 import adapter from "@orochibraru/svelte-smol";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 
 process.env.BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT = "1";
 
+/**
+ * Publishes the port the dev or preview server actually bound to as `PORT`, so
+ * `$lib/config.ts` builds the login wall's default auth-check URL against it
+ * instead of the production default of 3000. Runs before the first request,
+ * which is when SvelteKit first loads the server modules.
+ */
+function listeningPortPlugin(): Plugin {
+	const publish = (httpServer: ViteDevServer["httpServer"]) => {
+		httpServer?.once("listening", () => {
+			const address = httpServer.address();
+			if (address && typeof address === "object") {
+				process.env.PORT = String(address.port);
+			}
+		});
+	};
+	return {
+		configurePreviewServer: (server) => publish(server.httpServer),
+		configureServer: (server) => publish(server.httpServer),
+		name: "homerun-listening-port",
+	};
+}
+
 export default defineConfig({
 	plugins: [
+		listeningPortPlugin(),
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {

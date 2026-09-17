@@ -18,6 +18,7 @@
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConnectionStrings from "$lib/components/connection-strings.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
+	import ReplicaStats from "$lib/components/replica-stats.svelte";
 	import ServiceGraph from "$lib/components/service-graph.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -146,9 +147,30 @@
 			status = await fetchProgress(deploymentId);
 		}
 		if (myGeneration === pollGeneration) {
-			pendingAction = null;
-			void refreshAll();
+			settleDeploy(deploymentId, status ?? "");
 		}
+	}
+
+	/**
+	 * Ends the progress view once a deploy reaches a terminal status. A failed
+	 * deploy opens its revision instead of refreshing: `refreshAll` claims the
+	 * navigation token a microtask later than `goto`, so running both cancels
+	 * the navigation.
+	 */
+	function settleDeploy(deploymentId: string, status: string) {
+		pendingAction = null;
+		if (status !== "failed") {
+			void refreshAll();
+			return;
+		}
+		toast.error(`${svc.name} failed to deploy.`, {
+			action: {
+				label: "See why",
+				onClick: () => goto(revisionHref(deploymentId)),
+			},
+			description: "Opening the revision that failed.",
+		});
+		void goto(revisionHref(deploymentId));
 	}
 
 	function closeProgressSource() {
@@ -194,20 +216,12 @@
 			}
 		});
 
-		source.addEventListener("done", () => {
+		source.addEventListener("done", (event) => {
 			closeProgressSource();
-			pendingAction = null;
-			void refreshAll();
-			if (progressStatus === "failed") {
-				toast.error(`${svc.name} failed to deploy.`, {
-					action: {
-						label: "See why",
-						onClick: () => goto(revisionHref(deploymentId)),
-					},
-					description: "Opening the revision that failed.",
-				});
-				void goto(revisionHref(deploymentId));
-			}
+			const body = JSON.parse((event as MessageEvent).data) as {
+				status: string;
+			};
+			settleDeploy(deploymentId, body.status);
 		});
 
 		source.onerror = () => {
@@ -350,6 +364,10 @@
     {/if}
 </div>
 
+{#if svc.swarmServiceId}
+    <ReplicaStats serviceId={svc.id} />
+{/if}
+
 <div class="mb-4 grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
     <UsageChart serviceId={svc.id} title="Resource usage" />
     <div class="space-y-4">
@@ -392,7 +410,7 @@
             {/each}
         </ul>
         <div
-            class="h-48 overflow-y-auto rounded-b-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+            class="h-48 overflow-y-auto rounded-b-md log-output"
             bind:this={progressEl}
         >
             {#if progressLines.length === 0}

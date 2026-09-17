@@ -1,4 +1,5 @@
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceGitDTO } from "$lib/dto/service-git-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
@@ -98,9 +99,9 @@ class ServiceLifecycleServiceClass {
 	}
 
 	/**
-	 * Deletes a service: removes its swarm service or container, then its git
-	 * webhook and its row. A workload Docker reports as already gone counts as
-	 * removed.
+	 * Deletes a service: removes its pull request previews first, then its
+	 * swarm service or container, its git webhook and its row. A workload
+	 * Docker reports as already gone counts as removed.
 	 *
 	 * @param options.force Deletes the row even when the workload couldn't be
 	 * removed, for a daemon that will never answer for it again.
@@ -111,15 +112,17 @@ class ServiceLifecycleServiceClass {
 		svc: ServiceDTO,
 		options: { force?: boolean } = {},
 	): Promise<void> {
+		for (const preview of await ServiceGitDTO.listPreviews(svc.id)) {
+			// biome-ignore lint/performance/noAwaitInLoops: each preview's workload removal can fail the whole delete
+			await this.deleteService(preview, options);
+		}
 		const failure = await this.#detachWorkload(svc);
 		if (failure && !options.force) {
 			throw new WorkloadDetachError(
 				`Couldn't remove the ${svc.swarmServiceId ? "swarm service" : "container"} for "${svc.name}": ${failure}. Nothing was deleted.`,
 			);
 		}
-		const stack = svc.stackId
-			? await StackDTO.get(svc.stackId, svc.userId)
-			: null;
+		const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 		await this.#cleanUpOutside(svc, stack?.slug ?? null);
 		await svc.delete();
 	}
@@ -136,7 +139,7 @@ class ServiceLifecycleServiceClass {
 		stack: StackDTO,
 		options: { force?: boolean } = {},
 	): Promise<void> {
-		const members = await ServiceDTO.listByStack(stack.id, stack.userId);
+		const members = await ServiceDTO.listByStack(stack.id);
 		await stack.cascadeDelete(options);
 		await Promise.all(
 			members.map((svc) => this.#cleanUpOutside(svc, stack.slug)),

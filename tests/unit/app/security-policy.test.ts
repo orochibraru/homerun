@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
+	nextPasskeyRpId,
 	passkeyRpId,
 	passkeyUsableOn,
 	safeNextPath,
+	strandedPasskeyCount,
 	totpSecretFromUri,
 	unmetSecurityRequirements,
 } from "../../../src/lib/security-policy";
@@ -113,5 +115,37 @@ describe("passkeyUsableOn", () => {
 		expect(
 			passkeyUsableOn("http://203.0.113.4:3000", "https://homerun.example.com"),
 		).toBe(false);
+	});
+});
+
+describe("nextPasskeyRpId", () => {
+	test("prefers an explicit Dashboard URL", () => {
+		expect(
+			nextPasskeyRpId("example.com", "https://homerun.example.com:8443"),
+		).toBe("homerun.example.com");
+	});
+
+	test("derives the hostname from the base domain otherwise", () => {
+		expect(nextPasskeyRpId("Example.com:5173", "")).toBe("example.com");
+		expect(nextPasskeyRpId("https://example.com/path", "")).toBe("example.com");
+	});
+
+	test("is undefined when nothing yields a hostname", () => {
+		expect(nextPasskeyRpId("", "")).toBeUndefined();
+	});
+});
+
+describe("strandedPasskeyCount", () => {
+	test("strands every passkey when the hostname moves", () => {
+		expect(strandedPasskeyCount("old.example.com", "new.example.com", 3)).toBe(
+			3,
+		);
+		expect(strandedPasskeyCount(undefined, "example.com", 2)).toBe(2);
+	});
+
+	test("strands nothing when the hostname stays or is unknown", () => {
+		expect(strandedPasskeyCount("example.com", "example.com", 3)).toBe(0);
+		expect(strandedPasskeyCount(undefined, "localhost", 3)).toBe(0);
+		expect(strandedPasskeyCount("example.com", undefined, 3)).toBe(0);
 	});
 });

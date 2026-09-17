@@ -11,7 +11,7 @@ import { applyAndRebuild } from "$lib/server/validation/instance-settings-form";
 const logger = new Logger("InstanceSettings");
 
 export const load = async ({ locals, params, parent }) => {
-	const { user } = await parent();
+	await parent();
 	if (!locals.isAdmin) {
 		throw redirect(302, resolve("/"));
 	}
@@ -24,7 +24,7 @@ export const load = async ({ locals, params, parent }) => {
 		error(404, "No OAuth provider with that id.");
 	}
 
-	const services = await ServiceDTO.list(user.id);
+	const services = await ServiceDTO.list();
 	const method = oauthMethod(provider.name);
 
 	return {

@@ -6,8 +6,9 @@ description:
   entity", "add a page for managing Y", "add a DTO for Z". Scaffolds schema.ts
   changes, the DTO class extending BaseDTO, and route files, following this
   repo's exact conventions (no manual route-file typing, no raw Drizzle in
-  routes, toJSON() before returning from load, userId scoping). Not for one-off
-  bugfixes or edits to existing routes — use the general agent for those.
+  routes, toJSON() before returning from load, shared-resource finders). Not for
+  one-off bugfixes or edits to existing routes — use the general agent for
+  those.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---
@@ -32,8 +33,11 @@ improvise a different shape.
 - **Every DB read/write in a route goes through a DTO**, never
   `db.select()/.insert()/.update()/.delete()` inline in a route file.
 - **New DTO classes extend `BaseDTO<TRow>`** (`src/lib/dto/base-dto.ts`), static
-  finders scoped by `userId` unless there's a genuine cross-user reason
-  (document it if so), instance methods for mutations on an already-fetched row.
+  finders unscoped for a shared resource (every account sees every resource,
+  `userId` only records who created it) and scoped by `userId` only for personal
+  data (sessions, API keys, preferences, git connections, the bell feed,
+  notification channels), instance methods for mutations on an already-fetched
+  row.
 - **`load` functions map DTO instances through `.toJSON()`** before returning
   them — SvelteKit's devalue serializer can't handle a class instance.
 - **Nested loads under `(protected)/` don't re-check `!locals.user`** — use

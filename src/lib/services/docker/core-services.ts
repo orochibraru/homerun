@@ -66,6 +66,7 @@ export function applyFlags(
 
 /** What this mixin needs from the swarm mixin, which is merged ahead of it (see docker.service.ts). */
 interface RequiresSwarmMixin {
+	assertSwarmCapableDaemon: () => Promise<void>;
 	ensureSwarmNetwork: (name: string) => Promise<void>;
 	initSwarm: () => Promise<boolean>;
 }
@@ -366,8 +367,11 @@ export function DockerCoreServicesMixin<
 		 * Reports what it did as a list of lines rather than throwing on a
 		 * missing Traefik : the mode is still worth saving on a host whose
 		 * proxy lives elsewhere, the admin just has to wire that end up.
+		 *
+		 * @throws Before touching the host when the daemon runs rootless.
 		 */
 		async enableSwarmMode(): Promise<string[]> {
+			await this.assertSwarmCapableDaemon();
 			const steps: string[] = [];
 			steps.push(
 				(await this.initSwarm())

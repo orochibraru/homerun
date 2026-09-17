@@ -7,6 +7,7 @@ import {
 	mapLimit,
 	type RawRow,
 	rows,
+	sourceSlug,
 	str,
 } from "$lib/migrate/common";
 import {
@@ -17,6 +18,10 @@ import {
 	coolifyProjectName,
 	coolifyService,
 } from "$lib/migrate/coolify";
+import {
+	type CoolifyStorage,
+	coolifyStorages,
+} from "$lib/migrate/coolify-runtime";
 
 const logger = new Logger("Coolify");
 
@@ -60,10 +65,31 @@ class CoolifyServiceClass {
 	}
 
 	/**
+	 * Fetches an application's or database's persistent storage from
+	 * `/storages`, falling back to whatever the list row itself carries, or
+	 * null when neither says anything about storage.
+	 */
+	async #storage(
+		client: MigrationHttpClient,
+		kind: "applications" | "databases",
+		row: RawRow,
+	): Promise<CoolifyStorage | null> {
+		const uuid = str(row, "uuid");
+		const slug = sourceSlug(str(row, "name") ?? "service");
+		const body = uuid
+			? await client
+					.get(`/api/v1/${kind}/${encodeURIComponent(uuid)}/storages`)
+					.catch(() => null)
+			: null;
+		return coolifyStorages(body, slug) ?? coolifyStorages(row, slug);
+	}
+
+	/**
 	 * Reads a Coolify instance's projects, applications, services, and
 	 * databases (concurrently, `CONCURRENCY`-limited) and normalizes them
 	 * into this app's generic `MigrationEntry` shape for the Migrate tab,
-	 * fetching each application's/service's env vars along the way. When
+	 * fetching each application's/service's env vars and each application's/
+	 * database's persistent storage along the way. When
 	 * `only` is given, entries are filtered to just those uuids/ids.
 	 */
 	async listEntries(
@@ -101,6 +127,7 @@ class CoolifyServiceClass {
 					row,
 					coolifyProjectName(row, byEnvironment),
 					await this.#env(client, "applications", str(row, "uuid")),
+					await this.#storage(client, "applications", row),
 				),
 		);
 		const serviceEntries = await mapLimit(
@@ -113,11 +140,16 @@ class CoolifyServiceClass {
 					await this.#env(client, "services", str(row, "uuid")),
 				),
 		);
-		const databaseEntries = databases
-			.filter(wanted)
-			.map((row) =>
-				coolifyDatabase(row, coolifyProjectName(row, byEnvironment)),
-			);
+		const databaseEntries = await mapLimit(
+			databases.filter(wanted),
+			CONCURRENCY,
+			async (row) =>
+				coolifyDatabase(
+					row,
+					coolifyProjectName(row, byEnvironment),
+					await this.#storage(client, "databases", row),
+				),
+		);
 
 		const entries = [...appEntries, ...serviceEntries, ...databaseEntries];
 		logger.info(

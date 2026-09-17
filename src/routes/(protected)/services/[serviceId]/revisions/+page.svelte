@@ -5,8 +5,9 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import CheckBox from "$lib/components/check-box.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { timeAgo } from "$lib/formatting";
@@ -24,6 +25,7 @@
 	let pendingRevision = $state<(typeof data.deployments)[number] | null>(null);
 	let revisionForm = $state<HTMLFormElement | null>(null);
 	let deploying = $state(false);
+	let restoreConfig = $state(false);
 
 	const HEALTH_LABELS = {
 		healthy: {
@@ -63,6 +65,7 @@
 
 	function askDeploy(dep: (typeof data.deployments)[number]) {
 		pendingRevision = dep;
+		restoreConfig = false;
 		confirmOpen = true;
 	}
 </script>
@@ -186,15 +189,7 @@
                         {/if}
                     </div>
                     {#if expandedDeploymentId === dep.id && dep.log}
-                        <div
-                            class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
-                        >
-                            {#each dep.log
-                                .split("\n")
-                                .filter(Boolean) as line, i (i)}
-                                <AnsiLine {line} />
-                            {/each}
-                        </div>
+                        <DeployLogPanel errorMessage={dep.errorMessage} log={dep.log} />
                     {/if}
                 </div>
             {/each}
@@ -227,15 +222,26 @@
   })}
 >
   <input name="revisionId" type="hidden" value={pendingRevision?.id ?? ""}>
+  <input name="restoreConfig" type="hidden" value={restoreConfig ? "on" : ""}>
 </form>
 
 <ConfirmDialog
   bind:open={confirmOpen}
   confirmLabel="Deploy this revision"
   description={pendingRevision
-    ? `Redeploys ${pendingRevision.imageRef}${pendingRevision.gitCommit ? ` (commit ${pendingRevision.gitCommit.slice(0, 7)})` : ""} exactly as it ran, skipping the build and the image scan. The service's current environment, volumes and networking are kept.`
+    ? `Redeploys ${pendingRevision.imageRef}${pendingRevision.gitCommit ? ` (commit ${pendingRevision.gitCommit.slice(0, 7)})` : ""} exactly as it ran, skipping the build and the image scan. Volumes are always kept as they are now.`
     : ""}
   destructive={false}
   onConfirm={() => revisionForm?.requestSubmit()}
   title="Deploy this revision?"
-/>
+>
+  <CheckBox
+    helperText={pendingRevision?.hasConfigSnapshot
+      ? "Put back the environment variables, CPU, memory, replicas, port and network mode this revision ran with. Off keeps the current ones."
+      : "This revision was deployed before configs were recorded, so only its image can be restored."}
+    id="restoreConfig"
+    label="Also restore env vars, resources and networking"
+    name="restoreConfigToggle"
+    bind:checked={restoreConfig}
+  />
+</ConfirmDialog>

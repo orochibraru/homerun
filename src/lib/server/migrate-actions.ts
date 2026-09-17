@@ -81,6 +81,7 @@ export function migrationActions(source: MigrationSource) {
 					entries,
 					userId,
 					source.label,
+					event.locals.isAdmin,
 				);
 				return { result, values: { baseUrl } };
 			} catch (err) {
@@ -89,7 +90,7 @@ export function migrationActions(source: MigrationSource) {
 		},
 
 		preview: async (event: RequestEvent) => {
-			const userId = guard(event);
+			guard(event);
 			const formData = await event.request.formData();
 			const connection = readConnection(formData, source.label);
 			const baseUrl = String(formData.get("baseUrl") ?? "").trim();
@@ -98,7 +99,7 @@ export function migrationActions(source: MigrationSource) {
 			}
 			try {
 				const entries = await source.listEntries(connection);
-				const preview = await MigrationService.preview(entries, userId);
+				const preview = await MigrationService.preview(entries);
 				return { preview, values: { baseUrl } };
 			} catch (err) {
 				return fail(400, { error: message(err), values: { baseUrl } });

@@ -7,6 +7,7 @@ import {
 	StatSampleDTO,
 } from "$lib/dto/stat-sample-dto";
 import { requireUser } from "$lib/server/remote-auth";
+import { DockerService, type SwarmReplica } from "$lib/services/docker.service";
 
 const rangeSchema = z.enum([
 	"live",
@@ -36,9 +37,9 @@ export interface ServiceUsage {
 export const getStatHistory = query(
 	historyInput,
 	async ({ range, serviceId }): Promise<StatPoint[]> => {
-		const user = requireUser();
+		requireUser();
 		if (serviceId) {
-			const svc = await ServiceDTO.get(serviceId, user.id);
+			const svc = await ServiceDTO.get(serviceId);
 			if (!svc) {
 				return [];
 			}
@@ -49,9 +50,9 @@ export const getStatHistory = query(
 
 /** Every service the caller owns with its newest sample, for the dashboard's sortable usage table. */
 export const getServiceUsage = query(async (): Promise<ServiceUsage[]> => {
-	const user = requireUser();
+	requireUser();
 	const [services, latest] = await Promise.all([
-		ServiceDTO.list(user.id),
+		ServiceDTO.list(),
 		StatSampleDTO.latestPerService(),
 	]);
 	return services.map((svc) => {
@@ -67,3 +68,16 @@ export const getServiceUsage = query(async (): Promise<ServiceUsage[]> => {
 		};
 	});
 });
+
+/** Every replica of a swarm-mode service, with live stats for the ones on this host. Empty for a standalone service. */
+export const getReplicaStats = query(
+	z.string(),
+	async (serviceId): Promise<SwarmReplica[]> => {
+		requireUser();
+		const svc = await ServiceDTO.get(serviceId);
+		if (!svc?.swarmServiceId) {
+			return [];
+		}
+		return await DockerService.listSwarmReplicas(svc.swarmServiceId);
+	},
+);

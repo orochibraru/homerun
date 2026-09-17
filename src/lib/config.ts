@@ -255,7 +255,8 @@ export function isPlaceholderAuthSecret(secret: string | undefined): boolean {
 
 /**
  * Builds the file+env configuration: validates the YAML config file, then layers
- * the env-only values (`DATABASE_URL`, `PORT`, `AUTH_SECRET`, `ORIGIN`) and the
+ * the env-only values (`DATABASE_URL`, `PORT`, `AUTH_SECRET`, `ORIGIN`), the
+ * `TRAEFIK_DYNAMIC_CONFIG_DIR` fallback for `traefik.dynamicConfigDir`, and the
  * default forwardAuth check URL over it.
  *
  * @throws When the config file fails schema validation, or the merged config
@@ -293,6 +294,13 @@ export const parseConfig = (): AppConfig => {
 			`http://host.docker.internal:${port}/api/v1/auth-check`,
 		databaseUrl: firstNonBlank(Bun.env.DATABASE_URL),
 		port,
+		traefik: {
+			...yamlConfig.traefik,
+			dynamicConfigDir: firstNonBlank(
+				yamlConfig.traefik?.dynamicConfigDir,
+				Bun.env.TRAEFIK_DYNAMIC_CONFIG_DIR,
+			),
+		},
 	});
 };
 

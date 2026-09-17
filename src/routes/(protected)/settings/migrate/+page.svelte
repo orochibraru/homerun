@@ -5,13 +5,13 @@
 	const sources = [
 		{
 			description:
-				"Applications (Docker image or Dockerfile from git), raw compose stacks and databases, with their env, domains' ports and volume mounts.",
+				"Applications (Docker image, or git built with a Dockerfile, Nixpacks, Railpack or buildpacks), raw compose stacks and databases, with their env, domains' ports and volume mounts.",
 			href: resolve("/settings/migrate/dokploy"),
 			label: "Dokploy",
 		},
 		{
 			description:
-				"Applications (Docker image, Dockerfile or compose from git), one-click services and databases, with their env and ports.",
+				"Applications (Docker image, compose, or git built with a Dockerfile, Nixpacks or Railpack), one-click services and databases, with their env and ports.",
 			href: resolve("/settings/migrate/coolify"),
 			label: "Coolify",
 		},

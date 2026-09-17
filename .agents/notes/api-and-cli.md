@@ -15,6 +15,12 @@ wrong for a JSON API that should 401 instead. Every handler starts with its own
 requests by `hooks.server.ts` (see Auth below), so the same handlers serve the
 dashboard's own `fetch` calls and external API-key clients alike.
 
+Handlers don't check write permission themselves: `hooks.server.ts` refuses any
+non-GET request from a read-only caller (the `viewer` role or a read-scoped API
+key) with a JSON `403` before the route runs, see `auth.md`'s Read-only role
+section. `$lib/openapi/build.ts` adds that `403` to every non-GET operation
+automatically, so a new write route documents it without a registry entry.
+
 - `services/`, `GET` list, `POST` create (zod-validated body, not the
   FormData-shaped schema `$lib/server/validation/service.ts`, that one's
   checkbox/`envKey[]`/`envValue[]` preprocessing is form-specific).
@@ -40,11 +46,10 @@ dashboard's own `fetch` calls and external API-key clients alike.
   wants to know it didn't start a new one). `scans/latest/` and
   `scans/[scanId]/`, `GET`, the full row with `findings`; `latest` 404s with
   "This service hasn't been scanned yet." Every scan query goes through
-  `ServiceDTO.get(serviceId, userId)` first, `image_scan` has no `userId` of its
-  own.
+  `ServiceDTO.get(serviceId)` first, so an unknown service 404s.
 - `jobs/[jobId]/`, `GET`, a trimmed job row (no `payload`) for polling a queued
-  job, 404 unless `job.userId` is the caller. Exists for
-  `homerun services scan --wait`, generic on purpose.
+  job, any account's job (resources are shared), 404 for an unknown id. Exists
+  for `homerun services scan --wait`, generic on purpose.
 - `stacks/`, `templates/`, read/create, same pattern, thinner (no lifecycle
   actions).
 - `services/`, `stacks/`, and `templates/`'s `GET`s are paginated

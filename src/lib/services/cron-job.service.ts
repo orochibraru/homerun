@@ -1,18 +1,22 @@
-import { execFile } from "node:child_process";
-import process from "node:process";
-import { promisify } from "node:util";
 import { parseCommand } from "$lib/command-parse";
 import type { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { CronJobRunDTO } from "$lib/dto/cron-job-run-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
 import { Logger } from "$lib/logger";
-import { DockerService, type RegistryAuth } from "./docker.service.ts";
+import {
+	HOST_COMMAND_IMAGE,
+	HOST_COMMAND_TAG,
+	hostCommandArgs,
+} from "./docker/host-command.ts";
+import {
+	DockerService,
+	type OneOffRunResult,
+	type RegistryAuth,
+} from "./docker.service.ts";
 import { decryptSecret } from "./secrets.ts";
 
 const logger = new Logger("CronJob");
-const execFileAsync = promisify(execFile);
 
-const MAX_OUTPUT_BYTES = 1024 * 1024;
 const FLUSH_INTERVAL_MS = 1000;
 const CRON_JOB_LABEL = "homerun.cronjob.id";
 
@@ -21,13 +25,6 @@ export interface CronJobRunOutcome {
 	exitCode: number | null;
 	output: string;
 	success: boolean;
-}
-
-interface ExecError {
-	code?: number;
-	killed?: boolean;
-	stderr?: string;
-	stdout?: string;
 }
 
 function authFor(job: CronJobDTO): RegistryAuth | undefined {
@@ -41,6 +38,29 @@ function authFor(job: CronJobDTO): RegistryAuth | undefined {
 				: null) ?? "",
 		serveraddress: job.registryUrl ?? undefined,
 		username: job.registryUsername,
+	};
+}
+
+/** Maps a finished one-off run onto a cron run outcome : success is a zero exit that didn't time out, and the output is stdout then stderr. */
+function outcomeFrom(
+	result: OneOffRunResult,
+	timeoutSeconds: number,
+): CronJobRunOutcome {
+	const output = [
+		result.stdout.toString("utf8"),
+		result.stderr.toString("utf8"),
+	]
+		.filter(Boolean)
+		.join("");
+	return {
+		error: result.timedOut
+			? `Timed out after ${timeoutSeconds}s.`
+			: result.exitCode === 0
+				? null
+				: `Exited with code ${result.exitCode}.`,
+		exitCode: result.exitCode,
+		output,
+		success: result.exitCode === 0 && !result.timedOut,
 	};
 }
 
@@ -95,10 +115,7 @@ class CronJobServiceClass {
 			};
 		}
 
-		const target = await RemoteHostDTO.resolveBuildTarget(
-			job.remoteHostId,
-			job.userId,
-		);
+		const target = await RemoteHostDTO.resolveBuildTarget(job.remoteHostId);
 		if (target.kind === "agent") {
 			return {
 				error:
@@ -123,28 +140,23 @@ class CronJobServiceClass {
 			timeoutMs: job.timeoutSeconds * 1000,
 		});
 		await flusher.flush();
-
-		const output = [
-			result.stdout.toString("utf8"),
-			result.stderr.toString("utf8"),
-		]
-			.filter(Boolean)
-			.join("");
-
-		return {
-			error: result.timedOut
-				? `Timed out after ${job.timeoutSeconds}s.`
-				: result.exitCode === 0
-					? null
-					: `Exited with code ${result.exitCode}.`,
-			exitCode: result.exitCode,
-			output,
-			success: result.exitCode === 0 && !result.timedOut,
-		};
+		return outcomeFrom(result, job.timeoutSeconds);
 	}
 
-	/** Runs an "exec" kind cron job's command via `/bin/sh -c` on this same host, capping output at `MAX_OUTPUT_BYTES` and killing it after `job.timeoutSeconds`. Never throws: a non-zero exit or timeout is reported through the returned outcome. */
-	async #runExec(job: CronJobDTO): Promise<CronJobRunOutcome> {
+	/**
+	 * Runs a "host command" (kind `exec`) cron job on the Docker host itself,
+	 * not inside this app's container : a throwaway privileged `alpine`
+	 * helper sharing the host's PID namespace `nsenter`s into PID 1 and runs
+	 * the command through `sh -c` (`hostCommandArgs`). Only the job's own env
+	 * vars reach the command, never this app's environment. Output streams
+	 * into `run` as it arrives, and the helper is killed after
+	 * `job.timeoutSeconds`. Never throws for a non-zero exit or a timeout,
+	 * those are reported through the returned outcome.
+	 */
+	async #runExec(
+		job: CronJobDTO,
+		run: CronJobRunDTO,
+	): Promise<CronJobRunOutcome> {
 		if (!job.command) {
 			return {
 				error: "No command set on this cron job.",
@@ -154,33 +166,20 @@ class CronJobServiceClass {
 			};
 		}
 
-		try {
-			const { stdout, stderr } = await execFileAsync(
-				"/bin/sh",
-				["-c", job.command],
-				{
-					env: { ...process.env, ...job.envVars },
-					maxBuffer: MAX_OUTPUT_BYTES,
-					timeout: job.timeoutSeconds * 1000,
-				},
-			);
-			return {
-				error: null,
-				exitCode: 0,
-				output: `${stdout}${stderr}`,
-				success: true,
-			};
-		} catch (err) {
-			const failure = err as ExecError & Error;
-			return {
-				error: failure.killed
-					? `Timed out after ${job.timeoutSeconds}s.`
-					: failure.message,
-				exitCode: failure.code ?? null,
-				output: `${failure.stdout ?? ""}${failure.stderr ?? ""}`,
-				success: false,
-			};
-		}
+		const flusher = new OutputFlusher(run);
+		const result = await DockerService.runOneOff({
+			cmd: hostCommandArgs(job.command),
+			envVars: job.envVars,
+			image: HOST_COMMAND_IMAGE,
+			labels: { [CRON_JOB_LABEL]: job.id },
+			onOutput: (chunk) => flusher.push(chunk),
+			pidMode: "host",
+			privileged: true,
+			tag: HOST_COMMAND_TAG,
+			timeoutMs: job.timeoutSeconds * 1000,
+		});
+		await flusher.flush();
+		return outcomeFrom(result, job.timeoutSeconds);
 	}
 
 	/**
@@ -198,7 +197,7 @@ class CronJobServiceClass {
 			outcome =
 				job.kind === "image"
 					? await this.#runImage(job, run)
-					: await this.#runExec(job);
+					: await this.#runExec(job, run);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			logger.error(`Cron job failed: job=${job.id}`, err);

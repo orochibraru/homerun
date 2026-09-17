@@ -41,8 +41,8 @@ endpoints (webhook receiver, OAuth provider, openapi.json) are listed in
 `api-and-cli.md`. Its gate is not a layout but the DTO finder it calls:
 `StatusPageDTO.getPublicBySlug()` filters on `isPublic = true` and takes no
 `userId`, so an unpublished page 404s for everyone. Keep that guard in the DTO
-rather than the route — it's the only thing standing between a slug and someone
-else's service list.
+rather than the route — it's the only thing standing between a slug and a
+signed-out visitor reading the instance's service list.
 
 What that page renders is a security decision too: service names, up/down and an
 uptime percentage, never an image, port, hostname, or a probe's own error text,
@@ -83,10 +83,10 @@ render for signed-out visitors, see Per-app login wall below). The bell's own
 read/delete endpoints used to live at `/notifications/**` and are now remote
 commands instead, see Remote functions below. `(protected)/+layout.svelte`
 filters the nav array on `data.user.role === "admin"` before rendering, a
-developer sees everything else unchanged (their own services/stacks, already
-isolated per-user by every DTO's `userId` scoping). `/setup` was removed (see
-Setup diagnostics below) in favor of the dashboard banner deep-linking into
-`/settings`.
+developer sees everything else unchanged (every account shares every
+service/stack, see Shared resources in `data-and-config.md`). `/setup` was
+removed (see Setup diagnostics below) in favor of the dashboard banner
+deep-linking into `/settings`.
 
 `src/routes/(protected)/services/`:
 
@@ -140,8 +140,8 @@ Setup diagnostics below) in favor of the dashboard banner deep-linking into
   service's Overview tab instead of the services/stack list). A min-height
   wrapper around the step content keeps the Next/Back button row's vertical
   position stable as steps of different heights swap in.
-- `[serviceId]/+layout.server.ts`, ownership guard (id **and** userId must
-  match, else 404) + syncs live Docker status on every visit. Tabs: **Overview**
+- `[serviceId]/+layout.server.ts`, existence guard (unknown id, 404) + syncs
+  live Docker status on every visit. Tabs: **Overview**
   (deploy/start/stop/restart, live deploy progress panel, deployment history
   with expandable per-deployment logs, plus an embedded `LiveLogViewer`, see
   Logs below, shown once deployed so recent output is visible without switching

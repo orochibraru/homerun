@@ -172,7 +172,7 @@
         {
           exists
           ? "✓ Dockerfile found at the repo root."
-          : "⚠ No Dockerfile found at the repo root on this branch : the build will fail unless one exists at the path you set below."
+          : "⚠ No Dockerfile found at the repo root on this branch : set its path below, or pick Nixpacks, Railpack or buildpacks as the build method."
         }
       </p>
     {:catch}

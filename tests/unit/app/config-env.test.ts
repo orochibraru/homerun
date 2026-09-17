@@ -16,6 +16,7 @@ const saved = {
 	BETTER_AUTH_SECRET: Bun.env.BETTER_AUTH_SECRET,
 	CONFIG_FILE: Bun.env.CONFIG_FILE,
 	ORIGIN: Bun.env.ORIGIN,
+	TRAEFIK_DYNAMIC_CONFIG_DIR: Bun.env.TRAEFIK_DYNAMIC_CONFIG_DIR,
 };
 
 function setEnv(name: keyof typeof saved, value: string | undefined) {
@@ -66,6 +67,29 @@ describe("auth secret", () => {
 	test("an empty ORIGIN counts as unset", () => {
 		setEnv("ORIGIN", "");
 		expect(parseConfig().auth.origin).toBeUndefined();
+	});
+});
+
+describe("traefik.dynamicConfigDir", () => {
+	test("falls back to TRAEFIK_DYNAMIC_CONFIG_DIR when the file doesn't set it", () => {
+		setEnv("CONFIG_FILE", join(tmpdir(), "homerun-missing-config.yaml"));
+		setEnv("TRAEFIK_DYNAMIC_CONFIG_DIR", "/app/traefik-dynamic");
+		expect(parseConfig().traefik.dynamicConfigDir).toBe("/app/traefik-dynamic");
+	});
+
+	test("the config file wins over the env var", () => {
+		const dir = mkdtempSync(join(tmpdir(), "homerun-config-"));
+		const file = join(dir, "homerun.yaml");
+		writeFileSync(file, "traefik:\n  dynamicConfigDir: /from/file\n");
+		setEnv("CONFIG_FILE", file);
+		setEnv("TRAEFIK_DYNAMIC_CONFIG_DIR", "/from/env");
+		expect(parseConfig().traefik.dynamicConfigDir).toBe("/from/file");
+	});
+
+	test("a blank env var counts as unset", () => {
+		setEnv("CONFIG_FILE", join(tmpdir(), "homerun-missing-config.yaml"));
+		setEnv("TRAEFIK_DYNAMIC_CONFIG_DIR", " ");
+		expect(parseConfig().traefik.dynamicConfigDir).toBeUndefined();
 	});
 });
 

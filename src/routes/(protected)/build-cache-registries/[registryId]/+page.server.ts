@@ -6,9 +6,9 @@ import { Logger } from "$lib/logger";
 const logger = new Logger("BuildCacheRegistries");
 
 export const load = async ({ params, parent }) => {
-	const { user } = await parent();
+	await parent();
 
-	const registry = await BuildCacheRegistryDTO.get(params.registryId, user.id);
+	const registry = await BuildCacheRegistryDTO.get(params.registryId);
 	if (!registry) {
 		error(404, "Registry not found");
 	}
@@ -29,10 +29,7 @@ export const actions = {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 
-		const registry = await BuildCacheRegistryDTO.get(
-			params.registryId,
-			locals.user.id,
-		);
+		const registry = await BuildCacheRegistryDTO.get(params.registryId);
 		if (!registry) {
 			return fail(404, { error: "Registry not found." });
 		}

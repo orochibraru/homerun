@@ -5,14 +5,21 @@ import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import type { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import {
+	VOLUME_HELPER_IMAGE,
+	VOLUME_HELPER_MOUNT_PATH,
+	VOLUME_HELPER_TAG,
+	VolumeServices,
+} from "./backup/volume-services.ts";
 import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("Backup");
 const execFileAsync = promisify(execFile);
 
-const ARCHIVE_HELPER_IMAGE = "alpine";
-const ARCHIVE_HELPER_TAG = "3";
-const ARCHIVE_MOUNT_PATH = "/homerun-backup-source";
+export interface RestoreOptions {
+	stopServices: boolean;
+	wipe: boolean;
+}
 
 export interface BackupResult {
 	error?: string;
@@ -279,15 +286,17 @@ class S3BackupServiceClass {
 		const result = await this.attemptBackup(volume);
 		await run.finish(
 			result.success
-				? { sizeBytes: result.sizeBytes, success: true }
+				? { key: result.key, sizeBytes: result.sizeBytes, success: true }
 				: { error: result.error, success: false },
 		);
 		return result;
 	}
 
 	/**
-	 * Validates the volume's S3 destination, archives it (`archive`), and
-	 * uploads the archive under a timestamped key. Never throws: every
+	 * Validates the volume's S3 destination, runs its pre-backup command,
+	 * archives it (`archive`, with the services using it stopped when
+	 * `backupStopServices` is on, started again as soon as the tar is done),
+	 * and uploads the archive under a timestamped key. Never throws: every
 	 * failure (missing/deleted destination, undecryptable secret, archive or
 	 * upload error) comes back as `{ success: false, error }`.
 	 */
@@ -299,10 +308,7 @@ class S3BackupServiceClass {
 			};
 		}
 
-		const destinationRow = await S3DestinationDTO.get(
-			volume.s3DestinationId,
-			volume.userId,
-		);
+		const destinationRow = await S3DestinationDTO.get(volume.s3DestinationId);
 		if (!destinationRow) {
 			return {
 				error: "The picked S3 destination no longer exists.",
@@ -324,7 +330,13 @@ class S3BackupServiceClass {
 		}
 
 		try {
-			const archive = await this.archive(volume);
+			await VolumeServices.runPreCommand(volume);
+			const archive = volume.backupStopServices
+				? await VolumeServices.whileStopped(
+						await VolumeServices.servicesUsing(volume),
+						() => this.archive(volume),
+					)
+				: await this.archive(volume);
 
 			const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 			const prefix = volume.backupPrefix ? `${volume.backupPrefix}/` : "";
@@ -353,20 +365,50 @@ class S3BackupServiceClass {
 	}
 
 	/**
-	 * Downloads one backup and unpacks it back over the volume's contents.
-	 * Files in the archive replace the ones on disk; anything else already
-	 * there is left alone, so this is a restore-over, not a wipe-and-restore.
+	 * Downloads one backup and unpacks it into the volume, recording the
+	 * attempt as a `restore` run in the backup history. The download happens
+	 * first, so services are only down for the unpack itself. Without
+	 * `wipe`, files in the archive replace the ones on disk and anything else
+	 * is left alone; with it, the volume is emptied first. With
+	 * `stopServices`, the running services using the volume are stopped
+	 * around the wipe and unpack and started again afterwards. Never throws:
+	 * failures come back as `{ success: false, error }`.
 	 */
 	async restoreVolume(
 		volume: StorageVolumeDTO,
 		key: string,
+		options: RestoreOptions = { stopServices: false, wipe: false },
+	): Promise<BackupResult> {
+		const run = await BackupRunDTO.create(volume.id, { key, kind: "restore" });
+		const result = await this.#attemptRestore(volume, key, options);
+		await run.finish(
+			result.success
+				? { sizeBytes: result.sizeBytes, success: true }
+				: { error: result.error, success: false },
+		);
+		return result;
+	}
+
+	/** The download, optional wipe and unpack behind `restoreVolume`, turning any failure into `{ success: false, error }`. */
+	async #attemptRestore(
+		volume: StorageVolumeDTO,
+		key: string,
+		options: RestoreOptions,
 	): Promise<BackupResult> {
 		try {
 			const destination = await this.#destinationFor(volume);
 			const archive = await getObject(destination, key);
-			await this.#restoreInto(volume.source, archive);
+			const services = options.stopServices
+				? await VolumeServices.servicesUsing(volume)
+				: [];
+			await VolumeServices.whileStopped(services, async () => {
+				if (options.wipe) {
+					await VolumeServices.wipe(volume);
+				}
+				await this.#restoreInto(volume.source, archive);
+			});
 			logger.info(
-				`Backup restored: volume=${volume.id} key=${key} bytes=${archive.length}`,
+				`Backup restored: volume=${volume.id} key=${key} bytes=${archive.length} wipe=${options.wipe} stopServices=${options.stopServices}`,
 			);
 			return { key, sizeBytes: archive.length, success: true };
 		} catch (err) {
@@ -386,10 +428,7 @@ class S3BackupServiceClass {
 		if (!volume.s3DestinationId) {
 			throw new Error("No S3 destination picked for this volume.");
 		}
-		const row = await S3DestinationDTO.get(
-			volume.s3DestinationId,
-			volume.userId,
-		);
+		const row = await S3DestinationDTO.get(volume.s3DestinationId);
 		if (!row) {
 			throw new Error("The picked S3 destination no longer exists.");
 		}
@@ -416,9 +455,9 @@ class S3BackupServiceClass {
 	async #restoreInto(source: string, archive: Buffer): Promise<void> {
 		await DockerService.extractIntoVolume({
 			archive,
-			image: ARCHIVE_HELPER_IMAGE,
-			mountPath: ARCHIVE_MOUNT_PATH,
-			tag: ARCHIVE_HELPER_TAG,
+			image: VOLUME_HELPER_IMAGE,
+			mountPath: VOLUME_HELPER_MOUNT_PATH,
+			tag: VOLUME_HELPER_TAG,
 			volumeName: source,
 		});
 	}
@@ -449,10 +488,10 @@ class S3BackupServiceClass {
 	 */
 	private async archiveNamedVolume(name: string): Promise<Buffer> {
 		const result = await DockerService.runOneOff({
-			binds: [`${name}:${ARCHIVE_MOUNT_PATH}:ro`],
-			cmd: ["tar", "-czf", "-", "-C", ARCHIVE_MOUNT_PATH, "."],
-			image: ARCHIVE_HELPER_IMAGE,
-			tag: ARCHIVE_HELPER_TAG,
+			binds: [`${name}:${VOLUME_HELPER_MOUNT_PATH}:ro`],
+			cmd: ["tar", "-czf", "-", "-C", VOLUME_HELPER_MOUNT_PATH, "."],
+			image: VOLUME_HELPER_IMAGE,
+			tag: VOLUME_HELPER_TAG,
 		});
 		if (result.exitCode !== 0) {
 			const detail = result.stderr.toString("utf8").trim();

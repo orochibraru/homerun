@@ -12,6 +12,7 @@ import {
 	signGateToken,
 	verifyGateToken,
 } from "$lib/server/app-gate";
+import { cachedGateAccess } from "$lib/server/gate-access-cache";
 import { gatedService } from "$lib/server/gated-service-cache";
 import { AppAccessService } from "$lib/services/app-access.service";
 
@@ -115,6 +116,25 @@ async function handleCallback(
 	);
 }
 
+async function stillAllowed(
+	svc: ServiceDTO,
+	userId: string,
+	currentPolicy: string,
+): Promise<boolean> {
+	try {
+		return await cachedGateAccess(
+			{ policyVersion: currentPolicy, serviceId: svc.id, userId },
+			() => AppAccessService.recheck(svc, userId),
+		);
+	} catch (error) {
+		logger.error(
+			`App gate re-check failed, honouring the cookie: service=${svc.id} user=${userId}`,
+			error,
+		);
+		return true;
+	}
+}
+
 export const GET = async ({ request, url }) => {
 	const serviceId = url.searchParams.get("service");
 	if (!serviceId) {
@@ -143,11 +163,13 @@ export const GET = async ({ request, url }) => {
 
 	const cookie = readGateCookie(request.headers.get("cookie"));
 	const payload = cookie ? verifyGateToken(cookie) : null;
+	const currentPolicy = policyVersion(svc);
 	if (
 		payload?.userId &&
 		payload.serviceId === svc.id &&
 		payload.host === forwarded.host &&
-		payload.policyVersion === policyVersion(svc)
+		payload.policyVersion === currentPolicy &&
+		(await stillAllowed(svc, payload.userId, currentPolicy))
 	) {
 		return new Response("OK", {
 			headers: {

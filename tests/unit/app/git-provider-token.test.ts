@@ -12,7 +12,7 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { GitProviderService } = await import(
+const { GitProviderService, refusalFrom } = await import(
 	"../../../src/lib/services/git-provider.service"
 );
 
@@ -134,5 +134,57 @@ describe("GitProviderService.accessToken", () => {
 		);
 
 		expect(token).toBe("stale");
+	});
+});
+
+describe("refusalFrom", () => {
+	test("a missing scope keeps the provider's reason and suggests reconnecting", () => {
+		const refusal = refusalFrom(
+			"Gitea",
+			403,
+			JSON.stringify({
+				message:
+					"token does not have at least one of required scope(s), required=[write:repository]",
+			}),
+		);
+		expect(refusal.reconnectHelps).toBe(true);
+		expect(refusal.message).toContain("required=[write:repository]");
+		expect(refusal.message).toContain("Reconnect it");
+	});
+
+	test("missing repository rights say reconnecting won't help", () => {
+		const refusal = refusalFrom(
+			"Gitea",
+			403,
+			JSON.stringify({
+				message:
+					"user should be an owner or a collaborator with admin write of a repository",
+			}),
+		);
+		expect(refusal.reconnectHelps).toBe(false);
+		expect(refusal.message).toContain("admin write of a repository");
+		expect(refusal.message).toContain("Reconnecting won't change this");
+	});
+
+	test("a 401 or an empty body always suggests reconnecting", () => {
+		expect(refusalFrom("GitHub", 401, "{}").reconnectHelps).toBe(true);
+		expect(refusalFrom("GitHub", 403, "").reconnectHelps).toBe(true);
+	});
+
+	test("reads GitLab and Bitbucket error shapes", () => {
+		expect(
+			refusalFrom(
+				"GitLab",
+				403,
+				JSON.stringify({ error: "insufficient_scope" }),
+			).message,
+		).toContain("insufficient_scope");
+		expect(
+			refusalFrom(
+				"Bitbucket",
+				403,
+				JSON.stringify({ error: { message: "Access denied" } }),
+			).message,
+		).toContain("Access denied");
 	});
 });

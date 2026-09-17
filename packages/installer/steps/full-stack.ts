@@ -9,6 +9,8 @@ export interface FullStackParams {
 	dockerSocket: string;
 	/** Domain or IP this instance will be reached at, never localhost : see #fullStackCompose's docstring. */
 	host: string;
+	/** Runs compose as root against the system daemon instead of as `username` against its rootless one (`--docker=rootful`). */
+	rootful?: boolean;
 }
 
 class FullStackInstallerService {
@@ -16,6 +18,7 @@ class FullStackInstallerService {
 	async bringUpFullStack({
 		dockerSocket,
 		host,
+		rootful = false,
 		run,
 		username,
 		version,
@@ -23,13 +26,15 @@ class FullStackInstallerService {
 		const composeDir = `/home/${username}/homerun`;
 		const composePath = `${composeDir}/compose.yaml`;
 		const configPath = `${composeDir}/homerun.yaml`;
-		const env = {
-			DOCKER_HOST: `unix://${dockerSocket}`,
-			HOME: `/home/${username}`,
-		};
+		const dockerHost = { DOCKER_HOST: `unix://${dockerSocket}` };
+		const dockerUser = rootful
+			? { env: dockerHost }
+			: { as: username, env: { ...dockerHost, HOME: `/home/${username}` } };
 
 		await run.run(["mkdir", "-p", composeDir], { as: username });
-		await this.#allowPrivilegedPorts(run);
+		if (!rootful) {
+			await this.#allowPrivilegedPorts(run);
+		}
 		await AuthSecretInstaller.ensureAuthSecret(run, username, composeDir);
 		await this.#ensureConfigFile(run, configPath, dockerSocket, host);
 		await run.writeFile(
@@ -43,14 +48,12 @@ class FullStackInstallerService {
 		await run.run(["chown", "-R", `${username}:${username}`, composeDir]);
 
 		await run.run(["docker", "compose", "-f", composePath, "pull"], {
-			as: username,
+			...dockerUser,
 			cwd: composeDir,
-			env,
 		});
 		await run.run(["docker", "compose", "-f", composePath, "up", "-d"], {
-			as: username,
+			...dockerUser,
 			cwd: composeDir,
-			env,
 		});
 
 		return composePath;
@@ -196,6 +199,7 @@ services:
       AUTH_SECRET: "\${AUTH_SECRET:?missing from .env - the installer generates this automatically, set it yourself only if running this compose file standalone, e.g. openssl rand -hex 32}"
       ORIGIN: \${ORIGIN:-http://${host}:3000}
       DOCKER_SOCKET_PATH: ${dockerSocket}
+      TRAEFIK_DYNAMIC_CONFIG_DIR: /app/traefik-dynamic
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.homerun.rule=Host(\`\${DASHBOARD_DOMAIN:-${host}}\`)"

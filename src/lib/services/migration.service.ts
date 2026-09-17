@@ -14,19 +14,17 @@ import { ComposeImportService } from "./compose-import.service.ts";
 const logger = new Logger("Migration");
 
 class MigrationServiceClass {
-	/** Annotates raw migration entries (from a Coolify/Dokploy read) with slug-collision/blocked state against the user's existing services, for the Migrate tab's review step. */
-	async preview(
-		entries: MigrationEntry[],
-		userId: string,
-	): Promise<MigrationPreview> {
-		const services = await ServiceDTO.list(userId);
+	/** Annotates raw migration entries (from a Coolify/Dokploy read) with slug-collision/blocked state against the instance's existing services, for the Migrate tab's review step. */
+	async preview(entries: MigrationEntry[]): Promise<MigrationPreview> {
+		const services = await ServiceDTO.list();
 		return previewEntries(entries, new Set(services.map((svc) => svc.slug)));
 	}
 
 	/**
 	 * Imports every non-blocked entry, resolving (or creating) one stack per
 	 * distinct source project name (`#stackFor`) and delegating each entry's
-	 * services to `ComposeImportService.importPlan`. Never throws: a
+	 * services to `ComposeImportService.importPlan`, which refuses
+	 * host-level options unless `allowHostAccess`. Never throws: a
 	 * per-entry failure is recorded under `skipped` rather than aborting the
 	 * rest of the batch.
 	 */
@@ -34,6 +32,7 @@ class MigrationServiceClass {
 		entries: MigrationEntry[],
 		userId: string,
 		sourceLabel: string,
+		allowHostAccess: boolean,
 	): Promise<MigrationImportResult> {
 		const result: MigrationImportResult = { imported: [], skipped: [] };
 		const stacks = new Map<string, string>();
@@ -54,6 +53,7 @@ class MigrationServiceClass {
 					stacks,
 				);
 				const imported = await ComposeImportService.importPlan({
+					allowHostAccess,
 					drafts: entry.drafts,
 					stackId,
 					stackName: null,
@@ -87,9 +87,7 @@ class MigrationServiceClass {
 		if (cached) {
 			return cached;
 		}
-		const existing = (await StackDTO.list(userId)).find(
-			(row) => row.name === name,
-		);
+		const existing = (await StackDTO.list()).find((row) => row.name === name);
 		const id =
 			existing?.id ??
 			(

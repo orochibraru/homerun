@@ -28,15 +28,16 @@ Every table is wrapped by a DTO class extending `BaseDTO<TRow>` (see
 split: static finders return per-row instances, instance methods mutate that
 row.
 
-- Static finders: `get(id, userId)`, `list(userId)`, and whatever
-  listing/filtering shapes the route actually needs (look at
-  `service-dto.ts`/`stack-dto.ts` for the pattern of a `listWithX` join helper
-  vs a plain `list`).
-- **Scope every query by `userId` unless the operation is genuinely cross-user**
-  (a scheduler tick, e.g. `ServiceDTO.listCronEnabled()`,
-  `ServiceDTO.listAutoscaleEligibleOnLocalHost()`). If you're writing an
-  unscoped query for anything a user-facing route calls, that's very likely a
-  bug, not a shortcut.
+- Static finders: `get(id)`, `list()`, and whatever listing/filtering shapes the
+  route actually needs (look at `service-dto.ts`/`stack-dto.ts` for the pattern
+  of a `listWithX` join helper vs a plain `list`).
+- **Resources are shared across every account.** A shared resource's finders
+  (services, stacks, volumes, templates, cron jobs and the like) never filter by
+  `userId`, which only records who created the row. Only personal data
+  (sessions, API keys, preferences, git connections, terminal sessions, the bell
+  feed, notification channels) is scoped by `userId`. A new table with a
+  `userId` foreign key also needs a line in `UserService.cleanupUserResources`,
+  which hands shared rows over to another account before a user is deleted.
 - Instance methods: `update(fields)`, `delete()`, whatever mutations the entity
   needs. Don't add a static method that takes an id and does the same thing an
   instance method could — if you already have the row (via `get`), operate on

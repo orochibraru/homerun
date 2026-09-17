@@ -66,7 +66,7 @@
 	}
 
 	function byId(id: string): Template | undefined {
-		return [...data.builtins, ...data.mine].find((tmpl) => tmpl.id === id);
+		return [...data.builtins, ...data.custom].find((tmpl) => tmpl.id === id);
 	}
 </script>
 
@@ -148,7 +148,7 @@
 
   <EntityToolbar
     {filters}
-    pageParams={["bpage", "mpage"]}
+    pageParams={["bpage", "cpage"]}
     placeholder="Search templates by name or image…"
   >
     {#snippet trailing()}
@@ -186,8 +186,8 @@
   </div>
 
   <div>
-    <h2 class="eyebrow mb-3">My Templates</h2>
-    {#if data.mineTotal === 0 && !data.filtered}
+    <h2 class="eyebrow mb-3">Custom</h2>
+    {#if data.customTotal === 0 && !data.filtered}
       <div class="border-border flex flex-col items-center justify-center rounded-md border border-dashed py-12 text-center">
         <LayoutGrid class="text-text-muted mb-3 size-8 opacity-40" />
         <p class="text-text-muted text-sm font-medium">
@@ -198,13 +198,13 @@
           from its Settings tab.
         </p>
       </div>
-    {:else if data.mine.length === 0}
+    {:else if data.custom.length === 0}
       <p class="text-text-subtle text-sm">No custom templates match.</p>
     {:else}
       <EntityList
         {actions}
         cardGridClass={CARD_GRID}
-        items={data.mine.map((tmpl) => ({
+        items={data.custom.map((tmpl) => ({
           description: tmpl.description,
           href: detailsHref(tmpl),
           id: tmpl.id,
@@ -216,11 +216,11 @@
         {view}
       />
       <Pagination
-        label="templates"
-        page={data.minePage}
-        pageParam="mpage"
-        perPage={data.minePerPage}
-        total={data.mineTotal}
+        label="custom templates"
+        page={data.customPage}
+        pageParam="cpage"
+        perPage={data.customPerPage}
+        total={data.customTotal}
       />
     {/if}
   </div>

@@ -57,7 +57,7 @@ interface StatusCheckContext {
 async function isCancelled(ctx: StatusCheckContext): Promise<boolean> {
 	const [dep, svc] = await Promise.all([
 		DeploymentDTO.get(ctx.dep.id),
-		ServiceDTO.get(ctx.svc.id, ctx.svc.userId),
+		ServiceDTO.get(ctx.svc.id),
 	]);
 	const status = dep?.toJSON().status;
 	return (
@@ -160,28 +160,25 @@ async function settle(
 }
 
 /**
- * Notifies the user that a build was blocked by failing status checks : an
+ * Notifies every account that a build was blocked by failing status checks : an
  * in-app `NotificationDTO` plus any configured notification channel. No-op
  * when the failure was because the deploy itself was cancelled, since that's
  * an intentional user action, not something to alert on.
  */
 export async function notifyStatusChecksFailed(
 	svc: ServiceDTO,
-	userId: string,
 	err: StatusChecksFailedError,
 ): Promise<void> {
 	if (err.cancelled) {
 		return;
 	}
-	const stack = svc.stackId ? await StackDTO.get(svc.stackId, userId) : null;
+	const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 	NotificationDTO.notify({
 		message: `"${svc.name}" was not built: ${err.message}`,
 		serviceId: svc.id,
 		type: "build_checks_failed",
-		userId,
 	});
 	NotificationChannelService.notify(
-		userId,
 		statusChecksMessage(
 			{
 				commit: err.commit,

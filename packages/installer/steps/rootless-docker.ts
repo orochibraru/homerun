@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import type { StepRunner } from "../exec";
 import { commandExists } from "../exec";
@@ -74,13 +75,19 @@ class RootlessDockerInstallerService {
 		const uid = uidResult.stdout.trim() || "<uid>";
 		const xdgRuntimeDir = `/run/user/${uid}`;
 
-		await run.run(
-			["sh", "-c", "curl -fsSL https://get.docker.com/rootless | sh"],
-			{
-				as: username,
-				env: { HOME: `/home/${username}`, XDG_RUNTIME_DIR: xdgRuntimeDir },
-			},
-		);
+		if (existsSync(`/home/${username}/bin/dockerd`)) {
+			console.log(
+				`Rootless Docker already installed for "${username}", skipping.`,
+			);
+		} else {
+			await run.run(
+				["sh", "-c", "curl -fsSL https://get.docker.com/rootless | sh"],
+				{
+					as: username,
+					env: { HOME: `/home/${username}`, XDG_RUNTIME_DIR: xdgRuntimeDir },
+				},
+			);
+		}
 
 		await run.run(["systemctl", "--user", "enable", "--now", "docker"], {
 			as: username,
@@ -88,6 +95,20 @@ class RootlessDockerInstallerService {
 		});
 
 		return `${xdgRuntimeDir}/docker.sock`;
+	}
+
+	/**
+	 * `--docker=rootful`: starts the system daemon get.docker.com installed
+	 * and makes it survive reboots, instead of a per-user rootless one. Swarm
+	 * mode needs this: rootless Docker can't create the overlay networks a
+	 * swarm service joins (verified live, the daemon fails the task with
+	 * `mkdir /var/lib/docker/network: permission denied`).
+	 *
+	 * @returns The system daemon's socket path.
+	 */
+	async enableRootfulDocker(run: StepRunner): Promise<string> {
+		await run.run(["systemctl", "enable", "--now", "docker"]);
+		return "/var/run/docker.sock";
 	}
 
 	/**

@@ -12,10 +12,10 @@ The DNS-provider automation gap this doc used to list under Planned features is
 closed: two independent, optional integrations, configured on `/settings`, both
 DB-backed on `instance_settings`, both unset by default (inert until
 configured), and both can be turned on simultaneously (they run independently).
-Both are plain classes with static methods that re-read `InstanceSettingsDTO` on
-every call rather than caching, the admin can change credentials mid-session and
-syncs are infrequent (once per deploy), same reasoning as `GitProviderService`.
-Both fire from the same spot, `deploy.service.ts`'s `syncAutoDns`, right after a
+Both are instance singletons that re-read `InstanceSettingsDTO` on every call
+rather than caching, the admin can change credentials mid-session and syncs are
+infrequent (once per deploy), same reasoning as `GitProviderService`. Both fire
+from the same spot, `deploy.service.ts`'s `syncAutoDns`, right after a
 successful **local** deploy with `dnsResolvable` set, for **every** hostname the
 service answers on (`<slug>.<baseDomain>` and its `customDomain`, which used not
 to be synced at all). Neither can fail the deploy.
@@ -36,9 +36,10 @@ a server log line nobody reads.
 
 - **`CloudflareService`**: for instances that own DNS on Cloudflare directly.
   `syncDnsRecord(hostname, target)` upserts a CNAME (`<slug>.<baseDomain>` →
-  `baseDomain`) via the Cloudflare v4 REST API; `deleteDnsRecord(hostname)`
-  removes it on service delete; `verifyZoneAccess(token, zoneId)` backs the
-  Settings page's "Test connection" button. Config: `instanceSettings`'s
+  `baseDomain`) via the Cloudflare v4 REST API;
+  `deleteDnsRecord(hostname, target)` removes it on service delete;
+  `verifyZoneAccess(token, zoneId, baseDomain)` backs the Settings page's and
+  the onboarding wizard's "Test connection" button. Config: `instanceSettings`'s
   `cloudflareApiTokenEnc` (AES-256-GCM, same scheme as every other `*Enc`
   column) + `cloudflareZoneId`.
 - **`PangolinService`**: for instances fronted by a self-hosted
@@ -83,13 +84,14 @@ created resource is gated and nothing in the create call can say otherwise: a
 browser got a 302 to `pangolin.example.com/auth/resource/…` and an API client a
 bare `401 Unauthorized`, for every service the instance published.
 `setResourceSso` therefore follows every create with `POST /resource/{id}`
-`{"sso": false}`, **and does the same on the already-exists path**, so
-redeploying a service heals a resource created before this (there's no other way
-to reach the ones already made — the exists check returns early). A failed SSO
-update is reported as a failed sync rather than a success, since a gated route
-is exactly as unreachable as a missing one. Access control for a deployed
-service belongs to this app's own per-service login wall (see `auth.md`), not to
-a second, invisible gate at the edge — **unless the admin says otherwise**:
+`{"sso": false}`, **and does the same on the already-exists path** (skipped when
+the listed resource's effective `sso` already matches), so redeploying a service
+heals a resource created before this (there's no other way to reach the ones
+already made — the exists check returns early). A failed SSO update is reported
+as a failed sync rather than a success, since a gated route is exactly as
+unreachable as a missing one. Access control for a deployed service belongs to
+this app's own per-service login wall (see `auth.md`), not to a second,
+invisible gate at the edge — **unless the admin says otherwise**:
 `instance_settings.pangolinOwnsAuth` ("Let Pangolin handle sign-in", the
 Pangolin card on `/settings/networking`, default off) flips it, creating
 Resources with `sso: true` and making `api/v1/auth-check` answer 200 for every
@@ -146,15 +148,17 @@ route source. Three things it settled, all of which matter:
   server (port 3003 by default) that a self-hosted instance only exposes once
   it's enabled, and its base path ends in `/v1`. The Settings placeholder used
   to say `https://pangolin.example.com/api/v1`, which is the cookie-authed
-  dashboard API and rejects an API key. `request()` now names that case
-  specifically when a response body is HTML rather than JSON.
+  dashboard API and rejects an API key. `pangolinRequest` (`pangolin/http.ts`)
+  now names that case specifically when a response body is HTML rather than
+  JSON.
 - **Every list endpoint is paginated, and `/sites` and `/resources` default to
   20 per page.** The old client read page one and stopped, so `findMainSite`
   silently missed a site and the already-exists check silently missed a resource
-  on any org bigger than that. `listAll` now follows `pagination.total`
-  (recursively, since this repo's `noAwaitInLoops` rule forbids the obvious
-  loop). Note the two parameter spellings: `/sites` and `/resources` page with
-  1-based `page` + `pageSize`, `/domains` with `offset` + `limit`.
+  on any org bigger than that. `pangolinListAll` (`pangolin/http.ts`) now
+  follows `pagination.total` (recursively, since this repo's `noAwaitInLoops`
+  rule forbids the obvious loop). Note the two parameter spellings: `/sites` and
+  `/resources` page with 1-based `page` + `pageSize`, `/domains` with `offset` +
+  `limit`.
 - **Resource creation bodies are `z.strictObject`**, so an unknown field is a
   400, not an ignored key. `http: true` + `protocol: "tcp"` are deprecated in
   favour of `mode`, but still accepted, and are kept deliberately: an older
@@ -168,6 +172,72 @@ pass, which is how a setup that could never work reported "Org access verified".
 `tests/unit/app/pangolin.test.ts` drives all of this against a stubbed API that
 caps pages at 10 rows regardless of the requested size, so a client that stops
 after page one fails the test.
+
+Both integrations can also be switched on from the onboarding wizard's DNS step
+(see `auth.md`'s Onboarding section). Its form parsing and Test connection
+checks are the same functions Settings → Networking uses,
+`$lib/server/validation/dns-settings-form.ts` (`cloudflareInputFromForm`,
+`pangolinInputFromForm`, `testCloudflareFromForm`, `testPangolinFromForm`), so
+the two surfaces can't drift. The wizard tests Pangolin against the base domain
+typed in its own Core step, not the running one.
+
+## Offline API audit (Cloudflare v4 docs, Pangolin 1.23.0 source)
+
+Checked against `developers.cloudflare.com/api` and `fosrl/pangolin` tag
+`1.23.0` (`server/routers/integration.ts` and the route files it mounts), no
+real account involved. What it changed, all covered by
+`tests/unit/app/cloudflare.test.ts` and `tests/unit/app/pangolin.test.ts`:
+
+- **Cloudflare envelope.** Every response is
+  `{success, errors: [{code, message}], messages, result}`; `request()` now
+  unwraps `result`, throws on `success: false` even with a 2xx, renders errors
+  as `[code] message`, survives a non-JSON edge page (a 502 used to throw a bare
+  `SyntaxError`), and names `Retry-After` on a 429 (limit: 1,200 requests per 5
+  minutes per user, then 5 minutes blocked).
+- **Cloudflare lookup** lists by `name.exact` with **no** `type` filter. The old
+  `type=CNAME` lookup missed an A/AAAA record on the name, then the create
+  failed with `81053` ("An A, AAAA, or CNAME record with that host already
+  exists"); that case is now reported and left alone.
+- **Cloudflare update is `PATCH`, not `PUT`**, and only when the content
+  differs. `PUT` overwrites the record, so every redeploy reset a hand-set
+  `proxied`/TTL/comment. The body echoes `name`/`type`/the existing `ttl`, which
+  the documented CNAME schema marks required. Creates carry
+  `comment: "Managed by Homerun"` (the Free plan caps comments at 100
+  characters), and delete only removes a CNAME that points at `baseDomain` or
+  carries that comment; a 404 on delete counts as gone.
+- **Cloudflare skips** a hostname outside the zone (`GET /zones/{id}`'s `name`,
+  e.g. a custom domain on another provider) and a hostname equal to its target
+  (the create schema says content "must not match the record's name", which the
+  dashboard host hit when it equals `baseDomain`). `/user/tokens/verify` isn't
+  used since it rejects account-owned tokens; the zone read plus a
+  `dns_records?per_page=1` read work for both.
+- **Pangolin domain matching** (`matchPangolinDomain`, `pangolin/domains.ts`)
+  mirrors `validateAndConstructDomain` (`server/lib/domainUtils.ts`): a
+  `cname`-type domain's full domain is always its base domain, so it only
+  matches exactly; the most specific registered domain wins (the old `find` took
+  the first suffix match); the apex sends `subdomain: null`, because a
+  `wildcard`-type domain builds `${subdomain}.${base}` from any non-null value
+  and `""` became `.example.com`; an unverified domain is reported before
+  Pangolin 400s on it. `verifyConnection` probes `service.<baseDomain>` rather
+  than the base domain itself for the same reason.
+- **Pangolin idempotency.** Resource lookup compares `fullDomain`
+  case-insensitively (Pangolin lowercases it) and ignores `mode: "inference"`
+  resources, which may share a domain. A create answered `409` ("Resource with
+  that domain already exists", a concurrent sync) re-lists and heals the winner.
+  `ensureTarget` treats a target as correct only when host, port, `method`,
+  `siteId` and `enabled` all match, and repairs the one on the same address
+  before moving another, so a disabled or wrong-scheme target no longer passes
+  as healthy. A resource disabled in Pangolin is reported, not re-enabled.
+  Delete tolerates a 404.
+- **Pangolin pagination totals** come from `count(*)`, which Postgres returns as
+  a string; `pangolinListAll` coerces with `Number()`.
+- **Confirmed unchanged in 1.23.0:** `Authorization: Bearer <apiKeyId>.<secret>`
+  (`middlewares/integration/verifyApiKey.ts`), the error body
+  `{data, success, error, message, status}`, `PUT /org/{orgId}/resource` still
+  accepting the deprecated `http`/`protocol` pair (`mode` is the new field),
+  `POST /resource/{id}` still taking `sso` (now written to the resource's inline
+  policy), target create/update bodies, and the pagination parameters. The
+  Integration API has no rate limiter of its own.
 
 **Cloudflare is still not live-tested against a real registered account**, same
 posture as `GitProviderService`'s OAuth flow: built from the documented API

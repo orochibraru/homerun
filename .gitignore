@@ -32,3 +32,7 @@ test-results/
 playwright-report/
 playwright-results.json
 coverage/
+
+# Traefik dynamic config written by a local dev app (compose.yaml bind-mounts it)
+traefik-dynamic/*
+!traefik-dynamic/.gitkeep

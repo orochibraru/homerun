@@ -7,16 +7,16 @@ export const GET = async ({ locals, url }) => {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const query = parseApiListQuery(url);
-	const [builtins, mine] = await Promise.all([
-		TemplateDTO.listPaged(locals.user.id, "builtin", query),
-		TemplateDTO.listPaged(locals.user.id, "mine", query),
+	const [builtins, custom] = await Promise.all([
+		TemplateDTO.listPaged("builtin", query),
+		TemplateDTO.listPaged("custom", query),
 	]);
 	return jsonPage(
-		[...builtins.items, ...mine.items].map((t) => t.toJSON()),
+		[...builtins.items, ...custom.items].map((t) => t.toJSON()),
 		{
 			page: query.page,
 			perPage: query.perPage,
-			total: builtins.total + mine.total,
+			total: builtins.total + custom.total,
 		},
 	);
 };

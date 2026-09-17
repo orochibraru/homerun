@@ -11,7 +11,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import Alert from "$lib/components/alert.svelte";
-	import AnsiLine from "$lib/components/ansi-line.svelte";
+	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import UptimePanel from "$lib/components/uptime-panel.svelte";
@@ -228,11 +228,7 @@
             {/if}
           </button>
           {#if expandedDeploymentId === dep.id && dep.log}
-            <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
-              {#each dep.log.split("\n").filter(Boolean) as line, i (i)}
-                <AnsiLine {line} />
-              {/each}
-            </div>
+            <DeployLogPanel errorMessage={dep.errorMessage} log={dep.log} />
           {/if}
         </div>
       {/each}

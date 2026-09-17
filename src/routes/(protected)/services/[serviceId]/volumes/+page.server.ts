@@ -9,9 +9,9 @@ import { Logger } from "$lib/logger";
 const logger = new Logger("Services");
 
 export const load = async ({ params, parent }) => {
-	const { user } = await parent();
+	await parent();
 	const [volumes, mounts] = await Promise.all([
-		StorageVolumeDTO.list(user.id),
+		StorageVolumeDTO.list(),
 		ServiceVolumeDTO.listForService(params.serviceId),
 	]);
 
@@ -30,7 +30,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -63,7 +63,7 @@ export const actions = {
 					source: volumeId.slice(HOST_VOLUME_PREFIX.length),
 					userId: locals.user.id,
 				})
-			: await StorageVolumeDTO.get(volumeId, locals.user.id);
+			: await StorageVolumeDTO.get(volumeId);
 		if (!vol) {
 			return fail(400, { error: "That volume wasn't found." });
 		}
@@ -129,7 +129,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}

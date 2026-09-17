@@ -23,6 +23,7 @@ import {
 	createLinkedServices,
 	createStackForLinkedServices,
 	resolveEnvVarsWithLinks,
+	templateHostAccessRefusal,
 } from "$lib/services/template-links";
 
 const logger = new Logger("Services");
@@ -31,7 +32,10 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 	if (input.buildSource !== "git") {
 		return {
 			autoDeployOnPush: false,
+			gitBakeFile: null,
+			gitBakeTarget: null,
 			gitBuildContext: null,
+			gitBuildMethod: "dockerfile" as const,
 			gitDockerfilePath: null,
 			gitProviderId: null,
 			gitRef: null,
@@ -43,7 +47,10 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 	}
 	return {
 		autoDeployOnPush: input.autoDeployOnPush,
+		gitBakeFile: input.gitBakeFile || null,
+		gitBakeTarget: input.gitBakeTarget || null,
 		gitBuildContext: input.gitBuildContext || null,
+		gitBuildMethod: input.gitBuildMethod,
 		gitDockerfilePath: input.gitDockerfilePath || null,
 		gitProviderId: (input.gitRepo && input.gitProviderId) || null,
 		gitRef: input.gitRef || null,
@@ -54,23 +61,20 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 	};
 }
 
-export const load = async ({ url, parent }) => {
+export const load = async ({ url, parent, locals }) => {
 	const { user } = await parent();
 	const stackId = url.searchParams.get("stackId");
 	const templateId = url.searchParams.get("templateId");
 
-	const stack =
-		stackId && (await StackDTO.get(stackId, user.id)) ? stackId : null;
-	const template = templateId
-		? await TemplateDTO.usable(templateId, user.id)
-		: null;
+	const stack = stackId && (await StackDTO.get(stackId)) ? stackId : null;
+	const template = templateId ? await TemplateDTO.get(templateId) : null;
 	const [settings, connections, cacheRegistries, templateLinks, existing] =
 		await Promise.all([
 			InstanceSettingsDTO.get(),
 			GitConnectionDTO.listForUser(user.id),
-			BuildCacheRegistryDTO.list(user.id),
+			BuildCacheRegistryDTO.list(),
 			template ? TemplateLinkDTO.listForTemplate(template.id) : [],
-			ServiceDTO.list(user.id),
+			ServiceDTO.list(),
 		]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
@@ -94,6 +98,17 @@ export const load = async ({ url, parent }) => {
 			})),
 		stackId: stack,
 		template: template?.toJSON() ?? null,
+		templateHostAccessRefusal:
+			template && !locals.isAdmin
+				? templateHostAccessRefusal(
+						template,
+						templateLinks.map((l) => ({
+							runtime: l.linkedTemplateRuntime,
+							templateName: l.linkedTemplateName,
+						})),
+						false,
+					)
+				: null,
 		templateLinks: templateLinks.map((l) => ({
 			alias: l.link.alias,
 			icon: l.linkedTemplateIcon,
@@ -104,16 +119,26 @@ export const load = async ({ url, parent }) => {
 
 async function prepareLinkedStack(
 	formData: FormData,
-	userId: string,
+	user: { id: string; isAdmin: boolean },
 	primary: { name: string; stackId: string | null; slug: string },
 ) {
+	const userId = user.id;
 	const templateId = (formData.get("templateId") as string | null) || null;
-	const template = templateId
-		? await TemplateDTO.usable(templateId, userId)
-		: null;
+	const template = templateId ? await TemplateDTO.get(templateId) : null;
 	const links = template
 		? await buildTemplateLinkContext(template.id, primary.slug)
 		: [];
+	const refusal = template
+		? templateHostAccessRefusal(template, links, user.isAdmin)
+		: null;
+	if (refusal) {
+		return {
+			failure: fail(403, {
+				error: refusal,
+				values: Object.fromEntries(formData),
+			}),
+		} as const;
+	}
 
 	const stackId =
 		links.length > 0 && !primary.stackId
@@ -144,7 +169,6 @@ async function finishLinkedStack(
 			message: `"${linked.name}" was created.`,
 			serviceId: linked.id,
 			type: "service_created",
-			userId,
 		});
 	}
 	return linkedServices;
@@ -173,10 +197,30 @@ async function takenFieldFailure(
 	} as const;
 }
 
-async function createServiceFromForm(formData: FormData, userId: string) {
+/** Logs and notifies a service the wizard just created. */
+function announceCreated(
+	svc: ServiceDTO,
+	input: CreateServiceInput,
+	userId: string,
+) {
+	logger.info(
+		`Service created: service=${svc.id} slug=${input.slug} source=${input.buildSource} user=${userId}`,
+	);
+	NotificationDTO.notify({
+		message: `"${svc.name}" was created.`,
+		serviceId: svc.id,
+		type: "service_created",
+	});
+}
+
+async function createServiceFromForm(
+	formData: FormData,
+	user: { id: string; isAdmin: boolean },
+) {
+	const userId = user.id;
 	const rawStackId = formData.get("stackId") as string | null;
 	const initialStackId =
-		rawStackId && (await StackDTO.get(rawStackId, userId)) ? rawStackId : null;
+		rawStackId && (await StackDTO.get(rawStackId)) ? rawStackId : null;
 
 	const result = createServiceSchema.safeParse(Object.fromEntries(formData));
 
@@ -196,15 +240,15 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		return taken;
 	}
 
-	const { links, stackId, template } = await prepareLinkedStack(
-		formData,
-		userId,
-		{
-			name: input.name,
-			stackId: initialStackId,
-			slug: input.slug,
-		},
-	);
+	const prepared = await prepareLinkedStack(formData, user, {
+		name: input.name,
+		stackId: initialStackId,
+		slug: input.slug,
+	});
+	if ("failure" in prepared) {
+		return { failure: prepared.failure } as const;
+	}
+	const { links, stackId, template } = prepared;
 
 	const envVars =
 		links.length > 0
@@ -234,6 +278,7 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		registryUrl: input.registryUrl || null,
 		registryUsername: input.registryUsername || null,
 		restartPolicy: input.restartPolicy,
+		runtime: template?.runtimeOptions,
 		slug: input.slug,
 		userId,
 		...buildSourceFields(input, input.slug),
@@ -245,15 +290,7 @@ async function createServiceFromForm(formData: FormData, userId: string) {
 		gitWebhookId: null,
 	});
 
-	logger.info(
-		`Service created: service=${svc.id} slug=${input.slug} source=${input.buildSource} user=${userId}`,
-	);
-	NotificationDTO.notify({
-		message: `"${svc.name}" was created.`,
-		serviceId: svc.id,
-		type: "service_created",
-		userId,
-	});
+	announceCreated(svc, input, userId);
 
 	const linkedServices = await finishLinkedStack(
 		links,
@@ -272,7 +309,10 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const result = await createServiceFromForm(formData, locals.user.id);
+		const result = await createServiceFromForm(formData, {
+			id: locals.user.id,
+			isAdmin: locals.isAdmin,
+		});
 		if ("failure" in result) {
 			return result.failure;
 		}
@@ -291,7 +331,10 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const result = await createServiceFromForm(formData, locals.user.id);
+		const result = await createServiceFromForm(formData, {
+			id: locals.user.id,
+			isAdmin: locals.isAdmin,
+		});
 		if ("failure" in result) {
 			return result.failure;
 		}

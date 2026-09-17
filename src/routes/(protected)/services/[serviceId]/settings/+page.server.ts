@@ -6,6 +6,7 @@ import { TemplateDTO } from "$lib/dto/template-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateGeneralSchema } from "$lib/server/validation/service";
+import { runtimeOptionsFrom } from "$lib/service-runtime";
 import { CronService } from "$lib/services/cron.service";
 import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
@@ -13,8 +14,8 @@ import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service
 const logger = new Logger("Services");
 
 export const load = async ({ parent }) => {
-	const { user } = await parent();
-	const stacks = await StackDTO.list(user.id);
+	await parent();
+	const stacks = await StackDTO.list();
 
 	return { stacks: stacks.map((p) => p.toJSON()) };
 };
@@ -25,7 +26,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -48,7 +49,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -60,7 +61,7 @@ export const actions = {
 		// stack is actually the user's own, never trust the form value alone.
 		let stackId: string | null = null;
 		if (rawStackId) {
-			const stack = await StackDTO.get(rawStackId, locals.user.id);
+			const stack = await StackDTO.get(rawStackId);
 			if (!stack) {
 				return fail(400, { error: "That stack wasn't found." });
 			}
@@ -77,12 +78,13 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
 
 		await TemplateDTO.create({
+			...runtimeOptionsFrom(svc.toJSON()),
 			containerPort: svc.containerPort,
 			cpuLimit: svc.cpuLimit,
 			description: `Saved from ${svc.name}`,
@@ -105,7 +107,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -147,7 +149,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -163,7 +165,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -179,7 +181,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}

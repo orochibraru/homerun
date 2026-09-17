@@ -380,6 +380,21 @@ describe("Commands.revisionsList / serviceRollback", () => {
 			"/services/{serviceId}/revisions/{revisionId}/deploy",
 			{ params: { path: { revisionId: "rev-1", serviceId: "svc-1" } } },
 		);
+		await Commands.serviceRollback(
+			fakeClient({ POST }),
+			"svc-1",
+			"rev-1",
+			true,
+		);
+		expect(POST).toHaveBeenLastCalledWith(
+			"/services/{serviceId}/revisions/{revisionId}/deploy",
+			{
+				params: {
+					path: { revisionId: "rev-1", serviceId: "svc-1" },
+					query: { restoreConfig: "true" },
+				},
+			},
+		);
 		expect(revisionRow(revisionFixture()).digest).toBe(
 			`sha256:${"b".repeat(12)}`,
 		);

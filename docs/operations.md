@@ -8,7 +8,8 @@ host from filling up.
 
 `/` (Overview) is the landing page after sign-in:
 
-- **Service counts**, how many services you own and how many are running.
+- **Service counts**, how many services the instance has and how many are
+  running.
 - **Host resources**, live CPU, memory, disk and (if an NVIDIA card with
   `nvidia-smi` is present) GPU usage for the machine Homerun runs on, refreshed
   every five seconds. It loads behind a placeholder rather than blocking the
@@ -20,12 +21,12 @@ host from filling up.
   five services using the most (sort it by CPU, memory or traffic). A stack's
   own page has the same table for its members, and a service's Overview tab has
   its own chart.
-- **Recent deployments** across all your services, each linking to the service
-  it belongs to.
+- **Recent deployments** across every service, each linking to the service it
+  belongs to.
 - **Recent errors**, the latest warn/error-level log lines, each linking to the
   service it mentions (or to System Logs when it mentions none). An admin sees
-  the instance's most recent errors regardless of whose service they're about; a
-  developer only sees ones that mention one of their own services.
+  the instance's most recent errors, including ones that mention no service; a
+  developer only sees ones that mention a service.
 - **Quick actions**, shortcuts to deploy a service and to the services list.
 - **A setup-issues banner**, when applicable, see below.
 
@@ -33,10 +34,10 @@ host from filling up.
 
 The **Search…** button in the header, or `⌘K` / `Ctrl+K` anywhere, opens a
 command palette. It jumps to any dashboard page by name, and once you've typed
-two characters it also searches your services, stacks, templates, cron jobs,
-storage volumes, S3 destinations, remote hosts, build cache registries, git
-providers, notification channels and status pages, plus users and authentication
-providers for an admin.
+two characters it also searches the instance's services, stacks, templates, cron
+jobs, storage volumes, S3 destinations, remote hosts, build cache registries,
+git providers, notification channels and status pages, plus users and
+authentication providers for an admin.
 
 ## Setup diagnostics
 
@@ -115,8 +116,9 @@ confirmation first.
 Two things worth knowing:
 
 - **Pruning volumes deletes data.** An unreferenced Docker-managed volume is one
-  no container currently mounts, which includes a volume belonging to a service
-  you stopped and meant to start again.
+  no container currently mounts. A storage volume mounted into a Homerun service
+  is always kept, even while that service is stopped or has no container at all,
+  but a volume another tool created and no container uses is removed.
 - **Pruning networks can remove the shared `homerun` network** once the last
   container detaches from it. That's harmless, Homerun recreates it on the next
   deploy rather than assuming it exists.
@@ -171,11 +173,12 @@ service's Settings tab, the cron job's own page, the volume's page).
 
 ## Notifications
 
-The bell in the header is a per-account feed of lifecycle events, deploy
-succeeded or failed, a build stopped by status checks, an unhealthy or rolled
-back revision, service created, started, stopped, an auto-redeploy firing, an
-image scan finding a critical vulnerability, and runtime errors attributed to
-one of your services. Click an entry to jump to its service, mark everything
+The bell in the header is a per-account feed of lifecycle events on every
+service, whoever created it (each account gets its own copy to read and clear),
+deploy succeeded or failed, a build stopped by status checks, an unhealthy or
+rolled back revision, service created, started, stopped, an auto-redeploy
+firing, an image scan finding a critical vulnerability, and runtime errors
+attributed to a service. Click an entry to jump to its service, mark everything
 read from the dropdown, or hover a row and use the `x` to drop it.
 
 It's deliberately a short curated list, not a log: everything Homerun logs at
@@ -184,10 +187,11 @@ warn or error level is persisted separately and shown on the relevant service's
 automatically, so the feed doesn't grow without bound.
 
 **Notification channels** send the same kind of events outside the dashboard.
-Add a Discord webhook, a generic webhook, or an email address under
-**Notification Channels** in the sidebar, then pick which events each one gets
-under **Profile → Notifications**: build succeeded/failed, a build stopped by
-failing [status checks](services.md#required-status-checks), scheduled update
+Add a Discord webhook, a Slack incoming webhook, a Telegram bot, a generic
+webhook, or an email address under **Notification Channels** in the sidebar,
+then pick which events each one gets under **Profile → Notifications**: build
+succeeded/failed, a build stopped by failing
+[status checks](services.md#required-status-checks), scheduled update
 succeeded/failed, manual deploy succeeded/failed, a new revision found unhealthy
 or [rolled back](services.md#revisions-and-rollback), an image scan finding
 [critical vulnerabilities](services.md#image-scanning), and a service going down
@@ -195,19 +199,29 @@ or recovering (from its [uptime probe](services.md#uptime)). A new channel
 starts subscribed to build and update failures, status checks failures,
 unhealthy revisions and rollbacks; turn on the rest you want from that matrix. A
 **Send test** button on each channel fires a sample notification so you can
-check the destination actually works before relying on it; a delivery failure is
-shown right on the channel (and isn't retried automatically) rather than failing
-silently. Email channels need SMTP configured first, see
-[Configuration](configuration.md). Provider-shaped notifications beyond Discord
-(Telegram, Slack) aren't built yet, see
-[FAQ & limitations](faq-and-limitations.md#planned-not-yet-built).
+check the destination actually works before relying on it. A delivery failure is
+shown right on the channel rather than failing silently, and retried in the
+background through the job queue: first after 30 seconds, then after 20, 40 and
+80 more, four tries in all, visible as **Notification** jobs in the Scheduling
+page's job queue. A retry is dropped once the channel is removed, disabled or
+unsubscribed from that event, and a successful one clears the error. The test
+button isn't retried. Email channels need SMTP configured first, see
+[Configuration](configuration.md).
+
+- **Slack**: create an
+  [incoming webhook](https://api.slack.com/messaging/webhooks) for the channel
+  and paste its `https://hooks.slack.com/services/…` URL.
+- **Telegram**: create a bot with @BotFather, add it to the group or channel,
+  then enter the bot token and the chat id (a number like `-1001234567890`, or a
+  public channel's `@name`). The token is stored with the channel but never
+  shown again, the list only shows the chat.
 
 ## Status pages
 
 **Status Page** in the sidebar builds an uptime page out of your services'
 [uptime probes](services.md#uptime). Each page has a name, a slug and an
-optional description, and covers one of three sets: **every service you own**,
-**one stack**, or **services you pick**. Its page in the dashboard shows each
+optional description, and covers one of three sets: **every service**, **one
+stack**, or **services you pick**. Its page in the dashboard shows each
 service's recent heartbeats and uptime percentage.
 
 Tick **Publish this page** to make it readable without signing in at

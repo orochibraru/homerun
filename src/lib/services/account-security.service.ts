@@ -32,6 +32,12 @@ class AccountSecurityServiceClass {
 			.orderBy(desc(passkey.createdAt));
 	}
 
+	/** How many passkeys are registered on this instance, across every user. */
+	async countAllPasskeys(): Promise<number> {
+		const [row] = await db.select({ total: count() }).from(passkey);
+		return row?.total ?? 0;
+	}
+
 	/** The OAuth/credential accounts (better-auth's `account` table) linked to this user, one per sign-in provider. */
 	async linkedAccounts(
 		userId: string,

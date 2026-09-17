@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
+import { splitShellWords } from "$lib/shell-words";
 
 // Optional numeric fields that come from a plain <input>: an empty field
 // still submits as "" in FormData, and z.coerce.number() turns "" into 0
@@ -9,6 +11,15 @@ const optionalNumber = (schema: z.ZodNumber | z.ZodCoercedNumber) =>
 		(val) => (val === "" || val === undefined ? undefined : val),
 		schema.optional(),
 	);
+
+const bakeTargetField = z
+	.string()
+	.trim()
+	.refine(
+		(value) => value === "" || BAKE_TARGET_PATTERN.test(value),
+		"A bake target is letters, digits, dashes and underscores.",
+	)
+	.optional();
 
 const baseServiceSchema = z.object({
 	// Checkbox convention (also used below): present ("on") when checked,
@@ -53,7 +64,10 @@ const baseServiceSchema = z.object({
 		(val) => val === "on" || val === true,
 		z.boolean(),
 	),
+	gitBakeFile: z.string().trim().optional(),
+	gitBakeTarget: bakeTargetField,
 	gitBuildContext: z.string().optional(),
+	gitBuildMethod: z.enum(BUILD_METHODS).default("dockerfile"),
 	gitDockerfilePath: z.string().optional(),
 	gitProviderId: z.string().optional(),
 	gitRef: z.string().optional(),
@@ -164,7 +178,10 @@ export const updateSourceSchema = baseServiceSchema
 		buildCacheRegistryId: true,
 		buildServerRemoteHostId: true,
 		buildSource: true,
+		gitBakeFile: true,
+		gitBakeTarget: true,
 		gitBuildContext: true,
+		gitBuildMethod: true,
 		gitDockerfilePath: true,
 		gitProviderId: true,
 		gitRef: true,
@@ -192,3 +209,88 @@ export function parseEnvVars(formData: FormData): Record<string, string> {
 	});
 	return env;
 }
+
+/** Splits a textarea into its trimmed, non-blank lines. */
+function nonBlankLines(text: string): string[] {
+	return text
+		.split(/\r?\n/)
+		.map((line) => line.trim())
+		.filter(Boolean);
+}
+
+const CAPABILITY_RE = /^(CAP_)?[A-Z_]+$/i;
+const LABEL_KEY_RE = /^[A-Za-z0-9][\w.-]*$/;
+
+/**
+ * Backs the Runtime tab : command and entrypoint as shell-style command
+ * lines, labels as `KEY=VALUE` lines, capabilities separated by commas or
+ * spaces, devices one per line, and privileged as a checkbox. Parsed into
+ * the stored shapes (argv lists, a label map, string lists).
+ */
+export const updateRuntimeSchema = z
+	.object({
+		capAdd: z.string().default(""),
+		command: z.string().trim().max(4000).default(""),
+		devices: z.string().default(""),
+		entrypoint: z.string().trim().max(4000).default(""),
+		labels: z.string().default(""),
+		privileged: z.preprocess(
+			(val) => val === "on" || val === true,
+			z.boolean(),
+		),
+	})
+	.transform((input, ctx) => {
+		const capAdd = input.capAdd
+			.split(/[\s,]+/)
+			.map((cap) => cap.trim())
+			.filter(Boolean);
+		const badCap = capAdd.find((cap) => !CAPABILITY_RE.test(cap));
+		if (badCap) {
+			ctx.addIssue({
+				code: "custom",
+				message: `"${badCap}" isn't a capability name.`,
+				path: ["capAdd"],
+			});
+		}
+		const labels: Record<string, string> = {};
+		for (const line of nonBlankLines(input.labels)) {
+			const eq = line.indexOf("=");
+			const key = eq > 0 ? line.slice(0, eq).trim() : "";
+			if (!LABEL_KEY_RE.test(key)) {
+				ctx.addIssue({
+					code: "custom",
+					message: `"${line}" isn't a KEY=VALUE label.`,
+					path: ["labels"],
+				});
+				continue;
+			}
+			labels[key] = line.slice(eq + 1).trim();
+		}
+		const command = splitShellWords(input.command);
+		const entrypoint = splitShellWords(input.entrypoint);
+		return {
+			capAdd: capAdd.map((cap) => cap.toUpperCase()),
+			command: command.length > 0 ? command : null,
+			devices: nonBlankLines(input.devices),
+			entrypoint: entrypoint.length > 0 ? entrypoint : null,
+			labels,
+			privileged: input.privileged,
+		};
+	});
+export type UpdateRuntimeInput = z.infer<typeof updateRuntimeSchema>;
+
+/** Backs the Env Vars tab's env files form : absolute host paths, one per line. */
+export const updateEnvFilesSchema = z.object({
+	envFiles: z
+		.string()
+		.default("")
+		.transform(nonBlankLines)
+		.pipe(
+			z.array(
+				z
+					.string()
+					.max(1000)
+					.regex(/^\//, "Env file paths must be absolute host paths."),
+			),
+		),
+});

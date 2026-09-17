@@ -99,14 +99,29 @@ and `/v1/openapi.json`.
 - `GET /v1/stats`, host CPU/RAM/disk/GPU, same shape as the main app's
   `SystemStatsService`.
 - `POST /v1/build`, body is a `BuildInput` (see `schemas.ts`): clones a git repo
-  at a ref and builds its Dockerfile into a local image, optionally pushing it
-  to a registry afterward. Returns `{success, error?}`.
+  at a ref (a branch, tag or full commit SHA) and builds it into a local image
+  with `buildMethod`: `dockerfile` (the default, `docker buildx build` with
+  BuildKit), `bake` (`docker buildx bake`, one target of `bakeFile`, default
+  `docker-bake.hcl`, `bakeTarget`, default `default`), or `nixpacks`,
+  `railpack`, `heroku`, `paketo`. Every method runs in a pinned `docker:cli`
+  helper container with the agent's Docker socket mounted, see `builders.ts`.
+  With `push`, the BuildKit layer cache is read from and written to that
+  registry (`<registry>/<image>:buildcache`) and the image is pushed there
+  afterward. A `commit` pins the build to that commit even when the branch has
+  moved on, which is how the main app keeps a build on the commit whose required
+  status checks passed. Returns `{success, commit?, error?}`, where a failed
+  build's `error` carries its most telling output line. An agent older than this
+  ignores `commit` and builds the branch head.
+- `GET /v1/images/save?ref=<image:tag>`, streams a local image as a
+  `docker save` tarball (`application/x-tar`, 404 when the image isn't there).
+  The main app `docker load`s it when a build server has no cache registry.
+  **Not verified live** against a real agent yet.
 
 ## What's verified vs. not
 
 Verified live in development against a real local Docker socket: boot, every
-endpoint above, and the compiled binary running standalone with the same
-behavior as `bun run dev`.
+endpoint above except `/v1/images/save`, and the compiled binary running
+standalone with the same behavior as `bun run dev`.
 
 **Also now verified**, against a real disposable Multipass Ubuntu 24.04 VM
 provisioned by `packages/installer/bootstrap.sh --mode=agent` (see

@@ -10,8 +10,8 @@ export const load = async ({ params }) => {
 	}
 
 	const memberIds = await page.serviceIds();
-	const owned = await ServiceDTO.list(page.userId);
-	const members = owned.filter((svc) => memberIds.includes(svc.id));
+	const allServices = await ServiceDTO.list();
+	const members = allServices.filter((svc) => memberIds.includes(svc.id));
 
 	const services = await Promise.all(
 		members.map(async (svc) => {

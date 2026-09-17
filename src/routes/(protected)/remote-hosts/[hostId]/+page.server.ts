@@ -8,8 +8,8 @@ import { encryptSecret } from "$lib/services/secrets";
 const logger = new Logger("RemoteHosts");
 
 export const load = async ({ params, parent }) => {
-	const { user } = await parent();
-	const host = await RemoteHostDTO.get(params.hostId, user.id);
+	await parent();
+	const host = await RemoteHostDTO.get(params.hostId);
 	if (!host) {
 		error(404, "Remote host not found");
 	}
@@ -143,7 +143,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const host = await RemoteHostDTO.get(params.hostId, locals.user.id);
+		const host = await RemoteHostDTO.get(params.hostId);
 		if (!host) {
 			return fail(404, { error: "Remote host not found." });
 		}
@@ -156,7 +156,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const host = await RemoteHostDTO.get(params.hostId, locals.user.id);
+		const host = await RemoteHostDTO.get(params.hostId);
 		if (!host) {
 			return fail(404, { error: "Remote host not found." });
 		}

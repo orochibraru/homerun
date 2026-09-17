@@ -161,7 +161,7 @@ export class UptimeProbe extends BaseScheduler {
 		this.#ticks += 1;
 
 		const services = (await ServiceDTO.listRunningWithContainers()).filter(
-			(svc) => svc.uptimeEnabled,
+			(svc) => svc.uptimeEnabled && svc.containerId,
 		);
 		const previous = await UptimeCheckDTO.latestByProbe(
 			services.map((svc) => svc.id),

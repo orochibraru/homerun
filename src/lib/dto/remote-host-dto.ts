@@ -46,35 +46,30 @@ export type RemoteExecutionTarget =
 
 /** Wraps the `remote_host` table : see ServiceDTO for the pattern this follows. */
 export class RemoteHostDTO extends BaseDTO<RemoteHost> {
-	/**
-	 * Loads one remote host by id, scoped to its owner; null when missing or
-	 * owned by someone else.
-	 */
-	static async get(id: string, userId: string): Promise<RemoteHostDTO | null> {
+	/** Loads one remote host by id; null when missing. */
+	static async get(id: string): Promise<RemoteHostDTO | null> {
 		const [row] = await db
 			.select()
 			.from(remoteHost)
-			.where(and(eq(remoteHost.id, id), eq(remoteHost.userId, userId)))
+			.where(eq(remoteHost.id, id))
 			.limit(1);
 		return row ? new RemoteHostDTO(row) : null;
 	}
 
-	/** Every remote host the user registered, newest first. */
-	static async list(userId: string): Promise<RemoteHostDTO[]> {
+	/** Every remote host on the instance, newest first. */
+	static async list(): Promise<RemoteHostDTO[]> {
 		const rows = await db
 			.select()
 			.from(remoteHost)
-			.where(eq(remoteHost.userId, userId))
 			.orderBy(desc(remoteHost.createdAt));
 		return rows.map((row) => new RemoteHostDTO(row));
 	}
 
 	/** One page of `list`, searched/filtered server-side, plus the unpaged total. */
 	static async listPaged(
-		userId: string,
 		query: ListQuery,
 	): Promise<PagedResult<RemoteHostDTO>> {
-		const conditions: SQL[] = [eq(remoteHost.userId, userId)];
+		const conditions: SQL[] = [];
 		const search = searchCondition(query.q, [
 			remoteHost.name,
 			remoteHost.dockerHost,
@@ -112,31 +107,24 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 	}
 
 	/** Every registered host, all of which are build servers : `kind: "docker"` (a raw dockerode `buildImage()`) and `kind: "agent"` (its own `POST /v1/build`) alike. */
-	static listBuildServers(userId: string): Promise<RemoteHostDTO[]> {
-		return RemoteHostDTO.list(userId);
+	static listBuildServers(): Promise<RemoteHostDTO[]> {
+		return RemoteHostDTO.list();
 	}
 
 	/**
-	 * Up to `limit` of the user's hosts whose name, Docker host or agent URL
+	 * Up to `limit` hosts whose name, Docker host or agent URL
 	 * matches `q`, newest first, for global search.
 	 */
-	static async search(
-		userId: string,
-		q: string,
-		limit: number,
-	): Promise<RemoteHostDTO[]> {
+	static async search(q: string, limit: number): Promise<RemoteHostDTO[]> {
 		const rows = await db
 			.select()
 			.from(remoteHost)
 			.where(
-				and(
-					eq(remoteHost.userId, userId),
-					searchCondition(q, [
-						remoteHost.name,
-						remoteHost.dockerHost,
-						remoteHost.agentUrl,
-					]),
-				),
+				searchCondition(q, [
+					remoteHost.name,
+					remoteHost.dockerHost,
+					remoteHost.agentUrl,
+				]),
 			)
 			.orderBy(desc(remoteHost.createdAt))
 			.limit(limit);
@@ -231,17 +219,16 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 	 * Resolves a build server id into the connection its build should run
 	 * through; a missing id means this host.
 	 *
-	 * @throws When the host doesn't exist for this user, or is an agent without a
+	 * @throws When the host doesn't exist, or is an agent without a
 	 * usable URL and token.
 	 */
 	static async resolveBuildTarget(
 		hostId: string | null | undefined,
-		userId: string,
 	): Promise<RemoteExecutionTarget> {
 		if (!hostId) {
 			return { kind: "local" };
 		}
-		const host = await RemoteHostDTO.get(hostId, userId);
+		const host = await RemoteHostDTO.get(hostId);
 		if (!host) {
 			throw new Error(`Build server ${hostId} not found.`);
 		}

@@ -23,7 +23,7 @@ import {
 	MIRROR_SCAN_SOURCE,
 	pinnedToDigest,
 } from "./docker/image-scan-refs.ts";
-import { DockerService } from "./docker.service.ts";
+import { DockerService, type MirrorCopyResult } from "./docker.service.ts";
 import { ImageMirrorGcService } from "./image-mirror-gc.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
 import { imageScanMessage } from "./notification-messages.ts";
@@ -36,6 +36,7 @@ const LOGGED_FINDINGS = 5;
 export interface ScanPolicy {
 	block: ScanBlockPolicy;
 	enabled: boolean;
+	required: boolean;
 }
 
 export interface ScanContext {
@@ -71,6 +72,7 @@ class ImageScanServiceClass {
 		return {
 			block: settings.imageScanBlockPolicy,
 			enabled: settings.imageScanEnabled && svc.imageScanEnabled,
+			required: settings.imageScanRequired,
 		};
 	}
 
@@ -121,10 +123,8 @@ class ImageScanServiceClass {
 			message: `"${svc.name}" has ${summary.counts.critical} critical ${summary.counts.critical === 1 ? "vulnerability" : "vulnerabilities"} in ${ref}.`,
 			serviceId: svc.id,
 			type: "image_scan_critical",
-			userId: svc.userId,
 		});
 		NotificationChannelService.notify(
-			svc.userId,
 			imageScanMessage(
 				{
 					counts: summary.counts,
@@ -141,18 +141,24 @@ class ImageScanServiceClass {
 	/**
 	 * Tries each scan target in order until one scans successfully, recording
 	 * the result (`ImageScanDTO.create`) and logging/notifying on it. A
-	 * scanner failure on a target falls through to the next one rather than
-	 * failing the deploy; only an actual policy violation does.
+	 * scanner failure on a target falls through to the next one; when every
+	 * target fails the deploy goes ahead unless `options.required` is set.
 	 *
 	 * @returns The successful scan's summary, or `null` when every target
 	 *   failed to scan (recorded as `status: "failed"`).
 	 * @throws `ImageScanBlockedError` when the result violates
-	 *   `options.block`, after logging the reason to the deployment log.
+	 *   `options.block`, or when nothing could be scanned and
+	 *   `options.required` is set, after logging the reason to the deployment
+	 *   log.
 	 */
 	async scan(
 		ctx: ScanContext,
 		targets: ScanTarget[],
-		options: { block: ScanBlockPolicy | null; digest?: string | null },
+		options: {
+			block: ScanBlockPolicy | null;
+			digest?: string | null;
+			required?: boolean;
+		},
 	): Promise<TrivySummary | null> {
 		const failures: string[] = [];
 		for (const target of targets) {
@@ -207,6 +213,21 @@ class ImageScanServiceClass {
 			return summary;
 		}
 
+		return await this.#recordUnscanned(ctx, targets, failures, options);
+	}
+
+	/**
+	 * Records a scan where no target could be scanned (`status: "failed"`,
+	 * with every target's error) and decides whether the deploy may go ahead.
+	 *
+	 * @throws `ImageScanBlockedError` when `options.required` is set.
+	 */
+	async #recordUnscanned(
+		ctx: ScanContext,
+		targets: ScanTarget[],
+		failures: string[],
+		options: { digest?: string | null; required?: boolean },
+	): Promise<null> {
 		const error = failures.join("; ") || "no scan target";
 		await ImageScanDTO.create({
 			deploymentId: ctx.dep?.id ?? null,
@@ -218,9 +239,15 @@ class ImageScanServiceClass {
 			status: "failed",
 		});
 		logger.warn(`Image scan failed: service=${ctx.svc.id} ${error}`);
+		if (options.required) {
+			const message =
+				"The image couldn't be scanned, and this instance requires a successful scan before deploying.";
+			await this.#log(ctx, message);
+			throw new ImageScanBlockedError(message);
+		}
 		await this.#log(
 			ctx,
-			"The image couldn't be scanned. Deploying anyway : a scanner failure never blocks a deploy.",
+			"The image couldn't be scanned. Deploying anyway, since a successful scan isn't required on this instance.",
 		);
 		return null;
 	}
@@ -239,6 +266,7 @@ class ImageScanServiceClass {
 		await this.scan(ctx, [localScanTarget(ref)], {
 			block: policy.block,
 			digest,
+			required: policy.required,
 		});
 	}
 
@@ -259,6 +287,7 @@ class ImageScanServiceClass {
 		}
 		await this.scan(ctx, buildScanTargets(plan, built), {
 			block: policy.block,
+			required: policy.required,
 		});
 	}
 
@@ -336,7 +365,11 @@ class ImageScanServiceClass {
 					source: { insecure: true, kind: "remote" },
 				},
 			],
-			{ block: policy.block, digest: copied.digest },
+			{
+				block: policy.block,
+				digest: copied.digest,
+				required: policy.required,
+			},
 		);
 
 		if (input.swarm) {
@@ -357,30 +390,75 @@ class ImageScanServiceClass {
 			};
 		}
 
+		const digest = await this.#fetchFromMirror(ctx, copied, input, onProgress);
+		return { digest: copied.digest ?? digest, image, tag };
+	}
+
+	/**
+	 * Gets a scanned image out of the mirror onto this host : a loopback pull,
+	 * or on rootless Docker (whose daemon can't reach the loopback port) and
+	 * whenever that pull fails, a `docker load` streamed from the mirror, so
+	 * the host still runs the exact bytes that were scanned. Only when both
+	 * fail does it pull the image from its upstream registry.
+	 *
+	 * @returns The digest the pull reported, when there was one.
+	 */
+	async #fetchFromMirror(
+		ctx: ScanContext & { dep: DeploymentDTO },
+		copied: MirrorCopyResult,
+		input: MirrorDeployInput,
+		onProgress: (line: string) => void,
+	): Promise<string | null> {
+		const { image, tag } = input;
+		const ref = `${image}:${tag}`;
+		const rootless = await DockerService.isRootlessDocker();
+		if (!rootless) {
+			try {
+				await this.#log(ctx, "Pulling the scanned image from the mirror...");
+				const pulled = await DockerService.pullFromMirror(
+					copied.refs,
+					{ image, tag },
+					onProgress,
+				);
+				return pulled.digest;
+			} catch (err) {
+				logger.warn(
+					`Mirror pull failed: service=${ctx.svc.id} ref=${ref} : ${reason(err)}`,
+				);
+				await this.#log(
+					ctx,
+					`This host couldn't pull from the mirror (${reason(err)}). Loading the scanned image from the mirror instead.`,
+				);
+			}
+		} else {
+			await this.#log(
+				ctx,
+				"Rootless Docker can't pull from the mirror's loopback port, loading the scanned image from the mirror instead.",
+			);
+		}
 		try {
-			await this.#log(ctx, "Pulling the scanned image from the mirror...");
-			const pulled = await DockerService.pullFromMirror(
+			await DockerService.loadFromMirror(
 				copied.refs,
 				{ image, tag },
 				onProgress,
 			);
-			return { digest: copied.digest ?? pulled.digest, image, tag };
+			return null;
 		} catch (err) {
 			logger.warn(
-				`Mirror pull failed: service=${ctx.svc.id} ref=${ref} : ${reason(err)}`,
+				`Mirror load failed: service=${ctx.svc.id} ref=${ref} : ${reason(err)}`,
 			);
 			await this.#log(
 				ctx,
-				`This host couldn't pull from the mirror (${reason(err)}). Falling back to a direct pull of ${ref}.`,
+				`The scanned image couldn't be loaded from the mirror (${reason(err)}). Falling back to a direct pull of ${ref}.`,
 			);
-			const pulled = await DockerService.pullImage({
-				auth: input.auth,
-				image,
-				onProgress,
-				tag,
-			});
-			return { digest: pulled.digest, image, tag };
 		}
+		const pulled = await DockerService.pullImage({
+			auth: input.auth,
+			image,
+			onProgress,
+			tag,
+		});
+		return pulled.digest;
 	}
 
 	/** Whether an `image_scan` job for this service is currently active in the queue. */

@@ -2,7 +2,9 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
 import { Logger } from "$lib/logger";
+import { channelTargetLabel } from "$lib/notification-channel-target";
 import {
+	channelTargetFromForm,
 	notificationChannelSchema,
 	validateChannelTarget,
 } from "$lib/server/validation/notification-channel";
@@ -13,7 +15,12 @@ const logger = new Logger("NotificationChannels");
 export const load = async ({ parent }) => {
 	const { user } = await parent();
 	const channels = await NotificationChannelDTO.list(user.id);
-	return { channels: channels.map((channel) => channel.toJSON()) };
+	return {
+		channels: channels.map((channel) => ({
+			...channel.toJSON(),
+			target: channelTargetLabel(channel.kind, channel.target),
+		})),
+	};
 };
 
 export const actions = {
@@ -22,9 +29,10 @@ export const actions = {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
 		const form = await request.formData();
-		const parsed = notificationChannelSchema.safeParse(
-			Object.fromEntries(form),
-		);
+		const parsed = notificationChannelSchema.safeParse({
+			...Object.fromEntries(form),
+			target: channelTargetFromForm(form),
+		});
 		if (!parsed.success) {
 			return fail(400, { errors: parsed.error.flatten().fieldErrors });
 		}

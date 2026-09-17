@@ -1,5 +1,6 @@
 import type { Readable } from "node:stream";
 import Docker from "dockerode";
+import { runBuilder } from "./builders";
 import { config } from "./config";
 import type { BuildInput } from "./schemas";
 
@@ -37,6 +38,50 @@ export function authenticatedCloneUrl(
 	url.username = encodeURIComponent(credential.username);
 	url.password = encodeURIComponent(credential.token);
 	return url.toString();
+}
+
+/** Whether a ref is a full 40-character commit SHA, same rule as the main app's `$lib/git-ref.ts` `isCommitSha` (hand-mirrored). */
+export function isCommitSha(ref: string | null | undefined): boolean {
+	return !!ref && /^[0-9a-f]{40}$/i.test(ref.trim());
+}
+
+/**
+ * The `git` argv lists that check `ref` of `cloneUrl` out into `repoDir`,
+ * hand-mirrored from the main app's `$lib/git-ref.ts` `gitCheckoutSteps`: a
+ * shallow single-branch clone for a branch or tag, an init plus a shallow
+ * fetch and detached checkout for a commit SHA.
+ */
+export function gitCheckoutSteps(
+	cloneUrl: string,
+	ref: string,
+	repoDir: string,
+): string[][] {
+	if (!isCommitSha(ref)) {
+		return [
+			[
+				"clone",
+				"--depth",
+				"1",
+				"--branch",
+				ref,
+				"--single-branch",
+				cloneUrl,
+				repoDir,
+			],
+		];
+	}
+	const sha = ref.trim().toLowerCase();
+	return [
+		["init", "--quiet", repoDir],
+		["-C", repoDir, "remote", "add", "origin", cloneUrl],
+		["-C", repoDir, "fetch", "--depth", "1", "origin", sha],
+		["-C", repoDir, "checkout", "--detach", "FETCH_HEAD"],
+	];
+}
+
+/** The first full commit SHA in a git command's output, e.g. `rev-parse HEAD`, or null. */
+export function extractCommitSha(output: string): string | null {
+	return /\b[0-9a-f]{40}\b/.exec(output)?.[0] ?? null;
 }
 
 /** Strips any credential back out before a URL reaches a log line. */
@@ -150,39 +195,75 @@ class AgentDockerService {
 		}
 	}
 
-	/** Tars the cloned repo out of the workspace volume, which is what dockerode's buildImage wants as a context. */
-	async #openContext(
-		volumeName: string,
-		buildContext: string | null | undefined,
-	): Promise<{ close: () => Promise<void>; stream: Readable }> {
-		const d = this.getDocker();
-		const container = await d.createContainer({
-			Entrypoint: ["true"],
-			HostConfig: { Binds: [`${volumeName}:${WORKSPACE}:ro`] },
-			Image: GIT_IMAGE,
-			Labels: { [MANAGED_LABEL]: "true" },
-		});
-		await container.start();
-		await container.wait();
-		const path = buildContext
-			? `${REPO_DIR}/${buildContext.replace(/^\/+|\/+$/g, "")}/.`
-			: `${REPO_DIR}/.`;
-		const stream = (await container.getArchive({ path })) as Readable;
-		return {
-			close: async () => {
-				await container.remove({ force: true }).catch(() => {
-					// Best-effort cleanup.
-				});
-			},
-			stream,
-		};
+	/**
+	 * Checks `ref` out into the workspace volume (see `gitCheckoutSteps`),
+	 * then pins it to `commit` when one was given and the branch has moved
+	 * past it: the main app sends the commit whose required status checks
+	 * passed, so the build is that commit or it fails.
+	 *
+	 * @returns The commit that will be built, null when git didn't report one.
+	 * @throws When a clone, fetch or checkout step fails.
+	 */
+	async #checkout(
+		checkout: {
+			cloneUrl: string;
+			commit: string | null | undefined;
+			ref: string;
+			volumeName: string;
+		},
+		push: (line: string) => void,
+	): Promise<string | null> {
+		const { cloneUrl, commit, ref, volumeName } = checkout;
+		await this.#runSteps(gitCheckoutSteps(cloneUrl, ref, REPO_DIR), volumeName);
+		const rev = await this.#runInWorkspace({
+			cmd: ["-C", REPO_DIR, "rev-parse", "HEAD"],
+			volumeName,
+		}).catch(() => null);
+		const head = rev?.statusCode === 0 ? extractCommitSha(rev.output) : null;
+		const pinned = commit?.toLowerCase() ?? null;
+		if (pinned && head !== pinned) {
+			push(
+				`The branch moved since its status checks were read, checking out the checked commit ${pinned.slice(0, 7)}...`,
+			);
+			await this.#runSteps(
+				[
+					["-C", REPO_DIR, "fetch", "--depth", "1", "origin", pinned],
+					["-C", REPO_DIR, "checkout", "--detach", pinned],
+				],
+				volumeName,
+			);
+		}
+		const built = pinned ?? head;
+		if (built) {
+			push(`Building commit ${built.slice(0, 7)}`);
+		}
+		return built;
 	}
 
 	/**
-	 * Clones a git repo at a ref and builds its Dockerfile into a local
-	 * image tagged `input.tag`, optionally pushing it to a registry
-	 * afterward : see `buildInputSchema`'s docstring for the full picture
-	 * (why no cache-from pull, when `push` matters). Mirrors the main app's
+	 * Runs git steps in order in the workspace volume, stopping at the first
+	 * that fails.
+	 *
+	 * @throws With the failing step's redacted output.
+	 */
+	async #runSteps(steps: string[][], volumeName: string): Promise<void> {
+		for (const cmd of steps) {
+			// biome-ignore lint/performance/noAwaitInLoops: each git step works on the previous one's checkout
+			const step = await this.#runInWorkspace({ cmd, volumeName });
+			if (step.statusCode !== 0) {
+				throw new Error(
+					redactCloneUrl(step.output || `git exited ${step.statusCode}`),
+				);
+			}
+		}
+	}
+
+	/**
+	 * Clones a git repo at a ref and builds it with BuildKit (or the
+	 * configured builder) into a local image tagged `input.tag`, using and
+	 * refreshing the registry layer cache and pushing the image to that
+	 * registry afterward when `input.push` is set : see `buildInputSchema`'s
+	 * docstring for when that matters. Mirrors the main app's
 	 * `docker/git-build.ts`'s `buildFromGit`, this is a from-scratch,
 	 * self-contained implementation (the agent has no access to the main
 	 * app's source tree, same "keep the two in sync by hand" precedent as
@@ -193,7 +274,7 @@ class AgentDockerService {
 	async buildFromGit(
 		input: BuildInput,
 		onProgress?: (line: string) => void,
-	): Promise<{ error?: string; success: boolean }> {
+	): Promise<{ commit?: string | null; error?: string; success: boolean }> {
 		const ref = input.gitRef || "main";
 		const d = this.getDocker();
 		// Always logs to this process's own console, regardless of whether a
@@ -209,7 +290,7 @@ class AgentDockerService {
 		};
 
 		const volumeName = `homerun-agent-build-${crypto.randomUUID().slice(0, 8)}`;
-		let context: { close: () => Promise<void>; stream: Readable } | null = null;
+		let commit: string | null = null;
 
 		try {
 			await this.#ensureGitImage(push);
@@ -220,54 +301,31 @@ class AgentDockerService {
 
 			const cloneUrl = authenticatedCloneUrl(input.gitUrl, input.credential);
 			push(`Cloning ${redactCloneUrl(cloneUrl)} (${ref})...`);
-			const clone = await this.#runInWorkspace({
-				cmd: [
-					"clone",
-					"--depth",
-					"1",
-					"--branch",
-					ref,
-					"--single-branch",
-					cloneUrl,
-					REPO_DIR,
-				],
+			commit = await this.#checkout(
+				{ cloneUrl, commit: input.commit, ref, volumeName },
+				push,
+			);
+
+			await runBuilder({
+				bakeFile: input.bakeFile,
+				bakeTarget: input.bakeTarget,
+				buildContext: input.buildContext,
+				cacheRegistry: input.push
+					? {
+							password: input.push.password,
+							registryUrl: input.push.registryUrl,
+							username: input.push.username,
+						}
+					: null,
+				dockerfilePath: input.dockerfilePath,
+				docker: d,
+				method: input.buildMethod ?? "dockerfile",
+				push,
+				repoDir: REPO_DIR,
+				socketPath: config.dockerSocketPath,
+				tag: input.tag,
 				volumeName,
-			});
-			if (clone.statusCode !== 0) {
-				throw new Error(
-					redactCloneUrl(
-						clone.output || `git clone exited ${clone.statusCode}`,
-					),
-				);
-			}
-
-			const dockerfile = input.dockerfilePath || "Dockerfile";
-			context = await this.#openContext(volumeName, input.buildContext);
-
-			push(`Building ${dockerfile}...`);
-			const stream = await d.buildImage(context.stream, {
-				dockerfile,
-				rm: true,
-				t: input.tag,
-			});
-
-			await new Promise<void>((resolvePromise, reject) => {
-				let lastStatus = "";
-				d.modem.followProgress(
-					stream,
-					(err: Error | null) => (err ? reject(err) : resolvePromise()),
-					(event: { stream?: string; error?: string }) => {
-						if (event.error) {
-							reject(new Error(event.error));
-							return;
-						}
-						const text = event.stream?.trim();
-						if (text && text !== lastStatus) {
-							lastStatus = text;
-							push(text);
-						}
-					},
-				);
+				workspace: WORKSPACE,
 			});
 
 			if (input.push) {
@@ -275,12 +333,11 @@ class AgentDockerService {
 				await this.#pushImage(input.tag, input.push);
 			}
 
-			return { success: true };
+			return { commit, success: true };
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			return { error: redactCloneUrl(message), success: false };
+			return { commit, error: redactCloneUrl(message), success: false };
 		} finally {
-			await context?.close();
 			await d
 				.getVolume(volumeName)
 				.remove({ force: true })
@@ -288,6 +345,24 @@ class AgentDockerService {
 					// Best-effort cleanup, same as the main app's own buildFromGit.
 				});
 		}
+	}
+
+	/**
+	 * Opens a `docker save` tarball stream of a local image, for the main app
+	 * to load onto its own daemon when a build has no cache registry to
+	 * publish through.
+	 *
+	 * @returns null when the image doesn't exist on this daemon.
+	 */
+	async saveImage(ref: string): Promise<Readable | null> {
+		const image = this.getDocker().getImage(ref);
+		try {
+			await image.inspect();
+		} catch {
+			return null;
+		}
+		logLine("save", ref);
+		return (await image.get()) as unknown as Readable;
 	}
 
 	/** Same repo/tag splitting and tag-then-push shape as the main app's `docker/containers.ts`'s `pushImage`, kept in sync by hand (see `buildFromGit`'s docstring). */

@@ -15,7 +15,8 @@ export interface DnsSyncOptions {
 
 const providers = [
 	{
-		delete: (hostname: string) => CloudflareService.deleteDnsRecord(hostname),
+		delete: (hostname: string) =>
+			CloudflareService.deleteDnsRecord(hostname, config.baseDomain),
 		name: "cloudflare" as const,
 		sync: (hostname: string, _opts: DnsSyncOptions) =>
 			CloudflareService.syncDnsRecord(hostname, config.baseDomain),

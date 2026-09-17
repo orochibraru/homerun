@@ -48,9 +48,9 @@ async function checkAgentStatuses(
 }
 
 export const load = async ({ parent, url }) => {
-	const { user } = await parent();
+	await parent();
 	const query = parseListQuery(url, { filterKeys: ["kind"] });
-	const paged = await RemoteHostDTO.listPaged(user.id, query);
+	const paged = await RemoteHostDTO.listPaged(query);
 	const agentStatuses = await checkAgentStatuses(paged.items);
 	return {
 		agentStatuses,
@@ -73,7 +73,7 @@ export const actions = {
 			return fail(400, { error: "Missing host id." });
 		}
 
-		const host = await RemoteHostDTO.get(hostId, locals.user.id);
+		const host = await RemoteHostDTO.get(hostId);
 		if (!host) {
 			return fail(404, { error: "Remote host not found." });
 		}

@@ -7,7 +7,13 @@
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import {
+		API_KEY_SCOPE_OPTIONS,
+		type ApiKeyScope,
+		READ_ONLY_ROLE,
+	} from "$lib/permissions";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -16,6 +22,13 @@
 	onMount(() => title.set("Authorized Clients"));
 
 	let newKeyName = $state("");
+	const roleIsReadOnly = $derived(data.user?.role === READ_ONLY_ROLE);
+	let newKeyScope = $state<ApiKeyScope>("full");
+	const newKeyScopeOption = $derived(
+		API_KEY_SCOPE_OPTIONS.find(
+			(option) => option.value === (roleIsReadOnly ? "read" : newKeyScope),
+		) ?? API_KEY_SCOPE_OPTIONS[0],
+	);
 	let creating = $state(false);
 	let revokeDialogOpen = $state(false);
 	let pendingRevokeName = $state("");
@@ -62,7 +75,9 @@
         <p class="text-xs text-text-muted">
           API keys for the Homerun CLI or your own scripts. Same
           <code>x-api-key</code>
-          auth the REST API accepts.
+          auth the REST API accepts. A read-only key can call every
+          <code>GET</code> endpoint and is refused with a 403 on anything that
+          writes.
         </p>
       </div>
     </div>
@@ -70,7 +85,7 @@
     <div class="border-b border-border p-5">
       <form
         action="?/create"
-        class="flex items-end gap-2"
+        class="flex flex-wrap items-end gap-2"
         method="POST"
         use:enhance={enhanceToast({
           error: "Couldn't create the key.",
@@ -85,7 +100,7 @@
           success: "Key created.",
         })}
       >
-        <div class="flex-1">
+        <div class="min-w-48 flex-1">
           <label class="mb-1.5 block text-sm font-medium text-text" for="name">
             New key name
           </label>
@@ -96,6 +111,29 @@
             type="text"
             bind:value={newKeyName}
           />
+        </div>
+        <div>
+          <div class="mb-1.5 block text-sm font-medium text-text">Access</div>
+          <Select.Root
+            disabled={roleIsReadOnly}
+            name="scope"
+            type="single"
+            bind:value={newKeyScope}
+          >
+            <Select.Trigger aria-label="Access" class="w-40">
+              {newKeyScopeOption.label}
+            </Select.Trigger>
+            <Select.Content>
+              {#each API_KEY_SCOPE_OPTIONS as option (option.value)}
+                <Select.Item label={option.label} value={option.value}>
+                  <div>
+                    <p>{option.label}</p>
+                    <p class="text-xs text-text-muted">{option.description}</p>
+                  </div>
+                </Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
         </div>
         <Button disabled={creating} type="submit">
           {#if creating}
@@ -122,6 +160,11 @@
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium text-text">
                   {key.name ?? "Unnamed key"}
+                  {#if key.scope === "read"}
+                    <span class="ml-1.5 rounded-full border border-border px-2 py-0.5 text-[0.65rem] font-semibold text-text-muted">
+                      Read-only
+                    </span>
+                  {/if}
                   {#if !key.enabled}
                     <span class="ml-1.5 rounded-full bg-red-100 px-2 py-0.5 text-[0.65rem] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
                       Disabled

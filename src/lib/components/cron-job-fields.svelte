@@ -137,7 +137,7 @@
         Host command
         <span class="text-text-subtle block text-xs font-normal">
           {canUseExec
-            ? "A shell command on the host running Homerun"
+            ? "A shell command on the Docker host itself"
             : "Admins only"}
         </span>
       </button>
@@ -208,7 +208,7 @@
     />
     <p class="text-text-subtle mt-1 text-xs">
       {kind === "exec"
-        ? "Runs through /bin/sh -c, with this app's own privileges."
+        ? "Runs through sh -c as root on the Docker host, outside every container. Only this job's env vars are set."
         : "Blank runs the image's own entrypoint. Quotes group arguments; a JSON array is taken as-is."}
     </p>
   </div>

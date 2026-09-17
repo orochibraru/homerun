@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from "svelte";
 	import CopyBox from "$lib/components/copy-box.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Dialog from "$lib/components/ui/dialog/index.js";
@@ -13,6 +14,7 @@
 		confirmPhrase,
 		destructive = true,
 		onConfirm,
+		children,
 	}: {
 		open?: boolean;
 		title: string;
@@ -24,6 +26,7 @@
 		// destructive (e.g. "restart Traefik").
 		destructive?: boolean;
 		onConfirm: () => void;
+		children?: Snippet;
 	} = $props();
 
 	let typed = $state("");
@@ -64,6 +67,9 @@
         <Dialog.Description>{description}</Dialog.Description>
       {/if}
     </Dialog.Header>
+    {#if children}
+      <div class="space-y-3">{@render children()}</div>
+    {/if}
     {#if confirmPhrase !== undefined}
       <div class="space-y-2">
         <p class="text-text-muted text-sm">Type the name below to confirm.</p>

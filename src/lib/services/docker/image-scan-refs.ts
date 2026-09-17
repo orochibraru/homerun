@@ -164,6 +164,37 @@ export function skopeoCopyCommand(input: {
 	};
 }
 
+/**
+ * The `cmd`/`entrypoint` to run in a one-off skopeo container that reads
+ * `source` out of the mirror and writes it to stdout as a `docker load`
+ * tarball tagged `name`, for a daemon that can't pull from the mirror's
+ * loopback port (rootless Docker).
+ */
+export function skopeoArchiveCommand(input: { name: string; source: string }): {
+	cmd: string[];
+	entrypoint: string[];
+} {
+	return {
+		cmd: [
+			"copy",
+			"--quiet",
+			"--src-tls-verify=false",
+			`docker://${input.source}`,
+			`docker-archive:/dev/stdout:${input.name}`,
+		],
+		entrypoint: ["skopeo"],
+	};
+}
+
+/** Whether a daemon's `docker info` security options mark it as rootless Docker. */
+export function isRootlessDaemon(
+	securityOptions: string[] | null | undefined,
+): boolean {
+	return (securityOptions ?? []).some((option) =>
+		option.split(",").includes("name=rootless"),
+	);
+}
+
 function imageSourceFlags(source: TrivySource): string[] {
 	switch (source.kind) {
 		case "remote":

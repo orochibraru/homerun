@@ -1,6 +1,8 @@
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StatSampleDTO } from "$lib/dto/stat-sample-dto";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
+import type { ContainerSample } from "../docker/containers.ts";
+import { sumReplicaSamples } from "../docker/swarm-replicas.ts";
 import { DockerService } from "../docker.service.ts";
 import { SystemStatsService } from "../system-stats.service.ts";
 
@@ -9,7 +11,8 @@ const PRUNE_EVERY_TICKS = 60;
 
 /**
  * Writes one `stat_sample` row per minute for the host and for every
- * service with a running container, which is what the dashboard's and a
+ * service with a running container (or, in swarm mode, the sum over its
+ * replicas running on this host), which is what the dashboard's and a
  * service's own resource graphs read back. Nothing else records history :
  * the Host Resources panel polls live values and keeps none.
  */
@@ -20,9 +23,23 @@ export class StatsSampler extends BaseScheduler {
 
 	#ticks = 0;
 
+	/** One service's current sample : its container's, or the sum over its local swarm replicas. Null when nothing of it runs here. */
+	async #sampleService(svc: ServiceDTO): Promise<ContainerSample | null> {
+		if (svc.containerId) {
+			return await DockerService.sampleContainerStats(svc.containerId);
+		}
+		if (svc.swarmServiceId) {
+			const replicas = await DockerService.listSwarmReplicas(
+				svc.swarmServiceId,
+			);
+			return sumReplicaSamples(replicas.map((replica) => replica.sample));
+		}
+		return null;
+	}
+
 	/**
-	 * Samples host stats and every running service's container stats in
-	 * parallel and writes them as one batch of `stat_sample` rows
+	 * Samples host stats, every running service's container stats and every
+	 * swarm service's local replicas in parallel and writes them as one batch of `stat_sample` rows
 	 * (`StatSampleDTO.recordMany`). Every `PRUNE_EVERY_TICKS`th tick also
 	 * prunes old samples (`StatSampleDTO.prune`).
 	 */
@@ -36,9 +53,7 @@ export class StatsSampler extends BaseScheduler {
 
 		const samples = await Promise.all(
 			services.map(async (svc) => {
-				const sample = svc.containerId
-					? await DockerService.sampleContainerStats(svc.containerId)
-					: null;
+				const sample = await this.#sampleService(svc);
 				return sample
 					? {
 							cpuPercent: sample.cpuPercent,

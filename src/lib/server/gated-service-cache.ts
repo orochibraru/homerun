@@ -29,7 +29,7 @@ export async function gatedService(
 	if (hit && Date.now() - hit.fetchedAt < CACHE_TTL_MS) {
 		return hit.service;
 	}
-	const service = await ServiceDTO.getForGate(serviceId);
+	const service = await ServiceDTO.get(serviceId);
 	cache.set(serviceId, { fetchedAt: Date.now(), service });
 	return service;
 }

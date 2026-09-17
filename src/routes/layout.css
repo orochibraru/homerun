@@ -325,6 +325,18 @@
 	color: var(--color-text);
 }
 
+@utility log-output {
+	background-color: var(--color-zinc-950);
+	color: var(--color-zinc-200);
+	padding: 1rem;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	font-weight: 500;
+	font-variant-ligatures: none;
+	line-height: 1.7;
+	-webkit-font-smoothing: auto;
+}
+
 /* ─── Base ───────────────────────────────────────────────────── */
 @layer base {
 	html {

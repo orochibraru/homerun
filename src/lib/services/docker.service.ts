@@ -36,19 +36,24 @@ export type {
 	OneOffRunParams,
 	OneOffRunResult,
 } from "./docker/one-off.ts";
+export type { SwarmReplica } from "./docker/swarm-replicas.ts";
 
 import { BaseDockerService } from "./docker/base.ts";
 import { DockerCleanupMixin } from "./docker/cleanup.ts";
+import { DockerContainerRolloutMixin } from "./docker/container-rollout.ts";
 import { DockerContainerMixin } from "./docker/containers.ts";
 import { DockerCoreServicesMixin } from "./docker/core-services.ts";
 import { DockerCustomSslMixin } from "./docker/custom-ssl.ts";
 import { DockerGitBuildMixin } from "./docker/git-build.ts";
 import { DockerImageScanMixin } from "./docker/image-scan.ts";
+import { DockerImageTransferMixin } from "./docker/image-transfer.ts";
 import { DockerNetworkMixin } from "./docker/networks.ts";
 import { DockerOneOffMixin } from "./docker/one-off.ts";
 import { DockerReconcileMixin } from "./docker/reconcile.ts";
 import { DockerRevisionMixin } from "./docker/revisions.ts";
 import { DockerSwarmMixin } from "./docker/swarm.ts";
+import { DockerSwarmReplicasMixin } from "./docker/swarm-replicas.ts";
+import { DockerSwarmRolloutMixin } from "./docker/swarm-rollout.ts";
 import { DockerTerminalMixin } from "./docker/terminal.ts";
 
 // Merge order matters only where one concern calls another's methods via
@@ -58,17 +63,27 @@ import { DockerTerminalMixin } from "./docker/terminal.ts";
 // this.pullImage), containers+swarm before reconcile (syncServiceStatus
 // calls both this.inspectStatus and this.inspectSwarmServiceStatus). The
 // rest have no cross-concern dependency, so their position is arbitrary.
-class DockerServiceClass extends DockerRevisionMixin(
-	DockerImageScanMixin(
-		DockerCleanupMixin(
-			DockerOneOffMixin(
-				DockerTerminalMixin(
-					DockerCoreServicesMixin(
-						DockerCustomSslMixin(
-							DockerGitBuildMixin(
-								DockerReconcileMixin(
-									DockerSwarmMixin(
-										DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
+class DockerServiceClass extends DockerImageTransferMixin(
+	DockerRevisionMixin(
+		DockerImageScanMixin(
+			DockerCleanupMixin(
+				DockerOneOffMixin(
+					DockerTerminalMixin(
+						DockerCoreServicesMixin(
+							DockerCustomSslMixin(
+								DockerGitBuildMixin(
+									DockerReconcileMixin(
+										DockerSwarmReplicasMixin(
+											DockerSwarmMixin(
+												DockerSwarmRolloutMixin(
+													DockerContainerMixin(
+														DockerContainerRolloutMixin(
+															DockerNetworkMixin(BaseDockerService),
+														),
+													),
+												),
+											),
+										),
 									),
 								),
 							),

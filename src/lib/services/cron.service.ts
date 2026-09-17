@@ -22,6 +22,7 @@ import {
 	parseCronSchedule,
 } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
+import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
 import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
 import { enqueueCronJobRun } from "./cron-job-queue.ts";
 import { DeploymentService } from "./deploy.service.ts";
@@ -74,6 +75,8 @@ class CronServiceClass {
 
 	private readonly mirrorGcScheduler = new MirrorGcScheduler();
 
+	private readonly gitPollScheduler = new GitPollScheduler();
+
 	/** Parses a 5-field cron expression for schedule-input validation, see `cron-expression.ts`'s `parseCronSchedule`. */
 	parseCronSchedule(schedule: string): ParsedCron | null {
 		return parseCronSchedule(schedule);
@@ -112,6 +115,11 @@ class CronServiceClass {
 	/** Starts the daily mirror-registry garbage-collection scheduler. */
 	startMirrorGcScheduler(): void {
 		this.mirrorGcScheduler.start();
+	}
+
+	/** Starts the branch poller that deploys on push when a webhook can't be delivered. */
+	startGitPollScheduler(): void {
+		this.gitPollScheduler.start();
 	}
 }
 

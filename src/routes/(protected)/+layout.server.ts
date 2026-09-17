@@ -46,6 +46,7 @@ export const load = async ({ locals, url }) => {
 	return {
 		onboardingDone,
 		preferences: preferences.toJSON(),
+		readOnly: locals.readOnly,
 		user: locals.user,
 	};
 };

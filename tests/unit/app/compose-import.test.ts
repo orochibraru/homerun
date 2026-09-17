@@ -101,10 +101,15 @@ describe("parseComposeFile", () => {
 	});
 
 	test("warns about what it can't reproduce", () => {
-		expect(api?.warnings.some((w) => w.startsWith("command:"))).toBe(true);
 		expect(web?.warnings.some((w) => w.includes("Host port mappings"))).toBe(
 			true,
 		);
+	});
+
+	test("maps the command instead of warning about it", () => {
+		expect(api?.command).toEqual(["./serve"]);
+		expect(api?.warnings.some((w) => w.startsWith("command:"))).toBe(false);
+		expect(web?.command).toBeNull();
 	});
 
 	test("rejects input that isn't a compose file", () => {
@@ -214,5 +219,73 @@ services:
     image: redis:alpine
 `);
 		expect(plan.services[0].build).toBeNull();
+	});
+});
+
+describe("runtime options", () => {
+	const RUNTIME = `
+services:
+  ha:
+    image: homeassistant/home-assistant
+    entrypoint: /init
+    command: python3 -m homeassistant --config "/config dir"
+    privileged: true
+    cap_add: [NET_ADMIN, SYS_TIME]
+    devices:
+      - /dev/ttyUSB0:/dev/zigbee
+      - source: /dev/dri
+        target: /dev/dri
+        permissions: rw
+    labels:
+      com.example.team: home
+      traefik.enable: "true"
+    env_file:
+      - ./ha.env
+      - path: ./optional.env
+        required: false
+      - /opt/ha/secrets.env
+    environment:
+      TZ: Europe/Paris
+`;
+
+	test("maps entrypoint, command, capabilities, devices and privileged", () => {
+		const ha = parseComposeFile(RUNTIME).services[0];
+		expect(ha?.entrypoint).toEqual(["/init"]);
+		expect(ha?.command).toEqual([
+			"python3",
+			"-m",
+			"homeassistant",
+			"--config",
+			"/config dir",
+		]);
+		expect(ha?.privileged).toBe(true);
+		expect(ha?.capAdd).toEqual(["NET_ADMIN", "SYS_TIME"]);
+		expect(ha?.devices).toEqual([
+			"/dev/ttyUSB0:/dev/zigbee",
+			"/dev/dri:/dev/dri:rw",
+		]);
+	});
+
+	test("keeps custom labels and drops Traefik's with a warning", () => {
+		const ha = parseComposeFile(RUNTIME).services[0];
+		expect(ha?.labels).toEqual({ "com.example.team": "home" });
+		expect(ha?.warnings.some((w) => w.includes("Traefik"))).toBe(true);
+	});
+
+	test("an env_file that wasn't supplied: absolute is read at deploy, relative is missing", () => {
+		const plan = parseComposeFile(RUNTIME);
+		const ha = plan.services[0];
+		expect(ha?.envFiles).toEqual(["/opt/ha/secrets.env"]);
+		expect(ha?.missingEnvFiles).toEqual(["./ha.env"]);
+		expect(plan.missingEnvFiles).toEqual(["./ha.env"]);
+		expect(ha?.envVars).toEqual({ TZ: "Europe/Paris" });
+	});
+
+	test("a supplied env_file becomes variables, environment winning", () => {
+		const ha = parseComposeFile(RUNTIME, {
+			envFiles: { "ha.env": "TZ=UTC\nexport TOKEN='abc'\n# note" },
+		}).services[0];
+		expect(ha?.envVars).toEqual({ TOKEN: "abc", TZ: "Europe/Paris" });
+		expect(ha?.missingEnvFiles).toEqual([]);
 	});
 });

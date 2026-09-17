@@ -3,7 +3,7 @@ import { resolve } from "$app/paths";
 import { config, isSmtpEnabled } from "$lib/config";
 import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { Logger } from "$lib/logger";
-import type { UserRole } from "$lib/server/db/schema.js";
+import { asAuthRole, isUserRole, roleLabel } from "$lib/permissions";
 import { parseListQuery } from "$lib/server/list-query";
 import { auth } from "$lib/services/auth";
 import { EmailService } from "$lib/services/email.service";
@@ -11,7 +11,7 @@ import { UserService } from "$lib/services/user.service";
 
 const logger = new Logger("Users");
 
-const roleSet = new Set(["admin", "developer"]);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const load = async ({ locals, url }) => {
 	if (!locals.isAdmin) {
@@ -73,7 +73,7 @@ export const actions = {
 			?.trim()
 			.toLowerCase();
 		const password = (formData.get("password") as string | null) ?? "";
-		const role = formData.get("role") as UserRole;
+		const role = formData.get("role");
 
 		if (!(name && email)) {
 			return fail(400, {
@@ -81,7 +81,7 @@ export const actions = {
 				error: "Name and email are required.",
 			});
 		}
-		if (!roleSet.has(role)) {
+		if (!isUserRole(role)) {
 			return fail(400, { action: "createDirect", error: "Invalid role." });
 		}
 		if (password.length < 12) {
@@ -98,7 +98,13 @@ export const actions = {
 				// vouches for the email address, and there's no working
 				// verify-then-unlock flow for it to fall into otherwise (see
 				// sign-in/+page.svelte's comment on the dead-end that used to be).
-				body: { data: { emailVerified: true }, email, name, password, role },
+				body: {
+					data: { emailVerified: true },
+					email,
+					name,
+					password,
+					role: asAuthRole(role),
+				},
 				headers: request.headers,
 			})
 			.catch((error: unknown) => ({ error }));
@@ -138,7 +144,7 @@ export const actions = {
 		const email = (formData.get("email") as string | null)
 			?.trim()
 			.toLowerCase();
-		const role = formData.get("role") as UserRole;
+		const role = formData.get("role");
 
 		if (!(name && email)) {
 			return fail(400, {
@@ -146,7 +152,7 @@ export const actions = {
 				error: "Name and email are required.",
 			});
 		}
-		if (!roleSet.has(role)) {
+		if (!isUserRole(role)) {
 			return fail(400, { action: "invite", error: "Invalid role." });
 		}
 
@@ -167,7 +173,7 @@ export const actions = {
 
 		try {
 			const mail = new EmailService({
-				content: `${name}, you've been invited to Homerun as a ${role}.\n\nSet up your account: ${link}\n\nThis link expires in 7 days.`,
+				content: `${name}, you've been invited to Homerun with the ${roleLabel(role)} role.\n\nSet up your account: ${link}\n\nThis link expires in 7 days.`,
 				subject: "You've been invited to Homerun",
 				to: email,
 			});
@@ -211,14 +217,56 @@ export const actions = {
 			});
 		}
 
-		// See user.service.ts's docstring : admin.removeUser alone would leak
-		// this user's containers/networks, so the same cleanup self-service
-		// account deletion gets has to run first.
-		await UserService.cleanupUserResources(userId);
+		await UserService.cleanupUserResources(userId, locals.user.id);
 		await auth.api.removeUser({ body: { userId }, headers: request.headers });
 
 		logger.info(`User removed: user=${userId} by=${locals.user.id}`);
 		return { action: "removeUser", success: true };
+	},
+
+	setEmail: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+
+		const formData = await request.formData();
+		const userId = formData.get("userId") as string;
+		const email = (formData.get("email") as string | null)
+			?.trim()
+			.toLowerCase();
+
+		if (!(userId && email && EMAIL_RE.test(email))) {
+			return fail(400, {
+				action: "setEmail",
+				error: "Enter a valid email address.",
+			});
+		}
+		const users = await UserService.listUsers();
+		const target = users.find((candidate) => candidate.id === userId);
+		if (!target) {
+			return fail(404, { action: "setEmail", error: "User not found." });
+		}
+		if (target.email === email) {
+			return { action: "setEmail", success: true };
+		}
+		if (users.some((candidate) => candidate.email === email)) {
+			return fail(400, {
+				action: "setEmail",
+				error: "That email already has an account.",
+			});
+		}
+
+		await auth.api.adminUpdateUser({
+			body: { data: { email, emailVerified: true }, userId },
+			headers: request.headers,
+		});
+		logger.info(
+			`Email changed: user=${userId} from=${target.email} to=${email} by=${locals.user.id}`,
+		);
+		return { action: "setEmail", success: true };
 	},
 
 	setRole: async ({ request, locals }) => {
@@ -231,9 +279,9 @@ export const actions = {
 
 		const formData = await request.formData();
 		const userId = formData.get("userId") as string;
-		const role = formData.get("role") as UserRole;
+		const role = formData.get("role");
 
-		if (!roleSet.has(role)) {
+		if (!isUserRole(role)) {
 			return fail(400, { action: "setRole", error: "Invalid role." });
 		}
 		if (role !== "admin" && (await wouldRemoveLastAdmin(userId))) {
@@ -244,7 +292,7 @@ export const actions = {
 		}
 
 		await auth.api.setRole({
-			body: { role, userId },
+			body: { role: asAuthRole(role), userId },
 			headers: request.headers,
 		});
 		logger.info(

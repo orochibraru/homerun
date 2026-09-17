@@ -6,7 +6,7 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 
 export const load = async ({ parent, locals }) => {
-	const { user } = await parent();
+	await parent();
 
 	const [
 		servicesWithStacks,
@@ -16,14 +16,14 @@ export const load = async ({ parent, locals }) => {
 		_settings,
 		cronJobs,
 	] = await Promise.all([
-		ServiceDTO.listWithStackNames(user.id),
-		StorageVolumeDTO.list(user.id),
-		RemoteHostDTO.list(user.id),
-		S3DestinationDTO.list(user.id),
+		ServiceDTO.listWithStackNames(),
+		StorageVolumeDTO.list(),
+		RemoteHostDTO.list(),
+		S3DestinationDTO.list(),
 		// Instance-wide, only meaningful to show to an admin (see Settings'
 		// own admin-only gate); a developer's own cron/backup rows are still
 		locals.isAdmin ? InstanceSettingsDTO.get() : null,
-		CronJobDTO.list(user.id),
+		CronJobDTO.list(),
 	]);
 
 	const _remoteHostNames = new Map(remoteHosts.map((h) => [h.id, h.name]));

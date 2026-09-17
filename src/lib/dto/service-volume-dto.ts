@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import {
 	type ServiceVolume,
@@ -41,6 +41,34 @@ export class ServiceVolumeDTO extends BaseDTO<ServiceVolume> {
 			volumeName: r.volumeName,
 			volumeSource: r.volumeSource,
 		}));
+	}
+
+	/** The distinct ids of every service a storage volume is mounted into, for stopping them around a backup or restore of it. */
+	static async serviceIdsForVolume(volumeId: string): Promise<string[]> {
+		const rows = await db
+			.selectDistinct({ serviceId: serviceVolume.serviceId })
+			.from(serviceVolume)
+			.where(eq(serviceVolume.volumeId, volumeId));
+		return rows.map((row) => row.serviceId);
+	}
+
+	/**
+	 * The Docker volume name of every named storage volume mounted into at
+	 * least one service, across every user : what Docker Cleanup must never
+	 * prune, whether or not that service currently has a container.
+	 */
+	static async mountedVolumeNames(): Promise<string[]> {
+		const rows = await db
+			.selectDistinct({ source: storageVolume.source })
+			.from(serviceVolume)
+			.innerJoin(
+				storageVolume,
+				and(
+					eq(serviceVolume.volumeId, storageVolume.id),
+					eq(storageVolume.kind, "volume"),
+				),
+			);
+		return rows.map((row) => row.source);
 	}
 
 	/**

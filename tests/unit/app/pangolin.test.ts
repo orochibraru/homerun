@@ -27,8 +27,11 @@ mock.module("$lib/dto/instance-settings-dto", () => ({
 	InstanceSettingsDTO: { get: async () => settings },
 }));
 
-const { PangolinService, targetScheme } = await import(
+const { PangolinService } = await import(
 	"../../../src/lib/services/pangolin.service"
+);
+const { matchPangolinDomain, targetScheme } = await import(
+	"../../../src/lib/services/pangolin/domains"
 );
 
 const BASE_URL = "https://api.pangolin.test/v1";
@@ -38,8 +41,8 @@ const SITES = Array.from({ length: 25 }, (_, i) => ({
 	siteId: i + 1,
 }));
 const DOMAINS = [
-	{ baseDomain: "example.com", domainId: "dom-1" },
-	{ baseDomain: "other.test", domainId: "dom-2" },
+	{ baseDomain: "example.com", domainId: "dom-1", type: "ns", verified: true },
+	{ baseDomain: "other.test", domainId: "dom-2", type: "ns", verified: true },
 ];
 
 // Every page is capped at 10 rows no matter what `pageSize` asks for, exactly
@@ -54,9 +57,12 @@ let requested: string[] = [];
 let respondWithDashboardHtml = false;
 
 interface StubResource {
+	enabled?: boolean;
 	fullDomain: string;
+	mode?: string;
 	name: string;
 	resourceId: number;
+	sso?: boolean;
 }
 
 interface StubWrite {
@@ -66,8 +72,11 @@ interface StubWrite {
 }
 
 interface StubTarget {
+	enabled?: boolean;
 	ip: string;
+	method?: string;
 	port: number;
+	siteId?: number;
 	targetId: number;
 }
 
@@ -75,6 +84,9 @@ let resources: StubResource[] = [];
 let targets: StubTarget[] = [];
 let writes: StubWrite[] = [];
 let ssoUpdateStatus = 200;
+let deleteStatus = 200;
+let totalAsString = false;
+let raceOnCreate = false;
 
 function json(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
@@ -90,8 +102,13 @@ function pageOf<T>(rows: T[], url: URL, field: string): Response {
 	return json({
 		data: {
 			[field]: rows.slice(start, start + PAGE),
-			pagination: { total: rows.length },
+			pagination: {
+				total: totalAsString ? String(rows.length) : rows.length,
+			},
 		},
+		error: false,
+		message: "retrieved successfully",
+		status: 200,
 		success: true,
 	});
 }
@@ -105,6 +122,9 @@ beforeEach(() => {
 	targets = [{ ip: "localhost", port: 443, targetId: 5 }];
 	writes = [];
 	ssoUpdateStatus = 200;
+	deleteStatus = 200;
+	totalAsString = false;
+	raceOnCreate = false;
 	respondWithDashboardHtml = false;
 	globalThis.fetch = (async (
 		input: string | URL | Request,
@@ -144,12 +164,33 @@ beforeEach(() => {
 		}
 		if (url.pathname === "/v1/org/org-1/resource" && method === "PUT") {
 			const created = {
-				fullDomain: `${body.subdomain as string}.example.com`,
+				fullDomain: body.subdomain
+					? `${body.subdomain as string}.example.com`
+					: "example.com",
 				name: body.name as string,
 				resourceId: 99,
 			};
-			resources.push(created);
-			return json({ data: created, success: true });
+			resources.push(raceOnCreate ? { ...created, resourceId: 42 } : created);
+			return raceOnCreate
+				? json(
+						{
+							data: null,
+							error: true,
+							message: "Resource with that domain already exists",
+							status: 409,
+							success: false,
+						},
+						409,
+					)
+				: json({ data: created, success: true });
+		}
+		if (/^\/v1\/resource\/\d+$/.test(url.pathname) && method === "DELETE") {
+			return deleteStatus === 200
+				? json({ data: null, success: true })
+				: json(
+						{ data: null, message: "Resource not found", success: false },
+						deleteStatus,
+					);
 		}
 		if (/^\/v1\/resource\/\d+$/.test(url.pathname) && method === "POST") {
 			return ssoUpdateStatus === 200
@@ -405,5 +446,187 @@ describe("PangolinService.verifyConnection", () => {
 		});
 		expect(result.success).toBe(false);
 		expect(result.error).toContain("HTML, not JSON");
+	});
+});
+
+describe("matchPangolinDomain", () => {
+	test("prefers the most specific registered domain", () => {
+		const match = matchPangolinDomain("app.apps.example.com", [
+			{ baseDomain: "example.com", domainId: "wide", type: "ns" },
+			{ baseDomain: "apps.example.com", domainId: "narrow", type: "wildcard" },
+		]);
+		expect(match?.domain.domainId).toBe("narrow");
+		expect(match?.subdomain).toBe("app");
+	});
+
+	test("a CNAME-type domain only routes its own exact name", () => {
+		const domains = [
+			{ baseDomain: "app.example.com", domainId: "cname", type: "cname" },
+		];
+		expect(matchPangolinDomain("x.app.example.com", domains)).toBeNull();
+		expect(
+			matchPangolinDomain("app.example.com", domains)?.subdomain,
+		).toBeNull();
+	});
+
+	test("sends a null subdomain for the apex and compares case-insensitively", () => {
+		const match = matchPangolinDomain("Example.COM", DOMAINS);
+		expect(match?.domain.domainId).toBe("dom-1");
+		expect(match?.subdomain).toBeNull();
+	});
+});
+
+describe("PangolinService idempotency", () => {
+	test("creates an apex resource with a null subdomain, since a wildcard domain turns an empty one into .example.com", async () => {
+		const result = await PangolinService.syncDnsRecord("example.com");
+
+		expect(result?.ok).toBe(true);
+		expect(writes).toContainEqual({
+			body: {
+				domainId: "dom-1",
+				http: true,
+				name: "example.com",
+				postAuthPath: "/",
+				protocol: "tcp",
+				stickySession: true,
+				subdomain: null,
+			},
+			method: "PUT",
+			path: "/v1/org/org-1/resource",
+		});
+	});
+
+	test("finds an existing resource regardless of hostname case, and skips an SSO write that changes nothing", async () => {
+		resources = [
+			{ fullDomain: "app.example.com", name: "app", resourceId: 7, sso: false },
+		];
+
+		const result = await PangolinService.syncDnsRecord("App.Example.com");
+
+		expect(result?.ok).toBe(true);
+		expect(writes).toEqual([]);
+	});
+
+	test("ignores an inference resource sharing the hostname", async () => {
+		resources = [
+			{
+				fullDomain: "app.example.com",
+				mode: "inference",
+				name: "ai",
+				resourceId: 7,
+			},
+		];
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.detail).toStartWith("created app.example.com");
+	});
+
+	test("heals the winner when a concurrent sync created the resource first (409)", async () => {
+		raceOnCreate = true;
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.ok).toBe(true);
+		expect(result?.detail).toContain("was created concurrently");
+		expect(writes).toContainEqual({
+			body: { sso: false },
+			method: "POST",
+			path: "/v1/resource/42",
+		});
+	});
+
+	test("repairs a target on the right address with the wrong scheme, site or enabled flag instead of adding another", async () => {
+		resources = [{ fullDomain: "app.example.com", name: "app", resourceId: 7 }];
+		targets = [
+			{
+				enabled: false,
+				ip: "localhost",
+				method: "http",
+				port: 443,
+				siteId: 1,
+				targetId: 5,
+			},
+		];
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+
+		expect(result?.detail).toContain("target https://localhost:443 repaired");
+		expect(writes).toContainEqual({
+			body: {
+				enabled: true,
+				ip: "localhost",
+				method: "https",
+				port: 443,
+				siteId: 23,
+			},
+			method: "POST",
+			path: "/v1/target/5",
+		});
+		expect(writes.map((write) => write.path)).not.toContain(
+			"/v1/resource/7/target",
+		);
+	});
+
+	test("reports an unverified domain instead of letting Pangolin 400", async () => {
+		const unverified = DOMAINS.map((domain) => ({
+			...domain,
+			verified: false,
+		}));
+		const original = DOMAINS.splice(0, DOMAINS.length, ...unverified);
+
+		const result = await PangolinService.syncDnsRecord("app.example.com");
+		DOMAINS.splice(0, DOMAINS.length, ...original);
+
+		expect(result?.ok).toBe(false);
+		expect(result?.detail).toContain("isn't verified");
+		expect(writes).toEqual([]);
+	});
+
+	test("follows pagination when Postgres reports the total as a string", async () => {
+		totalAsString = true;
+
+		const result = await PangolinService.verifyConnection({
+			baseUrl: BASE_URL,
+			orgId: "org-1",
+			siteName: "site-23",
+			token: "good-token",
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.detail).toContain("25 site(s)");
+	});
+});
+
+describe("PangolinService.deleteDnsRecord", () => {
+	test("deletes the matching resource", async () => {
+		resources = [{ fullDomain: "app.example.com", name: "app", resourceId: 7 }];
+
+		const result = await PangolinService.deleteDnsRecord("app.example.com");
+
+		expect(result).toEqual({
+			detail: "removed app.example.com",
+			ok: true,
+			provider: "pangolin",
+		});
+		expect(writes).toEqual([
+			{ body: {}, method: "DELETE", path: "/v1/resource/7" },
+		]);
+	});
+
+	test("treats a resource deleted out of band between lookup and delete as gone", async () => {
+		resources = [{ fullDomain: "app.example.com", name: "app", resourceId: 7 }];
+		deleteStatus = 404;
+
+		const result = await PangolinService.deleteDnsRecord("app.example.com");
+
+		expect(result?.ok).toBe(true);
+	});
+
+	test("reports success with nothing to do when no resource exists", async () => {
+		const result = await PangolinService.deleteDnsRecord("app.example.com");
+
+		expect(result?.detail).toBe("no resource for app.example.com");
+		expect(writes).toEqual([]);
 	});
 });

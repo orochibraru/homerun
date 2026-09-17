@@ -20,10 +20,12 @@ export type JobStatus =
 
 export type JobType =
 	| "backup"
+	| "backup_restore"
 	| "cron_job"
 	| "deploy"
 	| "docker_cleanup"
-	| "image_scan";
+	| "image_scan"
+	| "notification_delivery";
 
 export type RevisionHealth =
 	| "watching"
@@ -33,7 +35,12 @@ export type RevisionHealth =
 
 export type StatusPageScope = "global" | "stack" | "custom";
 
-export type NotificationChannelKind = "webhook" | "discord" | "email";
+export type NotificationChannelKind =
+	| "webhook"
+	| "discord"
+	| "slack"
+	| "telegram"
+	| "email";
 
 export type NotificationEvent =
 	| "build.failed"

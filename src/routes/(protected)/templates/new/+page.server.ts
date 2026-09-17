@@ -2,8 +2,13 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
+import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
 import { Logger } from "$lib/logger";
-import { parseEnvVars } from "$lib/server/validation/service";
+import {
+	parseEnvVars,
+	updateEnvFilesSchema,
+	updateRuntimeSchema,
+} from "$lib/server/validation/service";
 import {
 	createTemplateSchema,
 	parseTags,
@@ -12,10 +17,10 @@ import { slugify } from "$lib/services/template-links";
 
 const logger = new Logger("Templates");
 
-export const load = async ({ parent }) => {
-	const { user } = await parent();
+export const load = async ({ parent, locals }) => {
+	await parent();
 
-	const templates = await TemplateDTO.listForUser(user.id);
+	const templates = await TemplateDTO.list();
 	const linkCounts = await Promise.all(
 		templates.map((t) => TemplateLinkDTO.countForTemplate(t.id)),
 	);
@@ -23,14 +28,14 @@ export const load = async ({ parent }) => {
 		.filter((_, i) => linkCounts[i] === 0)
 		.map((t) => t.toJSON());
 
-	return { linkableTemplates: linkable };
+	return { isAdmin: locals.isAdmin, linkableTemplates: linkable };
 };
 
-async function createLinks(
-	newTemplateId: string,
+async function parseLinks(
 	formData: FormData,
-	userId: string,
-) {
+): Promise<
+	{ error: string } | { rows: { alias: string; linkedTemplateId: string }[] }
+> {
 	const linkTemplateIds = formData.getAll("linkTemplateId").map(String);
 	const linkEnabledFlags = formData.getAll("linkEnabled").map(String);
 
@@ -42,32 +47,43 @@ async function createLinks(
 		}
 		const linkedTemplateId = linkTemplateIds[i];
 		// biome-ignore lint/performance/noAwaitInLoops: a handful of link rows at most, validates in order to fail on the first bad one
-		const linked = await TemplateDTO.usable(linkedTemplateId, userId);
+		const linked = await TemplateDTO.get(linkedTemplateId);
 		if (!linked) {
-			return "One of the linked containers wasn't found.";
+			return { error: "One of the linked containers wasn't found." };
 		}
 		if ((await TemplateLinkDTO.countForTemplate(linkedTemplateId)) > 0) {
-			return `"${linked.name}" already links to other containers itself, and can't be linked to in turn.`;
+			return {
+				error: `"${linked.name}" already links to other containers itself, and can't be linked to in turn.`,
+			};
 		}
 		const rawAlias = formData.get(`linkAlias.${linkedTemplateId}`);
 		const alias =
 			(rawAlias ? String(rawAlias) : "").trim() || slugify(linked.name);
 		if (seenAliases.has(alias)) {
-			return `The alias "${alias}" is used more than once.`;
+			return { error: `The alias "${alias}" is used more than once.` };
 		}
 		seenAliases.add(alias);
 		rows.push({ alias, linkedTemplateId });
 	}
+	return { rows };
+}
 
-	for (const row of rows) {
-		// biome-ignore lint/performance/noAwaitInLoops: a handful of link rows at most, no benefit to parallelizing
-		await TemplateLinkDTO.create({
-			alias: row.alias,
-			linkedTemplateId: row.linkedTemplateId,
-			templateId: newTemplateId,
-		});
+function parseTemplateForm(fields: Record<string, FormDataEntryValue>) {
+	const result = createTemplateSchema.safeParse(fields);
+	const runtime = updateRuntimeSchema.safeParse(fields);
+	const envFiles = updateEnvFilesSchema.safeParse(fields);
+	if (result.success && runtime.success && envFiles.success) {
+		return {
+			input: result.data,
+			runtimeOptions: { ...runtime.data, ...envFiles.data },
+		};
 	}
-	return null;
+	const errors: Record<string, string[] | undefined> = {
+		...(result.success ? {} : result.error.flatten().fieldErrors),
+		...(runtime.success ? {} : runtime.error.flatten().fieldErrors),
+		...(envFiles.success ? {} : envFiles.error.flatten().fieldErrors),
+	};
+	return { errors };
 }
 
 export const actions = {
@@ -77,18 +93,24 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const result = createTemplateSchema.safeParse(Object.fromEntries(formData));
-
-		if (!result.success) {
-			return fail(400, {
-				errors: result.error.flatten().fieldErrors,
-				values: Object.fromEntries(formData),
-			});
+		const fields = Object.fromEntries(formData);
+		const parsed = parseTemplateForm(fields);
+		if ("errors" in parsed) {
+			return fail(400, { errors: parsed.errors, values: fields });
 		}
 
-		const input = result.data;
+		const { input, runtimeOptions } = parsed;
+		if (!locals.isAdmin && hostAccessRequested(runtimeOptions)) {
+			return fail(403, { error: HOST_ACCESS_MESSAGE, values: fields });
+		}
+
+		const links = await parseLinks(formData);
+		if ("error" in links) {
+			return fail(400, { error: links.error, values: fields });
+		}
 
 		const newTemplate = await TemplateDTO.create({
+			...runtimeOptions,
 			category: input.category || null,
 			containerPort: input.containerPort,
 			cpuLimit: input.cpuLimit || null,
@@ -104,14 +126,15 @@ export const actions = {
 			tags: parseTags(input.tags),
 		});
 
-		const linkError = await createLinks(
-			newTemplate.id,
-			formData,
-			locals.user.id,
+		await Promise.all(
+			links.rows.map((row) =>
+				TemplateLinkDTO.create({
+					alias: row.alias,
+					linkedTemplateId: row.linkedTemplateId,
+					templateId: newTemplate.id,
+				}),
+			),
 		);
-		if (linkError) {
-			return fail(400, { error: linkError });
-		}
 
 		logger.info(`Template created: name=${input.name} user=${locals.user.id}`);
 		redirect(303, resolve("/templates"));

@@ -1,5 +1,10 @@
+import { Readable } from "node:stream";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+import type { BuildMethod } from "$lib/build-methods";
 import type { GitCredential } from "$lib/git-clone-url";
 import type { RegistryAuth } from "./docker/containers.ts";
+
+const IMAGE_TRANSFER_TIMEOUT_MS = 60 * 60 * 1000;
 
 /** Decrypted connection to a registered Homerun Agent : see remote-host-dto.ts's `toAgentConnection`. */
 export interface AgentConnection {
@@ -49,7 +54,11 @@ export interface AgentBuildPush {
 }
 
 export interface AgentBuildParams {
+	bakeFile?: string | null;
+	bakeTarget?: string | null;
 	buildContext?: string | null;
+	buildMethod?: BuildMethod | null;
+	commit?: string | null;
 	credential?: GitCredential | null;
 	dockerfilePath?: string | null;
 	gitRef?: string | null;
@@ -59,6 +68,7 @@ export interface AgentBuildParams {
 }
 
 export interface AgentBuildResult {
+	commit?: string | null;
 	error?: string;
 	success: boolean;
 }
@@ -127,7 +137,11 @@ class AgentClientServiceClass {
 		params: AgentBuildParams,
 	): Promise<AgentBuildResult> {
 		return this.#request<AgentBuildResult>(connection, "POST", "/v1/build", {
+			bakeFile: params.bakeFile ?? null,
+			bakeTarget: params.bakeTarget ?? null,
 			buildContext: params.buildContext ?? null,
+			buildMethod: params.buildMethod ?? "dockerfile",
+			commit: params.commit ?? null,
 			credential: params.credential ?? null,
 			dockerfilePath: params.dockerfilePath ?? null,
 			gitRef: params.gitRef ?? null,
@@ -135,6 +149,41 @@ class AgentClientServiceClass {
 			push: params.push ?? null,
 			tag: params.tag,
 		});
+	}
+
+	/**
+	 * GET /v1/images/save : streams `ref` off the agent's daemon as a `docker
+	 * save` tarball, for loading onto this host when the build server has no
+	 * cache registry to publish through.
+	 *
+	 * @throws When the agent can't be reached, or answers with an error
+	 *   (the image doesn't exist there, a bad token).
+	 */
+	async saveImage(connection: AgentConnection, ref: string): Promise<Readable> {
+		const url = new URL("/v1/images/save", connection.agentUrl);
+		url.searchParams.set("ref", ref);
+		let response: Response;
+		try {
+			response = await fetch(url, {
+				headers: { authorization: `Bearer ${connection.token}` },
+				signal: AbortSignal.timeout(IMAGE_TRANSFER_TIMEOUT_MS),
+			});
+		} catch (error) {
+			throw new Error(
+				`Couldn't reach the agent at ${connection.agentUrl} : ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+		if (!(response.ok && response.body)) {
+			const data = await response.json().catch(() => null);
+			const message =
+				data && typeof data === "object" && "error" in data
+					? String((data as { error: unknown }).error)
+					: `Agent returned ${response.status}.`;
+			throw new AgentRequestError(message, response.status);
+		}
+		return Readable.fromWeb(
+			response.body as unknown as NodeReadableStream<Uint8Array>,
+		);
 	}
 
 	/**

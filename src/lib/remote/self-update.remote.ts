@@ -1,5 +1,9 @@
 import { command, query } from "$app/server";
-import { requireAdmin, requireUser } from "$lib/server/remote-auth";
+import {
+	requireAdmin,
+	requireUser,
+	requireWriter,
+} from "$lib/server/remote-auth";
 import {
 	type ReleaseStatus,
 	SelfUpdateService,
@@ -24,6 +28,7 @@ export const getUpdatePreflight = query(async (): Promise<UpdatePreflight> => {
 export const startSelfUpdate = command(
 	async (): Promise<{ version: string }> => {
 		requireAdmin();
+		requireWriter();
 		return await SelfUpdateService.start();
 	},
 );

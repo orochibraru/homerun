@@ -18,30 +18,30 @@ async function withLinkedNames(templates: TemplateDTO[]) {
 }
 
 export const load = async ({ parent, url }) => {
-	const { user } = await parent();
+	await parent();
 
 	const builtinQuery = parseListQuery(url, {
 		filterKeys: ["category"],
 		pageParam: "bpage",
 		perPage: 24,
 	});
-	const mineQuery = parseListQuery(url, {
+	const customQuery = parseListQuery(url, {
 		filterKeys: ["category"],
-		pageParam: "mpage",
+		pageParam: "cpage",
 		perPage: 24,
 	});
 
 	const rawStackId = url.searchParams.get("stackId");
-	const [builtins, mine, categories, stack] = await Promise.all([
-		TemplateDTO.listPaged(user.id, "builtin", builtinQuery),
-		TemplateDTO.listPaged(user.id, "mine", mineQuery),
-		TemplateDTO.listCategories(user.id),
-		rawStackId ? StackDTO.get(rawStackId, user.id) : null,
+	const [builtins, custom, categories, stack] = await Promise.all([
+		TemplateDTO.listPaged("builtin", builtinQuery),
+		TemplateDTO.listPaged("custom", customQuery),
+		TemplateDTO.listCategories(),
+		rawStackId ? StackDTO.get(rawStackId) : null,
 	]);
 
-	const [builtinItems, mineItems] = await Promise.all([
+	const [builtinItems, customItems] = await Promise.all([
 		withLinkedNames(builtins.items),
-		withLinkedNames(mine.items),
+		withLinkedNames(custom.items),
 	]);
 
 	return {
@@ -51,10 +51,10 @@ export const load = async ({ parent, url }) => {
 		builtinsPerPage: builtins.perPage,
 		builtinsTotal: builtins.total,
 		categories,
-		mine: mineItems,
-		minePage: mine.page,
-		minePerPage: mine.perPage,
-		mineTotal: mine.total,
+		custom: customItems,
+		customPage: custom.page,
+		customPerPage: custom.perPage,
+		customTotal: custom.total,
 		stack: stack?.toJSON() ?? null,
 	};
 };
@@ -73,15 +73,13 @@ export const actions = {
 			return fail(400, { error: "Missing template." });
 		}
 		const stackId =
-			rawStackId && (await StackDTO.get(rawStackId, locals.user.id))
-				? rawStackId
-				: null;
+			rawStackId && (await StackDTO.get(rawStackId)) ? rawStackId : null;
 
-		const result = await quickDeployFromTemplate(
-			templateId,
-			locals.user.id,
+		const result = await quickDeployFromTemplate(templateId, {
+			isAdmin: locals.isAdmin,
 			stackId,
-		);
+			userId: locals.user.id,
+		});
 		if (!result.ok) {
 			return fail(result.status, { error: result.error });
 		}

@@ -11,7 +11,6 @@ export const GET = async ({ locals, url }) => {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const paged = await StackDTO.listWithServiceCountsPaged(
-		locals.user.id,
 		parseApiListQuery(url),
 	);
 	return jsonPage(

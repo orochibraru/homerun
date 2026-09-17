@@ -5,12 +5,15 @@ import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { allowLongRequest } from "$lib/server/long-request";
 import { getGitHubRepoInfo } from "$lib/services/github-repo.service";
-import { quickDeployFromTemplate } from "$lib/services/template-links";
+import {
+	quickDeployFromTemplate,
+	templateHostAccessRefusal,
+} from "$lib/services/template-links";
 
-export const load = async ({ params, parent, url }) => {
-	const { user } = await parent();
+export const load = async ({ params, parent, url, locals }) => {
+	await parent();
 
-	const tmpl = await TemplateDTO.usable(params.templateId, user.id);
+	const tmpl = await TemplateDTO.get(params.templateId);
 	if (!tmpl) {
 		error(404, "Template not found");
 	}
@@ -18,12 +21,20 @@ export const load = async ({ params, parent, url }) => {
 	const links = await TemplateLinkDTO.listForTemplate(tmpl.id);
 
 	const rawStackId = url.searchParams.get("stackId");
-	const stack = rawStackId ? await StackDTO.get(rawStackId, user.id) : null;
+	const stack = rawStackId ? await StackDTO.get(rawStackId) : null;
 
 	const templateJson = tmpl.toJSON();
 
 	return {
 		github: getGitHubRepoInfo(templateJson.sourceUrl),
+		hostAccessRefusal: templateHostAccessRefusal(
+			tmpl,
+			links.map((l) => ({
+				runtime: l.linkedTemplateRuntime,
+				templateName: l.linkedTemplateName,
+			})),
+			locals.isAdmin,
+		),
 		links: links.map((l) => ({
 			alias: l.link.alias,
 			icon: l.linkedTemplateIcon,
@@ -46,15 +57,13 @@ export const actions = {
 		const formData = await request.formData();
 		const rawStackId = formData.get("stackId") as string | null;
 		const stackId =
-			rawStackId && (await StackDTO.get(rawStackId, locals.user.id))
-				? rawStackId
-				: null;
+			rawStackId && (await StackDTO.get(rawStackId)) ? rawStackId : null;
 
-		const result = await quickDeployFromTemplate(
-			params.templateId,
-			locals.user.id,
+		const result = await quickDeployFromTemplate(params.templateId, {
+			isAdmin: locals.isAdmin,
 			stackId,
-		);
+			userId: locals.user.id,
+		});
 		if (!result.ok) {
 			return fail(result.status, { error: result.error });
 		}

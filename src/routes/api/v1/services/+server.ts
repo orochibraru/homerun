@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
+import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
 import { Logger } from "$lib/logger";
 import { jsonPage, parseApiListQuery } from "$lib/server/api-pagination";
 import {
@@ -18,7 +19,6 @@ export const GET = async ({ locals, url }) => {
 	}
 
 	const paged = await ServiceDTO.listWithStackNamesPaged(
-		locals.user.id,
 		parseApiListQuery(url),
 	);
 	return jsonPage(
@@ -60,6 +60,15 @@ function toCreateInput(
 		stackId,
 		pullPolicy: input.pullPolicy,
 		restartPolicy: input.restartPolicy,
+		runtime: {
+			capAdd: input.capAdd,
+			command: input.command ?? null,
+			devices: input.devices,
+			entrypoint: input.entrypoint ?? null,
+			envFiles: input.envFiles,
+			labels: input.labels,
+			privileged: input.privileged,
+		},
 		slug: input.slug,
 		userId,
 	};
@@ -70,7 +79,10 @@ function toSourceInput(input: CreateServiceApiInput) {
 	return {
 		autoDeployOnPush: input.autoDeployOnPush,
 		buildSource: input.buildSource,
+		gitBakeFile: input.gitBakeFile || null,
+		gitBakeTarget: input.gitBakeTarget || null,
 		gitBuildContext: input.gitBuildContext || null,
+		gitBuildMethod: input.gitBuildMethod,
 		gitDockerfilePath: input.gitDockerfilePath || null,
 		gitProviderId: input.gitProviderId || null,
 		gitRef: input.gitRef || null,
@@ -101,14 +113,16 @@ export const POST = async ({ request, locals }) => {
 	}
 	const input = result.data;
 
+	if (!locals.isAdmin && hostAccessRequested(input)) {
+		return json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
+	}
+
 	if (await ServiceDTO.slugTaken(input.slug)) {
 		return json({ error: "That slug is already in use." }, { status: 409 });
 	}
 
 	const stackId =
-		input.stackId && (await StackDTO.get(input.stackId, locals.user.id))
-			? input.stackId
-			: null;
+		input.stackId && (await StackDTO.get(input.stackId)) ? input.stackId : null;
 
 	const svc = await ServiceDTO.create(
 		toCreateInput(input, stackId, locals.user.id),

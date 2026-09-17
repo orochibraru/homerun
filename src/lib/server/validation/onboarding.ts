@@ -25,6 +25,9 @@ export const onboardingSchema = z
 	.object({
 		authCrossSubdomainCookies: checkbox,
 		baseDomain: requiredText("Base domain"),
+		cloudflareApiToken: z.string().optional(),
+		cloudflareEnabled: checkbox,
+		cloudflareZoneId: z.string().optional(),
 		// Optional, not required : real, tested-in-review bug this replaced.
 		// Both fields were `requiredText`, pre-filled from the *current*
 		// effective default (envDefaults, see +page.svelte), so finishing
@@ -41,6 +44,11 @@ export const onboardingSchema = z
 		// section already uses.
 		dockerNetworkName: z.string().optional(),
 		dockerSocketPath: z.string().optional(),
+		pangolinApiBaseUrl: z.string().optional(),
+		pangolinApiToken: z.string().optional(),
+		pangolinEnabled: checkbox,
+		pangolinMainSiteName: z.string().optional(),
+		pangolinOrgId: z.string().optional(),
 		smtpEnabled: checkbox,
 		smtpFrom: z.string().optional(),
 		smtpHost: z.string().optional(),
@@ -57,24 +65,35 @@ export const onboardingSchema = z
 		useHttps: checkbox,
 	})
 	.superRefine((input, ctx) => {
-		if (!input.smtpEnabled) {
-			return;
+		const required: [keyof typeof input, string, string][] = [];
+		if (input.smtpEnabled) {
+			required.push(
+				["smtpHost", "Host", "SMTP"],
+				["smtpUser", "Username", "SMTP"],
+				["smtpFrom", "From address", "SMTP"],
+			);
 		}
-		const required: [keyof typeof input, string][] = [
-			["smtpHost", "Host"],
-			["smtpUser", "Username"],
-			["smtpFrom", "From address"],
-		];
-		for (const [field, label] of required) {
-			if (!input[field]) {
+		if (input.cloudflareEnabled) {
+			required.push(["cloudflareZoneId", "Zone ID", "Cloudflare"]);
+		}
+		if (input.pangolinEnabled) {
+			required.push(
+				["pangolinApiBaseUrl", "API base URL", "Pangolin"],
+				["pangolinOrgId", "Org ID", "Pangolin"],
+				["pangolinMainSiteName", "Site name", "Pangolin"],
+			);
+		}
+		for (const [field, label, feature] of required) {
+			const value = input[field];
+			if (!(typeof value === "string" ? value.trim() : value)) {
 				ctx.addIssue({
 					code: "custom",
-					message: `${label} is required when SMTP is enabled.`,
+					message: `${label} is required when ${feature} is enabled.`,
 					path: [field],
 				});
 			}
 		}
-		if (!input.smtpPort) {
+		if (input.smtpEnabled && !input.smtpPort) {
 			ctx.addIssue({
 				code: "custom",
 				message: "Port is required when SMTP is enabled.",

@@ -12,14 +12,14 @@ import { PASSKEY_SIGN_IN, PASSWORD_SIGN_IN } from "$lib/sign-in-methods";
 const PREFERRED_FIELD_PREFIX = "preferred:";
 
 export const load = async ({ locals, parent }) => {
-	const { user } = await parent();
+	await parent();
 	if (!locals.isAdmin) {
 		throw redirect(302, resolve("/"));
 	}
 
 	const [settings, services, oauthApps] = await Promise.all([
 		InstanceSettingsDTO.get(),
-		ServiceDTO.list(user.id),
+		ServiceDTO.list(),
 		OauthClientDTO.list(),
 	]);
 

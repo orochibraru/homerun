@@ -14,8 +14,8 @@ import { requireUser } from "$lib/server/remote-auth";
 export const getCronJobRuns = query(
 	z.string(),
 	async (cronJobId): Promise<CronJobRun[]> => {
-		const user = requireUser();
-		const job = await CronJobDTO.get(cronJobId, user.id);
+		requireUser();
+		const job = await CronJobDTO.get(cronJobId);
 		if (!job) {
 			return [];
 		}

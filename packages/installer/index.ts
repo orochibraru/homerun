@@ -68,6 +68,11 @@ function normalizeHost(value: string): string {
 
 async function main() {
 	const opts = OptionsParser.parseArgs(process.argv.slice(2));
+	const invalid = OptionsParser.validate(opts);
+	if (invalid) {
+		console.error(invalid);
+		process.exit(1);
+	}
 
 	console.log(
 		"Homerun installer : draft/WIP, see installer/README.md before running against a real box.\n",
@@ -81,7 +86,7 @@ async function main() {
 	const run = new StepRunner(opts.dryRun);
 
 	console.log(
-		`Target: mode=${opts.mode} user=${opts.rootlessUser} arch=${Detector.arch()} version=${opts.version} dryRun=${opts.dryRun}\n`,
+		`Target: mode=${opts.mode} docker=${opts.docker} user=${opts.rootlessUser} arch=${Detector.arch()} version=${opts.version} dryRun=${opts.dryRun}\n`,
 	);
 
 	const host = opts.mode === "full" ? await resolveHost(opts) : "";
@@ -102,14 +107,21 @@ async function main() {
 	console.log("\n== 2/5 Rootless user ==");
 	await RootlessDockerInstaller.ensureRootlessUser(run, opts.rootlessUser);
 
-	console.log("\n== 3/5 Rootless Docker daemon ==");
-	const dockerSocket = await RootlessDockerInstaller.installRootlessDocker(
-		run,
-		opts.rootlessUser,
-	);
+	const rootful = opts.docker === "rootful";
+	console.log(`\n== 3/5 ${rootful ? "System" : "Rootless"} Docker daemon ==`);
+	const dockerSocket = rootful
+		? await RootlessDockerInstaller.enableRootfulDocker(run)
+		: await RootlessDockerInstaller.installRootlessDocker(
+				run,
+				opts.rootlessUser,
+			);
 
 	console.log("\n== 4/5 homerun ==");
-	await NetworkSetup.ensureHomerunNetwork(run, opts.rootlessUser, dockerSocket);
+	await NetworkSetup.ensureHomerunNetwork(
+		run,
+		rootful ? null : opts.rootlessUser,
+		dockerSocket,
+	);
 
 	console.log("\n== 5/5 Install ==");
 	if (opts.mode === "agent") {
@@ -124,6 +136,7 @@ async function main() {
 		await FullStackInstaller.bringUpFullStack({
 			dockerSocket,
 			host,
+			rootful,
 			run,
 			username: opts.rootlessUser,
 			version: opts.version,
@@ -156,14 +169,16 @@ function printNextSteps(
 	console.log(
 		`The full stack should be coming up under ${composePath}, check with:`,
 	);
-	console.log(
-		`  sudo -u ${opts.rootlessUser} env DOCKER_HOST=unix://${dockerSocket} docker compose -f ${composePath} ps`,
-	);
+	const asUser =
+		opts.docker === "rootful"
+			? "sudo"
+			: `sudo -u ${opts.rootlessUser} env DOCKER_HOST=unix://${dockerSocket}`;
+	console.log(`  ${asUser} docker compose -f ${composePath} ps`);
 	console.log(
 		`AUTH_SECRET was auto-generated into ${composePath.replace(
 			"compose.yaml",
 			".env",
-		)} ; if it's not up yet, check the other vars there (ORIGIN, ACME_EMAIL, etc.) then re-run \`docker compose -f ${composePath} up -d\` as ${opts.rootlessUser}.`,
+		)} ; if it's not up yet, check the other vars there (ORIGIN, ACME_EMAIL, etc.) then re-run \`${asUser} docker compose -f ${composePath} up -d\`.`,
 	);
 }
 

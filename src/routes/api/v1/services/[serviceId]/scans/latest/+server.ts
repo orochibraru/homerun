@@ -6,7 +6,7 @@ export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
 		return json({ error: "Not found" }, { status: 404 });
 	}

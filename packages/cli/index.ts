@@ -168,9 +168,24 @@ services
 	.description(
 		"redeploy a revision's exact image and wait for it (default: the previous revision)",
 	)
-	.action(async (id: string, revisionId: string | undefined) => {
-		await Commands.serviceRollback(requireClient(), id, revisionId);
-	});
+	.option(
+		"--restore-config",
+		"also restore the env vars, resources and networking that revision ran with",
+	)
+	.action(
+		async (
+			id: string,
+			revisionId: string | undefined,
+			options: { restoreConfig?: boolean },
+		) => {
+			await Commands.serviceRollback(
+				requireClient(),
+				id,
+				revisionId,
+				options.restoreConfig ?? false,
+			);
+		},
+	);
 
 services
 	.command("scan <id>")

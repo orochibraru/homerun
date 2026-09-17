@@ -70,14 +70,15 @@ two deploys of the same service racing each other, and what keeps a
 - **`$lib/services/queue/handlers.ts`** maps a `JobType` to its handler
   (`deploy` → `DeploymentService.deployService`, `backup` →
   `S3BackupService.backupVolume`, `cron_job` → `CronJobService.runJob`,
-  `docker_cleanup` → the matching `DockerService.prune*`), each parsing its own
-  payload through a zod schema in `queue/payloads.ts` rather than casting : a
-  payload written by an older version of the app fails as a clean job error
-  instead of deep inside dockerode. Throwing is how a handler reports failure.
-  Kept in its own module so `QueueService` stays importable from
-  `deploy.service.ts` without an import cycle (`handlers` → `deploy.service` →
-  `queue.service`, and `worker` → `handlers`, so `hooks.server.ts` imports the
-  worker directly).
+  `docker_cleanup` → the matching `DockerService.prune*`,
+  `notification_delivery` → `NotificationChannelService.retryDelivery`), each
+  parsing its own payload through a zod schema in `queue/payloads.ts` rather
+  than casting : a payload written by an older version of the app fails as a
+  clean job error instead of deep inside dockerode. Throwing is how a handler
+  reports failure. Kept in its own module so `QueueService` stays importable
+  from `deploy.service.ts` without an import cycle (`handlers` →
+  `deploy.service` → `queue.service`, and `worker` → `handlers`, so
+  `hooks.server.ts` imports the worker directly).
 
 **What changed at each trigger point.** `DeploymentService.deployService()` is
 unchanged as the actual pipeline and is still the single source of truth; what
@@ -127,7 +128,9 @@ banner is suppressed during a first deploy.
   job actually starts.
 
 **Retries** are per job type (`maxAttempts`, default 1) with exponential backoff
-: backups get 2 attempts, deploys and cleanups get one, since a failed deploy is
+: backups get 2 attempts, a notification channel delivery retry gets 4 (queued
+30s after the inline attempt failed, see Outbound notification channels in
+`observability.md`), deploys and cleanups get one, since a failed deploy is
 something the user should see and decide about rather than have silently
 retried. Finished rows are amortized-pruned after 7 days on ~2% of inserts, the
 same convention as `AppLogDTO`/`NotificationDTO`.
@@ -209,13 +212,23 @@ A user-defined scheduled task that isn't tied to a service, unlike
   small pure tokenizer (quotes group, backslash escapes, and a leading `[` is
   taken as Docker-style JSON exec form), tested in
   `tests/unit/app/command-parse.test.ts`.
-- **`kind: "exec"`** runs `/bin/sh -c <command>` where the app itself runs, via
-  `execFile` with a real `timeout`. **Admin-only, enforced in
-  `$lib/server/cron-job-form.ts`** (shared by both the create and edit actions,
-  so neither can skip it) rather than only hidden in the UI : it inherits this
-  process's own privileges. That's the same class of power the Docker socket
-  already gives any user of this app, but it's a different blast radius (the
-  app's own filesystem/credentials), hence the gate.
+- **`kind: "exec"`** ("Host command") runs on the Docker host itself, not in the
+  app's container: `DockerService.runOneOff` with `privileged: true`,
+  `pidMode: "host"` and a throwaway `alpine:3` helper whose command is
+  `nsenter -t 1 -m -u -i -n -p -- sh -c <command>` (`docker/host-command.ts`'s
+  `hostCommandArgs`, busybox ships `nsenter`). It used to be `execFile` inside
+  the app container, which is not the host at all once Homerun runs from
+  compose, and handed the app's own environment (`AUTH_SECRET`, `DATABASE_URL`)
+  to the command; now only `job.envVars` reach it, output streams through the
+  same `OutputFlusher` as image jobs, and the timeout is `runOneOff`'s kill.
+  Verified by hand: `docker run --rm --privileged --pid=host alpine:3` running
+  that `nsenter` line with `hostname` prints the host's (OrbStack VM's)
+  hostname. Under rootless Docker PID 1 of the daemon's PID namespace is
+  rootlesskit's, so "host" there means the rootless user namespace.
+  **Admin-only, enforced in `$lib/server/cron-job-form.ts`** (shared by both the
+  create and edit actions, so neither can skip it) rather than only hidden in
+  the UI : it is root on the host, the same class of power the Docker socket
+  already gives.
 
 `CronJobService.runJob(job)` is the single entry point both the scheduler and
 the manual "Run now" funnel through, and it writes one `cron_job_run` row per
@@ -276,10 +289,23 @@ branch, `attemptBackup` and every caller are kind-agnostic. A non-zero exit from
 the helper fails the run with the helper's own stderr attached, rather than
 uploading a truncated/empty tarball. Scheduled backups are one `DueScheduler`
 config over `StorageVolumeDTO.listBackupEnabled()`, see Schedulers above.
-Restore is `S3BackupService.restoreVolume()`, called straight from the volume
-page's `restore` action (not queued): it downloads one object and unpacks it
-over the volume through Docker's archive endpoint on a stopped helper container,
-one path for both volume kinds, without wiping what's already there.
+Restore is `S3BackupService.restoreVolume()`, run as a `backup_restore` job, see
+Restoring an S3 backup below.
+
+**Quiescing** lives in `$lib/services/backup/volume-services.ts`
+(`VolumeServices`). `storage_volume.backupStopServices` wraps the tar (not the
+upload) in `whileStopped`: services mounting the volume
+(`ServiceVolumeDTO.serviceIdsForVolume`) that a live `syncServiceStatus` says
+are running get `ServiceLifecycleService.stopService`'d one by one, and every
+one that was stopped is started again in a `finally`, a failed start logged
+rather than thrown. The ordering policy is the pure `stopAroundWork`, covered by
+`tests/unit/app/volume-services.test.ts`. `backupPreCommand` runs first, while
+everything is still up, through `/bin/sh -c` via `DockerService.execInContainer`
+(one-off mixin, a hijacked exec with a 15 minute wait cap) inside
+`backupPreCommandServiceId`'s container (swarm: the running task's container),
+or the first running service using the volume when none is picked. A non-zero
+exit fails the run with the output tail, before anything is tarred. Both are
+per-volume, which is also per-schedule, since a volume has one schedule.
 
 ## Cron jobs on another daemon, and live output
 
@@ -288,7 +314,7 @@ picks which daemon a kind `image` job runs its container on;
 `RemoteHostDTO.resolveBuildTarget` resolves it the same way a build server is
 resolved, and an **agent** host is refused with a message rather than silently
 running locally : the agent has no one-off run endpoint. Kind `exec` ignores it
-by definition, it's a shell command on the machine this app runs on.
+by definition, it's a shell command on the host of this app's own Docker daemon.
 
 **Output arrives while the job runs, not after it.** `runOneOff` takes an
 `onOutput` callback fed from the same demuxed stdout/stderr streams it already
@@ -302,14 +328,25 @@ of text.
 
 `S3BackupService.listBackups(volume)` is ListObjectsV2 against the volume's own
 prefix (same hand-rolled SigV4 as the upload, `signedRequest` shared between GET
-and LIST), and `restoreVolume(volume, key)` downloads one and unpacks it back
-over the volume. **Docker's own archive endpoint does the unpacking**
+and LIST), and `restoreVolume(volume, key, { wipe, stopServices })` downloads
+one and unpacks it back into the volume.
+
+**It's a queue job**, `backup_restore` (`enqueueVolumeRestore` in
+`backup-queue.ts`, payload `backupRestoreJobPayload`), deduped on
+`restore:<volumeId>`, sharing `volume:<volumeId>` as its lock with backups so a
+restore never races a tar of the same volume, and `maxAttempts: 1` (retrying a
+half-applied restore isn't something to do silently). It writes a `backup_run`
+row with `kind: "restore"` and the object `key` (backups now record their
+uploaded `key` too), so the run log and `/backups` (Kind filter) show both. The
+download happens before `whileStopped`, so services are down only for the
+optional `VolumeServices.wipe` (a helper `find <mount> -mindepth 1 -delete`) and
+the unpack. **Docker's own archive endpoint does the unpacking**
 (`DockerService.extractIntoVolume` → `putArchive` into a stopped helper
 container with the target mounted): it accepts a gzipped tar directly, needs no
 `tar` on this host, no stdin plumbing into a running container, and works
 against a remote daemon. One path covers both volume kinds, since a bind's
 source is as mountable as a named volume.
 
-It's a **restore-over, not a wipe-and-restore** : files in the archive replace
-what's on disk and anything else is left alone. The confirm dialog says so, and
-says to stop services using the volume first.
+Without `wipe` it's a **restore-over** : files in the archive replace what's on
+disk and anything else is left alone. `stopServices` defaults to on in the UI;
+the confirm dialog's text follows both toggles.

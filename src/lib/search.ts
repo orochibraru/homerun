@@ -222,7 +222,7 @@ export const SEARCH_PAGES: SearchPage[] = [
 	{
 		adminOnly: false,
 		href: "/notification-channels",
-		keywords: ["webhook", "discord", "email", "alerts"],
+		keywords: ["webhook", "discord", "slack", "telegram", "email", "alerts"],
 		label: "Notification Channels",
 		section: "Integrations",
 	},

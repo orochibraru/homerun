@@ -6,14 +6,14 @@ import { serviceHostname } from "$lib/services/dns.service";
 import { certResolverFor } from "$lib/services/docker/cert-resolver";
 
 export const load = async ({ params, parent }) => {
-	const { user } = await parent();
+	await parent();
 
-	const svc = await ServiceDTO.get(params.serviceId, user.id);
+	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
 		error(404, "Service not found");
 	}
 
-	const stack = svc.stackId ? await StackDTO.get(svc.stackId, user.id) : null;
+	const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 
 	return {
 		baseDomain: config.baseDomain,

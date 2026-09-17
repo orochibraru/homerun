@@ -144,6 +144,31 @@
         </div>
       {/if}
 
+      {#if plan.missingEnvFiles.length > 0}
+        <section class="panel space-y-4 rounded-md p-5">
+          <div>
+            <h2 class="eyebrow">Env files</h2>
+            <p class="text-text-muted mt-0.5 text-xs">
+              The file references these, relative to where it lived. Paste
+              each one's contents to import its variables, or leave it blank
+              to skip it.
+            </p>
+          </div>
+          {#each plan.missingEnvFiles as path, index (path)}
+            <div>
+              <label class={labelClass} for="envFileContent-{index}">{path}</label>
+              <input name="envFilePath" type="hidden" value={path} />
+              <textarea
+                class="{inputClass} h-28 resize-y font-mono text-xs"
+                id="envFileContent-{index}"
+                name="envFileContent"
+                placeholder={"KEY=value"}
+              ></textarea>
+            </div>
+          {/each}
+        </section>
+      {/if}
+
       <section class="panel rounded-md">
         <div class="border-border border-b px-5 py-4">
           <h2 class="eyebrow">Services ({plan.services.length})</h2>

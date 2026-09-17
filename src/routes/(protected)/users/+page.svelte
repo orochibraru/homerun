@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Mail, Plus, Trash2, UserPlus, X } from "@lucide/svelte";
+	import { Mail, Pencil, Plus, Trash2, UserPlus, X } from "@lucide/svelte";
 	import type { SubmitFunction } from "@sveltejs/kit";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
@@ -16,6 +16,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
+	import { ROLE_OPTIONS, roleLabel } from "$lib/permissions";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -23,19 +24,13 @@
 
 	onMount(() => title.set("Users"));
 
-	const roleOptions = [
-		{ label: "Developer", value: "developer" },
-		{ label: "Admin", value: "admin" },
-	];
+	const roleOptions = ROLE_OPTIONS;
 
 	const filters: FilterGroup[] = [
 		{
 			key: "role",
 			label: "Role",
-			options: [
-				{ label: "Admin", value: "admin" },
-				{ label: "Developer", value: "developer" },
-			],
+			options: ROLE_OPTIONS,
 		},
 	];
 
@@ -46,6 +41,7 @@
 		roleOptions.find((r) => r.value === newRole)?.label ?? "Developer",
 	);
 	let submitting = $state(false);
+	let editingEmailFor = $state<string | null>(null);
 
 	function submitToast(loading: string, success: string): SubmitFunction {
 		return enhanceToast({
@@ -79,9 +75,10 @@
     <div>
       <h1 class="text-text text-lg font-semibold tracking-tight">Users</h1>
       <p class="text-text-muted mt-1 text-sm">
-        Admin and developer accounts for this instance. Public sign-up is closed
-        once the first account exists : every account after that is created
-        here.
+        Admin, developer and read-only accounts for this instance. Public
+        sign-up is closed once the first account exists : every account after
+        that is created here. A read-only account sees everything but can't
+        change anything.
       </p>
     </div>
     <Button
@@ -177,11 +174,7 @@
                 <Select.Group>
                   <Select.Label>Role</Select.Label>
                   {#each roleOptions as opt (opt.value)}
-                    <Select.Item
-                      disabled={opt.value === "grapes"}
-                      label={opt.label}
-                      value={opt.value}
-                    >
+                    <Select.Item label={opt.label} value={opt.value}>
                       {opt.label}
                     </Select.Item>
                   {/each}
@@ -255,7 +248,57 @@
               <span class="text-text-subtle text-xs font-normal">(you)</span>
             {/if}
           </p>
-          <p class="text-text-muted truncate text-xs">{u.email}</p>
+          {#if editingEmailFor === u.id}
+            <form
+              action="?/setEmail"
+              class="mt-1.5 flex items-center gap-2"
+              method="POST"
+              use:enhance={enhanceToast({
+                loading: "Changing email",
+                onSuccess: () => {
+                  editingEmailFor = null;
+                },
+                success: "Email changed.",
+              })}
+            >
+              <input name="userId" type="hidden" value={u.id} />
+              <Input
+                aria-label="New email"
+                class="h-8 w-64 text-xs"
+                name="email"
+                required
+                type="email"
+                value={u.email}
+              />
+              <Button size="sm" type="submit">Save</Button>
+              <Button
+                onclick={() => {
+                  editingEmailFor = null;
+                }}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                Cancel
+              </Button>
+            </form>
+          {:else}
+            <p class="text-text-muted flex items-center gap-1 truncate text-xs">
+              {u.email}
+              <Button
+                aria-label="Change email"
+                class="size-6"
+                onclick={() => {
+                  editingEmailFor = u.id;
+                }}
+                size="icon-sm"
+                title="Change email"
+                variant="ghost"
+              >
+                <Pencil class="size-3" />
+              </Button>
+            </p>
+          {/if}
         </div>
         <div class="flex items-center gap-2">
           <form
@@ -270,8 +313,9 @@
               onchange={(e) => e.currentTarget.form?.requestSubmit()}
               value={u.role ?? "developer"}
             >
-              <option value="developer">Developer</option>
-              <option value="admin">Admin</option>
+              {#each roleOptions as opt (opt.value)}
+                <option value={opt.value}>{opt.label}</option>
+              {/each}
             </select>
           </form>
           <form
@@ -315,7 +359,7 @@
                 {inv.email}
               </p>
               <p class="text-text-muted text-xs">
-                {inv.role}
+                {roleLabel(inv.role)}
                 : expires {new Date(inv.expiresAt).toLocaleDateString()}
               </p>
             </div>
@@ -344,7 +388,7 @@
 <ConfirmDialog
   bind:open={removeDialogOpen}
   confirmLabel="Remove"
-  description={`Remove "${pendingRemoveName}"? Their services and containers are stopped and deleted : this can't be undone.`}
+  description={`Remove "${pendingRemoveName}"? Everything they created is handed over to you : this can't be undone.`}
   onConfirm={() => pendingRemoveForm?.requestSubmit()}
   title="Remove user"
 />

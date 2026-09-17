@@ -15,10 +15,12 @@ import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { GIT_WEBHOOK_PATH } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
 import { OIDC_BASE_PATH } from "$lib/oidc-provider";
+import { apiKeyScopeOf, isReadOnly } from "$lib/permissions";
 import { isForbiddenCrossSiteForm } from "$lib/server/csrf";
 import { db as appDb, getDb, resetDb } from "$lib/server/db";
 import { user as userTable } from "$lib/server/db/schema";
 import { seedBuiltinTemplates } from "$lib/server/db/seed";
+import { readOnlyRejection } from "$lib/server/read-only";
 import { AdminService } from "$lib/services/admin.service";
 import { auth, rebuildAuth } from "$lib/services/auth";
 import { CronService } from "$lib/services/cron.service";
@@ -188,7 +190,9 @@ async function runMigrations() {
  * Server boot sequence, run once before the first request : waits for the
  * database, migrates and seeds built-in templates, applies DB-backed instance
  * settings (plus the auto-detected forward-auth URL when running in a
- * container), rebuilds auth, syncs the dashboard's Traefik router and DNS, then
+ * container), rebuilds auth, syncs the dashboard's Traefik router and DNS,
+ * re-asserts swarm mode on the host (a `docker compose up` recreating Traefik
+ * drops its swarm provider flags) when that's the orchestration mode, then
  * starts the job worker, rollout health watches and every scheduler.
  */
 export const init = async () => {
@@ -213,6 +217,11 @@ export const init = async () => {
 	rebuildAuth();
 	await DockerService.syncDashboardRouter();
 	void syncDashboardDns();
+	if (settings.orchestrationMode === "swarm") {
+		void DockerService.enableSwarmMode().catch((err) => {
+			logger.warn("Couldn't re-assert swarm mode on this host", err);
+		});
+	}
 
 	JobWorker.start();
 	void DeploymentService.resumeHealthWatches();
@@ -223,6 +232,7 @@ export const init = async () => {
 	CronService.startStatsSampler();
 	CronService.startUptimeProbe();
 	CronService.startMirrorGcScheduler();
+	CronService.startGitPollScheduler();
 };
 
 /**
@@ -329,6 +339,7 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
 
 	if (apiKeyUser) {
 		event.locals.user = apiKeyUser;
+		event.locals.apiKeyScope = apiKeyScopeOf(result.key.metadata);
 	}
 	return null;
 }
@@ -366,6 +377,16 @@ const authHandler: Handle = async ({ event, resolve }) => {
 	// Declared in app.d.ts for exactly this : populated here so every route
 	// can check `locals.isAdmin` instead of re-deriving it from `role`.
 	event.locals.isAdmin = event.locals.user?.role === "admin";
+	event.locals.apiKeyScope ??= null;
+	event.locals.readOnly =
+		!!event.locals.user &&
+		isReadOnly(event.locals.user.role, event.locals.apiKeyScope);
+	if (event.locals.readOnly) {
+		const refused = readOnlyRejection(event.request, event.url.pathname);
+		if (refused) {
+			return refused;
+		}
+	}
 
 	// Skip better-auth handler for custom SvelteKit-managed auth routes
 	if (customAuthPaths.has(event.url.pathname)) {

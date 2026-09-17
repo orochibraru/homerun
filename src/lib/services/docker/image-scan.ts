@@ -8,6 +8,7 @@ import type { PullImageParams, RegistryAuth } from "./containers.ts";
 import type { SelfContainer } from "./core-services.ts";
 import {
 	extractDigest,
+	isRootlessDaemon,
 	lastErrorLine,
 	MIRROR_CONFIG_PATH,
 	MIRROR_CONTAINER_NAME,
@@ -27,6 +28,7 @@ import {
 	registryAuthFile,
 	SKOPEO_IMAGE,
 	SKOPEO_TAG,
+	skopeoArchiveCommand,
 	skopeoCopyCommand,
 	TRIVY_CACHE_VOLUME,
 	TRIVY_IMAGE,
@@ -34,6 +36,7 @@ import {
 	type TrivySource,
 	trivyImageCommand,
 } from "./image-scan-refs.ts";
+import { MANAGED_LABEL } from "./labels.ts";
 import {
 	isValidRepository,
 	MirrorRegistryClient,
@@ -407,6 +410,120 @@ export function DockerImageScanMixin<
 				.getImage(`${refs.loopbackImage}:${refs.loopbackTag}`)
 				.tag({ repo: target.image, tag: target.tag });
 			return pulled;
+		}
+
+		/** Kills a helper container, ignoring a container that already stopped or is gone. */
+		async #killQuietly(containerId: string): Promise<void> {
+			await this.getDocker()
+				.getContainer(containerId)
+				.kill()
+				.catch(() => undefined);
+		}
+
+		/** Pipes a `docker save` tarball into the local daemon's image load, resolving once the load finishes. */
+		async #loadArchive(archive: Readable): Promise<void> {
+			const docker = this.getDocker();
+			const progress = await docker.loadImage(archive);
+			await new Promise<void>((resolvePromise, reject) => {
+				docker.modem.followProgress(progress, (err: Error | null) =>
+					err ? reject(err) : resolvePromise(),
+				);
+			});
+		}
+
+		/** Whether the local daemon is rootless Docker, which can't pull from the mirror's loopback port. */
+		async isRootlessDocker(): Promise<boolean> {
+			const info = await this.getDocker()
+				.info()
+				.catch(() => null);
+			return isRootlessDaemon(info?.SecurityOptions);
+		}
+
+		/**
+		 * Streams an image out of the mirror into this daemon without a
+		 * registry pull : a one-off skopeo container on the shared network
+		 * reads it from `homerun-mirror:5000` and writes a `docker load`
+		 * tarball to its stdout, which is piped straight into the daemon's
+		 * image load, then tagged `target.image:target.tag`. Works wherever
+		 * the daemon can't reach the loopback registry (rootless Docker).
+		 *
+		 * @throws When skopeo exits non-zero, the load fails, or the whole
+		 *   transfer exceeds the scan timeout.
+		 */
+		async loadFromMirror(
+			refs: MirrorRefs,
+			target: { image: string; tag: string },
+			onProgress?: (line: string) => void,
+		): Promise<void> {
+			await this.ensureImageMirror();
+			const docker = this.getDocker();
+			try {
+				await docker.getImage(`${SKOPEO_IMAGE}:${SKOPEO_TAG}`).inspect();
+			} catch {
+				await this.pullImage({ image: SKOPEO_IMAGE, tag: SKOPEO_TAG });
+			}
+			const name = `${target.image}:${target.tag}`;
+			const command = skopeoArchiveCommand({ name, source: refs.internalRef });
+			const container = await docker.createContainer({
+				Cmd: command.cmd,
+				Entrypoint: command.entrypoint,
+				HostConfig: { NetworkMode: config.docker.networkName },
+				Image: `${SKOPEO_IMAGE}:${SKOPEO_TAG}`,
+				Labels: { [MANAGED_LABEL]: "true" },
+				Tty: false,
+			});
+			const raw = (await container.attach({
+				stderr: true,
+				stdout: true,
+				stream: true,
+			})) as unknown as Readable & { destroy: () => void };
+			const archive = new PassThrough();
+			const stderrStream = new PassThrough();
+			const stderr = collect(stderrStream);
+			docker.modem.demuxStream(raw, archive, stderrStream);
+			const finish = () => {
+				archive.end();
+				stderrStream.end();
+			};
+			raw.on("end", finish);
+			raw.on("close", finish);
+			const timer = setTimeout(() => {
+				container.kill().catch(() => undefined);
+			}, SCAN_TIMEOUT_MS);
+			try {
+				onProgress?.(`Loading ${name} from the mirror...`);
+				await container.start();
+				const loaded = this.#loadArchive(archive);
+				loaded.catch(() => this.#killQuietly(container.id));
+				const [exit, load] = await Promise.allSettled([
+					container.wait() as Promise<{ StatusCode: number }>,
+					loaded,
+				]);
+				if (exit.status === "rejected") {
+					throw exit.reason;
+				}
+				const skopeoOutput = (await stderr).trim();
+				if (exit.value.StatusCode !== 0 && skopeoOutput) {
+					throw new Error(lastErrorLine(skopeoOutput));
+				}
+				if (load.status === "rejected") {
+					throw load.reason;
+				}
+				if (exit.value.StatusCode !== 0) {
+					throw new Error(`skopeo exited with code ${exit.value.StatusCode}`);
+				}
+				await docker.getImage(name).inspect();
+				logger.info(`Image loaded from the mirror: ${name}`);
+			} finally {
+				clearTimeout(timer);
+				raw.destroy();
+				await container.remove({ force: true }).catch((err) => {
+					logger.warn(
+						`Couldn't remove mirror load container ${container.id}`,
+						err,
+					);
+				});
+			}
 		}
 
 		/**

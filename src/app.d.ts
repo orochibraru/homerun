@@ -1,6 +1,7 @@
 import type { HTMLAnchorAttributes } from "svelte/elements";
 import type { Pathname } from "$app/types";
 import type { Logger } from "$lib/logger";
+import type { ApiKeyScope } from "$lib/permissions";
 import type { AuthType } from "$lib/services/auth";
 
 /// <reference types="vite-plugin-pwa/client" />
@@ -12,6 +13,7 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
+			apiKeyScope: ApiKeyScope | null;
 			authCookie: string;
 			error: string;
 			errorId: string;
@@ -19,6 +21,7 @@ declare global {
 			isAdmin: boolean;
 			logger: Logger;
 			message: unknown;
+			readOnly: boolean;
 			session: AuthType["session"];
 			user: AuthType["user"];
 			userAgent: string;

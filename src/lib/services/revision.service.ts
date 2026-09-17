@@ -1,4 +1,5 @@
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import {
 	isRevision,
@@ -33,23 +34,28 @@ class RevisionServiceClass {
 		const rows = (await DeploymentDTO.listRevisions(svc.id)).map((dep) =>
 			dep.toJSON(),
 		);
-		return this.annotate(svc.toJSON(), rows);
+		const settings = await InstanceSettingsDTO.get();
+		return this.annotate(svc.toJSON(), rows, settings.retainedImagesPerService);
 	}
 
 	/**
 	 * Marks each deployment row as `current` (the deployed revision, only
 	 * when the service actually has a running workload), `previous` (the
-	 * rollback target), and `retained` (kept from image-pruning).
+	 * rollback target), and `retained` (among the newest `retainedLimit`
+	 * distinct images, kept from image-pruning).
 	 */
-	annotate(
+	annotate<TRow extends Deployment>(
 		svc: Pick<Service, "containerId" | "swarmServiceId">,
-		rows: Deployment[],
-	): RevisionView[] {
+		rows: TRow[],
+		retainedLimit: number,
+	): (TRow & Omit<RevisionView, keyof Deployment>)[] {
 		const deployed = Boolean(svc.containerId || svc.swarmServiceId);
 		const revisions = rows.filter(isRevision);
 		const current = deployed ? (revisions[0] ?? null) : null;
 		const previous = previousRevision(revisions, current?.id ?? null);
-		const retained = new Set(retainedRevisions(revisions).map((r) => r.id));
+		const retained = new Set(
+			retainedRevisions(revisions, retainedLimit).map((r) => r.id),
+		);
 		return rows.map((row) => ({
 			...row,
 			current: row.id === current?.id,
@@ -124,13 +130,15 @@ class RevisionServiceClass {
 		}
 	}
 
-	/** Enqueues a redeploy of `input.revision` as a rollback. */
+	/** Enqueues a redeploy of `input.revision` as a rollback, optionally putting back that revision's env vars, resources and networking too (`restoreConfig`). */
 	async enqueueRollback(input: {
+		restoreConfig?: boolean;
 		revision: DeploymentDTO;
 		svc: ServiceDTO;
 		userId: string;
 	}) {
 		return await DeploymentService.enqueueDeploy({
+			restoreConfig: input.restoreConfig ?? false,
 			rollbackOfDeploymentId: input.revision.id,
 			svc: input.svc,
 			userId: input.userId,

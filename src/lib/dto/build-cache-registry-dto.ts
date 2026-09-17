@@ -30,43 +30,30 @@ export interface UpdateBuildCacheRegistryInput {
 
 /** Wraps the `build_cache_registry` table : see ServiceDTO for the pattern this follows. */
 export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
-	/**
-	 * Loads one build cache registry by id, scoped to its owner; null when it
-	 * doesn't exist or belongs to someone else.
-	 */
-	static async get(
-		id: string,
-		userId: string,
-	): Promise<BuildCacheRegistryDTO | null> {
+	/** Loads one build cache registry by id; null when missing. */
+	static async get(id: string): Promise<BuildCacheRegistryDTO | null> {
 		const [row] = await db
 			.select()
 			.from(buildCacheRegistry)
-			.where(
-				and(
-					eq(buildCacheRegistry.id, id),
-					eq(buildCacheRegistry.userId, userId),
-				),
-			)
+			.where(eq(buildCacheRegistry.id, id))
 			.limit(1);
 		return row ? new BuildCacheRegistryDTO(row) : null;
 	}
 
-	/** Every build cache registry the user owns, newest first. */
-	static async list(userId: string): Promise<BuildCacheRegistryDTO[]> {
+	/** Every build cache registry on the instance, newest first. */
+	static async list(): Promise<BuildCacheRegistryDTO[]> {
 		const rows = await db
 			.select()
 			.from(buildCacheRegistry)
-			.where(eq(buildCacheRegistry.userId, userId))
 			.orderBy(desc(buildCacheRegistry.createdAt));
 		return rows.map((row) => new BuildCacheRegistryDTO(row));
 	}
 
 	/** One page of `list`, searched server-side, plus the unpaged total. */
 	static async listPaged(
-		userId: string,
 		query: ListQuery,
 	): Promise<PagedResult<BuildCacheRegistryDTO>> {
-		const conditions: SQL[] = [eq(buildCacheRegistry.userId, userId)];
+		const conditions: SQL[] = [];
 		const search = searchCondition(query.q, [
 			buildCacheRegistry.name,
 			buildCacheRegistry.registryUrl,
@@ -97,11 +84,10 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 	}
 
 	/**
-	 * Up to `limit` of the user's registries whose name, URL or username matches
+	 * Up to `limit` registries whose name, URL or username matches
 	 * `q`, newest first, for global search.
 	 */
 	static async search(
-		userId: string,
 		q: string,
 		limit: number,
 	): Promise<BuildCacheRegistryDTO[]> {
@@ -109,14 +95,11 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 			.select()
 			.from(buildCacheRegistry)
 			.where(
-				and(
-					eq(buildCacheRegistry.userId, userId),
-					searchCondition(q, [
-						buildCacheRegistry.name,
-						buildCacheRegistry.registryUrl,
-						buildCacheRegistry.username,
-					]),
-				),
+				searchCondition(q, [
+					buildCacheRegistry.name,
+					buildCacheRegistry.registryUrl,
+					buildCacheRegistry.username,
+				]),
 			)
 			.orderBy(desc(buildCacheRegistry.createdAt))
 			.limit(limit);

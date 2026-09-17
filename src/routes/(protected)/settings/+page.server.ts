@@ -1,15 +1,26 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import { passkeyRpId } from "$lib/security-policy";
 import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
 import {
 	applyAndRebuild,
 	checkbox,
 	nullableText,
 } from "$lib/server/validation/instance-settings-form";
+import { AccountSecurityService } from "$lib/services/account-security.service";
 
 const logger = new Logger("InstanceSettings");
+
+export const load = async ({ parent }) => {
+	await parent();
+	return {
+		passkeyCount: await AccountSecurityService.countAllPasskeys(),
+		passkeyRpId: passkeyRpId(config.auth.origin) ?? "localhost",
+	};
+};
 
 export const actions = {
 	updateCore: async ({ request, locals }) => {

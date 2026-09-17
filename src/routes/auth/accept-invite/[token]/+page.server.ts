@@ -2,6 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { Logger } from "$lib/logger";
+import { asAuthRole } from "$lib/permissions";
 import { auth } from "$lib/services/auth";
 
 const logger = new Logger("AcceptInvite");
@@ -51,7 +52,7 @@ export const actions = {
 					email,
 					name,
 					password,
-					role,
+					role: asAuthRole(role),
 				},
 			})
 			.catch((error: unknown) => ({ error }));

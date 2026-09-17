@@ -6,6 +6,7 @@ import {
 import { BUILTIN_TEMPLATES_APPS } from "$lib/server/db/builtin-templates-apps";
 import { db } from "$lib/server/db/lib";
 import { template, templateLink } from "$lib/server/db/schema";
+import { runtimeOptionsFrom } from "$lib/service-runtime";
 
 /**
  * Upserts every built-in template, overwriting their stored fields with the
@@ -19,6 +20,7 @@ export async function seedBuiltinTemplates(): Promise<void> {
 		.values(
 			[...BUILTIN_TEMPLATES, ...BUILTIN_TEMPLATES_APPS].map((t) => ({
 				...t,
+				...runtimeOptionsFrom(t),
 				createdAt: now,
 				healthcheckCommand: t.healthcheckCommand ?? null,
 				ownerId: null,
@@ -28,14 +30,21 @@ export async function seedBuiltinTemplates(): Promise<void> {
 		)
 		.onConflictDoUpdate({
 			set: {
+				capAdd: sql`excluded.cap_add`,
 				category: sql`excluded.category`,
+				command: sql`excluded.command`,
 				containerPort: sql`excluded.container_port`,
 				description: sql`excluded.description`,
+				devices: sql`excluded.devices`,
+				entrypoint: sql`excluded.entrypoint`,
+				envFiles: sql`excluded.env_files`,
 				envVars: sql`excluded.env_vars`,
 				healthcheckCommand: sql`excluded.healthcheck_command`,
 				icon: sql`excluded.icon`,
 				image: sql`excluded.image`,
+				labels: sql`excluded.labels`,
 				name: sql`excluded.name`,
+				privileged: sql`excluded.privileged`,
 				sourceUrl: sql`excluded.source_url`,
 				tag: sql`excluded.tag`,
 				tags: sql`excluded.tags`,

@@ -9,6 +9,12 @@ import type {
 } from "./containers.ts";
 import { dockerHealthcheck } from "./healthcheck.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
+import {
+	type ContainerRuntimeParams,
+	capabilityName,
+	mergeLabels,
+} from "./runtime-options.ts";
+import type { SwarmServiceSpec } from "./swarm-rollout.ts";
 
 const logger = new Logger("Swarm");
 
@@ -25,8 +31,27 @@ export function swarmNetworkName(): string {
 	return `${config.docker.networkName}-swarm`;
 }
 
-/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pullImage. */
+/**
+ * Whether `docker info`'s security options mark the daemon as rootless.
+ * Swarm mode can't work there: a rootless daemon can't create the overlay
+ * network a swarm service joins, and fails the attach with a bare "context
+ * deadline exceeded" after the swarm was already initialised.
+ */
+export function isRootlessDaemon(
+	securityOptions: string[] | undefined,
+): boolean {
+	return (securityOptions ?? []).some((option) =>
+		option.split(",").includes("name=rootless"),
+	);
+}
+
+/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pullImage and the swarm rollout mixin. */
 interface RequiresContainerMixin {
+	rollOutSwarmService: (
+		swarmServiceId: string,
+		spec: SwarmServiceSpec,
+		onProgress?: (line: string) => void,
+	) => Promise<{ swarmServiceId: string }>;
 	pullImage: (params: PullImageParams) => Promise<{ digest: string | null }>;
 }
 
@@ -40,7 +65,6 @@ export interface SwarmReadiness {
 
 export interface CreateSwarmServiceParams {
 	auth?: RegistryAuth;
-	authRequired?: boolean;
 	containerPort: number;
 	cpuLimit?: string | null;
 	customDomain?: string | null;
@@ -50,6 +74,7 @@ export interface CreateSwarmServiceParams {
 	memoryLimitMb?: number | null;
 	portProtocol?: "tcp" | "udp" | "both";
 	healthcheckCommand?: string | null;
+	runtime?: ContainerRuntimeParams;
 	stackSlug?: string | null;
 	replicas: number;
 	restartPolicy: string;
@@ -70,13 +95,10 @@ export interface CreateSwarmServiceParams {
  * an independent client. Not built here, flagged as a real gap : swarm-mode
  * services always run against the local swarm manager.
  *
- * Requires the host's own Docker daemon to already be swarm-active
- * (`docker swarm init`, the admin's own one-time step : this app never
- * runs that itself, same "don't touch host-level daemon state" boundary as
- * the rootless-Docker installer). Traefik must be configured with its
- * Docker provider in swarm mode (`--providers.docker.swarmMode=true`) to
- * discover these services : a compose.yaml change the admin makes once,
- * same pattern as the custom-SSL dynamic-config-dir opt-in.
+ * The host is prepared by `enableSwarmMode` (core-services.ts) when the
+ * orchestration mode is switched on the dashboard : `docker swarm init`
+ * through `initSwarm` below, the overlay network, and Traefik's
+ * `--providers.swarm` flags on the live container.
  */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerSwarmMixin<
@@ -87,6 +109,21 @@ export function DockerSwarmMixin<
 		async isSwarmActive(): Promise<boolean> {
 			const info = await this.getDocker().info();
 			return info?.Swarm?.LocalNodeState === "active";
+		}
+
+		/**
+		 * Refuses to go further on a rootless daemon, before anything on the
+		 * host has been changed.
+		 *
+		 * @throws When this daemon runs rootless.
+		 */
+		async assertSwarmCapableDaemon(): Promise<void> {
+			const info = await this.getDocker().info();
+			if (isRootlessDaemon(info?.SecurityOptions)) {
+				throw new Error(
+					"This Docker daemon runs rootless, and rootless Docker can't create the overlay networks swarm services need. Run Homerun on the system (rootful) daemon to use swarm mode: reinstall with --docker=rootful.",
+				);
+			}
 		}
 
 		/**
@@ -188,13 +225,18 @@ export function DockerSwarmMixin<
 		#taskTemplateFor(params: CreateSwarmServiceParams) {
 			return {
 				ContainerSpec: {
+					Args: params.runtime?.command ?? undefined,
+					CapabilityAdd: params.runtime?.capAdd.length
+						? params.runtime.capAdd.map(capabilityName)
+						: undefined,
+					Command: params.runtime?.entrypoint ?? undefined,
 					Env: Object.entries(params.envVars).map(([k, v]) => `${k}=${v}`),
 					Healthcheck: dockerHealthcheck(params.healthcheckCommand),
 					Image: `${params.image}:${params.tag}`,
-					Labels: {
+					Labels: mergeLabels(params.runtime?.labels, {
 						[SERVICE_ID_LABEL]: params.serviceId,
 						"homerun.managed": "true",
-					},
+					}),
 					Mounts: (params.volumes ?? []).map((v) => ({
 						ReadOnly: v.readOnly ?? false,
 						Source: v.source,
@@ -220,14 +262,16 @@ export function DockerSwarmMixin<
 		}
 
 		/**
-		 * Pulls the image, then creates (or replaces) the swarm service
-		 * backing one Homerun service: ensures the shared overlay network,
-		 * removes any previous swarm service for this service id (found by
-		 * label, see `#findSwarmService`), best-effort pre-pulls the image
-		 * (`#prePullImage`), then creates the service. Reports progress via
+		 * Pulls the image, then creates or updates the swarm service backing
+		 * one Homerun service: ensures the shared overlay network, best-effort
+		 * pre-pulls the image (`#prePullImage`), then either rolls the existing
+		 * swarm service for this service id (found by label, see
+		 * `#findSwarmService`) onto the new spec in place, health-gated
+		 * (`rollOutSwarmService`), or creates it. Reports progress via
 		 * `onProgress`.
 		 *
-		 * @throws When the Docker create-service call fails.
+		 * @throws When the Docker create-service call fails, or
+		 *   `RolloutFailedError` when swarm rolled the update back.
 		 */
 		async createAndStartSwarmService(
 			params: CreateSwarmServiceParams,
@@ -237,34 +281,40 @@ export function DockerSwarmMixin<
 			await this.ensureSwarmNetwork(swarmNetworkName());
 
 			const existing = await this.#findSwarmService(params.serviceId);
-			if (existing) {
-				onProgress?.(`Removing previous service ${existing.ID}...`);
-				await docker.getService(existing.ID).remove();
-			}
-
 			await this.#prePullImage(params, onProgress);
 
+			if (params.runtime?.privileged || params.runtime?.devices.length) {
+				onProgress?.(
+					"Swarm services can't run privileged or map devices : those settings are ignored under swarm mode.",
+				);
+			}
+			const spec = {
+				Labels: mergeLabels(
+					params.runtime?.labels,
+					buildContainerLabels({
+						containerPort: params.containerPort,
+						customDomain: params.customDomain,
+						dnsResolvable: params.dnsResolvable,
+						networkName: swarmNetworkName(),
+						stackSlug: params.stackSlug,
+						serviceId: params.serviceId,
+						slug: params.slug,
+					}),
+				),
+				Mode: { Replicated: { Replicas: params.replicas } },
+				Name: this.#swarmServiceName(params.slug, params.stackSlug),
+				TaskTemplate: this.#taskTemplateFor(params),
+			};
+			if (existing) {
+				return await this.rollOutSwarmService(existing.ID, spec, onProgress);
+			}
 			onProgress?.("Creating swarm service...");
 			// Swarm has no per-service EXPOSE equivalent to declare protocols
 			// the way standalone containers do, and no port is published
 			// either way (matching the rest of this app's "no host port
 			// publishing by design" stance), so params.portProtocol isn't
 			// attached to anything dockerode's swarm API accepts here.
-			const created = await docker.createService({
-				Labels: buildContainerLabels({
-					authRequired: params.authRequired,
-					containerPort: params.containerPort,
-					customDomain: params.customDomain,
-					dnsResolvable: params.dnsResolvable,
-					networkName: swarmNetworkName(),
-					stackSlug: params.stackSlug,
-					serviceId: params.serviceId,
-					slug: params.slug,
-				}),
-				Mode: { Replicated: { Replicas: params.replicas } },
-				Name: this.#swarmServiceName(params.slug, params.stackSlug),
-				TaskTemplate: this.#taskTemplateFor(params),
-			});
+			const created = await docker.createService(spec);
 
 			logger.info(
 				`Swarm service created: id=${created.id ?? created.ID} service=${params.serviceId}`,

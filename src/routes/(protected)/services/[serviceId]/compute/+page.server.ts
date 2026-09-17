@@ -19,7 +19,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}

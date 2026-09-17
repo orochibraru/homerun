@@ -155,7 +155,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Deploy a revision (roll back)
-		 * @description Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target.
+		 * @description Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target. Only the image is rolled back unless restoreConfig=true, which also puts back the env vars, resources and networking that revision ran with.
 		 */
 		post: operations["post_services__serviceId__revisions__revisionId__deploy"];
 		delete?: never;
@@ -390,6 +390,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
 		};
 	};
 	get_jobs__jobId_: {
@@ -473,7 +485,7 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description The caller's services */
+			/** @description Every service on the instance */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -490,6 +502,8 @@ export interface operations {
 						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
+						capAdd: string[];
+						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
 						cpuLimit: string | null;
@@ -515,29 +529,54 @@ export interface operations {
 						customSslKeyEnc: string | null;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
+						devices: string[];
 						dnsResolvable: boolean;
+						entrypoint: string[] | null;
+						envFiles: string[];
 						envVars: {
 							[key: string]: string;
 						};
+						gitBakeFile: string | null;
+						gitBakeTarget: string | null;
 						gitBuildContext: string | null;
+						/** @enum {string} */
+						gitBuildMethod:
+							| "dockerfile"
+							| "bake"
+							| "nixpacks"
+							| "railpack"
+							| "heroku"
+							| "paketo";
 						gitDockerfilePath: string | null;
+						gitLastSeenCommit: string | null;
+						gitPollEnabled: boolean;
 						gitProviderId: string | null;
 						gitRef: string | null;
 						gitRepo: string | null;
 						gitUrl: string | null;
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
+						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						id: string;
 						image: string;
 						imageScanEnabled: boolean;
+						labels: {
+							[key: string]: string;
+						};
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
+						previewBranch: string | null;
+						previewParentId: string | null;
+						previewPrNumber: number | null;
+						previewPrTitle: string | null;
+						previewsEnabled: boolean;
+						privileged: boolean;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -594,23 +633,58 @@ export interface operations {
 					 * @enum {string}
 					 */
 					buildSource: "image" | "git";
+					/** @default [] */
+					capAdd: string[];
+					/** @description Argv list, null keeps the image's own */
+					command?: string[] | null;
 					containerPort: number;
 					cpuLimit?: string;
+					/**
+					 * @description host[:container[:rwm]] device mappings
+					 * @default []
+					 */
+					devices: string[];
 					/** @default true */
 					dnsResolvable: boolean;
+					/** @description Argv list, null keeps the image's own */
+					entrypoint?: string[] | null;
+					/**
+					 * @description Absolute host paths of .env files read at deploy
+					 * @default []
+					 */
+					envFiles: string[];
 					/** @default {} */
 					envVars: {
 						[key: string]: string;
 					};
+					gitBakeFile?: string;
+					gitBakeTarget?: string;
 					gitBuildContext?: string;
+					/**
+					 * @default dockerfile
+					 * @enum {string}
+					 */
+					gitBuildMethod:
+						| "dockerfile"
+						| "bake"
+						| "nixpacks"
+						| "railpack"
+						| "heroku"
+						| "paketo";
 					gitDockerfilePath?: string;
 					gitProviderId?: string;
 					gitRef?: string;
 					gitRepo?: string;
 					gitUrl?: string;
 					image?: string;
+					/** @default {} */
+					labels: {
+						[key: string]: string;
+					};
 					memoryLimitMb?: number;
 					name: string;
+					/** @default false */
+					privileged: boolean;
 					/**
 					 * @default always
 					 * @enum {string}
@@ -648,6 +722,8 @@ export interface operations {
 						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
+						capAdd: string[];
+						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
 						cpuLimit: string | null;
@@ -673,29 +749,54 @@ export interface operations {
 						customSslKeyEnc: string | null;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
+						devices: string[];
 						dnsResolvable: boolean;
+						entrypoint: string[] | null;
+						envFiles: string[];
 						envVars: {
 							[key: string]: string;
 						};
+						gitBakeFile: string | null;
+						gitBakeTarget: string | null;
 						gitBuildContext: string | null;
+						/** @enum {string} */
+						gitBuildMethod:
+							| "dockerfile"
+							| "bake"
+							| "nixpacks"
+							| "railpack"
+							| "heroku"
+							| "paketo";
 						gitDockerfilePath: string | null;
+						gitLastSeenCommit: string | null;
+						gitPollEnabled: boolean;
 						gitProviderId: string | null;
 						gitRef: string | null;
 						gitRepo: string | null;
 						gitUrl: string | null;
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
+						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						id: string;
 						image: string;
 						imageScanEnabled: boolean;
+						labels: {
+							[key: string]: string;
+						};
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
+						previewBranch: string | null;
+						previewParentId: string | null;
+						previewPrNumber: number | null;
+						previewPrTitle: string | null;
+						previewsEnabled: boolean;
+						privileged: boolean;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -743,6 +844,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
 			/** @description Slug already in use */
 			409: {
 				headers: {
@@ -786,6 +899,8 @@ export interface operations {
 						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
+						capAdd: string[];
+						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
 						cpuLimit: string | null;
@@ -811,29 +926,54 @@ export interface operations {
 						customSslKeyEnc: string | null;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
+						devices: string[];
 						dnsResolvable: boolean;
+						entrypoint: string[] | null;
+						envFiles: string[];
 						envVars: {
 							[key: string]: string;
 						};
+						gitBakeFile: string | null;
+						gitBakeTarget: string | null;
 						gitBuildContext: string | null;
+						/** @enum {string} */
+						gitBuildMethod:
+							| "dockerfile"
+							| "bake"
+							| "nixpacks"
+							| "railpack"
+							| "heroku"
+							| "paketo";
 						gitDockerfilePath: string | null;
+						gitLastSeenCommit: string | null;
+						gitPollEnabled: boolean;
 						gitProviderId: string | null;
 						gitRef: string | null;
 						gitRepo: string | null;
 						gitUrl: string | null;
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
+						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						id: string;
 						image: string;
 						imageScanEnabled: boolean;
+						labels: {
+							[key: string]: string;
+						};
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
+						previewBranch: string | null;
+						previewParentId: string | null;
+						previewPrNumber: number | null;
+						previewPrTitle: string | null;
+						previewsEnabled: boolean;
+						privileged: boolean;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -917,6 +1057,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -961,15 +1113,35 @@ export interface operations {
 					autoRollback?: boolean;
 					/** @enum {string} */
 					buildSource?: "image" | "git";
+					capAdd?: string[];
+					/** @description Argv list, null keeps the image's own */
+					command?: string[] | null;
 					containerPort?: number;
 					cpuLimit?: string | null;
 					customDomain?: string | null;
+					/** @description host[:container[:rwm]] device mappings */
+					devices?: string[];
 					dnsResolvable?: boolean;
+					/** @description Argv list, null keeps the image's own */
+					entrypoint?: string[] | null;
+					/** @description Absolute host paths of .env files read at deploy */
+					envFiles?: string[];
 					envVars?: {
 						[key: string]: string;
 					};
+					gitBakeFile?: string | null;
+					gitBakeTarget?: string | null;
 					gitBuildContext?: string | null;
+					/** @enum {string} */
+					gitBuildMethod?:
+						| "dockerfile"
+						| "bake"
+						| "nixpacks"
+						| "railpack"
+						| "heroku"
+						| "paketo";
 					gitDockerfilePath?: string | null;
+					gitPollEnabled?: boolean;
 					gitProviderId?: string | null;
 					gitRef?: string | null;
 					gitRepo?: string | null;
@@ -977,8 +1149,13 @@ export interface operations {
 					healthcheckCommand?: string | null;
 					image?: string;
 					imageScanEnabled?: boolean;
+					labels?: {
+						[key: string]: string;
+					};
 					memoryLimitMb?: number | null;
 					name?: string;
+					previewsEnabled?: boolean;
+					privileged?: boolean;
 					/** @enum {string} */
 					pullPolicy?: "always" | "missing" | "never";
 					registryPassword?: string;
@@ -1011,6 +1188,8 @@ export interface operations {
 						autoRollback: boolean;
 						/** @enum {string} */
 						buildSource: "image" | "git";
+						capAdd: string[];
+						command: string[] | null;
 						containerId: string | null;
 						containerPort: number;
 						cpuLimit: string | null;
@@ -1036,29 +1215,54 @@ export interface operations {
 						customSslKeyEnc: string | null;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
+						devices: string[];
 						dnsResolvable: boolean;
+						entrypoint: string[] | null;
+						envFiles: string[];
 						envVars: {
 							[key: string]: string;
 						};
+						gitBakeFile: string | null;
+						gitBakeTarget: string | null;
 						gitBuildContext: string | null;
+						/** @enum {string} */
+						gitBuildMethod:
+							| "dockerfile"
+							| "bake"
+							| "nixpacks"
+							| "railpack"
+							| "heroku"
+							| "paketo";
 						gitDockerfilePath: string | null;
+						gitLastSeenCommit: string | null;
+						gitPollEnabled: boolean;
 						gitProviderId: string | null;
 						gitRef: string | null;
 						gitRepo: string | null;
 						gitUrl: string | null;
 						gitWebhookError: string | null;
 						gitWebhookId: string | null;
+						gitWebhookReconnect: boolean;
 						gitWebhookSecretEnc: string | null;
 						healthcheckCommand: string | null;
 						id: string;
 						image: string;
 						imageScanEnabled: boolean;
+						labels: {
+							[key: string]: string;
+						};
 						memoryLimitMb: number | null;
 						name: string;
 						/** @enum {string} */
 						networkMode: "bridge" | "host";
 						/** @enum {string} */
 						portProtocol: "tcp" | "udp" | "both";
+						previewBranch: string | null;
+						previewParentId: string | null;
+						previewPrNumber: number | null;
+						previewPrTitle: string | null;
+						previewsEnabled: boolean;
+						privileged: boolean;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
 						registryUrl: string | null;
@@ -1103,6 +1307,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
 					};
 				};
 			};
@@ -1155,6 +1371,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
 					};
 				};
 			};
@@ -1230,6 +1458,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
 					};
 				};
 			};
@@ -1331,7 +1571,10 @@ export interface operations {
 	};
 	post_services__serviceId__revisions__revisionId__deploy: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** @description true to also restore the revision's env vars, resources and networking (default false) */
+				restoreConfig?: string;
+			};
 			header?: never;
 			path: {
 				/** @description Service id */
@@ -1378,6 +1621,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
 					};
 				};
 			};
@@ -1543,6 +1798,18 @@ export interface operations {
 					"application/json": {
 						error: string;
 						issues?: unknown;
+					};
+				};
+			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
 					};
 				};
 			};
@@ -1804,6 +2071,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -1865,6 +2144,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
 			/** @description Not found */
 			404: {
 				headers: {
@@ -1900,7 +2191,14 @@ export interface operations {
 					"application/json": {
 						/** @description Why Homerun couldn't register the webhook itself, if it couldn't */
 						error: string | null;
+						/** @description Whether Homerun polls the branch head every two minutes instead of, or as well as, waiting for deliveries */
+						polling: boolean;
 						providerName: string | null;
+						/** @description The provider to reconnect when it refused the webhook, usually for a missing webhook scope */
+						reconnect: {
+							providerId: string;
+							providerName: string;
+						} | null;
 						/** @description Whether Homerun registered the webhook on the provider */
 						registered: boolean;
 						/** @description The secret deliveries are signed with */
@@ -1952,7 +2250,7 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description The caller's stacks */
+			/** @description Every stack on the instance */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -2057,6 +2355,18 @@ export interface operations {
 					};
 				};
 			};
+			/** @description Read-only caller: the user holds the read-only role or the request used a read-only API key. */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @example This account or API key is read-only: it can view everything but can't change anything. */
+						error: string;
+					};
+				};
+			};
 			/** @description Slug already in use */
 			409: {
 				headers: {
@@ -2133,14 +2443,16 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description Built-in templates plus the caller's own */
+			/** @description Built-in and custom templates */
 			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					"application/json": {
+						capAdd: string[];
 						category: string | null;
+						command: string[] | null;
 						containerPort: number;
 						cpuLimit: string | null;
 						/**
@@ -2149,16 +2461,24 @@ export interface operations {
 						 */
 						createdAt: string;
 						description: string | null;
+						devices: string[];
+						entrypoint: string[] | null;
+						envFiles: string[];
 						envVars: {
 							[key: string]: string;
 						} | null;
 						icon: string | null;
 						id: string;
 						image: string;
+						labels: {
+							[key: string]: string;
+						};
 						memoryLimitMb: number | null;
 						name: string;
 						/** @description null = built-in template */
 						ownerId: string | null;
+						/** @description privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them */
+						privileged: boolean;
 						restartPolicy: string;
 						tag: string;
 						/**

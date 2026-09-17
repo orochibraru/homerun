@@ -1,4 +1,14 @@
-import { and, count, desc, eq, isNull, or, type SQL } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	inArray,
+	isNull,
+	or,
+	type SQL,
+} from "drizzle-orm";
+import type { BackupRunKind } from "$lib/revision-config";
 import { db } from "$lib/server/db/lib";
 import {
 	type BackupRun,
@@ -15,14 +25,19 @@ import { BaseDTO } from "./base-dto";
 /** Wraps the `backup_run` table : see ServiceDTO for the pattern this follows. */
 export class BackupRunDTO extends BaseDTO<BackupRun> {
 	/**
-	 * Inserts a new in-progress backup run for a volume, stamped as started now
-	 * with no outcome yet.
+	 * Inserts a new in-progress run for a volume, stamped as started now with
+	 * no outcome yet : a backup by default, or a restore of `options.key`.
 	 */
-	static async create(volumeId: string): Promise<BackupRunDTO> {
+	static async create(
+		volumeId: string,
+		options: { key?: string | null; kind?: BackupRunKind } = {},
+	): Promise<BackupRunDTO> {
 		const row: BackupRun = {
 			error: null,
 			finishedAt: null,
 			id: crypto.randomUUID(),
+			key: options.key ?? null,
+			kind: options.kind ?? "backup",
 			sizeBytes: null,
 			startedAt: new Date(),
 			success: null,
@@ -38,12 +53,14 @@ export class BackupRunDTO extends BaseDTO<BackupRun> {
 	 */
 	async finish(result: {
 		error?: string;
+		key?: string;
 		sizeBytes?: number;
 		success: boolean;
 	}): Promise<void> {
 		const patch = {
 			error: result.error ?? null,
 			finishedAt: new Date(),
+			key: result.key ?? this.row.key,
 			sizeBytes: result.sizeBytes ?? null,
 			success: result.success,
 		};
@@ -66,19 +83,17 @@ export class BackupRunDTO extends BaseDTO<BackupRun> {
 	}
 
 	/**
-	 * Every run across every one of this user's volumes, newest first, with
+	 * Every run across every volume, newest first, with
 	 * the volume's own name joined in : for the dashboard Backups page,
 	 * which lists across volumes rather than one volume at a time.
 	 */
-	static async listForUser(
-		userId: string,
+	static async listRecent(
 		limit = 50,
 	): Promise<Array<{ run: BackupRunDTO; volumeName: string }>> {
 		const rows = await db
 			.select({ row: backupRun, volumeName: storageVolume.name })
 			.from(backupRun)
 			.innerJoin(storageVolume, eq(backupRun.volumeId, storageVolume.id))
-			.where(eq(storageVolume.userId, userId))
 			.orderBy(desc(backupRun.startedAt))
 			.limit(limit);
 		return rows.map((r) => ({
@@ -87,18 +102,22 @@ export class BackupRunDTO extends BaseDTO<BackupRun> {
 		}));
 	}
 
-	/** One page of `listForUser`, searched/filtered server-side, plus the unpaged total : this history grows without bound, so the page can't just load "the newest 50" and filter those client-side. */
-	static async listForUserPaged(
-		userId: string,
+	/** One page of `listRecent`, searched/filtered server-side, plus the unpaged total : this history grows without bound, so the page can't just load "the newest 50" and filter those client-side. */
+	static async listPaged(
 		query: ListQuery,
 	): Promise<PagedResult<{ run: BackupRunDTO; volumeName: string }>> {
-		const conditions: SQL[] = [eq(storageVolume.userId, userId)];
+		const conditions: SQL[] = [];
 		const search = searchCondition(query.q, [
 			storageVolume.name,
 			backupRun.error,
+			backupRun.key,
 		]);
 		if (search) {
 			conditions.push(search);
+		}
+		const kinds = query.filters.kind;
+		if (kinds && kinds.length > 0) {
+			conditions.push(inArray(backupRun.kind, kinds as BackupRunKind[]));
 		}
 		const outcomes = query.filters.outcome;
 		if (outcomes && outcomes.length > 0) {

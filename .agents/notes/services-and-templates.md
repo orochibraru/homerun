@@ -50,27 +50,28 @@ the cache registry row and the build server target, then hands plain data to
 
 - `image: ImagePlan`, one of `pull` (`svc.image`/`tag`/`pullPolicy`),
   `local-build` (optional cache registry as a layer cache), `docker-build` (a
-  remote Docker build server, registry required) or `agent-build` (an agent
-  build server, registry required), or `revision` (a rollback, see Revisions and
-  rollback below). Every git variant carries the `GitSource`
+  remote Docker build server) or `agent-build` (an agent build server), both
+  with `registry: CacheRegistryCredentials | null` (null streams the image back,
+  see Build servers in `docker.md`), or `revision` (a rollback, see Revisions
+  and rollback below). Every git variant carries the `GitSource`
   (url/ref/context/Dockerfile) with `gitUrl` already non-null.
 - `workload: WorkloadPlan`, either `container` (carries `networkMode`) or
   `swarm` (carries `replicas`).
 
 Illegal combinations throw a `DeployPlanError` there, so they fail the
 deployment with a clear message before anything happens: a git service without a
-URL, an image service without an image, a build server without a cache registry
-or that didn't resolve, and host networking under swarm (swarm services only
-join the overlay, this used to be silently dropped). Leftover
-`buildServerRemoteHostId`/`buildCacheRegistryId` on an image-source service are
-ignored and never loaded. Each pipeline step (`#resolveImage`, `#buildGitImage`,
-`#startWorkload`) is a `switch` over the variant's `kind` with a
-`default: return unreachable(plan)` (`never`) arm, so adding a variant is a type
-error until every step handles it. This exists because the old shape branched on
-`buildSource` × build target kind × `orchestrationMode` inline and rejected bad
-combinations with a `throw` deep in the pipeline (the old remote-deploy-target +
-swarm check only ran after the image was already built or pulled). Add a new
-axis or combination to the union, not an `if` in a step.
+URL, an image service without an image, a build server that didn't resolve, and
+host networking under swarm (swarm services only join the overlay, this used to
+be silently dropped). Leftover `buildServerRemoteHostId`/`buildCacheRegistryId`
+on an image-source service are ignored and never loaded. Each pipeline step
+(`#resolveImage`, `#buildGitImage`, `#startWorkload`) is a `switch` over the
+variant's `kind` with a `default: return unreachable(plan)` (`never`) arm, so
+adding a variant is a type error until every step handles it. This exists
+because the old shape branched on `buildSource` × build target kind ×
+`orchestrationMode` inline and rejected bad combinations with a `throw` deep in
+the pipeline (the old remote-deploy-target + swarm check only ran after the
+image was already built or pulled). Add a new axis or combination to the union,
+not an `if` in a step.
 
 A git build writes the resulting ref back to `svc.image`/`svc.tag` _before_ the
 workload starts, so the container step never needs to know which path produced
@@ -124,8 +125,11 @@ else unauthenticated for a well-known host (`inferProviderKind`). The checked
 SHA goes to `buildFromGit` as `commit`: when the shallow clone's HEAD differs (a
 push landed while waiting), `#checkoutCommit` runs
 `git fetch --depth 1 origin <sha>` and `checkout --detach` in the workspace, so
-the build is the checked commit or fails. Agent builds can't be pinned and say
-so in the log.
+the build is the checked commit or fails. Agent builds are pinned the same way:
+`AgentClientService.build` sends `commit`, and `packages/agent/docker.ts`'s
+`#checkout` does the same rev-parse, fetch and detached checkout, returning the
+built commit for the deployment row. An agent older than that strips the unknown
+field (zod's default) and builds the branch head.
 
 The Source tab's picker (`status-check-picker.svelte`) loads names through
 `listStatusCheckNames` (`$lib/remote/status-checks.remote.ts`, distinct names
@@ -146,9 +150,9 @@ split off into `imageDigest`, `imageId` from inspecting the run ref, and
 `health: "watching"`. Pure logic in `$lib/revisions.ts`, covered by
 `tests/unit/app/revisions.test.ts`: `previousRevision` (newest older revision
 whose image key, `imageId` then digest then ref, differs from the current one,
-skipping `unhealthy`/`rolled_back`), `retainedRevisions` (newest 5 distinct
-images per service), `revisionImageRefs` (what the Docker keep list resolves)
-and `healthVerdict`.
+skipping `unhealthy`/`rolled_back`), `retainedRevisions` (newest `limit`
+distinct images per service), `revisionImageRefs` (what the Docker keep list
+resolves) and `healthVerdict`.
 
 **Rollback** is `enqueueDeploy({rollbackOfDeploymentId})`: the row carries the
 target, the job is deduped on `rollback:<id>` (so it never coalesces into a
@@ -160,10 +164,24 @@ runs `image:tag@digest` (verified: `docker create` and a dockerode pull both
 accept that form), pulling by digest only if it's gone locally, and swarm just
 gets the pinned ref; without one it needs the local `image:tag` to still be the
 recorded `imageId`, and otherwise fails saying to redeploy. It writes the
-revision's `image`/`tag` back onto the service. Env, volumes, networking and
-resources are deliberately **not** snapshotted: a rollback undoes a bad image,
-config edits are intentional, and a snapshot would copy every secret into every
-deployment row.
+revision's `image`/`tag` back onto the service.
+
+**Config snapshot.** Every deploy writes `deployment.configSnapshot`
+(`RevisionConfig` in `$lib/revision-config.ts`: env vars, cpu/memory, replicas,
+containerPort/portProtocol, networkMode, dnsResolvable) right after the config
+phase, before the plan is built. A rollback enqueued with `restoreConfig`
+(`deployment.restoreConfig`, only ever true on a rollback row) runs
+`restoreRevisionConfig` (`deploy/revision-step.ts`) **before**
+`#loadDeployPlan`, because the workload plan reads `networkMode`/`replicas`,
+writing the target's snapshot onto the service and logging which fields changed;
+a target with no snapshot (deployed before this existed) logs and rolls back the
+image only. Volumes and `customDomain` (unique, and tied to DNS/SSL sync) are
+never part of it, and auto-rollback never sets it. The trade-off the old design
+avoided: env vars are copied into every deployment row. `service.envVars` is
+already plaintext jsonb, so that's no new exposure at rest, but the revisions
+page load strips the snapshot to `hasConfigSnapshot` rather than shipping every
+revision's env to the browser. Opt-in from the Revisions confirm dialog,
+`?restoreConfig=true` on the API, `--restore-config` on the CLI.
 
 **Health watch.** `DeploymentService.watchHealth` hands every successful deploy
 to `RevisionHealthService.watch`, an in-process fire-and-forget loop (not a
@@ -241,11 +259,15 @@ off, a `skipped` row is recorded and the pull is the plain one.
   it `syncServiceStatus`es instead, since the old container is still up.
   `fixableOnly` counts `image_scan.fixable_counts` (findings with a
   `FixedVersion`); rows from before that column (null) fall back to `counts`.
-  Unknown severity never blocks. **A scanner failure never blocks**, even with a
-  block policy set: only real findings do. Rollbacks (`revision-step.ts`) skip
-  the scan and the policy entirely, deliberately, so auto-rollback can always
-  recover. The git `docker-build`/`agent-build` paths push to the cache registry
-  before the scan; the gate is before `#startWorkload`, not before the push.
+  Unknown severity never blocks. **A scanner failure doesn't block by default**,
+  even with a block policy set: `instance_settings.image_scan_required`
+  (`imageScanRequired`, Settings → Docker, `ScanPolicy.required`) makes
+  `ImageScanService.scan`'s every-target-failed path (`#recordUnscanned`) throw
+  `ImageScanBlockedError` after recording the failed row. `scanDeployed` never
+  passes it. Rollbacks (`revision-step.ts`) skip the scan and the policy
+  entirely, deliberately, so auto-rollback can always recover. The git
+  `docker-build`/`agent-build` paths push to the cache registry before the scan;
+  the gate is before `#startWorkload`, not before the push.
 - The Security tab's **Scan now** is an `image_scan` job (dedupe/lock
   `image_scan:<serviceId>`) running `ImageScanService.scanDeployed`: Trivy with
   `--image-src docker,remote` against `svc.image:svc.tag` and the service's
@@ -282,11 +304,39 @@ both the map and `KEY=VALUE` list forms, `ports`/`expose` (the _container_ side;
 and the long `{target, protocol}` form), `restart` (`on-failure:3` →
 `on-failure`), `volumes` (short and long syntax), `depends_on`,
 `network_mode: host`, `container_name`, `deploy.resources.limits.cpus`/`memory`
-(and the legacy `cpus`/`mem_limit`). Everything else is a **warning on the
-preview, not a silent drop**: `build:`, `command`, `entrypoint`, `healthcheck`,
-`env_file`, `labels`, capabilities, devices, `privileged`, secrets/configs,
-top-level extra networks, relative bind mounts (Homerun needs an absolute host
-path), anonymous volumes, and the host side of every port mapping.
+(and the legacy `cpus`/`mem_limit`), and the runtime options (`command`,
+`entrypoint` via `$lib/shell-words.ts`'s `argvFrom`, `labels` minus `traefik.*`/
+`homerun.*`, `cap_add`, `devices` short and long form, `privileged`). Everything
+else is a **warning on the preview, not a silent drop**: `build:`,
+`healthcheck`, `cap_drop`, secrets/configs, top-level extra networks, relative
+bind mounts (Homerun needs an absolute host path), anonymous volumes, and the
+host side of every port mapping.
+
+`env_file` goes through `resolveEnvFiles`:
+`parseComposeFile(text, { envFiles })` takes a path → content map, a supplied
+file's variables are merged _under_ `environment`, an unsupplied absolute path
+lands in the draft's `envFiles` (the service column, read from the host at
+deploy time), and an unsupplied relative one lands in `missingEnvFiles`. The
+import page renders a textarea per `plan.missingEnvFiles` path and the `import`
+action re-parses with those contents (`envFilePath`/`envFileContent` form
+fields). Migrate passes Dokploy's `env` blob as `.env`, which is what Dokploy
+writes next to the compose file.
+
+Drafts also carry `registry` (plaintext credentials, encrypted by
+`ComposeImportService` on insert) and `files` (content to bind-mount): the
+service writes every file to `/var/lib/homerun/files/<slug>/<n>-<name>` as one
+in-memory ustar (`$lib/tar.ts`) through `DockerService.extractIntoVolume`
+(`putArchive` on a stopped `alpine` helper with that host directory bound, no
+size limit) and attaches each as a read-only bind storage volume. Only Migrate
+produces either.
+
+**Host access is admin-only** (`$lib/host-access.ts`): `privileged`, `devices`,
+`capAdd` and `envFiles` are host-root-equivalent. `hostAccessRequested` gates a
+create (REST `POST /services`, compose import, `ComposeImportService.importPlan`
+via its `allowHostAccess` input, which Migrate passes `locals.isAdmin` to) and
+`hostAccessChanged` gates an update (Runtime tab, Env files action, REST
+`PATCH`): a non-admin may save a form that keeps the current values, which is
+why the Runtime tab renders them as hidden inputs for non-admins.
 
 Two mapping decisions worth not re-litigating: **`dnsResolvable` is true only
 when the compose service published a host port** (`ports:`), false when it only
@@ -300,9 +350,9 @@ on a cycle rather than throwing), which is what makes "Import and deploy" queue
 the stack in `depends_on` order : the last service is passed to
 `DeploymentService.enqueueStackDeploy` as the primary and the rest as its
 dependency chain, reusing the template-links machinery rather than a second
-ordering implementation. Storage volumes are de-duplicated against the user's
-existing ones by `(kind, source)`, so importing two files that share a named
-volume mounts the same row twice instead of creating a duplicate.
+ordering implementation. Storage volumes are de-duplicated against the
+instance's existing ones by `(kind, source)`, so importing two files that share
+a named volume mounts the same row twice instead of creating a duplicate.
 
 ## Smart service links on create (`$lib/service-link.ts`, `service-link-picker.svelte`)
 
@@ -519,10 +569,10 @@ with `enhanceToast`, not a command.
 A template can link to other templates so deploying it deploys its companions
 too, e.g. a WordPress-shaped template linking to a "MySQL" template, or a worker
 linking to a "Redis" one : `templates/new`'s "Linked containers" section lets a
-template owner check any other _leaf_ template (built-in or their own, shown
-with its image/tag/port/env vars so there's enough to decide by) to link it,
-with an optional alias (defaults to the linked template's own slugified name
-when left blank). Deliberately two levels deep only, not a general DAG :
+template author check any other _leaf_ template (built-in or custom, shown with
+its image/tag/port/env vars so there's enough to decide by) to link it, with an
+optional alias (defaults to the linked template's own slugified name when left
+blank). Deliberately two levels deep only, not a general DAG :
 `TemplateLinkDTO.create`'s caller (`templates/new/+page.server.ts`) rejects
 linking to a template that itself already has links, so a link's target is
 always a leaf. This keeps env-var token resolution (below) simple, one level of
@@ -555,6 +605,41 @@ primary, same "bring up dependencies before dependents" ordering
 `docker compose`'s `depends_on` implies, though nothing here actually waits for
 a linked service to be _healthy_, just created and started.
 
+## Template runtime options and host access
+
+`template` carries the same runtime columns as `service` (`capAdd`, `command`,
+`devices`, `entrypoint`, `envFiles`, `labels`, `privileged`), typed through
+`ServiceRuntimeOptions` (`$lib/service-runtime.ts`): `NewTemplateInput` and
+`BuiltinTemplate` both extend `Partial<ServiceRuntimeOptions>`, and
+`TemplateDTO.create`/`seedBuiltinTemplates` normalize through
+`runtimeOptionsFrom`. `TemplateDTO.runtimeOptions` and
+`TemplateLinkWithTemplate.linkedTemplateRuntime` are what the deploy paths read.
+Captured by `saveAsTemplate` (the service Settings tab), `templates/new` (a
+**Runtime** section rendering `$lib/components/runtime-fields.svelte`, the same
+component the service Runtime tab uses, with `showEnvFiles`; parsed with
+`updateRuntimeSchema` + `updateEnvFilesSchema`) and returned by
+`GET /api/v1/templates`. There is no template edit, export or import to carry
+them through.
+
+Applied on every create-from-template path: `createServiceFromTemplate` (Quick
+Deploy) passes `runtime` for the primary and `createLinkedServices` for each
+companion (`ResolvedTemplateLink.runtime`); the wizard (`services/new`) passes
+the template's options on create, since the wizard itself has no runtime fields
+and only shows them as a `runtimeOptionsSummary` line in its template banner.
+
+**Host access stays admin-only.** A non-admin can't set privileged, devices,
+capAdd or envFiles on `templates/new` (403, `hostAccessRequested`), and
+`templateHostAccessRefusal(template, links, isAdmin)`
+(`$lib/services/template-links.ts`, built on `templatesNeedingHostAccess` +
+`templateHostAccessMessage` in `$lib/host-access.ts`) refuses a non-admin deploy
+when the primary **or any linked companion** needs it. It runs after
+`buildTemplateLinkContext` but before a stack or any service is created, so a
+refusal leaves nothing behind: `quickDeployFromTemplate` returns a 403,
+`services/new`'s `prepareLinkedStack` returns a 403 `fail`. The details page and
+the wizard compute the same refusal in `load` to warn up front (Quick Deploy is
+disabled on the details page). `saveAsTemplate` doesn't check: it only copies
+values an admin already set on the service.
+
 ## Built-in template catalog and gallery (`builtin-templates.ts`, `builtin-templates-apps.ts`, `template-icon.svelte`, `templates/[templateId]/`)
 
 69 built-in templates (up from the original 8), split across two data files
@@ -573,11 +658,10 @@ real via `docker manifest inspect <image>:<tag>` (fast, no full pull) before
 being added, not just guessed from a stack's README.
 
 **The seed upserts rather than `onConflictDoNothing()`, and it has to.** A
-built-in is code, not user data (`ownerId` null, and `TemplateDTO.owned()`
-refuses to hand one to an edit/delete route), so an instance that seeded once
-would otherwise keep the first version of every row forever : adding `tags` to
-the catalog changed nothing on any existing install, which is exactly how it was
-caught. `seedBuiltinTemplates()` now writes every display field back from
+built-in is code, not user data (`ownerId` null), so an instance that seeded
+once would otherwise keep the first version of every row forever : adding `tags`
+to the catalog changed nothing on any existing install, which is exactly how it
+was caught. `seedBuiltinTemplates()` now writes every display field back from
 `excluded.*` on conflict, so a boot re-syncs the catalog to whatever the code
 says. It deliberately doesn't touch `createdAt` or `ownerId`.
 
@@ -640,16 +724,16 @@ search-input-plus-`Drawer` implementation (`$lib/components/ui/drawer`,
 vaul-svelte's `direction` prop), now generalized into `entity-toolbar.svelte`
 and shared with every other list page instead of being templates-only. The
 built-in and custom sections paginate **independently**, 24 per page each,
-`TemplateDTO.listPaged(userId, "builtin" | "mine", query)` called twice with two
-separate `ListQuery`s (`pageParam: "bpage"` / `"mpage"`, see Server-side list
+`TemplateDTO.listPaged("builtin" | "custom", query)` called twice with two
+separate `ListQuery`s (`pageParam: "bpage"` / `"cpage"`, see Server-side list
 pagination above), one shared search/category toolbar filtering both, two
 `<Pagination>` footers reading their own param. Each card/row links to
 `templates/[templateId]/`, a details page (`+page.server.ts` guards via
-`TemplateDTO.usable`, same built-in-or-owned rule every deploy-from-template
-path uses) showing the full description, container port/CPU/memory/env vars, the
-source/website links, any linked companion templates (below), and the GitHub
-repo panel/readme (below). Every card and the details page carry two actions
-instead of one: **Quick Deploy** (primary) calls a `quickDeploy` form action
+`TemplateDTO.get`, same lookup every deploy-from-template path uses) showing the
+full description, container port/CPU/memory/env vars, the source/website links,
+any linked companion templates (below), and the GitHub repo panel/readme
+(below). Every card and the details page carry two actions instead of one:
+**Quick Deploy** (primary) calls a `quickDeploy` form action
 (`$lib/services/template-links.ts`'s `quickDeployFromTemplate()`, shared by both
 routes) that creates the service straight from the template's defaults
 (name/slug auto-generated via `slugify`) and deploys it immediately, no wizard;
@@ -693,7 +777,7 @@ allowlist, regardless of what GitHub returned.
 A status page groups services and answers one question — is this up? — for an
 audience that may not be signed in. Three shapes, set by `scope`:
 
-- `global` : every service the owner has.
+- `global` : every service on the instance.
 - `stack` : that stack's services.
 - `custom` : a hand-picked list, the only one that reads `status_page_service`.
 
@@ -728,15 +812,19 @@ same "Deploy from" toggle UI.
 **The clone runs in a container, into a Docker volume — never on the host.**
 `buildFromGit()` creates a throwaway `homerun-build-<uuid>` volume, runs
 `alpine/git` against it (`clone --depth 1 --branch <ref> --single-branch` into
-`/workspace/repo`, then a second container for `rev-parse HEAD`), reads the
-build context back out as a tar stream, and hands that stream to dockerode's
-`buildImage()`. The result is tagged `homerun-build-<slug>:<timestamp>`, a fresh
-tag every build, same "never reuse a name across deploys" precedent as container
-names. Progress lines stream into the deployment log exactly like `pullImage`'s
-layer-status events (filtered to status changes, not every line, build output is
-chattier than a pull). The volume and both containers are always removed
-afterward (`finally`), success or failure. A bare commit SHA doesn't work
-(shallow clone by branch/tag only, not by arbitrary ref).
+`/workspace/repo`, then a second container for `rev-parse HEAD`), then runs the
+build in a `docker:cli` helper container with that volume mounted (see Build
+methods below, every method including the Dockerfile goes through BuildKit
+there). The result is tagged `homerun-build-<slug>:<timestamp>`, a fresh tag
+every build, same "never reuse a name across deploys" precedent as container
+names. Build output streams into the deployment log line by line. The volume and
+every helper container are always removed afterward (`finally`), success or
+failure. The clone argv comes from `gitCheckoutSteps` (`$lib/git-ref.ts`,
+mirrored by hand in the agent): a branch or tag is one
+`clone --depth 1 --branch`, a full 40-hex commit SHA (`isCommitSha`, short SHAs
+can't be fetched from a remote) is `init`, `remote add origin`,
+`fetch --depth 1 origin <sha>` and `checkout --detach FETCH_HEAD`. A SHA-pinned
+service never matches a push and is never polled.
 
 This replaced `execFile("git", ...)` into an `mkdtemp()` directory, and it was a
 **production bug fix, not a refactor**: the runtime image is `oven/bun:1-alpine`
@@ -747,17 +835,13 @@ nothing. The temp directory was the second problem — inside the container it w
 the container's own ephemeral writable layer, not a volume, so a large clone
 grew the container unboundedly and vanished on restart.
 
-Four things about this shape are load-bearing:
+Three things about this shape are load-bearing:
 
 - **It stays on one daemon.** A real Docker-in-Docker sidecar would build on a
   _different_ daemon, and the image would then need a cache registry to get back
   to the deploy target — the same constraint `deploy.service.ts` already
-  enforces for build servers. Streaming the context to the existing daemon
-  avoids inheriting that.
-- **The archive path ends in `/.`.** `getArchive({path: "/workspace/repo"})`
-  prefixes every tar entry with `repo/`, and the daemon then can't find the
-  Dockerfile at the context root; `"/workspace/repo/."` roots the entries at
-  `./`. Verified live both ways.
+  enforces for build servers. The helper container talks to the building
+  daemon's own socket and BuildKit, so the image lands in that daemon's store.
 - **Argv is passed directly, never through `sh -c`.** The repo URL and ref are
   user input.
 - **Container output is demuxed, not stripped.** Docker frames non-TTY output
@@ -768,8 +852,79 @@ Four things about this shape are load-bearing:
   and `extractCommitSha` matches `\b[0-9a-f]{40}\b` rather than slicing. Both
   are pure and unit-tested in `tests/unit/app/git-build.test.ts`.
 
-`packages/agent/docker.ts` still shells out to `git` for agent-dispatched builds
-and its image has no `git` either : same latent bug, tracked in `TODO.md`.
+`packages/agent/docker.ts` clones the same way, in an `alpine/git` container
+into a volume, since the agent image has no `git` either.
+
+**Build methods** (`service.gitBuildMethod`, `$lib/build-methods.ts`):
+`dockerfile` (default), `bake`, `nixpacks`, `railpack`, `heroku` and `paketo`
+all go through `#runBuilder`, which runs `BUILDER_SCRIPT`
+(`docker/builder-run.ts`) in a throwaway `docker:29.8.1-cli` container (pinned,
+ships buildx 0.37) on the building daemon with the clone volume at `/workspace`,
+a persistent `homerun-builder-tools` volume at `/tools` and the daemon socket at
+`/var/run/docker.sock`. The socket's bind source is `config.docker.socketPath`
+for a local build (the installer mounts a rootless socket at the same path on
+both sides of the app container, so this is the host path) and
+`/var/run/docker.sock` on a Docker-connection build server; the agent uses its
+own `DOCKER_SOCKET_PATH`.
+
+**The Dockerfile path used to be dockerode's `buildImage()` (the classic
+builder) and was replaced, not kept alongside.** Real bug: a Dockerfile with
+`COPY --chmod` failed with "the --chmod option requires BuildKit", and
+`RUN --mount` and `# syntax=` frontends can't work there either. Now
+`dockerfile` runs `docker buildx build --progress plain -f <file> -t <tag>` with
+`--load <context>` (`BUILD_FILE`, the Dockerfile path resolved by
+`builderFilePath`, relative to the build context, refused if it leaves the
+repo). `bake` runs from the build context directory:
+`docker buildx bake --progress quiet -f <file> --print <target>` first, an awk
+pass over its JSON counts the resolved targets (a group resolving to more than
+one fails with their names; `--set` patterns don't match group names, verified
+live), then `docker buildx bake --progress plain -f <file>` with
+`--set <resolved>.tags=<tag>`, `--set <resolved>.output=type=docker` and
+`<target>`. `--set ...output` rather than `--load`, because `--load` is
+conditional and a target with its own `output = ["type=registry"]` must still
+end up loaded under Homerun's tag (verified live: a target tagged
+`example.invalid/web` with a registry output loaded as
+`homerun-build-live-bake:1` and nothing was pushed). The bake target is
+validated against `BAKE_TARGET_PATTERN` (no leading dash, so it can't be read as
+a flag, no dots, since `--set a.b.tags` splits on the first dot). A failed build
+throws `buildFailureMessage`: the exit code plus the last BuildKit `ERROR` line
+from the last 40 output lines, so the deployment error says why, not "see the
+log" (the agent returns no log at all).
+
+None of the three tools ships an official CLI image, so the script downloads the
+pinned musl release binary from GitHub once per version into `/tools` and runs
+it. The binary runs with the Docker socket mounted (root-equivalent), so
+`BUILDER_CHECKSUMS` pins a sha256 per tool per arch for both the release archive
+(matching the project's published `checksums.txt`/`.sha256` files, or the GitHub
+release asset digest for Nixpacks, which ships none) and the extracted binary:
+the script verifies the archive before extracting, the binary before installing,
+and the cached binary on every build (a mismatch re-downloads, a mismatched
+download fails the build with "Checksum mismatch"). Verified live: a tampered
+cached binary was re-downloaded, a wrong pinned checksum failed the build and
+installed nothing. Bumping a version means updating these checksums. Commands:
+`nixpacks build <dir> --name <tag>` (shells out to the docker CLI with
+BuildKit), `railpack prepare <dir> --plan-out ...` then `docker buildx build`
+with the build arg
+`BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend:v<version>`,
+`-f <plan> -t <tag> --load <dir>` (the documented production path, no separate
+BuildKit daemon needed), and `pack build <tag> --builder <builder>` with
+`--path <dir> --trust-builder --pull-policy if-not-present --network bridge`,
+with `PACK_VOLUME_KEY` set to the image name so a service reuses its cache
+volumes. User input only travels as env vars quoted inside the fixed script,
+never spliced into it. Verified live on Docker Desktop (arm64): Nixpacks and
+Railpack built and ran a Node app through `buildFromGit`. **Real, tested
+findings for pack**: without `--network` it creates an ephemeral bridge network
+per build, which fails with "all predefined address pools have been fully
+subnetted" on a daemon with many networks, hence `--network bridge`; and on
+Docker Desktop's containerd image store the export step fails with "does not
+provide the specified platform" (a pack/containerd-store issue, `--platform`
+doesn't help), so buildpacks got as far as export there but weren't seen
+producing an image; a Linux engine with the classic store is the expected
+target. A cache registry is a BuildKit registry cache for `dockerfile`, `bake`
+and `railpack` (see below) and ignored by Nixpacks and pack. The agent mirrors
+all of this by hand in `packages/agent/builders.ts`, and
+`tests/unit/agent/builders.test.ts` fails if the script, versions or env drift
+from the main app's.
 
 Any git-clone-able HTTPS URL works, this is what makes it "Git providers,
 including self-hosted Gitea" without any provider-specific API integration for
@@ -783,16 +938,27 @@ private repo can still fall back to a token embedded in the URL
 **Build cache and build servers** (`build_cache_registry`,
 `service.buildCacheRegistryId`/`buildServerRemoteHostId`,
 `/build-cache-registries`): a git-mode service can name a registry credential to
-use purely as a layer cache, `git-build.ts` pulls `<registry>/<cache ref>`
-before the build, passes it as `cachefrom`, and pushes the fresh layers back
-afterward. Both directions are best-effort: a missing cache image or a failed
-push logs and continues, it never fails the build. **Real, tested finding**: the
-classic (non-BuildKit) build API this app uses wants `cachefrom` as a
-JSON-encoded _array string_ despite `@types/dockerode` typing it as a plain
-string, a bare string 400s with `error reading cache-from: invalid character`;
-and `BUILDKIT_INLINE_CACHE` is a BuildKit-only concept the classic builder warns
-about and ignores, real reuse comes from the cache image's own layers (verified
-live, a repeat build showed "Using cache" for every step).
+use as a BuildKit layer cache: `builderEnv` sets `CACHE_REF`
+(`<registry>/homerun-build-<slug>:buildcache`, `buildCacheRef`) plus the
+credentials, and the script logs in (`docker login --password-stdin` inside the
+ephemeral helper, so nothing persists) and adds
+`--cache-from type=registry,ref=<ref>` and
+`--cache-to type=registry,ref=<ref>,mode=max,ignore-error=true` (bake: the same
+through `--set <target>.cache-from/cache-to`). Both directions are best-effort:
+a missing cache logs `failed to configure registry cache importer ... not found`
+and builds anyway, `ignore-error=true` keeps a failed export from failing the
+build. **Real, tested finding**: the daemon's default `docker` driver can't
+export a registry cache on the classic image store, so a cached build uses a
+`docker-container` builder named `homerun-cache`, created on first use with
+`--driver-opt network=host` (so the BuildKit container resolves registries like
+the daemon does) and its buildx config kept in `/tools/buildx` (`BUILDX_CONFIG`)
+so every later helper finds it; `--load` then imports the result into the
+daemon. Verified live against an htpasswd-protected `registry:2`: the first
+build exported `:buildcache`, and after `docker buildx prune` on the builder a
+rebuild showed `importing cache manifest` and `CACHED` for the
+`RUN --mount=type=cache` and `COPY --chmod` steps. The old approach (pull
+`<registry>/<image>:cache`, pass it as the classic API's JSON-string
+`cachefrom`, push the built image back as `:cache`) is gone.
 `buildServerRemoteHostId` picks a _different_ host to build on than the one the
 service deploys to (any registered Remote Host, see Build servers below);
 `deploy.service.ts` rejects that combination outright unless a cache registry is
@@ -903,6 +1069,71 @@ signature, other branch, ping, a real enqueued deploy job, unknown service).
 Registering against a real provider hasn't been live-tested, same caveat as the
 OAuth connect flow above.
 
+### Polling fallback (`GitPollScheduler`, `service.gitPollEnabled`, `service.gitLastSeenCommit`)
+
+`CronService.startGitPollScheduler()` runs `cron/git-poll-scheduler.ts` every
+two minutes over `ServiceGitDTO.listPushPollable()`: git services with
+deploy-on-push, not previews, with `gitPollEnabled` or no `gitWebhookId`. It
+reads the branch head with `StatusCheckService.clientFor(...).resolveCommit` (so
+the same provider/credential resolution as status checks, and the same "only a
+known provider API" limit), and `pollOutcome` (`$lib/git-ref.ts`) decides: no
+`gitLastSeenCommit` yet records a baseline without deploying, a different head
+enqueues a `push` deploy. A verified push delivery also writes
+`gitLastSeenCommit`, which is what stops a poll right after a webhook deploy
+from deploying the same commit twice. Services are polled one at a time to stay
+under per-token rate limits.
+
+### Reconnect on refusal (`GitProviderRefusedError`, `service.gitWebhookReconnect`)
+
+`GitProviderService.#api` throws `GitProviderRefusedError` on a 401/403.
+`GitWebhookService.#register` returns `{error, reconnect}`: reconnect is true
+for that error and for an owner with no connection, and lands in
+`gitWebhookReconnect`. `describe()` turns it into
+`reconnect: {providerId, providerName}`, and the Source tab links to
+`/api/v1/git-providers/<id>/connect?returnTo=/services/<id>/source`. The connect
+route stores a `safeRedirectTarget` of `returnTo` in the short-lived
+`GIT_CONNECT_RETURN_COOKIE` (the OAuth redirect URI has to stay exact, so it
+can't carry the path), the callback redirects there and calls
+`GitWebhookService.retryAfterReconnect(userId, providerId)`, which re-syncs
+every service of that user on that provider still missing a hook. No scopes are
+read off the token: a refusal is the only signal every provider gives the same
+way.
+
+## Pull request previews (`service.previewsEnabled`, `preview*` columns, `PreviewService`)
+
+A preview is a plain `service` row with `previewParentId` (FK to the parent,
+cascade), `previewPrNumber` (unique per parent), `previewPrTitle` and
+`previewBranch`. `wantsWebhook` in `git-webhook.service.ts` is deploy-on-push
+**or** previews, never on a preview itself; toggling previews counts as "moved"
+in `sync` (the snapshot's optional `previewsEnabled`), so the hook is deleted
+and re-created with PR events (`createWebhookRequest`'s `pullRequests`: GitHub
+and Gitea `pull_request`, GitLab `merge_requests_events`, Bitbucket
+`pullrequest:*`).
+
+`handleDelivery` tries `parsePullRequestEvent` first (`$lib/git-webhooks.ts`,
+unit-tested per provider): GitHub/Gitea `opened|reopened|synchronize(d)|closed`,
+GitLab `open|reopen|update|close|merge`, Bitbucket
+`created|updated|fulfilled| rejected`. `PreviewService.handle` creates the row
+at `previewSlug(parent, n)` (cut to a 63-char label) copying the parent's
+build/runtime/auth settings, refreshes them on every update, and enqueues a
+`push` deploy as the parent's owner. The ref is the head SHA when the provider
+sent a full one, else the branch (Bitbucket's hash is abbreviated).
+`PullRequestEvent.fromFork` is true unless head and base repo are both present
+and equal (GitHub/Gitea `head.repo.full_name` vs `base.repo.full_name`, not
+`head.repo.fork`, which is also true for a same-repo PR inside a forked repo;
+GitLab `source_project_id` vs `target_project_id`; Bitbucket `source.repository`
+vs `destination.repository`), and `handle` ignores fork events before anything
+else, close included: a fork PR's code would run with the parent's env vars. An
+`update` whose ref didn't change is ignored. `close` deletes it through
+`ServiceLifecycleService.deleteService`, which also deletes every preview first
+when the parent is deleted; turning previews off calls `removeAll`. Volumes,
+custom domain, cron, status checks and host networking are deliberately not
+copied. The Source tab lists them via `PreviewService.list`. The finders live in
+`ServiceGitDTO` (`$lib/dto/service-git-dto.ts`), which extends `ServiceDTO` only
+to reach its protected constructor, to keep `service-dto.ts` under the file
+length limit. **Not verified against real providers**, same caveat as
+push-to-deploy.
+
 ## Migrating from Dokploy or Coolify (`settings/migrate/`)
 
 Admin-only tab under `/settings`: `settings/migrate/+page.svelte` picks the
@@ -944,10 +1175,12 @@ notifications are the compose importer's, not a second copy.
   per-provider fields (`owner`/`repository`/`branch`/`buildPath` for GitHub,
   `giteaOwner`/`giteaRepository`/`giteaBranch`/`giteaBuildPath` plus the host in
   the nested `gitea.giteaUrl`, `customGitUrl`/`customGitBranch` for plain git).
-  `buildType` is `dockerfile`/`nixpacks`/`static`/`railpack`/..., only
-  `dockerfile` is importable (`dockerfile`, `dockerContextPath`). `env` is a
-  `.env` blob or `null`. There's no port field: the port is `domains[].port`
-  (`ports[]` is published ports). `mounts[]` is
+  `buildType` is `dockerfile`/`nixpacks`/`railpack`/`heroku_buildpacks`/
+  `paketo_buildpacks`/`static`: all but `static` import, mapped onto
+  `gitBuildMethod` (`dockerfile` keeps `dockerfile`/`dockerContextPath`, the
+  builders use `buildPath` as the context; a `herokuVersion` other than 24
+  warns). `env` is a `.env` blob or `null`. There's no port field: the port is
+  `domains[].port` (`ports[]` is published ports). `mounts[]` is
   `{ type: "volume"|"bind"|"file", volumeName, hostPath, mountPath }`, and a
   read-only bind carries `:ro` inside `mountPath`. `memoryLimit`/`cpuLimit` are
   strings or null.
@@ -963,7 +1196,16 @@ notifications are the compose importer's, not a second copy.
 - Databases: `dockerImage`, `databaseName`/`databaseUser`/`databasePassword`/
   `databaseRootPassword`, `externalPort`, and `mounts[]` including the
   auto-created data volume. The Redis password is applied by Dokploy through the
-  start command, so it only produces a warning here.
+  start command, so it's reproduced as entrypoint `/bin/sh`, command
+  `-c "exec redis-server --requirepass '<pw>'"`.
+- Runtime carry-over lives in `$lib/migrate/dokploy-runtime.ts`: `username`/
+  `password`/`registryUrl` → draft `registry`; `command` (string) → `/bin/sh -c`
+  and `args[]` replacing the arguments (`dokployStartCommand`, mirroring how
+  Dokploy sets `Command`/`Args` on its swarm service, from memory of Dokploy's
+  source, not re-verified live); `mounts[]` `type: "file"` with `content` →
+  draft `files`; a compose stack's `../files/<filePath>` short-syntax binds are
+  matched to the stack's file mounts by `filePath` and their relative-bind
+  warnings dropped.
 
 **Coolify is not verified against a live instance.** Built from the documented
 v4 API: `Authorization: Bearer`, `GET /api/v1/projects` (+
@@ -974,10 +1216,19 @@ v4 API: `Authorization: Bearer`, `GET /api/v1/projects` (+
 `real_value` over `value`). Application `build_pack` drives the mapping:
 `dockerimage` (`docker_registry_image_name`/`_tag`), `dockerfile` with
 `git_repository` (`base_directory`, `dockerfile_location`, a bare `owner/repo`
-is assumed to be GitHub), `dockercompose` (`docker_compose_raw`); everything
-else is blocked. Ports come from `ports_exposes`, public from `fqdn`. Services
-are compose (`docker_compose_raw`, env substituted so `SERVICE_FQDN_*` resolve).
-Databases map `database_type` +
-`postgres_*`/`mysql_*`/`mariadb_*`/`mongo_initdb_*` fields. The parsing accepts
-a bare array or a `data` wrapper. Persistent storage isn't read (warned). First
-real Coolify migration is the real test.
+is assumed to be GitHub), `nixpacks`/`railpack` the same way with that
+`gitBuildMethod` (custom `install_command`/`build_command` warn),
+`dockercompose` (`docker_compose_raw`); everything else (`static`) is blocked.
+Ports come from `ports_exposes`, public from `fqdn`. Services are compose
+(`docker_compose_raw`, env substituted so `SERVICE_FQDN_*` resolve). Databases
+map `database_type` + `postgres_*`/`mysql_*`/`mariadb_*`/`mongo_initdb_*`
+fields. The parsing accepts a bare array or a `data` wrapper. Persistent storage
+is tried from `/api/v1/{applications,databases}/{uuid}/storages`, falling back
+to `persistent_storages`/`file_storages` on the row itself (`coolifyStorages` in
+`$lib/migrate/coolify-runtime.ts`: `LocalPersistentVolume` → named volume or
+`host_path` bind, `LocalFileVolume` → file draft or directory bind), and warns
+when neither says anything. `custom_docker_run_options` is parsed by
+`parseDockerRunOptions` (`--cap-add`, `--device`, `--privileged`, `--label`/
+`-l`, `--entrypoint`, others warned), `start_command` becomes an `sh -c`
+command, and a Redis/KeyDB/Dragonfly password becomes a `--requirepass` command.
+First real Coolify migration is the real test.

@@ -2,14 +2,29 @@
 
 ## Roles
 
-Homerun has two roles, **admin** and **developer**. Both get the full dashboard
-over their own data, every stack/service/volume is already scoped by account,
-invisible to other users, the only difference is a few admin-only pages,
-**Users**, **Authentication**, **Settings**, **System Logs** and **Docker
-Cleanup** (see [Operations](operations.md#docker-cleanup)), plus admin-only
-actions elsewhere: registering a git provider's OAuth app and host-command cron
-jobs. There's no finer-grained permission system yet (no per-stack access
-control, no read-only role).
+Homerun has three roles, **admin**, **developer** and **read-only**. Every
+account sees every resource on the instance, and every admin or developer
+account manages it: services, stacks, volumes, backups, S3 destinations, build
+cache registries, remote hosts, cron jobs, status pages, custom templates and
+the job queue are shared, whoever created them. Each one still records who
+created it. What stays personal is your sessions, API keys, preferences, git
+provider connections, terminal sessions, bell feed and notification channels.
+Every account gets a copy of each bell notification, and every account's own
+notification channels hear about every event. Between admin and developer, the
+only difference is a few admin-only pages, **Users**, **Authentication**,
+**Settings**, **System Logs** and **Docker Cleanup** (see
+[Operations](operations.md#docker-cleanup)), plus admin-only actions elsewhere:
+registering a git provider's OAuth app and host-command cron jobs. There's no
+finer-grained permission system yet (no per-stack access control, no teams).
+
+**Read-only** accounts see everything a developer sees but can't change
+anything: every form, button and API call that writes is refused with "This
+account or API key is read-only", enforced on the server for form actions,
+remote commands and the REST API alike, and the dashboard header shows a
+**Read-only** badge. What they can still do is look after their own account:
+sign out, change their password, manage passkeys and two-factor, set
+preferences, clear their notification bell, create API keys (always read-only)
+and log in the CLI. They don't see the admin-only pages.
 
 **The very first account created on a fresh instance becomes admin
 automatically.** After that, there's no public sign-up, every other account is
@@ -23,11 +38,17 @@ created by an admin from `/users`:
   shows only invites that can still be accepted; an expired one drops off, and
   inviting the same address again replaces it.
 
-An admin can change a user's role or remove them from `/users`, with two guards:
-you can't remove yourself, and you can't demote/remove the last remaining admin.
-`/users` has a search box (name/email) and a Role filter once you have more than
-a couple of accounts, plus a pager once you have more than a page's worth,
-searched/paginated server-side.
+An admin can change a user's role or email, or remove them, from `/users`. An
+email changed there takes effect immediately and is marked verified, no
+confirmation link and no SMTP needed, which is the way to change a verified
+address on an instance without email set up. Two guards apply: you can't remove
+yourself, and you can't demote/remove the last remaining admin. Removing a user
+hands everything they created over to the admin who removed them: their services
+keep running. A git service they created builds with its new owner's git
+provider connection from then on, so reconnect the provider under your profile
+if its builds or webhooks start failing. `/users` has a search box (name/email)
+and a Role filter once you have more than a couple of accounts, plus a pager
+once you have more than a page's worth, searched/paginated server-side.
 
 ## OAuth / OIDC login
 
@@ -44,13 +65,16 @@ account:
 
 - **Personal information**, your name and email. Changing an unverified email
   takes effect immediately; a verified one needs confirming from a link sent to
-  the address you're leaving, so it stays locked until SMTP is configured (see
+  the address you're leaving, so it stays locked until SMTP is configured or an
+  admin changes it for you from `/users` (see
   [Known, real limitations](faq-and-limitations.md#known-real-limitations-not-hypothetical)).
 - **Security**, change your password, connect or disconnect OAuth providers (see
   [below](#connecting-a-provider-to-an-existing-account)), set up
   [two-factor authentication and passkeys](#two-factor-authentication-and-passkeys),
-  and delete your account. Deleting stops and removes every container you own
-  first, it isn't just a row disappearing.
+  and delete your account. Deleting it hands everything you created over to
+  another admin (or, failing that, the oldest other account), so nothing stops
+  running. Only when yours is the last account are its containers removed with
+  it.
 - **Sessions**, every browser currently signed in as you, with the device and
   when it was last seen. Revoke any of them, useful after signing in somewhere
   you don't control.
@@ -81,14 +105,24 @@ A passkey is bound to the **Dashboard URL**'s hostname (Settings → General), s
 it only works when you open Homerun on that host or a subdomain of it; on any
 other address the passkey option isn't offered. Set the Dashboard URL before
 anyone registers one, since changing its hostname later strands every passkey
-already registered.
+already registered. Settings → General warns before saving a Base domain or
+Dashboard URL change that moves the hostname, with how many passkeys it would
+strand, and asks you to confirm.
 
 ## API keys
 
 Generate an API key from **Profile → Authorized Clients** to use the
 [REST API or CLI](api-and-cli.md) without a browser session, sent as `x-api-key`
-or `Authorization: Bearer <key>` on any `/api/v1/*` request. A key carries the
-full permissions of the account that owns it, there's no per-key scoping yet.
+or `Authorization: Bearer <key>` on any `/api/v1/*` request. Pick its **Access**
+when you create it:
+
+- **Full access** carries the full permissions of the account that owns it.
+- **Read-only** can call every `GET` endpoint and gets a `403` on anything that
+  writes, whatever the owning account's role. Use it for dashboards, monitoring
+  scripts and anything else that only needs to look.
+
+A read-only account can only create read-only keys. The key list shows a
+**Read-only** badge on each read-only key.
 
 `homerun login` creates one for you through a device-code flow rather than
 making you copy-paste, and it shows up in this list like any other.
@@ -268,19 +302,34 @@ allowed method. Filling any of them narrows access to whoever matches at least
 one entry in that list. Changing any of this takes effect immediately, including
 for people already signed in to that app.
 
-**Redeploy the service** after turning the wall on or off: the middleware is
-attached through the container's Traefik labels, which are written at deploy
-time.
+**Turning the wall on or off applies immediately**, without a redeploy. Every
+publicly routed service carries the forwardAuth middleware whether its wall is
+on or not, and Homerun simply lets requests through for a service whose wall is
+off. Two consequences: a service deployed before this behaviour existed needs
+one redeploy to pick up the middleware, and while Homerun itself is down,
+Traefik refuses requests to every routed app, not just the gated ones.
 
 The app itself receives the signed-in identity as `X-Homerun-User`,
 `X-Homerun-Email` and `X-Homerun-Name` request headers, which an app that
 supports proxy-header authentication can consume directly.
 
+**Groups include the Homerun role.** Besides the provider's claims, a user's
+Homerun role (`admin`, `developer` or `viewer` for read-only) counts as a group,
+so an app can be limited to `admin` without an identity provider at all.
+
+**Revocation.** Access is re-checked when the app cookie is issued, whenever the
+rules change, and again at least every five minutes while the cookie is in use.
+Deleting, banning or re-roling a user in Homerun, or unlinking one of their
+sign-in methods, is picked up on their very next request to any gated app. For
+an app that filters on groups, the five-minute re-check first asks the user's
+OAuth provider for fresh tokens, so a group removed at the provider is noticed
+within about five minutes, as long as the provider issues refresh tokens and
+returns a new id token on refresh, which usually needs the `offline_access`
+scope. If the refresh fails, the groups from the last sign-in are used until the
+eight-hour cookie lifetime runs out.
+
 **Limits worth knowing.** The wall covers services Traefik routes publicly; a
-service that isn't publicly routed has no router to gate. Access is re-checked
-when the app cookie is issued and whenever the rules change, but deleting a user
-or changing their groups at the provider takes effect at the next sign-in, or
-within the eight-hour cookie lifetime at the latest.
+service that isn't publicly routed has no router to gate.
 
 ## Sign in with Homerun
 
@@ -322,8 +371,8 @@ new one into the app.
 If an app asks for individual endpoints instead, the app's page in Homerun lists
 the issuer, authorization, token, userinfo and JWKS URLs. Request the scopes
 `openid profile email`, plus `groups` if the app maps groups to roles: the
-`groups` claim holds the user's Homerun role (`admin` or `developer`). Tokens
-are signed with RS256.
+`groups` claim holds the user's Homerun role (`admin`, `developer` or `viewer`).
+Tokens are signed with RS256.
 
 **Turning an app off or deleting it.** **Turn off** stops new sign-ins through
 the app. **Delete app** also revokes every token it holds, so users are signed

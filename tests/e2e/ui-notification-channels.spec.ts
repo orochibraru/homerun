@@ -66,4 +66,42 @@ test.describe
 					.getByText(/A Discord webhook URL looks like/),
 			).toBeVisible();
 		});
+
+		test("a Telegram channel shows its chat but never its bot token", async ({
+			page,
+		}) => {
+			await signIn(page);
+			await page.goto("/notification-channels");
+
+			const botToken = "123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw";
+			await page.locator("#channelName").fill("E2E Telegram");
+			await page.locator("#channelKind").selectOption("telegram");
+			await expect(page.locator("#channelTarget")).toHaveCount(0);
+			await page.locator("#telegramBotToken").fill(botToken);
+			await page.locator("#telegramChatId").fill("-1001234567890");
+			await page.getByRole("button", { name: "Add channel" }).click();
+			await expect(page.getByText("Channel added.")).toBeVisible();
+			await expect(page.getByText("Chat -1001234567890")).toBeVisible();
+			await expect(page.getByText(botToken)).toHaveCount(0);
+
+			await page.getByRole("button", { name: "Remove E2E Telegram" }).click();
+			await page.getByRole("button", { exact: true, name: "Remove" }).click();
+			await expect(page.getByText("Channel removed.")).toBeVisible();
+		});
+
+		test("a Slack channel needs a Slack webhook URL", async ({ page }) => {
+			await signIn(page);
+			await page.goto("/notification-channels");
+
+			await page.locator("#channelName").fill("Bad Slack");
+			await page.locator("#channelKind").selectOption("slack");
+			await page.locator("#channelTarget").fill("https://example.com/hook");
+			await page.getByRole("button", { name: "Add channel" }).click();
+
+			await expect(
+				page
+					.locator("form[action='?/createChannel']")
+					.getByText(/A Slack webhook URL looks like/),
+			).toBeVisible();
+		});
 	});

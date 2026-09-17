@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { Check, LayoutGrid, Link2, Plus, Trash2 } from "@lucide/svelte";
+	import {
+		Check,
+		LayoutGrid,
+		Link2,
+		Plus,
+		TerminalSquare,
+		Trash2,
+	} from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
+	import RuntimeFields from "$lib/components/runtime-fields.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
@@ -264,6 +272,30 @@
           </Button>
           <EnvPasteButton onImport={importEnvRows} />
         </div>
+      </div>
+    </section>
+
+    <section class="rounded-md panel">
+      <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+          <TerminalSquare class="size-4" />
+        </div>
+        <div>
+          <h2 class="eyebrow">Runtime</h2>
+          <p class="text-xs text-text-muted">
+            How containers deployed from this template start and what they can
+            reach on the host. Only an admin can deploy a template that asks
+            for host access.
+          </p>
+        </div>
+      </div>
+      <div class="space-y-5 p-5">
+        <RuntimeFields
+          {errors}
+          isAdmin={data.isAdmin}
+          showEnvFiles
+          values={values ?? {}}
+        />
       </div>
     </section>
 

@@ -337,36 +337,31 @@ export class JobDTO extends BaseDTO<Job> {
 	}
 
 	/**
-	 * Up to 50 of the user's running and queued jobs, running first, then by
-	 * priority and age.
+	 * Up to 50 running and queued jobs, running first, then by priority and
+	 * age.
 	 */
-	static async listActive(userId: string): Promise<JobDTO[]> {
+	static async listActive(): Promise<JobDTO[]> {
 		const rows = await db
 			.select()
 			.from(job)
-			.where(
-				and(eq(job.userId, userId), inArray(job.status, ["running", "queued"])),
-			)
+			.where(inArray(job.status, ["running", "queued"]))
 			.orderBy(desc(job.status), desc(job.priority), asc(job.createdAt))
 			.limit(50);
 		return rows.map((row) => new JobDTO(row));
 	}
 
 	/**
-	 * The user's most recently finished jobs (succeeded, failed or cancelled),
-	 * each with its service's slug when it has one.
+	 * The most recently finished jobs (succeeded, failed or cancelled), each
+	 * with its service's slug when it has one.
 	 */
 	static async listRecent(
-		userId: string,
 		limit = 15,
 	): Promise<Array<{ job: JobDTO; serviceSlug: string | null }>> {
 		const rows = await db
 			.select({ row: job, serviceSlug: service.slug })
 			.from(job)
 			.leftJoin(service, eq(job.serviceId, service.id))
-			.where(
-				and(eq(job.userId, userId), inArray(job.status, TERMINAL_STATUSES)),
-			)
+			.where(inArray(job.status, TERMINAL_STATUSES))
 			.orderBy(desc(job.finishedAt))
 			.limit(limit);
 		return rows.map((r) => ({

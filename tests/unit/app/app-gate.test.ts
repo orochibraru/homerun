@@ -6,7 +6,11 @@ import {
 	signGateToken,
 	verifyGateToken,
 } from "../../../src/lib/server/app-gate";
-import { groupsFromIdToken } from "../../../src/lib/services/app-access.service";
+import {
+	groupsAcross,
+	groupsFromIdToken,
+	isBanned,
+} from "../../../src/lib/services/app-access.service";
 
 const payload = {
 	email: "ada@example.com",
@@ -96,5 +100,33 @@ describe("group claims", () => {
 	test("an undecodable token yields no groups instead of throwing", () => {
 		expect(groupsFromIdToken("not-a-jwt").size).toBe(0);
 		expect(groupsFromIdToken("a.!!!.c").size).toBe(0);
+	});
+});
+
+describe("gate user state", () => {
+	test("the Homerun role counts as a group alongside provider claims", () => {
+		const groups = groupsAcross(
+			[{ idToken: idTokenWith({ groups: ["devs"] }) }, { idToken: null }],
+			"admin",
+		);
+		expect(groups.has("devs")).toBe(true);
+		expect(groups.has("admin")).toBe(true);
+	});
+
+	test("a user with no role only carries provider groups", () => {
+		expect([...groupsAcross([], null)]).toEqual([]);
+	});
+
+	test("a ban only counts while it hasn't expired", () => {
+		const now = new Date("2026-01-01T00:00:00Z");
+		expect(isBanned({ banExpires: null, banned: true }, now)).toBe(true);
+		expect(
+			isBanned({ banExpires: new Date("2026-02-01"), banned: true }, now),
+		).toBe(true);
+		expect(
+			isBanned({ banExpires: new Date("2025-12-01"), banned: true }, now),
+		).toBe(false);
+		expect(isBanned({ banExpires: null, banned: false }, now)).toBe(false);
+		expect(isBanned({ banExpires: null, banned: null }, now)).toBe(false);
 	});
 });

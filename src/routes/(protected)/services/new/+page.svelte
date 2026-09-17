@@ -18,7 +18,13 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import {
+		DEFAULT_BAKE_FILE,
+		DEFAULT_BAKE_TARGET,
+		isBuildMethod,
+	} from "$lib/build-methods";
 	import Alert from "$lib/components/alert.svelte";
+	import BuildMethodField from "$lib/components/build-method-field.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import GitSourceFields from "$lib/components/git-source-fields.svelte";
@@ -36,6 +42,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { isDatabaseImage } from "$lib/service-link";
+	import { runtimeOptionsSummary } from "$lib/service-runtime";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -51,6 +58,7 @@
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 	// Flat list of every error message, so a field we forgot to render a
 	// dedicated <p> for still surfaces instead of silently failing.
+	const templateRuntime = $derived(runtimeOptionsSummary(data.template));
 	const errorMessages = $derived(errors ? Object.values(errors).flat() : []);
 
 	const STEPS = [
@@ -88,7 +96,14 @@
 	let gitProviderId = $derived(values?.gitProviderId ?? "");
 	let gitRepo = $derived(values?.gitRepo ?? "");
 	let autoDeployOnPush = $derived(values?.autoDeployOnPush === "on");
+	let gitBuildMethod = $derived(
+		isBuildMethod(values?.gitBuildMethod)
+			? values.gitBuildMethod
+			: "dockerfile",
+	);
 	let gitDockerfilePath = $derived(values?.gitDockerfilePath ?? "");
+	let gitBakeFile = $derived(values?.gitBakeFile ?? "");
+	let gitBakeTarget = $derived(values?.gitBakeTarget ?? "");
 	let gitBuildContext = $derived(values?.gitBuildContext ?? "");
 	let buildCacheRegistryId = $derived(values?.buildCacheRegistryId ?? "");
 	const buildCacheRegistryLabel = $derived(
@@ -295,7 +310,16 @@
       <div class="bg-accent/10 text-accent rounded-md px-4 py-3 text-sm font-medium">
         Starting from the {data.template.name} template : review everything
         below (especially any placeholder passwords) before deploying.
+        {#if templateRuntime.length > 0}
+          <span class="text-text-muted mt-1 block text-xs font-normal">
+            It also sets, editable later on the service's Runtime tab:
+            {templateRuntime.join(" · ")}
+          </span>
+        {/if}
       </div>
+      {#if data.templateHostAccessRefusal}
+        <Alert variant="warning">{data.templateHostAccessRefusal}</Alert>
+      {/if}
     {/if}
 
     {#if data.templateLinks.length > 0}
@@ -469,16 +493,47 @@
                 bind:gitRepo
                 bind:gitUrl
               />
-              <div>
-                <label class={label} for="gitDockerfilePath">Dockerfile path</label>
-                <Input
-                  id="gitDockerfilePath"
-                  name="gitDockerfilePath"
-                  placeholder="Dockerfile"
-                  type="text"
-                  bind:value={gitDockerfilePath}
-                />
-              </div>
+              <BuildMethodField labelClass={label} bind:value={gitBuildMethod} />
+              {#if gitBuildMethod === "dockerfile"}
+                <div>
+                  <label class={label} for="gitDockerfilePath">Dockerfile path</label>
+                  <Input
+                    id="gitDockerfilePath"
+                    name="gitDockerfilePath"
+                    placeholder="Dockerfile"
+                    type="text"
+                    bind:value={gitDockerfilePath}
+                  />
+                </div>
+              {/if}
+              {#if gitBuildMethod === "bake"}
+                <div>
+                  <label class={label} for="gitBakeFile">Bake file</label>
+                  <Input
+                    id="gitBakeFile"
+                    name="gitBakeFile"
+                    placeholder={DEFAULT_BAKE_FILE}
+                    type="text"
+                    bind:value={gitBakeFile}
+                  />
+                  <p class="text-text-muted mt-1.5 text-xs">
+                    Relative to the build context: docker-bake.hcl, docker-bake.json or a compose file.
+                  </p>
+                </div>
+                <div>
+                  <label class={label} for="gitBakeTarget">Bake target</label>
+                  <Input
+                    id="gitBakeTarget"
+                    name="gitBakeTarget"
+                    placeholder={DEFAULT_BAKE_TARGET}
+                    type="text"
+                    bind:value={gitBakeTarget}
+                  />
+                  {#if errors?.gitBakeTarget}
+                    <p class={errorClass}>{errors.gitBakeTarget[0]}</p>
+                  {/if}
+                </div>
+              {/if}
               <div>
                 <label class={label} for="gitBuildContext">
                   Build context (subdirectory)

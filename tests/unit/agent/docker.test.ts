@@ -96,9 +96,13 @@ class FakeDocker {
 // tests/README.md) : nothing else in the test suite touches this specifier.
 mock.module("dockerode", () => ({ default: FakeDocker }));
 
-const { authenticatedCloneUrl, DockerService, redactCloneUrl } = await import(
-	"../../../packages/agent/docker"
-);
+const {
+	authenticatedCloneUrl,
+	DockerService,
+	extractCommitSha,
+	gitCheckoutSteps,
+	redactCloneUrl,
+} = await import("../../../packages/agent/docker");
 afterAll(() => {
 	mock.module("dockerode", () => ({ default: FakeDocker }));
 });
@@ -175,5 +179,51 @@ describe("redactCloneUrl", () => {
 			"https://github.com/me/pub.git",
 		);
 		expect(redactCloneUrl("not a url")).toBe("not a url");
+	});
+});
+
+describe("gitCheckoutSteps", () => {
+	const sha = "68c1b9e0f1a2b3c4d5e6f708192a3b4c5d6e7f80";
+
+	test("a branch is one shallow clone", () => {
+		expect(gitCheckoutSteps("https://x/r.git", "main", "/w/repo")).toEqual([
+			[
+				"clone",
+				"--depth",
+				"1",
+				"--branch",
+				"main",
+				"--single-branch",
+				"https://x/r.git",
+				"/w/repo",
+			],
+		]);
+	});
+
+	test("a commit SHA is fetched by SHA and checked out detached", () => {
+		const steps = gitCheckoutSteps("https://x/r.git", sha, "/w/repo");
+		expect(steps[0]).toEqual(["init", "--quiet", "/w/repo"]);
+		expect(steps[2]).toEqual([
+			"-C",
+			"/w/repo",
+			"fetch",
+			"--depth",
+			"1",
+			"origin",
+			sha,
+		]);
+		expect(steps[3]).toEqual([
+			"-C",
+			"/w/repo",
+			"checkout",
+			"--detach",
+			"FETCH_HEAD",
+		]);
+	});
+
+	test("extractCommitSha reads through a Docker frame header", () => {
+		expect(
+			extractCommitSha(`\u0001\u0000\u0000\u0000\u0000\u0000\u0000)${sha}\n`),
+		).toBe(sha);
 	});
 });

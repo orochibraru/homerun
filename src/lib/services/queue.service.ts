@@ -70,18 +70,6 @@ class QueueServiceClass {
 		}
 		return current;
 	}
-
-	/** Lists the user's queued/running jobs. */
-	listActive(userId: string): Promise<JobDTO[]> {
-		return JobDTO.listActive(userId);
-	}
-
-	/** Lists the user's recently finished jobs, each paired with the slug of the service it deployed (if any). */
-	listRecent(
-		userId: string,
-	): Promise<Array<{ job: JobDTO; serviceSlug: string | null }>> {
-		return JobDTO.listRecent(userId);
-	}
 }
 
 export const QueueService = new QueueServiceClass();

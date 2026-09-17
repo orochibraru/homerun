@@ -61,36 +61,63 @@ background (see [the job queue](services.md#the-job-queue)), so the button
 returns straight away and the run shows up in the history on `/backups` once it
 starts. A failed backup is retried once.
 
-**Nothing is quiesced before the tar runs.** Homerun reads the volume as it is,
-while the service using it keeps running, which is fine for files but can
-produce a torn copy of a database that's mid-write. For a database, prefer a
-cron job running that database's own dump tool into a bind-mounted directory,
-and back up that directory instead.
+By default nothing is quiesced: Homerun reads the volume as it is, while the
+services using it keep running, which is fine for files but can produce a torn
+copy of a database that's mid-write. Two per-volume options on the same form fix
+that:
+
+- **Stop services during the backup** stops every running service that mounts
+  the volume just before the tar, and starts them again as soon as it's done
+  (before the upload), whether the tar worked or not. The services are down for
+  the length of the tar.
+- **Pre-backup command** runs a shell command (`/bin/sh -c`) inside a service's
+  running container before each backup, for example
+  `pg_dump -U postgres -f /var/lib/postgresql/data/dump.sql app` or
+  `mysqldump ... > /var/lib/mysql/dump.sql`. Write the dump into the volume
+  being backed up so it ends up in the archive. **Run it in** picks which
+  service's container it runs in; left on the default, it's the first running
+  service that mounts the volume. The command runs while the service is still up
+  (before any stop), a non-zero exit or a run longer than 15 minutes fails the
+  backup with the tail of its output, and nothing is uploaded.
 
 ## Backup history
 
-`/backups` is one row per attempt across every volume you own, scheduled or
-manual, with when it started and finished, whether it succeeded, the uploaded
-size, and the error if it didn't. It has a search box (matching volume name), an
-Outcome filter (success/failed/running) and a pager over the whole history, so a
-long-running instance with hundreds of past runs can page all the way back
-through them instead of only ever seeing the newest handful. The same "Run now"
-button is available here as on a volume's own page.
+`/backups` is one row per attempt across every volume, scheduled or manual,
+backups and restores alike, with its kind, when it started and finished, whether
+it succeeded, the size, and the error if it didn't (hover the kind for the
+object key). It has a search box (matching volume name, object key or error), a
+Kind filter (backup/restore), an Outcome filter (success/failed/running) and a
+pager over the whole history, so a long-running instance with hundreds of past
+runs can page all the way back through them instead of only ever seeing the
+newest handful. The same "Run now" button is available here as on a volume's own
+page.
 
 ## Restoring a backup
 
 A volume with a destination has a **Restore** panel on its own page. **List
 backups** reads what's in the bucket for that volume (under its key prefix),
-newest first with date and size, and **Restore** on one of them downloads it and
-unpacks it back into the volume, for both volume kinds, through the same kind of
-short-lived `alpine` helper container.
+newest first with date and size, and **Restore** on one of them queues a restore
+that downloads it and unpacks it back into the volume, for both volume kinds,
+through the same kind of short-lived `alpine` helper container.
 
-A restore unpacks _over_ the volume rather than wiping it first: files in the
-archive replace the ones on disk, and anything else already there is left alone.
-Nothing is stopped for you, so **stop every service using the volume before
-restoring**, or it can end up with half-old, half-new data. A restore runs in
-the request rather than through the job queue, so the page waits until it's
-done, and it isn't recorded in the backup history.
+Two options sit above the list and apply to whichever backup you restore:
+
+- **Wipe the volume first** deletes everything in the volume before unpacking,
+  so files that weren't in the backup don't survive. Off, the restore unpacks
+  _over_ the volume: files in the archive replace the ones on disk and anything
+  else is left alone.
+- **Stop services during the restore** (on by default) stops every running
+  service that mounts the volume for the wipe and unpack, and starts them again
+  afterwards, even when the restore fails. Turn it off only if you've stopped
+  them yourself or nothing writes to the volume, otherwise it can end up with
+  half-old, half-new data.
+
+Restores go through [the job queue](services.md#the-job-queue) like backups, so
+the button returns straight away. The download happens before anything is
+stopped, so services are only down for the unpack. A restore shares the volume's
+lock with backups (it never runs while the same volume is being backed up), is
+never retried, and shows up in the run log on the volume's page and on
+`/backups` as a `Restore` row.
 
 You can still fetch a backup from the bucket yourself (`aws s3 cp`, `rclone`,
 your provider's console) if you'd rather unpack it somewhere else.

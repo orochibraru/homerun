@@ -1,18 +1,33 @@
 import { config, isSmtpEnabled } from "$lib/config";
 import type { DeployTrigger } from "$lib/deploy-trigger";
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
+import type { NewJobInput } from "$lib/dto/job-dto";
 import { NotificationChannelDTO } from "$lib/dto/notification-channel-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
+import { parseTelegramTarget } from "$lib/notification-channel-target";
 import { isFailureEvent, NOTIFICATION_EVENTS } from "$lib/notification-events";
 import { serviceHostname } from "./dns.service";
 import { EmailService } from "./email.service";
 import { type ChannelMessage, deployMessage } from "./notification-messages";
+import { QueueService } from "./queue.service";
 
 const logger = new Logger("NotificationChannels");
 
 const WEBHOOK_TIMEOUT_MS = 10_000;
+
+const DELIVERY_RETRY_ATTEMPTS = 4;
+const DELIVERY_RETRY_DELAY_MS = 30_000;
+
+const SLACK_TEXT_LIMIT = 2900;
+const SLACK_INLINE_MAX = 40;
+const SLACK_RED = "#ef4444";
+const SLACK_GREEN = "#10b981";
+
+const TELEGRAM_API = "https://api.telegram.org";
+const TELEGRAM_TEXT_LIMIT = 4096;
+const TELEGRAM_DETAIL_LIMIT = 2500;
 
 const DISCORD_DESCRIPTION_LIMIT = 4000;
 const DISCORD_FIELD_LIMIT = 1024;
@@ -91,14 +106,101 @@ export function discordPayload(message: ChannelMessage) {
 	};
 }
 
+/** Renders a channel message as a Slack incoming-webhook payload: a coloured attachment with the fields and the detail's tail. */
+export function slackPayload(message: ChannelMessage) {
+	const detail = message.detail
+		? `\`\`\`${keepTail(message.detail, SLACK_TEXT_LIMIT)}\`\`\``
+		: undefined;
+	return {
+		attachments: [
+			{
+				color: isFailureEvent(message.event) ? SLACK_RED : SLACK_GREEN,
+				fallback: message.title,
+				fields: [
+					{ name: "Service", value: message.serviceName },
+					...message.fields,
+				].map((field) => ({
+					short: field.value.length <= SLACK_INLINE_MAX,
+					title: field.name,
+					value: keepHead(field.value, SLACK_TEXT_LIMIT),
+				})),
+				footer: message.event,
+				text: detail,
+				title: message.title,
+				title_link: message.link ?? undefined,
+				ts: Math.floor(Date.parse(message.timestamp) / 1000),
+			},
+		],
+		text: message.title,
+	};
+}
+
+function escapeHtml(text: string): string {
+	return text
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;");
+}
+
+/** Renders a channel message as a Telegram `sendMessage` body in HTML parse mode, kept under Telegram's 4096-character limit. */
+export function telegramPayload(chatId: string, message: ChannelMessage) {
+	const lines = [
+		`<b>${escapeHtml(message.title)}</b>`,
+		"",
+		`<b>Service:</b> ${escapeHtml(message.serviceName)}`,
+		...message.fields.map(
+			(field) => `<b>${escapeHtml(field.name)}:</b> ${escapeHtml(field.value)}`,
+		),
+	];
+	if (message.link) {
+		lines.push(`<a href="${escapeHtml(message.link)}">Open in Homerun</a>`);
+	}
+	if (message.detail) {
+		lines.push(
+			"",
+			`<pre>${escapeHtml(keepTail(message.detail, TELEGRAM_DETAIL_LIMIT))}</pre>`,
+		);
+	}
+	const text = lines.join("\n");
+	return {
+		chat_id: chatId,
+		disable_web_page_preview: true,
+		parse_mode: "HTML",
+		text:
+			text.length > TELEGRAM_TEXT_LIMIT
+				? escapeHtml(keepHead(messageBody(message), TELEGRAM_TEXT_LIMIT - 10))
+				: text,
+	};
+}
+
+/**
+ * The queued job that retries a failed delivery to one channel, starting
+ * `DELIVERY_RETRY_DELAY_MS` from `now` and backing off exponentially through
+ * the worker's own retry schedule.
+ */
+export function deliveryRetryJob(
+	channel: { id: string; name: string; userId: string },
+	message: ChannelMessage,
+	now = new Date(),
+): NewJobInput {
+	return {
+		maxAttempts: DELIVERY_RETRY_ATTEMPTS,
+		payload: { channelId: channel.id, message: { ...message } },
+		runAt: new Date(now.getTime() + DELIVERY_RETRY_DELAY_MS),
+		title: `Deliver "${message.title}" to ${channel.name}`,
+		type: "notification_delivery",
+		userId: channel.userId,
+	};
+}
+
 class NotificationChannelServiceClass {
 	/**
-	 * Fire-and-forget dispatch of `message` to every channel the user has
-	 * subscribed to that event on. Failures are logged, never thrown to the
+	 * Fire-and-forget dispatch of `message` to every account's channels
+	 * subscribed to that event. Failures are logged, never thrown to the
 	 * caller.
 	 */
-	notify(userId: string, message: ChannelMessage): void {
-		this.dispatch(userId, message).catch((err) => {
+	notify(message: ChannelMessage): void {
+		this.dispatch(message).catch((err) => {
 			logger.warn(
 				`Channel dispatch failed: event=${message.event} : ${err instanceof Error ? err.message : String(err)}`,
 			);
@@ -112,7 +214,7 @@ class NotificationChannelServiceClass {
 	 */
 	notifyDeploy(notification: DeployNotification): void {
 		this.#deployMessage(notification)
-			.then((message) => this.dispatch(notification.svc.userId, message))
+			.then((message) => this.dispatch(message))
 			.catch((err) => {
 				logger.warn(
 					`Deploy notification failed: service=${notification.svc.id} : ${err instanceof Error ? err.message : String(err)}`,
@@ -127,9 +229,7 @@ class NotificationChannelServiceClass {
 		svc: service,
 		trigger,
 	}: DeployNotification): Promise<ChannelMessage> {
-		const stack = service.stackId
-			? await StackDTO.get(service.stackId, service.userId)
-			: null;
+		const stack = service.stackId ? await StackDTO.get(service.stackId) : null;
 		const row = service.toJSON();
 		const host =
 			row.customDomain ?? serviceHostname(row.slug, stack?.slug ?? null);
@@ -147,12 +247,9 @@ class NotificationChannelServiceClass {
 		);
 	}
 
-	/** Delivers `message` to every channel the user has subscribed to that event on, in parallel. Per-channel failures don't reject; see `#send`. */
-	async dispatch(userId: string, message: ChannelMessage): Promise<void> {
-		const channels = await NotificationChannelDTO.listSubscribed(
-			userId,
-			message.event,
-		);
+	/** Delivers `message` to every account's enabled channels subscribed to that event, in parallel. Per-channel failures don't reject; see `#send`. */
+	async dispatch(message: ChannelMessage): Promise<void> {
+		const channels = await NotificationChannelDTO.listSubscribed(message.event);
 		await Promise.all(channels.map((channel) => this.#send(channel, message)));
 	}
 
@@ -185,10 +282,39 @@ class NotificationChannelServiceClass {
 	}
 
 	/**
+	 * Retries one queued delivery (the `notification_delivery` job handler).
+	 * A channel deleted, disabled or unsubscribed from the event since is
+	 * skipped rather than failed.
+	 *
+	 * @throws Whatever `#deliver` throws, after recording it as the channel's
+	 * `lastError`, so the worker schedules the next attempt.
+	 */
+	async retryDelivery(
+		channelId: string,
+		message: ChannelMessage,
+	): Promise<{ delivered: boolean }> {
+		const channel = await NotificationChannelDTO.getForDelivery(channelId);
+		if (!(channel?.enabled && channel.events.includes(message.event))) {
+			return { delivered: false };
+		}
+		try {
+			await this.#deliver(channel, message);
+		} catch (err) {
+			await channel.update({
+				lastError: err instanceof Error ? err.message : String(err),
+			});
+			throw err;
+		}
+		await channel.update({ lastError: null });
+		return { delivered: true };
+	}
+
+	/**
 	 * Delivers to one channel, recording the outcome on the channel row
 	 * itself (`lastError` cleared on success, set to the failure message
 	 * otherwise) rather than throwing, so one bad channel doesn't affect the
-	 * others in `dispatch`'s `Promise.all`.
+	 * others in `dispatch`'s `Promise.all`. A failed delivery is queued for
+	 * retry with backoff (`deliveryRetryJob`).
 	 */
 	async #send(
 		channel: NotificationChannelDTO,
@@ -199,12 +325,22 @@ class NotificationChannelServiceClass {
 			await channel.update({ lastError: null });
 		} catch (err) {
 			const reason = err instanceof Error ? err.message : String(err);
-			logger.warn(`Channel "${channel.name}" failed: ${reason}`);
+			logger.warn(
+				`Channel "${channel.name}" failed, retrying later: ${reason}`,
+			);
 			await channel.update({ lastError: reason });
+			await QueueService.enqueue(deliveryRetryJob(channel, message)).catch(
+				(queueErr) => {
+					logger.error(
+						`Couldn't queue a retry for channel "${channel.name}"`,
+						queueErr,
+					);
+				},
+			);
 		}
 	}
 
-	/** Routes delivery to the channel-kind-specific sender: Discord's embed payload, email, or the generic JSON webhook POST. */
+	/** Routes delivery to the channel-kind-specific sender: Discord's embed payload, Slack's attachment, Telegram's bot API, email, or the generic JSON webhook POST. */
 	#deliver(
 		channel: NotificationChannelDTO,
 		message: ChannelMessage,
@@ -212,10 +348,54 @@ class NotificationChannelServiceClass {
 		switch (channel.kind) {
 			case "discord":
 				return this.#post(channel.target, discordPayload(message));
+			case "slack":
+				return this.#post(channel.target, slackPayload(message));
+			case "telegram":
+				return this.#sendTelegram(channel.target, message);
 			case "email":
 				return this.#sendEmail(channel.target, message);
 			default:
 				return this.#post(channel.target, message);
+		}
+	}
+
+	/**
+	 * Sends a channel message through the Telegram Bot API's `sendMessage`.
+	 *
+	 * @throws When the stored target isn't a bot token and chat id, the request
+	 *   times out, or Telegram rejects it (with Telegram's own description,
+	 *   never the bot token).
+	 */
+	async #sendTelegram(target: string, message: ChannelMessage): Promise<void> {
+		const parsed = parseTelegramTarget(target);
+		if (!parsed) {
+			throw new Error("The Telegram channel has no bot token and chat id.");
+		}
+		let response: Response;
+		try {
+			response = await fetch(
+				`${TELEGRAM_API}/bot${parsed.botToken}/sendMessage`,
+				{
+					body: JSON.stringify(telegramPayload(parsed.chatId, message)),
+					headers: { "content-type": "application/json" },
+					method: "POST",
+					signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
+				},
+			);
+		} catch (err) {
+			const reason =
+				err instanceof Error && err.name === "TimeoutError"
+					? "timed out"
+					: "couldn't be reached";
+			throw new Error(`Telegram ${reason}`);
+		}
+		if (!response.ok) {
+			const body = (await response.json().catch(() => null)) as {
+				description?: string;
+			} | null;
+			throw new Error(
+				`Telegram returned HTTP ${response.status}${body?.description ? `: ${body.description}` : ""}`,
+			);
 		}
 	}
 

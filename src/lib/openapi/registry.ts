@@ -87,7 +87,7 @@ export const routes: RouteDef[] = [
 		queryParams: listQueryParams,
 		responses: {
 			200: {
-				description: "The caller's services",
+				description: "Every service on the instance",
 				isArray: true,
 				schema: serviceResponse,
 			},
@@ -198,7 +198,7 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target.",
+			"Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target. Only the image is rolled back unless restoreConfig=true, which also puts back the env vars, resources and networking that revision ran with.",
 		method: "post",
 		path: "/services/{serviceId}/revisions/{revisionId}/deploy",
 		pathParams: [
@@ -206,6 +206,13 @@ export const routes: RouteDef[] = [
 			{
 				description: "Revision (deployment) id, or previous",
 				name: "revisionId",
+			},
+		],
+		queryParams: [
+			{
+				description:
+					"true to also restore the revision's env vars, resources and networking (default false)",
+				name: "restoreConfig",
 			},
 		],
 		responses: {
@@ -365,7 +372,7 @@ export const routes: RouteDef[] = [
 		queryParams: listQueryParams,
 		responses: {
 			200: {
-				description: "The caller's stacks",
+				description: "Every stack on the instance",
 				isArray: true,
 				schema: stackResponse,
 			},
@@ -395,7 +402,7 @@ export const routes: RouteDef[] = [
 		queryParams: listQueryParams,
 		responses: {
 			200: {
-				description: "Built-in templates plus the caller's own",
+				description: "Built-in and custom templates",
 				isArray: true,
 				schema: templateResponse,
 			},

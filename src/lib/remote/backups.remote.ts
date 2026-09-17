@@ -11,8 +11,8 @@ import {
 export const getVolumeBackups = query(
 	z.string(),
 	async (volumeId): Promise<BackupObject[]> => {
-		const user = requireUser();
-		const volume = await StorageVolumeDTO.get(volumeId, user.id);
+		requireUser();
+		const volume = await StorageVolumeDTO.get(volumeId);
 		if (!volume?.s3DestinationId) {
 			return [];
 		}

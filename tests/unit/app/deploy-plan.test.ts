@@ -32,7 +32,10 @@ function service(
 	return {
 		buildServerRemoteHostId: null,
 		buildSource: "image",
+		gitBakeFile: null,
+		gitBakeTarget: null,
 		gitBuildContext: null,
+		gitBuildMethod: "dockerfile",
 		gitDockerfilePath: null,
 		gitRef: "main",
 		gitUrl: null,
@@ -115,12 +118,59 @@ describe("resolveDeployPlan, legal combinations", () => {
 		expect(plan.image.kind).toBe("pull");
 	});
 
+	test("a builder method is carried through to every git build variant", () => {
+		const local = resolveDeployPlan(
+			input({ service: gitService({ gitBuildMethod: "railpack" }) }),
+		);
+		expect(local.image).toMatchObject({
+			git: { buildMethod: "railpack" },
+			kind: "local-build",
+		});
+		const agent = resolveDeployPlan(
+			input({
+				buildServer: agentServer,
+				cacheRegistry: registry,
+				service: gitService({
+					buildServerRemoteHostId: "host-agent",
+					gitBuildMethod: "heroku",
+				}),
+			}),
+		);
+		expect(agent.image).toMatchObject({
+			git: { buildMethod: "heroku" },
+			kind: "agent-build",
+		});
+	});
+
+	test("a bake service carries its bake file and target into the build", () => {
+		const plan = resolveDeployPlan(
+			input({
+				service: gitService({
+					gitBakeFile: "build/docker-bake.json",
+					gitBakeTarget: "api",
+					gitBuildMethod: "bake",
+				}),
+			}),
+		);
+		expect(plan.image).toMatchObject({
+			git: {
+				bakeFile: "build/docker-bake.json",
+				bakeTarget: "api",
+				buildMethod: "bake",
+			},
+			kind: "local-build",
+		});
+	});
+
 	test("git source without a build server builds locally, with or without a cache", () => {
 		const bare = resolveDeployPlan(input({ service: gitService() }));
 		expect(bare.image).toEqual({
 			cacheRegistry: null,
 			git: {
+				bakeFile: null,
+				bakeTarget: null,
 				buildContext: null,
+				buildMethod: "dockerfile",
 				dockerfilePath: null,
 				gitRef: "main",
 				gitUrl: "https://github.com/acme/api.git",
@@ -160,6 +210,27 @@ describe("resolveDeployPlan, legal combinations", () => {
 		});
 	});
 
+	test("a build server without a cache registry streams the image back", () => {
+		const docker = resolveDeployPlan(
+			input({
+				buildServer: dockerServer,
+				service: gitService({ buildServerRemoteHostId: "host-docker" }),
+			}),
+		);
+		expect(docker.image).toMatchObject({
+			kind: "docker-build",
+			registry: null,
+			server: dockerServer,
+		});
+		const agent = resolveDeployPlan(
+			input({
+				buildServer: agentServer,
+				service: gitService({ buildServerRemoteHostId: "host-agent" }),
+			}),
+		);
+		expect(agent.image).toMatchObject({ kind: "agent-build", registry: null });
+	});
+
 	test("git source on an agent build server publishes through the registry", () => {
 		const plan = resolveDeployPlan(
 			input({
@@ -189,17 +260,6 @@ describe("resolveDeployPlan, illegal combinations", () => {
 		expect(() =>
 			resolveDeployPlan(input({ service: service({ image: "" }) })),
 		).toThrow(DeployPlanError);
-	});
-
-	test("a build server without a cache registry", () => {
-		expect(() =>
-			resolveDeployPlan(
-				input({
-					buildServer: dockerServer,
-					service: gitService({ buildServerRemoteHostId: "host-docker" }),
-				}),
-			),
-		).toThrow("needs a build cache registry");
 	});
 
 	test("a build server that didn't resolve", () => {

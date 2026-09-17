@@ -36,6 +36,22 @@ function deliver(
 	);
 }
 
+function pullRequest(action: string): Record<string, unknown> {
+	return {
+		action,
+		number: 7,
+		pull_request: {
+			base: { repo: { full_name: "acme/fixture" } },
+			head: {
+				ref: "main",
+				repo: { full_name: "acme/fixture" },
+				sha: "0123456789abcdef0123456789abcdef01234567",
+			},
+			title: "IT preview",
+		},
+	};
+}
+
 describe("git push webhooks", () => {
 	beforeAll(async () => {
 		const ctx = integrationContext();
@@ -46,6 +62,12 @@ describe("git push webhooks", () => {
 				authRequired: false,
 				autoDeployOnPush: true,
 				buildSource: "git",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
@@ -127,6 +149,43 @@ describe("git push webhooks", () => {
 			params: { path: { jobId } },
 		});
 		expect(job.response.status).toBe(200);
+	});
+
+	test("a pull request is ignored while previews are off", async () => {
+		const res = await deliver(
+			pullRequest("opened"),
+			fixture.secret,
+			"pull_request",
+		);
+		expect(res.status).toBe(202);
+		expect(await res.json()).toEqual({
+			ignored: "Pull request previews are off.",
+		});
+	});
+
+	test("with previews on, an opened pull request deploys a preview once per head", async () => {
+		const patched = await client.PATCH("/services/{serviceId}", {
+			body: { previewsEnabled: true },
+			params: { path: { serviceId: fixture.serviceId } },
+		});
+		expect(patched.response.status).toBe(200);
+
+		const opened = await deliver(
+			pullRequest("opened"),
+			fixture.secret,
+			"pull_request",
+		);
+		expect(opened.status).toBe(202);
+		const { deploymentId } = await opened.json();
+		expect(deploymentId).toEqual(expect.any(String));
+
+		const again = await deliver(
+			pullRequest("synchronize"),
+			fixture.secret,
+			"pull_request",
+		);
+		expect(again.status).toBe(202);
+		expect((await again.json()).ignored).toContain("already builds");
 	});
 
 	test("an unknown service is a 404, not a deploy", async () => {

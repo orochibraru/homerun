@@ -3,12 +3,12 @@ import { StatusPageDTO } from "$lib/dto/status-page-dto";
 import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 
 export const load = async ({ parent }) => {
-	const { user } = await parent();
+	await parent();
 
 	const [pages, services, latest] = await Promise.all([
-		StatusPageDTO.list(user.id),
-		ServiceDTO.list(user.id),
-		UptimeCheckDTO.latestForUser(user.id),
+		StatusPageDTO.list(),
+		ServiceDTO.list(),
+		UptimeCheckDTO.latest(),
 	]);
 
 	const health = new Map<string, boolean>();

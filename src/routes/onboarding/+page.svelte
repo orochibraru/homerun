@@ -5,11 +5,14 @@
 		Globe,
 		Mail,
 		Minus,
+		Network,
 		Rocket,
 		Server,
 		TriangleAlert,
 	} from "@lucide/svelte";
+	import type { SubmitFunction } from "@sveltejs/kit";
 	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import AsyncBlock from "$lib/components/async-block.svelte";
 	import BrandMark from "$lib/components/brand-mark.svelte";
@@ -26,7 +29,7 @@
 	import { ONBOARDING_FIELD_STEP } from "$lib/onboarding-fields";
 	import { getSwarmReadiness } from "$lib/remote/setup.remote";
 	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	import { enhanceToast, toastError } from "$lib/toast";
 
 	const { data, form } = $props();
 
@@ -52,6 +55,7 @@
 		{ icon: Server, label: "Docker" },
 		{ icon: Cpu, label: "Traefik" },
 		{ icon: Mail, label: "Email" },
+		{ icon: Network, label: "DNS" },
 		{ label: "Review" },
 	];
 
@@ -182,6 +186,31 @@
 		settings?.smtpSecure ?? envDefaults?.smtpSecure ?? false,
 	);
 
+	let cloudflareEnabled = $derived(!!settings?.cloudflareZoneId);
+	let cloudflareZoneId = $derived(
+		(form?.values?.cloudflareZoneId as string | undefined) ??
+			settings?.cloudflareZoneId ??
+			"",
+	);
+	let cloudflareApiToken = $state("");
+	let pangolinEnabled = $derived(!!settings?.pangolinApiBaseUrl);
+	let pangolinApiBaseUrl = $derived(
+		(form?.values?.pangolinApiBaseUrl as string | undefined) ??
+			settings?.pangolinApiBaseUrl ??
+			"",
+	);
+	let pangolinOrgId = $derived(
+		(form?.values?.pangolinOrgId as string | undefined) ??
+			settings?.pangolinOrgId ??
+			"",
+	);
+	let pangolinMainSiteName = $derived(
+		(form?.values?.pangolinMainSiteName as string | undefined) ??
+			settings?.pangolinMainSiteName ??
+			"",
+	);
+	let pangolinApiToken = $state("");
+
 	type FieldErrors = Record<string, string>;
 	let errors = $state<FieldErrors>({});
 	let attempted = $state<Set<number>>(new Set());
@@ -248,19 +277,124 @@
 		return next;
 	}
 
+	function requireDnsFields(
+		enabled: boolean,
+		feature: string,
+		fields: [string, string, string, boolean?][],
+	): FieldErrors {
+		const next: FieldErrors = {};
+		if (!enabled) {
+			return next;
+		}
+		for (const [field, fieldLabel, value, stored] of fields) {
+			if (!(value.trim() || stored)) {
+				next[field] = `${fieldLabel} is required when ${feature} is enabled.`;
+			}
+		}
+		return next;
+	}
+
+	function validateDns(): FieldErrors {
+		return {
+			...requireDnsFields(cloudflareEnabled, "Cloudflare", [
+				["cloudflareZoneId", "Zone ID", cloudflareZoneId],
+				[
+					"cloudflareApiToken",
+					"API token",
+					cloudflareApiToken,
+					!!settings?.cloudflareApiTokenEnc,
+				],
+			]),
+			...requireDnsFields(pangolinEnabled, "Pangolin", [
+				["pangolinApiBaseUrl", "API base URL", pangolinApiBaseUrl],
+				["pangolinOrgId", "Org ID", pangolinOrgId],
+				["pangolinMainSiteName", "Site name", pangolinMainSiteName],
+				[
+					"pangolinApiToken",
+					"API token",
+					pangolinApiToken,
+					!!settings?.pangolinApiTokenEnc,
+				],
+			]),
+		};
+	}
+
 	// Index-aligned with STEPS (minus the fields-less Review step).
 	const STEP_FIELDS: string[][] = [
 		["baseDomain"],
 		["dockerSocketPath", "dockerNetworkName"],
 		["traefikEntrypoint", "traefikCertResolver"],
 		["smtpHost", "smtpPort", "smtpUser", "smtpFrom"],
+		[
+			"cloudflareZoneId",
+			"cloudflareApiToken",
+			"pangolinApiBaseUrl",
+			"pangolinOrgId",
+			"pangolinMainSiteName",
+			"pangolinApiToken",
+		],
 	];
 	const STEP_VALIDATORS = [
 		validateCore,
 		validateDocker,
 		validateTraefik,
 		validateSmtp,
+		validateDns,
 	];
+
+	const finishToast = enhanceToast({
+		error: "Check the form for errors.",
+		loading: "Saving your setup",
+		onFailure: (failure) => {
+			applyServerErrors(
+				(failure as { errors?: Record<string, string[]> } | undefined)?.errors,
+			);
+		},
+		onSettled: () => {
+			submitting = false;
+		},
+		onStart: () => {
+			submitting = true;
+		},
+		success: "Setup complete.",
+	});
+
+	/** Runs a DNS "Test connection" submission through its own promise toast, without `update()`, so nothing typed into the wizard is reset. */
+	const testConnection: SubmitFunction = () => {
+		let settle!: (message: string) => void;
+		let reject!: (error: Error) => void;
+		const outcome = new Promise<string>((resolvePromise, rejectPromise) => {
+			settle = resolvePromise;
+			reject = rejectPromise;
+		});
+		toast.promise(outcome, {
+			error: (error: unknown) =>
+				toastError(error, "Couldn't test the connection."),
+			loading: "Testing the connection",
+			success: (message: string) => message,
+		});
+		return ({ result }) => {
+			if (result.type === "success") {
+				settle(
+					(result.data?.message as string | undefined) ?? "Connection works.",
+				);
+			} else if (result.type === "failure") {
+				reject(
+					new Error(
+						(result.data?.error as string | undefined) ??
+							"Couldn't test the connection.",
+					),
+				);
+			} else {
+				reject(new Error("Couldn't test the connection."));
+			}
+		};
+	};
+
+	const submitWizard: SubmitFunction = (input) =>
+		input.action.search.includes("/test")
+			? testConnection(input)
+			: finishToast(input);
 
 	function validateStep(step: number): boolean {
 		attempted.add(step);
@@ -384,22 +518,7 @@
     <form
       action="?/finish"
       method="POST"
-      use:enhance={enhanceToast({
-        error: "Check the form for errors.",
-        loading: "Saving your setup",
-        onFailure: (data) => {
-          applyServerErrors(
-            (data as { errors?: Record<string, string[]> } | undefined)?.errors,
-          );
-        },
-        onSettled: () => {
-          submitting = false;
-        },
-        onStart: () => {
-          submitting = true;
-        },
-        success: "Setup complete.",
-      })}
+      use:enhance={submitWizard}
     >
       <Stepper onNext={validateStep} steps={STEPS} bind:activeStep>
         {#snippet children()}
@@ -686,10 +805,153 @@
             {/if}
           </section>
 
-          <!-- ═══ Step 5: Review ═══ -->
           <section
             class="space-y-5 rounded-md panel p-6"
             class:hidden={activeStep !== 4}
+          >
+            {@render panelHeader(
+              "DNS",
+              "Optional : create a DNS record or tunnel route for every service you deploy.",
+            )}
+            <CheckBox
+              helperText="Upsert a CNAME in a Cloudflare zone for every deployed hostname"
+              id="cloudflareEnabled"
+              label="Cloudflare"
+              name="cloudflareEnabled"
+              bind:checked={cloudflareEnabled}
+            />
+            {#if cloudflareEnabled}
+              <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label class={label} for="cloudflareZoneId">Zone ID</label>
+                  <input
+                    class={input}
+                    id="cloudflareZoneId"
+                    name="cloudflareZoneId"
+                    type="text"
+                    bind:value={cloudflareZoneId}
+                  >
+                  {#if showError("cloudflareZoneId")}
+                    <p class={errorClass}>{showError("cloudflareZoneId")}</p>
+                  {/if}
+                </div>
+                <div>
+                  <label class={label} for="cloudflareApiToken">API token</label>
+                  <input
+                    class={input}
+                    id="cloudflareApiToken"
+                    name="cloudflareApiToken"
+                    placeholder={settings?.cloudflareApiTokenEnc
+                    ? "Leave blank to keep current"
+                    : "Zone:DNS:Edit scope"}
+                    type="password"
+                    bind:value={cloudflareApiToken}
+                  >
+                  {#if showError("cloudflareApiToken")}
+                    <p class={errorClass}>{showError("cloudflareApiToken")}</p>
+                  {/if}
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <Button formaction="?/testCloudflare" type="submit" variant="outline">
+                  Test Cloudflare
+                </Button>
+              </div>
+            {/if}
+
+            <CheckBox
+              helperText="Create a Pangolin Resource and Target through a tunnel site for every deployed hostname"
+              id="pangolinEnabled"
+              label="Pangolin"
+              name="pangolinEnabled"
+              bind:checked={pangolinEnabled}
+            />
+            {#if pangolinEnabled}
+              <div class="grid gap-5 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <label class={label} for="pangolinApiBaseUrl">API base URL</label>
+                  <input
+                    class={input}
+                    id="pangolinApiBaseUrl"
+                    name="pangolinApiBaseUrl"
+                    placeholder="https://api.pangolin.example.com/v1"
+                    type="text"
+                    bind:value={pangolinApiBaseUrl}
+                  >
+                  <p class="mt-1.5 text-xs text-text-subtle">
+                    The Integration API (port 3003 by default, path ending in
+                    <code>/v1</code>), not the Pangolin dashboard.
+                  </p>
+                  {#if showError("pangolinApiBaseUrl")}
+                    <p class={errorClass}>{showError("pangolinApiBaseUrl")}</p>
+                  {/if}
+                </div>
+                <div>
+                  <label class={label} for="pangolinOrgId">Org ID</label>
+                  <input
+                    class={input}
+                    id="pangolinOrgId"
+                    name="pangolinOrgId"
+                    type="text"
+                    bind:value={pangolinOrgId}
+                  >
+                  {#if showError("pangolinOrgId")}
+                    <p class={errorClass}>{showError("pangolinOrgId")}</p>
+                  {/if}
+                </div>
+                <div>
+                  <label class={label} for="pangolinMainSiteName">Site name</label>
+                  <input
+                    class={input}
+                    id="pangolinMainSiteName"
+                    name="pangolinMainSiteName"
+                    type="text"
+                    bind:value={pangolinMainSiteName}
+                  >
+                  {#if showError("pangolinMainSiteName")}
+                    <p class={errorClass}>{showError("pangolinMainSiteName")}</p>
+                  {/if}
+                </div>
+                <div class="sm:col-span-2">
+                  <label class={label} for="pangolinApiToken">API token</label>
+                  <input
+                    class={input}
+                    id="pangolinApiToken"
+                    name="pangolinApiToken"
+                    placeholder={settings?.pangolinApiTokenEnc
+                    ? "Leave blank to keep current"
+                    : ""}
+                    type="password"
+                    bind:value={pangolinApiToken}
+                  >
+                  {#if showError("pangolinApiToken")}
+                    <p class={errorClass}>{showError("pangolinApiToken")}</p>
+                  {/if}
+                </div>
+              </div>
+              <p class="text-xs text-text-subtle">
+                Target host, target port and Pangolin sign-in live on Settings →
+                Networking, where they default to detected values.
+              </p>
+              <div class="flex justify-end">
+                <Button formaction="?/testPangolin" type="submit" variant="outline">
+                  Test Pangolin
+                </Button>
+              </div>
+            {/if}
+
+            {#if !(cloudflareEnabled || pangolinEnabled)}
+              <p class="text-xs text-text-subtle">
+                Skippable : add DNS records by hand, or turn either integration on
+                later from Settings → Networking.
+              </p>
+            {/if}
+          </section>
+
+          <!-- ═══ Step 6: Review ═══ -->
+          <section
+            class="space-y-5 rounded-md panel p-6"
+            class:hidden={activeStep !== 5}
           >
             {@render panelHeader(
               "Review",
@@ -731,6 +993,15 @@
               {@render reviewRow(
                 "Email",
                 smtpEnabled ? smtpHost || "—" : "Not configured",
+              )}
+              {@render reviewRow(
+                "DNS automation",
+                [
+                  cloudflareEnabled ? "Cloudflare" : null,
+                  pangolinEnabled ? "Pangolin" : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "Not configured",
               )}
             </dl>
           </section>

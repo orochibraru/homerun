@@ -36,9 +36,10 @@ function registryTarget(
 
 /**
  * The Trivy scan targets to check for a just-built git image : a
- * local-build plan only ever has the local daemon copy to scan, while a
- * docker-build/agent-build plan scans both the pushed registry copy and the
- * local copy pulled back onto this host.
+ * local-build plan, or a build server with no cache registry (whose image
+ * is streamed back onto this host), only has the local daemon copy to scan,
+ * while a docker-build/agent-build plan with a registry scans both the pushed
+ * registry copy and the local copy pulled back onto this host.
  */
 export function buildScanTargets(
 	plan: GitBuildPlan,
@@ -50,7 +51,9 @@ export function buildScanTargets(
 			return [localScanTarget(ref)];
 		case "docker-build":
 		case "agent-build":
-			return [registryTarget(plan.registry, ref), localScanTarget(ref)];
+			return plan.registry
+				? [registryTarget(plan.registry, ref), localScanTarget(ref)]
+				: [localScanTarget(ref)];
 		default:
 			return unreachable(plan);
 	}

@@ -208,7 +208,7 @@
           onStart: () => {
             submittingAuth = true;
           },
-          success: "Saved. Redeploy for it to take effect.",
+          success: "Access rules saved.",
         })}
       >
         {#if form?.authError}
@@ -352,7 +352,6 @@
             {/if}
             Save
           </Button>
-          {@render applyNote()}
         </div>
       </form>
     {/if}

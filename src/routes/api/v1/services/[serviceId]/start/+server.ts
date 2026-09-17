@@ -10,7 +10,7 @@ export const POST = async ({ params, locals }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const service = await ServiceDTO.get(params.serviceId, locals.user.id);
+	const service = await ServiceDTO.get(params.serviceId);
 	if (!service) {
 		return json({ error: "Not found" }, { status: 404 });
 	}

@@ -130,7 +130,7 @@
         loading: "Saving Cloudflare settings",
         success: (data) =>
           data?.cloudflareTestOk
-            ? "Zone access verified."
+            ? `Zone access verified: ${data.cloudflareTestDetail ?? "token accepted"}.`
             : "Cloudflare settings saved.",
       })}
     >
@@ -155,7 +155,7 @@
           name="cloudflareApiToken"
           placeholder={data.settings.cloudflareZoneId
           ? "Unchanged"
-          : "Zone:DNS:Edit scope"}
+          : "Zone / DNS / Edit permission"}
           type="password"
         />
       </div>

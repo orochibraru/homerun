@@ -20,7 +20,7 @@
 {#if data.channels.length === 0}
   <EmptyState
     icon={BellRing}
-    subtitle="Add a Discord webhook, a generic webhook or an email address, then choose what it receives here."
+    subtitle="Add a Discord, Slack or Telegram channel, a generic webhook or an email address, then choose what it receives here."
     title="No notification channels yet"
   >
     <Button href={resolve("/notification-channels")}>

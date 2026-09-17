@@ -6,12 +6,12 @@ import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 export const load = async ({ locals, parent }) => {
 	// (protected)/+layout.server.ts already redirects unauthenticated users
 	// before this load runs : parent() gives the already-guaranteed user.
-	const { user } = await parent();
+	await parent();
 
 	const [services, recentDeployments, uptime] = await Promise.all([
-		ServiceDTO.list(user.id),
-		DeploymentDTO.listRecentForUser(user.id),
-		UptimeCheckDTO.latestForUser(user.id),
+		ServiceDTO.list(),
+		DeploymentDTO.listRecent(),
+		UptimeCheckDTO.latest(),
 	]);
 	const recentErrors = locals.isAdmin
 		? await AppLogDTO.listRecent(5)

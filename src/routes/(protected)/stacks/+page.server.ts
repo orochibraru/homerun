@@ -2,10 +2,10 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { parseListQuery } from "$lib/server/list-query";
 
 export const load = async ({ parent, url }) => {
-	const { user } = await parent();
+	await parent();
 
 	const query = parseListQuery(url);
-	const paged = await StackDTO.listWithServiceCountsPaged(user.id, query);
+	const paged = await StackDTO.listWithServiceCountsPaged(query);
 
 	return {
 		filtered: query.active,

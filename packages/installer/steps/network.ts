@@ -1,21 +1,29 @@
 import type { StepRunner } from "../exec";
 
 class NetworkSetupService {
-	/** Creates the shared network on the rootless daemon : same name convention as the main app's homerun, idempotent (docker network create errors on a duplicate name, so check first). */
+	/**
+	 * Creates the shared network on the daemon behind `dockerSocket`, same
+	 * name convention as the main app's homerun. Idempotent: docker network
+	 * create errors on a duplicate name, so it checks first.
+	 *
+	 * @param username The rootless user whose daemon this is, or null for the system daemon, which root reaches directly.
+	 */
 	async ensureHomerunNetwork(
 		run: StepRunner,
-		username: string,
+		username: string | null,
 		dockerSocket: string,
 	): Promise<void> {
-		const env = {
-			DOCKER_HOST: `unix://${dockerSocket}`,
-			HOME: `/home/${username}`,
-		};
+		const target: { as?: string; env: Record<string, string> } = username
+			? {
+					as: username,
+					env: {
+						DOCKER_HOST: `unix://${dockerSocket}`,
+						HOME: `/home/${username}`,
+					},
+				}
+			: { env: { DOCKER_HOST: `unix://${dockerSocket}` } };
 		const inspected = await run
-			.run(["docker", "network", "inspect", "homerun"], {
-				as: username,
-				env,
-			})
+			.run(["docker", "network", "inspect", "homerun"], target)
 			.then(
 				() => true,
 				() => false,
@@ -24,10 +32,7 @@ class NetworkSetupService {
 			console.log("homerun already exists, skipping.");
 			return;
 		}
-		await run.run(["docker", "network", "create", "homerun"], {
-			as: username,
-			env,
-		});
+		await run.run(["docker", "network", "create", "homerun"], target);
 	}
 }
 

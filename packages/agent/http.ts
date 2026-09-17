@@ -1,7 +1,8 @@
+import { Readable } from "node:stream";
 import type { BunRequest } from "bun";
 import { DockerService } from "./docker";
 import { OpenApiBuilder } from "./openapi";
-import { buildInputSchema } from "./schemas";
+import { buildInputSchema, imageSaveQuerySchema } from "./schemas";
 import { SystemStatsService } from "./stats";
 import { tokensMatch } from "./token";
 import { AGENT_VERSION } from "./version";
@@ -55,6 +56,32 @@ export class AgentHttpServer {
 			},
 			"/v1/health": {
 				GET: () => json({ status: "ok", version: AGENT_VERSION }),
+			},
+			"/v1/images/save": {
+				GET: this.#authed(async (req) => {
+					const parsed = imageSaveQuerySchema.safeParse({
+						ref: new URL(req.url).searchParams.get("ref"),
+					});
+					if (!parsed.success) {
+						return json(
+							{ error: "Invalid query", issues: parsed.error.issues },
+							{ status: 400 },
+						);
+					}
+					const archive = await DockerService.saveImage(parsed.data.ref);
+					if (!archive) {
+						return json(
+							{ error: `Image ${parsed.data.ref} not found.` },
+							{ status: 404 },
+						);
+					}
+					return new Response(
+						Readable.toWeb(archive) as unknown as ReadableStream,
+						{
+							headers: { "content-type": "application/x-tar" },
+						},
+					);
+				}),
 			},
 			"/v1/openapi.json": {
 				GET: (req: BunRequest) =>

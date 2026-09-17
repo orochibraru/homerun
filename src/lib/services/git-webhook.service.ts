@@ -3,8 +3,11 @@ import { config } from "$lib/config";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import type { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceGitDTO } from "$lib/dto/service-git-dto";
+import { isCommitSha } from "$lib/git-ref";
 import {
 	gitWebhookUrl,
+	parsePullRequestEvent,
 	parsePushEvent,
 	verifyGitWebhook,
 } from "$lib/git-webhooks";
@@ -12,7 +15,11 @@ import { Logger } from "$lib/logger";
 import type { GitProviderConfig, GitProviderKind } from "$lib/server/db/schema";
 import { inferProviderKind } from "$lib/status-checks";
 import { DeploymentService } from "./deploy.service.ts";
-import { GitProviderService } from "./git-provider.service.ts";
+import {
+	GitProviderRefusedError,
+	GitProviderService,
+} from "./git-provider.service.ts";
+import { PreviewService } from "./preview.service.ts";
 import { decryptSecret, encryptSecret } from "./secrets.ts";
 
 const logger = new Logger("GitWebhook");
@@ -21,11 +28,14 @@ export interface WebhookSnapshot {
 	gitProviderId: string | null;
 	gitRepo: string | null;
 	gitWebhookId: string | null;
+	previewsEnabled?: boolean;
 }
 
 export interface PushWebhookDetails {
 	error: string | null;
+	polling: boolean;
 	providerName: string | null;
+	reconnect: { providerId: string; providerName: string } | null;
 	registered: boolean;
 	secret: string;
 	url: string | null;
@@ -33,8 +43,23 @@ export interface PushWebhookDetails {
 
 export type WebhookDeliveryResult =
 	| { deploymentId: string; jobId: string; status: "deployed" }
+	| { status: "removed"; serviceId: string }
 	| { status: "ignored"; reason: string }
 	| { status: "rejected"; code: 400 | 401 | 404; reason: string };
+
+interface RegistrationOutcome {
+	error: string | null;
+	reconnect: boolean;
+}
+
+/** Whether a service wants a webhook on its repo at all: pushes to deploy, or pull requests to preview. */
+function wantsWebhook(svc: ServiceDTO): boolean {
+	return (
+		svc.buildSource === "git" &&
+		!svc.toJSON().previewParentId &&
+		(svc.autoDeployOnPush || svc.toJSON().previewsEnabled)
+	);
+}
 
 /** The configured, enabled provider with this id, null otherwise. */
 async function enabledProvider(
@@ -64,10 +89,12 @@ class GitWebhookServiceClass {
 	 * is kept in `gitWebhookError` for the Source tab. Never throws.
 	 */
 	async sync(svc: ServiceDTO, previous: WebhookSnapshot): Promise<void> {
-		const wanted = svc.buildSource === "git" && svc.autoDeployOnPush;
+		const wanted = wantsWebhook(svc);
 		const moved =
 			previous.gitProviderId !== svc.gitProviderId ||
-			previous.gitRepo !== svc.gitRepo;
+			previous.gitRepo !== svc.gitRepo ||
+			(previous.previewsEnabled !== undefined &&
+				previous.previewsEnabled !== svc.toJSON().previewsEnabled);
 
 		if (previous.gitWebhookId && (!wanted || moved)) {
 			await this.#deleteHook(svc.userId, previous);
@@ -75,7 +102,11 @@ class GitWebhookServiceClass {
 		}
 
 		if (!wanted) {
-			await svc.update({ gitWebhookError: null, gitWebhookSecretEnc: null });
+			await svc.update({
+				gitWebhookError: null,
+				gitWebhookReconnect: false,
+				gitWebhookSecretEnc: null,
+			});
 			return;
 		}
 
@@ -87,26 +118,63 @@ class GitWebhookServiceClass {
 		if (svc.gitWebhookId && !moved) {
 			return;
 		}
-		await svc.update({ gitWebhookError: await this.#register(svc, secret) });
+		const outcome = await this.#register(svc, secret);
+		await svc.update({
+			gitWebhookError: outcome.error,
+			gitWebhookReconnect: outcome.reconnect,
+		});
+	}
+
+	/**
+	 * Retries the webhook of every service a user owns on a provider whose
+	 * registration didn't go through, right after that user reconnected the
+	 * provider (usually to grant the webhook scope). Never throws.
+	 */
+	async retryAfterReconnect(userId: string, providerId: string): Promise<void> {
+		const services = await ServiceGitDTO.listAwaitingWebhook(
+			userId,
+			providerId,
+		);
+		for (const svc of services) {
+			// biome-ignore lint/performance/noAwaitInLoops: one provider API call at a time is plenty for a reconnect
+			await this.sync(svc, {
+				gitProviderId: svc.gitProviderId,
+				gitRepo: svc.gitRepo,
+				gitWebhookId: null,
+			}).catch((err) => {
+				logger.warn(`Webhook retry failed: service=${svc.id}`, err);
+			});
+		}
 	}
 
 	/**
 	 * What the Source tab and the API show about a service's push webhook: the
 	 * URL and secret to add it by hand, whether Homerun registered it, and why
-	 * not. Null when deploy-on-push is off.
+	 * not, whether reconnecting the provider would fix it, and whether the
+	 * branch is polled instead. Null when neither deploy-on-push nor previews
+	 * are on.
 	 */
 	async describe(svc: ServiceDTO): Promise<PushWebhookDetails | null> {
 		const secret = svc.gitWebhookSecretEnc
 			? decryptSecret(svc.gitWebhookSecretEnc)
 			: null;
-		if (!(svc.autoDeployOnPush && secret)) {
+		if (!(wantsWebhook(svc) && secret)) {
 			return null;
 		}
 		const provider = await enabledProvider(svc.gitProviderId);
+		const registered = !!svc.gitWebhookId;
 		return {
 			error: svc.gitWebhookError,
+			polling:
+				svc.autoDeployOnPush &&
+				!isCommitSha(svc.gitRef) &&
+				(svc.toJSON().gitPollEnabled || !registered),
 			providerName: provider?.name ?? null,
-			registered: !!svc.gitWebhookId,
+			reconnect:
+				provider && !registered && svc.toJSON().gitWebhookReconnect
+					? { providerId: provider.id, providerName: provider.name }
+					: null,
+			registered,
 			secret,
 			url: config.auth.origin
 				? gitWebhookUrl(config.auth.origin, svc.id)
@@ -123,8 +191,9 @@ class GitWebhookServiceClass {
 
 	/**
 	 * Handles one delivery to `/api/v1/webhooks/git/<serviceId>`: checks the
-	 * signature against the service's secret, and enqueues a deploy as the
-	 * service's owner when the push was to the branch it builds.
+	 * signature against the service's secret, then either hands a pull request
+	 * event to `PreviewService` when previews are on, or enqueues a deploy as
+	 * the service's owner when a push was to the branch it builds.
 	 */
 	async handleDelivery(
 		svc: ServiceDTO | null,
@@ -134,7 +203,7 @@ class GitWebhookServiceClass {
 		const secret = svc?.gitWebhookSecretEnc
 			? decryptSecret(svc.gitWebhookSecretEnc)
 			: null;
-		if (!(svc && svc.buildSource === "git" && svc.autoDeployOnPush && secret)) {
+		if (!(svc && wantsWebhook(svc) && secret)) {
 			return {
 				code: 404,
 				reason: "No service with deploy-on-push here.",
@@ -161,12 +230,22 @@ class GitWebhookServiceClass {
 			};
 		}
 
+		const pullRequest = parsePullRequestEvent(headers, payload);
+		if (pullRequest) {
+			return svc.toJSON().previewsEnabled
+				? await PreviewService.handle(svc, pullRequest)
+				: { reason: "Pull request previews are off.", status: "ignored" };
+		}
+
 		const branch = svc.gitRef ?? "main";
 		const push = parsePushEvent(headers, payload).find(
 			(entry) => entry.branch === branch,
 		);
-		if (!push) {
+		if (!(svc.autoDeployOnPush && push)) {
 			return { reason: `Not a push to ${branch}.`, status: "ignored" };
+		}
+		if (push.commit) {
+			await svc.update({ gitLastSeenCommit: push.commit });
 		}
 
 		const { deploymentId, jobId } = await DeploymentService.enqueueDeploy({
@@ -192,28 +271,44 @@ class GitWebhookServiceClass {
 	 * Registers the service's webhook with its provider and records the hook
 	 * id.
 	 *
-	 * @returns Why it couldn't be registered, or null on success.
+	 * @returns Why it couldn't be registered (null on success), and whether
+	 * reconnecting the provider is what fixes it.
 	 */
-	async #register(svc: ServiceDTO, secret: string): Promise<string | null> {
+	async #register(
+		svc: ServiceDTO,
+		secret: string,
+	): Promise<RegistrationOutcome> {
 		if (!config.auth.origin) {
-			return "Set the Dashboard URL under Settings → General: it's the address the provider sends pushes to.";
+			return {
+				error:
+					"Set the Dashboard URL under Settings → General: it's the address the provider sends pushes to.",
+				reconnect: false,
+			};
 		}
 		const provider = await enabledProvider(svc.gitProviderId);
 		if (!(provider && svc.gitRepo)) {
-			return "This repo wasn't picked from a connected git provider, so add the webhook by hand.";
+			return {
+				error:
+					"This repo wasn't picked from a connected git provider, so add the webhook by hand.",
+				reconnect: false,
+			};
 		}
 		const connection = await GitConnectionDTO.getForUserAndProvider(
 			svc.userId,
 			provider.id,
 		);
 		if (!connection) {
-			return `The service's owner isn't connected to ${provider.name} any more. Reconnect it on the Git Providers page.`;
+			return {
+				error: `The service's owner isn't connected to ${provider.name} any more.`,
+				reconnect: true,
+			};
 		}
 		try {
 			const hookId = await GitProviderService.createPushWebhook(
 				provider,
 				connection,
 				{
+					pullRequests: svc.toJSON().previewsEnabled,
 					repo: svc.gitRepo,
 					secret,
 					url: gitWebhookUrl(config.auth.origin, svc.id),
@@ -223,15 +318,17 @@ class GitWebhookServiceClass {
 			logger.info(
 				`Registered push webhook: service=${svc.id} provider=${provider.id} repo=${svc.gitRepo} hook=${hookId}`,
 			);
-			return null;
+			return { error: null, reconnect: false };
 		} catch (err) {
 			logger.warn(
 				`Couldn't register push webhook: service=${svc.id} provider=${provider.id} repo=${svc.gitRepo}`,
 				err,
 			);
-			return err instanceof Error
-				? err.message
-				: "Couldn't register the webhook.";
+			return {
+				error:
+					err instanceof Error ? err.message : "Couldn't register the webhook.",
+				reconnect: err instanceof GitProviderRefusedError && err.reconnectHelps,
+			};
 		}
 	}
 

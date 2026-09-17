@@ -6,8 +6,7 @@ the swarm as a worker (`packages/installer/swarm-join.sh`) rather than being
 registered separately.
 
 A **remote host** is therefore a _build server_: somewhere a git-based service's
-image gets built instead of on this machine, then published through a build
-cache registry and pulled back here to run.
+image gets built instead of on this machine, then brought back here to run.
 
 ## Registering a build server
 
@@ -29,23 +28,28 @@ an agent host through its own `POST /v1/build`.
 socket/Homerun Agent) once you have more than a couple registered, plus a pager
 if you have more than a page's worth, searched/paginated server-side.
 
-## A build server needs a cache registry
+## Getting the image back here
 
-The built image only exists on the build server's own daemon, so a service with
-a build server set also needs a **build cache registry**, a registry credential
-registered under `/build-cache-registries` and picked on the service's
-[Source tab](services.md#deploy-source-image-or-git-repo): the build pushes the
-final image there and this host pulls it back before starting the container.
-Saving a build server without one is rejected. The same registry doubles as the
-layer cache, so a repeat build reuses what the last one pushed.
+The built image only exists on the build server's own daemon, so it has to reach
+this host before the container can start. Two ways, picked by whether the
+service has a **build cache registry** (a registry credential registered under
+`/build-cache-registries` and picked on the service's
+[Source tab](services.md#deploy-source-image-or-git-repo)):
 
-Where the `git clone` itself happens depends on the connection kind, which
-matters if the repository is only reachable from one of the two machines:
+- **With a cache registry**, the build pushes the final image there and this
+  host pulls it back. The same registry doubles as the layer cache, so a repeat
+  build reuses what the last one pushed.
+- **Without one**, the image is streamed straight from the build server into
+  this host's daemon: `docker save` on the build server piped into `docker load`
+  here, through the Docker connection itself or the agent's
+  `GET /v1/images/save`. Nothing to set up, but every deploy transfers the whole
+  image rather than only the layers that changed.
 
-- A **Docker connection** host clones on _this_ machine and streams the build
-  context over to the remote daemon.
-- A **Homerun Agent** host clones on _itself_, so the repository has to be
-  reachable from the build server rather than from here.
+The `git clone` runs on the build server itself for both connection kinds (in a
+throwaway `alpine/git` container on its daemon), so the repository has to be
+reachable from the build server rather than from here. The build runs there too,
+with BuildKit in a `docker:cli` helper container that mounts the build server's
+`/var/run/docker.sock` (the agent uses its own `DOCKER_SOCKET_PATH`).
 
 ## Homerun Agent
 
@@ -83,10 +87,10 @@ Docker plus either the Agent or the full stack, this is what
 what's verified.
 
 A separate script, `packages/installer/swarm-join.sh`, joins a box to an
-**existing** Docker Swarm as a worker (on its own rootless Docker daemon) and
-installs the Homerun Agent there. This is how you add capacity: the swarm
-scheduler places workloads on the new node automatically. Registering it as a
-build server (above) is separate and only needed if you also want to build
+**existing** Homerun swarm as a worker and installs the Homerun Agent there
+(through the installer's `--mode=agent`). This is how you add capacity: the
+swarm scheduler places workloads on the new node automatically. Registering it
+as a build server (above) is separate and only needed if you also want to build
 there. Run it with the join token/manager address from
 `docker swarm join-token worker` on your manager:
 
@@ -95,9 +99,10 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/i
   | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377
 ```
 
-Unlike the main installer's `--mode=agent`/`--mode=full` (now verified live
-against real disposable VMs, see
-[`packages/installer/README.md`](../packages/installer/README.md)),
-`swarm-join.sh` itself hasn't been run against a real second host or a real
-swarm yet, same "verify on your own box first" caveat, just not yet closed the
-way the rest of the installer's mutating steps were.
+The node joins on the **system (rootful)** Docker daemon, same as the manager
+has to run on (see [swarm mode](services.md#swarm-mode)): rootless Docker can't
+create the overlay networks swarm services use. Nodes need to reach each other
+on 2377/tcp, 7946/tcp+udp and 4789/udp. On a host with several network
+interfaces add `--advertise-addr=<ip>`. Verified against two real disposable
+VMs: the worker joins, replicas get scheduled on it and Traefik on the manager
+serves them over the overlay network.

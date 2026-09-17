@@ -30,39 +30,32 @@ export type StackUpdateInput = Partial<
 
 /** Wraps the `stack` table : see ServiceDTO for the pattern this follows. */
 export class StackDTO extends BaseDTO<Stack> {
-	/**
-	 * Loads one stack by id, scoped to its owner; null when missing or owned by
-	 * someone else.
-	 */
-	static async get(id: string, userId: string): Promise<StackDTO | null> {
+	/** Loads one stack by id; null when missing. */
+	static async get(id: string): Promise<StackDTO | null> {
 		const [row] = await db
 			.select()
 			.from(stack)
-			.where(and(eq(stack.id, id), eq(stack.userId, userId)))
+			.where(eq(stack.id, id))
 			.limit(1);
 		return row ? new StackDTO(row) : null;
 	}
 
-	/** Every stack id on the instance, across all users : for reconciling against what Docker actually has (see DockerService.findOrphanStackNetworks). */
+	/** Every stack id on the instance : for reconciling against what Docker actually has (see DockerService.findOrphanStackNetworks). */
 	static async allIds(): Promise<Set<string>> {
 		const rows = await db.select({ id: stack.id }).from(stack);
 		return new Set(rows.map((row) => row.id));
 	}
 
-	/** Every stack the user owns, newest first. */
-	static async list(userId: string): Promise<StackDTO[]> {
-		const rows = await db
-			.select()
-			.from(stack)
-			.where(eq(stack.userId, userId))
-			.orderBy(desc(stack.createdAt));
+	/** Every stack on the instance, newest first. */
+	static async list(): Promise<StackDTO[]> {
+		const rows = await db.select().from(stack).orderBy(desc(stack.createdAt));
 		return rows.map((row) => new StackDTO(row));
 	}
 
 	/** Same as `list`, plus each stack's member-service count, for the stacks gallery. */
-	static async listWithServiceCounts(
-		userId: string,
-	): Promise<Array<{ stack: StackDTO; serviceCount: number }>> {
+	static async listWithServiceCounts(): Promise<
+		Array<{ stack: StackDTO; serviceCount: number }>
+	> {
 		const rows = await db
 			.select({
 				row: stack,
@@ -70,7 +63,6 @@ export class StackDTO extends BaseDTO<Stack> {
 			})
 			.from(stack)
 			.leftJoin(service, eq(service.stackId, stack.id))
-			.where(eq(stack.userId, userId))
 			.groupBy(stack.id)
 			.orderBy(desc(stack.createdAt));
 		return rows.map((r) => ({
@@ -81,10 +73,9 @@ export class StackDTO extends BaseDTO<Stack> {
 
 	/** One page of `listWithServiceCounts`, searched server-side, plus the unpaged total. */
 	static async listWithServiceCountsPaged(
-		userId: string,
 		query: ListQuery,
 	): Promise<PagedResult<{ stack: StackDTO; serviceCount: number }>> {
-		const conditions: SQL[] = [eq(stack.userId, userId)];
+		const conditions: SQL[] = [];
 		const search = searchCondition(query.q, [
 			stack.name,
 			stack.slug,
@@ -132,23 +123,14 @@ export class StackDTO extends BaseDTO<Stack> {
 	}
 
 	/**
-	 * Up to `limit` of the user's stacks whose name, slug or description matches
-	 * `q`, newest first, for global search.
+	 * Up to `limit` stacks whose name, slug or description matches `q`, newest
+	 * first, for global search.
 	 */
-	static async search(
-		userId: string,
-		q: string,
-		limit: number,
-	): Promise<StackDTO[]> {
+	static async search(q: string, limit: number): Promise<StackDTO[]> {
 		const rows = await db
 			.select()
 			.from(stack)
-			.where(
-				and(
-					eq(stack.userId, userId),
-					searchCondition(q, [stack.name, stack.slug, stack.description]),
-				),
-			)
+			.where(searchCondition(q, [stack.name, stack.slug, stack.description]))
 			.orderBy(desc(stack.createdAt))
 			.limit(limit);
 		return rows.map((row) => new StackDTO(row));
@@ -204,7 +186,7 @@ export class StackDTO extends BaseDTO<Stack> {
 	 * `force` isn't set; no row is deleted then.
 	 */
 	async cascadeDelete(options: { force?: boolean } = {}): Promise<void> {
-		const services = await ServiceDTO.listByStack(this.row.id, this.row.userId);
+		const services = await ServiceDTO.listByStack(this.row.id);
 
 		const failures = (
 			await Promise.all(
@@ -255,7 +237,7 @@ export class StackDTO extends BaseDTO<Stack> {
 	get id(): string {
 		return this.row.id;
 	}
-	/** The id of the user who owns the stack. */
+	/** The id of the user who created the stack. */
 	get userId(): string {
 		return this.row.userId;
 	}

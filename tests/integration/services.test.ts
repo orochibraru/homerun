@@ -70,6 +70,12 @@ describe("services : image-mode deploy", () => {
 				authRequired: false,
 				autoDeployOnPush: false,
 				buildSource: "image",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
@@ -110,6 +116,12 @@ describe("services : image-mode deploy", () => {
 				authRequired: false,
 				autoDeployOnPush: false,
 				buildSource: "image",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
@@ -138,6 +150,12 @@ describe("services : image-mode deploy", () => {
 				authRequired: false,
 				autoDeployOnPush: false,
 				buildSource: "image",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: { IT_MARKER: "hello-from-integration-test" },
@@ -172,6 +190,12 @@ describe("services : image-mode deploy", () => {
 				authRequired: false,
 				autoDeployOnPush: false,
 				buildSource: "image",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
@@ -210,6 +234,12 @@ describe("services : lifecycle", () => {
 				authRequired: false,
 				autoDeployOnPush: false,
 				buildSource: "image",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
@@ -256,6 +286,12 @@ describe("services : git-build deploy", () => {
 				authRequired: false,
 				autoDeployOnPush: false,
 				buildSource: "git",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
 				// containerPort is required unconditionally by
 				// createServiceApiBody (not just for buildSource: "image"),
 				// confirmed by reading the schema after this test 400'd
@@ -290,6 +326,12 @@ describe("services : update and delete", () => {
 				authRequired: false,
 				autoDeployOnPush: false,
 				buildSource: "image",
+				capAdd: [],
+				devices: [],
+				envFiles: [],
+				gitBuildMethod: "dockerfile",
+				labels: {},
+				privileged: false,
 				containerPort: 80,
 				dnsResolvable: false,
 				envVars: {},
@@ -326,7 +368,7 @@ describe("services : update and delete", () => {
 	});
 });
 
-describe("services : auth and ownership", () => {
+describe("services : auth and lookup", () => {
 	test("no api key is unauthorized", async () => {
 		const res = await nativeFetch(
 			`${integrationContext().origin}/api/v1/services`,
@@ -334,7 +376,7 @@ describe("services : auth and ownership", () => {
 		expect(res.status).toBe(401);
 	});
 
-	test("acting on a nonexistent/foreign service id is 404, not 403", async () => {
+	test("acting on a nonexistent service id is 404", async () => {
 		const res = await client.GET("/services/{serviceId}", {
 			params: { path: { serviceId: "00000000-0000-0000-0000-000000000000" } },
 		});

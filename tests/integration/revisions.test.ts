@@ -26,6 +26,12 @@ async function createService(name: string, tag: string): Promise<string> {
 			authRequired: false,
 			autoDeployOnPush: false,
 			buildSource: "image",
+			capAdd: [],
+			devices: [],
+			envFiles: [],
+			gitBuildMethod: "dockerfile",
+			labels: {},
+			privileged: false,
 			containerPort: 80,
 			dnsResolvable: false,
 			envVars: {},
@@ -69,6 +75,15 @@ async function deploy(serviceId: string): Promise<string> {
 		throw new Error(`Deploy failed: ${result.error}`);
 	}
 	return result.deploymentId;
+}
+
+async function stop(serviceId: string): Promise<void> {
+	const res = await client.POST("/services/{serviceId}/stop", {
+		params: { path: { serviceId } },
+	});
+	if (!res.response.ok) {
+		throw new Error(`Stop failed with ${res.response.status}`);
+	}
 }
 
 async function revisions(serviceId: string) {
@@ -163,10 +178,24 @@ describe("revisions : list and roll back", () => {
 	}, 120_000);
 });
 
+describe("revisions : health-gated rollout", () => {
+	test("a revision that never becomes ready is refused and the previous container keeps serving", async () => {
+		const id = await createService("IT health gate", "1.27-alpine");
+		await deploy(id);
+		await patch(id, { image: "hello-world", tag: "latest" });
+		const res = await client.POST("/services/{serviceId}/deploy", {
+			params: { path: { serviceId: id } },
+		});
+		expect(res.response.status).toBe(500);
+		expect(await containerImage(id)).toBe("nginx:1.27-alpine");
+	}, 240_000);
+});
+
 describe("revisions : auto-rollback", () => {
 	test("a restart-looping revision is rolled back to the previous one", async () => {
 		const id = await createService("IT auto rollback", "1.27-alpine");
 		const good = await deploy(id);
+		await stop(id);
 		await patch(id, {
 			autoRollback: true,
 			image: "hello-world",
@@ -186,6 +215,7 @@ describe("revisions : auto-rollback", () => {
 	test("with auto-rollback off an unhealthy revision is only marked", async () => {
 		const id = await createService("IT unhealthy", "1.27-alpine");
 		await deploy(id);
+		await stop(id);
 		await patch(id, { image: "hello-world", tag: "latest" });
 		const bad = await deploy(id);
 

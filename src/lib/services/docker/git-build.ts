@@ -1,14 +1,26 @@
-import type { Readable } from "node:stream";
+import { PassThrough, type Readable } from "node:stream";
+import type { BuildMethod } from "$lib/build-methods";
+import { config } from "$lib/config";
 import {
 	authenticatedCloneUrl,
 	cloneFailureHint,
 	type GitCredential,
 	redactCloneUrl,
 } from "$lib/git-clone-url";
+import { gitCheckoutSteps } from "$lib/git-ref";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
+import {
+	BUILDER_HELPER_IMAGE,
+	BUILDER_HELPER_TAG,
+	BUILDER_SCRIPT,
+	BUILDER_TOOLS_VOLUME,
+	builderEnv,
+	buildFailureMessage,
+	createLineSplitter,
+	DOCKER_SOCKET,
+} from "./builder-run.ts";
 import type { RemoteHostConnection } from "./client.ts";
-import type { RegistryAuth } from "./containers.ts";
 import { MANAGED_LABEL } from "./labels.ts";
 
 const logger = new Logger("GitBuild");
@@ -16,6 +28,10 @@ const logger = new Logger("GitBuild");
 const GIT_IMAGE = "alpine/git:latest";
 
 const CLONE_TIMEOUT_MS = 10 * 60 * 1000;
+
+const BUILDER_TIMEOUT_MS = 60 * 60 * 1000;
+
+const RECENT_LINE_LIMIT = 40;
 
 /**
  * Decodes Docker's multiplexed stdout/stderr stream format (an 8-byte header
@@ -49,16 +65,6 @@ const ignoreCleanupFailure = () => undefined;
 const WORKSPACE = "/workspace";
 const REPO_DIR = `${WORKSPACE}/repo`;
 
-/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pushImage. */
-interface RequiresContainerMixin {
-	pushImage: (
-		localRef: string,
-		targetRef: string,
-		auth?: RegistryAuth,
-		remote?: RemoteHostConnection | null,
-	) => Promise<void>;
-}
-
 export interface BuildCacheRegistryConfig {
 	password: string;
 	registryUrl: string;
@@ -66,13 +72,11 @@ export interface BuildCacheRegistryConfig {
 }
 
 export interface GitBuildParams {
+	bakeFile?: string | null;
+	bakeTarget?: string | null;
 	// Subdirectory inside the repo to use as the build context (".": repo root).
 	buildContext?: string | null;
-	// Registry to pull a `--cache-from` source from before the build and push
-	// the fresh layers back to after (best-effort both ways : a missing cache
-	// image or a failed push never fails the build itself, it just means no
-	// cache this time). Undefined/null : no cache-from/cache-to at all, same
-	// behavior as before this existed.
+	buildMethod?: BuildMethod | null;
 	cacheRegistry?: BuildCacheRegistryConfig | null;
 	commit?: string | null;
 	// Credentials for a private repo, when a git provider is connected for
@@ -82,9 +86,6 @@ export interface GitBuildParams {
 	credential?: GitCredential | null;
 	// Relative to buildContext.
 	dockerfilePath?: string | null;
-	// Branch, tag, or commit : passed to `git clone --branch`, so only
-	// branches/tags work directly (a bare commit SHA needs a full clone,
-	// not attempted here : shallow-clone-by-ref covers the common case).
 	gitRef?: string | null;
 	gitUrl: string;
 	remote?: RemoteHostConnection | null;
@@ -98,10 +99,10 @@ export interface GitBuildResult {
 	success: boolean;
 }
 
-/** Git-clone-then-Dockerfile-build, tagging the result for the normal deploy pipeline to run like any other image. */
+/** Git-clone-then-BuildKit-build, tagging the result for the normal deploy pipeline to run like any other image. */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerGitBuildMixin<
-	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
+	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
 	return class DockerGitBuildService extends Base {
 		/** Pulls the `alpine/git` helper image if it isn't already present locally, reporting progress via `onProgress`. */
@@ -174,7 +175,8 @@ export function DockerGitBuildMixin<
 		}
 
 		/**
-		 * Shallow single-branch clones `params.gitUrl` at `ref` into the
+		 * Shallow-clones `params.gitUrl` at `ref` (a branch, tag or full
+		 * commit SHA, see `gitCheckoutSteps`) into the
 		 * workspace volume (via `#runInWorkspace`), then resolves the commit
 		 * that was actually built: the cloned HEAD, unless `params.commit`
 		 * was pinned and the branch has since moved past it, in which case
@@ -197,26 +199,20 @@ export function DockerGitBuildMixin<
 				params.credential ?? null,
 			);
 			onProgress?.(`Cloning ${redactCloneUrl(cloneUrl)} (${ref})...`);
-			const clone = await this.#runInWorkspace({
-				cmd: [
-					"clone",
-					"--depth",
-					"1",
-					"--branch",
-					ref,
-					"--single-branch",
-					cloneUrl,
-					REPO_DIR,
-				],
-				entrypoint: ["git"],
-				remote: params.remote,
-				volumeName,
-			});
-			if (clone.statusCode !== 0) {
-				const output = redactCloneUrl(
-					clone.output || `git clone exited ${clone.statusCode}`,
-				);
-				throw new Error(cloneFailureHint(params.gitUrl, output));
+			for (const cmd of gitCheckoutSteps(cloneUrl, ref, REPO_DIR)) {
+				// biome-ignore lint/performance/noAwaitInLoops: each git step works on the previous one's checkout
+				const step = await this.#runInWorkspace({
+					cmd,
+					entrypoint: ["git"],
+					remote: params.remote,
+					volumeName,
+				});
+				if (step.statusCode !== 0) {
+					const output = redactCloneUrl(
+						step.output || `git exited ${step.statusCode}`,
+					);
+					throw new Error(cloneFailureHint(params.gitUrl, output));
+				}
 			}
 			logger.info(`Cloned: ${params.gitUrl}#${ref} -> ${volumeName}`);
 
@@ -281,123 +277,117 @@ export function DockerGitBuildMixin<
 		}
 
 		/**
-		 * Materializes the cloned repo (or `buildContext`, a subdirectory of
-		 * it) as a tar stream suitable for `docker.buildImage`, via a
-		 * throwaway container's `getArchive`. The returned `close()` removes
-		 * that container; callers must call it once done reading the stream.
+		 * Builds the cloned repo with the service's build method (BuildKit
+		 * through `docker buildx build` or `docker buildx bake`, Nixpacks,
+		 * Railpack or pack) inside a throwaway `docker:cli` container on the
+		 * same daemon, with the workspace volume, a persistent tools volume
+		 * (builder binaries and the cache builder's buildx config) and the
+		 * daemon's socket mounted, so the build tags `params.tag` straight
+		 * into that daemon's image store. With a cache registry the layer
+		 * cache is imported from and exported to it. Streams the output to
+		 * `onProgress` line by line.
+		 *
+		 * @throws When the build settings are invalid, or the build exits
+		 *   non-zero (with its most telling output line) or runs past the
+		 *   timeout.
 		 */
-		async #openContext(
-			volumeName: string,
-			buildContext: string | null | undefined,
-			remote?: RemoteHostConnection | null,
-		): Promise<{ close: () => Promise<void>; stream: Readable }> {
-			const docker = this.getDocker(remote);
-			const container = await docker.createContainer({
-				Entrypoint: ["true"],
-				HostConfig: { Binds: [`${volumeName}:${WORKSPACE}:ro`] },
-				Image: GIT_IMAGE,
-				Labels: { [MANAGED_LABEL]: "true" },
-			});
-			await container.start();
-			await container.wait();
-
-			const path = buildContext
-				? `${REPO_DIR}/${buildContext.replace(/^\/+|\/+$/g, "")}/.`
-				: `${REPO_DIR}/.`;
-			const stream = (await container.getArchive({ path })) as Readable;
-			return {
-				close: async () => {
-					await container.remove({ force: true }).catch(ignoreCleanupFailure);
-				},
-				stream,
-			};
-		}
-
-		/** Best-effort cache warm-up : no cache yet (first build) or a briefly unreachable registry never fails the build. */
-		async #pullBuildCache(
-			docker: ReturnType<BaseDockerService["getDocker"]>,
-			cacheRef: string,
-			cacheAuth: RegistryAuth | undefined,
-			onProgress?: (line: string) => void,
-		): Promise<void> {
-			onProgress?.(`Pulling build cache ${cacheRef}...`);
-			try {
-				const pullStream: NodeJS.ReadableStream = await docker.pull(
-					cacheRef,
-					cacheAuth ? { authconfig: cacheAuth } : {},
-				);
-				await new Promise<void>((res) => {
-					docker.modem.followProgress(pullStream, () => res());
-				});
-			} catch (err) {
-				logger.warn(`No build cache pulled for ${cacheRef}`, {
-					error: err instanceof Error ? err.message : String(err),
-				});
-			}
-		}
-
-		/** Runs the image build itself, forwarding only changed output lines to `onProgress`. */
-		async #runBuild(
+		async #runBuilder(
 			params: GitBuildParams,
-			context: Readable,
-			cacheRef: string | null,
+			method: BuildMethod,
+			volumeName: string,
 			onProgress?: (line: string) => void,
 		): Promise<void> {
 			const docker = this.getDocker(params.remote);
-			const dockerfile = params.dockerfilePath || "Dockerfile";
-
-			onProgress?.(`Building ${dockerfile}...`);
-			const stream = await docker.buildImage(context, {
-				dockerfile,
-				rm: true,
-				t: params.tag,
-				// The classic (non-BuildKit) build API this app uses wants
-				// cachefrom as a JSON-encoded array string, despite
-				// @types/dockerode typing it as a plain string : verified
-				// live, a bare string 400s with "error reading cache-from:
-				// invalid character ... looking for beginning of value"
-				// (the daemon tries to JSON-parse it). No
-				// BUILDKIT_INLINE_CACHE buildarg : that's a BuildKit-only
-				// concept, the classic builder just warns "not consumed"
-				// and ignores it, real cache reuse here comes from the
-				// cachefrom image's layers alone (verified live : a repeat
-				// build showed "Using cache" for every step).
-				...(cacheRef ? { cachefrom: JSON.stringify([cacheRef]) } : {}),
+			const helper = `${BUILDER_HELPER_IMAGE}:${BUILDER_HELPER_TAG}`;
+			try {
+				await docker.getImage(helper).inspect();
+			} catch {
+				onProgress?.(`Pulling ${helper}...`);
+				const pullStream: NodeJS.ReadableStream = await docker.pull(helper, {});
+				await new Promise<void>((resolvePromise, reject) => {
+					docker.modem.followProgress(pullStream, (err) =>
+						err ? reject(err) : resolvePromise(),
+					);
+				});
+			}
+			const env = builderEnv({
+				bakeFile: params.bakeFile,
+				bakeTarget: params.bakeTarget,
+				buildContext: params.buildContext,
+				cacheRegistry: params.cacheRegistry,
+				dockerfilePath: params.dockerfilePath,
+				method,
+				repoDir: REPO_DIR,
+				tag: params.tag,
 			});
-
-			await new Promise<void>((resolvePromise, reject) => {
-				let lastStatus = "";
-				docker.modem.followProgress(
-					stream,
-					(err: Error | null) => (err ? reject(err) : resolvePromise()),
-					(event: { stream?: string; error?: string }) => {
-						if (event.error) {
-							reject(new Error(event.error));
-							return;
-						}
-						const text = event.stream?.trim();
-						// Docker build output is far chattier than a pull's
-						// layer events : only forward lines that actually
-						// changed, same "status change, not byte-tick"
-						// filtering as pullImage.
-						if (text && text !== lastStatus) {
-							lastStatus = text;
-							onProgress?.(text);
-						}
-					},
-				);
+			onProgress?.(`Building with ${method}...`);
+			const container = await docker.createContainer({
+				Cmd: ["-c", BUILDER_SCRIPT],
+				Entrypoint: ["sh"],
+				Env: env,
+				HostConfig: {
+					Binds: [
+						`${volumeName}:${WORKSPACE}`,
+						`${BUILDER_TOOLS_VOLUME}:/tools`,
+						`${params.remote ? DOCKER_SOCKET : config.docker.socketPath}:${DOCKER_SOCKET}`,
+					],
+				},
+				Image: helper,
+				Labels: { [MANAGED_LABEL]: "true" },
+				Tty: false,
 			});
+			const recentLines: string[] = [];
+			const lines = createLineSplitter((line) => {
+				recentLines.push(line);
+				if (recentLines.length > RECENT_LINE_LIMIT) {
+					recentLines.shift();
+				}
+				onProgress?.(line);
+			});
+			const output = new PassThrough();
+			output.on("data", (chunk: Buffer) => lines.push(chunk.toString("utf8")));
+			const raw = (await container.attach({
+				stderr: true,
+				stdout: true,
+				stream: true,
+			})) as unknown as Readable & { destroy: () => void };
+			docker.modem.demuxStream(raw, output, output);
+			const streamDone = new Promise<void>((resolvePromise) => {
+				raw.on("end", resolvePromise);
+				raw.on("close", resolvePromise);
+			});
+			let timedOut = false;
+			const timer = setTimeout(() => {
+				timedOut = true;
+				container.kill().catch(ignoreCleanupFailure);
+			}, BUILDER_TIMEOUT_MS);
+			try {
+				await container.start();
+				const result = (await container.wait()) as { StatusCode: number };
+				await streamDone;
+				lines.flush();
+				if (timedOut) {
+					throw new Error(`The ${method} build timed out.`);
+				}
+				if (result.StatusCode !== 0) {
+					throw new Error(
+						buildFailureMessage(method, result.StatusCode, recentLines),
+					);
+				}
+			} finally {
+				clearTimeout(timer);
+				raw.destroy();
+				await container.remove({ force: true }).catch(ignoreCleanupFailure);
+			}
 		}
 
 		/**
 		 * Runs the full git-based build pipeline for a service: creates a
 		 * scratch Docker volume, ensures the git helper image, clones the
 		 * repo (checking out a pinned commit if the branch has since moved),
-		 * best-effort pulls a `--cache-from` image when a cache registry is
-		 * configured, builds the Dockerfile into `params.tag`, best-effort
-		 * pushes the fresh layers back to the cache registry, and always
-		 * cleans up the build context and scratch volume. Reports progress
-		 * via `onProgress`.
+		 * builds it with the configured build method into `params.tag`
+		 * (see `#runBuilder`), and always removes the scratch volume.
+		 * Reports progress via `onProgress`.
 		 *
 		 * Never throws: build failures are caught and returned as
 		 * `{ success: false, error }` rather than propagated.
@@ -410,25 +400,7 @@ export function DockerGitBuildMixin<
 			const docker = this.getDocker(params.remote);
 			const volumeName = `homerun-build-${crypto.randomUUID()}`;
 
-			// Same image name as `tag` (before the ":"), just pushed under the
-			// cache registry instead of staying purely local : a stable name
-			// per service so the *next* build of the same service finds this
-			// one as its cache-from source.
-			const imageName = params.tag.split(":")[0];
-			const cacheRef = params.cacheRegistry
-				? `${params.cacheRegistry.registryUrl}/${imageName}:cache`
-				: null;
-			const cacheAuth = params.cacheRegistry
-				? {
-						password: params.cacheRegistry.password,
-						serveraddress: params.cacheRegistry.registryUrl,
-						username: params.cacheRegistry.username,
-					}
-				: undefined;
-
 			let commit: string | null = null;
-			let context: { close: () => Promise<void>; stream: Readable } | null =
-				null;
 			try {
 				await docker.createVolume({
 					Labels: { [MANAGED_LABEL]: "true" },
@@ -436,47 +408,19 @@ export function DockerGitBuildMixin<
 				});
 				await this.#ensureGitImage(params.remote, onProgress);
 				commit = await this.#cloneRepo(params, ref, volumeName, onProgress);
-
-				if (cacheRef) {
-					await this.#pullBuildCache(docker, cacheRef, cacheAuth, onProgress);
-				}
-
-				context = await this.#openContext(
+				await this.#runBuilder(
+					params,
+					params.buildMethod ?? "dockerfile",
 					volumeName,
-					params.buildContext,
-					params.remote,
+					onProgress,
 				);
-				await this.#runBuild(params, context.stream, cacheRef, onProgress);
 				logger.info(`Build succeeded: tag=${params.tag}`);
-
-				if (cacheRef) {
-					onProgress?.(`Pushing build cache ${cacheRef}...`);
-					// this.pushImage : DockerContainerMixin is lower in the chain
-					// than this mixin (see docker.service.ts's merge order), so
-					// it's a real inherited method here, not a separate helper.
-					await this.pushImage(
-						params.tag,
-						cacheRef,
-						cacheAuth,
-						params.remote,
-					).catch((err) => {
-						// Best-effort : the deploy already succeeded, a failed
-						// cache push just means the next build starts fresh.
-						logger.warn(`Couldn't push build cache ${cacheRef}`, {
-							error: err instanceof Error ? err.message : String(err),
-						});
-					});
-				}
-
 				return { commit, success: true };
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);
 				logger.error(`Build failed: ${params.gitUrl}#${ref}`, err);
-				return { error: message, success: false };
+				return { error: redactCloneUrl(message), success: false };
 			} finally {
-				await context?.close();
-				// Best-effort cleanup : a leftover temp dir isn't worth
-				// failing the build over.
 				await docker.getVolume(volumeName).remove().catch(ignoreCleanupFailure);
 			}
 		}

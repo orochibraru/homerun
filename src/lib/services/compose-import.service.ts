@@ -1,4 +1,6 @@
 import {
+	bindVolumeName,
+	type ComposeFileDraft,
 	type ComposeServiceDraft,
 	orderByDependencies,
 	slugifyComposeKey,
@@ -8,18 +10,29 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
+import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
 import { Logger } from "$lib/logger";
 import { uniqueSlug } from "$lib/slug";
+import { tarArchive } from "$lib/tar";
 import { DeploymentService } from "./deploy.service.ts";
+import { DockerService } from "./docker.service.ts";
+import { encryptSecret } from "./secrets.ts";
 
 const logger = new Logger("ComposeImport");
 
+const HOST_FILES_DIR = "/var/lib/homerun/files";
+const HELPER_IMAGE = "alpine";
+const HELPER_TAG = "3";
+
 export interface ComposeImportInput {
+	allowHostAccess: boolean;
 	drafts: ComposeServiceDraft[];
 	stackId: string | null;
 	stackName: string | null;
 	userId: string;
 }
+
+export class HostAccessError extends Error {}
 
 export interface ComposeImportResult {
 	stackId: string | null;
@@ -30,7 +43,7 @@ class ComposeImportServiceClass {
 	/** Resolves which stack imported services belong to: the given `stackId` if it exists, a newly created stack from `stackName`, or null (no stack) if neither is given. */
 	async #resolveStackId(input: ComposeImportInput): Promise<string | null> {
 		if (input.stackId) {
-			const existing = await StackDTO.get(input.stackId, input.userId);
+			const existing = await StackDTO.get(input.stackId);
 			return existing ? existing.id : null;
 		}
 		if (!input.stackName) {
@@ -80,6 +93,71 @@ class ComposeImportServiceClass {
 		return byMount;
 	}
 
+	/** A draft's private registry credentials as service columns, the password encrypted. */
+	#registryColumns(draft: ComposeServiceDraft) {
+		return {
+			registryPasswordEnc: draft.registry?.password
+				? encryptSecret(draft.registry.password)
+				: null,
+			registryUrl: draft.registry?.url ?? null,
+			registryUsername: draft.registry?.username ?? null,
+		};
+	}
+
+	/**
+	 * Carries file mounts over : every file's content goes to
+	 * `HOST_FILES_DIR/<slug>/` in one tar through Docker's archive endpoint
+	 * (a stopped helper container with that host directory bound), so there's
+	 * no size limit, then each is bind-mounted read-only at its container path
+	 * through a new bind storage volume.
+	 *
+	 * @throws When the helper container can't be created or the archive
+	 * can't be extracted.
+	 */
+	async #attachFiles(
+		svc: ServiceDTO,
+		files: ComposeFileDraft[],
+		userId: string,
+	): Promise<void> {
+		if (files.length === 0) {
+			return;
+		}
+		const mounts = files.map((file, index) => {
+			const baseName =
+				slugifyComposeKey(file.containerPath.split("/").pop() ?? "") || "file";
+			return { ...file, relative: `${svc.slug}/${index + 1}-${baseName}` };
+		});
+		await DockerService.extractIntoVolume({
+			archive: tarArchive([
+				{ name: svc.slug, type: "directory" },
+				...mounts.map((mount) => ({
+					content: mount.content,
+					name: mount.relative,
+					type: "file" as const,
+				})),
+			]),
+			image: HELPER_IMAGE,
+			mountPath: "/files",
+			tag: HELPER_TAG,
+			volumeName: HOST_FILES_DIR,
+		});
+		for (const mount of mounts) {
+			// biome-ignore lint/performance/noAwaitInLoops: mounts are attached in declaration order
+			const volume = await StorageVolumeDTO.create({
+				kind: "bind",
+				name: bindVolumeName(svc.slug, mount.containerPath),
+				source: `${HOST_FILES_DIR}/${mount.relative}`,
+				userId,
+			});
+			await ServiceVolumeDTO.attach({
+				containerPath: mount.containerPath,
+				readOnly: true,
+				serviceId: svc.id,
+				volumeId: volume.id,
+			});
+		}
+	}
+
 	/**
 	 * Creates one service row from a parsed compose draft, resolves and
 	 * attaches its volume mounts (`#resolveVolumes`), and fires a
@@ -92,12 +170,14 @@ class ComposeImportServiceClass {
 		volumes: StorageVolumeDTO[],
 	): Promise<ServiceDTO> {
 		const svc = await ServiceDTO.create({
+			...this.#registryColumns(draft),
 			buildSource: draft.build ? "git" : "image",
 			containerPort: draft.containerPort,
 			cpuLimit: draft.cpuLimit,
 			dnsResolvable: draft.dnsResolvable,
 			envVars: draft.envVars,
 			gitBuildContext: draft.build?.context ?? null,
+			gitBuildMethod: draft.build?.method ?? "dockerfile",
 			gitDockerfilePath: draft.build?.dockerfile ?? null,
 			gitRef: draft.build?.gitRef ?? null,
 			gitUrl: draft.build?.gitUrl ?? null,
@@ -108,6 +188,15 @@ class ComposeImportServiceClass {
 			portProtocol: draft.portProtocol,
 			stackId,
 			restartPolicy: draft.restartPolicy,
+			runtime: {
+				capAdd: draft.capAdd,
+				command: draft.command,
+				devices: draft.devices,
+				entrypoint: draft.entrypoint,
+				envFiles: draft.envFiles,
+				labels: draft.labels,
+				privileged: draft.privileged,
+			},
 			slug: await uniqueSlug(draft.slug, (slug) => ServiceDTO.slugTaken(slug)),
 			tag: draft.tag,
 			userId,
@@ -128,11 +217,12 @@ class ComposeImportServiceClass {
 			});
 		}
 
+		await this.#attachFiles(svc, draft.files, userId);
+
 		NotificationDTO.notify({
 			message: `"${svc.name}" was created from a compose file.`,
 			serviceId: svc.id,
 			type: "service_created",
-			userId,
 		});
 		return svc;
 	}
@@ -142,10 +232,19 @@ class ComposeImportServiceClass {
 	 * file, in dependency order (`orderByDependencies`) so a `depends_on`
 	 * target already exists by the time a dependent service references it.
 	 * Does not deploy anything, see `deployImported` for that.
+	 *
+	 * @throws HostAccessError When `allowHostAccess` is false and a draft asks
+	 * for privileged mode, devices, added capabilities or host env files.
 	 */
 	async importPlan(input: ComposeImportInput): Promise<ComposeImportResult> {
+		if (
+			!input.allowHostAccess &&
+			input.drafts.some((draft) => hostAccessRequested(draft))
+		) {
+			throw new HostAccessError(HOST_ACCESS_MESSAGE);
+		}
 		const stackId = await this.#resolveStackId(input);
-		const volumes = await StorageVolumeDTO.list(input.userId);
+		const volumes = await StorageVolumeDTO.list();
 		const ordered = orderByDependencies(input.drafts);
 
 		const services: ServiceDTO[] = [];

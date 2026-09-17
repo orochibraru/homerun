@@ -7,12 +7,12 @@ import { RevisionService } from "$lib/services/revision.service";
 
 const logger = new Logger("API");
 
-export const POST = async ({ params, locals, platform }) => {
+export const POST = async ({ params, locals, platform, url }) => {
 	allowLongRequest(platform);
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
 		return json({ error: "Not found" }, { status: 404 });
 	}
@@ -26,13 +26,15 @@ export const POST = async ({ params, locals, platform }) => {
 	}
 	const { revision } = target;
 
+	const restoreConfig = url.searchParams.get("restoreConfig") === "true";
 	const { deploymentId, jobId } = await RevisionService.enqueueRollback({
+		restoreConfig,
 		revision,
 		svc,
 		userId: locals.user.id,
 	});
 	logger.info(
-		`Revision deploy via API: service=${svc.id} revision=${revision.id} deployment=${deploymentId} user=${locals.user.id}`,
+		`Revision deploy via API: service=${svc.id} revision=${revision.id} deployment=${deploymentId} restoreConfig=${restoreConfig} user=${locals.user.id}`,
 	);
 	const finished = await QueueService.wait(jobId);
 	if (finished.status !== "succeeded") {

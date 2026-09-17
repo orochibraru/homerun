@@ -77,8 +77,8 @@ section. Deploys and lifecycle operations always run on the local daemon (or the
 local swarm manager); don't add a remote-host path to a lifecycle mixin. The
 only place `DockerService.getDocker(remote)` is ever called with a non-local
 connection is a git build: thread it through
-`RemoteHostDTO.resolveBuildTarget(hostId, userId)`, the one place a host id
-becomes a `RemoteExecutionTarget`, the same way `docker/git-build.ts` does.
+`RemoteHostDTO.resolveBuildTarget(hostId)`, the one place a host id becomes a
+`RemoteExecutionTarget`, the same way `docker/git-build.ts` does.
 
 ## Finish
 

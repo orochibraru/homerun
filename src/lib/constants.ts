@@ -57,10 +57,12 @@ export const JOB_STATUS_CONFIG: Record<
 
 export const JOB_TYPE_LABELS: Record<JobType, string> = {
 	backup: "Backup",
+	backup_restore: "Restore",
 	cron_job: "Cron job",
 	deploy: "Deploy",
 	docker_cleanup: "Cleanup",
 	image_scan: "Image scan",
+	notification_delivery: "Notification",
 };
 
 export const SERVICE_STATUS_CONFIG: Record<

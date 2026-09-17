@@ -85,7 +85,7 @@
     <div>
       <label class={label} for="scope">Covers</label>
       <select bind:value={scope} class={inputClass} id="scope" name="scope">
-        <option value="global">Every service I own</option>
+        <option value="global">Every service</option>
         <option value="stack">One stack</option>
         <option value="custom">Services I pick</option>
       </select>

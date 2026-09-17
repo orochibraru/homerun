@@ -36,6 +36,15 @@ mock.module("../../../src/lib/services/git-webhook.service.ts", () => ({
 	},
 }));
 
+const previewsByParent = new Map<string, unknown[]>();
+
+mock.module("../../../src/lib/dto/service-git-dto.ts", () => ({
+	ServiceGitDTO: {
+		listPreviews: async (parentId: string) =>
+			previewsByParent.get(parentId) ?? [],
+	},
+}));
+
 const { ServiceLifecycleService } = await import(
 	"../../../src/lib/services/service-lifecycle.service"
 );
@@ -68,6 +77,7 @@ beforeEach(() => {
 	removeError = null;
 	removed.length = 0;
 	webhooksRemoved.length = 0;
+	previewsByParent.clear();
 });
 
 describe("removalFailure", () => {
@@ -127,6 +137,16 @@ describe("ServiceLifecycleService.deleteService", () => {
 		removeError = dockerError(500, "unused");
 		const { state, svc } = fakeService({ containerId: null });
 		await ServiceLifecycleService.deleteService(svc);
+		expect(state.deleted).toBe(true);
+	});
+
+	test("removes the service's pull request previews first", async () => {
+		const preview = fakeService({ containerId: "c2", id: "s2" });
+		previewsByParent.set("s1", [preview.svc]);
+		const { state, svc } = fakeService();
+		await ServiceLifecycleService.deleteService(svc);
+		expect(removed).toEqual(["c2", "c1"]);
+		expect(preview.state.deleted).toBe(true);
 		expect(state.deleted).toBe(true);
 	});
 });

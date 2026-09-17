@@ -4,6 +4,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { isCommitSha } from "$lib/git-ref";
 	import { listRepoBranches } from "$lib/remote/git-repos.remote";
 
 	interface ConnectedProvider {
@@ -47,6 +48,9 @@
 			? listRepoBranches({ providerId: gitProviderId, repo: gitRepo })
 			: null,
 	);
+
+	let customRef = $state((() => isCommitSha(gitRef))());
+	const pinnedToCommit = $derived(isCommitSha(gitRef));
 
 	function useManualUrl() {
 		manualUrl = true;
@@ -92,7 +96,7 @@
     {/if}
   </div>
   <div>
-    <label class={labelClass} for="gitRef">Branch / tag</label>
+    <label class={labelClass} for="gitRef">Branch, tag or commit</label>
     <Input
       id="gitRef"
       name="gitRef"
@@ -100,6 +104,9 @@
       type="text"
       bind:value={gitRef}
     />
+    <p class="text-text-subtle mt-1.5 text-xs">
+      A full 40-character commit SHA pins the service to that commit.
+    </p>
   </div>
 {:else}
   <input name="gitUrl" type="hidden" value={gitUrl}>
@@ -120,7 +127,29 @@
     <p class={errorClass}>Pick a repository.</p>
   {/if}
 
-  {#if picked}
+  {#if picked && customRef}
+    <div>
+      <label class={labelClass} for="gitRef">Tag or commit</label>
+      <Input
+        id="gitRef"
+        name="gitRef"
+        placeholder="v1.2.0 or a full commit SHA"
+        type="text"
+        bind:value={gitRef}
+      />
+      <p class="text-text-subtle mt-1.5 text-xs">
+        <button
+          class="text-accent font-medium hover:underline"
+          onclick={() => {
+            customRef = false;
+          }}
+          type="button"
+        >
+          Pick a branch instead
+        </button>
+      </p>
+    </div>
+  {:else if picked}
     <div>
       <label class={labelClass} for="gitRef">Branch</label>
       {#await branchesPromise}
@@ -153,6 +182,17 @@
           Couldn't list branches, type the branch name instead.
         </p>
       {/await}
+      <p class="text-text-subtle mt-1.5 text-xs">
+        <button
+          class="text-accent font-medium hover:underline"
+          onclick={() => {
+            customRef = true;
+          }}
+          type="button"
+        >
+          Use a tag or commit instead
+        </button>
+      </p>
     </div>
   {:else}
     <input name="gitRef" type="hidden" value={gitRef}>
@@ -170,9 +210,11 @@
 {/if}
 
 <CheckBox
-  helperText={picked
-  ? `Homerun adds a webhook to the repo on ${pickedProviderName}, and every push to this branch deploys the service.`
-  : "Every push to this branch deploys the service. Homerun can't add the webhook to a pasted URL itself, so it gives you the URL and secret to add in the repo's settings."}
+  helperText={pinnedToCommit
+  ? "The service is pinned to a commit, so pushes never match it. Pick a branch to deploy on push."
+  : picked
+    ? `Homerun adds a webhook to the repo on ${pickedProviderName}, and every push to this branch deploys the service.`
+    : "Every push to this branch deploys the service. Homerun can't add the webhook to a pasted URL itself, so it gives you the URL and secret to add in the repo's settings."}
   id="autoDeployOnPush"
   label="Deploy on push"
   name="autoDeployOnPush"

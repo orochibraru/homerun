@@ -22,45 +22,40 @@ export type StorageVolumeUpdateInput = Partial<
 		| "backupEnabled"
 		| "backupLastRunAt"
 		| "backupPrefix"
+		| "backupPreCommand"
+		| "backupPreCommandServiceId"
 		| "backupSchedule"
+		| "backupStopServices"
 		| "s3DestinationId"
 	>
 >;
 
 /** Wraps the `storage_volume` table : see ServiceDTO for the pattern this follows. */
 export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
-	/**
-	 * Loads one storage volume by id, scoped to its owner; null when missing or
-	 * owned by someone else.
-	 */
-	static async get(
-		id: string,
-		userId: string,
-	): Promise<StorageVolumeDTO | null> {
+	/** Loads one storage volume by id; null when missing. */
+	static async get(id: string): Promise<StorageVolumeDTO | null> {
 		const [row] = await db
 			.select()
 			.from(storageVolume)
-			.where(and(eq(storageVolume.id, id), eq(storageVolume.userId, userId)))
+			.where(eq(storageVolume.id, id))
 			.limit(1);
 		return row ? new StorageVolumeDTO(row) : null;
 	}
 
-	/** Every storage volume the user owns, newest first. */
-	static async list(userId: string): Promise<StorageVolumeDTO[]> {
+	/** Every storage volume on the instance, newest first. */
+	static async list(): Promise<StorageVolumeDTO[]> {
 		const rows = await db
 			.select()
 			.from(storageVolume)
-			.where(eq(storageVolume.userId, userId))
 			.orderBy(desc(storageVolume.createdAt));
 		return rows.map((row) => new StorageVolumeDTO(row));
 	}
 
 	/** One page of `list`, searched/filtered server-side, plus the unpaged total. */
 	static async listPaged(
-		userId: string,
 		query: ListQuery,
 	): Promise<PagedResult<StorageVolumeDTO>> {
-		const conditions: SQL[] = [eq(storageVolume.userId, userId)];
+		const conditions: SQL[] = [];
 		const search = searchCondition(query.q, [
 			storageVolume.name,
 			storageVolume.source,
@@ -108,26 +103,19 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 	}
 
 	/**
-	 * Up to `limit` of the user's volumes whose name, source or description
+	 * Up to `limit` volumes whose name, source or description
 	 * matches `q`, newest first, for global search.
 	 */
-	static async search(
-		userId: string,
-		q: string,
-		limit: number,
-	): Promise<StorageVolumeDTO[]> {
+	static async search(q: string, limit: number): Promise<StorageVolumeDTO[]> {
 		const rows = await db
 			.select()
 			.from(storageVolume)
 			.where(
-				and(
-					eq(storageVolume.userId, userId),
-					searchCondition(q, [
-						storageVolume.name,
-						storageVolume.source,
-						storageVolume.description,
-					]),
-				),
+				searchCondition(q, [
+					storageVolume.name,
+					storageVolume.source,
+					storageVolume.description,
+				]),
 			)
 			.orderBy(desc(storageVolume.createdAt))
 			.limit(limit);
@@ -144,7 +132,10 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 			backupEnabled: false,
 			backupLastRunAt: null,
 			backupPrefix: null,
+			backupPreCommand: null,
+			backupPreCommandServiceId: null,
 			backupSchedule: null,
+			backupStopServices: false,
 			createdAt: now,
 			description: input.description ?? null,
 			id: crypto.randomUUID(),
@@ -180,7 +171,7 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 	get id(): string {
 		return this.row.id;
 	}
-	/** The id of the user who owns the volume. */
+	/** The id of the user who created the volume. */
 	get userId(): string {
 		return this.row.userId;
 	}
@@ -211,6 +202,18 @@ export class StorageVolumeDTO extends BaseDTO<StorageVolume> {
 	/** The key prefix backups are uploaded under, if one is set. */
 	get backupPrefix(): string | null {
 		return this.row.backupPrefix;
+	}
+	/** Whether services using this volume are stopped while it's backed up. */
+	get backupStopServices(): boolean {
+		return this.row.backupStopServices;
+	}
+	/** A shell command run inside a service's container before each backup (a database dump, say), if one is set. */
+	get backupPreCommand(): string | null {
+		return this.row.backupPreCommand;
+	}
+	/** The service whose container runs `backupPreCommand`, null to use the first running service that mounts this volume. */
+	get backupPreCommandServiceId(): string | null {
+		return this.row.backupPreCommandServiceId;
 	}
 	/** The S3 destination backups go to, if one is chosen. */
 	get s3DestinationId(): string | null {

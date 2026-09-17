@@ -4,6 +4,7 @@ import {
 	type Notification,
 	notification,
 	service,
+	user,
 } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
 
@@ -11,7 +12,6 @@ export interface NewNotificationInput {
 	message: string;
 	serviceId?: string | null;
 	type: Notification["type"];
-	userId: string;
 }
 
 // Same amortized-prune convention as AppLogDTO, per user rather than
@@ -53,39 +53,45 @@ export class NotificationDTO extends BaseDTO<Notification> {
 	}
 
 	/**
-	 * Fire-and-forget, same posture as Logger.warn/error's app_log write :
-	 * never awaited by the caller, never throws (a failed notification write
-	 * shouldn't fail the operation it's notifying about). Call sites use
-	 * this directly rather than `new NotificationDTO(...)`, there's no
-	 * synchronous constructor path callers need.
+	 * Fire-and-forget fan-out to every account's bell feed, same posture as
+	 * Logger.warn/error's app_log write : never awaited by the caller, never
+	 * throws, since a failed notification write shouldn't fail the operation
+	 * it's notifying about.
 	 */
 	static notify(input: NewNotificationInput): void {
-		NotificationDTO.create(input).catch(() => {
-			// Best-effort : see docstring above.
-		});
+		NotificationDTO.broadcast(input).catch(() => undefined);
 	}
 
 	/**
-	 * Inserts a notification and, on roughly 5% of writes, prunes that user's
-	 * feed back down to its newest 200 entries.
+	 * Inserts one copy of a notification per account, since every account
+	 * shares every resource, and on roughly 5% of writes prunes each feed back
+	 * down to its newest 200 entries.
 	 */
-	static async create(input: NewNotificationInput): Promise<NotificationDTO> {
-		const row: Notification = {
-			createdAt: new Date(),
-			id: crypto.randomUUID(),
-			message: input.message,
-			readAt: null,
-			serviceId: input.serviceId ?? null,
-			type: input.type,
-			userId: input.userId,
-		};
-		await db.insert(notification).values(row);
+	static async broadcast(input: NewNotificationInput): Promise<void> {
+		const users = await db.select({ id: user.id }).from(user);
+		if (users.length === 0) {
+			return;
+		}
+		const createdAt = new Date();
+		await db.insert(notification).values(
+			users.map(
+				(account): Notification => ({
+					createdAt,
+					id: crypto.randomUUID(),
+					message: input.message,
+					readAt: null,
+					serviceId: input.serviceId ?? null,
+					type: input.type,
+					userId: account.id,
+				}),
+			),
+		);
 
 		if (Math.random() < PRUNE_PROBABILITY) {
-			await NotificationDTO.prune(input.userId);
+			await Promise.all(
+				users.map((account) => NotificationDTO.prune(account.id)),
+			);
 		}
-
-		return new NotificationDTO(row);
 	}
 
 	/** Deletes everything past the user's newest 200 notifications. */
@@ -139,31 +145,28 @@ export class NotificationDTO extends BaseDTO<Notification> {
 	}
 
 	/**
-	 * Notifies a service's owner of an app-level error attributed to it
+	 * Notifies every account of an app-level error attributed to a service
 	 * (Logger.error()'s "app runtime failures" feed item), looked up by
-	 * `serviceId` alone since the logging call site doesn't carry a userId
+	 * `serviceId` alone since the logging call site only knows the service
 	 * (see logger.ts's persistLog, same heuristic-attribution shape as
-	 * AppLogDTO). The one unscoped-by-owner query in this DTO, same
-	 * precedent as ServiceDTO.listCronEnabled : this is internal
-	 * system-triggered attribution, not a user-facing access path.
+	 * AppLogDTO).
 	 */
 	static async notifyServiceError(
 		serviceId: string,
 		message: string,
 	): Promise<void> {
 		const [row] = await db
-			.select({ name: service.name, userId: service.userId })
+			.select({ name: service.name })
 			.from(service)
 			.where(eq(service.id, serviceId))
 			.limit(1);
 		if (!row) {
 			return;
 		}
-		await NotificationDTO.create({
+		await NotificationDTO.broadcast({
 			message: `"${row.name}" hit a runtime error: ${message}`,
 			serviceId,
 			type: "app_runtime_error",
-			userId: row.userId,
 		});
 	}
 }

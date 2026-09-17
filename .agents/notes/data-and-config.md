@@ -10,8 +10,8 @@ than in this one.
 
 Every table is wrapped by a DTO class extending `BaseDTO<TRow>` (`base-dto.ts`):
 a thin instance around one DB row that owns its own queries. Route files call
-`ServiceDTO.get(id, userId)`, `svc.update({...})`, `svc.delete()` etc. instead
-of writing Drizzle inline, this is what "no raw SQL in page.server.ts" means in
+`ServiceDTO.get(id)`, `svc.update({...})`, `svc.delete()` etc. instead of
+writing Drizzle inline, this is what "no raw SQL in page.server.ts" means in
 practice, and it's also the layer a future REST/CLI API would sit on top of (not
 yet built).
 
@@ -34,18 +34,19 @@ yet built).
   delete and `DELETE /api/v1/services/:id` (`?force=true`) all call; the two
   Settings pages turn the action's `fail(409, { detachFailed })` into a "Delete
   anyway" confirm.
-- `template-dto.ts`, `TemplateDTO`: `usable(id, userId)` (built-in OR owned, for
-  deploy-from-template), `owned(id, userId)` (owned only), `listForUser`,
-  `listPaged(userId, "builtin" | "mine", query)`, `listCategories`, `create`.
-  Built-ins have `ownerId: null` and are seeded on boot (see below).
+- `template-dto.ts`, `TemplateDTO`: `get(id)` (built-in or custom, for
+  deploy-from-template), `list`, `listPaged("builtin" | "custom", query)`,
+  `listCategories`, `create`. Built-ins have `ownerId: null` and are seeded on
+  boot (see below); a custom template's `ownerId` is its creator.
 - `template-link-dto.ts`, `TemplateLinkDTO`: `listForTemplate(templateId)`
-  (joined with the linked template's own image/tag/port/envVars/resources, for
-  both display and for actually deploying it), `countForTemplate`, `create`,
-  `remove`. See Template links below.
-- `deployment-dto.ts`, `DeploymentDTO`:
-  `get`/`listForService`/`listRecentForUser` (joins in service name/slug, for
-  the dashboard)/`create`/`update`/`appendLog(line)` (appends to the live
-  progress log, see below).
+  (joined with the linked template's own image/tag/port/envVars/resources and
+  runtime options as `linkedTemplateRuntime`, for both display and for actually
+  deploying it), `countForTemplate`, `create`, `remove`. See Template links
+  below.
+- `deployment-dto.ts`, `DeploymentDTO`: `get`/`listForService`/`listRecent`
+  (joins in service name/slug, for the
+  dashboard)/`create`/`update`/`appendLog(line)` (appends to the live progress
+  log, see below).
 - `storage-volume-dto.ts`, `StorageVolumeDTO`:
   `get`/`list`/`listPaged`/`create`/`delete`, for the `/storage` page's volume
   sources.
@@ -55,30 +56,31 @@ yet built).
 - `remote-host-dto.ts`, `RemoteHostDTO`:
   `get`/`list`/`listPaged`/`listBuildServers`/`create`/`update`/`delete`,
   `toConnection()` (decrypts TLS material into what `DockerService.getDocker()`
-  wants), and the static `resolveBuildTarget(hostId, userId)` that turns a host
-  id into the `RemoteExecutionTarget` `deploy.service.ts` branches on, see Build
-  servers below.
+  wants), and the static `resolveBuildTarget(hostId)` that turns a host id into
+  the `RemoteExecutionTarget` `deploy.service.ts` branches on, see Build servers
+  below.
 - `s3-destination-dto.ts`, `S3DestinationDTO`:
   `get`/`list`/`listPaged`/`create`/`update`/`delete`, plus
   `decryptSecretAccessKey()` (for the S3 client only, never a `load` return
   value), a named, reusable S3 target several volumes can share, see S3 backups
   below.
 - `backup-run-dto.ts`, `BackupRunDTO`: `create`/`finish`/`listForVolume`/
-  `listForUser`/`listForUserPaged` (joins in the volume's name), one row per
-  backup attempt, the history behind `/backups`.
+  `listRecent`/`listPaged` (joins in the volume's name), one row per backup
+  attempt, the history behind `/backups`.
 - `cron-job-dto.ts`, `CronJobDTO`: `get`/`list`/`listPaged`/`listEnabled`
   (unscoped by user, for the scheduler tick, same precedent as
   `ServiceDTO.listCronEnabled`)/`create`/`update`/ `delete`, and
   `cron-job-run-dto.ts`, `CronJobRunDTO`:
-  `create`/`finish`/`listForJob`/`listForUser` (joins in the job's name), one
-  row per cron job attempt with its captured output. See Cron jobs below.
+  `create`/`finish`/`listForJob`/`listRecent` (joins in the job's name), one row
+  per cron job attempt with its captured output. See Cron jobs below.
 - `image-scan-dto.ts`, `ImageScanDTO`: `create` (keeps the newest 25 per
   service, pruned on every insert)/`listForService`, one row per image scan. See
   Image scanning in the pipeline in `services-and-templates.md`.
 - `build-cache-registry-dto.ts`, `BuildCacheRegistryDTO`:
-  `get`/`list`/`listPaged`/`create`/`delete`, a per-user registry credential a
-  git-build pulls its `--cache-from` image from and pushes fresh layers back to,
-  see Git-based builds below.
+  `get`/`list`/`listPaged`/`create`/`delete`, a shared registry credential a git
+  build uses as its BuildKit registry cache
+  (`--cache-from`/`--cache-to type=registry`), see Git-based builds in
+  `services-and-templates.md`.
 - `git-connection-dto.ts`, `GitConnectionDTO`: one user's OAuth authorization
   against one configured git provider, see Git provider connections below.
 - `oauth-client-dto.ts`, `OauthClientDTO`: `list`/`get`/`getByClientId`/
@@ -127,12 +129,12 @@ paging through.
   `ServiceDTO.listWithStackNamesPaged` (+ `ServiceDTO.listFilterFacets`, every
   distinct status/stack the user actually has, so the filter pills stay stable
   no matter which page you're on), `StackDTO.listWithServiceCountsPaged`,
-  `TemplateDTO.listPaged(userId, "builtin" | "mine", query)` (+
+  `TemplateDTO.listPaged("builtin" | "custom", query)` (+
   `TemplateDTO.listCategories`), `StorageVolumeDTO.listPaged`,
   `RemoteHostDTO.listPaged`, `S3DestinationDTO.listPaged`,
-  `BuildCacheRegistryDTO.listPaged`, `BackupRunDTO.listForUserPaged`, and
+  `BuildCacheRegistryDTO.listPaged`, `BackupRunDTO.listPaged`, and
   `UserService.listUsersPaged`. The old unpaged finders (`ServiceDTO.list`,
-  `list`/`listForUser`/etc. on the others) stay, for internal callers that need
+  `list`/`listRecent`/etc. on the others) stay, for internal callers that need
   every row regardless of the requesting user's current page: schedulers, Docker
   Cleanup, cascade-delete.
 - `services/+page.server.ts`'s `load` used to call
@@ -209,10 +211,10 @@ OIDC provider in `auth.md`) plus:
 - `stack`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
   member service's container name and public subdomain, see Docker integration
   below). Every stack has a matching Docker network (see below), created
-  alongside the row and removed on cascade-delete. Account deletion covers these
-  twice over: `UserService.cleanupUserResources` removes each stack's Docker
-  network and then deletes the rows explicitly, and `stack.userId` is
-  `onDelete: "cascade"` underneath that.
+  alongside the row and removed on cascade-delete. Account deletion hands stacks
+  over to another account (`UserService.cleanupUserResources`, see Shared
+  resources below); only the last account's deletion removes their networks
+  before `stack.userId`'s `onDelete: "cascade"` drops the rows.
 - `stat_sample`, one point on the resource graphs: `serviceId` (null = the host
   itself), CPU%, memory, the cumulative network counters and a timestamp,
   written every minute by `StatsSampler` and read back bucketed per range. See
@@ -226,8 +228,11 @@ OIDC provider in `auth.md`) plus:
   first), `totalFindings`, `error`, nullable `deploymentId` (`set null`, null
   for a Scan now), `serviceId` cascade. `instance_settings.imageScanEnabled`
   (null = on), `imageScanBlockSeverity` (null = off, `CRITICAL`/`HIGH`/
-  `MEDIUM`/`LOW`) and `imageScanBlockFixableOnly` (null = false) plus
-  `service.imageScanEnabled` (default true) are its settings.
+  `MEDIUM`/`LOW`), `imageScanBlockFixableOnly` (null = false) and
+  `imageScanRequired` (null = false, fail the deploy when nothing could be
+  scanned) plus `service.imageScanEnabled` (default true) are its settings.
+  `instance_settings.retainedImagesPerService` (null = 5) is how many distinct
+  images per service `retainedRevisions` keeps.
 - `uptime_check`, one appended row per liveness probe per tick (the heartbeat
   strips read the last 40, "now" is the newest). See Uptime probes in
   `observability.md`.
@@ -264,8 +269,8 @@ OIDC provider in `auth.md`) plus:
   volumes can share one target, see S3 backups below.
 - `s3_destination` (`S3DestinationDTO`), a named, reusable S3-compatible target:
   `name`/`endpoint`/`bucket`/`region`/`accessKeyId`/`secretAccessKeyEnc`
-  (AES-256-GCM, same scheme as `registryPasswordEnc`), owned per user, managed
-  on `/s3-destinations`.
+  (AES-256-GCM, same scheme as `registryPasswordEnc`), shared by every account,
+  managed on `/s3-destinations`.
 - `backup_run` (`BackupRunDTO`), one row per backup attempt (scheduled or manual
   "Run now"): `volumeId`, `startedAt`/`finishedAt`, `success` (null while still
   running), `sizeBytes`, `error`. Written from `S3BackupService.backupVolume()`,
@@ -283,14 +288,14 @@ OIDC provider in `auth.md`) plus:
   manual "Run now"): `startedAt`/`finishedAt`, `success` (null while running),
   `exitCode`, `output` (stdout+stderr, last 64k characters), `error`. Same shape
   as `backup_run`, plus what the command printed.
-- `build_cache_registry` (`BuildCacheRegistryDTO`), a per-user container
-  registry credential (`registryUrl` with no scheme, `username`, `passwordEnc`)
-  used only as a build cache source/destination, not as a deploy image source,
-  managed on `/build-cache-registries`. See Git-based builds below. Editable in
-  place from `/build-cache-registries/[registryId]` (`update()`, with a blank
-  password meaning "keep the stored one", the same convention the SMTP password
-  field uses); it was create-and-delete-only before, so fixing a typo meant
-  re-adding it and re-picking it on every service that used it.
+- `build_cache_registry` (`BuildCacheRegistryDTO`), a shared container registry
+  credential (`registryUrl` with no scheme, `username`, `passwordEnc`) used only
+  as a build cache source/destination, not as a deploy image source, managed on
+  `/build-cache-registries`. See Git-based builds below. Editable in place from
+  `/build-cache-registries/[registryId]` (`update()`, with a blank password
+  meaning "keep the stored one", the same convention the SMTP password field
+  uses); it was create-and-delete-only before, so fixing a typo meant re-adding
+  it and re-picking it on every service that used it.
 - `service_volume`, join table: one mount of one `storage_volume` into one
   `service` (`containerPath`, `readOnly`). A volume becomes "shared" simply by
   being mounted into more than one service, no separate stack-volume concept.
@@ -321,10 +326,10 @@ OIDC provider in `auth.md`) plus:
   service's Errors tab. `AppLogDTO.create()` amortized-prunes the table back to
   the newest 5000 rows on ~2% of writes, rather than adding a third scheduler
   alongside `CronService`'s two.
-- `notification` (`NotificationDTO`), a curated per-user lifecycle event feed
-  (deploy success/failure, service created/started/stopped, auto-redeploy,
-  runtime error), deliberately separate from `app_log` above, see In-app
-  notifications below.
+- `notification` (`NotificationDTO`), a curated lifecycle event feed, one copy
+  per account (deploy success/failure, service created/started/stopped,
+  auto-redeploy, runtime error), deliberately separate from `app_log` above, see
+  In-app notifications below.
 - `instance_settings.orchestrationMode` (`"standalone"` default | `"swarm"`),
   plus `service.replicas`/`swarmServiceId`, opt-in Docker Swarm mode, see Swarm
   mode below.
@@ -346,10 +351,30 @@ so it's now a genuine DB-level safety net, not just documentation.) Explicit
 app-level cascade logic still exists and is still required,
 `StackDTO.cascadeDelete()` and `$lib/services/user.service.ts`'s
 `UserService.cleanupUserResources()` (account deletion, see User roles &
-invitations below for why that had to be pulled out of `auth.ts`'s
+invitations in `auth.md` for why that had to be pulled out of `auth.ts`'s
 `beforeDelete` into its own method rather than left inline), because a DB
-constraint can't stop/remove a real Docker container or network; only the
-row-data half of cleanup benefits from the enforcement being real now.
+constraint can't stop/remove a real Docker container or network, and because
+every `userId` FK being `onDelete: "cascade"` would otherwise delete shared rows
+another account still uses.
+
+## Shared resources (no `userId` scoping)
+
+Every account sees and manages every resource. The finders on `service`,
+`stack`, `storage_volume`, `backup_run`, `s3_destination`,
+`build_cache_registry`, `remote_host`, `cron_job`, `cron_job_run`, `status_page`
+(its `global` scope is every service on the instance), `uptime_check`,
+`deployment`, `job` and `template` take no `userId`: `get(id)`, `list()`,
+`listPaged(query)`, `search(q, limit)`. Their `userId` (`ownerId` on `template`,
+where null still means built-in) only records who created the row, and git
+builds use that account's git connection. Personal data stays scoped by
+`userId`: sessions, API keys, `user_preferences`, `git_connection`, terminal
+sessions, `notification` (the bell) and `notification_channel`. Events fan out
+instead: `NotificationDTO.notify`/`notifyServiceError` insert one row per
+account (`broadcast`), and `NotificationChannelService.dispatch(message)` sends
+to every account's enabled channels subscribed to the event. A new table with a
+`userId` FK needs a line in `UserService.cleanupUserResources`, which reassigns
+shared rows to the acting admin (or another admin, or any other account on
+self-delete) before the user row cascades.
 
 Migrations are incremental under `drizzle/`, Postgres dialect (`0000` is the
 full-schema baseline generated at the SQLite→Postgres conversion, see below,

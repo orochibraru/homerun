@@ -7,6 +7,7 @@ import {
 	spyOn,
 	test,
 } from "bun:test";
+import { Readable } from "node:stream";
 import { DockerService } from "../../../packages/agent/docker";
 import { AgentHttpServer } from "../../../packages/agent/http";
 import { SystemStatsService } from "../../../packages/agent/stats";
@@ -176,6 +177,32 @@ describe("routes", () => {
 	test("GET /v1/stats returns getSystemStats()'s result", async () => {
 		const res = await handle(req("/v1/stats", { authed: true }));
 		expect(await res.json()).toEqual(await mocks.getSystemStats());
+	});
+
+	test("GET /v1/images/save streams the image tarball", async () => {
+		const save = spyOn(DockerService, "saveImage").mockImplementation(
+			async () => Readable.from([Buffer.from("tar-bytes")]),
+		);
+		const res = await handle(
+			req("/v1/images/save?ref=homerun-build-api:abc", { authed: true }),
+		);
+		expect(res.status).toBe(200);
+		expect(res.headers.get("content-type")).toBe("application/x-tar");
+		expect(await res.text()).toBe("tar-bytes");
+		expect(save).toHaveBeenCalledWith("homerun-build-api:abc");
+	});
+
+	test("GET /v1/images/save 404s for an image the daemon doesn't have", async () => {
+		spyOn(DockerService, "saveImage").mockImplementation(async () => null);
+		const res = await handle(
+			req("/v1/images/save?ref=gone:1", { authed: true }),
+		);
+		expect(res.status).toBe(404);
+	});
+
+	test("GET /v1/images/save without a ref is a 400", async () => {
+		const res = await handle(req("/v1/images/save", { authed: true }));
+		expect(res.status).toBe(400);
 	});
 
 	test("an unknown path 404s", async () => {

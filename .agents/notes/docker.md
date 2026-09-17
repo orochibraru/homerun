@@ -101,10 +101,27 @@ reordering the chain.
     deploy-progress log. → `DockerService.pullImage`.
   - `createAndStartContainer(params, onProgress?)`, container names include a
     random suffix (`homerun-[<stackSlug>-]<slug>-<hex8>`) so a redeploy never
-    collides on "name already in use"; the _previous_ container for a service is
-    found by its `homerun.service.id` label (`#findServiceContainer`, a private
-    method), not by name, since names are no longer stable across deploys. The
-    container is aliased as its slug on the shared network
+    collides on "name already in use"; the _previous_ containers for a service
+    are found by their `homerun.service.id` label, not by name, since names are
+    no longer stable across deploys. **Redeploys are health-gated** through
+    `DockerContainerRolloutMixin` (`docker/container-rollout.ts`, chained
+    between networks and containers): `beginContainerRollout` lists the previous
+    containers and asks the pure `rolloutStrategy` (`docker/rollout.ts`, tested
+    in `tests/unit/app/rollout.test.ts`) for blue-green or recreate. Recreate
+    (nothing running, host networking, or any writable volume) removes them
+    before creating. Blue-green starts the new container alongside, polls
+    `readinessVerdict` every 2s (healthy healthcheck, or running 5s with none;
+    failed on exit, any restart, disappearance, `unhealthy`, or not ready in 5
+    minutes), then removes the old ones in `completeContainerRollout`. On
+    failure it logs the new container's last 20 lines, removes it and throws
+    `RolloutFailedError`, which `#recordFailure` treats like a scan block
+    (`syncServiceStatus`, service not marked failed). The gate relies on
+    Traefik's docker provider skipping containers whose health isn't `healthy`;
+    with no healthcheck both copies briefly share the router (same router and
+    service names, merged when their labels match), and the shared-network slug
+    alias resolves to both during the overlap. `containerSampleFromInspect` is
+    shared with `DockerRevisionMixin.containerHealthSample`. The container is
+    aliased as its slug on the shared network
     (`NetworkingConfig.EndpointsConfig`) so other services can reach it at
     `http://<slug>:<containerPort>` regardless of the randomized name; if
     `params.stackId` is set, it also joins that stack's network under the same
@@ -197,6 +214,17 @@ reordering the chain.
   skopeo copies only the host platform's manifest, so the recorded digest is the
   platform manifest digest, not the upstream index digest;
   `--digestfile /dev/stdout` works and `--quiet` keeps progress off stdout.
+  **Rootless Docker**: `isRootlessDocker()` (`docker info` security options,
+  pure `isRootlessDaemon`) skips the loopback pull, whose daemon lives in
+  RootlessKit's network namespace and can't reach `127.0.0.1:5055`.
+  `loadFromMirror` then runs skopeo on the shared network
+  (`skopeoArchiveCommand`:
+  `copy --src-tls-verify=false docker://homerun-mirror:5000/... docker-archive:/dev/stdout:<image:tag>`),
+  demuxes the attached stdout straight into `docker.loadImage` (no buffering),
+  and kills skopeo if the load fails. `ImageScanService`'s `#fetchFromMirror`
+  order: loopback pull (rootful only) → mirror load → upstream pull. A loaded
+  image has no `RepoDigests`, so the recorded digest is the mirror copy's. Not
+  verified live on a rootless host.
 - Mirror GC: `ImageMirrorGcService` (`$lib/services/image-mirror-gc.service.ts`)
   runs as the `pruneMirror` Docker Cleanup action (exclusive `docker_cleanup`
   job, button + size panel on `/docker-cleanup` via `getMirrorUsage`), queued
@@ -205,13 +233,14 @@ reordering the chain.
   pure in `docker/mirror-registry.ts` (`mirrorKeepSet` + `planMirrorGc`, from
   `listMirrorReferences` in `$lib/dto/mirror-reference-dto.ts`): per service the
   current `image:tag`, the digest of every **retained revision**
-  (`DeploymentDTO.listRetainedRevisions`, the newest `RETAINED_REVISIONS` (5)
-  distinct images per service, `$lib/revisions.ts`), and the last
-  `MIRROR_GC_SCANS_PER_SERVICE` (2) distinct mirror-scan digests.
-  `MirrorRegistryClient` there does catalog (Link paging) → tags → HEAD with an
-  index/list-aware Accept → DELETE by digest, fetch injected so
-  `tests/unit/app/image-mirror-gc.test.ts` mocks it. The mixin reaches the API
-  at `127.0.0.1:5055` or `homerun-mirror:5000` (first that answers `/v2/`,
+  (`DeploymentDTO.listRetainedRevisions`, the newest
+  `instance_settings.retainedImagesPerService` (null = `RETAINED_REVISIONS`, 5;
+  1 to 50 on Settings → Docker) distinct images per service,
+  `$lib/revisions.ts`), and the last `MIRROR_GC_SCANS_PER_SERVICE` (2) distinct
+  mirror-scan digests. `MirrorRegistryClient` there does catalog (Link paging) →
+  tags → HEAD with an index/list-aware Accept → DELETE by digest, fetch injected
+  so `tests/unit/app/image-mirror-gc.test.ts` mocks it. The mixin reaches the
+  API at `127.0.0.1:5055` or `homerun-mirror:5000` (first that answers `/v2/`,
   container name first when this app runs in one) and `docker exec`s `du`,
   `registry garbage-collect --delete-untagged`, `rm -rf` of emptied repo dirs.
   **Real, tested findings**: `--delete-untagged` sweeps every manifest with no
@@ -334,35 +363,82 @@ Docker Swarm Service (`docker.createService`,
   routes (`src/routes/api/v1/services/`) branch the same way, swarm-mode
   services are controllable via the API, not just the dashboard.
 
-**Prerequisites this app never automates** (same "don't touch infra without the
-admin's own action" boundary as custom SSL's Traefik config): the host's Docker
-daemon must already be swarm-active (`docker swarm init`, done once by the
-admin), and the live Traefik container needs `--providers.docker.swarmMode=true`
-added to its command, a one-time `tools/compose/base.compose.yaml` edit +
-restart (or its equivalent in whichever compose file is actually running,
-`compose.prod.yaml` is self-contained, see Compose files below).
+**The host is prepared by the app, not by hand.** Saving Swarm on Settings →
+Docker calls `DockerService.enableSwarmMode()` (see `core-services.ts` above):
+`swarmInit` when the daemon isn't a manager, the `<networkName>-swarm` overlay,
+Traefik attached to it, and Traefik v3's `--providers.swarm` flags written onto
+the live container via `applyTraefikFlags`. `hooks.server.ts`'s `init()` calls
+it again (fire and forget) whenever the stored mode is `swarm`, since a
+`docker compose up` recreating Traefik from the compose file drops flags the app
+added; `applyTraefikFlags` no-ops when they already hold, so a normal boot never
+bounces the proxy. Not handled: a multi-interface host where `swarmInit` can't
+pick an advertise address, the admin runs
+`docker swarm init --advertise-addr <ip>` once and saves again (documented in
+`docs/services.md`).
+
+**Per-replica stats.** `DockerSwarmMixin.listSwarmReplicas(swarmServiceId)`
+lists the service's tasks (slot, node hostname, state, container id) and samples
+each local task container with `sampleContainerStats`; a task on another node
+comes back with `local: false` and no sample, since the app only reaches this
+daemon. The service Overview renders it through `getReplicaStats`
+(`stats.remote.ts`, polled) in `$lib/components/replica-stats.svelte`, and
+`StatsSampler` records the sum over local replicas (`sumReplicaSamples`,
+unit-tested in `tests/unit/app/swarm-replicas.test.ts`) as the service's
+`stat_sample` (`ServiceDTO.listRunningWithContainers()` now also returns running
+rows with a `swarmServiceId`; the uptime probe filters those back out), so the
+usage graph works in swarm mode instead of staying empty.
 
 **This app only ever talks to the local manager.** Extra capacity comes from a
 node _joining this swarm_ as a worker, which Docker then schedules onto on its
 own; it is never a `remote_host` row. That's exactly why Remote Hosts was cut
 back to build servers (see Build servers above), a second standalone daemon and
 a swarm worker are different things and this app only wires up the latter.
-`packages/installer/swarm-join.sh` (a standalone bash script, not part of the
-TypeScript installer's `StepRunner`, documented in
-`packages/installer/README.md`) is the groundwork for this gap: it joins a
-remote box to an existing swarm as a worker on its own rootless Docker daemon
-and installs the Homerun Agent there via `systemd --user`, the same install
-shape `packages/installer/steps/agent.ts` uses locally, hand-mirrored rather
-than sharing the TS installer's dry-run machinery so the two scripts stay in
-lockstep by inspection. Usage:
-`curl -fsSL .../swarm-join.sh | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377`
-(token/manager address come from `docker swarm join-token worker` on the
-manager). Once joined, the node is schedulable by the swarm itself, nothing in
-this app has to register it. **Not verified against a real second host or a real
-swarm**: syntax-checked (`bash -n`) and `shellcheck`-clean, and every individual
-command mirrors a step already dry-run-verified in the main installer, but the
-actual `docker swarm join` handshake and a real Homerun deploy onto that node
-haven't been run end-to-end, same caveat `bootstrap.sh` itself carries.
+`packages/installer/swarm-join.sh` (a standalone bash script, documented in
+`packages/installer/README.md`) joins a box as a worker **on its system
+(rootful) daemon** and then runs the released installer binary with
+`--mode=agent` for the agent, rather than hand-copying the TS installer's
+rootless steps (the copy had drifted and lacked the AppArmor profile). Usage:
+`curl -fsSL .../swarm-join.sh | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377`.
+Once joined, the node is schedulable by the swarm itself, nothing in this app
+has to register it.
+
+**Real, tested finding: swarm mode can't run on rootless Docker.** On a rootless
+install (the installer's default), saving Swarm initialised the swarm and
+created the overlay, then `connect` for Traefik failed with "attaching to
+network failed ... context deadline exceeded" and the daemon logged the task
+failing with `mkdir /var/lib/docker/network: permission denied` (plus a missing
+`br_netfilter` for the ingress network). Docker documents overlay networks as
+unsupported in rootless mode. So `enableSwarmMode` calls
+`assertSwarmCapableDaemon` first, which throws before touching the host when
+`docker info`'s `SecurityOptions` carry `name=rootless` (`isRootlessDaemon`,
+unit-tested in `tests/unit/app/swarm-rootless.test.ts`), and the installer has
+`--docker=rootful` to run the full stack on the system daemon. Verified end to
+end on two Multipass VMs: rootful manager, worker joined through the script, a
+3-replica service with tasks on both nodes, Traefik answering from every replica
+over the overlay (`bun run e2e:multipass --swarm` replays it). Traefik's swarm
+provider polls every 15s by default, so new replicas take that long to join the
+load balancer.
+
+## Runtime options (`service.command`/`entrypoint`/`envFiles`/`labels`/`capAdd`/`devices`/`privileged`, Runtime tab)
+
+Stored as jsonb argv lists / string lists / a label map plus a boolean;
+`$lib/service-runtime.ts`'s `runtimeOptionsFrom` reads them off a row with
+defaults, and `deploy.service.ts`'s `#startWorkload` passes them as `runtime` to
+both workload paths. The pure mapping is `docker/runtime-options.ts`
+(`runtimeArgv` → `Cmd`/`Entrypoint`, `runtimeHostConfig` → `CapAdd` with the
+`CAP_` prefix, `Devices` from `host[:container[:perms]]`, `Privileged`), tested
+in `tests/unit/app/docker-runtime-options.test.ts`. Swarm maps entrypoint to
+`ContainerSpec.Command`, command to `Args`, capabilities to `CapabilityAdd`, and
+logs that privileged/devices are ignored (the swarm API has neither). Custom
+labels go through `mergeLabels`, Homerun's own labels winning on a key clash, on
+the container and on both the swarm service and its task spec.
+
+Env files are **host** paths, but the app runs in a container, so
+`deploy/env-file-step.ts` reads each one with an `alpine:3` `runOneOff` that
+binds `/` read-only at `/homerun-host` and `cat`s the path. Binding the file
+itself would make Docker create a missing path as a directory on the host. An
+unreadable file throws, failing the deploy. Only the local daemon: container
+workloads never pass `remote` today.
 
 ## Network mode (`service.networkMode`, `service.portProtocol`, Networking tab)
 
@@ -432,6 +508,17 @@ can't be labelled) but walks `docker.df()`'s unused images and removes each one
 not kept, skipping any the daemon refuses. That matters for dangling-only prunes
 as well: a pulled revision whose tag moved on is untagged, i.e. dangling, but
 still exactly what a rollback by digest needs.
+
+**Mounted volumes are never pruned either.** `pruneVolumes(keepVolumeNames)` and
+`getCleanupPreview(keepImageIds, keepVolumeNames)` take
+`ServiceVolumeDTO.mountedVolumeNames()`, the source of every `kind: "volume"`
+storage volume with at least one `service_volume` row. Docker's own `RefCount`
+only sees containers, so a service whose container was removed (a stopped swarm
+service scaled to 0, a failed deploy, a `pruneContainers` run first) left its
+data volume looking unused and `docker volume prune --all` took it. With a
+non-empty keep list the prune walks `docker.df()`'s unreferenced volumes
+(`prunableVolumes`, unit-tested in `tests/unit/app/docker-cleanup.test.ts`) and
+removes each one not kept, same shape as the image keep list above.
 
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 
@@ -513,11 +600,16 @@ pointing at the other two), or removes all three if the cert's been cleared or
 the domain's changed. **That directory is now wired by default**, so this is
 only inert on an instance whose compose file predates it: every compose file in
 this repo and the one the installer generates share a `traefik_dynamic` named
-volume between the app (`/app/traefik-dynamic`, which is what the generated
-`homerun.yaml` points `traefik.dynamicConfigDir` at) and Traefik
-(`/etc/traefik/dynamic`), with `--providers.file.directory` and
-`--providers.file.watch` on. It used to be commented out with the admin expected
-to wire a bind mount themselves, which meant custom SSL did nothing on a default
+volume between the app (`/app/traefik-dynamic`, which the app's container
+environment sets as `TRAEFIK_DYNAMIC_CONFIG_DIR`, the env fallback `config.ts`
+reads when the YAML file has no `traefik.dynamicConfigDir`, and which the
+generated `homerun.yaml` also points at) and Traefik (`/etc/traefik/dynamic`),
+with `--providers.file.directory` and `--providers.file.watch` on. Local dev
+(`compose.yaml`, app on the host) bind-mounts `./traefik-dynamic` into Traefik
+instead, and `.env.example` sets `TRAEFIK_DYNAMIC_CONFIG_DIR=./traefik-dynamic`
+to match (the directory is committed with a `.gitkeep` so Docker doesn't create
+it root-owned on Linux). It used to be commented out with the admin expected to
+wire a bind mount themselves, which meant custom SSL did nothing on a default
 install. Traefik's file provider picks up changes on its own (`watch=true`), no
 restart needed per certificate.
 
@@ -571,33 +663,39 @@ Two connection kinds (`remote_host.kind`, chosen on the "new host" form's
 connection-type toggle), both real build servers:
 
 - `"docker"` (the original/default): name + `tcp://host:port` [+ optional TLS
-  client cert] or `ssh://user@host`, a raw Docker Engine connection, built
-  through dockerode's own `buildImage()`.
+  client cert] or `ssh://user@host`, a raw Docker Engine connection, built with
+  BuildKit in a `docker:cli` helper container on that daemon (see Build methods
+  in `services-and-templates.md`).
 - `"agent"`: name + `agentUrl`/`agentTokenEnc`, a registered Homerun Agent (see
   below) instead, token-authenticated HTTP rather than exposing the daemon
   itself, built through its own `POST /v1/build`. The token is verified against
   the agent (`AgentClientService.verifyToken`, which hits the authenticated
   `/v1/stats`) before the row is saved.
 
-`RemoteHostDTO.resolveBuildTarget(hostId, userId)` is the one place a host id
-becomes a `RemoteExecutionTarget` (`{kind: "local"}` /
-`{kind: "docker", connection}` / `{kind: "agent", connection}`);
-`deploy.service.ts` branches on that `kind` to route the build through
-`DockerService` or `AgentClientService`. `RemoteHostDTO.listBuildServers()` is
-what the Source tab's build-server picker reads : every registered host
-qualifies, there's no per-host opt-in flag. `services/docker/client.ts`'s
-`getDocker(remote?: RemoteHostConnection)` (exposed as
-`DockerService.getDocker`, see Docker integration below) caches one dockerode
-client per host (keyed by remote host id, `"local"` for the default) in the same
-HMR-safe `globalThis` pattern as the db singleton, for `"docker"` hosts.
+`RemoteHostDTO.resolveBuildTarget(hostId)` is the one place a host id becomes a
+`RemoteExecutionTarget` (`{kind: "local"}` / `{kind: "docker", connection}` /
+`{kind: "agent", connection}`); `deploy.service.ts` branches on that `kind` to
+route the build through `DockerService` or `AgentClientService`.
+`RemoteHostDTO.listBuildServers()` is what the Source tab's build-server picker
+reads : every registered host qualifies, there's no per-host opt-in flag.
+`services/docker/client.ts`'s `getDocker(remote?: RemoteHostConnection)`
+(exposed as `DockerService.getDocker`, see Docker integration below) caches one
+dockerode client per host (keyed by remote host id, `"local"` for the default)
+in the same HMR-safe `globalThis` pattern as the db singleton, for `"docker"`
+hosts.
 
-**A build server always needs a cache registry.** The built image lands on the
-build server's own daemon, which by definition isn't the daemon the service
-deploys to, so the registry is the only way it gets across; `deploy.service.ts`
-rejects the combination outright rather than deploying a tag that doesn't exist
-locally. Where the `git clone` runs depends on the build target: a `"docker"`
-host clones on this host (`git-build.ts`'s `mkdtemp` is local) and streams the
-build context to the remote daemon, whereas an `"agent"` host clones on the
-agent itself (`packages/agent/docker.ts` does its own `mkdtemp` + `git clone`).
-A repo only reachable from one of the two machines therefore works with one kind
-and not the other.
+**A build server doesn't need a cache registry.** The built image lands on the
+build server's own daemon, so it has to be brought across
+(`deploy/build-transfer-step.ts`'s `transferBuiltImage`). With a registry
+(`plan.registry` set), a `"docker"` host pushes and this host pulls the
+published ref (an agent already pushed during `/v1/build`). Without one, the
+image is streamed and keeps its local `homerun-build-<slug>:<tag>` name: a
+`"docker"` host through `DockerImageTransferMixin.copyImageFromRemote`
+(`docker/image-transfer.ts`, dockerode `getImage(ref).get()` piped into the
+local `loadImage`), an agent through `AgentClientService.saveImage` (the agent's
+authenticated `GET /v1/images/save?ref=`, `Readable.fromWeb` of the body) into
+`loadImageArchive`. Scan targets then only include the local copy. Not verified
+against a real remote daemon or agent. The `git clone` runs on the build server
+for both kinds, in an `alpine/git` container into a volume on that daemon
+(`git-build.ts` with `remote` set, or `packages/agent/docker.ts`), so the repo
+has to be reachable from the build server.

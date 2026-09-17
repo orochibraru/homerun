@@ -1,4 +1,14 @@
-import { and, asc, count, desc, eq, inArray, type SQL } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	inArray,
+	ne,
+	type SQL,
+	sql,
+} from "drizzle-orm";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
 import type { User } from "$lib/server/db/schema";
@@ -13,98 +23,155 @@ import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("UserCleanup");
 
-/** Read/cleanup operations for the `user` table and everything a user owns. */
+/** Read/cleanup operations for the `user` table and everything a user created. */
 class UserServiceClass {
 	/**
-	 * Stops/removes a user's actual Docker containers and networks and deletes
-	 * their app-owned rows (deployments/services/stacks/storage volumes)
-	 * before* the user row itself goes away. Postgres enforces the schema's
-	 * `onDelete: "cascade"`/`"set null"` FK constraints for real (unlike the
-	 * previous SQLite setup, where `PRAGMA foreign_keys` was intentionally
-	 * left off and cascade was decorative) : so this explicit cleanup is
-	 * still required for anything with a real-world side effect a DB
-	 * constraint can't touch (stopping/removing containers, Docker networks),
-	 * but the row-level cascade is now a genuine DB-level safety net too, not
-	 * just documentation.
+	 * Hands every shared resource a user created (services, stacks, deployments,
+	 * jobs, volumes, S3 destinations, build cache registries, remote hosts, cron
+	 * jobs, status pages, custom templates, pending invites and registered OIDC
+	 * apps) over to another account *before* the user row goes away, since
+	 * every one of those foreign keys is `onDelete: cascade` and would
+	 * otherwise delete the rows and orphan their running containers. Personal
+	 * rows (sessions, API keys, preferences, git connections, the bell feed,
+	 * notification channels) still cascade away with the user. A transferred
+	 * git service builds with its new owner's git connection from then on.
+	 *
+	 * The successor is `actingUserId` when given (the admin removing someone),
+	 * otherwise the oldest other admin, otherwise the oldest other account.
+	 * When the user is the last account there's nobody to hand over to, so
+	 * their containers and stack networks are removed and the rows cascade.
 	 *
 	 * Shared by two callers that must both get this treatment:
 	 * - auth.ts's `user.deleteUser.beforeDelete` hook (self-service account
 	 *   deletion).
-	 * - The Users page's admin "remove user" action. Real, tested-in-review
-	 *   finding: better-auth's admin plugin `removeUser` endpoint calls
-	 *   `internalAdapter.deleteUser()` directly, which does **not** run the
-	 *   `deleteUser.beforeDelete` option : that option is only read by the
-	 *   self-service delete-account endpoints (confirmed against
-	 *   node_modules/better-auth/dist/api/routes/update-user.mjs : the only
-	 *   place `beforeDelete`/`afterDelete` are referenced at all). Calling
-	 *   `auth.api.removeUser` without first calling this method would leak
-	 *   the removed user's running containers.
+	 * - The Users page's admin "remove user" action. better-auth's admin
+	 *   plugin `removeUser` endpoint calls `internalAdapter.deleteUser()`
+	 *   directly, which does **not** run the `deleteUser.beforeDelete`
+	 *   option, so that action has to call this itself first.
 	 */
-	async cleanupUserResources(userId: string): Promise<void> {
-		const services = await db
-			.select()
-			.from(schema.service)
-			.where(eq(schema.service.userId, userId));
+	async cleanupUserResources(
+		userId: string,
+		actingUserId?: string,
+	): Promise<void> {
+		const successorId =
+			actingUserId && actingUserId !== userId
+				? actingUserId
+				: await this.#successorFor(userId);
+		if (!successorId) {
+			await this.#removeHostResources(userId);
+			return;
+		}
 
 		logger.info(
-			`Cleaning up user resources: user=${userId} services=${services.length}`,
+			`Handing over user resources: user=${userId} successor=${successorId}`,
 		);
+		const reassign = { userId: successorId };
+		await Promise.all([
+			db
+				.update(schema.service)
+				.set(reassign)
+				.where(eq(schema.service.userId, userId)),
+			db
+				.update(schema.stack)
+				.set(reassign)
+				.where(eq(schema.stack.userId, userId)),
+			db
+				.update(schema.deployment)
+				.set(reassign)
+				.where(eq(schema.deployment.userId, userId)),
+			db.update(schema.job).set(reassign).where(eq(schema.job.userId, userId)),
+			db
+				.update(schema.storageVolume)
+				.set(reassign)
+				.where(eq(schema.storageVolume.userId, userId)),
+			db
+				.update(schema.s3Destination)
+				.set(reassign)
+				.where(eq(schema.s3Destination.userId, userId)),
+			db
+				.update(schema.buildCacheRegistry)
+				.set(reassign)
+				.where(eq(schema.buildCacheRegistry.userId, userId)),
+			db
+				.update(schema.remoteHost)
+				.set(reassign)
+				.where(eq(schema.remoteHost.userId, userId)),
+			db
+				.update(schema.cronJob)
+				.set(reassign)
+				.where(eq(schema.cronJob.userId, userId)),
+			db
+				.update(schema.statusPage)
+				.set(reassign)
+				.where(eq(schema.statusPage.userId, userId)),
+			db
+				.update(schema.oauthClient)
+				.set(reassign)
+				.where(eq(schema.oauthClient.userId, userId)),
+			db
+				.update(schema.template)
+				.set({ ownerId: successorId })
+				.where(eq(schema.template.ownerId, userId)),
+			db
+				.update(schema.invitation)
+				.set({ invitedByUserId: successorId })
+				.where(eq(schema.invitation.invitedByUserId, userId)),
+		]);
+		logger.info(`User resource hand-over complete: user=${userId}`);
+	}
 
+	/**
+	 * The account that inherits a deleted user's resources: the oldest other
+	 * admin, else the oldest other account, else null.
+	 */
+	async #successorFor(userId: string): Promise<string | null> {
+		const [row] = await db
+			.select({ id: userTable.id })
+			.from(userTable)
+			.where(ne(userTable.id, userId))
+			.orderBy(
+				sql`case when ${userTable.role} = 'admin' then 0 else 1 end`,
+				asc(userTable.createdAt),
+			)
+			.limit(1);
+		return row ? row.id : null;
+	}
+
+	/**
+	 * Removes the last account's containers and stack networks, which a
+	 * database cascade can't reach; the rows themselves cascade with the user.
+	 */
+	async #removeHostResources(userId: string): Promise<void> {
+		const [services, stacks] = await Promise.all([
+			db.select().from(schema.service).where(eq(schema.service.userId, userId)),
+			db
+				.select({ id: schema.stack.id })
+				.from(schema.stack)
+				.where(eq(schema.stack.userId, userId)),
+		]);
+		logger.info(
+			`Removing the last account's resources: user=${userId} services=${services.length}`,
+		);
 		await Promise.all(
-			services
-				.filter((svc) => svc.containerId)
-				.map(async (svc) => {
-					try {
-						await DockerService.removeContainer(svc.containerId as string, {
-							force: true,
-						});
-					} catch {
-						// Already gone on the host : fine, keep cleaning up.
-					}
-				}),
+			services.map((svc) => {
+				if (svc.swarmServiceId) {
+					return DockerService.removeSwarmService(svc.swarmServiceId).catch(
+						() => undefined,
+					);
+				}
+				if (svc.containerId) {
+					return DockerService.removeContainer(svc.containerId, {
+						force: true,
+					}).catch(() => undefined);
+				}
+				return Promise.resolve();
+			}),
 		);
-
-		await db
-			.delete(schema.deployment)
-			.where(eq(schema.deployment.userId, userId));
-		await db.delete(schema.service).where(eq(schema.service.userId, userId));
-
-		// Same explicit-cleanup precedent as services above : FK cascade alone
-		// would leave the stack's Docker network dangling.
-		const stacks = await db
-			.select()
-			.from(schema.stack)
-			.where(eq(schema.stack.userId, userId));
 		await Promise.all(
 			stacks.map((stack) =>
-				DockerService.removeStackNetwork(stack.id).catch(() => {
-					// Already gone : fine, keep cleaning up.
-				}),
+				DockerService.removeStackNetwork(stack.id).catch(() => undefined),
 			),
 		);
-		await db.delete(schema.stack).where(eq(schema.stack.userId, userId));
-
-		// Row-only : no host-side resource (unlike services/stacks, nothing was
-		// ever created on the user's behalf just by defining a storage volume
-		// source). Delete the join rows first (no userId column of its own to
-		// filter by directly).
-		const volumes = await db
-			.select({ id: schema.storageVolume.id })
-			.from(schema.storageVolume)
-			.where(eq(schema.storageVolume.userId, userId));
-		if (volumes.length > 0) {
-			await db.delete(schema.serviceVolume).where(
-				inArray(
-					schema.serviceVolume.volumeId,
-					volumes.map((v) => v.id),
-				),
-			);
-		}
-		await db
-			.delete(schema.storageVolume)
-			.where(eq(schema.storageVolume.userId, userId));
-
-		logger.info(`User resource cleanup complete: user=${userId}`);
 	}
 
 	/**
@@ -166,7 +233,7 @@ class UserServiceClass {
 			.where(eq(userTable.role, "admin"))
 			.orderBy(asc(userTable.createdAt))
 			.limit(1);
-		return row?.id ?? null;
+		return row ? row.id : null;
 	}
 
 	/** How many users currently hold the `admin` role. */

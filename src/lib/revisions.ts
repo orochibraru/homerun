@@ -2,6 +2,8 @@ import { splitImageRef } from "$lib/image-ref";
 import type { ContainerStatus, RevisionHealth } from "$lib/types";
 
 export const RETAINED_REVISIONS = 5;
+export const MIN_RETAINED_IMAGES = 1;
+export const MAX_RETAINED_IMAGES = 50;
 
 export interface RevisionLike {
 	buildSource: "image" | "git" | null;

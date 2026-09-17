@@ -1,14 +1,17 @@
 import { and, count, desc, eq, gt, inArray, isNotNull, lte } from "drizzle-orm";
+import type { RevisionConfig } from "$lib/revision-config";
 import { type RevisionLike, retainedRevisions } from "$lib/revisions";
 import { db } from "$lib/server/db/lib";
 import { type Deployment, deployment, service } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
+import { InstanceSettingsDTO } from "./instance-settings-dto";
 
 export interface NewDeploymentInput {
 	// Lets a caller pre-generate the id (e.g. the client, so it can start
 	// polling the progress endpoint before the create-deployment request
 	// even resolves) : falls back to a fresh one when omitted.
 	id?: string;
+	restoreConfig?: boolean;
 	rollbackOfDeploymentId?: string | null;
 	serviceId: string;
 	status: Deployment["status"];
@@ -19,6 +22,7 @@ export type DeploymentUpdateInput = Partial<
 	Pick<
 		Deployment,
 		| "buildSource"
+		| "configSnapshot"
 		| "containerId"
 		| "errorMessage"
 		| "finishedAt"
@@ -112,8 +116,9 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	}
 
 	/**
-	 * The revisions kept across every service (the newest few distinct images per
-	 * service), whose images must survive cleanup and mirror garbage collection.
+	 * The revisions kept across every service (the newest distinct images per
+	 * service, as many as the instance's retained images setting allows), whose
+	 * images must survive cleanup and mirror garbage collection.
 	 */
 	static async listRetainedRevisions(): Promise<RevisionLike[]> {
 		const rows = await db
@@ -137,7 +142,8 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 				),
 			)
 			.orderBy(desc(deployment.createdAt));
-		return retainedRevisions(rows);
+		const settings = await InstanceSettingsDTO.get();
+		return retainedRevisions(rows, settings.retainedImagesPerService);
 	}
 
 	/** Every failed deployment attempt for a service, newest first : for the Errors tab. */
@@ -215,11 +221,8 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		}));
 	}
 
-	/** Same as `listForService`, scoped to a user across all their services : plus each row's service name/slug, for the dashboard. */
-	static async listRecentForUser(
-		userId: string,
-		limit = 5,
-	): Promise<
+	/** The newest deployments across every service, plus each row's service name/slug, for the dashboard. */
+	static async listRecent(limit = 5): Promise<
 		Array<{
 			deployment: DeploymentDTO;
 			serviceName: string | null;
@@ -234,7 +237,6 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			})
 			.from(deployment)
 			.leftJoin(service, eq(deployment.serviceId, service.id))
-			.where(eq(deployment.userId, userId))
 			.orderBy(desc(deployment.createdAt))
 			.limit(limit);
 		return rows.map((r) => ({
@@ -252,6 +254,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 		const now = new Date();
 		const row: Deployment = {
 			buildSource: null,
+			configSnapshot: null,
 			containerId: null,
 			createdAt: now,
 			errorMessage: null,
@@ -264,6 +267,7 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 			imageId: null,
 			imageRef: null,
 			log: "",
+			restoreConfig: input.restoreConfig ?? false,
 			rollbackOfDeploymentId: input.rollbackOfDeploymentId ?? null,
 			serviceId: input.serviceId,
 			startedAt: now,
@@ -302,5 +306,26 @@ export class DeploymentDTO extends BaseDTO<Deployment> {
 	/** The deployment this one rolled back to, null when it wasn't a rollback. */
 	get rollbackOfDeploymentId(): string | null {
 		return this.row.rollbackOfDeploymentId;
+	}
+	/** Whether this rollback also puts back the target revision's env vars, resources and networking. */
+	get restoreConfig(): boolean {
+		return this.row.restoreConfig;
+	}
+	/** The env vars, resources and networking this deploy ran with, null for a deploy recorded before snapshots existed. */
+	get configSnapshot(): RevisionConfig | null {
+		return this.row.configSnapshot;
+	}
+
+	/**
+	 * The row for a `load` or API response, with the config snapshot (which
+	 * holds the deploy's env vars) swapped for a flag saying whether one exists,
+	 * so secrets never reach the browser or an API client.
+	 */
+	override toJSON(): Deployment & { hasConfigSnapshot: boolean } {
+		return {
+			...this.row,
+			configSnapshot: null,
+			hasConfigSnapshot: this.row.configSnapshot !== null,
+		};
 	}
 }

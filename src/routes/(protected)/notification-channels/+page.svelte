@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		BellRing,
+		Hash,
 		Mail,
 		MessageCircle,
 		Plus,
@@ -42,12 +43,16 @@
 	const KIND_LABEL: Record<NotificationChannelKind, string> = {
 		discord: "Discord",
 		email: "Email",
+		slack: "Slack",
+		telegram: "Telegram",
 		webhook: "Webhook",
 	};
 
 	const TARGET_PLACEHOLDER: Record<NotificationChannelKind, string> = {
 		discord: "https://discord.com/api/webhooks/…",
 		email: "oncall@example.com",
+		slack: "https://hooks.slack.com/services/…",
+		telegram: "",
 		webhook: "https://hooks.example.com/…",
 	};
 
@@ -117,21 +122,52 @@
             name="kind"
           >
             <option value="discord">Discord</option>
+            <option value="slack">Slack</option>
+            <option value="telegram">Telegram</option>
             <option value="webhook">Webhook</option>
             <option value="email">Email</option>
           </select>
         </div>
-        <div>
-          <label class={label} for="channelTarget">
-            {channelKind === "email" ? "Address" : "Webhook URL"}
-          </label>
-          <Input
-            id="channelTarget"
-            name="target"
-            placeholder={TARGET_PLACEHOLDER[channelKind]}
-          />
-        </div>
+        {#if channelKind === "telegram"}
+          <div>
+            <label class={label} for="telegramBotToken">Bot token</label>
+            <Input
+              autocomplete="off"
+              id="telegramBotToken"
+              name="telegramBotToken"
+              placeholder="123456789:AA…"
+              type="password"
+            />
+          </div>
+        {:else}
+          <div>
+            <label class={label} for="channelTarget">
+              {channelKind === "email" ? "Address" : "Webhook URL"}
+            </label>
+            <Input
+              id="channelTarget"
+              name="target"
+              placeholder={TARGET_PLACEHOLDER[channelKind]}
+            />
+          </div>
+        {/if}
       </div>
+      {#if channelKind === "telegram"}
+        <div class="grid gap-4 md:grid-cols-3">
+          <div class="md:col-start-3">
+            <label class={label} for="telegramChatId">Chat id</label>
+            <Input
+              id="telegramChatId"
+              name="telegramChatId"
+              placeholder="-1001234567890 or @channel"
+            />
+          </div>
+        </div>
+        <p class="text-text-subtle text-xs">
+          Create a bot with @BotFather, add it to the chat, and use the chat's
+          numeric id (or a public channel's @name).
+        </p>
+      {/if}
       {#if form?.errors && "target" in form.errors && form.errors.target}
         <p class="text-xs text-red-500">{form.errors.target[0]}</p>
       {/if}
@@ -147,7 +183,7 @@
   {#if data.channels.length === 0}
     <EmptyState
       icon={BellRing}
-      subtitle="Add a Discord webhook, a generic webhook or an email address above."
+      subtitle="Add a Discord, Slack or Telegram channel, a generic webhook or an email address above."
       title="No notification channels yet"
     />
   {:else}
@@ -165,6 +201,10 @@
               <Webhook class="text-text-muted size-4 shrink-0" />
             {:else if channel.kind === "discord"}
               <MessageCircle class="text-text-muted size-4 shrink-0" />
+            {:else if channel.kind === "slack"}
+              <Hash class="text-text-muted size-4 shrink-0" />
+            {:else if channel.kind === "telegram"}
+              <Send class="text-text-muted size-4 shrink-0" />
             {:else}
               <Mail class="text-text-muted size-4 shrink-0" />
             {/if}

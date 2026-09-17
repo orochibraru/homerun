@@ -8,16 +8,16 @@ import { dashboardOrigin } from "$lib/server/canonical-origin";
 import { statusPageSchema } from "$lib/server/validation/status-page";
 
 export const load = async ({ params, parent, request, url }) => {
-	const { user } = await parent();
+	await parent();
 
-	const page = await StatusPageDTO.get(params.statusPageId, user.id);
+	const page = await StatusPageDTO.get(params.statusPageId);
 	if (!page) {
 		error(404, "Status page not found");
 	}
 
 	const [stacks, allServices, memberIds] = await Promise.all([
-		StackDTO.list(user.id),
-		ServiceDTO.list(user.id),
+		StackDTO.list(),
+		ServiceDTO.list(),
 		page.serviceIds(),
 	]);
 
@@ -55,7 +55,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const page = await StatusPageDTO.get(params.statusPageId, locals.user.id);
+		const page = await StatusPageDTO.get(params.statusPageId);
 		if (!page) {
 			return fail(404, { error: "Status page not found." });
 		}
@@ -96,7 +96,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const page = await StatusPageDTO.get(params.statusPageId, locals.user.id);
+		const page = await StatusPageDTO.get(params.statusPageId);
 		if (!page) {
 			return fail(404, { error: "Status page not found." });
 		}

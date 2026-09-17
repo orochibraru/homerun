@@ -11,13 +11,6 @@ than in this one.
 Intentional gaps, noted so a future session has the intended shape rather than
 re-litigating design decisions.
 
-- **Health-gated rollout**: opt-in health check (path + expected status/timeout)
-  gating whether a newly-deployed container receives traffic, blue-green style,
-  keep the old container alive/routable until the new one passes, roll back
-  (never route to it) if it doesn't. What exists today is post-hoc: the new
-  revision takes traffic immediately, and the health watch plus opt-in
-  auto-rollback (Revisions and rollback in `services-and-templates.md`) replace
-  it with the previous revision after the fact.
 - **Observability**: per-service resource history (`stat_sample`) samples a
   standalone service's one container; swarm mode's `inspectSwarmServiceStatus`
   aggregates task state, not per-task resource usage, so there's no per-replica
@@ -30,8 +23,8 @@ re-litigating design decisions.
 - **Source integration**: git-based builds and push-to-deploy webhooks exist
   (see Git-based builds and Push-to-deploy). Build servers exist too (see Build
   servers above); adding capacity for _deploys_ is Swarm's job, and
-  `packages/installer/swarm-join.sh` (joining a node as a worker) is still
-  unverified against a real swarm.
+  `packages/installer/swarm-join.sh` joins a node as a worker (verified on two
+  real VMs, needs the system Docker daemon on every node, see `docker.md`).
 - **Onboarding**: the forced first-run wizard now exists (`/onboarding`, see
   above), and setup diagnostics feed a highlighted deep-link into `/settings`
   instead of a standalone page; DNS automation itself now exists (Cloudflare and

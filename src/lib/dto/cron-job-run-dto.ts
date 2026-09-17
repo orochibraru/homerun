@@ -96,18 +96,16 @@ export class CronJobRunDTO extends BaseDTO<CronJobRun> {
 	}
 
 	/**
-	 * Most recent runs across every cron job the user owns, newest first, each
+	 * Most recent runs across every cron job on the instance, newest first, each
 	 * paired with its job's name.
 	 */
-	static async listForUser(
-		userId: string,
+	static async listRecent(
 		limit = 20,
 	): Promise<Array<{ jobName: string; run: CronJobRunDTO }>> {
 		const rows = await db
 			.select({ jobName: cronJob.name, row: cronJobRun })
 			.from(cronJobRun)
 			.innerJoin(cronJob, eq(cronJobRun.cronJobId, cronJob.id))
-			.where(eq(cronJob.userId, userId))
 			.orderBy(desc(cronJobRun.startedAt))
 			.limit(limit);
 		return rows.map((r) => ({

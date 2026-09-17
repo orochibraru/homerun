@@ -41,6 +41,26 @@
 	let restoreDialogOpen = $state(false);
 	let pendingRestoreKey = $state("");
 	let pendingRestoreForm: HTMLFormElement | null = null;
+	let restoreWipe = $state(false);
+	let restoreStopServices = $state(true);
+	let preCommandServiceId = $state(
+		untrack(() => vol.backupPreCommandServiceId ?? ""),
+	);
+	const preCommandServiceLabel = $derived(
+		data.services.find((service) => service.id === preCommandServiceId)?.name ??
+			"First running service using this volume",
+	);
+	const restoreDescription = $derived(
+		[
+			`Queue a restore of "${pendingRestoreKey}" into ${vol.name}?`,
+			restoreWipe
+				? "Everything currently in the volume is deleted first."
+				: "Files in the archive replace what's on disk and anything else is left alone.",
+			restoreStopServices
+				? "Running services using this volume are stopped for the restore and started again after."
+				: "Nothing is stopped : restoring under a running container can leave it with half-old, half-new data.",
+		].join(" "),
+	);
 
 	const backups = $derived(getVolumeBackups(data.volume.id));
 	const destinationName = $derived(
@@ -135,6 +155,61 @@
           type="text"
           value={vol.backupSchedule ?? ""}
         />
+      </div>
+
+      <CheckBox
+        checked={vol.backupStopServices}
+        helperText="Stop the running services that mount this volume while it's tarred, and start them again right after. Gives a consistent copy at the cost of a short outage."
+        id="backupStopServices"
+        label="Stop services during the backup"
+        name="backupStopServices"
+      />
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label class={label} for="backupPreCommand"
+          >Pre-backup command (optional)</label>
+          <Input
+            id="backupPreCommand"
+            name="backupPreCommand"
+            placeholder="pg_dump -U postgres -f /var/lib/postgresql/data/dump.sql app"
+            type="text"
+            value={vol.backupPreCommand ?? ""}
+          />
+          <p class="mt-1 text-xs text-text-muted">
+            Runs with /bin/sh inside a service's container before each backup,
+            while it's still running. Write the dump into this volume so it's
+            part of the archive. A non-zero exit fails the backup.
+          </p>
+        </div>
+        <div>
+          <label class={label} for="backupPreCommandServiceId"
+          >Run it in</label>
+          {#if data.services.length === 0}
+            <p class="text-xs text-text-muted">
+              No service mounts this volume yet.
+            </p>
+          {:else}
+            <SelectRoot
+              name="backupPreCommandServiceId"
+              type="single"
+              bind:value={preCommandServiceId}
+            >
+              <SelectTrigger id="backupPreCommandServiceId">
+                {preCommandServiceLabel}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  label="First running service using this volume"
+                  value=""
+                />
+                {#each data.services as service (service.id)}
+                  <SelectItem label={service.name} value={service.id} />
+                {/each}
+              </SelectContent>
+            </SelectRoot>
+          {/if}
+        </div>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">
@@ -232,8 +307,8 @@
           <p class="text-text-muted text-sm">
             Unpacks a backup from
             <span class="font-mono text-xs">{destinationName}</span>
-            back over this volume. Files in the archive replace the ones on
-            disk; anything else already there is left alone.
+            back into this volume, in the background. It shows up in the run
+            log below like a backup does.
           </p>
         {:else if backups.error}
           <p class="text-sm text-red-500">
@@ -246,6 +321,22 @@
             No backups for this volume in that bucket yet.
           </p>
         {:else}
+          <div class="mb-3 grid gap-3 sm:grid-cols-2">
+            <CheckBox
+              helperText="Delete everything in the volume before unpacking, so files that aren't in the backup don't survive the restore."
+              id="restoreWipe"
+              label="Wipe the volume first"
+              name="restoreWipeToggle"
+              bind:checked={restoreWipe}
+            />
+            <CheckBox
+              helperText="Stop the running services that mount this volume for the restore, and start them again after."
+              id="restoreStopServices"
+              label="Stop services during the restore"
+              name="restoreStopServicesToggle"
+              bind:checked={restoreStopServices}
+            />
+          </div>
           <ul class="divide-border divide-y">
             {#each backups.current as backup (backup.key)}
               <li class="flex items-center gap-3 py-2">
@@ -264,18 +355,24 @@
                   action="?/restore"
                   method="POST"
                   use:enhance={enhanceToast({
-                    error: "Restore failed.",
-                    loading: "Restoring this backup",
+                    error: "Couldn't queue the restore.",
+                    loading: "Queueing the restore",
                     onSettled: () => {
                       restoringKey = null;
                     },
                     onStart: () => {
                       restoringKey = backup.key;
                     },
-                    success: "Volume restored.",
+                    success: "Restore queued : it shows up in the run log once it starts.",
                   })}
                 >
                   <input name="key" type="hidden" value={backup.key}>
+                  <input name="wipe" type="hidden" value={restoreWipe ? "on" : ""}>
+                  <input
+                    name="stopServices"
+                    type="hidden"
+                    value={restoreStopServices ? "on" : ""}
+                  >
                   <Button
                     disabled={restoringKey !== null}
                     onclick={(e) => requestRestore(e, backup.key)}
@@ -285,7 +382,7 @@
                   >
                     {#if restoringKey === backup.key}
                       <Spinner />
-                      Restoring…
+                      Queueing…
                     {:else}
                       Restore
                     {/if}
@@ -309,6 +406,7 @@
           <thead>
             <tr class="border-b border-border text-left text-xs uppercase text-text-muted">
               <th class="px-5 py-3 font-medium">Started</th>
+              <th class="px-5 py-3 font-medium">Kind</th>
               <th class="px-5 py-3 font-medium">Status</th>
             </tr>
           </thead>
@@ -317,6 +415,9 @@
               <tr class="border-b border-border/60 last:border-0">
                 <td class="px-5 py-3 text-text-muted">
                   {new Date(run.startedAt).toLocaleString()}
+                </td>
+                <td class="px-5 py-3 text-text-muted" title={run.key ?? ""}>
+                  {run.kind === "restore" ? "Restore" : "Backup"}
                 </td>
                 <td class="px-5 py-3">
                   {#if run.success === null}
@@ -348,7 +449,8 @@
 <ConfirmDialog
   bind:open={restoreDialogOpen}
   confirmLabel="Restore"
-  description={`Unpack "${pendingRestoreKey}" over ${vol.name}? Files in the archive replace what's on disk. Stop any service using this volume first : restoring under a running container is how you get half-old, half-new data.`}
+  description={restoreDescription}
+  destructive={restoreWipe}
   onConfirm={() => pendingRestoreForm?.requestSubmit()}
   title="Restore this backup?"
 />

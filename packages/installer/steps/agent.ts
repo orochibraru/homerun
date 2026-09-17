@@ -50,8 +50,9 @@ WantedBy=default.target
 
 	/**
 	 * Writes the agent's `systemd --user` unit into the rootless user's config
-	 * directory, hands it to that user, then reloads and enables it with
-	 * `--now` so the agent starts immediately.
+	 * directory, hands it to that user, then reloads, enables and restarts it, so a
+	 * re-run picks up a replaced binary or unit instead of leaving the old
+	 * process running.
 	 *
 	 * @param dockerSocket The rootless daemon's socket path the agent should talk to.
 	 * @param port The agent's HTTP port.
@@ -87,7 +88,11 @@ WantedBy=default.target
 			as: username,
 			env,
 		});
-		await run.run(["systemctl", "--user", "enable", "--now", "homerun-agent"], {
+		await run.run(["systemctl", "--user", "enable", "homerun-agent"], {
+			as: username,
+			env,
+		});
+		await run.run(["systemctl", "--user", "restart", "homerun-agent"], {
 			as: username,
 			env,
 		});

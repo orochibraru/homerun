@@ -1,6 +1,12 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { Logger } from "$lib/logger";
+import {
+	API_KEY_SCOPES,
+	type ApiKeyScope,
+	apiKeyScopeOf,
+	READ_ONLY_ROLE,
+} from "$lib/permissions";
 import { auth } from "$lib/services/auth";
 
 const logger = new Logger("ApiKeys");
@@ -11,6 +17,7 @@ interface ApiKeyRow {
 	expiresAt: Date | null;
 	id: string;
 	lastRequest: Date | null;
+	metadata: unknown;
 	name: string | null;
 	prefix: string | null;
 	start: string | null;
@@ -35,6 +42,7 @@ export const load = async ({ request }) => {
 				lastRequest: k.lastRequest,
 				name: k.name,
 				prefix: k.prefix,
+				scope: apiKeyScopeOf(k.metadata),
 				start: k.start,
 			})),
 		};
@@ -42,7 +50,9 @@ export const load = async ({ request }) => {
 		logger.warn("Couldn't list API keys", {
 			error: error instanceof Error ? error.message : String(error),
 		});
-		return { apiKeys: [] as ApiKeyRow[] };
+		return {
+			apiKeys: [] as (Omit<ApiKeyRow, "metadata"> & { scope: ApiKeyScope })[],
+		};
 	}
 };
 
@@ -53,6 +63,12 @@ export const actions = {
 		}
 		const formData = await request.formData();
 		const name = (formData.get("name") as string | null)?.trim() || "API key";
+		const requestedScope = formData.get("scope");
+		const scope: ApiKeyScope =
+			locals.user.role === READ_ONLY_ROLE
+				? "read"
+				: (API_KEY_SCOPES.find((candidate) => candidate === requestedScope) ??
+					"full");
 
 		try {
 			// Server-only userId field, same pattern cli-auth.service.ts's
@@ -60,9 +76,11 @@ export const actions = {
 			// normal session requirement since we already know who's asking
 			// (locals.user, not a client-supplied id).
 			const created = await auth.api.createApiKey({
-				body: { name, userId: locals.user.id },
+				body: { metadata: { scope }, name, userId: locals.user.id },
 			});
-			logger.info(`API key created: name=${name} user=${locals.user.id}`);
+			logger.info(
+				`API key created: name=${name} scope=${scope} user=${locals.user.id}`,
+			);
 			return { key: created.key, success: true };
 		} catch (error) {
 			logger.warn("Couldn't create API key", {

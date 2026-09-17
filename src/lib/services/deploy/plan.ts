@@ -1,3 +1,4 @@
+import type { BuildMethod } from "$lib/build-methods";
 import type { RemoteExecutionTarget } from "$lib/dto/remote-host-dto";
 import type { Service } from "$lib/server/db/schema";
 import type { PullPolicy } from "$lib/types";
@@ -11,7 +12,10 @@ export interface CacheRegistryCredentials {
 export type BuildServer = Exclude<RemoteExecutionTarget, { kind: "local" }>;
 
 export interface GitSource {
+	bakeFile: string | null;
+	bakeTarget: string | null;
 	buildContext: string | null;
+	buildMethod: BuildMethod;
 	dockerfilePath: string | null;
 	gitRef: string | null;
 	gitUrl: string;
@@ -38,13 +42,13 @@ export type ImagePlan =
 	| {
 			git: GitSource;
 			kind: "docker-build";
-			registry: CacheRegistryCredentials;
+			registry: CacheRegistryCredentials | null;
 			server: Extract<BuildServer, { kind: "docker" }>;
 	  }
 	| {
 			git: GitSource;
 			kind: "agent-build";
-			registry: CacheRegistryCredentials;
+			registry: CacheRegistryCredentials | null;
 			server: Extract<BuildServer, { kind: "agent" }>;
 	  };
 
@@ -63,7 +67,10 @@ export type DeployPlanService = Pick<
 	Service,
 	| "buildServerRemoteHostId"
 	| "buildSource"
+	| "gitBakeFile"
+	| "gitBakeTarget"
 	| "gitBuildContext"
+	| "gitBuildMethod"
 	| "gitDockerfilePath"
 	| "gitRef"
 	| "gitUrl"
@@ -100,11 +107,11 @@ export function unreachable(value: never): never {
  * Builds the `GitBuildPlan` for a `buildSource: "git"` service : a local
  * build when no build server is configured, otherwise a docker-remote or
  * agent build depending on the build server's kind, publishing through the
- * configured cache registry.
+ * configured cache registry when there is one, or streaming the image back to
+ * this host (`registry: null`) when there isn't.
  *
- * @throws When the service has no `gitUrl`, when a build server is
- *   configured but has no cache registry to publish through, or when the
- *   configured build server id doesn't resolve to one.
+ * @throws When the service has no `gitUrl`, or when the configured build
+ *   server id doesn't resolve to one.
  */
 function resolveGitBuild(input: DeployPlanInput): GitBuildPlan {
 	const { buildServer, cacheRegistry, service } = input;
@@ -112,7 +119,10 @@ function resolveGitBuild(input: DeployPlanInput): GitBuildPlan {
 		throw new DeployPlanError("No git repository URL configured.");
 	}
 	const git: GitSource = {
+		bakeFile: service.gitBakeFile,
+		bakeTarget: service.gitBakeTarget,
 		buildContext: service.gitBuildContext,
+		buildMethod: service.gitBuildMethod,
 		dockerfilePath: service.gitDockerfilePath,
 		gitRef: service.gitRef,
 		gitUrl: service.gitUrl,
@@ -120,11 +130,6 @@ function resolveGitBuild(input: DeployPlanInput): GitBuildPlan {
 
 	if (!service.buildServerRemoteHostId) {
 		return { cacheRegistry, git, kind: "local-build" };
-	}
-	if (!cacheRegistry) {
-		throw new DeployPlanError(
-			"A build server needs a build cache registry configured, to publish the built image through.",
-		);
 	}
 	if (!buildServer) {
 		throw new DeployPlanError(

@@ -299,9 +299,6 @@
 		return groups;
 	}
 
-	// Users/Settings/System Logs are instance-wide admin controls : hidden
-	// from developers, who otherwise get the same dashboard (their own
-	// services/stacks, already isolated per-user).
 	const mainNavGroups = $derived(
 		groupByCategory(allNavItems.filter((item) => !item.adminOnly)),
 	);
@@ -360,12 +357,14 @@
       <span class="text-text text-[0.9375rem] font-semibold tracking-tight">homerun</span>
     </div>
 
-    <div class="px-2 pb-2">
-      <Button class="w-full" href={resolve("/services/new")}>
-        <Plus class="size-4" />
-        Deploy a service
-      </Button>
-    </div>
+    {#if !data.readOnly}
+      <div class="px-2 pb-2">
+        <Button class="w-full" href={resolve("/services/new")}>
+          <Plus class="size-4" />
+          Deploy a service
+        </Button>
+      </div>
+    {/if}
 
     <!-- Nav links -->
     <nav class="flex-1 overflow-y-auto px-2 pb-3">
@@ -427,6 +426,14 @@
       <span class="text-text flex-1 truncate text-sm font-medium">
         {$title || "Dashboard"}
       </span>
+      {#if data.readOnly}
+        <span
+          class="text-text-muted border-border rounded-full border px-2 py-0.5 text-[0.7rem] font-medium"
+          title="This account or API key can view everything but can't change anything."
+        >
+          Read-only
+        </span>
+      {/if}
       <GlobalSearch isAdmin={data.user?.role === "admin"} />
       <NotificationBell />
       <ProfileMenu user={data.user} />

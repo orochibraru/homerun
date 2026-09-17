@@ -3,9 +3,22 @@ import type { GitProviderKind } from "$lib/server/db/schema";
 
 export const GIT_WEBHOOK_PATH = "/api/v1/webhooks/git";
 
+export const GIT_CONNECT_RETURN_COOKIE = "homerun_git_connect_return";
+
 export interface PushedBranch {
 	branch: string;
 	commit: string | null;
+}
+
+export type PullRequestAction = "open" | "update" | "close";
+
+export interface PullRequestEvent {
+	action: PullRequestAction;
+	branch: string | null;
+	commit: string | null;
+	fromFork: boolean;
+	number: number;
+	title: string;
 }
 
 export interface WebhookRequest {
@@ -125,20 +138,32 @@ export function parsePushEvent(
 	return [{ branch, commit }];
 }
 
-/** The API call that registers a push webhook for `repo` on a provider of `kind`, relative to its API base. */
+const BITBUCKET_PULL_REQUEST_EVENTS = [
+	"pullrequest:created",
+	"pullrequest:updated",
+	"pullrequest:fulfilled",
+	"pullrequest:rejected",
+];
+
+/**
+ * The API call that registers a webhook for `repo` on a provider of `kind`,
+ * relative to its API base: push events always, pull request events too when
+ * `hook.pullRequests` is set.
+ */
 export function createWebhookRequest(
 	kind: GitProviderKind,
 	repo: string,
-	url: string,
-	secret: string,
+	hook: { pullRequests?: boolean; secret: string; url: string },
 ): WebhookRequest {
+	const { pullRequests = false, secret, url } = hook;
+	const events = pullRequests ? ["push", "pull_request"] : ["push"];
 	switch (kind) {
 		case "github":
 			return {
 				body: {
 					active: true,
 					config: { content_type: "json", insecure_ssl: "0", secret, url },
-					events: ["push"],
+					events,
 					name: "web",
 				},
 				method: "POST",
@@ -149,7 +174,7 @@ export function createWebhookRequest(
 				body: {
 					active: true,
 					config: { content_type: "json", secret, url },
-					events: ["push"],
+					events,
 					type: "gitea",
 				},
 				method: "POST",
@@ -159,6 +184,7 @@ export function createWebhookRequest(
 			return {
 				body: {
 					enable_ssl_verification: true,
+					merge_requests_events: pullRequests,
 					push_events: true,
 					token: secret,
 					url,
@@ -171,7 +197,10 @@ export function createWebhookRequest(
 				body: {
 					active: true,
 					description: "Homerun push-to-deploy",
-					events: ["repo:push"],
+					events: [
+						"repo:push",
+						...(pullRequests ? BITBUCKET_PULL_REQUEST_EVENTS : []),
+					],
 					secret,
 					url,
 				},
@@ -207,4 +236,137 @@ export function webhookIdFrom(
 ): string | null {
 	const id = kind === "bitbucket" ? response.uuid : response.id;
 	return typeof id === "string" || typeof id === "number" ? String(id) : null;
+}
+
+const GITHUB_PULL_REQUEST_ACTIONS: Record<string, PullRequestAction> = {
+	closed: "close",
+	opened: "open",
+	reopened: "open",
+	synchronize: "update",
+	synchronized: "update",
+};
+
+const GITLAB_MERGE_REQUEST_ACTIONS: Record<string, PullRequestAction> = {
+	close: "close",
+	merge: "close",
+	open: "open",
+	reopen: "open",
+	update: "update",
+};
+
+const BITBUCKET_PULL_REQUEST_ACTIONS: Record<string, PullRequestAction> = {
+	"pullrequest:created": "open",
+	"pullrequest:fulfilled": "close",
+	"pullrequest:rejected": "close",
+	"pullrequest:updated": "update",
+};
+
+type JsonRecord = Record<string, unknown>;
+
+function record(value: unknown): JsonRecord {
+	return value && typeof value === "object" ? (value as JsonRecord) : {};
+}
+
+function stringOrNull(value: unknown): string | null {
+	return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+/** Whether a pull request's head and base repo identifiers are both known and equal: anything missing counts as a fork. */
+function sameRepo(head: unknown, base: unknown): boolean {
+	const known = (value: unknown) =>
+		(typeof value === "string" && value.length > 0) ||
+		(typeof value === "number" && Number.isFinite(value));
+	return known(head) && known(base) && String(head) === String(base);
+}
+
+function pullRequestEvent(
+	action: PullRequestAction | undefined,
+	fields: {
+		branch: unknown;
+		commit: unknown;
+		headRepo: unknown;
+		baseRepo: unknown;
+		number: unknown;
+		title: unknown;
+	},
+): PullRequestEvent | null {
+	const number = Number(fields.number);
+	if (!(action && Number.isInteger(number) && number > 0)) {
+		return null;
+	}
+	return {
+		action,
+		branch: stringOrNull(fields.branch),
+		commit: stringOrNull(fields.commit),
+		fromFork: !sameRepo(fields.headRepo, fields.baseRepo),
+		number,
+		title: stringOrNull(fields.title) ?? `#${number}`,
+	};
+}
+
+/**
+ * The pull request a delivery opened, updated or closed, with the head
+ * branch and commit a preview builds. Null for anything else: a push, a
+ * label change, a review. GitHub and Gitea share one payload shape, GitLab
+ * sends a "Merge Request Hook" and Bitbucket a `pullrequest:*` event key.
+ * Bitbucket only sends an abbreviated commit hash, which can't be fetched, so
+ * its previews build the branch. `fromFork` is true unless the head repo is
+ * positively the base repo, so a payload missing either counts as a fork.
+ */
+export function parsePullRequestEvent(
+	headers: Headers,
+	payload: unknown,
+): PullRequestEvent | null {
+	const body = record(payload);
+	const eventKey = headers.get("x-event-key");
+	if (eventKey?.startsWith("pullrequest:")) {
+		const pullRequest = record(body.pullrequest);
+		const source = record(pullRequest.source);
+		return pullRequestEvent(BITBUCKET_PULL_REQUEST_ACTIONS[eventKey], {
+			branch: record(source.branch).name,
+			commit: null,
+			headRepo: record(source.repository).full_name,
+			baseRepo: record(record(pullRequest.destination).repository).full_name,
+			number: pullRequest.id,
+			title: pullRequest.title,
+		});
+	}
+	if (headers.get("x-gitlab-event") === "Merge Request Hook") {
+		const attributes = record(body.object_attributes);
+		return pullRequestEvent(
+			GITLAB_MERGE_REQUEST_ACTIONS[String(attributes.action)],
+			{
+				branch: attributes.source_branch,
+				commit: record(attributes.last_commit).id,
+				headRepo: attributes.source_project_id,
+				baseRepo: attributes.target_project_id,
+				number: attributes.iid,
+				title: attributes.title,
+			},
+		);
+	}
+	const event = headers.get("x-github-event") ?? headers.get("x-gitea-event");
+	if (event !== "pull_request") {
+		return null;
+	}
+	const pullRequest = record(body.pull_request);
+	const head = record(pullRequest.head);
+	return pullRequestEvent(GITHUB_PULL_REQUEST_ACTIONS[String(body.action)], {
+		branch: head.ref,
+		commit: head.sha,
+		headRepo: record(head.repo).full_name,
+		baseRepo: record(record(pullRequest.base).repo).full_name,
+		number: body.number ?? pullRequest.number,
+		title: pullRequest.title,
+	});
+}
+
+/**
+ * The slug of pull request `number`'s preview of a service: `<slug>-pr-<n>`,
+ * with the parent slug cut short so the whole thing stays a valid 63
+ * character DNS label.
+ */
+export function previewSlug(parentSlug: string, number: number): string {
+	const suffix = `-pr-${number}`;
+	return `${parentSlug.slice(0, 63 - suffix.length).replace(/-+$/, "")}${suffix}`;
 }

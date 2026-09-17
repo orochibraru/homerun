@@ -2,7 +2,7 @@
 	"components": {
 		"securitySchemes": {
 			"apiKey": {
-				"description": "A better-auth API key, from the app's own Settings/API keys UI.",
+				"description": "An API key from Profile → Authorized Clients (or `homerun login`). A key is created with Full access or Read-only scope: a read-only key may call every GET endpoint and gets a 403 on anything that writes.",
 				"in": "header",
 				"name": "x-api-key",
 				"type": "apiKey"
@@ -15,7 +15,7 @@
 		}
 	},
 	"info": {
-		"description": "Homerun's REST API : a thin JSON wrapper over the DTO layer, meant for a future CLI (see the `cli/` sub-project) and any other external client. Requests are the same zod schemas that validate them server-side; every route also requires a cookie session or an `x-api-key`/`Authorization: Bearer` API key (see hooks.server.ts).",
+		"description": "Homerun's REST API : a thin JSON wrapper over the DTO layer, meant for a future CLI (see the `cli/` sub-project) and any other external client. Requests are the same zod schemas that validate them server-side; every route also requires a cookie session or an `x-api-key`/`Authorization: Bearer` API key (see hooks.server.ts). Writes (POST, PATCH, DELETE) answer 403 for a read-only caller: a user holding the read-only role, or any request authenticated with a read-only API key.",
 		"title": "Homerun API",
 		"version": "1.0.0"
 	},
@@ -79,6 +79,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					}
 				},
 				"security": [
@@ -343,6 +360,25 @@
 												"enum": ["image", "git"],
 												"type": "string"
 											},
+											"capAdd": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"command": {
+												"anyOf": [
+													{
+														"items": {
+															"type": "string"
+														},
+														"type": "array"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"containerId": {
 												"anyOf": [
 													{
@@ -444,8 +480,33 @@
 												"enum": ["running", "stopped"],
 												"type": "string"
 											},
+											"devices": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"dnsResolvable": {
 												"type": "boolean"
+											},
+											"entrypoint": {
+												"anyOf": [
+													{
+														"items": {
+															"type": "string"
+														},
+														"type": "array"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"envFiles": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
 											},
 											"envVars": {
 												"additionalProperties": {
@@ -455,6 +516,26 @@
 													"type": "string"
 												},
 												"type": "object"
+											},
+											"gitBakeFile": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitBakeTarget": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
 											},
 											"gitBuildContext": {
 												"anyOf": [
@@ -466,6 +547,17 @@
 													}
 												]
 											},
+											"gitBuildMethod": {
+												"enum": [
+													"dockerfile",
+													"bake",
+													"nixpacks",
+													"railpack",
+													"heroku",
+													"paketo"
+												],
+												"type": "string"
+											},
 											"gitDockerfilePath": {
 												"anyOf": [
 													{
@@ -475,6 +567,19 @@
 														"type": "null"
 													}
 												]
+											},
+											"gitLastSeenCommit": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitPollEnabled": {
+												"type": "boolean"
 											},
 											"gitProviderId": {
 												"anyOf": [
@@ -536,6 +641,9 @@
 													}
 												]
 											},
+											"gitWebhookReconnect": {
+												"type": "boolean"
+											},
 											"gitWebhookSecretEnc": {
 												"anyOf": [
 													{
@@ -565,6 +673,15 @@
 											"imageScanEnabled": {
 												"type": "boolean"
 											},
+											"labels": {
+												"additionalProperties": {
+													"type": "string"
+												},
+												"propertyNames": {
+													"type": "string"
+												},
+												"type": "object"
+											},
 											"memoryLimitMb": {
 												"anyOf": [
 													{
@@ -587,6 +704,54 @@
 											"portProtocol": {
 												"enum": ["tcp", "udp", "both"],
 												"type": "string"
+											},
+											"previewBranch": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"previewParentId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"previewPrNumber": {
+												"anyOf": [
+													{
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991,
+														"type": "integer"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"previewPrTitle": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"previewsEnabled": {
+												"type": "boolean"
+											},
+											"privileged": {
+												"type": "boolean"
 											},
 											"registryPasswordEnc": {
 												"anyOf": [
@@ -683,14 +848,24 @@
 											"cronLastRunAt",
 											"cronSchedule",
 											"currentStatus",
+											"capAdd",
+											"command",
 											"customDomain",
+											"devices",
+											"entrypoint",
+											"envFiles",
+											"labels",
+											"privileged",
 											"customSslCertEnc",
 											"customSslKeyEnc",
 											"desiredState",
 											"dnsResolvable",
 											"envVars",
 											"autoDeployOnPush",
+											"gitBakeFile",
+											"gitBakeTarget",
 											"gitBuildContext",
+											"gitBuildMethod",
 											"gitDockerfilePath",
 											"gitProviderId",
 											"gitRef",
@@ -699,6 +874,14 @@
 											"gitWebhookError",
 											"gitWebhookId",
 											"gitWebhookSecretEnc",
+											"gitWebhookReconnect",
+											"gitPollEnabled",
+											"gitLastSeenCommit",
+											"previewsEnabled",
+											"previewParentId",
+											"previewPrNumber",
+											"previewPrTitle",
+											"previewBranch",
 											"healthcheckCommand",
 											"id",
 											"image",
@@ -726,7 +909,7 @@
 								}
 							}
 						},
-						"description": "The caller's services"
+						"description": "Every service on the instance"
 					},
 					"401": {
 						"content": {
@@ -781,6 +964,30 @@
 										"enum": ["image", "git"],
 										"type": "string"
 									},
+									"capAdd": {
+										"default": [],
+										"items": {
+											"pattern": "^(CAP_)?[A-Za-z_]+$",
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
+									},
+									"command": {
+										"anyOf": [
+											{
+												"items": {
+													"type": "string"
+												},
+												"maxItems": 200,
+												"type": "array"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "Argv list, null keeps the image's own"
+									},
 									"containerPort": {
 										"maximum": 65535,
 										"minimum": 1,
@@ -789,9 +996,44 @@
 									"cpuLimit": {
 										"type": "string"
 									},
+									"devices": {
+										"default": [],
+										"description": "host[:container[:rwm]] device mappings",
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
+									},
 									"dnsResolvable": {
 										"default": true,
 										"type": "boolean"
+									},
+									"entrypoint": {
+										"anyOf": [
+											{
+												"items": {
+													"type": "string"
+												},
+												"maxItems": 200,
+												"type": "array"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "Argv list, null keeps the image's own"
+									},
+									"envFiles": {
+										"default": [],
+										"description": "Absolute host paths of .env files read at deploy",
+										"items": {
+											"pattern": "^\\/",
+											"type": "string"
+										},
+										"maxItems": 20,
+										"type": "array"
 									},
 									"envVars": {
 										"additionalProperties": {
@@ -803,7 +1045,26 @@
 										},
 										"type": "object"
 									},
+									"gitBakeFile": {
+										"type": "string"
+									},
+									"gitBakeTarget": {
+										"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$",
+										"type": "string"
+									},
 									"gitBuildContext": {
+										"type": "string"
+									},
+									"gitBuildMethod": {
+										"default": "dockerfile",
+										"enum": [
+											"dockerfile",
+											"bake",
+											"nixpacks",
+											"railpack",
+											"heroku",
+											"paketo"
+										],
 										"type": "string"
 									},
 									"gitDockerfilePath": {
@@ -824,6 +1085,16 @@
 									"image": {
 										"type": "string"
 									},
+									"labels": {
+										"additionalProperties": {
+											"type": "string"
+										},
+										"default": {},
+										"propertyNames": {
+											"type": "string"
+										},
+										"type": "object"
+									},
 									"memoryLimitMb": {
 										"exclusiveMinimum": 0,
 										"maximum": 9007199254740991,
@@ -833,6 +1104,10 @@
 										"maxLength": 100,
 										"minLength": 1,
 										"type": "string"
+									},
+									"privileged": {
+										"default": false,
+										"type": "boolean"
 									},
 									"pullPolicy": {
 										"default": "always",
@@ -870,9 +1145,15 @@
 									"autoDeployOnPush",
 									"buildSource",
 									"containerPort",
+									"capAdd",
+									"devices",
 									"dnsResolvable",
+									"envFiles",
 									"envVars",
+									"gitBuildMethod",
+									"labels",
 									"name",
+									"privileged",
 									"pullPolicy",
 									"restartPolicy",
 									"slug"
@@ -927,6 +1208,25 @@
 										"buildSource": {
 											"enum": ["image", "git"],
 											"type": "string"
+										},
+										"capAdd": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"command": {
+											"anyOf": [
+												{
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"containerId": {
 											"anyOf": [
@@ -1029,8 +1329,33 @@
 											"enum": ["running", "stopped"],
 											"type": "string"
 										},
+										"devices": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"entrypoint": {
+											"anyOf": [
+												{
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"envFiles": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"envVars": {
 											"additionalProperties": {
@@ -1040,6 +1365,26 @@
 												"type": "string"
 											},
 											"type": "object"
+										},
+										"gitBakeFile": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitBakeTarget": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"gitBuildContext": {
 											"anyOf": [
@@ -1051,6 +1396,17 @@
 												}
 											]
 										},
+										"gitBuildMethod": {
+											"enum": [
+												"dockerfile",
+												"bake",
+												"nixpacks",
+												"railpack",
+												"heroku",
+												"paketo"
+											],
+											"type": "string"
+										},
 										"gitDockerfilePath": {
 											"anyOf": [
 												{
@@ -1060,6 +1416,19 @@
 													"type": "null"
 												}
 											]
+										},
+										"gitLastSeenCommit": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitPollEnabled": {
+											"type": "boolean"
 										},
 										"gitProviderId": {
 											"anyOf": [
@@ -1121,6 +1490,9 @@
 												}
 											]
 										},
+										"gitWebhookReconnect": {
+											"type": "boolean"
+										},
 										"gitWebhookSecretEnc": {
 											"anyOf": [
 												{
@@ -1150,6 +1522,15 @@
 										"imageScanEnabled": {
 											"type": "boolean"
 										},
+										"labels": {
+											"additionalProperties": {
+												"type": "string"
+											},
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
+										},
 										"memoryLimitMb": {
 											"anyOf": [
 												{
@@ -1172,6 +1553,54 @@
 										"portProtocol": {
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
+										},
+										"previewBranch": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewParentId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewPrNumber": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewPrTitle": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewsEnabled": {
+											"type": "boolean"
+										},
+										"privileged": {
+											"type": "boolean"
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -1263,14 +1692,24 @@
 										"cronLastRunAt",
 										"cronSchedule",
 										"currentStatus",
+										"capAdd",
+										"command",
 										"customDomain",
+										"devices",
+										"entrypoint",
+										"envFiles",
+										"labels",
+										"privileged",
 										"customSslCertEnc",
 										"customSslKeyEnc",
 										"desiredState",
 										"dnsResolvable",
 										"envVars",
 										"autoDeployOnPush",
+										"gitBakeFile",
+										"gitBakeTarget",
 										"gitBuildContext",
+										"gitBuildMethod",
 										"gitDockerfilePath",
 										"gitProviderId",
 										"gitRef",
@@ -1279,6 +1718,14 @@
 										"gitWebhookError",
 										"gitWebhookId",
 										"gitWebhookSecretEnc",
+										"gitWebhookReconnect",
+										"gitPollEnabled",
+										"gitLastSeenCommit",
+										"previewsEnabled",
+										"previewParentId",
+										"previewPrNumber",
+										"previewPrTitle",
+										"previewBranch",
 										"healthcheckCommand",
 										"id",
 										"image",
@@ -1341,6 +1788,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					},
 					"409": {
 						"content": {
@@ -1418,6 +1882,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					},
 					"404": {
 						"content": {
@@ -1525,6 +2006,25 @@
 											"enum": ["image", "git"],
 											"type": "string"
 										},
+										"capAdd": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"command": {
+											"anyOf": [
+												{
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"containerId": {
 											"anyOf": [
 												{
@@ -1626,8 +2126,33 @@
 											"enum": ["running", "stopped"],
 											"type": "string"
 										},
+										"devices": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"entrypoint": {
+											"anyOf": [
+												{
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"envFiles": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"envVars": {
 											"additionalProperties": {
@@ -1637,6 +2162,26 @@
 												"type": "string"
 											},
 											"type": "object"
+										},
+										"gitBakeFile": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitBakeTarget": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"gitBuildContext": {
 											"anyOf": [
@@ -1648,6 +2193,17 @@
 												}
 											]
 										},
+										"gitBuildMethod": {
+											"enum": [
+												"dockerfile",
+												"bake",
+												"nixpacks",
+												"railpack",
+												"heroku",
+												"paketo"
+											],
+											"type": "string"
+										},
 										"gitDockerfilePath": {
 											"anyOf": [
 												{
@@ -1657,6 +2213,19 @@
 													"type": "null"
 												}
 											]
+										},
+										"gitLastSeenCommit": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitPollEnabled": {
+											"type": "boolean"
 										},
 										"gitProviderId": {
 											"anyOf": [
@@ -1718,6 +2287,9 @@
 												}
 											]
 										},
+										"gitWebhookReconnect": {
+											"type": "boolean"
+										},
 										"gitWebhookSecretEnc": {
 											"anyOf": [
 												{
@@ -1747,6 +2319,15 @@
 										"imageScanEnabled": {
 											"type": "boolean"
 										},
+										"labels": {
+											"additionalProperties": {
+												"type": "string"
+											},
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
+										},
 										"memoryLimitMb": {
 											"anyOf": [
 												{
@@ -1769,6 +2350,54 @@
 										"portProtocol": {
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
+										},
+										"previewBranch": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewParentId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewPrNumber": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewPrTitle": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewsEnabled": {
+											"type": "boolean"
+										},
+										"privileged": {
+											"type": "boolean"
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -1860,14 +2489,24 @@
 										"cronLastRunAt",
 										"cronSchedule",
 										"currentStatus",
+										"capAdd",
+										"command",
 										"customDomain",
+										"devices",
+										"entrypoint",
+										"envFiles",
+										"labels",
+										"privileged",
 										"customSslCertEnc",
 										"customSslKeyEnc",
 										"desiredState",
 										"dnsResolvable",
 										"envVars",
 										"autoDeployOnPush",
+										"gitBakeFile",
+										"gitBakeTarget",
 										"gitBuildContext",
+										"gitBuildMethod",
 										"gitDockerfilePath",
 										"gitProviderId",
 										"gitRef",
@@ -1876,6 +2515,14 @@
 										"gitWebhookError",
 										"gitWebhookId",
 										"gitWebhookSecretEnc",
+										"gitWebhookReconnect",
+										"gitPollEnabled",
+										"gitLastSeenCommit",
+										"previewsEnabled",
+										"previewParentId",
+										"previewPrNumber",
+										"previewPrTitle",
+										"previewBranch",
 										"healthcheckCommand",
 										"id",
 										"image",
@@ -1983,6 +2630,29 @@
 										"enum": ["image", "git"],
 										"type": "string"
 									},
+									"capAdd": {
+										"items": {
+											"pattern": "^(CAP_)?[A-Za-z_]+$",
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
+									},
+									"command": {
+										"anyOf": [
+											{
+												"items": {
+													"type": "string"
+												},
+												"maxItems": 200,
+												"type": "array"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "Argv list, null keeps the image's own"
+									},
 									"containerPort": {
 										"maximum": 65535,
 										"minimum": 1,
@@ -2008,8 +2678,41 @@
 											}
 										]
 									},
+									"devices": {
+										"description": "host[:container[:rwm]] device mappings",
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"maxItems": 50,
+										"type": "array"
+									},
 									"dnsResolvable": {
 										"type": "boolean"
+									},
+									"entrypoint": {
+										"anyOf": [
+											{
+												"items": {
+													"type": "string"
+												},
+												"maxItems": 200,
+												"type": "array"
+											},
+											{
+												"type": "null"
+											}
+										],
+										"description": "Argv list, null keeps the image's own"
+									},
+									"envFiles": {
+										"description": "Absolute host paths of .env files read at deploy",
+										"items": {
+											"pattern": "^\\/",
+											"type": "string"
+										},
+										"maxItems": 20,
+										"type": "array"
 									},
 									"envVars": {
 										"additionalProperties": {
@@ -2019,6 +2722,27 @@
 											"type": "string"
 										},
 										"type": "object"
+									},
+									"gitBakeFile": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"gitBakeTarget": {
+										"anyOf": [
+											{
+												"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$",
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
 									},
 									"gitBuildContext": {
 										"anyOf": [
@@ -2030,6 +2754,17 @@
 											}
 										]
 									},
+									"gitBuildMethod": {
+										"enum": [
+											"dockerfile",
+											"bake",
+											"nixpacks",
+											"railpack",
+											"heroku",
+											"paketo"
+										],
+										"type": "string"
+									},
 									"gitDockerfilePath": {
 										"anyOf": [
 											{
@@ -2039,6 +2774,9 @@
 												"type": "null"
 											}
 										]
+									},
+									"gitPollEnabled": {
+										"type": "boolean"
 									},
 									"gitProviderId": {
 										"anyOf": [
@@ -2098,6 +2836,15 @@
 									"imageScanEnabled": {
 										"type": "boolean"
 									},
+									"labels": {
+										"additionalProperties": {
+											"type": "string"
+										},
+										"propertyNames": {
+											"type": "string"
+										},
+										"type": "object"
+									},
 									"memoryLimitMb": {
 										"anyOf": [
 											{
@@ -2114,6 +2861,12 @@
 										"maxLength": 100,
 										"minLength": 1,
 										"type": "string"
+									},
+									"previewsEnabled": {
+										"type": "boolean"
+									},
+									"privileged": {
+										"type": "boolean"
 									},
 									"pullPolicy": {
 										"enum": ["always", "missing", "never"],
@@ -2217,6 +2970,25 @@
 											"enum": ["image", "git"],
 											"type": "string"
 										},
+										"capAdd": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"command": {
+											"anyOf": [
+												{
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"containerId": {
 											"anyOf": [
 												{
@@ -2318,8 +3090,33 @@
 											"enum": ["running", "stopped"],
 											"type": "string"
 										},
+										"devices": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"entrypoint": {
+											"anyOf": [
+												{
+													"items": {
+														"type": "string"
+													},
+													"type": "array"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"envFiles": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"envVars": {
 											"additionalProperties": {
@@ -2329,6 +3126,26 @@
 												"type": "string"
 											},
 											"type": "object"
+										},
+										"gitBakeFile": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitBakeTarget": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
 										},
 										"gitBuildContext": {
 											"anyOf": [
@@ -2340,6 +3157,17 @@
 												}
 											]
 										},
+										"gitBuildMethod": {
+											"enum": [
+												"dockerfile",
+												"bake",
+												"nixpacks",
+												"railpack",
+												"heroku",
+												"paketo"
+											],
+											"type": "string"
+										},
 										"gitDockerfilePath": {
 											"anyOf": [
 												{
@@ -2349,6 +3177,19 @@
 													"type": "null"
 												}
 											]
+										},
+										"gitLastSeenCommit": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"gitPollEnabled": {
+											"type": "boolean"
 										},
 										"gitProviderId": {
 											"anyOf": [
@@ -2410,6 +3251,9 @@
 												}
 											]
 										},
+										"gitWebhookReconnect": {
+											"type": "boolean"
+										},
 										"gitWebhookSecretEnc": {
 											"anyOf": [
 												{
@@ -2439,6 +3283,15 @@
 										"imageScanEnabled": {
 											"type": "boolean"
 										},
+										"labels": {
+											"additionalProperties": {
+												"type": "string"
+											},
+											"propertyNames": {
+												"type": "string"
+											},
+											"type": "object"
+										},
 										"memoryLimitMb": {
 											"anyOf": [
 												{
@@ -2461,6 +3314,54 @@
 										"portProtocol": {
 											"enum": ["tcp", "udp", "both"],
 											"type": "string"
+										},
+										"previewBranch": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewParentId": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewPrNumber": {
+											"anyOf": [
+												{
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991,
+													"type": "integer"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewPrTitle": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
+										"previewsEnabled": {
+											"type": "boolean"
+										},
+										"privileged": {
+											"type": "boolean"
 										},
 										"registryPasswordEnc": {
 											"anyOf": [
@@ -2552,14 +3453,24 @@
 										"cronLastRunAt",
 										"cronSchedule",
 										"currentStatus",
+										"capAdd",
+										"command",
 										"customDomain",
+										"devices",
+										"entrypoint",
+										"envFiles",
+										"labels",
+										"privileged",
 										"customSslCertEnc",
 										"customSslKeyEnc",
 										"desiredState",
 										"dnsResolvable",
 										"envVars",
 										"autoDeployOnPush",
+										"gitBakeFile",
+										"gitBakeTarget",
 										"gitBuildContext",
+										"gitBuildMethod",
 										"gitDockerfilePath",
 										"gitProviderId",
 										"gitRef",
@@ -2568,6 +3479,14 @@
 										"gitWebhookError",
 										"gitWebhookId",
 										"gitWebhookSecretEnc",
+										"gitWebhookReconnect",
+										"gitPollEnabled",
+										"gitLastSeenCommit",
+										"previewsEnabled",
+										"previewParentId",
+										"previewPrNumber",
+										"previewPrTitle",
+										"previewBranch",
 										"healthcheckCommand",
 										"id",
 										"image",
@@ -2630,6 +3549,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					},
 					"404": {
 						"content": {
@@ -2721,6 +3657,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					},
 					"404": {
 						"content": {
@@ -2846,6 +3799,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					},
 					"404": {
 						"content": {
@@ -3111,7 +4081,7 @@
 		},
 		"/services/{serviceId}/revisions/{revisionId}/deploy": {
 			"post": {
-				"description": "Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target.",
+				"description": "Redeploys that revision's exact image (by digest when known, else the retained local build) without building, pulling from upstream or scanning, and waits for the deploy like POST /services/{serviceId}/deploy. Pass previous as revisionId for the default rollback target. Only the image is rolled back unless restoreConfig=true, which also puts back the env vars, resources and networking that revision ran with.",
 				"operationId": "post_services__serviceId__revisions__revisionId__deploy",
 				"parameters": [
 					{
@@ -3128,6 +4098,15 @@
 						"in": "path",
 						"name": "revisionId",
 						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "true to also restore the revision's env vars, resources and networking (default false)",
+						"in": "query",
+						"name": "restoreConfig",
+						"required": false,
 						"schema": {
 							"type": "string"
 						}
@@ -3195,6 +4174,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					},
 					"404": {
 						"content": {
@@ -3594,6 +4590,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					},
 					"404": {
 						"content": {
@@ -4308,6 +5321,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -4407,6 +5437,23 @@
 						},
 						"description": "Unauthorized"
 					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
+					},
 					"404": {
 						"content": {
 							"application/json": {
@@ -4471,6 +5518,10 @@
 											],
 											"description": "Why Homerun couldn't register the webhook itself, if it couldn't"
 										},
+										"polling": {
+											"description": "Whether Homerun polls the branch head every two minutes instead of, or as well as, waiting for deliveries",
+											"type": "boolean"
+										},
 										"providerName": {
 											"anyOf": [
 												{
@@ -4480,6 +5531,27 @@
 													"type": "null"
 												}
 											]
+										},
+										"reconnect": {
+											"anyOf": [
+												{
+													"additionalProperties": false,
+													"properties": {
+														"providerId": {
+															"type": "string"
+														},
+														"providerName": {
+															"type": "string"
+														}
+													},
+													"required": ["providerId", "providerName"],
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The provider to reconnect when it refused the webhook, usually for a missing webhook scope"
 										},
 										"registered": {
 											"description": "Whether Homerun registered the webhook on the provider",
@@ -4503,7 +5575,9 @@
 									},
 									"required": [
 										"error",
+										"polling",
 										"providerName",
+										"reconnect",
 										"registered",
 										"secret",
 										"url"
@@ -4652,7 +5726,7 @@
 								}
 							}
 						},
-						"description": "The caller's stacks"
+						"description": "Every stack on the instance"
 					},
 					"401": {
 						"content": {
@@ -4803,6 +5877,23 @@
 							}
 						},
 						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"error": {
+											"example": "This account or API key is read-only: it can view everything but can't change anything.",
+											"type": "string"
+										}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Read-only caller: the user holds the read-only role or the request used a read-only API key."
 					},
 					"409": {
 						"content": {
@@ -5008,10 +6099,29 @@
 									"items": {
 										"additionalProperties": false,
 										"properties": {
+											"capAdd": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"category": {
 												"anyOf": [
 													{
 														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"command": {
+												"anyOf": [
+													{
+														"items": {
+															"type": "string"
+														},
+														"type": "array"
 													},
 													{
 														"type": "null"
@@ -5048,6 +6158,31 @@
 													}
 												]
 											},
+											"devices": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"entrypoint": {
+												"anyOf": [
+													{
+														"items": {
+															"type": "string"
+														},
+														"type": "array"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"envFiles": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
 											"envVars": {
 												"anyOf": [
 													{
@@ -5080,6 +6215,15 @@
 											"image": {
 												"type": "string"
 											},
+											"labels": {
+												"additionalProperties": {
+													"type": "string"
+												},
+												"propertyNames": {
+													"type": "string"
+												},
+												"type": "object"
+											},
 											"memoryLimitMb": {
 												"anyOf": [
 													{
@@ -5106,6 +6250,10 @@
 												],
 												"description": "null = built-in template"
 											},
+											"privileged": {
+												"description": "privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them",
+												"type": "boolean"
+											},
 											"restartPolicy": {
 												"type": "string"
 											},
@@ -5119,18 +6267,25 @@
 											}
 										},
 										"required": [
+											"capAdd",
 											"category",
+											"command",
 											"containerPort",
 											"cpuLimit",
 											"createdAt",
 											"description",
+											"devices",
+											"entrypoint",
+											"envFiles",
 											"envVars",
 											"icon",
 											"id",
 											"image",
+											"labels",
 											"memoryLimitMb",
 											"name",
 											"ownerId",
+											"privileged",
 											"restartPolicy",
 											"tag",
 											"updatedAt"
@@ -5141,7 +6296,7 @@
 								}
 							}
 						},
-						"description": "Built-in templates plus the caller's own"
+						"description": "Built-in and custom templates"
 					},
 					"401": {
 						"content": {

@@ -10,9 +10,17 @@
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import {
+		DEFAULT_BAKE_FILE,
+		DEFAULT_BAKE_TARGET,
+		isBuildMethod,
+	} from "$lib/build-methods";
+	import BuildMethodField from "$lib/components/build-method-field.svelte";
+	import CheckBox from "$lib/components/check-box.svelte";
 	import CopyBox from "$lib/components/copy-box.svelte";
 	import GitSourceFields from "$lib/components/git-source-fields.svelte";
 	import ImageCheckWarning from "$lib/components/image-check-warning.svelte";
+	import StatusBadge from "$lib/components/status-badge.svelte";
 	import StatusCheckPicker from "$lib/components/status-check-picker.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
@@ -39,7 +47,10 @@
 			buildCacheRegistryId: svc.buildCacheRegistryId ?? "",
 			buildServerRemoteHostId: svc.buildServerRemoteHostId ?? "",
 			buildSource: svc.buildSource,
+			gitBakeFile: svc.gitBakeFile ?? "",
+			gitBakeTarget: svc.gitBakeTarget ?? "",
 			gitBuildContext: svc.gitBuildContext ?? "",
+			gitBuildMethod: svc.gitBuildMethod,
 			gitDockerfilePath: svc.gitDockerfilePath ?? "",
 			autoDeployOnPush: svc.autoDeployOnPush ? "on" : "",
 			gitProviderId: svc.gitProviderId ?? "",
@@ -75,9 +86,23 @@
 	let registryUrl = $derived(values.registryUrl);
 	let gitUrl = $derived(values.gitUrl);
 	let gitRef = $derived(values.gitRef);
+	let gitBuildMethod = $derived(
+		isBuildMethod(values.gitBuildMethod) ? values.gitBuildMethod : "dockerfile",
+	);
 	let gitProviderId = $derived(values.gitProviderId ?? "");
 	let gitRepo = $derived(values.gitRepo ?? "");
 	let autoDeployOnPush = $derived(values.autoDeployOnPush === "on");
+	let gitPollEnabled = $derived(
+		form?.values ? values.gitPollEnabled === "on" : svc.gitPollEnabled,
+	);
+	let previewsEnabled = $derived(
+		form?.values ? values.previewsEnabled === "on" : svc.previewsEnabled,
+	);
+	const reconnectHref = $derived(
+		data.pushWebhook?.reconnect
+			? `/api/v1/git-providers/${data.pushWebhook.reconnect.providerId}/connect?${new URLSearchParams({ returnTo: `/services/${svc.id}/source` })}`
+			: null,
+	);
 </script>
 
 <section class="panel rounded-md">
@@ -211,6 +236,24 @@
             {#if data.pushWebhook.error}
               <p class="text-xs text-amber-600">{data.pushWebhook.error}</p>
             {/if}
+            {#if data.pushWebhook.reconnect && reconnectHref}
+              <div class="flex flex-wrap items-center gap-3">
+                <p class="text-text-muted flex-1 text-xs">
+                  The connection to {data.pushWebhook.reconnect.providerName}
+                  doesn't allow adding webhooks. Reconnect it to grant webhook
+                  access, and Homerun registers the webhook right after.
+                </p>
+                <Button data-sveltekit-reload href={reconnectHref} size="sm">
+                  Reconnect {data.pushWebhook.reconnect.providerName}
+                </Button>
+              </div>
+            {/if}
+            {#if data.pushWebhook.polling}
+              <p class="text-text-muted text-xs">
+                Until the webhook is in place, Homerun checks {gitRef} for new
+                commits every two minutes and deploys when it moves.
+              </p>
+            {/if}
             <p class="text-text-muted text-xs">
               Add a webhook in the repository's settings with this URL and
               secret, sending push events as JSON. GitLab calls the secret a
@@ -229,16 +272,107 @@
           {/if}
         </div>
       {/if}
-      <div>
-        <label class={label} for="gitDockerfilePath">Dockerfile path</label>
-        <Input
-          id="gitDockerfilePath"
-          name="gitDockerfilePath"
-          placeholder="Dockerfile"
-          type="text"
-          value={values.gitDockerfilePath}
+      {#if autoDeployOnPush}
+        <CheckBox
+          helperText="Also check the branch for new commits every two minutes, for a dashboard the provider can't reach. Homerun already does this whenever it couldn't register the webhook."
+          id="gitPollEnabled"
+          label="Poll the branch for pushes"
+          name="gitPollEnabled"
+          bind:checked={gitPollEnabled}
         />
-      </div>
+      {/if}
+      {#if data.previewOf}
+        <p class="text-text-muted text-xs">
+          This service is a pull request preview of
+          <a
+            class="text-accent underline"
+            href={resolve("/(protected)/services/[serviceId]/source", {
+              serviceId: data.previewOf.id,
+            })}
+          >
+            {data.previewOf.name}
+          </a>. It follows the pull request and is removed when it closes.
+        </p>
+      {:else}
+        <CheckBox
+          helperText={`Every pull request opened on the repo gets its own service at ${svc.slug}-pr-<number>, built from the pull request's head, redeployed on every push to it and removed when it's closed or merged. Needs the webhook.`}
+          id="previewsEnabled"
+          label="Pull request previews"
+          name="previewsEnabled"
+          bind:checked={previewsEnabled}
+        />
+        {#if data.previews.length > 0}
+          <div class="border-border divide-border divide-y rounded-md border">
+            {#each data.previews as preview (preview.id)}
+              <div class="flex flex-wrap items-center gap-3 px-4 py-3">
+                <div class="min-w-0 flex-1">
+                  <a
+                    class="text-text text-sm font-medium hover:underline"
+                    href={resolve("/(protected)/services/[serviceId]", {
+                      serviceId: preview.id,
+                    })}
+                  >
+                    #{preview.prNumber} {preview.title ?? preview.name}
+                  </a>
+                  <p class="text-text-muted truncate text-xs">
+                    {preview.branch ?? preview.gitRef}
+                    {#if preview.hostname}
+                      · {preview.hostname}
+                    {/if}
+                  </p>
+                </div>
+                <StatusBadge status={preview.status} />
+              </div>
+            {/each}
+          </div>
+        {/if}
+      {/if}
+      <BuildMethodField labelClass={label} bind:value={gitBuildMethod} />
+      {#if gitBuildMethod === "dockerfile"}
+        <div>
+          <label class={label} for="gitDockerfilePath">Dockerfile path</label>
+          <Input
+            id="gitDockerfilePath"
+            name="gitDockerfilePath"
+            placeholder="Dockerfile"
+            type="text"
+            value={values.gitDockerfilePath}
+          />
+        </div>
+      {:else}
+        <input name="gitDockerfilePath" type="hidden" value={values.gitDockerfilePath} />
+      {/if}
+      {#if gitBuildMethod === "bake"}
+        <div>
+          <label class={label} for="gitBakeFile">Bake file</label>
+          <Input
+            id="gitBakeFile"
+            name="gitBakeFile"
+            placeholder={DEFAULT_BAKE_FILE}
+            type="text"
+            value={values.gitBakeFile}
+          />
+          <p class="text-text-muted mt-1.5 text-xs">
+            Relative to the build context: docker-bake.hcl, docker-bake.json or a compose file.
+          </p>
+        </div>
+        <div>
+          <label class={label} for="gitBakeTarget">Bake target</label>
+          <Input
+            id="gitBakeTarget"
+            name="gitBakeTarget"
+            placeholder={DEFAULT_BAKE_TARGET}
+            type="text"
+            value={values.gitBakeTarget}
+          />
+          {#if errors?.gitBakeTarget}
+            <p class={errorClass}>{errors.gitBakeTarget[0]}</p>
+          {/if}
+        </div>
+      {:else}
+        <input name="gitBakeFile" type="hidden" value={values.gitBakeFile} />
+        <input name="gitBakeTarget" type="hidden" value={values.gitBakeTarget} />
+      {/if}
       <div>
         <label class={label} for="gitBuildContext">
           Build context (subdirectory)
@@ -310,9 +444,9 @@
             </SelectContent>
           </SelectRoot>
           <p class="text-text-subtle mt-1.5 text-xs">
-            If different from this service's deploy target, a build cache
-            registry above is required : the built image gets published
-            there and pulled back onto the deploy target.
+            With a build cache registry above, the built image is published
+            there and pulled back onto this host. Without one it's streamed
+            straight back from the build server instead.
           </p>
         {/if}
       </div>

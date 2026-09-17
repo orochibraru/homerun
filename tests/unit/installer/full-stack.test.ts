@@ -127,6 +127,9 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		expect(compose).toContain("traefik-dynamic:/app/traefik-dynamic");
 		expect(compose).toContain("traefik-dynamic:/etc/traefik/dynamic");
 		expect(compose).toContain("traefik-dynamic: {}");
+		expect(compose).toContain(
+			"TRAEFIK_DYNAMIC_CONFIG_DIR: /app/traefik-dynamic",
+		);
 
 		const configCall = writeFile.mock.calls.find(
 			(call) => call[0] === "/home/homerun/homerun/homerun.yaml",
@@ -155,5 +158,53 @@ describe("FullStackInstaller.bringUpFullStack", () => {
 		) as [string, string];
 		expect(composeCall[1]).toContain("DASHBOARD_DOMAIN:-homerun.example.com");
 		expect(composeCall[1]).toContain("DASHBOARD_CERT_RESOLVER:-letsencrypt}");
+	});
+
+	test("--docker=rootful runs compose as root on the system socket and leaves the port sysctl alone", async () => {
+		const run = mock(
+			async (
+				_cmd: string[],
+				_opts?: { as?: string; cwd?: string; env?: Record<string, string> },
+			) => ({ code: 0, stderr: "", stdout: "" }),
+		);
+		const writeFile = mock(
+			async (_path: string, _content: string) => undefined,
+		);
+		const appendLine = mock(async (_path: string, _line: string) => undefined);
+		const runner = { appendLine, run, writeFile } as unknown as StepRunner;
+
+		const composePath = await FullStackInstaller.bringUpFullStack({
+			dockerSocket: "/var/run/docker.sock",
+			host: "homerun.example.com",
+			rootful: true,
+			run: runner,
+			username: "homerun",
+			version: "latest",
+		});
+
+		const composeCalls = run.mock.calls.filter(
+			(call) => call[0][0] === "docker",
+		);
+		expect(composeCalls.map((call) => call[0])).toEqual([
+			["docker", "compose", "-f", composePath, "pull"],
+			["docker", "compose", "-f", composePath, "up", "-d"],
+		]);
+		for (const call of composeCalls) {
+			expect(call[1]).toEqual({
+				cwd: "/home/homerun/homerun",
+				env: { DOCKER_HOST: "unix:///var/run/docker.sock" },
+			});
+		}
+		expect(
+			writeFile.mock.calls.some((call) => call[0].startsWith("/etc/sysctl.d/")),
+		).toBe(false);
+
+		const compose = (
+			writeFile.mock.calls.find((call) => call[0] === composePath) as [
+				string,
+				string,
+			]
+		)[1];
+		expect(compose).toContain("- /var/run/docker.sock:/var/run/docker.sock:ro");
 	});
 });

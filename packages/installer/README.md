@@ -69,7 +69,17 @@ See `--help`. Notable ones: `--version=` (a release tag like `v1.2.3`, default
 reached at, see below), `--user=` (rootless account name), `--port=` (agent
 port), `--dry-run` (prints every command instead of running it, see below),
 `--yes`/`-y` (no confirmation prompt, needed for a non-interactive
-`curl | bash`).
+`curl | bash`), `--docker=rootless|rootful` (`--mode=full` only, see below).
+
+`--docker=rootful` skips step 3 above and runs the `--mode=full` stack on the
+system Docker daemon (`/var/run/docker.sock`, compose run as root) instead of
+the rootless one. [Swarm mode](../../docs/services.md#swarm-mode) needs it:
+rootless Docker can't create overlay networks. Verified live on a Multipass VM:
+on a rootless install, switching to Swarm left the daemon failing the overlay
+attach with "context deadline exceeded" and the task with
+`mkdir /var/lib/docker/network: permission denied`; the same stack on the system
+daemon initialised the swarm, attached Traefik and served replicas from a second
+node. The dashboard now refuses Swarm up front on a rootless daemon.
 
 `--mode=full` needs to know **where this instance will be reached**, and it is
 never allowed to be `localhost`. `--domain=` sets it outright (a full URL is
@@ -100,14 +110,12 @@ next to `compose.yaml`, or on `/settings`.
 
 ## Joining a host to a swarm (`swarm-join.sh`)
 
-Separate one-off script, not part of the TypeScript installer above : joins this
-host to an existing Docker Swarm as a worker (on its own rootless Docker daemon)
-and installs the Homerun Agent as a `systemd --user` unit against that same
-daemon. This is what makes a remote box usable once the main instance's Settings
-→ Docker → Orchestration is switched to Swarm (see
-`$lib/services/docker/swarm.ts`) : a swarm-mode service only schedules onto
-nodes that are actually members of the swarm, plain Remote Hosts (a
-separately-reachable Docker daemon) don't automatically become that.
+Separate script, not part of the TypeScript installer above: joins this host to
+an existing Homerun swarm as a worker, on the **system (rootful)** Docker
+daemon, then installs the Homerun Agent by downloading the installer binary and
+running it with `--mode=agent`. The manager has to be on the system daemon too
+(`--docker=rootful`, see Flags): rootless Docker can't create the overlay
+networks swarm services join.
 
 Get the join token and manager address from the swarm manager itself first:
 
@@ -124,23 +132,38 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/i
 
 Same "only while the repo is public" caveat as `bootstrap.sh` above applies :
 otherwise download `packages/installer/swarm-join.sh` directly and run it with
-`sudo bash`. `--user=` (default `homerun`) and `--version=` (agent binary
-release tag, default `latest`) are both optional, same meaning as the main
-installer's flags.
+`sudo bash`. Optional flags: `--advertise-addr=<ip>` (needed when the node has
+several network interfaces), `--user=` (the agent's rootless account, default
+`homerun`) and `--version=` (the release the agent comes from, default
+`latest`). A `--manager=` without a port gets `:2377`. Re-running it on a node
+that's already in a swarm skips the join. Nodes must reach each other on
+2377/tcp, 7946/tcp+udp and 4789/udp.
 
-Deliberately a standalone bash script, not a mode of the TypeScript installer :
-a narrower job (join + agent only, no `homerun`/compose-stack setup) that
-doesn't need `StepRunner`'s dry-run machinery to stay readable. Mirrors
-`steps/rootless-docker.ts` and `steps/agent.ts`'s exact command sequences by
-hand so the two don't drift.
+**Verified** against two real disposable Multipass Ubuntu 24.04 VMs: a
+`--mode=full --docker=rootful` manager switched to Swarm from Settings, a second
+VM running the command above, the worker listed `Ready` in `docker node ls`, a
+3-replica `traefik/whoami` service deployed from the dashboard's API with two
+tasks on the worker, Traefik on the manager answering from all three replicas
+over the overlay network, stop/start through the API, and the agent's health
+endpoint reachable on the worker. That run found and fixed:
 
-**Not verified against a real second host or a real swarm** (same "couldn't be
-checked against something real in this environment" caveat as the rest of this
-installer, see below) : `bash -n` syntax-checked and `shellcheck`-clean, and
-every individual command mirrors a step already dry-run-verified in the main
-installer, but the actual `docker swarm join` handshake and the resulting
-Homerun deploy onto that node haven't been run end-to-end. Verify by hand
-against a real disposable second box before relying on it.
+1. The script hand-copied the TS installer's rootless steps and had drifted: it
+   lacked the AppArmor user-namespace profile, so the rootless install died with
+   `rootlesskit: fork/exec /proc/self/exe: permission denied` on Ubuntu 24.04.
+   The script now runs the installer binary for the agent instead of copying its
+   steps.
+2. It joined the swarm on the rootless daemon, which can't work: no overlay
+   networks. It now joins on the system daemon.
+3. Re-running the installer on a host with rootless Docker failed
+   (`get.docker.com/rootless` refuses to reinstall) and couldn't replace a
+   running agent binary (curl exit 23, "Text file busy"). The rootless install
+   is now skipped when present, the binary is downloaded next to its target and
+   renamed over it, and the agent unit is restarted rather than only started.
+
+`bun run e2e:multipass --swarm` replays this scenario (manager install, swarm
+switch, `swarm-join.sh` on a second VM, replicated deploy, Traefik check). It
+runs the local script and installer, but the agent on the worker comes from the
+latest published release.
 
 ## Building the installer itself to a binary
 
@@ -232,12 +255,9 @@ each file's own doc comments for the full detail):
    itself. Fixed by asking for (or detecting) the real address, see the Flags
    section above.
 
-**Still not verified**: `swarm-join.sh` (see its own section above), this VM
-testing round didn't touch it. Particular things worth double-checking on a
-future real run: the `XDG_RUNTIME_DIR`/`DOCKER_HOST` env threading through
-`sudo -u` (env_reset can be subtle across distros), and that
-`loginctl enable-linger` actually persists the rootless daemon across a real
-reboot (not exercised this round, the VMs weren't rebooted).
+**Still not verified**: that `loginctl enable-linger` actually persists the
+rootless daemon across a real reboot (not exercised, the VMs weren't rebooted).
+`swarm-join.sh` has its own verification notes above.
 
 This whole run is scripted and reproducible, not a one-off: from the repo root,
 `bun run e2e:multipass` (`scripts/e2e-multipass.ts`) builds these binaries from

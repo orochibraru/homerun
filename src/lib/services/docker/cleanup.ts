@@ -111,6 +111,21 @@ function imageCategory(
 	};
 }
 
+/**
+ * The volumes a volume prune may remove : unreferenced by any container
+ * (stopped ones included, which Docker already counts) and not named in
+ * `keep`, the Homerun-mounted volumes whose service's container may be gone
+ * entirely while the service still owns the data.
+ */
+export function prunableVolumes<
+	T extends { Name?: string; UsageData?: { RefCount?: number } | null },
+>(volumes: T[], keep: Set<string>): T[] {
+	return volumes.filter(
+		(volume) =>
+			(volume.UsageData?.RefCount ?? 0) <= 0 && !keep.has(volume.Name ?? ""),
+	);
+}
+
 /** Mixin adding the "Docker Cleanup" surface : previewing and pruning unused containers/images/networks/volumes/build cache. */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
 export function DockerCleanupMixin<
@@ -141,9 +156,13 @@ export function DockerCleanupMixin<
 		 * @param keepImageIds Image ids to exclude from the images category
 		 *   even if otherwise unused, e.g. retained revision images a rollback
 		 *   might still need.
+		 * @param keepVolumeNames Volume names to exclude from the volumes
+		 *   category even if no container references them, i.e. every volume
+		 *   a Homerun service mounts.
 		 */
 		async getCleanupPreview(
 			keepImageIds: string[] = [],
+			keepVolumeNames: string[] = [],
 		): Promise<CleanupPreview> {
 			const keep = new Set(keepImageIds);
 			const docker = this.getDocker();
@@ -210,14 +229,14 @@ export function DockerCleanupMixin<
 					totalCount: networks.length,
 				},
 				volumes: {
-					items: volumes
-						.filter((v) => (v.UsageData?.RefCount ?? 0) <= 0)
-						.map((v) => ({
+					items: prunableVolumes(volumes, new Set(keepVolumeNames)).map(
+						(v) => ({
 							detail: v.Driver,
 							id: v.Name ?? "",
 							label: v.Name ?? "",
 							sizeBytes: v.UsageData?.Size ?? 0,
-						})),
+						}),
+					),
 					totalCount: volumes.length,
 					totalSizeBytes: volumes.reduce(
 						(sum, v) => sum + (v.UsageData?.Size ?? 0),
@@ -320,16 +339,52 @@ export function DockerCleanupMixin<
 			};
 		}
 
-		/** Removes every unused volume on the host, including named ones (`filters: { all: true }`), via `docker volume prune`. Not scoped to Homerun-managed volumes. */
-		async pruneVolumes(): Promise<PruneSummary> {
-			const result = await this.getDocker().pruneVolumes({
-				filters: { all: ["true"] },
-			});
-			const itemsDeleted = result.VolumesDeleted?.length ?? 0;
+		/**
+		 * Removes every unused volume on the host, including named ones, not
+		 * scoped to Homerun-managed volumes. With an empty `keepVolumeNames`
+		 * this is the daemon's own `docker volume prune --all`; otherwise it
+		 * removes unreferenced volumes one at a time, skipping every kept name
+		 * (the daemon's prune only filters by label, and a volume a stopped
+		 * or removed service still mounts carries none), and logs and
+		 * continues past any single removal the daemon refuses.
+		 */
+		async pruneVolumes(keepVolumeNames: string[] = []): Promise<PruneSummary> {
+			if (keepVolumeNames.length === 0) {
+				const result = await this.getDocker().pruneVolumes({
+					filters: { all: ["true"] },
+				});
+				const itemsDeleted = result.VolumesDeleted?.length ?? 0;
+				logger.info(
+					`Pruned ${itemsDeleted} unused volume(s), reclaimed ${result.SpaceReclaimed ?? 0} bytes`,
+				);
+				return {
+					itemsDeleted,
+					spaceReclaimedBytes: result.SpaceReclaimed ?? 0,
+				};
+			}
+			const docker = this.getDocker();
+			const df = (await docker.df()) as DockerDfResponse;
+			const keep = new Set(keepVolumeNames);
+			const candidates = prunableVolumes(df.Volumes ?? [], keep);
+			let itemsDeleted = 0;
+			let spaceReclaimedBytes = 0;
+			for (const volume of candidates) {
+				if (!volume.Name) {
+					continue;
+				}
+				try {
+					// biome-ignore lint/performance/noAwaitInLoops: volumes are removed one at a time so a volume the daemon refuses only skips that one
+					await docker.getVolume(volume.Name).remove();
+					itemsDeleted += 1;
+					spaceReclaimedBytes += Math.max(0, volume.UsageData?.Size ?? 0);
+				} catch (err) {
+					logger.warn(`Skipped volume ${volume.Name} during prune`, err);
+				}
+			}
 			logger.info(
-				`Pruned ${itemsDeleted} unused volume(s), reclaimed ${result.SpaceReclaimed ?? 0} bytes`,
+				`Pruned ${itemsDeleted} unused volume(s), kept ${keep.size} volume(s) mounted by Homerun services, reclaimed ${spaceReclaimedBytes} bytes`,
 			);
-			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
+			return { itemsDeleted, spaceReclaimedBytes };
 		}
 
 		/**

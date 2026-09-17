@@ -33,7 +33,7 @@ describe("ReleaseAssets.imageRef", () => {
 });
 
 describe("ReleaseAssets.downloadReleaseBinary", () => {
-	test("curls the release asset URL to dest, then chmods it executable", async () => {
+	test("curls the release asset next to dest, chmods it, then renames it over dest", async () => {
 		const run = mock(
 			async (
 				_cmd: string[],
@@ -49,17 +49,21 @@ describe("ReleaseAssets.downloadReleaseBinary", () => {
 			"/usr/local/bin/homerun-agent",
 		);
 
-		expect(run.mock.calls[0][0]).toEqual([
-			"curl",
-			"-fsSL",
-			"https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-agent-arm64",
-			"-o",
-			"/usr/local/bin/homerun-agent",
-		]);
-		expect(run.mock.calls[1][0]).toEqual([
-			"chmod",
-			"+x",
-			"/usr/local/bin/homerun-agent",
+		expect(run.mock.calls.map((call) => call[0])).toEqual([
+			[
+				"curl",
+				"-fsSL",
+				"https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-agent-arm64",
+				"-o",
+				"/usr/local/bin/homerun-agent.download",
+			],
+			["chmod", "+x", "/usr/local/bin/homerun-agent.download"],
+			[
+				"mv",
+				"-f",
+				"/usr/local/bin/homerun-agent.download",
+				"/usr/local/bin/homerun-agent",
+			],
 		]);
 	});
 });

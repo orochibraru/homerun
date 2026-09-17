@@ -70,9 +70,9 @@ const OP_PAST_TENSE: Record<BulkOp, string> = {
 	stop: "stopped",
 };
 
-async function loadServices(userId: string, url: URL) {
+async function loadServices(url: URL) {
 	const query = parseListQuery(url, { filterKeys: ["status", "stack"] });
-	const paged = await ServiceDTO.listWithStackNamesPaged(userId, query);
+	const paged = await ServiceDTO.listWithStackNamesPaged(query);
 
 	return {
 		services: paged.items.map((r) => ({
@@ -102,7 +102,7 @@ async function runSingle(op: BulkOp, formData: FormData, userId: string) {
 		return fail(400, { error: "Missing service id." });
 	}
 
-	const svc = await ServiceDTO.get(serviceId, userId);
+	const svc = await ServiceDTO.get(serviceId);
 	if (!svc) {
 		return fail(404, { error: "Service not found." });
 	}
@@ -139,7 +139,7 @@ async function runBulk(formData: FormData, userId: string) {
 	}
 
 	const found = (
-		await Promise.all(parsed.ids.map((id) => ServiceDTO.get(id, userId)))
+		await Promise.all(parsed.ids.map((id) => ServiceDTO.get(id)))
 	).filter((svc): svc is ServiceDTO => svc !== null);
 
 	const settled = await Promise.allSettled(
@@ -164,12 +164,12 @@ async function runBulk(formData: FormData, userId: string) {
 
 export const load = async ({ parent, platform, url }) => {
 	allowLongRequest(platform);
-	const { user } = await parent();
+	await parent();
 	const query = parseListQuery(url, { filterKeys: ["status", "stack"] });
 	const [{ services, total }, facets, stacks] = await Promise.all([
-		loadServices(user.id, url),
-		ServiceDTO.listFilterFacets(user.id),
-		StackDTO.list(user.id),
+		loadServices(url),
+		ServiceDTO.listFilterFacets(),
+		StackDTO.list(),
 	]);
 
 	return {
@@ -204,8 +204,8 @@ export const actions = {
 		}
 
 		const [svc, target] = await Promise.all([
-			ServiceDTO.get(serviceId, locals.user.id),
-			ServiceDTO.get(targetId, locals.user.id),
+			ServiceDTO.get(serviceId),
+			ServiceDTO.get(targetId),
 		]);
 		if (!(svc && target)) {
 			return fail(404, { error: "Service not found." });
@@ -277,7 +277,7 @@ export const actions = {
 		}
 
 		const services = await Promise.all(
-			serviceIds.map((id) => ServiceDTO.get(id, locals.user?.id ?? "")),
+			serviceIds.map((id) => ServiceDTO.get(id)),
 		);
 		await Promise.all(
 			services

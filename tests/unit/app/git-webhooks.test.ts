@@ -4,7 +4,9 @@ import {
 	createWebhookRequest,
 	deleteWebhookPath,
 	gitWebhookUrl,
+	parsePullRequestEvent,
 	parsePushEvent,
+	previewSlug,
 	verifyGitWebhook,
 	webhookIdFrom,
 } from "../../../src/lib/git-webhooks";
@@ -164,23 +166,203 @@ describe("webhook API shapes", () => {
 	test("each provider's create request targets the repo's hooks", () => {
 		const url = gitWebhookUrl("https://homerun.example.com/", "svc-1");
 		expect(url).toBe("https://homerun.example.com/api/v1/webhooks/git/svc-1");
-		expect(createWebhookRequest("github", "acme/api", url, secret).path).toBe(
-			"/repos/acme/api/hooks",
-		);
 		expect(
-			createWebhookRequest("gitlab", "group/sub/api", url, secret).path,
+			createWebhookRequest("github", "acme/api", { secret, url }).path,
+		).toBe("/repos/acme/api/hooks");
+		expect(
+			createWebhookRequest("gitlab", "group/sub/api", { secret, url }).path,
 		).toBe("/projects/group%2Fsub%2Fapi/hooks");
 		expect(
-			createWebhookRequest("bitbucket", "ws/api", url, secret).body.events,
+			createWebhookRequest("bitbucket", "ws/api", { secret, url }).body.events,
 		).toEqual(["repo:push"]);
 		expect(deleteWebhookPath("gitea", "acme/api", "7")).toBe(
 			"/repos/acme/api/hooks/7",
 		);
 	});
 
+	test("pull request events are only subscribed when previews want them", () => {
+		expect(
+			createWebhookRequest("github", "acme/api", {
+				pullRequests: true,
+				secret,
+				url: "https://h/x",
+			}).body.events,
+		).toEqual(["push", "pull_request"]);
+		expect(
+			createWebhookRequest("gitlab", "acme/api", {
+				pullRequests: true,
+				secret,
+				url: "https://h/x",
+			}).body.merge_requests_events,
+		).toBe(true);
+		expect(
+			createWebhookRequest("bitbucket", "ws/api", {
+				pullRequests: true,
+				secret,
+				url: "https://h/x",
+			}).body.events,
+		).toContain("pullrequest:fulfilled");
+	});
+
 	test("reads the new hook's id", () => {
 		expect(webhookIdFrom("github", { id: 42 })).toBe("42");
 		expect(webhookIdFrom("bitbucket", { uuid: "{abc}" })).toBe("{abc}");
 		expect(webhookIdFrom("gitea", {})).toBeNull();
+	});
+});
+
+describe("parsePullRequestEvent", () => {
+	const sha = "68c1b9e0f1a2b3c4d5e6f708192a3b4c5d6e7f80";
+
+	function githubPayload(
+		action: string,
+		headRepo: unknown = { full_name: "acme/api" },
+	) {
+		return {
+			action,
+			number: 12,
+			pull_request: {
+				base: { repo: { full_name: "acme/api" } },
+				head: { ref: "feature/x", repo: headRepo, sha },
+				title: "Add x",
+			},
+		};
+	}
+
+	test("GitHub opened, synchronize and closed", () => {
+		const headers = new Headers({ "x-github-event": "pull_request" });
+		expect(parsePullRequestEvent(headers, githubPayload("opened"))).toEqual({
+			action: "open",
+			branch: "feature/x",
+			commit: sha,
+			fromFork: false,
+			number: 12,
+			title: "Add x",
+		});
+		expect(
+			parsePullRequestEvent(headers, githubPayload("synchronize"))?.action,
+		).toBe("update");
+		expect(
+			parsePullRequestEvent(headers, githubPayload("closed"))?.action,
+		).toBe("close");
+		expect(parsePullRequestEvent(headers, githubPayload("labeled"))).toBeNull();
+	});
+
+	test("GitHub fork, deleted fork and missing repos are forks", () => {
+		const headers = new Headers({ "x-github-event": "pull_request" });
+		expect(
+			parsePullRequestEvent(
+				headers,
+				githubPayload("opened", { fork: true, full_name: "mallory/api" }),
+			)?.fromFork,
+		).toBe(true);
+		expect(
+			parsePullRequestEvent(headers, githubPayload("opened", null))?.fromFork,
+		).toBe(true);
+		expect(
+			parsePullRequestEvent(headers, {
+				action: "opened",
+				number: 1,
+				pull_request: { head: { ref: "x", sha } },
+			})?.fromFork,
+		).toBe(true);
+	});
+
+	test("Gitea's synchronized action, same repo and fork", () => {
+		const headers = new Headers({ "x-gitea-event": "pull_request" });
+		const payload = (headRepo: string) => ({
+			action: "synchronized",
+			number: 3,
+			pull_request: {
+				base: { repo: { full_name: "team/app" } },
+				head: { ref: "fix", repo: { full_name: headRepo }, sha },
+				title: "Fix",
+			},
+		});
+		const same = parsePullRequestEvent(headers, payload("team/app"));
+		expect(same?.action).toBe("update");
+		expect(same?.fromFork).toBe(false);
+		expect(
+			parsePullRequestEvent(headers, payload("someone/app"))?.fromFork,
+		).toBe(true);
+	});
+
+	test("GitLab merge request hooks, merge closes, other projects are forks", () => {
+		const headers = new Headers({ "x-gitlab-event": "Merge Request Hook" });
+		const attributes = {
+			action: "open",
+			iid: 7,
+			last_commit: { id: sha },
+			source_branch: "mr-branch",
+			source_project_id: 42,
+			target_project_id: 42,
+			title: "MR",
+		};
+		expect(
+			parsePullRequestEvent(headers, { object_attributes: attributes }),
+		).toEqual({
+			action: "open",
+			branch: "mr-branch",
+			commit: sha,
+			fromFork: false,
+			number: 7,
+			title: "MR",
+		});
+		expect(
+			parsePullRequestEvent(headers, {
+				object_attributes: { ...attributes, source_project_id: 99 },
+			})?.fromFork,
+		).toBe(true);
+		const merged = parsePullRequestEvent(headers, {
+			object_attributes: { action: "merge", iid: 7 },
+		});
+		expect(merged?.action).toBe("close");
+		expect(merged?.fromFork).toBe(true);
+	});
+
+	test("Bitbucket builds the branch, other repositories are forks", () => {
+		const headers = new Headers({ "x-event-key": "pullrequest:rejected" });
+		const payload = (sourceRepo: string | null) => ({
+			pullrequest: {
+				destination: { repository: { full_name: "ws/api" } },
+				id: 9,
+				source: {
+					branch: { name: "b" },
+					commit: { hash: "abc123" },
+					repository: sourceRepo ? { full_name: sourceRepo } : undefined,
+				},
+				title: "T",
+			},
+		});
+		expect(parsePullRequestEvent(headers, payload("ws/api"))).toEqual({
+			action: "close",
+			branch: "b",
+			commit: null,
+			fromFork: false,
+			number: 9,
+			title: "T",
+		});
+		expect(parsePullRequestEvent(headers, payload("other/api"))?.fromFork).toBe(
+			true,
+		);
+		expect(parsePullRequestEvent(headers, payload(null))?.fromFork).toBe(true);
+	});
+
+	test("a push isn't a pull request", () => {
+		expect(
+			parsePullRequestEvent(new Headers({ "x-github-event": "push" }), {}),
+		).toBeNull();
+	});
+});
+
+describe("previewSlug", () => {
+	test("appends the pull request number", () => {
+		expect(previewSlug("api", 12)).toBe("api-pr-12");
+	});
+
+	test("stays a 63 character DNS label", () => {
+		const slug = previewSlug(`${"a".repeat(60)}-b`, 1234);
+		expect(slug.length).toBeLessThanOrEqual(63);
+		expect(slug.endsWith("-pr-1234")).toBe(true);
 	});
 });

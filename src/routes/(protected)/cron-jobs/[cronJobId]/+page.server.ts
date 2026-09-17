@@ -11,13 +11,13 @@ const logger = new Logger("CronJob");
 
 export const load = async ({ params, parent }) => {
 	const { user } = await parent();
-	const job = await CronJobDTO.get(params.cronJobId, user.id);
+	const job = await CronJobDTO.get(params.cronJobId);
 	if (!job) {
 		error(404, "Cron job not found");
 	}
 	const [runs, hosts] = await Promise.all([
 		CronJobRunDTO.listForJob(job.id),
-		RemoteHostDTO.list(user.id),
+		RemoteHostDTO.list(),
 	]);
 	return {
 		canUseExec: user.role === "admin",
@@ -34,9 +34,14 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const job = await CronJobDTO.get(params.cronJobId, locals.user.id);
+		const job = await CronJobDTO.get(params.cronJobId);
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
+		}
+		if (job.kind === "exec" && !locals.isAdmin) {
+			return fail(403, {
+				error: "Only an admin can manage a host command job.",
+			});
 		}
 
 		await job.delete();
@@ -48,9 +53,14 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const job = await CronJobDTO.get(params.cronJobId, locals.user.id);
+		const job = await CronJobDTO.get(params.cronJobId);
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
+		}
+		if (job.kind === "exec" && !locals.isAdmin) {
+			return fail(403, {
+				error: "Only an admin can manage a host command job.",
+			});
 		}
 
 		const entry = await enqueueCronJobRun(job);
@@ -62,9 +72,14 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const job = await CronJobDTO.get(params.cronJobId, locals.user.id);
+		const job = await CronJobDTO.get(params.cronJobId);
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
+		}
+		if (job.kind === "exec" && !locals.isAdmin) {
+			return fail(403, {
+				error: "Only an admin can manage a host command job.",
+			});
 		}
 
 		const formData = await request.formData();

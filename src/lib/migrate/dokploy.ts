@@ -1,6 +1,8 @@
 import { parse as parseYaml } from "yaml";
+import type { BuildMethod } from "$lib/build-methods";
 import {
 	bindVolumeName,
+	type ComposeFileDraft,
 	type ComposeServiceDraft,
 	type ComposeVolumeDraft,
 } from "$lib/compose-import";
@@ -20,6 +22,13 @@ import {
 	str,
 	trimPath,
 } from "./common";
+import {
+	attachComposeFileMounts,
+	dokployFileMounts,
+	dokployRegistry,
+	dokployStartCommand,
+	shellQuote,
+} from "./dokploy-runtime";
 
 export type DokployResourceType =
 	| "application"
@@ -82,9 +91,9 @@ export function dokployRefs(projects: unknown[]): DokployRef[] {
 
 /**
  * Converts a Dokploy resource's mounts into volume drafts: named volumes stay
- * named, bind mounts get a generated volume name, and other mount types (file
- * mounts and the like) are skipped with a warning. A `:ro` suffix marks the
- * mount read-only.
+ * named, bind mounts get a generated volume name, file mounts with content are
+ * left to `dokployFileMounts`, and anything else is skipped with a warning. A
+ * `:ro` suffix marks the mount read-only.
  */
 function mountsFor(
 	row: RawRow,
@@ -100,6 +109,9 @@ function mountsFor(
 		const readOnly = /:ro$/.test(rawPath);
 		const containerPath = rawPath.replace(/:(ro|rw)$/, "");
 		const type = str(mount, "type");
+		if (type === "file" && typeof mount.content === "string") {
+			continue;
+		}
 		const volumeName = str(mount, "volumeName");
 		const hostPath = str(mount, "hostPath");
 		if (type === "volume" && volumeName) {
@@ -248,8 +260,11 @@ interface AppOutcome {
 
 interface AppContext {
 	base: {
+		command: string[] | null;
 		cpuLimit: string | null;
+		entrypoint: string[] | null;
 		envVars: Record<string, string>;
+		files: ComposeFileDraft[];
 		memoryLimitMb: number | null;
 		name: string;
 		public: boolean;
@@ -264,8 +279,8 @@ function blockedOutcome(blocked: string, summary: string): AppOutcome {
 }
 
 /**
- * Drafts a Dokploy application deployed from a Docker image, warning when it
- * pulled from a private registry. Blocked when no image is set.
+ * Drafts a Dokploy application deployed from a Docker image, carrying its
+ * private registry credentials over. Blocked when no image is set.
  */
 function imageApp({ base, row, slug, warnings }: AppContext): AppOutcome {
 	const image = str(row, "dockerImage");
@@ -275,24 +290,28 @@ function imageApp({ base, row, slug, warnings }: AppContext): AppOutcome {
 			"docker image",
 		);
 	}
-	if (str(row, "username") || str(row, "registryUrl")) {
-		warnings.push(
-			"Pulled from a private registry on Dokploy : add the registry credentials on the service.",
-		);
-	}
 	const draft = singleDraft({
 		...base,
 		containerPort: publicPort(row),
 		image,
+		registry: dokployRegistry(row, warnings),
 		volumes: mountsFor(row, slug, warnings),
 	});
 	return { blocked: null, drafts: [draft], summary: imageSummary(draft) };
 }
 
+const DOKPLOY_BUILD_METHODS: Record<string, BuildMethod> = {
+	dockerfile: "dockerfile",
+	heroku_buildpacks: "heroku",
+	nixpacks: "nixpacks",
+	paketo_buildpacks: "paketo",
+	railpack: "railpack",
+};
+
 /**
  * Drafts a Dokploy application built from a git source as a git-based service.
- * Blocked when the source has nothing to clone, isn't a Dockerfile build, or has
- * no repository URL.
+ * Blocked when the source has nothing to clone, uses a build type Homerun has
+ * no builder for (a static build), or has no repository URL.
  */
 function gitApp(
 	{ base, row, slug, warnings }: AppContext,
@@ -306,10 +325,17 @@ function gitApp(
 		);
 	}
 	const buildType = str(row, "buildType") ?? "dockerfile";
-	if (buildType !== "dockerfile") {
+	const method = DOKPLOY_BUILD_METHODS[buildType];
+	if (!method) {
 		return blockedOutcome(
-			`Built with ${buildType} on Dokploy : Homerun only builds from a Dockerfile.`,
+			`Built with ${buildType} on Dokploy : Homerun builds from a Dockerfile, Nixpacks, Railpack or Heroku/Paketo buildpacks.`,
 			`git ${git.url ?? "repository"} · ${buildType}`,
+		);
+	}
+	const herokuVersion = str(row, "herokuVersion");
+	if (method === "heroku" && herokuVersion && herokuVersion !== "24") {
+		warnings.push(
+			`Built with the heroku/builder:${herokuVersion} stack on Dokploy : Homerun builds on heroku/builder:24.`,
 		);
 	}
 	if (!git.url) {
@@ -326,10 +352,15 @@ function gitApp(
 	const draft = singleDraft({
 		...base,
 		build: {
-			context: joinPaths(git.buildPath, str(row, "dockerContextPath")),
-			dockerfile: trimPath(str(row, "dockerfile")),
+			context:
+				method === "dockerfile"
+					? joinPaths(git.buildPath, str(row, "dockerContextPath"))
+					: trimPath(git.buildPath),
+			dockerfile:
+				method === "dockerfile" ? trimPath(str(row, "dockerfile")) : null,
 			gitRef: git.branch,
 			gitUrl: git.url,
+			method,
 		},
 		containerPort: publicPort(row),
 		image: null,
@@ -342,8 +373,8 @@ const PROJECT_VARIABLE_RE = /\$\{\{/;
 
 /**
  * Converts a Dokploy application detail row into a migration entry with one
- * service draft, built from its image or git source, warning about settings that
- * don't carry over (custom command, project-level variable references).
+ * service draft, built from its image or git source, carrying its start command
+ * and file mounts over and warning about project-level variable references.
  */
 export function dokployApplication(
 	row: RawRow,
@@ -353,19 +384,16 @@ export function dokployApplication(
 	const context: AppContext = {
 		base: {
 			envVars: parseEnvBlob(row.env),
+			files: dokployFileMounts(row),
 			name,
 			public: rows(row.domains).length > 0,
+			...dokployStartCommand(row),
 			...limits(row),
 		},
 		row,
 		slug: sourceSlug(name),
 		warnings: [],
 	};
-	if (str(row, "command") || str(row, "args")) {
-		context.warnings.push(
-			"A custom command is set on Dokploy : it isn't applied here.",
-		);
-	}
 	if (
 		Object.values(context.base.envVars).some((value) =>
 			PROJECT_VARIABLE_RE.test(value),
@@ -482,8 +510,13 @@ export function dokployCompose(
 			warnings: [],
 		};
 	}
-	const parsed = composeDrafts(file, parseEnvBlob(row.env));
+	const parsed = composeDrafts(
+		file,
+		parseEnvBlob(row.env),
+		typeof row.env === "string" ? { ".env": row.env } : {},
+	);
 	prefixComposeVolumes(parsed.drafts, file, str(row, "appName"));
+	attachComposeFileMounts(parsed, file, row);
 	for (const domain of rows(row.domains)) {
 		const target = str(domain, "serviceName");
 		const draft =
@@ -547,9 +580,10 @@ const DATABASES: Record<string, { env: Record<string, string>; port: number }> =
 
 /**
  * Converts a Dokploy database into a single private service draft, mapping its
- * stored credentials onto the image's standard env vars and warning about the
- * Redis password and host port exposure, which don't carry over. Blocked when no
- * image is set.
+ * stored credentials onto the image's standard env vars, carrying its start
+ * command over (Redis's password is applied through it, same as Dokploy does)
+ * and warning about host port exposure, which doesn't. Blocked when no image
+ * is set.
  */
 export function dokployDatabase(
 	row: RawRow,
@@ -568,11 +602,11 @@ export function dokployDatabase(
 		}
 	}
 	Object.assign(envVars, parseEnvBlob(row.env));
-	if (type === "redis" && str(row, "databasePassword")) {
-		warnings.push(
-			"Dokploy sets the Redis password through the start command, which isn't applied here : set --requirepass yourself.",
-		);
-	}
+	const password = str(row, "databasePassword");
+	const redisFallback =
+		type === "redis" && password
+			? `exec redis-server --requirepass ${shellQuote(password)}`
+			: null;
 	if (num(row, "externalPort")) {
 		warnings.push(
 			"Exposed on a host port on Dokploy : Homerun only reaches it over the internal network.",
@@ -581,8 +615,10 @@ export function dokployDatabase(
 	const image = str(row, "dockerImage");
 	const draft = singleDraft({
 		...limits(row),
+		...dokployStartCommand(row, redisFallback),
 		containerPort: spec.port || null,
 		envVars,
+		files: dokployFileMounts(row),
 		image,
 		name,
 		public: false,

@@ -9,7 +9,7 @@ export const GET = async ({ params, locals, platform }) => {
 		return new Response("Unauthorized", { status: 401 });
 	}
 
-	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
 		return new Response("Not found", { status: 404 });
 	}

@@ -1,4 +1,6 @@
-export interface BuiltinTemplate {
+import type { ServiceRuntimeOptions } from "$lib/service-runtime";
+
+export interface BuiltinTemplate extends Partial<ServiceRuntimeOptions> {
 	category: string;
 	containerPort: number;
 	description: string;

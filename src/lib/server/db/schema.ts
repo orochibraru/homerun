@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+	type AnyPgColumn,
 	boolean,
 	doublePrecision,
 	index,
@@ -10,12 +11,14 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { BuildMethod } from "$lib/build-methods";
 import type {
 	BlockSeverity,
 	ImageScanFinding,
 	ImageScanStatus,
 	SeverityCounts,
 } from "$lib/image-scan";
+import type { BackupRunKind, RevisionConfig } from "$lib/revision-config";
 import type {
 	ContainerStatus,
 	JobStatus,
@@ -534,6 +537,8 @@ export const instanceSettings = pgTable("instance_settings", {
 		"image_scan_block_severity",
 	).$type<BlockSeverity>(),
 	imageScanEnabled: boolean("image_scan_enabled"),
+	imageScanRequired: boolean("image_scan_required"),
+	retainedImagesPerService: integer("retained_images_per_service"),
 	// {name, clientId, clientSecretEnc, discoveryUrl, enabled, pkce, scopes}[]
 	// : see genericOAuth's config shape in $lib/services/auth.ts.
 	oauthProviders: jsonb("oauth_providers")
@@ -671,8 +676,18 @@ export const invitation = pgTable(
 export const template = pgTable(
 	"template",
 	{
+		capAdd: jsonb("cap_add").$type<string[]>().default([]).notNull(),
 		category: text("category"), // "database" | "cache" | "monitoring" | "automation" | "other"
+		command: jsonb("command").$type<string[] | null>(),
 		containerPort: integer("container_port").notNull(),
+		devices: jsonb("devices").$type<string[]>().default([]).notNull(),
+		entrypoint: jsonb("entrypoint").$type<string[] | null>(),
+		envFiles: jsonb("env_files").$type<string[]>().default([]).notNull(),
+		labels: jsonb("labels")
+			.$type<Record<string, string>>()
+			.default({})
+			.notNull(),
+		privileged: boolean("privileged").default(false).notNull(),
 		cpuLimit: text("cpu_limit"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
@@ -745,6 +760,16 @@ export const service = pgTable(
 			.notNull(),
 		authRequired: boolean("auth_required").default(false).notNull(),
 		autoRollback: boolean("auto_rollback").default(false).notNull(),
+		capAdd: jsonb("cap_add").$type<string[]>().default([]).notNull(),
+		command: jsonb("command").$type<string[] | null>(),
+		devices: jsonb("devices").$type<string[]>().default([]).notNull(),
+		entrypoint: jsonb("entrypoint").$type<string[] | null>(),
+		envFiles: jsonb("env_files").$type<string[]>().default([]).notNull(),
+		labels: jsonb("labels")
+			.$type<Record<string, string>>()
+			.default({})
+			.notNull(),
+		privileged: boolean("privileged").default(false).notNull(),
 		// Registry to use as a git-build layer cache (git mode only, see
 		// docker/git-build.ts) : null means no cache-from/cache-to, every
 		// build is from scratch, same as before this existed.
@@ -812,11 +837,18 @@ export const service = pgTable(
 		// network by slug alias, plus its stack's network if any).
 		dnsResolvable: boolean("dns_resolvable").default(true).notNull(),
 		envVars: jsonb("env_vars").$type<Record<string, string>>().default({}),
-		// Relative to gitBuildContext. Defaults to "Dockerfile" when unset.
+		// Bake file relative to gitBuildContext, "docker-bake.hcl" when unset.
+		gitBakeFile: text("git_bake_file"),
+		// Bake target or group resolving to one target, "default" when unset.
+		gitBakeTarget: text("git_bake_target"),
 		gitBuildContext: text("git_build_context"),
+		gitBuildMethod: text("git_build_method")
+			.$type<BuildMethod>()
+			.default("dockerfile")
+			.notNull(),
+		// Relative to gitBuildContext. Defaults to "Dockerfile" when unset.
 		gitDockerfilePath: text("git_dockerfile_path"),
-		// Branch or tag : see $lib/services/docker/git-build.ts (a bare commit
-		// SHA needs a full, non-shallow clone, not supported here).
+		// Branch, tag or full commit SHA : see $lib/git-ref.ts.
 		gitRef: text("git_ref"),
 		gitUrl: text("git_url"),
 		gitProviderId: text("git_provider_id"),
@@ -825,6 +857,19 @@ export const service = pgTable(
 		gitWebhookId: text("git_webhook_id"),
 		gitWebhookSecretEnc: text("git_webhook_secret_enc"),
 		gitWebhookError: text("git_webhook_error"),
+		gitWebhookReconnect: boolean("git_webhook_reconnect")
+			.default(false)
+			.notNull(),
+		gitPollEnabled: boolean("git_poll_enabled").default(false).notNull(),
+		gitLastSeenCommit: text("git_last_seen_commit"),
+		previewsEnabled: boolean("previews_enabled").default(false).notNull(),
+		previewParentId: text("preview_parent_id").references(
+			(): AnyPgColumn => service.id,
+			{ onDelete: "cascade" },
+		),
+		previewPrNumber: integer("preview_pr_number"),
+		previewPrTitle: text("preview_pr_title"),
+		previewBranch: text("preview_branch"),
 		id: text("id").primaryKey(),
 		// e.g. "ghcr.io/acme/api"
 		image: text("image").notNull(),
@@ -899,6 +944,10 @@ export const service = pgTable(
 		index("service_userId_idx").on(table.userId),
 		index("service_slug_idx").on(table.slug),
 		index("service_stackId_idx").on(table.stackId),
+		uniqueIndex("service_previewParentId_previewPrNumber_uidx").on(
+			table.previewParentId,
+			table.previewPrNumber,
+		),
 	],
 );
 
@@ -906,6 +955,7 @@ export const deployment = pgTable(
 	"deployment",
 	{
 		buildSource: text("build_source").$type<"image" | "git">(),
+		configSnapshot: jsonb("config_snapshot").$type<RevisionConfig>(),
 		containerId: text("container_id"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		errorMessage: text("error_message"),
@@ -925,6 +975,7 @@ export const deployment = pgTable(
 		// "Starting container...") : polled by the Overview tab while a deploy
 		// is in flight, kept around after for a lightweight audit trail.
 		log: text("log").default(""),
+		restoreConfig: boolean("restore_config").default(false).notNull(),
 		rollbackOfDeploymentId: text("rollback_of_deployment_id"),
 		serviceId: text("service_id")
 			.notNull()
@@ -985,7 +1036,15 @@ export const storageVolume = pgTable(
 		// "backups/my-app" : per-volume, even when several volumes share one
 		// destination.
 		backupPrefix: text("backup_prefix"),
+		backupPreCommand: text("backup_pre_command"),
+		backupPreCommandServiceId: text("backup_pre_command_service_id").references(
+			() => service.id,
+			{ onDelete: "set null" },
+		),
 		backupSchedule: text("backup_schedule"),
+		backupStopServices: boolean("backup_stop_services")
+			.default(false)
+			.notNull(),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		description: text("description"),
 		id: text("id").primaryKey(),
@@ -1046,6 +1105,8 @@ export const backupRun = pgTable(
 		error: text("error"),
 		finishedAt: timestamp("finished_at", { mode: "date" }),
 		id: text("id").primaryKey(),
+		key: text("key"),
+		kind: text("kind").$type<BackupRunKind>().default("backup").notNull(),
 		sizeBytes: integer("size_bytes"),
 		startedAt: timestamp("started_at", { mode: "date" }).notNull(),
 		// null while the run is still in progress (startedAt set, finishedAt
@@ -1479,7 +1540,7 @@ export const serviceVolumeRelations = relations(serviceVolume, ({ one }) => ({
 	}),
 }));
 
-export type UserRole = "user" | "admin";
+export type UserRole = "admin" | "developer" | "viewer";
 export const statusPage = pgTable(
 	"status_page",
 	{

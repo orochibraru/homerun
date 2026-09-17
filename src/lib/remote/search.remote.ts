@@ -29,21 +29,20 @@ function withQuery(path: string, q: string): string {
 }
 
 /**
- * Global search over the user's services, stacks, templates, cron jobs and
+ * Global search over the instance's services, stacks, templates, cron jobs and
  * status pages, each mapped to a result linking to its page.
  */
 async function searchWorkspace(
-	userId: string,
 	q: string,
 	limit: number,
 ): Promise<SearchResult[]> {
 	const [services, stacks, templates, cronJobs, statusPages] =
 		await Promise.all([
-			ServiceDTO.search(userId, q, limit),
-			StackDTO.search(userId, q, limit),
-			TemplateDTO.search(userId, q, limit),
-			CronJobDTO.search(userId, q, limit),
-			StatusPageDTO.search(userId, q, limit),
+			ServiceDTO.search(q, limit),
+			StackDTO.search(q, limit),
+			TemplateDTO.search(q, limit),
+			CronJobDTO.search(q, limit),
+			StatusPageDTO.search(q, limit),
 		]);
 
 	return [
@@ -106,8 +105,8 @@ async function searchWorkspace(
 }
 
 /**
- * Global search over the user's remote hosts, storage volumes, S3 destinations,
- * build cache registries and notification channels, each mapped to a result
+ * Global search over the instance's remote hosts, storage volumes, S3
+ * destinations, build cache registries and the user's own notification channels, each mapped to a result
  * linking to its page.
  */
 async function searchInfrastructure(
@@ -117,10 +116,10 @@ async function searchInfrastructure(
 ): Promise<SearchResult[]> {
 	const [remoteHosts, volumes, s3Destinations, registries, channels] =
 		await Promise.all([
-			RemoteHostDTO.search(userId, q, limit),
-			StorageVolumeDTO.search(userId, q, limit),
-			S3DestinationDTO.search(userId, q, limit),
-			BuildCacheRegistryDTO.search(userId, q, limit),
+			RemoteHostDTO.search(q, limit),
+			StorageVolumeDTO.search(q, limit),
+			S3DestinationDTO.search(q, limit),
+			BuildCacheRegistryDTO.search(q, limit),
 			NotificationChannelDTO.search(userId, q, limit),
 		]);
 
@@ -229,7 +228,7 @@ export const searchContent = query(
 		const user = requireUser();
 		const isAdmin = Boolean(getRequestEvent().locals.isAdmin);
 		const groups = await Promise.all([
-			searchWorkspace(user.id, q, SEARCH_GROUP_LIMIT),
+			searchWorkspace(q, SEARCH_GROUP_LIMIT),
 			searchInfrastructure(user.id, q, SEARCH_GROUP_LIMIT),
 			searchInstance(q, SEARCH_GROUP_LIMIT, isAdmin),
 		]);

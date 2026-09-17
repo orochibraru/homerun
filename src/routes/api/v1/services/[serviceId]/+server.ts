@@ -1,11 +1,14 @@
 import { json } from "@sveltejs/kit";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { HOST_ACCESS_MESSAGE, hostAccessChanged } from "$lib/host-access";
 import { Logger } from "$lib/logger";
+import { invalidateGatedService } from "$lib/server/gated-service-cache";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateServiceApiBody } from "$lib/server/validation/api";
 import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { DockerService } from "$lib/services/docker.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
+import { PreviewService } from "$lib/services/preview.service";
 import { encryptSecret } from "$lib/services/secrets";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
@@ -15,7 +18,7 @@ export const GET = async ({ params, locals }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
 		return json({ error: "Not found" }, { status: 404 });
 	}
@@ -31,7 +34,7 @@ export const GET = async ({ params, locals }) => {
 	// service. Same fix, same call, as the dashboard's own reconciliation.
 	if (svc.containerId || svc.swarmServiceId) {
 		await DockerService.syncServiceStatus(svc.id);
-		const fresh = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const fresh = await ServiceDTO.get(params.serviceId);
 		return json((fresh ?? svc).toJSON());
 	}
 	return json(svc.toJSON());
@@ -41,7 +44,7 @@ export const PATCH = async ({ params, request, locals }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
 		return json({ error: "Not found" }, { status: 404 });
 	}
@@ -55,11 +58,15 @@ export const PATCH = async ({ params, request, locals }) => {
 		);
 	}
 	const { registryPassword, ...rest } = result.data;
+	if (!locals.isAdmin && hostAccessChanged(svc.toJSON(), rest)) {
+		return json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
+	}
 
 	const previousWebhook = {
 		gitProviderId: svc.gitProviderId,
 		gitRepo: svc.gitRepo,
 		gitWebhookId: svc.gitWebhookId,
+		previewsEnabled: svc.toJSON().previewsEnabled,
 	};
 	await svc.update({
 		...rest,
@@ -68,6 +75,10 @@ export const PATCH = async ({ params, request, locals }) => {
 			: {}),
 	});
 	await GitWebhookService.sync(svc, previousWebhook);
+	if (previousWebhook.previewsEnabled && !svc.toJSON().previewsEnabled) {
+		await PreviewService.removeAll(svc);
+	}
+	invalidateGatedService(svc.id);
 
 	logger.info(
 		`Service updated via API: service=${svc.id} user=${locals.user.id}`,
@@ -80,7 +91,7 @@ export const DELETE = async ({ params, locals, platform, url }) => {
 	if (!locals.user) {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
-	const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+	const svc = await ServiceDTO.get(params.serviceId);
 	if (!svc) {
 		return json({ error: "Not found" }, { status: 404 });
 	}

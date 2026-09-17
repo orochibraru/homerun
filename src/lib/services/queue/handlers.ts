@@ -2,6 +2,7 @@ import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import type { JobDTO } from "$lib/dto/job-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import type { JobType } from "$lib/types";
@@ -17,15 +18,18 @@ import {
 	type MirrorGcResult,
 } from "../image-mirror-gc.service.ts";
 import { ImageScanService } from "../image-scan.service.ts";
+import { NotificationChannelService } from "../notification-channel.service.ts";
 import { RevisionService } from "../revision.service.ts";
 import { S3BackupService } from "../s3-backup.service.ts";
 import {
 	backupJobPayload,
+	backupRestoreJobPayload,
 	cronJobPayload,
 	type DockerCleanupAction,
 	deployJobPayload,
 	dockerCleanupJobPayload,
 	imageScanJobPayload,
+	notificationDeliveryJobPayload,
 } from "./payloads.ts";
 
 export type JobResult = Record<string, unknown> | null;
@@ -41,7 +45,7 @@ async function runDeploy(entry: JobDTO): Promise<JobResult> {
 	const { deploymentId, serviceId, trigger, userId } = deployJobPayload.parse(
 		entry.payload,
 	);
-	const svc = await ServiceDTO.get(serviceId, userId);
+	const svc = await ServiceDTO.get(serviceId);
 	if (!svc) {
 		const message = "The service was deleted before its deploy ran.";
 		const dep = await DeploymentDTO.get(deploymentId);
@@ -66,8 +70,8 @@ async function runDeploy(entry: JobDTO): Promise<JobResult> {
 }
 
 async function runBackup(entry: JobDTO): Promise<JobResult> {
-	const { userId, volumeId } = backupJobPayload.parse(entry.payload);
-	const volume = await StorageVolumeDTO.get(volumeId, userId);
+	const { volumeId } = backupJobPayload.parse(entry.payload);
+	const volume = await StorageVolumeDTO.get(volumeId);
 	if (!volume) {
 		throw new Error("The volume was deleted before its backup ran.");
 	}
@@ -80,9 +84,28 @@ async function runBackup(entry: JobDTO): Promise<JobResult> {
 	return { key: result.key ?? null, sizeBytes: result.sizeBytes ?? null };
 }
 
+async function runBackupRestore(entry: JobDTO): Promise<JobResult> {
+	const { key, stopServices, volumeId, wipe } = backupRestoreJobPayload.parse(
+		entry.payload,
+	);
+	const volume = await StorageVolumeDTO.get(volumeId);
+	if (!volume) {
+		throw new Error("The volume was deleted before its restore ran.");
+	}
+
+	const result = await S3BackupService.restoreVolume(volume, key, {
+		stopServices,
+		wipe,
+	});
+	if (!result.success) {
+		throw new Error(result.error ?? "Restore failed.");
+	}
+	return { key, sizeBytes: result.sizeBytes ?? null };
+}
+
 async function runCronJob(entry: JobDTO): Promise<JobResult> {
-	const { cronJobId, userId } = cronJobPayload.parse(entry.payload);
-	const job = await CronJobDTO.get(cronJobId, userId);
+	const { cronJobId } = cronJobPayload.parse(entry.payload);
+	const job = await CronJobDTO.get(cronJobId);
 	if (!job) {
 		throw new Error("The cron job was deleted before it ran.");
 	}
@@ -95,8 +118,8 @@ async function runCronJob(entry: JobDTO): Promise<JobResult> {
 }
 
 async function runImageScan(entry: JobDTO): Promise<JobResult> {
-	const { serviceId, userId } = imageScanJobPayload.parse(entry.payload);
-	const svc = await ServiceDTO.get(serviceId, userId);
+	const { serviceId } = imageScanJobPayload.parse(entry.payload);
+	const svc = await ServiceDTO.get(serviceId);
 	if (!svc) {
 		throw new Error("The service was deleted before its scan ran.");
 	}
@@ -140,8 +163,17 @@ async function cleanupRunner(
 				await RevisionService.retainedImageIds(),
 			);
 		default:
-			return DockerService.pruneVolumes();
+			return DockerService.pruneVolumes(
+				await ServiceVolumeDTO.mountedVolumeNames(),
+			);
 	}
+}
+
+async function runNotificationDelivery(entry: JobDTO): Promise<JobResult> {
+	const { channelId, message } = notificationDeliveryJobPayload.parse(
+		entry.payload,
+	);
+	return await NotificationChannelService.retryDelivery(channelId, message);
 }
 
 async function runDockerCleanup(entry: JobDTO): Promise<JobResult> {
@@ -151,8 +183,10 @@ async function runDockerCleanup(entry: JobDTO): Promise<JobResult> {
 
 export const jobHandlers: Record<JobType, JobHandler> = {
 	backup: runBackup,
+	backup_restore: runBackupRestore,
 	cron_job: runCronJob,
 	deploy: runDeploy,
 	docker_cleanup: runDockerCleanup,
 	image_scan: runImageScan,
+	notification_delivery: runNotificationDelivery,
 };

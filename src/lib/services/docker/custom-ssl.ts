@@ -28,13 +28,10 @@ export function DockerCustomSslMixin<
 		/**
 		 * Writes (or removes) a service's custom SSL cert/key as files, plus
 		 * a Traefik dynamic-config YAML file pointing at them, into
-		 * `config.traefik.dynamicConfigDir`. This is genuinely inert unless
-		 * the admin has configured that dir *and* bind-mounted the same path
-		 * into the Traefik container with its file provider enabled (see
-		 * compose.yaml's commented-out example) : this app never touches the
-		 * Traefik container itself, only files on the host it's told to
-		 * write to. A no-op (logged once, not per-call) when
-		 * dynamicConfigDir is unset.
+		 * `config.traefik.dynamicConfigDir` (`TRAEFIK_DYNAMIC_CONFIG_DIR`,
+		 * set by every shipped compose file and the installer to a volume
+		 * Traefik's file provider also reads). A no-op (logged once, not
+		 * per-call) when dynamicConfigDir is unset.
 		 *
 		 * Traefik's file provider picks up the dynamic config on its own
 		 * (`--providers.file.watch=true`) : no restart needed, unlike the

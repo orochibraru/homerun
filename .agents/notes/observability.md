@@ -91,10 +91,10 @@ pattern.
 
 ## In-app notifications (`notification` table, `NotificationDTO`, `notification-bell.svelte`)
 
-A curated, per-user lifecycle event feed, deliberately separate from the
-`app_log`/Errors-tab system above: written explicitly at each event site rather
-than derived from logs, so it stays a short, meaningful list rather than every
-warn/error the app produces. Shown via a bell icon
+A curated lifecycle event feed, one copy per account, deliberately separate from
+the `app_log`/Errors-tab system above: written explicitly at each event site
+rather than derived from logs, so it stays a short, meaningful list rather than
+every warn/error the app produces. Shown via a bell icon
 (`$lib/components/notification-bell.svelte`, a Popover-based dropdown) in the
 protected layout's header, next to `$lib/components/profile-menu.svelte` (the
 account/sign-out dropdown, pulled out of `+layout.svelte`'s previously-inline
@@ -111,13 +111,13 @@ markup as its own component alongside this feature).
   scoped, backs the bell dropdown's per-row remove button), and a
   fire-and-forget static `notify(input)` helper, never awaited, swallows its own
   errors, same posture as `Logger.warn`/`.error`'s `AppLogDTO` write, a
-  notification call can't fail the operation it's attached to. `create`
-  amortized-prunes each user back to their newest 200 rows on ~5% of writes,
-  same convention as `AppLogDTO`'s 5000-row prune.
-  `notifyServiceError(serviceId, message)` is the one unscoped-by-owner query on
-  this DTO (same precedent as `ServiceDTO.listCronEnabled`), used by
-  `Logger.error` to attribute a runtime error notification without threading a
-  userId through every call site.
+  notification call can't fail the operation it's attached to. `notify` goes
+  through `broadcast(input)`, which inserts one row per account (resources are
+  shared, so every account hears about every event, and each reads and clears
+  its own copy) and amortized-prunes each feed back to its newest 200 rows on
+  ~5% of writes, same convention as `AppLogDTO`'s 5000-row prune.
+  `notifyServiceError(serviceId, message)` broadcasts too, used by
+  `Logger.error` to attribute a runtime error notification to a service.
 - Call sites: `deploy.service.ts` (deploy success, auto-redeploy, deploy
   failure), `$lib/logger.ts` (`Logger.error` → `notifyServiceError`),
   `services/new/+page.server.ts` (service created), the service Overview page's
@@ -138,7 +138,8 @@ too, see Outbound notification channels next.
 ## Outbound notification channels (`notification_channel`, `NotificationChannelDTO`, `notification-channel.service.ts`)
 
 The account-wide counterpart to the in-app feed above: a `notification_channel`
-row is a `kind` (`"webhook"` generic JSON POST, `"discord"` embed, or `"email"`)
+row is a `kind` (`"webhook"` generic JSON POST, `"discord"` embed, `"slack"`
+incoming-webhook attachment, `"telegram"` Bot API `sendMessage`, or `"email"`)
 plus a `target` and an `events` jsonb column (`NotificationEvent[]`, DB default
 and DTO default
 `["build.failed","build.checks_failed","update.failed","deploy.unhealthy","deploy.rolled_back"]`),
@@ -163,27 +164,46 @@ end in `.failed`. `deployEvent(buildSource, trigger, ok)` picks the right one of
 the first three from what `deploy.service.ts` already knows; `isFailureEvent` is
 what colors a Discord embed red vs. green.
 
-`NotificationChannelService.dispatch(userId, message)` fans a message out to
-every enabled channel subscribed to that event
+`NotificationChannelService.dispatch(message)` fans a message out to every
+account's enabled channels subscribed to that event
 (`NotificationChannelDTO.listSubscribed`, filtered in code, not with jsonb `@>`,
 see the jsonb trap in `data-and-config.md`), one delivery attempt per channel
 via `Promise.all`; a channel that throws is caught, logged and written to its
 own `lastError` rather than aborting the others, same posture as
-`status-alert.service.ts` below and no retry beyond that. `notify`/
-`notifyDeploy` are fire-and-forget (never awaited) so a channel outage can't
-fail the deploy or probe tick that triggered it. `deploy.service.ts` calls
-`notifyDeploy` from both `#recordFailure` and its success path;
-`status-alert.service.ts`'s `StatusAlertService.dispatch` calls the shared
-`dispatch` directly for uptime transitions, it no longer has its own delivery
-code (that used to be scoped to a status page's channels, see Status pages in
-`services-and-templates.md` for why it isn't anymore). Email requires SMTP
-configured and says so instead of failing opaquely; a Discord target is
-validated to look like `https://discord.com/api/webhooks/...` (or the
-`discordapp.com`/`canary`/`ptb` variants) before it's saved
-(`validateChannelTarget`, `$lib/server/validation/notification-channel.ts`). The
-payload builders (`messageSubject`/`messageBody`/`discordPayload`) and
-`deployEvent`/`isFailureEvent` are pure and unit-tested in
-`tests/unit/app/notification-channel.test.ts`.
+`status-alert.service.ts` below. **A failed delivery is retried through the job
+queue** (see `jobs-and-queue.md`): `#send` enqueues
+`deliveryRetryJob(channel, message)`, a `notification_delivery` job owned by the
+channel's user carrying `{channelId, message}` (`notificationDeliveryJobPayload`
+re-validates it, including the event name), `runAt` 30s out and `maxAttempts` 4,
+so the worker's own `10s * 2^attempts` backoff spaces the rest. Its handler
+calls `NotificationChannelService.retryDelivery`, which loads the channel
+unscoped (`NotificationChannelDTO.getForDelivery`), returns `{delivered: false}`
+for a channel deleted, disabled or unsubscribed since, and otherwise rethrows a
+failure after writing `lastError` so the worker schedules the next try.
+`sendTest` stays a single direct attempt. `notify`/ `notifyDeploy` are
+fire-and-forget (never awaited) so a channel outage can't fail the deploy or
+probe tick that triggered it. `deploy.service.ts` calls `notifyDeploy` from both
+`#recordFailure` and its success path; `status-alert.service.ts`'s
+`StatusAlertService.dispatch` calls the shared `dispatch` directly for uptime
+transitions, it no longer has its own delivery code (that used to be scoped to a
+status page's channels, see Status pages in `services-and-templates.md` for why
+it isn't anymore). Email requires SMTP configured and says so instead of failing
+opaquely; a Discord target is validated to look like
+`https://discord.com/api/webhooks/...` (or the `discordapp.com`/`canary`/`ptb`
+variants) and a Slack one to be an https
+`hooks.slack.com/services|triggers|workflows/` URL before it's saved
+(`validateChannelTarget`, `$lib/server/validation/notification-channel.ts`). **A
+Telegram channel has two secrets and one `target` column**: the create form
+posts `telegramBotToken`/`telegramChatId`, `channelTargetFromForm` packs them as
+`<bot token>/<chat id>` (`$lib/notification-channel-target.ts`, split back with
+`parseTelegramTarget` on the last `/`), validated as `\d+:[\w-]{30,}` and a
+numeric chat id or `@name`. `/notification-channels`' `load` swaps every target
+for `channelTargetLabel`, so a Telegram row reaches the browser as `Chat <id>`
+and the token never does; a Telegram error reports Telegram's own `description`,
+never the request URL that carries the token. The payload builders
+(`messageSubject`/`messageBody`/`discordPayload`/
+`slackPayload`/`telegramPayload`) and `deployEvent`/`isFailureEvent` are pure
+and unit-tested in `tests/unit/app/notification-channel.test.ts`.
 
 **A message is built once, in `notification-messages.ts`, and every channel
 renders the same shape**: `title`, `detail`, a list of `fields` (name/value) and
@@ -194,10 +214,12 @@ public URL on success; a failure's `detail` is the error plus the last 15 log
 lines (ANSI and phase markers stripped), since the error alone is often just
 "Build failed.". `uptimeMessage` adds the probe kind and, for the external
 probe, the host. Discord shows the fields as embed fields (inline when short)
-and keeps the _end_ of an oversized detail, where the error is; email lists them
-as `Name: value` lines; a generic webhook gets the message object as-is.
-`notifyDeploy` loads the stack itself, so both deploy exits pass the same
-`{dep, ok, svc, trigger}`.
+and keeps the _end_ of an oversized detail, where the error is; Slack does the
+same as a coloured attachment; Telegram sends escaped HTML (bold labels, a
+`<pre>` detail tail) and falls back to the plain-text body when the rendered
+message would pass its 4096-character limit; email lists them as `Name: value`
+lines; a generic webhook gets the message object as-is. `notifyDeploy` loads the
+stack itself, so both deploy exits pass the same `{dep, ok, svc, trigger}`.
 
 ## Uptime probes (`uptime_check`, `UptimeCheckDTO`, `$lib/services/uptime/uptime-probe.ts`)
 
@@ -280,7 +302,7 @@ noise, reporting it as up would be a lie. The panel says why instead.
 Results are **appended, one row per probe** (`id` primary key), not upserted:
 the panel renders the last `BEAT_WINDOW` (40) as a heartbeat strip, which needs
 the history. `UptimeCheckDTO.beats(serviceId, kind)` returns them oldest-first
-for the strip, `latestForUser` uses a `selectDistinctOn` for the "now" view, and
+for the strip, `latest` uses a `selectDistinctOn` for the "now" view, and
 `prune()` drops anything past a 7-day retention, amortized one tick in 60. The
 service Observability tab renders both probes with per-probe troubleshooting
 steps when one fails; the dashboard shows a banner listing every failing probe,

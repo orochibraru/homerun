@@ -20,10 +20,10 @@ function lifecycleFailure(verb: string, error: unknown) {
 }
 
 export const load = async ({ params, parent }) => {
-	const { service: svc, user } = await parent();
+	const { service: svc } = await parent();
 	const [deployments, siblings] = await Promise.all([
 		DeploymentDTO.listForService(params.serviceId),
-		ServiceDTO.list(user.id),
+		ServiceDTO.list(),
 	]);
 
 	// A link between two services is an env var pointing at the other one's
@@ -56,7 +56,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -80,7 +80,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -108,7 +108,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -125,7 +125,6 @@ export const actions = {
 				message: `"${svc.name}" was started.`,
 				serviceId: svc.id,
 				type: "service_started",
-				userId: locals.user.id,
 			});
 			return { success: true };
 		}
@@ -144,7 +143,6 @@ export const actions = {
 			message: `"${svc.name}" was started.`,
 			serviceId: svc.id,
 			type: "service_started",
-			userId: locals.user.id,
 		});
 		return { success: true };
 	},
@@ -154,7 +152,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -168,7 +166,6 @@ export const actions = {
 				message: `"${svc.name}" was stopped.`,
 				serviceId: svc.id,
 				type: "service_stopped",
-				userId: locals.user.id,
 			});
 			return { success: true };
 		}
@@ -187,7 +184,6 @@ export const actions = {
 			message: `"${svc.name}" was stopped.`,
 			serviceId: svc.id,
 			type: "service_stopped",
-			userId: locals.user.id,
 		});
 		return { success: true };
 	},

@@ -1,15 +1,9 @@
 import type { WorkloadHealthSample } from "$lib/revisions";
 import type { BaseDockerService, Constructor } from "./base.ts";
-
-const CONTAINER_STATES = new Set([
-	"running",
-	"restarting",
-	"exited",
-	"created",
-]);
-const HEALTH_STATES = new Set(["starting", "healthy", "unhealthy"]);
-
-type ContainerSample = Extract<WorkloadHealthSample, { kind: "container" }>;
+import {
+	type ContainerHealthSample,
+	containerSampleFromInspect,
+} from "./rollout.ts";
 
 function isNotFound(error: unknown): boolean {
 	return (error as { statusCode?: number } | null)?.statusCode === 404;
@@ -41,35 +35,18 @@ export function DockerRevisionMixin<
 		 * exit code and restart count. Returns a `state: "missing"` sample
 		 * rather than throwing when the container is gone.
 		 */
-		async containerHealthSample(containerId: string): Promise<ContainerSample> {
+		async containerHealthSample(
+			containerId: string,
+		): Promise<ContainerHealthSample> {
 			try {
-				const info = await this.getDocker().getContainer(containerId).inspect();
-				const status = info.State?.Status ?? "exited";
-				const health = info.State?.Health?.Status ?? "none";
-				return {
-					exitCode: info.State?.ExitCode ?? null,
-					health: HEALTH_STATES.has(health)
-						? (health as ContainerSample["health"])
-						: "none",
-					healthOutput: info.State?.Health?.Log?.at(-1)?.Output?.trim() || null,
-					kind: "container",
-					restartCount: info.RestartCount ?? 0,
-					state: CONTAINER_STATES.has(status)
-						? (status as ContainerSample["state"])
-						: "exited",
-				};
+				return containerSampleFromInspect(
+					await this.getDocker().getContainer(containerId).inspect(),
+				);
 			} catch (error) {
 				if (!isNotFound(error)) {
 					throw error;
 				}
-				return {
-					exitCode: null,
-					health: "none",
-					healthOutput: null,
-					kind: "container",
-					restartCount: 0,
-					state: "missing",
-				};
+				return containerSampleFromInspect(null);
 			}
 		}
 

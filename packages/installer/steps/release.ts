@@ -31,7 +31,14 @@ class ReleaseAssetsService {
 		return `${REGISTRY_HOST}/${REPO}:${tag}`;
 	}
 
-	/** Downloads a release binary straight to `dest` and makes it executable. No git, no build step : this is the only way this installer installs the agent (or itself, via bootstrap.sh). */
+	/**
+	 * Downloads a release binary next to `dest`, makes it executable, then
+	 * renames it over `dest`. No git, no build step : this is the only way
+	 * this installer installs the agent (or itself, via bootstrap.sh). The
+	 * rename is what lets a re-run replace a binary that's running: curl
+	 * writing straight into it fails with "Text file busy" (verified live,
+	 * curl exit 23).
+	 */
 	async downloadReleaseBinary(
 		run: StepRunner,
 		version: string,
@@ -39,8 +46,10 @@ class ReleaseAssetsService {
 		dest: string,
 	): Promise<void> {
 		const url = this.releaseAssetUrl(version, filename);
-		await run.run(["curl", "-fsSL", url, "-o", dest]);
-		await run.run(["chmod", "+x", dest]);
+		const staging = `${dest}.download`;
+		await run.run(["curl", "-fsSL", url, "-o", staging]);
+		await run.run(["chmod", "+x", staging]);
+		await run.run(["mv", "-f", staging, dest]);
 	}
 }
 

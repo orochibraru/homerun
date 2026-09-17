@@ -25,6 +25,14 @@
 
 	const filters: FilterGroup[] = [
 		{
+			key: "kind",
+			label: "Kind",
+			options: [
+				{ label: "Backup", value: "backup" },
+				{ label: "Restore", value: "restore" },
+			],
+		},
+		{
 			key: "outcome",
 			label: "Outcome",
 			options: [
@@ -62,7 +70,7 @@
     <div>
       <h1 class="text-text text-lg font-semibold tracking-tight">Backups</h1>
       <p class="text-text-muted mt-1 text-sm">
-        Per-volume S3 backups and their run history. Configure a volume's
+        Per-volume S3 backups, restores and their run history. Configure a volume's
         destination and schedule from its own page.
       </p>
     </div>
@@ -140,7 +148,7 @@
         title="No backup runs yet"
       />
     {:else}
-      <EntityToolbar {filters} placeholder="Search runs by volume name…" />
+      <EntityToolbar {filters} placeholder="Search runs by volume, key or error…" />
 
       {#if data.runs.length === 0}
         <div class="border-border/70 rounded-md border border-dashed py-16 text-center">
@@ -152,6 +160,7 @@
           <thead>
             <tr class="border-border text-text-muted border-b text-left text-xs uppercase">
               <th class="px-4 py-3 font-medium">Volume</th>
+              <th class="px-4 py-3 font-medium">Kind</th>
               <th class="px-4 py-3 font-medium">Started</th>
               <th class="px-4 py-3 font-medium">Duration</th>
               <th class="px-4 py-3 font-medium">Size</th>
@@ -165,6 +174,9 @@
               : null}
               <tr class="border-border/60 border-b last:border-0">
                 <td class="text-text px-4 py-3 font-medium">{run.volumeName}</td>
+                <td class="text-text-muted px-4 py-3" title={run.key ?? ""}>
+                  {run.kind === "restore" ? "Restore" : "Backup"}
+                </td>
                 <td class="text-text-muted px-4 py-3">{formatDate(run.startedAt)}</td>
                 <td class="text-text-muted px-4 py-3">
                   {durationMs != null ? `${(durationMs / 1000).toFixed(1)}s` : "—"}

@@ -4,12 +4,18 @@ import type { ContainerStatus } from "$lib/types";
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
+import type {
+	ContainerRollout,
+	ContainerRolloutInput,
+} from "./container-rollout.ts";
 import { dockerHealthcheck } from "./healthcheck.ts";
+import { buildContainerLabels, MANAGED_LABEL } from "./labels.ts";
 import {
-	buildContainerLabels,
-	MANAGED_LABEL,
-	SERVICE_ID_LABEL,
-} from "./labels.ts";
+	type ContainerRuntimeParams,
+	mergeLabels,
+	runtimeArgv,
+	runtimeHostConfig,
+} from "./runtime-options.ts";
 
 export type { ContainerStatus } from "$lib/types";
 export type { RemoteHostConnection } from "./client.ts";
@@ -87,9 +93,6 @@ export interface VolumeMountParams {
 }
 
 export interface CreateContainerParams {
-	// When true, gatekeeps this service behind this app's own login via a
-	// Traefik forwardAuth middleware. No effect when dnsResolvable is false.
-	authRequired?: boolean;
 	containerPort: number;
 	cpuLimit?: string | null;
 	// Optional second hostname routed to this service (DNS must already
@@ -136,14 +139,29 @@ export interface CreateContainerParams {
 	remote?: RemoteHostConnection | null;
 	healthcheckCommand?: string | null;
 	restartPolicy: string;
+	runtime?: ContainerRuntimeParams;
 	serviceId: string;
 	slug: string;
 	tag: string;
 	volumes?: VolumeMountParams[];
 }
 
-/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the network mixin. */
+/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the network and container rollout mixins. */
 interface RequiresNetworkMixin {
+	abandonContainerRollout: (
+		rollout: ContainerRollout,
+		containerId: string,
+		error: unknown,
+	) => Promise<never>;
+	beginContainerRollout: (
+		input: ContainerRolloutInput,
+		onProgress?: (line: string) => void,
+	) => Promise<ContainerRollout>;
+	completeContainerRollout: (
+		rollout: ContainerRollout,
+		containerId: string,
+		onProgress?: (line: string) => void,
+	) => Promise<void>;
 	connectToStackNetwork: (
 		containerId: string,
 		stackId: string,
@@ -176,21 +194,6 @@ export function DockerContainerMixin<
 			const suffix = crypto.randomUUID().slice(0, 8);
 			const prefix = stackSlug ? `${stackSlug}-` : "";
 			return `homerun-${prefix}${slug}-${suffix}`;
-		}
-
-		/** The currently-running (or last) container for a service, if any : found by label, not name. */
-		async #findServiceContainer(
-			serviceId: string,
-			remote?: RemoteHostConnection | null,
-		) {
-			const docker = this.getDocker(remote);
-			const containers = await docker.listContainers({
-				all: true,
-				filters: JSON.stringify({
-					label: [`${SERVICE_ID_LABEL}=${serviceId}`],
-				}),
-			});
-			return containers[0] ?? null;
 		}
 
 		/**
@@ -320,38 +323,6 @@ export function DockerContainerMixin<
 		}
 
 		/**
-		 * Removes any previous container for this service (a redeploy), found
-		 * by its service-id label rather than by name (see #containerName).
-		 */
-		async #removePreviousContainer(
-			params: CreateContainerParams,
-			onProgress?: (line: string) => void,
-		): Promise<void> {
-			const existingInfo = await this.#findServiceContainer(
-				params.serviceId,
-				params.remote,
-			);
-			if (!existingInfo) {
-				return;
-			}
-
-			onProgress?.("Replacing previous container...");
-			try {
-				const existing = this.getDocker(params.remote).getContainer(
-					existingInfo.Id,
-				);
-				if (existingInfo.State === "running") {
-					await existing.stop();
-				}
-				await existing.remove({ force: true });
-			} catch {
-				// Already gone / couldn't be removed cleanly : proceed anyway,
-				// the random name suffix means the new container won't
-				// collide with it.
-			}
-		}
-
-		/**
 		 * Host mode shares the host's network namespace directly : Docker
 		 * doesn't allow combining it with any other network attachment (see
 		 * CreateContainerParams.networkMode), so it wins over everything else.
@@ -383,6 +354,7 @@ export function DockerContainerMixin<
 			);
 
 			return {
+				...runtimeHostConfig(params.runtime),
 				Binds: binds.length > 0 ? binds : undefined,
 				Memory: params.memoryLimitMb
 					? params.memoryLimitMb * 1024 * 1024
@@ -414,6 +386,7 @@ export function DockerContainerMixin<
 					: [params.portProtocol ?? "tcp"];
 
 			return {
+				...runtimeArgv(params.runtime),
 				Env: Object.entries(params.envVars).map(
 					([key, value]) => `${key}=${value}`,
 				),
@@ -427,15 +400,17 @@ export function DockerContainerMixin<
 				// dnsResolvable : there's no container-specific IP/network for
 				// Traefik's docker provider to route to in host mode, only the
 				// host's own interfaces (see CreateContainerParams.networkMode).
-				Labels: buildContainerLabels({
-					authRequired: params.authRequired,
-					containerPort: params.containerPort,
-					customDomain: params.customDomain,
-					dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
-					stackSlug: params.stackSlug,
-					serviceId: params.serviceId,
-					slug: params.slug,
-				}),
+				Labels: mergeLabels(
+					params.runtime?.labels,
+					buildContainerLabels({
+						containerPort: params.containerPort,
+						customDomain: params.customDomain,
+						dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
+						stackSlug: params.stackSlug,
+						serviceId: params.serviceId,
+						slug: params.slug,
+					}),
+				),
 				// Alias the container as its slug on the shared network, so
 				// other services can reach it at a stable hostname even though
 				// the container's own name carries a random per-deploy suffix.
@@ -512,8 +487,13 @@ export function DockerContainerMixin<
 
 		/**
 		 * Creates and starts the container for a service, replacing any
-		 * previous container for the same service (a redeploy : see
-		 * `#removePreviousContainer`). Ensures the shared Traefik network
+		 * previous container for the same service. When the previous one is
+		 * running (and neither host networking nor a writable volume rules it
+		 * out, see `rolloutStrategy`), the new container starts next to it and
+		 * the previous one is only removed once the new one is ready, so
+		 * Traefik (which skips a container whose healthcheck hasn't passed)
+		 * keeps routing to the old one meanwhile; otherwise the previous
+		 * container is removed first. Ensures the shared Traefik network
 		 * exists first (unless the container is remote or on the host
 		 * network), attaches under a DNS alias equal to the service's slug so
 		 * other services can reach it at `http://<slug>:<containerPort>`
@@ -521,7 +501,8 @@ export function DockerContainerMixin<
 		 * best-effort joins the service's stack network. Reports progress and
 		 * final reachability via `onProgress`/the logger.
 		 *
-		 * @throws When the Docker create or start call fails.
+		 * @throws When the Docker create or start call fails, or
+		 *   `RolloutFailedError` when the new container never became ready.
 		 */
 		async createAndStartContainer(
 			params: CreateContainerParams,
@@ -530,7 +511,7 @@ export function DockerContainerMixin<
 			const docker = this.getDocker(params.remote);
 			const name = this.#containerName(params.slug, params.stackSlug);
 
-			await this.#removePreviousContainer(params, onProgress);
+			const rollout = await this.beginContainerRollout(params, onProgress);
 
 			if (!(params.remote || params.networkMode === "host")) {
 				await this.ensureSharedNetwork();
@@ -542,7 +523,11 @@ export function DockerContainerMixin<
 			);
 
 			onProgress?.("Starting container...");
-			await container.start();
+			await container
+				.start()
+				.catch((error) =>
+					this.abandonContainerRollout(rollout, container.id, error),
+				);
 			logger.info(
 				`Container created and started: ${name} (${container.id})${
 					params.remote ? ` on remote host=${params.remote.id}` : ""
@@ -550,6 +535,7 @@ export function DockerContainerMixin<
 			);
 
 			await this.#joinStackNetwork(container.id, params);
+			await this.completeContainerRollout(rollout, container.id, onProgress);
 			this.#reportReachability(params, onProgress);
 
 			return { containerId: container.id };

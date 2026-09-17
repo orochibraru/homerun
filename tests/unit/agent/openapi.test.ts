@@ -32,7 +32,7 @@ describe("OpenApiBuilder.buildDocument", () => {
 
 	test("documents every route the HTTP handler actually serves", () => {
 		expect(Object.keys(doc.paths).sort()).toEqual(
-			["/v1/build", "/v1/health", "/v1/stats"].sort(),
+			["/v1/build", "/v1/health", "/v1/images/save", "/v1/stats"].sort(),
 		);
 	});
 

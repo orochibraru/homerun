@@ -67,4 +67,22 @@ describe("NetworkSetup.ensureHomerunNetwork", () => {
 			},
 		});
 	});
+
+	test("talks to the system daemon as root when there's no rootless user", async () => {
+		const runner = fakeRunner({ inspectSucceeds: false });
+
+		await NetworkSetup.ensureHomerunNetwork(
+			runner,
+			null,
+			"/var/run/docker.sock",
+		);
+
+		const calls = (runner.run as ReturnType<typeof mock>).mock.calls;
+		for (const call of calls) {
+			expect(call[1]).toEqual({
+				env: { DOCKER_HOST: "unix:///var/run/docker.sock" },
+			});
+		}
+		expect(calls[1][0]).toEqual(["docker", "network", "create", "homerun"]);
+	});
 });

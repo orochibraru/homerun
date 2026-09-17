@@ -15,6 +15,11 @@
 	} from "$lib/components/ui/select/index.js";
 	import { BLOCK_SEVERITY_OPTIONS } from "$lib/image-scan";
 	import { getSetupStatus } from "$lib/remote/setup.remote";
+	import {
+		MAX_RETAINED_IMAGES,
+		MIN_RETAINED_IMAGES,
+		RETAINED_REVISIONS,
+	} from "$lib/revisions";
 	import { enhanceToast, saveToast } from "$lib/toast";
 
 	const { data } = $props();
@@ -153,9 +158,8 @@
         <p class="text-text-subtle mt-1.5 text-xs">
           {blockOption.description} Applies to manual, scheduled, push-triggered
           and API deploys; a blocked deploy is marked failed, the previous
-          container keeps running, and deploy-failure notifications fire. A
-          scanner that fails to run never blocks a deploy, and rollbacks to an
-          earlier revision aren't re-checked.
+          container keeps running, and deploy-failure notifications fire.
+          Rollbacks to an earlier revision aren't re-checked.
         </p>
       </div>
       <CheckBox
@@ -165,6 +169,52 @@
         label="Only block on fixable vulnerabilities"
         name="imageScanBlockFixableOnly"
       />
+      <CheckBox
+        checked={data.settings.imageScanRequired ?? false}
+        helperText="When the scanner can't run at all (Trivy can't start, the vulnerability database can't be downloaded, the image can't be read), fail the deploy instead of deploying the unscanned image. The previous container keeps running. Services that opted out of scanning aren't affected."
+        id="imageScanRequired"
+        label="Fail deploys when the image can't be scanned"
+        name="imageScanRequired"
+      />
+      <div class="flex justify-end">
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel rounded-md">
+    <div class="border-border border-b px-5 py-4">
+      <h2 class="eyebrow">Retained images</h2>
+      <p class="text-text-muted text-xs">
+        How many distinct images of every service stay on this host for
+        rollbacks. Docker Cleanup's image prune and the image mirror cleanup
+        skip them, so deploying any of those revisions never needs a rebuild or
+        a pull.
+      </p>
+    </div>
+    <form
+      action="?/updateRetainedImages"
+      class="space-y-4 p-5"
+      method="POST"
+      use:enhance={saveToast("Retained images settings")}
+    >
+      <div>
+        <label class={label} for="retainedImagesPerService"
+        >Images kept per service</label>
+        <Input
+          id="retainedImagesPerService"
+          max={MAX_RETAINED_IMAGES}
+          min={MIN_RETAINED_IMAGES}
+          name="retainedImagesPerService"
+          required
+          type="number"
+          value={data.settings.retainedImagesPerService ?? RETAINED_REVISIONS}
+        />
+        <p class="text-text-subtle mt-1.5 text-xs">
+          Between {MIN_RETAINED_IMAGES} and {MAX_RETAINED_IMAGES}. Lowering it
+          lets the next cleanup remove the older images.
+        </p>
+      </div>
       <div class="flex justify-end">
         <Button type="submit">Save</Button>
       </div>

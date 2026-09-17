@@ -52,25 +52,21 @@ export type CronJobUpdateInput = Partial<
  * container from an image or a shell command run on the app host.
  */
 export class CronJobDTO extends BaseDTO<CronJob> {
-	/**
-	 * Loads one cron job by id, scoped to its owner; null when missing or owned
-	 * by someone else.
-	 */
-	static async get(id: string, userId: string): Promise<CronJobDTO | null> {
+	/** Loads one cron job by id; null when missing. */
+	static async get(id: string): Promise<CronJobDTO | null> {
 		const [row] = await db
 			.select()
 			.from(cronJob)
-			.where(and(eq(cronJob.id, id), eq(cronJob.userId, userId)))
+			.where(eq(cronJob.id, id))
 			.limit(1);
 		return row ? new CronJobDTO(row) : null;
 	}
 
-	/** Every cron job the user owns, newest first. */
-	static async list(userId: string): Promise<CronJobDTO[]> {
+	/** Every cron job on the instance, newest first. */
+	static async list(): Promise<CronJobDTO[]> {
 		const rows = await db
 			.select()
 			.from(cronJob)
-			.where(eq(cronJob.userId, userId))
 			.orderBy(desc(cronJob.createdAt));
 		return rows.map((row) => new CronJobDTO(row));
 	}
@@ -79,11 +75,8 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 	 * One page of `list`, searched and filtered by kind and enabled state
 	 * server-side, plus the unpaged total.
 	 */
-	static async listPaged(
-		userId: string,
-		query: ListQuery,
-	): Promise<PagedResult<CronJobDTO>> {
-		const conditions: SQL[] = [eq(cronJob.userId, userId)];
+	static async listPaged(query: ListQuery): Promise<PagedResult<CronJobDTO>> {
+		const conditions: SQL[] = [];
 		const search = searchCondition(query.q, [
 			cronJob.name,
 			cronJob.description,
@@ -142,27 +135,20 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 	}
 
 	/**
-	 * Up to `limit` of the user's cron jobs whose name, description, image or
+	 * Up to `limit` cron jobs whose name, description, image or
 	 * command matches `q`, newest first, for global search.
 	 */
-	static async search(
-		userId: string,
-		q: string,
-		limit: number,
-	): Promise<CronJobDTO[]> {
+	static async search(q: string, limit: number): Promise<CronJobDTO[]> {
 		const rows = await db
 			.select()
 			.from(cronJob)
 			.where(
-				and(
-					eq(cronJob.userId, userId),
-					searchCondition(q, [
-						cronJob.name,
-						cronJob.description,
-						cronJob.image,
-						cronJob.command,
-					]),
-				),
+				searchCondition(q, [
+					cronJob.name,
+					cronJob.description,
+					cronJob.image,
+					cronJob.command,
+				]),
 			)
 			.orderBy(desc(cronJob.createdAt))
 			.limit(limit);
@@ -215,7 +201,7 @@ export class CronJobDTO extends BaseDTO<CronJob> {
 	get id(): string {
 		return this.row.id;
 	}
-	/** The id of the user who owns the job. */
+	/** The id of the user who created the job. */
 	get userId(): string {
 		return this.row.userId;
 	}

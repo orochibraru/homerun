@@ -20,6 +20,41 @@ better-auth's own docs advise against enabling it in production). This is what
 makes `x-api-key`/`Bearer` auth work for `src/routes/api/v1/*` (see REST API
 above).
 
+## Read-only role and scoped API keys (`$lib/permissions.ts`, `$lib/server/read-only.ts`)
+
+Roles are `admin`, `developer` and `viewer` (labelled "Read-only"), all listed
+in `$lib/permissions.ts` (`USER_ROLES`, `ROLE_OPTIONS`, `isUserRole`), which
+`/users` validates against. An API key carries a scope in better-auth's key
+`metadata` (`{scope: "read"}`, `apiKey({ enableMetadata: true })` in `auth.ts`,
+metadata is rejected otherwise); no scope recorded means full access, so every
+key created before this is a full key. `apiKeyScopeOf` reads it, tolerating the
+double-stringified legacy shape better-auth itself migrates.
+
+**Enforcement is one check in `hooks.server.ts`, not one per action.**
+`authHandler` sets `locals.apiKeyScope` (API-key path only) and
+`locals.readOnly` (`isReadOnly(role, scope)`), and when read-only runs
+`readOnlyRejection` before resolving: every non-GET/HEAD/OPTIONS request is
+refused unless `readOnlyMayRequest` allowlists it. That single gate covers form
+actions, remote commands (`/_app/remote/<hash>/<exportName>` POSTs) and the REST
+API at once, so a new action or endpoint is protected without remembering to add
+a guard. The allowlist is the caller's own account only: better-auth's
+`/api/v1/auth/*` (sign-out, passkeys, 2FA, password; its admin endpoints stay
+gated by better-auth's own admin check), `/api/v1/auth-token`
+(`homerun logout`), `/profile/*`, `/cli-auth`, `/security-setup`, `/auth/*`,
+`/app-auth`, and the four notification-bell commands **by export name**, since a
+remote function's URL is `<file hash>/<export name>`. Renaming one of those
+commands silently drops it from the allowlist (it then 403s for viewers, fails
+closed). The response is shaped per caller so the UI reports it properly: a
+devalue-encoded `ActionResult` failure for a `use:enhance` post (the promise
+toast shows the message), a remote-function `{type:"error"}` body for commands,
+`{error}` JSON for `/api/`, plain text otherwise. `requireWriter()` in
+`remote-auth.ts` is the call-site belt-and-braces for commands
+(`startSelfUpdate` uses it). A read-only account's API keys are always created
+read-only (Profile → Authorized Clients forces the scope); the (protected)
+layout exposes `readOnly` for the header badge and hides "Deploy a service".
+Hiding every other write button for viewers is not done: they see them and get
+the toast.
+
 `user.deleteUser` is enabled with a `beforeDelete` hook (thin wrapper around
 `$lib/services/user.service.ts`'s `UserService.cleanupUserResources()`, see User
 roles & invitations below), don't assume better-auth's default account-deletion
@@ -193,14 +228,17 @@ wall 500'd on a real install. The dev compose files also give Traefik
 Services deployed before the fix keep the old URL in their labels until
 redeployed.
 
-**Known dev-mode papercut, deliberately not automated**: outside a container,
-`config.authCheckUrl` defaults to
+**Dev-mode port**: outside a container, `config.authCheckUrl` defaults to
 `http://host.docker.internal:${PORT}/api/v1/auth-check` with `PORT` defaulting
-to 3000, but `vite dev` serves on 5173 and doesn't set `PORT`, so the login
-wall's forwardAuth calls a dead port in development until Auth-check URL is set
-by hand. **Don't "fix" this by deriving the port from `auth.origin`** : that is
-only the same port in dev. Behind a reverse proxy the origin is 443 while the
-app listens on 3000, so deriving would break production to fix development.
+to 3000. `vite dev` serves on 5173 (or the next free port) and doesn't set
+`PORT`, so `vite.config.ts`'s `listeningPortPlugin` hooks the dev and preview
+servers' `listening` event and writes the bound port into `process.env.PORT`.
+That works because SvelteKit's dev middleware only loads the server modules (and
+so evaluates `$lib/config.ts`) on the first request, which is always after
+`listening`. **Don't "fix" this by deriving the port from `auth.origin`**
+instead: that is only the same port in dev. Behind a reverse proxy the origin is
+443 while the app listens on 3000, so deriving would break production to fix
+development.
 
 ## Authentication pages (`/authentication`, `$lib/auth-providers.ts`)
 
@@ -447,9 +485,33 @@ this, so don't add a query to it.
 recomputes it per request and challenges on a mismatch, and saving the policy
 calls `invalidateGatedService()`. Without this, tightening an allowlist would
 have left already-issued cookies working for up to 8 hours — observed for real
-during live testing, which is what prompted adding it. What is _not_ covered:
-deleting a user or changing their groups at the provider only takes effect at
-their next sign-in, or at the 8h cookie expiry.
+during live testing, which is what prompted adding it.
+
+**User changes revoke too, through a cached re-check.** A cookie that passes the
+signature/host/policy checks is also run through
+`$lib/server/gate-access-cache.ts`'s `cachedGateAccess`, keyed by service, user
+and policy version, which calls `AppAccessService.recheck()` (the full
+`evaluate()`, now also refusing a missing or banned user) at most once every
+five minutes and shares one in-flight promise between concurrent requests. So
+the hot path stays DB-free between re-checks. `auth.ts` registers
+`databaseHooks` `after` hooks on `user` update/delete and `account`
+create/update/delete that call `forgetGateAccess(userId)`, so deleting, banning,
+re-roling or changing the email of a user, or linking/unlinking an account, is
+seen on the very next request. Those hooks fire for every better-auth
+`internalAdapter` write (`removeUser`, `setRole`, `banUser`, `updateUser`,
+self-service delete), but **a raw Drizzle write to `user` or `account` bypasses
+them**: call `forgetGateAccess(userId)` after one. A re-check that throws (DB
+down) is logged, not cached, and honours the cookie, matching the old DB-free
+behaviour. The user's Homerun role counts as a group for `authAllowedGroups`
+(`groupsAcross(accounts, role)`), which is what makes a role change on `/users`
+a re-grouping for gated apps. For a service with `authAllowedGroups`,
+`recheck()` first calls `auth.api.refreshToken({ body: { accountId, userId } })`
+(no headers, so better-auth treats it as a trusted server call) for each linked
+OAuth account holding a refresh token, throttled to once per five minutes per
+user, so a group removed at the provider lands in the stored `idToken` well
+before the 8h cookie expiry. A failed refresh is logged and the stored token is
+used. `auth` is imported dynamically there so the unit tests importing
+`app-access.service.ts` don't build better-auth.
 
 **Config prerequisite**: `config.auth.origin` must be set, since that's where
 visitors get sent to sign in. `updateAppAuth` refuses to turn the wall on
@@ -460,9 +522,16 @@ var** — it previously read only `homerun.yaml`/`instance_settings`, even thoug
 all set `ORIGIN`, and `auth.ts` warned based on `process.env.ORIGIN` while
 `config.auth.origin` never read it.
 
-**Turning the wall on or off requires a redeploy**, since the middleware is
-attached via the container's Traefik labels. Changing the policy on an
-already-gated service does not.
+**Turning the wall on or off applies live.** `buildContainerLabels` attaches the
+forwardAuth middleware to every publicly routed service, wall on or off, and
+auth-check answers `200` straight away for a service whose `authRequired` is
+false (the same early return `pangolinOwnsAuth` uses). Saving on the Networking
+tab or `PATCH /api/v1/services/:id` calls `invalidateGatedService()` so the 10s
+service cache doesn't delay it. The cost, accepted on purpose: every routed app
+now depends on the dashboard answering auth-check, so Traefik refuses all of
+them while Homerun is down, and each request to an ungated app costs one cached
+service lookup. Services deployed before this change need one redeploy to get
+the middleware.
 
 **The policy columns** on `service` (all jsonb, all `[]` by default):
 `authProviders` (allowed sign-in methods, `"password"` for built-in credentials
@@ -496,12 +565,14 @@ claim extraction.
 ## User roles & admin-managed accounts (`user.role`, `/users`, `invitation` table)
 
 This moved from "anyone can `/auth/sign-up`" to a real single-instance model.
-Roles are `"admin"` and `"developer"`, developer is a label plus route-gating
-only, not a permissions system: both roles get the full dashboard over their own
-data (already isolated per-user by every DTO's `userId` scoping), the only
-difference is two admin-only pages, `/users` and `/settings` (`locals.isAdmin`,
-see below, checked at the top of each `load`, plus the nav items are filtered
-out of `(protected)/+layout.svelte`'s sidebar for non-admins).
+Roles are `"admin"`, `"developer"` and `"viewer"` (read-only, see Read-only role
+above). Between admin and developer the difference is a label plus route-gating
+only, not a permissions system: both roles get the full dashboard over every
+shared resource (no shared-resource DTO filters by `userId`, which only records
+the creator; see Shared resources in `data-and-config.md`), the only difference
+is two admin-only pages, `/users` and `/settings` (`locals.isAdmin`, see below,
+checked at the top of each `load`, plus the nav items are filtered out of
+`(protected)/+layout.svelte`'s sidebar for non-admins).
 
 - **The very first account becomes admin automatically**, whoever creates it.
   `hooks.server.ts`'s `authHandler` hard-blocks
@@ -537,18 +608,30 @@ out of `(protected)/+layout.svelte`'s sidebar for non-admins).
   endpoints (`node_modules/better-auth/dist/api/routes/update-user.mjs` is the
   only place `beforeDelete`/`afterDelete` are referenced at all), not by
   `internalAdapter.deleteUser` generically. Calling `auth.api.removeUser`
-  naively from an admin "remove user" action would leak that user's Docker
-  containers/networks. Fixed by extracting the cleanup body out of `auth.ts`'s
-  `beforeDelete` into `$lib/services/user.service.ts`'s
-  `UserService.cleanupUserResources(userId)`, called explicitly by both the
-  self-service `beforeDelete` hook _and_ `/users`' `removeUser` action before it
-  calls `auth.api.removeUser`. By contrast `databaseHooks.user.create.before`
-  (used for the role-promotion above) genuinely _is_ generic,
-  `internalAdapter.createUser` goes through the same `createWithHooks` machinery
-  regardless of caller, confirmed in
+  naively from an admin "remove user" action would cascade-delete that user's
+  rows and leak their Docker containers/networks. Fixed by extracting the
+  cleanup body out of `auth.ts`'s `beforeDelete` into
+  `$lib/services/user.service.ts`'s
+  `UserService.cleanupUserResources(userId, actingUserId?)`, called explicitly
+  by both the self-service `beforeDelete` hook _and_ `/users`' `removeUser`
+  action (passing the acting admin) before it calls `auth.api.removeUser`. It
+  reassigns every shared row's `userId` (and `template.ownerId`,
+  `invitation.invitedByUserId`) to the acting admin, else the oldest other
+  admin, else the oldest other account, so nothing cascades; only the very last
+  account's deletion removes containers and stack networks. A transferred git
+  service builds with its new owner's git connection. By contrast
+  `databaseHooks.user.create.before` (used for the role-promotion above)
+  genuinely _is_ generic, `internalAdapter.createUser` goes through the same
+  `createWithHooks` machinery regardless of caller, confirmed in
   `node_modules/better-auth/dist/db/internal-adapter.mjs`, so that one hook
   firing uniformly for self-service sign-up, `admin.createUser`, and
   invite-accept was safe to rely on.
+- `/users`' `setEmail` action changes an address directly through the admin
+  plugin's `auth.api.adminUpdateUser` (`{email, emailVerified: true}`, with the
+  request headers so better-auth re-checks admin), after refusing an address
+  another account already holds. It exists because self-service change-email on
+  a verified address sends a confirmation to the old address, which never
+  arrives without SMTP.
 - `/users`' `removeUser`/`setRole` actions also refuse to strip the last
   remaining admin (`wouldRemoveLastAdmin()`, checked via
   `$lib/services/user.service.ts`'s `UserService.countAdmins()`) and refuse
@@ -615,12 +698,12 @@ underlying gotcha (`resolve()` here returns a relative path, not useful for a
 `url.pathname` equality check) is still real and still worth knowing if a future
 gate needs one, just not implemented this way anymore.
 
-`/onboarding/+page.svelte` is a 5-step wizard (Core / Docker / Traefik / Email /
-Review) in a centred `max-w-3xl` column, each step a `panel` card with its own
-header, closing on a Review step that lists what's about to be persisted. It's
-built on the reusable `$lib/components/stepper.svelte` (connected circular step
-markers with labels at `sm+`, a progress bar below that, `Button` primitives for
-Back/Next), extracted from `services/new`'s inlined
+`/onboarding/+page.svelte` is a 6-step wizard (Core / Docker / Traefik / Email /
+DNS / Review) in a centred `max-w-3xl` column, each step a `panel` card with its
+own header, closing on a Review step that lists what's about to be persisted.
+It's built on the reusable `$lib/components/stepper.svelte` (connected circular
+step markers with labels at `sm+`, a progress bar below that, `Button`
+primitives for Back/Next), extracted from `services/new`'s inlined
 step-indicator-bar-plus-Back/Next pattern (not retrofitted onto `services/new`
 itself, a deliberate scope cut). `Stepper` owns navigation and which step is
 unlocked (`reachableStep`, grows only after a passed `onNext`); the consuming
@@ -630,9 +713,19 @@ renders once that field's step has actually failed an attempted `Next`/submit
 (tracked in the page's own `attempted: Set<number>` state, not the component's),
 nothing shows on initial render. The finish action reuses the exact
 `InstanceSettingsDTO.updateCore/updateDocker/updateTraefik/updateSmtp` methods
-`/settings` already calls, then `markOnboardingComplete()`, then the same
-`applyInstanceSettings()` + `rebuildAuth()` post-save dance `/settings`'s
-actions already do.
+`/settings` already calls, plus `updateCloudflare`/`updatePangolin` for
+whichever DNS integration the DNS step switched on, then
+`markOnboardingComplete()`, then `applyAndRebuild()` (the same post-save helper
+`/settings` uses, so the dashboard DNS record is synced too). The DNS step
+shares its form parsing and "Test connection" checks with Settings → Networking
+through `$lib/server/validation/dns-settings-form.ts`; Pangolin's target
+host/port and `pangolinOwnsAuth` aren't shown and are preserved. Its Test
+buttons post `?/testCloudflare`/`?/testPangolin` from the same wizard form, and
+the page's submit function routes those through their own promise toast
+**without calling `update()`**: a successful action result invalidates `data`,
+and every wizard field is a writable `$derived` over `data`, so `update()` would
+reset everything typed so far. Secrets (`smtpPassword`, both API tokens) are
+stripped from the `values` echoed back on a failed finish.
 
 ## Trusted origins (`$lib/services/auth-origins.ts`)
 
@@ -674,6 +767,14 @@ from Profile → Security (`two-factor-panel.svelte`, `passkey-panel.svelte`,
 reads through `AccountSecurityService`). The sign-in page offers a passkey
 button (labelled "Continue with a passkey" because e2e selects the `Sign in`
 button by name prefix) and the TOTP/backup-code step on `twoFactorRedirect`.
+
+Changing the Dashboard URL's hostname strands every passkey on the instance (a
+credential only signs for the rp id it was registered under). Settings → General
+computes the next rp id from the typed Base domain / Dashboard URL
+(`nextPasskeyRpId`), compares it against the running one
+(`strandedPasskeyCount`, count from
+`AccountSecurityService.countAllPasskeys()`), shows an inline warning, and
+cancels the enhance submit behind a confirm dialog until the admin accepts.
 
 `instance_settings.require_two_factor` / `require_passkey`, edited on
 `/authentication`, are enforced by the `(protected)` layout load only for cookie

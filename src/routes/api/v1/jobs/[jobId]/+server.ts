@@ -6,7 +6,7 @@ export const GET = async ({ params, locals }) => {
 		return json({ error: "Unauthorized" }, { status: 401 });
 	}
 	const job = await JobDTO.get(params.jobId);
-	if (!job || job.userId !== locals.user.id) {
+	if (!job) {
 		return json({ error: "Not found" }, { status: 404 });
 	}
 	const row = job.toJSON();

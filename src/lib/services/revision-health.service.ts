@@ -127,7 +127,7 @@ class RevisionHealthServiceClass {
 		input: RevisionWatch,
 		workload: Workload,
 	): Promise<ServiceDTO | null> {
-		const svc = await ServiceDTO.get(input.serviceId, input.userId);
+		const svc = await ServiceDTO.get(input.serviceId);
 		const [latest] = await DeploymentDTO.listForService(input.serviceId, 1);
 		const sameWorkload =
 			svc?.containerId === workload.containerId &&
@@ -152,7 +152,7 @@ class RevisionHealthServiceClass {
 	 */
 	async #run(input: RevisionWatch): Promise<void> {
 		const dep = await DeploymentDTO.get(input.deploymentId);
-		const svc = await ServiceDTO.get(input.serviceId, input.userId);
+		const svc = await ServiceDTO.get(input.serviceId);
 		if (!(dep && svc)) {
 			return;
 		}
@@ -266,10 +266,8 @@ class RevisionHealthServiceClass {
 				: `"${svc.name}"'s new revision is unhealthy: ${context.reason}`,
 			serviceId: svc.id,
 			type: target ? "deploy_rolled_back" : "deploy_unhealthy",
-			userId: input.userId,
 		});
 		NotificationChannelService.notify(
-			input.userId,
 			revisionHealthMessage(
 				{
 					origin: config.auth.origin ?? null,

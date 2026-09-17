@@ -3,6 +3,8 @@ services:
     extends:
       file: tools/compose/base.compose.yaml
       service: traefik
+    volumes:
+      - ./traefik-dynamic:/etc/traefik/dynamic
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,4 +29,3 @@ networks:
 volumes:
   postgres_data: {}
   traefik_certs: {}
-  traefik_dynamic: {}

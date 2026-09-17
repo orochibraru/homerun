@@ -174,3 +174,20 @@ describe("RootlessDockerInstaller.installRootlessDocker", () => {
 		expect(socket).toBe("/run/user/<uid>/docker.sock");
 	});
 });
+
+describe("RootlessDockerInstaller.enableRootfulDocker", () => {
+	test("enables and starts the system daemon and returns its socket", async () => {
+		const run = mock(async () => ({ code: 0, stderr: "", stdout: "" }));
+		const runner = fakeRunner({ run });
+
+		const socket = await RootlessDockerInstaller.enableRootfulDocker(runner);
+
+		expect(socket).toBe("/var/run/docker.sock");
+		expect(run).toHaveBeenCalledWith([
+			"systemctl",
+			"enable",
+			"--now",
+			"docker",
+		]);
+	});
+});

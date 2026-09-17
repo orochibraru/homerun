@@ -31,15 +31,15 @@ test.describe
 		}) => {
 			await expect(page).toHaveURL(/\/onboarding$/);
 
-			// Core / Docker / Traefik / Email : every field pre-fills with the
+			// Core / Docker / Traefik / Email / DNS : every field pre-fills with the
 			// effective current value (DB override, falling back to the env
 			// default, see +page.svelte's own comment), so "required" is trivially
 			// satisfied by just clicking through without touching anything.
-			for (let step = 0; step < 4; step++) {
+			for (let step = 0; step < 5; step++) {
 				await page.getByRole("button", { name: "Next" }).click();
 			}
 
-			// Review, the 5th step : the page's own submit button replaces
+			// Review, the 6th step : the page's own submit button replaces
 			// Stepper's "Next" here.
 			await page.getByRole("button", { name: "Finish setup" }).click();
 

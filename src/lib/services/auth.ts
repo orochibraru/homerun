@@ -28,6 +28,7 @@ import {
 import { passkeyRpId } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
 import * as schema from "$lib/server/db/schema";
+import { forgetGateAccess } from "$lib/server/gate-access-cache";
 import { AdminService } from "./admin.service.ts";
 import {
 	type DirectAccessScheme,
@@ -119,6 +120,18 @@ if (!(process.env.ORIGIN || dev || building)) {
 }
 
 /**
+ * Drops the cached login-wall decisions for the user a changed better-auth row
+ * belongs to, so gated apps re-check them on their next request. The row can
+ * be null after an update that matched nothing.
+ */
+function forgetGateAccessOf(userId: string | undefined): Promise<void> {
+	if (userId) {
+		forgetGateAccess(userId);
+	}
+	return Promise.resolve();
+}
+
+/**
  * Builds the better-auth instance from the current `config` (env defaults
  * merged with any DB-backed instance settings : see $lib/config.ts). Wrapped
  * in a function, rather than inlined into a single `betterAuth({...})` call
@@ -188,6 +201,11 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 			schema,
 		}),
 		databaseHooks: {
+			account: {
+				create: { after: (row) => forgetGateAccessOf(row?.userId) },
+				delete: { after: (row) => forgetGateAccessOf(row?.userId) },
+				update: { after: (row) => forgetGateAccessOf(row?.userId) },
+			},
 			user: {
 				create: {
 					// The very first account on the instance becomes admin,
@@ -213,6 +231,8 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 						return { data: { ...user, role: "admin" } };
 					},
 				},
+				delete: { after: (row) => forgetGateAccessOf(row?.id) },
+				update: { after: (row) => forgetGateAccessOf(row?.id) },
 			},
 		},
 		emailAndPassword: {
@@ -277,7 +297,10 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 			// generous for legitimate CLI/dashboard use while still keeping
 			// *some* abuse protection, rather than removing rate limiting
 			// outright.
-			apiKey({ rateLimit: { maxRequests: 300, timeWindow: 60_000 } }),
+			apiKey({
+				enableMetadata: true,
+				rateLimit: { maxRequests: 300, timeWindow: 60_000 },
+			}),
 			passkey({
 				rpID: passkeyRpId(config.auth.origin),
 				rpName: "Homerun",

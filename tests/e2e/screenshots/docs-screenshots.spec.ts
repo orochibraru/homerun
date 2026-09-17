@@ -191,7 +191,7 @@ test("bootstraps a blank instance", async ({ page }) => {
 	await expect(page).toHaveURL(/\/onboarding$/);
 
 	await page.locator("#baseDomain").fill(BASE_DOMAIN);
-	for (let step = 0; step < 4; step++) {
+	for (let step = 0; step < 5; step++) {
 		await page.getByRole("button", { name: "Next" }).click();
 	}
 	await page.getByRole("button", { name: "Finish setup" }).click();

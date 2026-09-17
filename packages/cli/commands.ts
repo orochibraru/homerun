@@ -201,16 +201,19 @@ class CliCommands {
 	 * Redeploys a service from one of its revisions.
 	 *
 	 * @param revisionId The revision to roll back to; omitted means the previous one.
+	 * @param restoreConfig Also puts back the env vars, resources and networking that revision ran with.
 	 */
 	async serviceRollback(
 		client: Client,
 		serviceId: string,
 		revisionId: string | undefined,
+		restoreConfig = false,
 	): Promise<void> {
 		const result = await this.#unwrap(
 			client.POST("/services/{serviceId}/revisions/{revisionId}/deploy", {
 				params: {
 					path: { revisionId: revisionId ?? "previous", serviceId },
+					...(restoreConfig ? { query: { restoreConfig: "true" } } : {}),
 				},
 			}),
 		);

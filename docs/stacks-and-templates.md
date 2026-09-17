@@ -32,8 +32,9 @@ stack's name to confirm, since it also deletes every service inside it.
 ## Templates
 
 A template is a saved service config (image, tag, container port, env vars, CPU/
-memory) you can deploy from repeatedly without re-entering everything. Two
-kinds:
+memory, and the [runtime options](services.md#runtime): entrypoint, command,
+labels, env files, added capabilities, devices and privileged mode) you can
+deploy from repeatedly without re-entering everything. Two kinds:
 
 - **Built-in**, a catalog of ~70 common self-hosted apps, media (Jellyfin,
   Navidrome, the *arr stack, qBittorrent), databases and caches (PostgreSQL,
@@ -46,7 +47,20 @@ kinds:
   internet; an app with no official logo falls back to a colored icon for its
   category.
 - **Custom**, save any service's current config as a template from its Settings
-  tab. Owned by the account that created it and visible only to them.
+  tab, or build one from scratch under `Templates → New`, whose **Runtime**
+  section takes the same fields as a service's Runtime tab plus env files. Owned
+  by the account that created it and visible only to them.
+
+### Host access
+
+Privileged mode, devices, added capabilities and env files give a container
+access to the host, so they stay admin-only on templates too. Only an admin can
+set them on `Templates → New`, and only an admin can deploy a template that
+carries any of them, whether through **Quick Deploy** or **Configure**. That
+includes a template whose linked companion carries them: the whole deploy is
+refused with a message naming each template that needs host access, before
+anything is created. Non-admins see the same warning on the template's details
+page and in the New Service wizard, and Quick Deploy is disabled there.
 
 ### The gallery
 
@@ -71,13 +85,13 @@ Every card, and the template's own details page, offers two actions:
 ### The details page
 
 Clicking a template opens its own page: the full description, container port,
-CPU/memory defaults, every env var it sets, and links to the project's source
-repository and website where it has them. When the source link points at GitHub,
-Homerun also pulls in the repo's star count, last push, latest release tag and
-rendered README, so you can read what an app actually is without leaving the
-dashboard. That's fetched unauthenticated and streamed in after the rest of the
-page, so GitHub being slow, rate-limiting you (60 requests an hour per IP), or
-down just means the panel doesn't render.
+CPU/memory defaults, every env var it sets, any runtime overrides, and links to
+the project's source repository and website where it has them. When the source
+link points at GitHub, Homerun also pulls in the repo's star count, last push,
+latest release tag and rendered README, so you can read what an app actually is
+without leaving the dashboard. That's fetched unauthenticated and streamed in
+after the rest of the page, so GitHub being slow, rate-limiting you (60 requests
+an hour per IP), or down just means the panel doesn't render.
 
 ### Linked containers
 

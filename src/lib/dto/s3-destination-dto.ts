@@ -28,38 +28,30 @@ export type S3DestinationUpdateInput = Partial<
 
 /** Wraps the `s3_destination` table : see ServiceDTO for the pattern this follows. */
 export class S3DestinationDTO extends BaseDTO<S3Destination> {
-	/**
-	 * Loads one S3 destination by id, scoped to its owner; null when missing or
-	 * owned by someone else.
-	 */
-	static async get(
-		id: string,
-		userId: string,
-	): Promise<S3DestinationDTO | null> {
+	/** Loads one S3 destination by id; null when missing. */
+	static async get(id: string): Promise<S3DestinationDTO | null> {
 		const [row] = await db
 			.select()
 			.from(s3Destination)
-			.where(and(eq(s3Destination.id, id), eq(s3Destination.userId, userId)))
+			.where(eq(s3Destination.id, id))
 			.limit(1);
 		return row ? new S3DestinationDTO(row) : null;
 	}
 
-	/** Every S3 destination the user owns, newest first. */
-	static async list(userId: string): Promise<S3DestinationDTO[]> {
+	/** Every S3 destination on the instance, newest first. */
+	static async list(): Promise<S3DestinationDTO[]> {
 		const rows = await db
 			.select()
 			.from(s3Destination)
-			.where(eq(s3Destination.userId, userId))
 			.orderBy(desc(s3Destination.createdAt));
 		return rows.map((row) => new S3DestinationDTO(row));
 	}
 
 	/** One page of `list`, searched server-side, plus the unpaged total. */
 	static async listPaged(
-		userId: string,
 		query: ListQuery,
 	): Promise<PagedResult<S3DestinationDTO>> {
-		const conditions: SQL[] = [eq(s3Destination.userId, userId)];
+		const conditions: SQL[] = [];
 		const search = searchCondition(query.q, [
 			s3Destination.name,
 			s3Destination.endpoint,
@@ -91,27 +83,20 @@ export class S3DestinationDTO extends BaseDTO<S3Destination> {
 	}
 
 	/**
-	 * Up to `limit` of the user's destinations whose name, endpoint, bucket or
+	 * Up to `limit` destinations whose name, endpoint, bucket or
 	 * region matches `q`, newest first, for global search.
 	 */
-	static async search(
-		userId: string,
-		q: string,
-		limit: number,
-	): Promise<S3DestinationDTO[]> {
+	static async search(q: string, limit: number): Promise<S3DestinationDTO[]> {
 		const rows = await db
 			.select()
 			.from(s3Destination)
 			.where(
-				and(
-					eq(s3Destination.userId, userId),
-					searchCondition(q, [
-						s3Destination.name,
-						s3Destination.endpoint,
-						s3Destination.bucket,
-						s3Destination.region,
-					]),
-				),
+				searchCondition(q, [
+					s3Destination.name,
+					s3Destination.endpoint,
+					s3Destination.bucket,
+					s3Destination.region,
+				]),
 			)
 			.orderBy(desc(s3Destination.createdAt))
 			.limit(limit);

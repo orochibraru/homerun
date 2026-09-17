@@ -1,16 +1,23 @@
 <script lang="ts">
-	import { Check, Plus, SlidersHorizontal, Trash2 } from "@lucide/svelte";
+	import {
+		Check,
+		FileText,
+		Plus,
+		SlidersHorizontal,
+		Trash2,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
-	const { data } = $props();
+	const { data, form } = $props();
 	const svc = $derived(data.service);
 
 	onMount(() => title.set(`${svc.name} · Env Vars`));
@@ -55,6 +62,7 @@
 	}
 </script>
 
+<div class="space-y-6">
 <section class="rounded-md panel">
   <div class="flex items-center gap-3 border-b border-border px-5 py-4">
     <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -134,3 +142,63 @@
     </div>
   </form>
 </section>
+
+<section class="panel rounded-md">
+  <div class="border-border flex items-center gap-3 border-b px-5 py-4">
+    <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
+      <FileText class="size-4" />
+    </div>
+    <div>
+      <h2 class="eyebrow">Env files</h2>
+      <p class="text-text-muted text-xs">
+        <code>.env</code> files on this host, read at every deploy. Variables
+        above win over a file's, and a later file wins over an earlier one. A
+        file that can't be read fails the deploy.
+      </p>
+    </div>
+  </div>
+
+  {#if !data.isAdmin}
+    <div class="space-y-2 p-5 text-xs">
+      {#if (svc.envFiles ?? []).length > 0}
+        <ul class="text-text font-mono">
+          {#each svc.envFiles ?? [] as path (path)}
+            <li>{path}</li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="text-text-muted">No env files.</p>
+      {/if}
+      <p class="text-text-subtle">
+        Only an admin can change env files : they're read from the host.
+      </p>
+    </div>
+  {:else}
+  <form
+    action="?/updateEnvFiles"
+    class="space-y-3 p-5"
+    method="POST"
+    use:enhance={enhanceToast({
+      error: "Couldn't save the env files.",
+      loading: "Saving env files",
+      success: "Saved.",
+    })}
+  >
+    <Textarea
+      class="min-h-20 font-mono text-xs"
+      aria-label="Env file paths"
+      name="envFiles"
+      placeholder="/opt/my-app/.env"
+      value={(svc.envFiles ?? []).join("\n")}
+    />
+    <p class="text-text-subtle text-xs">One absolute path per line.</p>
+    {#if form?.envFilesError}
+      <p class="text-xs text-red-500">{form.envFilesError}</p>
+    {/if}
+    <div class="flex justify-end">
+      <Button type="submit" variant="outline">Save env files</Button>
+    </div>
+  </form>
+  {/if}
+</section>
+</div>

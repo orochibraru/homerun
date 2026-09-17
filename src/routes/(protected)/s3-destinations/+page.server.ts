@@ -7,9 +7,9 @@ import { parseListQuery } from "$lib/server/list-query";
 const logger = new Logger("S3Destinations");
 
 export const load = async ({ parent, url }) => {
-	const { user } = await parent();
+	await parent();
 	const query = parseListQuery(url);
-	const paged = await S3DestinationDTO.listPaged(user.id, query);
+	const paged = await S3DestinationDTO.listPaged(query);
 	return {
 		destinations: paged.items.map((d) => d.toJSON()),
 		filtered: query.active,
@@ -30,10 +30,7 @@ export const actions = {
 			return fail(400, { error: "Missing destination id." });
 		}
 
-		const destination = await S3DestinationDTO.get(
-			destinationId,
-			locals.user.id,
-		);
+		const destination = await S3DestinationDTO.get(destinationId);
 		if (!destination) {
 			return fail(404, { error: "Destination not found." });
 		}

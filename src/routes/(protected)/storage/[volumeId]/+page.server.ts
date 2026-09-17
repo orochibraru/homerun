@@ -4,26 +4,34 @@ import { BackupRunDTO } from "$lib/dto/backup-run-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
-import { allowLongRequest } from "$lib/server/long-request";
-import { enqueueVolumeBackup } from "$lib/services/backup-queue";
+import { parseVolumeBackupGuard } from "$lib/server/volume-backup-form";
+import { VolumeServices } from "$lib/services/backup/volume-services";
+import {
+	enqueueVolumeBackup,
+	enqueueVolumeRestore,
+} from "$lib/services/backup-queue";
 import { CronService } from "$lib/services/cron.service";
-import { S3BackupService } from "$lib/services/s3-backup.service";
 
 const logger = new Logger("Storage");
 
 export const load = async ({ params, parent }) => {
-	const { user } = await parent();
-	const volume = await StorageVolumeDTO.get(params.volumeId, user.id);
+	await parent();
+	const volume = await StorageVolumeDTO.get(params.volumeId);
 	if (!volume) {
 		error(404, "Volume not found");
 	}
-	const [runs, destinations] = await Promise.all([
+	const [runs, destinations, services] = await Promise.all([
 		BackupRunDTO.listForVolume(volume.id),
-		S3DestinationDTO.list(user.id),
+		S3DestinationDTO.list(),
+		VolumeServices.servicesUsing(volume),
 	]);
 	return {
 		destinations: destinations.map((d) => d.toJSON()),
 		runs: runs.map((r) => r.toJSON()),
+		services: services.map((service) => ({
+			id: service.id,
+			name: service.name,
+		})),
 		volume: volume.toJSON(),
 	};
 };
@@ -33,7 +41,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const volume = await StorageVolumeDTO.get(params.volumeId, locals.user.id);
+		const volume = await StorageVolumeDTO.get(params.volumeId);
 		if (!volume) {
 			return fail(404, { error: "Volume not found." });
 		}
@@ -44,12 +52,11 @@ export const actions = {
 		return { backupSuccess: true };
 	},
 
-	restore: async ({ request, params, locals, platform }) => {
-		allowLongRequest(platform);
+	restore: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const volume = await StorageVolumeDTO.get(params.volumeId, locals.user.id);
+		const volume = await StorageVolumeDTO.get(params.volumeId);
 		if (!volume) {
 			return fail(404, { error: "Volume not found." });
 		}
@@ -59,11 +66,14 @@ export const actions = {
 			return fail(400, { error: "Pick a backup to restore." });
 		}
 
-		const result = await S3BackupService.restoreVolume(volume, key);
-		if (!result.success) {
-			return fail(500, { error: result.error ?? "Restore failed." });
-		}
-		logger.info(`Backup restored: volume=${volume.id} key=${key}`);
+		const options = {
+			stopServices: formData.get("stopServices") === "on",
+			wipe: formData.get("wipe") === "on",
+		};
+		const entry = await enqueueVolumeRestore(volume, key, options);
+		logger.info(
+			`Restore queued: volume=${volume.id} key=${key} wipe=${options.wipe} stopServices=${options.stopServices} job=${entry.id}`,
+		);
 		return { restoredKey: key, success: true };
 	},
 
@@ -71,7 +81,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const volume = await StorageVolumeDTO.get(params.volumeId, locals.user.id);
+		const volume = await StorageVolumeDTO.get(params.volumeId);
 		if (!volume) {
 			return fail(404, { error: "Volume not found." });
 		}
@@ -94,11 +104,13 @@ export const actions = {
 		if (backupEnabled && !s3DestinationId) {
 			return fail(400, { error: "Pick an S3 destination." });
 		}
-		if (
-			s3DestinationId &&
-			!(await S3DestinationDTO.get(s3DestinationId, locals.user.id))
-		) {
+		if (s3DestinationId && !(await S3DestinationDTO.get(s3DestinationId))) {
 			return fail(400, { error: "That S3 destination wasn't found." });
+		}
+
+		const guard = await parseVolumeBackupGuard(formData, volume);
+		if (guard.error !== null) {
+			return fail(400, { error: guard.error });
 		}
 
 		await volume.update({
@@ -106,6 +118,7 @@ export const actions = {
 			backupPrefix,
 			backupSchedule,
 			s3DestinationId,
+			...guard.fields,
 		});
 
 		logger.info(

@@ -54,7 +54,7 @@ describe("AgentInstaller.installAgentBinary", () => {
 });
 
 describe("AgentInstaller.installAgentSystemdUnit", () => {
-	test("writes the unit, chowns it, and enables it via systemctl --user", async () => {
+	test("writes the unit, chowns it, then enables and restarts it via systemctl --user", async () => {
 		const run = mock(async (cmd: string[]) => {
 			if (cmd[0] === "id" && cmd[1] === "-u") {
 				return { code: 0, stderr: "", stdout: "1000\n" };
@@ -98,7 +98,11 @@ describe("AgentInstaller.installAgentSystemdUnit", () => {
 			}),
 		);
 		expect(run).toHaveBeenCalledWith(
-			["systemctl", "--user", "enable", "--now", "homerun-agent"],
+			["systemctl", "--user", "enable", "homerun-agent"],
+			expect.objectContaining({ as: "homerun" }),
+		);
+		expect(run).toHaveBeenCalledWith(
+			["systemctl", "--user", "restart", "homerun-agent"],
 			expect.objectContaining({ as: "homerun" }),
 		);
 	});

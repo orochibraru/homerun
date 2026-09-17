@@ -34,10 +34,10 @@ function toQueuedJob(entry: JobDTO): QueuedJob {
 }
 
 export const getJobQueue = query(async (): Promise<JobQueueSnapshot> => {
-	const user = requireUser();
+	requireUser();
 	const [active, recent] = await Promise.all([
-		JobDTO.listActive(user.id),
-		JobDTO.listRecent(user.id),
+		JobDTO.listActive(),
+		JobDTO.listRecent(),
 	]);
 	return {
 		active: active.map(toQueuedJob),

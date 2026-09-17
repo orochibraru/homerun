@@ -68,16 +68,16 @@ server for a different Homerun instance, not the full app. Add `--dry-run` to
 print every command without running anything, `--version=vX.Y.Z` to pin a
 release instead of the latest one, and see
 [`packages/installer/README.md`](../packages/installer/README.md) for the rest
-of the flags (`--user=`, `--port=`).
+of the flags (`--user=`, `--port=`). Planning to use
+[swarm mode](services.md#swarm-mode)? Add `--docker=rootful`: swarm needs the
+system Docker daemon, rootless Docker can't create its overlay networks.
 
 > The installer's mutating steps (package install, rootless Docker setup,
 > systemd units) are verified live for both `--mode=agent` and `--mode=full`
 > against real disposable VMs, see
 > [`packages/installer/README.md`](../packages/installer/README.md) for what was
 > checked (and the real bugs that run found and fixed). `--dry-run` first is
-> still a good habit on a box that matters, and
-> `packages/installer/swarm-join.sh` specifically hasn't had the same
-> real-hardware pass yet.
+> still a good habit on a box that matters.
 
 ## Option B, Docker Compose
 
@@ -134,7 +134,7 @@ automatically.** After that there's no public sign-up: every other account is
 created by an admin from `/users`, either directly (name, email, temporary
 password) or by email invite once SMTP is configured.
 
-Signing in for the first time drops you into a five-step onboarding wizard:
+Signing in for the first time drops you into a six-step onboarding wizard:
 
 1. **Core**, your base domain (the DNS suffix deployed services are routed
    under, so a service lands at `<slug>.<your domain>`) and the dashboard URL.
@@ -143,7 +143,10 @@ Signing in for the first time drops you into a five-step onboarding wizard:
 3. **Traefik**, which entrypoint and certificate resolver your services' routes
    should use.
 4. **Email**, optional SMTP, only needed for invite emails.
-5. **Review**, confirm and finish.
+5. **DNS**, optional Cloudflare or Pangolin automation, so every service you
+   deploy gets its DNS record or tunnel route created for you. Each has a
+   **Test** button that checks the credentials before you finish.
+6. **Review**, confirm and finish.
 
 Everything it asks is also editable afterwards from `/settings`, and nothing it
 skips is hidden in a file, see [Configuration](configuration.md).

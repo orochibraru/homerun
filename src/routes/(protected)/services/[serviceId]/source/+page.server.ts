@@ -11,23 +11,33 @@ import {
 	updateSourceSchema,
 } from "$lib/server/validation/service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
+import { PreviewService } from "$lib/services/preview.service";
 import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("Services");
 
 export const load = async ({ parent, params }) => {
 	const { user } = await parent();
-	const svc = await ServiceDTO.get(params.serviceId, user.id);
+	const svc = await ServiceDTO.get(params.serviceId);
 	const [settings, connections, cacheRegistries, buildServers] =
 		await Promise.all([
 			InstanceSettingsDTO.get(),
 			GitConnectionDTO.listForUser(user.id),
-			BuildCacheRegistryDTO.list(user.id),
-			RemoteHostDTO.listBuildServers(user.id),
+			BuildCacheRegistryDTO.list(),
+			RemoteHostDTO.listBuildServers(),
 		]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
+	const previewParentId = svc?.toJSON().previewParentId;
+	const previewParent = previewParentId
+		? await ServiceDTO.get(previewParentId)
+		: null;
+
 	return {
+		previewOf: previewParent
+			? { id: previewParent.id, name: previewParent.name }
+			: null,
+		previews: svc ? await PreviewService.list(svc) : [],
 		pushWebhook: svc ? await GitWebhookService.describe(svc) : null,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
 		buildServers: buildServers.map((r) => r.toJSON()),
@@ -42,6 +52,18 @@ export const load = async ({ parent, params }) => {
 			})),
 	};
 };
+
+function gitTriggerPatch(
+	formData: FormData,
+	isGitBuild: boolean,
+	isPreview: boolean,
+) {
+	return {
+		gitPollEnabled: isGitBuild && formData.get("gitPollEnabled") === "on",
+		previewsEnabled:
+			isGitBuild && !isPreview && formData.get("previewsEnabled") === "on",
+	};
+}
 
 function statusCheckPatch(formData: FormData, isGitBuild: boolean) {
 	const names = formData
@@ -61,32 +83,24 @@ interface BuildTargets {
 }
 
 /**
- * Validates the build-server/build-cache pair, returning field errors or
- * null. Both remote-host kinds (docker and agent) are real build servers,
+ * Validates the chosen build server exists, returning field errors or
+ * null. No cache registry is needed: without one the built image is streamed
+ * back to this host. Both remote-host kinds (docker and agent) are real build servers,
  * see deploy.service.ts's git-build branch and AgentClientService.build :
  * real, tested-in-review bug this replaced, a stale "docker only" leftover
  * from before that integration.
  */
 async function checkBuildServer(
 	targets: BuildTargets,
-	userId: string,
 ): Promise<Record<string, string[]> | null> {
-	const { buildCacheRegistryId, buildServerRemoteHostId } = targets;
+	const { buildServerRemoteHostId } = targets;
 	if (!buildServerRemoteHostId) {
 		return null;
 	}
 
-	const buildServer = await RemoteHostDTO.get(buildServerRemoteHostId, userId);
+	const buildServer = await RemoteHostDTO.get(buildServerRemoteHostId);
 	if (!buildServer) {
 		return { buildServerRemoteHostId: ["That build server wasn't found."] };
-	}
-
-	if (!buildCacheRegistryId) {
-		return {
-			buildCacheRegistryId: [
-				"A build server needs a build cache registry, to publish the built image through.",
-			],
-		};
 	}
 	return null;
 }
@@ -106,7 +120,10 @@ function sourcePatch(input: UpdateSourceInput, isGitBuild: boolean) {
 		...(isGitBuild
 			? {
 					autoDeployOnPush: input.autoDeployOnPush,
+					gitBakeFile: input.gitBakeFile || null,
+					gitBakeTarget: input.gitBakeTarget || null,
 					gitBuildContext: input.gitBuildContext || null,
+					gitBuildMethod: input.gitBuildMethod,
 					gitDockerfilePath: input.gitDockerfilePath || null,
 					gitProviderId: (input.gitRepo && input.gitProviderId) || null,
 					gitRef: input.gitRef || null,
@@ -115,7 +132,10 @@ function sourcePatch(input: UpdateSourceInput, isGitBuild: boolean) {
 				}
 			: {
 					autoDeployOnPush: false,
+					gitBakeFile: null,
+					gitBakeTarget: null,
 					gitBuildContext: null,
+					gitBuildMethod: "dockerfile" as const,
 					gitDockerfilePath: null,
 					gitProviderId: null,
 					gitRef: null,
@@ -132,7 +152,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		const svc = await ServiceDTO.get(params.serviceId);
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
@@ -169,10 +189,10 @@ export const actions = {
 			});
 		}
 
-		const buildServerError = await checkBuildServer(
-			{ buildCacheRegistryId, buildServerRemoteHostId },
-			locals.user.id,
-		);
+		const buildServerError = await checkBuildServer({
+			buildCacheRegistryId,
+			buildServerRemoteHostId,
+		});
 		if (buildServerError) {
 			return fail(400, {
 				errors: buildServerError,
@@ -184,14 +204,19 @@ export const actions = {
 			gitProviderId: svc.gitProviderId,
 			gitRepo: svc.gitRepo,
 			gitWebhookId: svc.gitWebhookId,
+			previewsEnabled: svc.toJSON().previewsEnabled,
 		};
 		await svc.update({
 			buildCacheRegistryId,
 			buildServerRemoteHostId,
 			...checks,
+			...gitTriggerPatch(formData, isGitBuild, !!svc.toJSON().previewParentId),
 			...sourcePatch(input, isGitBuild),
 		});
 		await GitWebhookService.sync(svc, previousWebhook);
+		if (previousWebhook.previewsEnabled && !svc.toJSON().previewsEnabled) {
+			await PreviewService.removeAll(svc);
+		}
 
 		logger.info(
 			`Service source updated: service=${svc.id} buildSource=${input.buildSource} user=${locals.user.id}`,

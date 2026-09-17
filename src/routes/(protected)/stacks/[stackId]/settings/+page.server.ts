@@ -13,7 +13,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const stack = await StackDTO.get(params.stackId, locals.user.id);
+		const stack = await StackDTO.get(params.stackId);
 		if (!stack) {
 			return fail(404, { error: "Stack not found." });
 		}
@@ -35,7 +35,7 @@ export const actions = {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
-		const stack = await StackDTO.get(params.stackId, locals.user.id);
+		const stack = await StackDTO.get(params.stackId);
 		if (!stack) {
 			return fail(404, { error: "Stack not found." });
 		}

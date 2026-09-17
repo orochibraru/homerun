@@ -98,10 +98,10 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[DNS automation](docs/services.md#dns-automation)**: optional Cloudflare or
   self-hosted Pangolin integration auto-manages a deployed service's DNS record
   for you
-- **[Notifications](docs/operations.md#notifications)**: a per-user in-app feed
-  of deploy/service lifecycle events, plus outbound notification channels
-  (Discord, generic webhook, email) you can subscribe to build, update, deploy
-  and uptime events
+- **[Notifications](docs/operations.md#notifications)**: an in-app feed of
+  deploy/service lifecycle events, plus outbound notification channels (Discord,
+  Slack, Telegram, generic webhook, email, retried when delivery fails) you can
+  subscribe to build, update, deploy and uptime events
 - **[Scheduled redeploys](docs/services.md#scheduled-redeploy),
   [cron jobs](docs/services.md#cron-jobs) &
   [S3 backups](docs/storage-and-backups.md)**: cron-style auto-redeploy per

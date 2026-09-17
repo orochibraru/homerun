@@ -13,6 +13,7 @@
 		ShieldCheck,
 		SlidersHorizontal,
 		Terminal,
+		TerminalSquare,
 	} from "@lucide/svelte";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -117,6 +118,15 @@
 			icon: Cpu,
 			id: "compute",
 			label: "Compute",
+		},
+		{
+			exact: false,
+			href: resolve("/(protected)/services/[serviceId]/runtime", {
+				serviceId: svc.id,
+			}),
+			icon: TerminalSquare,
+			id: "runtime",
+			label: "Runtime",
 		},
 		{
 			exact: false,

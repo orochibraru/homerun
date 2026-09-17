@@ -32,9 +32,32 @@ const statsSchema = z.object({
 	memUsedMb: z.number(),
 });
 const buildResultSchema = z.object({
+	commit: z.string().nullable().optional(),
 	error: z.string().optional(),
 	success: z.boolean(),
 });
+
+const imageSaveOperation = {
+	description:
+		"Streams a local image as a `docker save` tarball, so the main app can `docker load` a build onto its own daemon when no cache registry is configured.",
+	parameters: [
+		{ in: "query", name: "ref", required: true, schema: { type: "string" } },
+	],
+	responses: {
+		200: {
+			content: {
+				"application/x-tar": { schema: { format: "binary", type: "string" } },
+			},
+			description: "The image tarball",
+		},
+		400: { description: "Missing ref" },
+		401: { description: "Unauthorized" },
+		404: { description: "Image not found" },
+	},
+	security: [{ bearerAuth: [] }],
+	summary: "Export an image",
+	tags: ["Deploy"],
+};
 
 /**
  * Same "one document, hand-registered routes" shape as the main app's
@@ -88,7 +111,7 @@ class AgentOpenApiBuilder {
 				"/v1/build": {
 					post: {
 						description:
-							"Clones a git repo at a ref and builds its Dockerfile into a local image tagged `tag`, optionally pushing it to a registry afterward (see the request schema's own docstring for when that matters).",
+							"Clones a git repo at a ref and builds it into a local image tagged `tag` with `buildMethod` (its Dockerfile with BuildKit by default, a Docker Bake target, or Nixpacks, Railpack, Heroku or Paketo buildpacks), using `push`'s registry as the BuildKit layer cache and pushing the image to it afterward when set (see the request schema's own docstring for when that matters).",
 						requestBody: {
 							content: {
 								"application/json": {
@@ -122,6 +145,7 @@ class AgentOpenApiBuilder {
 						tags: ["Meta"],
 					},
 				},
+				"/v1/images/save": { get: imageSaveOperation },
 				"/v1/stats": {
 					get: {
 						responses: {

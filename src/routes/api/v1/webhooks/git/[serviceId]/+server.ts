@@ -3,7 +3,7 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
 
 export const POST = async ({ params, request }) => {
-	const svc = await ServiceDTO.getForWebhook(params.serviceId);
+	const svc = await ServiceDTO.get(params.serviceId);
 	const result = await GitWebhookService.handleDelivery(
 		svc,
 		request.headers,
@@ -14,6 +14,9 @@ export const POST = async ({ params, request }) => {
 	}
 	if (result.status === "ignored") {
 		return json({ ignored: result.reason }, { status: 202 });
+	}
+	if (result.status === "removed") {
+		return json({ removedServiceId: result.serviceId }, { status: 202 });
 	}
 	return json(
 		{ deploymentId: result.deploymentId, jobId: result.jobId },

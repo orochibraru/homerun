@@ -14,6 +14,7 @@ describe("OptionsParser.parseArgs", () => {
 	test("defaults when no flags are given", () => {
 		expect(OptionsParser.parseArgs([])).toEqual({
 			agentPort: 7420,
+			docker: "rootless",
 			dryRun: false,
 			mode: "agent",
 			rootlessUser: "homerun",
@@ -34,6 +35,15 @@ describe("OptionsParser.parseArgs", () => {
 	test("--mode=full and --mode=agent set mode", () => {
 		expect(OptionsParser.parseArgs(["--mode=full"]).mode).toBe("full");
 		expect(OptionsParser.parseArgs(["--mode=agent"]).mode).toBe("agent");
+	});
+
+	test("--docker=rootful and --docker=rootless set docker", () => {
+		expect(OptionsParser.parseArgs(["--docker=rootful"]).docker).toBe(
+			"rootful",
+		);
+		expect(
+			OptionsParser.parseArgs(["--docker=rootful", "--docker=rootless"]).docker,
+		).toBe("rootless");
 	});
 
 	test("--user=<name> overrides rootlessUser", () => {
@@ -63,6 +73,7 @@ describe("OptionsParser.parseArgs", () => {
 		]);
 		expect(opts).toEqual({
 			agentPort: 8080,
+			docker: "rootless",
 			dryRun: true,
 			mode: "full",
 			rootlessUser: "alice",
@@ -119,6 +130,7 @@ describe("OptionsParser.printHelp", () => {
 		for (const flag of [
 			"--version=",
 			"--mode=agent|full",
+			"--docker=rootless|rootful",
 			"--user=",
 			"--port=",
 			"--dry-run",
@@ -135,5 +147,25 @@ describe("OptionsParser.parseArgs --domain", () => {
 		expect(
 			OptionsParser.parseArgs(["--domain=https://homerun.example.com/"]).domain,
 		).toBe("https://homerun.example.com/");
+	});
+});
+
+describe("OptionsParser.validate", () => {
+	test("accepts rootful Docker for a full install", () => {
+		expect(
+			OptionsParser.validate(
+				OptionsParser.parseArgs(["--mode=full", "--docker=rootful"]),
+			),
+		).toBeNull();
+	});
+
+	test("rejects rootful Docker for an agent install", () => {
+		expect(
+			OptionsParser.validate(OptionsParser.parseArgs(["--docker=rootful"])),
+		).toContain("--docker=rootful only applies to --mode=full");
+	});
+
+	test("accepts the defaults", () => {
+		expect(OptionsParser.validate(OptionsParser.parseArgs([]))).toBeNull();
 	});
 });

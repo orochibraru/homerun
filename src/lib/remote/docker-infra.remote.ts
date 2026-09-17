@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { query } from "$app/server";
+import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { requireAdmin, requireUser } from "$lib/server/remote-auth";
 import type { CleanupPreview } from "$lib/services/docker/cleanup";
@@ -22,9 +23,11 @@ export interface InfraStatus {
 
 export const getCleanupPreview = query(async (): Promise<CleanupPreview> => {
 	requireAdmin();
-	return await DockerService.getCleanupPreview(
-		await RevisionService.retainedImageIds(),
-	);
+	const [keepImageIds, keepVolumeNames] = await Promise.all([
+		RevisionService.retainedImageIds(),
+		ServiceVolumeDTO.mountedVolumeNames(),
+	]);
+	return await DockerService.getCleanupPreview(keepImageIds, keepVolumeNames);
 });
 
 /** Stack networks the daemon still has but no stack row does : the leak Docker's own network prune can't see while anything is attached. */

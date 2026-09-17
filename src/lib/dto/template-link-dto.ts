@@ -5,6 +5,10 @@ import {
 	template,
 	templateLink,
 } from "$lib/server/db/schema";
+import {
+	runtimeOptionsFrom,
+	type ServiceRuntimeOptions,
+} from "$lib/service-runtime";
 import { BaseDTO } from "./base-dto";
 
 export interface NewTemplateLinkInput {
@@ -23,6 +27,7 @@ export interface TemplateLinkWithTemplate {
 	linkedTemplateMemoryLimitMb: number | null;
 	linkedTemplateName: string;
 	linkedTemplateRestartPolicy: string;
+	linkedTemplateRuntime: ServiceRuntimeOptions;
 	linkedTemplateTag: string;
 }
 
@@ -33,7 +38,7 @@ export interface TemplateLinkWithTemplate {
 export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 	/**
 	 * Every link on a primary template, with the linked template's image,
-	 * resources and env vars joined in for display and for deploying the
+	 * resources, env vars and runtime options joined in for display and for deploying the
 	 * companions.
 	 */
 	static async listForTemplate(
@@ -41,6 +46,13 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 	): Promise<TemplateLinkWithTemplate[]> {
 		const rows = await db
 			.select({
+				linkedTemplateCapAdd: template.capAdd,
+				linkedTemplateCommand: template.command,
+				linkedTemplateDevices: template.devices,
+				linkedTemplateEntrypoint: template.entrypoint,
+				linkedTemplateEnvFiles: template.envFiles,
+				linkedTemplateLabels: template.labels,
+				linkedTemplatePrivileged: template.privileged,
 				linkedTemplateContainerPort: template.containerPort,
 				linkedTemplateCpuLimit: template.cpuLimit,
 				linkedTemplateEnvVars: template.envVars,
@@ -65,6 +77,15 @@ export class TemplateLinkDTO extends BaseDTO<TemplateLink> {
 			linkedTemplateMemoryLimitMb: r.linkedTemplateMemoryLimitMb,
 			linkedTemplateName: r.linkedTemplateName,
 			linkedTemplateRestartPolicy: r.linkedTemplateRestartPolicy,
+			linkedTemplateRuntime: runtimeOptionsFrom({
+				capAdd: r.linkedTemplateCapAdd,
+				command: r.linkedTemplateCommand,
+				devices: r.linkedTemplateDevices,
+				entrypoint: r.linkedTemplateEntrypoint,
+				envFiles: r.linkedTemplateEnvFiles,
+				labels: r.linkedTemplateLabels,
+				privileged: r.linkedTemplatePrivileged,
+			}),
 			linkedTemplateTag: r.linkedTemplateTag,
 		}));
 	}

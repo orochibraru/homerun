@@ -7,9 +7,9 @@ import { parseListQuery } from "$lib/server/list-query";
 const logger = new Logger("Storage");
 
 export const load = async ({ parent, url }) => {
-	const { user } = await parent();
+	await parent();
 	const query = parseListQuery(url, { filterKeys: ["kind", "backup"] });
-	const paged = await StorageVolumeDTO.listPaged(user.id, query);
+	const paged = await StorageVolumeDTO.listPaged(query);
 
 	return {
 		filtered: query.active,
@@ -31,7 +31,7 @@ export const actions = {
 			return fail(400, { error: "Missing volume id." });
 		}
 
-		const vol = await StorageVolumeDTO.get(volumeId, locals.user.id);
+		const vol = await StorageVolumeDTO.get(volumeId);
 		if (!vol) {
 			return fail(404, { error: "Volume not found." });
 		}

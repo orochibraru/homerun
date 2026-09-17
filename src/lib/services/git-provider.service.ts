@@ -38,6 +38,73 @@ interface TokenGrant {
 	refreshToken: string | null;
 }
 
+/**
+ * A provider refused an API call with 401 or 403. `reconnectHelps` is true
+ * when the refusal is about the token itself (revoked, expired, or granted
+ * before Homerun asked for the scope the call needs), false when it's about
+ * the account's rights on the repository or the provider's own settings.
+ */
+export class GitProviderRefusedError extends Error {
+	override name = "GitProviderRefusedError";
+	readonly reconnectHelps: boolean;
+	readonly status: number;
+
+	/**
+	 * @param status The HTTP status the provider answered with.
+	 * @param reconnectHelps Whether reconnecting the provider would fix it.
+	 */
+	constructor(message: string, status: number, reconnectHelps: boolean) {
+		super(message);
+		this.status = status;
+		this.reconnectHelps = reconnectHelps;
+	}
+}
+
+const TOKEN_REFUSAL_PATTERN =
+	/scope|token|unauthori[sz]ed|expired|revoked|invalid[_ ]grant|credential/i;
+
+/** The human-readable reason in a provider's error body, whichever of the common shapes it uses. */
+function providerErrorDetail(bodyText: string): string {
+	try {
+		const body = JSON.parse(bodyText) as {
+			error?: string | { message?: string };
+			error_description?: string;
+			message?: string;
+		};
+		const detail =
+			body.message ??
+			body.error_description ??
+			(typeof body.error === "string" ? body.error : body.error?.message);
+		return (detail ?? "").trim();
+	} catch {
+		return bodyText.trim().slice(0, 300);
+	}
+}
+
+/**
+ * Turns a provider's 401/403 answer into a refusal error: carries the
+ * provider's own reason, and only suggests reconnecting when that reason is
+ * about the token (always for a 401).
+ */
+export function refusalFrom(
+	providerName: string,
+	status: number,
+	bodyText: string,
+): GitProviderRefusedError {
+	const detail = providerErrorDetail(bodyText);
+	const reconnectHelps =
+		status === 401 || detail === "" || TOKEN_REFUSAL_PATTERN.test(detail);
+	const reason = detail ? `: ${detail}` : "";
+	const advice = reconnectHelps
+		? "Reconnect it so Homerun gets repository and webhook access."
+		: "Reconnecting won't change this: the connected account needs admin rights on the repository, or the provider has webhooks turned off.";
+	return new GitProviderRefusedError(
+		`${providerName} refused the request (${status})${reason}. ${advice}`,
+		status,
+		reconnectHelps,
+	);
+}
+
 interface ProviderEndpoints {
 	api: string;
 	authorize: string;
@@ -515,9 +582,7 @@ class GitProviderServiceClass {
 			method: init.method ?? "GET",
 		});
 		if (res.status === 401 || res.status === 403) {
-			throw new Error(
-				`${provider.name} refused the request (${res.status}). Reconnect it on the Git Providers page so Homerun gets repository and webhook access.`,
-			);
+			throw refusalFrom(provider.name, res.status, await res.text());
 		}
 		if (!res.ok) {
 			throw new Error(
@@ -547,24 +612,26 @@ class GitProviderServiceClass {
 	}
 
 	/**
-	 * Registers a webhook on `hook.repo` that delivers push events to
-	 * `hook.url`, signed with `hook.secret`.
+	 * Registers a webhook on `hook.repo` that delivers push events, and pull
+	 * request events when `hook.pullRequests` is set, to `hook.url`, signed
+	 * with `hook.secret`.
 	 *
 	 * @returns The provider's id for the new hook, used to delete it later.
-	 * @throws When the provider refuses (usually a connection missing the
-	 * webhook scope) or can't be reached.
+	 * @throws `GitProviderRefusedError` when the provider refuses (usually a
+	 * connection missing the webhook scope), a plain error when it can't be
+	 * reached or answers otherwise.
 	 */
 	async createPushWebhook(
 		provider: GitProviderConfig,
 		connection: GitConnectionDTO,
-		hook: { repo: string; secret: string; url: string },
+		hook: {
+			pullRequests?: boolean;
+			repo: string;
+			secret: string;
+			url: string;
+		},
 	): Promise<string> {
-		const request = createWebhookRequest(
-			provider.kind,
-			hook.repo,
-			hook.url,
-			hook.secret,
-		);
+		const request = createWebhookRequest(provider.kind, hook.repo, hook);
 		const res = await this.#api(provider, connection, request.path, {
 			body: request.body,
 			method: request.method,

@@ -1,5 +1,7 @@
 import {
+	type ComposeFileDraft,
 	ComposeParseError,
+	type ComposeRegistryDraft,
 	type ComposeServiceDraft,
 	type ComposeVolumeDraft,
 	parseComposeFile,
@@ -205,13 +207,21 @@ export function sourceSlug(name: string): string {
 
 export interface SingleDraftInput {
 	build?: ComposeServiceDraft["build"];
+	capAdd?: string[];
+	command?: string[] | null;
 	containerPort: number | null;
 	cpuLimit?: string | null;
+	devices?: string[];
+	entrypoint?: string[] | null;
 	envVars: Record<string, string>;
+	files?: ComposeFileDraft[];
 	image: string | null;
+	labels?: Record<string, string>;
 	memoryLimitMb?: number | null;
 	name: string;
+	privileged?: boolean;
 	public: boolean;
+	registry?: ComposeRegistryDraft | null;
 	volumes?: ComposeVolumeDraft[];
 }
 
@@ -228,17 +238,27 @@ export function singleDraft(input: SingleDraftInput): ComposeServiceDraft {
 		: { image: slug, tag: "latest" };
 	return {
 		build: input.build ?? null,
+		capAdd: input.capAdd ?? [],
+		command: input.command ?? null,
 		containerPort: input.containerPort ?? DEFAULT_PORT,
 		cpuLimit: input.cpuLimit ?? null,
 		dependsOn: [],
+		devices: input.devices ?? [],
 		dnsResolvable: input.public,
+		entrypoint: input.entrypoint ?? null,
+		envFiles: [],
 		envVars: input.envVars,
+		files: input.files ?? [],
 		image: ref.image,
 		key: slug,
+		labels: input.labels ?? {},
 		memoryLimitMb: input.memoryLimitMb ?? null,
+		missingEnvFiles: [],
 		name: input.name,
 		networkMode: "bridge",
 		portProtocol: "tcp",
+		privileged: input.privileged ?? false,
+		registry: input.registry ?? null,
 		restartPolicy: "unless-stopped",
 		slug,
 		tag: ref.tag,
@@ -249,17 +269,19 @@ export function singleDraft(input: SingleDraftInput): ComposeServiceDraft {
 
 /**
  * Parses a source compose file into service drafts after interpolating the
- * resource's env into it, collecting the parse warnings (prefixed per service)
- * and a warning when variables are still unresolved.
+ * resource's env into it, resolving `env_file:` references against the given
+ * file contents, collecting the parse warnings (prefixed per service) and a
+ * warning when variables are still unresolved.
  *
  * @returns `error` set, and no drafts, when the file can't be parsed.
  */
 export function composeDrafts(
 	file: string,
 	env: Record<string, string>,
+	envFiles: Record<string, string> = {},
 ): { drafts: ComposeServiceDraft[]; error: string | null; warnings: string[] } {
 	try {
-		const plan = parseComposeFile(interpolate(file, env));
+		const plan = parseComposeFile(interpolate(file, env), { envFiles });
 		const unresolved = plan.services.some((svc) =>
 			Object.values(svc.envVars).some((value) => /\$\{[^}]+\}/.test(value)),
 		);
@@ -297,7 +319,11 @@ export function composeDrafts(
 export function imageSummary(draft: ComposeServiceDraft): string {
 	if (draft.build) {
 		const ref = draft.build.gitRef ? `@${draft.build.gitRef}` : "";
-		return `git ${draft.build.gitUrl ?? "repository"}${ref}`;
+		const method =
+			draft.build.method && draft.build.method !== "dockerfile"
+				? ` · ${draft.build.method}`
+				: "";
+		return `git ${draft.build.gitUrl ?? "repository"}${ref}${method}`;
 	}
 	return `${draft.image}:${draft.tag}`;
 }
@@ -325,7 +351,7 @@ export function previewEntries(
 				public: draft.dnsResolvable,
 				slug: draft.slug,
 				slugTaken: takenSlugs.has(draft.slug),
-				volumeCount: draft.volumes.length,
+				volumeCount: draft.volumes.length + draft.files.length,
 			})),
 			summary: entry.summary,
 			warnings: entry.warnings,

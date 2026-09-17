@@ -2,16 +2,24 @@ import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { GIT_CONNECT_RETURN_COOKIE } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
+import { safeRedirectTarget } from "$lib/redirect-target";
 import { GitProviderService } from "$lib/services/git-provider.service";
+import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("GitProviders");
 
-export const GET = async ({ params, locals, url }) => {
+export const GET = async ({ cookies, params, locals, url }) => {
 	if (!locals.user) {
 		throw redirect(302, resolve("/auth/sign-in"));
 	}
+	const returnTo = safeRedirectTarget(
+		cookies.get(GIT_CONNECT_RETURN_COOKIE) ?? null,
+	);
+	cookies.delete(GIT_CONNECT_RETURN_COOKIE, { path: "/" });
+	const done = returnTo ?? resolve("/git-providers");
 
 	const code = url.searchParams.get("code");
 	const state = url.searchParams.get("state");
@@ -19,7 +27,7 @@ export const GET = async ({ params, locals, url }) => {
 
 	if (oauthError) {
 		logger.warn(`OAuth error from provider: ${oauthError}`);
-		throw redirect(303, resolve("/git-providers"));
+		throw redirect(303, done);
 	}
 	if (!(code && state)) {
 		return new Response("Missing code/state.", { status: 400 });
@@ -61,6 +69,7 @@ export const GET = async ({ params, locals, url }) => {
 		logger.info(
 			`Git provider connected: provider=${provider.id} kind=${provider.kind} account=${exchanged.providerUsername} user=${locals.user.id}`,
 		);
+		await GitWebhookService.retryAfterReconnect(locals.user.id, provider.id);
 	} catch (err) {
 		logger.error(
 			`Git provider connect failed: provider=${provider.id} user=${locals.user.id}`,
@@ -68,5 +77,5 @@ export const GET = async ({ params, locals, url }) => {
 		);
 	}
 
-	throw redirect(303, resolve("/git-providers"));
+	throw redirect(303, done);
 };

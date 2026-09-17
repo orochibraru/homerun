@@ -197,6 +197,7 @@ describe("dokployApplication", () => {
 			dockerfile: "Dockerfile",
 			gitRef: "main",
 			gitUrl: "https://github.com/acme/sergios",
+			method: "dockerfile",
 		});
 		expect(entry.drafts[0]?.containerPort).toBe(3000);
 	});
@@ -221,6 +222,37 @@ describe("dokployApplication", () => {
 		});
 	});
 
+	test("carries nixpacks, railpack and buildpacks apps over with their builder", () => {
+		const cases = [
+			["nixpacks", "nixpacks"],
+			["railpack", "railpack"],
+			["heroku_buildpacks", "heroku"],
+			["paketo_buildpacks", "paketo"],
+		] as const;
+		for (const [buildType, method] of cases) {
+			const entry = dokployApplication(
+				{ ...GITHUB_APP, buildPath: "/web", buildType },
+				"Homelab",
+			);
+			expect(entry.blocked).toBeNull();
+			expect(entry.drafts[0]?.build).toEqual({
+				context: "web",
+				dockerfile: null,
+				gitRef: "main",
+				gitUrl: "https://github.com/acme/sergios",
+				method,
+			});
+		}
+	});
+
+	test("warns when a Heroku app used an older stack", () => {
+		const entry = dokployApplication(
+			{ ...GITHUB_APP, buildType: "heroku_buildpacks", herokuVersion: "22" },
+			"Homelab",
+		);
+		expect(entry.warnings.join(" ")).toContain("heroku/builder:22");
+	});
+
 	test("blocks a build pack Homerun can't run", () => {
 		const entry = dokployApplication(
 			{ ...GITHUB_APP, buildType: "static" },
@@ -228,6 +260,123 @@ describe("dokployApplication", () => {
 		);
 		expect(entry.blocked).toContain("static");
 		expect(entry.drafts).toEqual([]);
+	});
+});
+
+describe("dokploy runtime carry-over", () => {
+	test("carries private registry credentials over", () => {
+		const entry = dokployApplication(
+			{
+				...IMAGE_APP,
+				password: "hunter2",
+				registryUrl: "registry.example.com",
+				username: "deploy",
+			},
+			"Auth",
+		);
+		expect(entry.drafts[0]?.registry).toEqual({
+			password: "hunter2",
+			url: "registry.example.com",
+			username: "deploy",
+		});
+		expect(entry.warnings.join(" ")).not.toContain("registry");
+		expect(
+			dokployApplication(IMAGE_APP, "Auth").drafts[0]?.registry,
+		).toBeNull();
+	});
+
+	test("warns when the registry password didn't come back", () => {
+		const entry = dokployApplication(
+			{ ...IMAGE_APP, password: null, username: "deploy" },
+			"Auth",
+		);
+		expect(entry.drafts[0]?.registry?.password).toBeNull();
+		expect(entry.warnings.join(" ")).toContain("registry password");
+	});
+
+	test("runs a custom command through /bin/sh -c, args replacing the arguments", () => {
+		const shell = dokployApplication(
+			{ ...IMAGE_APP, command: "node server.js --port 1411" },
+			"Auth",
+		).drafts[0];
+		expect(shell?.entrypoint).toEqual(["/bin/sh"]);
+		expect(shell?.command).toEqual(["-c", "node server.js --port 1411"]);
+		const args = dokployApplication(
+			{ ...IMAGE_APP, args: ["--verbose"] },
+			"Auth",
+		).drafts[0];
+		expect(args?.entrypoint).toBeNull();
+		expect(args?.command).toEqual(["--verbose"]);
+	});
+
+	test("carries file mounts over with their content", () => {
+		const entry = dokployApplication(
+			{
+				...IMAGE_APP,
+				mounts: [
+					...IMAGE_APP.mounts,
+					{
+						content: "key: value\n",
+						filePath: "config.yml",
+						mountPath: "/app/config.yml",
+						type: "file",
+					},
+				],
+			},
+			"Auth",
+		);
+		expect(entry.drafts[0]?.files).toEqual([
+			{ containerPath: "/app/config.yml", content: "key: value\n" },
+		]);
+		expect(entry.drafts[0]?.volumes).toHaveLength(2);
+		expect(entry.warnings.join(" ")).not.toContain("file mount");
+	});
+
+	test("a stack's ../files binds become file drafts, and .env resolves env_file", () => {
+		const entry = dokployCompose(
+			{
+				...COMPOSE,
+				composeFile:
+					"services:\n  syncthing:\n    image: syncthing/syncthing\n    env_file: .env\n    volumes:\n      - ../files/syncthing.xml:/config/config.xml\n",
+				env: "PUID=1000",
+				mounts: [
+					{
+						content: "<configuration/>",
+						filePath: "syncthing.xml",
+						mountPath: "/config/config.xml",
+						type: "file",
+					},
+				],
+			},
+			"Homelab",
+		);
+		expect(entry.drafts[0]?.files).toEqual([
+			{ containerPath: "/config/config.xml", content: "<configuration/>" },
+		]);
+		expect(entry.drafts[0]?.envVars).toEqual({ PUID: "1000" });
+		expect(entry.warnings.join(" ")).not.toContain("relative bind");
+		expect(entry.warnings.join(" ")).not.toContain("env_file");
+	});
+
+	test("applies the Redis password through the start command, like Dokploy", () => {
+		const entry = dokployDatabase(
+			{
+				appName: "cache",
+				databasePassword: "p'w",
+				dockerImage: "redis:7",
+				mounts: [],
+				name: "cache",
+				redisId: "r-1",
+			},
+			"redis",
+			"Cache",
+		);
+		expect(entry.drafts[0]?.entrypoint).toEqual(["/bin/sh"]);
+		expect(entry.drafts[0]?.command).toEqual([
+			"-c",
+			"exec redis-server --requirepass 'p'\"'\"'w'",
+		]);
+		expect(entry.warnings.join(" ")).not.toContain("requirepass");
 	});
 });
 

@@ -6,6 +6,7 @@ import {
 	parseComposeFile,
 } from "$lib/compose-import";
 import { StackDTO } from "$lib/dto/stack-dto";
+import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { ComposeImportService } from "$lib/services/compose-import.service";
@@ -13,17 +14,17 @@ import { ComposeImportService } from "$lib/services/compose-import.service";
 const logger = new Logger("ComposeImport");
 
 export const load = async ({ url, parent }) => {
-	const { user } = await parent();
-	const stacks = await StackDTO.list(user.id);
+	await parent();
+	const stacks = await StackDTO.list();
 	return {
 		stackId: url.searchParams.get("stackId"),
 		stacks: stacks.map((p) => p.toJSON()),
 	};
 };
 
-function planFrom(compose: string) {
+function planFrom(compose: string, envFiles: Record<string, string> = {}) {
 	try {
-		return { plan: parseComposeFile(compose) } as const;
+		return { plan: parseComposeFile(compose, { envFiles }) } as const;
 	} catch (err) {
 		return {
 			error:
@@ -32,6 +33,16 @@ function planFrom(compose: string) {
 					: "Couldn't parse that compose file.",
 		} as const;
 	}
+}
+
+function envFilesFrom(formData: FormData): Record<string, string> {
+	const paths = formData.getAll("envFilePath").map(String);
+	const contents = formData.getAll("envFileContent").map(String);
+	return Object.fromEntries(
+		paths.flatMap((path, index) =>
+			contents[index]?.trim() ? [[path, contents[index]]] : [],
+		),
+	);
 }
 
 function pickSelected(
@@ -70,7 +81,7 @@ export const actions = {
 		}
 		const formData = await request.formData();
 		const compose = (formData.get("compose") as string | null) ?? "";
-		const parsed = planFrom(compose);
+		const parsed = planFrom(compose, envFilesFrom(formData));
 		if ("error" in parsed) {
 			return fail(400, { compose, error: parsed.error });
 		}
@@ -87,11 +98,20 @@ export const actions = {
 			});
 		}
 
+		if (!locals.isAdmin && drafts.some((draft) => hostAccessRequested(draft))) {
+			return fail(403, {
+				compose,
+				error: HOST_ACCESS_MESSAGE,
+				plan: parsed.plan,
+			});
+		}
+
 		const stackId = (formData.get("stackId") as string | null) || null;
 		const stackName =
 			(formData.get("stackName") as string | null)?.trim() || null;
 
 		const result = await ComposeImportService.importPlan({
+			allowHostAccess: locals.isAdmin,
 			drafts,
 			stackId,
 			stackName: stackId ? null : stackName,

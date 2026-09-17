@@ -178,6 +178,22 @@ notice. The checkout now takes `RELEASE_TOKEN` too, and a failing dry run fails
 the job instead of falling back; only a successful run with no release-worthy
 commits uses the SHA.
 
+**A PR that can break the release dry-runs it.** `pull_request.yaml`'s `changes`
+job also sets `release=true` when the PR touches `package.json`, `bun.lock` or
+`.releaserc.json`, which is every Renovate bump of a `@semantic-release/*`
+plugin, and `release-dry-run` then runs
+`semantic-release --dry-run --no-ci --branches <head ref>` on a checkout of the
+PR branch. Two things make that a real test rather than a no-op:
+semantic-release returns "triggered by a pull request" before `verifyConditions`
+on a PR event, so the step overrides `GITHUB_EVENT_NAME=push` and `GITHUB_REF`
+to the head branch in the shell (env-ci reads those to detect a PR), and it only
+releases from `main`, so `--branches` makes the PR branch the one release
+branch. It then loads every plugin and runs `verifyConditions`, `analyzeCommits`
+and `generateNotes` for real (checked locally: every plugin loads), with
+`RELEASE_TOKEN` on both checkout and `GH_TOKEN` for the same
+`git push --dry-run` reason as the `version` job above. Skipped on fork PRs (no
+secrets), counted by `CI Gate`, and shown in the summary comment.
+
 **Job ids use `-`, never `:`** (`build-app`, not `build:app`). GitHub rejects a
 colon in a job id outright and refuses to run the whole workflow file; the
 Gitea-era config had `build:app` and got away with it.
@@ -319,9 +335,8 @@ drives a target machine's shell, not this app's own runtime).
   YAML scalar in the generated compose file, a postgres-18 volume-mount-path
   mismatch, and a missing `ORIGIN` env var, all now fixed in
   `packages/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts`).
-  **Still not verified**: `packages/installer/swarm-join.sh` (see Swarm mode
-  above), this session's VM testing didn't touch it, it remains untested against
-  a real second host or a real swarm, same caveat as before.
+  `packages/installer/swarm-join.sh` has since had its own real two-VM run (see
+  Swarm mode in `docker.md`), replayable with `bun run e2e:multipass --swarm`.
 
   This whole run is reproducible, not a one-off: `scripts/e2e-multipass.ts`
   (`bun run e2e:multipass`) automates exactly this, builds the

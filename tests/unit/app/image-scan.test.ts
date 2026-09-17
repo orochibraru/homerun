@@ -12,6 +12,7 @@ import type { GitBuildPlan } from "../../../src/lib/services/deploy/plan";
 import { buildScanTargets } from "../../../src/lib/services/deploy/scan-targets";
 import {
 	extractDigest,
+	isRootlessDaemon,
 	lastErrorLine,
 	MIRROR_HOST_PORT,
 	mirrorRefs,
@@ -19,6 +20,7 @@ import {
 	pinnedToDigest,
 	REGISTRY_AUTH_ENV,
 	registryAuthFile,
+	skopeoArchiveCommand,
 	skopeoCopyCommand,
 	trivyImageCommand,
 } from "../../../src/lib/services/docker/image-scan-refs";
@@ -441,7 +443,10 @@ describe("helper commands", () => {
 
 describe("buildScanTargets", () => {
 	const git = {
+		bakeFile: null,
+		bakeTarget: null,
 		buildContext: null,
+		buildMethod: "dockerfile" as const,
 		dockerfilePath: null,
 		gitRef: "main",
 		gitUrl: "https://example.com/app.git",
@@ -481,6 +486,57 @@ describe("buildScanTargets", () => {
 		});
 		expect(local?.source).toEqual({ kind: "docker" });
 		expect(local?.ref).toBe(remote?.ref);
+	});
+
+	test("a build server without a cache registry only scans the streamed-back local image", () => {
+		const plan = {
+			git,
+			kind: "agent-build",
+			registry: null,
+			server: { connection: {}, hostId: "h", kind: "agent" },
+		} as unknown as GitBuildPlan;
+		const targets = buildScanTargets(plan, {
+			image: "homerun-build-app",
+			tag: "abc",
+		});
+		expect(targets).toHaveLength(1);
+		expect(targets[0]?.source).toEqual({ kind: "docker" });
+	});
+});
+
+describe("skopeoArchiveCommand", () => {
+	test("reads the mirror copy insecurely and writes a named docker-archive to stdout", () => {
+		expect(
+			skopeoArchiveCommand({
+				name: "nginx:1",
+				source: "homerun-mirror:5000/docker.io/library/nginx:1",
+			}),
+		).toEqual({
+			cmd: [
+				"copy",
+				"--quiet",
+				"--src-tls-verify=false",
+				"docker://homerun-mirror:5000/docker.io/library/nginx:1",
+				"docker-archive:/dev/stdout:nginx:1",
+			],
+			entrypoint: ["skopeo"],
+		});
+	});
+});
+
+describe("isRootlessDaemon", () => {
+	test("spots the rootless security option", () => {
+		expect(
+			isRootlessDaemon(["name=seccomp,profile=builtin", "name=rootless"]),
+		).toBe(true);
+		expect(
+			isRootlessDaemon(["name=seccomp,profile=builtin,name=rootless"]),
+		).toBe(true);
+	});
+
+	test("a rootful or unknown daemon isn't rootless", () => {
+		expect(isRootlessDaemon(["name=seccomp,profile=builtin"])).toBe(false);
+		expect(isRootlessDaemon(undefined)).toBe(false);
 	});
 });
 

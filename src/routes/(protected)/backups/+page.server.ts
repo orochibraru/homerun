@@ -10,12 +10,12 @@ import { enqueueVolumeBackup } from "$lib/services/backup-queue";
 const logger = new Logger("Backups");
 
 export const load = async ({ parent, url }) => {
-	const { user } = await parent();
-	const query = parseListQuery(url, { filterKeys: ["outcome"] });
+	await parent();
+	const query = parseListQuery(url, { filterKeys: ["kind", "outcome"] });
 	const [volumes, runs, destinations] = await Promise.all([
-		StorageVolumeDTO.list(user.id),
-		BackupRunDTO.listForUserPaged(user.id, query),
-		S3DestinationDTO.list(user.id),
+		StorageVolumeDTO.list(),
+		BackupRunDTO.listPaged(query),
+		S3DestinationDTO.list(),
 	]);
 	const destinationNames = new Map(destinations.map((d) => [d.id, d.name]));
 
@@ -48,7 +48,7 @@ export const actions = {
 			return fail(400, { error: "Missing volume id." });
 		}
 
-		const volume = await StorageVolumeDTO.get(volumeId, locals.user.id);
+		const volume = await StorageVolumeDTO.get(volumeId);
 		if (!volume) {
 			return fail(404, { error: "Volume not found." });
 		}

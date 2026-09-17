@@ -7,9 +7,9 @@ import { parseListQuery } from "$lib/server/list-query";
 const logger = new Logger("BuildCacheRegistries");
 
 export const load = async ({ parent, url }) => {
-	const { user } = await parent();
+	await parent();
 	const query = parseListQuery(url);
-	const paged = await BuildCacheRegistryDTO.listPaged(user.id, query);
+	const paged = await BuildCacheRegistryDTO.listPaged(query);
 	return {
 		filtered: query.active,
 		page: paged.page,
@@ -30,10 +30,7 @@ export const actions = {
 			return fail(400, { error: "Missing registry id." });
 		}
 
-		const registry = await BuildCacheRegistryDTO.get(
-			registryId,
-			locals.user.id,
-		);
+		const registry = await BuildCacheRegistryDTO.get(registryId);
 		if (!registry) {
 			return fail(404, { error: "Registry not found." });
 		}

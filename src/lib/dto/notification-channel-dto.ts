@@ -27,7 +27,8 @@ export type NotificationChannelUpdateInput = Partial<
 
 /**
  * Wraps the `notification_channel` table : an external destination (webhook,
- * Discord or email) that selected notification events are delivered to.
+ * Discord, Slack, Telegram or email) that selected notification events are
+ * delivered to.
  */
 export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 	/**
@@ -51,6 +52,21 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		return row ? new NotificationChannelDTO(row) : null;
 	}
 
+	/**
+	 * Loads one channel by id without an owner check, for the queued delivery
+	 * retry, which runs outside any request; null when it was deleted since.
+	 */
+	static async getForDelivery(
+		id: string,
+	): Promise<NotificationChannelDTO | null> {
+		const [row] = await db
+			.select()
+			.from(notificationChannel)
+			.where(eq(notificationChannel.id, id))
+			.limit(1);
+		return row ? new NotificationChannelDTO(row) : null;
+	}
+
 	/** Every channel the user owns, sorted by name. */
 	static async list(userId: string): Promise<NotificationChannelDTO[]> {
 		const rows = await db
@@ -61,20 +77,18 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 		return rows.map((row) => new NotificationChannelDTO(row));
 	}
 
-	/** The user's enabled channels subscribed to `event`, sorted by name. */
+	/**
+	 * Every account's enabled channels subscribed to `event`, sorted by name :
+	 * events are about shared resources, so each account's own channels hear
+	 * about all of them.
+	 */
 	static async listSubscribed(
-		userId: string,
 		event: NotificationEvent,
 	): Promise<NotificationChannelDTO[]> {
 		const rows = await db
 			.select()
 			.from(notificationChannel)
-			.where(
-				and(
-					eq(notificationChannel.userId, userId),
-					eq(notificationChannel.enabled, true),
-				),
-			)
+			.where(eq(notificationChannel.enabled, true))
 			.orderBy(asc(notificationChannel.name));
 		return rows
 			.filter((row) => row.events.includes(event))
@@ -150,6 +164,14 @@ export class NotificationChannelDTO extends BaseDTO<NotificationChannel> {
 	/** The channel's id. */
 	get id(): string {
 		return this.row.id;
+	}
+	/** The id of the user who owns the channel. */
+	get userId(): string {
+		return this.row.userId;
+	}
+	/** Whether the channel currently receives notifications. */
+	get enabled(): boolean {
+		return this.row.enabled;
 	}
 	/** The notification events the channel is subscribed to. */
 	get events(): NotificationEvent[] {

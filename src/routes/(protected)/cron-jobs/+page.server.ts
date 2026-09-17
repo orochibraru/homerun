@@ -9,11 +9,11 @@ import { enqueueCronJobRun } from "$lib/services/cron-job-queue";
 const logger = new Logger("CronJob");
 
 export const load = async ({ parent, url }) => {
-	const { user } = await parent();
+	await parent();
 	const query = parseListQuery(url, { filterKeys: ["kind", "enabled"] });
 	const [paged, runs] = await Promise.all([
-		CronJobDTO.listPaged(user.id, query),
-		CronJobRunDTO.listForUser(user.id),
+		CronJobDTO.listPaged(query),
+		CronJobRunDTO.listRecent(),
 	]);
 	return {
 		filtered: query.active,
@@ -32,9 +32,14 @@ export const actions = {
 		}
 		const formData = await request.formData();
 		const jobId = formData.get("jobId") as string | null;
-		const job = jobId ? await CronJobDTO.get(jobId, locals.user.id) : null;
+		const job = jobId ? await CronJobDTO.get(jobId) : null;
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
+		}
+		if (job.kind === "exec" && !locals.isAdmin) {
+			return fail(403, {
+				error: "Only an admin can manage a host command job.",
+			});
 		}
 
 		await job.delete();
@@ -48,9 +53,14 @@ export const actions = {
 		}
 		const formData = await request.formData();
 		const jobId = formData.get("jobId") as string | null;
-		const job = jobId ? await CronJobDTO.get(jobId, locals.user.id) : null;
+		const job = jobId ? await CronJobDTO.get(jobId) : null;
 		if (!job) {
 			return fail(404, { error: "Cron job not found." });
+		}
+		if (job.kind === "exec" && !locals.isAdmin) {
+			return fail(403, {
+				error: "Only an admin can manage a host command job.",
+			});
 		}
 
 		const entry = await enqueueCronJobRun(job);

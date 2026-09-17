@@ -92,7 +92,7 @@
 		pruneVolumes: {
 			confirmLabel: "Prune",
 			description:
-				"Permanently deletes every unused Docker-managed volume on this host, including any Storage volume whose data isn't currently mounted into a service. This can't be undone.",
+				"Permanently deletes every Docker-managed volume on this host that no container uses. A volume mounted into a Homerun service is always kept, even while that service is stopped or has no container. This can't be undone.",
 			title: "Prune unused volumes?",
 		},
 	};
@@ -587,6 +587,7 @@
         </h2>
         <p class="text-text-muted text-xs">
           Can permanently delete data. Not included in Quick cleanup.
+          Volumes mounted into a Homerun service are never listed or pruned.
         </p>
       </div>
       <form action="?/pruneVolumes" class="ml-auto" method="POST"

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { BlockSeverity, ScanBlockPolicy } from "$lib/image-scan";
+import { RETAINED_REVISIONS } from "$lib/revisions";
 import type { SecurityPolicy } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
 import {
@@ -160,6 +161,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			imageScanBlockFixableOnly: null,
 			imageScanBlockSeverity: null,
 			imageScanEnabled: null,
+			imageScanRequired: null,
 			oauthProviders: [],
 			onboardingCompletedAt: null,
 			orchestrationMode: null,
@@ -173,6 +175,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			preferredSignInMethods: null,
 			requirePasskey: null,
 			requireTwoFactor: null,
+			retainedImagesPerService: null,
 			smtpEnabled: null,
 			smtpFrom: null,
 			smtpHost: null,
@@ -278,6 +281,21 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		return this.row.imageScanBlockFixableOnly ?? false;
 	}
 
+	/** Whether a deploy fails when its image couldn't be scanned at all, off unless explicitly enabled. */
+	get imageScanRequired(): boolean {
+		return this.row.imageScanRequired ?? false;
+	}
+
+	/** How many distinct images per service are kept on the host for rollbacks, `RETAINED_REVISIONS` when unset. */
+	get retainedImagesPerService(): number {
+		return this.row.retainedImagesPerService ?? RETAINED_REVISIONS;
+	}
+
+	/** Persists how many distinct images per service are kept for rollbacks. */
+	async updateRetainedImages(count: number): Promise<void> {
+		await this.persist({ retainedImagesPerService: count });
+	}
+
 	/** The deploy block policy as one value, for `evaluateScanPolicy`. */
 	get imageScanBlockPolicy(): ScanBlockPolicy {
 		return {
@@ -291,6 +309,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		imageScanBlockFixableOnly: boolean;
 		imageScanBlockSeverity: BlockSeverity | null;
 		imageScanEnabled: boolean;
+		imageScanRequired: boolean;
 	}): Promise<void> {
 		await this.persist(input);
 	}

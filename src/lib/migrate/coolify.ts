@@ -1,3 +1,4 @@
+import type { BuildMethod } from "$lib/build-methods";
 import {
 	composeDrafts,
 	imageSummary,
@@ -9,6 +10,7 @@ import {
 	str,
 	trimPath,
 } from "./common";
+import { applyCoolifyExtras, type CoolifyStorage } from "./coolify-runtime";
 
 /**
  * Indexes Coolify projects by the id and uuid of each of their environments, so
@@ -200,35 +202,58 @@ function composeApp(row: RawRow, env: Record<string, string>): AppOutcome {
 	};
 }
 
+const COOLIFY_BUILD_METHODS: Record<string, BuildMethod> = {
+	dockerfile: "dockerfile",
+	nixpacks: "nixpacks",
+	railpack: "railpack",
+};
+
 /**
- * Drafts a Coolify git application as a git-based service. Blocked when it isn't
- * built with a Dockerfile (e.g. nixpacks) or has no repository behind it.
+ * Drafts a Coolify git application as a git-based service, built from its
+ * Dockerfile or with Nixpacks/Railpack. Blocked for a build pack Homerun has no
+ * builder for (static) or when there's no repository behind it.
  */
-function dockerfileApp(
+function gitApp(
 	row: RawRow,
 	base: ReturnType<typeof appBase>,
 	buildPack: string,
 ): AppOutcome {
 	const gitUrl = coolifyGitUrl(str(row, "git_repository"));
-	if (buildPack !== "dockerfile") {
+	const method = COOLIFY_BUILD_METHODS[buildPack];
+	if (!method) {
 		return blockedApp(
-			`Built with ${buildPack} on Coolify : Homerun only builds from a Dockerfile.`,
+			`Built with ${buildPack} on Coolify : Homerun builds from a Dockerfile, Nixpacks, Railpack or buildpacks.`,
 			`git ${gitUrl ?? "repository"} · ${buildPack}`,
 		);
 	}
 	if (!gitUrl) {
 		return blockedApp(
-			"Built from a Dockerfile pasted into Coolify, with no repository behind it : create it here from its image or a repository instead.",
-			"dockerfile",
+			method === "dockerfile"
+				? "Built from a Dockerfile pasted into Coolify, with no repository behind it : create it here from its image or a repository instead."
+				: `Built with ${buildPack} on Coolify with no repository behind it : create it here from its image or a repository instead.`,
+			buildPack,
+		);
+	}
+	const warnings: string[] = [];
+	if (
+		method !== "dockerfile" &&
+		(str(row, "install_command") || str(row, "build_command"))
+	) {
+		warnings.push(
+			`Custom install or build commands are set on Coolify : ${buildPack} detects them from the repository here, set them in a config file there instead.`,
 		);
 	}
 	const draft = singleDraft({
 		...base,
 		build: {
 			context: trimPath(str(row, "base_directory")),
-			dockerfile: trimPath(str(row, "dockerfile_location")),
+			dockerfile:
+				method === "dockerfile"
+					? trimPath(str(row, "dockerfile_location"))
+					: null,
 			gitRef: str(row, "git_branch"),
 			gitUrl,
+			method,
 		},
 		image: null,
 	});
@@ -237,19 +262,21 @@ function dockerfileApp(
 		drafts: [draft],
 		kind: "application",
 		summary: imageSummary(draft),
-		warnings: [],
+		warnings,
 	};
 }
 
 /**
  * Converts a Coolify application into a migration entry, picking the image,
- * compose or Dockerfile path from its build pack and warning about custom run
- * options and volumes, which the API doesn't expose.
+ * compose or Dockerfile path from its build pack and carrying over its run
+ * options, start command and persistent storage (`storage`, null when the
+ * source didn't list it).
  */
 export function coolifyApplication(
 	row: RawRow,
 	projectName: string,
 	env: Record<string, string>,
+	storage: CoolifyStorage | null = null,
 ): MigrationEntry {
 	const name = str(row, "name") ?? "unnamed";
 	const buildPack = str(row, "build_pack") ?? "nixpacks";
@@ -259,17 +286,11 @@ export function coolifyApplication(
 			? imageApp(row, base)
 			: buildPack === "dockercompose"
 				? composeApp(row, env)
-				: dockerfileApp(row, base, buildPack);
+				: gitApp(row, base, buildPack);
 	const warnings: string[] = [];
-	if (str(row, "custom_docker_run_options") || str(row, "start_command")) {
-		warnings.push(
-			"Custom run options or a start command are set on Coolify : they aren't applied here.",
-		);
-	}
-	if (buildPack !== "dockercompose") {
-		warnings.push(
-			"Coolify's API doesn't list persistent storage : re-attach volumes on the Storage tab.",
-		);
+	const single = buildPack === "dockercompose" ? undefined : outcome.drafts[0];
+	if (single) {
+		applyCoolifyExtras(single, row, storage, warnings);
 	}
 	return {
 		...outcome,
@@ -373,14 +394,43 @@ const DATABASES: Array<{
 ];
 
 /**
+ * The start command Coolify runs a Redis-family database with to set its
+ * password (`--requirepass`), or null when it has none. Redis and KeyDB name
+ * their server binary; Dragonfly's image entrypoint takes bare flags.
+ */
+export function coolifyPasswordCommand(
+	row: RawRow,
+	type: string,
+): string[] | null {
+	const password = str(
+		row,
+		"redis_password",
+		"keydb_password",
+		"dragonfly_password",
+	);
+	if (!password) {
+		return null;
+	}
+	if (type.includes("keydb")) {
+		return ["keydb-server", "--requirepass", password];
+	}
+	if (type.includes("dragonfly")) {
+		return ["--requirepass", password];
+	}
+	return ["redis-server", "--requirepass", password];
+}
+
+/**
  * Converts a Coolify standalone database into a single private service draft,
- * mapping its stored credentials onto the image's standard env vars and warning
- * about start-command passwords, public ports and volumes, which don't carry
- * over. Blocked when no image is set.
+ * mapping its stored credentials onto the image's standard env vars, applying
+ * a Redis-family password through the start command the way Coolify does,
+ * carrying its persistent storage over when listed (`storage`), and warning
+ * about public ports, which don't carry over. Blocked when no image is set.
  */
 export function coolifyDatabase(
 	row: RawRow,
 	projectName: string,
+	storage: CoolifyStorage | null = null,
 ): MigrationEntry {
 	const name = str(row, "name") ?? "database";
 	const type = str(row, "database_type", "type") ?? "";
@@ -393,19 +443,16 @@ export function coolifyDatabase(
 			envVars[envKey] = value;
 		}
 	}
-	if (str(row, "redis_password", "keydb_password", "dragonfly_password")) {
-		warnings.push(
-			"Coolify sets this password through the start command, which isn't applied here : set it yourself.",
-		);
-	}
 	if (row.is_public === true) {
 		warnings.push(
 			"Public on a host port on Coolify : Homerun only reaches it over the internal network.",
 		);
 	}
-	warnings.push(
-		"Coolify's API doesn't list persistent storage : re-attach the data volume on the Storage tab.",
-	);
+	if (!storage) {
+		warnings.push(
+			"Coolify didn't list this database's persistent storage : re-attach the data volume on the Volumes tab.",
+		);
+	}
 	const image = str(row, "image");
 	const id = str(row, "uuid", "id") ?? `${projectName}-${name}`;
 	if (!image) {
@@ -421,13 +468,16 @@ export function coolifyDatabase(
 		};
 	}
 	const draft = singleDraft({
+		command: coolifyPasswordCommand(row, type),
 		containerPort: spec?.port ?? null,
 		cpuLimit: cpuLimit(row.limits_cpus),
 		envVars,
+		files: storage?.files ?? [],
 		image,
 		memoryLimitMb: coolifyMemoryMb(row.limits_memory),
 		name,
 		public: false,
+		volumes: storage?.volumes ?? [],
 	});
 	return {
 		blocked: null,

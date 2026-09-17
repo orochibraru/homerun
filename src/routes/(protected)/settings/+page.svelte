@@ -1,11 +1,15 @@
 <script lang="ts">
+	import { TriangleAlert } from "@lucide/svelte";
+	import type { SubmitFunction } from "@sveltejs/kit";
 	import { enhance } from "$app/forms";
 	import { page } from "$app/state";
 	import CheckBox from "$lib/components/check-box.svelte";
+	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { getSetupStatus } from "$lib/remote/setup.remote";
+	import { nextPasskeyRpId, strandedPasskeyCount } from "$lib/security-policy";
 	import { saveToast } from "$lib/toast";
 
 	const { data } = $props();
@@ -26,6 +30,31 @@
 				(data.settings.authOrigin === `https://${data.settings.baseDomain}` ||
 					data.settings.authOrigin === `http://${data.settings.baseDomain}`)),
 	);
+
+	let baseDomainInput = $derived(data.settings.baseDomain ?? "");
+	let dashboardUrlInput = $derived(
+		originIsDerived ? "" : (data.settings.authOrigin ?? ""),
+	);
+	const nextRpId = $derived(
+		nextPasskeyRpId(baseDomainInput, dashboardUrlInput),
+	);
+	const stranded = $derived(
+		strandedPasskeyCount(data.passkeyRpId, nextRpId, data.passkeyCount),
+	);
+	let strandDialogOpen = $state(false);
+	let strandConfirmed = false;
+	let coreForm: HTMLFormElement | undefined = $state();
+
+	const saveCore = saveToast("Core settings");
+	const guardedSaveCore: SubmitFunction = (input) => {
+		if (stranded > 0 && !strandConfirmed) {
+			input.cancel();
+			strandDialogOpen = true;
+			return;
+		}
+		strandConfirmed = false;
+		return saveCore(input);
+	};
 
 	const highlighted = $derived(
 		new Set(
@@ -48,10 +77,11 @@
     </p>
   </div>
   <form
+    bind:this={coreForm}
     action="?/updateCore"
     class="space-y-4 p-5"
     method="POST"
-    use:enhance={saveToast("Core settings")}
+    use:enhance={guardedSaveCore}
   >
     <div>
       <label class={label} for="baseDomain">Base domain</label>
@@ -59,6 +89,9 @@
         class={highlightClass("baseDomain")}
         id="baseDomain"
         name="baseDomain"
+        oninput={(event) => {
+          baseDomainInput = event.currentTarget.value;
+        }}
         placeholder={data.envDefaults.baseDomain}
         type="text"
         value={data.settings.baseDomain ?? ""}
@@ -101,6 +134,9 @@
         placeholder={derivedOrigin ??
         data.envDefaults.authOrigin ??
         "https://example.com"}
+        oninput={(event) => {
+          dashboardUrlInput = event.currentTarget.value;
+        }}
         type="text"
         value={originIsDerived ? "" : (data.settings.authOrigin ?? "")}
       />
@@ -114,6 +150,19 @@
         (<code class="">dashy.localhost</code>). Single sign-on
         redirect URIs and the per-app login wall both point here.
       </p>
+      {#if stranded > 0}
+        <p class="mt-1.5 flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+          <TriangleAlert class="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            This moves the dashboard from <code>{data.passkeyRpId}</code> to
+            <code>{nextRpId}</code>, which strands
+            {stranded === 1 ? "the 1 registered passkey" : `all ${stranded} registered passkeys`}
+            on this instance: a passkey only signs in on the hostname it was
+            created on. Everyone affected signs in another way and registers a
+            new one from Profile → Security.
+          </span>
+        </p>
+      {/if}
     </div>
     <div>
       <label class={label} for="authCheckUrl">Auth-check URL</label>
@@ -142,3 +191,14 @@
     </div>
   </form>
 </section>
+
+<ConfirmDialog
+  bind:open={strandDialogOpen}
+  confirmLabel="Save anyway"
+  description={`Saving moves the dashboard to ${nextRpId ?? "a new hostname"}. ${stranded === 1 ? "The 1 registered passkey" : `All ${stranded} registered passkeys`} on this instance will stop working, and anyone who relies on one has to sign in another way and register a new passkey.`}
+  onConfirm={() => {
+    strandConfirmed = true;
+    coreForm?.requestSubmit();
+  }}
+  title="Strand registered passkeys?"
+/>

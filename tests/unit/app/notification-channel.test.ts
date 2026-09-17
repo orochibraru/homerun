@@ -6,8 +6,18 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { discordPayload, messageBody, messageSubject } = await import(
-	"../../../src/lib/services/notification-channel.service"
+const {
+	deliveryRetryJob,
+	discordPayload,
+	messageBody,
+	messageSubject,
+	slackPayload,
+	telegramPayload,
+} = await import("../../../src/lib/services/notification-channel.service");
+const { channelTargetLabel, formatTelegramTarget, parseTelegramTarget } =
+	await import("../../../src/lib/notification-channel-target");
+const { notificationDeliveryJobPayload } = await import(
+	"../../../src/lib/services/queue/payloads"
 );
 const { deployEvent, deployTitle, isFailureEvent } = await import(
 	"../../../src/lib/notification-events"
@@ -20,9 +30,11 @@ const {
 	statusChecksMessage,
 	uptimeMessage,
 } = await import("../../../src/lib/services/notification-messages");
-const { validateChannelTarget } = await import(
+const { channelTargetFromForm, validateChannelTarget } = await import(
 	"../../../src/lib/server/validation/notification-channel"
 );
+
+const BOT_TOKEN = "123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw";
 
 const message = {
 	detail: "exit code 1",
@@ -106,6 +118,108 @@ describe("channel formatting", () => {
 	});
 });
 
+describe("Slack and Telegram formatting", () => {
+	test("a Slack failure is a red attachment linking to Homerun", () => {
+		const payload = slackPayload(message);
+		const [attachment] = payload.attachments;
+		expect(payload.text).toBe("api failed to build");
+		expect(attachment?.color).toBe("#ef4444");
+		expect(attachment?.title_link).toBe(message.link);
+		expect(attachment?.text).toContain("exit code 1");
+		expect(attachment?.fields).toContainEqual({
+			short: true,
+			title: "Branch",
+			value: "main",
+		});
+		expect(attachment?.ts).toBe(1_789_560_000);
+		expect(
+			slackPayload({ ...message, detail: null, event: "service.up" })
+				.attachments[0]?.color,
+		).toBe("#10b981");
+	});
+
+	test("a Telegram message is escaped HTML for the chat", () => {
+		const payload = telegramPayload("-100123", {
+			...message,
+			detail: "<script>boom</script>",
+			serviceName: "a & b",
+		});
+		expect(payload.chat_id).toBe("-100123");
+		expect(payload.parse_mode).toBe("HTML");
+		expect(payload.text).toStartWith("<b>api failed to build</b>");
+		expect(payload.text).toContain("a &amp; b");
+		expect(payload.text).toContain(
+			"<pre>&lt;script&gt;boom&lt;/script&gt;</pre>",
+		);
+		expect(payload.text).toContain(`<a href="${message.link}">`);
+	});
+
+	test("a huge Telegram message stays under Telegram's limit", () => {
+		const payload = telegramPayload("-100123", {
+			...message,
+			fields: Array.from({ length: 200 }, (_, index) => ({
+				name: `Field ${index}`,
+				value: "x".repeat(40),
+			})),
+		});
+		expect(payload.text.length).toBeLessThanOrEqual(4096);
+	});
+
+	test("the Telegram target packs the token and chat, and never shows the token", () => {
+		const target = formatTelegramTarget({
+			botToken: ` ${BOT_TOKEN} `,
+			chatId: "-100123",
+		});
+		expect(parseTelegramTarget(target)).toEqual({
+			botToken: BOT_TOKEN,
+			chatId: "-100123",
+		});
+		expect(parseTelegramTarget("no-separator")).toBeNull();
+		expect(channelTargetLabel("telegram", target)).toBe("Chat -100123");
+		expect(channelTargetLabel("slack", "https://hooks.slack.com/x")).toBe(
+			"https://hooks.slack.com/x",
+		);
+
+		const form = new FormData();
+		form.set("kind", "telegram");
+		form.set("telegramBotToken", BOT_TOKEN);
+		form.set("telegramChatId", "@homerun_alerts");
+		form.set("target", "ignored");
+		expect(channelTargetFromForm(form)).toBe(`${BOT_TOKEN}/@homerun_alerts`);
+		form.set("kind", "slack");
+		expect(channelTargetFromForm(form)).toBe("ignored");
+	});
+});
+
+describe("delivery retries", () => {
+	test("a failed delivery becomes a delayed, retried job on the channel's owner", () => {
+		const now = new Date("2026-09-16T12:00:00.000Z");
+		const job = deliveryRetryJob(
+			{ id: "chan-1", name: "On-call", userId: "user-1" },
+			message,
+			now,
+		);
+		expect(job.type).toBe("notification_delivery");
+		expect(job.userId).toBe("user-1");
+		expect(job.maxAttempts).toBeGreaterThan(1);
+		expect(job.runAt?.getTime()).toBeGreaterThan(now.getTime());
+		expect(job.title).toBe('Deliver "api failed to build" to On-call');
+		expect(notificationDeliveryJobPayload.parse(job.payload)).toEqual({
+			channelId: "chan-1",
+			message,
+		});
+	});
+
+	test("a payload with an unknown event is rejected", () => {
+		expect(
+			notificationDeliveryJobPayload.safeParse({
+				channelId: "chan-1",
+				message: { ...message, event: "nope" },
+			}).success,
+		).toBe(false);
+	});
+});
+
 describe("validateChannelTarget", () => {
 	test("a Discord channel needs a Discord webhook URL", () => {
 		expect(
@@ -117,6 +231,37 @@ describe("validateChannelTarget", () => {
 		expect(
 			validateChannelTarget("discord", "https://example.com/hook"),
 		).not.toBeNull();
+	});
+
+	test("a Slack channel needs a Slack incoming webhook URL", () => {
+		expect(
+			validateChannelTarget(
+				"slack",
+				"https://hooks.slack.com/services/T000/B000/XXXX",
+			),
+		).toBeNull();
+		expect(
+			validateChannelTarget("slack", "https://example.com/services/T000"),
+		).not.toBeNull();
+		expect(
+			validateChannelTarget("slack", "http://hooks.slack.com/services/T000"),
+		).not.toBeNull();
+	});
+
+	test("a Telegram channel needs a bot token and a chat id", () => {
+		expect(
+			validateChannelTarget("telegram", `${BOT_TOKEN}/-1001234567890`),
+		).toBeNull();
+		expect(
+			validateChannelTarget("telegram", `${BOT_TOKEN}/@homerun_alerts`),
+		).toBeNull();
+		expect(validateChannelTarget("telegram", "not-a-token/123")).toContain(
+			"bot token",
+		);
+		expect(validateChannelTarget("telegram", `${BOT_TOKEN}/chat`)).toContain(
+			"chat id",
+		);
+		expect(validateChannelTarget("telegram", "")).not.toBeNull();
 	});
 
 	test("a generic webhook needs http(s), an email needs an address", () => {

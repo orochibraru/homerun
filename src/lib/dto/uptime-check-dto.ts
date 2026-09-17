@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, lt } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
-import { service, type UptimeCheck, uptimeCheck } from "$lib/server/db/schema";
+import { type UptimeCheck, uptimeCheck } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
 
 export type ProbeKind = "internal" | "external";
@@ -79,24 +79,11 @@ export class UptimeCheckDTO extends BaseDTO<UptimeCheck> {
 		return rows.reverse();
 	}
 
-	/** The newest beat of every probe a user owns, for the dashboard's failing-probe banner. */
-	static async latestForUser(userId: string): Promise<UptimeCheck[]> {
-		const owned = await db
-			.select({ id: service.id })
-			.from(service)
-			.where(eq(service.userId, userId));
-		if (owned.length === 0) {
-			return [];
-		}
+	/** The newest beat of every probe on the instance, for the dashboard's failing-probe banner. */
+	static async latest(): Promise<UptimeCheck[]> {
 		return await db
 			.selectDistinctOn([uptimeCheck.serviceId, uptimeCheck.kind])
 			.from(uptimeCheck)
-			.where(
-				inArray(
-					uptimeCheck.serviceId,
-					owned.map((row) => row.id),
-				),
-			)
 			.orderBy(
 				uptimeCheck.serviceId,
 				uptimeCheck.kind,

@@ -10,6 +10,7 @@ import {
 	or,
 	type SQL,
 } from "drizzle-orm";
+import type { BuildMethod } from "$lib/build-methods";
 import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
 import { db } from "$lib/server/db/lib";
 import { type Service, service, stack } from "$lib/server/db/schema";
@@ -19,131 +20,20 @@ import {
 	type PagedResult,
 	searchCondition,
 } from "$lib/server/list-query";
+import { runtimeOptionsFrom } from "$lib/service-runtime";
 import type { ContainerStatus, PullPolicy } from "$lib/types";
 import { BaseDTO } from "./base-dto";
-
-/** Fields a caller supplies to insert a new service row. */
-export interface NewServiceInput {
-	authRequired?: boolean;
-	buildCacheRegistryId?: string | null;
-	buildServerRemoteHostId?: string | null;
-	buildSource?: "image" | "git";
-	containerPort: number;
-	cpuLimit?: string | null;
-	customDomain?: string | null;
-	dnsResolvable?: boolean;
-	envVars: Record<string, string>;
-	gitBuildContext?: string | null;
-	gitDockerfilePath?: string | null;
-	gitRef?: string | null;
-	gitUrl?: string | null;
-	gitProviderId?: string | null;
-	gitRepo?: string | null;
-	autoDeployOnPush?: boolean;
-	healthcheckCommand?: string | null;
-	image: string;
-	memoryLimitMb?: number | null;
-	name: string;
-	networkMode?: "bridge" | "host";
-	portProtocol?: "tcp" | "udp" | "both";
-	stackId?: string | null;
-	registryPasswordEnc?: string | null;
-	registryUrl?: string | null;
-	registryUsername?: string | null;
-	pullPolicy?: PullPolicy;
-	replicas?: number;
-	restartPolicy: string;
-	slug: string;
-	tag: string;
-	userId: string;
-}
-
-/** Fields a caller may patch on an existing service row. */
-export type ServiceUpdateInput = Partial<
-	Pick<
-		Service,
-		| "authAllowedEmails"
-		| "authAllowedGroups"
-		| "authAllowedUserIds"
-		| "authProviders"
-		| "authRequired"
-		| "autoRollback"
-		| "buildCacheRegistryId"
-		| "buildServerRemoteHostId"
-		| "buildSource"
-		| "containerId"
-		| "containerPort"
-		| "cpuLimit"
-		| "cronEnabled"
-		| "cronLastRunAt"
-		| "cronSchedule"
-		| "currentStatus"
-		| "customDomain"
-		| "customSslCertEnc"
-		| "customSslKeyEnc"
-		| "desiredState"
-		| "dnsResolvable"
-		| "envVars"
-		| "errorsDismissedAt"
-		| "errorsDismissedByDeploymentId"
-		| "gitBuildContext"
-		| "gitDockerfilePath"
-		| "gitRef"
-		| "gitUrl"
-		| "gitProviderId"
-		| "gitRepo"
-		| "autoDeployOnPush"
-		| "gitWebhookId"
-		| "gitWebhookSecretEnc"
-		| "gitWebhookError"
-		| "healthcheckCommand"
-		| "image"
-		| "imageScanEnabled"
-		| "memoryLimitMb"
-		| "name"
-		| "networkMode"
-		| "portProtocol"
-		| "stackId"
-		| "pullPolicy"
-		| "registryPasswordEnc"
-		| "registryUrl"
-		| "registryUsername"
-		| "replicas"
-		| "requireStatusChecks"
-		| "requiredStatusChecks"
-		| "restartPolicy"
-		| "slug"
-		| "swarmServiceId"
-		| "uptimeEnabled"
-		| "tag"
-	>
->;
+import type { NewServiceInput, ServiceUpdateInput } from "./service-input";
 
 /**
  * Wraps the `service` table : every route that touches a service goes
- * through here instead of writing its own Drizzle query. Ownership checks
- * (`userId` match) are baked into `get`/`list`, matching the existing
- * `ownedService` convention: never trust a route param alone.
+ * through here instead of writing its own Drizzle query. Resources are shared
+ * across every account on the instance, so no finder filters by `userId`,
+ * which only records who created the service.
  */
 export class ServiceDTO extends BaseDTO<Service> {
-	/**
-	 * Loads one service by id, scoped to its owner; null when missing or owned by
-	 * someone else.
-	 */
-	static async get(id: string, userId: string): Promise<ServiceDTO | null> {
-		const [row] = await db
-			.select()
-			.from(service)
-			.where(and(eq(service.id, id), eq(service.userId, userId)))
-			.limit(1);
-		return row ? new ServiceDTO(row) : null;
-	}
-
-	/**
-	 * Loads one service by id without an owner check, for the per-app login wall,
-	 * which has to look up whichever service a request is for.
-	 */
-	static async getForGate(id: string): Promise<ServiceDTO | null> {
+	/** Loads one service by id; null when missing. */
+	static async get(id: string): Promise<ServiceDTO | null> {
 		const [row] = await db
 			.select()
 			.from(service)
@@ -152,34 +42,21 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return row ? new ServiceDTO(row) : null;
 	}
 
-	/**
-	 * Loads one service by id without an owner check, for an incoming git push
-	 * webhook, which is authenticated by the service's own webhook secret
-	 * rather than a user session.
-	 */
-	static async getForWebhook(id: string): Promise<ServiceDTO | null> {
-		return await ServiceDTO.getForGate(id);
-	}
-
-	/** Every service the user owns, newest first. */
-	static async list(userId: string): Promise<ServiceDTO[]> {
+	/** Every service on the instance, newest first. */
+	static async list(): Promise<ServiceDTO[]> {
 		const rows = await db
 			.select()
 			.from(service)
-			.where(eq(service.userId, userId))
 			.orderBy(desc(service.createdAt));
 		return rows.map((row) => new ServiceDTO(row));
 	}
 
-	/** Every service the user owns in one stack, newest first. */
-	static async listByStack(
-		stackId: string,
-		userId: string,
-	): Promise<ServiceDTO[]> {
+	/** Every service in one stack, newest first. */
+	static async listByStack(stackId: string): Promise<ServiceDTO[]> {
 		const rows = await db
 			.select()
 			.from(service)
-			.where(and(eq(service.stackId, stackId), eq(service.userId, userId)))
+			.where(eq(service.stackId, stackId))
 			.orderBy(desc(service.createdAt));
 		return rows.map((row) => new ServiceDTO(row));
 	}
@@ -189,14 +66,13 @@ export class ServiceDTO extends BaseDTO<Service> {
 	 * bucket the services list groups by) : a dedicated query rather than
 	 * bolting a join onto `list`, since the two callers want different shapes.
 	 */
-	static async listWithStackNames(
-		userId: string,
-	): Promise<Array<{ stackName: string | null; service: ServiceDTO }>> {
+	static async listWithStackNames(): Promise<
+		Array<{ stackName: string | null; service: ServiceDTO }>
+	> {
 		const rows = await db
 			.select({ stackName: stack.name, row: service })
 			.from(service)
 			.leftJoin(stack, eq(service.stackId, stack.id))
-			.where(eq(service.userId, userId))
 			.orderBy(desc(service.createdAt));
 		return rows.map((r) => ({
 			stackName: r.stackName,
@@ -205,12 +81,12 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 
 	/**
-	 * Builds the WHERE clause for the paged services list : owner scope, the
-	 * search box (name, slug, image, tag), status pills, and stack pills where
-	 * the Ungrouped label means no stack.
+	 * Builds the WHERE clause for the paged services list : the search box
+	 * (name, slug, image, tag), status pills, and stack pills where the
+	 * Ungrouped label means no stack.
 	 */
-	static #listFilters(userId: string, query: ListQuery): SQL | undefined {
-		const conditions: SQL[] = [eq(service.userId, userId)];
+	static #listFilters(query: ListQuery): SQL | undefined {
+		const conditions: SQL[] = [];
 
 		const search = searchCondition(query.q, [
 			service.name,
@@ -251,10 +127,9 @@ export class ServiceDTO extends BaseDTO<Service> {
 
 	/** One page of `listWithStackNames`, filtered/searched server-side, plus the unpaged total the pager needs. */
 	static async listWithStackNamesPaged(
-		userId: string,
 		query: ListQuery,
 	): Promise<PagedResult<{ stackName: string | null; service: ServiceDTO }>> {
-		const where = ServiceDTO.#listFilters(userId, query);
+		const where = ServiceDTO.#listFilters(query);
 		const [rows, totals] = await Promise.all([
 			db
 				.select({ stackName: stack.name, row: service })
@@ -281,18 +156,18 @@ export class ServiceDTO extends BaseDTO<Service> {
 		};
 	}
 
-	/** Every distinct status/stack this user's services actually use, for the list page's filter pills (which must stay stable regardless of the current page). */
-	static async listFilterFacets(
-		userId: string,
-	): Promise<{ stacks: string[]; statuses: string[] }> {
+	/** Every distinct status/stack the instance's services actually use, for the list page's filter pills (which must stay stable regardless of the current page). */
+	static async listFilterFacets(): Promise<{
+		stacks: string[];
+		statuses: string[];
+	}> {
 		const rows = await db
 			.selectDistinct({
 				stackName: stack.name,
 				status: service.currentStatus,
 			})
 			.from(service)
-			.leftJoin(stack, eq(service.stackId, stack.id))
-			.where(eq(service.userId, userId));
+			.leftJoin(stack, eq(service.stackId, stack.id));
 		return {
 			stacks: [
 				...new Set(rows.map((r) => r.stackName ?? UNGROUPED_LABEL)),
@@ -301,7 +176,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		};
 	}
 
-	/** Every service (across all users) with cron redeploys turned on : for the scheduler tick, which isn't scoped to one user. */
+	/** Every service with cron redeploys turned on : for the scheduler tick. */
 	static async listCronEnabled(): Promise<ServiceDTO[]> {
 		const rows = await db
 			.select()
@@ -311,9 +186,8 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 
 	/**
-	 * Every service with a live container, for the per-minute stats sampler.
-	 * Unscoped by owner deliberately, same precedent as `listCronEnabled`:
-	 * this is a system-triggered sweep, not a user-facing access path.
+	 * Every running service with a live container or a swarm service, for the
+	 * per-minute stats sampler and uptime probe.
 	 */
 	static async listRunningWithContainers(): Promise<ServiceDTO[]> {
 		const rows = await db
@@ -321,7 +195,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			.from(service)
 			.where(
 				and(
-					isNotNull(service.containerId),
+					or(isNotNull(service.containerId), isNotNull(service.swarmServiceId)),
 					eq(service.currentStatus, "running"),
 				),
 			);
@@ -357,14 +231,24 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return !!row;
 	}
 
+	/** How a git service is built : the build method and its per-method file, target and context settings. */
+	static #buildMethodColumns(input: NewServiceInput) {
+		return {
+			gitBakeFile: input.gitBakeFile ?? null,
+			gitBakeTarget: input.gitBakeTarget ?? null,
+			gitBuildContext: input.gitBuildContext ?? null,
+			gitBuildMethod: input.gitBuildMethod ?? "dockerfile",
+			gitDockerfilePath: input.gitDockerfilePath ?? null,
+		} satisfies Partial<Service>;
+	}
+
 	/** Where the image comes from : registry coordinates plus the git-build fields, all optional with a default. */
 	static #buildColumns(input: NewServiceInput) {
 		return {
 			buildCacheRegistryId: input.buildCacheRegistryId ?? null,
 			buildServerRemoteHostId: input.buildServerRemoteHostId ?? null,
 			buildSource: input.buildSource ?? "image",
-			gitBuildContext: input.gitBuildContext ?? null,
-			gitDockerfilePath: input.gitDockerfilePath ?? null,
+			...ServiceDTO.#buildMethodColumns(input),
 			gitRef: input.gitRef ?? null,
 			gitUrl: input.gitUrl ?? null,
 			gitProviderId: input.gitProviderId ?? null,
@@ -379,9 +263,24 @@ export class ServiceDTO extends BaseDTO<Service> {
 		} satisfies Partial<Service>;
 	}
 
+	/** Push polling, webhook reconnect and pull request preview columns, all off for a new service unless it is itself a preview. */
+	static #gitTriggerColumns(input: NewServiceInput) {
+		return {
+			gitLastSeenCommit: null,
+			gitPollEnabled: false,
+			gitWebhookReconnect: false,
+			previewBranch: input.previewBranch ?? null,
+			previewParentId: input.previewParentId ?? null,
+			previewPrNumber: input.previewPrNumber ?? null,
+			previewPrTitle: input.previewPrTitle ?? null,
+			previewsEnabled: false,
+		} satisfies Partial<Service>;
+	}
+
 	/** How the container runs : placement, networking, resource limits, all optional with a default. */
 	static #runtimeColumns(input: NewServiceInput) {
 		return {
+			...runtimeOptionsFrom(input.runtime),
 			authAllowedEmails: [],
 			authAllowedGroups: [],
 			authAllowedUserIds: [],
@@ -399,28 +298,21 @@ export class ServiceDTO extends BaseDTO<Service> {
 	}
 
 	/**
-	 * Up to `limit` of the user's services whose name, slug, image, custom domain
-	 * or git URL matches `q`, newest first, for global search.
+	 * Up to `limit` services whose name, slug, image, custom domain or git URL
+	 * matches `q`, newest first, for global search.
 	 */
-	static async search(
-		userId: string,
-		q: string,
-		limit: number,
-	): Promise<ServiceDTO[]> {
+	static async search(q: string, limit: number): Promise<ServiceDTO[]> {
 		const rows = await db
 			.select()
 			.from(service)
 			.where(
-				and(
-					eq(service.userId, userId),
-					searchCondition(q, [
-						service.name,
-						service.slug,
-						service.image,
-						service.customDomain,
-						service.gitUrl,
-					]),
-				),
+				searchCondition(q, [
+					service.name,
+					service.slug,
+					service.image,
+					service.customDomain,
+					service.gitUrl,
+				]),
 			)
 			.orderBy(desc(service.createdAt))
 			.limit(limit);
@@ -437,6 +329,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 		const row: Service = {
 			...ServiceDTO.#buildColumns(input),
 			...ServiceDTO.#runtimeColumns(input),
+			...ServiceDTO.#gitTriggerColumns(input),
 			autoRollback: false,
 			containerId: null,
 			containerPort: input.containerPort,
@@ -512,7 +405,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 	get id(): string {
 		return this.row.id;
 	}
-	/** The id of the user who owns the service. */
+	/** The id of the user who created the service. */
 	get userId(): string {
 		return this.row.userId;
 	}
@@ -696,9 +589,21 @@ export class ServiceDTO extends BaseDTO<Service> {
 	get gitWebhookError(): string | null {
 		return this.row.gitWebhookError;
 	}
+	/** The bake file path relative to the build context, if not `docker-bake.hcl`. */
+	get gitBakeFile(): string | null {
+		return this.row.gitBakeFile;
+	}
+	/** The bake target or single-target group to build, if not `default`. */
+	get gitBakeTarget(): string | null {
+		return this.row.gitBakeTarget;
+	}
 	/** The build context directory inside the repo, if not the root. */
 	get gitBuildContext(): string | null {
 		return this.row.gitBuildContext;
+	}
+	/** How a git service is built: its Dockerfile, a Docker Bake target, or a Nixpacks, Railpack or buildpacks builder. */
+	get gitBuildMethod(): BuildMethod {
+		return this.row.gitBuildMethod;
 	}
 	/** The Dockerfile path relative to the build context, if not `Dockerfile`. */
 	get gitDockerfilePath(): string | null {

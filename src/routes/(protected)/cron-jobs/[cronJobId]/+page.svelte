@@ -177,7 +177,7 @@
               {/if}
             </button>
             {#if expandedRunId === run.id && run.output}
-              <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300">
+              <div class="mx-5 mb-3 max-h-64 overflow-y-auto rounded-md log-output">
                 {#each run.output.split("\n").filter(Boolean) as line, i (i)}
                   <AnsiLine {line} />
                 {/each}

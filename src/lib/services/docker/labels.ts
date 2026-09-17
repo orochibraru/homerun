@@ -42,8 +42,10 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
  * `homerun.managed`/`homerun.service.id` tracking labels, plus (when
  * `dnsResolvable`) the Traefik router/service/TLS labels that give it its
  * public `<slug>.<baseDomain>` route, a second router for `customDomain`
- * sharing the same backend, and a forwardAuth middleware when `authRequired`
- * is set.
+ * sharing the same backend, and the login wall's forwardAuth middleware on every
+ * router. The middleware is attached whether or not the wall is on: auth-check
+ * lets requests through for a service whose wall is off, so toggling it applies
+ * without a redeploy.
  */
 export function buildContainerLabels(params: {
 	serviceId: string;
@@ -60,11 +62,6 @@ export function buildContainerLabels(params: {
 	// sharing the primary router's Traefik service (no duplicated backend
 	// config). Only applied when dnsResolvable is true.
 	customDomain?: string | null;
-	// When true, gatekeeps every router for this service behind a Traefik
-	// forwardAuth middleware pointing at config.authCheckUrl : see
-	// /api/v1/auth-check. Only applied when dnsResolvable is true (a
-	// subnet-only service has no public router to gate anyway).
-	authRequired?: boolean;
 	// Which network Traefik should reach this workload on. Defaults to the
 	// shared bridge network every standalone container joins; swarm-mode
 	// services pass their own overlay instead (see docker/swarm.ts).
@@ -77,7 +74,6 @@ export function buildContainerLabels(params: {
 		dnsResolvable = true,
 		stackSlug,
 		customDomain,
-		authRequired,
 		networkName = config.docker.networkName,
 	} = params;
 
@@ -132,18 +128,15 @@ export function buildContainerLabels(params: {
 		labels[`traefik.http.routers.${customRouter}.service`] = slug;
 	}
 
-	if (authRequired) {
-		const authMiddleware = `${slug}-auth`;
-		labels[`traefik.http.middlewares.${authMiddleware}.forwardauth.address`] =
-			authCheckUrlFor(serviceId);
-		labels[
-			`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`
-		] = GATE_IDENTITY_HEADERS.join(",");
-		labels[`traefik.http.routers.${slug}.middlewares`] = authMiddleware;
-		if (customDomain) {
-			labels[`traefik.http.routers.${slug}-custom.middlewares`] =
-				authMiddleware;
-		}
+	const authMiddleware = `${slug}-auth`;
+	labels[`traefik.http.middlewares.${authMiddleware}.forwardauth.address`] =
+		authCheckUrlFor(serviceId);
+	labels[
+		`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`
+	] = GATE_IDENTITY_HEADERS.join(",");
+	labels[`traefik.http.routers.${slug}.middlewares`] = authMiddleware;
+	if (customDomain) {
+		labels[`traefik.http.routers.${slug}-custom.middlewares`] = authMiddleware;
 	}
 
 	return labels;

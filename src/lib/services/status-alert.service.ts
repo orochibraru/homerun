@@ -37,7 +37,7 @@ export function detectTransitions(
 }
 
 class StatusAlertServiceClass {
-	/** Sends an uptime notification for each transition to its service's owner via `NotificationChannelService`. Per-transition failures are logged and don't stop the others from dispatching. */
+	/** Sends an uptime notification for each transition to every account's channels via `NotificationChannelService`. Per-transition failures are logged and don't stop the others from dispatching. */
 	async dispatch(
 		transitions: ProbeTransition[],
 		servicesById: Map<string, { host: string | null; svc: ServiceDTO }>,
@@ -51,7 +51,6 @@ class StatusAlertServiceClass {
 				const { host, svc } = entry;
 				try {
 					await NotificationChannelService.dispatch(
-						svc.userId,
 						uptimeMessage(
 							{
 								detail: transition.detail,

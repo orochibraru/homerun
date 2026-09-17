@@ -26,6 +26,7 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      release: ${{ steps.diff.outputs.release }}
     steps:
       - name: List changed files outside docs
         id: diff
@@ -35,10 +36,15 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          code="$(
-            gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename' \
-              | grep -vE '^(docs/|\.agents/|\.claude/)|\.md$' || true
-          )"
+          files="$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')"
+          code="$(printf '%s\n' "$files" | grep -vE '^(docs/|\.agents/|\.claude/)|\.md$' || true)"
+          release="$(printf '%s\n' "$files" | grep -xE 'package\.json|bun\.lock|\.releaserc\.json' || true)"
+          if [ -n "$release" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "Release config or dependencies changed: dry-running semantic-release."
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "$code"
@@ -54,6 +60,51 @@ jobs:
     with:
       tests: ${{ needs.changes.outputs.code == 'true' }}
     secrets: inherit
+
+  release-dry-run:
+    name: Release Dry Run
+    needs: [changes]
+    if:
+      needs.changes.outputs.release == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node.js for semantic-release
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      # semantic-release bails out on a pull_request event before it runs a
+      # single plugin, and only releases from `main`. Posing as a push to the
+      # PR's own branch, listed as the only release branch, makes it load
+      # every plugin and run verifyConditions, analyzeCommits and
+      # generateNotes for real, so a broken plugin upgrade fails here instead
+      # of on the release after merge. --dry-run still skips prepare/publish.
+      - name: Dry-run semantic-release against this branch
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          GITHUB_EVENT_NAME=push GITHUB_REF="refs/heads/$HEAD_REF" \
+            bun run semantic-release --dry-run --no-ci --branches "$HEAD_REF"
 
   binaries:
     name: Binaries
@@ -151,6 +202,7 @@ jobs:
       github.repository
     needs:
       - code_quality
+      - release-dry-run
       - binaries
       - build-app
       - build-agent
@@ -192,6 +244,7 @@ jobs:
               ["E2E", cell(result("e2e"), needs.e2e?.outputs?.summary)],
               ["Docs screenshots", cell(result("screenshots"), needs.screenshots?.outputs?.summary)],
               ["Binaries", cell(result("binaries"))],
+              ["Release dry run", cell(result("release-dry-run"))],
               ["Docker build", cell(result("build-app"))],
             ];
 
@@ -286,6 +339,7 @@ jobs:
     needs:
       - changes
       - code_quality
+      - release-dry-run
       - binaries
       - build-app
       - build-agent
@@ -300,6 +354,7 @@ jobs:
           results=(
             "${{ needs.changes.result }}"
             "${{ needs.code_quality.result }}"
+            "${{ needs.release-dry-run.result }}"
             "${{ needs.binaries.result }}"
             "${{ needs.build-app.result }}"
             "${{ needs.build-agent.result }}"

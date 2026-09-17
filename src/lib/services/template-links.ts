@@ -3,8 +3,13 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
+import {
+	templateHostAccessMessage,
+	templatesNeedingHostAccess,
+} from "$lib/host-access";
 import { Logger } from "$lib/logger";
 import { isDatabaseImage } from "$lib/service-link";
+import type { ServiceRuntimeOptions } from "$lib/service-runtime";
 import { uniqueSlug } from "$lib/slug";
 import { DeploymentService } from "./deploy.service";
 
@@ -18,6 +23,7 @@ export interface ResolvedTemplateLink {
 	image: string;
 	memoryLimitMb: number | null;
 	restartPolicy: string;
+	runtime: ServiceRuntimeOptions;
 	slug: string;
 	tag: string;
 	templateName: string;
@@ -83,12 +89,33 @@ export async function buildTemplateLinkContext(
 			image: linkedTemplate.linkedTemplateImage,
 			memoryLimitMb: linkedTemplate.linkedTemplateMemoryLimitMb,
 			restartPolicy: linkedTemplate.linkedTemplateRestartPolicy,
+			runtime: linkedTemplate.linkedTemplateRuntime,
 			slug,
 			tag: linkedTemplate.linkedTemplateTag,
 			templateName: linkedTemplate.linkedTemplateName,
 		});
 	}
 	return resolved;
+}
+
+/**
+ * The refusal for a non-admin deploying `template` when it or one of its
+ * resolved linked companions asks for host-level access, null when the
+ * deploy may go ahead.
+ */
+export function templateHostAccessRefusal(
+	template: TemplateDTO,
+	links: Pick<ResolvedTemplateLink, "runtime" | "templateName">[],
+	isAdmin: boolean,
+): string | null {
+	if (isAdmin) {
+		return null;
+	}
+	const names = templatesNeedingHostAccess([
+		{ ...template.runtimeOptions, name: template.name },
+		...links.map((link) => ({ ...link.runtime, name: link.templateName })),
+	]);
+	return names.length > 0 ? templateHostAccessMessage(names) : null;
 }
 
 /** Resolves every `{{alias}}`/`{{alias.KEY}}` token in `envVars`' values against the given resolved links. */
@@ -136,6 +163,7 @@ export async function createLinkedServices(
 			name: link.templateName,
 			stackId: params.stackId,
 			restartPolicy: link.restartPolicy,
+			runtime: link.runtime,
 			slug: link.slug,
 			tag: link.tag,
 			userId: params.userId,
@@ -150,22 +178,31 @@ export async function createLinkedServices(
  * Instantiates a template as a real service: resolves its linked services
  * (creating a stack for them if none was given), resolves `{{alias}}` env
  * var tokens against those links, then creates the primary service and its
- * linked services.
+ * linked services, each carrying its template's runtime options. Returns a
+ * refusal without creating anything when a non-admin deploys a template (or
+ * a companion) that needs host access.
  */
 export async function createServiceFromTemplate(
 	template: TemplateDTO,
-	userId: string,
-	stackId: string | null,
-): Promise<{
-	linkedServices: ServiceDTO[];
-	stackId: string | null;
-	svc: ServiceDTO;
-}> {
+	params: { isAdmin: boolean; stackId: string | null; userId: string },
+): Promise<
+	| {
+			linkedServices: ServiceDTO[];
+			stackId: string | null;
+			svc: ServiceDTO;
+	  }
+	| { refusal: string }
+> {
+	const { stackId, userId } = params;
 	const row = template.toJSON();
 	const slug = await uniqueSlug(slugify(row.name), (candidate) =>
 		ServiceDTO.slugTaken(candidate),
 	);
 	const links = await buildTemplateLinkContext(row.id, slug);
+	const refusal = templateHostAccessRefusal(template, links, params.isAdmin);
+	if (refusal) {
+		return { refusal };
+	}
 
 	const finalStackId =
 		links.length > 0 && !stackId
@@ -184,11 +221,13 @@ export async function createServiceFromTemplate(
 		// …) is for its siblings, not for the public internet.
 		dnsResolvable: !isDatabaseImage(row.image),
 		envVars,
+		healthcheckCommand: row.healthcheckCommand,
 		image: row.image,
 		memoryLimitMb: row.memoryLimitMb,
 		name: row.name,
 		stackId: finalStackId,
 		restartPolicy: row.restartPolicy,
+		runtime: template.runtimeOptions,
 		slug,
 		tag: row.tag,
 		userId,
@@ -214,24 +253,25 @@ export type QuickDeployResult =
  * `createServiceFromTemplate`, records a "service created" notification for
  * each, and enqueues the stack deploy job.
  *
- * @returns An error result (404) when the template isn't usable by this
- *   user, otherwise the created service/stack ids.
+ * @returns An error result when the template isn't found (404) or needs
+ *   host access a non-admin can't grant (403, nothing is created),
+ *   otherwise the created service/stack ids.
  */
 export async function quickDeployFromTemplate(
 	templateId: string,
-	userId: string,
-	stackId: string | null,
+	params: { isAdmin: boolean; stackId: string | null; userId: string },
 ): Promise<QuickDeployResult> {
-	const template = await TemplateDTO.usable(templateId, userId);
+	const { userId } = params;
+	const template = await TemplateDTO.get(templateId);
 	if (!template) {
 		return { error: "Template not found.", ok: false, status: 404 };
 	}
 
-	const {
-		linkedServices,
-		stackId: finalStackId,
-		svc,
-	} = await createServiceFromTemplate(template, userId, stackId);
+	const created = await createServiceFromTemplate(template, params);
+	if ("refusal" in created) {
+		return { error: created.refusal, ok: false, status: 403 };
+	}
+	const { linkedServices, stackId: finalStackId, svc } = created;
 
 	logger.info(
 		`Quick-deployed from template: template=${templateId} service=${svc.id} user=${userId}`,
@@ -240,7 +280,6 @@ export async function quickDeployFromTemplate(
 		message: `"${svc.name}" was created.`,
 		serviceId: svc.id,
 		type: "service_created",
-		userId,
 	});
 
 	for (const linked of linkedServices) {
@@ -248,7 +287,6 @@ export async function quickDeployFromTemplate(
 			message: `"${linked.name}" was created.`,
 			serviceId: linked.id,
 			type: "service_created",
-			userId,
 		});
 	}
 

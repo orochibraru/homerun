@@ -136,7 +136,7 @@
   </div>
 
   <div
-    class="{heightClass} overflow-y-auto bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-zinc-300"
+    class="{heightClass} overflow-y-auto log-output"
     bind:this={logEl}
   >
     {#if !containerId}

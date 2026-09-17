@@ -13,10 +13,12 @@
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
+	import { runtimeOptionsSummary } from "$lib/service-runtime";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -24,6 +26,7 @@
 	const tmpl = $derived(data.template);
 
 	let deploying = $state(false);
+	const runtime = $derived(runtimeOptionsSummary(tmpl));
 
 	onMount(() => title.set(tmpl.name));
 
@@ -82,7 +85,11 @@
                         value={data.stack.id}
                     />
                 {/if}
-                <Button disabled={deploying} size="sm" type="submit">
+                <Button
+                    disabled={deploying || data.hostAccessRefusal !== null}
+                    size="sm"
+                    type="submit"
+                >
                     {#if deploying}
                         <Spinner />
                         Deploying…
@@ -98,6 +105,10 @@
             </Button>
         </div>
     </div>
+
+    {#if data.hostAccessRefusal}
+        <Alert variant="warning">{data.hostAccessRefusal}</Alert>
+    {/if}
 
     {#if tmpl.description}
         <p class="max-w-2xl text-sm text-text-muted">{tmpl.description}</p>
@@ -195,6 +206,21 @@
             </div>
         {/if}
     </div>
+
+    {#if runtime.length > 0}
+        <div class="rounded-md panel p-5">
+            <h2
+                class="mb-3 text-xs font-semibold tracking-widest text-text-subtle uppercase"
+            >
+                Runtime
+            </h2>
+            <ul class="space-y-2 font-mono text-xs text-text">
+                {#each runtime as line (line)}
+                    <li class="truncate">{line}</li>
+                {/each}
+            </ul>
+        </div>
+    {/if}
 
     {#if data.links.length > 0}
         <div class="rounded-md panel p-5">

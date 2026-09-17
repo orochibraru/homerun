@@ -1,5 +1,6 @@
 import process from "node:process";
 export type InstallMode = "agent" | "full";
+export type DockerFlavour = "rootful" | "rootless";
 
 export interface Options {
 	/** Print every command instead of running it : the only way this installer's logic gets exercised in review/CI without root or a disposable VM. */
@@ -13,12 +14,15 @@ export interface Options {
 	agentPort: number;
 	/** Domain or IP this instance will be reached at (`--mode=full`): becomes the app's baseDomain and its ORIGIN. Prompted for, or detected from this host's own address, when not given : it must never end up as localhost, see steps/full-stack.ts. */
 	domain?: string;
+	/** Which Docker daemon `--mode=full` runs the stack on. "rootless" (default) is the per-user daemon the rest of this installer sets up; "rootful" is the system daemon, required for swarm mode, whose overlay networks rootless Docker doesn't support. */
+	docker: DockerFlavour;
 	/** Skip the "here's what I'm about to do, continue?" prompt : required for a non-interactive `curl | sh` install. */
 	yes: boolean;
 }
 
 const DEFAULTS: Options = {
 	agentPort: 7420,
+	docker: "rootless",
 	dryRun: false,
 	mode: "agent",
 	rootlessUser: "homerun",
@@ -28,6 +32,12 @@ const DEFAULTS: Options = {
 
 /** Bare flags : an exact argv token that just sets a field. */
 const FLAG_ARGS: Record<string, (opts: Options) => void> = {
+	"--docker=rootful": (opts) => {
+		opts.docker = "rootful";
+	},
+	"--docker=rootless": (opts) => {
+		opts.docker = "rootless";
+	},
 	"--dry-run": (opts) => {
 		opts.dryRun = true;
 	},
@@ -77,6 +87,18 @@ class InstallerOptionsParser {
 		return opts;
 	}
 
+	/**
+	 * Cross-flag checks the per-token parser can't make.
+	 *
+	 * @returns An error message, or null when the combination is valid.
+	 */
+	validate(opts: Options): string | null {
+		if (opts.docker === "rootful" && opts.mode !== "full") {
+			return "--docker=rootful only applies to --mode=full : the agent always runs on its own rootless daemon.";
+		}
+		return null;
+	}
+
 	/** Applies one argv token, exiting the process on `--help` or anything unrecognized. */
 	#applyArg(opts: Options, arg: string): void {
 		const flag = FLAG_ARGS[arg];
@@ -119,6 +141,9 @@ Options:
   --domain=<host>     Domain or IP the instance is reached at (--mode=full).
                       Prompted for, or detected from this host's own address,
                       when omitted. Never defaults to localhost.
+  --docker=rootless|rootful
+                      Daemon --mode=full runs the stack on (default:
+                      rootless). rootful is required for swarm mode.
   --user=<name>       Rootless-Docker system user to create (default: homerun)
   --port=<n>          Agent HTTP port (default: 7420)
   --dry-run           Print every command instead of running it

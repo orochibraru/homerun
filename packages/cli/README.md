@@ -42,6 +42,12 @@ They can go before or after the subcommand
 `homerun services list --base-url <url>`, both work). Running any command with
 none of the three configured (no flags, no env vars, no saved login) prints "Not
 logged in" and points you at `homerun login` instead of a raw error.
+
+A read-only API key (created with **Access: Read-only** under Profile →
+Authorized Clients, or any key belonging to a read-only account) works with
+every read command and gets a `403` from anything that deploys, starts, stops,
+restarts, deletes or scans.
+
 `--version=vX.Y.Z` (on `install.sh`) pins a specific release instead of the
 latest one.
 
@@ -78,7 +84,7 @@ homerun services scans <id> [--json] [--page <n>] [--per-page <n>] [--search <te
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
 homerun services revisions <id> [--json]
-homerun services rollback <id> [revisionId]
+homerun services rollback <id> [revisionId] [--restore-config]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
@@ -99,7 +105,8 @@ danger-zone action as the Settings tab's Delete button; `--force` adds
 service itself couldn't be removed (without it, that case answers a 409 and
 deletes nothing). `homerun services webhook <id>` calls
 `GET /services/{serviceId}/webhook` and prints the push-to-deploy URL and secret
-for that service (a 404 when Deploy on push isn't turned on).
+for that service (a 404 when neither Deploy on push nor pull request previews
+are turned on).
 
 `homerun services scans <id>` is an alias for `homerun services scans list <id>`
 (`list` is the group's default subcommand): a table of the service's image
@@ -123,6 +130,8 @@ marker, health, image, commit, digest), `--json` for the raw list.
 no revision id is given, which deploys the default rollback target (the newest
 older healthy revision with a different image), and prints the deploy result
 once it's finished, same contract as `homerun services deploy`.
+`--restore-config` adds `?restoreConfig=true`, which also restores the env vars,
+resources and networking that revision ran with.
 
 `homerun update` self-updates the installed binary in place: it checks the
 latest GitHub release, downloads the `homerun-cli-<arch>` asset for your

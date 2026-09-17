@@ -6,10 +6,10 @@ import { StatusPageDTO } from "$lib/dto/status-page-dto";
 import { statusPageSchema } from "$lib/server/validation/status-page";
 
 export const load = async ({ parent }) => {
-	const { user } = await parent();
+	await parent();
 	const [stacks, services] = await Promise.all([
-		StackDTO.list(user.id),
-		ServiceDTO.list(user.id),
+		StackDTO.list(),
+		ServiceDTO.list(),
 	]);
 	return {
 		stacks: stacks.map((p) => ({ id: p.id, name: p.name })),

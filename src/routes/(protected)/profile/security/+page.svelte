@@ -493,8 +493,8 @@
                 <div>
                     <p class="text-text text-sm font-medium">Delete account</p>
                     <p class="text-text-muted mt-0.5 text-xs">
-                        Permanently removes your account, all your services, and
-                        their deployment history. This cannot be undone.
+                        Permanently removes your account. Everything you created
+                        is handed over to another admin. This cannot be undone.
                     </p>
                 </div>
                 <Button
@@ -518,9 +518,9 @@
         <Dialog.Header>
             <Dialog.Title>Delete your account</Dialog.Title>
             <Dialog.Description>
-                This permanently removes your account, every service you own,
-                their containers, and all deployment history. It cannot be
-                undone.
+                This permanently removes your account, sessions, API keys and
+                personal settings. Everything you created stays and is handed
+                over to another admin. It cannot be undone.
             </Dialog.Description>
         </Dialog.Header>
         <form class="space-y-4" onsubmit={deleteAccount}>

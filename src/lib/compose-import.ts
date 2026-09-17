@@ -1,5 +1,8 @@
 import { parse as parseYaml } from "yaml";
+import type { BuildMethod } from "$lib/build-methods";
+import { parseDotEnv } from "$lib/env-parse";
 import { splitImageRef } from "$lib/image-ref";
+import { argvFrom } from "$lib/shell-words";
 
 export type ComposeRestartPolicy =
 	| "no"
@@ -20,21 +23,43 @@ export interface ComposeBuildDraft {
 	dockerfile: string | null;
 	gitRef: string | null;
 	gitUrl: string | null;
+	method?: BuildMethod;
+}
+
+export interface ComposeRegistryDraft {
+	password: string | null;
+	url: string | null;
+	username: string;
+}
+
+export interface ComposeFileDraft {
+	containerPath: string;
+	content: string;
 }
 
 export interface ComposeServiceDraft {
 	build: ComposeBuildDraft | null;
+	capAdd: string[];
+	command: string[] | null;
 	containerPort: number;
 	cpuLimit: string | null;
 	dependsOn: string[];
+	devices: string[];
 	dnsResolvable: boolean;
+	entrypoint: string[] | null;
+	envFiles: string[];
 	envVars: Record<string, string>;
+	files: ComposeFileDraft[];
 	image: string;
 	key: string;
+	labels: Record<string, string>;
 	memoryLimitMb: number | null;
+	missingEnvFiles: string[];
 	name: string;
 	networkMode: "bridge" | "host";
 	portProtocol: "tcp" | "udp" | "both";
+	privileged: boolean;
+	registry: ComposeRegistryDraft | null;
 	restartPolicy: ComposeRestartPolicy;
 	slug: string;
 	tag: string;
@@ -43,10 +68,15 @@ export interface ComposeServiceDraft {
 }
 
 export interface ComposeImportPlan {
+	missingEnvFiles: string[];
 	networkNames: string[];
 	services: ComposeServiceDraft[];
 	volumeNames: string[];
 	warnings: string[];
+}
+
+export interface ComposeParseOptions {
+	envFiles?: Record<string, string>;
 }
 
 export class ComposeParseError extends Error {}
@@ -54,16 +84,9 @@ export class ComposeParseError extends Error {}
 const DEFAULT_CONTAINER_PORT = 80;
 
 const UNSUPPORTED_KEYS: Record<string, string> = {
-	cap_add: "added capabilities are not applied",
 	cap_drop: "dropped capabilities are not applied",
-	command: "a custom command is not applied : bake it into the image instead",
-	devices: "device mappings are not applied",
-	entrypoint: "a custom entrypoint is not applied",
-	env_file: "env_file is not read : paste the values as variables instead",
 	extra_hosts: "extra_hosts entries are not applied",
 	healthcheck: "healthchecks are not applied",
-	labels: "custom labels are not applied",
-	privileged: "privileged mode is not applied",
 	secrets: "secrets are not applied",
 	sysctls: "sysctls are not applied",
 	tmpfs: "tmpfs mounts are not applied",
@@ -156,6 +179,137 @@ function parseEnvironment(raw: unknown): Record<string, string> {
 		}
 	}
 	return env;
+}
+
+/** Normalizes a compose-relative path for matching, dropping a leading `./`. */
+function normalizeEnvFilePath(path: string): string {
+	return path.trim().replace(/^\.\//, "");
+}
+
+/** The `env_file:` entries of a service in any of compose's shapes (a string, a list of strings, or a list of `{ path, required }`), with whether each is required. */
+function envFileEntries(
+	raw: unknown,
+): Array<{ path: string; required: boolean }> {
+	const list = Array.isArray(raw) ? raw : raw === undefined ? [] : [raw];
+	return list.flatMap((entry) => {
+		if (typeof entry === "string" && entry.trim()) {
+			return [{ path: entry.trim(), required: true }];
+		}
+		if (
+			isRecord(entry) &&
+			typeof entry.path === "string" &&
+			entry.path.trim()
+		) {
+			return [{ path: entry.path.trim(), required: entry.required !== false }];
+		}
+		return [];
+	});
+}
+
+interface EnvFileResolution {
+	envFiles: string[];
+	envVars: Record<string, string>;
+	missing: string[];
+}
+
+/**
+ * Resolves a service's `env_file:` entries: a file whose content was supplied
+ * is parsed into variables, an absolute path that wasn't is kept for the
+ * deploy to read from the host, and a relative one that wasn't is reported
+ * as missing (unless compose marked it optional).
+ */
+export function resolveEnvFiles(
+	raw: unknown,
+	supplied: Record<string, string>,
+	warnings: string[],
+): EnvFileResolution {
+	const byPath = new Map(
+		Object.entries(supplied).map(([path, content]) => [
+			normalizeEnvFilePath(path),
+			content,
+		]),
+	);
+	const result: EnvFileResolution = { envFiles: [], envVars: {}, missing: [] };
+	for (const entry of envFileEntries(raw)) {
+		const content = byPath.get(normalizeEnvFilePath(entry.path));
+		if (content !== undefined) {
+			for (const { key, value } of parseDotEnv(content)) {
+				result.envVars[key] = value;
+			}
+			continue;
+		}
+		if (entry.path.startsWith("/")) {
+			result.envFiles.push(entry.path);
+			warnings.push(
+				`env_file ${entry.path} is read from this host at every deploy : make sure it exists here.`,
+			);
+			continue;
+		}
+		if (entry.required) {
+			result.missing.push(entry.path);
+			warnings.push(
+				`env_file ${entry.path} wasn't provided : paste its contents before importing, or its variables are left out.`,
+			);
+		}
+	}
+	return result;
+}
+
+const RESERVED_LABEL_RE = /^(traefik|homerun)\./;
+
+/**
+ * Reads compose `labels:` in map or `KEY=VALUE` list form. Traefik and
+ * Homerun labels are dropped with a warning, since Homerun writes its own
+ * routing labels and a copied router from another setup would clash with
+ * them.
+ */
+export function parseLabels(
+	raw: unknown,
+	warnings: string[],
+): Record<string, string> {
+	const labels = parseEnvironment(raw);
+	const dropped = Object.keys(labels).filter((key) =>
+		RESERVED_LABEL_RE.test(key),
+	);
+	for (const key of dropped) {
+		delete labels[key];
+	}
+	if (dropped.length > 0) {
+		warnings.push(
+			`${dropped.length} Traefik/Homerun label(s) dropped : Homerun routes the service itself.`,
+		);
+	}
+	return labels;
+}
+
+/** Reads compose `devices:` entries, short `host:container[:perms]` strings or the long `{ source, target, permissions }` form, into Docker's short form. */
+export function parseDevices(raw: unknown): string[] {
+	if (!Array.isArray(raw)) {
+		return [];
+	}
+	return raw.flatMap((entry) => {
+		if (typeof entry === "string" && entry.trim()) {
+			return [entry.trim()];
+		}
+		if (isRecord(entry) && typeof entry.source === "string") {
+			const target =
+				typeof entry.target === "string" ? entry.target : entry.source;
+			const permissions =
+				typeof entry.permissions === "string" ? `:${entry.permissions}` : "";
+			return [`${entry.source}:${target}${permissions}`];
+		}
+		return [];
+	});
+}
+
+/** Reads a compose list of strings (`cap_add:`), dropping anything that isn't a non-blank string. */
+function stringList(raw: unknown): string[] {
+	return Array.isArray(raw)
+		? raw
+				.filter((entry): entry is string => typeof entry === "string")
+				.map((entry) => entry.trim())
+				.filter(Boolean)
+		: [];
 }
 
 interface PortMapping {
@@ -433,6 +587,7 @@ function draftFor(
 	key: string,
 	raw: Record<string, unknown>,
 	usedSlugs: Set<string>,
+	suppliedEnvFiles: Record<string, string>,
 ): ComposeServiceDraft {
 	const name =
 		typeof raw.container_name === "string" ? raw.container_name : key;
@@ -451,17 +606,29 @@ function draftFor(
 		.map((entry) => parseVolumeEntry(entry, slug, warnings))
 		.filter((v): v is ComposeVolumeDraft => v !== null);
 
+	const envFiles = resolveEnvFiles(raw.env_file, suppliedEnvFiles, warnings);
+
 	return {
 		build: parseBuild(raw.build),
+		capAdd: stringList(raw.cap_add),
+		command: argvFrom(raw.command),
 		containerPort: mappings[0]?.port ?? DEFAULT_CONTAINER_PORT,
 		dependsOn: parseDependsOn(raw.depends_on),
+		devices: parseDevices(raw.devices),
 		dnsResolvable: networkMode === "bridge" && published,
-		envVars: parseEnvironment(raw.environment),
+		entrypoint: argvFrom(raw.entrypoint),
+		envFiles: envFiles.envFiles,
+		envVars: { ...envFiles.envVars, ...parseEnvironment(raw.environment) },
+		files: [],
 		image: imageName,
 		key,
+		labels: parseLabels(raw.labels, warnings),
+		missingEnvFiles: envFiles.missing,
 		name,
 		networkMode,
 		portProtocol: protocolFor(mappings),
+		privileged: raw.privileged === true,
+		registry: null,
 		restartPolicy: parseRestart(raw.restart),
 		slug,
 		tag,
@@ -479,7 +646,10 @@ function draftFor(
  * @throws ComposeParseError When the text isn't YAML, has no `services:` block,
  * or contains no usable service definitions.
  */
-export function parseComposeFile(text: string): ComposeImportPlan {
+export function parseComposeFile(
+	text: string,
+	options: ComposeParseOptions = {},
+): ComposeImportPlan {
 	let doc: unknown;
 	try {
 		doc = parseYaml(text);
@@ -505,7 +675,7 @@ export function parseComposeFile(text: string): ComposeImportPlan {
 			warnings.push(`Skipped "${key}" : it isn't a service definition.`);
 			continue;
 		}
-		services.push(draftFor(key, value, usedSlugs));
+		services.push(draftFor(key, value, usedSlugs, options.envFiles ?? {}));
 	}
 	if (services.length === 0) {
 		throw new ComposeParseError("No usable services found in that file.");
@@ -529,7 +699,11 @@ export function parseComposeFile(text: string): ComposeImportPlan {
 		),
 	];
 
-	return { networkNames, services, volumeNames, warnings };
+	const missingEnvFiles = [
+		...new Set(services.flatMap((svc) => svc.missingEnvFiles)),
+	];
+
+	return { missingEnvFiles, networkNames, services, volumeNames, warnings };
 }
 
 /**

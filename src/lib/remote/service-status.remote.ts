@@ -13,14 +13,14 @@ export interface ServiceStatus {
 export const syncServiceStatuses = query(
 	z.array(z.string()),
 	async (serviceIds): Promise<ServiceStatus[]> => {
-		const user = requireUser();
+		requireUser();
 		if (serviceIds.length === 0) {
 			return [];
 		}
-		const owned = await ServiceDTO.list(user.id);
-		const mine = owned.filter((svc) => serviceIds.includes(svc.id));
+		const services = await ServiceDTO.list();
+		const requested = services.filter((svc) => serviceIds.includes(svc.id));
 		return await Promise.all(
-			mine.map(async (svc) => ({
+			requested.map(async (svc) => ({
 				id: svc.id,
 				status: await DockerService.syncServiceStatus(svc.id),
 			})),

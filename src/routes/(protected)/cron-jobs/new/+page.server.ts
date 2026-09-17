@@ -9,7 +9,7 @@ const logger = new Logger("CronJob");
 
 export const load = async ({ parent }) => {
 	const { user } = await parent();
-	const hosts = await RemoteHostDTO.list(user.id);
+	const hosts = await RemoteHostDTO.list();
 	return {
 		canUseExec: user.role === "admin",
 		remoteHosts: hosts

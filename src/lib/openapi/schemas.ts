@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BUILD_METHODS } from "$lib/build-methods";
 
 /**
  * Response-shape schemas for the OpenAPI spec. Request bodies are generated
@@ -48,7 +49,14 @@ export const serviceResponse = z.object({
 		"failed",
 		"missing",
 	]),
+	capAdd: z.array(z.string()),
+	command: z.array(z.string()).nullable(),
 	customDomain: z.string().nullable(),
+	devices: z.array(z.string()),
+	entrypoint: z.array(z.string()).nullable(),
+	envFiles: z.array(z.string()),
+	labels: z.record(z.string(), z.string()),
+	privileged: z.boolean(),
 	// Ciphertext (AES-256-GCM), not plaintext : present because `.toJSON()`
 	// returns the raw row as-is. Documented honestly rather than hidden, since
 	// hiding it here would make the spec describe a smaller response than the
@@ -59,7 +67,10 @@ export const serviceResponse = z.object({
 	dnsResolvable: z.boolean(),
 	envVars: z.record(z.string(), z.string()),
 	autoDeployOnPush: z.boolean(),
+	gitBakeFile: z.string().nullable(),
+	gitBakeTarget: z.string().nullable(),
 	gitBuildContext: z.string().nullable(),
+	gitBuildMethod: z.enum(BUILD_METHODS),
 	gitDockerfilePath: z.string().nullable(),
 	gitProviderId: z.string().nullable(),
 	gitRef: z.string().nullable(),
@@ -68,6 +79,14 @@ export const serviceResponse = z.object({
 	gitWebhookError: z.string().nullable(),
 	gitWebhookId: z.string().nullable(),
 	gitWebhookSecretEnc: z.string().nullable(),
+	gitWebhookReconnect: z.boolean(),
+	gitPollEnabled: z.boolean(),
+	gitLastSeenCommit: z.string().nullable(),
+	previewsEnabled: z.boolean(),
+	previewParentId: z.string().nullable(),
+	previewPrNumber: z.number().int().nullable(),
+	previewPrTitle: z.string().nullable(),
+	previewBranch: z.string().nullable(),
 	healthcheckCommand: z.string().nullable(),
 	id: z.string(),
 	image: z.string(),
@@ -110,21 +129,31 @@ export const stackResponse = z.object({
 });
 
 export const templateResponse = z.object({
+	capAdd: z.array(z.string()),
 	category: z.string().nullable(),
+	command: z.array(z.string()).nullable(),
 	containerPort: z.number().int(),
 	cpuLimit: z.string().nullable(),
 	createdAt: isoTimestamp,
 	description: z.string().nullable(),
+	devices: z.array(z.string()),
+	entrypoint: z.array(z.string()).nullable(),
+	envFiles: z.array(z.string()),
 	envVars: z.record(z.string(), z.string()).nullable(),
 	icon: z.string().nullable(),
 	id: z.string(),
 	image: z.string(),
+	labels: z.record(z.string(), z.string()),
 	memoryLimitMb: z.number().int().nullable(),
 	name: z.string(),
 	ownerId: z
 		.string()
 		.nullable()
 		.meta({ description: "null = built-in template" }),
+	privileged: z.boolean().meta({
+		description:
+			"privileged, devices, capAdd and envFiles need host access : only an admin can deploy a template that sets any of them",
+	}),
 	restartPolicy: z.string(),
 	tag: z.string(),
 	updatedAt: isoTimestamp,
@@ -260,7 +289,18 @@ export const pushWebhookResponse = z.object({
 		description:
 			"Why Homerun couldn't register the webhook itself, if it couldn't",
 	}),
+	polling: z.boolean().meta({
+		description:
+			"Whether Homerun polls the branch head every two minutes instead of, or as well as, waiting for deliveries",
+	}),
 	providerName: z.string().nullable(),
+	reconnect: z
+		.object({ providerId: z.string(), providerName: z.string() })
+		.nullable()
+		.meta({
+			description:
+				"The provider to reconnect when it refused the webhook, usually for a missing webhook scope",
+		}),
 	registered: z.boolean().meta({
 		description: "Whether Homerun registered the webhook on the provider",
 	}),
