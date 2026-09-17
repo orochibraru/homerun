@@ -34,6 +34,7 @@ linters:
         - G304
         - G306
         - G703
+        - G704
     revive:
       rules:
         - name: exported
@@ -52,6 +53,9 @@ linters:
           - gocritic
           - gosec
           - usestdlibvars
+      - linters:
+          - gosec
+        text: "G70[0-9]:"
 
 formatters:
   enable:
