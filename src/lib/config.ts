@@ -64,20 +64,6 @@ function detectDockerSocketPath(): string {
 	return "/var/run/docker.sock";
 }
 
-const oauthProviderSchema = z.object({
-	clientId: z.string(),
-	clientSecret: z.string(),
-	discoveryUrl: z.string(),
-	enabled: z.boolean().optional(),
-	name: z.string(),
-	pkce: z.boolean().optional(),
-	scopes: z.array(z.string()).optional(),
-	discoveredTokenAuth: z.array(z.string()).optional(),
-	label: z.string().optional(),
-	signOutOfProvider: z.boolean().optional(),
-	tokenAuthMethod: z.enum(["auto", "basic", "post"]).optional(),
-});
-
 /**
  * The shape of the YAML config file (`homerun.yaml` by default, see
  * `CONFIG_FILE` below) : every field optional, nothing here is required to
@@ -102,7 +88,6 @@ export const yamlConfigSchema = z.object({
 			// subdomain too (docker/labels.ts's authRequired) ; off by default,
 			// see docs/users-and-access.md before turning this on.
 			crossSubdomainCookies: z.boolean().optional(),
-			oauthProviders: z.array(oauthProviderSchema).optional(),
 			// Unset lets better-auth derive the origin from each incoming
 			// request instead (auth.ts's buildAuth()), correct for dev and the
 			// common single-domain prod case.
@@ -155,7 +140,11 @@ const configSchema = z.object({
 		crossSubdomainCookies: z.boolean().default(false),
 		oauthProviders: z
 			.array(
-				oauthProviderSchema.extend({
+				z.object({
+					clientId: z.string(),
+					clientSecret: z.string(),
+					discoveryUrl: z.string(),
+					name: z.string(),
 					enabled: z.boolean().default(false),
 					pkce: z.boolean().default(true),
 					scopes: z.array(z.string()).default([]),
@@ -249,6 +238,22 @@ function readYamlConfig(): unknown {
 }
 
 /**
+ * The first value that is set and not blank, so an env var left empty (as
+ * `.env.example` ships `AUTH_SECRET=`) falls through to the next source or the
+ * schema default instead of being used as-is.
+ */
+export function firstNonBlank(
+	...values: Array<string | undefined>
+): string | undefined {
+	return values.find((value) => value !== undefined && value.trim() !== "");
+}
+
+/** Whether an auth secret is unusable : unset, blank, or the built-in `default-secret` placeholder the schema falls back to. */
+export function isPlaceholderAuthSecret(secret: string | undefined): boolean {
+	return firstNonBlank(secret) === undefined || secret === "default-secret";
+}
+
+/**
  * Builds the file+env configuration: validates the YAML config file, then layers
  * the env-only values (`DATABASE_URL`, `PORT`, `AUTH_SECRET`, `ORIGIN`) and the
  * default forwardAuth check URL over it.
@@ -277,16 +282,16 @@ export const parseConfig = (): AppConfig => {
 			// honored as the env default for auth.origin so the per-app login
 			// wall (docker/labels.ts's authRequired) knows where to send a
 			// visitor without a second, separately-configured value.
-			origin: yamlConfig.auth?.origin ?? Bun.env.ORIGIN,
+			origin: firstNonBlank(yamlConfig.auth?.origin, Bun.env.ORIGIN),
 			// AUTH_SECRET is the app-local var name ; BETTER_AUTH_SECRET is what
 			// better-auth's own CLI (`auth generate`) and `.env` use by
 			// convention, fall back to it so a generated secret is honored.
-			secret: Bun.env.AUTH_SECRET ?? Bun.env.BETTER_AUTH_SECRET,
+			secret: firstNonBlank(Bun.env.AUTH_SECRET, Bun.env.BETTER_AUTH_SECRET),
 		},
 		authCheckUrl:
 			yamlConfig.authCheckUrl ??
 			`http://host.docker.internal:${port}/api/v1/auth-check`,
-		databaseUrl: Bun.env.DATABASE_URL,
+		databaseUrl: firstNonBlank(Bun.env.DATABASE_URL),
 		port,
 	});
 };
@@ -401,8 +406,7 @@ function applyAuthOverride(override: InstanceSettingsOverride): void {
 	config.auth.crossSubdomainCookies =
 		override.authCrossSubdomainCookies ??
 		fileDefaults.auth.crossSubdomainCookies;
-	config.auth.oauthProviders =
-		override.oauthProviders ?? fileDefaults.auth.oauthProviders;
+	config.auth.oauthProviders = override.oauthProviders ?? [];
 	config.auth.origin = override.authOrigin ?? fileDefaults.auth.origin;
 }
 

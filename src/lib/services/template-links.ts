@@ -5,6 +5,7 @@ import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
 import { isDatabaseImage } from "$lib/service-link";
+import { uniqueSlug } from "$lib/slug";
 import { DeploymentService } from "./deploy.service";
 
 const logger = new Logger("Templates");
@@ -57,17 +58,6 @@ export function resolveLinkTokens(
 	);
 }
 
-async function uniqueLinkSlug(baseSlug: string): Promise<string> {
-	let candidate = baseSlug;
-	let suffix = 1;
-	// biome-ignore lint/performance/noAwaitInLoops: retry loop, each check depends on the previous candidate being rejected
-	while (await ServiceDTO.slugTaken(candidate)) {
-		suffix += 1;
-		candidate = slugify(`${baseSlug}-${suffix}`);
-	}
-	return candidate;
-}
-
 /**
  * Resolves every service linked to a template into a `ResolvedTemplateLink`,
  * assigning each a unique slug derived from `primarySlug` and the link's
@@ -81,7 +71,10 @@ export async function buildTemplateLinkContext(
 	const resolved: ResolvedTemplateLink[] = [];
 	for (const { link, ...linkedTemplate } of links) {
 		// biome-ignore lint/performance/noAwaitInLoops: each slug must account for the ones already picked earlier in this same batch, none of which are committed to the DB yet
-		const slug = await uniqueLinkSlug(slugify(`${primarySlug}-${link.alias}`));
+		const slug = await uniqueSlug(
+			slugify(`${primarySlug}-${link.alias}`),
+			(candidate) => ServiceDTO.slugTaken(candidate),
+		);
 		resolved.push({
 			alias: link.alias,
 			containerPort: linkedTemplate.linkedTemplateContainerPort,
@@ -114,23 +107,14 @@ export function resolveEnvVarsWithLinks(
 	);
 }
 
-async function uniqueStackSlug(baseSlug: string): Promise<string> {
-	let candidate = baseSlug;
-	let suffix = 1;
-	// biome-ignore lint/performance/noAwaitInLoops: retry loop, each check depends on the previous candidate being rejected
-	while (await StackDTO.slugTaken(candidate)) {
-		suffix += 1;
-		candidate = slugify(`${baseSlug}-${suffix}`);
-	}
-	return candidate;
-}
-
 /** Creates a new stack (with a unique slug derived from `name`) to hold a template's primary service and its linked services. */
 export async function createStackForLinkedServices(
 	name: string,
 	userId: string,
 ): Promise<string> {
-	const slug = await uniqueStackSlug(slugify(name));
+	const slug = await uniqueSlug(slugify(name), (candidate) =>
+		StackDTO.slugTaken(candidate),
+	);
 	const stack = await StackDTO.create({ name, slug, userId });
 	return stack.id;
 }
@@ -162,17 +146,6 @@ export async function createLinkedServices(
 	return created;
 }
 
-async function uniqueServiceSlug(baseSlug: string): Promise<string> {
-	let candidate = baseSlug;
-	let suffix = 1;
-	// biome-ignore lint/performance/noAwaitInLoops: retry loop, each check depends on the previous candidate being rejected
-	while (await ServiceDTO.slugTaken(candidate)) {
-		suffix += 1;
-		candidate = slugify(`${baseSlug}-${suffix}`);
-	}
-	return candidate;
-}
-
 /**
  * Instantiates a template as a real service: resolves its linked services
  * (creating a stack for them if none was given), resolves `{{alias}}` env
@@ -189,7 +162,9 @@ export async function createServiceFromTemplate(
 	svc: ServiceDTO;
 }> {
 	const row = template.toJSON();
-	const slug = await uniqueServiceSlug(slugify(row.name));
+	const slug = await uniqueSlug(slugify(row.name), (candidate) =>
+		ServiceDTO.slugTaken(candidate),
+	);
 	const links = await buildTemplateLinkContext(row.id, slug);
 
 	const finalStackId =

@@ -1,6 +1,7 @@
 import process from "node:process";
 import { createInterface } from "node:readline/promises";
-import { ConfigStore } from "./config";
+import { ClientFactory } from "./client";
+import { ConfigStore, type StoredConfig } from "./config";
 import { Output } from "./output";
 
 function question(prompt: string, fallback: string): Promise<string> {
@@ -120,15 +121,38 @@ class CliLoginFlow {
 		Output.fail("Timed out waiting for approval. Run `homerun login` again.");
 	}
 
-	/** Deletes the stored config file, forgetting the API key locally. The key itself is not revoked on the server. */
-	logout(): void {
+	/**
+	 * Revokes the API key on the server (`DELETE /api/v1/auth-token`, which
+	 * revokes whichever key authenticated the request, i.e. this one), then
+	 * always clears the local config, even when the server call fails, so a
+	 * stale/unreachable instance can never block logging out locally.
+	 */
+	async logout(): Promise<void> {
 		const existing = ConfigStore.readStoredConfig();
 		if (!existing) {
 			console.log("Not logged in.");
 			return;
 		}
+
+		const revoked = await this.#revokeApiKey(existing);
 		ConfigStore.clearStoredConfig();
-		console.log(`Logged out of ${existing.baseUrl}.`);
+
+		console.log(
+			revoked
+				? `Logged out of ${existing.baseUrl} and revoked the API key.`
+				: `Logged out of ${existing.baseUrl}. Couldn't revoke the API key on the server (it may already be invalid, or the server is unreachable) : cleared the local config anyway.`,
+		);
+	}
+
+	/** Best-effort: any thrown error or non-ok response just means the local logout proceeds without server-side revocation. */
+	async #revokeApiKey(config: StoredConfig): Promise<boolean> {
+		try {
+			const client = ClientFactory.makeClient(config);
+			const { response } = await client.DELETE("/auth-token", {});
+			return response.ok;
+		} catch {
+			return false;
+		}
 	}
 }
 

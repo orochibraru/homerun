@@ -92,6 +92,10 @@ export const serviceResponse = z.object({
 	slug: z.string(),
 	tag: z.string(),
 	updatedAt: isoTimestamp,
+	uptimeEnabled: z.boolean().meta({
+		description:
+			"Whether the per-minute internal and external uptime probes run for this service",
+	}),
 	userId: z.string(),
 });
 
@@ -212,6 +216,10 @@ export const imageScanSummaryResponse = z.object({
 		.string()
 		.nullable()
 		.meta({ description: "Why a failed or skipped scan has no findings" }),
+	fixableCounts: severityCounts.nullable().meta({
+		description:
+			"Findings that have a fixed version, per severity. null on scans recorded before this was tracked",
+	}),
 	id: z.string(),
 	imageRef: z.string(),
 	scannedAt: isoTimestamp,

@@ -4,13 +4,14 @@ description:
   Use PROACTIVELY as a final gate before declaring any change to this repo
   complete, or when explicitly asked to review/verify a diff against this repo's
   own conventions. Runs bun run check (svelte-check --fail-on-warnings, 0
-  errors/0 warnings, whole src/ tree) and bun run lint (biome, 0 errors), plus
-  per-subproject typechecks for packages/agent/, packages/installer/,
-  packages/cli/ if touched, and scans the diff for violations of this repo's
-  hard rules (manual typing in route files, raw Drizzle in routes, $derived
-  push/splice, bare toast.success/error on async actions, nested (protected)
-  loads re-checking !locals.user, static-barrel classes, unscoped DTO queries).
-  Reports findings; does not silently fix them unless asked.
+  errors/0 warnings, whole src/ and tests/ trees) and bun run lint (biome, 0
+  errors), plus per-subproject typechecks for packages/agent/,
+  packages/installer/, packages/cli/ if touched, and scans the diff for
+  violations of this repo's hard rules (manual typing in route files, raw
+  Drizzle in routes, $derived push/splice, bare toast.success/error on async
+  actions, nested (protected) loads re-checking !locals.user, static-barrel
+  classes, unscoped DTO queries). Reports findings; does not silently fix them
+  unless asked.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
@@ -25,10 +26,10 @@ suggestion.
 ## What to run, every time
 
 1. `bun run check` — must be zero errors AND zero warnings across the whole
-   `src/` tree (`svelte-check --fail-on-warnings`). This is the hard gate, not
-   advisory. Scope is always the full tree, not just changed files — a
-   pre-existing-looking failure is still in scope; read the file before
-   dismissing it as unrelated.
+   `src/` and `tests/` trees (`svelte-check --fail-on-warnings`). This is the
+   hard gate, not advisory. Scope is always the full tree, not just changed
+   files — a pre-existing-looking failure is still in scope; read the file
+   before dismissing it as unrelated.
 2. `bun run lint` — markdownlint-cli2, tailwint and
    `biome check --error-on-warnings`, must be clean, whole repo.
 3. `git status`/`git diff` to see what's touched. `bun run check` already

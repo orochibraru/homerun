@@ -1,11 +1,19 @@
 import { randomBytes } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import type { Invitation, UserRole } from "$lib/server/db/schema";
 import { invitation } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
 
 const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/** Whether an invite can still be accepted : not accepted yet and not past its expiry. */
+export function isInviteLive(
+	row: Pick<Invitation, "acceptedAt" | "expiresAt">,
+	now: Date = new Date(),
+): boolean {
+	return !row.acceptedAt && row.expiresAt > now;
+}
 
 export interface InvitationCreateInput {
 	email: string;
@@ -49,19 +57,20 @@ export class InvitationDTO extends BaseDTO<Invitation> {
 			.from(invitation)
 			.where(eq(invitation.token, token))
 			.limit(1);
-		if (!row || row.acceptedAt || row.expiresAt < new Date()) {
+		if (!(row && isInviteLive(row))) {
 			return null;
 		}
 
 		return new InvitationDTO(row as Invitation);
 	}
 
-	/** Every invite not yet accepted, including expired ones. */
+	/** Every invite that can still be accepted : not accepted and not expired, the same rule `getByToken` applies. */
 	static async listPending(): Promise<InvitationDTO[]> {
+		const now = new Date();
 		const rows = await db
 			.select()
 			.from(invitation)
-			.where(isNull(invitation.acceptedAt));
+			.where(and(isNull(invitation.acceptedAt), gt(invitation.expiresAt, now)));
 		return rows.map((row) => new InvitationDTO(row as Invitation));
 	}
 

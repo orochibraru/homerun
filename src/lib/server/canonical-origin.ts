@@ -37,3 +37,19 @@ export function offCanonicalOrigin(request: Request, url: URL): string | null {
 		? null
 		: configured.origin;
 }
+
+/**
+ * The origin the dashboard is served on : the configured Dashboard URL
+ * (`auth.origin`) when set and parseable, else the origin the browser used for
+ * this request.
+ */
+export function dashboardOrigin(request: Request, url: URL): string {
+	if (config.auth.origin) {
+		try {
+			return new URL(config.auth.origin).origin;
+		} catch {
+			return browserOrigin(request, url);
+		}
+	}
+	return browserOrigin(request, url);
+}

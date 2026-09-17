@@ -18,11 +18,13 @@ export async function createGitBuildFixture(
 	await ensureImage(docker);
 	await docker.createVolume({ Name: volumeName });
 
-	let daemon: Docker.Container | null = null;
+	const state: { daemon: Docker.Container | null } = { daemon: null };
 	try {
 		return await build();
 	} catch (err) {
-		await daemon?.remove({ force: true }).catch(() => undefined);
+		if (state.daemon) {
+			await state.daemon.remove({ force: true }).catch(() => undefined);
+		}
 		await docker
 			.getVolume(volumeName)
 			.remove()
@@ -61,7 +63,7 @@ export async function createGitBuildFixture(
 			);
 		}
 
-		daemon = await docker.createContainer({
+		state.daemon = await docker.createContainer({
 			Cmd: [
 				[
 					"apk add --no-cache git-daemon >/dev/null",
@@ -72,6 +74,7 @@ export async function createGitBuildFixture(
 			HostConfig: { Binds: [`${volumeName}:/srv:ro`] },
 			Image: GIT_IMAGE,
 		});
+		const daemon = state.daemon;
 		await daemon.start();
 		await waitForDaemon(daemon);
 

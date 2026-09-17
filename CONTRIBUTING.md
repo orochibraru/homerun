@@ -8,7 +8,8 @@ dev server) is needed for either of those paths.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh)
+- [Bun](https://bun.sh), the version pinned in `package.json`'s `packageManager`
+  field
 - Docker (for Traefik + Postgres, and for the containers the app itself will
   manage once it's running)
 
@@ -52,7 +53,7 @@ rejected for "files were modified by this hook" just needs `git add` and a
 re-commit.
 
 ```sh
-bun run check   # svelte-check --fail-on-warnings over src/, then tsc over packages/* and scripts/, zero errors AND zero warnings
+bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then tsc over packages/* and scripts/, zero errors AND zero warnings
 bun run lint    # markdownlint-cli2, tailwint and biome check --error-on-warnings, whole repo
 ```
 

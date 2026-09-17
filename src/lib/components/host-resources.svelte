@@ -42,7 +42,7 @@
       </span>
       <span class="metric text-[1.0625rem]">{percent.toFixed(0)}<span class="text-text-subtle text-xs font-normal">%</span></span>
     </div>
-    <div class="bg-surface-2 mt-2 h-[3px] overflow-hidden">
+    <div class="bg-surface-2 mt-2 h-0.75 overflow-hidden">
       <div
         class="h-full transition-all duration-500 {barColor(percent)}"
         style="width: {percent}%"
@@ -58,7 +58,7 @@
       <Skeleton class="h-3 w-12" />
       <Skeleton class="h-4 w-10" />
     </div>
-    <Skeleton class="mt-2 h-[3px] w-full" />
+    <Skeleton class="mt-2 h-0.75 w-full" />
     <Skeleton class="mt-1.5 h-3 w-20" />
   </div>
 {/snippet}
@@ -103,7 +103,7 @@
             GB
           </span>
         </div>
-        <div class="bg-surface-2 mt-2 h-[3px] overflow-hidden">
+        <div class="bg-surface-2 mt-2 h-0.75 overflow-hidden">
           <div
             class="h-full transition-all duration-500 {barColor(
               s.gpu.utilizationPercent,

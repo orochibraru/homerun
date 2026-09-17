@@ -22,6 +22,7 @@ export interface NewImageScanInput {
 	digest?: string | null;
 	error?: string | null;
 	findings?: ImageScanFinding[];
+	fixableCounts?: SeverityCounts | null;
 	imageRef: string;
 	serviceId: string;
 	source: string;
@@ -47,6 +48,7 @@ export class ImageScanDTO extends BaseDTO<ImageScan> {
 			digest: input.digest ?? null,
 			error: input.error ?? null,
 			findings: input.findings ?? [],
+			fixableCounts: input.fixableCounts ?? null,
 			id: crypto.randomUUID(),
 			imageRef: input.imageRef,
 			scannedAt: new Date(),

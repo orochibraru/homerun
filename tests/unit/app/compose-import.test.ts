@@ -3,7 +3,6 @@ import {
 	ComposeParseError,
 	orderByDependencies,
 	parseComposeFile,
-	splitImageRef,
 } from "../../../src/lib/compose-import";
 
 const COMPOSE = `
@@ -154,23 +153,6 @@ describe("orderByDependencies", () => {
 			"services:\n  a:\n    image: a\n    depends_on: [b]\n  b:\n    image: b\n    depends_on: [a]\n",
 		);
 		expect(orderByDependencies(plan.services)).toHaveLength(2);
-	});
-});
-
-describe("splitImageRef", () => {
-	test("handles a registry port and a digest", () => {
-		expect(splitImageRef("localhost:5000/app")).toEqual({
-			image: "localhost:5000/app",
-			tag: "latest",
-		});
-		expect(splitImageRef("localhost:5000/app:v2")).toEqual({
-			image: "localhost:5000/app",
-			tag: "v2",
-		});
-		expect(splitImageRef("redis@sha256:abc")).toEqual({
-			image: "redis",
-			tag: "latest",
-		});
 	});
 });
 

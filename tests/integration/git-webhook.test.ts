@@ -43,12 +43,16 @@ describe("git push webhooks", () => {
 		cleanup = new ServiceCleanup(client);
 		const { data, error, response } = await client.POST("/services", {
 			body: {
+				authRequired: false,
 				autoDeployOnPush: true,
 				buildSource: "git",
 				containerPort: 80,
+				dnsResolvable: false,
+				envVars: {},
 				gitRef: "main",
 				gitUrl: ctx.gitBuildFixtureUrl,
 				name: "IT push deploy",
+				pullPolicy: "always",
 				restartPolicy: "no",
 				slug: `push-deploy-${Date.now().toString(36)}`,
 			},

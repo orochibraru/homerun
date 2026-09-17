@@ -38,21 +38,38 @@ ROOTLESS_USER="homerun"
 JOIN_TOKEN=""
 MANAGER_ADDR=""
 
-for arg in "$@"; do
-	case "$arg" in
-		--version=*) VERSION="${arg#--version=}" ;;
-		--user=*) ROOTLESS_USER="${arg#--user=}" ;;
-		--token=*) JOIN_TOKEN="${arg#--token=}" ;;
-		--manager=*) MANAGER_ADDR="${arg#--manager=}" ;;
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--version=*) VERSION="${1#--version=}" ;;
+		--version)
+			VERSION="${2:?error: --version requires a value}"
+			shift
+			;;
+		--user=*) ROOTLESS_USER="${1#--user=}" ;;
+		--user)
+			ROOTLESS_USER="${2:?error: --user requires a value}"
+			shift
+			;;
+		--token=*) JOIN_TOKEN="${1#--token=}" ;;
+		--token)
+			JOIN_TOKEN="${2:?error: --token requires a value}"
+			shift
+			;;
+		--manager=*) MANAGER_ADDR="${1#--manager=}" ;;
+		--manager)
+			MANAGER_ADDR="${2:?error: --manager requires a value}"
+			shift
+			;;
 		--help | -h)
 			sed -n '2,25p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
 			exit 0
 			;;
 		*)
-			echo "error: unknown argument: $arg (see --help)" >&2
+			echo "error: unknown argument: $1 (see --help)" >&2
 			exit 1
 			;;
 	esac
+	shift
 done
 
 if [ -z "$JOIN_TOKEN" ] || [ -z "$MANAGER_ADDR" ]; then

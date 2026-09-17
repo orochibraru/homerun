@@ -61,11 +61,11 @@ database to read settings from, or because changing them at runtime would break
 every session in flight. The installer sets all three for you; with plain
 `docker compose` you set them once in `.env` and never touch them again.
 
-| Var            | What it is                                                                                                                                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL` | Postgres connection string. Defaults to the bundled `postgres` service; you only change it if you're bringing your own database.                                                                |
-| `AUTH_SECRET`  | Signs sessions **and** derives the encryption key for every secret stored in the database. **Generate a real one** (`openssl rand -hex 32`). Changing it later invalidates every stored secret. |
-| `ORIGIN`       | The scheme, host and port you actually open the dashboard at. See below.                                                                                                                        |
+| Var            | What it is                                                                                                                                                                                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL` | Postgres connection string. Defaults to the bundled `postgres` service; you only change it if you're bringing your own database.                                                                                                                                                           |
+| `AUTH_SECRET`  | Signs sessions **and** derives the encryption key for every secret stored in the database. **Generate a real one** (`openssl rand -hex 32`). Changing it later invalidates every stored secret. Left empty (`AUTH_SECRET=`) it counts as unset, and the dashboard's setup banner flags it. |
+| `ORIGIN`       | The scheme, host and port you actually open the dashboard at. See below.                                                                                                                                                                                                                   |
 
 `ORIGIN` is the one that bites people, so it's worth a paragraph. It's how the
 app is _served_, which is why it's fixed for the life of the process rather than
@@ -145,7 +145,9 @@ add there.
 Three things have **no file form at all** and are dashboard-only: orchestration
 mode, DNS automation (Cloudflare and Pangolin), and OAuth/OIDC sign-in
 providers. They hold secrets or live state that belongs in the encrypted
-database row rather than a plaintext file on disk.
+database row rather than a plaintext file on disk. An `auth.oauthProviders` key
+left in `homerun.yaml` from an older version is ignored; add those providers on
+the Authentication page instead.
 
 ## The first-run wizard
 

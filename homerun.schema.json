@@ -8,56 +8,6 @@
 				"crossSubdomainCookies": {
 					"type": "boolean"
 				},
-				"oauthProviders": {
-					"items": {
-						"additionalProperties": false,
-						"properties": {
-							"clientId": {
-								"type": "string"
-							},
-							"clientSecret": {
-								"type": "string"
-							},
-							"discoveredTokenAuth": {
-								"items": {
-									"type": "string"
-								},
-								"type": "array"
-							},
-							"discoveryUrl": {
-								"type": "string"
-							},
-							"enabled": {
-								"type": "boolean"
-							},
-							"label": {
-								"type": "string"
-							},
-							"name": {
-								"type": "string"
-							},
-							"pkce": {
-								"type": "boolean"
-							},
-							"scopes": {
-								"items": {
-									"type": "string"
-								},
-								"type": "array"
-							},
-							"signOutOfProvider": {
-								"type": "boolean"
-							},
-							"tokenAuthMethod": {
-								"enum": ["auto", "basic", "post"],
-								"type": "string"
-							}
-						},
-						"required": ["clientId", "clientSecret", "discoveryUrl", "name"],
-						"type": "object"
-					},
-					"type": "array"
-				},
 				"origin": {
 					"type": "string"
 				}

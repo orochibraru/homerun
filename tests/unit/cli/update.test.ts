@@ -48,3 +48,97 @@ describe("update", () => {
 		}
 	});
 });
+
+/**
+ * `#currentArch` is private, so these drive it through the public
+ * `update()` entry point, past the platform/compiled-binary guards
+ * `process.platform`/`process.execPath` are overridden with
+ * `Object.defineProperty` (both are plain, configurable properties on Bun's
+ * `process`) so the arch guard is reached deterministically regardless of
+ * what this suite actually runs on. Mirrors
+ * `packages/installer/steps/detect.ts`'s `arch()`, see
+ * `.agents/notes/packages-and-release.md`.
+ */
+describe("update arch detection", () => {
+	const originalArch = process.arch;
+	const originalPlatform = process.platform;
+	const originalExecPath = process.execPath;
+
+	afterEach(() => {
+		mock.restore();
+		Object.defineProperty(process, "arch", {
+			configurable: true,
+			value: originalArch,
+		});
+		Object.defineProperty(process, "platform", {
+			configurable: true,
+			value: originalPlatform,
+		});
+		Object.defineProperty(process, "execPath", {
+			configurable: true,
+			value: originalExecPath,
+		});
+	});
+
+	function asCompiledLinuxBinary(arch: string): void {
+		Object.defineProperty(process, "platform", {
+			configurable: true,
+			value: "linux",
+		});
+		Object.defineProperty(process, "execPath", {
+			configurable: true,
+			value: "/usr/local/bin/homerun",
+		});
+		Object.defineProperty(process, "arch", { configurable: true, value: arch });
+	}
+
+	test("maps x64 to amd64 and reaches the network step", async () => {
+		asCompiledLinuxBinary("x64");
+		spyOn(console, "log").mockImplementation(() => undefined);
+		const fetchSpy = spyOn(globalThis, "fetch").mockRejectedValue(
+			new Error("network disabled in test"),
+		);
+		spyOn(process, "exit").mockImplementation(((code?: number) => {
+			throw new ExitCalled(code ?? 0);
+		}) as never);
+
+		await expect(UpdateService.update()).rejects.toThrow(ExitCalled);
+		expect(fetchSpy).toHaveBeenCalledWith(
+			expect.stringContaining("api.github.com"),
+		);
+	});
+
+	test("maps arm64 to arm64 and reaches the network step", async () => {
+		asCompiledLinuxBinary("arm64");
+		spyOn(console, "log").mockImplementation(() => undefined);
+		const fetchSpy = spyOn(globalThis, "fetch").mockRejectedValue(
+			new Error("network disabled in test"),
+		);
+		spyOn(process, "exit").mockImplementation(((code?: number) => {
+			throw new ExitCalled(code ?? 0);
+		}) as never);
+
+		await expect(UpdateService.update()).rejects.toThrow(ExitCalled);
+		expect(fetchSpy).toHaveBeenCalledWith(
+			expect.stringContaining("api.github.com"),
+		);
+	});
+
+	test("fails fast on an unsupported architecture, before any network call", async () => {
+		asCompiledLinuxBinary("ia32");
+		const errorSpy = spyOn(console, "error").mockImplementation(
+			() => undefined,
+		);
+		const fetchSpy = spyOn(globalThis, "fetch");
+		spyOn(process, "exit").mockImplementation(((code?: number) => {
+			throw new ExitCalled(code ?? 0);
+		}) as never);
+
+		await expect(UpdateService.update()).rejects.toThrow(ExitCalled);
+
+		expect(fetchSpy).not.toHaveBeenCalled();
+		expect(errorSpy.mock.calls[0]?.[0]).toContain(
+			'Unsupported architecture "ia32"',
+		);
+	});
+});

@@ -38,7 +38,7 @@
 	let deleteForm: HTMLFormElement | null = null;
 
 	const publicUrl = $derived(
-		`https://${data.baseDomain}${resolve("/status/[slug]", {
+		`${data.dashboardOrigin}${resolve("/status/[slug]", {
 			slug: data.statusPage.slug,
 		})}`,
 	);

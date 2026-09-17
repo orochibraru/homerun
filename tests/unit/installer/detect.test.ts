@@ -4,8 +4,41 @@ import * as exec from "../../../packages/installer/exec";
 import { Detector } from "../../../packages/installer/steps/detect";
 
 describe("Detector.arch", () => {
+	const originalArch = process.arch;
+
+	afterEach(() => {
+		Object.defineProperty(process, "arch", {
+			configurable: true,
+			value: originalArch,
+		});
+	});
+
 	test("matches this repo's release-asset naming, derived from process.arch", () => {
 		expect(Detector.arch()).toBe(process.arch === "arm64" ? "arm64" : "amd64");
+	});
+
+	test("maps x64 to amd64", () => {
+		Object.defineProperty(process, "arch", {
+			configurable: true,
+			value: "x64",
+		});
+		expect(Detector.arch()).toBe("amd64");
+	});
+
+	test("maps arm64 to arm64", () => {
+		Object.defineProperty(process, "arch", {
+			configurable: true,
+			value: "arm64",
+		});
+		expect(Detector.arch()).toBe("arm64");
+	});
+
+	test("throws a clear error on an unsupported architecture, matching packages/cli/update.ts's #currentArch", () => {
+		Object.defineProperty(process, "arch", {
+			configurable: true,
+			value: "ia32",
+		});
+		expect(() => Detector.arch()).toThrow('Unsupported architecture "ia32"');
 	});
 });
 

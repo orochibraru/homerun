@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { AlertTriangle, ArrowLeft, Check, Trash2 } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
@@ -21,6 +21,9 @@
 	let deleteDialogOpen = $state(false);
 	let deleteForm = $state<HTMLFormElement | null>(null);
 	let deleting = $state(false);
+	let forceDelete = $state(false);
+	let forceDeleteDialogOpen = $state(false);
+	let detachError = $state("");
 </script>
 
 <div class="p-5 md:p-6">
@@ -129,8 +132,13 @@
         use:enhance={enhanceToast({
           error: "Couldn't delete the stack.",
           loading: "Deleting the stack",
-          onFailure: () => {
+          onFailure: (result) => {
             deleting = false;
+            if (result?.detachFailed && !forceDelete) {
+              detachError = String(result.error ?? "");
+              forceDeleteDialogOpen = true;
+            }
+            forceDelete = false;
           },
           onStart: () => {
             deleting = true;
@@ -138,6 +146,7 @@
           success: "Stack deleted.",
         })}
       >
+        <input name="force" type="hidden" value={forceDelete ? "true" : "false"} />
         <Button
           class="text-red-500 hover:bg-red-500/10 hover:text-red-500"
           disabled={deleting}
@@ -165,4 +174,16 @@
   onConfirm={() => deleteForm?.requestSubmit()}
   title="Delete {stack.name}?"
   bind:open={deleteDialogOpen}
+/>
+
+<ConfirmDialog
+  confirmLabel="Delete anyway"
+  description={`${detachError} Deleting anyway removes Homerun's records for this stack : any workload still on the host has to be removed by hand.`}
+  onConfirm={async () => {
+    forceDelete = true;
+    await tick();
+    deleteForm?.requestSubmit();
+  }}
+  title="Delete the stack anyway?"
+  bind:open={forceDeleteDialogOpen}
 />

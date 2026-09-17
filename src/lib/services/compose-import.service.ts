@@ -9,6 +9,7 @@ import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
+import { uniqueSlug } from "$lib/slug";
 import { DeploymentService } from "./deploy.service.ts";
 
 const logger = new Logger("ComposeImport");
@@ -25,29 +26,6 @@ export interface ComposeImportResult {
 	services: ServiceDTO[];
 }
 
-async function uniqueServiceSlug(slug: string): Promise<string> {
-	let candidate = slug;
-	let attempt = 2;
-	// biome-ignore lint/performance/noAwaitInLoops: each candidate can only be checked once the previous one came back taken
-	while (await ServiceDTO.slugTaken(candidate)) {
-		candidate = `${slug.slice(0, 58)}-${attempt}`;
-		attempt += 1;
-	}
-	return candidate;
-}
-
-async function uniqueStackSlug(name: string): Promise<string> {
-	const base = slugifyComposeKey(name) || "imported-stack";
-	let candidate = base;
-	let attempt = 2;
-	// biome-ignore lint/performance/noAwaitInLoops: each candidate can only be checked once the previous one came back taken
-	while (await StackDTO.slugTaken(candidate)) {
-		candidate = `${base.slice(0, 58)}-${attempt}`;
-		attempt += 1;
-	}
-	return candidate;
-}
-
 class ComposeImportServiceClass {
 	/** Resolves which stack imported services belong to: the given `stackId` if it exists, a newly created stack from `stackName`, or null (no stack) if neither is given. */
 	async #resolveStackId(input: ComposeImportInput): Promise<string | null> {
@@ -60,7 +38,10 @@ class ComposeImportServiceClass {
 		}
 		const created = await StackDTO.create({
 			name: input.stackName,
-			slug: await uniqueStackSlug(input.stackName),
+			slug: await uniqueSlug(
+				slugifyComposeKey(input.stackName) || "imported-stack",
+				(slug) => StackDTO.slugTaken(slug),
+			),
 			userId: input.userId,
 		});
 		return created.id;
@@ -127,7 +108,7 @@ class ComposeImportServiceClass {
 			portProtocol: draft.portProtocol,
 			stackId,
 			restartPolicy: draft.restartPolicy,
-			slug: await uniqueServiceSlug(draft.slug),
+			slug: await uniqueSlug(draft.slug, (slug) => ServiceDTO.slugTaken(slug)),
 			tag: draft.tag,
 			userId,
 		});

@@ -72,11 +72,17 @@ mutating one process-global registry is a real, accepted tradeoff again — see
 `spyOn`, restored with `mock.restore()`), which have to coexist in one process
 without colliding.
 
-`tsconfig.json` excludes `tests/` from `svelte-check` (`check:app`) —
-`bun:test`'s `mock()` return type hits real overload-resolution errors under
-svelte-check's TS resolution that don't occur under `tsc`/`bun test` directly.
-`tests/` is type-checked per-package instead (`check:agent`/`check:cli`/
-`check:installer`, `bun-types`, not svelte-check's DOM-flavored config).
+`tsconfig.json` type-checks `tests/` as part of `svelte-check` (`check:app`),
+same as `src/`. It used to exclude `tests/` entirely, which meant ~115 test
+files had no type-checking gate at all; re-including them surfaced a handful of
+real bugs (a `[Date, Date]` tuple cast in `queue.test.ts` that should've been
+`[string, Date]`, a `never`-typed `daemon` in `git-fixture.ts` from a TS/tsgo
+control-flow quirk that doesn't re-widen a `let` narrowed to `null` across a
+closure call inside a `catch` block, worked around with a `{ daemon: T | null }`
+object instead of a bare `let`). `bun:test`'s `spyOn` needs an explicit
+`Mock<typeof console.log>` annotation rather than `ReturnType<typeof spyOn>`,
+which resolves to `any` since `spyOn`'s type parameters can't be inferred
+without a call site.
 
 ## `packages/cli/` tests need a mocked `os.homedir()`
 

@@ -1,13 +1,13 @@
 import { error, fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { StatusPageDTO } from "$lib/dto/status-page-dto";
 import { BEAT_WINDOW, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
+import { dashboardOrigin } from "$lib/server/canonical-origin";
 import { statusPageSchema } from "$lib/server/validation/status-page";
 
-export const load = async ({ params, parent }) => {
+export const load = async ({ params, parent, request, url }) => {
 	const { user } = await parent();
 
 	const page = await StatusPageDTO.get(params.statusPageId, user.id);
@@ -36,7 +36,7 @@ export const load = async ({ params, parent }) => {
 	);
 
 	return {
-		baseDomain: config.baseDomain,
+		dashboardOrigin: dashboardOrigin(request, url),
 		beatWindow: BEAT_WINDOW,
 		memberIds,
 		stacks: stacks.map((p) => ({ id: p.id, name: p.name })),

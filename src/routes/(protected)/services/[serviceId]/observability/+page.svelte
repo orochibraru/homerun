@@ -5,6 +5,7 @@
 		Eraser,
 		Ghost,
 		Loader2,
+		Power,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
@@ -24,6 +25,7 @@
 
 	let expandedDeploymentId = $state<string | null>(null);
 	let resolving = $state(false);
+	let togglingUptime = $state(false);
 	let clearing = $state<"errors" | "heartbeats" | null>(null);
 
 	const dismissedLabel = $derived(
@@ -40,7 +42,42 @@
     beats={data.uptime}
     enabled={data.service.uptimeEnabled}
     externalSkipped={data.externalSkipped}
-  />
+  >
+    {#snippet headerAction()}
+      <form
+        action="?/setUptime"
+        method="POST"
+        use:enhance={enhanceToast({
+          error: "Couldn't change uptime probing.",
+          loading: "Saving uptime probing",
+          onSettled: () => {
+            togglingUptime = false;
+          },
+          onStart: () => {
+            togglingUptime = true;
+          },
+          success: (result) =>
+            result?.uptimeEnabled
+              ? "Uptime probing is on."
+              : "Uptime probing is off.",
+        })}
+      >
+        <input
+          name="uptimeEnabled"
+          type="hidden"
+          value={data.service.uptimeEnabled ? "false" : "true"}
+        />
+        <Button disabled={togglingUptime} size="sm" type="submit" variant="outline">
+          {#if togglingUptime}
+            <Loader2 class="size-3.5 animate-spin" />
+          {:else}
+            <Power class="size-3.5" />
+          {/if}
+          {data.service.uptimeEnabled ? "Turn off" : "Turn on"}
+        </Button>
+      </form>
+    {/snippet}
+  </UptimePanel>
   {#if data.uptime.internal.length > 0 || data.uptime.external.length > 0}
     <form
       action="?/clearHeartbeats"

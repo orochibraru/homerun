@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { homedir, tmpdir } from "node:os";
+import { ClientFactory } from "../../../packages/cli/client";
 import { ConfigStore } from "../../../packages/cli/config";
 import { LoginFlow } from "../../../packages/cli/login";
+
+type Client = ReturnType<typeof ClientFactory.makeClient>;
+
+function fakeDeleteClient(overrides: { DELETE?: ReturnType<typeof mock> }) {
+	return {
+		DELETE: overrides.DELETE ?? mock(),
+	} as unknown as Client;
+}
 
 // See tests/cli/config.test.ts for why : logout() reads/clears the real
 // on-disk config path, which needs the same mocked-homedir guarantee (see
@@ -27,24 +36,82 @@ describe("LoginFlow.logout", () => {
 		ConfigStore.clearStoredConfig();
 	});
 
-	test("says so when not logged in, without touching the filesystem", () => {
+	test("says so when not logged in, without touching the filesystem or the network", async () => {
 		ConfigStore.clearStoredConfig();
 		const logSpy = spyOn(console, "log").mockImplementation(() => undefined);
+		const fetchSpy = spyOn(globalThis, "fetch");
 
-		LoginFlow.logout();
+		await LoginFlow.logout();
 
 		expect(logSpy).toHaveBeenCalledWith("Not logged in.");
+		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
-	test("clears the stored config and reports the instance logged out of", () => {
+	test("revokes the API key on the server, then clears the local config", async () => {
 		ConfigStore.writeStoredConfig({
 			apiKey: "k",
 			baseUrl: "https://h.example.com",
 		});
 		const logSpy = spyOn(console, "log").mockImplementation(() => undefined);
+		const DELETE = mock(async () => ({
+			data: { success: true },
+			error: undefined,
+			response: { ok: true, status: 200 },
+		}));
+		spyOn(ClientFactory, "makeClient").mockReturnValue(
+			fakeDeleteClient({ DELETE }),
+		);
 
-		LoginFlow.logout();
+		await LoginFlow.logout();
 
-		expect(logSpy).toHaveBeenCalledWith("Logged out of https://h.example.com.");
+		expect(DELETE).toHaveBeenCalledWith("/auth-token", {});
+		expect(logSpy).toHaveBeenCalledWith(
+			"Logged out of https://h.example.com and revoked the API key.",
+		);
+		expect(ConfigStore.readStoredConfig()).toBeNull();
+	});
+
+	test("still clears the local config when the server rejects the revoke", async () => {
+		ConfigStore.writeStoredConfig({
+			apiKey: "k",
+			baseUrl: "https://h.example.com",
+		});
+		const logSpy = spyOn(console, "log").mockImplementation(() => undefined);
+		const DELETE = mock(async () => ({
+			data: undefined,
+			error: { error: "Unauthorized" },
+			response: { ok: false, status: 401 },
+		}));
+		spyOn(ClientFactory, "makeClient").mockReturnValue(
+			fakeDeleteClient({ DELETE }),
+		);
+
+		await LoginFlow.logout();
+
+		expect(logSpy).toHaveBeenCalledWith(
+			"Logged out of https://h.example.com. Couldn't revoke the API key on the server (it may already be invalid, or the server is unreachable) : cleared the local config anyway.",
+		);
+		expect(ConfigStore.readStoredConfig()).toBeNull();
+	});
+
+	test("still clears the local config when the server is unreachable", async () => {
+		ConfigStore.writeStoredConfig({
+			apiKey: "k",
+			baseUrl: "https://h.example.com",
+		});
+		const logSpy = spyOn(console, "log").mockImplementation(() => undefined);
+		const DELETE = mock(async () => {
+			throw new Error("fetch failed");
+		});
+		spyOn(ClientFactory, "makeClient").mockReturnValue(
+			fakeDeleteClient({ DELETE }),
+		);
+
+		await LoginFlow.logout();
+
+		expect(logSpy).toHaveBeenCalledWith(
+			"Logged out of https://h.example.com. Couldn't revoke the API key on the server (it may already be invalid, or the server is unreachable) : cleared the local config anyway.",
+		);
+		expect(ConfigStore.readStoredConfig()).toBeNull();
 	});
 });

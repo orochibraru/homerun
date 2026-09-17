@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, lt, lte } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, lt, lte } from "drizzle-orm";
 import { db } from "$lib/server/db/lib";
 import { type AppLog, appLog } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
@@ -55,6 +55,27 @@ export class AppLogDTO extends BaseDTO<AppLog> {
 				and(eq(appLog.serviceId, serviceId), lte(appLog.createdAt, until)),
 			);
 		return row?.total ?? 0;
+	}
+
+	/**
+	 * The most recent warn/error logs attributed to any of `serviceIds`, for a
+	 * non-admin's dashboard, which must not show other people's services or
+	 * instance-level logs.
+	 */
+	static async listRecentForServices(
+		serviceIds: string[],
+		limit = 100,
+	): Promise<AppLogDTO[]> {
+		if (serviceIds.length === 0) {
+			return [];
+		}
+		const rows = await db
+			.select()
+			.from(appLog)
+			.where(inArray(appLog.serviceId, serviceIds))
+			.orderBy(desc(appLog.createdAt))
+			.limit(limit);
+		return rows.map((row) => new AppLogDTO(row));
 	}
 
 	/** Most recent warn/error logs instance-wide, regardless of service attribution : for a future instance-wide log view. */

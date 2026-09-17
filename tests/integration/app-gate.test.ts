@@ -71,12 +71,14 @@ describe("per-app auth gate", () => {
 		const { data, error, response } = await client.POST("/services", {
 			body: {
 				authRequired: false,
+				autoDeployOnPush: false,
 				buildSource: "image",
 				containerPort: 80,
 				dnsResolvable: true,
 				envVars: {},
 				image: "nginx",
 				name: "IT gate check",
+				pullPolicy: "always",
 				restartPolicy: "no",
 				slug: `gate-check-${Date.now().toString(36)}`,
 				tag: "alpine",

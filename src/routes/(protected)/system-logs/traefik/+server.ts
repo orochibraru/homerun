@@ -4,6 +4,9 @@ export const GET = async ({ locals }) => {
 	if (!locals.user) {
 		return new Response("Unauthorized", { status: 401 });
 	}
+	if (!locals.isAdmin) {
+		return new Response("Forbidden", { status: 403 });
+	}
 
 	const traefik = await DockerService.findTraefikContainer();
 	if (!traefik) {

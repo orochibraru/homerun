@@ -13,6 +13,7 @@ import {
 	detectLinkEngine,
 } from "$lib/service-link";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
+import { uniqueSlug } from "$lib/slug";
 
 const logger = new Logger("Services");
 
@@ -35,7 +36,9 @@ async function groupPair(
 		(
 			await StackDTO.create({
 				name: svc.name,
-				slug: await uniqueStackSlug(slugify(svc.name)),
+				slug: await uniqueSlug(slugify(svc.name) || "stack", (slug) =>
+					StackDTO.slugTaken(slug),
+				),
 				userId,
 			})
 		).id;
@@ -46,22 +49,6 @@ async function groupPair(
 			.map((row) => row.update({ stackId })),
 	);
 	return stackId;
-}
-
-/** Appends -2, -3, … until the slug is free, so linking never fails on a name collision. */
-async function uniqueStackSlug(base: string): Promise<string> {
-	const candidate = base || "stack";
-	if (!(await StackDTO.slugTaken(candidate))) {
-		return candidate;
-	}
-	const suffixed = await Promise.all(
-		[2, 3, 4, 5, 6, 7, 8, 9].map(async (n) => ({
-			n,
-			taken: await StackDTO.slugTaken(`${candidate}-${n}`),
-		})),
-	);
-	const free = suffixed.find((entry) => !entry.taken);
-	return free ? `${candidate}-${free.n}` : `${candidate}-${Date.now()}`;
 }
 
 function slugify(name: string): string {

@@ -151,10 +151,20 @@
           </SelectContent>
         </SelectRoot>
         <p class="text-text-subtle mt-1.5 text-xs">
-          {blockOption.description} A scanner that fails to run never blocks a
-          deploy.
+          {blockOption.description} Applies to manual, scheduled, push-triggered
+          and API deploys; a blocked deploy is marked failed, the previous
+          container keeps running, and deploy-failure notifications fire. A
+          scanner that fails to run never blocks a deploy, and rollbacks to an
+          earlier revision aren't re-checked.
         </p>
       </div>
+      <CheckBox
+        checked={data.settings.imageScanBlockFixableOnly ?? false}
+        helperText="Only count findings that have a fixed version. A vulnerability with no upstream fix yet is still shown on the Security tab, but doesn't block."
+        id="imageScanBlockFixableOnly"
+        label="Only block on fixable vulnerabilities"
+        name="imageScanBlockFixableOnly"
+      />
       <div class="flex justify-end">
         <Button type="submit">Save</Button>
       </div>

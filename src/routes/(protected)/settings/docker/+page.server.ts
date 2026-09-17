@@ -43,13 +43,16 @@ export const actions = {
 			return fail(400, { error: "Invalid block policy." });
 		}
 		const imageScanEnabled = formData.get("imageScanEnabled") === "on";
+		const imageScanBlockFixableOnly =
+			formData.get("imageScanBlockFixableOnly") === "on";
 		const settings = await InstanceSettingsDTO.get();
 		await settings.updateImageScan({
+			imageScanBlockFixableOnly,
 			imageScanBlockSeverity: isBlockSeverity(severity) ? severity : null,
 			imageScanEnabled,
 		});
 		logger.info(
-			`Image scanning updated: enabled=${imageScanEnabled} block=${severity} user=${locals.user.id}`,
+			`Image scanning updated: enabled=${imageScanEnabled} block=${severity} fixableOnly=${imageScanBlockFixableOnly} user=${locals.user.id}`,
 		);
 		return { savedSection: "imageScan", success: true };
 	},

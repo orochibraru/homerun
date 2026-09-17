@@ -5,6 +5,12 @@ import { DockerService } from "$lib/services/docker.service";
 
 const logger = new Logger("Traefik");
 
+export const load = ({ locals }) => {
+	if (!locals.isAdmin) {
+		throw redirect(302, resolve("/"));
+	}
+};
+
 export const actions = {
 	restartTraefik: async ({ locals }) => {
 		if (!locals.user) {

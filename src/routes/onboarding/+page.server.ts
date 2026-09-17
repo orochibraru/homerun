@@ -4,6 +4,7 @@ import {
 	applyInstanceSettings,
 	config,
 	envDefaultsForDisplay,
+	isPlaceholderAuthSecret,
 } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
@@ -31,7 +32,7 @@ export const load = async ({ locals }) => {
 
 	const settings = await InstanceSettingsDTO.get();
 	return {
-		authSecretIsDefault: config.auth.secret === "default-secret",
+		authSecretIsDefault: isPlaceholderAuthSecret(config.auth.secret),
 		envDefaults: envDefaultsForDisplay(),
 		settings: settings.toJSON(),
 		waitingForAdmin: false as const,

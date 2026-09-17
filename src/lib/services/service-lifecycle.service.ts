@@ -1,7 +1,16 @@
-import type { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
+import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
+import { deleteDns, serviceHostname } from "./dns.service.ts";
+import {
+	tryRemoveWorkload,
+	WorkloadDetachError,
+} from "./docker/workload-removal.ts";
 import { DockerService } from "./docker.service.ts";
 import { GitWebhookService } from "./git-webhook.service.ts";
+
+const logger = new Logger("ServiceLifecycle");
 
 /**
  * Container/swarm-service lifecycle operations, keyed off a `ServiceDTO`
@@ -89,13 +98,70 @@ class ServiceLifecycleServiceClass {
 	}
 
 	/**
-	 * Deletes a service: best-effort detaches its swarm service/container
-	 * (a failure there doesn't stop the delete), then deletes the row.
+	 * Deletes a service: removes its swarm service or container, then its git
+	 * webhook and its row. A workload Docker reports as already gone counts as
+	 * removed.
+	 *
+	 * @param options.force Deletes the row even when the workload couldn't be
+	 * removed, for a daemon that will never answer for it again.
+	 * @throws {WorkloadDetachError} When the workload couldn't be removed and
+	 * `force` isn't set; nothing is deleted then.
 	 */
-	async deleteService(svc: ServiceDTO): Promise<void> {
-		await GitWebhookService.remove(svc);
-		await this.#detachWorkload(svc);
+	async deleteService(
+		svc: ServiceDTO,
+		options: { force?: boolean } = {},
+	): Promise<void> {
+		const failure = await this.#detachWorkload(svc);
+		if (failure && !options.force) {
+			throw new WorkloadDetachError(
+				`Couldn't remove the ${svc.swarmServiceId ? "swarm service" : "container"} for "${svc.name}": ${failure}. Nothing was deleted.`,
+			);
+		}
+		const stack = svc.stackId
+			? await StackDTO.get(svc.stackId, svc.userId)
+			: null;
+		await this.#cleanUpOutside(svc, stack?.slug ?? null);
 		await svc.delete();
+	}
+
+	/**
+	 * Deletes a stack and every service in it (see `StackDTO.cascadeDelete`
+	 * for the workload rules and `force`), then removes what each member left
+	 * outside Homerun: its push webhook and DNS records.
+	 *
+	 * @throws WorkloadDetachError When a member's workload can't be removed and
+	 * `force` isn't set; nothing is deleted then.
+	 */
+	async deleteStack(
+		stack: StackDTO,
+		options: { force?: boolean } = {},
+	): Promise<void> {
+		const members = await ServiceDTO.listByStack(stack.id, stack.userId);
+		await stack.cascadeDelete(options);
+		await Promise.all(
+			members.map((svc) => this.#cleanUpOutside(svc, stack.slug)),
+		);
+	}
+
+	/**
+	 * Removes a deleted service's footprint outside Homerun: the git push
+	 * webhook on its provider, and the DNS records for its hostname and custom
+	 * domain when it was publicly routed. Best effort, never throws.
+	 */
+	async #cleanUpOutside(
+		svc: ServiceDTO,
+		stackSlug: string | null,
+	): Promise<void> {
+		await GitWebhookService.remove(svc);
+		if (!svc.dnsResolvable) {
+			return;
+		}
+		await deleteDns([
+			serviceHostname(svc.slug, stackSlug),
+			...(svc.customDomain ? [svc.customDomain] : []),
+		]).catch((err) => {
+			logger.warn(`Couldn't remove DNS records for service=${svc.id}`, err);
+		});
 	}
 
 	/**
@@ -110,22 +176,22 @@ class ServiceLifecycleServiceClass {
 	}
 
 	/**
-	 * Removes a service's swarm service or container, swallowing any
-	 * failure rather than throwing.
+	 * Removes a service's swarm service or container, if it has one.
 	 *
-	 * @returns Whether the removal succeeded.
+	 * @returns Null when it's gone (or there was nothing to remove), else why the
+	 * removal failed.
 	 */
-	async #detachWorkload(svc: ServiceDTO): Promise<boolean> {
-		try {
-			if (svc.swarmServiceId) {
-				await DockerService.removeSwarmService(svc.swarmServiceId);
-			} else if (svc.containerId) {
-				await this.remove(svc.containerId);
-			}
-			return true;
-		} catch {
-			return false;
+	#detachWorkload(svc: ServiceDTO): Promise<string | null> {
+		const { containerId, swarmServiceId } = svc;
+		if (swarmServiceId) {
+			return tryRemoveWorkload(() =>
+				DockerService.removeSwarmService(swarmServiceId),
+			);
 		}
+		if (containerId) {
+			return tryRemoveWorkload(() => this.remove(containerId));
+		}
+		return Promise.resolve(null);
 	}
 }
 

@@ -84,6 +84,7 @@ export const updateServiceApiBody = z.object({
 		.enum(["no", "always", "on-failure", "unless-stopped"])
 		.optional(),
 	tag: z.string().min(1).optional(),
+	uptimeEnabled: z.boolean().optional(),
 });
 
 export const createStackApiBody = z.object({

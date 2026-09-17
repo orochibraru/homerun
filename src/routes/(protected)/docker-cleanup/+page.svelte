@@ -192,7 +192,7 @@
     {#snippet pending()}
       <div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
         {#each [0, 1, 2, 3, 4] as tile (tile)}
-          <Skeleton class="h-[5.75rem] rounded-md" />
+          <Skeleton class="h-23 rounded-md" />
         {/each}
       </div>
       {#each [0, 1, 2] as section (section)}

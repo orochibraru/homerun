@@ -42,8 +42,9 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
   earlier revision's exact image, with opt-in auto-rollback when a new one comes
   up unhealthy
 - **[Image scanning](docs/services.md#image-scanning)**: every deploy scanned
-  with Trivy before it starts, with an optional block on critical or high
-  findings, and scan results readable from the dashboard, REST API and CLI
+  with Trivy before it starts, with an admin policy that blocks deploys on
+  findings at or above a chosen severity (optionally fixable ones only), and
+  scan results readable from the dashboard, REST API and CLI
 - **[Required status checks](docs/services.md#required-status-checks)**: a
   git-based service can wait for its CI checks to pass before it builds
 - **[Search, filters, pagination & bulk actions](docs/services.md#the-services-list)**:

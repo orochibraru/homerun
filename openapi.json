@@ -21,6 +21,78 @@
 	},
 	"openapi": "3.1.0",
 	"paths": {
+		"/auth-token": {
+			"delete": {
+				"description": "Revokes the API key that authenticated this request (x-api-key or Authorization: Bearer), what homerun logout calls server-side before clearing its local config. success is false when the key was already invalid.",
+				"operationId": "delete_auth_token",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Revoked (or already invalid)"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not authenticated with an API key"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Revoke the current API key",
+				"tags": ["Meta"]
+			}
+		},
 		"/jobs/{jobId}": {
 			"get": {
 				"operationId": "get_jobs__jobId_",
@@ -587,6 +659,10 @@
 												"example": "2026-08-20T12:00:00.000Z",
 												"type": "string"
 											},
+											"uptimeEnabled": {
+												"description": "Whether the per-minute internal and external uptime probes run for this service",
+												"type": "boolean"
+											},
 											"userId": {
 												"type": "string"
 											}
@@ -641,6 +717,7 @@
 											"slug",
 											"tag",
 											"updatedAt",
+											"uptimeEnabled",
 											"userId"
 										],
 										"type": "object"
@@ -1162,6 +1239,10 @@
 											"example": "2026-08-20T12:00:00.000Z",
 											"type": "string"
 										},
+										"uptimeEnabled": {
+											"description": "Whether the per-minute internal and external uptime probes run for this service",
+											"type": "boolean"
+										},
 										"userId": {
 											"type": "string"
 										}
@@ -1216,6 +1297,7 @@
 										"slug",
 										"tag",
 										"updatedAt",
+										"uptimeEnabled",
 										"userId"
 									],
 									"type": "object"
@@ -1293,7 +1375,7 @@
 		},
 		"/services/{serviceId}": {
 			"delete": {
-				"description": "Stops/removes the container first, same as the Settings danger-zone action.",
+				"description": "Removes the container or swarm service first, same as the Settings danger-zone action. One Docker reports as already gone counts as removed; any other removal failure answers 409 and deletes nothing, unless force=true.",
 				"operationId": "delete_services__serviceId_",
 				"parameters": [
 					{
@@ -1301,6 +1383,15 @@
 						"in": "path",
 						"name": "serviceId",
 						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "true deletes the service record even when its container or swarm service couldn't be removed",
+						"in": "query",
+						"name": "force",
+						"required": false,
 						"schema": {
 							"type": "string"
 						}
@@ -1345,6 +1436,24 @@
 							}
 						},
 						"description": "Not found"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "The container or swarm service couldn't be removed, nothing was deleted"
 					}
 				},
 				"security": [
@@ -1727,6 +1836,10 @@
 											"example": "2026-08-20T12:00:00.000Z",
 											"type": "string"
 										},
+										"uptimeEnabled": {
+											"description": "Whether the per-minute internal and external uptime probes run for this service",
+											"type": "boolean"
+										},
 										"userId": {
 											"type": "string"
 										}
@@ -1781,6 +1894,7 @@
 										"slug",
 										"tag",
 										"updatedAt",
+										"uptimeEnabled",
 										"userId"
 									],
 									"type": "object"
@@ -2047,6 +2161,9 @@
 									"tag": {
 										"minLength": 1,
 										"type": "string"
+									},
+									"uptimeEnabled": {
+										"type": "boolean"
 									}
 								},
 								"type": "object"
@@ -2411,6 +2528,10 @@
 											"example": "2026-08-20T12:00:00.000Z",
 											"type": "string"
 										},
+										"uptimeEnabled": {
+											"description": "Whether the per-minute internal and external uptime probes run for this service",
+											"type": "boolean"
+										},
 										"userId": {
 											"type": "string"
 										}
@@ -2465,6 +2586,7 @@
 										"slug",
 										"tag",
 										"updatedAt",
+										"uptimeEnabled",
 										"userId"
 									],
 									"type": "object"
@@ -3251,6 +3373,52 @@
 												],
 												"description": "Why a failed or skipped scan has no findings"
 											},
+											"fixableCounts": {
+												"anyOf": [
+													{
+														"additionalProperties": false,
+														"properties": {
+															"critical": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"high": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"low": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"medium": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															},
+															"unknown": {
+																"maximum": 9007199254740991,
+																"minimum": -9007199254740991,
+																"type": "integer"
+															}
+														},
+														"required": [
+															"critical",
+															"high",
+															"low",
+															"medium",
+															"unknown"
+														],
+														"type": "object"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Findings that have a fixed version, per severity. null on scans recorded before this was tracked"
+											},
 											"id": {
 												"type": "string"
 											},
@@ -3284,6 +3452,7 @@
 											"deploymentId",
 											"digest",
 											"error",
+											"fixableCounts",
 											"id",
 											"imageRef",
 											"scannedAt",
@@ -3626,6 +3795,52 @@
 											},
 											"type": "array"
 										},
+										"fixableCounts": {
+											"anyOf": [
+												{
+													"additionalProperties": false,
+													"properties": {
+														"critical": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"high": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"low": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"medium": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"unknown": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														}
+													},
+													"required": [
+														"critical",
+														"high",
+														"low",
+														"medium",
+														"unknown"
+													],
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Findings that have a fixed version, per severity. null on scans recorded before this was tracked"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -3659,6 +3874,7 @@
 										"deploymentId",
 										"digest",
 										"error",
+										"fixableCounts",
 										"id",
 										"imageRef",
 										"scannedAt",
@@ -3880,6 +4096,52 @@
 											},
 											"type": "array"
 										},
+										"fixableCounts": {
+											"anyOf": [
+												{
+													"additionalProperties": false,
+													"properties": {
+														"critical": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"high": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"low": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"medium": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														},
+														"unknown": {
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991,
+															"type": "integer"
+														}
+													},
+													"required": [
+														"critical",
+														"high",
+														"low",
+														"medium",
+														"unknown"
+													],
+													"type": "object"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "Findings that have a fixed version, per severity. null on scans recorded before this was tracked"
+										},
 										"id": {
 											"type": "string"
 										},
@@ -3913,6 +4175,7 @@
 										"deploymentId",
 										"digest",
 										"error",
+										"fixableCounts",
 										"id",
 										"imageRef",
 										"scannedAt",

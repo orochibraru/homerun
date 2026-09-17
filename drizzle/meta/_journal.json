@@ -287,6 +287,13 @@
 			"when": 1789589873080,
 			"tag": "0040_dark_eddie_brock",
 			"breakpoints": true
+		},
+		{
+			"idx": 41,
+			"version": "7",
+			"when": 1789593394341,
+			"tag": "0041_thankful_nextwave",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

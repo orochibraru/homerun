@@ -3,11 +3,11 @@ name: check-repo
 description: >-
   Run this before considering any change to this repo done. Executes the real
   gates this codebase enforces: bun run check (svelte-check --fail-on-warnings
-  over src/ plus tsc over packages/* and scripts/, 0 errors AND 0 warnings) and
-  bun run lint (markdownlint-cli2, tailwint, biome check --error-on-warnings),
-  plus the matching unit tests. Use whenever finishing an edit to this codebase,
-  before saying a change is "done", or after any change under src/, packages/,
-  scripts/ or tests/.
+  over src/ and tests/ plus tsc over packages/* and scripts/, 0 errors AND 0
+  warnings) and bun run lint (markdownlint-cli2, tailwint, biome check
+  --error-on-warnings), plus the matching unit tests. Use whenever finishing an
+  edit to this codebase, before saying a change is "done", or after any change
+  under src/, packages/, scripts/ or tests/.
 user-invocable: true
 allowed-tools:
   Bash(bun run check), Bash(bun run check:*), Bash(bun run lint), Bash(bun run
@@ -25,12 +25,12 @@ actually reading the failing file first.
 ## Steps
 
 1. **`bun run check`** — `check:app` (svelte-kit sync + svelte-check with
-   `--fail-on-warnings`, full `src/` tree) then `check:packages` (`tsc --noEmit`
-   over `packages/installer`, `packages/agent`, `packages/cli` and `scripts/`,
-   each with its own tsconfig). This is the hard gate: 0 errors, 0 warnings. A
-   warning fails it exactly like an error. Scope is always the whole repo
-   regardless of which files were edited, so a failure anywhere is in scope, not
-   just in files this change touched.
+   `--fail-on-warnings`, full `src/` and `tests/` trees) then `check:packages`
+   (`tsc --noEmit` over `packages/installer`, `packages/agent`, `packages/cli`
+   and `scripts/`, each with its own tsconfig). This is the hard gate: 0 errors,
+   0 warnings. A warning fails it exactly like an error. Scope is always the
+   whole repo regardless of which files were edited, so a failure anywhere is in
+   scope, not just in files this change touched.
 
 2. **`bun run lint`** — `lint:md` (markdownlint-cli2), `lint:tailwind`
    (tailwint) and `lint:ts` (`biome check --error-on-warnings`), must be clean,

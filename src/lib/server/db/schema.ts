@@ -529,6 +529,7 @@ export const instanceSettings = pgTable("instance_settings", {
 		.notNull()
 		.default([]),
 	id: text("id").primaryKey(),
+	imageScanBlockFixableOnly: boolean("image_scan_block_fixable_only"),
 	imageScanBlockSeverity: text(
 		"image_scan_block_severity",
 	).$type<BlockSeverity>(),
@@ -1275,6 +1276,7 @@ export const imageScan = pgTable(
 		digest: text("digest"),
 		error: text("error"),
 		findings: jsonb("findings").$type<ImageScanFinding[]>().notNull(),
+		fixableCounts: jsonb("fixable_counts").$type<SeverityCounts>(),
 		id: text("id").primaryKey(),
 		imageRef: text("image_ref").notNull(),
 		scannedAt: timestamp("scanned_at", { mode: "date" }).notNull(),

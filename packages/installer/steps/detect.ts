@@ -79,12 +79,27 @@ class InstallerDetector {
 		}
 	}
 
-	/** "amd64"/"arm64": matches this repo's own release-asset naming (`scripts/build-packages.ts`'s `homerun-<pkg>-<arch>` filenames), not Node's "x64"/"arm64" `process.arch` values. */
+	/**
+	 * "amd64"/"arm64": matches this repo's own release-asset naming
+	 * (`scripts/build-packages.ts`'s `homerun-<pkg>-<arch>` filenames), mapped
+	 * from Node's "x64"/"arm64" `process.arch` values. Mirrored by
+	 * `packages/cli/update.ts`'s `#currentArch` : the two sub-projects can't
+	 * share a module (each `tsconfig.json`'s `include` is scoped to its own
+	 * directory), so keep both in sync by hand, see
+	 * `.agents/notes/packages-and-release.md`.
+	 * @throws When `process.arch` is anything but "x64"/"arm64" : release
+	 *   binaries only cover linux/amd64 and linux/arm64.
+	 */
 	arch(): "amd64" | "arm64" {
+		if (process.arch === "x64") {
+			return "amd64";
+		}
 		if (process.arch === "arm64") {
 			return "arm64";
 		}
-		return "amd64";
+		throw new Error(
+			`Unsupported architecture "${process.arch}" : release binaries only cover linux/amd64 and linux/arm64.`,
+		);
 	}
 }
 

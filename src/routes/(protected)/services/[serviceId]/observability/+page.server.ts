@@ -75,6 +75,24 @@ export const actions = {
 		return { success: true };
 	},
 
+	setUptime: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId, locals.user.id);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+
+		const formData = await request.formData();
+		const uptimeEnabled = formData.get("uptimeEnabled") === "true";
+		await svc.update({ uptimeEnabled });
+		logger.info(
+			`Uptime probing updated: service=${svc.id} enabled=${uptimeEnabled} user=${locals.user.id}`,
+		);
+		return { success: true, uptimeEnabled };
+	},
+
 	clearHeartbeats: async ({ params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

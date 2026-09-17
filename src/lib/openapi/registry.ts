@@ -139,14 +139,26 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Stops/removes the container first, same as the Settings danger-zone action.",
+			"Removes the container or swarm service first, same as the Settings danger-zone action. One Docker reports as already gone counts as removed; any other removal failure answers 409 and deletes nothing, unless force=true.",
 		method: "delete",
 		path: "/services/{serviceId}",
 		pathParams: [{ description: "Service id", name: "serviceId" }],
+		queryParams: [
+			{
+				description:
+					"true deletes the service record even when its container or swarm service couldn't be removed",
+				name: "force",
+			},
+		],
 		responses: {
 			204: { description: "Deleted" },
 			401: unauthorized,
 			404: notFound,
+			409: {
+				description:
+					"The container or swarm service couldn't be removed, nothing was deleted",
+				schema: errorResponse,
+			},
 		},
 		summary: "Delete a service",
 		tags: ["Services"],
@@ -403,6 +415,25 @@ export const routes: RouteDef[] = [
 			401: unauthorized,
 		},
 		summary: "Host resource stats",
+		tags: ["Meta"],
+	},
+	{
+		description:
+			"Revokes the API key that authenticated this request (x-api-key or Authorization: Bearer), what homerun logout calls server-side before clearing its local config. success is false when the key was already invalid.",
+		method: "delete",
+		path: "/auth-token",
+		responses: {
+			200: {
+				description: "Revoked (or already invalid)",
+				schema: successResponse,
+			},
+			400: {
+				description: "Not authenticated with an API key",
+				schema: errorResponse,
+			},
+			401: unauthorized,
+		},
+		summary: "Revoke the current API key",
 		tags: ["Meta"],
 	},
 ];

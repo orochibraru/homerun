@@ -1,4 +1,5 @@
 import { parse as parseYaml } from "yaml";
+import { splitImageRef } from "$lib/image-ref";
 
 export type ComposeRestartPolicy =
 	| "no"
@@ -134,24 +135,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Splits an image reference into repository and tag, dropping any `@digest` and
- * defaulting the tag to `latest`. A colon before the last slash is treated as a
- * registry port, not a tag.
- */
-export function splitImageRef(ref: string): { image: string; tag: string } {
-	const withoutDigest = ref.split("@")[0] ?? ref;
-	const lastColon = withoutDigest.lastIndexOf(":");
-	const lastSlash = withoutDigest.lastIndexOf("/");
-	if (lastColon === -1 || lastColon < lastSlash) {
-		return { image: withoutDigest, tag: "latest" };
-	}
-	return {
-		image: withoutDigest.slice(0, lastColon),
-		tag: withoutDigest.slice(lastColon + 1) || "latest",
-	};
-}
-
-/**
  * Reads a compose `environment:` block in either list (`KEY=value`) or map form;
  * null map values become empty strings and list entries without `=` are dropped.
  */
@@ -274,7 +257,14 @@ function parseDependsOn(raw: unknown): string[] {
 	return [];
 }
 
-function volumeNameFor(serviceSlug: string, containerPath: string): string {
+/**
+ * Names the Docker volume backing a bind mount, from the service slug and the
+ * container mount path, capped at 63 characters.
+ */
+export function bindVolumeName(
+	serviceSlug: string,
+	containerPath: string,
+): string {
 	const suffix = slugifyComposeKey(containerPath.replace(/^\//, "")) || "data";
 	return `${serviceSlug}-${suffix}`.slice(0, 63);
 }
@@ -299,7 +289,7 @@ function parseLongVolume(
 	return {
 		containerPath: target,
 		kind: type,
-		name: type === "volume" ? source : volumeNameFor(serviceSlug, target),
+		name: type === "volume" ? source : bindVolumeName(serviceSlug, target),
 		readOnly: raw.read_only === true,
 		source,
 	};
@@ -334,7 +324,7 @@ function parseShortVolume(
 	return {
 		containerPath,
 		kind: isPath ? "bind" : "volume",
-		name: isPath ? volumeNameFor(serviceSlug, containerPath) : source,
+		name: isPath ? bindVolumeName(serviceSlug, containerPath) : source,
 		readOnly: mode === "ro",
 		source,
 	};

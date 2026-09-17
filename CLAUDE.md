@@ -72,7 +72,7 @@ bun run check:app        # svelte-kit sync && svelte-check --fail-on-warnings --
 bun run check:packages   # check:installer + check:agent + check:cli + check:scripts, each a tsc --noEmit over its own tsconfig
 bun run check:agent      # tsc over packages/agent/tsconfig.json (check:cli, check:installer: same for their package)
 bun run check:scripts    # tsc over scripts/ (tsconfig.scripts.json), scripts/ isn't covered by svelte-check's own include list
-bun run lint             # lint:md (markdownlint-cli2) then lint:tailwind (tailwint, Tailwind class sorting) then lint:ts (biome check --error-on-warnings)
+bun run lint             # lint:md (markdownlint-cli2) then lint:tailwind (scripts/lint-tailwind.ts, tailwint in chunks, Tailwind class sorting) then lint:ts (biome check --error-on-warnings)
 bun run lint:fix         # the --write/--fix half of all three (lint:fix:md, lint:fix:tailwind, lint:fix:ts)
 bun run format           # format:md (prettier over **/*.md) + format:ts (biome format --write)
 bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts, the app applies them itself at boot

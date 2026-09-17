@@ -16,6 +16,7 @@
 	import { timeAgo } from "$lib/formatting";
 	import {
 		BLOCK_SEVERITY_OPTIONS,
+		evaluateScanPolicy,
 		SCAN_SEVERITIES,
 		type ScanSeverity,
 		type SeverityCounts,
@@ -52,9 +53,14 @@
 	const latest = $derived(data.scans[0] ?? null);
 	const latestOk = $derived(data.scans.find((scan) => scan.status === "ok"));
 	const policyLabel = $derived(
-		BLOCK_SEVERITY_OPTIONS.find(
-			(option) => option.value === (data.blockSeverity ?? "off"),
-		)?.label ?? "Off",
+		`${
+			BLOCK_SEVERITY_OPTIONS.find(
+				(option) => option.value === (data.blockPolicy.severity ?? "off"),
+			)?.label ?? "Off"
+		}${data.blockPolicy.severity && data.blockPolicy.fixableOnly ? ", fixable only" : ""}`,
+	);
+	const verdict = $derived(
+		latestOk ? evaluateScanPolicy(latestOk, data.blockPolicy) : null,
 	);
 	const deployed = $derived(Boolean(svc.containerId || svc.swarmServiceId));
 
@@ -94,7 +100,13 @@
           <h2 class="eyebrow">Image scan</h2>
           <p class="text-text-muted text-xs">
             Every deploy scans the image with Trivy before the workload starts.
-            Block policy: <span class="text-text font-medium">{policyLabel}</span>.
+            Block policy: <span class="text-text font-medium">{policyLabel}</span>
+            {#if data.isAdmin}
+              (<a class="text-accent underline" href={resolve("/settings/docker")}
+              >change</a>).
+            {:else}
+              (set by an admin).
+            {/if}
           </p>
         </div>
       </div>
@@ -152,6 +164,15 @@
         </div>
         {#if latest.error}
           <p class="text-text-muted text-xs">{latest.error}</p>
+        {/if}
+        {#if verdict && data.blockPolicy.severity}
+          {#if verdict.blocked}
+            <Alert title="The latest scan fails the block policy." variant="error">
+              A deploy of this image would fail. {verdict.reason}
+            </Alert>
+          {:else}
+            <Alert title="The latest scan passes the block policy." variant="success" />
+          {/if}
         {/if}
         {#if latestOk}
           <div class="flex flex-wrap gap-2">

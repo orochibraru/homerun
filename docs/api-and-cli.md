@@ -38,7 +38,8 @@ A service's [image scans](services.md#image-scanning) are readable over the API:
 
 - `GET /api/v1/services/:id/scans` lists them newest first, without findings:
   `id`, `deploymentId` (null for an on-demand scan), `imageRef`, `digest`,
-  `status` (`ok`, `failed`, `skipped`), `counts` per severity, `totalFindings`,
+  `status` (`ok`, `failed`, `skipped`), `counts` per severity, `fixableCounts`
+  (findings with a fixed version, `null` on older scans), `totalFindings`,
   `scannedAt`, and `error` for a scan that didn't produce findings.
 - `GET /api/v1/services/:id/scans/latest` and
   `GET /api/v1/services/:id/scans/:scanId` return one scan with its `findings`
@@ -72,7 +73,8 @@ Only your own services' scans and jobs are visible; anything else is a 404.
 `PATCH /api/v1/services/:id` also takes `autoRollback`, `requireStatusChecks`
 and `requiredStatusChecks` (see
 [Required status checks](services.md#required-status-checks)), plus
-`healthcheckCommand` and `imageScanEnabled`.
+`healthcheckCommand`, `imageScanEnabled` and `uptimeEnabled` (turns the
+service's [uptime probes](services.md#uptime) on or off).
 
 ## OpenAPI spec & Swagger UI
 
@@ -120,8 +122,11 @@ the request, and the CLI picks up an API key of its own. It's saved to
 `~/.config/homerun/config.json` (mode `0600`) alongside the instance URL, so
 every later command just works with no flags.
 
-`homerun logout` clears that file. Approved CLI clients are also listed under
-**Profile → Authorized Clients** in the dashboard, where you can revoke one.
+`homerun logout` revokes that API key on the server, then clears the local file
+regardless of whether the server call succeeded (an unreachable instance or an
+already-invalid key never blocks logging out locally). Approved CLI clients are
+also listed under **Profile → Authorized Clients** in the dashboard, where you
+can revoke one directly.
 
 If you'd rather not use the device flow, generate an API key from your profile
 page and pass it per call or by environment:
