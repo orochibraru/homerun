@@ -1,3 +1,19 @@
+## [1.0.29](https://github.com/orochibraru/homerun/compare/v1.0.28...v1.0.29) (2026-09-17)
+
+### Features
+
+- docs conf
+  ([d8850fa](https://github.com/orochibraru/homerun/commit/d8850fa1e34d4606c6effd75b239164733a3dc9d))
+- login wall on Security tab, editable PKCE, retrying rollouts, IP-origin fixes
+  ([e1b57b4](https://github.com/orochibraru/homerun/commit/e1b57b4e0e50316623a00af2b018cd9b55870b9a))
+- more docs
+  ([4370ead](https://github.com/orochibraru/homerun/commit/4370eada143f984d7d0154124a853fbc0d559ba4))
+
+### Bug Fixes
+
+- e2e
+  ([fb48a89](https://github.com/orochibraru/homerun/commit/fb48a896aeb2ce6fedc8ba91b335de7fdc5239ef))
+
 ## [1.0.28](https://github.com/orochibraru/homerun/compare/v1.0.27...v1.0.28) (2026-09-17)
 
 ### Features
