@@ -1,153 +1,121 @@
 # FAQ & limitations
 
+Homerun is new. If you're used to another self-hosted PaaS, most of what you
+expect is here, but some things work differently and a few aren't built yet.
+This page is the honest list, so you find out here rather than halfway through
+moving your services over.
+
 ## Is this production-ready?
 
-It's actively developed and running on real hardware, but it's a
-single-maintainer project and "production" here means _your_ homelab or single
-server, not a multi-tenant SaaS. Read this whole page before trusting it with
-something you'd mind losing, and keep backups (see
-[Storage & backups](storage-and-backups.md)).
+It's actively developed and runs on real hardware, but it's a single-maintainer
+project, and "production" here means your homelab or your own server. Keep
+[backups](storage-and-backups.md), and take a Postgres dump before a major
+upgrade: migrations only run forward.
 
-Releases are versioned and published automatically from `main`, so the version
-you're running is whatever the image tag says, `latest` tracks the newest
-release. Pin `HOMERUN_VERSION` in `.env` if you'd rather upgrade deliberately,
-see [Operations](operations.md#upgrading-homerun-itself).
+## Can several people share the same services?
 
-## Do I have to edit config files?
+No. Every service, stack, volume and backup belongs to the account that created
+it, and nobody else sees it, admins included. A second account starts with an
+empty dashboard. There are no teams, no shared projects and no per-stack
+permissions: the two roles, admin and developer, only differ in which
+instance-wide pages they can open. An API key has the full permissions of its
+account. See [Users & access](users-and-access.md#roles).
 
-No. The installer sets up everything the container needs to boot, and from your
-first sign-in onwards, base domain, Docker, Traefik, email, sign-in methods, DNS
-automation and orchestration mode are all pages in the dashboard.
+## Can it build an app without a Dockerfile?
 
-Three values are env-only and always will be: the database URL (needed before
-there's a database to read settings from), `AUTH_SECRET` (it's the key the
-stored settings are encrypted _with_, so it can't live among them), and `ORIGIN`
-(changing the scheme at runtime would rename your session cookie and sign
-everyone out). The installer writes all three; with plain `docker compose` you
-set two of them once. A `homerun.yaml` file exists for people who want
-configuration as code, and is entirely optional, see
-[Configuration](configuration.md).
+No. A git-based service is built from its `Dockerfile`; there's no Nixpacks,
+Railpack or buildpack detection. A build clones a branch or a tag, not a
+specific commit, and there are no pull request preview deployments. See
+[Services](services.md#deploy-source-image-or-git-repo).
 
-## Does it support multiple hosts / Kubernetes-style orchestration?
+## Can it deploy to more than one server?
 
-Not a Kubernetes-equivalent control plane, no, that's still by design, see the
-README's "Why Homerun". Extra capacity comes from opt-in Docker
-[Swarm mode](services.md#swarm-mode), which gives real replica scaling and load
-balancing for a single service: a second machine joins the swarm as a worker
-(`packages/installer/swarm-join.sh`) and Docker schedules onto it. Homerun
-itself only ever talks to the local manager.
-[Build servers](remote-hosts-and-agent.md) are a separate thing, a second
-machine that compiles images, not one that runs them. `service.containerId`
-still being a single column is what standalone mode (the default) is built
-around; swarm mode is the separate, newer path around that limitation for
-services that opt in.
+Not the way you might expect. Services run on the machine Homerun is installed
+on. To spread a service across machines you turn on
+[swarm mode](services.md#swarm-mode) and join the other machines to the swarm as
+workers. There's no "add a server and deploy to it" screen.
+[Build servers](remote-hosts-and-agent.md) only compile images, they never run
+services, and each one needs a build cache registry.
+
+## Does it manage databases?
+
+Not as a separate kind of resource. PostgreSQL, MySQL, Redis, MongoDB and others
+are [templates](stacks-and-templates.md#templates) deployed like any other
+service, and [service links](services.md#env-vars) fill in the connection URL
+for the apps that use them. Backups tar the database's volume while it runs,
+they don't run a dump tool, so read the backup warning below.
+
+## Can I bring my existing services over?
+
+Mostly. **Settings → Migrate** reads another instance's applications, compose
+stacks and databases with an API token and recreates them here without touching
+the original. Apps built with Nixpacks, Railpack or buildpacks can't come
+across, and neither can custom start commands, private registry credentials or
+file mounts. Persistent storage isn't always listed by the other side's API, so
+check volumes after importing. A pasted compose file works too, but `command`,
+`entrypoint`, `healthcheck`, `env_file`, labels, capabilities, devices,
+`privileged`, secrets and configs are dropped with a warning. See
+[Services](services.md#importing-a-compose-file).
 
 ## Known, real limitations (not hypothetical)
 
-- **OAuth / OIDC sign-in** needs **Origin** set under Settings → General and
-  matching how you actually reach Homerun: the redirect URI sent to your
-  provider is built from it, and providers reject any URI they weren't given in
-  advance. See [Users & access](users-and-access.md#authentication-providers).
-- **The login wall's Auth-check URL defaults to port 3000**, which is right for
-  a normal deployment but wrong under `vite dev` (which serves on 5173 and
-  doesn't set `PORT`). Set Auth-check URL explicitly under Settings → General
-  when developing, or the wall's checks call a port nothing is listening on.
-- **The per-app login wall** needs **Origin** set under Settings → General
-  (that's where visitors are sent to sign in), and the service has to be
-  redeployed after the wall is turned on or off. Group restrictions depend on
-  your provider actually putting group or role claims in the id token. See
-  [Users & access](users-and-access.md#per-app-login-wall).
-- **Changing a verified account's email needs SMTP configured.** The new address
-  has to be confirmed from a link sent to the _current_ one, so with no mail
-  server there's no way to prove it; the field on your profile locks itself with
-  an explanation until Settings → Email is set up. An unverified address changes
-  immediately on save, no confirmation involved. See
-  [Users & access](users-and-access.md#your-profile).
-- **Custom SSL certs** require a one-time manual Traefik config change
-  (`TRAEFIK_DYNAMIC_CONFIG_DIR` + uncommenting flags in `compose.yaml`), Homerun
-  writes the cert files but never touches the live Traefik container itself. See
-  [Services: custom domains & SSL](services.md#custom-domains--ssl).
-- **Build servers** only build; they never run your services, and one always
-  needs a build-cache registry so the image it produced can reach the host that
-  deploys it. See [Build servers](remote-hosts-and-agent.md).
-- **Git-based builds** clone by branch/tag only, a bare commit SHA doesn't work.
-  Deploy on push needs the Dashboard URL to be reachable from your git provider.
-- **Restoring a backup unpacks over the volume, it doesn't wipe it first.**
-  Files in the archive replace the ones on disk, anything else already there
-  stays, and nothing stops the service using the volume for you: stop it before
-  restoring. See [Storage & backups](storage-and-backups.md#restoring-a-backup).
-- **`packages/installer/swarm-join.sh`** (joining a remote box to an existing
-  swarm) hasn't been run against a real second host or a real swarm yet, unlike
-  the rest of the installer, which has (`--mode=agent`/`--mode=full`, see
-  [`packages/installer/README.md`](../packages/installer/README.md)). Verify by
-  hand before relying on it.
-- **Swarm mode** is local-manager-only, see
-  [above](#does-it-support-multiple-hosts--kubernetes-style-orchestration): a
-  second machine joins the swarm as a worker rather than being registered
-  separately, and `packages/installer/swarm-join.sh` has not been verified
-  against a real swarm yet.
-- **Cloudflare and Pangolin DNS automation** are new and neither has been
-  exercised against a real account by the maintainer. Point Pangolin at its
-  **Integration API** (a separate server on its own port, base path `/v1`), not
-  the dashboard's `/api/v1`, which is the usual reason a setup that looks right
-  doesn't work. "Test connection" checks the whole configuration rather than
-  just the credentials, and every deploy writes what each provider did into that
-  deploy's own log, so verify the first real sync by reading it. See
+- **Swarm mode needs manual setup.** Run `docker swarm init` and add
+  `--providers.docker.swarmMode=true` to Traefik yourself.
+  `packages/installer/swarm-join.sh`, which joins another machine, hasn't been
+  run against a real second host yet. Check it by hand before relying on it.
+- **Cloudflare and Pangolin DNS automation haven't been tried against real
+  accounts.** Every deploy writes what each provider did into its log, so read
+  the first one. Point Pangolin at its **Integration API** (its own port, base
+  path `/v1`), not the dashboard's `/api/v1`. See
   [Services: DNS automation](services.md#dns-automation).
-- **Notification channels don't retry a failed delivery.** A channel that errors
-  (a dead webhook, a Discord URL that got revoked, SMTP misconfigured) is
-  caught, logged, and its error shown right on the channel, but the notification
-  itself is dropped, not queued for a later attempt. See
-  [Operations: Notifications](operations.md#notifications).
-- **Pruning Docker volumes deletes data.** `/docker-cleanup` is host-wide and
-  deliberately not limited to containers Homerun created; an "unreferenced"
-  volume includes one belonging to a service you stopped and meant to restart.
-  Read the preview. See [Operations](operations.md#docker-cleanup).
-- **Backups aren't quiesced.** A volume is tarred while the service using it
-  keeps running, which is fine for files and can tear a database mid-write. Dump
-  databases with their own tooling into a bind mount and back that up instead.
+- **Custom SSL certificates need a one-time Traefik change**: set
+  `TRAEFIK_DYNAMIC_CONFIG_DIR` and uncomment the matching flags and mount in
+  `compose.yaml`. See
+  [Services: custom domains & SSL](services.md#custom-domains--ssl).
+- **Deploy on push needs the Dashboard URL reachable from your git provider.** A
+  GitHub repo can't deliver a webhook to a dashboard only reachable on your LAN.
+- **The per-app login wall needs a redeploy** after you turn it on or off.
+  Removing someone at your identity provider takes effect at their next sign-in,
+  or within eight hours. See
+  [Users & access](users-and-access.md#per-app-login-wall).
+- **Backups aren't paused for writes.** A volume is tarred while its service
+  keeps running, which can tear a database mid-write. Dump the database into a
+  bind mount with a [cron job](services.md#cron-jobs) and back that up instead.
   See [Storage & backups](storage-and-backups.md#s3-compatible-backups).
-- **Passkeys only work on the Dashboard URL's host.** A passkey is bound to that
-  hostname, so it isn't offered on any other address you reach Homerun at, and
-  changing the hostname later strands the passkeys already registered. See
-  [Users & access](users-and-access.md#two-factor-authentication-and-passkeys).
-- **Compose import** maps what Homerun has an equivalent for and tells you what
-  it dropped, it is not a compose runtime: `build:`, `command:`, healthchecks,
-  capabilities, `env_file`, secrets/configs and host port publishing all come
-  back as warnings on the preview rather than being applied. See
-  [Services: importing a compose file](services.md#importing-a-compose-file).
-- **Host command cron jobs** run with this app's own privileges (as root inside
-  the app container, on the app's own filesystem, not the host's, when Homerun
-  itself runs in a container). They're admin-only for that reason. See
-  [Services: cron jobs](services.md#cron-jobs).
-- **Live progress uses server-sent events, not WebSockets.** SvelteKit 2 has no
-  WebSocket route API, so deploy progress and container logs are one-way server
-  push over HTTP instead. Nothing in the dashboard needs a client-to-server
-  socket today; the web terminal, which does, uses its own chunked-HTTP channel.
+- **Restoring a backup unpacks over the volume** without wiping it or stopping
+  anything. Stop the services using it first. See
+  [Storage & backups](storage-and-backups.md#restoring-a-backup).
+- **A rollback only restores the image.** Env vars, volumes and networking stay
+  as they are now, and only the last 5 images of a service are kept on the host.
+  Auto-rollback is off by default and replaces an unhealthy revision after it
+  has taken traffic. See [Services](services.md#revisions-and-rollback).
+- **Pruning volumes in Docker Cleanup deletes data**, including volumes of
+  services you've only stopped. Read the preview. See
+  [Operations](operations.md#docker-cleanup).
+- **Notification channels don't retry.** A failed delivery is shown on the
+  channel and dropped. See [Operations](operations.md#notifications).
+- **Host command cron jobs run inside Homerun's own container**, not on the
+  host. See [Services: cron jobs](services.md#cron-jobs).
+- **Image scanning never blocks a deploy it couldn't finish.** If Trivy can't
+  run, the deploy goes ahead, even with a block policy set. See
+  [Services: image scanning](services.md#image-scanning).
+- **Changing a verified email needs SMTP configured**, since the change is
+  confirmed from the current address. See
+  [Users & access](users-and-access.md#your-profile).
 
 ## Planned, not yet built
 
-- **Health-gated rollout**, blue-green style: keep the old container alive until
-  a new deploy passes a health check. Today a new revision takes traffic
-  straight away and [auto-rollback](services.md#revisions-and-rollback) replaces
-  it after the fact if it turns out unhealthy.
-- **Provider-shaped outbound notifications beyond Discord**, Telegram and Slack
-  in particular. Discord embeds, generic webhooks and email already work on
-  build/update/deploy/uptime events, see
-  [Operations: Notifications](operations.md#notifications).
-- **DNS automation during onboarding**, Cloudflare and Pangolin sync now exist
-  (see [Services: DNS automation](services.md#dns-automation)), but the
-  onboarding wizard doesn't walk a new admin through configuring either one,
-  that's still a manual `/settings` visit afterward.
-- **Finer-grained permissions**, today "developer" is a role label plus
-  route-gating only, not a real permissions system.
+- **Telegram notifications.** Discord, generic webhooks and email work today.
+- **Health-gated rollouts**, keeping the old container serving until the new one
+  passes its health check.
+- **Sharing between accounts** and finer permissions: teams, a read-only role,
+  scoped API keys.
+- **Builds without a Dockerfile** and pull request preview deployments.
+- **DNS automation in the first-run wizard.**
 
-See the repo's [`TODO.md`](../TODO.md) for the live, granular backlog, this page
-is the "what should a self-hoster know before relying on X" summary of it.
+The live backlog is [`TODO.md`](../TODO.md).
 
 ## Where do I report a bug or ask something not covered here?
 
 Open an issue against the repo. If you're contributing code, read
-[`CLAUDE.md`](../CLAUDE.md) first, it's the denser, implementation-level
-counterpart to this docs directory, including exactly what's been verified live
-vs. reasoned-about-but-untested for each feature.
+[`CLAUDE.md`](../CLAUDE.md) and the `.agents/notes/` it points to first.

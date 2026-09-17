@@ -1,3 +1,67 @@
 {
-	"$schema": "https://docs.renovatebot.com/renovate-schema.json"
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"extends": ["config:recommended", ":semanticCommits", ":dependencyDashboard"],
+	"schedule": ["before 6am on monday"],
+	"prConcurrentLimit": 10,
+	"lockFileMaintenance": {
+		"enabled": true,
+		"schedule": ["before 6am on the first day of the month"]
+	},
+	"pre-commit": {
+		"enabled": true
+	},
+	"packageRules": [
+		{
+			"matchDepNames": ["typescript"],
+			"allowedVersions": "<7"
+		},
+		{
+			"matchPackageNames": [
+				"semantic-release",
+				"@semantic-release/**",
+				"conventional-changelog-**"
+			],
+			"groupName": "semantic-release"
+		},
+		{
+			"matchPackageNames": [
+				"semantic-release",
+				"@semantic-release/**",
+				"conventional-changelog-**"
+			],
+			"matchUpdateTypes": ["major"],
+			"dependencyDashboardApproval": true
+		},
+		{
+			"matchDepNames": ["bun", "oven/bun", "@types/bun"],
+			"groupName": "bun"
+		},
+		{
+			"matchPackageNames": ["better-auth", "@better-auth/**", "auth"],
+			"groupName": "better-auth"
+		},
+		{
+			"matchPackageNames": ["svelte", "@sveltejs/**", "svelte-check"],
+			"groupName": "svelte"
+		},
+		{
+			"matchPackageNames": ["tailwindcss", "@tailwindcss/**"],
+			"groupName": "tailwind"
+		},
+		{
+			"matchPackageNames": ["drizzle-orm", "drizzle-kit"],
+			"groupName": "drizzle"
+		},
+		{
+			"matchManagers": ["github-actions"],
+			"matchUpdateTypes": ["minor", "patch", "digest"],
+			"groupName": "GitHub Actions"
+		},
+		{
+			"matchDatasources": ["docker"],
+			"matchDepNames": ["postgres", "traefik"],
+			"matchUpdateTypes": ["major"],
+			"dependencyDashboardApproval": true
+		}
+	]
 }
