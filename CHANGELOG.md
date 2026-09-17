@@ -1,3 +1,11 @@
+## [1.0.26](https://github.com/orochibraru/homerun/compare/v1.0.25...v1.0.26) (2026-09-17)
+
+### Features
+
+- clear the TODO backlog (shared resources, roles, previews, BuildKit/Bake,
+  health-gated rollout, swarm fixes)
+  ([a116ba1](https://github.com/orochibraru/homerun/commit/a116ba17aab790625a791d27fe9cefc7051f9143))
+
 ## [1.0.25](https://github.com/orochibraru/homerun/compare/v1.0.24...v1.0.25) (2026-09-17)
 
 ### Bug Fixes
