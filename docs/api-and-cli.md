@@ -120,11 +120,9 @@ request.
 
 ## CLI
 
-A typed CLI (`packages/cli/`) built on
-[`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) against the spec above:
-its types are generated straight from a running instance's real
-`/api/v1/openapi.json`, so the client is checked against the actual API shape,
-not a hand-maintained guess.
+A CLI (`packages/cli/`) against the API above. It's a small, standalone Go
+binary (around 6MB) with no runtime to install, rather than the old Bun build
+that shipped a whole embedded runtime for the same job.
 
 ### Install
 
@@ -252,7 +250,8 @@ restores that revision's env vars, resources and networking.
 
 ### Working on the CLI itself
 
-From the repo root: `bun install && bun run packages/cli/index.ts services list`
-(`bun run scripts/build-packages.ts <amd64|arm64>` compiles it the same way CI
-does). See [`packages/cli/README.md`](../packages/cli/README.md) for the full
-reference, including how to regenerate the generated types after an API change.
+The CLI is a Go program, not part of the Bun app: from the repo root (with Go
+installed), `go run ./packages/cli services list` runs it from source, and
+`bun run scripts/build-packages.ts <amd64|arm64|darwin-amd64|darwin-arm64>`
+compiles it the same way CI does. See
+[`packages/cli/README.md`](../packages/cli/README.md) for the full reference.

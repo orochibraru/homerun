@@ -27,14 +27,6 @@ const ASSETS: ReleaseAsset[] = [
 	{ label: "homerun CLI (linux/amd64)", path: "dist/homerun-cli-amd64" },
 	{ label: "homerun CLI (linux/arm64)", path: "dist/homerun-cli-arm64" },
 	{
-		label: "homerun-agent (darwin/amd64)",
-		path: "dist/homerun-agent-darwin-amd64",
-	},
-	{
-		label: "homerun-agent (darwin/arm64)",
-		path: "dist/homerun-agent-darwin-arm64",
-	},
-	{
 		label: "homerun CLI (darwin/amd64)",
 		path: "dist/homerun-cli-darwin-amd64",
 	},
@@ -75,18 +67,19 @@ async function uploadedAssets(
 	);
 }
 
+/** Gzips a binary next to itself, since a compiled Bun binary is ~82 MB raw and ~26 MB gzipped, and returns the compressed path. */
+async function compress(path: string): Promise<string> {
+	const target = `${path}.gz`;
+	await Bun.write(target, Bun.gzipSync(await Bun.file(path).bytes()));
+	return target;
+}
+
 /** Uploads one asset, replacing a partial one, retrying with a growing delay since GitHub's upload endpoint times out on large files now and then. */
-async function upload(tag: string, asset: ReleaseAsset): Promise<void> {
+async function upload(tag: string, path: string, label: string): Promise<void> {
 	for (let attempt = 1; ; attempt++) {
 		try {
-			await gh([
-				"release",
-				"upload",
-				tag,
-				`${asset.path}#${asset.label}`,
-				"--clobber",
-			]);
-			console.log(`Uploaded ${asset.path}`);
+			await gh(["release", "upload", tag, `${path}#${label}`, "--clobber"]);
+			console.log(`Uploaded ${path}`);
 			return;
 		} catch (error) {
 			if (attempt >= MAX_ATTEMPTS) {
@@ -94,7 +87,7 @@ async function upload(tag: string, asset: ReleaseAsset): Promise<void> {
 			}
 			const delay = RETRY_BASE_MS * attempt;
 			console.warn(
-				`Upload of ${asset.path} failed (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay / 1000}s: ${error instanceof Error ? error.message : error}`,
+				`Upload of ${path} failed (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay / 1000}s: ${error instanceof Error ? error.message : error}`,
 			);
 			await Bun.sleep(delay);
 		}
@@ -108,15 +101,18 @@ if (!tag) {
 }
 
 const done = await uploadedAssets(tag);
-for (const asset of ASSETS) {
-	const name = asset.path.split("/").at(-1) ?? asset.path;
-	const { size } = await stat(asset.path);
-	if (done.get(name)?.size === size) {
-		console.log(`Already uploaded ${asset.path}`);
-		continue;
-	}
-	await upload(tag, asset);
-}
+await Promise.all(
+	ASSETS.map(async (asset) => {
+		const path = await compress(asset.path);
+		const name = path.split("/").at(-1) ?? path;
+		const { size } = await stat(path);
+		if (done.get(name)?.size === size) {
+			console.log(`Already uploaded ${path}`);
+			return;
+		}
+		await upload(tag, path, asset.label);
+	}),
+);
 
 await gh(["release", "edit", tag, "--draft=false", "--latest"]);
 console.log(`Published ${tag}`);

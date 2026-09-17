@@ -33,7 +33,7 @@ describe("Detector.arch", () => {
 		expect(Detector.arch()).toBe("arm64");
 	});
 
-	test("throws a clear error on an unsupported architecture, matching packages/cli/update.ts's #currentArch", () => {
+	test("throws a clear error on an unsupported architecture, matching packages/cli/update.go's assetSuffix", () => {
 		Object.defineProperty(process, "arch", {
 			configurable: true,
 			value: "ia32",

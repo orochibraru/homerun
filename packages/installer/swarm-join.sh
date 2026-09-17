@@ -102,9 +102,9 @@ case "$(uname -m)" in
 esac
 
 if [ "$VERSION" = "latest" ]; then
-	INSTALLER_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-installer-${ARCH}"
+	INSTALLER_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-installer-${ARCH}.gz"
 else
-	INSTALLER_URL="https://${GIT_HOST}/${GIT_REPO}/releases/download/${VERSION}/homerun-installer-${ARCH}"
+	INSTALLER_URL="https://${GIT_HOST}/${GIT_REPO}/releases/download/${VERSION}/homerun-installer-${ARCH}.gz"
 fi
 
 echo "==> Installing Docker Engine (skipped if already present)"
@@ -128,7 +128,7 @@ fi
 echo "==> Installing the Homerun Agent (homerun-installer --mode=agent)"
 INSTALLER_BINARY="$(mktemp)"
 trap 'rm -f "$INSTALLER_BINARY"' EXIT
-curl -fsSL "$INSTALLER_URL" -o "$INSTALLER_BINARY"
+curl -fsSL "$INSTALLER_URL" | gunzip -c > "$INSTALLER_BINARY"
 chmod +x "$INSTALLER_BINARY"
 "$INSTALLER_BINARY" --mode=agent --yes "--version=${VERSION}" "--user=${AGENT_USER}"
 

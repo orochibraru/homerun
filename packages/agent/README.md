@@ -48,17 +48,18 @@ as `tokenFile` does for a bare-binary install; set `AGENT_TOKEN` explicitly via
 default system one.)
 
 **Grab the prebuilt binary directly** from this repo's GitHub releases (Linux
-and macOS, amd64/arm64, same coverage as the CLI's binaries, see
-`scripts/build-packages.ts`):
+only, amd64/arm64, see `scripts/build-packages.ts`):
 
 ```bash
-curl -fsSL https://github.com/orochibraru/homerun/releases/latest/download/homerun-agent-amd64 -o homerun-agent
+curl -fsSL https://github.com/orochibraru/homerun/releases/latest/download/homerun-agent-amd64.gz | gunzip -c > homerun-agent
 chmod +x homerun-agent
 ./homerun-agent
 ```
 
-(`-arm64` instead of `-amd64` on an arm64 host, `-darwin-amd64`/`-darwin-arm64`
-on macOS.)
+(`-arm64` instead of `-amd64` on an arm64 host. No macOS build any more: the
+agent's own binary is still Bun, which can't cross-compile the way the CLI's Go
+binary now does, and CI's macOS runners were dropped once the CLI stopped
+needing them.)
 
 On first boot with no `AGENT_TOKEN` set, it generates one and prints it, copy
 that (plus this host's reachable `http://host:7420`) into the main Homerun
@@ -74,7 +75,7 @@ bun run packages/agent/index.ts      # or `bun --watch packages/agent/index.ts` 
 Compiling it to a standalone binary yourself, rather than using a release one:
 
 ```bash
-bun run build:packages       # builds cli/installer/agent binaries for every target, cli/agent also for macOS
+bun run build:packages       # builds cli/installer/agent binaries for every target, only the Go cli also for macOS
 ./dist/homerun-agent-amd64   # or -arm64
 ```
 

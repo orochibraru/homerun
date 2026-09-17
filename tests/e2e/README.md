@@ -102,20 +102,24 @@ suite already covers directly and faster.
 
 ## The CLI runs against this same instance (`ui-cli.spec.ts`)
 
-`ui-cli.spec.ts` spawns the real CLI from source
-(`bun run packages/cli/index.ts`) against the app this suite already booted,
-with a throwaway `HOME` per test so it never reads or writes a real
-`~/.config/homerun/config.json`, and with `HOMERUN_BASE_URL`, `HOMERUN_API_KEY`
-and `FORCE_COLOR` stripped from its environment (Playwright sets `FORCE_COLOR`
-in its workers, and Bun then colours the `error:` prefix, which breaks every
-assertion on stderr). No key is minted by hand: the spec drives
-`homerun login`'s device-code flow for real, reading the code the CLI prints and
-approving it on `/cli-auth` in the browser as the bootstrap admin, then uses the
-key the CLI saved.
+The CLI is a Go program (`packages/cli/*.go`), so this suite can't run it from
+source the way it once ran `bun run packages/cli/index.ts`: `ui-cli.spec.ts`'s
+`beforeAll` compiles it first (`go build -ldflags "-X main.version=..."` into a
+scratch dir, version-stamped to match `package.json` exactly like
+`scripts/build-packages.ts` does), then spawns that real binary against the app
+this suite already booted, with a throwaway `HOME` per test so it never reads or
+writes a real `~/.config/homerun/config.json`. `HOMERUN_BASE_URL`,
+`HOMERUN_API_KEY` and `FORCE_COLOR` are stripped from its environment and
+`NO_COLOR=1` is set, keeping every assertion on stdout/stderr free of terminal
+escape codes and any real login already on the machine. No key is minted by
+hand: the spec drives `homerun login`'s device-code flow for real, reading the
+code the CLI prints and approving it on `/cli-auth` in the browser as the
+bootstrap admin, then uses the key the CLI saved.
 
-Covered: help, `--version`, "Not logged in" with no config, commander's
-missing-argument error, login against an unreachable URL, a denied login
-(non-zero exit, nothing saved), an approved login (config saved at `0600`),
+Covered: help, `--version`, "Not logged in" with no config, the CLI's own
+missing-argument error (hand-rolled arg parsing, not Commander's, since the CLI
+is a Go program), login against an unreachable URL, a denied login (non-zero
+exit, nothing saved), an approved login (config saved at `0600`),
 `stacks list`/`services list`/`templates list` as tables, `--json`, `--search`,
 `--per-page`/`--page` and the truncation footer, `services get`,
 `--base-url`/`--api-key` flags and the env vars overriding the saved login, a

@@ -28,7 +28,7 @@ The one-liner serves `bootstrap.sh` straight from this repo on
 isn't, download the release binary directly and run it instead:
 
 ```bash
-curl -fsSL https://github.com/orochibraru/homerun/releases/latest/download/homerun-installer-amd64 -o homerun-installer
+curl -fsSL https://github.com/orochibraru/homerun/releases/latest/download/homerun-installer-amd64.gz | gunzip -c > homerun-installer
 chmod +x homerun-installer
 sudo ./homerun-installer --mode=full
 ```
@@ -263,14 +263,18 @@ the latest published release.
 
 ## Building the installer itself to a binary
 
-There's no separate `packages/installer/package.json`: `packages/agent/`,
-`packages/cli/`, and `packages/installer/` all share the repo root's
-`bun install`/`node_modules`. From the repo root:
+There's no separate `packages/installer/package.json`: `packages/agent/` and
+`packages/installer/` share the repo root's `bun install`/`node_modules`.
+`packages/cli/` is a separate Go module instead (`go.mod` at the repo root, no
+`bun install` needed for it). From the repo root:
 
 ```bash
 bun install
 bun run packages/installer/index.ts --help   # from source
-bun run scripts/build-packages.ts amd64   # or arm64, cross-compiles all three (agent/cli/installer)
+bun run scripts/build-packages.ts amd64   # or arm64/darwin-amd64/darwin-arm64; builds the
+                                           # agent/installer Bun binaries for a Linux arch plus
+                                           # the matching Go cli binary (cli alone also
+                                           # cross-compiles cleanly to the darwin targets)
 ```
 
 Output lands in `dist/homerun-installer-<arch>` (plus the agent/cli binaries

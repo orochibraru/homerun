@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import {
 	existsSync,
 	mkdtempSync,
@@ -23,7 +23,10 @@ interface CliOptions {
 	home: string;
 }
 
-const CLI_ENTRY = join(process.cwd(), "packages/cli/index.ts");
+const CLI_BINARY = join(
+	mkdtempSync(join(tmpdir(), "homerun-cli-bin-")),
+	"homerun",
+);
 const CLI_VERSION: string = JSON.parse(
 	readFileSync(join(process.cwd(), "package.json"), "utf8"),
 ).version;
@@ -55,8 +58,28 @@ function cliEnv({ env, home }: CliOptions): NodeJS.ProcessEnv {
 	};
 }
 
+// The CLI is a Go program (packages/cli/*.go), so these specs drive the real
+// compiled binary, version stamped exactly as scripts/build-packages.ts does.
+function buildCli(): void {
+	const build = spawnSync(
+		"go",
+		[
+			"build",
+			"-ldflags",
+			`-X main.version=${CLI_VERSION}`,
+			"-o",
+			CLI_BINARY,
+			"./packages/cli",
+		],
+		{ cwd: process.cwd(), encoding: "utf8" },
+	);
+	if (build.status !== 0) {
+		throw new Error(`go build failed: ${build.stderr || build.stdout}`);
+	}
+}
+
 function startCli(args: string[], options: CliOptions): ChildProcess {
-	return spawn("bun", ["run", CLI_ENTRY, ...args], {
+	return spawn(CLI_BINARY, args, {
 		cwd: process.cwd(),
 		env: cliEnv(options),
 		stdio: ["ignore", "pipe", "pipe"],
@@ -130,6 +153,7 @@ test.describe
 		let serviceIds: string[] = [];
 
 		test.beforeAll(() => {
+			buildCli();
 			home = freshHome();
 		});
 
@@ -157,7 +181,7 @@ test.describe
 
 			const missingArg = await cli(["services", "get"], { home });
 			expect(missingArg.code).toBe(1);
-			expect(missingArg.stderr).toContain("missing required argument 'id'");
+			expect(missingArg.stderr).toContain("missing <id>");
 		});
 
 		test("login fails cleanly when the instance is unreachable", async () => {

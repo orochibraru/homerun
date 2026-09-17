@@ -26,14 +26,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The Bun binaries (agent, installer) are built natively per arch;
+          # the Go CLI cross-compiles, so the amd64 leg also produces both
+          # macOS ones and no macOS runner is needed at all.
           - arch: amd64
+            targets: amd64 darwin-amd64 darwin-arm64
             runner: ubuntu-latest
           - arch: arm64
+            targets: arm64
             runner: ubuntu-24.04-arm
-          - arch: darwin-arm64
-            runner: macos-latest
-          - arch: darwin-amd64
-            runner: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -43,6 +44,11 @@ jobs:
         with:
           bun-version-file: package.json
 
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -51,7 +57,7 @@ jobs:
         run: bun scripts/bump-version.ts ${{ inputs.version }}
 
       - name: Build binaries
-        run: bun run scripts/build-packages.ts ${{ matrix.arch }}
+        run: bun run scripts/build-packages.ts ${{ matrix.targets }}
 
       - name: Upload binaries
         uses: orochibraru/upload-artifact@v8

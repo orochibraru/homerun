@@ -1,8 +1,8 @@
 import createClient from "openapi-fetch";
-import type { paths } from "../../../packages/cli/generated/openapi-types";
 import { nativeFetch } from "./config";
+import type { paths } from "./openapi-types";
 
-/** Same shape as cli/client.ts's makeClient : reuses the CLI's own generated OpenAPI types rather than hand-rolling a second client, so a REST API shape change breaks this suite the same way it'd break the CLI. `fetch: nativeFetch` is load-bearing, see config.ts's own docstring. `origin` is per-run (a random port), not a static constant, see port.ts/setup.ts. */
+/** Typed against the app's own OpenAPI document (`bun run gen` regenerates `openapi-types.ts` from `openapi.json`), so a REST API shape change breaks this suite rather than slipping through. `fetch: nativeFetch` is load-bearing, see config.ts's own docstring. `origin` is per-run (a random port), not a static constant, see port.ts/setup.ts. */
 export function makeApiClient(apiKey: string, origin: string) {
 	return createClient<paths>({
 		baseUrl: `${origin}/api/v1`,

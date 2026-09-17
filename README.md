@@ -196,8 +196,8 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[REST API & OpenAPI](docs/api-and-cli.md)**: everything in the dashboard is
   also a typed JSON API (`/api/v1`), authenticated by session or API key, with a
   live Swagger UI
-- **[The `homerun` CLI](packages/cli/README.md)**: built against the generated
-  OpenAPI types, logs in through a device-code flow and updates itself
+- **[The `homerun` CLI](packages/cli/README.md)**: a small (~6MB) standalone Go
+  binary, logs in through a device-code flow and updates itself
 
 ### Install & operations
 
@@ -245,9 +245,10 @@ readable straight from the file browser. Start with
 
 ## Sub-projects
 
-Three standalone Bun/TypeScript tools live under `packages/` alongside the main
-app (sharing the root `package.json`/`bun install`, each compiling to its own
-binary or build output):
+Three standalone tools live under `packages/` alongside the main app, each
+compiling to its own binary. `packages/agent/` and `packages/installer/` are
+Bun/TypeScript, sharing the root `package.json`/`bun install`; `packages/cli/`
+is a separate Go module instead:
 
 - [`packages/agent/`](packages/agent/README.md): a small token-authenticated
   HTTP server that lets a second machine build images for this one, without
@@ -255,5 +256,5 @@ binary or build output):
 - [`packages/installer/`](packages/installer/README.md): the one-liner installer
   used above (Docker as a swarm manager, or rootless, plus the agent or full
   stack, and `--migrate-to-rootful` for older rootless installs)
-- [`packages/cli/`](packages/cli/README.md): a typed CLI
+- [`packages/cli/`](packages/cli/README.md): a CLI
   (`homerun services deploy <id>`, etc.) against the REST API

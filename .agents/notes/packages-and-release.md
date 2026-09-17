@@ -126,26 +126,34 @@ created). And **`code_quality.yaml` no longer runs e2e at all** — it is `lint`
 steps instead, so a red run names the gate that broke rather than burying it in
 one `prek` log. Its `Codegen is current` step runs `bun run gen` and fails on
 any resulting diff, which is what keeps `openapi.json`, `homerun.schema.json`
-and `packages/cli/generated/` from silently going stale after a REST API change.
+and `tests/integration/support/openapi-types.ts` from silently going stale after
+a REST API change (the CLI itself has no generated types to go stale, see
+Homerun CLI in `api-and-cli.md`).
 
 `semantic-release`, driven by conventional-commit messages (this repo's commits
 already follow `feat:`/`fix:`/`chore:`, no new discipline required). Runs as a
 new `release` job in `.github/workflows/publish.yaml`, alongside the existing
 `code_quality`/`build` jobs, on every push to `main`; a non-releasable push
 (docs/chore-only) is a no-op, not a failure. One version number covers the whole
-repo, the root app plus `packages/agent`/`packages/installer`/`packages/cli`'s
-own `package.json`s all get bumped together by `scripts/bump-version.ts` (an
-`@semantic-release/exec` `prepareCmd`, not `@semantic-release/npm`, this repo
-has no npm package to publish, and `npm`'s plugin still wants registry-shaped
-config even with `npmPublish: false`; a small script fits this codebase's
-existing "hand-roll a small thing rather than fight a mismatched tool" posture
-better, same instinct as the cron matcher/SigV4 client).
-`scripts/build-packages.ts` cross-compiles all six `agent`/`installer`/`cli`
-Linux binaries (x64 + arm64, each sub-project's own
-`build:linux-x64`/`build:linux-arm64` scripts) so `.releaserc.json`'s
-release-assets step has something to attach, directly serving the "installer
-(and homerun agent) in each release artifact" TODO item, with the CLI's own
-binary added the same way for consistency.
+repo: the root app plus `packages/agent`/`packages/installer`'s own
+`package.json`s get bumped together by `scripts/bump-version.ts`
+(`packages/cli/` has no `package.json` of its own to bump, it's a Go module now
+and reads the root `package.json`'s version directly at build time, see
+`scripts/build-packages.ts` below), an `@semantic-release/exec` `prepareCmd`,
+not `@semantic-release/npm`, this repo has no npm package to publish, and
+`npm`'s plugin still wants registry-shaped config even with `npmPublish: false`;
+a small script fits this codebase's existing "hand-roll a small thing rather
+than fight a mismatched tool" posture better, same instinct as the cron
+matcher/SigV4 client). `scripts/build-packages.ts` builds every release binary:
+the Bun-based `agent`/`installer` natively per arch, Linux only
+(`linux-amd64`/`linux-arm64`, via `Bun.build({compile: ...})`), and the Go-based
+`cli` cross-compiled for all four targets
+(`amd64`/`arm64`/`darwin-amd64`/`darwin-arm64`, `go build` with `GOOS`/`GOARCH`
+set, exact since Go's cross-compilation is, unlike Bun's — see Homerun CLI in
+`api-and-cli.md`). Eight binaries total, so `.releaserc.json`'s release-assets
+step has something to attach, directly serving the "installer (and homerun
+agent) in each release artifact" TODO item, with the CLI's own binaries added
+the same way for consistency.
 
 **Uses `@semantic-release/github`**, the official plugin: this repo is hosted on
 GitHub (`github.com/orochibraru/homerun`) and runs on GitHub Actions. It
@@ -157,15 +165,26 @@ reintroduce Gitea-specific release/CI config.
 release as a draft (`draftRelease: true`), a second `@semantic-release/exec`
 entry's `successCmd` writes the tag to `.release-tag`, and the release job's
 next step runs `scripts/upload-release-assets.ts <tag>`: one
-`gh release upload --clobber` per binary with retries, skipping any already
-uploaded at the same size, then `gh release edit --draft=false --latest`. Real
-failure it replaced: the plugin uploads all ten ~80MB binaries in one go with no
-retry, uploads took minutes each, and a 504 from `uploads.github.com` on the
-tenth left v1.0.32 a draft with the tag pushed and no way to resume. Since a
-draft isn't `releases/latest`, `install.sh` and `homerun update` never see a
-release until every binary is on it. A failed upload step is finished by hand:
-download the run's `binaries-*` artifacts into `dist/` and run the script with
-that tag.
+`gh release upload --clobber` per binary with retries, all ten concurrently,
+skipping any already uploaded at the same size, then
+`gh release edit --draft=false --latest`.
+
+**Every binary is published gzipped, as `<name>.gz`.** A `bun build --compile`
+binary is ~62-82MB of which ~62MB is the embedded Bun runtime (a hello-world
+compiles to the same size), so ten of them was ~800MB per release and the
+sequential upload step ran 40+ minutes. Gzip takes each one to ~26MB, measured,
+and the whole release to ~260MB. Everything that downloads one unpacks it:
+`install.sh`/`bootstrap.sh`/`swarm-join.sh` pipe through `gunzip -c`,
+`steps/release.ts` curls `<name>.gz` and shells out to `gunzip -f`, and
+`homerun update` uses `Bun.gunzipSync`. Releases up to v1.0.33 carry raw,
+un-suffixed assets, so `scripts/e2e-multipass.ts`'s pinned `PREVIOUS_RELEASE`
+download stays un-suffixed until that pin moves past v1.0.33. Real failure it
+replaced: the plugin uploads all ten ~80MB binaries in one go with no retry,
+uploads took minutes each, and a 504 from `uploads.github.com` on the tenth left
+v1.0.32 a draft with the tag pushed and no way to resume. Since a draft isn't
+`releases/latest`, `install.sh` and `homerun update` never see a release until
+every binary is on it. A failed upload step is finished by hand: download the
+run's `binaries-*` artifacts into `dist/` and run the script with that tag.
 
 **Container images go to Docker Hub, not GHCR**, deliberately:
 `docker.io/orochibraru/homerun{,-agent,-docs}`. That's the one piece of the
@@ -256,19 +275,19 @@ drives a target machine's shell, not this app's own runtime).
   Docker socket : instead of exposing the daemon itself, the build server runs
   this agent and the main app only ever talks HTTP-plus-bearer-token to it.
   **Arch detection is mirrored, not shared**:
-  `packages/installer/steps/detect.ts`'s `Detector.arch()` and
-  `packages/cli/update.ts`'s `#currentArch()` both map Node's `process.arch`
-  (`x64`/`arm64`) onto this repo's release-asset naming (`amd64`/`arm64`),
-  throwing/exiting with a readable message on anything else. They can't import a
-  shared module : each sub-project's `tsconfig.json` scopes its own `include` to
-  its own directory (`./**/*.ts`, resolved relative to that tsconfig), so a
-  module outside `packages/installer/` or `packages/cli/` respectively isn't
-  visible to either's typecheck. Keep both in sync by hand if the mapping ever
-  changes. **Wired into the main app**: `remote_host.kind` (`"docker"` |
-  `"agent"`) + `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
-  (`$lib/services/agent-client.service.ts`, a thin HTTP client over
-  `build`/`stats`/`health`), and the Remote Hosts "new host" form's
-  connection-type toggle; `deploy.service.ts` branches on
+  `packages/installer/steps/detect.ts`'s `Detector.arch()` maps Node's
+  `process.arch` (`x64`/`arm64`) onto this repo's release-asset naming
+  (`amd64`/`arm64`), throwing with a readable message on anything else;
+  `packages/cli/update.go`'s `assetSuffix()` does the equivalent from Go's own
+  `runtime.GOARCH`/`runtime.GOOS` (already `amd64`/`arm64`, no remapping needed,
+  just the `darwin-` prefix for macOS), exiting the same way. They can't share a
+  module either way : the installer's `tsconfig.json` scopes its own `include`
+  to its own directory, and the CLI isn't even TypeScript any more. Keep both in
+  sync by hand if the mapping ever changes. **Wired into the main app**:
+  `remote_host.kind` (`"docker"` | `"agent"`) + `agentUrl`/`agentTokenEnc`
+  (schema.ts), `AgentClientService` (`$lib/services/agent-client.service.ts`, a
+  thin HTTP client over `build`/`stats`/`health`), and the Remote Hosts "new
+  host" form's connection-type toggle; `deploy.service.ts` branches on
   `RemoteHostDTO.resolveBuildTarget()`'s `kind` to route a git build through
   `DockerService` or `AgentClientService`. The agent has no access to the main
   app's source tree at runtime, so `packages/agent/docker.ts` and

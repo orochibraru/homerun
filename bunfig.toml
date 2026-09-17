@@ -19,4 +19,4 @@ retry = 2
 pathIgnorePatterns = ["**/tests/e2e/**"]
 
 coverage = true
-coveragePathIgnorePatterns = ["tests/**", "packages/cli/generated/**"]
+coveragePathIgnorePatterns = ["tests/**"]

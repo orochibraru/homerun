@@ -4,21 +4,21 @@ import * as os from "node:os";
 import { join } from "node:path";
 
 /**
- * `cli/config.ts` resolves its config directory from `os.homedir()` once,
- * at module load (`const CONFIG_DIR = join(homedir(), ...)`), and
- * `os.homedir()` itself is fixed for the life of the process : it's read
- * from the real OS environment at process start, not re-read per call
- * (verified : reassigning `process.env.HOME` mid-process does *not* change
- * what it returns). A bunfig.toml `[test].preload` script is the one place
- * guaranteed to run before *any* test file's own imports, so mocking
- * `node:os`'s `homedir()` here, once, for the whole run, keeps every
- * `cli/config.ts` import in the suite (direct, or transitive via
- * `cli/client.ts`/`cli/login.ts`) pointed at a scratch directory instead of
- * a real developer's `~/.config/homerun`, regardless of which test file
- * happens to import it first — no more reliable a boundary exists once the
- * test run has actually started (see tests/README.md's "module mocks are
- * process-global" note), so this has to happen before that, not from within
- * any individual test file.
+ * Points `os.homedir()` at a scratch directory for the whole unit run, so no
+ * test can read or write a real developer's home. `os.homedir()` is fixed for
+ * the life of the process : it's read from the real OS environment at process
+ * start, not re-read per call (verified : reassigning `process.env.HOME`
+ * mid-process does *not* change what it returns), and a bunfig.toml
+ * `[test].preload` script is the one place guaranteed to run before *any* test
+ * file's own imports, so the override has to happen here rather than from
+ * within a test file (see tests/README.md's "module mocks are process-global"
+ * note).
+ *
+ * What still depends on it, now that the CLI is Go and keeps its own config
+ * elsewhere: `config.ts`'s Docker-socket candidate list (both the app's and
+ * the agent's) is built from `homedir()`, so without this a developer who
+ * happens to have `~/.orbstack/run/docker.sock` would get different results
+ * from one who doesn't.
  *
  * Only `homedir()` is overridden ; every other `node:os` export (`cpus()`,
  * `totalmem()`, etc., used for real by agent/stats.ts) is passed through

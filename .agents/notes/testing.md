@@ -11,29 +11,34 @@ than in this one.
 `bun:test`, run directly by Bun — `bun test --timeout 120000` (every
 `test`/`test:*` script passes `--timeout` explicitly since `bunfig.toml`'s
 `[test].timeout` key is silently unhonored on Bun 1.4.0). Covers
-`packages/agent/`, `packages/installer/`, and `packages/cli/`. Tests live under
+`packages/agent/` and `packages/installer/`. Tests live under
 `tests/unit/<package>/`, not next to the source files they cover
 (`tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`, etc.).
-`tests/unit/app/` covers the SvelteKit app itself, a couple of component tests
-plus the pure modules under `$lib` that are worth pinning down directly
-(`long-request.test.ts`, see Long-running requests below; `queue.test.ts`;
-`toast.test.ts`; `compose-import.test.ts`; `service-link.test.ts`;
-`deploy-phases.test.ts`; `command-parse.test.ts`; `auth-providers.test.ts`;
-`app-gate.test.ts`, the login wall's token signing/expiry/tampering, its cookie
-parsing, and OIDC group-claim extraction) : anything that's a real transform
-with no DB or Docker dependency belongs here rather than in
-`tests/integration/`, which is still where most of `src/` is exercised.
+`packages/cli/` is a separate Go module and isn't part of this at all: its tests
+are `packages/cli/cli_test.go`, run by `go test ./packages/cli/...`
+(`bun run test:unit:cli`), not `bun:test`. `tests/unit/app/` covers the
+SvelteKit app itself, a couple of component tests plus the pure modules under
+`$lib` that are worth pinning down directly (`long-request.test.ts`, see
+Long-running requests below; `queue.test.ts`; `toast.test.ts`;
+`compose-import.test.ts`; `service-link.test.ts`; `deploy-phases.test.ts`;
+`command-parse.test.ts`; `auth-providers.test.ts`; `app-gate.test.ts`, the login
+wall's token signing/expiry/tampering, its cookie parsing, and OIDC group-claim
+extraction) : anything that's a real transform with no DB or Docker dependency
+belongs here rather than in `tests/integration/`, which is still where most of
+`src/` is exercised.
 
-Run everything: `bun run test` (bare `bun test` also works, no wrapper script —
-`bunfig.toml`'s `[test].preload` handles the rest). Scoped: `bun run test:unit`,
-`test:unit:agent`, `test:unit:app`, `test:unit:cli`, `test:unit:installer`,
-every one of which also sets `HOMERUN_SKIP_INTEGRATION_SETUP=1` so the preloaded
-integration bootstrap (real Postgres container) doesn't run for a unit-only
-invocation. `tests/integration/` is a separate suite with its own
-`beforeAll`/`afterAll` (real Postgres/Docker/agent, see
-`tests/integration/README.md`), and `tests/e2e/` is a third, Playwright, outside
-`bun test` entirely (see E2E browser tests below). `tests/integration/README.md`
-and `tests/e2e/README.md` are the counterparts living next to the code.
+Run everything: `bun run test` (bare `bun test` also works for the `bun:test`
+half, no wrapper script — `bunfig.toml`'s `[test].preload` handles the rest —
+but `bun run test` also runs `go test ./packages/cli/...` afterward). Scoped:
+`bun run test:unit`, `test:unit:agent`, `test:unit:app`, `test:unit:installer`
+all set `HOMERUN_SKIP_INTEGRATION_SETUP=1` so the preloaded integration
+bootstrap (real Postgres container) doesn't run for a unit-only invocation;
+`test:unit:cli` is plain `go test`, no Bun preload involved at all.
+`tests/integration/` is a separate suite with its own `beforeAll`/`afterAll`
+(real Postgres/Docker/agent, see `tests/integration/README.md`), and
+`tests/e2e/` is a third, Playwright, outside `bun test` entirely (see E2E
+browser tests below). `tests/integration/README.md` and `tests/e2e/README.md`
+are the counterparts living next to the code.
 
 **Where Postgres comes from, `HOMERUN_TEST_POSTGRES_URL`.**
 `tests/integration/support/postgres.ts`'s `startTestPostgres()` is the one entry
@@ -84,30 +89,23 @@ object instead of a bare `let`). `bun:test`'s `spyOn` needs an explicit
 which resolves to `any` since `spyOn`'s type parameters can't be inferred
 without a call site.
 
-## `packages/cli/` tests need a mocked `os.homedir()`
+## `packages/cli/`'s Go tests set `$HOME` per test, no preload needed
 
-`packages/cli/config.ts` resolves its config file path from `os.homedir()` once,
-at module load, and `os.homedir()` is fixed for the life of the process
-(reassigning `process.env.HOME` mid-run doesn't change it, verified on Bun
-1.4.0). `tests/unit/support/homedir-preload.ts`, wired in via `bunfig.toml`'s
-`[test].preload`, mocks `node:os`'s `homedir()` to a scratch directory for the
-whole run via `mock.module`, before any test file's own imports — the one place
-guaranteed to run early enough regardless of which file imports
-`packages/cli/config.ts` first. Every test file that touches
-`packages/cli/config.ts` still guards against this invariant breaking:
-
-```ts
-if (!homedir().startsWith(tmpdir())) {
-  throw new Error(
-    "... refusing to risk touching the real ~/.config/homerun ...",
-  );
-}
-```
+`packages/cli/config.go` resolves its config file path from `os.UserHomeDir()`,
+which re-reads `$HOME` on every call — unlike the old TypeScript CLI's
+`os.homedir()`, fixed for the life of the process (reassigning
+`process.env.HOME` mid-run didn't change it, verified on Bun 1.4.0), which is
+why that version needed `tests/unit/support/homedir-preload.ts` mocking
+`node:os` via a `bunfig.toml` `[test].preload`. `packages/cli/cli_test.go` just
+calls `t.Setenv("HOME", t.TempDir())` per test instead, reset automatically by
+Go's own test runner; there's no shared preload and nothing under
+`tests/unit/support/` is involved for `go test`.
 
 ## Coverage
 
 `bunfig.toml`'s `[test].coverage = true` turns on Bun's native coverage for
-every run, scoped away from `tests/**` and `packages/cli/generated/**`. No
+every run, scoped away from `tests/**` (`packages/cli/generated/**` was in this
+exclusion list too, back when that directory existed for the TypeScript CLI). No
 threshold enforced yet.
 
 ## Retries (`bunfig.toml`'s `[test].retry`)
@@ -247,15 +245,15 @@ Access section's reveal-and-validate behaviour, and (`ui-form-state.spec.ts`)
 that a saved settings section keeps its field values and that the compose-import
 page's Import step accepts the file its own Parse step previewed, the two halves
 of the `reset` bug under Conventions above, and (`ui-cli.spec.ts`) the `homerun`
-CLI spawned from source against the same instance, logged in through its real
-device-code flow approved in the browser, then every list/get command, the
-flag/env overrides, 401/404 exits and logout (`bun run test:e2e:cli` runs it
-with only the bootstrap and onboarding specs ahead of it; see
-`tests/e2e/README.md` for why it strips `FORCE_COLOR` from the CLI's env). Not
-covered by the specs above: a real deploy (the screenshot pipeline below does
-one, on purpose, and is the only thing here that touches Docker). Add
-browser-level cases here; don't re-prove API shapes `tests/integration/` already
-covers directly and faster.
+CLI, a Go program compiled from source in `beforeAll`, run against the same
+instance, logged in through its real device-code flow approved in the browser,
+then every list/get command, the flag/env overrides, 401/404 exits and logout
+(`bun run test:e2e:cli` runs it with only the bootstrap and onboarding specs
+ahead of it; see `tests/e2e/README.md` for why it strips `FORCE_COLOR` from the
+CLI's env). Not covered by the specs above: a real deploy (the screenshot
+pipeline below does one, on purpose, and is the only thing here that touches
+Docker). Add browser-level cases here; don't re-prove API shapes
+`tests/integration/` already covers directly and faster.
 
 ## Screenshots for the docs (`tests/e2e/screenshots/`, `bun run screenshots`)
 

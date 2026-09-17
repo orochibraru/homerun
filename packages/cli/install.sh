@@ -39,16 +39,16 @@ case "$(uname -m)" in
 esac
 
 if [ "$VERSION" = "latest" ]; then
-	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-cli-${ARCH}"
+	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-cli-${ARCH}.gz"
 else
-	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/download/${VERSION}/homerun-cli-${ARCH}"
+	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/download/${VERSION}/homerun-cli-${ARCH}.gz"
 fi
 
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 
 echo "Downloading homerun-cli-${ARCH} (${VERSION}) from ${GIT_HOST}/${GIT_REPO}..."
-curl -fsSL "$DOWNLOAD_URL" -o "$TMP"
+curl -fsSL "$DOWNLOAD_URL" | gunzip -c > "$TMP"
 chmod +x "$TMP"
 
 mkdir -p "$INSTALL_DIR"

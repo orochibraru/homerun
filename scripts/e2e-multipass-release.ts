@@ -196,12 +196,12 @@ async function resolveRelease(): Promise<PublishedRelease> {
 	log(`Resolving the published release under test (${version})`);
 	const release = await PublishedRelease.resolve(version);
 	release.assertAssets([
-		"homerun-agent-amd64",
-		"homerun-agent-arm64",
-		"homerun-cli-amd64",
-		"homerun-cli-arm64",
-		"homerun-installer-amd64",
-		"homerun-installer-arm64",
+		"homerun-agent-amd64.gz",
+		"homerun-agent-arm64.gz",
+		"homerun-cli-amd64.gz",
+		"homerun-cli-arm64.gz",
+		"homerun-installer-amd64.gz",
+		"homerun-installer-arm64.gz",
 	]);
 	console.log(
 		`  ${release.repo} ${release.tag}, all six binaries published (this host pulls the ${arch} ones).`,

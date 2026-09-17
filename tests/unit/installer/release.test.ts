@@ -33,7 +33,7 @@ describe("ReleaseAssets.imageRef", () => {
 });
 
 describe("ReleaseAssets.downloadReleaseBinary", () => {
-	test("curls the release asset next to dest, chmods it, then renames it over dest", async () => {
+	test("curls the gzipped release asset next to dest, unpacks and chmods it, then renames it over dest", async () => {
 		const run = mock(
 			async (
 				_cmd: string[],
@@ -53,10 +53,11 @@ describe("ReleaseAssets.downloadReleaseBinary", () => {
 			[
 				"curl",
 				"-fsSL",
-				"https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-agent-arm64",
+				"https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-agent-arm64.gz",
 				"-o",
-				"/usr/local/bin/homerun-agent.download",
+				"/usr/local/bin/homerun-agent.download.gz",
 			],
+			["gunzip", "-f", "/usr/local/bin/homerun-agent.download.gz"],
 			["chmod", "+x", "/usr/local/bin/homerun-agent.download"],
 			[
 				"mv",

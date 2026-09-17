@@ -45,16 +45,16 @@ case "$(uname -m)" in
 esac
 
 if [ "$VERSION" = "latest" ]; then
-	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-installer-${ARCH}"
+	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/latest/download/homerun-installer-${ARCH}.gz"
 else
-	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/download/${VERSION}/homerun-installer-${ARCH}"
+	DOWNLOAD_URL="https://${GIT_HOST}/${GIT_REPO}/releases/download/${VERSION}/homerun-installer-${ARCH}.gz"
 fi
 
 BIN="$(mktemp)"
 trap 'rm -f "$BIN"' EXIT
 
 echo "Downloading homerun-installer-${ARCH} (${VERSION}) from ${GIT_HOST}/${GIT_REPO}..."
-curl -fsSL "$DOWNLOAD_URL" -o "$BIN"
+curl -fsSL "$DOWNLOAD_URL" | gunzip -c > "$BIN"
 chmod +x "$BIN"
 
 # All original args (including --version=, which the installer itself also

@@ -10,6 +10,9 @@ dev server) is needed for either of those paths.
 
 - [Bun](https://bun.sh), the version pinned in `package.json`'s `packageManager`
   field
+- [Go](https://go.dev), the version pinned in `go.mod` — only needed to build or
+  test `packages/cli/`, which is a separate Go program, not part of the root
+  `bun install`
 - Docker (for Traefik + Postgres, and for the containers the app itself will
   manage once it's running)
 
@@ -36,11 +39,12 @@ wizard (base domain / Docker / Traefik / email).
 server, closer to how the production Docker image runs it, still directly on the
 host, still against the same `compose.yaml` Postgres/Traefik.
 
-`packages/agent/`, `packages/installer/`, and `packages/cli/` all share this
-same root `bun install`/`node_modules` (no separate per-package installs). Run
-each directly from source with `bun run packages/agent/index.ts`,
-`bun run packages/installer/index.ts --dry-run`,
-`bun run packages/cli/index.ts services list`, etc.
+`packages/agent/` and `packages/installer/` both share this same root
+`bun install`/`node_modules` (no separate per-package installs). Run each
+directly from source with `bun run packages/agent/index.ts`,
+`bun run packages/installer/index.ts --dry-run`. `packages/cli/` is a separate
+Go module instead (`go.mod` at the repo root):
+`go run ./packages/cli services list`, etc.
 
 ## Before every change: the hard gates
 
@@ -53,7 +57,7 @@ rejected for "files were modified by this hook" just needs `git add` and a
 re-commit.
 
 ```sh
-bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then tsc over packages/* and scripts/, zero errors AND zero warnings
+bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then tsc over packages/agent, packages/installer and scripts/ plus go vet over packages/cli, zero errors AND zero warnings
 bun run lint    # markdownlint-cli2, tailwint and biome check --error-on-warnings, whole repo
 ```
 
@@ -61,12 +65,12 @@ Run both after _every_ change, not just once at the end. `bun run check`'s scope
 is already the whole repo regardless of which files you touched, so a red result
 elsewhere is still your problem to look at, not something to wave off as
 unrelated without actually checking. `bun run check` includes the
-`packages/agent/`, `packages/installer/`, `packages/cli/` and `scripts/`
-typechecks (`check:packages`); `bun run check:agent` / `check:installer` /
-`check:cli` / `check:scripts` run one of them alone. If you changed a REST API
-route or `config.ts`, also run `bun run gen` and commit the regenerated
-`openapi.json`, `homerun.schema.json` and `packages/cli/generated/`: CI fails
-when they're stale.
+`packages/agent/`, `packages/installer/` and `scripts/` typechecks plus
+`packages/cli/`'s `go vet` (`check:packages`); `bun run check:agent` /
+`check:installer` / `check:cli` / `check:scripts` run one of them alone. If you
+changed a REST API route or `config.ts`, also run `bun run gen` and commit the
+regenerated `openapi.json`, `homerun.schema.json` and
+`tests/integration/support/openapi-types.ts`: CI fails when they're stale.
 
 `bun run test:unit` is the fast suite (seconds, no Postgres or Docker needed).
 `bun run test` runs the whole `bun:test` suite, unit + integration, see

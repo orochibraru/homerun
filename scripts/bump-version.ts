@@ -5,8 +5,8 @@ import process from "node:process";
  * Called by semantic-release's @semantic-release/exec `prepareCmd`
  * (`.releaserc.json`) with the next version as argv[0], e.g.
  * `bun scripts/bump-version.ts 0.2.0`. Bumps the `version` field in every
- * package.json semantic-release should track: the root app plus the three
- * standalone sub-projects (agent/installer/cli), which don't get their own
+ * package.json semantic-release should track: the root app plus the
+ * standalone Bun sub-projects (agent/installer), which don't get their own
  * independent version numbers, one release version for the whole repo,
  * same as every other cross-cutting thing here (one CLAUDE.md, one TODO.md).
  *
@@ -29,7 +29,6 @@ const packageJsonPaths = [
 	"package.json",
 	"packages/agent/package.json",
 	"packages/installer/package.json",
-	"packages/cli/package.json",
 ];
 
 for (const path of packageJsonPaths) {

@@ -178,11 +178,7 @@
 			}
 		},
 		{
-			"includes": [
-				"packages/agent/**",
-				"packages/cli/**",
-				"packages/installer/**"
-			],
+			"includes": ["packages/agent/**", "packages/installer/**"],
 			"linter": {
 				"rules": {
 					"suspicious": {
@@ -202,7 +198,7 @@
 			}
 		},
 		{
-			"includes": ["packages/cli/generated/**"],
+			"includes": ["tests/integration/support/openapi-types.ts"],
 			"linter": {
 				"rules": {
 					"style": {

@@ -2,18 +2,23 @@
 
 `bun:test`, run directly by Bun (`bun test --timeout 120000` — see the root
 `CLAUDE.md`'s note on why `--timeout` is passed explicitly), covering
-`packages/agent/`, `packages/installer/`, and `packages/cli/`. Tests live here,
-under `tests/unit/<package>/`, mirroring the source tree —
+`packages/agent/` and `packages/installer/`. Tests live here, under
+`tests/unit/<package>/`, mirroring the source tree —
 `tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`,
 `tests/unit/installer/detect.test.ts` tests
 `packages/installer/steps/detect.ts`, etc. `tests/unit/app/` is component tests
 for the SvelteKit app itself (a Svelte-compiling Bun plugin + happy-dom setup,
-`@testing-library/svelte`), see its own README.
+`@testing-library/svelte`), see its own README. `packages/cli/` is a separate Go
+module and isn't part of this suite at all: its own tests are
+`packages/cli/cli_test.go`, run with `go test ./packages/cli/...`
+(`bun run test:unit:cli`), not `bun:test`.
 
-Run everything: `bun run test` (a bare `bun test` also works — no wrapper
-script, `bunfig.toml`'s `[test].preload` handles the rest). Scoped:
-`bun run test:unit`, `bun run test:unit:agent`, `bun run test:unit:app`,
-`bun run test:unit:cli`, `bun run test:unit:installer`. See
+Run everything: `bun run test` (a bare `bun test` also works for the `bun:test`
+half — no wrapper script, `bunfig.toml`'s `[test].preload` handles the rest —
+but `bun run test` also runs `go test ./packages/cli/...` afterward). Scoped:
+`bun run test:unit` (agent/app/installer only, no Postgres/Docker needed),
+`bun run test:unit:agent`, `bun run test:unit:app`, `bun run test:unit:cli` (the
+Go tests, above), `bun run test:unit:installer`. See
 `tests/integration/README.md` for the separate `tests/integration/` suite, and
 `tests/e2e/README.md` for the real-browser Playwright suite (its own runner,
 `bun run test:e2e`, not part of `bun run test`'s `bun test` invocation).
@@ -29,31 +34,23 @@ in `afterEach`) coexist because they mock at different granularities, not
 because either is isolated — keep that in mind adding a new file that touches
 either module.
 
-## `cli/` tests need a mocked `os.homedir()`
+## `packages/cli/`'s tests set `$HOME` directly, no preload needed
 
-`packages/cli/config.ts` resolves its config file path
-(`~/.config/homerun/config.json`) from `os.homedir()` once, at module load.
-`os.homedir()` itself is fixed for the life of the process (reassigning
-`process.env.HOME` mid-process doesn't change it, verified on Bun 1.4.0).
-
-`tests/unit/support/homedir-preload.ts`, wired in via `bunfig.toml`'s
-`[test].preload`, mocks `node:os`'s `homedir()` to a `mkdtempSync`-created
-scratch directory for the whole run, before any test file's own imports run.
-Every test file that touches `cli/config.ts` (`config.test.ts`,
-`client.test.ts`, `login.test.ts`) guards against this invariant breaking:
-
-```ts
-if (!homedir().startsWith(tmpdir())) {
-  throw new Error(
-    "... refusing to risk touching the real ~/.config/homerun ...",
-  );
-}
-```
+`packages/cli/config.go` resolves its config file path
+(`~/.config/homerun/config.json`) from `os.UserHomeDir()`, which reads `$HOME`
+fresh on every call (unlike the old TypeScript CLI's `os.homedir()`, fixed for
+the life of the process, which is why that version needed a `bunfig.toml`
+preload mocking it). `packages/cli/cli_test.go` just calls
+`t.Setenv("HOME", t.TempDir())` per test, which Go's own test runner resets
+automatically, so there's no shared scratch-directory setup and no
+`tests/unit/support/` involvement at all for `go test`.
 
 ## Coverage
 
 `bunfig.toml`'s `[test].coverage = true` turns coverage on for every run, scoped
-away from `tests/**` and `packages/cli/generated/**`. No threshold enforced yet.
+away from `tests/**` (`packages/cli/generated/**` was in this exclusion list
+too, back when that directory existed for the TypeScript CLI). No threshold
+enforced yet.
 
 ## Fakes over mocking libraries
 
@@ -90,5 +87,7 @@ back to `bun:test` rather than keep the extra dependency around for that.
 `tsconfig.json` excludes `tests/` from `svelte-check` (`bun run check`'s
 `check:app`) — `bun:test`'s `mock()` return type hits real overload-resolution
 errors under svelte-check's TS resolution that don't happen under
-`tsc`/`bun test` directly. `tests/` is type-checked per-package instead
-(`bun run check:agent`/`check:cli`/`check:installer`).
+`tsc`/`bun test` directly. `tests/unit/agent/` and `tests/unit/installer/` are
+type-checked per-package instead (`bun run check:agent`/`check:installer`);
+`packages/cli/`'s own tests aren't under `tests/` at all, `check:cli` is
+`go vet`, not `tsc`.

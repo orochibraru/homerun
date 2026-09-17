@@ -48,7 +48,6 @@
         "auth": "^1.7.1",
         "bits-ui": "^2.19.0",
         "clsx": "^2.1.1",
-        "commander": "^15.0.0",
         "conventional-changelog-conventionalcommits": "^10.0.0",
         "devalue": "^5.9.1",
         "drizzle-kit": "^0.31.10",

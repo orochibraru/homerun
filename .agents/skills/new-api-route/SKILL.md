@@ -81,20 +81,22 @@ schema from step 2), `responses` (status → `{description, schema}`, referencin
 bun run gen
 ```
 
-Regenerates `openapi.json`, `packages/cli/generated/openapi-types.ts`, and
+Regenerates `openapi.json`, `tests/integration/support/openapi-types.ts`, and
 `homerun.schema.json` from the running spec. Run this after any shape change —
-`openapi-fetch` (what `packages/cli/` is built on) has no way to detect a
-stale-spec mismatch at compile time, this is the only thing that catches it.
+those generated types only feed `tests/integration/support/client.ts` now (the
+CLI is Go and has no generated types of its own, see step 7), but CI's "Codegen
+is current" step still fails on a stale snapshot, so keep them checked in.
 
 ## 7. CLI command (only if this route should be user-facing there)
 
 Not every API route needs a CLI command. If it does, add it to
-`packages/cli/commands.ts` following the existing `services`/`stacks`/
+`packages/cli/commands.go` following the existing `services`/`stacks`/
 `templates` pattern; a `list` command should thread `--page`/`--per-page`/
-`--search` through the same way the existing ones do.
+`--search` through the same way the existing ones do. The CLI has no generated
+types to catch a stale shape here, `commands.go`'s structs and `client.go`'s
+requests need updating by hand.
 
 ## 8. Finish
 
 Run `check-repo`. If `packages/cli/` was touched, use the `subproject-sync`
-agent to confirm the regenerated types and the sub-project's own typecheck are
-both clean.
+agent to confirm `go vet ./packages/cli/...` and the Go tests are both clean.
