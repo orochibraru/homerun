@@ -1,3 +1,10 @@
+## [1.0.28](https://github.com/orochibraru/homerun/compare/v1.0.27...v1.0.28) (2026-09-17)
+
+### Features
+
+- **pangolin:** run Newt as a Homerun-managed container, set up from onboarding
+  ([8e260bf](https://github.com/orochibraru/homerun/commit/8e260bf5cef2fabbbfa14b5be402c4102148c05c))
+
 ## [1.0.27](https://github.com/orochibraru/homerun/compare/v1.0.26...v1.0.27) (2026-09-17)
 
 ### Features
