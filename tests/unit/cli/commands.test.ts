@@ -2,6 +2,7 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import process from "node:process";
 import type { ClientFactory } from "../../../packages/cli/client";
 import {
+	apiErrorMessage,
 	Commands,
 	findingsAtOrAbove,
 	instanceStatusText,
@@ -828,5 +829,31 @@ describe("Commands.instanceUpdate", () => {
 		await Commands.instanceUpdate(fakeClient({ GET, POST }), { wait: false });
 
 		expect(GET).not.toHaveBeenCalled();
+	});
+});
+
+describe("apiErrorMessage", () => {
+	test("keeps a JSON error body", () => {
+		expect(
+			apiErrorMessage(
+				{ status: 409, statusText: "Conflict" },
+				{ error: "busy" },
+			),
+		).toBe('409 Conflict: {"error":"busy"}');
+	});
+
+	test("replaces an HTML 404 page with a hint about an older instance", () => {
+		const message = apiErrorMessage(
+			{ status: 404, statusText: "Not Found" },
+			"<!DOCTYPE html><html></html>",
+		);
+		expect(message).toStartWith("404 Not Found: this instance doesn't have");
+		expect(message).not.toContain("<html");
+	});
+
+	test("leaves out any other non-JSON body", () => {
+		expect(
+			apiErrorMessage({ status: 502, statusText: "Bad Gateway" }, "<html>"),
+		).toBe("502 Bad Gateway: the instance answered with a non-JSON body.");
 	});
 });

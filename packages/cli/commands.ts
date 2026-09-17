@@ -2,6 +2,7 @@ import process from "node:process";
 import type { ClientFactory } from "./client";
 import type { paths } from "./generated/openapi-types";
 import { Output } from "./output";
+import { CLI_VERSION } from "./version";
 
 type Client = ReturnType<typeof ClientFactory.makeClient>;
 
@@ -120,6 +121,25 @@ export function instanceStatusText(status: InstanceUpdateStatus): string {
 		);
 	}
 	return lines.join("\n");
+}
+
+/**
+ * The message for a failed API call: the status line plus the JSON error body.
+ * A body that isn't JSON (an HTML page) is left out, and a 404 of that kind
+ * says the instance likely predates this CLI's endpoint instead.
+ */
+export function apiErrorMessage(
+	response: Pick<Response, "status" | "statusText">,
+	error: unknown,
+): string {
+	const status = `${response.status} ${response.statusText}`;
+	if (typeof error !== "string") {
+		return `${status}: ${JSON.stringify(error ?? {})}`;
+	}
+	if (response.status === 404) {
+		return `${status}: this instance doesn't have that endpoint, it's probably older than this CLI (v${CLI_VERSION}). Update the instance first.`;
+	}
+	return `${status}: the instance answered with a non-JSON body.`;
 }
 
 /** Every command takes the already-built `Client` as an argument rather than owning one itself : this class holds no client of its own, it's grouped for consistency with every other cli/ module, not because it carries state. */
@@ -456,9 +476,7 @@ class CliCommands {
 		if (wait && response.status === 409 && error && "jobId" in error) {
 			return error.jobId;
 		}
-		return Output.fail(
-			`${response.status} ${response.statusText}: ${JSON.stringify(error ?? {})}`,
-		);
+		return Output.fail(apiErrorMessage(response, error));
 	}
 
 	/** Prints the instance's running version, the latest release and whether an update could start now, as JSON or a short summary. Exits on an API error. */
@@ -577,9 +595,7 @@ class CliCommands {
 	): Promise<{ data: T; response: Response }> {
 		const { data, error, response } = await promise;
 		if (error !== undefined || !response.ok) {
-			Output.fail(
-				`${response.status} ${response.statusText}: ${JSON.stringify(error ?? {})}`,
-			);
+			Output.fail(apiErrorMessage(response, error));
 		}
 		return { data: data as T, response };
 	}
@@ -590,9 +606,7 @@ class CliCommands {
 	): Promise<T> {
 		const { data, error, response } = await promise;
 		if (error !== undefined || !response.ok) {
-			Output.fail(
-				`${response.status} ${response.statusText}: ${JSON.stringify(error ?? {})}`,
-			);
+			Output.fail(apiErrorMessage(response, error));
 		}
 		return data as T;
 	}
