@@ -1,3 +1,13 @@
+## [1.0.33](https://github.com/orochibraru/homerun/compare/v1.0.32...v1.0.33) (2026-09-17)
+
+### Bug Fixes
+
+- **ci:** upload release binaries with retries and publish the draft only once
+  all are uploaded
+  ([4531333](https://github.com/orochibraru/homerun/commit/4531333f45da1422fc5e9436318d1bab7afa07d1))
+- count swarm tasks started during the rollout as running in the health watch
+  ([218b8df](https://github.com/orochibraru/homerun/commit/218b8dfcf05bdbae142b8ac25091ef844f06aca7))
+
 ## [1.0.32](https://github.com/orochibraru/homerun/compare/v1.0.31...v1.0.32) (2026-09-17)
 
 ### Bug Fixes
