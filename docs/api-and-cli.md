@@ -109,7 +109,8 @@ not a hand-maintained guess.
 ### Install
 
 One command: it detects your arch, downloads the matching release binary, and
-drops it at `/usr/local/bin/homerun` (Linux only, no Bun or build step needed):
+drops it at `/usr/local/bin/homerun` (Linux or macOS, no Bun or build step
+needed):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/cli/install.sh | bash

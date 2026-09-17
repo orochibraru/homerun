@@ -30,6 +30,10 @@ jobs:
             runner: ubuntu-latest
           - arch: arm64
             runner: ubuntu-24.04-arm
+          - arch: darwin-arm64
+            runner: macos-latest
+          - arch: darwin-amd64
+            runner: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v6

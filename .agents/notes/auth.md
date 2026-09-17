@@ -80,6 +80,16 @@ no settings save can ever rename a cookie out from under a signed-in user. If a
 deployment genuinely changes scheme, that's a restart, which is the correct
 blast radius for a cookie-security change.
 
+**Direct access on an IP or `localhost` gets its own auth instance.** With
+`ORIGIN=https://…` (or cross-subdomain cookies on), signing in at
+`http://<ip>:3000` failed at the 2FA step with "Invalid two factor cookie": the
+`two_factor` challenge cookie came out `__Secure-…; Secure` (or
+`Domain=.<baseDomain>`), which the browser drops on that origin. The exported
+`auth` is a proxy that picks, per request (`getRequestEvent()`), a variant built
+by `buildAuth(directAccessScheme(host, x-forwarded-proto))` : `Secure` only over
+HTTPS, never scoped to the base domain. Named hosts keep the configured
+instance, so the rule above is unchanged for them.
+
 Rate limiting is on outside `vite dev`: 100 requests per IP per 15 minutes
 overall, plus the `apiKey()` plugin's own 300/minute. **Real, tested finding**:
 better-auth also applies an undocumented-in-config "special rule" (its

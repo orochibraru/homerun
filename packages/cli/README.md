@@ -14,11 +14,11 @@ against the actual API shape, not a hand-maintained guess.
 curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/cli/install.sh | bash
 ```
 
-`install.sh` (Linux only, see the script's own comment for why) detects your
-arch, downloads the matching `homerun-cli-<arch>` release binary (a GitHub
-release asset on this repo), and installs it as `/usr/local/bin/homerun`,
-`sudo`'d automatically if that directory isn't writable by your user. From
-there:
+`install.sh` (Linux or macOS) detects your OS and arch, downloads the matching
+`homerun-cli-<arch>` release binary (`amd64`/`arm64` on Linux,
+`darwin-amd64`/`darwin-arm64` on macOS, a GitHub release asset on this repo),
+and installs it as `/usr/local/bin/homerun`, `sudo`'d automatically if that
+directory isn't writable by your user. From there:
 
 ```bash
 homerun login
@@ -56,7 +56,7 @@ To work on the CLI itself instead of just using it: there's no separate
 ```bash
 bun install                                    # from the repo root
 bun run packages/cli/index.ts services list    # from source
-bun run scripts/build-packages.ts amd64        # or arm64, same as CI, outputs dist/homerun-cli-<arch>
+bun run scripts/build-packages.ts amd64        # or arm64, darwin-amd64, darwin-arm64, same as CI, outputs dist/homerun-cli-<arch>
 ```
 
 ## Commands
@@ -128,10 +128,10 @@ once it's finished, same contract as `homerun services deploy`.
 latest GitHub release, downloads the `homerun-cli-<arch>` asset for your
 architecture (same one `install.sh` installs), and replaces the running binary
 (`sudo`'d automatically if the install directory isn't writable by your user,
-same as `install.sh`). Linux-only, same as installation itself, and only works
-on the compiled binary, not `bun run packages/cli/index.ts` (there's nothing to
-replace when running from source, `git pull` instead). `homerun --version` (or
-`-v`) just prints the current version, no network call.
+same as `install.sh`). Linux and macOS, same as installation itself, and only
+works on the compiled binary, not `bun run packages/cli/index.ts` (there's
+nothing to replace when running from source, `git pull` instead).
+`homerun --version` (or `-v`) just prints the current version, no network call.
 
 ## Regenerating the types
 

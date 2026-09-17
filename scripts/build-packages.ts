@@ -1,19 +1,37 @@
 import process from "node:process";
 import Bun from "bun";
 
-const packages = ["cli", "installer", "agent"];
+const TARGET_NAMES = [
+	"amd64",
+	"arm64",
+	"darwin-amd64",
+	"darwin-arm64",
+] as const;
 interface CustomTarget {
-	name: "amd64" | "arm64";
+	name: (typeof TARGET_NAMES)[number];
+	packages: string[];
 	target: Bun.Build.CompileTarget;
 }
 const allTargets: CustomTarget[] = [
 	{
 		name: "arm64",
+		packages: ["cli", "installer", "agent"],
 		target: "bun-linux-arm64",
 	},
 	{
 		name: "amd64",
+		packages: ["cli", "installer", "agent"],
 		target: "bun-linux-x64",
+	},
+	{
+		name: "darwin-arm64",
+		packages: ["cli", "agent"],
+		target: "bun-darwin-arm64",
+	},
+	{
+		name: "darwin-amd64",
+		packages: ["cli", "agent"],
+		target: "bun-darwin-x64",
 	},
 ];
 
@@ -24,23 +42,26 @@ const allTargets: CustomTarget[] = [
 // "arm64" to build just that target; omit it (plain `bun run build:packages`,
 // local dev) to build both, same as before.
 const requestedArch = process.argv[2];
-if (requestedArch && requestedArch !== "amd64" && requestedArch !== "arm64") {
+if (
+	requestedArch &&
+	!TARGET_NAMES.includes(requestedArch as CustomTarget["name"])
+) {
 	console.error(
-		`Unknown target "${requestedArch}" : expected "amd64" or "arm64"`,
+		`Unknown target "${requestedArch}" : expected one of ${TARGET_NAMES.join(", ")}`,
 	);
 	process.exit(1);
 }
 const targets = requestedArch
 	? allTargets.filter((t) => t.name === requestedArch)
 	: allTargets;
-const totalBuilds = packages.length * targets.length;
+const totalBuilds = targets.reduce((n, t) => n + t.packages.length, 0);
 const results: Awaited<ReturnType<typeof Bun.build>>[] = [];
 const errors: unknown[] = [];
 
-for (const packageName of packages) {
-	console.log(`Building ${packageName}...`);
-	for (const target of targets) {
-		console.log(`  ==> ${target.name}...`);
+for (const target of targets) {
+	console.log(`Building ${target.name}...`);
+	for (const packageName of target.packages) {
+		console.log(`  ==> ${packageName}...`);
 		try {
 			const res = await Bun.build({
 				entrypoints: [`./packages/${packageName}/index.ts`],

@@ -77,6 +77,22 @@
 					{
 						"label": "homerun CLI (linux/arm64)",
 						"path": "dist/homerun-cli-arm64"
+					},
+					{
+						"label": "homerun-agent (darwin/amd64)",
+						"path": "dist/homerun-agent-darwin-amd64"
+					},
+					{
+						"label": "homerun-agent (darwin/arm64)",
+						"path": "dist/homerun-agent-darwin-arm64"
+					},
+					{
+						"label": "homerun CLI (darwin/amd64)",
+						"path": "dist/homerun-cli-darwin-amd64"
+					},
+					{
+						"label": "homerun CLI (darwin/arm64)",
+						"path": "dist/homerun-cli-darwin-arm64"
 					}
 				]
 			}

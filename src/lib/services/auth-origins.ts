@@ -62,13 +62,41 @@ function hostnameOf(host: string): string {
  * configured origins, since DNS rebinding could otherwise point one here.
  */
 export function directAccessOrigins(host: string | null | undefined): string[] {
-	if (!host) {
-		return [];
-	}
+	return host && isDirectAccessHost(host)
+		? [`http://${host}`, `https://${host}`]
+		: [];
+}
+
+/** Whether a `Host` header names an IP literal or `localhost` rather than a domain. */
+function isDirectAccessHost(host: string): boolean {
 	const hostname = hostnameOf(host.trim().toLowerCase());
-	const direct =
+	return (
 		hostname === "localhost" ||
 		IPV4_RE.test(hostname) ||
-		(hostname.includes(":") && /^[0-9a-f:.]+$/.test(hostname));
-	return direct ? [`http://${host}`, `https://${host}`] : [];
+		(hostname.includes(":") && /^[0-9a-f:.]+$/.test(hostname))
+	);
+}
+
+export type DirectAccessScheme = "http" | "https";
+
+/**
+ * The scheme a request sent straight to the instance's own address arrived on,
+ * so auth cookies can be issued to suit it instead of the configured origin:
+ * a `Secure`/`__Secure-` cookie from an `https://` ORIGIN is dropped by the
+ * browser over plain HTTP, and a cross-subdomain `Domain=.<baseDomain>` cookie
+ * is rejected on an IP. Plain HTTP unless a proxy says `X-Forwarded-Proto:
+ * https`, since the published port itself never terminates TLS.
+ *
+ * @returns Null for a named host, which keeps the configured cookies.
+ */
+export function directAccessScheme(
+	host: string | null | undefined,
+	forwardedProto: string | null | undefined,
+): DirectAccessScheme | null {
+	if (!(host && isDirectAccessHost(host))) {
+		return null;
+	}
+	return forwardedProto?.split(",")[0]?.trim().toLowerCase() === "https"
+		? "https"
+		: "http";
 }

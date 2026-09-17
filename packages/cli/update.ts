@@ -14,13 +14,13 @@ class CliUpdateService {
 	/**
 	 * Replaces the running binary with the latest GitHub release when it's
 	 * newer, falling back to `sudo mv` when the install directory isn't
-	 * writable. Exits the process on any failure, including a non-Linux host
-	 * or a run from source.
+	 * writable. Exits the process on any failure, including a host other than
+	 * Linux or macOS, or a run from source.
 	 */
 	async update(): Promise<void> {
-		if (process.platform !== "linux") {
+		if (process.platform !== "linux" && process.platform !== "darwin") {
 			Output.fail(
-				"`homerun update` only supports Linux, the only platform prebuilt binaries are published for. Rebuild from source instead, see cli/README.md.",
+				"`homerun update` only supports Linux and macOS, the platforms prebuilt binaries are published for.",
 			);
 		}
 		if (!this.#isCompiledBinary()) {
@@ -93,22 +93,24 @@ class CliUpdateService {
 	}
 
 	/**
-	 * Maps `process.arch` onto the release-asset arch names, exiting on
-	 * anything other than x64 or arm64. Mirrored by
+	 * Maps `process.platform`/`process.arch` onto the release-asset suffix
+	 * (`amd64`, `arm64`, `darwin-amd64`, `darwin-arm64`), exiting on anything
+	 * other than x64 or arm64. The arch half is mirrored by
 	 * `packages/installer/steps/detect.ts`'s `arch()` : the two sub-projects
 	 * can't share a module (each `tsconfig.json`'s `include` is scoped to its
 	 * own directory), so keep both in sync by hand, see
 	 * `.agents/notes/packages-and-release.md`.
 	 */
-	#currentArch(): "amd64" | "arm64" {
+	#currentArch(): string {
+		const prefix = process.platform === "darwin" ? "darwin-" : "";
 		if (process.arch === "x64") {
-			return "amd64";
+			return `${prefix}amd64`;
 		}
 		if (process.arch === "arm64") {
-			return "arm64";
+			return `${prefix}arm64`;
 		}
 		return Output.fail(
-			`Unsupported architecture "${process.arch}" : prebuilt binaries only cover linux/amd64 and linux/arm64.`,
+			`Unsupported architecture "${process.arch}" : prebuilt binaries only cover amd64 and arm64.`,
 		);
 	}
 

@@ -20,24 +20,20 @@ for arg in "$@"; do
 	esac
 done
 
-# Only Linux binaries are published (see scripts/build-packages.ts /
-# .github/workflows/binaries.yaml) : macOS/Windows aren't targets for this
-# app's own deploy host, and the CLI just talks to a running instance's REST
-# API over HTTP, so building from source (`cli/README.md`) is the fallback
-# there rather than adding cross-platform release builds for a thin client.
 case "$(uname -s)" in
-	Linux) ;;
+	Linux) PLATFORM="" ;;
+	Darwin) PLATFORM="darwin-" ;;
 	*)
-		echo "error: prebuilt homerun CLI binaries are Linux-only (amd64/arm64). Build it from source instead, see cli/README.md." >&2
+		echo "error: prebuilt homerun CLI binaries cover Linux and macOS only, not $(uname -s)." >&2
 		exit 1
 		;;
 esac
 
 case "$(uname -m)" in
-	x86_64 | amd64) ARCH="amd64" ;;
-	aarch64 | arm64) ARCH="arm64" ;;
+	x86_64 | amd64) ARCH="${PLATFORM}amd64" ;;
+	aarch64 | arm64) ARCH="${PLATFORM}arm64" ;;
 	*)
-		echo "error: unsupported architecture $(uname -m) : release binaries only cover linux/amd64 and linux/arm64." >&2
+		echo "error: unsupported architecture $(uname -m) : release binaries only cover amd64 and arm64." >&2
 		exit 1
 		;;
 esac

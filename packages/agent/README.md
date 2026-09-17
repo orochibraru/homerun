@@ -48,7 +48,7 @@ as `tokenFile` does for a bare-binary install; set `AGENT_TOKEN` explicitly via
 default system one.)
 
 **Grab the prebuilt binary directly** from this repo's GitHub releases (Linux
-amd64/arm64 only, same coverage as the CLI's binaries, see
+and macOS, amd64/arm64, same coverage as the CLI's binaries, see
 `scripts/build-packages.ts`):
 
 ```bash
@@ -57,7 +57,8 @@ chmod +x homerun-agent
 ./homerun-agent
 ```
 
-(`-arm64` instead of `-amd64` on an arm64 host.)
+(`-arm64` instead of `-amd64` on an arm64 host, `-darwin-amd64`/`-darwin-arm64`
+on macOS.)
 
 On first boot with no `AGENT_TOKEN` set, it generates one and prints it, copy
 that (plus this host's reachable `http://host:7420`) into the main Homerun
@@ -73,7 +74,7 @@ bun run packages/agent/index.ts      # or `bun --watch packages/agent/index.ts` 
 Compiling it to a standalone binary yourself, rather than using a release one:
 
 ```bash
-bun run build:packages       # builds cli/installer/agent binaries for both arches
+bun run build:packages       # builds cli/installer/agent binaries for every target, cli/agent also for macOS
 ./dist/homerun-agent-amd64   # or -arm64
 ```
 

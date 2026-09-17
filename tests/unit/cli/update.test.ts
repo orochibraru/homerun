@@ -39,8 +39,8 @@ describe("update", () => {
 
 		expect(fetchSpy).not.toHaveBeenCalled();
 		const message = errorSpy.mock.calls[0]?.[0] as string;
-		if (process.platform !== "linux") {
-			expect(message).toContain("only supports Linux");
+		if (process.platform !== "linux" && process.platform !== "darwin") {
+			expect(message).toContain("only supports Linux and macOS");
 		} else {
 			// Running via `bun test`, process.execPath is the `bun` runtime
 			// itself, never a compiled `homerun` binary.

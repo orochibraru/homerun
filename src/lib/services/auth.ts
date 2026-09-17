@@ -29,7 +29,12 @@ import { passkeyRpId } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
 import * as schema from "$lib/server/db/schema";
 import { AdminService } from "./admin.service.ts";
-import { directAccessOrigins, trustedOriginsFor } from "./auth-origins.ts";
+import {
+	type DirectAccessScheme,
+	directAccessOrigins,
+	directAccessScheme,
+	trustedOriginsFor,
+} from "./auth-origins.ts";
 import { EmailService } from "./email.service.ts";
 import { UserService } from "./user.service.ts";
 
@@ -118,23 +123,23 @@ if (!(process.env.ORIGIN || dev || building)) {
  * merged with any DB-backed instance settings : see $lib/config.ts). Wrapped
  * in a function, rather than inlined into a single `betterAuth({...})` call
  * assigned once, so OAuth provider changes saved on the Settings page can
- * take effect live: rebuildAuth() below reassigns the exported `auth`
- * binding, and since every consumer reads `auth.*` per-request rather than
- * destructuring it at import time, the new instance is picked up
- * immediately everywhere without a process restart.
+ * take effect live: rebuildAuth() below drops the built instances behind the
+ * exported `auth` proxy, and since every consumer reads `auth.*` per-request
+ * rather than destructuring it at import time, the new instance is picked up
+ * immediately everywhere without a process restart. `directAccess` builds the
+ * variant for a request on the instance's own IP or `localhost`: cookies
+ * `Secure` only over HTTPS and never scoped to the base domain.
  */
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: one betterAuth() configuration object literal, not branching logic
-function buildAuth() {
+function buildAuth(directAccess: DirectAccessScheme | null) {
 	return betterAuth({
 		advanced: {
 			disableOriginCheck: false,
-			...(process.env.ORIGIN
-				? { useSecureCookies: process.env.ORIGIN.startsWith("https://") }
-				: {}),
+			...secureCookiesOption(directAccess),
 			// Opt-in (AUTH_CROSS_SUBDOMAIN=true) : see config.ts for the tradeoff.
 			// Required for a signed-in admin to be recognized on a gated deployed
 			// service's subdomain without a separate login there.
-			...(config.auth.crossSubdomainCookies
+			...(config.auth.crossSubdomainCookies && !directAccess
 				? {
 						crossSubDomainCookies: {
 							domain: `.${config.baseDomain}`,
@@ -356,11 +361,60 @@ function buildAuth() {
 	});
 }
 
-export let auth = buildAuth();
+type Auth = ReturnType<typeof buildAuth>;
 
-/** Reconstructs `auth` from the current config : see buildAuth()'s docstring. */
+/**
+ * The `useSecureCookies` override for one auth instance: the request's own
+ * scheme on direct IP/localhost access, else `ORIGIN`'s scheme, else none so
+ * better-auth falls back to its `isProduction` default.
+ */
+function secureCookiesOption(
+	directAccess: DirectAccessScheme | null,
+): { useSecureCookies: boolean } | Record<string, never> {
+	if (directAccess) {
+		return { useSecureCookies: directAccess === "https" };
+	}
+	if (process.env.ORIGIN) {
+		return { useSecureCookies: process.env.ORIGIN.startsWith("https://") };
+	}
+	return {};
+}
+
+let instances = new Map<DirectAccessScheme | "configured", Auth>();
+
+/**
+ * The auth instance whose cookies suit the current request: a direct-access
+ * variant on an IP or `localhost` (see `directAccessScheme`), the configured
+ * one otherwise and outside a request.
+ */
+function currentInstance(): Auth {
+	let scheme: DirectAccessScheme | null = null;
+	try {
+		const { request } = getRequestEvent();
+		scheme = directAccessScheme(
+			request.headers.get("host"),
+			request.headers.get("x-forwarded-proto"),
+		);
+	} catch {
+		scheme = null;
+	}
+	const key = scheme ?? "configured";
+	let instance = instances.get(key);
+	if (!instance) {
+		instance = buildAuth(scheme);
+		instances.set(key, instance);
+	}
+	return instance;
+}
+
+export const auth: Auth = new Proxy({} as Auth, {
+	get: (_target, property) => Reflect.get(currentInstance(), property),
+});
+
+/** Drops every built auth instance so the next use rebuilds from the current config : see buildAuth()'s docstring. */
 export function rebuildAuth(): void {
-	auth = buildAuth();
+	instances = new Map();
+	currentInstance();
 	logger.info("Rebuilt auth instance from updated instance settings");
 }
 

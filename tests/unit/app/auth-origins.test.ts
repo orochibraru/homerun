@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	directAccessOrigins,
+	directAccessScheme,
 	trustedOriginsFor,
 } from "$lib/services/auth-origins";
 
@@ -56,5 +57,18 @@ describe("directAccessOrigins", () => {
 		expect(directAccessOrigins("homerun.example.com")).toEqual([]);
 		expect(directAccessOrigins("evil.203.0.113.4.nip.io")).toEqual([]);
 		expect(directAccessOrigins(null)).toEqual([]);
+	});
+});
+
+describe("directAccessScheme", () => {
+	test("plain HTTP on an IP unless a proxy forwarded HTTPS", () => {
+		expect(directAccessScheme("203.0.113.4:3000", null)).toBe("http");
+		expect(directAccessScheme("203.0.113.4", "https")).toBe("https");
+		expect(directAccessScheme("[2001:db8::1]:3000", "http")).toBe("http");
+	});
+
+	test("keeps the configured cookies on a named host", () => {
+		expect(directAccessScheme("homerun.example.com", "https")).toBeNull();
+		expect(directAccessScheme(null, null)).toBeNull();
 	});
 });
