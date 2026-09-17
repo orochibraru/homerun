@@ -163,9 +163,10 @@ reordering the chain.
   subscriber (yet, see Planned features). →
   `DockerService.syncServiceStatus`/`syncAllServiceStatuses`.
 - `core-services.ts`, `DockerCoreServicesMixin`, `findTraefikContainer()`, a
-  deliberate narrow exception to the managed-label-only rule: read-only (logs
-  only, never lifecycle) lookup of the Traefik container by image-name prefix,
-  backing the System Logs page. →
+  deliberate narrow exception to the managed-label-only rule: lookup of the
+  Traefik container by image-name prefix, which System Logs uses to put
+  Restart/Update on Traefik's row of the stack list (its logs stream through the
+  same per-container route as every other stack container). →
   `DockerService.findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`.
 - `cleanup.ts`, `DockerCleanupMixin`, host-wide (not per-service, deliberately
   the one mixin that isn't scoped to `homerun.managed=true` containers, see

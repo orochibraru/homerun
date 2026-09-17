@@ -14,7 +14,7 @@ let streamed = false;
 
 mock.module("$lib/services/docker.service", () => ({
 	DockerService: {
-		findTraefikContainer: async () => ({ id: "traefik" }),
+		listInfraContainers: async () => [{ id: "traefik" }],
 		streamLogs: async () => {
 			streamed = true;
 			return new ReadableStream();
@@ -22,14 +22,14 @@ mock.module("$lib/services/docker.service", () => ({
 	},
 }));
 
-const traefikRoute = await import(
-	"../../../src/routes/(protected)/system-logs/traefik/+server"
+const logsRoute = await import(
+	"../../../src/routes/(protected)/system-logs/containers/[containerId]/logs/+server"
 );
 const pageRoute = await import(
 	"../../../src/routes/(protected)/system-logs/+page.server"
 );
 
-type TraefikEvent = Parameters<typeof traefikRoute.GET>[0];
+type LogsEvent = Parameters<typeof logsRoute.GET>[0];
 type LoadEvent = Parameters<typeof pageRoute.load>[0];
 
 function locals(isAdmin: boolean) {
@@ -37,27 +37,40 @@ function locals(isAdmin: boolean) {
 }
 
 describe("system logs access", () => {
-	test("a developer can't stream Traefik logs", async () => {
+	test("a developer can't stream a stack container's logs", async () => {
 		streamed = false;
-		const res = await traefikRoute.GET({
+		const res = await logsRoute.GET({
 			locals: locals(false),
-		} as unknown as TraefikEvent);
+			params: { containerId: "traefik" },
+		} as unknown as LogsEvent);
 		expect(res.status).toBe(403);
 		expect(streamed).toBe(false);
 	});
 
-	test("an admin can stream Traefik logs", async () => {
-		const res = await traefikRoute.GET({
+	test("an admin can stream a stack container's logs", async () => {
+		const res = await logsRoute.GET({
 			locals: locals(true),
-		} as unknown as TraefikEvent);
+			params: { containerId: "traefik" },
+		} as unknown as LogsEvent);
 		expect(res.status).toBe(200);
 		expect(streamed).toBe(true);
 	});
 
+	test("a container outside the stack is a 404", async () => {
+		streamed = false;
+		const res = await logsRoute.GET({
+			locals: locals(true),
+			params: { containerId: "someone-elses" },
+		} as unknown as LogsEvent);
+		expect(res.status).toBe(404);
+		expect(streamed).toBe(false);
+	});
+
 	test("signed out gets a 401", async () => {
-		const res = await traefikRoute.GET({
+		const res = await logsRoute.GET({
 			locals: { isAdmin: false, user: null },
-		} as unknown as TraefikEvent);
+			params: { containerId: "traefik" },
+		} as unknown as LogsEvent);
 		expect(res.status).toBe(401);
 	});
 

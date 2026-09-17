@@ -87,7 +87,7 @@ test.describe
 				name: "Docker Cleanup",
 				path: "/docker-cleanup",
 			},
-			{ heading: "Traefik", name: "System Logs", path: "/system-logs" },
+			{ heading: "System Logs", name: "System Logs", path: "/system-logs" },
 		]) {
 			test(`${name} renders before its Docker query resolves`, async ({
 				page,

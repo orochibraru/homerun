@@ -207,5 +207,5 @@ deep-linking into `/settings`.
 
 `src/routes/(protected)/stacks/`, `templates/`, `storage/`, `authentication/`
 mirror this pattern (list + `new/` create route + `[id]` detail where
-applicable). `system-logs/` streams the Traefik container's own logs (see Docker
-integration below).
+applicable). `system-logs/` streams the logs of any container in the instance's
+own compose stack, Traefik included (see Docker integration below).

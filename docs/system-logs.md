@@ -4,19 +4,19 @@
 depends on, with the same push-based viewer the per-service
 [logs panel](observability.md#logs) uses.
 
-- **This instance's stack** lists every container your compose file starts,
-  Homerun itself, Postgres and Traefik included, with its state. Click one to
-  open its live log. It only appears when Homerun runs as a Docker Compose
-  service; run from source, the app's own output is whatever your terminal or
-  process manager is already capturing.
-- **Traefik** streams the Traefik container's stdout/stderr. This is where
-  routing problems show up: a service that deployed fine but returns 404, a
-  certificate that won't issue, a middleware that isn't attaching.
+**This instance's stack** lists every container your compose file starts,
+Homerun itself, Postgres and Traefik included, with its state. Click one to open
+its live log. Traefik's is where routing problems show up: a service that
+deployed fine but returns 404, a certificate that won't issue, a middleware that
+isn't attaching. The list only appears when Homerun runs as a Docker Compose
+service; run from source, the app's own output is whatever your terminal or
+process manager is already capturing.
 
 App-level warnings and errors that mention a specific service are also persisted
 and surfaced on that service's [Observability tab](observability.md#errors).
 
-Two buttons sit on the Traefik panel, both behind a confirmation dialog:
+Opening Traefik also shows two buttons above its log, both behind a confirmation
+dialog:
 
 - **Restart**, restarts the Traefik container in place. Useful after a change
   Traefik only reads at startup (its static config/flags).
