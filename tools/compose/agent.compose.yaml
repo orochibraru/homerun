@@ -13,8 +13,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - agent_data:/app/data
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
-      DOCKER_NETWORK_NAME: homerun
       DOCKER_SOCKET_PATH: /var/run/docker.sock
     healthcheck:
       interval: 30s

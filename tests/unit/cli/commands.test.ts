@@ -12,10 +12,12 @@ type Client = ReturnType<typeof ClientFactory.makeClient>;
 class FailCalled extends Error {}
 
 function fakeClient(overrides: {
+	DELETE?: ReturnType<typeof mock>;
 	GET?: ReturnType<typeof mock>;
 	POST?: ReturnType<typeof mock>;
 }): Client {
 	return {
+		DELETE: overrides.DELETE ?? mock(),
 		GET: overrides.GET ?? mock(),
 		POST: overrides.POST ?? mock(),
 	} as unknown as Client;
@@ -156,6 +158,92 @@ describe("Commands.serviceAction", () => {
 			expect(printJsonSpy).toHaveBeenCalledWith({ ok: true });
 		},
 	);
+});
+
+describe("Commands.serviceDelete", () => {
+	test("DELETE with no force query by default and prints a confirmation", async () => {
+		spyOnOutput();
+		const DELETE = mock(async () => okResponse(undefined));
+		const client = fakeClient({ DELETE });
+
+		await Commands.serviceDelete(client, "svc-1", false);
+
+		expect(DELETE).toHaveBeenCalledWith("/services/{serviceId}", {
+			params: { path: { serviceId: "svc-1" }, query: {} },
+		});
+		expect(printJsonSpy).toHaveBeenCalledWith({ deleted: true, id: "svc-1" });
+	});
+
+	test("passes force=true when requested", async () => {
+		spyOnOutput();
+		const DELETE = mock(async () => okResponse(undefined));
+		const client = fakeClient({ DELETE });
+
+		await Commands.serviceDelete(client, "svc-1", true);
+
+		expect(DELETE).toHaveBeenCalledWith("/services/{serviceId}", {
+			params: { path: { serviceId: "svc-1" }, query: { force: "true" } },
+		});
+	});
+
+	test("calls Output.fail() on the 409 the API answers when the workload is still attached", async () => {
+		const failSpy = spyOn(Output, "fail").mockImplementation(() => {
+			throw new FailCalled();
+		});
+		const DELETE = mock(async () =>
+			errResponse(409, "Conflict", { error: "still attached" }),
+		);
+
+		await expect(
+			Commands.serviceDelete(fakeClient({ DELETE }), "svc-1", false),
+		).rejects.toThrow(FailCalled);
+		expect(failSpy).toHaveBeenCalledWith(
+			'409 Conflict: {"error":"still attached"}',
+		);
+	});
+});
+
+describe("Commands.serviceWebhook", () => {
+	test("fetches by id and prints JSON", async () => {
+		spyOnOutput();
+		const GET = mock(async () =>
+			okResponse({
+				error: null,
+				providerName: "GitHub",
+				registered: true,
+				secret: "shh",
+				url: "https://homerun.example.com/api/v1/webhooks/git/svc-1",
+			}),
+		);
+		const client = fakeClient({ GET });
+
+		await Commands.serviceWebhook(client, "svc-1");
+
+		expect(GET).toHaveBeenCalledWith("/services/{serviceId}/webhook", {
+			params: { path: { serviceId: "svc-1" } },
+		});
+		expect(printJsonSpy).toHaveBeenCalledWith(
+			expect.objectContaining({ secret: "shh" }),
+		);
+	});
+
+	test("calls Output.fail() on the not-turned-on 404", async () => {
+		const failSpy = spyOn(Output, "fail").mockImplementation(() => {
+			throw new FailCalled();
+		});
+		const GET = mock(async () =>
+			errResponse(404, "Not Found", {
+				error: "Deploy on push isn't turned on for this service.",
+			}),
+		);
+
+		await expect(
+			Commands.serviceWebhook(fakeClient({ GET }), "svc-1"),
+		).rejects.toThrow(FailCalled);
+		expect(failSpy).toHaveBeenCalledWith(
+			'404 Not Found: {"error":"Deploy on push isn\'t turned on for this service."}',
+		);
+	});
 });
 
 describe("Commands.stacksList", () => {

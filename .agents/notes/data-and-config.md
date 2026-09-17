@@ -81,6 +81,11 @@ yet built).
   see Git-based builds below.
 - `git-connection-dto.ts`, `GitConnectionDTO`: one user's OAuth authorization
   against one configured git provider, see Git provider connections below.
+- `oauth-client-dto.ts`, `OauthClientDTO`: `list`/`get`/`getByClientId`/
+  `setDisabled`/`delete`/`summary()`, reads over the `oauth_client` table only,
+  a registered "Sign in with Homerun" app. Creating, editing and rotating a
+  client's secret go through `OauthAppService` instead (better-auth's own admin
+  endpoints own secret hashing), see Homerun as an OIDC provider in `auth.md`.
 - `app-log-dto.ts`, `notification-dto.ts`, `user-preferences-dto.ts`,
   `instance-settings-dto.ts`, `invitation-dto.ts`, each covered by its own
   section below.
@@ -149,7 +154,12 @@ in the UI saying so.
 ## Data model (`src/lib/server/db/schema.ts`)
 
 better-auth-owned tables (`user`, `role` is `"admin"` | `"developer"`, see Auth
-below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
+below, `session`, `account`, `verification`, `apikey`, `passkey`, plus the
+OIDC-provider set `jwks`/`oauth_client`/`oauth_access_token`/
+`oauth_refresh_token`/`oauth_consent`/`oauth_client_assertion` and the unused
+`oauth_resource`/`oauth_client_resource`, hand-written from `getAuthTables()`
+output since the drizzle adapter needs every column explicit; see Homerun as an
+OIDC provider in `auth.md`) plus:
 
 - `service`, image/tag, registry creds (`registryPasswordEnc`, AES-256-GCM),
   envVars (JSON), port/restart-policy/resource limits, `desiredState` (user
@@ -161,7 +171,10 @@ below, `session`, `account`, `verification`, `apikey`, `passkey`) plus:
   policy, see Per-app login wall below), `buildSource` (`"image"` | `"git"`) +
   `gitUrl`/`gitRef`/`gitBuildContext`/`gitDockerfilePath` (see Git-based builds
   below, `image`/`tag` hold the resolved local build tag when `buildSource` is
-  `"git"`, not user-editable directly in that mode),
+  `"git"`, not user-editable directly in that mode), `gitProviderId`/`gitRepo`
+  (the connected-account repo a git service was picked from, next to `gitUrl`) +
+  `autoDeployOnPush`/`gitWebhookId`/`gitWebhookSecretEnc`/`gitWebhookError`
+  (push-to-deploy, see Push-to-deploy in `services-and-templates.md`),
   `customSslCertEnc`/`customSslKeyEnc` (see Custom SSL certificates below),
   `requireStatusChecks` + `requiredStatusChecks` (jsonb `string[]`, git builds
   only, see Required status checks in `services-and-templates.md`),

@@ -273,18 +273,20 @@ plain instance singleton) that turns a plan into `StackDTO`/`ServiceDTO`/
 plan) and an `import` action that **re-parses the pasted text server-side**
 rather than trusting a plan round-tripped through the client.
 
-What maps: `image` (split via `splitImageRef`, which handles a registry port and
-strips a digest), `environment` in both the map and `KEY=VALUE` list forms,
-`ports`/`expose` (the _container_ side; `parsePortEntry` handles
-`"8080:80/udp"`, `"127.0.0.1:8080:80"`, a bare number, and the long
-`{target, protocol}` form), `restart` (`on-failure:3` → `on-failure`), `volumes`
-(short and long syntax), `depends_on`, `network_mode: host`, `container_name`,
-`deploy.resources.limits.cpus`/`memory` (and the legacy `cpus`/`mem_limit`).
-Everything else is a **warning on the preview, not a silent drop**: `build:`,
-`command`, `entrypoint`, `healthcheck`, `env_file`, `labels`, capabilities,
-devices, `privileged`, secrets/configs, top-level extra networks, relative bind
-mounts (Homerun needs an absolute host path), anonymous volumes, and the host
-side of every port mapping.
+What maps: `image` (split via `$lib/image-ref.ts`'s `splitImageRef`, which
+handles a registry port and strips a digest; also the one place
+`deploy/revision-step.ts` and the mirror registry's keep-set logic split an
+image ref, replacing three near-duplicate implementations), `environment` in
+both the map and `KEY=VALUE` list forms, `ports`/`expose` (the _container_ side;
+`parsePortEntry` handles `"8080:80/udp"`, `"127.0.0.1:8080:80"`, a bare number,
+and the long `{target, protocol}` form), `restart` (`on-failure:3` →
+`on-failure`), `volumes` (short and long syntax), `depends_on`,
+`network_mode: host`, `container_name`, `deploy.resources.limits.cpus`/`memory`
+(and the legacy `cpus`/`mem_limit`). Everything else is a **warning on the
+preview, not a silent drop**: `build:`, `command`, `entrypoint`, `healthcheck`,
+`env_file`, `labels`, capabilities, devices, `privileged`, secrets/configs,
+top-level extra networks, relative bind mounts (Homerun needs an absolute host
+path), anonymous volumes, and the host side of every port mapping.
 
 Two mapping decisions worth not re-litigating: **`dnsResolvable` is true only
 when the compose service published a host port** (`ports:`), false when it only
@@ -542,8 +544,11 @@ Deploying from a linked template (`services/new`'s `create`/`createAndDeploy`
 actions, via `buildTemplateLinkContext`/`createLinkedServices`) : if the service
 being created has no stack yet, one is auto-created (named after it) so the
 whole stack shows up grouped ; each linked service gets a deterministic slug
-(`<primary-slug>-<alias>`, de-duplicated against existing services) and deploys
-from its own template's image/tag/port/envVars/resources, created
+(`<primary-slug>-<alias>`, de-duplicated against existing services via
+`$lib/slug.ts`'s `uniqueSlug`/`suffixedSlug`, the one retry-loop shared by every
+slug-generating caller: compose import, migration import, and stack creation
+here, replacing four near-identical private implementations) and deploys from
+its own template's image/tag/port/envVars/resources, created
 `dnsResolvable: false` by default (a database/cache/worker doesn't usually want
 a public subdomain). `createAndDeploy` deploys every linked service before the
 primary, same "bring up dependencies before dependents" ordering

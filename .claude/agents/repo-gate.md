@@ -83,10 +83,13 @@ narrow, specific triggers:
   `env-paste-button.svelte`'s parse), a background load that renders its own
   inline spinner (`loadRepos()`), and a long-lived stream reporting through an
   inline banner (the Terminal tab).
-- **Any comment added by the diff** — this repo allows none, in any code file:
-  no JSDoc/docstrings, no explanatory line comments, no header banners, no prose
-  in YAML/compose/shell files. Flag every added comment line. Comments already
-  present in untouched parts of a file are not a finding.
+- **Any comment added by the diff, except JSDoc on functions** — no explanatory
+  line comments, no header banners, no prose in YAML/compose/shell files. A
+  `/** ... */` block directly above a class method or exported function is the
+  one exception and is required (CLAUDE.md's "No comments" rule); flag a missing
+  or stale one instead. Tool directives with a reason (`biome-ignore ...: why`)
+  aren't findings. Comments already present in untouched parts of a file are not
+  a finding.
 - **Secrets written via `Bun.write(..., { mode: 0o600 })`** — this repo found
   that `Bun.write`'s `mode` option is a silent no-op on the Bun version in use;
   a new secret written this way needs an explicit `node:fs/promises` `chmod()`

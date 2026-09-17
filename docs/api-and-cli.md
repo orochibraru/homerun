@@ -8,11 +8,19 @@ independently (a cookie session, or `x-api-key`/`Authorization: Bearer <key>`
 from your profile page), so the same handlers serve the dashboard's own requests
 and external API-key clients alike.
 
-- `GET/POST /api/v1/services`, `GET/PATCH/DELETE /api/v1/services/:id`
+- `GET/POST /api/v1/services`, `GET/PATCH/DELETE /api/v1/services/:id`: delete
+  takes `?force=true` to drop Homerun's record even when the container or swarm
+  service couldn't be removed, the API equivalent of the Settings tab's
+  [**Delete anyway**](services.md#the-services-list)
 - `POST /api/v1/services/:id/{deploy,start,stop,restart}`: `deploy` awaits the
   full pull-or-build → create → start pipeline and returns once it's done (no
   separate polling endpoint for API clients: that's dashboard-only, for its own
   progress UI)
+- `GET /api/v1/services/:id/webhook`: the
+  [push-to-deploy](services.md#deploy-on-push) payload URL and secret for that
+  service, a 404 when Deploy on push isn't on
+- `DELETE /api/v1/auth-token`: revokes the API key that authenticated the
+  request, what `homerun logout` calls (see [Logging in](#logging-in) below)
 - `GET/POST /api/v1/stacks`, `GET /api/v1/templates`
 - `GET/POST /api/v1/services/:id/scans`,
   `GET /api/v1/services/:id/scans/latest`,
@@ -160,6 +168,8 @@ homerun services deploy <id>
 homerun services start <id>
 homerun services stop <id>
 homerun services restart <id>
+homerun services delete <id> [--force]
+homerun services webhook <id>
 homerun services scans <id> [--json]
 homerun services scans get <id> [scanId] [--json]
 homerun services scan <id> [--wait] [--fail-on critical|high|medium|low] [--timeout <seconds>] [--json]
@@ -169,9 +179,17 @@ homerun stacks list [--json]
 homerun templates list [--json]
 ```
 
-No `create`/`update`/`delete` yet. Every `list` command also accepts `--page`,
-`--per-page` (default 100, max 100) and `--search <term>` for a large result
-set; if what's printed is only part of the total, a footer line tells you so
+No `create`/`update` yet (`homerun update` above is the CLI's own self-updater,
+unrelated). `homerun services delete <id>` is the same danger-zone action as the
+Settings tab's Delete button, and `--force` deletes Homerun's record even when
+the container or swarm service couldn't be removed (the API's `?force=true`,
+without it that case is a `409` and deletes nothing).
+`homerun services webhook <id>` prints a service's push-to-deploy payload URL
+and secret (a `404` when Deploy on push isn't turned on).
+
+Every `list` command also accepts `--page`, `--per-page` (default 100, max 100)
+and `--search <term>` for a large result set; if what's printed is only part of
+the total, a footer line tells you so
 (`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.`) rather
 than letting a truncated table look complete.
 

@@ -70,11 +70,15 @@ operation (start/stop/restart/logs), not a full deploy.
 
 ## If this needs to work against a Remote Host
 
-Don't call `DockerService.getDocker()` bare from a new call site. Thread the
-connection through `RemoteHostDTO.connectionFor(svc, userId)` the same way every
-existing lifecycle operation does (see the Remote hosts section of CLAUDE.md) —
-that's the one place ownership scoping and the local-vs-remote-daemon decision
-are made.
+A registered remote host (`RemoteHostDTO`, `remote_host` table) is a build
+server, nothing else — every general remote-deploy branch was removed (migration
+`drizzle/0022_shiny_shiva.sql`), see `.agents/notes/docker.md`'s "Build servers"
+section. Deploys and lifecycle operations always run on the local daemon (or the
+local swarm manager); don't add a remote-host path to a lifecycle mixin. The
+only place `DockerService.getDocker(remote)` is ever called with a non-local
+connection is a git build: thread it through
+`RemoteHostDTO.resolveBuildTarget(hostId, userId)`, the one place a host id
+becomes a `RemoteExecutionTarget`, the same way `docker/git-build.ts` does.
 
 ## Finish
 

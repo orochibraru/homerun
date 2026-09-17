@@ -138,6 +138,24 @@ for (const action of ["deploy", "start", "stop", "restart"] as const) {
 }
 
 services
+	.command("delete <id>")
+	.description("delete a service")
+	.option(
+		"--force",
+		"delete Homerun's record even if the container or swarm service couldn't be removed",
+	)
+	.action(async (id: string, options: { force?: boolean }) => {
+		await Commands.serviceDelete(requireClient(), id, Boolean(options.force));
+	});
+
+services
+	.command("webhook <id>")
+	.description("show a service's push-to-deploy webhook URL and secret")
+	.action(async (id: string) => {
+		await Commands.serviceWebhook(requireClient(), id);
+	});
+
+services
 	.command("revisions <id>")
 	.description("list a service's revisions, newest first")
 	.option("--json", "print raw JSON instead of a table")

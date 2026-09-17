@@ -32,13 +32,17 @@ instance hasn't finished it (see Onboarding below for the other half,
 `(protected)/`, with its own reverse-direction `load`). There is no public
 marketing page.
 
-**Two unauthenticated surfaces, and only two**: `src/routes/auth/**`, and
-`src/routes/status/[slug]` — a published status page, deliberately outside
-`(protected)/` so a signed-out visitor can read it. Its gate is not a layout but
-the DTO finder it calls: `StatusPageDTO.getPublicBySlug()` filters on
-`isPublic = true` and takes no `userId`, so an unpublished page 404s for
-everyone. Keep that guard in the DTO rather than the route — it's the only thing
-standing between a slug and someone else's service list.
+**Pages a signed-out visitor can load**: `src/routes/auth/**`,
+`src/routes/app-auth` (a gated app's landing page: it forwards to
+`/auth/sign-in` and only renders itself for the denial and "no sign-in method"
+screens), and `src/routes/status/[slug]` — a published status page, deliberately
+outside `(protected)/` so a signed-out visitor can read it. The public API
+endpoints (webhook receiver, OAuth provider, openapi.json) are listed in
+`api-and-cli.md`. Its gate is not a layout but the DTO finder it calls:
+`StatusPageDTO.getPublicBySlug()` filters on `isPublic = true` and takes no
+`userId`, so an unpublished page 404s for everyone. Keep that guard in the DTO
+rather than the route — it's the only thing standing between a slug and someone
+else's service list.
 
 What that page renders is a security decision too: service names, up/down and an
 uptime percentage, never an image, port, hostname, or a probe's own error text,
@@ -65,8 +69,10 @@ Appearance preferences below for the per-user "single accent color" override):
   `/profile/notifications` instead, not in this nav), **API Docs**.
 - **Administration**: **Users** (admin-only), **Authentication** (admin-only,
   sign-in methods for the instance and the per-app login wall, see
-  Authentication page below), **Settings** (admin-only), **System Logs**,
-  **Docker Cleanup** (admin-only, see below).
+  Authentication page below), **Settings** (admin-only), **System Logs**
+  (admin-only: its `load` and the Traefik-log `GET` both 403/redirect a
+  developer, it used to be readable by any signed-in user), **Docker Cleanup**
+  (admin-only, see below).
 
 Not in the nav but real routes: `/profile/**` (reached from the profile menu,
 see Appearance preferences below), `/cli-auth` (the CLI device-code approval

@@ -1,4 +1,4 @@
-export {};
+import process from "node:process";
 
 const CHUNK_SIZE = 100;
 
@@ -19,16 +19,16 @@ files.sort();
 const cssFiles = files.filter((file) => file.endsWith(".css"));
 const otherFiles = files.filter((file) => !file.endsWith(".css"));
 
-let exitCode = 0;
-for (const batch of chunk(otherFiles, CHUNK_SIZE)) {
-	const args = fix ? ["--fix", ...cssFiles, ...batch] : [...cssFiles, ...batch];
-	const result = Bun.spawnSync(
-		["bun", "run", "node_modules/tailwint/bin/tailwint.js", ...args],
-		{ stderr: "inherit", stdout: "inherit" },
-	);
-	if (!result.success) {
-		exitCode = 1;
-	}
-}
+const exitCodes = await Promise.all(
+	chunk(otherFiles, CHUNK_SIZE).map((batch) => {
+		const args = fix
+			? ["--fix", ...cssFiles, ...batch]
+			: [...cssFiles, ...batch];
+		return Bun.spawn(
+			["bun", "run", "node_modules/tailwint/bin/tailwint.js", ...args],
+			{ stderr: "inherit", stdout: "inherit" },
+		).exited;
+	}),
+);
 
-process.exit(exitCode);
+process.exit(exitCodes.every((code) => code === 0) ? 0 : 1);
