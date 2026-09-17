@@ -30,121 +30,206 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 
 ## Features
 
-- **[Services](docs/services.md)**: deploy from a Docker image _or_
-  [build from a git repo's Dockerfile](docs/services.md#deploy-source-image-or-git-repo)
-  (any git-clone-able HTTPS URL, including a self-hosted Gitea); env vars,
-  CPU/memory limits, restart policy, private registry auth
+### Deploying
+
+- **[Image or git repo](docs/services.md#deploy-source-image-or-git-repo)**:
+  deploy any Docker image (private registry auth included), or clone a repo by
+  branch, tag or pinned commit and build it on the host, with no registry in
+  between
+- **[Six build methods](docs/services.md#build-methods)**: a `Dockerfile` or a
+  Docker Bake target built with BuildKit (cache mounts, multi-stage,
+  `# syntax=`), or no Dockerfile at all with Nixpacks, Railpack, Heroku or
+  Paketo buildpacks, builder binaries checksum-verified
+- **[Deploy on push](docs/services.md#deploy-on-push)**: Homerun registers the
+  webhook on your repo for you, and falls back to polling the branch when the
+  git provider can't reach your dashboard (LAN, VPN)
+- **[Pull request previews](docs/services.md#pull-request-previews)**: every
+  pull request gets its own `<slug>-pr-<n>` service, redeployed on each push and
+  deleted on merge or close, with forks never previewed
+- **[Required status checks](docs/services.md#required-status-checks)**: a git
+  service waits for the CI checks you pick to pass, then builds exactly the
+  commit they passed on
+- **[Build servers & build cache](docs/services.md#build-servers-and-build-cache)**:
+  compile on another Docker daemon (`tcp://`, `ssh://` or the lightweight
+  [Homerun Agent](docs/remote-hosts-and-agent.md#homerun-agent)), and share
+  BuildKit layer cache through a registry
 - **[Live deploy progress](docs/services.md#deploying)**:
-  pull/build/create/start streamed to the UI in real time, resumes correctly if
-  you reload mid-deploy
+  pull/build/create/start streamed to the UI in real time, and it resumes if you
+  reload mid-deploy or the deploy started somewhere else
+- **[Zero-downtime, health-gated redeploys](docs/services.md#deploying)**: the
+  new container starts next to the old one and only gets traffic once it's ready
+  (its healthcheck, the image's, or a port check Homerun adds itself); a new
+  copy that never comes up is removed and the old one keeps serving
 - **[Revisions & rollback](docs/services.md#revisions-and-rollback)**: every
-  attempt recorded with status, image digest, and its full log; redeploy any
-  earlier revision's exact image, with opt-in auto-rollback when a new one comes
-  up unhealthy
+  deploy recorded with its image digest, commit and full log; redeploy any
+  earlier revision's exact image, with opt-in auto-rollback when a new one turns
+  unhealthy
 - **[Image scanning](docs/services.md#image-scanning)**: every deploy scanned
-  with Trivy before it starts, with an admin policy that blocks deploys on
-  findings at or above a chosen severity (optionally fixable ones only), and
-  scan results readable from the dashboard, REST API and CLI
-- **[Required status checks](docs/services.md#required-status-checks)**: a
-  git-based service can wait for its CI checks to pass before it builds
-- **[Search, filters, pagination & bulk actions](docs/services.md#the-services-list)**:
-  every list page (services, stacks, templates, storage, and more) gets
-  server-side search/filters, a list/card view toggle, and paging once you have
-  more than a screenful; multi-select Start/Stop/Restart/Delete on the services
-  list, with a typed confirmation before anything destructive runs
-- **[Stacks](docs/stacks-and-templates.md#stacks)**: group services under one
-  Docker network so they reach each other by slug (`http://api:8080`),
-  independent of the shared Traefik network
-- **[Templates](docs/stacks-and-templates.md#templates)**: a built-in catalog of
-  ~70 common self-hosted apps (Jellyfin, the *arr stack, Pi-hole, Vaultwarden,
-  Grafana, Uptime Kuma, PostgreSQL, Redis, n8n and more) with real app logos,
-  one-click **Quick Deploy**, companion containers that come along with the
-  primary (WordPress pulls MySQL), plus save any service's config as your own
-  reusable template
-- **[Storage volumes](docs/storage-and-backups.md#storage-volumes)**: define
-  bind-mount paths or Docker-managed volumes once, mount into one or more
-  services
-- **[Migrate from Dokploy or Coolify](docs/services.md#migrating-from-dokploy-or-coolify)**:
-  read another instance's apps, compose stacks and databases and recreate them
-  here
+  with Trivy through a local registry mirror before it starts, so the container
+  runs exactly what was scanned, with an admin policy that blocks deploys at or
+  above a chosen severity (optionally fixable findings only)
 - **[Compose import](docs/services.md#importing-a-compose-file)**: paste a
-  `docker-compose.yaml` and turn its services, volumes and dependency order into
-  Homerun rows, with an up-front preview of everything that doesn't map across
-- **[Smart service links](docs/services.md#env-vars)**: point a new service at
-  an existing Postgres, MySQL, Redis, Mongo or RabbitMQ and get the connection
-  URL (or JDBC URL, or one variable per value) filled in for you, with names you
-  can rename
-- **[Live log streaming](docs/services.md#logs) &
+  `docker-compose.yaml` and get its services, volumes, runtime options and
+  dependency order as Homerun services, with a preview of anything that doesn't
+  map across
+- **[Migrate from Dokploy or Coolify](docs/services.md#migrating-from-dokploy-or-coolify)**:
+  read another instance's apps, compose stacks and databases (read-only on their
+  side) and recreate them here, builders and start commands included
+
+### Running services
+
+- **[Swarm mode](docs/services.md#swarm-mode)**: the installer's default, every
+  service is a Docker Swarm service with replica scaling and load balancing, and
+  more machines join as workers with one command; standalone (one container per
+  service) stays available
+- **[Env vars & env files](docs/services.md#env-vars)**: key/value rows plus
+  `.env` files read off the host at each deploy
+- **[Smart service links](docs/services.md#env-vars)**: point a service at an
+  existing Postgres, MySQL, Redis, Mongo, RabbitMQ or HTTP service and get the
+  connection URL, JDBC URL or one variable per value filled in for you
+- **[Runtime options](docs/services.md#runtime)**: entrypoint, command, custom
+  labels, and (admin-only) added capabilities, device mappings and privileged
+  mode
+- **[Compute & settings](docs/services.md#settings)**: CPU/memory limits,
+  replicas, restart and pull policies, a healthcheck command, and scanning and
+  auto-rollback per service
+- **[Live logs](docs/services.md#logs) &
   [a web terminal](docs/services.md#terminal)**: tail stdout/stderr or open an
-  interactive shell into a running container, all from the browser
-- **[Uptime & resource history](docs/services.md#observability) and
-  [status pages](docs/operations.md#status-pages)**: every service probed from
-  the Docker network and from its public hostname, CPU/memory/network history
-  per service and for the host, and public or private status pages built from
-  those probes
+  interactive shell into a running container from the browser
+- **[The services list](docs/services.md#the-services-list)**: server-side
+  search, filters and paging on every list page, a list/card toggle, and bulk
+  Start/Stop/Restart/Delete with a typed confirmation before anything
+  destructive
+
+### Stacks & templates
+
+- **[Stacks](docs/stacks-and-templates.md#stacks)**: group services on their own
+  private Docker network so they reach each other by slug (`http://api:8080`),
+  with prefixed subdomains and one-step delete of the whole stack
+- **[~70 built-in templates](docs/stacks-and-templates.md#templates)**:
+  Jellyfin, the *arr stack, Pi-hole, Vaultwarden, Grafana, Uptime Kuma,
+  PostgreSQL, Redis, n8n and more, with bundled app logos, one-click **Quick
+  Deploy**, and a details page that pulls in the project's GitHub README, stars
+  and latest release
+- **[Linked containers](docs/stacks-and-templates.md#linked-containers)**:
+  companions deploy with the primary (WordPress brings MySQL), and env vars like
+  `{{db.POSTGRES_PASSWORD}}` wire them together without retyping
+- **Custom templates**: save any service's config as your own template, or build
+  one from scratch
+
+### Networking & domains
+
+- **Automatic routing & TLS**: Traefik routes every service to
+  `<slug>.<baseDomain>` with a certificate, with no host ports published
 - **[Custom domains & SSL](docs/services.md#custom-domains--ssl)**: a second
   hostname per service, plus bring-your-own cert/key for domains outside
   Traefik's automatic ACME coverage
-- **[Build servers](docs/remote-hosts-and-agent.md)**: build a git-based
-  service's image on another Docker daemon (`tcp://`/`ssh://`, or the
-  lightweight [Homerun Agent](packages/agent/README.md)) instead of this host
-- **[Swarm mode](docs/services.md#swarm-mode)**: the installer's default, every
-  service is a Docker Swarm service with real replica scaling and load
-  balancing, and more machines join as workers; standalone (one container per
-  service) remains available
-- **[Docker Cleanup](docs/operations.md#docker-cleanup)**: admin-only host-wide
-  `docker system df`/prune from the dashboard, unused
-  images/containers/volumes/networks/build cache and the scan image mirror, with
-  a preview before you prune
-- **[DNS automation](docs/services.md#dns-automation)**: optional Cloudflare or
-  self-hosted Pangolin integration auto-manages a deployed service's DNS record
-  for you
-- **[Notifications](docs/operations.md#notifications)**: an in-app feed of
-  deploy/service lifecycle events, plus outbound notification channels (Discord,
-  Slack, Telegram, generic webhook, email, retried when delivery fails) you can
-  subscribe to build, update, deploy and uptime events
-- **[Scheduled redeploys](docs/services.md#scheduled-redeploy),
-  [cron jobs](docs/services.md#cron-jobs) &
-  [S3 backups](docs/storage-and-backups.md)**: cron-style auto-redeploy per
-  service, standalone cron jobs (a throwaway container, or an admin-only host
-  command) with their own run history, and cron-style volume backups, bind
-  mounts and Docker-managed volumes alike, to any S3-compatible endpoint, with
-  restore from the dashboard
-- **[REST API, OpenAPI docs, and a CLI](docs/api-and-cli.md)**: everything above
-  is also a typed JSON API (`/api/v1`), authenticated by session or API key,
-  with a live Swagger UI and a proper [`homerun` CLI](packages/cli/README.md)
-  built against the generated OpenAPI types
-- **[Users, roles & invites](docs/users-and-access.md)**: admin/developer roles,
-  email or direct-create invites,
-  [OAuth/OIDC sign-in](docs/users-and-access.md#oauth--oidc-login) with
+- **[Host networking](docs/services.md#networking)**: for apps that need the
+  host's network directly (mDNS/SSDP discovery)
+- **[DNS automation](docs/services.md#dns-automation)**: Cloudflare CNAMEs or
+  Pangolin resources created and removed as services come and go, and Homerun
+  can run the Pangolin Newt tunnel client for you, set up straight from
+  onboarding
+- **[Per-app login wall](docs/users-and-access.md#per-app-login-wall)**: put any
+  deployed service behind a Homerun login (passkeys and 2FA included) through
+  Traefik forwardAuth
+
+### Storage & backups
+
+- **[Storage volumes](docs/storage-and-backups.md#storage-volumes)**: bind
+  mounts or Docker-managed volumes defined once, mounted into one or more
+  services, read-write or read-only
+- **[S3 backups](docs/storage-and-backups.md#s3-compatible-backups)**: scheduled
+  or on-demand backups of both volume kinds to any S3-compatible endpoint, with
+  optional service stop or a pre-backup command (`pg_dump`, `mysqldump`) for
+  consistent database copies
+- **[Restore from the dashboard](docs/storage-and-backups.md#restoring-a-backup)**:
+  browse a volume's backups in the bucket and restore one, optionally wiping the
+  volume first, with a searchable history of every run
+
+### Observability & notifications
+
+- **[Uptime probes](docs/services.md#uptime)**: every service probed every
+  minute from the Docker network and from its public hostname, with failure
+  reasons and fix hints
+- **[Status pages](docs/operations.md#status-pages)**: private or public uptime
+  pages for every service, one stack, or services you pick
+- **[Resource history](docs/operations.md#the-dashboard)**: live and historical
+  CPU, memory, disk, network and NVIDIA GPU usage for the host and each service,
+  kept for a year, plus top consumers per instance and per stack
+- **[Errors in context](docs/services.md#errors)**: failed deploys and the
+  warnings Homerun logged about a service, on that service's page, with crash
+  and "container is gone" banners
+- **[Notifications](docs/operations.md#notifications)**: an in-app bell, plus
+  Discord, Slack, Telegram, webhook and email channels subscribed to build,
+  deploy, update, rollback, scan and up/down events, retried when delivery fails
+
+### Scheduling
+
+- **[Scheduled redeploys](docs/services.md#scheduled-redeploy)**: cron-style
+  auto-redeploy per service to pick up new images
+- **[Cron jobs](docs/services.md#cron-jobs)**: a throwaway container, or an
+  admin-only command on the host itself, on a schedule, with exit codes and
+  output kept per run
+- **[The Scheduling page](docs/operations.md#the-scheduling-page)**: every cron
+  redeploy, job and backup schedule, plus the live job queue, on one page
+
+### Users & security
+
+- **[Roles & invites](docs/users-and-access.md#roles)**: admin, developer and
+  read-only roles, email or direct-create invites, and a resource pool the whole
+  team shares
+- **[OAuth/OIDC sign-in](docs/users-and-access.md#oauth--oidc-login)**:
   one-click presets for Pocket ID, Keycloak, Authelia, Authentik, Logto, Zitadel
-  and Kanidm, and
-  [passkeys and two-factor authentication](docs/users-and-access.md#two-factor-authentication-and-passkeys),
+  and Kanidm
+- **[Passkeys & two-factor](docs/users-and-access.md#two-factor-authentication-and-passkeys)**:
   which an admin can require for every account
 - **[Sign in with Homerun](docs/users-and-access.md#sign-in-with-homerun)**:
   Homerun is an OpenID Connect provider too, so the apps you host (Grafana,
-  Gitea, Outline, Immich…) can log in with your Homerun accounts, passkeys and
-  2FA rules, with no separate Pocket ID or Authentik to run
+  Gitea, Outline, Immich…) log in with your Homerun accounts, passkeys and 2FA
+  rules
 - **[Git provider accounts](docs/users-and-access.md#git-provider-accounts)**:
-  connect GitHub, GitLab, self-hosted Gitea or Bitbucket, pick a repo and branch
-  instead of pasting URLs, and
-  [deploy on every push](docs/services.md#deploy-on-push) through a webhook
-  Homerun registers for you
-- **[Operations](docs/operations.md)**: live logs for Traefik and the rest of
-  the instance's own stack, Traefik restart/update from the dashboard, a
-  [job-queue and scheduling overview](docs/operations.md#the-scheduling-page),
-  [setup diagnostics](docs/operations.md#setup-diagnostics) that deep-link
-  straight to the setting that's wrong, a
-  [`⌘K` search](docs/operations.md#search) across pages and everything you own,
-  and [one-click self-update](docs/operations.md#upgrading-homerun-itself) to
-  the latest release
-- **[Per-service auth gate](docs/users-and-access.md#per-app-login-wall) &
-  account isolation**: optionally require a Homerun login to reach a deployed
-  service; every container is labeled `homerun.managed=true` so this app never
-  touches anything it didn't create
-- **[Appearance](docs/users-and-access.md#appearance)**: per-account
-  light/dark/system theme, sidebar color intensity, and a custom accent color,
-  from your profile page
+  connect GitHub, GitLab, self-hosted Gitea or Bitbucket and pick a repo and
+  branch instead of pasting URLs
+- **[API keys](docs/users-and-access.md#api-keys)**: full-access or read-only,
+  created by hand or through `homerun login`
+- **Hands off everything else**: every container is labeled
+  `homerun.managed=true`, and Homerun never touches anything it didn't create
+  (Docker Cleanup being the one deliberate exception)
+
+### API & CLI
+
+- **[REST API & OpenAPI](docs/api-and-cli.md)**: everything in the dashboard is
+  also a typed JSON API (`/api/v1`), authenticated by session or API key, with a
+  live Swagger UI
+- **[The `homerun` CLI](packages/cli/README.md)**: built against the generated
+  OpenAPI types, logs in through a device-code flow and updates itself
+
+### Install & operations
+
+- **[One-line installer](docs/getting-started.md#option-a-the-one-liner-fresh-linux-server)**:
+  Docker, a swarm manager, Traefik, Postgres and Homerun on a fresh Linux box in
+  one command, or rootless Docker if you'd rather, and
+  [a rootless-to-rootful migration](docs/getting-started.md#moving-a-rootless-install-to-rootful--swarm)
+  for older installs
+- **[First-run wizard](docs/configuration.md#the-first-run-wizard)**: configure
+  base domain, email, sign-in and DNS in the dashboard, with no config file to
+  maintain, and an
+  [optional `homerun.yaml`](docs/configuration.md#the-optional-yaml-file) if you
+  want config as code
+- **[One-click self-update](docs/operations.md#upgrading-homerun-itself)**: to
+  the latest release, straight from the sidebar
+- **[Setup diagnostics](docs/operations.md#setup-diagnostics)**: a banner that
+  deep-links to the exact setting that's wrong
+- **[System logs](docs/operations.md#system-logs)**: live logs of Traefik,
+  Postgres and Homerun itself, with Traefik restart and update buttons
+- **[Docker Cleanup](docs/operations.md#docker-cleanup)**: admin-only
+  `docker system df`/prune from the dashboard with a preview before anything
+  goes, plus automatic garbage collection of the scan mirror
+- **[`⌘K` search](docs/operations.md#search)**: jump to any page, or to anything
+  on the instance, from anywhere
+- **[Appearance](docs/users-and-access.md#appearance)**: light/dark/system
+  theme, sidebar intensity and a custom accent color per account
 
 ## Configuration
 
