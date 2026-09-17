@@ -395,12 +395,14 @@ Three audiences, three places, keep them apart:
 - **`CLAUDE.md`** (this file): everything a future session needs that isn't
   derivable from the code, including the "real, tested finding" notes. Not
   user-facing.
-- **`docs/*.md`**: the operator-facing guides (`getting-started`,
-  `configuration`, `services`, `remote-hosts-and-agent`, `storage-and-backups`,
-  `stacks-and-templates`, `users-and-access`, `api-and-cli`,
-  `faq-and-limitations`, `operations`, indexed by `docs/README.md`), plus the
-  root `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These are
-  the source of truth, plain Markdown, readable straight from the repo. The
+- **`docs/*.md`**: the operator-facing guides, one flat page per feature
+  (`getting-started`, `configuration`, `services` as the hub for the per-feature
+  service pages, `stacks`, `templates`, `storage-volumes`, `backups`,
+  `users-and-roles`, `authentication-providers`, `login-wall`, `dashboard`,
+  `docker-cleanup`, `api-and-cli`, `faq-and-limitations` and the rest, every one
+  listed by area in `docs/README.md`, which a new page must be added to), plus
+  the root `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These
+  are the source of truth, plain Markdown, readable straight from the repo. The
   commands they print are **executed verbatim** by
   `bun run e2e:multipass:release` (see above), so a stale install one-liner is a
   test failure, not just a doc nit. **Configuration docs are UI-first on

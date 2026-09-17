@@ -1,23 +1,7 @@
-# Storage & backups
+# S3 backups
 
-## Storage volumes
-
-A **storage volume** (`/storage`) is a named source you define once, then mount
-into one or more services from each service's Volumes tab:
-
-- **Bind mount**, an absolute path on the host filesystem.
-- **Docker-managed volume**, a named Docker volume, created/managed by Docker
-  itself.
-
-Docker's own bind-vs-named-volume syntax is what tells the two apart under the
-hood; you just pick a kind and a source when creating one. A volume becomes
-"shared" simply by being mounted into more than one service, there's no separate
-"shared volume" concept to configure.
-
-`/storage` has a search box, Kind and Backups filters, a list/card view toggle,
-and a pager once you have more than a page's worth, same toolkit as the
-[services list](services.md#the-services-list), searched/paginated server-side
-the same way.
+Back up storage volumes to any S3-compatible bucket, on a schedule or on demand,
+and restore them from the dashboard.
 
 ## S3 destinations
 
@@ -50,14 +34,14 @@ it exits, and a failure to read the volume fails the run with the helper's own
 stderr attached.
 
 Set a cron schedule alongside the destination to back up automatically; the
-scheduler mirrors the [scheduled-redeploy](services.md#scheduled-redeploy) shape
-(a 60-second tick, a due-check, a guard against double-firing in the same
+scheduler mirrors the [scheduled-redeploy](scheduling.md#scheduled-redeploy)
+shape (a 60-second tick, a due-check, a guard against double-firing in the same
 minute). Enabled schedules also show up on the
-[Scheduling page](operations.md#the-scheduling-page) alongside cron redeploys
+[Scheduling page](scheduling.md#the-scheduling-page) alongside cron redeploys
 and cron jobs.
 
 Backups, scheduled or from a "Run now" button, are queued and run in the
-background (see [the job queue](services.md#the-job-queue)), so the button
+background (see [the job queue](scheduling.md#the-job-queue)), so the button
 returns straight away and the run shows up in the history on `/backups` once it
 starts. A failed backup is retried once.
 
@@ -112,8 +96,8 @@ Two options sit above the list and apply to whichever backup you restore:
   them yourself or nothing writes to the volume, otherwise it can end up with
   half-old, half-new data.
 
-Restores go through [the job queue](services.md#the-job-queue) like backups, so
-the button returns straight away. The download happens before anything is
+Restores go through [the job queue](scheduling.md#the-job-queue) like backups,
+so the button returns straight away. The download happens before anything is
 stopped, so services are only down for the unpack. A restore shares the volume's
 lock with backups (it never runs while the same volume is being backed up), is
 never retried, and shows up in the run log on the volume's page and on
@@ -121,8 +105,3 @@ never retried, and shows up in the run log on the volume's page and on
 
 You can still fetch a backup from the bucket yourself (`aws s3 cp`, `rclone`,
 your provider's console) if you'd rather unpack it somewhere else.
-
-## Next steps
-
-- [Services: Volumes tab](services.md#volumes)
-- [Build servers & the Homerun Agent](remote-hosts-and-agent.md)

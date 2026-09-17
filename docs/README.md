@@ -12,37 +12,98 @@ sync by hand.
 
 **[Showcase](showcase.md)**: what it looks like, every screen, light and dark.
 
-## Guides
+## Getting started
 
-1. **[Getting started](getting-started.md)**: install (the one-liner or Docker
-   Compose), first boot, the onboarding wizard, and deploying your first
-   service.
-2. **[Configuration](configuration.md)**: what you set in the dashboard (almost
-   everything), the three values the container needs before it can start, and
-   the optional YAML file for config-as-code setups.
-3. **[Services](services.md)**: deploying from an image or a git repo, importing
-   a compose file, the job queue behind every deploy, env vars, linking one
-   service to another, revisions and rollback, image scanning, volumes,
-   networking and DNS automation, the login wall, compute limits, swarm mode,
-   cron redeploys, cron jobs, uptime, logs, and the web terminal.
-4. **[Stacks & templates](stacks-and-templates.md)**: grouping services on a
-   shared network, the built-in app catalog, quick deploys, linked companion
-   containers, and saving your own.
-5. **[Storage & backups](storage-and-backups.md)**: bind-mount and
-   Docker-managed volumes, mounting them into services, reusable S3 destinations
-   scheduled backups of either volume kind, and restoring them.
-6. **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
-   images on a second machine, the standalone agent and installer.
-7. **[Users & access](users-and-access.md)**: roles, invites, OAuth/OIDC login,
-   two-factor authentication and passkeys, your profile and API keys, the
-   per-service auth gate, appearance preferences.
-8. **[Operations & maintenance](operations.md)**: the dashboard, search, setup
-   diagnostics, system logs, Docker cleanup, the scheduling view, notifications,
-   status pages, and upgrading.
-9. **[API & CLI](api-and-cli.md)**: the REST API, the live Swagger UI, and the
-   `homerun` CLI.
-10. **[FAQ & limitations](faq-and-limitations.md)**: what's genuinely finished,
-    what's a known gap, and what's on the roadmap.
+- **[Getting started](getting-started.md)**: install (the one-liner or Docker
+  Compose), first boot, the onboarding wizard, and deploying your first service.
+- **[Configuration](configuration.md)**: what you set in the dashboard (almost
+  everything), the three values the container needs before it can start, and the
+  optional YAML file for config-as-code setups.
+- **[FAQ & limitations](faq-and-limitations.md)**: what's genuinely finished,
+  what's a known gap, and what's on the roadmap.
+
+## Services
+
+- **[Services](services.md)**: creating a service, the services list, bulk
+  actions, and the Settings tab (pull policy, healthcheck, save as template).
+- **[Deploy source and build methods](deploy-source-and-builds.md)**: image or
+  git repo, the six build methods, build servers and the build cache registry.
+- **[Connecting a git provider](git-providers.md)**: GitHub, GitLab, Gitea or
+  Bitbucket OAuth apps, and browsing your repos from the Source tab.
+- **[Deploy on push](deploy-on-push.md)**: webhooks registered for you, manual
+  webhooks, and polling the branch when the provider can't reach you.
+- **[Pull request previews](pull-request-previews.md)**: a service per pull
+  request, and why forks are never previewed.
+- **[Required status checks](status-checks.md)**: holding a build until CI
+  passes on the exact commit.
+- **[Importing a compose file](compose-import.md)**: what maps across from a
+  `docker-compose.yaml`, and what comes back as a warning.
+- **[Migrating from Dokploy or Coolify](migrating-from-dokploy-or-coolify.md)**:
+  reading another instance and recreating its apps, stacks and databases here.
+- **[Deploying](deploying.md)**: the live progress panel, health-gated
+  redeploys, readiness checks and retried requests.
+- **[Revisions and rollback](revisions-and-rollback.md)**: every deploy as a
+  revision, rolling back, retained images and auto-rollback.
+- **[Image scanning](image-scanning.md)**: Trivy scans through the registry
+  mirror, the Security tab, and blocking deploys on findings.
+- **[Env vars](env-vars.md)**: key/value rows, linking a service to fill in
+  connection details, and env files on the host.
+- **[Networking](networking.md)**: container port, network mode,
+  DNS-resolvability, custom domains and your own SSL certificates.
+- **[DNS automation](dns-automation.md)**: keeping Cloudflare records or
+  Pangolin resources in sync with your services.
+- **[Runtime and compute](runtime-and-compute.md)**: entrypoint, command,
+  labels, capabilities, devices, privileged mode, and CPU/memory limits.
+- **[Swarm mode](swarm-mode.md)**: replicas, what swarm mode changes, and adding
+  a node.
+- **[Observability](observability.md)**: uptime probes, live logs, failed
+  deploys and errors, and the web terminal.
+- **[Scheduling and the job queue](scheduling.md)**: scheduled redeploys, cron
+  jobs, the Scheduling page, and the background job queue.
+
+## Stacks, templates and storage
+
+- **[Stacks](stacks.md)**: grouping services on a shared private network.
+- **[Templates](templates.md)**: the built-in app catalog, quick deploys, host
+  access, linked companion containers, and saving your own.
+- **[Storage volumes](storage-volumes.md)**: bind-mount and Docker-managed
+  volumes, and mounting them into services.
+- **[S3 backups](backups.md)**: reusable S3 destinations, scheduled backups of
+  either volume kind, the backup history, and restoring.
+- **[Build servers & the Homerun Agent](remote-hosts-and-agent.md)**: building
+  images on a second machine, the standalone agent and installer.
+
+## Users and access
+
+- **[Users and roles](users-and-roles.md)**: admin, developer and read-only,
+  creating and inviting accounts, and onboarding.
+- **[Authentication providers](authentication-providers.md)**: OAuth/OIDC
+  sign-in, preferred methods, sign-in requirements, and linking a provider to an
+  existing account.
+- **[Your profile](your-profile.md)**: personal information, sessions, API keys,
+  appearance, and git provider accounts.
+- **[Two-factor authentication and passkeys](two-factor-and-passkeys.md)**:
+  authenticator codes, backup codes, and passkeys.
+- **[Per-app login wall](login-wall.md)**: requiring a sign-in before anyone
+  reaches a service, and who's allowed through.
+- **[Sign in with Homerun](sign-in-with-homerun.md)**: Homerun as an OIDC
+  provider for the apps you host.
+
+## Operations and maintenance
+
+- **[The dashboard](dashboard.md)**: service counts, host resources and history,
+  `⌘K` search, and setup diagnostics.
+- **[System Logs](system-logs.md)**: live logs of your instance's stack and
+  Traefik, and restarting or updating Traefik.
+- **[Docker Cleanup](docker-cleanup.md)**: previewing and pruning what Docker
+  can reclaim, and the image mirror cleanup.
+- **[Notifications](notifications.md)**: the bell, and sending events to
+  Discord, Slack, Telegram, a webhook or email.
+- **[Status pages](status-pages.md)**: private or public uptime pages.
+- **[Upgrading Homerun](upgrading.md)**: the one-click update, and upgrading by
+  hand.
+- **[API & CLI](api-and-cli.md)**: the REST API, the live Swagger UI, and the
+  `homerun` CLI.
 
 ## Something's out of date
 

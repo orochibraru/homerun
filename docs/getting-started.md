@@ -61,12 +61,12 @@ host's architecture and runs it, which:
    Postgres, and the app itself, all pulled from published images, then prints
    the dashboard URL.
 
-The instance starts in [swarm mode](services.md#swarm-mode): every service
-deploys as a replicated swarm service, and more machines can join as workers.
-**The trade-off is that the Docker daemon runs as root**, so anything with
-access to its socket (Homerun itself, and any service you give the socket to) is
-effectively root on the host. Rootless Docker avoids that, but it can't create
-overlay networks, so it can't run a swarm.
+The instance starts in [swarm mode](swarm-mode.md): every service deploys as a
+replicated swarm service, and more machines can join as workers. **The trade-off
+is that the Docker daemon runs as root**, so anything with access to its socket
+(Homerun itself, and any service you give the socket to) is effectively root on
+the host. Rootless Docker avoids that, but it can't create overlay networks, so
+it can't run a swarm.
 
 To keep the old rootless setup instead, add `--docker=rootless`: Docker runs
 under the `homerun` user (`get.docker.com/rootless`, a `systemd --user` unit,
@@ -211,9 +211,9 @@ skips is hidden in a file, see [Configuration](configuration.md).
    with no DNS or reverse-proxy work on your side beyond pointing the domain at
    this host.
 
-See [Services](services.md) for everything the wizard doesn't cover: git-based
-builds, volumes, logs, the web terminal, scheduled redeploys, and the per-app
-login wall.
+See the [docs index](README.md) for everything the wizard doesn't cover:
+git-based builds, volumes, logs, the web terminal, scheduled redeploys, and the
+per-app login wall.
 
 ## Health check
 
@@ -225,5 +225,7 @@ not data" carve-out as `/api/v1/openapi.json`, see [API & CLI](api-and-cli.md)).
 
 - [Services](services.md), deploy your first service.
 - [Configuration](configuration.md), what's settable and where.
-- [Users & access](users-and-access.md), inviting people and adding SSO.
-- [Operations & maintenance](operations.md), day-two housekeeping.
+- [Users and roles](users-and-roles.md), inviting people, and
+  [Authentication providers](authentication-providers.md), adding SSO.
+- [The dashboard](dashboard.md), [System Logs](system-logs.md) and
+  [Docker Cleanup](docker-cleanup.md), day-two housekeeping.

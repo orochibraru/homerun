@@ -1,9 +1,9 @@
 # Build servers & the Homerun Agent
 
 Services always deploy to this host's own Docker daemon. Placement across
-machines is [swarm mode](services.md#swarm-mode)'s job: a second machine joins
-the swarm as a worker (`packages/installer/swarm-join.sh`) rather than being
-registered separately.
+machines is [swarm mode](swarm-mode.md)'s job: a second machine joins the swarm
+as a worker (`packages/installer/swarm-join.sh`) rather than being registered
+separately.
 
 A **remote host** is therefore a _build server_: somewhere a git-based service's
 image gets built instead of on this machine, then brought back here to run.
@@ -34,7 +34,7 @@ The built image only exists on the build server's own daemon, so it has to reach
 this host before the container can start. Two ways, picked by whether the
 service has a **build cache registry** (a registry credential registered under
 `/build-cache-registries` and picked on the service's
-[Source tab](services.md#deploy-source-image-or-git-repo)):
+[Source tab](deploy-source-and-builds.md#deploy-source-image-or-git-repo)):
 
 - **With a cache registry**, the build pushes the final image there and this
   host pulls it back. The same registry doubles as the layer cache, so a repeat
@@ -103,9 +103,9 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/i
 ```
 
 The node joins on the **system (rootful)** Docker daemon, same as the manager
-runs on (see [swarm mode](services.md#swarm-mode)): rootless Docker can't create
-the overlay networks swarm services use. Nodes need to reach each other on
-2377/tcp, 7946/tcp+udp and 4789/udp. On a host with several network interfaces
-add `--advertise-addr=<ip>`. Verified against two real disposable VMs: the
-worker joins, replicas get scheduled on it and Traefik on the manager serves
-them over the overlay network.
+runs on (see [swarm mode](swarm-mode.md)): rootless Docker can't create the
+overlay networks swarm services use. Nodes need to reach each other on 2377/tcp,
+7946/tcp+udp and 4789/udp. On a host with several network interfaces add
+`--advertise-addr=<ip>`. Verified against two real disposable VMs: the worker
+joins, replicas get scheduled on it and Traefik on the manager serves them over
+the overlay network.

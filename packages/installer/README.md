@@ -111,10 +111,10 @@ failing is tolerated), `--user=` (install account name), `--port=` (agent port),
 `--yes`/`-y` (no confirmation prompt, needed for a non-interactive
 `curl | bash`).
 
-Why rootful is the default: [swarm mode](../../docs/services.md#swarm-mode)
-can't run on rootless Docker. Verified live on a Multipass VM: on a rootless
-install, switching to Swarm left the daemon failing the overlay attach with
-"context deadline exceeded" and the task with
+Why rootful is the default: [swarm mode](../../docs/swarm-mode.md) can't run on
+rootless Docker. Verified live on a Multipass VM: on a rootless install,
+switching to Swarm left the daemon failing the overlay attach with "context
+deadline exceeded" and the task with
 `mkdir /var/lib/docker/network: permission denied`; the same stack on the system
 daemon initialised the swarm, attached Traefik and served replicas from a second
 node. The dashboard refuses Swarm up front on a rootless daemon.

@@ -9,8 +9,8 @@ moving your services over.
 
 It's actively developed and runs on real hardware, but it's a single-maintainer
 project, and "production" here means your homelab or your own server. Keep
-[backups](storage-and-backups.md), and take a Postgres dump before a major
-upgrade: migrations only run forward.
+[backups](storage-volumes.md), and take a Postgres dump before a major upgrade:
+migrations only run forward.
 
 ## Can several people share the same services?
 
@@ -20,7 +20,7 @@ preferences, git connections, the bell feed and notification channels stay
 personal. There are no teams and no per-stack permissions: the two roles, admin
 and developer, only differ in which instance-wide pages they can open. An API
 key has the full permissions of its account. Deleting an account hands what it
-created over to another admin. See [Users & access](users-and-access.md#roles).
+created over to another admin. See [Users and roles](users-and-roles.md).
 
 ## Can it build an app without a Dockerfile?
 
@@ -28,24 +28,24 @@ Yes. Besides a `Dockerfile` or a Docker Bake file (both built with BuildKit), a
 git-based service can be built with Nixpacks, Railpack, or Cloud Native
 Buildpacks (Heroku or Paketo builders), picked as the build method on the Source
 tab. A build clones a branch, a tag or a specific commit, and pull requests can
-get their own preview deployment. See [Services](services.md#build-methods).
+get their own preview deployment. See
+[Build methods](deploy-source-and-builds.md#build-methods).
 
 ## Can it deploy to more than one server?
 
 Not the way you might expect. Services run on the machine Homerun is installed
-on. To spread a service across machines you turn on
-[swarm mode](services.md#swarm-mode) and join the other machines to the swarm as
-workers. There's no "add a server and deploy to it" screen.
-[Build servers](remote-hosts-and-agent.md) only compile images, they never run
-services.
+on. To spread a service across machines you turn on [swarm mode](swarm-mode.md)
+and join the other machines to the swarm as workers. There's no "add a server
+and deploy to it" screen. [Build servers](remote-hosts-and-agent.md) only
+compile images, they never run services.
 
 ## Does it manage databases?
 
 Not as a separate kind of resource. PostgreSQL, MySQL, Redis, MongoDB and others
-are [templates](stacks-and-templates.md#templates) deployed like any other
-service, and [service links](services.md#env-vars) fill in the connection URL
-for the apps that use them. Backups tar the database's volume while it runs,
-they don't run a dump tool, so read the backup warning below.
+are [templates](templates.md) deployed like any other service, and
+[service links](env-vars.md) fill in the connection URL for the apps that use
+them. Backups tar the database's volume while it runs, they don't run a dump
+tool, so read the backup warning below.
 
 ## Can I bring my existing services over?
 
@@ -57,8 +57,7 @@ credentials and file mounts; static build packs can't. Persistent storage isn't
 always listed by the other side's API, so check volumes after importing. A
 pasted compose file works too, including `command`, `entrypoint`, `env_file`,
 labels, `cap_add`, devices and `privileged`; `healthcheck`, secrets and configs
-are dropped with a warning. See
-[Services](services.md#importing-a-compose-file).
+are dropped with a warning. See [Importing a compose file](compose-import.md).
 
 ## Known, real limitations (not hypothetical)
 
@@ -74,13 +73,12 @@ are dropped with a warning. See
   the uptime "from the network" probe doesn't run for swarm services.
 - **Swarm mode ignores privileged mode and devices** and doesn't give a stack
   its own network. With several nodes, volumes are per node and locally built
-  images need a build cache registry. See
-  [Services: swarm mode](services.md#swarm-mode).
+  images need a build cache registry. See [Swarm mode](swarm-mode.md).
 - **Cloudflare and Pangolin DNS automation haven't been tried against real
   accounts.** Every deploy writes what each provider did into its log, so read
   the first one. Point Pangolin at its **Integration API** (its own port, base
   path `/v1`), not the dashboard's `/api/v1`. See
-  [Services: DNS automation](services.md#dns-automation).
+  [DNS automation](dns-automation.md).
 - **Deploy on push without a reachable dashboard polls every two minutes.** A
   GitHub repo can't deliver a webhook to a dashboard only reachable on your LAN,
   so Homerun reads the branch head through the provider's API instead, which
@@ -92,38 +90,32 @@ are dropped with a warning. See
   while Homerun itself is down. Removing someone at your identity provider is
   picked up within about five minutes when the app filters on groups and the
   provider issues refresh tokens, otherwise at their next sign-in or within
-  eight hours. See [Users & access](users-and-access.md#per-app-login-wall).
+  eight hours. See [Per-app login wall](login-wall.md).
 - **Backups aren't paused for writes.** A volume is tarred while its service
   keeps running, which can tear a database mid-write. Dump the database into a
-  bind mount with a [cron job](services.md#cron-jobs) and back that up instead.
-  See [Storage & backups](storage-and-backups.md#s3-compatible-backups).
+  bind mount with a [cron job](scheduling.md#cron-jobs) and back that up
+  instead. See [S3 backups](backups.md#s3-compatible-backups).
 - **Restoring a backup unpacks over the volume** without wiping it or stopping
   anything. Stop the services using it first. See
-  [Storage & backups](storage-and-backups.md#restoring-a-backup).
+  [S3 backups](backups.md#restoring-a-backup).
 - **A rollback only restores the image.** Env vars, volumes and networking stay
   as they are now, and only the last 5 images of a service are kept on the host
   (configurable under Settings → Docker). Auto-rollback is off by default and
   replaces an unhealthy revision after it has taken traffic. See
-  [Services](services.md#revisions-and-rollback).
+  [Revisions and rollback](revisions-and-rollback.md).
 - **Pruning volumes in Docker Cleanup deletes data**, including volumes of
   services you've only stopped. Read the preview. See
-  [Operations](operations.md#docker-cleanup).
+  [Docker Cleanup](docker-cleanup.md).
 - **Image scanning lets a deploy through when it couldn't finish**, unless
   **Fail deploys when the image can't be scanned** is ticked under Settings →
-  Docker. See [Services: image scanning](services.md#image-scanning).
+  Docker. See [Image scanning](image-scanning.md).
 - **Health-gated redeploys need a healthcheck to really gate.** Without one the
   new container takes traffic as soon as it's been running a few seconds, and a
   service on host networking or with a writable volume still stops the old
-  container first. See [Services: deploying](services.md#deploying).
+  container first. See [Deploying](deploying.md).
 - **Changing your own verified email needs SMTP configured**, since the change
   is confirmed from the current address. Without SMTP, an admin can change it
-  directly from `/users`. See
-  [Users & access](users-and-access.md#your-profile).
-
-## Planned, not yet built
-
-- **Finer permissions**: teams and per-stack access control. A read-only role
-  and read-only API keys exist, see [Users & access](users-and-access.md#roles).
+  directly from `/users`. See [Your profile](your-profile.md).
 
 The live backlog is [`TODO.md`](../TODO.md).
 

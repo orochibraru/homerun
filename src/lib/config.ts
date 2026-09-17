@@ -86,7 +86,7 @@ export const yamlConfigSchema = z.object({
 			// Widens the session cookie to every subdomain of baseDomain so a
 			// signed-in admin is recognized on a gated deployed service's own
 			// subdomain too (docker/labels.ts's authRequired) ; off by default,
-			// see docs/users-and-access.md before turning this on.
+			// see docs/login-wall.md before turning this on.
 			crossSubdomainCookies: z.boolean().optional(),
 			// Unset lets better-auth derive the origin from each incoming
 			// request instead (auth.ts's buildAuth()), correct for dev and the

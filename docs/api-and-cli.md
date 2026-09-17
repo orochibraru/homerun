@@ -9,9 +9,9 @@ from your profile page), so the same handlers serve the dashboard's own requests
 and external API-key clients alike.
 
 An API key is created with **Full access** or **Read-only** access (see
-[API keys](users-and-access.md#api-keys)). A read-only key, or any request from
-a [read-only account](users-and-access.md#roles), can call every `GET` endpoint;
-every `POST`, `PATCH` and `DELETE` answers `403` with
+[API keys](your-profile.md#api-keys)). A read-only key, or any request from a
+[read-only account](users-and-roles.md), can call every `GET` endpoint; every
+`POST`, `PATCH` and `DELETE` answers `403` with
 `{"error": "This account or API key is read-only: ..."}`. The OpenAPI spec lists
 that `403` on every write.
 
@@ -23,11 +23,10 @@ that `403` on every write.
   full pull-or-build → create → start pipeline and returns once it's done (no
   separate polling endpoint for API clients: that's dashboard-only, for its own
   progress UI)
-- `GET /api/v1/services/:id/webhook`: the
-  [push-to-deploy](services.md#deploy-on-push) payload URL and secret for that
-  service, whether the branch is polled instead and which provider to reconnect
-  when it refused the webhook, a 404 when neither Deploy on push nor pull
-  request previews are on
+- `GET /api/v1/services/:id/webhook`: the [push-to-deploy](deploy-on-push.md)
+  payload URL and secret for that service, whether the branch is polled instead
+  and which provider to reconnect when it refused the webhook, a 404 when
+  neither Deploy on push nor pull request previews are on
 - `DELETE /api/v1/auth-token`: revokes the API key that authenticated the
   request, what `homerun logout` calls (see [Logging in](#logging-in) below)
 - `GET/POST /api/v1/stacks`, `GET /api/v1/templates`
@@ -51,7 +50,7 @@ these the same way.
 
 ### Image scans
 
-A service's [image scans](services.md#image-scanning) are readable over the API:
+A service's [image scans](image-scanning.md) are readable over the API:
 
 - `GET /api/v1/services/:id/scans` lists them newest first, without findings:
   `id`, `deploymentId` (null for an on-demand scan), `imageRef`, `digest`,
@@ -74,17 +73,17 @@ Every account sees every service's scans and jobs; an unknown id is a 404.
 ### Revisions
 
 - `GET /api/v1/services/:id/revisions` lists the
-  [revisions](services.md#revisions-and-rollback) among the last 50 deploys that
-  reached running, one entry per revision, newest first by when it was first
-  deployed. A rollback doesn't add an entry, it updates the revision it
-  redeployed. Fields: `id` (the revision's original deployment, what the deploy
-  endpoint below takes), `imageRef`, `imageDigest`, `imageId`, `buildSource`,
-  `gitCommit`, `gitRef`, `status`, `createdAt` (first deployed),
-  `lastDeployedAt` (last went live), `latestDeploymentId` and `redeployCount`,
-  `health` of its latest run (`watching` and `healthy` only on the current
-  revision, `unhealthy` and `rolled_back` kept as history, otherwise null), plus
-  three markers: `current` (running now), `previous` (the default rollback
-  target) and `retained` (its image is kept on the host).
+  [revisions](revisions-and-rollback.md) among the last 50 deploys that reached
+  running, one entry per revision, newest first by when it was first deployed. A
+  rollback doesn't add an entry, it updates the revision it redeployed. Fields:
+  `id` (the revision's original deployment, what the deploy endpoint below
+  takes), `imageRef`, `imageDigest`, `imageId`, `buildSource`, `gitCommit`,
+  `gitRef`, `status`, `createdAt` (first deployed), `lastDeployedAt` (last went
+  live), `latestDeploymentId` and `redeployCount`, `health` of its latest run
+  (`watching` and `healthy` only on the current revision, `unhealthy` and
+  `rolled_back` kept as history, otherwise null), plus three markers: `current`
+  (running now), `previous` (the default rollback target) and `retained` (its
+  image is kept on the host).
 - `POST /api/v1/services/:id/revisions/:revisionId/deploy` redeploys that
   revision's image without building, pulling from upstream or scanning, and like
   `deploy` returns once it's done. Use `previous` as the `revisionId` for the
@@ -94,10 +93,9 @@ Every account sees every service's scans and jobs; an unknown id is a 404.
   different image.
 
 `PATCH /api/v1/services/:id` also takes `autoRollback`, `requireStatusChecks`
-and `requiredStatusChecks` (see
-[Required status checks](services.md#required-status-checks)), plus
-`healthcheckCommand`, `imageScanEnabled` and `uptimeEnabled` (turns the
-service's [uptime probes](services.md#uptime) on or off).
+and `requiredStatusChecks` (see [Required status checks](status-checks.md)),
+plus `healthcheckCommand`, `imageScanEnabled` and `uptimeEnabled` (turns the
+service's [uptime probes](observability.md#uptime) on or off).
 
 ## OpenAPI spec & Swagger UI
 
