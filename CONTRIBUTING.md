@@ -8,20 +8,39 @@ dev server) is needed for either of those paths.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh), the version pinned in `package.json`'s `packageManager`
-  field
-- [Go](https://go.dev), the version pinned in `go.mod` — only needed to build or
-  test `cmd/agent/`, `cmd/cli/` or `cmd/installer/`, three separate Go programs,
-  not part of the root `bun install`
+- [mise](https://mise.jdx.dev), then `mise install` in the repo: it installs the
+  Bun, Go, prek and golangci-lint versions pinned in `mise.toml`. Without mise,
+  install those four yourself at the same versions (Go is only needed for `cmd/`
+  and `internal/`, the worker, agent, CLI and installer)
 - Docker (for Traefik + Postgres, and for the containers the app itself will
   manage once it's running)
+
+## Toolchain (mise)
+
+`mise.toml` pins the tools a checkout needs outside `node_modules`: Bun, Go,
+prek and golangci-lint. `mise install` installs them, and mise's shell
+activation (`eval "$(mise activate zsh)"`, see
+[mise's docs](https://mise.jdx.dev/getting-started.html)) puts those versions on
+`PATH` inside the repo. `mise ls` shows what's active.
+
+mise can't install Docker itself, only check it: `mise run docker` (also run
+after every `mise install`) fails if no daemon is reachable or `docker compose`
+v2 is missing, and creates the `homerun` network if it doesn't exist yet.
+
+CI doesn't use mise, so the same versions are also pinned elsewhere, and a bump
+has to touch every copy: Bun in `package.json`'s `packageManager` and the
+`Dockerfile`'s `oven/bun` tags, Go in `go.mod` and the `Dockerfile`'s `golang`
+tag, golangci-lint in `.github/workflows/go.yaml` and `code_quality.yaml`, prek
+via `j178/prek-action` in `code_quality.yaml`. Renovate updates `mise.toml`
+along with the rest.
 
 ## Setup
 
 ```sh
 git clone https://github.com/orochibraru/homerun.git && cd homerun
+mise install
 bun install
-docker network create homerun
+docker network create homerun # already done by mise install
 docker compose up -d          # Traefik + Postgres, see compose.yaml
 cp .env.example .env          # set AUTH_SECRET, and ORIGIN=http://localhost:5173 for bun run dev
 bun run dev
@@ -56,16 +75,16 @@ at the repo root, no `bun install` needed for any of them): `go run ./cmd/agent`
 ## Before every change: the hard gates
 
 These are enforced by git hooks, not just CI. The hooks are run by
-[prek](https://github.com/j178/prek) from `.pre-commit-config.yaml`; install
-prek (`brew install prek`, or `uv tool install prek`), then `bun install` wires
-them up for you (`prepare` runs `prek install`, which installs the pre-commit,
-commit-msg and pre-push hooks). A commit only runs the fast, per-file hooks
-(oxlint, Biome format and import sorting, Prettier and markdownlint, gofmt,
-Tailwind, typos, secret scanning), a few seconds. A push runs the whole-repo
-gates: the type check, unit tests (80% coverage gate), golangci-lint and the Go
-tests. Hooks autofix in place, so a commit that gets rejected for "files were
-modified by this hook" just needs `git add` and a re-commit. After pulling this
-change, run `prek install` once so the pre-push hook exists.
+[prek](https://github.com/j178/prek) from `.pre-commit-config.yaml`; prek comes
+from `mise install`, then `bun install` wires them up for you (`prepare` runs
+`prek install`, which installs the pre-commit, commit-msg and pre-push hooks). A
+commit only runs the fast, per-file hooks (oxlint, Biome format and import
+sorting, Prettier and markdownlint, gofmt, Tailwind, typos, secret scanning), a
+few seconds. A push runs the whole-repo gates: the type check, unit tests (80%
+coverage gate), golangci-lint and the Go tests. Hooks autofix in place, so a
+commit that gets rejected for "files were modified by this hook" just needs
+`git add` and a re-commit. After pulling this change, run `prek install` once so
+the pre-push hook exists.
 
 ```sh
 bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then go vet over every package under cmd/ and internal/, plus tsc over scripts/, zero errors AND zero warnings

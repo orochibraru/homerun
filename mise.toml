@@ -1,0 +1,17 @@
+[tools]
+bun = "1.4.2"
+go = "1.26.5"
+prek = "0.4.12"
+golangci-lint = "2.12.2"
+
+[tasks.docker]
+description = "Check for a reachable Docker daemon and compose v2, create the homerun network"
+run = '''
+docker info >/dev/null 2>&1 || { echo "Docker daemon not reachable: start Docker Desktop, OrbStack, colima or dockerd" >&2; exit 1; }
+docker compose version >/dev/null 2>&1 || { echo "docker compose v2 missing" >&2; exit 1; }
+docker network inspect homerun >/dev/null 2>&1 || docker network create homerun >/dev/null
+echo "Docker $(docker info 2>/dev/null | awk '/Server Version/ {print $3}') ok, homerun network ready"
+'''
+
+[hooks]
+postinstall = "mise run docker || true"

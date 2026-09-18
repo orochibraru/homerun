@@ -3,7 +3,6 @@
 The backlog, and the only one. There is no priority ordering, pick whatever.
 When done delete the entry, no bloat.
 
-- [ ] Setup mise
 - [ ] **[WIP]** Go worker, multi-agent workflow running. Create a homerun
       worker, in Go. Shares library with the installer, the agent and the CLI.
       Then remove ALL intensive logic from the sveltekit app. The go worker will

@@ -63,6 +63,11 @@ dependency needed), Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
 
 ## Commands
 
+`mise install` installs the pinned Bun, Go, prek and golangci-lint from
+`mise.toml` and runs `mise run docker` (daemon + compose check, creates the
+`homerun` network); bumping one means updating its other pins too, see
+`CONTRIBUTING.md`'s Toolchain section.
+
 ```bash
 bun run dev              # scripts/dev.ts, vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change
 bun run dev:app          # vite dev alone
