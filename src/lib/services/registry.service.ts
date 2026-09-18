@@ -128,10 +128,11 @@ class RegistryServiceClass {
 	}
 
 	/**
-	 * Creates a push/pull token and re-syncs the registry's htpasswd file.
+	 * Creates a push/pull token and, when auth is on, re-syncs the registry's
+	 * htpasswd file, deleting the token again if that sync fails.
 	 *
 	 * @returns The username and the generated secret, which is readable this once and never again.
-	 * @throws When the username is invalid or already taken.
+	 * @throws When the username is invalid or already taken, or the sync fails.
 	 */
 	async createToken(username: string, userId: string): Promise<CreatedToken> {
 		const invalid = this.validateUsername(username);
@@ -142,24 +143,31 @@ class RegistryServiceClass {
 			throw new Error(`"${username}" already has a token.`);
 		}
 		const secret = this.#generateSecret();
-		await RegistryTokenDTO.create({
+		const token = await RegistryTokenDTO.create({
 			secretHash: await this.#hash(secret),
 			userId,
 			username,
 		});
-		await this.syncAuth();
+		if (await this.authEnabled()) {
+			await this.syncAuth().catch(async (error: unknown) => {
+				await token.delete();
+				throw error;
+			});
+		}
 		logger.info(`Registry token created: ${username}`);
 		return { secret, username };
 	}
 
-	/** Deletes a token and re-syncs the htpasswd file, which is what actually revokes it. */
+	/** Deletes a token and, when auth is on, re-syncs the htpasswd file, which is what actually revokes it. */
 	async revokeToken(id: string): Promise<void> {
 		const token = await RegistryTokenDTO.get(id);
 		if (!token) {
 			throw new Error("That token no longer exists.");
 		}
 		await token.delete();
-		await this.syncAuth();
+		if (await this.authEnabled()) {
+			await this.syncAuth();
+		}
 		logger.info(`Registry token revoked: ${token.username}`);
 	}
 
