@@ -50,6 +50,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install golangci-lint
+        run: curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.12.2
+
       # The hooks shell out to the repo's own tooling (bun run gen, biome,
       # prettier, markdownlint, tailwint, svelte-check), so deps have to exist
       # first.
