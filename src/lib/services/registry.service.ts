@@ -79,7 +79,7 @@ class RegistryServiceClass {
 	/** The registry's current state, for the Registry page's header and Settings tab. */
 	async status(): Promise<RegistryStatus> {
 		const settings = await InstanceSettingsDTO.get();
-		const running = await DockerService.imageMirrorRunning();
+		const running = await DockerService.imageMirrorRunning().catch(() => false);
 		const publicHost = settings.toJSON().registryPublicHost ?? null;
 		return {
 			authEnabled: await this.authEnabled(),

@@ -132,10 +132,11 @@ better-auth also applies an undocumented-in-config "special rule" (its
 `/sign-in`/`/sign-up`-prefixed path at 3 requests per 10 seconds, well below
 that `max`/`window` and unaffected by them, which a handful of `tests/e2e/`
 specs signing in and out against a real production build tripped immediately.
-`HOMERUN_DISABLE_AUTH_RATE_LIMIT=1` turns rate limiting off for that reason, set
-only by `tests/e2e/support/bootstrap-runtime.ts`'s spawned app, never in
-production, same test-only-escape-hatch shape as
-`HOMERUN_SKIP_INTEGRATION_SETUP`.
+`HOMERUN_DISABLE_AUTH_RATE_LIMIT=1` turns rate limiting off for that reason
+(better-auth's and `sign-in.remote.ts`'s own per-IP `throttle`, which the E2E
+suite's ~60 sign-ins as one user also trip), set only by
+`tests/e2e/support/bootstrap-runtime.ts`'s spawned app, never in production,
+same test-only-escape-hatch shape as `HOMERUN_SKIP_INTEGRATION_SETUP`.
 
 `user.changeEmail` is enabled (`enabled: true`,
 `updateEmailWithoutVerification: true`) so `/profile`'s email field is editable,

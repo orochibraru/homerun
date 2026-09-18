@@ -148,6 +148,18 @@ describe("sign-in throttle", () => {
 		expect(calls).toHaveLength(22);
 	});
 
+	test("HOMERUN_DISABLE_AUTH_RATE_LIMIT=1 turns it off", async () => {
+		process.env.HOMERUN_DISABLE_AUTH_RATE_LIMIT = "1";
+		try {
+			for (let i = 0; i < 25; i++) {
+				await lookup("a@example.com");
+			}
+			expect(calls).toHaveLength(25);
+		} finally {
+			delete process.env.HOMERUN_DISABLE_AUTH_RATE_LIMIT;
+		}
+	});
+
 	test("attempts older than a minute stop counting", async () => {
 		const realNow = Date.now;
 		let now = realNow();

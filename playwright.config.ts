@@ -1,3 +1,4 @@
+import process from "node:process";
 import { defineConfig, devices } from "@playwright/test";
 import { E2E_BASE_URL } from "./tests/e2e/support/config";
 
@@ -20,6 +21,7 @@ export default defineConfig({
 			use: { ...devices["Desktop Chrome"] },
 		},
 	],
+	maxFailures: process.env.CI ? 10 : 0,
 	reporter: "list",
 	retries: 0,
 	testDir: "./tests/e2e",

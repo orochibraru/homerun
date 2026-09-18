@@ -1,5 +1,6 @@
 import { error } from "@sveltejs/kit";
 import { z } from "zod";
+import { dev } from "$app/environment";
 import { command, getRequestEvent } from "$app/server";
 import {
 	AccountSetupService,
@@ -12,6 +13,9 @@ const attempts = new Map<string, number[]>();
 
 /** Refuses a caller past `MAX_PER_WINDOW` calls a minute, per IP and command: these run before anyone is signed in. */
 function throttle(name: string): void {
+	if (dev || process.env.HOMERUN_DISABLE_AUTH_RATE_LIMIT === "1") {
+		return;
+	}
 	const key = `${name}:${getRequestEvent().getClientAddress()}`;
 	const now = Date.now();
 	const recent = (attempts.get(key) ?? []).filter((t) => now - t < WINDOW_MS);

@@ -47,6 +47,7 @@ jobs:
   e2e:
     name: Tests (E2E)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       summary: ${{ steps.stats.outputs.summary }}
     services:
