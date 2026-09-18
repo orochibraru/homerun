@@ -27,6 +27,22 @@ services:
       - internal
       - homerun
 
+  worker:
+    profiles: [worker]
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: app
+    extends:
+      file: tools/compose/worker.compose.yaml
+      service: worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - homerun
+
   postgres:
     extends:
       file: tools/compose/base.compose.yaml

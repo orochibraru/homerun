@@ -1,9 +1,17 @@
 import { JobDTO } from "$lib/dto/job-dto";
 import { listMirrorReferences } from "$lib/dto/mirror-reference-dto";
 import { Logger } from "$lib/logger";
-import { MIRROR_CONTAINER_NAME } from "./docker/image-scan-refs.ts";
+import {
+	MIRROR_CONFIG_PATH,
+	MIRROR_CONTAINER_NAME,
+	MIRROR_HOST_PORT,
+	MIRROR_INTERNAL_PORT,
+	MIRROR_REPOSITORIES_DIR,
+	MIRROR_STORAGE_DIR,
+} from "./docker/image-scan-refs.ts";
 import {
 	type MirrorGcPlan,
+	type MirrorKeepSet,
 	type MirrorRegistryClient,
 	type MirrorTag,
 	mirrorKeepSet,
@@ -21,6 +29,17 @@ export interface MirrorUsage {
 	sizeBytes: number | null;
 }
 
+export interface MirrorGcSpec {
+	configPath: string;
+	container: string;
+	keep: MirrorKeepSet;
+	password: string;
+	repositoriesDir: string;
+	storageDir: string;
+	urls: string[];
+	username: string;
+}
+
 export interface MirrorGcResult {
 	itemsDeleted: number;
 	keptManifests: number;
@@ -34,11 +53,14 @@ class ImageMirrorGcServiceClass {
 		return lockState.__mirror_gc_running === true;
 	}
 
-	/** The mirror registry's running state and current disk usage, plus whether GC is in progress. */
+	/** The mirror registry's running state and current disk usage, plus whether a GC job is queued or running. */
 	async usage(): Promise<MirrorUsage> {
-		const running = await DockerService.imageMirrorRunning();
+		const [running, job] = await Promise.all([
+			DockerService.imageMirrorRunning(),
+			JobDTO.findActive("docker_cleanup", "docker-cleanup:pruneMirror"),
+		]);
 		return {
-			collecting: this.running,
+			collecting: this.running || job !== null,
 			running,
 			sizeBytes: running ? await DockerService.imageMirrorUsageBytes() : null,
 		};
@@ -53,6 +75,42 @@ class ImageMirrorGcServiceClass {
 		return active > 0
 			? `${active} deploy or scan job(s) are running and may be using the mirror.`
 			: null;
+	}
+
+	/**
+	 * Resolves what the Go worker needs to garbage-collect the mirror: makes
+	 * sure the mirror is up and configured, then hands over its container,
+	 * the registry API addresses to try, its internal credentials and the
+	 * keep set.
+	 *
+	 * @throws When the mirror container isn't running, or when a deploy/scan
+	 *   job is currently using it (see `busyReason`).
+	 */
+	async spec(): Promise<MirrorGcSpec> {
+		if (!(await DockerService.imageMirrorRunning())) {
+			throw new Error(
+				`${MIRROR_CONTAINER_NAME} isn't running, nothing to clean up.`,
+			);
+		}
+		const busy = await this.busyReason();
+		if (busy) {
+			throw new Error(`Mirror cleanup skipped: ${busy}`);
+		}
+		await DockerService.ensureImageMirror();
+		const auth = await DockerService.registryInternalAuth();
+		return {
+			configPath: MIRROR_CONFIG_PATH,
+			container: MIRROR_CONTAINER_NAME,
+			keep: mirrorKeepSet(await listMirrorReferences()),
+			password: auth?.password ?? "",
+			repositoriesDir: MIRROR_REPOSITORIES_DIR,
+			storageDir: MIRROR_STORAGE_DIR,
+			urls: [
+				`http://127.0.0.1:${MIRROR_HOST_PORT}`,
+				`http://${MIRROR_CONTAINER_NAME}:${MIRROR_INTERNAL_PORT}`,
+			],
+			username: auth?.username ?? "",
+		};
 	}
 
 	/** Walks every repository in the mirror registry's catalog and collects their full tag inventory. */

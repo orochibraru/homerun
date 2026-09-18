@@ -14,9 +14,9 @@ and the reason for the latest failure plus hints for fixing it:
   when it has one, opens a TCP connection for a database image, and makes an
   HTTP request otherwise.
 - **From its hostname**: the public hostname Traefik publishes
-  (`<slug>.<base domain>` or the custom domain). It's skipped for a service that
-  isn't DNS-resolvable, and while the base domain is a loopback address like
-  `localhost`, since probing it from this machine proves nothing.
+  (`<slug>.<base domain>` or the service's main domain). It's skipped for a
+  service that isn't DNS-resolvable, and while the base domain is a loopback
+  address like `localhost`, since probing it from this machine proves nothing.
 
 A probe that changes from up to down, or back, fires the **Service down** or
 **Service recovered** event on any [notification channel](notifications.md)

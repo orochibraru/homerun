@@ -231,9 +231,9 @@ PATCH) and a live container, run by another `BaseScheduler`:
   (`DockerService.containerAddress`) and its container port. This is what a
   sibling service sees, and it catches a dead process inside a container the
   daemon still reports as running.
-- **external** — HTTP to the hostname Traefik publishes (the custom domain when
-  set, else `<slug>.<baseDomain>`). It fails for entirely different reasons:
-  DNS, a missing router, a tunnel that isn't up.
+- **external** — HTTP to the hostname Traefik publishes (`primaryHostname()`:
+  the service's chosen main domain, else `<slug>.<baseDomain>`). It fails for
+  entirely different reasons: DNS, a missing router, a tunnel that isn't up.
 
 **An untrusted certificate is not an outage, and treating it as one reported
 healthy services as down.** The probe's own comment always claimed a self-signed

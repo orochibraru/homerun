@@ -343,6 +343,27 @@
 			"when": 1789676707015,
 			"tag": "0048_elite_lilandra",
 			"breakpoints": true
+		},
+		{
+			"idx": 49,
+			"version": "7",
+			"when": 1789726537082,
+			"tag": "0049_messy_lila_cheney",
+			"breakpoints": true
+		},
+		{
+			"idx": 50,
+			"version": "7",
+			"when": 1789726541781,
+			"tag": "0050_same_toxin",
+			"breakpoints": true
+		},
+		{
+			"idx": 51,
+			"version": "7",
+			"when": 1789727508116,
+			"tag": "0051_melted_wrecker",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

@@ -7,6 +7,9 @@ export const COMPOSE_WORKING_DIR_LABEL =
 export const COMPOSE_CONFIG_FILES_LABEL =
 	"com.docker.compose.project.config_files";
 
+export const WORKER_ROLE_LABEL = "homerun.role";
+export const WORKER_ROLE = "worker";
+
 export const UPDATER_CONTAINER_NAME = "homerun-updater";
 export const UPDATER_IMAGE = "docker";
 export const UPDATER_IMAGE_TAG = "cli";
@@ -106,12 +109,14 @@ function escapeRegex(value: string): string {
  * Builds the shell script the updater container runs: when the current tag
  * is a pinnable version tag, rewrites it in-place across the compose files
  * and `.env` (via `sed`) before `docker compose pull`/`up -d --no-deps` for
- * just this service, so a version-pinned deployment tracks the new release
- * rather than silently staying pinned to the old tag.
+ * this service plus `companions` (the homerun-worker service running from the
+ * same image), so a version-pinned deployment tracks the new release rather
+ * than silently staying pinned to the old tag.
  */
 export function updaterScript(
 	target: ComposeTarget,
 	latestVersion: string,
+	companions: string[] = [],
 ): string {
 	const { repository, tag } = splitImageRef(target.image);
 	const nextTag = pinnedTagFor(tag, latestVersion);
@@ -136,9 +141,12 @@ export function updaterScript(
 		);
 	}
 
+	const services = [...new Set([target.service, ...companions])]
+		.map(shellQuote)
+		.join(" ");
 	lines.push(
-		`${compose} pull ${shellQuote(target.service)}`,
-		`${compose} up -d --no-deps ${shellQuote(target.service)}`,
+		`${compose} pull ${services}`,
+		`${compose} up -d --no-deps ${services}`,
 	);
 	return lines.join("\n");
 }

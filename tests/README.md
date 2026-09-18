@@ -7,7 +7,7 @@ happy-dom setup, `@testing-library/svelte`, see its own README. Tests live here,
 under `tests/unit/<package>/`, mirroring the source tree. `cmd/agent/`,
 `cmd/cli/` and `cmd/installer/` are all Go packages in the repo-root `go.mod`
 and aren't part of this suite at all: their own tests sit next to the source
-they cover (`cmd/agent/token_test.go`, `cmd/cli/cli_test.go`,
+they cover (`internal/agent/token_test.go`, `internal/cli/cli_test.go`,
 `cmd/installer/*_test.go`), run with `go test ./cmd/agent/...`
 (`bun run test:unit:agent`), `go test ./cmd/cli/...` (`bun run test:unit:cli`)
 and `go test ./cmd/installer/...` (`bun run test:unit:installer`), not
@@ -38,15 +38,15 @@ also cover the Bun-based agent's own suite (`tests/unit/agent/docker.test.ts`
 mocked `"dockerode"` wholesale, `tests/unit/agent/http.test.ts` spied on
 individual `DockerService` methods); that suite is gone along with the Bun
 agent, replaced by `cmd/agent/`'s own Go tests, which fake the Docker client via
-a real interface instead (`cmd/agent/fake_docker_test.go`).
+a real interface instead (`internal/agent/fake_docker_test.go`).
 
 ## `cmd/cli/`'s tests set `$HOME` directly, no preload needed
 
-`cmd/cli/config.go` resolves its config file path
+`internal/cli/config.go` resolves its config file path
 (`~/.config/homerun/config.json`) from `os.UserHomeDir()`, which reads `$HOME`
 fresh on every call (unlike the old TypeScript CLI's `os.homedir()`, fixed for
 the life of the process, which is why that version needed a `bunfig.toml`
-preload mocking it). `cmd/cli/cli_test.go` just calls
+preload mocking it). `internal/cli/cli_test.go` just calls
 `t.Setenv("HOME", t.TempDir())` per test, which Go's own test runner resets
 automatically, so there's no shared scratch-directory setup and no
 `tests/unit/support/` involvement at all for `go test`.
@@ -60,8 +60,8 @@ yet.
 
 ## Fakes over mocking libraries
 
-`cmd/installer/exec.go`'s `Runner` is a real Go interface, so its own Go tests
-(`steps_test.go`, `fullstack_test.go`, `migrate_test.go`, `flow_test.go`,
+`internal/installer/exec.go`'s `Runner` is a real Go interface, so its own Go
+tests (`steps_test.go`, `fullstack_test.go`, `migrate_test.go`, `flow_test.go`,
 `main_test.go`, `support_test.go`) pass a fake implementation instead of the
 real `StepRunner`, no mocking library involved — the same "fake over mock"
 posture the old `bun:test` suite used to take with plain object literals for
@@ -76,7 +76,7 @@ of `tests/unit/installer/` entirely.
   persisted token — a full-access API credential — was affected by exactly this,
   fixed at the time by calling `node:fs/promises`'s `chmod()` explicitly after
   `Bun.write` (`node:fs`'s own `mode` option is honored, verified). The agent's
-  Go rewrite sidesteps the whole bug class: `cmd/agent/token.go` calls
+  Go rewrite sidesteps the whole bug class: `internal/agent/token.go` calls
   `os.WriteFile(tokenFile, token, 0o600)` then an explicit `os.Chmod`, both of
   which Go actually honors.
 - `bunfig.toml`'s `[test].timeout` key is silently not honored by Bun 1.4.0 for

@@ -12,6 +12,7 @@ import type { SpawnAppOptions, SpawnedApp } from "./server";
  * one machine, for the same fixed-port reason (see tests/e2e/support/config.ts).
  */
 const E2E_CONTAINER_NAME = "homerun-e2e-app";
+const E2E_WORKER_CONTAINER_NAME = "homerun-e2e-worker";
 
 /**
  * The image under test, set by CI to the exact digest `docker.yaml` pushed
@@ -145,4 +146,57 @@ export async function startAppContainer(
 			await dockerRemove(name);
 		},
 	};
+}
+
+/**
+ * Runs the homerun-worker baked into the image under test, the same way
+ * production does: a second container from the app image with
+ * `/usr/local/bin/homerun-worker` as its command, the Docker socket mounted,
+ * and the app's `DATABASE_URL`/`AUTH_SECRET`. Ready once it logs `ready:`.
+ */
+export async function startWorkerContainer(
+	image: string,
+	options: Pick<SpawnAppOptions, "authSecret" | "databaseUrl">,
+): Promise<SpawnedApp> {
+	const name = E2E_WORKER_CONTAINER_NAME;
+	await dockerRemove(name);
+	const hostNetwork = process.platform === "linux";
+	const proc = Bun.spawn(
+		[
+			"docker",
+			"run",
+			"-d",
+			"--name",
+			name,
+			...(hostNetwork
+				? ["--network", "host"]
+				: ["--add-host", "host.docker.internal:host-gateway"]),
+			"-v",
+			"/var/run/docker.sock:/var/run/docker.sock",
+			"-e",
+			`AUTH_SECRET=${options.authSecret}`,
+			"-e",
+			`DATABASE_URL=${hostNetwork ? options.databaseUrl : databaseUrlForContainer(options.databaseUrl)}`,
+			image,
+			"/usr/local/bin/homerun-worker",
+		],
+		{ stderr: "pipe", stdout: "pipe" },
+	);
+	const startErr = await new Response(proc.stderr).text();
+	await proc.exited;
+	if (proc.exitCode !== 0) {
+		throw new Error(`Could not start the worker from ${image}: ${startErr}`);
+	}
+
+	const timeoutMs = ciTimeout(30_000, 60_000);
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		if ((await containerLogs(name)).includes("[homerun-worker] ready:")) {
+			return { proc, stop: () => dockerRemove(name) };
+		}
+		await new Promise((r) => setTimeout(r, 500));
+	}
+	const logs = await containerLogs(name);
+	await dockerRemove(name);
+	throw new Error(`The worker in ${image} never became ready:\n${logs}`);
 }

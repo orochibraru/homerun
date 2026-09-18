@@ -93,6 +93,69 @@ export function spawnAgent(port: number, token: string) {
 	};
 }
 
+const WORKER_READY = "[homerun-worker] ready:";
+
+/** Resolves once the spawned worker has logged its ready line, or throws with its output if it exits or `deadlineMs` passes first. */
+async function waitForWorker(
+	proc: ReturnType<typeof Bun.spawn>,
+	captured: { lines: () => string },
+	deadlineMs: number,
+): Promise<void> {
+	const deadline = Date.now() + deadlineMs;
+	while (Date.now() < deadline && proc.exitCode === null) {
+		if (captured.lines().includes(WORKER_READY)) {
+			return;
+		}
+		await new Promise((r) => setTimeout(r, 200));
+	}
+	throw new Error(
+		`worker never became ready within ${deadlineMs}ms\n--- captured output ---\n${captured.lines()}`,
+	);
+}
+
+export interface SpawnWorkerOptions {
+	authSecret: string;
+	databaseUrl: string;
+}
+
+/**
+ * Builds the real Go worker (`cmd/worker`) and spawns it against the test
+ * Postgres with the same `AUTH_SECRET` as the spawned app, so job specs the
+ * app encrypts decrypt on the worker side. Ready once it prints its `ready:`
+ * line, which it does after its first successful ping.
+ */
+export function spawnWorker(options: SpawnWorkerOptions) {
+	const binary = join(tmpdir(), `homerun-worker-it-${process.pid}`);
+	const build = Bun.spawnSync(["go", "build", "-o", binary, "./cmd/worker"], {
+		cwd: process.cwd(),
+		stderr: "pipe",
+	});
+	if (build.exitCode !== 0) {
+		throw new Error(`go build ./cmd/worker failed: ${build.stderr.toString()}`);
+	}
+	const proc = Bun.spawn([binary], {
+		cwd: process.cwd(),
+		env: {
+			...process.env,
+			AUTH_SECRET: options.authSecret,
+			DATABASE_URL: options.databaseUrl,
+			WORKER_ID: `integration-${process.pid}`,
+		},
+		stderr: "pipe",
+		stdout: "pipe",
+	});
+	const captured = captureOutput(proc);
+	return {
+		output: captured.lines,
+		proc,
+		ready: () => waitForWorker(proc, captured, ciTimeout(15_000, 30_000)),
+		stop: async () => {
+			proc.kill("SIGTERM");
+			await proc.exited;
+		},
+	};
+}
+
 /**
  * A genuine *second* TCP connection to the same local Docker daemon,
  * standing in for a truly separate remote host : the exact

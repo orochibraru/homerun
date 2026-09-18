@@ -1,56 +1,39 @@
+import { config } from "$lib/config";
 import { phaseLine } from "$lib/deploy-phases";
 import type { DeployTrigger } from "$lib/deploy-trigger";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
+import { ImageScanDTO } from "$lib/dto/image-scan-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import type { JobDTO } from "$lib/dto/job-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { RemoteHostDTO } from "$lib/dto/remote-host-dto";
-import type { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
+import type { TrivySummary } from "$lib/image-scan";
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
 import { snapshotRevisionConfig } from "$lib/revision-config";
-import { runtimeOptionsFrom } from "$lib/service-runtime";
-import { AgentClientService } from "./agent-client.service.ts";
-import {
-	publishedImageRef,
-	transferBuiltImage,
-} from "./deploy/build-transfer-step.ts";
-import { readHostEnvFiles } from "./deploy/env-file-step.ts";
-import {
-	resolveGitCredential,
-	type ServiceMounts,
-	syncAutoDns,
-	toVolumeParams,
-} from "./deploy/helpers.ts";
+import { syncAutoDns } from "./deploy/helpers.ts";
 import {
 	type BuildServer,
 	type CacheRegistryCredentials,
 	type DeployPlan,
-	type GitBuildPlan,
-	type GitSource,
 	type RevisionSource,
 	resolveDeployPlan,
-	unreachable,
-	type WorkloadPlan,
 } from "./deploy/plan.ts";
-import { pullForDeploy } from "./deploy/pull-step.ts";
+import { restoreRevisionConfig } from "./deploy/revision-step.ts";
 import {
-	resolveRevisionImage,
-	restoreRevisionConfig,
-} from "./deploy/revision-step.ts";
-import {
-	enforceStatusChecks,
 	notifyStatusChecksFailed,
 	StatusChecksFailedError,
 } from "./deploy/status-check-step.ts";
+import { deployWorkerSpec } from "./deploy/worker-spec.ts";
 import { RolloutFailedError } from "./docker/rollout.ts";
-import { DockerService, type RemoteHostConnection } from "./docker.service.ts";
-import {
-	ImageScanBlockedError,
-	ImageScanService,
-} from "./image-scan.service.ts";
+import { DockerService } from "./docker.service.ts";
+import { ImageScanBlockedError } from "./image-scan.service.ts";
 import { NotificationChannelService } from "./notification-channel.service.ts";
+import { imageScanMessage } from "./notification-messages.ts";
+import type { JobResult } from "./queue/handlers.ts";
 import { deployJobPayload } from "./queue/payloads.ts";
 import { QueueService } from "./queue.service.ts";
 import { RevisionHealthService } from "./revision-health.service.ts";
@@ -63,24 +46,10 @@ interface DeployContext {
 	userId: string;
 }
 
-interface GitBuildOutcome {
-	image: string;
-	tag: string;
-}
-
 interface ResolvedImage {
 	digest: string | null;
 	image: string;
-	tag: string;
-}
-
-interface WorkloadContext {
-	dep: DeploymentDTO;
-	image: string;
-	mounts: ServiceMounts;
-	plan: WorkloadPlan;
-	stack: StackDTO | null;
-	svc: ServiceDTO;
+	imageId: string | null;
 	tag: string;
 }
 
@@ -99,11 +68,43 @@ export interface EnqueueDeployResult {
 	jobId: string;
 }
 
-export interface DeployResult {
-	containerId?: string;
-	deploymentId: string;
+interface WorkerScan {
+	digest?: string;
 	error?: string;
-	success: boolean;
+	imageRef: string;
+	source: string;
+	status: "ok" | "failed" | "skipped";
+	summary?: TrivySummary;
+}
+
+interface WorkerDeployOutcome {
+	built?: boolean;
+	containerId?: string;
+	digest?: string;
+	failure?: "scan-blocked" | "rollout-failed";
+	gitCommit?: string;
+	gitRef?: string;
+	image?: string;
+	imageId?: string;
+	scans?: WorkerScan[];
+	serviceImage?: { image: string; tag: string };
+	swarmServiceId?: string;
+	tag?: string;
+}
+
+/** The error a worker-reported failure stands for, so `#recordFailure` keeps the previous workload's status for a scan block or a failed rollout. */
+function workerFailure(
+	kind: WorkerDeployOutcome["failure"],
+	message: string,
+): Error {
+	switch (kind) {
+		case "scan-blocked":
+			return new ImageScanBlockedError(message);
+		case "rollout-failed":
+			return new RolloutFailedError(message);
+		default:
+			return new Error(message);
+	}
 }
 
 /**
@@ -182,239 +183,12 @@ class DeploymentServiceClass {
 		});
 	}
 
-	/** Clone + build on the local socket or a docker remote. */
-	async #runDockerBuild(
-		ctx: DeployContext,
-		git: GitSource,
-		target: {
-			cacheRegistry: CacheRegistryCredentials | null;
-			commit: string | null;
-			remote?: RemoteHostConnection;
-		},
-		ref: string,
-	): Promise<void> {
-		const { dep } = ctx;
-		const result = await DockerService.buildFromGit(
-			{
-				bakeFile: git.bakeFile,
-				bakeTarget: git.bakeTarget,
-				buildContext: git.buildContext,
-				buildMethod: git.buildMethod,
-				cacheRegistry: target.cacheRegistry,
-				commit: target.commit,
-				credential: await resolveGitCredential(git.gitUrl, ctx.userId),
-				dockerfilePath: git.dockerfilePath,
-				gitRef: git.gitRef,
-				gitUrl: git.gitUrl,
-				remote: target.remote,
-				tag: ref,
-			},
-			(line) => dep.appendLog(line),
-		);
-		if (!result.success) {
-			throw new Error(result.error ?? "Build failed.");
-		}
-		await dep.update({
-			gitCommit: result.commit ?? null,
-			gitRef: git.gitRef ?? null,
-		});
-	}
-
-	/**
-	 * The agent builds and pushes in one call : no separate pushImage step
-	 * the way the docker/local path needs, see agent/schemas.ts's
-	 * buildInputSchema docstring. A commit whose status checks passed is
-	 * sent along so the agent builds exactly that commit.
-	 */
-	async #runAgentBuild(
-		ctx: DeployContext,
-		plan: Extract<GitBuildPlan, { kind: "agent-build" }>,
-		commit: string | null,
-		built: { image: string; tag: string },
-	): Promise<void> {
-		const { dep } = ctx;
-		const { git, registry, server } = plan;
-		const published = registry && publishedImageRef(registry, built);
-		const push = published && {
-			...registry,
-			tag: `${published.image}:${published.tag}`,
-		};
-
-		const result = await AgentClientService.build(server.connection, {
-			bakeFile: git.bakeFile,
-			bakeTarget: git.bakeTarget,
-			buildContext: git.buildContext,
-			buildMethod: git.buildMethod,
-			commit,
-			credential: await resolveGitCredential(git.gitUrl, ctx.userId),
-			dockerfilePath: git.dockerfilePath,
-			gitRef: git.gitRef,
-			gitUrl: git.gitUrl,
-			push,
-			tag: `${built.image}:${built.tag}`,
-		});
-		if (!result.success) {
-			throw new Error(result.error ?? "Build failed.");
-		}
-
-		// No live progress from the agent (a single response once it's done,
-		// not a stream) : one summary line instead of the line-by-line log
-		// the local/docker build path gets.
-		await dep.appendLog(
-			result.commit
-				? `Built commit ${result.commit.slice(0, 7)} on agent ${server.hostId}.`
-				: `Build finished on agent ${server.hostId}.`,
-		);
-		await dep.update({
-			gitCommit: result.commit ?? commit,
-			gitRef: git.gitRef ?? null,
-		});
-	}
-
-	/**
-	 * The `buildSource: "git"` path : clone + build (locally, on a docker
-	 * remote, or on an agent), bring the image onto this host when it was
-	 * built elsewhere (through the cache registry, or streamed back without
-	 * one), and resolve the image ref the deploy step should actually use.
-	 */
-	async #buildGitImage(
-		ctx: DeployContext,
-		plan: GitBuildPlan,
-		commit: string | null,
-	): Promise<GitBuildOutcome> {
-		const image = `homerun-build-${ctx.svc.slug}`;
-		const tag = Date.now().toString(36);
-		const ref = `${image}:${tag}`;
-
-		switch (plan.kind) {
-			case "local-build":
-				await this.#runDockerBuild(
-					ctx,
-					plan.git,
-					{ cacheRegistry: plan.cacheRegistry, commit },
-					ref,
-				);
-				return { image, tag };
-			case "docker-build":
-				await this.#runDockerBuild(
-					ctx,
-					plan.git,
-					{
-						cacheRegistry: plan.registry,
-						commit,
-						remote: plan.server.connection,
-					},
-					ref,
-				);
-				return await transferBuiltImage(ctx.dep, plan, { image, tag });
-			case "agent-build":
-				await this.#runAgentBuild(ctx, plan, commit, { image, tag });
-				return await transferBuiltImage(ctx.dep, plan, { image, tag });
-			default:
-				return unreachable(plan);
-		}
-	}
-
-	/** Creates and starts the actual workload : a swarm service or a plain container. */
-	async #startWorkload(
-		ctx: WorkloadContext,
-	): Promise<{ containerId?: string; swarmServiceId?: string }> {
-		const { dep, image, mounts, plan, stack, svc, tag } = ctx;
-		const onLog = (line: string) => dep.appendLog(line);
-		const runtime = runtimeOptionsFrom(svc.toJSON());
-		const shared = {
-			containerPort: svc.containerPort,
-			cpuLimit: svc.cpuLimit,
-			customDomain: svc.customDomain,
-			dnsResolvable: svc.dnsResolvable,
-			envVars: {
-				...(await readHostEnvFiles(runtime.envFiles, onLog)),
-				...(svc.envVars ?? {}),
-			},
-			healthcheckCommand: svc.healthcheckCommand,
-			image,
-			memoryLimitMb: svc.memoryLimitMb,
-			portProtocol: svc.portProtocol,
-			restartPolicy: svc.restartPolicy,
-			runtime,
-			serviceId: svc.id,
-			slug: svc.slug,
-			stackSlug: stack?.slug,
-			tag,
-			volumes: toVolumeParams(mounts),
-		};
-
-		switch (plan.kind) {
-			case "swarm": {
-				const result = await DockerService.createAndStartSwarmService(
-					{
-						...shared,
-						auth: DockerService.buildAuthConfig(svc),
-						networkMode: plan.networkMode,
-						replicas: plan.replicas,
-					},
-					onLog,
-				);
-				return { swarmServiceId: result.swarmServiceId };
-			}
-			case "container": {
-				const result = await DockerService.createAndStartContainer(
-					{ ...shared, networkMode: plan.networkMode, stackId: svc.stackId },
-					onLog,
-				);
-				return { containerId: result.containerId };
-			}
-			default:
-				return unreachable(plan);
-		}
-	}
-
-	/**
-	 * Resolves the image ref the deploy step should use : a plain registry
-	 * pull, a rollback's already-built revision image, or a fresh git build
-	 * (local, docker build server, or agent). A git build also runs required
-	 * status checks first when configured, triggers an image scan on the
-	 * result, and persists the resolved image/tag onto the service row
-	 * immediately so a concurrent redeploy sees it.
-	 */
-	async #resolveImage(
-		ctx: DeployContext,
-		plan: DeployPlan,
-	): Promise<ResolvedImage> {
-		const imagePlan = plan.image;
-		switch (imagePlan.kind) {
-			case "pull":
-				return await pullForDeploy(ctx, imagePlan, plan.workload);
-			case "revision":
-				return await resolveRevisionImage(
-					ctx,
-					imagePlan.revision,
-					plan.workload,
-				);
-			case "local-build":
-			case "docker-build":
-			case "agent-build": {
-				const commit = ctx.svc.toJSON().requireStatusChecks
-					? await enforceStatusChecks(ctx, imagePlan.git)
-					: null;
-				const built = await this.#buildGitImage(ctx, imagePlan, commit);
-				await ImageScanService.scanBuilt(ctx, imagePlan, built);
-				// Persist the resolved tag immediately : createAndStartContainer,
-				// and any future redeploy that reads svc.image/tag before this
-				// deploy returns, must see the image that actually exists.
-				await ctx.svc.update({ image: built.image, tag: built.tag });
-				return { digest: null, ...built };
-			}
-			default:
-				return unreachable(imagePlan);
-		}
-	}
-	/** Marks the deployment failed (and the service too, unless a status-check block, an image-scan block or a failed health-gated rollout left its previous workload running), notifies, and shapes the caller's DeployResult. */
+	/** Marks the deployment failed (and the service too, unless a status-check block, an image-scan block or a failed health-gated rollout left its previous workload running), notifies, and returns the error message. */
 	async #recordFailure(
 		ctx: DeployContext,
 		err: unknown,
 		trigger: DeployTrigger,
-	): Promise<DeployResult> {
+	): Promise<string> {
 		const { dep, svc } = ctx;
 		const errorMessage = err instanceof Error ? err.message : String(err);
 		const checksFailed = err instanceof StatusChecksFailedError;
@@ -446,7 +220,7 @@ class DeploymentServiceClass {
 		logger.error(`Deploy failed: service=${svc.id} deployment=${dep.id}`, err);
 		if (checksFailed) {
 			await notifyStatusChecksFailed(svc, err);
-			return { deploymentId: dep.id, error: errorMessage, success: false };
+			return errorMessage;
 		}
 		NotificationDTO.notify({
 			message: `"${svc.name}" failed to deploy: ${errorMessage}`,
@@ -454,7 +228,7 @@ class DeploymentServiceClass {
 			type: "deploy_failure",
 		});
 		NotificationChannelService.notifyDeploy({ dep, ok: false, svc, trigger });
-		return { deploymentId: dep.id, error: errorMessage, success: false };
+		return errorMessage;
 	}
 
 	/**
@@ -463,7 +237,7 @@ class DeploymentServiceClass {
 	 * error state on the service, clears the live health state of every
 	 * revision this one supersedes, appends the closing log line, and syncs
 	 * DNS for the service's hostname(s). Doesn't notify : the caller
-	 * (`deployService`) does that itself once this returns.
+	 * (`finalizeWorkerDeploy`) does that itself once this returns.
 	 */
 	async #recordSuccess(
 		ctx: DeployContext,
@@ -474,7 +248,6 @@ class DeploymentServiceClass {
 		const { dep, svc } = ctx;
 		const { containerId, swarmServiceId } = ids;
 		const [plainTag, pinnedDigest] = resolved.tag.split("@");
-		const runRef = `${resolved.image}:${resolved.tag}`;
 
 		await svc.update({
 			containerId: containerId ?? null,
@@ -492,7 +265,7 @@ class DeploymentServiceClass {
 			finishedAt: new Date(),
 			health: "watching",
 			imageDigest: resolved.digest || pinnedDigest || null,
-			imageId: await DockerService.localImageId(runRef),
+			imageId: resolved.imageId,
 			imageRef: `${resolved.image}:${plainTag}`,
 			status: "running",
 		});
@@ -503,6 +276,208 @@ class DeploymentServiceClass {
 		);
 
 		await syncAutoDns(svc, stack, dep);
+	}
+
+	/** Sends the in-app and channel notifications for a deploy that reached "running". */
+	#notifySuccess(dep: DeploymentDTO, svc: ServiceDTO, trigger: DeployTrigger) {
+		NotificationDTO.notify({
+			message:
+				trigger === "cron"
+					? `"${svc.name}" was auto-redeployed.`
+					: `"${svc.name}" deployed successfully.`,
+			serviceId: svc.id,
+			type: trigger === "cron" ? "auto_redeploy" : "deploy_success",
+		});
+		NotificationChannelService.notifyDeploy({ dep, ok: true, svc, trigger });
+	}
+
+	/**
+	 * The `deploy` job's prepare step, run in the app before the homerun worker
+	 * executes it: marks the deployment and service pulling, resolves the
+	 * configuration (a rollback's revision and its restored config, the config
+	 * snapshot, the deploy plan, the volumes) and, for a git build, waits on its
+	 * required status checks, then returns the worker's spec (see
+	 * `deployWorkerSpec`). Writes the config, volumes and image phase lines.
+	 *
+	 * @throws When the service is gone, or anything before the hand-off fails,
+	 *   after recording the failure on the deployment and service and notifying
+	 *   the way a failed deploy always has.
+	 */
+	async prepareWorkerDeploy(job: JobDTO): Promise<Record<string, unknown>> {
+		const { deploymentId, serviceId, trigger, userId } = deployJobPayload.parse(
+			job.payload,
+		);
+		const svc = await ServiceDTO.get(serviceId);
+		if (!svc) {
+			const message = "The service was deleted before its deploy ran.";
+			await (await DeploymentDTO.get(deploymentId))?.update({
+				errorMessage: message,
+				finishedAt: new Date(),
+				status: "failed",
+			});
+			throw new Error(message);
+		}
+		logger.info(
+			`Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${
+				svc.buildSource === "git"
+					? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
+					: `image=${svc.image}:${svc.tag}`
+			} user=${userId}`,
+		);
+		const dep =
+			(await DeploymentDTO.get(deploymentId)) ??
+			(await DeploymentDTO.create({
+				id: deploymentId,
+				serviceId: svc.id,
+				status: "pulling",
+				userId,
+			}));
+		await dep.update({ startedAt: new Date(), status: "pulling" });
+		await svc.update({ currentStatus: "pulling" });
+
+		const ctx: DeployContext = { dep, svc, userId };
+		try {
+			await dep.appendLog(phaseLine("config"));
+			const revision = await revisionSourceFor(dep);
+			if (revision && dep.restoreConfig) {
+				await restoreRevisionConfig(ctx, revision.id);
+			}
+			await dep.update({
+				configSnapshot: snapshotRevisionConfig(svc.toJSON()),
+			});
+			const plan = await this.#loadDeployPlan(svc, revision);
+			await dep.appendLog(phaseLine("volumes"));
+			const mounts = await ServiceVolumeDTO.listForService(svc.id);
+			const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
+			await dep.appendLog(phaseLine("image"));
+			return await deployWorkerSpec({ ...ctx, mounts, plan, stack });
+		} catch (err) {
+			throw new Error(await this.#recordFailure(ctx, err, trigger));
+		}
+	}
+
+	/** Stores the scans the worker ran as scan history rows on the deployment, and alerts on critical findings the way an in-app scan does. */
+	async #recordWorkerScans(
+		dep: DeploymentDTO,
+		svc: ServiceDTO,
+		scans: WorkerScan[],
+	): Promise<void> {
+		for (const scan of scans) {
+			const { summary } = scan;
+			// biome-ignore lint/performance/noAwaitInLoops: scan history keeps the order the worker ran them in
+			await ImageScanDTO.create({
+				counts: summary?.counts,
+				deploymentId: dep.id,
+				digest: scan.digest ?? null,
+				error: scan.error ?? undefined,
+				findings: summary?.findings,
+				fixableCounts: summary?.fixableCounts,
+				imageRef: scan.imageRef,
+				serviceId: svc.id,
+				source: scan.source,
+				status: scan.status,
+				totalFindings: summary?.totalFindings,
+			});
+			if (summary && summary.counts.critical > 0) {
+				NotificationDTO.notify({
+					message: `"${svc.name}" has ${summary.counts.critical} critical ${summary.counts.critical === 1 ? "vulnerability" : "vulnerabilities"} in ${scan.imageRef}.`,
+					serviceId: svc.id,
+					type: "image_scan_critical",
+				});
+				NotificationChannelService.notify(
+					imageScanMessage(
+						{
+							counts: summary.counts,
+							findings: summary.findings,
+							imageRef: scan.imageRef,
+							origin: config.auth.origin ?? null,
+							service: { id: svc.id, name: svc.name },
+						},
+						new Date().toISOString(),
+					),
+				);
+			}
+		}
+	}
+
+	/** Records what the worker did whatever the outcome: the commit a git build built, the service's new image, and the scans. */
+	async #applyWorkerOutcome(
+		dep: DeploymentDTO,
+		svc: ServiceDTO,
+		outcome: WorkerDeployOutcome,
+	): Promise<void> {
+		if (outcome.built) {
+			await dep.update({
+				gitCommit: outcome.gitCommit || null,
+				gitRef: outcome.gitRef || null,
+			});
+		}
+		if (outcome.serviceImage) {
+			await svc.update(outcome.serviceImage);
+		}
+		await this.#recordWorkerScans(dep, svc, outcome.scans ?? []);
+	}
+
+	/**
+	 * The `deploy` job's finalize step, once the homerun worker has run it:
+	 * records the built commit, the service's new image and the scans, then
+	 * either the success (service and deployment running, superseded health
+	 * cleared, DNS synced, health watch armed, notifications) or the failure
+	 * (the service kept running when a scan block or a failed health-gated
+	 * rollout left its previous workload in place).
+	 *
+	 * @returns The job result `POST /services/:id/deploy` answers with.
+	 * @throws When the deploy failed, with its error message.
+	 */
+	async finalizeWorkerDeploy(
+		job: JobDTO,
+		result: Record<string, unknown> | null,
+		error: string | null,
+	): Promise<JobResult> {
+		const { deploymentId, serviceId, trigger, userId } = deployJobPayload.parse(
+			job.payload,
+		);
+		const [svc, dep] = await Promise.all([
+			ServiceDTO.get(serviceId),
+			DeploymentDTO.get(deploymentId),
+		]);
+		if (!(svc && dep)) {
+			throw new Error("The service was deleted while it deployed.");
+		}
+		const outcome = (result ?? {}) as WorkerDeployOutcome;
+		await this.#applyWorkerOutcome(dep, svc, outcome);
+
+		const ctx: DeployContext = { dep, svc, userId };
+		if (error !== null || !outcome.image) {
+			const message = error ?? "The worker didn't report a deployed image.";
+			throw new Error(
+				await this.#recordFailure(
+					ctx,
+					workerFailure(outcome.failure, message),
+					trigger,
+				),
+			);
+		}
+
+		const ids = {
+			containerId: outcome.containerId || undefined,
+			swarmServiceId: outcome.swarmServiceId || undefined,
+		};
+		const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
+		await this.#recordSuccess(
+			ctx,
+			ids,
+			{
+				digest: outcome.digest || null,
+				image: outcome.image,
+				imageId: outcome.imageId || null,
+				tag: outcome.tag ?? "",
+			},
+			stack,
+		);
+		this.watchHealth(dep.id, svc.id, userId);
+		this.#notifySuccess(dep, svc, trigger);
+		return { containerId: ids.containerId ?? null, deploymentId: dep.id };
 	}
 
 	/**
@@ -606,106 +581,6 @@ class DeploymentServiceClass {
 			svc: primary,
 			userId,
 		});
-	}
-
-	/**
-	 * Runs an entire deploy end to end: loads the deploy plan, resolves (pulls
-	 * or builds) the image, starts the container/swarm service, records the
-	 * result, and arms the post-deploy health watch. This is the job worker's
-	 * actual `deploy` job handler, invoked with the deployment id `enqueueDeploy`
-	 * already created (or reuses `clientDeploymentId`'s row if it already
-	 * exists, so a job retry doesn't create a duplicate one). Appends
-	 * phase-by-phase progress to the deployment's log throughout, and sends a
-	 * success/failure notification (both an in-app `NotificationDTO` and any
-	 * configured notification channel) before returning. Never throws: any
-	 * error is caught and turned into a `{ success: false }` result via
-	 * `#recordFailure`.
-	 */
-	async deployService(
-		svc: ServiceDTO,
-		userId: string,
-		clientDeploymentId?: string | null,
-		trigger: DeployTrigger = "manual",
-	): Promise<DeployResult> {
-		const isGitBuild = svc.buildSource === "git";
-		logger.info(
-			`Deploy started: service=${svc.name} (${svc.id}) source=${svc.buildSource} ${
-				isGitBuild
-					? `git=${svc.gitUrl}#${svc.gitRef ?? "main"}`
-					: `image=${svc.image}:${svc.tag}`
-			} user=${userId}`,
-		);
-
-		const existing = clientDeploymentId
-			? await DeploymentDTO.get(clientDeploymentId)
-			: null;
-		const dep =
-			existing ??
-			(await DeploymentDTO.create({
-				id: clientDeploymentId || undefined,
-				serviceId: svc.id,
-				status: "pulling",
-				userId,
-			}));
-		await dep.update({ startedAt: new Date(), status: "pulling" });
-		await svc.update({ currentStatus: "pulling" });
-
-		try {
-			await dep.appendLog(phaseLine("config"));
-			const ctx: DeployContext = { dep, svc, userId };
-			const revision = await revisionSourceFor(dep);
-			if (revision && dep.restoreConfig) {
-				await restoreRevisionConfig(ctx, revision.id);
-			}
-			await dep.update({
-				configSnapshot: snapshotRevisionConfig(svc.toJSON()),
-			});
-			const plan = await this.#loadDeployPlan(svc, revision);
-
-			await dep.appendLog(phaseLine("volumes"));
-			const mounts = await ServiceVolumeDTO.listForService(svc.id);
-
-			await dep.appendLog(phaseLine("image"));
-			const resolved = await this.#resolveImage(ctx, plan);
-			const { image, tag } = resolved;
-
-			await svc.update({ currentStatus: "starting" });
-
-			const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
-
-			await dep.appendLog(phaseLine("container"));
-			const ids = await this.#startWorkload({
-				dep,
-				image,
-				mounts,
-				plan: plan.workload,
-				stack,
-				svc,
-				tag,
-			});
-
-			await dep.appendLog(phaseLine("network"));
-			await this.#recordSuccess(ctx, ids, resolved, stack);
-			this.watchHealth(dep.id, svc.id, userId);
-
-			NotificationDTO.notify({
-				message:
-					trigger === "cron"
-						? `"${svc.name}" was auto-redeployed.`
-						: `"${svc.name}" deployed successfully.`,
-				serviceId: svc.id,
-				type: trigger === "cron" ? "auto_redeploy" : "deploy_success",
-			});
-			NotificationChannelService.notifyDeploy({ dep, ok: true, svc, trigger });
-
-			return {
-				containerId: ids.containerId,
-				deploymentId: dep.id,
-				success: true,
-			};
-		} catch (err) {
-			return await this.#recordFailure({ dep, svc, userId }, err, trigger);
-		}
 	}
 }
 

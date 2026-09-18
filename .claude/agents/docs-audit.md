@@ -34,20 +34,20 @@ The docs being audited:
 
 The ground truth to check them against:
 
-| Claim type                          | Source of truth                                                                                           |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Pages, tabs, nav entries, UI labels | `src/routes/(protected)/**` directory tree, `src/lib/nav.ts`, sidebar component, button/label text        |
-| Settings and their defaults         | `src/routes/(protected)/settings/**`, `src/lib/dto/instance-settings-dto.ts`, `schema.ts` defaults        |
-| Env vars and config file keys       | `src/lib/config.ts`, `homerun.schema.json`, `compose.yaml`, installer `options.go`                        |
-| Data the app stores                 | `src/lib/server/db/schema.ts`                                                                             |
-| REST API endpoints, auth, payloads  | `src/routes/api/v1/**`, `openapi.json` (regenerate with `bun run gen` if stale)                           |
-| CLI commands, flags, output         | `cmd/cli/main.go`, `commands.go`, `login.go`, `update.go` (Go, not TypeScript); `go run ./cmd/cli --help` |
-| Installer steps and flags           | `cmd/installer/main.go`, `options.go`, `*.go` (Go, not TypeScript); `go run ./cmd/installer --help`       |
-| Agent endpoints and config          | `cmd/agent/main.go`, `server.go`, `config.go`, `openapi.go` (Go, not TypeScript)                          |
-| Built-in templates                  | the template catalog under `src/lib` (grep `TemplateDTO` / seed data)                                     |
-| Background jobs, schedules, cleanup | `src/lib/services/queue/**`, `cron/**`, `cron.service.ts`, `docker-cleanup-queue.ts`                      |
-| Limitations and planned features    | the code plus `.agents/notes/planned-features.md` and `TODO.md`                                           |
-| Screenshots                         | `docs/images/**` referenced paths exist                                                                   |
+| Claim type                          | Source of truth                                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Pages, tabs, nav entries, UI labels | `src/routes/(protected)/**` directory tree, `src/lib/nav.ts`, sidebar component, button/label text            |
+| Settings and their defaults         | `src/routes/(protected)/settings/**`, `src/lib/dto/instance-settings-dto.ts`, `schema.ts` defaults            |
+| Env vars and config file keys       | `src/lib/config.ts`, `homerun.schema.json`, `compose.yaml`, installer `options.go`                            |
+| Data the app stores                 | `src/lib/server/db/schema.ts`                                                                                 |
+| REST API endpoints, auth, payloads  | `src/routes/api/v1/**`, `openapi.json` (regenerate with `bun run gen` if stale)                               |
+| CLI commands, flags, output         | `internal/cli/cli.go`, `commands.go`, `login.go`, `update.go` (Go, not TypeScript); `go run ./cmd/cli --help` |
+| Installer steps and flags           | `internal/installer/installer.go`, `options.go`, `*.go` (Go, not TypeScript); `go run ./cmd/installer --help` |
+| Agent endpoints and config          | `internal/agent/agent.go`, `server.go`, `config.go`, `openapi.go` (Go, not TypeScript)                        |
+| Built-in templates                  | the template catalog under `src/lib` (grep `TemplateDTO` / seed data)                                         |
+| Background jobs, schedules, cleanup | `src/lib/services/queue/**`, `cron/**`, `cron.service.ts`, `docker-cleanup-queue.ts`                          |
+| Limitations and planned features    | the code plus `.agents/notes/planned-features.md` and `TODO.md`                                               |
+| Screenshots                         | `docs/images/**` referenced paths exist                                                                       |
 
 ## Workflow
 

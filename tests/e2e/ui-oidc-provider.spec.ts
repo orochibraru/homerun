@@ -11,6 +11,7 @@ interface RegisteredApp {
 
 async function signIn(page: Page) {
 	await page.locator("#email").fill("ada@example.com");
+	await page.getByRole("button", { exact: true, name: "Continue" }).click();
 	await page.locator("#password").fill("a-real-strong-password-123");
 	await page.getByRole("button", { name: "Sign in" }).click();
 }
@@ -71,6 +72,7 @@ test.describe
 	.serial("Homerun as an OpenID Connect provider", () => {
 		let trusted: RegisteredApp;
 		let issuer = "";
+		let trustedAccessToken = "";
 
 		test("the discovery document advertises Homerun as the issuer", async ({
 			request,
@@ -147,6 +149,7 @@ test.describe
 			expect(token.ok(), await token.text()).toBe(true);
 			const tokens = await token.json();
 			expect(tokens.access_token).toBeTruthy();
+			trustedAccessToken = tokens.access_token;
 
 			const [, payload] = String(tokens.id_token).split(".");
 			const claims = JSON.parse(
@@ -187,5 +190,36 @@ test.describe
 			expect(landed.searchParams.get("state")).toBe("state-456");
 			expect(landed.searchParams.get("code")).toBeTruthy();
 			await context.close();
+		});
+
+		test("the user sees the apps on their profile and revoking one kills its tokens", async ({
+			page,
+			request,
+		}) => {
+			await page.goto("/auth/sign-in");
+			await signIn(page);
+			await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);
+
+			await page.goto("/profile/clients");
+			const grafana = page.locator("div.rounded-md.border", {
+				hasText: "E2E Grafana",
+			});
+			await expect(grafana).toBeVisible();
+			await expect(
+				page.locator("div.rounded-md.border", { hasText: "E2E Outline" }),
+			).toBeVisible();
+
+			await grafana.getByRole("button", { name: "Revoke" }).click();
+			await page
+				.getByRole("button", { exact: true, name: "Revoke" })
+				.last()
+				.click();
+			await expect(page.getByText("App revoked.")).toBeVisible();
+			await expect(grafana).toHaveCount(0);
+
+			const userinfo = await request.get(`${AUTH_BASE}/oauth2/userinfo`, {
+				headers: { authorization: `Bearer ${trustedAccessToken}` },
+			});
+			expect(userinfo.ok()).toBe(false);
 		});
 	});

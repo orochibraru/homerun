@@ -8,7 +8,6 @@ import type { BaseDockerService, Constructor } from "./base.ts";
 const logger = new Logger("CustomSsl");
 
 export interface CustomSslService {
-	customDomain: string | null;
 	customSslCertEnc: string | null;
 	customSslKeyEnc: string | null;
 	slug: string;
@@ -47,11 +46,7 @@ export function DockerCustomSslMixin<
 			const certPath = join(dir, "certs", `${svc.slug}.crt`);
 			const keyPath = join(dir, "certs", `${svc.slug}.key`);
 
-			const hasCert = !!(
-				svc.customDomain &&
-				svc.customSslCertEnc &&
-				svc.customSslKeyEnc
-			);
+			const hasCert = !!(svc.customSslCertEnc && svc.customSslKeyEnc);
 
 			if (!hasCert) {
 				// Not (or no longer) configured : remove any previously-written
@@ -90,9 +85,7 @@ export function DockerCustomSslMixin<
 					configPath,
 					`# Written by Homerun for service "${svc.slug}" : do not edit by hand.\ntls:\n  certificates:\n    - certFile: ${certPath}\n      keyFile: ${keyPath}\n`,
 				);
-				logger.info(
-					`Wrote dynamic TLS config: service=${svc.slug} domain=${svc.customDomain}`,
-				);
+				logger.info(`Wrote dynamic TLS config: service=${svc.slug}`);
 			} catch (err) {
 				logger.error(
 					`Failed to write dynamic TLS config: service=${svc.slug}`,

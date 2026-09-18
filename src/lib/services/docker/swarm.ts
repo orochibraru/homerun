@@ -130,6 +130,66 @@ export function swarmRestartCondition(
 	return restartPolicy === "on-failure" ? "on-failure" : "any";
 }
 
+/**
+ * The swarm service spec for a service, minus its name and what depends on
+ * the image the deploy actually resolved (the task's `Env`, `Image`, readiness
+ * `Healthcheck` and label): Traefik and tracking labels on the service (routed
+ * over the swarm overlay), the replica count, and a task template with the
+ * runtime options, mounts (`swarmMount`), networks (`swarmNetworksFor`),
+ * resource limits and restart condition. The homerun worker fills in the rest.
+ */
+export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
+	return {
+		Labels: mergeLabels(
+			params.runtime?.labels,
+			buildContainerLabels({
+				containerPort: params.containerPort,
+				defaultDomainEnabled: params.defaultDomainEnabled,
+				dnsResolvable:
+					params.networkMode === "host" ? false : params.dnsResolvable,
+				domains: params.domains,
+				networkName: swarmNetworkName(),
+				serviceId: params.serviceId,
+				slug: params.slug,
+				stackSlug: params.stackSlug,
+			}),
+		),
+		Mode: { Replicated: { Replicas: params.replicas } },
+		TaskTemplate: {
+			ContainerSpec: {
+				Args: params.runtime?.command ?? undefined,
+				CapabilityAdd: params.runtime?.capAdd.length
+					? params.runtime.capAdd.map(capabilityName)
+					: undefined,
+				Command: params.runtime?.entrypoint ?? undefined,
+				Labels: mergeLabels(params.runtime?.labels, {
+					[SERVICE_ID_LABEL]: params.serviceId,
+					"homerun.managed": "true",
+				}),
+				Mounts: (params.volumes ?? []).map(swarmMount),
+			},
+			Networks: swarmNetworksFor(
+				params.networkMode,
+				swarmNetworkName(),
+				params.slug,
+			),
+			Resources: {
+				Limits: {
+					MemoryBytes: params.memoryLimitMb
+						? params.memoryLimitMb * 1024 * 1024
+						: undefined,
+					NanoCPUs: params.cpuLimit
+						? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
+						: undefined,
+				},
+			},
+			RestartPolicy: {
+				Condition: swarmRestartCondition(params.restartPolicy),
+			},
+		},
+	};
+}
+
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pullImage and the swarm rollout mixin. */
 interface RequiresContainerMixin {
 	planReadiness: (
@@ -156,8 +216,9 @@ export interface CreateSwarmServiceParams {
 	auth?: RegistryAuth;
 	containerPort: number;
 	cpuLimit?: string | null;
-	customDomain?: string | null;
+	defaultDomainEnabled?: boolean;
 	dnsResolvable?: boolean;
+	domains?: string[];
 	envVars: Record<string, string>;
 	image: string;
 	memoryLimitMb?: number | null;
@@ -334,52 +395,6 @@ export function DockerSwarmMixin<
 			}
 		}
 
-		/** Builds the dockerode `TaskTemplate` for a swarm service from its create params: env, healthcheck, image, labels, bind and named-volume mounts, its networks (`swarmNetworksFor`), resource limits, and restart condition. */
-		#taskTemplateFor(
-			params: CreateSwarmServiceParams,
-			readiness: ReadinessCheck,
-		) {
-			return {
-				ContainerSpec: {
-					Args: params.runtime?.command ?? undefined,
-					CapabilityAdd: params.runtime?.capAdd.length
-						? params.runtime.capAdd.map(capabilityName)
-						: undefined,
-					Command: params.runtime?.entrypoint ?? undefined,
-					Env: Object.entries(params.envVars).map(([k, v]) => `${k}=${v}`),
-					Healthcheck: readinessHealthcheck(
-						readiness,
-						params.healthcheckCommand,
-					),
-					Image: `${params.image}:${params.tag}`,
-					Labels: mergeLabels(params.runtime?.labels, {
-						[SERVICE_ID_LABEL]: params.serviceId,
-						"homerun.managed": "true",
-						...readinessLabels(readiness),
-					}),
-					Mounts: (params.volumes ?? []).map(swarmMount),
-				},
-				Networks: swarmNetworksFor(
-					params.networkMode,
-					swarmNetworkName(),
-					params.slug,
-				),
-				Resources: {
-					Limits: {
-						MemoryBytes: params.memoryLimitMb
-							? params.memoryLimitMb * 1024 * 1024
-							: undefined,
-						NanoCPUs: params.cpuLimit
-							? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
-							: undefined,
-					},
-				},
-				RestartPolicy: {
-					Condition: swarmRestartCondition(params.restartPolicy),
-				},
-			};
-		}
-
 		/**
 		 * Pulls the image, then creates or updates the swarm service backing
 		 * one Homerun service: ensures the shared overlay network, best-effort
@@ -419,23 +434,26 @@ export function DockerSwarmMixin<
 				},
 				onProgress,
 			);
+			const template = swarmServiceTemplate(params);
 			const spec = {
-				Labels: mergeLabels(
-					params.runtime?.labels,
-					buildContainerLabels({
-						containerPort: params.containerPort,
-						customDomain: params.customDomain,
-						dnsResolvable:
-							params.networkMode === "host" ? false : params.dnsResolvable,
-						networkName: swarmNetworkName(),
-						stackSlug: params.stackSlug,
-						serviceId: params.serviceId,
-						slug: params.slug,
-					}),
-				),
-				Mode: { Replicated: { Replicas: params.replicas } },
+				...template,
 				Name: this.#swarmServiceName(params.slug, params.stackSlug),
-				TaskTemplate: this.#taskTemplateFor(params, readiness),
+				TaskTemplate: {
+					...template.TaskTemplate,
+					ContainerSpec: {
+						...template.TaskTemplate.ContainerSpec,
+						Env: Object.entries(params.envVars).map(([k, v]) => `${k}=${v}`),
+						Healthcheck: readinessHealthcheck(
+							readiness,
+							params.healthcheckCommand,
+						),
+						Image: `${params.image}:${params.tag}`,
+						Labels: {
+							...template.TaskTemplate.ContainerSpec.Labels,
+							...readinessLabels(readiness),
+						},
+					},
+				},
 			};
 			if (existing) {
 				return await this.rollOutSwarmService(existing.ID, spec, onProgress);

@@ -13,6 +13,7 @@ test.describe
 		test.beforeEach(async ({ page }) => {
 			await page.goto("/auth/sign-in");
 			await page.locator("#email").fill("ada@example.com");
+			await page.getByRole("button", { exact: true, name: "Continue" }).click();
 			await page.locator("#password").fill("a-real-strong-password-123");
 			await page.getByRole("button", { name: "Sign in" }).click();
 		});

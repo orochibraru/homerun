@@ -1,0 +1,16 @@
+services:
+  worker:
+    restart: unless-stopped
+    command: ["/usr/local/bin/homerun-worker"]
+    labels:
+      - "homerun.role=worker"
+    stop_grace_period: 65s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+    healthcheck:
+      disable: true

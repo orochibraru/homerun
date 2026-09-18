@@ -27,11 +27,17 @@ export function DockerReconcileMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerAndSwarmMixin>,
 >(Base: TBase) {
 	return class DockerReconcileService extends Base {
-		/** Syncs one service's `currentStatus` with the live Docker state of its container (or swarm service). */
+		/**
+		 * Syncs one service's `currentStatus` with the live Docker state of its
+		 * container (or swarm service). A container the user stopped counts as
+		 * stopped whatever its exit code: `docker stop` SIGKILLs a process that
+		 * outlives the stop timeout, and that 137 isn't a failure.
+		 */
 		async syncServiceStatus(serviceId: string): Promise<ContainerStatus> {
 			const [row] = await db
 				.select({
 					containerId: service.containerId,
+					desiredState: service.desiredState,
 					swarmServiceId: service.swarmServiceId,
 				})
 				.from(service)
@@ -51,7 +57,11 @@ export function DockerReconcileMixin<
 				return "pending";
 			}
 
-			const status = await this.inspectStatus(row.containerId);
+			const inspected = await this.inspectStatus(row.containerId);
+			const status =
+				inspected === "failed" && row.desiredState === "stopped"
+					? "stopped"
+					: inspected;
 			await db
 				.update(service)
 				.set({ currentStatus: status })

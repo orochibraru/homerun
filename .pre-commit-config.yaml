@@ -1,3 +1,6 @@
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_stages: [pre-commit]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -77,9 +80,9 @@ repos:
         pass_filenames: false
         files: ^(src/routes/api/|src/lib/openapi/|src/lib/config\.ts$|scripts/generate-)
 
-      - id: format-ts
-        name: Formatting (TS)
-        entry: bun run biome format --write
+      - id: biome
+        name: Format and lint (Biome)
+        entry: bun run biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true
         language: system
         files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html)$
 
@@ -89,43 +92,46 @@ repos:
         language: system
         files: \.(md|mdx)$
 
-      - id: format-go
-        name: Formatting (Go)
-        entry: gofmt -w
-        language: system
-        files: \.go$
-
       - id: markdownlint
         name: Markdown Lint
         entry: bun run markdownlint-cli2 --fix
         language: system
         types: [markdown]
 
-      - id: lint-ts
-        name: Lint (TS)
-        entry: bun run lint:ts
+      - id: format-go
+        name: Formatting (Go)
+        entry: gofmt -w
         language: system
-        files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html)$
+        files: \.go$
 
       - id: lint-tailwind
         name: Lint (Tailwind)
-        entry: bun run lint:tailwind
+        entry: bun run scripts/lint-tailwind.ts
+        language: system
+        files: ^src/.*\.(svelte|css|html)$
+
+      - id: check
+        name: Type Check
+        entry: bash -c 'bun run check:app && bun run check:scripts'
         language: system
         pass_filenames: false
-        files: \.(tsx|jsx|html|vue|svelte|astro|mdx|css)$
+        stages: [pre-push]
+        files: ^(src/|scripts/|tests/|vite\.config\.ts$|tsconfig.*\.json$)
 
       - id: test-unit
         name: Unit Tests
         entry: bun run test:unit
         language: system
         pass_filenames: false
-        files: ^(src/|tests/unit/|bunfig\.toml$)
+        stages: [pre-push]
+        files: ^(src/|tests/unit/|bunfig.*\.toml$)
 
       - id: lint-go
         name: Lint (Go)
         entry: golangci-lint run ./cmd/... ./internal/...
         language: system
         pass_filenames: false
+        stages: [pre-push]
         files: (^(cmd|internal)/.*\.go$|^go\.mod$|^\.golangci\.yml$)
 
       - id: test-go
@@ -133,14 +139,8 @@ repos:
         entry: go test ./cmd/... ./internal/...
         language: system
         pass_filenames: false
+        stages: [pre-push]
         files: (^(cmd|internal)/.*\.(go|sh|json)$|^go\.mod$)
-
-      - id: check
-        name: Type Check
-        entry: bun run check
-        language: system
-        pass_filenames: false
-        files: ^(src/|cmd/|internal/|scripts/|tests/|vite\.config\.ts$|tsconfig.*\.json$)
 
   - repo: local
     hooks:

@@ -1,3 +1,21 @@
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS go-builder
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd ./cmd
+COPY internal ./internal
+COPY package.json ./
+
+ARG TARGETOS
+ARG TARGETARCH
+RUN VERSION="$(sed -n 's/^[[:space:]]*"version": "\(.*\)",*$/\1/p' package.json)"; \
+    CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath \
+    -ldflags "-s -w -X github.com/orochibraru/homerun/internal/buildinfo.Version=${VERSION}" \
+    -o /out/ ./cmd/agent ./cmd/worker && \
+    mv /out/agent /out/homerun-agent && mv /out/worker /out/homerun-worker
+
 FROM oven/bun:1.4.2-alpine AS deps-base
 
 ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
@@ -33,6 +51,7 @@ WORKDIR /app
 
 COPY --from=app-builder --chown=bun:bun /app/build /app/build
 COPY --from=app-builder --chown=bun:bun /app/drizzle/ /app/drizzle
+COPY --from=go-builder /out/homerun-worker /usr/local/bin/homerun-worker
 COPY tools/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
@@ -60,27 +79,11 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/app/build/server"]
 
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS agent-builder
-
-WORKDIR /src
-
-COPY go.mod ./
-COPY cmd/agent ./cmd/agent
-COPY internal ./internal
-COPY package.json ./
-
-ARG TARGETOS
-ARG TARGETARCH
-RUN VERSION="$(sed -n 's/^[[:space:]]*"version": "\(.*\)",*$/\1/p' package.json)"; \
-    CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath \
-    -ldflags "-s -w -X github.com/orochibraru/homerun/internal/buildinfo.Version=${VERSION}" \
-    -o /out/homerun-agent ./cmd/agent
-
 FROM alpine:3 AS agent
 
 RUN apk add --no-cache ca-certificates wget
 
-COPY --from=agent-builder /out/homerun-agent /usr/local/bin/homerun-agent
+COPY --from=go-builder /out/homerun-agent /usr/local/bin/homerun-agent
 
 ENV PORT=7420
 ENV DOCKER_SOCKET_PATH=/var/run/docker.sock

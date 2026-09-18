@@ -67,18 +67,22 @@ two deploys of the same service racing each other, and what keeps a
   process that died, and is put back on the queue. `runJob()` is public
   specifically so `tests/unit/app/queue.test.ts` can drive the
   succeed/retry/permanently-fail decision without an interval.
+- **Go-executed job types** skip their in-process handler: a non-null module in
+  `$lib/services/queue/worker-jobs/` makes `runJob` run its `prepare` step and
+  hand the job to the Go worker, and the tick's finalize pass runs its
+  `finalize` step once the worker reports back. See `worker.md`.
 - **`$lib/services/queue/handlers.ts`** maps a `JobType` to its handler
   (`deploy` → `DeploymentService.deployService`, `backup` →
   `S3BackupService.backupVolume`, `cron_job` → `CronJobService.runJob`,
-  `docker_cleanup` → the matching `DockerService.prune*`,
-  `notification_delivery` → `NotificationChannelService.retryDelivery`), each
-  parsing its own payload through a zod schema in `queue/payloads.ts` rather
-  than casting : a payload written by an older version of the app fails as a
-  clean job error instead of deep inside dockerode. Throwing is how a handler
-  reports failure. Kept in its own module so `QueueService` stays importable
-  from `deploy.service.ts` without an import cycle (`handlers` →
-  `deploy.service` → `queue.service`, and `worker` → `handlers`, so
-  `hooks.server.ts` imports the worker directly).
+  `docker_cleanup` → the matching `DockerService.prune*` (unused now, the Go
+  worker runs it, see `worker.md`), `notification_delivery` →
+  `NotificationChannelService.retryDelivery`), each parsing its own payload
+  through a zod schema in `queue/payloads.ts` rather than casting : a payload
+  written by an older version of the app fails as a clean job error instead of
+  deep inside dockerode. Throwing is how a handler reports failure. Kept in its
+  own module so `QueueService` stays importable from `deploy.service.ts` without
+  an import cycle (`handlers` → `deploy.service` → `queue.service`, and `worker`
+  → `handlers`, so `hooks.server.ts` imports the worker directly).
 
 **What changed at each trigger point.** `DeploymentService.deployService()` is
 unchanged as the actual pipeline and is still the single source of truth; what
@@ -251,10 +255,16 @@ one form component (`$lib/components/cron-job-fields.svelte`) and one
 server-side parser (`$lib/server/cron-job-form.ts`); enabled jobs also render on
 the Scheduling page next to cron redeploys and backups.
 
-**Not remote-host aware**: an image job always runs on the local daemon
-(`runOneOff` takes a `remote` param, but nothing sets it here yet). **No per-run
-streaming either**: output is captured and shown once the run finishes, which is
-why a long-running job's page shows a spinner rather than a live tail.
+**Executed by the Go worker** (`worker-jobs/cron_job.ts`,
+`internal/jobs/cronjob`). `CronJobService.prepareRun` creates the run row and
+resolves the spec (image ref or the `nsenter` helper, parsed command, env,
+labels, registry auth, and for an image job on a `"docker"` build server its
+`tcp://` connection; `ssh://` hosts are rejected by the worker, agent hosts by
+prepare). Go runs it through `dockerapi.RunOneOff`, appends output to
+`cron_job_run.output` at most once a second, and returns
+`{exitCode, output, timedOut}`; `CronJobService.finishRun` maps that onto the
+outcome (same messages as before) and finishes the run. `CronJobService.runJob`
+is the old in-process path, dead while the worker job is on.
 
 ## S3 backups (`src/lib/services/s3-backup.service.ts`, `/backups`, `/s3-destinations`)
 

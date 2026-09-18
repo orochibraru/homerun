@@ -1,18 +1,20 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { updatePortsSchema } from "$lib/server/validation/service";
+import {
+	DOMAIN_RE,
+	defaultHostname,
+	normalizeDomains,
+	serviceHostnames,
+} from "$lib/service-domains";
 import { DockerService } from "$lib/services/docker.service";
 import { encryptSecret } from "$lib/services/secrets";
 
 const logger = new Logger("Services");
-
-// Loose hostname check : real validation is "does DNS for this actually
-// point here", which the app has no way to verify; this just rejects
-// obviously-malformed input.
-const DOMAIN_RE =
-	/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
 
 /** Blank fields mean "leave unchanged" (same convention as registryPassword elsewhere); the explicit clearSsl checkbox is the only way to actually remove a stored cert/key. */
 function sslUpdateFields(
@@ -33,7 +35,61 @@ function sslUpdateFields(
 }
 
 export const actions = {
-	updateNetworking: async ({ request, params, locals }) => {
+	updateDomains: async ({ request, params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
+
+		const formData = await request.formData();
+		const defaultDomainEnabled = formData.get("defaultDomainEnabled") === "on";
+		const fallback = defaultHostname(svc.slug, stack?.slug, config.baseDomain);
+		const domains = normalizeDomains(
+			formData.getAll("domains").map(String),
+		).filter((domain) => domain !== fallback);
+
+		const invalid = domains.find((domain) => !DOMAIN_RE.test(domain));
+		if (invalid) {
+			return fail(400, { error: `"${invalid}" isn't a valid domain.` });
+		}
+		const taken = await ServiceDTO.domainTaken(domains, svc.id);
+		if (taken) {
+			return fail(400, {
+				error: `${taken} is already routed to another service.`,
+			});
+		}
+		const hostnames = serviceHostnames(
+			{ defaultDomainEnabled, domains, primaryDomain: null, slug: svc.slug },
+			stack?.slug,
+			config.baseDomain,
+		);
+		if (hostnames.length === 0) {
+			return fail(400, {
+				error:
+					"Keep at least one domain, or turn public routing off in the Network section.",
+			});
+		}
+		const chosen = String(formData.get("primaryDomain") ?? "")
+			.trim()
+			.toLowerCase();
+
+		await svc.update({
+			defaultDomainEnabled,
+			domains,
+			primaryDomain: hostnames.includes(chosen) ? chosen : hostnames[0],
+		});
+
+		logger.info(
+			`Domains updated: service=${svc.id} domains=${hostnames.join(",")} user=${locals.user.id}`,
+		);
+		return { success: true };
+	},
+
+	updateSsl: async ({ request, params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));
 		}
@@ -43,47 +99,24 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
-		const raw = (formData.get("customDomain") as string | null)?.trim() ?? "";
-		const customDomain = raw.toLowerCase() || null;
-		const customSslCert = (
-			formData.get("customSslCert") as string | null
-		)?.trim();
-		const customSslKey = (
-			formData.get("customSslKey") as string | null
-		)?.trim();
+		const cert = (formData.get("customSslCert") as string | null)?.trim();
+		const key = (formData.get("customSslKey") as string | null)?.trim();
 		const clearSsl = formData.get("clearSsl") === "on";
-
-		if (customDomain && !DOMAIN_RE.test(customDomain)) {
-			return fail(400, { error: "That doesn't look like a valid domain." });
-		}
-		if (
-			customDomain &&
-			(await ServiceDTO.customDomainTaken(customDomain, svc.id))
-		) {
+		if (!clearSsl && Boolean(cert) !== Boolean(key)) {
 			return fail(400, {
-				error: "That domain is already mapped to another service.",
-			});
-		}
-		if (customSslCert && customSslKey && !customDomain) {
-			return fail(400, {
-				error: "A custom domain is required to attach a custom certificate.",
+				error: "Paste both the certificate and its private key.",
 			});
 		}
 
-		await svc.update({
-			customDomain,
-			...sslUpdateFields(clearSsl, customSslCert, customSslKey),
-		});
-
+		await svc.update(sslUpdateFields(clearSsl, cert, key));
 		await DockerService.syncCustomSslConfig(svc);
 
 		logger.info(
-			`Networking updated: service=${svc.id} domain=${
-				customDomain ?? "none"
-			} user=${locals.user.id}`,
+			`Custom certificate ${clearSsl ? "removed" : "updated"}: service=${svc.id} user=${locals.user.id}`,
 		);
 		return { success: true };
 	},
+
 	// Container port, protocol, network mode, and DNS-resolvability : moved
 	// here from the old Settings tab (see validation/service.ts's
 	// updatePortsSchema docstring).

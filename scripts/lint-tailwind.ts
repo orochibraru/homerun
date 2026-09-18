@@ -10,14 +10,19 @@ function chunk<T>(items: T[], size: number): T[][] {
 	return chunks;
 }
 
-const fix = process.argv.includes("--fix");
+const args = process.argv.slice(2);
+const fix = args.includes("--fix");
+const requested = args.filter((arg) => !arg.startsWith("--"));
 const files = await Array.fromAsync(
 	new Bun.Glob("src/**/*.{svelte,css,html}").scan({ cwd: process.cwd() }),
 );
 files.sort();
 
 const cssFiles = files.filter((file) => file.endsWith(".css"));
-const otherFiles = files.filter((file) => !file.endsWith(".css"));
+const otherFiles =
+	requested.length > 0
+		? requested.filter((file) => !file.endsWith(".css"))
+		: files.filter((file) => !file.endsWith(".css"));
 
 const exitCodes = await Promise.all(
 	chunk(otherFiles, CHUNK_SIZE).map((batch) => {

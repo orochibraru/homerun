@@ -64,7 +64,9 @@ dependency needed), Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
 ## Commands
 
 ```bash
-bun run dev              # vite dev
+bun run dev              # scripts/dev.ts, vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change
+bun run dev:app          # vite dev alone
+bun run dev:worker       # the worker alone, same rebuild-on-change loop
 bun run preview          # vite preview, serves the last vite build (bun run start is closer to production)
 bun run build            # build:app then build:packages, sequential
 bun run build:app        # bun run gen && vite build
@@ -98,7 +100,7 @@ bun run test              # svelte-kit sync && bun test (unit + integration) the
 bun run test:unit         # tests/unit/app only, no Postgres/Docker needed; cmd/agent/, cmd/cli/ and cmd/installer/'s own Go tests are separate commands, below
 bun run test:unit:agent   # go test ./cmd/agent/..., its own *_test.go files, not under tests/unit/ and not bun:test
 bun run test:unit:app     # tests/unit/app, the SvelteKit app's own unit/component tests
-bun run test:unit:cli     # go test ./cmd/cli/..., cmd/cli/cli_test.go, not under tests/unit/ and not bun:test
+bun run test:unit:cli     # go test ./cmd/cli/..., internal/cli/cli_test.go, not under tests/unit/ and not bun:test
 bun run test:unit:installer  # go test ./cmd/installer/..., its own *_test.go files, not under tests/unit/ and not bun:test
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see .agents/notes/testing.md
@@ -404,6 +406,7 @@ to reintroduce a fixed bug.
 | `api-and-cli.md`            | `src/routes/api/v1/`, the OpenAPI document, `cmd/cli/`, long-running requests and Bun's idle timeout                                                                  |
 | `services-and-templates.md` | The deploy pipeline, compose import, service links, templates and template links, git-based builds, git providers, SSE deploy progress, remote functions              |
 | `jobs-and-queue.md`         | The `job` table and worker, cron schedulers, user cron jobs, S3 backups                                                                                               |
+| `worker.md`                 | The Go worker (`cmd/worker`, `internal/worker`, `internal/jobs`), the job stage protocol, porting a job type to Go                                                    |
 | `testing.md`                | `tests/` (unit, integration, e2e), `bunfig.toml`, Playwright, the CI Postgres wiring                                                                                  |
 | `packages-and-release.md`   | `cmd/agent/`, `cmd/installer/`, semantic-release, CI/Docker publishing, `docs/`                                                                                       |
 | `dns.md`                    | Cloudflare or Pangolin DNS automation                                                                                                                                 |

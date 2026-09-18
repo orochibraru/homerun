@@ -126,7 +126,7 @@ SHA goes to `buildFromGit` as `commit`: when the shallow clone's HEAD differs (a
 push landed while waiting), `#checkoutCommit` runs
 `git fetch --depth 1 origin <sha>` and `checkout --detach` in the workspace, so
 the build is the checked commit or fails. Agent builds are pinned the same way:
-`AgentClientService.build` sends `commit`, and `cmd/agent/git.go`'s
+`AgentClientService.build` sends `commit`, and `internal/agent/git.go`'s
 `gitCheckoutSteps`/`extractCommitSHA` do the same rev-parse, fetch and detached
 checkout, returning the built commit for the deployment row. An agent older than
 that ignores the unrecognized field (Go's `encoding/json` default) and builds
@@ -176,13 +176,13 @@ phase, before the plan is built. A rollback enqueued with `restoreConfig`
 `#loadDeployPlan`, because the workload plan reads `networkMode`/`replicas`,
 writing the target's snapshot onto the service and logging which fields changed;
 a target with no snapshot (deployed before this existed) logs and rolls back the
-image only. Volumes and `customDomain` (unique, and tied to DNS/SSL sync) are
-never part of it, and auto-rollback never sets it. The trade-off the old design
-avoided: env vars are copied into every deployment row. `service.envVars` is
-already plaintext jsonb, so that's no new exposure at rest, but the revisions
-page load strips the snapshot to `hasConfigSnapshot` rather than shipping every
-revision's env to the browser. Opt-in from the Revisions confirm dialog,
-`?restoreConfig=true` on the API, `--restore-config` on the CLI.
+image only. Volumes and `domains` (unique across services, and tied to DNS/SSL
+sync) are never part of it, and auto-rollback never sets it. The trade-off the
+old design avoided: env vars are copied into every deployment row.
+`service.envVars` is already plaintext jsonb, so that's no new exposure at rest,
+but the revisions page load strips the snapshot to `hasConfigSnapshot` rather
+than shipping every revision's env to the browser. Opt-in from the Revisions
+confirm dialog, `?restoreConfig=true` on the API, `--restore-config` on the CLI.
 
 **Health watch.** `DeploymentService.watchHealth` hands every successful deploy
 to `RevisionHealthService.watch`, an in-process fire-and-forget loop (not a
@@ -878,8 +878,8 @@ Three things about this shape are load-bearing:
   and `extractCommitSha` matches `\b[0-9a-f]{40}\b` rather than slicing. Both
   are pure and unit-tested in `tests/unit/app/git-build.test.ts`.
 
-`cmd/agent/build.go`/`git.go` clone the same way, in an `alpine/git` container
-into a volume, since the agent image has no `git` either.
+`internal/agent/build.go`/`git.go` clone the same way, in an `alpine/git`
+container into a volume, since the agent image has no `git` either.
 
 **Build methods** (`service.gitBuildMethod`, `$lib/build-methods.ts`):
 `dockerfile` (default), `bake`, `nixpacks`, `railpack`, `heroku` and `paketo`
@@ -949,18 +949,18 @@ producing an image; a Linux engine with the classic store is the expected
 target. A cache registry is a BuildKit registry cache for `dockerfile`, `bake`
 and `railpack` (see below) and ignored by Nixpacks and pack. The agent is Go and
 can't import `builder-run.ts`, so the two sides share by **file identity**
-instead of by hand-copying: `cmd/agent/builder.sh` and
-`cmd/agent/builder-tools.json` are checked in verbatim (the same script and the
-same methods/versions/checksums/images/bake-defaults `builder-run.ts` exports as
-TS constants) and `//go:embed`-ed by `cmd/agent/builders.go`. Two tests pin both
-sides to those same two files rather than to each other:
+instead of by hand-copying: `internal/agent/builder.sh` and
+`internal/agent/builder-tools.json` are checked in verbatim (the same script and
+the same methods/versions/checksums/images/bake-defaults `builder-run.ts`
+exports as TS constants) and `//go:embed`-ed by `internal/agent/builders.go`.
+Two tests pin both sides to those same two files rather than to each other:
 `tests/unit/app/agent-builder-parity.test.ts` (on the app side, `bun:test`)
 asserts `builder-run.ts`'s exports equal what's checked into `cmd/agent/`,
-including golden fixtures under `cmd/agent/testdata/*.json` for
+including golden fixtures under `internal/agent/testdata/*.json` for
 `builderEnv`/build-failure-message parity across every recorded input; and
-`cmd/agent/builders_test.go` (on the agent side, `go test`) asserts the agent's
-own runtime behavior against the same embedded files. A change to
-`builder-run.ts` that isn't mirrored into `cmd/agent/builder.sh`/
+`internal/agent/builders_test.go` (on the agent side, `go test`) asserts the
+agent's own runtime behavior against the same embedded files. A change to
+`builder-run.ts` that isn't mirrored into `internal/agent/builder.sh`/
 `builder-tools.json` fails the app-side test, not silently drifts.
 
 Any git-clone-able HTTPS URL works, this is what makes it "Git providers,
@@ -1183,8 +1183,8 @@ else, close included: a fork PR's code would run with the parent's env vars. An
 `update` whose ref didn't change is ignored. `close` deletes it through
 `ServiceLifecycleService.deleteService`, which also deletes every preview first
 when the parent is deleted; turning previews off calls `removeAll`. Volumes,
-custom domain, cron, status checks and host networking are deliberately not
-copied. The Source tab lists them via `PreviewService.list`. The finders live in
+domains, cron, status checks and host networking are deliberately not copied.
+The Source tab lists them via `PreviewService.list`. The finders live in
 `ServiceGitDTO` (`$lib/dto/service-git-dto.ts`), which extends `ServiceDTO` only
 to reach its protected constructor, to keep `service-dto.ts` under the file
 length limit. **Not verified against real providers**, same caveat as

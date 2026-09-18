@@ -47,6 +47,16 @@ export class BackupRunDTO extends BaseDTO<BackupRun> {
 		return new BackupRunDTO(row);
 	}
 
+	/** Loads one run by id; null when missing. */
+	static async get(id: string): Promise<BackupRunDTO | null> {
+		const [row] = await db
+			.select()
+			.from(backupRun)
+			.where(eq(backupRun.id, id))
+			.limit(1);
+		return row ? new BackupRunDTO(row) : null;
+	}
+
 	/**
 	 * Records a run's outcome and finish time, updating both the row and this
 	 * instance.

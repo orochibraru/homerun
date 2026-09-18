@@ -1,3 +1,4 @@
+import { config } from "$lib/config";
 import type { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
@@ -10,10 +11,9 @@ import {
 	providerForGitUrl,
 } from "$lib/git-clone-url";
 import { DEPLOY_LOG_SCOPE, Logger } from "$lib/logger";
-import { serviceHostname, syncDns } from "../dns.service.ts";
-import type { RegistryAuth } from "../docker/containers.ts";
+import { serviceHostnames } from "$lib/service-domains";
+import { syncDns } from "../dns.service.ts";
 import { GitProviderService } from "../git-provider.service.ts";
-import type { CacheRegistryCredentials } from "./plan.ts";
 
 const logger = new Logger(DEPLOY_LOG_SCOPE);
 
@@ -22,7 +22,7 @@ export type ServiceMounts = Awaited<
 >;
 
 /**
- * Syncs DNS for a service's hostname (and its custom domain, if set) through
+ * Syncs DNS for every hostname a service routes, through
  * whichever DNS provider is configured, after a successful deploy. No-op
  * when the service isn't DNS-resolvable. Appends a result line per hostname
  * to the deployment's log, and logs a warning for any provider failure
@@ -36,11 +36,11 @@ export async function syncAutoDns(
 	if (!svc.dnsResolvable) {
 		return;
 	}
-	const row = svc.toJSON();
-	const hostnames = [
-		serviceHostname(svc.slug, stack?.slug),
-		...(row.customDomain ? [row.customDomain] : []),
-	];
+	const hostnames = serviceHostnames(
+		svc.toJSON(),
+		stack?.slug,
+		config.baseDomain,
+	);
 	const results = await syncDns(hostnames);
 	if (results.length > 0) {
 		await dep.appendLog(
@@ -69,15 +69,6 @@ export function toVolumeParams(mounts: ServiceMounts) {
 		readOnly: m.mount.toJSON().readOnly,
 		source: m.volumeSource,
 	}));
-}
-
-/** Reshapes cache registry credentials into the `RegistryAuth` shape dockerode's pull/push calls expect. */
-export function registryAuth(registry: CacheRegistryCredentials): RegistryAuth {
-	return {
-		password: registry.password,
-		serveraddress: registry.registryUrl,
-		username: registry.username,
-	};
 }
 
 /**

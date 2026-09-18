@@ -206,9 +206,14 @@ OIDC provider in `auth.md`) plus:
   `revision` plan). Migration 0038 backfilled `imageRef`/`buildSource` on each
   service's latest running row from the service's current image. See Revisions
   and rollback in `services-and-templates.md`.
-- `service.customDomain`, optional second hostname (unique), a second Traefik
-  router sharing the primary router's backend service, see labels.ts below.
-  Configured on the service's Networking tab.
+- `service.domains` (text[], the service's own hostnames, unique across services
+  via `ServiceDTO.domainTaken`), `defaultDomainEnabled` (boolean, default true:
+  whether `<slug>.<baseDomain>` is still routed) and `primaryDomain` (nullable,
+  the main one), replacing the old single `customDomain`. Each routed hostname
+  gets its own Traefik router sharing the primary router's backend service, see
+  labels.ts below. Pure helpers in `$lib/service-domains.ts` (`defaultHostname`,
+  `serviceHostnames`, `primaryHostname`, `isUnderDomain`, `normalizeDomains`).
+  Configured on the service's Networking tab (Domains card).
 - `stack`, name/description/userId/`slug` (unique, DNS-safe, prefixes every
   member service's container name and public subdomain, see Docker integration
   below). Every stack has a matching Docker network (see below), created

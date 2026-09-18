@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
+import { OauthGrantDTO } from "$lib/dto/oauth-grant-dto";
 import { Logger } from "$lib/logger";
 import {
 	API_KEY_SCOPES,
@@ -23,7 +24,9 @@ interface ApiKeyRow {
 	start: string | null;
 }
 
-export const load = async ({ request }) => {
+export const load = async ({ parent, request }) => {
+	const { user } = await parent();
+	const authorizedApps = await OauthGrantDTO.listForUser(user.id);
 	// listApiKeys is user-scoped via the cookie session (sessionMiddleware),
 	// same shape as listSessions : returns this user's own keys only. Wrapped
 	// defensively (same posture as the Sessions tab) rather than trusted to
@@ -34,6 +37,7 @@ export const load = async ({ request }) => {
 		})) as { apiKeys: ApiKeyRow[] };
 
 		return {
+			authorizedApps,
 			apiKeys: apiKeys.map((k) => ({
 				createdAt: k.createdAt,
 				enabled: k.enabled ?? true,
@@ -51,6 +55,7 @@ export const load = async ({ request }) => {
 			error: error instanceof Error ? error.message : String(error),
 		});
 		return {
+			authorizedApps,
 			apiKeys: [] as (Omit<ApiKeyRow, "metadata"> & { scope: ApiKeyScope })[],
 		};
 	}
@@ -88,6 +93,22 @@ export const actions = {
 			});
 			return fail(400, { error: "Couldn't create an API key." });
 		}
+	},
+
+	revokeApp: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const formData = await request.formData();
+		const clientId = (formData.get("clientId") as string | null)?.trim();
+		if (!clientId) {
+			return fail(400, { error: "Missing app id." });
+		}
+		await OauthGrantDTO.revokeForUser(locals.user.id, clientId);
+		logger.info(
+			`App access revoked: client=${clientId} user=${locals.user.id}`,
+		);
+		return { appRevoked: true };
 	},
 
 	revoke: async ({ request, locals }) => {

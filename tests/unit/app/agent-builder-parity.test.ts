@@ -24,16 +24,16 @@ import {
 	RAILPACK_VERSION,
 } from "$lib/services/docker/builder-run";
 
-const AGENT = join(process.cwd(), "cmd/agent");
+const AGENT = join(process.cwd(), "internal/agent");
 
 function read(path: string): string {
 	return readFileSync(join(AGENT, path), "utf8");
 }
 
 describe("the Go agent's builder stays in sync with the app's", () => {
-	// The agent is Go and embeds cmd/agent/builder.sh and builder-tools.json;
+	// The agent is Go and embeds internal/agent/builder.sh and builder-tools.json;
 	// the app is TypeScript. Neither can import the other, so these files are the
-	// contract: this test pins the app to them, and cmd/agent/builders_test.go
+	// contract: this test pins the app to them, and internal/agent/builders_test.go
 	// pins the agent to the very same files.
 	test("the agent embeds the app's exact builder script", () => {
 		expect(read("builder.sh")).toBe(BUILDER_SCRIPT);

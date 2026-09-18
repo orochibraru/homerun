@@ -8,6 +8,7 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
 import { parseTelegramTarget } from "$lib/notification-channel-target";
 import { isFailureEvent, NOTIFICATION_EVENTS } from "$lib/notification-events";
+import { primaryHostname } from "$lib/service-domains";
 import { serviceHostname } from "./dns.service";
 import { EmailService } from "./email.service";
 import { type ChannelMessage, deployMessage } from "./notification-messages";
@@ -232,7 +233,8 @@ class NotificationChannelServiceClass {
 		const stack = service.stackId ? await StackDTO.get(service.stackId) : null;
 		const row = service.toJSON();
 		const host =
-			row.customDomain ?? serviceHostname(row.slug, stack?.slug ?? null);
+			primaryHostname(row, stack?.slug, config.baseDomain) ??
+			serviceHostname(row.slug, stack?.slug ?? null);
 		return deployMessage(
 			{
 				deployment: deployment.toJSON(),

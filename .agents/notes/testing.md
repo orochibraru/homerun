@@ -15,7 +15,7 @@ which today is just `tests/unit/app/`: the SvelteKit app itself. Tests live
 under `tests/unit/<package>/`, not next to the source files they cover.
 `cmd/agent/`, `cmd/cli/` and `cmd/installer/` are all separate Go packages (one
 repo-root `go.mod`) and aren't part of this at all: their tests sit next to the
-source they cover (`cmd/agent/token_test.go`, `cmd/cli/cli_test.go`,
+source they cover (`internal/agent/token_test.go`, `internal/cli/cli_test.go`,
 `cmd/installer/*_test.go`), run by `go test ./cmd/agent/...`
 (`bun run test:unit:agent`), `go test ./cmd/cli/...` (`bun run test:unit:cli`)
 and `go test ./cmd/installer/...` (`bun run test:unit:installer`), not
@@ -91,7 +91,7 @@ of the suite in one process without colliding, restoring spies with
 own test suite (`tests/unit/agent/docker.test.ts` mocked `"dockerode"`
 wholesale); that suite is gone along with the Bun agent, replaced by
 `cmd/agent/`'s own Go tests, which fake the Docker client via a real interface
-instead (`cmd/agent/fake_docker_test.go`).
+instead (`internal/agent/fake_docker_test.go`).
 
 `tsconfig.json` type-checks `tests/` as part of `svelte-check` (`check:app`),
 same as `src/`. It used to exclude `tests/` entirely, which meant ~115 test
@@ -107,14 +107,14 @@ without a call site.
 
 ## `cmd/cli/`'s Go tests set `$HOME` per test, no preload needed
 
-`cmd/cli/config.go` resolves its config file path from `os.UserHomeDir()`, which
-re-reads `$HOME` on every call — unlike the old TypeScript CLI's `os.homedir()`,
-fixed for the life of the process (reassigning `process.env.HOME` mid-run didn't
-change it, verified on Bun 1.4.0), which is why that version needed
-`tests/unit/support/homedir-preload.ts` mocking `node:os` via a `bunfig.toml`
-`[test].preload`. `cmd/cli/cli_test.go` just calls
-`t.Setenv("HOME", t.TempDir())` per test instead, reset automatically by Go's
-own test runner; there's no shared preload and nothing under
+`internal/cli/config.go` resolves its config file path from `os.UserHomeDir()`,
+which re-reads `$HOME` on every call — unlike the old TypeScript CLI's
+`os.homedir()`, fixed for the life of the process (reassigning
+`process.env.HOME` mid-run didn't change it, verified on Bun 1.4.0), which is
+why that version needed `tests/unit/support/homedir-preload.ts` mocking
+`node:os` via a `bunfig.toml` `[test].preload`. `internal/cli/cli_test.go` just
+calls `t.Setenv("HOME", t.TempDir())` per test instead, reset automatically by
+Go's own test runner; there's no shared preload and nothing under
 `tests/unit/support/` is involved for `go test`.
 
 ## Coverage
@@ -145,7 +145,7 @@ rerun policy checked in here.
 
 ## Fakes over mocking libraries
 
-`cmd/installer/exec.go`'s `Runner` is a real Go interface (`StepRunner`
+`internal/installer/exec.go`'s `Runner` is a real Go interface (`StepRunner`
 implements it), so its Go tests (`steps_test.go`, `fullstack_test.go`,
 `migrate_test.go`, `flow_test.go`, `main_test.go`, sharing a `fakeRunner` from
 `support_test.go`) pass a fake implementation instead of the real one, no
@@ -162,7 +162,7 @@ gone) took the equivalent shortcut with a plain object literal and
   persisted token — a full-access API credential — was affected by exactly this,
   fixed at the time by calling `node:fs/promises`'s `chmod()` explicitly after
   `Bun.write` (`node:fs`'s own `mode` option is honored, verified). The agent's
-  Go rewrite sidesteps the whole bug class: `cmd/agent/token.go`'s
+  Go rewrite sidesteps the whole bug class: `internal/agent/token.go`'s
   `resolveToken` calls `os.WriteFile(tokenFile, token, 0o600)` then an explicit
   `os.Chmod`, both of which Go actually honors. If a future change writes
   another secret to disk via `Bun.write` anywhere in this repo, `chmod`
@@ -190,8 +190,8 @@ TypeScript installer's `steps/rootless-docker.ts` doc comment:
 `Bun.file(path).exists()` could return `true` for a `/proc` pseudo-file while
 `.text()` silently returned `""`, `node:fs/promises`' `readFile` read it
 correctly. Moot since the installer's Go rewrite — Go's `os.ReadFile` has no
-such quirk, and `cmd/installer/docker.go`'s doc comment on `allowRootlessUserns`
-records the history. See Homerun Agent + installer below.
+such quirk, and `internal/installer/docker.go`'s doc comment on
+`allowRootlessUserns` records the history. See Homerun Agent + installer below.
 
 ## E2E browser tests (`tests/e2e/`, `playwright.config.ts`)
 

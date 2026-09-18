@@ -5,6 +5,7 @@ import { Logger } from "$lib/logger";
 import { invalidateGatedService } from "$lib/server/gated-service-cache";
 import { allowLongRequest } from "$lib/server/long-request";
 import { updateServiceApiBody } from "$lib/server/validation/api";
+import { normalizeDomains } from "$lib/service-domains";
 import { WorkloadDetachError } from "$lib/services/docker/workload-removal";
 import { DockerService } from "$lib/services/docker.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
@@ -58,6 +59,16 @@ export const PATCH = async ({ params, request, locals }) => {
 		);
 	}
 	const { registryPassword, ...rest } = result.data;
+	if (rest.domains) {
+		rest.domains = normalizeDomains(rest.domains);
+		const taken = await ServiceDTO.domainTaken(rest.domains, svc.id);
+		if (taken) {
+			return json(
+				{ error: `${taken} is already routed to another service.` },
+				{ status: 409 },
+			);
+		}
+	}
 	if (!locals.isAdmin && hostAccessChanged(svc.toJSON(), rest)) {
 		return json({ error: HOST_ACCESS_MESSAGE }, { status: 403 });
 	}

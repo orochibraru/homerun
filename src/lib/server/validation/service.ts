@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
+import { DOMAIN_RE } from "$lib/service-domains";
 import { splitShellWords } from "$lib/shell-words";
 
 // Optional numeric fields that come from a plain <input>: an empty field
@@ -41,18 +42,12 @@ const baseServiceSchema = z.object({
 		.min(1)
 		.max(65_535),
 	cpuLimit: z.string().optional(),
-	// Blank is "no custom domain". Validated the same way the Networking tab
-	// validates it, minus the uniqueness check, which needs the DB.
-	customDomain: z
+	domain: z
 		.string()
 		.trim()
 		.toLowerCase()
 		.refine(
-			(value) =>
-				value === "" ||
-				/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(
-					value,
-				),
+			(value) => value === "" || DOMAIN_RE.test(value),
 			"That doesn't look like a domain name.",
 		)
 		.optional(),

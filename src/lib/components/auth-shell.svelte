@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import BrandMark from "$lib/components/brand-mark.svelte";
+	import ErrorBoundary from "./error-boundary.svelte";
 
 	interface Props {
 		below?: Snippet;
@@ -34,7 +35,9 @@
     </div>
 
     <div class="panel rounded-md p-6 sm:p-7">
-      {@render children()}
+      <ErrorBoundary title="This page hit an error.">
+        {@render children()}
+      </ErrorBoundary>
     </div>
 
     {#if below}

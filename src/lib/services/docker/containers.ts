@@ -101,13 +101,11 @@ export interface VolumeMountParams {
 export interface CreateContainerParams {
 	containerPort: number;
 	cpuLimit?: string | null;
-	// Optional second hostname routed to this service (DNS must already
-	// point at this host : the app doesn't manage that). No effect when
-	// dnsResolvable is false.
-	customDomain?: string | null;
+	defaultDomainEnabled?: boolean;
 	// When false, the container gets no Traefik labels at all : no public
 	// <slug>.<baseDomain>, subnet-only reachability. Defaults to true.
 	dnsResolvable?: boolean;
+	domains?: string[];
 	envVars: Record<string, string>;
 	image: string;
 	memoryLimitMb?: number | null;
@@ -150,6 +148,90 @@ export interface CreateContainerParams {
 	slug: string;
 	tag: string;
 	volumes?: VolumeMountParams[];
+}
+
+/**
+ * Host mode shares the host's network namespace directly : Docker doesn't
+ * allow combining it with any other network attachment (see
+ * CreateContainerParams.networkMode), so it wins over everything else.
+ * Otherwise the shared network only exists on the local host, so a remote
+ * daemon gets Docker's own default bridge instead (no Traefik routing, no
+ * internal service-discovery alias).
+ */
+function networkModeFor(params: CreateContainerParams): string | undefined {
+	if (params.networkMode === "host") {
+		return "host";
+	}
+	return params.remote ? undefined : config.docker.networkName;
+}
+
+/**
+ * The dockerode `HostConfig` for a service's container: volume binds (Docker's
+ * `source:target[:ro]` form covers a host path and a named volume alike),
+ * memory/CPU limits, network mode, restart policy and the runtime options.
+ */
+function containerHostConfig(params: CreateContainerParams) {
+	const binds = (params.volumes ?? []).map(
+		(v) => `${v.source}:${v.containerPath}${v.readOnly ? ":ro" : ""}`,
+	);
+	return {
+		...runtimeHostConfig(params.runtime),
+		Binds: binds.length > 0 ? binds : undefined,
+		Memory: params.memoryLimitMb
+			? params.memoryLimitMb * 1024 * 1024
+			: undefined,
+		NanoCpus: params.cpuLimit
+			? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
+			: undefined,
+		NetworkMode: networkModeFor(params),
+		RestartPolicy: {
+			Name: params.restartPolicy === "no" ? "" : params.restartPolicy,
+		},
+	};
+}
+
+/**
+ * The container-creation body for a service, minus what depends on the image
+ * the deploy actually resolved (`Env`, `Image`, the readiness `Healthcheck`
+ * and label, the name): exposed ports, `HostConfig`, Traefik and tracking
+ * labels (none for host networking, where Traefik has nothing to route to),
+ * the shared-network alias and `Tty` (one unframed log stream). The homerun
+ * worker fills in the rest.
+ */
+export function containerCreateTemplate(params: CreateContainerParams) {
+	const isHostNetwork = params.networkMode === "host";
+	const protocols =
+		params.portProtocol === "both"
+			? (["tcp", "udp"] as const)
+			: [params.portProtocol ?? "tcp"];
+	return {
+		...runtimeArgv(params.runtime),
+		ExposedPorts: Object.fromEntries(
+			protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
+		),
+		HostConfig: containerHostConfig(params),
+		Labels: mergeLabels(
+			params.runtime?.labels,
+			buildContainerLabels({
+				containerPort: params.containerPort,
+				defaultDomainEnabled: params.defaultDomainEnabled,
+				dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
+				domains: params.domains,
+				serviceId: params.serviceId,
+				slug: params.slug,
+				stackSlug: params.stackSlug,
+			}),
+		),
+		NetworkingConfig:
+			isHostNetwork || params.remote
+				? undefined
+				: {
+						EndpointsConfig: {
+							[config.docker.networkName]: { Aliases: [params.slug] },
+						},
+					},
+		Tty: true,
+	};
 }
 
 /** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the network and container rollout mixins. */
@@ -329,116 +411,25 @@ export function DockerContainerMixin<
 		}
 
 		/**
-		 * Host mode shares the host's network namespace directly : Docker
-		 * doesn't allow combining it with any other network attachment (see
-		 * CreateContainerParams.networkMode), so it wins over everything else.
-		 * Otherwise the shared network only exists on the local host, so a
-		 * remote daemon gets Docker's own default bridge instead (no Traefik
-		 * routing, no internal service-discovery alias).
-		 */
-		#networkModeFor(params: CreateContainerParams): string | undefined {
-			if (params.networkMode === "host") {
-				return "host";
-			}
-			return params.remote ? undefined : config.docker.networkName;
-		}
-
-		/**
-		 * Builds the dockerode `HostConfig` for a container from its create
-		 * params: volume binds, memory/CPU limits, network mode, and restart
-		 * policy.
-		 */
-		#hostConfigFor(params: CreateContainerParams) {
-			// Docker's Binds syntax covers both a host bind-mount path and a
-			// Docker-managed named volume with the same "source:target[:ro]"
-			// form : it tells them apart by whether source looks like a path.
-			// Bind-mount sources only make sense for the local host : a remote
-			// deploy with volumes attached would try to bind a path on the
-			// *remote* machine.
-			const binds = (params.volumes ?? []).map(
-				(v) => `${v.source}:${v.containerPath}${v.readOnly ? ":ro" : ""}`,
-			);
-
-			return {
-				...runtimeHostConfig(params.runtime),
-				Binds: binds.length > 0 ? binds : undefined,
-				Memory: params.memoryLimitMb
-					? params.memoryLimitMb * 1024 * 1024
-					: undefined,
-				NanoCpus: params.cpuLimit
-					? Math.round(Number.parseFloat(params.cpuLimit) * 1e9)
-					: undefined,
-				NetworkMode: this.#networkModeFor(params),
-				// "no" is our restart-policy value (matches docker-compose
-				// convention for the dropdown); the Docker Engine API itself
-				// wants "" for that.
-				RestartPolicy: {
-					Name: params.restartPolicy === "no" ? "" : params.restartPolicy,
-				},
-			};
-		}
-
-		/**
 		 * Builds the full dockerode container-creation options for a service:
-		 * env vars, exposed ports, healthcheck, `HostConfig` (via
-		 * `#hostConfigFor`), Traefik labels, and the shared-network alias when
-		 * applicable.
+		 * `containerCreateTemplate` plus its env vars, image, the readiness
+		 * healthcheck and label, and the container name.
 		 */
 		#createContainerOptions(
 			params: CreateContainerParams,
 			name: string,
 			readiness: ReadinessCheck,
 		) {
-			const isHostNetwork = params.networkMode === "host";
-			const protocols =
-				params.portProtocol === "both"
-					? (["tcp", "udp"] as const)
-					: [params.portProtocol ?? "tcp"];
-
+			const template = containerCreateTemplate(params);
 			return {
-				...runtimeArgv(params.runtime),
+				...template,
 				Env: Object.entries(params.envVars).map(
 					([key, value]) => `${key}=${value}`,
 				),
-				ExposedPorts: Object.fromEntries(
-					protocols.map((proto) => [`${params.containerPort}/${proto}`, {}]),
-				),
 				Healthcheck: readinessHealthcheck(readiness, params.healthcheckCommand),
-				HostConfig: this.#hostConfigFor(params),
 				Image: `${params.image}:${params.tag}`,
-				// Host-mode containers never get Traefik labels regardless of
-				// dnsResolvable : there's no container-specific IP/network for
-				// Traefik's docker provider to route to in host mode, only the
-				// host's own interfaces (see CreateContainerParams.networkMode).
-				Labels: mergeLabels(params.runtime?.labels, {
-					...buildContainerLabels({
-						containerPort: params.containerPort,
-						customDomain: params.customDomain,
-						dnsResolvable: isHostNetwork ? false : params.dnsResolvable,
-						stackSlug: params.stackSlug,
-						serviceId: params.serviceId,
-						slug: params.slug,
-					}),
-					...readinessLabels(readiness),
-				}),
-				// Alias the container as its slug on the shared network, so
-				// other services can reach it at a stable hostname even though
-				// the container's own name carries a random per-deploy suffix.
-				// Only meaningful on the local host in bridge mode : see
-				// #networkModeFor.
-				NetworkingConfig:
-					isHostNetwork || params.remote
-						? undefined
-						: {
-								EndpointsConfig: {
-									[config.docker.networkName]: { Aliases: [params.slug] },
-								},
-							},
+				Labels: { ...template.Labels, ...readinessLabels(readiness) },
 				name,
-				// Tty combines stdout/stderr into one unframed stream, which
-				// keeps the v1 log viewer simple (no demux of Docker's
-				// multiplexed stdout/stderr frames needed).
-				Tty: true,
 			};
 		}
 

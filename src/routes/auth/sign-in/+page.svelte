@@ -10,6 +10,7 @@
 	import { goto, onNavigate, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { authClient, signIn, useSession } from "$lib/auth-client";
+	import Alert from "$lib/components/alert.svelte";
 	import AuthShell from "$lib/components/auth-shell.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import PasswordField from "$lib/components/password-field.svelte";
@@ -17,7 +18,12 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { rememberOauthAttempt } from "$lib/oauth-attempt";
-	import { PASSKEY_SIGN_IN, PASSWORD_SIGN_IN } from "$lib/sign-in-methods";
+	import {
+		completeAccountSetup,
+		lookupSignIn,
+		resendSetupCode,
+	} from "$lib/remote/sign-in.remote";
+	import type { SignInProvider } from "$lib/services/account-setup.service";
 	import { title } from "$lib/store/title";
 	import { toastError } from "$lib/toast";
 
@@ -49,9 +55,20 @@
 	let redirectCountdown = $state(REDIRECT_DELAY_SECONDS);
 	const destinationName = $derived(data.appName ?? "Homerun");
 
+	let signInError = $state<string | null>(null);
+	const OAUTH_RETURN_TIMEOUT_MS = 15_000;
+
 	async function finishSignIn() {
+		signInError = null;
 		if (data.oauthSignIn) {
 			redirecting = true;
+			setTimeout(() => {
+				if (redirecting) {
+					redirecting = false;
+					loading = false;
+					signInError = `You're signed in, but ${destinationName} didn't take you back. Try again, or open ${destinationName} and sign in from there.`;
+				}
+			}, OAUTH_RETURN_TIMEOUT_MS);
 			return;
 		}
 		if (!data.redirectTo) {
@@ -79,7 +96,110 @@
 	let twoFactorMode = $state<"backup" | "totp">("totp");
 	let twoFactorCode = $state("");
 	let trustDevice = $state(false);
-	let showOtherMethods = $state(false);
+	let step = $state<"email" | "password" | "setup" | "sso">("email");
+	let stepProviders = $state<SignInProvider[]>([]);
+	let setupEmailed = $state(false);
+	let setupCode = $state("");
+	let newPassword = $state("");
+	let confirmPassword = $state("");
+
+	function backToEmail() {
+		step = "email";
+		password = "";
+		setupCode = "";
+		newPassword = "";
+		confirmPassword = "";
+	}
+
+	async function continueCallback(e: SubmitEvent): Promise<string> {
+		e.preventDefault();
+		loading = true;
+		try {
+			const next = await lookupSignIn(email);
+			loading = false;
+			if (next.step === "setup") {
+				setupEmailed = next.emailed;
+				step = "setup";
+				return next.emailed
+					? `We emailed a code to ${email}.`
+					: "Choose a password for your account.";
+			}
+			stepProviders = next.providers;
+			step = next.step;
+			if (next.step === "sso" && next.autoRedirect) {
+				const provider = next.providers.find(
+					(p) => p.name === next.autoRedirect,
+				);
+				if (provider) {
+					void handleOauthSignIn(provider.name, provider.label);
+				}
+			}
+			return "Continue signing in.";
+		} catch (err) {
+			loading = false;
+			throw err;
+		}
+	}
+
+	function handleContinue(e: SubmitEvent) {
+		return toast.promise(continueCallback(e), {
+			error: (err) => toastError(err, "Couldn't check that email."),
+			loading: "Checking your account",
+			success: (message: string) => message,
+		});
+	}
+
+	async function setupCallback(e: SubmitEvent) {
+		e.preventDefault();
+		loading = true;
+		try {
+			if (newPassword !== confirmPassword) {
+				throw new Error("The two passwords don't match.");
+			}
+			await completeAccountSetup({
+				code: setupEmailed ? setupCode.trim() : null,
+				email,
+				password: newPassword,
+			});
+			const { error } = await signIn.email({ email, password: newPassword });
+			if (error) {
+				throw new Error(error.message ?? "Couldn't sign you in.");
+			}
+			newPassword = "";
+			confirmPassword = "";
+			await finishSignIn();
+		} catch (err) {
+			loading = false;
+			newPassword = "";
+			confirmPassword = "";
+			throw err;
+		}
+	}
+
+	function handleSetup(e: SubmitEvent) {
+		return toast.promise(setupCallback(e), {
+			error: (err) => toastError(err, "Couldn't set up your account."),
+			loading: "Setting up your account",
+			...signedInToast("Your account is ready"),
+		});
+	}
+
+	async function resendCallback() {
+		loading = true;
+		try {
+			await resendSetupCode(email);
+		} finally {
+			loading = false;
+		}
+	}
+
+	function handleResend() {
+		return toast.promise(resendCallback(), {
+			error: (err) => toastError(err, "Couldn't send a new code."),
+			loading: "Sending a new code",
+			success: `We emailed a new code to ${email}.`,
+		});
+	}
 
 	onMount(() => {
 		title.set("Sign In");
@@ -90,17 +210,32 @@
 		void startPasskeyAutofill();
 	});
 
+	function passkeyFailure(error: { code?: string; message?: string } | null) {
+		if (!error || error.code === "AUTH_CANCELLED") {
+			return null;
+		}
+		return error.message || "Couldn't sign you in with a passkey.";
+	}
+
 	async function promptPasskeyOnLoad() {
 		if (typeof PublicKeyCredential === "undefined") {
 			return;
 		}
 		loading = true;
-		const result = await authClient.signIn.passkey().catch(() => null);
-		if (!result || result.error) {
+		try {
+			const { error } = await authClient.signIn.passkey();
+			const failure = passkeyFailure(error);
+			if (error) {
+				signInError = failure;
+				loading = false;
+				return;
+			}
+			await finishSignIn();
+		} catch (err) {
+			signInError = toastError(err, "Couldn't sign you in with a passkey.");
 			loading = false;
-			return;
+			redirecting = false;
 		}
-		await finishSignIn();
 	}
 
 	async function startPasskeyAutofill() {
@@ -114,10 +249,18 @@
 		if (!available) {
 			return;
 		}
-		const { error } = await authClient.signIn.passkey({ autoFill: true });
-		if (!error) {
+		try {
+			const { error } = await authClient.signIn.passkey({ autoFill: true });
+			if (error) {
+				signInError = passkeyFailure(error);
+				return;
+			}
 			loading = true;
 			await finishSignIn();
+		} catch (err) {
+			signInError = toastError(err, "Couldn't sign you in with a passkey.");
+			loading = false;
+			redirecting = false;
 		}
 	}
 
@@ -144,7 +287,7 @@
 				twoFactorStep = true;
 				return "two-factor";
 			}
-			void finishSignIn();
+			await finishSignIn();
 			return "signed-in";
 		} catch (e) {
 			password = "";
@@ -186,7 +329,7 @@
 			if (error) {
 				throw new Error(error.message ?? "That code didn't match.");
 			}
-			void finishSignIn();
+			await finishSignIn();
 		} catch (err) {
 			twoFactorCode = "";
 			loading = false;
@@ -211,7 +354,7 @@
 					error.message ?? "Couldn't sign you in with a passkey.",
 				);
 			}
-			void finishSignIn();
+			await finishSignIn();
 		} catch (err) {
 			loading = false;
 			throw err;
@@ -259,49 +402,24 @@
 	}
 </script>
 
-{#snippet passwordForm()}
-    <form class="space-y-4" novalidate onsubmit={handleSignIn}>
-        <div>
-            <label class="text-text mb-1.5 block text-sm font-medium" for="email">
-                Email
-            </label>
-            <Input
-                autocomplete="email webauthn"
-                class="h-10"
-                disabled={loading}
-                id="email"
-                placeholder="you@example.com"
-                required
-                type="email"
-                bind:value={email}
-            />
-        </div>
-
-        <PasswordField
-            disabled={loading}
-            id="password"
-            autocomplete="current-password"
-            label="Password"
-            bind:value={password}
-        />
-
-        <Button
-            class="mt-2 h-10 w-full"
-            disabled={loading || !email || !password}
-            type="submit"
-        >
-            {#if loading}
-                <Spinner />
-                Signing in…
-            {:else}
-                Sign in
-                <ArrowRight class="size-4 opacity-70" />
-            {/if}
+{#snippet emailSummary()}
+    <div class="border-border flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+        <span class="text-text truncate text-sm">{email}</span>
+        <Button disabled={loading} onclick={backToEmail} size="sm" variant="ghost">
+            Change
         </Button>
-    </form>
+    </div>
 {/snippet}
 
-{#snippet oauthButtons(providers: typeof data.oauthProviders)}
+{#snippet orDivider()}
+    <div class="my-6 flex items-center gap-3">
+        <span class="bg-border h-px flex-1"></span>
+        <span class="eyebrow">or</span>
+        <span class="bg-border h-px flex-1"></span>
+    </div>
+{/snippet}
+
+{#snippet oauthButtons(providers: SignInProvider[])}
     {#if data.canonicalSignInUrl}
         <div
             class="flex items-start gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400"
@@ -318,51 +436,17 @@
             </span>
         </div>
     {:else}
-        {#each providers as provider (provider.name)}
-            <Button
-                class="h-10 w-full"
-                disabled={loading}
-                onclick={() => handleOauthSignIn(provider.name, provider.label)}
-                variant="outline"
-            >
-                Continue with {provider.label}
-            </Button>
-        {/each}
-    {/if}
-{/snippet}
-
-{#snippet methodList(methods: string[])}
-    {@const providers = data.oauthProviders.filter((p) =>
-        methods.includes(p.method),
-    )}
-    {@const hasPassword = methods.includes(PASSWORD_SIGN_IN)}
-    {@const hasPasskey = methods.includes(PASSKEY_SIGN_IN)}
-    {#if hasPassword}
-        {@render passwordForm()}
-    {/if}
-    {#if hasPassword && (hasPasskey || providers.length > 0)}
-        <div class="my-6 flex items-center gap-3">
-            <span class="bg-border h-px flex-1"></span>
-            <span class="eyebrow">or</span>
-            <span class="bg-border h-px flex-1"></span>
-        </div>
-    {/if}
-    {#if hasPasskey || providers.length > 0}
         <div class="space-y-2">
-            {#if hasPasskey}
+            {#each providers as provider (provider.name)}
                 <Button
                     class="h-10 w-full"
                     disabled={loading}
-                    onclick={handlePasskeySignIn}
+                    onclick={() => handleOauthSignIn(provider.name, provider.label)}
                     variant="outline"
                 >
-                    <Fingerprint class="size-4" />
-                    Continue with a passkey
+                    Continue with {provider.label}
                 </Button>
-            {/if}
-            {#if providers.length > 0}
-                {@render oauthButtons(providers)}
-            {/if}
+            {/each}
         </div>
     {/if}
 {/snippet}
@@ -380,6 +464,9 @@
           ? `${data.appName} is behind Homerun's login. Sign in to continue.`
           : "Sign in to manage your services."}
 >
+    {#if signInError}
+        <Alert class="mb-4" title="Sign-in failed">{signInError}</Alert>
+    {/if}
     {#if redirecting}
         <div
             aria-live="polite"
@@ -479,29 +566,152 @@
             </div>
         </form>
     {:else}
-        {@render methodList(data.primaryMethods)}
-        {#if data.otherMethods.length > 0}
-            {#if showOtherMethods}
-                <div class="my-6 flex items-center gap-3">
-                    <span class="bg-border h-px flex-1"></span>
-                    <span class="eyebrow">or</span>
-                    <span class="bg-border h-px flex-1"></span>
-                </div>
-                {@render methodList(data.otherMethods)}
-            {:else}
-                <div class="mt-4 text-center">
-                    <button
-                        class="text-text-muted hover:text-text text-xs underline-offset-4 hover:underline"
+        {#if step === "email"}
+            <form class="space-y-4" novalidate onsubmit={handleContinue}>
+                <div>
+                    <label class="text-text mb-1.5 block text-sm font-medium" for="email">
+                        Email
+                    </label>
+                    <Input
+                        autocomplete="email webauthn"
+                        class="h-10"
                         disabled={loading}
-                        onclick={() => {
-                            showOtherMethods = true;
-                        }}
-                        type="button"
-                    >
-                        Other sign-in methods
-                    </button>
+                        id="email"
+                        placeholder="you@example.com"
+                        required
+                        type="email"
+                        bind:value={email}
+                    />
                 </div>
+                <Button class="h-10 w-full" disabled={loading || !email} type="submit">
+                    {#if loading}
+                        <Spinner />
+                        Checking…
+                    {:else}
+                        Continue
+                        <ArrowRight class="size-4 opacity-70" />
+                    {/if}
+                </Button>
+            </form>
+            {#if data.passkeyAvailable}
+                {@render orDivider()}
+                <Button
+                    class="h-10 w-full"
+                    disabled={loading}
+                    onclick={handlePasskeySignIn}
+                    variant="outline"
+                >
+                    <Fingerprint class="size-4" />
+                    Continue with a passkey
+                </Button>
             {/if}
+        {:else if step === "password"}
+            <form class="space-y-4" novalidate onsubmit={handleSignIn}>
+                {@render emailSummary()}
+                <PasswordField
+                    autocomplete="current-password"
+                    disabled={loading}
+                    id="password"
+                    label="Password"
+                    bind:value={password}
+                />
+                <Button class="h-10 w-full" disabled={loading || !password} type="submit">
+                    {#if loading}
+                        <Spinner />
+                        Signing in…
+                    {:else}
+                        Sign in
+                        <ArrowRight class="size-4 opacity-70" />
+                    {/if}
+                </Button>
+            </form>
+            {#if stepProviders.length > 0}
+                {@render orDivider()}
+                {@render oauthButtons(stepProviders)}
+            {/if}
+        {:else if step === "sso"}
+            <div class="space-y-4">
+                {@render emailSummary()}
+                <p class="text-text-muted text-sm">
+                    This account signs in through single sign-on.
+                </p>
+                {@render oauthButtons(stepProviders)}
+            </div>
+        {:else}
+            <form class="space-y-4" novalidate onsubmit={handleSetup}>
+                {@render emailSummary()}
+                <p class="text-text-muted text-sm">
+                    {#if setupEmailed}
+                        Enter the 6-digit code we emailed you, then choose your
+                        password.
+                    {:else}
+                        Your account is new: choose your password.
+                    {/if}
+                </p>
+                {#if setupEmailed}
+                    <div>
+                        <label
+                            class="text-text mb-1.5 block text-sm font-medium"
+                            for="setupCode"
+                        >
+                            Verification code
+                        </label>
+                        <Input
+                            autocomplete="one-time-code"
+                            class="h-10 font-mono tracking-widest"
+                            disabled={loading}
+                            id="setupCode"
+                            inputmode="numeric"
+                            placeholder="123456"
+                            required
+                            bind:value={setupCode}
+                        />
+                    </div>
+                {/if}
+                <PasswordField
+                    autocomplete="new-password"
+                    disabled={loading}
+                    id="newPassword"
+                    label="New password"
+                    bind:value={newPassword}
+                />
+                <PasswordField
+                    autocomplete="new-password"
+                    disabled={loading}
+                    id="confirmPassword"
+                    label="Confirm password"
+                    bind:value={confirmPassword}
+                />
+                <p class="text-text-subtle text-xs">At least 12 characters.</p>
+                <Button
+                    class="h-10 w-full"
+                    disabled={loading ||
+                        !newPassword ||
+                        !confirmPassword ||
+                        (setupEmailed && !setupCode.trim())}
+                    type="submit"
+                >
+                    {#if loading}
+                        <Spinner />
+                        Setting up…
+                    {:else}
+                        Set password and sign in
+                        <ArrowRight class="size-4 opacity-70" />
+                    {/if}
+                </Button>
+                {#if setupEmailed}
+                    <div class="text-center">
+                        <button
+                            class="text-text-muted hover:text-text text-xs underline-offset-4 hover:underline"
+                            disabled={loading}
+                            onclick={handleResend}
+                            type="button"
+                        >
+                            Send a new code
+                        </button>
+                    </div>
+                {/if}
+            </form>
         {/if}
     {/if}
 

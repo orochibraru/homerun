@@ -15,6 +15,7 @@ test.describe
 		}) => {
 			await page.goto("/auth/sign-in");
 			await page.locator("#email").fill("ada@example.com");
+			await page.getByRole("button", { exact: true, name: "Continue" }).click();
 			await page.locator("#password").fill("definitely-the-wrong-password");
 			await page.getByRole("button", { name: "Sign in" }).click();
 
@@ -29,6 +30,7 @@ test.describe
 		}) => {
 			await page.goto("/auth/sign-in");
 			await page.locator("#email").fill("ada@example.com");
+			await page.getByRole("button", { exact: true, name: "Continue" }).click();
 			await page.locator("#password").fill("a-real-strong-password-123");
 			await page.getByRole("button", { name: "Sign in" }).click();
 
@@ -43,6 +45,7 @@ test.describe
 		}) => {
 			await page.goto("/auth/sign-in?redirectTo=%2Fsettings");
 			await page.locator("#email").fill("ada@example.com");
+			await page.getByRole("button", { exact: true, name: "Continue" }).click();
 			await page.locator("#password").fill("a-real-strong-password-123");
 			await page.getByRole("button", { name: "Sign in" }).click();
 
@@ -56,6 +59,7 @@ test.describe
 		}) => {
 			await page.goto("/auth/sign-in");
 			await page.locator("#email").fill("ada@example.com");
+			await page.getByRole("button", { exact: true, name: "Continue" }).click();
 			await page.locator("#password").fill("a-real-strong-password-123");
 			await page.getByRole("button", { name: "Sign in" }).click();
 			await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:4310\/$/);

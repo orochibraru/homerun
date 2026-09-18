@@ -38,16 +38,19 @@ reordering the chain.
   any host-scanning code **must** filter on `homerun.managed=true`, this app
   must never touch a container it didn't create. When the service belongs to a
   stack, the public subdomain is `<stackSlug>-<slug>.<baseDomain>` (`stackSlug`
-  param, optional). When `customDomain` is set, a second router
-  (`<slug>-custom`) is added pointing at the _same_
-  `traefik.http.services.<slug>` backend, one loadbalancer config, two hostnames
-  reaching it, not a duplicated service block. When `authRequired` is set, a
-  forwardAuth middleware is attached to every router for the service, pointing
-  at `authCheckUrlFor(serviceId)` — `config.authCheckUrl` with a `?service=<id>`
-  query param, so the gate identifies the service from the URL rather than
-  having to resolve `X-Forwarded-Host` back to a slug or custom domain — plus
-  `authResponseHeaders` for `GATE_IDENTITY_HEADERS`. Because these are labels,
-  turning the wall on or off only takes effect on the next deploy.
+  param, optional). `serviceHostnames()` (`$lib/service-domains.ts`) resolves
+  the full hostname list — the default hostname first when
+  `defaultDomainEnabled`, then each of `domains` — and one Traefik router is
+  added per hostname (router name `<slug>` for the first, `<slug>-<n>` after
+  it), all pointing at the _same_ `traefik.http.services.<slug>` backend, one
+  loadbalancer config, N hostnames reaching it, not a duplicated service block.
+  When `authRequired` is set, a forwardAuth middleware is attached to every
+  router for the service, pointing at `authCheckUrlFor(serviceId)` —
+  `config.authCheckUrl` with a `?service=<id>` query param, so the gate
+  identifies the service from the URL rather than having to resolve
+  `X-Forwarded-Host` back to a slug or domain — plus `authResponseHeaders` for
+  `GATE_IDENTITY_HEADERS`. Because these are labels, turning the wall on or off
+  only takes effect on the next deploy.
 - `networks.ts`, `DockerNetworkMixin`, per-stack Docker networks.
   `stackNetworkName(stackId)` is deterministic (`homerun-stack-<id>`, no
   separate id stored, stays a plain exported pure function).
@@ -148,7 +151,7 @@ reordering the chain.
     (`ServiceDTO.resolveOrphan()`) this status backs, and Remote hosts/Homerun
     Agent below, `agent-client.service.ts`'s `inspectStatus` and
     `internal/dockerapi`'s `ErrNotFound` (mapped to a real HTTP 404 by
-    `cmd/agent/server.go`'s `saveImage`) make the same distinction for an
+    `internal/agent/server.go`'s `saveImage`) make the same distinction for an
     agent-backed host. Docker doesn't strip a container's own ANSI color codes
     from its stdout, every raw-log-line surface (the Logs tab, deploy progress
     panel, deployment history, Errors tab) renders each line through
@@ -226,6 +229,16 @@ reordering the chain.
   order: loopback pull (rootful only) → mirror load → upstream pull. A loaded
   image has no `RepoDigests`, so the recorded digest is the mirror copy's. Not
   verified live on a rootless host.
+- Docker Cleanup runs in the Go worker (`internal/jobs/cleanup`, prunes via
+  `internal/dockerapi/prune.go`): `worker-jobs/docker_cleanup.ts`'s `prepare`
+  resolves the retention lists (retained revision image ids, mounted volume
+  names, live stack ids, the mirror spec from `ImageMirrorGcService.spec()`), Go
+  prunes and returns the same `PruneSummary`/`SystemPruneSummary`/
+  `MirrorGcResult` shapes. The mirror GC's plan, registry calls and
+  `docker exec`s live in Go (`internal/registryapi`, `PlanGC` is the port of
+  `planMirrorGc`); the Registry page's "Collect garbage" goes through the same
+  queued `pruneMirror` job. The TS descriptions below are the reference
+  behaviour the Go code mirrors.
 - Mirror GC: `ImageMirrorGcService` (`$lib/services/image-mirror-gc.service.ts`)
   runs as the `pruneMirror` Docker Cleanup action (exclusive `docker_cleanup`
   job, button + size panel on `/docker-cleanup` via `getMirrorUsage`), queued
@@ -339,8 +352,8 @@ all in any compose file, so Homerun itself was reachable on `:3000` and nowhere
 else no matter how carefully `baseDomain` was configured, while every service it
 deployed got a routed hostname. The labels live in
 `tools/compose/app.compose.yaml`, `compose.prod.yaml` and the installer's
-generated compose (`cmd/installer/fullstack.go`), and the shape they take is the
-result of testing three candidates against the real dev Traefik:
+generated compose (`internal/installer/fullstack.go`), and the shape they take
+is the result of testing three candidates against the real dev Traefik:
 
 - `traefik.enable` set to an empty string (what `${DASHBOARD_DOMAIN:+true}`
   expands to when the variable is unset) is **not** silently ignored: Traefik
@@ -440,10 +453,10 @@ advertise address (the installer passes one; by hand, run
 `docker swarm init --advertise-addr <ip>` once and save again).
 
 **Migrating a rootless install** (`--migrate-to-rootful`,
-`cmd/installer/migrate.go`'s `Migrate`): stops every container on the rootless
-daemon, copies each named volume through `tar --numeric-owner` in `alpine:3` on
-both daemons (ownership as the container saw it, not the subuid on disk),
-recreates volumes with their labels so compose keeps owning them, sets up
+`internal/installer/migrate.go`'s `Migrate`): stops every container on the
+rootless daemon, copies each named volume through `tar --numeric-owner` in
+`alpine:3` on both daemons (ownership as the container saw it, not the subuid on
+disk), recreates volumes with their labels so compose keeps owning them, sets up
 swarm + networks, rewrites `homerun.yaml`'s `socketPath` and the compose file,
 starts the stack, then waits for the app (so its migrations have run) and sets
 `orchestration_mode = 'swarm'` plus `instance_settings.pendingServiceRedeploy`
@@ -785,9 +798,10 @@ page.
 
 ## Custom SSL certificates (`src/lib/services/docker/custom-ssl.ts`)
 
-Per-service, only meaningful once `customDomain` is set (a domain outside this
-instance's own base domain, so Traefik's automatic ACME resolver can't cover
-it), cert/key PEM stored encrypted
+Per-service, only meaningful once the service has a domain outside this
+instance's own base domain (Traefik's automatic ACME resolver can't cover
+those), and never while the instance sits behind Pangolin (which serves
+certificates itself). Cert/key PEM stored encrypted
 (`service.customSslCertEnc`/`customSslKeyEnc`, same AES-256-GCM scheme as
 `registryPasswordEnc`), edited on the Networking tab's SSL section.
 
@@ -900,5 +914,6 @@ authenticated `GET /v1/images/save?ref=`, `Readable.fromWeb` of the body) into
 `loadImageArchive`. Scan targets then only include the local copy. Not verified
 against a real remote daemon or agent. The `git clone` runs on the build server
 for both kinds, in an `alpine/git` container into a volume on that daemon
-(`git-build.ts` with `remote` set, or `cmd/agent/build.go`/`cmd/agent/git.go`),
-so the repo has to be reachable from the build server.
+(`git-build.ts` with `remote` set, or
+`internal/agent/build.go`/`internal/agent/git.go`), so the repo has to be
+reachable from the build server.

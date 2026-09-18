@@ -697,21 +697,21 @@
 
             {#if dnsResolvable}
               <div>
-                <label class={label} for="customDomain">Custom domain</label>
+                <label class={label} for="domain">Domain</label>
                 <Input
-                  id="customDomain"
-                  name="customDomain"
+                  id="domain"
+                  name="domain"
                   placeholder="app.example.com"
                   type="text"
-                  value={values?.customDomain ?? ""}
+                  value={values?.domain ?? ""}
                 />
                 <p class="mt-1 text-xs text-text-subtle">
-                  Optional second hostname routed to this service, mapped
-                  before the first deploy. Point its DNS at this host; Traefik
-                  requests a certificate for it on deploy.
+                  Optional hostname of your own, used as the service's main
+                  link. Point its DNS at this host; Traefik requests a
+                  certificate for it on deploy. Add more on the Networking tab.
                 </p>
-                {#if errors?.customDomain}
-                  <p class={errorClass}>{errors.customDomain[0]}</p>
+                {#if errors?.domain}
+                  <p class={errorClass}>{errors.domain[0]}</p>
                 {/if}
               </div>
 

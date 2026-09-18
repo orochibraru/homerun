@@ -174,11 +174,10 @@ export const actions = {
 		}
 
 		try {
-			await ServiceLifecycleService.stop(svc.containerId);
+			await ServiceLifecycleService.stopService(svc);
 		} catch (error) {
 			return lifecycleFailure("stop", error);
 		}
-		await svc.update({ desiredState: "stopped" });
 		logger.info(`Service stopped: service=${svc.id} user=${locals.user.id}`);
 		NotificationDTO.notify({
 			message: `"${svc.name}" was stopped.`,

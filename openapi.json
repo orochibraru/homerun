@@ -686,16 +686,6 @@
 												],
 												"type": "string"
 											},
-											"customDomain": {
-												"anyOf": [
-													{
-														"type": "string"
-													},
-													{
-														"type": "null"
-													}
-												]
-											},
 											"customSslCertEnc": {
 												"anyOf": [
 													{
@@ -716,6 +706,9 @@
 													}
 												]
 											},
+											"defaultDomainEnabled": {
+												"type": "boolean"
+											},
 											"desiredState": {
 												"enum": ["running", "stopped"],
 												"type": "string"
@@ -728,6 +721,12 @@
 											},
 											"dnsResolvable": {
 												"type": "boolean"
+											},
+											"domains": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
 											},
 											"entrypoint": {
 												"anyOf": [
@@ -990,6 +989,16 @@
 											"previewsEnabled": {
 												"type": "boolean"
 											},
+											"primaryDomain": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
 											"privileged": {
 												"type": "boolean"
 											},
@@ -1090,7 +1099,6 @@
 											"currentStatus",
 											"capAdd",
 											"command",
-											"customDomain",
 											"devices",
 											"entrypoint",
 											"envFiles",
@@ -1098,11 +1106,14 @@
 											"privileged",
 											"customSslCertEnc",
 											"customSslKeyEnc",
+											"defaultDomainEnabled",
 											"desiredState",
 											"dnsResolvable",
+											"domains",
 											"envVars",
 											"autoDeployOnPush",
 											"gitBakeFile",
+											"primaryDomain",
 											"gitBakeTarget",
 											"gitBuildContext",
 											"gitBuildMethod",
@@ -1535,16 +1546,6 @@
 											],
 											"type": "string"
 										},
-										"customDomain": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"customSslCertEnc": {
 											"anyOf": [
 												{
@@ -1565,6 +1566,9 @@
 												}
 											]
 										},
+										"defaultDomainEnabled": {
+											"type": "boolean"
+										},
 										"desiredState": {
 											"enum": ["running", "stopped"],
 											"type": "string"
@@ -1577,6 +1581,12 @@
 										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"domains": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"entrypoint": {
 											"anyOf": [
@@ -1839,6 +1849,16 @@
 										"previewsEnabled": {
 											"type": "boolean"
 										},
+										"primaryDomain": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"privileged": {
 											"type": "boolean"
 										},
@@ -1934,7 +1954,6 @@
 										"currentStatus",
 										"capAdd",
 										"command",
-										"customDomain",
 										"devices",
 										"entrypoint",
 										"envFiles",
@@ -1942,11 +1961,14 @@
 										"privileged",
 										"customSslCertEnc",
 										"customSslKeyEnc",
+										"defaultDomainEnabled",
 										"desiredState",
 										"dnsResolvable",
+										"domains",
 										"envVars",
 										"autoDeployOnPush",
 										"gitBakeFile",
+										"primaryDomain",
 										"gitBakeTarget",
 										"gitBuildContext",
 										"gitBuildMethod",
@@ -2332,16 +2354,6 @@
 											],
 											"type": "string"
 										},
-										"customDomain": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"customSslCertEnc": {
 											"anyOf": [
 												{
@@ -2362,6 +2374,9 @@
 												}
 											]
 										},
+										"defaultDomainEnabled": {
+											"type": "boolean"
+										},
 										"desiredState": {
 											"enum": ["running", "stopped"],
 											"type": "string"
@@ -2374,6 +2389,12 @@
 										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"domains": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"entrypoint": {
 											"anyOf": [
@@ -2636,6 +2657,16 @@
 										"previewsEnabled": {
 											"type": "boolean"
 										},
+										"primaryDomain": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"privileged": {
 											"type": "boolean"
 										},
@@ -2731,7 +2762,6 @@
 										"currentStatus",
 										"capAdd",
 										"command",
-										"customDomain",
 										"devices",
 										"entrypoint",
 										"envFiles",
@@ -2739,11 +2769,14 @@
 										"privileged",
 										"customSslCertEnc",
 										"customSslKeyEnc",
+										"defaultDomainEnabled",
 										"desiredState",
 										"dnsResolvable",
+										"domains",
 										"envVars",
 										"autoDeployOnPush",
 										"gitBakeFile",
+										"primaryDomain",
 										"gitBakeTarget",
 										"gitBuildContext",
 										"gitBuildMethod",
@@ -2908,15 +2941,8 @@
 											}
 										]
 									},
-									"customDomain": {
-										"anyOf": [
-											{
-												"type": "string"
-											},
-											{
-												"type": "null"
-											}
-										]
+									"defaultDomainEnabled": {
+										"type": "boolean"
 									},
 									"devices": {
 										"description": "host[:container[:rwm]] device mappings",
@@ -2929,6 +2955,13 @@
 									},
 									"dnsResolvable": {
 										"type": "boolean"
+									},
+									"domains": {
+										"items": {
+											"pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$",
+											"type": "string"
+										},
+										"type": "array"
 									},
 									"entrypoint": {
 										"anyOf": [
@@ -3104,6 +3137,16 @@
 									},
 									"previewsEnabled": {
 										"type": "boolean"
+									},
+									"primaryDomain": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
 									},
 									"privileged": {
 										"type": "boolean"
@@ -3296,16 +3339,6 @@
 											],
 											"type": "string"
 										},
-										"customDomain": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "null"
-												}
-											]
-										},
 										"customSslCertEnc": {
 											"anyOf": [
 												{
@@ -3326,6 +3359,9 @@
 												}
 											]
 										},
+										"defaultDomainEnabled": {
+											"type": "boolean"
+										},
 										"desiredState": {
 											"enum": ["running", "stopped"],
 											"type": "string"
@@ -3338,6 +3374,12 @@
 										},
 										"dnsResolvable": {
 											"type": "boolean"
+										},
+										"domains": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										},
 										"entrypoint": {
 											"anyOf": [
@@ -3600,6 +3642,16 @@
 										"previewsEnabled": {
 											"type": "boolean"
 										},
+										"primaryDomain": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											]
+										},
 										"privileged": {
 											"type": "boolean"
 										},
@@ -3695,7 +3747,6 @@
 										"currentStatus",
 										"capAdd",
 										"command",
-										"customDomain",
 										"devices",
 										"entrypoint",
 										"envFiles",
@@ -3703,11 +3754,14 @@
 										"privileged",
 										"customSslCertEnc",
 										"customSslKeyEnc",
+										"defaultDomainEnabled",
 										"desiredState",
 										"dnsResolvable",
+										"domains",
 										"envVars",
 										"autoDeployOnPush",
 										"gitBakeFile",
+										"primaryDomain",
 										"gitBakeTarget",
 										"gitBuildContext",
 										"gitBuildMethod",

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/environment", () => ({
 	browser: false,
@@ -19,13 +20,12 @@ const settings = {
 
 let detectedTargetHost = "homerun-traefik-1";
 
-mock.module("$lib/services/docker.service", () => ({
-	DockerService: { tunnelTargetHost: async () => detectedTargetHost },
-}));
-
-mock.module("$lib/dto/instance-settings-dto", () => ({
-	InstanceSettingsDTO: { get: async () => settings },
-}));
+const { DockerService } = await import(
+	"../../../src/lib/services/docker.service"
+);
+const { InstanceSettingsDTO } = await import(
+	"../../../src/lib/dto/instance-settings-dto"
+);
 
 const { PangolinService } = await import(
 	"../../../src/lib/services/pangolin.service"
@@ -114,6 +114,8 @@ function pageOf<T>(rows: T[], url: URL, field: string): Response {
 }
 
 beforeEach(() => {
+	stub(DockerService, "tunnelTargetHost", async () => detectedTargetHost);
+	stub(InstanceSettingsDTO, "get", async () => settings);
 	settings.pangolinOwnsAuth = false;
 	settings.pangolinTargetHost = "localhost";
 	detectedTargetHost = "homerun-traefik-1";
@@ -214,6 +216,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	restoreStubs();
 	globalThis.fetch = realFetch;
 });
 

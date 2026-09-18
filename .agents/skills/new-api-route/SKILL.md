@@ -90,11 +90,11 @@ is current" step still fails on a stale snapshot, so keep them checked in.
 ## 7. CLI command (only if this route should be user-facing there)
 
 Not every API route needs a CLI command. If it does, add it to
-`cmd/cli/commands.go` following the existing `services`/`stacks`/ `templates`
-pattern; a `list` command should thread `--page`/`--per-page`/ `--search`
-through the same way the existing ones do. The CLI has no generated types to
-catch a stale shape here, `commands.go`'s structs and `client.go`'s requests
-need updating by hand.
+`internal/cli/commands.go` following the existing `services`/`stacks`/
+`templates` pattern; a `list` command should thread `--page`/`--per-page`/
+`--search` through the same way the existing ones do. The CLI has no generated
+types to catch a stale shape here, `commands.go`'s structs and `client.go`'s
+requests need updating by hand.
 
 ## 8. Finish
 

@@ -600,8 +600,8 @@ checked at the top of each `load`, plus the nav items are filtered out of
   own `load`s cross-redirect based on the same check (blank instance → sign-up;
   account exists → sign-in), so navigating to either one always lands somewhere
   sensible. Every account after the first is created by an admin from `/users`,
-  direct-create (name/email/temp password/role, works with no SMTP, via
-  `auth.api.createUser`) or email invite (`InvitationDTO` +
+  direct-create (name/email/role, no password field at all, see Email-first
+  sign-in below for what happens next) or email invite (`InvitationDTO` +
   `/auth/accept-invite/[token]`, gated behind `isSmtpEnabled()`).
 - **Real, tested-in-review finding**: making the bootstrap-admin hook
   conditional on `!user.role` doesn't work. `auth.ts`'s
@@ -801,22 +801,66 @@ one is redirected to `/security-setup?next=…`, an `AuthShell` card outside
 and remote functions hit directly aren't gated, and better-auth only asks for
 the TOTP code on email/password sign-in, not passkey or OAuth.
 
-## Preferred sign-in methods
+## Email-first sign-in and admin-created accounts (`AccountSetupService`, `$lib/remote/sign-in.remote.ts`)
 
-`instance_settings.preferred_sign_in_methods` (jsonb string[], null = none),
-edited in the "Preferred sign-in methods" section of `/authentication`. Keys are
-`password`, `passkey` and `oauth:<provider name>` (`$lib/sign-in-methods.ts`,
-`oauthMethod`). The sign-in load builds the methods actually available on this
-request (passkey only when `passkeyUsableOn`, enabled OAuth providers) and
-`splitSignInMethods` puts the preferred ones up front and the rest behind an
-"Other sign-in methods" link. A preference matching nothing available (a deleted
-provider, passkey on the wrong host) falls back to showing everything, so the
-page can never render with no way in. When `passkey` is among the preferred
-methods (and usable on this host), the sign-in page prompts for a passkey on
-load instead of starting the conditional autofill request, since a second
-WebAuthn call would abort the first. Cancelling, or a browser that refuses a
-prompt without a click (Safari), fails silently and leaves the passkey button in
-place.
+`/auth/sign-in` (`src/routes/auth/sign-in/+page.svelte`) is email-first: step 1
+asks only for an email (the passkey button and passkey autofill/auto-prompt are
+unrestricted and still shown on this step), and "Continue" calls the
+`lookupSignIn` remote command (throttled to 20 calls/min per IP per command via
+a module-scope `Map`, `sign-in.remote.ts`'s `throttle`), backed by
+`$lib/services/account-setup.service.ts`'s `AccountSetupService.lookup(email)`.
+That decides the next step, returned as a `SignInLookup` discriminated union:
+
+- **`"password"`**: the account has a `credential` account, or the email is
+  unknown — an unknown email deliberately also gets this step, so the lookup
+  can't be used to enumerate which emails have an account. All enabled OAuth
+  providers are offered below as "Continue with …" buttons.
+- **`"sso"`**: the account is linked to an enabled OAuth/OIDC provider and has
+  no `credential` account, or one of its linked providers is among
+  `instance_settings.preferred_sign_in_methods`. `autoRedirect` names the
+  provider to jump straight to (the preferred one, or the only linked one); the
+  page calls `handleOauthSignIn` immediately in that case, otherwise it shows a
+  button per linked provider.
+- **`"setup"`**: the account was created by an admin (`createPendingUser`, see
+  below) and hasn't chosen a password yet. With SMTP configured
+  (`isSmtpEnabled()`), `lookup` emails a 6-digit code first (`#sendCode`,
+  10-minute TTL, "Send a new code" re-sends via the `resendSetupCode` command)
+  before the page shows the set-password form; without SMTP the page skips
+  straight to it. Either way `completeAccountSetup` (12+ characters, confirmed
+  twice client-side, `MIN_PASSWORD_LENGTH` server side too) sets the password
+  via `ctx.internalAdapter.updatePassword`, marks the email verified only when a
+  code was actually checked, clears both verification rows, and the page signs
+  in immediately after with the new password.
+
+**Admin-created accounts have no temporary-password field at all.** `/users`'
+`createDirect` action calls `AccountSetupService.createPendingUser`, which
+creates the user through `auth.api.createUser` with a random 32-byte password
+nobody is told, then writes a `verification` row (identifier
+`account-setup:<userId>`, no dedicated table) marking it pending — that's the
+row `lookup`/`#pendingUser` check for the `"setup"` step above. `/users` shows
+an amber "Setting up SMTP is highly recommended" warning when
+`!isSmtpEnabled()`: without SMTP anyone who knows the new user's email can hit
+`/auth/sign-in`, land on the `"setup"` step, and set that account's password
+before its real owner does, since there's no code step to prove the address.
+Email invite (`InvitationDTO` + `/auth/accept-invite/[token]`) is unrelated to
+this and unchanged, it still requires SMTP.
+
+**Preferred sign-in methods** (`instance_settings.preferred_sign_in_methods`,
+jsonb string[], null = none, edited on `/authentication`, keys `password`,
+`passkey` and `oauth:<provider name>` via `$lib/sign-in-methods.ts`'s
+`oauthMethod`) no longer reshuffles a list of buttons on one page —
+`splitSignInMethods` and the old "Other sign-in methods" link are gone along
+with the single-page form. It now drives exactly two things: `lookup`'s SSO
+auto-redirect above (a preferred linked provider wins over "show every linked
+provider as a button"), and the passkey auto-prompt — when `passkey` is
+preferred and usable on this host (`passkeyUsableOn`), step 1 calls
+`authClient.signIn.passkey()` on mount instead of starting the conditional
+autofill request, since a second WebAuthn call would abort the first.
+Cancelling, or a browser that refuses a prompt without a click (Safari), fails
+silently and leaves the passkey button in place. A preference matching nothing
+available (a deleted provider, passkey on the wrong host) simply doesn't apply,
+`lookup` still falls back to the `"password"`/`"sso"` step it would pick anyway,
+so the page can never render with no way in.
 
 ## Homerun as an OIDC provider (`@better-auth/oauth-provider`, `$lib/oidc-provider.ts`, `/authentication/apps`, `/auth/consent`)
 

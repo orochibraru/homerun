@@ -7,6 +7,8 @@ import { APP_VERSION } from "$lib/server/app-version";
 import { DockerService } from "$lib/services/docker.service";
 import { JobWorker } from "$lib/services/queue/worker";
 import {
+	COMPOSE_PROJECT_LABEL,
+	COMPOSE_SERVICE_LABEL,
 	type ComposeTarget,
 	composeTargetFrom,
 	containerIdFromMountinfo,
@@ -15,6 +17,8 @@ import {
 	UPDATER_IMAGE_TAG,
 	updaterBinds,
 	updaterScript,
+	WORKER_ROLE,
+	WORKER_ROLE_LABEL,
 } from "./self-update/compose-target.ts";
 import { isNewerVersion, normalizeVersion } from "./self-update/version.ts";
 
@@ -47,6 +51,7 @@ export interface UpdatePreflight {
 }
 
 interface ResolvedSelf {
+	companions: string[];
 	hostSocketPath: string;
 	target: ComposeTarget;
 }
@@ -164,11 +169,28 @@ class SelfUpdateServiceClass {
 				(mount) => mount.Destination === config.docker.socketPath,
 			);
 			return {
+				companions: await this.#workerServices(target.project),
 				hostSocketPath: socketMount?.Source ?? config.docker.socketPath,
 				target,
 			};
 		}
 		return null;
+	}
+
+	/** Compose service names of the homerun-worker containers (`homerun.role=worker`) in `project`, recreated alongside the app since they run the same image. */
+	async #workerServices(project: string): Promise<string[]> {
+		const containers = await DockerService.getDocker().listContainers({
+			all: true,
+			filters: {
+				label: [
+					`${COMPOSE_PROJECT_LABEL}=${project}`,
+					`${WORKER_ROLE_LABEL}=${WORKER_ROLE}`,
+				],
+			},
+		});
+		return containers
+			.map((container) => container.Labels[COMPOSE_SERVICE_LABEL])
+			.filter((service): service is string => !!service);
 	}
 
 	/**
@@ -219,7 +241,8 @@ class SelfUpdateServiceClass {
 	 * Starts a self-update: holds the job worker (`JobWorker.hold()`) so no
 	 * new job starts mid-update, re-checks `preflight()` and that no job is
 	 * still running, then launches the updater container (`#launchUpdater`)
-	 * which pulls and recreates this app's own compose service. Releases the
+	 * which pulls and recreates this app's own compose service and its
+	 * homerun-worker companion. Releases the
 	 * hold and rethrows on any failure before the updater launches; once it
 	 * launches, the hold is left in place (this process is about to be
 	 * replaced).
@@ -280,7 +303,7 @@ class SelfUpdateServiceClass {
 				}
 			});
 		const container = await docker.createContainer({
-			Cmd: [updaterScript(self.target, version)],
+			Cmd: [updaterScript(self.target, version, self.companions)],
 			Entrypoint: ["sh", "-c"],
 			HostConfig: {
 				Binds: updaterBinds(self.target, self.hostSocketPath),

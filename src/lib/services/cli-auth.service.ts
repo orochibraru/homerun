@@ -147,7 +147,7 @@ class CliAuthServiceClass {
 
 	/**
 	 * Revokes the API key identified by its raw value, e.g. the one
-	 * `homerun logout` (`cmd/cli/login.go`) authenticated with, deleting
+	 * `homerun logout` (`internal/cli/login.go`) authenticated with, deleting
 	 * its row directly rather than going through better-auth's own
 	 * `POST /api-key/delete`: that endpoint requires a session
 	 * (`sessionMiddleware`), which an API-key-only caller revoking itself

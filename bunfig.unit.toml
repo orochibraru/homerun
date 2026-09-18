@@ -1,0 +1,17 @@
+[run]
+bun = true
+
+[test]
+preload = [
+	"./tests/unit/app/svelte-loader.ts",
+	"./tests/unit/support/homedir-preload.ts",
+]
+timeout = 120_000
+pathIgnorePatterns = ["**/tests/e2e/**", "**/tests/integration/**"]
+coverage = true
+coveragePathIgnorePatterns = [
+	"tests/**",
+	"src/lib/dto/**",
+	"src/lib/server/db/**",
+]
+coverageThreshold = { functions = 0.7, lines = 0.8 }

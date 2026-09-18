@@ -34,6 +34,29 @@ services:
       - homerun
       - internal
 
+  worker:
+    image: docker.io/orochibraru/homerun:${HOMERUN_VERSION:-latest}
+    restart: unless-stopped
+    command: ["/usr/local/bin/homerun-worker"]
+    labels:
+      - "homerun.role=worker"
+    stop_grace_period: 65s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
+      AUTH_SECRET: "${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}"
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      disable: true
+    networks:
+      - homerun
+      - internal
+
   traefik:
     image: traefik:v3
     restart: unless-stopped

@@ -35,6 +35,15 @@ runs Traefik and Postgres. The first account you create becomes admin
 automatically; signing in for the first time drops you into the onboarding
 wizard (base domain / Docker / Traefik / email).
 
+`bun run dev` also runs the job worker (`cmd/worker`, Go), with its output
+prefixed `[worker]`. Deploys, builds, scans, backups, cron jobs and Docker
+cleanups only run while it's up. It rebuilds and restarts on every change under
+`cmd/` or `internal/`; a change that doesn't compile prints the error and leaves
+the previous worker running. `bun run dev:app` is vite alone,
+`bun run dev:worker` the worker alone. Without Go installed, run the worker in
+Docker instead: `docker compose --profile worker up -d --build worker` (rebuild
+it after a Go change).
+
 `bun run build && bun run start` runs the built app instead of the Vite dev
 server, closer to how the production Docker image runs it, still directly on the
 host, still against the same `compose.yaml` Postgres/Traefik.
@@ -46,13 +55,17 @@ at the repo root, no `bun install` needed for any of them): `go run ./cmd/agent`
 
 ## Before every change: the hard gates
 
-These are enforced by a git pre-commit hook, not just CI: a violating commit is
-rejected locally. The hook is run by [prek](https://github.com/j178/prek) from
-`.pre-commit-config.yaml`; install prek (`brew install prek`, or
-`uv tool install prek`), then `bun install` wires the git shim up for you
-(`prepare` runs `prek install`). Hooks autofix in place, so a commit that gets
-rejected for "files were modified by this hook" just needs `git add` and a
-re-commit.
+These are enforced by git hooks, not just CI. The hooks are run by
+[prek](https://github.com/j178/prek) from `.pre-commit-config.yaml`; install
+prek (`brew install prek`, or `uv tool install prek`), then `bun install` wires
+them up for you (`prepare` runs `prek install`, which installs the pre-commit,
+commit-msg and pre-push hooks). A commit only runs the fast, per-file hooks
+(Biome format + lint, Prettier and markdownlint, gofmt, Tailwind, typos, secret
+scanning), a few seconds. A push runs the whole-repo gates: the type check, unit
+tests (80% coverage gate), golangci-lint and the Go tests. Hooks autofix in
+place, so a commit that gets rejected for "files were modified by this hook"
+just needs `git add` and a re-commit. After pulling this change, run
+`prek install` once so the pre-push hook exists.
 
 ```sh
 bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then go vet over every package under cmd/ and internal/, plus tsc over scripts/, zero errors AND zero warnings

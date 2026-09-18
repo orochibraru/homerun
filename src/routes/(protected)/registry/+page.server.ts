@@ -1,10 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { Logger } from "$lib/logger";
+import { runQueuedCleanup } from "$lib/services/docker-cleanup-queue";
 import { ImageMirrorGcService } from "$lib/services/image-mirror-gc.service";
 import { RegistryService } from "$lib/services/registry.service";
-
-const logger = new Logger("Registry");
 
 function reason(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
@@ -30,13 +28,7 @@ export const actions = {
 		if (busy) {
 			return fail(409, { error: busy });
 		}
-		try {
-			const result = await ImageMirrorGcService.collect();
-			return { reclaimedBytes: result.spaceReclaimedBytes, success: true };
-		} catch (error) {
-			logger.warn(`Registry garbage collection failed: ${reason(error)}`);
-			return fail(500, { error: reason(error) });
-		}
+		return await runQueuedCleanup("pruneMirror", false, locals.user.id);
 	},
 
 	deleteRepository: async ({ request, locals }) => {

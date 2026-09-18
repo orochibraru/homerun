@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
+import { DOMAIN_RE } from "$lib/service-domains";
 
 /**
  * Request-body schemas for the JSON REST API (`src/routes/api/v1/**`) : kept
@@ -95,7 +96,9 @@ export const updateServiceApiBody = z.object({
 	command: runtimeFields.command.optional(),
 	containerPort: z.number().int().min(1).max(65_535).optional(),
 	cpuLimit: z.string().nullable().optional(),
-	customDomain: z.string().nullable().optional(),
+	defaultDomainEnabled: z.boolean().optional(),
+	domains: z.array(z.string().trim().toLowerCase().regex(DOMAIN_RE)).optional(),
+	primaryDomain: z.string().trim().toLowerCase().nullable().optional(),
 	devices: runtimeFields.devices.optional(),
 	dnsResolvable: z.boolean().optional(),
 	entrypoint: runtimeFields.entrypoint.optional(),

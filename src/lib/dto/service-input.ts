@@ -11,8 +11,8 @@ export interface NewServiceInput {
 	buildSource?: "image" | "git";
 	containerPort: number;
 	cpuLimit?: string | null;
-	customDomain?: string | null;
 	dnsResolvable?: boolean;
+	domains?: string[];
 	envVars: Record<string, string>;
 	gitBakeFile?: string | null;
 	gitBakeTarget?: string | null;
@@ -67,7 +67,9 @@ export type ServiceUpdateInput = Partial<
 		| "cronLastRunAt"
 		| "cronSchedule"
 		| "currentStatus"
-		| "customDomain"
+		| "defaultDomainEnabled"
+		| "domains"
+		| "primaryDomain"
 		| "customSslCertEnc"
 		| "customSslKeyEnc"
 		| "desiredState"

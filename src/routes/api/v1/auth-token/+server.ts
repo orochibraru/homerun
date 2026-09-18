@@ -4,7 +4,7 @@ import { CliAuthService } from "$lib/services/cli-auth.service";
 /**
  * Revokes the API key that authenticated this very request, `homerun
  * logout`'s server-side counterpart to clearing the local config
- * (`cmd/cli/login.go`). Not under `/api/v1/auth/`: every path there is
+ * (`internal/cli/login.go`). Not under `/api/v1/auth/`: every path there is
  * routed to better-auth's own catch-all handler first
  * (`hooks.server.ts`'s `customAuthPaths`), which would 404 an
  * undeclared one, same real bug the CLI's device-code endpoints hit.

@@ -23,11 +23,13 @@ URI on the provider's side. The Authentication page prints the exact URL to use.
 
 The same page has two instance-wide switches:
 
-- **Preferred sign-in methods** picks what the sign-in page shows up front,
-  among password, passkey and each enabled provider. Everything else stays
-  available behind an "Other sign-in methods" link; pick none to show every
-  method. With passkey preferred, the sign-in page prompts for one as soon as it
-  opens.
+- **Preferred sign-in methods** picks among password, passkey and each enabled
+  provider. The sign-in page is email-first (see below), so this no longer
+  reorders a list of buttons: with passkey preferred, the page prompts for one
+  as soon as it opens instead of only offering autofill; with a provider
+  preferred, an account linked to it is sent straight there once you enter its
+  email, skipping the extra click. Pick none and the page just falls back to
+  whatever's available for that account.
 - **Sign-in requirements**: **Require two-factor authentication** and **Require
   a passkey**. They apply to every account, admins included. Anyone who doesn't
   meet one is sent to a setup page on their next visit and can't use the
@@ -108,6 +110,10 @@ shows you. Two things follow:
   sign-in screen redirects there on its own. Email and password sign-in works
   from any address.
 
-Every enabled provider appears as a "Continue with …" button on the Homerun
-sign-in page, and becomes selectable as a per-app sign-in method on the
-[login wall](login-wall.md). Saving takes effect immediately, without a restart.
+The sign-in page asks for your email first: enter one with no password set and
+already linked to a provider, and it's offered there as a "Continue with …"
+button (or you're sent straight to it, see Preferred sign-in methods above); any
+other email gets a password field with every enabled provider offered below it.
+Every enabled provider also becomes selectable as a per-app sign-in method on
+the [login wall](login-wall.md). Saving takes effect immediately, without a
+restart.

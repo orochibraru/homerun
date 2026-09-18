@@ -1,6 +1,5 @@
 import { redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
-import { oauthMethod } from "$lib/auth-providers";
 import { config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
@@ -12,11 +11,7 @@ import {
 	offCanonicalOrigin,
 } from "$lib/server/canonical-origin";
 import { AdminService } from "$lib/services/admin.service";
-import {
-	PASSKEY_SIGN_IN,
-	PASSWORD_SIGN_IN,
-	splitSignInMethods,
-} from "$lib/sign-in-methods";
+import { PASSKEY_SIGN_IN } from "$lib/sign-in-methods";
 
 export const load = async ({ request, url, locals }) => {
 	const hasUsers = await AdminService.hasAnyUser();
@@ -37,22 +32,7 @@ export const load = async ({ request, url, locals }) => {
 		browserOrigin(request, url),
 		config.auth.origin,
 	);
-	const oauthProviders = config.auth.oauthProviders
-		.filter((p) => p.enabled)
-		.map((p) => ({
-			label: p.label || p.name,
-			method: oauthMethod(p.name),
-			name: p.name,
-		}));
 	const settings = await InstanceSettingsDTO.get();
-	const methods = splitSignInMethods(
-		[
-			PASSWORD_SIGN_IN,
-			...(passkeyAvailable ? [PASSKEY_SIGN_IN] : []),
-			...oauthProviders.map((p) => p.method),
-		],
-		settings.preferredSignInMethods,
-	);
 	return {
 		appName: oauthClientId
 			? ((await OauthClientDTO.getByClientId(oauthClientId))?.name ?? null)
@@ -60,10 +40,7 @@ export const load = async ({ request, url, locals }) => {
 		canonicalSignInUrl: canonicalOrigin
 			? `${canonicalOrigin}${url.pathname}${url.search}`
 			: null,
-		oauthProviders,
-		otherMethods: methods.others,
 		passkeyAvailable,
-		primaryMethods: methods.primary,
 		promptPasskeyOnLoad:
 			passkeyAvailable &&
 			settings.preferredSignInMethods.includes(PASSKEY_SIGN_IN),

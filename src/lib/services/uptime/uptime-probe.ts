@@ -2,6 +2,10 @@ import { stripAnsi } from "$lib/ansi";
 import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { type ProbeResult, UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
+import {
+	primaryHostname,
+	type ServiceDomainFields,
+} from "$lib/service-domains";
 import { isDatabaseImage } from "$lib/service-link";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import { DockerService } from "../docker.service.ts";
@@ -36,15 +40,13 @@ export function externalProbeSkipReason(host: string): string | null {
 }
 
 /** The hostname a service is published at, or null when it isn't published. */
-export function externalHostFor(svc: {
-	customDomain: string | null;
-	dnsResolvable: boolean;
-	slug: string;
-}): string | null {
+export function externalHostFor(
+	svc: ServiceDomainFields & { dnsResolvable: boolean },
+): string | null {
 	if (!svc.dnsResolvable) {
 		return null;
 	}
-	return svc.customDomain ?? `${svc.slug}.${config.baseDomain}`;
+	return primaryHostname(svc, null, config.baseDomain);
 }
 
 export type InternalProbeMethod = "healthcheck" | "http" | "tcp";

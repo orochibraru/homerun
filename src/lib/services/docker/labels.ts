@@ -1,4 +1,5 @@
 import { config } from "$lib/config";
+import { serviceHostnames } from "$lib/service-domains";
 import { certResolverFor } from "./cert-resolver.ts";
 
 export const GATE_IDENTITY_HEADERS = [
@@ -43,42 +44,31 @@ export const SERVICE_ID_LABEL = "homerun.service.id";
 /**
  * Builds the full label set for a container/swarm service : always the
  * `homerun.managed`/`homerun.service.id` tracking labels, plus (when
- * `dnsResolvable`) the Traefik router/service/TLS labels that give it its
- * public `<slug>.<baseDomain>` route, a second router for `customDomain`
- * sharing the same backend, and the login wall's forwardAuth middleware on every
- * router. The middleware is attached whether or not the wall is on: auth-check
- * lets requests through for a service whose wall is off, so toggling it applies
- * without a redeploy. A retry middleware follows it, so a request that reaches
- * a container or swarm task that just went away during a rollout is sent to
- * another one; Traefik only retries when no request bytes reached the backend.
+ * `dnsResolvable`) one Traefik router per routed hostname (the default
+ * `<slug>.<baseDomain>` unless it was turned off, then each of `domains`), all
+ * sharing one Traefik service, and the login wall's forwardAuth middleware on
+ * every router. The middleware is attached whether or not the wall is on:
+ * auth-check lets requests through for a service whose wall is off, so
+ * toggling it applies without a redeploy. A retry middleware follows it, so a
+ * request that reaches a container or swarm task that just went away during a
+ * rollout is sent to another one; Traefik only retries when no request bytes
+ * reached the backend.
  */
 export function buildContainerLabels(params: {
+	containerPort: number;
+	defaultDomainEnabled?: boolean;
+	dnsResolvable?: boolean;
+	domains?: string[];
+	networkName?: string;
 	serviceId: string;
 	slug: string;
-	containerPort: number;
-	// When false, no Traefik labels are attached at all : Traefik's docker
-	// provider runs with exposedbydefault=false (see compose.yaml), so an
-	// absent "traefik.enable" label means the container never gets a
-	// router: no public <slug>.<baseDomain>, subnet-only reachability.
-	dnsResolvable?: boolean;
-	// When set, prefixes the public subdomain: "<stackSlug>-<slug>.<baseDomain>".
 	stackSlug?: string | null;
-	// Optional second hostname routed to the same backend : its own router,
-	// sharing the primary router's Traefik service (no duplicated backend
-	// config). Only applied when dnsResolvable is true.
-	customDomain?: string | null;
-	// Which network Traefik should reach this workload on. Defaults to the
-	// shared bridge network every standalone container joins; swarm-mode
-	// services pass their own overlay instead (see docker/swarm.ts).
-	networkName?: string;
 }): Record<string, string> {
 	const {
 		serviceId,
 		slug,
 		containerPort,
 		dnsResolvable = true,
-		stackSlug,
-		customDomain,
 		networkName = config.docker.networkName,
 	} = params;
 
@@ -87,68 +77,56 @@ export function buildContainerLabels(params: {
 		[SERVICE_ID_LABEL]: serviceId,
 	};
 
-	if (!dnsResolvable) {
+	const hostnames = serviceHostnames(
+		{
+			defaultDomainEnabled: params.defaultDomainEnabled ?? true,
+			domains: params.domains ?? [],
+			primaryDomain: null,
+			slug,
+		},
+		params.stackSlug,
+		config.baseDomain,
+	);
+	if (!dnsResolvable || hostnames.length === 0) {
 		return baseLabels;
 	}
 
-	const host = stackSlug ? `${stackSlug}-${slug}` : slug;
-	const hostname = `${host}.${config.baseDomain}`;
-	const resolverFor = (name: string) =>
-		certResolverFor(name, config.traefik.certResolver, config.pangolinEnabled);
-	const primaryResolver = resolverFor(hostname);
-
+	const authMiddleware = `${slug}-auth`;
+	const retryMiddleware = `${slug}-retry`;
 	const labels: Record<string, string> = {
 		...baseLabels,
 		"traefik.docker.network": networkName,
-
-		// Traefik auto-discovers this container via the Docker provider :
-		// no control-plane push required. See compose.yaml for how Traefik
-		// itself is bootstrapped.
 		"traefik.enable": "true",
-		[`traefik.http.routers.${slug}.rule`]: `Host(\`${hostname}\`)`,
-		[`traefik.http.routers.${slug}.entrypoints`]: config.traefik.entrypoint,
-		[`traefik.http.routers.${slug}.tls`]: "true",
 		[`traefik.http.services.${slug}.loadbalancer.server.port`]:
 			String(containerPort),
+		[`traefik.http.middlewares.${authMiddleware}.forwardauth.address`]:
+			authCheckUrlFor(serviceId),
+		[`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`]:
+			GATE_IDENTITY_HEADERS.join(","),
+		[`traefik.http.middlewares.${retryMiddleware}.retry.attempts`]:
+			String(RETRY_ATTEMPTS),
+		[`traefik.http.middlewares.${retryMiddleware}.retry.initialinterval`]:
+			RETRY_INITIAL_INTERVAL,
 	};
 
-	if (primaryResolver) {
-		labels[`traefik.http.routers.${slug}.tls.certresolver`] = primaryResolver;
-	}
-
-	if (customDomain) {
-		const customRouter = `${slug}-custom`;
-		labels[`traefik.http.routers.${customRouter}.rule`] =
-			`Host(\`${customDomain}\`)`;
-		labels[`traefik.http.routers.${customRouter}.entrypoints`] =
+	hostnames.forEach((hostname, index) => {
+		const router = index === 0 ? slug : `${slug}-${index}`;
+		labels[`traefik.http.routers.${router}.rule`] = `Host(\`${hostname}\`)`;
+		labels[`traefik.http.routers.${router}.entrypoints`] =
 			config.traefik.entrypoint;
-		labels[`traefik.http.routers.${customRouter}.tls`] = "true";
-		const customResolver = resolverFor(customDomain);
-		if (customResolver) {
-			labels[`traefik.http.routers.${customRouter}.tls.certresolver`] =
-				customResolver;
+		labels[`traefik.http.routers.${router}.tls`] = "true";
+		labels[`traefik.http.routers.${router}.service`] = slug;
+		labels[`traefik.http.routers.${router}.middlewares`] =
+			`${authMiddleware},${retryMiddleware}`;
+		const resolver = certResolverFor(
+			hostname,
+			config.traefik.certResolver,
+			config.pangolinEnabled,
+		);
+		if (resolver) {
+			labels[`traefik.http.routers.${router}.tls.certresolver`] = resolver;
 		}
-		// Reuses the primary router's service : same backend, just a second
-		// hostname reaching it, not a duplicated loadbalancer config.
-		labels[`traefik.http.routers.${customRouter}.service`] = slug;
-	}
-
-	const authMiddleware = `${slug}-auth`;
-	labels[`traefik.http.middlewares.${authMiddleware}.forwardauth.address`] =
-		authCheckUrlFor(serviceId);
-	labels[
-		`traefik.http.middlewares.${authMiddleware}.forwardauth.authResponseHeaders`
-	] = GATE_IDENTITY_HEADERS.join(",");
-	const retryMiddleware = `${slug}-retry`;
-	labels[`traefik.http.middlewares.${retryMiddleware}.retry.attempts`] =
-		String(RETRY_ATTEMPTS);
-	labels[`traefik.http.middlewares.${retryMiddleware}.retry.initialinterval`] =
-		RETRY_INITIAL_INTERVAL;
-	const middlewares = `${authMiddleware},${retryMiddleware}`;
-	labels[`traefik.http.routers.${slug}.middlewares`] = middlewares;
-	if (customDomain) {
-		labels[`traefik.http.routers.${slug}-custom.middlewares`] = middlewares;
-	}
+	});
 
 	return labels;
 }

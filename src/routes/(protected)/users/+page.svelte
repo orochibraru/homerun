@@ -1,9 +1,18 @@
 <script lang="ts">
-	import { Mail, Pencil, Plus, Trash2, UserPlus, X } from "@lucide/svelte";
+	import {
+		Mail,
+		Pencil,
+		Plus,
+		Trash2,
+		TriangleAlert,
+		UserPlus,
+		X,
+	} from "@lucide/svelte";
 	import type { SubmitFunction } from "@sveltejs/kit";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
+	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
@@ -91,6 +100,24 @@
     </Button>
   </div>
 
+  {#if !data.smtpEnabled}
+    <div class="mb-6 flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+      <TriangleAlert class="mt-0.5 size-4 shrink-0" />
+      <div>
+        <p class="font-semibold">Setting up SMTP is highly recommended.</p>
+        <p class="mt-1">
+          A new user chooses their own password the first time they sign in.
+          With SMTP, Homerun first emails them a code to prove the address is
+          theirs. Without it, anyone who knows a new user's email can pick that
+          password before they do.
+          <a class="font-medium underline" href={resolve("/(protected)/settings/email")}>
+            Set up SMTP
+          </a>
+        </p>
+      </div>
+    </div>
+  {/if}
+
   {#if showAddForm}
     <div class="panel mb-6 rounded-md p-5">
       <div class="mb-4 flex gap-2">
@@ -150,19 +177,10 @@
             <label class={label} for="email">Email</label>
             <Input id="email" name="email" required type="email" />
           </div>
-          <div>
-            <label class={label} for="password">Temporary password</label>
-            <Input
-              id="password"
-              minlength={12}
-              name="password"
-              required
-              type="text"
-            />
-            <p class="text-text-subtle mt-1.5 text-xs">
-              At least 12 characters : share this with them out of band.
-            </p>
-          </div>
+          <p class="text-text-subtle text-xs">
+            They choose their own password the first time they sign in with
+            this email{data.smtpEnabled ? ", after confirming a code we email them" : ""}.
+          </p>
           <div>
             <div class={label}>Role</div>
 
@@ -221,7 +239,7 @@
             </Select.Root>
           </div>
           <div class="flex justify-end">
-            <Button disabled={submitting}>
+            <Button disabled={submitting} type="submit">
               <Mail class="size-4" />
               Send invite
             </Button>

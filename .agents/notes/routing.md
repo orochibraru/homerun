@@ -154,22 +154,26 @@ deep-linking into `/settings`.
   Overview), **Env Vars**, **Volumes** (mount/unmount StorageVolumes, including
   a "New volume" modal, `$lib/components/new-volume-fields.svelte` shared with
   `/storage/new`, so a volume can be created and mounted without leaving the
-  service), **Networking** (custom domain mapping; an **Access** section holds
-  the per-app login wall, its allowed sign-in methods and its user/email/group
-  allowlists, `updateAppAuth`, see Per-app login wall below; a **Network**
-  section holds container port, protocol (tcp/udp/both), network mode
-  (bridge/host, see below), and DNS-resolvability, `updatePortsSchema`, its own
-  `updatePorts` action, moved off Settings; SSL section is a read-only explainer
-  for the automatic-vs-custom-cert split, host ports are still never
+  service), **Networking** (a **Domains** card: the default
+  `<slug>.<baseDomain>` hostname with a "Routed" toggle, a list of extra domains
+  and a radio picking the main one, `updateDomains` action, pure helpers in
+  `$lib/service-domains.ts`; an **Access** section holds the per-app login wall,
+  its allowed sign-in methods and its user/email/group allowlists,
+  `updateAppAuth`, see Per-app login wall below; a **Network** section holds
+  container port, protocol (tcp/udp/both), network mode (bridge/host, see
+  below), and DNS-resolvability, `updatePortsSchema`, its own `updatePorts`
+  action, moved off Settings; an **SSL** section, its own `updateSsl` action,
+  shown only for domains outside the instance's base domain and never behind
+  Pangolin (which serves certificates itself), host ports are still never
   _published_/mapped by design even though host network mode now exists, see
   below; **every one of those settings is a Traefik label written when the
   container is created**, so saving one changes nothing about the container
   that's already running, which is why an already-deployed service shows an
   amber notice and a `?/redeploy` button at the top of this tab rather than
-  leaving the user to work out why their custom domain 404s), **Compute**
-  (cpu/memory limits, `updateComputeSchema`, its own `updateCompute` action,
-  moved off Settings), **Terminal** (interactive shell into the live container,
-  see below), **Errors** (failed deployments + a live "container currently down"
+  leaving the user to work out why their domain 404s), **Compute** (cpu/memory
+  limits, `updateComputeSchema`, its own `updateCompute` action, moved off
+  Settings), **Terminal** (interactive shell into the live container, see
+  below), **Errors** (failed deployments + a live "container currently down"
   banner + "Application errors", persisted app-level warn/error `Logger` output
   attributed to this service, see `app_log`/`AppLogDTO` in Data model below;
   plus, when `currentStatus === "missing"`, a distinct banner with a "Resolve"

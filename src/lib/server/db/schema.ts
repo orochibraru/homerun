@@ -21,6 +21,7 @@ import type {
 import type { BackupRunKind, RevisionConfig } from "$lib/revision-config";
 import type {
 	ContainerStatus,
+	JobStage,
 	JobStatus,
 	JobType,
 	NotificationChannelKind,
@@ -852,12 +853,13 @@ export const service = pgTable(
 			.$type<ContainerStatus>()
 			.default("pending")
 			.notNull(),
-		// Optional second hostname routed to this service (its own DNS A/CNAME
-		// must already point at this host : the app doesn't manage that).
-		// Only takes effect when dnsResolvable is true.
-		customDomain: text("custom_domain").unique(),
+		defaultDomainEnabled: boolean("default_domain_enabled")
+			.default(true)
+			.notNull(),
+		domains: text("domains").array().default(sql`'{}'::text[]`).notNull(),
+		primaryDomain: text("primary_domain"),
 		// AES-256-GCM ciphertext (PEM), same scheme as registryPasswordEnc.
-		// Only take effect together, and only when customDomain is set : see
+		// Only take effect together : see
 		// $lib/services/docker/custom-ssl.ts. Requires the admin's own opt-in
 		// (TRAEFIK_DYNAMIC_CONFIG_DIR + a Traefik file-provider config
 		// change, see compose.yaml) to actually be picked up by Traefik.
@@ -1403,9 +1405,13 @@ export const job = pgTable(
 		dependsOnJobId: text("depends_on_job_id"),
 		error: text("error"),
 		exclusive: boolean("exclusive").default(false).notNull(),
+		executorError: text("executor_error"),
+		executorResult: jsonb("executor_result").$type<Record<string, unknown>>(),
 		finishedAt: timestamp("finished_at", { mode: "date" }),
+		heartbeatAt: timestamp("heartbeat_at", { mode: "date" }),
 		id: text("id").primaryKey(),
 		lockKey: text("lock_key"),
+		log: text("log").default("").notNull(),
 		maxAttempts: integer("max_attempts").default(1).notNull(),
 		payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
 		priority: integer("priority").default(0).notNull(),
@@ -1414,6 +1420,8 @@ export const job = pgTable(
 		serviceId: text("service_id").references(() => service.id, {
 			onDelete: "cascade",
 		}),
+		spec: text("spec"),
+		stage: text("stage").$type<JobStage>(),
 		startedAt: timestamp("started_at", { mode: "date" }),
 		status: text("status").$type<JobStatus>().default("queued").notNull(),
 		title: text("title").notNull(),
@@ -1421,9 +1429,11 @@ export const job = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
+		workerId: text("worker_id"),
 	},
 	(table) => [
 		index("job_status_runAt_idx").on(table.status, table.runAt),
+		index("job_status_stage_idx").on(table.status, table.stage),
 		index("job_userId_createdAt_idx").on(table.userId, table.createdAt),
 		uniqueIndex("job_type_dedupeKey_queued_uidx")
 			.on(table.type, table.dedupeKey)

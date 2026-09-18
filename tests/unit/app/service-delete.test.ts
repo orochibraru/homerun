@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/environment", () => ({
 	browser: false,
@@ -8,43 +9,58 @@ mock.module("$app/environment", () => ({
 
 let removeError: unknown = null;
 const removed: string[] = [];
+const dockerCalls: unknown[][] = [];
 
-mock.module("../../../src/lib/services/docker.service.ts", () => ({
-	DockerService: {
-		removeContainer: async (id: string) => {
-			if (removeError) {
-				throw removeError;
-			}
-			removed.push(id);
-		},
-		removeSwarmService: async (id: string) => {
-			if (removeError) {
-				throw removeError;
-			}
-			removed.push(id);
-		},
+function record(name: string) {
+	return async (...args: unknown[]) => {
+		dockerCalls.push([name, ...args]);
+		return name === "inspectStatus" ? "running" : undefined;
+	};
+}
+
+const fakeDocker: Record<string, unknown> = {
+	inspectStatus: record("inspectStatus"),
+	removeContainer: async (id: string, ...rest: unknown[]) => {
+		dockerCalls.push(["removeContainer", id, ...rest]);
+		if (removeError) {
+			throw removeError;
+		}
+		removed.push(id);
 	},
-}));
+	removeSwarmService: async (id: string) => {
+		if (removeError) {
+			throw removeError;
+		}
+		removed.push(id);
+	},
+	restartContainer: record("restartContainer"),
+	restartSwarmService: record("restartSwarmService"),
+	scaleSwarmService: record("scaleSwarmService"),
+	startContainer: record("startContainer"),
+	stopContainer: record("stopContainer"),
+	streamLogs: record("streamLogs"),
+};
 
 const webhooksRemoved: string[] = [];
-
-mock.module("../../../src/lib/services/git-webhook.service.ts", () => ({
-	GitWebhookService: {
-		remove: async (svc: { id: string }) => {
-			webhooksRemoved.push(svc.id);
-		},
-	},
-}));
-
 const previewsByParent = new Map<string, unknown[]>();
 
-mock.module("../../../src/lib/dto/service-git-dto.ts", () => ({
-	ServiceGitDTO: {
-		listPreviews: async (parentId: string) =>
-			previewsByParent.get(parentId) ?? [],
-	},
-}));
-
+const { config } = await import("../../../src/lib/config");
+const { Logger } = await import("../../../src/lib/logger");
+const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
+const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
+const { CloudflareService } = await import(
+	"../../../src/lib/services/cloudflare.service"
+);
+const { PangolinService } = await import(
+	"../../../src/lib/services/pangolin.service"
+);
+const { DockerService } = await import(
+	"../../../src/lib/services/docker.service"
+);
+const { GitWebhookService } = await import(
+	"../../../src/lib/services/git-webhook.service"
+);
+const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
 const { ServiceLifecycleService } = await import(
 	"../../../src/lib/services/service-lifecycle.service"
 );
@@ -55,11 +71,23 @@ const { removalFailure, tryRemoveWorkload, WorkloadDetachError } = await import(
 type Svc = Parameters<typeof ServiceLifecycleService.deleteService>[0];
 
 function fakeService(overrides: Partial<Record<string, unknown>> = {}) {
-	const state = { deleted: false };
+	const state = { deleted: false, updates: [] as unknown[] };
 	const svc = {
 		containerId: "c1",
+		defaultDomainEnabled: true,
 		delete: async () => {
 			state.deleted = true;
+		},
+		dnsResolvable: false,
+		domains: [] as string[],
+		replicas: 0,
+		slug: "web",
+		stackId: null,
+		toJSON() {
+			return this;
+		},
+		update: async (patch: unknown) => {
+			state.updates.push(patch);
 		},
 		id: "s1",
 		name: "web",
@@ -73,11 +101,48 @@ function dockerError(statusCode: number, message: string) {
 	return Object.assign(new Error(message), { statusCode });
 }
 
+const dnsDeletes: string[] = [];
+let dnsFailure: unknown = null;
+const warnings: string[] = [];
+const originalBaseDomain = config.baseDomain;
+
 beforeEach(() => {
 	removeError = null;
 	removed.length = 0;
+	dockerCalls.length = 0;
+	dnsDeletes.length = 0;
+	dnsFailure = null;
+	warnings.length = 0;
+	config.baseDomain = "example.com";
+	for (const [key, impl] of Object.entries(fakeDocker)) {
+		stub(DockerService, key, impl);
+	}
+	stub(GitWebhookService, "remove", async (svc: { id: string }) => {
+		webhooksRemoved.push(svc.id);
+	});
+	stub(
+		ServiceGitDTO,
+		"listPreviews",
+		async (parentId: string) => previewsByParent.get(parentId) ?? [],
+	);
+	stub(CloudflareService, "deleteDnsRecord", async (host: string) => {
+		if (dnsFailure) {
+			throw dnsFailure;
+		}
+		dnsDeletes.push(host);
+		return null;
+	});
+	stub(PangolinService, "deleteDnsRecord", async () => null);
+	stub(Logger.prototype, "warn", (message: string) => {
+		warnings.push(message);
+	});
 	webhooksRemoved.length = 0;
 	previewsByParent.clear();
+});
+
+afterEach(() => {
+	config.baseDomain = originalBaseDomain;
+	restoreStubs();
 });
 
 describe("removalFailure", () => {
@@ -148,5 +213,160 @@ describe("ServiceLifecycleService.deleteService", () => {
 		expect(removed).toEqual(["c2", "c1"]);
 		expect(preview.state.deleted).toBe(true);
 		expect(state.deleted).toBe(true);
+	});
+});
+
+describe("ServiceLifecycleService container passthroughs", () => {
+	test("each one forwards the container id to Docker", async () => {
+		await ServiceLifecycleService.start("c1");
+		await ServiceLifecycleService.stop("c1");
+		await ServiceLifecycleService.restart("c1");
+		await ServiceLifecycleService.remove("c1");
+		expect(await ServiceLifecycleService.status("c1")).toBe("running");
+		await ServiceLifecycleService.streamLogs("c1");
+
+		expect(dockerCalls).toEqual([
+			["startContainer", "c1"],
+			["stopContainer", "c1"],
+			["restartContainer", "c1"],
+			["removeContainer", "c1", { force: true }],
+			["inspectStatus", "c1"],
+			["streamLogs", "c1", { follow: true, tail: 200 }],
+		]);
+	});
+});
+
+describe("ServiceLifecycleService start/stop/restart", () => {
+	test("startService starts the container, then marks it running", async () => {
+		const { state, svc } = fakeService();
+		await ServiceLifecycleService.startService(svc);
+		expect(dockerCalls).toEqual([["startContainer", "c1"]]);
+		expect(state.updates).toEqual([{ desiredState: "running" }]);
+	});
+
+	test("startService scales a swarm service to its replicas, at least 1", async () => {
+		const one = fakeService({ swarmServiceId: "sw1" });
+		await ServiceLifecycleService.startService(one.svc);
+		const three = fakeService({ replicas: 3, swarmServiceId: "sw3" });
+		await ServiceLifecycleService.startService(three.svc);
+
+		expect(dockerCalls).toEqual([
+			["scaleSwarmService", "sw1", 1],
+			["scaleSwarmService", "sw3", 3],
+		]);
+		expect(three.state.updates).toEqual([{ desiredState: "running" }]);
+	});
+
+	test("stopService records the stop before stopping the container", async () => {
+		const { state, svc } = fakeService();
+		await ServiceLifecycleService.stopService(svc);
+		expect(state.updates).toEqual([{ desiredState: "stopped" }]);
+		expect(dockerCalls).toEqual([["stopContainer", "c1"]]);
+	});
+
+	test("stopService scales a swarm service to 0", async () => {
+		const { svc } = fakeService({ containerId: null, swarmServiceId: "sw1" });
+		await ServiceLifecycleService.stopService(svc);
+		expect(dockerCalls).toEqual([["scaleSwarmService", "sw1", 0]]);
+	});
+
+	test("restartService restarts the swarm service or the container", async () => {
+		await ServiceLifecycleService.restartService(
+			fakeService({ swarmServiceId: "sw1" }).svc,
+		);
+		await ServiceLifecycleService.restartService(fakeService().svc);
+		expect(dockerCalls).toEqual([
+			["restartSwarmService", "sw1"],
+			["restartContainer", "c1"],
+		]);
+	});
+
+	test("a never-deployed service can't be started, stopped or restarted, and nothing is persisted", async () => {
+		const { state, svc } = fakeService({ containerId: null });
+		for (const action of [
+			ServiceLifecycleService.startService,
+			ServiceLifecycleService.stopService,
+			ServiceLifecycleService.restartService,
+		]) {
+			await expect(action.call(ServiceLifecycleService, svc)).rejects.toThrow(
+				"This service hasn't been deployed yet.",
+			);
+		}
+		expect(state.updates).toEqual([]);
+		expect(dockerCalls).toEqual([]);
+	});
+});
+
+describe("ServiceLifecycleService DNS cleanup", () => {
+	test("a publicly routed service in a stack drops its stack-prefixed and custom hostnames", async () => {
+		stub(StackDTO, "get", async (id: string) =>
+			id === "st1" ? { slug: "shop" } : null,
+		);
+		const { state, svc } = fakeService({
+			dnsResolvable: true,
+			domains: ["shop.acme.io"],
+			stackId: "st1",
+		});
+
+		await ServiceLifecycleService.deleteService(svc);
+
+		expect(dnsDeletes).toEqual(["shop-web.example.com", "shop.acme.io"]);
+		expect(state.deleted).toBe(true);
+	});
+
+	test("a DNS provider failure doesn't block the delete or surface as a warning", async () => {
+		dnsFailure = new Error("boom");
+		stub(StackDTO, "get", async () => null);
+		const { state, svc } = fakeService({ dnsResolvable: true });
+
+		await ServiceLifecycleService.deleteService(svc);
+
+		expect(state.deleted).toBe(true);
+		expect(warnings).toEqual([]);
+	});
+});
+
+describe("ServiceLifecycleService.deleteStack", () => {
+	test("cascades the stack delete, then cleans up each member's webhook and DNS under the stack slug", async () => {
+		const api = fakeService({ dnsResolvable: true, id: "api", slug: "api" });
+		const worker = fakeService({ id: "worker", slug: "worker" });
+		const cascades: unknown[] = [];
+		stub(ServiceDTO, "listByStack", async (id: string) =>
+			id === "st1" ? [api.svc, worker.svc] : [],
+		);
+		const stack = {
+			cascadeDelete: async (options: unknown) => {
+				cascades.push(options);
+				expect(webhooksRemoved).toEqual([]);
+			},
+			id: "st1",
+			slug: "shop",
+		} as unknown as Parameters<typeof ServiceLifecycleService.deleteStack>[0];
+
+		await ServiceLifecycleService.deleteStack(stack, { force: true });
+
+		expect(cascades).toEqual([{ force: true }]);
+		expect(webhooksRemoved.sort((a, b) => a.localeCompare(b))).toEqual([
+			"api",
+			"worker",
+		]);
+		expect(dnsDeletes).toEqual(["shop-api.example.com"]);
+	});
+
+	test("a failed cascade leaves webhooks and DNS alone", async () => {
+		stub(ServiceDTO, "listByStack", async () => [fakeService().svc]);
+		const stack = {
+			cascadeDelete: async () => {
+				throw new WorkloadDetachError("nope");
+			},
+			id: "st1",
+			slug: "shop",
+		} as unknown as Parameters<typeof ServiceLifecycleService.deleteStack>[0];
+
+		await expect(ServiceLifecycleService.deleteStack(stack)).rejects.toThrow(
+			"nope",
+		);
+		expect(webhooksRemoved).toEqual([]);
+		expect(dnsDeletes).toEqual([]);
 	});
 });

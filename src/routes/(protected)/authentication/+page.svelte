@@ -66,8 +66,9 @@
     <div class="border-border border-b px-5 py-4">
       <h2 class="eyebrow">Preferred sign-in methods</h2>
       <p class="text-text-muted text-xs">
-        What the sign-in page shows up front. Everything else stays available
-        behind an "Other sign-in methods" link. Pick none to show every method.
+        Picking passkey prompts for one as soon as the sign-in page opens.
+        Picking a single sign-on provider sends accounts linked to it straight
+        there once they enter their email.
       </p>
     </div>
     <form

@@ -3,9 +3,9 @@
 If your instance's DNS is on Cloudflare, or you front it with a self-hosted
 [Pangolin](https://github.com/fosrl/pangolin) tunnel instead, configure one (or
 both) from `/settings` → Networking and Homerun keeps DNS in sync on its own for
-any service with **DNS-resolvable** on: a deploy creates or updates the record
-(a Cloudflare CNAME, or a Pangolin Resource + Target), deleting the service
-removes it, including its custom domain if it has one.
+any service with **DNS-resolvable** on: a deploy creates or updates a record per
+routed hostname (a Cloudflare CNAME, or a Pangolin Resource + Target), deleting
+the service removes them, including any extra domains it has.
 
 Both are best-effort and fire only after a successful deploy, a DNS failure
 never fails the deploy itself. **What each provider did is written into that
@@ -31,8 +31,8 @@ What a sync does to a hostname's records, so re-running it is always safe:
   comment you set by hand survives.
 - An A or AAAA record on that name: leaves it alone and says so in the deploy
   log, since Cloudflare won't allow a CNAME next to one.
-- A hostname outside the zone (a custom domain on another DNS provider), or the
-  base domain itself: skipped.
+- A hostname outside the zone (a domain on another DNS provider), or the base
+  domain itself: skipped.
 
 Deleting a service removes its CNAME only when it points at your base domain or
 carries the `Managed by Homerun` comment, so a record you created by hand for

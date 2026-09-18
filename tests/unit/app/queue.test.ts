@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 interface FakeJob {
 	attempts: number;
+	executorError: string | null;
+	executorResult: Record<string, unknown> | null;
+	handOff: ReturnType<typeof mock>;
 	id: string;
 	markFailed: ReturnType<typeof mock>;
 	markSucceeded: ReturnType<typeof mock>;
@@ -14,6 +17,9 @@ interface FakeJob {
 function fakeJob(overrides: Partial<FakeJob> = {}): FakeJob {
 	return {
 		attempts: 1,
+		executorError: null,
+		executorResult: null,
+		handOff: mock(async () => undefined),
 		id: "job-1",
 		markFailed: mock(async () => undefined),
 		markSucceeded: mock(async () => undefined),
@@ -35,14 +41,18 @@ const create = mock(async (_input: unknown) => null as unknown);
 const get = mock(async (_id: string) => null as unknown);
 const requeueOrphaned = mock(async () => 0);
 const claimNext = mock(async () => null as unknown);
+const claimFinalize = mock(async () => null as unknown);
+const listStalledExecutions = mock(async (_since: Date) => [] as unknown[]);
 
 mock.module("../../../src/lib/dto/job-dto", () => ({
 	JobDTO: {
 		cancelDependents,
+		claimFinalize,
 		claimNext,
 		create,
 		findQueued,
 		get,
+		listStalledExecutions,
 		requeueOrphaned,
 	},
 }));
@@ -50,6 +60,17 @@ mock.module("../../../src/lib/dto/job-dto", () => ({
 const handler = mock(async (_entry: unknown) => ({ ok: true }) as unknown);
 mock.module("../../../src/lib/services/queue/handlers", () => ({
 	jobHandlers: { backup: handler, deploy: handler, docker_cleanup: handler },
+}));
+
+const prepare = mock(
+	async (_entry: unknown) => ({ image: "nginx" }) as Record<string, unknown>,
+);
+const finalize = mock(
+	async (_entry: unknown, _result: unknown, _error: unknown) =>
+		({ finalized: true }) as Record<string, unknown> | null,
+);
+mock.module("../../../src/lib/services/queue/worker-jobs/index", () => ({
+	workerJobs: { backup: { finalize, prepare }, deploy: null },
 }));
 
 const { QueueService } = await import(
@@ -78,7 +99,11 @@ beforeEach(() => {
 		get,
 		requeueOrphaned,
 		claimNext,
+		claimFinalize,
+		listStalledExecutions,
 		handler,
+		prepare,
+		finalize,
 	]) {
 		m.mockClear();
 	}
@@ -201,5 +226,103 @@ describe("JobWorker.runJob", () => {
 		expect(entry.markFailed).toHaveBeenCalledWith("image not found");
 		expect(cancelDependents).toHaveBeenCalledTimes(1);
 		expect(cancelDependents.mock.calls[0]?.[0]).toBe("last");
+	});
+});
+
+describe("JobWorker, Go-executed job types", () => {
+	test("runs prepare and hands the spec to the Go worker instead of a handler", async () => {
+		const entry = fakeJob({ type: "backup" });
+
+		await JobWorker.runJob(entry as never);
+
+		expect(prepare).toHaveBeenCalledWith(entry);
+		expect(entry.handOff).toHaveBeenCalledWith({ image: "nginx" });
+		expect(handler).not.toHaveBeenCalled();
+		expect(entry.markSucceeded).not.toHaveBeenCalled();
+	});
+
+	test("a job type without a worker module still runs in-process", async () => {
+		const entry = fakeJob({ type: "deploy" });
+
+		await JobWorker.runJob(entry as never);
+
+		expect(handler).toHaveBeenCalledTimes(1);
+		expect(entry.handOff).not.toHaveBeenCalled();
+		expect(entry.markSucceeded).toHaveBeenCalledTimes(1);
+	});
+
+	test("a throwing prepare takes the normal retry path and never reaches the worker", async () => {
+		const entry = fakeJob({ attempts: 1, maxAttempts: 2, type: "backup" });
+		prepare.mockRejectedValueOnce(new Error("volume is gone"));
+
+		await JobWorker.runJob(entry as never);
+
+		expect(entry.handOff).not.toHaveBeenCalled();
+		expect(entry.scheduleRetry.mock.calls[0]?.[0]).toBe("volume is gone");
+	});
+
+	test("finalize gets the executor's outcome and its result marks the job succeeded", async () => {
+		const entry = fakeJob({
+			executorResult: { key: "b.tar" },
+			type: "backup",
+		});
+
+		await JobWorker.finalizeJob(entry as never);
+
+		expect(finalize).toHaveBeenCalledWith(entry, { key: "b.tar" }, null);
+		expect(entry.markSucceeded).toHaveBeenCalledWith({ finalized: true });
+	});
+
+	test("a throwing finalize retries while attempts are left", async () => {
+		const entry = fakeJob({
+			attempts: 1,
+			executorError: "s3 timed out",
+			maxAttempts: 2,
+			type: "backup",
+		});
+		finalize.mockRejectedValueOnce(new Error("s3 timed out"));
+
+		await JobWorker.finalizeJob(entry as never);
+
+		expect(entry.markSucceeded).not.toHaveBeenCalled();
+		expect(entry.scheduleRetry.mock.calls[0]?.[0]).toBe("s3 timed out");
+	});
+
+	test("a throwing finalize on the last attempt fails the job and its dependents", async () => {
+		const entry = fakeJob({ id: "last-backup", type: "backup" });
+		finalize.mockRejectedValueOnce(new Error("upload failed"));
+
+		await JobWorker.finalizeJob(entry as never);
+
+		expect(entry.markFailed).toHaveBeenCalledWith("upload failed");
+		expect(cancelDependents.mock.calls[0]?.[0]).toBe("last-backup");
+	});
+
+	test("a finalize row for a type with no worker module fails instead of hanging", async () => {
+		const entry = fakeJob({ type: "deploy" });
+
+		await JobWorker.finalizeJob(entry as never);
+
+		expect(entry.markFailed).toHaveBeenCalledTimes(1);
+		expect(entry.markSucceeded).not.toHaveBeenCalled();
+	});
+});
+
+describe("JobWorker tick", () => {
+	test("recovers orphans once, finalizes executed jobs, then claims new work", async () => {
+		const executed = fakeJob({ id: "executed", type: "backup" });
+		claimFinalize.mockResolvedValueOnce(executed).mockResolvedValueOnce(null);
+		const tick = () =>
+			(JobWorker as unknown as { tick: () => Promise<void> }).tick();
+
+		await tick();
+		await tick();
+		await Bun.sleep(0);
+
+		expect(requeueOrphaned).toHaveBeenCalledTimes(1);
+		expect(finalize).toHaveBeenCalledWith(executed, null, null);
+		expect(executed.markSucceeded).toHaveBeenCalledTimes(1);
+		expect(claimNext).toHaveBeenCalledTimes(2);
+		expect(listStalledExecutions).toHaveBeenCalledTimes(1);
 	});
 });

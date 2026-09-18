@@ -20,6 +20,7 @@
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
 	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
+	import { primaryHostname } from "$lib/service-domains";
 
 	const { data, children } = $props();
 
@@ -31,17 +32,12 @@
 		synced.current?.find((row) => row.id === svc.id)?.status ??
 			svc.currentStatus,
 	);
-	const publicHost = $derived(
-		data.stackSlug ? `${data.stackSlug}-${svc.slug}` : svc.slug,
-	);
-	const publicDomains = $derived(
-		svc.dnsResolvable
-			? [
-					`${publicHost}.${data.baseDomain}`,
-					...(svc.customDomain ? [svc.customDomain] : []),
-				]
-			: [],
-	);
+	const publicDomains = $derived.by(() => {
+		const main = svc.dnsResolvable
+			? primaryHostname(svc, data.stackSlug, data.baseDomain)
+			: null;
+		return main ? [main] : [];
+	});
 
 	interface RouteTab extends NavTab {
 		exact: boolean;

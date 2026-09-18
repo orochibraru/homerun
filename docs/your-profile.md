@@ -21,7 +21,11 @@ account:
 - **Authorized clients**, API keys, including the ones the
   [CLI](api-and-cli.md#logging-in) created for itself through its device-code
   login. Create a key here to use the REST API or CLI without a browser session,
-  and revoke one the same way. A key is shown once, at creation.
+  and revoke one the same way. A key is shown once, at creation. Below the keys,
+  **Apps using your Homerun account** lists every app you signed in to with
+  "Sign in with Homerun" ([OIDC provider](authentication-providers.md)).
+  Revoking one deletes its tokens, so it's signed out of your account right away
+  and asks for your consent again next time.
 - **Appearance**, see [below](#appearance).
 - **Notifications**, which events each of your notification channels receives,
   see [Notifications](notifications.md).

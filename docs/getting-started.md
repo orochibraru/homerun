@@ -173,8 +173,10 @@ no `app` service) is the reference if you'd rather run each container by hand.
 Visit the app at the address the installer printed, or the `ORIGIN` you set
 (`http://localhost:5173` in dev). **The first account you create becomes admin
 automatically.** After that there's no public sign-up: every other account is
-created by an admin from `/users`, either directly (name, email, temporary
-password) or by email invite once SMTP is configured.
+created by an admin from `/users`, either directly (name, email, role, no
+password to hand over — they choose their own at their first sign-in, see
+[Users and roles](users-and-roles.md)) or by email invite once SMTP is
+configured.
 
 Signing in for the first time drops you into a six-step onboarding wizard:
 

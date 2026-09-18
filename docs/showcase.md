@@ -44,7 +44,7 @@ backs the tail on the overview page.
 
 ## Networking
 
-The public hostname, custom domains, the container port and protocol, bridge or
+The public hostname, extra domains, the container port and protocol, bridge or
 host networking. Most of these are Traefik labels, so the tab tells you plainly
 that changing them needs a redeploy.
 

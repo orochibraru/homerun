@@ -36,6 +36,16 @@ export class CronJobRunDTO extends BaseDTO<CronJobRun> {
 		return new CronJobRunDTO(row);
 	}
 
+	/** Loads one run by id; null when missing. */
+	static async get(id: string): Promise<CronJobRunDTO | null> {
+		const [row] = await db
+			.select()
+			.from(cronJobRun)
+			.where(eq(cronJobRun.id, id))
+			.limit(1);
+		return row ? new CronJobRunDTO(row) : null;
+	}
+
 	/** Appends to a still-running run's output, so the page polling it shows a long job's progress instead of nothing until it exits. */
 	async appendOutput(chunk: string): Promise<void> {
 		if (!chunk) {

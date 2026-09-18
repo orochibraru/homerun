@@ -1,0 +1,250 @@
+// Package deploy executes deploy jobs for the homerun worker: it resolves the
+// image (a registry pull, a rollback's revision image or a git build), gates it
+// on the image scan, then starts the workload as a standalone container or a
+// swarm service. Everything that needs the database or a business rule was
+// resolved by the app's prepare step into the Spec; progress goes straight to
+// the deployment's own log, which the Overview's progress panel polls.
+package deploy
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+
+	"github.com/orochibraru/homerun/internal/agent"
+	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/orochibraru/homerun/internal/jobs"
+	"github.com/orochibraru/homerun/internal/jobs/imagescan"
+)
+
+// Spec is what the app's prepare step resolves for one deploy.
+type Spec struct {
+	DeploymentID string         `json:"deploymentId"`
+	Env          [][2]string    `json:"env"`
+	EnvFiles     []string       `json:"envFiles"`
+	Healthchecks Healthchecks   `json:"healthchecks"`
+	Image        ImageSpec      `json:"image"`
+	Network      string         `json:"network"`
+	Readiness    ReadinessInput `json:"readiness"`
+	ServiceID    string         `json:"serviceId"`
+	SocketPath   string         `json:"socketPath"`
+	Volumes      []Volume       `json:"volumes"`
+	Workload     WorkloadSpec   `json:"workload"`
+}
+
+// Healthchecks are the Docker Healthcheck specs a readiness check may attach:
+// the service's own command (nil without one) and the generated listening one.
+type Healthchecks struct {
+	Listening map[string]any `json:"listening"`
+	Service   map[string]any `json:"service"`
+}
+
+// Volume is a mounted volume, as far as the rollout strategy cares.
+type Volume struct {
+	ReadOnly bool `json:"readOnly"`
+}
+
+// ImageSpec says where the deploy's image comes from. Kind is "pull",
+// "revision", "local-build", "docker-build" or "agent-build".
+type ImageSpec struct {
+	Auth       *dockerapi.AuthConfig `json:"auth"`
+	Build      *BuildSpec            `json:"build"`
+	Image      string                `json:"image"`
+	Kind       string                `json:"kind"`
+	Mirror     *MirrorSpec           `json:"mirror"`
+	PullPolicy string                `json:"pullPolicy"`
+	Revision   *Revision             `json:"revision"`
+	Scan       *ScanSpec             `json:"scan"`
+	Tag        string                `json:"tag"`
+}
+
+// Revision is the deployment a rollback reuses the image of, with its image
+// ref already split into Image and Tag.
+type Revision struct {
+	Digest    string `json:"digest"`
+	GitCommit string `json:"gitCommit"`
+	GitRef    string `json:"gitRef"`
+	ID        string `json:"id"`
+	Image     string `json:"image"`
+	ImageID   string `json:"imageId"`
+	ImageRef  string `json:"imageRef"`
+	Tag       string `json:"tag"`
+}
+
+// BuildSpec is a git build: the source, where it builds and how its image
+// reaches this host. Registry is the build cache registry, used for the layer
+// cache and, on a build server, to publish the image through.
+type BuildSpec struct {
+	AuthHint   string               `json:"authHint"`
+	Commit     string               `json:"commit"`
+	Credential *agent.GitCredential `json:"credential"`
+	Git        GitSource            `json:"git"`
+	Registry   *Registry            `json:"registry"`
+	Server     *BuildServer         `json:"server"`
+}
+
+// GitSource is the repository and build settings of a git build.
+type GitSource struct {
+	BakeFile       *string `json:"bakeFile"`
+	BakeTarget     *string `json:"bakeTarget"`
+	BuildContext   *string `json:"buildContext"`
+	BuildMethod    *string `json:"buildMethod"`
+	DockerfilePath *string `json:"dockerfilePath"`
+	GitRef         *string `json:"gitRef"`
+	GitURL         string  `json:"gitUrl"`
+}
+
+// Registry is a build cache registry's credentials.
+type Registry struct {
+	Password    string `json:"password"`
+	RegistryURL string `json:"registryUrl"`
+	Username    string `json:"username"`
+}
+
+func (r Registry) auth() dockerapi.AuthConfig {
+	return dockerapi.AuthConfig{Password: r.Password, ServerAddress: r.RegistryURL, Username: r.Username}
+}
+
+// BuildServer is the remote host a git build runs on: a Docker daemon over TCP
+// or a Homerun Agent.
+type BuildServer struct {
+	Agent  *AgentConnection      `json:"agent"`
+	Docker *dockerapi.RemoteHost `json:"docker"`
+	HostID string                `json:"hostId"`
+}
+
+// AgentConnection is a registered agent's address and bearer token.
+type AgentConnection struct {
+	AgentURL string `json:"agentUrl"`
+	Token    string `json:"token"`
+}
+
+// WorkloadSpec is the container or swarm service to start. Template is the
+// Engine API create body (a container) or service spec (swarm) with everything
+// but the image, environment, healthcheck, readiness label and name filled in.
+type WorkloadSpec struct {
+	ContainerPort int            `json:"containerPort"`
+	HostNetwork   bool           `json:"hostNetwork"`
+	Kind          string         `json:"kind"`
+	NamePrefix    string         `json:"namePrefix"`
+	Overlay       string         `json:"overlay"`
+	Privileged    bool           `json:"privileged"`
+	Slug          string         `json:"slug"`
+	StackNetwork  string         `json:"stackNetwork"`
+	Template      map[string]any `json:"template"`
+}
+
+// Result is what a deploy reports back to the app's finalize step. Built is
+// set once a git build succeeded, GitCommit then being the commit it built
+// (empty when git didn't say).
+type Result struct {
+	Built          bool         `json:"built,omitempty"`
+	ContainerID    string       `json:"containerId,omitempty"`
+	Digest         string       `json:"digest,omitempty"`
+	Failure        string       `json:"failure,omitempty"`
+	GitCommit      string       `json:"gitCommit,omitempty"`
+	GitRef         string       `json:"gitRef,omitempty"`
+	Image          string       `json:"image,omitempty"`
+	ImageID        string       `json:"imageId,omitempty"`
+	Scans          []ScanRecord `json:"scans"`
+	ServiceImage   *ImageRef    `json:"serviceImage,omitempty"`
+	SwarmServiceID string       `json:"swarmServiceId,omitempty"`
+	Tag            string       `json:"tag,omitempty"`
+}
+
+// ImageRef is an image name and tag.
+type ImageRef struct {
+	Image string `json:"image"`
+	Tag   string `json:"tag"`
+}
+
+// Failure kinds the finalize step treats as "the previous workload kept
+// running", so the service isn't marked failed.
+const (
+	FailureScanBlocked   = "scan-blocked"
+	FailureRolloutFailed = "rollout-failed"
+)
+
+type kindError struct {
+	kind string
+	err  error
+}
+
+func (e *kindError) Error() string { return e.err.Error() }
+func (e *kindError) Unwrap() error { return e.err }
+
+type run struct {
+	docker   *dockerapi.Client
+	progress progress
+	result   Result
+	scanner  func(ctx context.Context, target imagescan.Target) (imagescan.Summary, error)
+	spec     Spec
+}
+
+// Run executes one deploy job. The result comes back even alongside an error,
+// so the app still records what happened: a build's commit, the scans, the
+// kind of failure.
+func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
+	var spec Spec
+	if err := job.DecodeSpec(&spec); err != nil {
+		return nil, err
+	}
+	docker := dockerapi.New(job.DockerSocket)
+	r := &run{
+		docker:   docker,
+		progress: progress{job: job, deploymentID: spec.DeploymentID, serviceID: spec.ServiceID},
+		result:   Result{Scans: []ScanRecord{}},
+		spec:     spec,
+		scanner: func(ctx context.Context, target imagescan.Target) (imagescan.Summary, error) {
+			return imagescan.Scan(ctx, docker, job.DockerSocket, spec.Network, target)
+		},
+	}
+	err := r.deploy(ctx)
+	var kinded *kindError
+	if errors.As(err, &kinded) {
+		r.result.Failure = kinded.kind
+	}
+	return r.result.asMap(), err
+}
+
+func (r *run) deploy(ctx context.Context) error {
+	resolved, err := r.resolveImage(ctx)
+	if err != nil {
+		return err
+	}
+	r.result.Image, r.result.Tag, r.result.Digest = resolved.image, resolved.tag, resolved.digest
+	r.progress.serviceStatus(ctx, "starting")
+
+	r.progress.line(phaseContainer)
+	if r.spec.Workload.Kind == "swarm" {
+		id, err := r.startSwarm(ctx, resolved)
+		if err != nil {
+			return err
+		}
+		r.result.SwarmServiceID = id
+	} else {
+		id, err := r.startContainer(ctx, resolved)
+		if err != nil {
+			return err
+		}
+		r.result.ContainerID = id
+	}
+
+	r.progress.line(phaseNetwork)
+	if inspected, err := r.docker.InspectImage(ctx, resolved.ref()); err == nil {
+		r.result.ImageID = inspected.ID
+	}
+	return nil
+}
+
+func (r Result) asMap() map[string]any {
+	raw, err := json.Marshal(r)
+	if err != nil {
+		return nil
+	}
+	var shaped map[string]any
+	if err := json.Unmarshal(raw, &shaped); err != nil {
+		return nil
+	}
+	return shaped
+}

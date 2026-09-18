@@ -133,6 +133,16 @@ describe("updaterScript", () => {
 		expect(script.indexOf(" pull ")).toBeLessThan(script.indexOf(" up -d "));
 	});
 
+	test("recreates the worker service alongside the app", () => {
+		const target = composeTargetFrom(labels, "homerun:latest");
+		if (!target) {
+			throw new Error("expected a target");
+		}
+		const script = updaterScript(target, "1.0.22", ["worker", "app"]);
+		expect(script).toContain("pull 'app' 'worker'");
+		expect(script).toContain("up -d --no-deps 'app' 'worker'");
+	});
+
 	test("bumps a pinned tag in the compose file and .env before pulling", () => {
 		const target = composeTargetFrom(
 			labels,

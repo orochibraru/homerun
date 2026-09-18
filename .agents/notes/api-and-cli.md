@@ -191,7 +191,7 @@ A standalone **Go** program, a package in a single Go module at the repo root
 (`go.mod`), shared with `cmd/installer/` and `cmd/agent/` (all three now Go, the
 agent was the last to be rewritten from Bun/TypeScript, see
 `packages-and-release.md`): `check:cli` is `go vet ./cmd/cli/...`,
-`test:unit:cli` is `go test ./cmd/cli/...` (`cmd/cli/cli_test.go`), and
+`test:unit:cli` is `go test ./cmd/cli/...` (`internal/cli/cli_test.go`), and
 `scripts/build-packages.ts` builds it with `go build` rather than
 `Bun.build({compile: ...})`. **Rewritten from TypeScript** to cut release size:
 a `bun build --compile` binary embeds the whole Bun runtime (~81MB on linux/x64,

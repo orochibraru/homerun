@@ -118,9 +118,9 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 
 - **Automatic routing & TLS**: Traefik routes every service to
   `<slug>.<baseDomain>` with a certificate, with no host ports published
-- **[Custom domains & SSL](docs/networking.md#custom-domains--ssl)**: a second
-  hostname per service, plus bring-your-own cert/key for domains outside
-  Traefik's automatic ACME coverage
+- **[Domains & SSL](docs/networking.md#domains--ssl)**: any number of extra
+  hostnames per service, each with its own router, plus bring-your-own cert/key
+  for domains outside Traefik's automatic ACME coverage
 - **[Host networking](docs/networking.md)**: for apps that need the host's
   network directly (mDNS/SSDP discovery)
 - **[DNS automation](docs/dns-automation.md)**: Cloudflare CNAMEs or Pangolin

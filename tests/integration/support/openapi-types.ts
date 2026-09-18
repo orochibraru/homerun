@@ -690,13 +690,14 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
-						customDomain: string | null;
 						customSslCertEnc: string | null;
 						customSslKeyEnc: string | null;
+						defaultDomainEnabled: boolean;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
 						devices: string[];
 						dnsResolvable: boolean;
+						domains: string[];
 						entrypoint: string[] | null;
 						envFiles: string[];
 						envVars: {
@@ -742,6 +743,7 @@ export interface operations {
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
 						previewsEnabled: boolean;
+						primaryDomain: string | null;
 						privileged: boolean;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
@@ -910,13 +912,14 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
-						customDomain: string | null;
 						customSslCertEnc: string | null;
 						customSslKeyEnc: string | null;
+						defaultDomainEnabled: boolean;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
 						devices: string[];
 						dnsResolvable: boolean;
+						domains: string[];
 						entrypoint: string[] | null;
 						envFiles: string[];
 						envVars: {
@@ -962,6 +965,7 @@ export interface operations {
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
 						previewsEnabled: boolean;
+						primaryDomain: string | null;
 						privileged: boolean;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
@@ -1087,13 +1091,14 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
-						customDomain: string | null;
 						customSslCertEnc: string | null;
 						customSslKeyEnc: string | null;
+						defaultDomainEnabled: boolean;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
 						devices: string[];
 						dnsResolvable: boolean;
+						domains: string[];
 						entrypoint: string[] | null;
 						envFiles: string[];
 						envVars: {
@@ -1139,6 +1144,7 @@ export interface operations {
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
 						previewsEnabled: boolean;
+						primaryDomain: string | null;
 						privileged: boolean;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;
@@ -1284,10 +1290,11 @@ export interface operations {
 					command?: string[] | null;
 					containerPort?: number;
 					cpuLimit?: string | null;
-					customDomain?: string | null;
+					defaultDomainEnabled?: boolean;
 					/** @description host[:container[:rwm]] device mappings */
 					devices?: string[];
 					dnsResolvable?: boolean;
+					domains?: string[];
 					/** @description Argv list, null keeps the image's own */
 					entrypoint?: string[] | null;
 					/** @description Absolute host paths of .env files read at deploy */
@@ -1321,6 +1328,7 @@ export interface operations {
 					memoryLimitMb?: number | null;
 					name?: string;
 					previewsEnabled?: boolean;
+					primaryDomain?: string | null;
 					privileged?: boolean;
 					/** @enum {string} */
 					pullPolicy?: "always" | "missing" | "never";
@@ -1376,13 +1384,14 @@ export interface operations {
 							| "stopped"
 							| "failed"
 							| "missing";
-						customDomain: string | null;
 						customSslCertEnc: string | null;
 						customSslKeyEnc: string | null;
+						defaultDomainEnabled: boolean;
 						/** @enum {string} */
 						desiredState: "running" | "stopped";
 						devices: string[];
 						dnsResolvable: boolean;
+						domains: string[];
 						entrypoint: string[] | null;
 						envFiles: string[];
 						envVars: {
@@ -1428,6 +1437,7 @@ export interface operations {
 						previewPrNumber: number | null;
 						previewPrTitle: string | null;
 						previewsEnabled: boolean;
+						primaryDomain: string | null;
 						privileged: boolean;
 						/** @description Ciphertext, not plaintext. */
 						registryPasswordEnc: string | null;

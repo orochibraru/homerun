@@ -28,13 +28,24 @@ and log in the CLI. They don't see the admin-only pages.
 automatically.** After that, there's no public sign-up, every other account is
 created by an admin from `/users`:
 
-- **Direct-create**, name/email/temporary password/role, works with no email
-  setup.
+- **Direct-create**, name/email/role only, no password to set or hand over. The
+  new account signs in itself the first time: it enters its email on the sign-in
+  page and, since it doesn't have a password yet, is walked through choosing one
+  there (a 6-digit emailed code first if SMTP is configured, so the person
+  really owns that address; straight to picking a password if it isn't). Works
+  with no email setup either way.
 - **Email invite**, only shown once SMTP is configured (see
   [Configuration](configuration.md)); sends a link to
   `/auth/accept-invite/<token>`, valid for 7 days. The pending list on `/users`
   shows only invites that can still be accepted; an expired one drops off, and
   inviting the same address again replaces it.
+
+Without SMTP configured, `/users` shows a warning: anyone who knows a
+direct-created account's email can beat its real owner to the sign-in page and
+choose that account's password themselves, since there's no code step proving
+who's asking. Set up SMTP (see [Configuration](configuration.md)) before
+direct-creating an account if that's a real risk on your instance, or use email
+invites instead, which already require it.
 
 An admin can change a user's role or email, or remove them, from `/users`. An
 email changed there takes effect immediately and is marked verified, no

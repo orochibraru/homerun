@@ -3,9 +3,11 @@ import process from "node:process";
 import {
 	imageUnderTest,
 	startAppContainer,
+	startWorkerContainer,
 } from "../../integration/support/app-container";
 import { runMigrations } from "../../integration/support/migrate";
 import { startTestPostgres } from "../../integration/support/postgres";
+import { spawnWorker } from "../../integration/support/processes";
 import { assertAppIsBuilt, spawnApp } from "../../integration/support/server";
 import { E2E_BASE_URL, E2E_PORT } from "./config";
 
@@ -27,6 +29,12 @@ async function main(): Promise<void> {
 		origin: E2E_BASE_URL,
 		port: E2E_PORT,
 	};
+	const worker = image
+		? await startWorkerContainer(image, options)
+		: spawnWorker(options);
+	if (!image) {
+		await (worker as ReturnType<typeof spawnWorker>).ready();
+	}
 	const app = image
 		? await startAppContainer(image, options)
 		: await spawnApp(options);
@@ -39,6 +47,7 @@ async function main(): Promise<void> {
 		shuttingDown = true;
 		void (async () => {
 			await app.stop();
+			await worker.stop();
 			await pg.stop();
 			process.exit(0);
 		})();

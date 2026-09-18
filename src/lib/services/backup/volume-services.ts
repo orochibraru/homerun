@@ -22,6 +22,20 @@ export function outputTail(output: string): string {
 		: trimmed;
 }
 
+export interface StopTarget {
+	containerId: string | null;
+	id: string;
+	name: string;
+	replicas: number;
+	swarmServiceId: string | null;
+}
+
+export interface PreCommandTarget {
+	command: string;
+	containerId: string;
+	serviceName: string;
+}
+
 export interface StopAroundWorkHooks<TService> {
 	onStartFailure: (service: TService, reason: unknown) => void;
 	start: (service: TService) => Promise<void>;
@@ -87,6 +101,43 @@ class VolumeServicesClass {
 			),
 		);
 		return services.filter((_, index) => statuses[index] === "running");
+	}
+
+	/** The running services among `services`, as the Go worker stops and starts them around a backup or restore. */
+	async stopTargets(services: ServiceDTO[]): Promise<StopTarget[]> {
+		return (await this.runningOnly(services)).map((service) => ({
+			containerId: service.containerId,
+			id: service.id,
+			name: service.name,
+			replicas: service.replicas,
+			swarmServiceId: service.swarmServiceId,
+		}));
+	}
+
+	/**
+	 * Where the volume's `backupPreCommand` runs: its picked service's
+	 * container, or the first running service using the volume. Null when no
+	 * command is set.
+	 *
+	 * @throws When there's no running service or container to run it in.
+	 */
+	async preCommandTarget(
+		volume: StorageVolumeDTO,
+	): Promise<PreCommandTarget | null> {
+		const command = volume.backupPreCommand?.trim();
+		if (!command) {
+			return null;
+		}
+		const service = await this.#preCommandService(volume);
+		const containerId = service.swarmServiceId
+			? await DockerService.getRunningTaskContainerId(service.swarmServiceId)
+			: service.containerId;
+		if (!containerId) {
+			throw new Error(
+				`"${service.name}" has no running container to run the pre-backup command in.`,
+			);
+		}
+		return { command, containerId, serviceName: service.name };
 	}
 
 	/**

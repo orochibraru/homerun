@@ -6,14 +6,15 @@ description:
   covered by the root bun run check). All three are Go packages sharing one
   go.mod at the repo root, plus shared internal/ libraries (buildinfo, release,
   homerun, dockerapi). Handles keeping cmd/agent/'s hand-reimplemented logic
-  (cmd/agent/build.go, git.go, stats.go) in sync with the main app's equivalents
-  (src/lib/services/docker/containers.ts, system-stats.service.ts) after either
-  changes, keeping cmd/agent/builder.sh and builder-tools.json in sync with
-  src/lib/services/docker/builder-run.ts (pinned by
-  tests/unit/app/agent-builder-parity.test.ts and cmd/agent/builders_test.go),
-  regenerating tests/integration/support/openapi-types.ts after a REST API
-  change, and running each sub-project's own typecheck/test commands. Not for
-  changes purely within src/ — use scaffold-feature or repo-gate for those.
+  (internal/agent/build.go, git.go, stats.go) in sync with the main app's
+  equivalents (src/lib/services/docker/containers.ts, system-stats.service.ts)
+  after either changes, keeping internal/agent/builder.sh and builder-tools.json
+  in sync with src/lib/services/docker/builder-run.ts (pinned by
+  tests/unit/app/agent-builder-parity.test.ts and
+  internal/agent/builders_test.go), regenerating
+  tests/integration/support/openapi-types.ts after a REST API change, and
+  running each sub-project's own typecheck/test commands. Not for changes purely
+  within src/ — use scaffold-feature or repo-gate for those.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---
@@ -38,35 +39,35 @@ API client over the unix socket, used by the agent).
 ## `cmd/agent/` — the Homerun Agent
 
 A token-authenticated HTTP server meant to run on a remote host's Docker daemon
-(`cmd/agent/server.go`). It has **no access to the main app's source tree at
-runtime**, so `cmd/agent/build.go`/`git.go` and `cmd/agent/stats.go` are
-deliberate, from-scratch reimplementations (not imports) of the equivalent logic
-in `src/lib/services/docker/containers.ts` (and `docker/git-build.ts`) and
-`src/lib/services/system-stats.service.ts`.
+(`internal/agent/server.go`). It has **no access to the main app's source tree
+at runtime**, so `internal/agent/build.go`/`git.go` and
+`internal/agent/stats.go` are deliberate, from-scratch reimplementations (not
+imports) of the equivalent logic in `src/lib/services/docker/containers.ts` (and
+`docker/git-build.ts`) and `src/lib/services/system-stats.service.ts`.
 
 **If you change deploy/container-lifecycle logic in
 `src/lib/services/docker/containers.ts`**
 (pull→remove-previous-by-label→create→start shape, container naming, label
-conventions, etc.), check whether `cmd/agent/build.go`/`git.go` needs the
+conventions, etc.), check whether `internal/agent/build.go`/`git.go` needs the
 equivalent change to stay behaviorally consistent, and make it by hand — there
 is no shared module, no codegen, no automated sync. Same for
-`system-stats.service.ts` ↔ `cmd/agent/stats.go`.
+`system-stats.service.ts` ↔ `internal/agent/stats.go`.
 
 **If you change the agent's request/response shapes**, update
-`cmd/agent/build.go`'s `BuildInput` struct and `server.go`'s
+`internal/agent/build.go`'s `BuildInput` struct and `server.go`'s
 `validateBuildInput` (the hand-validation backing `/v1/build`, there's no zod
-here, this is Go) and `cmd/agent/openapi.go` (generates the agent's own OpenAPI
-doc from the same shapes as plain Go literals) together — same "one schema, two
-purposes" pattern as the main app's zod schemas.
+here, this is Go) and `internal/agent/openapi.go` (generates the agent's own
+OpenAPI doc from the same shapes as plain Go literals) together — same "one
+schema, two purposes" pattern as the main app's zod schemas.
 
 **If you change build-tool versions, checksums or the builder script** in
 `src/lib/services/docker/builder-run.ts`, mirror the change into
-`cmd/agent/builder.sh` and `cmd/agent/builder-tools.json` byte-for-byte (the
-agent `//go:embed`s them rather than importing the TS module it can't reach).
-`tests/unit/app/agent-builder-parity.test.ts` (on the app side) and
-`cmd/agent/builders_test.go` (on the agent side) both pin against those two
-files, so a mismatch fails a test rather than silently drifting — run both after
-touching either side.
+`internal/agent/builder.sh` and `internal/agent/builder-tools.json`
+byte-for-byte (the agent `//go:embed`s them rather than importing the TS module
+it can't reach). `tests/unit/app/agent-builder-parity.test.ts` (on the app side)
+and `internal/agent/builders_test.go` (on the agent side) both pin against those
+two files, so a mismatch fails a test rather than silently drifting — run both
+after touching either side.
 
 ## `cmd/cli/` — the Homerun CLI
 
@@ -89,9 +90,9 @@ request/response shape, changed `$lib/openapi/registry.ts`/`schemas.ts`),
 regenerate with `bun run gen` from the repo root (no running instance needed)
 and keep the regenerated `openapi.json`, `homerun.schema.json` and
 `tests/integration/support/openapi-types.ts` in the change. Then check whether
-`cmd/cli/commands.go`'s structs or `client.go`'s requests need updating by hand
-for whatever the CLI actually sends or formats — there's no codegen to catch a
-mismatch here.
+`internal/cli/commands.go`'s structs or `client.go`'s requests need updating by
+hand for whatever the CLI actually sends or formats — there's no codegen to
+catch a mismatch here.
 
 ## `cmd/installer/`
 
@@ -100,12 +101,12 @@ systemd units, `--mode=agent`/`--mode=full`), also a Go package in the repo-root
 `go.mod` (rewritten from Bun/TypeScript for the same release-size reason as the
 CLI, ~81MB down to ~2.7MB; behaviour and `--dry-run` output are unchanged,
 diffed old-vs-new for both modes). Every shell-out goes through one `StepRunner`
-(`cmd/installer/exec.go`, a `Runner` interface) so `--dry-run` stays a single
-interception point — don't add a step that shells out directly, route it through
-the runner. Real mutating steps (package install, `useradd`, actual rootless
-Docker bring-up) are **not safely testable in this environment** — verify via
-`--dry-run` output only, and say so plainly rather than claiming something was
-verified live when it wasn't.
+(`internal/installer/exec.go`, a `Runner` interface) so `--dry-run` stays a
+single interception point — don't add a step that shells out directly, route it
+through the runner. Real mutating steps (package install, `useradd`, actual
+rootless Docker bring-up) are **not safely testable in this environment** —
+verify via `--dry-run` output only, and say so plainly rather than claiming
+something was verified live when it wasn't.
 
 ## Always finish with
 

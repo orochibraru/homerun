@@ -56,7 +56,7 @@ import { createGitBuildFixture } from "./git-fixture";
 import { runMigrations } from "./migrate";
 import { getFreePort } from "./port";
 import { startTestPostgres, type TestPostgres } from "./postgres";
-import { spawnAgent, startSocatProxy } from "./processes";
+import { spawnAgent, spawnWorker, startSocatProxy } from "./processes";
 import {
 	registerAgentRemoteHost,
 	registerDockerRemoteHost,
@@ -102,6 +102,15 @@ if (wantsIntegrationTests()) {
 
 				stepLog("Running migrations...");
 				await runMigrations(pg.databaseUrl);
+
+				stepLog("Building and starting the Go worker...");
+				const worker = spawnWorker({
+					authSecret: TEST_AUTH_SECRET,
+					databaseUrl: pg.databaseUrl,
+				});
+				stopFns.push(worker.stop);
+				rawProcs.push(worker.proc);
+				await worker.ready();
 
 				stepLog("Starting socat proxy (second Docker connection)...");
 				const socatPort = getFreePort();

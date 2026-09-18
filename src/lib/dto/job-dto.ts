@@ -5,6 +5,7 @@ import {
 	desc,
 	eq,
 	inArray,
+	isNull,
 	lt,
 	lte,
 	ne,
@@ -15,7 +16,8 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "$lib/server/db/lib";
 import { type Job, job, service } from "$lib/server/db/schema";
-import type { JobStatus, JobType } from "$lib/types";
+import { decryptSecret, encryptSecret } from "$lib/services/secrets";
+import type { JobStage, JobStatus, JobType } from "$lib/types";
 import { BaseDTO } from "./base-dto";
 
 const TERMINAL_STATUSES: JobStatus[] = ["succeeded", "failed", "cancelled"];
@@ -38,6 +40,15 @@ export interface NewJobInput {
 }
 
 const one = { one: sql`1` };
+
+const CLEARED_STAGE = {
+	executorError: null,
+	executorResult: null,
+	heartbeatAt: null,
+	spec: null,
+	stage: null,
+	workerId: null,
+} satisfies Partial<Job>;
 
 function dependencySatisfied() {
 	const dependency = alias(job, "dependency");
@@ -188,20 +199,27 @@ export class JobDTO extends BaseDTO<Job> {
 			dependsOnJobId: input.dependsOnJobId ?? null,
 			error: null,
 			exclusive: input.exclusive ?? false,
+			executorError: null,
+			executorResult: null,
 			finishedAt: null,
+			heartbeatAt: null,
 			id: crypto.randomUUID(),
 			lockKey: input.lockKey ?? null,
+			log: "",
 			maxAttempts: input.maxAttempts ?? 1,
 			payload: input.payload,
 			priority: input.priority ?? 0,
 			result: null,
 			runAt: input.runAt ?? now,
 			serviceId: input.serviceId ?? null,
+			spec: null,
+			stage: null,
 			startedAt: null,
 			status: "queued",
 			title: input.title,
 			type: input.type,
 			userId: input.userId,
+			workerId: null,
 		};
 
 		const [inserted] = await db
@@ -300,18 +318,74 @@ export class JobDTO extends BaseDTO<Job> {
 	}
 
 	/**
-	 * Puts every job still marked running back in the queue, for jobs a previous
-	 * process died in the middle of.
+	 * Recovers jobs a previous app process died in the middle of: a running job
+	 * with no stage or still in `prepare` goes back to the queue, one caught
+	 * mid-`finalizing` goes back to `finalize`. Jobs in `execute` are left
+	 * alone, the Go worker's lease owns them.
 	 *
 	 * @returns How many jobs were requeued.
 	 */
 	static async requeueOrphaned(): Promise<number> {
+		await db
+			.update(job)
+			.set({ stage: "finalize" })
+			.where(and(eq(job.status, "running"), eq(job.stage, "finalizing")));
 		const rows = await db
 			.update(job)
-			.set({ startedAt: null, status: "queued" })
-			.where(eq(job.status, "running"))
+			.set({ ...CLEARED_STAGE, startedAt: null, status: "queued" })
+			.where(
+				and(
+					eq(job.status, "running"),
+					or(isNull(job.stage), eq(job.stage, "prepare")),
+				),
+			)
 			.returning({ id: job.id });
 		return rows.length;
+	}
+
+	/**
+	 * Claims one job the Go worker has finished executing (stage `finalize`),
+	 * moving it to `finalizing` so no other claimer picks it up.
+	 */
+	static async claimFinalize(): Promise<JobDTO | null> {
+		return await db.transaction(async (tx) => {
+			const [candidate] = await tx
+				.select()
+				.from(job)
+				.where(and(eq(job.status, "running"), eq(job.stage, "finalize")))
+				.orderBy(desc(job.priority), asc(job.createdAt))
+				.limit(1)
+				.for("update", { skipLocked: true });
+			if (!candidate) {
+				return null;
+			}
+			await tx
+				.update(job)
+				.set({ stage: "finalizing" })
+				.where(eq(job.id, candidate.id));
+			return new JobDTO({ ...candidate, stage: "finalizing" });
+		});
+	}
+
+	/**
+	 * Jobs waiting in `execute` with no live Go worker: never leased and handed
+	 * over before `since`, or with a heartbeat older than two minutes.
+	 */
+	static async listStalledExecutions(since: Date): Promise<JobDTO[]> {
+		const rows = await db
+			.select()
+			.from(job)
+			.where(
+				and(
+					eq(job.status, "running"),
+					eq(job.stage, "execute"),
+					or(
+						and(isNull(job.heartbeatAt), lt(job.startedAt, since)),
+						lt(job.heartbeatAt, since),
+					),
+				),
+			);
+		return rows.map((row) => new JobDTO(row));
 	}
 
 	/**
@@ -388,27 +462,89 @@ export class JobDTO extends BaseDTO<Job> {
 		Object.assign(this.row, input);
 	}
 
-	/** Marks the job succeeded now, storing its result. */
+	/** Marks the job succeeded now, storing its result and dropping its spec. */
 	async markSucceeded(result: Record<string, unknown> | null): Promise<void> {
-		await this.update({ finishedAt: new Date(), result, status: "succeeded" });
+		await this.update({
+			finishedAt: new Date(),
+			result,
+			spec: null,
+			stage: null,
+			status: "succeeded",
+		});
 	}
 
-	/** Marks the job failed now, storing the error message. */
+	/** Marks the job failed now, storing the error message and dropping its spec. */
 	async markFailed(error: string): Promise<void> {
-		await this.update({ error, finishedAt: new Date(), status: "failed" });
+		await this.update({
+			error,
+			finishedAt: new Date(),
+			spec: null,
+			stage: null,
+			status: "failed",
+		});
 	}
 
 	/**
 	 * Puts the job back in the queue to run again at `runAt`, keeping the last
-	 * error for display.
+	 * error for display and clearing everything the previous attempt's stages
+	 * left behind.
 	 */
 	async scheduleRetry(error: string, runAt: Date): Promise<void> {
-		await this.update({ error, runAt, startedAt: null, status: "queued" });
+		await this.update({
+			...CLEARED_STAGE,
+			error,
+			runAt,
+			startedAt: null,
+			status: "queued",
+		});
+	}
+
+	/**
+	 * Hands a claimed job to the Go worker: stores `spec` encrypted and moves
+	 * the job to the `execute` stage, still `running`.
+	 */
+	async handOff(spec: Record<string, unknown>): Promise<void> {
+		await this.update({
+			...CLEARED_STAGE,
+			spec: encryptSecret(JSON.stringify(spec)),
+			stage: "execute",
+		});
+	}
+
+	/**
+	 * The spec `handOff` stored, decrypted, or null when there is none or it
+	 * can't be decrypted.
+	 */
+	decryptSpec(): Record<string, unknown> | null {
+		const plaintext = this.row.spec ? decryptSecret(this.row.spec) : null;
+		return plaintext
+			? (JSON.parse(plaintext) as Record<string, unknown>)
+			: null;
 	}
 
 	/** How many times the job has been claimed so far. */
 	get attempts(): number {
 		return this.row.attempts;
+	}
+	/** The Go executor's error message, null when it succeeded or hasn't run. */
+	get executorError(): string | null {
+		return this.row.executorError;
+	}
+	/** What the Go executor returned, null until it has run. */
+	get executorResult(): Record<string, unknown> | null {
+		return this.row.executorResult;
+	}
+	/** Output lines the Go executor appended, newline-separated. */
+	get log(): string {
+		return this.row.log;
+	}
+	/** Where a Go-executed job is in the prepare/execute/finalize protocol, null for an in-process job. */
+	get stage(): JobStage | null {
+		return this.row.stage;
+	}
+	/** When the job was claimed, null while queued. */
+	get startedAt(): Date | null {
+		return this.row.startedAt;
 	}
 	/** The last error message, null when it hasn't failed. */
 	get error(): string | null {

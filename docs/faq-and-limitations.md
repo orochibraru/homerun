@@ -116,6 +116,11 @@ are dropped with a warning. See [Importing a compose file](compose-import.md).
 - **Changing your own verified email needs SMTP configured**, since the change
   is confirmed from the current address. Without SMTP, an admin can change it
   directly from `/users`. See [Your profile](your-profile.md).
+- **A direct-created account is a race without SMTP configured.** It has no
+  password until it's chosen one at its first sign-in, and without SMTP there's
+  no code step proving who's asking, so anyone who knows the new account's email
+  can set its password before its real owner does. See
+  [Users and roles](users-and-roles.md).
 - **Every registry token can both push and pull.** The built-in registry's
   htpasswd auth has no concept of scopes or read-only access without running a
   separate token server, so there's no pull-only credential to hand out. See

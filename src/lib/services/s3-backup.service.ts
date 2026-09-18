@@ -11,6 +11,7 @@ import {
 	VOLUME_HELPER_TAG,
 	VolumeServices,
 } from "./backup/volume-services.ts";
+import { MANAGED_LABEL } from "./docker/labels.ts";
 import { DockerService } from "./docker.service.ts";
 
 const logger = new Logger("Backup");
@@ -355,9 +356,68 @@ class S3BackupServiceClass {
 		}
 	}
 
+	/**
+	 * Everything the Go worker needs to back `volume` up: its decrypted
+	 * destination, a fresh timestamped key, the pre-backup command's target
+	 * and, with `backupStopServices`, the running services to stop around it.
+	 *
+	 * @throws When the destination can't be resolved or the pre-backup
+	 *   command has nowhere to run.
+	 */
+	async backupSpec(volume: StorageVolumeDTO): Promise<Record<string, unknown>> {
+		const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+		const prefix = volume.backupPrefix ? `${volume.backupPrefix}/` : "";
+		return {
+			...this.#helperSpec(volume),
+			destination: await this.destinationFor(volume),
+			key: `${prefix}${volume.name}-${timestamp}.tar.gz`,
+			preCommand: await VolumeServices.preCommandTarget(volume),
+			stopServices: volume.backupStopServices
+				? await VolumeServices.stopTargets(
+						await VolumeServices.servicesUsing(volume),
+					)
+				: [],
+		};
+	}
+
+	/**
+	 * Everything the Go worker needs to restore backup `key` into `volume`,
+	 * with the running services using it to stop when `options.stopServices`.
+	 *
+	 * @throws When the destination can't be resolved.
+	 */
+	async restoreSpec(
+		volume: StorageVolumeDTO,
+		key: string,
+		options: RestoreOptions,
+	): Promise<Record<string, unknown>> {
+		return {
+			...this.#helperSpec(volume),
+			destination: await this.destinationFor(volume),
+			key,
+			stopServices: options.stopServices
+				? await VolumeServices.stopTargets(
+						await VolumeServices.servicesUsing(volume),
+					)
+				: [],
+			wipe: options.wipe,
+		};
+	}
+
+	/** The helper container the worker mounts the volume into, shared by backup and restore specs. */
+	#helperSpec(volume: StorageVolumeDTO): Record<string, unknown> {
+		return {
+			helperImage: `${VOLUME_HELPER_IMAGE}:${VOLUME_HELPER_TAG}`,
+			helperLabels: { [MANAGED_LABEL]: "true" },
+			mountPath: VOLUME_HELPER_MOUNT_PATH,
+			source: volume.source,
+			volumeName: volume.name,
+		};
+	}
+
 	/** The backups that exist for this volume, newest first : what the Restore picker lists. */
 	async listBackups(volume: StorageVolumeDTO): Promise<BackupObject[]> {
-		const destination = await this.#destinationFor(volume);
+		const destination = await this.destinationFor(volume);
 		const prefix = volume.backupPrefix
 			? `${volume.backupPrefix}/${volume.name}-`
 			: `${volume.name}-`;
@@ -396,7 +456,7 @@ class S3BackupServiceClass {
 		options: RestoreOptions,
 	): Promise<BackupResult> {
 		try {
-			const destination = await this.#destinationFor(volume);
+			const destination = await this.destinationFor(volume);
 			const archive = await getObject(destination, key);
 			const services = options.stopServices
 				? await VolumeServices.servicesUsing(volume)
@@ -424,7 +484,7 @@ class S3BackupServiceClass {
 	 * @throws When the volume has no destination picked, the destination row
 	 *   no longer exists, or its secret key can't be decrypted.
 	 */
-	async #destinationFor(volume: StorageVolumeDTO): Promise<S3Config> {
+	async destinationFor(volume: StorageVolumeDTO): Promise<S3Config> {
 		if (!volume.s3DestinationId) {
 			throw new Error("No S3 destination picked for this volume.");
 		}

@@ -1,5 +1,6 @@
 import {
 	and,
+	arrayOverlaps,
 	count,
 	desc,
 	eq,
@@ -202,20 +203,21 @@ export class ServiceDTO extends BaseDTO<Service> {
 		return rows.map((row) => new ServiceDTO(row));
 	}
 
-	/** Whether `customDomain` is already taken by a *different* service. */
-	static async customDomainTaken(
-		customDomain: string,
+	/** The first of `domains` another service (not `excludeId`) already routes, or null when they're all free. */
+	static async domainTaken(
+		domains: string[],
 		excludeId?: string,
-	): Promise<boolean> {
-		const conditions = excludeId
-			? and(eq(service.customDomain, customDomain), ne(service.id, excludeId))
-			: eq(service.customDomain, customDomain);
-		const [row] = await db
-			.select({ id: service.id })
+	): Promise<string | null> {
+		if (domains.length === 0) {
+			return null;
+		}
+		const overlap = arrayOverlaps(service.domains, domains);
+		const rows = await db
+			.select({ domains: service.domains })
 			.from(service)
-			.where(conditions)
-			.limit(1);
-		return !!row;
+			.where(excludeId ? and(overlap, ne(service.id, excludeId)) : overlap);
+		const taken = new Set(rows.flatMap((row) => row.domains));
+		return domains.find((domain) => taken.has(domain)) ?? null;
 	}
 
 	/** Whether `slug` is already taken by a *different* service (for uniqueness checks on create/update). */
@@ -310,7 +312,6 @@ export class ServiceDTO extends BaseDTO<Service> {
 					service.name,
 					service.slug,
 					service.image,
-					service.customDomain,
 					service.gitUrl,
 				]),
 			)
@@ -340,9 +341,11 @@ export class ServiceDTO extends BaseDTO<Service> {
 			currentStatus: "pending",
 			errorsDismissedAt: null,
 			errorsDismissedByDeploymentId: null,
-			customDomain: input.customDomain ?? null,
 			customSslCertEnc: null,
 			customSslKeyEnc: null,
+			defaultDomainEnabled: true,
+			domains: input.domains ?? [],
+			primaryDomain: input.domains?.[0] ?? null,
 			desiredState: "stopped",
 			envVars: input.envVars,
 			healthcheckCommand: input.healthcheckCommand ?? null,
@@ -513,9 +516,17 @@ export class ServiceDTO extends BaseDTO<Service> {
 	get cronSchedule(): string | null {
 		return this.row.cronSchedule;
 	}
-	/** An extra hostname routed to the service, if set. */
-	get customDomain(): string | null {
-		return this.row.customDomain;
+	/** The service's own hostnames, routed alongside (or instead of) its default one. */
+	get domains(): string[] {
+		return this.row.domains;
+	}
+	/** Whether the default `<slug>.<baseDomain>` hostname is still routed. */
+	get defaultDomainEnabled(): boolean {
+		return this.row.defaultDomainEnabled;
+	}
+	/** The hostname chosen as the service's main link, if one was picked. */
+	get primaryDomain(): string | null {
+		return this.row.primaryDomain;
 	}
 	/**
 	 * The encrypted custom TLS certificate for the custom domain, if uploaded.

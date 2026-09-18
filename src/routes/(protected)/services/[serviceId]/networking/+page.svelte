@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { Check, Globe, Network, ShieldCheck } from "@lucide/svelte";
+	import {
+		Check,
+		Globe,
+		Network,
+		Plus,
+		ShieldCheck,
+		Trash2,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import CheckBox from "$lib/components/check-box.svelte";
@@ -14,14 +21,53 @@
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
+	import {
+		defaultHostname,
+		isUnderDomain,
+		primaryHostname,
+		serviceHostnames,
+	} from "$lib/service-domains";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);
-	const publicHost = $derived(
-		data.stackSlug ? `${data.stackSlug}-${svc.slug}` : svc.slug,
+	const fallbackHost = $derived(
+		defaultHostname(svc.slug, data.stackSlug, data.baseDomain),
 	);
+	const mainHost = $derived(
+		primaryHostname(svc, data.stackSlug, data.baseDomain),
+	);
+	const routedCount = $derived(
+		serviceHostnames(svc, data.stackSlug, data.baseDomain).length,
+	);
+	const outsideDomains = $derived(
+		svc.domains.filter((domain) => !isUnderDomain(domain, data.baseDomain)),
+	);
+
+	let domains = $state<string[]>([]);
+	let defaultEnabled = $state(true);
+	let primary = $state("");
+	$effect.pre(() => {
+		domains = [...svc.domains];
+		defaultEnabled = svc.defaultDomainEnabled;
+		primary = mainHost ?? "";
+	});
+
+	function renameDomain(index: number, value: string) {
+		const previous = domains[index];
+		domains = domains.map((domain, i) => (i === index ? value : domain));
+		if (primary === previous) {
+			primary = value;
+		}
+	}
+
+	function removeDomain(index: number) {
+		if (primary === domains[index]) {
+			primary = "";
+		}
+		domains = domains.filter((_, i) => i !== index);
+	}
 
 	onMount(() => title.set(`${svc.name} · Networking`));
 
@@ -62,18 +108,20 @@
 {/snippet}
 
 <div class="space-y-6">
-  <!-- ═══ DNS / public routing ═══ -->
   <section class="panel rounded-md p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
         <Globe class="size-4" />
       </div>
       <div>
-        <p class="text-text text-sm font-medium">DNS</p>
+        <p class="text-text text-sm font-medium">Domains</p>
         <p class="text-text-muted text-xs">
-          {#if svc.dnsResolvable}
+          {#if svc.dnsResolvable && mainHost}
             Publicly routed at
-            <span class="text-accent">{publicHost}.{data.baseDomain}</span>.
+            <span class="text-accent">{mainHost}</span>
+            {#if routedCount > 1}
+              and {routedCount - 1} more
+            {/if}.
           {:else if svc.networkMode === "host"}
             Not publicly routed : this service is on the host network (see
             Network below), which Traefik can't route to.
@@ -87,12 +135,12 @@
 
     {#if svc.dnsResolvable}
       <form
-        action="?/updateNetworking"
+        action="?/updateDomains"
         class="space-y-3"
         method="POST"
         use:enhance={enhanceToast({
-          error: "Check the domain and try again.",
-          loading: "Saving the domain",
+          error: "Check the domains and try again.",
+          loading: "Saving the domains",
           onSettled: () => {
             submitting = false;
           },
@@ -102,25 +150,77 @@
           success: "Saved. Redeploy for it to take effect.",
         })}
       >
-        {#if form?.error}
-          <p class="text-xs text-red-500">{form.error}</p>
-        {/if}
-        <div>
-          <label class={label} for="customDomain">Custom domain</label>
-          <Input
-            id="customDomain"
-            name="customDomain"
-            placeholder="app.example.com"
-            type="text"
-            value={svc.customDomain ?? ""}
-          />
-          <p class="text-text-subtle mt-1.5 text-xs">
-            Optional second hostname routed to this service, alongside its
-            {publicHost}.{data.baseDomain}
-            address. Point its DNS (A/CNAME) at this server yourself first :
-            this app only tells Traefik to route it, it doesn't manage DNS.
-          </p>
+        <div class="space-y-2">
+          <div class="border-border flex items-center gap-3 rounded-md border px-3 py-2">
+            <input
+              class="accent-accent"
+              aria-label={`Use ${fallbackHost} as the main domain`}
+              disabled={!defaultEnabled}
+              name="primaryDomain"
+              type="radio"
+              value={fallbackHost}
+              bind:group={primary}
+            >
+            <span class="text-text min-w-0 flex-1 truncate font-mono text-sm">{fallbackHost}</span>
+            <label class="text-text-muted flex shrink-0 items-center gap-2 text-xs">
+              <input
+                class="accent-accent"
+                name="defaultDomainEnabled"
+                type="checkbox"
+                bind:checked={defaultEnabled}
+              >
+              Routed
+            </label>
+          </div>
+          {#each domains as domain, index (index)}
+            <div class="flex items-center gap-3">
+              <input
+                class="accent-accent ml-3"
+                aria-label={`Use ${domain || "this domain"} as the main domain`}
+                checked={primary !== "" && primary === domain}
+                name="primaryDomain"
+                onchange={() => {
+                  primary = domain;
+                }}
+                type="radio"
+                value={domain}
+              >
+              <Input
+                name="domains"
+                oninput={(event) => renameDomain(index, event.currentTarget.value)}
+                placeholder="app.example.com"
+                type="text"
+                value={domain}
+              />
+              <Button
+                aria-label="Remove this domain"
+                onclick={() => removeDomain(index)}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <Trash2 class="size-4" />
+              </Button>
+            </div>
+          {/each}
         </div>
+        <Button
+          onclick={() => {
+            domains = [...domains, ""];
+          }}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <Plus class="size-4" />
+          Add domain
+        </Button>
+        <p class="text-text-subtle text-xs">
+          The selected domain is the service's main link. Point each domain's
+          DNS (A/CNAME) at this server yourself first : this app only tells
+          Traefik to route it, it doesn't manage DNS for domains outside
+          {data.baseDomain}.
+        </p>
 
         <div class="flex flex-wrap items-center gap-3">
           <Button disabled={submitting} type="submit" variant="outline">
@@ -137,7 +237,6 @@
     {/if}
   </section>
 
-  <!-- ═══ SSL ═══ -->
   <section class="panel rounded-md p-5">
     <div class="mb-4 flex items-center gap-3">
       <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
@@ -147,17 +246,17 @@
         <p class="text-text text-sm font-medium">SSL</p>
         <p class="text-text-muted text-xs">
           {#if svc.dnsResolvable && data.behindPangolin}
-            Pangolin serves the public certificate for {publicHost}.{data.baseDomain}
+            Pangolin serves the public certificates for this service's domains
             : Traefik only encrypts the hop from the tunnel with its default certificate.
           {:else if svc.dnsResolvable && !data.certResolver}
-            {publicHost}.{data.baseDomain} can't get a public certificate, since
+            Domains under {data.baseDomain} can't get a public certificate, since
             ACME only issues for real domain names : Traefik serves its self-signed
             default instead.
           {:else if svc.dnsResolvable}
             TLS is automatic via Traefik's
             <code>{data.certResolver}</code>
-            resolver for {publicHost}.{data.baseDomain}
-            : no certificate handling needed for that hostname.
+            resolver for every domain of this service : no certificate handling
+            needed.
           {:else}
             Not applicable : this service isn't publicly routed.
           {/if}
@@ -165,9 +264,9 @@
       </div>
     </div>
 
-    {#if svc.dnsResolvable && svc.customDomain}
+    {#if svc.dnsResolvable && !data.behindPangolin && outsideDomains.length > 0}
       <form
-        action="?/updateNetworking"
+        action="?/updateSsl"
         class="border-border space-y-3 border-t pt-4"
         method="POST"
         use:enhance={enhanceToast({
@@ -183,9 +282,9 @@
         })}
       >
         <p class="text-text-muted text-xs">
-          A custom certificate for <strong>{svc.customDomain}</strong> : since
-          it isn't a subdomain of this instance's base domain, the automatic
-          resolver above can't cover it. Requires the admin to have set
+          Optional: your own certificate for
+          <strong>{outsideDomains.join(", ")}</strong>, instead of the automatic
+          one. Requires the admin to have set
           <code>TRAEFIK_DYNAMIC_CONFIG_DIR</code>
           and enabled Traefik's file provider (see compose.yaml) : this app
           writes the cert/key files there, it doesn't touch the Traefik
@@ -225,18 +324,14 @@
           />
         {/if}
         <div class="flex flex-wrap items-center gap-3">
-          <button
-            class="border-border text-text hover:bg-surface-2 flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={submitting}
-            type="submit"
-          >
+          <Button disabled={submitting} type="submit" variant="outline">
             {#if submitting}
               <Spinner />
             {:else}
               <Check class="size-4" />
             {/if}
             Save certificate
-          </button>
+          </Button>
           {@render applyNote()}
         </div>
       </form>

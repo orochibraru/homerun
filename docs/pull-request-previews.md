@@ -18,9 +18,9 @@ repository); a fork, or a payload that doesn't say, is acknowledged and ignored.
 
 A preview copies the service's build settings, env vars, resources, stack and
 login wall when it's created and again on every update, but not its volumes,
-custom domain, cron schedule or status checks. Previews are listed under the
-toggle, and each is a normal service you can open, redeploy or delete (a push to
-its pull request brings it back). Turning previews off, or deleting the service,
+domains, cron schedule or status checks. Previews are listed under the toggle,
+and each is a normal service you can open, redeploy or delete (a push to its
+pull request brings it back). Turning previews off, or deleting the service,
 deletes every preview.
 
 Previews ride on the same webhook as deploy on push: turning them on

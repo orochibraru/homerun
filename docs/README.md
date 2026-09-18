@@ -49,7 +49,7 @@ sync by hand.
 - **[Env vars](env-vars.md)**: key/value rows, linking a service to fill in
   connection details, and env files on the host.
 - **[Networking](networking.md)**: container port, network mode,
-  DNS-resolvability, custom domains and your own SSL certificates.
+  DNS-resolvability, extra domains and your own SSL certificates.
 - **[DNS automation](dns-automation.md)**: keeping Cloudflare records or
   Pangolin resources in sync with your services.
 - **[Runtime and compute](runtime-and-compute.md)**: entrypoint, command,

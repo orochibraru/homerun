@@ -84,6 +84,7 @@ connection is a git build: thread it through
 
 Run the `check-repo` skill. If the change also needs to be mirrored into the
 standalone `cmd/agent/` sub-project (see its own README —
-`cmd/agent/build.go`/`git.go` re-implement, not import, the equivalent logic
-since the agent is a separate Go binary with no access to this app's source tree
-at runtime), use the `subproject-sync` agent to keep the two in sync.
+`internal/agent/build.go`/`git.go` re-implement, not import, the equivalent
+logic since the agent is a separate Go binary with no access to this app's
+source tree at runtime), use the `subproject-sync` agent to keep the two in
+sync.

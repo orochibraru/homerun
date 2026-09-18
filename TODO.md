@@ -3,12 +3,18 @@
 The backlog, and the only one. There is no priority ordering, pick whatever.
 When done delete the entry, no bloat.
 
-- [ ] Create a homerun worker, in Go. Shares library with the installer, the
-      agent and the CLI. Then remove ALL intensive logic from the sveltekit app.
-      The go worker will do the heavy lifting, the sveltekit app handles saving
-      stuff in the DB and the job queue to send to the worker.
-- [ ] cmd/ for go is a place for direct usage files, no internal libraries, no
-      test files.
+- [ ] Setup mise
+- [ ] **[WIP]** Go worker, multi-agent workflow running. Create a homerun
+      worker, in Go. Shares library with the installer, the agent and the CLI.
+      Then remove ALL intensive logic from the sveltekit app. The go worker will
+      do the heavy lifting, the sveltekit app handles saving stuff in the DB and
+      the job queue to send to the worker.
+
+- [ ] Move every remaining Docker call into the Go worker so the SvelteKit app
+      becomes a pure control plane: start/stop/restart and status sync as jobs,
+      logs, web terminal and host stats streamed from the worker, boot-time core
+      services (Traefik, registry, Newt) and self-update run by the worker.
+      Starts once the job-type port above lands.
 
 ## Small
 
@@ -20,9 +26,6 @@ When done delete the entry, no bloat.
       SvelteKit then refuses every remote command with a bare 403 before any
       hook runs, so nothing is logged (an IP `ORIGIN` from the installer plus a
       Pangolin/Cloudflare dashboard domain set later hits exactly this).
-- [ ] Integration test `services : lifecycle > start/stop/restart` fails
-      locally: stopping a running local nginx service reports `failed` instead
-      of `stopped`.
 
 ## Medium
 

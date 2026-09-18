@@ -176,18 +176,15 @@ async function finishLinkedStack(
 
 /** The two uniqueness checks a new service can fail on, as one guard. */
 async function takenFieldFailure(
-	input: { customDomain?: string; slug: string },
+	input: { domain?: string; slug: string },
 	formData: FormData,
 ) {
 	const errors: Record<string, string[]> = {};
 	if (await ServiceDTO.slugTaken(input.slug)) {
 		errors.slug = ["That slug is already in use."];
 	}
-	if (
-		input.customDomain &&
-		(await ServiceDTO.customDomainTaken(input.customDomain))
-	) {
-		errors.customDomain = ["That domain is already in use."];
+	if (input.domain && (await ServiceDTO.domainTaken([input.domain]))) {
+		errors.domain = ["That domain is already in use."];
 	}
 	if (Object.keys(errors).length === 0) {
 		return null;
@@ -257,7 +254,7 @@ async function createServiceFromForm(
 
 	const svc = await ServiceDTO.create({
 		authRequired: input.authRequired,
-		customDomain: input.customDomain || null,
+		domains: input.domain ? [input.domain] : [],
 		networkMode: input.networkMode,
 		portProtocol: input.portProtocol,
 		buildCacheRegistryId:

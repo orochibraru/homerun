@@ -280,6 +280,7 @@ for (const theme of ["light", "dark"] as const) {
 			timeout: 15_000,
 		});
 		await page.locator("#email").fill(EMAIL);
+		await page.getByRole("button", { exact: true, name: "Continue" }).click();
 		await page.locator("#password").fill(PASSWORD);
 		await settle(page);
 		await page.screenshot({

@@ -22,7 +22,11 @@ import { user as userTable } from "$lib/server/db/schema";
 import { seedBuiltinTemplates } from "$lib/server/db/seed";
 import { readOnlyRejection } from "$lib/server/read-only";
 import { AdminService } from "$lib/services/admin.service";
-import { auth, rebuildAuth } from "$lib/services/auth";
+import {
+	auth,
+	pruneUndecryptableSigningKeys,
+	rebuildAuth,
+} from "$lib/services/auth";
 import { CronService } from "$lib/services/cron.service";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { syncDashboardDns } from "$lib/services/dns.service";
@@ -218,6 +222,9 @@ export const init = async () => {
 		applyInstanceSettings(settings.toConfigOverride());
 	}
 	rebuildAuth();
+	await pruneUndecryptableSigningKeys().catch((err) => {
+		logger.warn("Couldn't check the OIDC signing keys", err);
+	});
 	await DockerService.syncDashboardRouter();
 	void syncDashboardDns();
 	void DockerService.syncNewtContainer(settings.newtCredentials());

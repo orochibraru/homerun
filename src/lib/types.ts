@@ -18,6 +18,8 @@ export type JobStatus =
 	| "failed"
 	| "cancelled";
 
+export type JobStage = "prepare" | "execute" | "finalize" | "finalizing";
+
 export type JobType =
 	| "backup"
 	| "backup_restore"

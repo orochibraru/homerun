@@ -20,6 +20,7 @@ import {
 } from "./deploy/scan-targets.ts";
 import type { RegistryAuth } from "./docker/containers.ts";
 import {
+	isMirrorRef,
 	MIRROR_SCAN_SOURCE,
 	pinnedToDigest,
 } from "./docker/image-scan-refs.ts";
@@ -59,6 +60,13 @@ export interface MirroredImage {
 
 export class ImageScanBlockedError extends Error {
 	override name = "ImageScanBlockedError";
+}
+
+export const DEPLOYED_SCAN_LABEL = "the deployed image";
+
+/** The job error for an on-demand scan of `ref` that couldn't scan at all. */
+export function unscannedDeployedMessage(ref: string): string {
+	return `Couldn't scan ${ref}. The scan history on the Security tab has the reason.`;
 }
 
 function reason(err: unknown): string {
@@ -183,23 +191,12 @@ class ImageScanServiceClass {
 				);
 				continue;
 			}
-			await ImageScanDTO.create({
-				counts: summary.counts,
-				deploymentId: ctx.dep?.id ?? null,
-				digest: options.digest ?? null,
-				findings: summary.findings,
-				fixableCounts: summary.fixableCounts,
-				imageRef: shown,
-				serviceId: ctx.svc.id,
-				source: target.label,
-				status: "ok",
-				totalFindings: summary.totalFindings,
-			});
-			await this.#logSummary(ctx, shown, summary);
-			logger.info(
-				`Image scanned: service=${ctx.svc.id} ref=${shown} ${countsLine(summary.counts)}`,
+			await this.recordScanned(
+				ctx,
+				{ label: target.label, shown },
+				summary,
+				options.digest ?? null,
 			);
-			this.#notifyCritical(ctx, shown, summary);
 			const verdict = options.block
 				? evaluateScanPolicy(summary, options.block)
 				: null;
@@ -213,7 +210,36 @@ class ImageScanServiceClass {
 			return summary;
 		}
 
-		return await this.#recordUnscanned(ctx, targets, failures, options);
+		return await this.recordUnscanned(ctx, targets, failures, options);
+	}
+
+	/**
+	 * Records a successful scan (`status: "ok"`), logs its summary to the
+	 * deployment log when there is one, and notifies on critical findings.
+	 */
+	async recordScanned(
+		ctx: ScanContext,
+		target: { label: string; shown: string },
+		summary: TrivySummary,
+		digest: string | null,
+	): Promise<void> {
+		await ImageScanDTO.create({
+			counts: summary.counts,
+			deploymentId: ctx.dep?.id ?? null,
+			digest,
+			findings: summary.findings,
+			fixableCounts: summary.fixableCounts,
+			imageRef: target.shown,
+			serviceId: ctx.svc.id,
+			source: target.label,
+			status: "ok",
+			totalFindings: summary.totalFindings,
+		});
+		await this.#logSummary(ctx, target.shown, summary);
+		logger.info(
+			`Image scanned: service=${ctx.svc.id} ref=${target.shown} ${countsLine(summary.counts)}`,
+		);
+		this.#notifyCritical(ctx, target.shown, summary);
 	}
 
 	/**
@@ -222,7 +248,7 @@ class ImageScanServiceClass {
 	 *
 	 * @throws `ImageScanBlockedError` when `options.required` is set.
 	 */
-	async #recordUnscanned(
+	async recordUnscanned(
 		ctx: ScanContext,
 		targets: ScanTarget[],
 		failures: string[],
@@ -489,26 +515,33 @@ class ImageScanServiceClass {
 	 * @throws When the image can't be scanned at all.
 	 */
 	async scanDeployed(svc: ServiceDTO): Promise<TrivySummary> {
-		const ref = `${svc.image}:${svc.tag}`;
-		const target = localScanTarget(ref);
-		const summary = await this.scan(
-			{ dep: null, svc },
-			[
-				{
-					...target,
-					auth: DockerService.buildAuthConfig(svc),
-					label: "the deployed image",
-					source: { kind: "any" },
-				},
-			],
-			{ block: null },
-		);
+		const target = await this.deployedScanTarget(svc);
+		const summary = await this.scan({ dep: null, svc }, [target], {
+			block: null,
+		});
 		if (!summary) {
-			throw new Error(
-				`Couldn't scan ${ref}. The scan history on the Security tab has the reason.`,
-			);
+			throw new Error(unscannedDeployedMessage(target.ref));
 		}
 		return summary;
+	}
+
+	/**
+	 * The scan target for a service's deployed image: read from the local
+	 * daemon or its registry, with the service's registry credentials, or
+	 * Homerun's own when the image lives in the built-in registry.
+	 */
+	async deployedScanTarget(svc: ServiceDTO): Promise<ScanTarget> {
+		const ref = `${svc.image}:${svc.tag}`;
+		const auth = isMirrorRef(ref)
+			? ((await DockerService.registryInternalAuth()) ??
+				DockerService.buildAuthConfig(svc))
+			: DockerService.buildAuthConfig(svc);
+		return {
+			auth,
+			label: DEPLOYED_SCAN_LABEL,
+			ref,
+			source: { kind: "any" },
+		};
 	}
 }
 

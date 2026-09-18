@@ -1,4 +1,13 @@
-import { describe, expect, mock, test } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
+import { restoreStubs, stub } from "../support/stub";
 
 mock.module("$app/environment", () => ({
 	browser: false,
@@ -11,16 +20,37 @@ mock.module("$app/paths", () => ({
 }));
 
 let streamed = false;
+let traefikFailure: unknown = null;
+let traefikCalls: string[] = [];
 
-mock.module("$lib/services/docker.service", () => ({
-	DockerService: {
-		listInfraContainers: async () => [{ id: "traefik" }],
-		streamLogs: async () => {
-			streamed = true;
-			return new ReadableStream();
-		},
-	},
-}));
+const { DockerService } = await import(
+	"../../../src/lib/services/docker.service"
+);
+
+beforeEach(() => {
+	stub(DockerService, "listInfraContainers", async () => [{ id: "traefik" }]);
+	stub(DockerService, "restartTraefikContainer", async () => {
+		traefikCalls.push("restart");
+		if (traefikFailure) {
+			throw traefikFailure;
+		}
+	});
+	stub(DockerService, "streamLogs", async () => {
+		streamed = true;
+		return new ReadableStream();
+	});
+	stub(DockerService, "updateTraefikContainer", async () => {
+		traefikCalls.push("update");
+		if (traefikFailure) {
+			throw traefikFailure;
+		}
+		return { message: "Updated to v3.2", updated: true };
+	});
+});
+
+afterEach(() => {
+	restoreStubs();
+});
 
 const logsRoute = await import(
 	"../../../src/routes/(protected)/system-logs/containers/[containerId]/logs/+server"
@@ -29,8 +59,11 @@ const pageRoute = await import(
 	"../../../src/routes/(protected)/system-logs/+page.server"
 );
 
+const { AppLogDTO } = await import("../../../src/lib/dto/app-log-dto");
+
 type LogsEvent = Parameters<typeof logsRoute.GET>[0];
 type LoadEvent = Parameters<typeof pageRoute.load>[0];
+type ActionEvent = Parameters<typeof pageRoute.actions.restartTraefik>[0];
 
 function locals(isAdmin: boolean) {
 	return { isAdmin, user: { id: "u1" } };
@@ -85,5 +118,80 @@ describe("system logs access", () => {
 		expect(() =>
 			pageRoute.load({ locals: locals(true) } as unknown as LoadEvent),
 		).not.toThrow();
+	});
+});
+
+describe("Traefik actions", () => {
+	let spies: { mockRestore: () => void }[] = [];
+
+	beforeEach(() => {
+		traefikFailure = null;
+		traefikCalls = [];
+		spies = [
+			spyOn(console, "log").mockImplementation(() => undefined),
+			spyOn(console, "error").mockImplementation(() => undefined),
+			spyOn(AppLogDTO, "create").mockResolvedValue(undefined as never),
+		];
+	});
+
+	afterEach(() => {
+		for (const spy of spies) {
+			spy.mockRestore();
+		}
+	});
+
+	const run = (
+		name: keyof typeof pageRoute.actions,
+		eventLocals: ReturnType<typeof locals> | { isAdmin: boolean; user: null },
+	): Promise<unknown> =>
+		pageRoute.actions[name]({
+			locals: eventLocals,
+		} as unknown as ActionEvent);
+
+	test("signed out is sent to sign in, a developer home, and nothing runs", async () => {
+		for (const name of ["restartTraefik", "updateTraefik"] as const) {
+			await expect(
+				run(name, { isAdmin: false, user: null }),
+			).rejects.toMatchObject({ location: "/auth/sign-in", status: 302 });
+			await expect(run(name, locals(false))).rejects.toMatchObject({
+				location: "/",
+				status: 302,
+			});
+		}
+		expect(traefikCalls).toEqual([]);
+	});
+
+	test("an admin restarts and updates Traefik", async () => {
+		expect(await run("restartTraefik", locals(true))).toEqual({
+			action: "restartTraefik",
+			success: true,
+		});
+		expect(await run("updateTraefik", locals(true))).toEqual({
+			action: "updateTraefik",
+			message: "Updated to v3.2",
+			success: true,
+			updated: true,
+		});
+		expect(traefikCalls).toEqual(["restart", "update"]);
+	});
+
+	test("a Docker failure is a 500 with its message", async () => {
+		traefikFailure = new Error("container not found");
+		for (const name of ["restartTraefik", "updateTraefik"] as const) {
+			expect(await run(name, locals(true))).toMatchObject({
+				data: { action: name, error: "container not found" },
+				status: 500,
+			});
+		}
+	});
+
+	test("a non-Error failure gets a generic message", async () => {
+		traefikFailure = "weird";
+		expect(await run("restartTraefik", locals(true))).toMatchObject({
+			data: { error: "Failed to restart Traefik." },
+		});
+		expect(await run("updateTraefik", locals(true))).toMatchObject({
+			data: { error: "Failed to update Traefik." },
+		});
 	});
 });

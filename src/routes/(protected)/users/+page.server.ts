@@ -5,6 +5,7 @@ import { InvitationDTO } from "$lib/dto/invitation-dto";
 import { Logger } from "$lib/logger";
 import { asAuthRole, isUserRole, roleLabel } from "$lib/permissions";
 import { parseListQuery } from "$lib/server/list-query";
+import { AccountSetupService } from "$lib/services/account-setup.service";
 import { auth } from "$lib/services/auth";
 import { EmailService } from "$lib/services/email.service";
 import { UserService } from "$lib/services/user.service";
@@ -72,7 +73,6 @@ export const actions = {
 		const email = (formData.get("email") as string | null)
 			?.trim()
 			.toLowerCase();
-		const password = (formData.get("password") as string | null) ?? "";
 		const role = formData.get("role");
 
 		if (!(name && email)) {
@@ -84,43 +84,26 @@ export const actions = {
 		if (!isUserRole(role)) {
 			return fail(400, { action: "createDirect", error: "Invalid role." });
 		}
-		if (password.length < 12) {
-			return fail(400, {
-				action: "createDirect",
-				error: "Password must be at least 12 characters.",
-			});
-		}
 
-		const result = await auth.api
-			.createUser({
-				// emailVerified: true, same as accept-invite/+page.server.ts's
-				// createUser call : an admin creating this account already
-				// vouches for the email address, and there's no working
-				// verify-then-unlock flow for it to fall into otherwise (see
-				// sign-in/+page.svelte's comment on the dead-end that used to be).
-				body: {
-					data: { emailVerified: true },
-					email,
-					name,
-					password,
-					role: asAuthRole(role),
-				},
-				headers: request.headers,
-			})
-			.catch((error: unknown) => ({ error }));
-		if ("error" in result) {
-			logger.warn(`Direct user creation failed: ${result.error}`);
+		const created = await AccountSetupService.createPendingUser({
+			email,
+			headers: request.headers,
+			name,
+			role: asAuthRole(role),
+		}).catch((error: unknown) => ({ error }));
+		if (typeof created !== "string") {
+			logger.warn(`Direct user creation failed: ${created.error}`);
 			return fail(400, {
 				action: "createDirect",
 				error:
-					result.error instanceof Error
-						? result.error.message
+					created.error instanceof Error
+						? created.error.message
 						: "Could not create user.",
 			});
 		}
 
 		logger.info(
-			`User created directly: user=${result.user.id} role=${role} by=${locals.user.id}`,
+			`User created directly: user=${created} role=${role} by=${locals.user.id}`,
 		);
 		return { action: "createDirect", success: true };
 	},

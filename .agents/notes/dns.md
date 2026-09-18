@@ -17,8 +17,9 @@ rather than caching, the admin can change credentials mid-session and syncs are
 infrequent (once per deploy), same reasoning as `GitProviderService`. Both fire
 from the same spot, `deploy.service.ts`'s `syncAutoDns`, right after a
 successful **local** deploy with `dnsResolvable` set, for **every** hostname the
-service answers on (`<slug>.<baseDomain>` and its `customDomain`, which used not
-to be synced at all). Neither can fail the deploy.
+service answers on (`serviceHostnames()` in `$lib/service-domains.ts`: the
+default `<slug>.<baseDomain>` hostname while it's still routed, plus each of
+`domains`, which used not to be synced at all). Neither can fail the deploy.
 
 **They are no longer fire-and-forget, and that was the whole bug behind
 "Pangolin is configured and nothing gets created".** Both `syncDnsRecord`s
@@ -222,8 +223,8 @@ real account involved. What it changed, all covered by
   characters), and delete only removes a CNAME that points at `baseDomain` or
   carries that comment; a 404 on delete counts as gone.
 - **Cloudflare skips** a hostname outside the zone (`GET /zones/{id}`'s `name`,
-  e.g. a custom domain on another provider) and a hostname equal to its target
-  (the create schema says content "must not match the record's name", which the
+  e.g. a domain on another provider) and a hostname equal to its target (the
+  create schema says content "must not match the record's name", which the
   dashboard host hit when it equals `baseDomain`). `/user/tokens/verify` isn't
   used since it rejects account-owned tokens; the zone read plus a
   `dns_records?per_page=1` read work for both.

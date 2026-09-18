@@ -6,7 +6,7 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
-## The agent's git builds (`cmd/agent/build.go`, `cmd/agent/git.go`)
+## The agent's git builds (`internal/agent/build.go`, `internal/agent/git.go`)
 
 `Builder.Build` mirrors the main app's `docker/git-build.ts` by hand (the agent
 is a separate Go binary and can't import from `src/`), **including its
@@ -20,7 +20,7 @@ JSON decoded and hand-validated by `validateBuildInput`, no schema library)
 carries an optional `Credential` (`{username, token}`) that `deploy.service.ts`
 fills from `resolveGitCredential` and `AgentClientService.build` sends over,
 since the agent has no access to the git-provider tables.
-`authenticatedCloneURL` and `redactCloneURL` (`cmd/agent/git.go`) are
+`authenticatedCloneURL` and `redactCloneURL` (`internal/agent/git.go`) are
 hand-mirrored from `$lib/git-clone-url.ts`, and every log line and error message
 goes through the redaction so a token can't reach the deployment log.
 
@@ -177,9 +177,9 @@ sequential upload step ran 40+ minutes. Every binary is Go now and none embed a
 language runtime, but the gzip step, the `.gz`-suffixed asset naming and every
 downloader that unpacks one stayed, both for the smaller download and because
 nothing forces re-deriving it: `install.sh`/`bootstrap.sh`/`swarm-join.sh` pipe
-through `gunzip -c`, `cmd/installer/release.go`'s `DownloadReleaseBinary` curls
-`<name>.gz` and shells out to `gunzip -f` the same way, and `cmd/cli`'s own
-`homerun update` (`downloadRelease`) unpacks in-process via
+through `gunzip -c`, `internal/installer/release.go`'s `DownloadReleaseBinary`
+curls `<name>.gz` and shells out to `gunzip -f` the same way, and `cmd/cli`'s
+own `homerun update` (`downloadRelease`) unpacks in-process via
 `internal/release.DownloadGzipped` (`compress/gzip`), the one place this repo
 does it without shelling out. Releases up to v1.0.33 carry raw, un-suffixed
 assets, so `scripts/e2e-multipass.ts`'s pinned `PREVIOUS_RELEASE` download stays
@@ -275,8 +275,8 @@ drives a target machine's shell, not this app's own runtime).
 
 - **`cmd/agent/`**, the **Homerun Agent**: a small token-authenticated HTTP
   server meant to run on a build server's own Docker daemon
-  (`cmd/agent/server.go`'s `Server.Handler`). Five routes: `GET /v1/health` and
-  `GET /v1/openapi.json` unauthenticated (the latter for the same "spec
+  (`internal/agent/server.go`'s `Server.Handler`). Five routes: `GET /v1/health`
+  and `GET /v1/openapi.json` unauthenticated (the latter for the same "spec
   describes shapes, not data" reason the main app's is public, health so a
   monitor can probe liveness without holding the token), `POST /v1/build`,
   `GET /v1/stats` and `GET /v1/images/save` behind
@@ -290,63 +290,65 @@ drives a target machine's shell, not this app's own runtime).
   shared**, not just mirrored by hand: `internal/release.Arch` (already
   `amd64`/`arm64`, no remapping needed) and `internal/release.AssetSuffix` (the
   same, plus a `darwin-` prefix for macOS) are the one place this repo maps a Go
-  arch/platform onto a release-asset name; `cmd/installer/detect.go`'s `Arch()`
-  and `cmd/cli/update.go`'s `assetSuffix()` both just call through to it now,
-  rather than each keeping its own hand-written copy (a real de-duplication this
-  Go rewrite bought, since Bun and Go couldn't share a module before). **Wired
-  into the main app**: `remote_host.kind` (`"docker"` | `"agent"`) +
-  `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
+  arch/platform onto a release-asset name; `internal/installer/detect.go`'s
+  `Arch()` and `internal/cli/update.go`'s `assetSuffix()` both just call through
+  to it now, rather than each keeping its own hand-written copy (a real
+  de-duplication this Go rewrite bought, since Bun and Go couldn't share a
+  module before). **Wired into the main app**: `remote_host.kind` (`"docker"` |
+  `"agent"`) + `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
   (`$lib/services/agent-client.service.ts`, a thin HTTP client over
   `build`/`stats`/`health`), and the Remote Hosts "new host" form's
   connection-type toggle; `deploy.service.ts` branches on
   `RemoteHostDTO.resolveBuildTarget()`'s `kind` to route a git build through
   `DockerService` or `AgentClientService`. The agent has no access to the main
-  app's source tree at runtime, so `cmd/agent/build.go` and `cmd/agent/git.go`
-  intentionally re-implement (not import) the equivalent logic from
-  `docker/git-build.ts`, and `cmd/agent/stats.go` re-implements
+  app's source tree at runtime, so `internal/agent/build.go` and
+  `internal/agent/git.go` intentionally re-implement (not import) the equivalent
+  logic from `docker/git-build.ts`, and `internal/agent/stats.go` re-implements
   `SystemStatsService`; keep the two in sync by hand if one changes (the
-  `subproject-sync` agent's job). `cmd/agent/build.go`'s `BuildInput` struct is
-  the build body's shape, hand-validated by `validateBuildInput` in
-  `cmd/agent/server.go` (no schema library, this is Go, not zod), and
-  `cmd/agent/openapi.go` generates the agent's own OpenAPI 3.1 doc from plain Go
-  literals describing the same shapes, the "one schema, two purposes" approach
-  the main app uses with zod (see OpenAPI above) without a shared runtime to
-  hang a real schema library off. `cmd/agent/builders.go` embeds
-  `cmd/agent/builder.sh` and `cmd/agent/builder-tools.json` (`//go:embed`), the
-  same generated-and-pinned build-tool script and checksums the main app's own
-  `builder-run.ts` uses; golden files under `cmd/agent/testdata/*.json` plus
+  `subproject-sync` agent's job). `internal/agent/build.go`'s `BuildInput`
+  struct is the build body's shape, hand-validated by `validateBuildInput` in
+  `internal/agent/server.go` (no schema library, this is Go, not zod), and
+  `internal/agent/openapi.go` generates the agent's own OpenAPI 3.1 doc from
+  plain Go literals describing the same shapes, the "one schema, two purposes"
+  approach the main app uses with zod (see OpenAPI above) without a shared
+  runtime to hang a real schema library off. `internal/agent/builders.go` embeds
+  `internal/agent/builder.sh` and `internal/agent/builder-tools.json`
+  (`//go:embed`), the same generated-and-pinned build-tool script and checksums
+  the main app's own `builder-run.ts` uses; golden files under
+  `internal/agent/testdata/*.json` plus
   `tests/unit/app/agent-builder-parity.test.ts` (on the app side) pin the two
   together, so the pair can't silently drift the way a hand-copied string could.
-- **`cmd/installer/`**, a single-binary installer (`cmd/installer/main.go`)
-  meant to be the target of a `curl | bash` one-liner
-  (`cmd/installer/bootstrap.sh`) on a fresh Linux server. `--mode=full` defaults
-  to the **system (rootful)** daemon (`options.go`'s `DockerFlavourOf`): enables
-  it, makes it a swarm manager (`swarm.go`'s `EnsureSwarmManager`,
-  `--advertise-addr=` or the default-route address), creates the `homerun`
-  bridge and the attachable `homerun-swarm` overlay, and writes a compose file
-  whose Traefik runs the swarm provider too, so the app boots in swarm mode (see
-  Swarm mode in `docker.md`). The trade-off is a root daemon.
-  `--docker=rootless` (and `--mode=agent`, always) installs Docker Engine +
-  rootless prerequisites (`uidmap`/`dbus-user-session`), creates a dedicated
-  non-root system user, installs **rootless** Docker for it via Docker's own
-  documented flow (`get.docker.com/rootless` → `dockerd-rootless-setuptool.sh`,
-  `loginctl enable-linger` + a `systemd --user` unit so the daemon survives a
-  headless reboot without an active login session), creates `homerun` on that
-  daemon, then installs the Agent (`--mode=agent`, default, own `systemd --user`
-  unit) or the standalone full stack under that account, never as root.
-  `--migrate-to-rootful` (`migrate.go`'s `Migrate`) moves a rootless full
-  install onto the system daemon in swarm mode, volumes and all, and is
-  re-runnable; `--image=` swaps the app image (the e2e suite uses it to run a
-  locally built one). **Binaries and Docker images only, nothing built from
-  source on the target host** (superseding an earlier draft that cloned the repo
-  and ran `bun run build` there): `bootstrap.sh` downloads the
-  `homerun-installer-<arch>` release binary itself and `exec`s it (no Bun, no
-  git); `--mode=agent` downloads the matching `homerun-agent-<arch>` release
-  binary straight to `/usr/local/bin/homerun-agent`; `--mode=full` writes a
-  standalone `compose.yaml` (`fullstack.go`'s `fullStackCompose`, distinct from
-  the root dev `compose.yaml`; see Docker integration above) pulling the
-  published `docker.io/orochibraru/homerun` app image alongside
-  Traefik/Postgres, then `docker compose pull && ...up -d`.
+- **`cmd/installer/`**, a single-binary installer
+  (`internal/installer/installer.go`) meant to be the target of a `curl | bash`
+  one-liner (`cmd/installer/bootstrap.sh`) on a fresh Linux server.
+  `--mode=full` defaults to the **system (rootful)** daemon (`options.go`'s
+  `DockerFlavourOf`): enables it, makes it a swarm manager (`swarm.go`'s
+  `EnsureSwarmManager`, `--advertise-addr=` or the default-route address),
+  creates the `homerun` bridge and the attachable `homerun-swarm` overlay, and
+  writes a compose file whose Traefik runs the swarm provider too, so the app
+  boots in swarm mode (see Swarm mode in `docker.md`). The trade-off is a root
+  daemon. `--docker=rootless` (and `--mode=agent`, always) installs Docker
+  Engine + rootless prerequisites (`uidmap`/`dbus-user-session`), creates a
+  dedicated non-root system user, installs **rootless** Docker for it via
+  Docker's own documented flow (`get.docker.com/rootless` →
+  `dockerd-rootless-setuptool.sh`, `loginctl enable-linger` + a `systemd --user`
+  unit so the daemon survives a headless reboot without an active login
+  session), creates `homerun` on that daemon, then installs the Agent
+  (`--mode=agent`, default, own `systemd --user` unit) or the standalone full
+  stack under that account, never as root. `--migrate-to-rootful`
+  (`migrate.go`'s `Migrate`) moves a rootless full install onto the system
+  daemon in swarm mode, volumes and all, and is re-runnable; `--image=` swaps
+  the app image (the e2e suite uses it to run a locally built one). **Binaries
+  and Docker images only, nothing built from source on the target host**
+  (superseding an earlier draft that cloned the repo and ran `bun run build`
+  there): `bootstrap.sh` downloads the `homerun-installer-<arch>` release binary
+  itself and `exec`s it (no Bun, no git); `--mode=agent` downloads the matching
+  `homerun-agent-<arch>` release binary straight to
+  `/usr/local/bin/homerun-agent`; `--mode=full` writes a standalone
+  `compose.yaml` (`fullstack.go`'s `fullStackCompose`, distinct from the root
+  dev `compose.yaml`; see Docker integration above) pulling the published
+  `docker.io/orochibraru/homerun` app image alongside Traefik/Postgres, then
+  `docker compose pull && ...up -d`.
 
   **`--mode=full` resolves an address for the instance and it is never
   `localhost`** (`main.go`'s `resolveHost`): `--domain=` wins, else an

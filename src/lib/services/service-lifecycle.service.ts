@@ -1,9 +1,11 @@
+import { config } from "$lib/config";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { ServiceGitDTO } from "$lib/dto/service-git-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { Logger } from "$lib/logger";
+import { serviceHostnames } from "$lib/service-domains";
 import type { ContainerStatus } from "$lib/types";
-import { deleteDns, serviceHostname } from "./dns.service.ts";
+import { deleteDns } from "./dns.service.ts";
 import {
 	tryRemoveWorkload,
 	WorkloadDetachError,
@@ -71,18 +73,22 @@ class ServiceLifecycleServiceClass {
 	}
 
 	/**
-	 * Stops a service: scales its swarm service to 0 replicas or stops its
-	 * single container, then persists `desiredState: "stopped"`.
+	 * Stops a service: persists `desiredState: "stopped"` first, so a status
+	 * sync during a slow stop already knows the exit was asked for, then scales
+	 * its swarm service to 0 replicas or stops its single container.
 	 *
 	 * @throws When the service has no swarm service and no container yet.
 	 */
 	async stopService(svc: ServiceDTO): Promise<void> {
+		if (!svc.swarmServiceId) {
+			this.#requireContainer(svc);
+		}
+		await svc.update({ desiredState: "stopped" });
 		if (svc.swarmServiceId) {
 			await DockerService.scaleSwarmService(svc.swarmServiceId, 0);
 		} else {
 			await this.stop(this.#requireContainer(svc));
 		}
-		await svc.update({ desiredState: "stopped" });
 	}
 
 	/**
@@ -159,10 +165,9 @@ class ServiceLifecycleServiceClass {
 		if (!svc.dnsResolvable) {
 			return;
 		}
-		await deleteDns([
-			serviceHostname(svc.slug, stackSlug),
-			...(svc.customDomain ? [svc.customDomain] : []),
-		]).catch((err) => {
+		await deleteDns(
+			serviceHostnames(svc.toJSON(), stackSlug, config.baseDomain),
+		).catch((err) => {
 			logger.warn(`Couldn't remove DNS records for service=${svc.id}`, err);
 		});
 	}

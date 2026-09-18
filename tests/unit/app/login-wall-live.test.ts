@@ -17,7 +17,7 @@ describe("login wall middleware labels", () => {
 	test("every routed service gets the forwardAuth middleware, wall on or off", () => {
 		const labels = buildContainerLabels({
 			containerPort: 80,
-			customDomain: "app.example.org",
+			domains: ["app.example.org"],
 			serviceId: "svc-1",
 			slug: "app",
 		});
@@ -27,9 +27,34 @@ describe("login wall middleware labels", () => {
 		expect(labels["traefik.http.routers.app.middlewares"]).toBe(
 			"app-auth,app-retry",
 		);
-		expect(labels["traefik.http.routers.app-custom.middlewares"]).toBe(
+		expect(labels["traefik.http.routers.app-1.middlewares"]).toBe(
 			"app-auth,app-retry",
 		);
+	});
+
+	test("every domain gets its own router on the one shared backend", () => {
+		const labels = buildContainerLabels({
+			containerPort: 80,
+			defaultDomainEnabled: false,
+			domains: ["a.example.org", "b.example.org"],
+			serviceId: "svc-1",
+			slug: "app",
+		});
+		expect(labels["traefik.http.routers.app.rule"]).toBe(
+			"Host(`a.example.org`)",
+		);
+		expect(labels["traefik.http.routers.app-1.rule"]).toBe(
+			"Host(`b.example.org`)",
+		);
+		expect(labels["traefik.http.routers.app-1.service"]).toBe("app");
+		expect(
+			buildContainerLabels({
+				containerPort: 80,
+				defaultDomainEnabled: false,
+				serviceId: "svc-1",
+				slug: "app",
+			})["traefik.enable"],
+		).toBeUndefined();
 	});
 
 	test("every routed service retries requests that reach a workload that just went away", () => {

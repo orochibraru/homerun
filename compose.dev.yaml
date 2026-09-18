@@ -14,6 +14,23 @@ services:
       - internal
       - homerun
 
+  worker:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: app
+    extends:
+      file: tools/compose/worker.compose.yaml
+      service: worker
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - homerun
+
   agent:
     build:
       context: .

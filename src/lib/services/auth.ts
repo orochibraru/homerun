@@ -4,6 +4,7 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { symmetricDecrypt } from "better-auth/crypto";
 import {
 	admin,
 	bearer,
@@ -13,6 +14,7 @@ import {
 	twoFactor,
 } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
+import { inArray } from "drizzle-orm";
 import { building, dev } from "$app/environment";
 import { getRequestEvent } from "$app/server";
 import { resolveAdvertisedTokenAuth } from "$lib/auth-providers";
@@ -434,6 +436,41 @@ export function rebuildAuth(): void {
 	instances = new Map();
 	currentInstance();
 	logger.info("Rebuilt auth instance from updated instance settings");
+}
+
+/**
+ * Deletes the OIDC signing keys the current auth secret can't decrypt. The
+ * `jwt` plugin signs a token on every session fetch, so one such key (left by
+ * an earlier AUTH_SECRET) failed every sign-in with "Failed to decrypt private
+ * key". A key that can't be decrypted can never sign again anyway; the plugin
+ * mints a fresh one on its next signature. Tokens apps got from the old key
+ * stop verifying, so their users sign in to those apps again.
+ */
+export async function pruneUndecryptableSigningKeys(): Promise<void> {
+	const ctx = await auth.$context;
+	const rows = await db
+		.select({ id: schema.jwks.id, privateKey: schema.jwks.privateKey })
+		.from(schema.jwks);
+	const stale: string[] = [];
+	for (const row of rows) {
+		// biome-ignore lint/performance/noAwaitInLoops: Decrypting keys is fairly fast.
+		const readable = await symmetricDecrypt({
+			data: JSON.parse(row.privateKey) as string,
+			key: ctx.secretConfig,
+		})
+			.then(() => true)
+			.catch(() => false);
+		if (!readable) {
+			stale.push(row.id);
+		}
+	}
+	if (stale.length === 0) {
+		return;
+	}
+	await db.delete(schema.jwks).where(inArray(schema.jwks.id, stale));
+	logger.warn(
+		`Deleted ${stale.length} OIDC signing key(s) the current AUTH_SECRET can't decrypt (the secret changed since they were made). A new key is created on the next sign-in; apps using "Sign in with Homerun" need their users to sign in again.`,
+	);
 }
 
 export type AuthType = typeof auth.$Infer.Session;

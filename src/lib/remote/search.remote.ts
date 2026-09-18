@@ -49,7 +49,7 @@ async function searchWorkspace(
 		...services
 			.map((dto) => dto.toJSON())
 			.map((row) => ({
-				detail: row.customDomain ?? row.gitUrl ?? `${row.image}:${row.tag}`,
+				detail: row.primaryDomain ?? row.gitUrl ?? `${row.image}:${row.tag}`,
 				href: resolve("/(protected)/services/[serviceId]", {
 					serviceId: row.id,
 				}),
