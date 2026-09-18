@@ -1,3 +1,35 @@
+## [1.0.35](https://github.com/orochibraru/homerun/compare/v1.0.34...v1.0.35) (2026-09-18)
+
+### Features
+
+- Go agent and worker foundation under cmd/ + internal/, multiple domains per
+  service, email-first sign-in, OIDC app revocation, GitHub App setup, and
+  auth/lifecycle fixes
+  ([4008956](https://github.com/orochibraru/homerun/commit/40089567315b284a5ef0549e9849b7ffd7daa1c6))
+- **registry:** add a Registry page and make the built-in registry pushable
+  ([443eb70](https://github.com/orochibraru/homerun/commit/443eb70007411b21a9d1a5858a294b14f123a00a))
+
+### Bug Fixes
+
+- **ci:** exclude gosec's taint-analysis SSRF rule for the CLI's configured
+  instance URL
+  ([97eedf7](https://github.com/orochibraru/homerun/commit/97eedf7d344e89b1681457553d978a370bded6b0))
+- **ci:** install golangci-lint in the code quality job so the prek lint-go hook
+  can run
+  ([66489c0](https://github.com/orochibraru/homerun/commit/66489c0121e1d0fe29d24f90d5199b59c7fd9a92))
+- **logs:** stream logs for swarm services instead of claiming they're
+  undeployed
+  ([ba08d5b](https://github.com/orochibraru/homerun/commit/ba08d5b7550fab56fbae82a2d48f5afbdbe4d025))
+- skip registry htpasswd sync for token changes while auth is off, and render
+  the UI at 110% root font size
+  ([97328ef](https://github.com/orochibraru/homerun/commit/97328efb958d08a6b9918faf4e6d547b891b5b07))
+- skip the sign-in lookup throttle when auth rate limiting is disabled and keep
+  the Registry page up when Docker is unreachable
+  ([f2620ff](https://github.com/orochibraru/homerun/commit/f2620ff7c5e97660c5d17b86d3cfbffbac1cc2ff))
+- **ui:** outline toast action buttons and hide Redeploy on services that were
+  never deployed
+  ([25a2f4f](https://github.com/orochibraru/homerun/commit/25a2f4fd16d60b4fd0310bdf608a90148adbfac2))
+
 ## [1.0.34](https://github.com/orochibraru/homerun/compare/v1.0.33...v1.0.34) (2026-09-17)
 
 ## [1.0.33](https://github.com/orochibraru/homerun/compare/v1.0.32...v1.0.33) (2026-09-17)
