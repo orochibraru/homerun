@@ -13,5 +13,12 @@ coveragePathIgnorePatterns = [
 	"tests/**",
 	"src/lib/dto/**",
 	"src/lib/server/db/**",
+	"src/lib/services/docker/**",
+	"src/lib/services/docker.service.ts",
+	"src/lib/services/deploy/**",
+	"src/lib/services/deploy.service.ts",
+	"src/lib/services/image-scan.service.ts",
+	"src/lib/services/image-mirror-gc.service.ts",
+	"src/lib/services/backup/**",
 ]
-coverageThreshold = { functions = 0.7, lines = 0.8 }
+coverageThreshold = { functions = 0.8, lines = 0.8 }

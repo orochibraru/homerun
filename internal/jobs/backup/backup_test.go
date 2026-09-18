@@ -179,6 +179,9 @@ func TestBackupAndRestoreRoundTripOnRealDocker(t *testing.T) {
 		Destination: stubS3(t), HelperImage: "alpine:3", Key: "p/" + volume + ".tar.gz",
 		MountPath: "/homerun-backup-source", Source: volume, VolumeName: volume,
 	}
+	if err := ensureImage(ctx, docker, spec.HelperImage); err != nil {
+		t.Fatal(err)
+	}
 	runStep(t, docker, spec, "echo hi > /homerun-backup-source/a.txt && mkdir /homerun-backup-source/sub && echo x > /homerun-backup-source/sub/b")
 
 	job, lines, _ := jobs.Recorder("backup", spec)

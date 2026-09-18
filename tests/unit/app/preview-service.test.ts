@@ -1,0 +1,287 @@
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { restoreStubs, stub } from "../support/stub";
+
+mock.module("$app/environment", () => ({
+	browser: false,
+	building: false,
+	dev: false,
+}));
+
+const { config } = await import("../../../src/lib/config");
+const { Logger } = await import("../../../src/lib/logger");
+const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
+const { ServiceGitDTO } = await import("../../../src/lib/dto/service-git-dto");
+const { StackDTO } = await import("../../../src/lib/dto/stack-dto");
+const { DeploymentService } = await import(
+	"../../../src/lib/services/deploy.service"
+);
+const { ServiceLifecycleService } = await import(
+	"../../../src/lib/services/service-lifecycle.service"
+);
+const { PreviewService } = await import(
+	"../../../src/lib/services/preview.service"
+);
+
+type Svc = Parameters<typeof PreviewService.handle>[0];
+type Event = Parameters<typeof PreviewService.handle>[1];
+
+const SHA = "a".repeat(40);
+
+function fakeService(overrides: Record<string, unknown> = {}) {
+	const updates: Record<string, unknown>[] = [];
+	const svc = {
+		authAllowedEmails: ["a@b.c"],
+		authAllowedGroups: [],
+		authAllowedUserIds: [],
+		authProviders: [],
+		currentStatus: "running",
+		dnsResolvable: true,
+		gitRef: "main",
+		id: "parent",
+		image: "img",
+		name: "Web",
+		slug: "web",
+		stackId: null,
+		tag: "latest",
+		toJSON() {
+			return this;
+		},
+		update: async (patch: Record<string, unknown>) => {
+			updates.push(patch);
+		},
+		userId: "u1",
+		...overrides,
+	};
+	return { svc: svc as unknown as Svc, updates };
+}
+
+function event(overrides: Partial<Event> = {}): Event {
+	return {
+		action: "open",
+		branch: "feature",
+		commit: SHA,
+		fromFork: false,
+		number: 7,
+		title: "Add thing",
+		...overrides,
+	};
+}
+
+let enqueued: unknown[] = [];
+let deleted: string[] = [];
+let deleteError: unknown = null;
+let existing: Svc | null = null;
+let slugTaken = false;
+let created: Record<string, unknown>[] = [];
+let previews: Svc[] = [];
+const originalBaseDomain = config.baseDomain;
+
+beforeEach(() => {
+	enqueued = [];
+	deleted = [];
+	deleteError = null;
+	existing = null;
+	slugTaken = false;
+	created = [];
+	previews = [];
+	config.baseDomain = "example.com";
+	stub(Logger.prototype, "info", () => undefined);
+	stub(Logger.prototype, "warn", () => undefined);
+	stub(DeploymentService, "enqueueDeploy", async (input: unknown) => {
+		enqueued.push(input);
+		return { deploymentId: "d1", jobId: "j1" };
+	});
+	stub(ServiceLifecycleService, "deleteService", async (svc: Svc) => {
+		if (deleteError) {
+			throw deleteError;
+		}
+		deleted.push(svc.id);
+	});
+	stub(ServiceGitDTO, "getPreview", async () => existing);
+	stub(ServiceGitDTO, "listPreviews", async () => previews);
+	stub(ServiceDTO, "slugTaken", async () => slugTaken);
+	stub(ServiceDTO, "create", async (input: Record<string, unknown>) => {
+		created.push(input);
+		return fakeService({ ...input, id: "preview" }).svc;
+	});
+	stub(StackDTO, "get", async (id: string) => ({ id, slug: "stk" }));
+});
+
+afterEach(() => {
+	config.baseDomain = originalBaseDomain;
+	restoreStubs();
+});
+
+describe("PreviewService.handle", () => {
+	test("ignores a pull request from a fork", async () => {
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(svc, event({ fromFork: true }));
+		expect(result.status).toBe("ignored");
+		expect(enqueued).toHaveLength(0);
+	});
+
+	test("ignores an event with no head branch or commit", async () => {
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(
+			svc,
+			event({ branch: null, commit: null }),
+		);
+		expect(result).toEqual({
+			reason: "The pull request event carried no head branch or commit.",
+			status: "ignored",
+		});
+	});
+
+	test("creates and deploys a preview for a new pull request", async () => {
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(svc, event());
+		expect(result).toEqual({
+			deploymentId: "d1",
+			jobId: "j1",
+			status: "deployed",
+		});
+		expect(created[0]).toMatchObject({
+			buildSource: "git",
+			gitRef: SHA,
+			name: "Web PR #7",
+			previewBranch: "feature",
+			previewParentId: "parent",
+			previewPrNumber: 7,
+			slug: "web-pr-7",
+			userId: "u1",
+		});
+		expect(enqueued).toEqual([
+			expect.objectContaining({ trigger: "push", userId: "u1" }),
+		]);
+	});
+
+	test("builds the branch when the commit isn't a full SHA", async () => {
+		const { svc } = fakeService();
+		await PreviewService.handle(svc, event({ commit: "abc123" }));
+		expect(created[0].gitRef).toBe("feature");
+	});
+
+	test("ignores a new pull request whose slug is taken", async () => {
+		slugTaken = true;
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(svc, event());
+		expect(result.status).toBe("ignored");
+		expect(created).toHaveLength(0);
+	});
+
+	test("refreshes and redeploys an existing preview on a new head", async () => {
+		const preview = fakeService({ gitRef: "old", id: "preview" });
+		existing = preview.svc;
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(
+			svc,
+			event({ action: "update", title: "New" }),
+		);
+		expect(result.status).toBe("deployed");
+		expect(preview.updates[0]).toMatchObject({
+			gitRef: SHA,
+			previewPrTitle: "New",
+		});
+	});
+
+	test("skips the redeploy when an update left the head in place", async () => {
+		const preview = fakeService({ gitRef: SHA, id: "preview" });
+		existing = preview.svc;
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(
+			svc,
+			event({ action: "update" }),
+		);
+		expect(result.status).toBe("ignored");
+		expect(enqueued).toHaveLength(0);
+		expect(preview.updates).toHaveLength(1);
+	});
+
+	test("a reopened pull request always redeploys", async () => {
+		existing = fakeService({ gitRef: SHA, id: "preview" }).svc;
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(svc, event());
+		expect(result.status).toBe("deployed");
+	});
+
+	test("removes the preview of a closed pull request", async () => {
+		existing = fakeService({ id: "preview" }).svc;
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(svc, event({ action: "close" }));
+		expect(result).toEqual({ serviceId: "preview", status: "removed" });
+		expect(deleted).toEqual(["preview"]);
+	});
+
+	test("ignores closing a pull request with no preview", async () => {
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(svc, event({ action: "close" }));
+		expect(result).toEqual({ reason: "No preview for #7.", status: "ignored" });
+	});
+
+	test("reports a teardown failure instead of throwing", async () => {
+		existing = fakeService({ id: "preview" }).svc;
+		deleteError = new Error("docker down");
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(svc, event({ action: "close" }));
+		expect(result).toEqual({ reason: "docker down", status: "ignored" });
+	});
+
+	test("stringifies a non-Error teardown failure", async () => {
+		existing = fakeService({ id: "preview" }).svc;
+		deleteError = "boom";
+		const { svc } = fakeService();
+		const result = await PreviewService.handle(svc, event({ action: "close" }));
+		expect(result).toEqual({ reason: "boom", status: "ignored" });
+	});
+});
+
+describe("PreviewService.removeAll", () => {
+	test("deletes every preview and survives one failing", async () => {
+		previews = [fakeService({ id: "p1" }).svc, fakeService({ id: "p2" }).svc];
+		const { svc } = fakeService();
+		stub(ServiceLifecycleService, "deleteService", async (preview: Svc) => {
+			if (preview.id === "p1") {
+				throw new Error("stuck");
+			}
+			deleted.push(preview.id);
+		});
+		await PreviewService.removeAll(svc);
+		expect(deleted).toEqual(["p2"]);
+	});
+});
+
+describe("PreviewService.list", () => {
+	test("summarises previews with hostnames under the parent's stack", async () => {
+		previews = [
+			fakeService({
+				id: "p1",
+				previewBranch: "feature",
+				previewPrNumber: 7,
+				previewPrTitle: "Add thing",
+				slug: "web-pr-7",
+			}).svc,
+			fakeService({ dnsResolvable: false, id: "p2", slug: "web-pr-8" }).svc,
+		];
+		const { svc } = fakeService({ stackId: "s1" });
+		const list = await PreviewService.list(svc);
+		expect(list[0]).toEqual({
+			branch: "feature",
+			gitRef: "main",
+			hostname: "stk-web-pr-7.example.com",
+			id: "p1",
+			name: "Web",
+			prNumber: 7,
+			slug: "web-pr-7",
+			status: "running",
+			title: "Add thing",
+		});
+		expect(list[1]).toMatchObject({ hostname: null, prNumber: 0 });
+	});
+
+	test("uses the bare slug outside a stack", async () => {
+		previews = [fakeService({ id: "p1", slug: "web-pr-7" }).svc];
+		const { svc } = fakeService();
+		const list = await PreviewService.list(svc);
+		expect(list[0].hostname).toBe("web-pr-7.example.com");
+	});
+});

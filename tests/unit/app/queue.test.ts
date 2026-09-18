@@ -326,3 +326,71 @@ describe("JobWorker tick", () => {
 		expect(listStalledExecutions).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe("JobWorker hold and dispatch", () => {
+	const tick = () =>
+		(JobWorker as unknown as { tick: () => Promise<void> }).tick();
+
+	test("a held worker claims nothing until released", async () => {
+		JobWorker.hold();
+		expect(JobWorker.held).toBe(true);
+		await tick();
+		expect(claimNext).not.toHaveBeenCalled();
+
+		JobWorker.release();
+		expect(JobWorker.held).toBe(false);
+		await tick();
+		expect(claimNext).toHaveBeenCalledTimes(1);
+	});
+
+	test("dispatches claimed jobs, stays busy while they run, and survives bookkeeping failures", async () => {
+		let finish: (value: unknown) => void = () => undefined;
+		handler.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					finish = resolve;
+				}),
+		);
+		const running = fakeJob({ id: "running" });
+		const broken = fakeJob({
+			id: "broken",
+			markFailed: mock(async () => {
+				throw new Error("db down");
+			}),
+		});
+		handler.mockRejectedValueOnce(new Error("boom"));
+		claimNext
+			.mockResolvedValueOnce(running)
+			.mockResolvedValueOnce(broken)
+			.mockResolvedValueOnce(null);
+
+		await tick();
+		expect(JobWorker.busy).toBe(true);
+
+		finish({ ok: true });
+		await Bun.sleep(0);
+		await Bun.sleep(0);
+
+		expect(running.markSucceeded).toHaveBeenCalledTimes(1);
+		expect(broken.markFailed).toHaveBeenCalledTimes(1);
+		expect(JobWorker.busy).toBe(false);
+	});
+
+	test("a finalize whose bookkeeping throws is logged, not left in flight", async () => {
+		const executed = fakeJob({
+			id: "executed-broken",
+			markFailed: mock(async () => {
+				throw new Error("db down");
+			}),
+			type: "backup",
+		});
+		finalize.mockRejectedValueOnce(new Error("upload failed"));
+		claimFinalize.mockResolvedValueOnce(executed).mockResolvedValueOnce(null);
+
+		await tick();
+		await Bun.sleep(0);
+
+		expect(executed.markFailed).toHaveBeenCalledTimes(1);
+		expect(JobWorker.busy).toBe(false);
+	});
+});
