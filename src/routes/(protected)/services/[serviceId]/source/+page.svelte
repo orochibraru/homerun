@@ -31,6 +31,7 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
+	import { isDeployed } from "$lib/service-state";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -123,15 +124,17 @@
     class="space-y-5 p-5"
     method="POST"
     use:enhance={enhanceToast({
-      action: {
-        label: "Redeploy",
-        onClick: () =>
-          goto(
-            resolve("/(protected)/services/[serviceId]", {
-              serviceId: svc.id,
-            }),
-          ),
-      },
+      action: isDeployed(svc)
+        ? {
+            label: "Redeploy",
+            onClick: () =>
+              goto(
+                resolve("/(protected)/services/[serviceId]", {
+                  serviceId: svc.id,
+                }),
+              ),
+          }
+        : undefined,
       description: "Changes take effect on the next deploy.",
       error: "Check the form for errors.",
       loading: "Saving the source",
