@@ -1,0 +1,262 @@
+{
+	"cases": [
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo",
+				"BUILD_METHOD=dockerfile",
+				"CACHE_PASSWORD=",
+				"CACHE_REF=",
+				"CACHE_REGISTRY=",
+				"CACHE_USERNAME=",
+				"IMAGE_TAG=svc-1:abc",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-1",
+				"RAILPACK_VERSION=0.39.0",
+				"BUILD_FILE=/workspace/repo/Dockerfile"
+			],
+			"input": {
+				"buildContext": null,
+				"method": "dockerfile",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-1:abc"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo/apps/web",
+				"BUILD_METHOD=dockerfile",
+				"CACHE_PASSWORD=",
+				"CACHE_REF=",
+				"CACHE_REGISTRY=",
+				"CACHE_USERNAME=",
+				"IMAGE_TAG=svc-1:abc",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-1",
+				"RAILPACK_VERSION=0.39.0",
+				"BUILD_FILE=/workspace/repo/apps/web/docker/Dockerfile.prod"
+			],
+			"input": {
+				"buildContext": "apps/web/",
+				"dockerfilePath": "docker/Dockerfile.prod",
+				"method": "dockerfile",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-1:abc"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo",
+				"BUILD_METHOD=dockerfile",
+				"CACHE_PASSWORD=p4ss",
+				"CACHE_REF=registry.example.com/svc-1:buildcache",
+				"CACHE_REGISTRY=registry.example.com/",
+				"CACHE_USERNAME=robot",
+				"IMAGE_TAG=svc-1:abc",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-1",
+				"RAILPACK_VERSION=0.39.0",
+				"BUILD_FILE=/workspace/repo/Dockerfile"
+			],
+			"input": {
+				"buildContext": ".",
+				"cacheRegistry": {
+					"password": "p4ss",
+					"registryUrl": "registry.example.com/",
+					"username": "robot"
+				},
+				"method": "dockerfile",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-1:abc"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo",
+				"BUILD_METHOD=bake",
+				"CACHE_PASSWORD=",
+				"CACHE_REF=",
+				"CACHE_REGISTRY=",
+				"CACHE_USERNAME=",
+				"IMAGE_TAG=svc-2:def",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-2",
+				"RAILPACK_VERSION=0.39.0",
+				"BUILD_FILE=/workspace/repo/docker-bake.hcl",
+				"BAKE_TARGET=default"
+			],
+			"input": {
+				"bakeFile": null,
+				"bakeTarget": null,
+				"buildContext": null,
+				"method": "bake",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-2:def"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo/srv",
+				"BUILD_METHOD=bake",
+				"CACHE_PASSWORD=p4ss",
+				"CACHE_REF=registry.example.com/svc-2:buildcache",
+				"CACHE_REGISTRY=registry.example.com/",
+				"CACHE_USERNAME=robot",
+				"IMAGE_TAG=svc-2:def",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-2",
+				"RAILPACK_VERSION=0.39.0",
+				"BUILD_FILE=/workspace/repo/srv/ci/bake.hcl",
+				"BAKE_TARGET=web"
+			],
+			"input": {
+				"bakeFile": "ci/bake.hcl",
+				"bakeTarget": "web",
+				"buildContext": "/srv/",
+				"cacheRegistry": {
+					"password": "p4ss",
+					"registryUrl": "registry.example.com/",
+					"username": "robot"
+				},
+				"method": "bake",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-2:def"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo",
+				"BUILD_METHOD=nixpacks",
+				"CACHE_PASSWORD=",
+				"CACHE_REF=",
+				"CACHE_REGISTRY=",
+				"CACHE_USERNAME=",
+				"IMAGE_TAG=svc-3:1",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-3",
+				"RAILPACK_VERSION=0.39.0"
+			],
+			"input": {
+				"buildContext": null,
+				"method": "nixpacks",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-3:1"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo/backend",
+				"BUILD_METHOD=railpack",
+				"CACHE_PASSWORD=p4ss",
+				"CACHE_REF=registry.example.com/svc-4:buildcache",
+				"CACHE_REGISTRY=registry.example.com/",
+				"CACHE_USERNAME=robot",
+				"IMAGE_TAG=svc-4:2",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-4",
+				"RAILPACK_VERSION=0.39.0"
+			],
+			"input": {
+				"buildContext": "backend",
+				"cacheRegistry": {
+					"password": "p4ss",
+					"registryUrl": "registry.example.com/",
+					"username": "robot"
+				},
+				"method": "railpack",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-4:2"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo",
+				"BUILD_METHOD=heroku",
+				"CACHE_PASSWORD=",
+				"CACHE_REF=",
+				"CACHE_REGISTRY=",
+				"CACHE_USERNAME=",
+				"IMAGE_TAG=svc-5:3",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-5",
+				"RAILPACK_VERSION=0.39.0",
+				"PACK_BUILDER=heroku/builder:24"
+			],
+			"input": {
+				"buildContext": null,
+				"method": "heroku",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-5:3"
+			}
+		},
+		{
+			"env": [
+				"BUILD_DIR=/workspace/repo",
+				"BUILD_METHOD=paketo",
+				"CACHE_PASSWORD=",
+				"CACHE_REF=",
+				"CACHE_REGISTRY=",
+				"CACHE_USERNAME=",
+				"IMAGE_TAG=svc-6:4",
+				"NIXPACKS_VERSION=1.41.0",
+				"PACK_VERSION=0.40.9",
+				"PACK_VOLUME_KEY=svc-6",
+				"RAILPACK_VERSION=0.39.0",
+				"PACK_BUILDER=paketobuildpacks/builder-jammy-base"
+			],
+			"input": {
+				"buildContext": null,
+				"method": "paketo",
+				"repoDir": "/workspace/repo",
+				"tag": "svc-6:4"
+			}
+		}
+	],
+	"errors": [
+		{
+			"error": "The build context can't leave the repository.",
+			"input": {
+				"buildContext": "../escape",
+				"method": "dockerfile",
+				"repoDir": "/workspace/repo",
+				"tag": "svc:1"
+			}
+		},
+		{
+			"error": "The build context can't leave the repository.",
+			"input": {
+				"buildContext": "a/../../b",
+				"method": "nixpacks",
+				"repoDir": "/workspace/repo",
+				"tag": "svc:1"
+			}
+		},
+		{
+			"error": "The build file ../../etc/passwd can't leave the repository.",
+			"input": {
+				"buildContext": null,
+				"dockerfilePath": "../../etc/passwd",
+				"method": "dockerfile",
+				"repoDir": "/workspace/repo",
+				"tag": "svc:1"
+			}
+		},
+		{
+			"error": "The bake target bad target! isn't valid, use letters, digits, dashes and underscores.",
+			"input": {
+				"bakeTarget": "bad target!",
+				"buildContext": null,
+				"method": "bake",
+				"repoDir": "/workspace/repo",
+				"tag": "svc:1"
+			}
+		}
+	]
+}

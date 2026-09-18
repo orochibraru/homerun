@@ -126,10 +126,11 @@ SHA goes to `buildFromGit` as `commit`: when the shallow clone's HEAD differs (a
 push landed while waiting), `#checkoutCommit` runs
 `git fetch --depth 1 origin <sha>` and `checkout --detach` in the workspace, so
 the build is the checked commit or fails. Agent builds are pinned the same way:
-`AgentClientService.build` sends `commit`, and `packages/agent/docker.ts`'s
-`#checkout` does the same rev-parse, fetch and detached checkout, returning the
-built commit for the deployment row. An agent older than that strips the unknown
-field (zod's default) and builds the branch head.
+`AgentClientService.build` sends `commit`, and `cmd/agent/git.go`'s
+`gitCheckoutSteps`/`extractCommitSHA` do the same rev-parse, fetch and detached
+checkout, returning the built commit for the deployment row. An agent older than
+that ignores the unrecognized field (Go's `encoding/json` default) and builds
+the branch head.
 
 The Source tab's picker (`status-check-picker.svelte`) loads names through
 `listStatusCheckNames` (`$lib/remote/status-checks.remote.ts`, distinct names
@@ -877,7 +878,7 @@ Three things about this shape are load-bearing:
   and `extractCommitSha` matches `\b[0-9a-f]{40}\b` rather than slicing. Both
   are pure and unit-tested in `tests/unit/app/git-build.test.ts`.
 
-`packages/agent/docker.ts` clones the same way, in an `alpine/git` container
+`cmd/agent/build.go`/`git.go` clone the same way, in an `alpine/git` container
 into a volume, since the agent image has no `git` either.
 
 **Build methods** (`service.gitBuildMethod`, `$lib/build-methods.ts`):
@@ -946,10 +947,21 @@ provide the specified platform" (a pack/containerd-store issue, `--platform`
 doesn't help), so buildpacks got as far as export there but weren't seen
 producing an image; a Linux engine with the classic store is the expected
 target. A cache registry is a BuildKit registry cache for `dockerfile`, `bake`
-and `railpack` (see below) and ignored by Nixpacks and pack. The agent mirrors
-all of this by hand in `packages/agent/builders.ts`, and
-`tests/unit/agent/builders.test.ts` fails if the script, versions or env drift
-from the main app's.
+and `railpack` (see below) and ignored by Nixpacks and pack. The agent is Go and
+can't import `builder-run.ts`, so the two sides share by **file identity**
+instead of by hand-copying: `cmd/agent/builder.sh` and
+`cmd/agent/builder-tools.json` are checked in verbatim (the same script and the
+same methods/versions/checksums/images/bake-defaults `builder-run.ts` exports as
+TS constants) and `//go:embed`-ed by `cmd/agent/builders.go`. Two tests pin both
+sides to those same two files rather than to each other:
+`tests/unit/app/agent-builder-parity.test.ts` (on the app side, `bun:test`)
+asserts `builder-run.ts`'s exports equal what's checked into `cmd/agent/`,
+including golden fixtures under `cmd/agent/testdata/*.json` for
+`builderEnv`/build-failure-message parity across every recorded input; and
+`cmd/agent/builders_test.go` (on the agent side, `go test`) asserts the agent's
+own runtime behavior against the same embedded files. A change to
+`builder-run.ts` that isn't mirrored into `cmd/agent/builder.sh`/
+`builder-tools.json` fails the app-side test, not silently drifts.
 
 Any git-clone-able HTTPS URL works, this is what makes it "Git providers,
 including self-hosted Gitea" without any provider-specific API integration for
@@ -1021,6 +1033,25 @@ repos and checks for a `Dockerfile` at a given ref through
 `$lib/remote/git-repos.remote.ts`, not a `+server.ts` route, see Remote
 functions below; both go through `GitProviderService.listRepos`/`hasDockerfile`,
 which branch per-kind the same way `endpoints()` does.
+
+**GitHub is registered as a GitHub App through the manifest flow, never by
+pasting credentials** (`$lib/github-app.ts`). The `createGithubApp` action picks
+the provider id up front and returns `githubAppRegistration(...)`: a form target
+on `github.com/settings/apps/new` (or an organization's) carrying a
+`createState(providerId, userId)` state, and the manifest JSON, with
+`redirect_url` = `/api/v1/git-providers/<id>/github-app` and `callback_urls` =
+that provider's usual `/callback`. The page then posts that form to GitHub
+itself. GitHub sends the admin back with a one-time `code`, the `github-app`
+route verifies the state, trades the code at
+`POST /app-manifests/<code>/conversions` for the app's client id/secret, saves
+the provider under the pre-picked id, and redirects to the app's
+`/installations/new`. Connecting afterwards is the ordinary OAuth flow: a GitHub
+App's user-to-server token is issued by the same `login/oauth` endpoints and
+only sees repos the app is installed on. The manifest's permissions (contents,
+metadata, checks and statuses read, repository hooks write) are exactly the API
+calls this app makes; adding a GitHub call means adding its permission there,
+and existing apps need it granted on GitHub. `addProvider` no longer accepts
+`github`. Not live-tested against github.com yet.
 
 **Every token read goes through `GitProviderService.accessToken()`**, never
 `decryptSecret(connection.accessTokenEnc)` directly: repo listing, the

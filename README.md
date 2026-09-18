@@ -196,7 +196,7 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[REST API & OpenAPI](docs/api-and-cli.md)**: everything in the dashboard is
   also a typed JSON API (`/api/v1`), authenticated by session or API key, with a
   live Swagger UI
-- **[The `homerun` CLI](packages/cli/README.md)**: a small (~6MB) standalone Go
+- **[The `homerun` CLI](cmd/cli/README.md)**: a small (~6MB) standalone Go
   binary, logs in through a device-code flow and updates itself
 
 ### Install & operations
@@ -248,16 +248,15 @@ readable straight from the file browser. Start with
 
 ## Sub-projects
 
-Three standalone tools live under `packages/` alongside the main app, each
-compiling to its own binary. `packages/agent/` is Bun/TypeScript, sharing the
-root `package.json`/`bun install`; `packages/installer/` and `packages/cli/` are
-Go packages instead, sharing one `go.mod` at the repo root:
+Three standalone tools live under `cmd/` alongside the main app, each compiling
+to its own binary. All three are Go packages sharing one `go.mod` at the repo
+root, not part of the SvelteKit build:
 
-- [`packages/agent/`](packages/agent/README.md): a small token-authenticated
-  HTTP server that lets a second machine build images for this one, without
-  exposing its Docker daemon
-- [`packages/installer/`](packages/installer/README.md): the one-liner installer
-  used above (Docker as a swarm manager, or rootless, plus the agent or full
-  stack, and `--migrate-to-rootful` for older rootless installs)
-- [`packages/cli/`](packages/cli/README.md): a CLI
-  (`homerun services deploy <id>`, etc.) against the REST API
+- [`cmd/agent/`](cmd/agent/README.md): a small token-authenticated HTTP server
+  that lets a second machine build images for this one, without exposing its
+  Docker daemon
+- [`cmd/installer/`](cmd/installer/README.md): the one-liner installer used
+  above (Docker as a swarm manager, or rootless, plus the agent or full stack,
+  and `--migrate-to-rootful` for older rootless installs)
+- [`cmd/cli/`](cmd/cli/README.md): a CLI (`homerun services deploy <id>`, etc.)
+  against the REST API

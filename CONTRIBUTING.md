@@ -11,8 +11,8 @@ dev server) is needed for either of those paths.
 - [Bun](https://bun.sh), the version pinned in `package.json`'s `packageManager`
   field
 - [Go](https://go.dev), the version pinned in `go.mod` — only needed to build or
-  test `packages/cli/` or `packages/installer/`, both separate Go programs, not
-  part of the root `bun install`
+  test `cmd/agent/`, `cmd/cli/` or `cmd/installer/`, three separate Go programs,
+  not part of the root `bun install`
 - Docker (for Traefik + Postgres, and for the containers the app itself will
   manage once it's running)
 
@@ -39,12 +39,10 @@ wizard (base domain / Docker / Traefik / email).
 server, closer to how the production Docker image runs it, still directly on the
 host, still against the same `compose.yaml` Postgres/Traefik.
 
-`packages/agent/` shares this same root `bun install`/`node_modules` (no
-separate per-package install). Run it directly from source with
-`bun run packages/agent/index.ts`. `packages/cli/` and `packages/installer/` are
-both Go programs instead (one `go.mod` at the repo root, no `bun install` needed
-for either): `go run ./packages/cli services list`,
-`go run ./packages/installer --dry-run`, etc.
+`cmd/agent/`, `cmd/cli/` and `cmd/installer/` are all Go programs (one `go.mod`
+at the repo root, no `bun install` needed for any of them): `go run ./cmd/agent`
+(also `bun run dev:agent`), `go run ./cmd/cli services list`,
+`go run ./cmd/installer --dry-run`, etc.
 
 ## Before every change: the hard gates
 
@@ -57,20 +55,21 @@ rejected for "files were modified by this hook" just needs `git add` and a
 re-commit.
 
 ```sh
-bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then tsc over packages/agent and scripts/ plus go vet over packages/cli and packages/installer, zero errors AND zero warnings
+bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then go vet over every package under cmd/ and internal/, plus tsc over scripts/, zero errors AND zero warnings
 bun run lint    # markdownlint-cli2, tailwint and biome check --error-on-warnings, whole repo
 ```
 
 Run both after _every_ change, not just once at the end. `bun run check`'s scope
 is already the whole repo regardless of which files you touched, so a red result
 elsewhere is still your problem to look at, not something to wave off as
-unrelated without actually checking. `bun run check` includes the
-`packages/agent/` and `scripts/` typechecks plus `packages/cli/`'s and
-`packages/installer/`'s `go vet` (`check:packages`); `bun run check:agent` /
-`check:installer` / `check:cli` / `check:scripts` run one of them alone. If you
-changed a REST API route or `config.ts`, also run `bun run gen` and commit the
-regenerated `openapi.json`, `homerun.schema.json` and
-`tests/integration/support/openapi-types.ts`: CI fails when they're stale.
+unrelated without actually checking. `bun run check` includes `go vet` over
+`cmd/agent/`, `cmd/cli/`, `cmd/installer/` and every shared `internal/` library
+(`check:go`) plus the `scripts/` typecheck (`check:scripts`), together
+`check:packages`; `bun run check:agent` / `check:installer` / `check:cli` /
+`check:scripts` run one of them alone. If you changed a REST API route or
+`config.ts`, also run `bun run gen` and commit the regenerated `openapi.json`,
+`homerun.schema.json` and `tests/integration/support/openapi-types.ts`: CI fails
+when they're stale.
 
 `bun run test:unit` is the fast suite (seconds, no Postgres or Docker needed).
 `bun run test` runs the whole `bun:test` suite, unit + integration, see
@@ -113,6 +112,5 @@ commit. Only `feat`, `fix`, `perf`, `refactor`, `docs` and breaking changes
 Don't run `bun run release` yourself; it's CI-only, triggered on push to `main`.
 See the "Release automation" section of
 [`.agents/notes/packages-and-release.md`](.agents/notes/packages-and-release.md)
-for what it does (binaries for
-`packages/agent`/`packages/installer`/`packages/cli`, the Docker image, the
-GitHub release).
+for what it does (binaries for `cmd/agent`/`cmd/installer`/`cmd/cli`, the Docker
+image, the GitHub release).

@@ -3,11 +3,11 @@ name: check-repo
 description: >-
   Run this before considering any change to this repo done. Executes the real
   gates this codebase enforces: bun run check (svelte-check --fail-on-warnings
-  over src/ and tests/ plus tsc over packages/agent and scripts/, plus go vet
-  over the Go packages/cli and packages/installer, 0 errors AND 0 warnings) and
-  bun run lint (markdownlint-cli2, tailwint, biome check --error-on-warnings),
-  plus the matching unit tests. Use whenever finishing an edit to this codebase,
-  before saying a change is "done", or after any change under src/, packages/,
+  over src/ and tests/ plus tsc over scripts/, plus go vet over every Go package
+  under cmd/ and internal/, 0 errors AND 0 warnings) and bun run lint
+  (markdownlint-cli2, tailwint, biome check --error-on-warnings), plus the
+  matching unit tests. Use whenever finishing an edit to this codebase, before
+  saying a change is "done", or after any change under src/, cmd/, internal/,
   scripts/ or tests/.
 user-invocable: true
 allowed-tools:
@@ -27,13 +27,14 @@ actually reading the failing file first.
 
 1. **`bun run check`** — `check:app` (svelte-kit sync + svelte-check with
    `--fail-on-warnings`, full `src/` and `tests/` trees) then `check:packages`
-   (`tsc --noEmit` over `packages/agent` and `scripts/`, each with its own
-   tsconfig, plus `go vet ./packages/cli/...` and
-   `go vet ./packages/installer/...` for the CLI and the installer, both
-   separate Go packages in the repo-root `go.mod`, not TypeScript). This is the
-   hard gate: 0 errors, 0 warnings. A warning fails it exactly like an error.
-   Scope is always the whole repo regardless of which files were edited, so a
-   failure anywhere is in scope, not just in files this change touched.
+   (`check:go` = `go vet ./cmd/... ./internal/...`, every Go sub-project — the
+   agent, the CLI and the installer, all three separate `package main`s in the
+   repo-root `go.mod`, not TypeScript any more — plus every shared `internal/`
+   library, in one pass; and `check:scripts` = `tsc --noEmit` over `scripts/`,
+   its own tsconfig). This is the hard gate: 0 errors, 0 warnings. A warning
+   fails it exactly like an error. Scope is always the whole repo regardless of
+   which files were edited, so a failure anywhere is in scope, not just in files
+   this change touched.
 
 2. **`bun run lint`** — `lint:md` (markdownlint-cli2), `lint:tailwind`
    (tailwint) and `lint:ts` (`biome check --error-on-warnings`), must be clean,

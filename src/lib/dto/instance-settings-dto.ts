@@ -75,7 +75,7 @@ export interface GitProviderInput {
 	clientId: string;
 	clientSecret?: string;
 	enabled: boolean;
-	/** Present when editing an existing provider; absent when adding a new one. */
+	/** Present when editing an existing provider, or when a new one's id was picked up front (the GitHub App manifest flow); absent otherwise. */
 	id?: string;
 	kind: GitProviderKind;
 	name: string;

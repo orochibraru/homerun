@@ -130,30 +130,27 @@ async function readDocumentedCommands(): Promise<DocumentedCommands> {
 	showCommand("docs/getting-started.md", installerFull);
 
 	const installerReadme = Docs.command(
-		"packages/installer/README.md",
+		"cmd/installer/README.md",
 		"bootstrap.sh",
 		"--mode=full",
 	);
 	assert(
 		normalizeCommand(installerReadme) === normalizeCommand(installerFull),
-		`packages/installer/README.md's one-liner differs from docs/getting-started.md's:\n  ${normalizeCommand(installerReadme)}\n  ${normalizeCommand(installerFull)}`,
+		`cmd/installer/README.md's one-liner differs from docs/getting-started.md's:\n  ${normalizeCommand(installerReadme)}\n  ${normalizeCommand(installerFull)}`,
 	);
 
 	const installerAgent = Docs.command(
-		"packages/agent/README.md",
+		"cmd/agent/README.md",
 		"bootstrap.sh",
 		"--mode=agent",
 	);
 	assert(
 		normalizeCommand(installerAgent) ===
 			normalizeCommand(installerFull).replace("--mode=full", "--mode=agent"),
-		`packages/agent/README.md's --mode=agent one-liner isn't docs/getting-started.md's with the mode swapped:\n  ${normalizeCommand(installerAgent)}`,
+		`cmd/agent/README.md's --mode=agent one-liner isn't docs/getting-started.md's with the mode swapped:\n  ${normalizeCommand(installerAgent)}`,
 	);
 
-	const cliInstall = Docs.command(
-		"docs/api-and-cli.md",
-		"packages/cli/install.sh",
-	);
+	const cliInstall = Docs.command("docs/api-and-cli.md", "cmd/cli/install.sh");
 	const cliReference = commandLines(
 		Docs.command(
 			"docs/api-and-cli.md",
@@ -174,8 +171,8 @@ async function readDocumentedCommands(): Promise<DocumentedCommands> {
 	const cliInstallUrl = cliInstall.match(/https:\/\/\S+install\.sh/)?.[0];
 	assert(cliInstallUrl, `No install.sh URL found in:\n${cliInstall}`);
 	assert(
-		readFileSync("packages/cli/install.sh", "utf8").includes(cliInstallUrl),
-		`packages/cli/install.sh's own header doesn't document the URL the docs tell users to curl (${cliInstallUrl}).`,
+		readFileSync("cmd/cli/install.sh", "utf8").includes(cliInstallUrl),
+		`cmd/cli/install.sh's own header doesn't document the URL the docs tell users to curl (${cliInstallUrl}).`,
 	);
 
 	console.log(`  Documented CLI commands: ${cliReference.length}`);
@@ -217,7 +214,7 @@ async function provisionAgent(
 ): Promise<{ token: string; url: string }> {
 	log(`Launching ${vm.name} and running the documented agent one-liner`);
 	await vm.recreate(1, "2G", "10G");
-	showCommand("packages/agent/README.md", cmds.installerAgent);
+	showCommand("cmd/agent/README.md", cmds.installerAgent);
 	await vm.runScript(pinned(cmds.installerAgent));
 
 	const ip = await vm.ip();

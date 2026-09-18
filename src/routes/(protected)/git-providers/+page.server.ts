@@ -2,17 +2,17 @@ import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
+import { githubAppRegistration } from "$lib/github-app";
 import { Logger } from "$lib/logger";
+import { browserOrigin } from "$lib/server/canonical-origin";
 import type { GitProviderKind } from "$lib/server/db/schema";
+import { GitProviderService } from "$lib/services/git-provider.service";
 
 const logger = new Logger("GitProviders");
 
-const VALID_KINDS: GitProviderKind[] = [
-	"github",
-	"gitlab",
-	"gitea",
-	"bitbucket",
-];
+const GITHUB_ORG_PATTERN = /^[a-z\d](?:[a-z\d-]{0,38})$/i;
+
+const VALID_KINDS: GitProviderKind[] = ["gitlab", "gitea", "bitbucket"];
 
 export const load = async ({ parent, locals }) => {
 	const { user } = await parent();
@@ -39,6 +39,41 @@ export const load = async ({ parent, locals }) => {
 };
 
 export const actions = {
+	createGithubApp: async ({ request, locals, url }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+
+		const formData = await request.formData();
+		const name = (formData.get("name") as string | null)?.trim() ?? "";
+		const org = (formData.get("org") as string | null)?.trim() || null;
+		if (!name) {
+			return fail(400, { error: "Name is required." });
+		}
+		if (name.length > 34) {
+			return fail(400, {
+				error: "GitHub App names are at most 34 characters.",
+			});
+		}
+		if (org && !GITHUB_ORG_PATTERN.test(org)) {
+			return fail(400, { error: "That isn't a GitHub organization name." });
+		}
+
+		const providerId = crypto.randomUUID();
+		return {
+			githubApp: githubAppRegistration({
+				name,
+				org,
+				origin: browserOrigin(request, url),
+				providerId,
+				state: GitProviderService.createState(providerId, locals.user.id),
+			}),
+		};
+	},
+
 	addProvider: async ({ request, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

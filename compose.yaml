@@ -12,6 +12,21 @@ services:
       - homerun
       - internal
 
+  agent:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: agent
+    extends:
+      file: tools/compose/agent.compose.yaml
+      service: agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - homerun
+
   postgres:
     extends:
       file: tools/compose/base.compose.yaml
@@ -29,3 +44,4 @@ networks:
 volumes:
   postgres_data: {}
   traefik_certs: {}
+  agent_data: {}

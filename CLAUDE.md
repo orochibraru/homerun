@@ -73,10 +73,11 @@ bun run start            # ./build/server (the binary @orochibraru/svelte-smol c
 bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts and homerun.schema.json from source, CI fails if the result isn't committed
 bun run check            # check:app then check:packages, the real gate, see `.agents/notes/testing.md`
 bun run check:app        # svelte-kit sync && svelte-check --fail-on-warnings --tsgo, the SvelteKit half of the gate
-bun run check:packages   # check:installer + check:agent + check:cli + check:scripts, tsc over the one remaining TS sub-project (agent) plus go vet over installer and cli (see below)
-bun run check:agent      # tsc over packages/agent/tsconfig.json, the only sub-project still Bun/TypeScript
-bun run check:cli        # go vet ./packages/cli/..., the CLI is a Go package in the repo-root go.mod, no tsconfig.json
-bun run check:installer  # go vet ./packages/installer/..., same repo-root go.mod as the CLI, no tsconfig.json
+bun run check:packages   # check:go + check:scripts, go vet over every cmd/*/internal/* package plus scripts/
+bun run check:go         # go vet ./cmd/... ./internal/..., every Go sub-project and shared library in one pass
+bun run check:agent      # go vet ./cmd/agent/...
+bun run check:cli        # go vet ./cmd/cli/...
+bun run check:installer  # go vet ./cmd/installer/...
 bun run check:scripts    # tsc over scripts/ (tsconfig.scripts.json), scripts/ isn't covered by svelte-check's own include list
 bun run lint             # lint:md (markdownlint-cli2) then lint:tailwind (scripts/lint-tailwind.ts, tailwint in chunks, Tailwind class sorting) then lint:ts (biome check --error-on-warnings)
 bun run lint:fix         # the --write/--fix half of all three (lint:fix:md, lint:fix:tailwind, lint:fix:ts)
@@ -84,7 +85,7 @@ bun run format           # format:md (prettier over **/*.md) + format:ts (biome 
 bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts, the app applies them itself at boot
 bun run auth:db:generate # better-auth CLI `auth generate`, writes the Drizzle schema better-auth and its plugins expect, to diff against schema.ts after a better-auth upgrade
 bun run component:add    # shadcn-svelte add <name>, installs a UI primitive into src/lib/components/ui/
-bun run dev:agent        # bun run --hot packages/agent/index.ts, the Homerun Agent against the local Docker socket
+bun run dev:agent        # go run ./cmd/agent, the Homerun Agent against the local Docker socket
 docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml, needs `docker network create homerun` once), required, the app has no fallback DB, see .agents/notes/docker.md
 bun run release          # semantic-release, normally CI-only (.github/workflows/publish.yaml), see .agents/notes/packages-and-release.md
 ```
@@ -93,12 +94,12 @@ bun run release          # semantic-release, normally CI-only (.github/workflows
 hooks from `.pre-commit-config.yaml`) run on `bun install`.
 
 ```bash
-bun run test              # svelte-kit sync && bun test (unit + integration) then go test ./packages/..., never tests/e2e/ (Playwright, own runner)
-bun run test:unit         # tests/unit/ only (agent, app), no Postgres/Docker needed; packages/cli/ and packages/installer/'s own Go tests are separate commands, below
-bun run test:unit:agent   # tests/unit/agent, packages/agent
+bun run test              # svelte-kit sync && bun test (unit + integration) then go test ./cmd/... ./internal/..., never tests/e2e/ (Playwright, own runner)
+bun run test:unit         # tests/unit/app only, no Postgres/Docker needed; cmd/agent/, cmd/cli/ and cmd/installer/'s own Go tests are separate commands, below
+bun run test:unit:agent   # go test ./cmd/agent/..., its own *_test.go files, not under tests/unit/ and not bun:test
 bun run test:unit:app     # tests/unit/app, the SvelteKit app's own unit/component tests
-bun run test:unit:cli     # go test ./packages/cli/..., packages/cli/cli_test.go, not under tests/unit/ and not bun:test
-bun run test:unit:installer  # go test ./packages/installer/..., its own *_test.go files, not under tests/unit/ and not bun:test
+bun run test:unit:cli     # go test ./cmd/cli/..., cmd/cli/cli_test.go, not under tests/unit/ and not bun:test
+bun run test:unit:installer  # go test ./cmd/installer/..., its own *_test.go files, not under tests/unit/ and not bun:test
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see .agents/notes/testing.md
 bun run test:e2e:cli      # playwright test over bootstrap + onboarding + ui-cli.spec.ts only, the CLI driven against the E2E app instance
@@ -107,17 +108,21 @@ bun run e2e:multipass     # scripts/e2e-multipass.ts, real-infra installer/agent
 bun run e2e:multipass:release  # scripts/e2e-multipass-release.ts, the same but against the *published* release and the *documented* commands, also not wired into CI (`--only=docs` is the VM-free docs-drift check)
 ```
 
-`packages/agent/` is the one remaining standalone Bun/TypeScript sub-project
-(its own `tsconfig.json`, checked via the root `check:agent` script, **not** its
-own `package.json`/`bun install`, it shares the root one), not part of the
-SvelteKit app above. `packages/cli/` and `packages/installer/` are both
-standalone Go programs instead (a single Go module at the repo root, `go.mod`,
-checked via `check:cli` = `go vet ./packages/cli/...` and `check:installer` =
-`go vet ./packages/installer/...`); all three still compile via
-`scripts/build-packages.ts`, but because Go's `GOOS`/`GOARCH` cross-compilation
-is exact (unlike Bun's), the CLI's macOS binaries are cross-compiled from a
-Linux runner too, with no macOS runner in CI at all — the installer gets no
-macOS build at all, it only ever runs on the Linux box it's installing (see
+`cmd/agent/`, `cmd/cli/` and `cmd/installer/` are three standalone Go programs
+(a single Go module at the repo root, `go.mod`, no
+`tsconfig.json`/`package.json` of their own), not part of the SvelteKit app
+above and not covered by `svelte-check`. Shared Go libraries live under
+`internal/` (`internal/buildinfo`, the version stamped via `-ldflags` at build
+time; `internal/release`, release asset naming/URLs/download;
+`internal/homerun`, the CLI's config and API client; `internal/dockerapi`, a
+stdlib Docker Engine API client over the unix socket the agent drives).
+`check:go` (`go vet ./cmd/... ./internal/...`) covers all of it in one pass;
+`check:agent`/`check:cli`/`check:installer` scope that to one sub-project. All
+three still compile via `scripts/build-packages.ts`, and because Go's
+`GOOS`/`GOARCH` cross-compilation is exact, every target builds from any one
+runner: the CLI's macOS binaries are cross-compiled from a Linux runner too,
+with no macOS runner in CI at all — the installer and the agent get no macOS
+build at all, they only ever run on the Linux box they're installed on (see
 `.agents/notes/packages-and-release.md`). See that note and
 `.agents/notes/api-and-cli.md` for what each sub-project is.
 
@@ -148,8 +153,8 @@ hand:
 - Subagents (`.claude/agents/*.md`): `repo-gate` (final review gate before
   calling a change done, scans for this file's own hard rules),
   `scaffold-feature` (adds a new table+DTO+route end to end), `subproject-sync`
-  (keeps `packages/agent/`'s hand-reimplemented Docker/stats logic in sync with
-  the main app, regenerates `tests/integration/support/openapi-types.ts` after a
+  (keeps `cmd/agent/`'s hand-reimplemented Docker/stats logic in sync with the
+  main app, regenerates `tests/integration/support/openapi-types.ts` after a
   REST API change), `ui-consistency` (flags route markup that reimplements an
   existing shared component/primitive instead of using it, and visual drift
   between equivalent pages), `docs-sync` (use PROACTIVELY after a code change
@@ -396,11 +401,11 @@ to reintroduce a fixed bug.
 | `ui.md`                     | `layout.css`, theming/tokens, `$lib/components/`, list-page toolkit, page width, the `$derived` push/splice bug, appearance prefs                                     |
 | `docker.md`                 | `DockerService` and its mixins, containers/networks/volumes, swarm mode, network mode, web terminal, build servers, custom SSL, Docker Cleanup, the built-in registry |
 | `auth.md`                   | better-auth, sign-in/sign-up, OAuth providers, Homerun as an OIDC provider, `/authentication`, the per-app login wall, user roles/invites, onboarding                 |
-| `api-and-cli.md`            | `src/routes/api/v1/`, the OpenAPI document, `packages/cli/`, long-running requests and Bun's idle timeout                                                             |
+| `api-and-cli.md`            | `src/routes/api/v1/`, the OpenAPI document, `cmd/cli/`, long-running requests and Bun's idle timeout                                                                  |
 | `services-and-templates.md` | The deploy pipeline, compose import, service links, templates and template links, git-based builds, git providers, SSE deploy progress, remote functions              |
 | `jobs-and-queue.md`         | The `job` table and worker, cron schedulers, user cron jobs, S3 backups                                                                                               |
 | `testing.md`                | `tests/` (unit, integration, e2e), `bunfig.toml`, Playwright, the CI Postgres wiring                                                                                  |
-| `packages-and-release.md`   | `packages/agent/`, `packages/installer/`, semantic-release, CI/Docker publishing, `docs/`                                                                             |
+| `packages-and-release.md`   | `cmd/agent/`, `cmd/installer/`, semantic-release, CI/Docker publishing, `docs/`                                                                                       |
 | `dns.md`                    | Cloudflare or Pangolin DNS automation                                                                                                                                 |
 | `observability.md`          | `Logger`, `app_log`, in-app notifications, system stats, setup diagnostics                                                                                            |
 | `planned-features.md`       | Proposing or building something that might be a deliberate gap — check here before designing it                                                                       |

@@ -102,10 +102,11 @@ suite already covers directly and faster.
 
 ## The CLI runs against this same instance (`ui-cli.spec.ts`)
 
-The CLI is a Go program (`packages/cli/*.go`), so this suite can't run it from
-source the way it once ran `bun run packages/cli/index.ts`: `ui-cli.spec.ts`'s
-`beforeAll` compiles it first (`go build -ldflags "-X main.version=..."` into a
-scratch dir, version-stamped to match `package.json` exactly like
+The CLI is a Go program (`cmd/cli/*.go`), so this suite can't run it from source
+the way it once ran `bun run cmd/cli/index.ts`: `ui-cli.spec.ts`'s `beforeAll`
+compiles it first
+(`go build -ldflags "-X github.com/orochibraru/homerun/internal/buildinfo.Version=..."`
+into a scratch dir, version-stamped to match `package.json` exactly like
 `scripts/build-packages.ts` does), then spawns that real binary against the app
 this suite already booted, with a throwaway `HOME` per test so it never reads or
 writes a real `~/.config/homerun/config.json`. `HOMERUN_BASE_URL`,

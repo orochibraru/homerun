@@ -67,7 +67,7 @@ async function uploadedAssets(
 	);
 }
 
-/** Gzips a binary next to itself, since a compiled Bun binary is ~82 MB raw and ~26 MB gzipped, and returns the compressed path. */
+/** Gzips a binary next to itself, roughly a third of its raw size for a stripped Go binary, and returns the compressed path. */
 async function compress(path: string): Promise<string> {
 	const target = `${path}.gz`;
 	await Bun.write(target, Bun.gzipSync(await Bun.file(path).bytes()));

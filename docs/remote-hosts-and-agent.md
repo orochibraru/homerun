@@ -2,7 +2,7 @@
 
 Services always deploy to this host's own Docker daemon. Placement across
 machines is [swarm mode](swarm-mode.md)'s job: a second machine joins the swarm
-as a worker (`packages/installer/swarm-join.sh`) rather than being registered
+as a worker (`cmd/installer/swarm-join.sh`) rather than being registered
 separately.
 
 A **remote host** is therefore a _build server_: somewhere a git-based service's
@@ -53,26 +53,25 @@ with BuildKit in a `docker:cli` helper container that mounts the build server's
 
 ## Homerun Agent
 
-A standalone binary (`packages/agent/`) meant to run on a build server's own
-Docker daemon, exposing git builds and host stats over a small
-token-authenticated HTTP API, the alternative to registering a build server by
-raw `tcp://`/`ssh://` socket. Instead of exposing (or SSH-tunneling into) the
-daemon itself, the build server runs this agent and the main app talks to it
-over plain HTTP with a bearer token, this is what the "Homerun Agent" connection
-type on `/remote-hosts` (above) registers.
+A standalone binary (`cmd/agent/`) meant to run on a build server's own Docker
+daemon, exposing git builds and host stats over a small token-authenticated HTTP
+API, the alternative to registering a build server by raw `tcp://`/`ssh://`
+socket. Instead of exposing (or SSH-tunneling into) the daemon itself, the build
+server runs this agent and the main app talks to it over plain HTTP with a
+bearer token, this is what the "Homerun Agent" connection type on
+`/remote-hosts` (above) registers.
 
 ```sh
-bun install                      # from the repo root, packages/agent/ has no package.json of its own
-bun run packages/agent/index.ts  # talks to /var/run/docker.sock by default
+go run ./cmd/agent   # from the repo root; talks to /var/run/docker.sock by default
 ```
 
-Or compiled to a standalone binary (no Bun runtime needed on the target host):
+Or compiled to a standalone binary (no Go toolchain needed on the target host):
 `bun run build:packages` (builds the CLI/installer/agent binaries for both
 arches). On first boot with no `AGENT_TOKEN` set, it generates one and prints
 it, copy that plus this host's reachable URL into `/remote-hosts`'s "new host"
-form, see [`packages/agent/README.md`](../packages/agent/README.md) for the full
-env var and HTTP surface reference, plus install options (a Docker image, a
-prebuilt binary, or the installer below).
+form, see [`cmd/agent/README.md`](../cmd/agent/README.md) for the full env var
+and HTTP surface reference, plus install options (a Docker image, a prebuilt
+binary, or the installer below).
 
 **Wired into the main app**: registering an agent-kind build server and picking
 it on a git-based service's Source tab routes that service's builds through this
@@ -80,25 +79,24 @@ agent's HTTP API instead of a raw Docker connection.
 
 ## Installer
 
-`packages/installer/` automates standing up a fresh Linux box with either the
-full stack, on the system Docker daemon as a swarm manager (or on rootless
-Docker in standalone mode with `--docker=rootless`), or the Agent alone, on its
-own rootless daemon. This is what `docs/getting-started.md`'s one-liner runs,
-and `--migrate-to-rootful` moves an older rootless install onto the system
-daemon in swarm mode. See
-[`packages/installer/README.md`](../packages/installer/README.md) for flags and
-what's verified.
+`cmd/installer/` automates standing up a fresh Linux box with either the full
+stack, on the system Docker daemon as a swarm manager (or on rootless Docker in
+standalone mode with `--docker=rootless`), or the Agent alone, on its own
+rootless daemon. This is what `docs/getting-started.md`'s one-liner runs, and
+`--migrate-to-rootful` moves an older rootless install onto the system daemon in
+swarm mode. See [`cmd/installer/README.md`](../cmd/installer/README.md) for
+flags and what's verified.
 
-A separate script, `packages/installer/swarm-join.sh`, joins a box to an
-**existing** Homerun swarm as a worker and installs the Homerun Agent there
-(through the installer's `--mode=agent`). This is how you add capacity: the
-swarm scheduler places workloads on the new node automatically. Registering it
-as a build server (above) is separate and only needed if you also want to build
-there. Run it with the join token/manager address from
-`docker swarm join-token worker` on your manager:
+A separate script, `cmd/installer/swarm-join.sh`, joins a box to an **existing**
+Homerun swarm as a worker and installs the Homerun Agent there (through the
+installer's `--mode=agent`). This is how you add capacity: the swarm scheduler
+places workloads on the new node automatically. Registering it as a build server
+(above) is separate and only needed if you also want to build there. Run it with
+the join token/manager address from `docker swarm join-token worker` on your
+manager:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/swarm-join.sh \
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/swarm-join.sh \
   | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377
 ```
 

@@ -1,6 +1,4 @@
 name: Binaries
-# Builds the agent/cli/installer standalone binaries, one arch per matrix leg,
-# natively on a GitHub-hosted runner of that arch.
 
 on:
   workflow_call:
@@ -21,20 +19,7 @@ permissions:
 jobs:
   build:
     name: Build Binaries
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # The Bun binaries (agent, installer) are built natively per arch;
-          # the Go CLI cross-compiles, so the amd64 leg also produces both
-          # macOS ones and no macOS runner is needed at all.
-          - arch: amd64
-            targets: amd64 darwin-amd64 darwin-arm64
-            runner: ubuntu-latest
-          - arch: arm64
-            targets: arm64
-            runner: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -57,12 +42,12 @@ jobs:
         run: bun scripts/bump-version.ts ${{ inputs.version }}
 
       - name: Build binaries
-        run: bun run scripts/build-packages.ts ${{ matrix.targets }}
+        run: bun run scripts/build-packages.ts
 
       - name: Upload binaries
         uses: orochibraru/upload-artifact@v8
         with:
-          name: binaries-${{ matrix.arch }}
+          name: binaries-all
           path: dist/*
           if-no-files-found: error
           retention-days: 1

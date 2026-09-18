@@ -10,20 +10,26 @@ than in this one.
 
 `bun:test`, run directly by Bun — `bun test --timeout 120000` (every
 `test`/`test:*` script passes `--timeout` explicitly since `bunfig.toml`'s
-`[test].timeout` key is silently unhonored on Bun 1.4.0). Covers
-`packages/agent/`, the one sub-project still Bun/TypeScript. Tests live under
-`tests/unit/<package>/`, not next to the source files they cover
-(`tests/unit/agent/token.test.ts` tests `packages/agent/token.ts`, etc.).
-`packages/cli/` and `packages/installer/` are both separate Go packages (one
-repo-root `go.mod`) and aren't part of this at all: their tests are
-`packages/cli/cli_test.go` and `packages/installer/*_test.go`, run by
-`go test ./packages/cli/...` (`bun run test:unit:cli`) and
-`go test ./packages/installer/...` (`bun run test:unit:installer`), not
-`bun:test`. `packages/installer/`'s tests used to live under
-`tests/unit/installer/`, mirroring `packages/agent/`'s shape, before its Go
-rewrite moved them next to the source; `tests/unit/installer/` no longer exists.
-`tests/unit/app/` covers the SvelteKit app itself, a couple of component tests
-plus the pure modules under `$lib` that are worth pinning down directly
+`[test].timeout` key is silently unhonored on Bun 1.4.0). Covers `tests/unit/`,
+which today is just `tests/unit/app/`: the SvelteKit app itself. Tests live
+under `tests/unit/<package>/`, not next to the source files they cover.
+`cmd/agent/`, `cmd/cli/` and `cmd/installer/` are all separate Go packages (one
+repo-root `go.mod`) and aren't part of this at all: their tests sit next to the
+source they cover (`cmd/agent/token_test.go`, `cmd/cli/cli_test.go`,
+`cmd/installer/*_test.go`), run by `go test ./cmd/agent/...`
+(`bun run test:unit:agent`), `go test ./cmd/cli/...` (`bun run test:unit:cli`)
+and `go test ./cmd/installer/...` (`bun run test:unit:installer`), not
+`bun:test`. Both `cmd/installer/` and `cmd/agent/` used to live under
+`tests/unit/installer/`/`tests/unit/agent/`, mirroring the app's shape, before
+each was rewritten to Go and its tests moved next to the source; neither
+`tests/unit/installer/` nor `tests/unit/agent/` exists any more. Shared Go
+libraries under `internal/` (`buildinfo`, `release`, `homerun`, `dockerapi`)
+follow the same next-to-source convention (`internal/release/release_test.go`,
+etc.) and are covered by `go test ./internal/...`, part of `bun run test:go`
+(`go test ./cmd/... ./internal/...`) but with no dedicated `test:unit:*` script
+of their own since no sub-project owns them exclusively. `tests/unit/app/`
+covers the SvelteKit app itself, a couple of component tests plus the pure
+modules under `$lib` that are worth pinning down directly
 (`long-request.test.ts`, see Long-running requests below; `queue.test.ts`;
 `toast.test.ts`; `compose-import.test.ts`; `service-link.test.ts`;
 `deploy-phases.test.ts`; `command-parse.test.ts`; `auth-providers.test.ts`;
@@ -34,16 +40,17 @@ with no DB or Docker dependency belongs here rather than in
 
 Run everything: `bun run test` (bare `bun test` also works for the `bun:test`
 half, no wrapper script — `bunfig.toml`'s `[test].preload` handles the rest —
-but `bun run test` also runs `go test ./packages/...` afterward, covering both
-`packages/cli/` and `packages/installer/`). Scoped: `bun run test:unit`,
-`test:unit:agent`, `test:unit:app` all set `HOMERUN_SKIP_INTEGRATION_SETUP=1` so
-the preloaded integration bootstrap (real Postgres container) doesn't run for a
-unit-only invocation; `test:unit:cli` and `test:unit:installer` are both plain
-`go test`, no Bun preload involved at all. `tests/integration/` is a separate
-suite with its own `beforeAll`/`afterAll` (real Postgres/Docker/agent, see
-`tests/integration/README.md`), and `tests/e2e/` is a third, Playwright, outside
-`bun test` entirely (see E2E browser tests below). `tests/integration/README.md`
-and `tests/e2e/README.md` are the counterparts living next to the code.
+but `bun run test` also runs `go test ./cmd/... ./internal/...` afterward,
+covering `cmd/agent/`, `cmd/cli/` and `cmd/installer/`). Scoped:
+`bun run test:unit` and `test:unit:app` set `HOMERUN_SKIP_INTEGRATION_SETUP=1`
+so the preloaded integration bootstrap (real Postgres container) doesn't run for
+a unit-only invocation; `test:unit:agent`, `test:unit:cli` and
+`test:unit:installer` are all plain `go test`, no Bun preload involved at all.
+`tests/integration/` is a separate suite with its own `beforeAll`/`afterAll`
+(real Postgres/Docker/agent, see `tests/integration/README.md`), and
+`tests/e2e/` is a third, Playwright, outside `bun test` entirely (see E2E
+browser tests below). `tests/integration/README.md` and `tests/e2e/README.md`
+are the counterparts living next to the code.
 
 **Where Postgres comes from, `HOMERUN_TEST_POSTGRES_URL`.**
 `tests/integration/support/postgres.ts`'s `startTestPostgres()` is the one entry
@@ -76,11 +83,15 @@ test file needs merging — `@bcoe/v8-coverage`'s recursive merge throws
 `RangeError: Maximum call stack size exceeded`, reproduced directly, confirmed
 independent of provider (`istanbul` avoided it, `v8` didn't). Given that, plus
 `bun:test` being the simpler/native option, the suite moved back. `mock.module`
-mutating one process-global registry is a real, accepted tradeoff again — see
-`tests/unit/agent/docker.test.ts` (mocks `"dockerode"` wholesale) and
-`tests/unit/agent/http.test.ts` (spies on individual `DockerService` methods via
-`spyOn`, restored with `mock.restore()`), which have to coexist in one process
-without colliding.
+mutating one process-global registry is a real, accepted tradeoff again — every
+`tests/unit/app/*.test.ts` that calls `mock.module` (e.g.
+`docker-cleanup.test.ts`, `orchestration.test.ts`) has to coexist with the rest
+of the suite in one process without colliding, restoring spies with
+`mock.restore()` where it matters. This used to also cover the Bun-based agent's
+own test suite (`tests/unit/agent/docker.test.ts` mocked `"dockerode"`
+wholesale); that suite is gone along with the Bun agent, replaced by
+`cmd/agent/`'s own Go tests, which fake the Docker client via a real interface
+instead (`cmd/agent/fake_docker_test.go`).
 
 `tsconfig.json` type-checks `tests/` as part of `svelte-check` (`check:app`),
 same as `src/`. It used to exclude `tests/` entirely, which meant ~115 test
@@ -94,22 +105,22 @@ object instead of a bare `let`). `bun:test`'s `spyOn` needs an explicit
 which resolves to `any` since `spyOn`'s type parameters can't be inferred
 without a call site.
 
-## `packages/cli/`'s Go tests set `$HOME` per test, no preload needed
+## `cmd/cli/`'s Go tests set `$HOME` per test, no preload needed
 
-`packages/cli/config.go` resolves its config file path from `os.UserHomeDir()`,
-which re-reads `$HOME` on every call — unlike the old TypeScript CLI's
-`os.homedir()`, fixed for the life of the process (reassigning
-`process.env.HOME` mid-run didn't change it, verified on Bun 1.4.0), which is
-why that version needed `tests/unit/support/homedir-preload.ts` mocking
-`node:os` via a `bunfig.toml` `[test].preload`. `packages/cli/cli_test.go` just
-calls `t.Setenv("HOME", t.TempDir())` per test instead, reset automatically by
-Go's own test runner; there's no shared preload and nothing under
+`cmd/cli/config.go` resolves its config file path from `os.UserHomeDir()`, which
+re-reads `$HOME` on every call — unlike the old TypeScript CLI's `os.homedir()`,
+fixed for the life of the process (reassigning `process.env.HOME` mid-run didn't
+change it, verified on Bun 1.4.0), which is why that version needed
+`tests/unit/support/homedir-preload.ts` mocking `node:os` via a `bunfig.toml`
+`[test].preload`. `cmd/cli/cli_test.go` just calls
+`t.Setenv("HOME", t.TempDir())` per test instead, reset automatically by Go's
+own test runner; there's no shared preload and nothing under
 `tests/unit/support/` is involved for `go test`.
 
 ## Coverage
 
 `bunfig.toml`'s `[test].coverage = true` turns on Bun's native coverage for
-every run, scoped away from `tests/**` (`packages/cli/generated/**` was in this
+every run, scoped away from `tests/**` (`cmd/cli/generated/**` was in this
 exclusion list too, back when that directory existed for the TypeScript CLI). No
 threshold enforced yet.
 
@@ -134,7 +145,7 @@ rerun policy checked in here.
 
 ## Fakes over mocking libraries
 
-`packages/installer/exec.go`'s `Runner` is a real Go interface (`StepRunner`
+`cmd/installer/exec.go`'s `Runner` is a real Go interface (`StepRunner`
 implements it), so its Go tests (`steps_test.go`, `fullstack_test.go`,
 `migrate_test.go`, `flow_test.go`, `main_test.go`, sharing a `fakeRunner` from
 `support_test.go`) pass a fake implementation instead of the real one, no
@@ -147,11 +158,15 @@ gone) took the equivalent shortcut with a plain object literal and
 
 - `Bun.write(path, data, { mode: 0o600 })`'s `mode` option is silently a no-op
   on Bun 1.4.0 — the file lands with whatever the umask produces (0644 under the
-  common 022 umask) regardless of what's passed. `packages/agent/token.ts`'s
-  persisted agent token — a full-access API credential — was affected by exactly
-  this. Fixed by calling `node:fs/promises`'s `chmod()` explicitly after
-  `Bun.write` (`node:fs`'s own `mode` option is honored, verified). If a future
-  change writes another secret to disk via `Bun.write`, `chmod` afterward too.
+  common 022 umask) regardless of what's passed. The old Bun-based agent's
+  persisted token — a full-access API credential — was affected by exactly this,
+  fixed at the time by calling `node:fs/promises`'s `chmod()` explicitly after
+  `Bun.write` (`node:fs`'s own `mode` option is honored, verified). The agent's
+  Go rewrite sidesteps the whole bug class: `cmd/agent/token.go`'s
+  `resolveToken` calls `os.WriteFile(tokenFile, token, 0o600)` then an explicit
+  `os.Chmod`, both of which Go actually honors. If a future change writes
+  another secret to disk via `Bun.write` anywhere in this repo, `chmod`
+  afterward too.
 - `bunfig.toml`'s `[test].timeout` key is silently not honored by Bun 1.4.0 for
   `test()` bodies — every `test/test:*` script passes `--timeout 120000` on the
   CLI instead.
@@ -175,8 +190,8 @@ TypeScript installer's `steps/rootless-docker.ts` doc comment:
 `Bun.file(path).exists()` could return `true` for a `/proc` pseudo-file while
 `.text()` silently returned `""`, `node:fs/promises`' `readFile` read it
 correctly. Moot since the installer's Go rewrite — Go's `os.ReadFile` has no
-such quirk, and `packages/installer/docker.go`'s doc comment on
-`allowRootlessUserns` records the history. See Homerun Agent + installer below.
+such quirk, and `cmd/installer/docker.go`'s doc comment on `allowRootlessUserns`
+records the history. See Homerun Agent + installer below.
 
 ## E2E browser tests (`tests/e2e/`, `playwright.config.ts`)
 

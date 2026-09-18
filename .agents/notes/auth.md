@@ -699,7 +699,7 @@ is a swarm manager, whether the overlay network exists, and whether Traefik is
 actually running its swarm provider, each read off the daemon rather than
 assumed. It's informational, not a gate : standalone containers need none of it,
 and Settings → Docker sets up whatever's missing when the mode is switched.
-`packages/installer/swarm-join.sh` is still unverified against a real host.
+`cmd/installer/swarm-join.sh` is still unverified against a real host.
 
 **Doc correction**: this section previously described both directions as gated
 from a single `(protected)/+layout.server.ts` load comparing `route.id` against

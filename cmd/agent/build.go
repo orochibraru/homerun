@@ -1,0 +1,407 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"strings"
+	"time"
+
+	"github.com/orochibraru/homerun/internal/dockerapi"
+)
+
+const (
+	gitImage        = "alpine/git:latest"
+	workspace       = "/workspace"
+	repoDir         = workspace + "/repo"
+	managedLabel    = "homerun.managed"
+	containerSocket = "/var/run/docker.sock"
+	recentLineLimit = 40
+	cloneTimeout    = 10 * time.Minute
+	builderTimeout  = 60 * time.Minute
+	cleanupTimeout  = 30 * time.Second
+)
+
+// Docker is the subset of the Engine API the agent drives. An interface so the
+// build pipeline can be tested against a fake daemon.
+type Docker interface {
+	ContainerLogs(ctx context.Context, id string, follow bool) (io.ReadCloser, error)
+	CreateContainer(ctx context.Context, config dockerapi.ContainerConfig) (string, error)
+	CreateVolume(ctx context.Context, name string, labels map[string]string) error
+	ImageExists(ctx context.Context, ref string) (bool, error)
+	KillContainer(ctx context.Context, id string) error
+	Ping(ctx context.Context) error
+	PullImage(ctx context.Context, ref string, auth *dockerapi.AuthConfig, onProgress func(string)) error
+	PushImage(ctx context.Context, repository, tag string, auth dockerapi.AuthConfig, onProgress func(string)) error
+	RemoveContainer(ctx context.Context, id string) error
+	RemoveVolume(ctx context.Context, name string) error
+	SaveImage(ctx context.Context, ref string) (io.ReadCloser, error)
+	StartContainer(ctx context.Context, id string) error
+	TagImage(ctx context.Context, source, repository, tag string) error
+	WaitContainer(ctx context.Context, id string) (int, error)
+}
+
+// PushTarget is the build cache registry a build publishes its image to, when
+// the image has to reach a different daemon than the one that built it.
+type PushTarget struct {
+	Password    string `json:"password"`
+	RegistryURL string `json:"registryUrl"`
+	Tag         string `json:"tag"`
+	Username    string `json:"username"`
+}
+
+// BuildInput is POST /v1/build's body: clone a git repo at a ref and build it
+// into a local image tagged Tag. Push, when set, names the service's build
+// cache registry: the layer cache is imported from and exported to it, and the
+// built image is published to it afterward. It's left out when the build and
+// the deploy target are this same agent, since the deploy then references the
+// local tag directly.
+type BuildInput struct {
+	BakeFile       *string        `json:"bakeFile"`
+	BakeTarget     *string        `json:"bakeTarget"`
+	BuildContext   *string        `json:"buildContext"`
+	BuildMethod    *string        `json:"buildMethod"`
+	Commit         *string        `json:"commit"`
+	Credential     *GitCredential `json:"credential"`
+	DockerfilePath *string        `json:"dockerfilePath"`
+	GitRef         *string        `json:"gitRef"`
+	GitURL         string         `json:"gitUrl"`
+	Push           *PushTarget    `json:"push"`
+	Tag            string         `json:"tag"`
+}
+
+// BuildResult is POST /v1/build's answer.
+type BuildResult struct {
+	Commit  *string `json:"commit"`
+	Error   string  `json:"error,omitempty"`
+	Success bool    `json:"success"`
+}
+
+// Builder runs builds against one daemon.
+type Builder struct {
+	docker     Docker
+	socketPath string
+	newID      func() string
+}
+
+// NewBuilder builds a Builder for the daemon behind socketPath.
+func NewBuilder(docker Docker, socketPath string) *Builder {
+	return &Builder{docker: docker, socketPath: socketPath, newID: randomID}
+}
+
+func randomID() string {
+	buffer := make([]byte, 4)
+	_, _ = rand.Read(buffer)
+	return hex.EncodeToString(buffer)
+}
+
+func valueOr(pointer *string, fallback string) string {
+	if pointer == nil || *pointer == "" {
+		return fallback
+	}
+	return *pointer
+}
+
+// Build clones input's repo at its ref into a throwaway volume, builds it with
+// the configured method, and pushes the result when input.Push is set. The
+// agent image has no git of its own, so cloning runs in an alpine/git
+// container against the volume. Progress goes to this process's own log,
+// since the HTTP answer is a single JSON result once it's done.
+func (b *Builder) Build(ctx context.Context, input BuildInput) BuildResult {
+	ref := valueOr(input.GitRef, "main")
+	progress := func(line string) { log.Printf("[build %s] %s", input.Tag, line) }
+	volume := "homerun-agent-build-" + b.newID()
+	var commit *string
+
+	defer func() {
+		cleanup, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
+		defer cancel()
+		_ = b.docker.RemoveVolume(cleanup, volume)
+	}()
+
+	fail := func(err error) BuildResult {
+		return BuildResult{Commit: commit, Error: redactCloneURL(err.Error()), Success: false}
+	}
+
+	if err := b.ensureImage(ctx, gitImage, progress); err != nil {
+		return fail(err)
+	}
+	if err := b.docker.CreateVolume(ctx, volume, map[string]string{managedLabel: "true"}); err != nil {
+		return fail(err)
+	}
+
+	cloneURL := authenticatedCloneURL(input.GitURL, input.Credential)
+	progress(fmt.Sprintf("Cloning %s (%s)...", redactCloneURL(cloneURL), ref))
+	built, err := b.checkout(ctx, cloneURL, ref, valueOr(input.Commit, ""), volume, progress)
+	if built != "" {
+		commit = &built
+	}
+	if err != nil {
+		return fail(err)
+	}
+
+	builderInput := BuilderInput{
+		BakeFile:       valueOr(input.BakeFile, ""),
+		BakeTarget:     valueOr(input.BakeTarget, ""),
+		BuildContext:   valueOr(input.BuildContext, ""),
+		DockerfilePath: valueOr(input.DockerfilePath, ""),
+		Method:         valueOr(input.BuildMethod, "dockerfile"),
+		RepoDir:        repoDir,
+		Tag:            input.Tag,
+	}
+	if input.Push != nil {
+		builderInput.CacheRegistry = &CacheRegistry{
+			Password:    input.Push.Password,
+			RegistryURL: input.Push.RegistryURL,
+			Username:    input.Push.Username,
+		}
+	}
+	if err := b.runBuilder(ctx, builderInput, volume, progress); err != nil {
+		return fail(err)
+	}
+
+	if input.Push != nil {
+		progress(fmt.Sprintf("Pushing to %s...", input.Push.Tag))
+		if err := b.push(ctx, input.Tag, *input.Push); err != nil {
+			return fail(err)
+		}
+	}
+	return BuildResult{Commit: commit, Success: true}
+}
+
+// ensureImage pulls ref unless it's already on the daemon.
+func (b *Builder) ensureImage(ctx context.Context, ref string, progress func(string)) error {
+	exists, err := b.docker.ImageExists(ctx, ref)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	progress(fmt.Sprintf("Pulling %s...", ref))
+	return b.docker.PullImage(ctx, ref, nil, nil)
+}
+
+// checkout checks ref out into the volume, then pins it to commit when one was
+// given and the branch has moved past it: the main app sends the commit whose
+// required status checks passed, so the build is that commit or it fails.
+// Returns the commit that will be built, empty when git didn't report one.
+func (b *Builder) checkout(ctx context.Context, cloneURL, ref, commit, volume string, progress func(string)) (string, error) {
+	if err := b.runSteps(ctx, gitCheckoutSteps(cloneURL, ref, repoDir), volume); err != nil {
+		return "", err
+	}
+	head := ""
+	if output, code, err := b.runGit(ctx, []string{"-C", repoDir, "rev-parse", "HEAD"}, volume); err == nil && code == 0 {
+		head = extractCommitSHA(output)
+	}
+	pinned := strings.ToLower(commit)
+	if pinned != "" && head != pinned {
+		progress(fmt.Sprintf(
+			"The branch moved since its status checks were read, checking out the checked commit %s...",
+			pinned[:7],
+		))
+		if err := b.runSteps(ctx, [][]string{
+			{"-C", repoDir, "fetch", "--depth", "1", "origin", pinned},
+			{"-C", repoDir, "checkout", "--detach", pinned},
+		}, volume); err != nil {
+			return "", err
+		}
+	}
+	built := head
+	if pinned != "" {
+		built = pinned
+	}
+	if built != "" {
+		progress(fmt.Sprintf("Building commit %s", built[:7]))
+	}
+	return built, nil
+}
+
+// runSteps runs git steps in order, stopping at the first that fails with its
+// redacted output.
+func (b *Builder) runSteps(ctx context.Context, steps [][]string, volume string) error {
+	for _, step := range steps {
+		output, code, err := b.runGit(ctx, step, volume)
+		if err != nil {
+			return err
+		}
+		if code != 0 {
+			if strings.TrimSpace(output) == "" {
+				output = fmt.Sprintf("git exited %d", code)
+			}
+			return errors.New(redactCloneURL(output))
+		}
+	}
+	return nil
+}
+
+// runGit runs one git command in a throwaway container with the volume mounted
+// at the workspace, bounded by the clone timeout, and always removes it.
+func (b *Builder) runGit(ctx context.Context, cmd []string, volume string) (string, int, error) {
+	ctx, cancel := context.WithTimeout(ctx, cloneTimeout)
+	defer cancel()
+	id, err := b.docker.CreateContainer(ctx, dockerapi.ContainerConfig{
+		Binds:      []string{volume + ":" + workspace},
+		Cmd:        cmd,
+		Entrypoint: []string{"git"},
+		Env:        []string{"GIT_TERMINAL_PROMPT=0"},
+		Image:      gitImage,
+		Labels:     map[string]string{managedLabel: "true"},
+	})
+	if err != nil {
+		return "", 0, err
+	}
+	defer b.remove(id)
+	if err := b.docker.StartContainer(ctx, id); err != nil {
+		return "", 0, err
+	}
+	code, err := b.docker.WaitContainer(ctx, id)
+	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return "", 0, errors.New("The clone timed out.")
+		}
+		return "", 0, err
+	}
+	logs, err := b.docker.ContainerLogs(ctx, id, false)
+	if err != nil {
+		return "", code, err
+	}
+	defer func() { _ = logs.Close() }()
+	var output strings.Builder
+	if err := dockerapi.Demux(logs, &output); err != nil {
+		return "", code, err
+	}
+	return output.String(), code, nil
+}
+
+// runBuilder runs the build (BuildKit build or bake, Nixpacks, Railpack or
+// pack) in a throwaway docker:cli container with the clone's volume, the
+// persistent tools volume and the daemon socket mounted, so the image is tagged
+// straight into this daemon. Output is forwarded line by line, and a failure
+// carries its most telling line.
+func (b *Builder) runBuilder(ctx context.Context, input BuilderInput, volume string, progress func(string)) error {
+	env, err := builderEnv(input)
+	if err != nil {
+		return err
+	}
+	if err := b.ensureImage(ctx, tools.HelperImage, progress); err != nil {
+		return err
+	}
+	progress(fmt.Sprintf("Building with %s...", input.Method))
+
+	ctx, cancel := context.WithTimeout(ctx, builderTimeout)
+	defer cancel()
+	id, err := b.docker.CreateContainer(ctx, dockerapi.ContainerConfig{
+		Binds: []string{
+			volume + ":" + workspace,
+			tools.ToolsVolume + ":/tools",
+			b.socketPath + ":" + containerSocket,
+		},
+		Cmd:        []string{"-c", builderScript},
+		Entrypoint: []string{"sh"},
+		Env:        env,
+		Image:      tools.HelperImage,
+		Labels:     map[string]string{managedLabel: "true"},
+	})
+	if err != nil {
+		return err
+	}
+	defer b.remove(id)
+	if err := b.docker.StartContainer(ctx, id); err != nil {
+		return err
+	}
+
+	recent := []string{}
+	streamed := make(chan error, 1)
+	go func() {
+		logs, err := b.docker.ContainerLogs(ctx, id, true)
+		if err != nil {
+			streamed <- err
+			return
+		}
+		defer func() { _ = logs.Close() }()
+		reader, writer := io.Pipe()
+		go func() { _ = writer.CloseWithError(dockerapi.Demux(logs, writer)) }()
+		scanner := bufio.NewScanner(reader)
+		scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+		scanner.Split(scanLinesAnyEnding)
+		for scanner.Scan() {
+			line := strings.TrimRight(scanner.Text(), " \t")
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			recent = append(recent, line)
+			if len(recent) > recentLineLimit {
+				recent = recent[1:]
+			}
+			progress(line)
+		}
+		streamed <- scanner.Err()
+	}()
+
+	code, err := b.docker.WaitContainer(ctx, id)
+	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			kill, cancelKill := context.WithTimeout(context.Background(), cleanupTimeout)
+			defer cancelKill()
+			_ = b.docker.KillContainer(kill, id)
+			return fmt.Errorf("The %s build timed out.", input.Method)
+		}
+		return err
+	}
+	<-streamed
+	if code != 0 {
+		return errors.New(buildFailureMessage(input.Method, code, recent))
+	}
+	return nil
+}
+
+// scanLinesAnyEnding splits on \n, \r\n or a bare \r, since BuildKit's plain
+// progress output uses carriage returns to redraw a line.
+func scanLinesAnyEnding(data []byte, atEOF bool) (int, []byte, error) {
+	for index, char := range data {
+		if char == '\n' {
+			return index + 1, data[:index], nil
+		}
+		if char == '\r' {
+			if index+1 < len(data) && data[index+1] == '\n' {
+				return index + 2, data[:index], nil
+			}
+			if index+1 < len(data) || atEOF {
+				return index + 1, data[:index], nil
+			}
+			return 0, nil, nil
+		}
+	}
+	if atEOF && len(data) > 0 {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
+}
+
+// push tags the local image as the push target and pushes it with the cache
+// registry's credentials.
+func (b *Builder) push(ctx context.Context, localTag string, target PushTarget) error {
+	repository, tag := dockerapi.SplitRef(target.Tag)
+	if err := b.docker.TagImage(ctx, localTag, repository, tag); err != nil {
+		return err
+	}
+	return b.docker.PushImage(ctx, repository, tag, dockerapi.AuthConfig{
+		Password:      target.Password,
+		ServerAddress: target.RegistryURL,
+		Username:      target.Username,
+	}, nil)
+}
+
+// remove force-removes a helper container, best effort, outside the request's
+// own context so a cancelled request still cleans up after itself.
+func (b *Builder) remove(id string) {
+	cleanup, cancel := context.WithTimeout(context.Background(), cleanupTimeout)
+	defer cancel()
+	_ = b.docker.RemoveContainer(cleanup, id)
+}

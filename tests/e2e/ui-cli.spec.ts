@@ -58,7 +58,7 @@ function cliEnv({ env, home }: CliOptions): NodeJS.ProcessEnv {
 	};
 }
 
-// The CLI is a Go program (packages/cli/*.go), so these specs drive the real
+// The CLI is a Go program (cmd/cli/*.go), so these specs drive the real
 // compiled binary, version stamped exactly as scripts/build-packages.ts does.
 function buildCli(): void {
 	const build = spawnSync(
@@ -66,10 +66,10 @@ function buildCli(): void {
 		[
 			"build",
 			"-ldflags",
-			`-X main.version=${CLI_VERSION}`,
+			`-X github.com/orochibraru/homerun/internal/buildinfo.Version=${CLI_VERSION}`,
 			"-o",
 			CLI_BINARY,
-			"./packages/cli",
+			"./cmd/cli",
 		],
 		{ cwd: process.cwd(), encoding: "utf8" },
 	);

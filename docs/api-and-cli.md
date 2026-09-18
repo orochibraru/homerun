@@ -120,9 +120,9 @@ request.
 
 ## CLI
 
-A CLI (`packages/cli/`) against the API above. It's a small, standalone Go
-binary (around 6MB) with no runtime to install, rather than the old Bun build
-that shipped a whole embedded runtime for the same job.
+A CLI (`cmd/cli/`) against the API above. It's a small, standalone Go binary
+(around 6MB) with no runtime to install, rather than the old Bun build that
+shipped a whole embedded runtime for the same job.
 
 ### Install
 
@@ -131,7 +131,7 @@ drops it at `/usr/local/bin/homerun` (Linux or macOS, no Bun or build step
 needed):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/install.sh | bash
 ```
 
 `homerun update` re-runs that from inside the binary, replacing itself with the
@@ -251,7 +251,7 @@ restores that revision's env vars, resources and networking.
 ### Working on the CLI itself
 
 The CLI is a Go program, not part of the Bun app: from the repo root (with Go
-installed), `go run ./packages/cli services list` runs it from source, and
+installed), `go run ./cmd/cli services list` runs it from source, and
 `bun run scripts/build-packages.ts <amd64|arm64|darwin-amd64|darwin-arm64>`
 compiles it the same way CI does. See
-[`packages/cli/README.md`](../packages/cli/README.md) for the full reference.
+[`cmd/cli/README.md`](../cmd/cli/README.md) for the full reference.

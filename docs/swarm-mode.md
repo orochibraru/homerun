@@ -69,7 +69,7 @@ being registered separately. On the manager, `docker swarm join-token worker`
 prints the token and address; on the new machine:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/swarm-join.sh \
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/swarm-join.sh \
   | sudo bash -s -- --token=<SWMTKN-...> --manager=<manager-ip>:2377
 ```
 
@@ -78,4 +78,4 @@ the Homerun Agent; the swarm scheduler places tasks there from then on and
 Traefik on the manager routes to them over the overlay network. The machines
 need to reach each other on 2377/tcp, 7946/tcp+udp and 4789/udp. Traefik picks
 up new replicas within about 2 seconds. See
-[`packages/installer/README.md`](../packages/installer/README.md) for the flags.
+[`cmd/installer/README.md`](../cmd/installer/README.md) for the flags.

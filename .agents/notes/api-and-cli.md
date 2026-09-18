@@ -90,7 +90,7 @@ automatically, so a new write route documents it without a registry entry.
 API surface or the OpenAPI document.
 
 This is deliberately a thin JSON wrapper over the DTO layer, not a new
-abstraction, the `packages/cli/` sub-project talks to this (see below).
+abstraction, the `cmd/cli/` sub-project talks to this (see below).
 
 `homerun services scan <id> --wait` polls `GET /jobs/{jobId}` (2s) then reads
 `scans/latest`; `--fail-on <critical|high|medium|low>` implies `--wait` and
@@ -181,18 +181,17 @@ fighting the resolution issue.
 
 **Verified live**: the served document is a real, valid OpenAPI 3.1 spec, parsed
 successfully by `openapi-typescript` (not just eyeballed), used to generate the
-actual types `packages/cli/` is built against (see below), and driven end-to-end
+actual types `cmd/cli/` is built against (see below), and driven end-to-end
 through a real account/API key against a real Docker daemon (see
-`packages/cli/README.md`'s verification notes).
+`cmd/cli/README.md`'s verification notes).
 
-## Homerun CLI (`packages/cli/`)
+## Homerun CLI (`cmd/cli/`)
 
 A standalone **Go** program, a package in a single Go module at the repo root
-(`go.mod`), shared with `packages/installer/` (also rewritten from
-Bun/TypeScript to Go, see `packages-and-release.md`) — unlike `packages/agent/`
-below, still Bun/TypeScript, sharing the root `package.json`/`bun install`:
-`check:cli` is `go vet ./packages/cli/...`, `test:unit:cli` is
-`go test ./packages/cli/...` (`packages/cli/cli_test.go`), and
+(`go.mod`), shared with `cmd/installer/` and `cmd/agent/` (all three now Go, the
+agent was the last to be rewritten from Bun/TypeScript, see
+`packages-and-release.md`): `check:cli` is `go vet ./cmd/cli/...`,
+`test:unit:cli` is `go test ./cmd/cli/...` (`cmd/cli/cli_test.go`), and
 `scripts/build-packages.ts` builds it with `go build` rather than
 `Bun.build({compile: ...})`. **Rewritten from TypeScript** to cut release size:
 a `bun build --compile` binary embeds the whole Bun runtime (~81MB on linux/x64,
@@ -200,17 +199,16 @@ same size as a hello-world; `strip`/`--bytecode` changed nothing), the Go binary
 is ~6MB. It hand-rolls arg parsing and uses Go's stdlib `net/http` rather than
 Commander/`openapi-fetch`, and has no generated types at all: it defines small
 structs for only the fields it formats (`commands.go`/`client.go`) and passes
-everything else through as raw JSON. `packages/cli/generated/` is gone;
-`bun run gen` still regenerates OpenAPI types
-(`tests/integration/support/openapi-types.ts`), but they now feed only
-`tests/integration/support/client.ts`, not this CLI. Auth is
-`x-api-key`/`--api-key`, same header the REST API's own hooks check first for a
-non-cookie caller. Commands:
+everything else through as raw JSON. `cmd/cli/generated/` is gone; `bun run gen`
+still regenerates OpenAPI types (`tests/integration/support/openapi-types.ts`),
+but they now feed only `tests/integration/support/client.ts`, not this CLI. Auth
+is `x-api-key`/`--api-key`, same header the REST API's own hooks check first for
+a non-cookie caller. Commands:
 `services {list,get,deploy,start,stop,restart,scan}`,
 `services scans {list,get}` (`list` is the group's `isDefault` subcommand, so
 `services scans <id>` works), `stacks list`, `templates list`, no
 `create`/`update`/`delete` yet, straightforward to add the same way. See
-`packages/cli/README.md` for the full command reference and what's verified.
+`cmd/cli/README.md` for the full command reference and what's verified.
 
 Every `list` command also takes `--page <n>`, `--per-page <n>` (default 100, max
 100, same clamp as the API) and `--search <term>`, threaded through as the same
@@ -253,7 +251,7 @@ row.
 
 `homerun login`'s device-code flow is now verified live too (previously flagged
 as untested, closed in a later session): a real compiled CLI binary, installed
-via `packages/cli/install.sh` inside a Linux Docker container, ran
+via `cmd/cli/install.sh` inside a Linux Docker container, ran
 `homerun login --base-url <real installer-provisioned instance>`, printed a real
 user code, was approved via the real `/cli-auth` approval-page form action as
 the real signed-in admin, and picked up a real API key, saved to

@@ -35,7 +35,7 @@ runs Docker Engine with the Compose plugin works, rootful included.
 ## Option A, the one-liner (fresh Linux server)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
   | sudo bash -s -- --mode=full
 ```
 
@@ -79,7 +79,7 @@ An instance installed rootless (the installer's default before swarm became the
 default) can be moved in place:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/installer/bootstrap.sh \
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
   | sudo bash -s -- --migrate-to-rootful --yes
 ```
 
@@ -111,16 +111,15 @@ Run `--mode=agent` instead of `--mode=full` if you only want this box to run the
 server for a different Homerun instance, not the full app. Add `--dry-run` to
 print every command without running anything, `--version=vX.Y.Z` to pin a
 release instead of the latest one, and see
-[`packages/installer/README.md`](../packages/installer/README.md) for the rest
-of the flags (`--user=`, `--port=`, `--image=`).
+[`cmd/installer/README.md`](../cmd/installer/README.md) for the rest of the
+flags (`--user=`, `--port=`, `--image=`).
 
 > The installer's mutating steps (package install, rootful and rootless Docker
 > setup, the swarm, systemd units, the rootless-to-rootful migration) are
 > verified live for both `--mode=agent` and `--mode=full` against real
-> disposable VMs, see
-> [`packages/installer/README.md`](../packages/installer/README.md) for what was
-> checked (and the real bugs that run found and fixed). `--dry-run` first is
-> still a good habit on a box that matters.
+> disposable VMs, see [`cmd/installer/README.md`](../cmd/installer/README.md)
+> for what was checked (and the real bugs that run found and fixed). `--dry-run`
+> first is still a good habit on a box that matters.
 
 ## Option B, Docker Compose
 

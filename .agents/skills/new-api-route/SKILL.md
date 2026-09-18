@@ -5,9 +5,9 @@ description: >-
   REST API: the auth check every handler needs since it sits outside
   (protected)'s guard, the separate zod body schema in
   $lib/server/validation/api.ts, keeping $lib/openapi/registry.ts and schemas.ts
-  in sync by hand, and regenerating packages/cli/'s OpenAPI-derived types
-  afterward. Use whenever a route under src/routes/api/v1/ is added, removed, or
-  has its request/response shape changed.
+  in sync by hand, and regenerating cmd/cli/'s OpenAPI-derived types afterward.
+  Use whenever a route under src/routes/api/v1/ is added, removed, or has its
+  request/response shape changed.
 user-invocable: true
 ---
 
@@ -90,13 +90,13 @@ is current" step still fails on a stale snapshot, so keep them checked in.
 ## 7. CLI command (only if this route should be user-facing there)
 
 Not every API route needs a CLI command. If it does, add it to
-`packages/cli/commands.go` following the existing `services`/`stacks`/
-`templates` pattern; a `list` command should thread `--page`/`--per-page`/
-`--search` through the same way the existing ones do. The CLI has no generated
-types to catch a stale shape here, `commands.go`'s structs and `client.go`'s
-requests need updating by hand.
+`cmd/cli/commands.go` following the existing `services`/`stacks`/ `templates`
+pattern; a `list` command should thread `--page`/`--per-page`/ `--search`
+through the same way the existing ones do. The CLI has no generated types to
+catch a stale shape here, `commands.go`'s structs and `client.go`'s requests
+need updating by hand.
 
 ## 8. Finish
 
-Run `check-repo`. If `packages/cli/` was touched, use the `subproject-sync`
-agent to confirm `go vet ./packages/cli/...` and the Go tests are both clean.
+Run `check-repo`. If `cmd/cli/` was touched, use the `subproject-sync` agent to
+confirm `go vet ./cmd/cli/...` and the Go tests are both clean.

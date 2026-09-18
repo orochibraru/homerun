@@ -17,6 +17,8 @@
 		actions?: Snippet<[T]>;
 		badge?: Snippet<[T]>;
 		cardGridClass?: string;
+		/** Full-width content under a row's title block, on its own line. */
+		details?: Snippet<[T]>;
 		items: T[];
 		media?: Snippet<[T]>;
 		meta?: Snippet<[T]>;
@@ -39,6 +41,7 @@
 		badge,
 		meta,
 		actions,
+		details,
 		selectedIds,
 		onToggleSelect,
 		selectLabel = (item: T) => `Select ${item.title}`,
@@ -77,21 +80,24 @@
             onCheckedChange={() => onToggleSelect?.(item.id)}
           />
         {/if}
-        {#if item.href}
-          <a class="flex min-w-0 flex-1 items-center gap-3" href={item.href}>
-            {@render media?.(item)}
-            <span class="min-w-0 flex-1">
-              {@render text(item, false)}
-            </span>
-          </a>
-        {:else}
-          <div class="flex min-w-0 flex-1 items-center gap-3">
-            {@render media?.(item)}
-            <span class="min-w-0 flex-1">
-              {@render text(item, false)}
-            </span>
-          </div>
-        {/if}
+        <div class="flex min-w-0 flex-1 flex-col gap-2">
+          {#if item.href}
+            <a class="flex min-w-0 items-center gap-3" href={item.href}>
+              {@render media?.(item)}
+              <span class="min-w-0 flex-1">
+                {@render text(item, false)}
+              </span>
+            </a>
+          {:else}
+            <div class="flex min-w-0 items-center gap-3">
+              {@render media?.(item)}
+              <span class="min-w-0 flex-1">
+                {@render text(item, false)}
+              </span>
+            </div>
+          {/if}
+          {@render details?.(item)}
+        </div>
         <div class="flex shrink-0 items-center gap-2">
           {@render badge?.(item)}
           {@render meta?.(item)}
@@ -128,6 +134,9 @@
           </div>
           {@render badge?.(item)}
         </div>
+        {#if details}
+          <div class="mt-3">{@render details(item)}</div>
+        {/if}
         {#if meta || actions}
           <div class="border-border mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             <div class="min-w-0">{@render meta?.(item)}</div>

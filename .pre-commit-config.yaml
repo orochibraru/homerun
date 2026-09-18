@@ -119,28 +119,28 @@ repos:
         entry: bun run test:unit
         language: system
         pass_filenames: false
-        files: ^(src/|packages/|tests/unit/|bunfig\.toml$)
+        files: ^(src/|tests/unit/|bunfig\.toml$)
 
       - id: lint-go
         name: Lint (Go)
-        entry: golangci-lint run ./packages/...
+        entry: golangci-lint run ./cmd/... ./internal/...
         language: system
         pass_filenames: false
-        files: (^packages/.*\.go$|^go\.mod$|^\.golangci\.yml$)
+        files: (^(cmd|internal)/.*\.go$|^go\.mod$|^\.golangci\.yml$)
 
       - id: test-go
         name: Unit Tests (Go)
-        entry: go test ./packages/...
+        entry: go test ./cmd/... ./internal/...
         language: system
         pass_filenames: false
-        files: (^packages/.*\.go$|^go\.mod$)
+        files: (^(cmd|internal)/.*\.(go|sh|json)$|^go\.mod$)
 
       - id: check
         name: Type Check
         entry: bun run check
         language: system
         pass_filenames: false
-        files: ^(src/|packages/|scripts/|tests/|vite\.config\.ts$|tsconfig.*\.json$)
+        files: ^(src/|cmd/|internal/|scripts/|tests/|vite\.config\.ts$|tsconfig.*\.json$)
 
   - repo: local
     hooks:

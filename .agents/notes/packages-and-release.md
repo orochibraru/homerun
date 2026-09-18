@@ -6,23 +6,23 @@ directory. These sections were split out of that file, so a "see X below/above"
 in the text below may now point at a section living in a sibling note rather
 than in this one.
 
-## The agent's git builds (`packages/agent/docker.ts`)
+## The agent's git builds (`cmd/agent/build.go`, `cmd/agent/git.go`)
 
-`buildFromGit` mirrors the main app's `docker/git-build.ts` by hand (the agent
-can't import from `src/`), **including its clone-in-a-container shape**: it used
-to `execFile("git", ...)` into a temp dir, and the agent image is `alpine:3`
-plus a few libraries with no git binary at all, so every agent-dispatched git
-build failed with ENOENT. It now pulls `alpine/git`, clones into a named volume,
-tars the context back out with `getArchive`, and removes the volume in a
-`finally`. The same fix, for the same reason, as the main app's.
+`Builder.Build` mirrors the main app's `docker/git-build.ts` by hand (the agent
+is a separate Go binary and can't import from `src/`), **including its
+clone-in-a-container shape**: the agent image has no git binary of its own, so
+cloning can't shell out directly. It pulls `alpine/git`, clones into a named
+volume, tars the context back out, and removes the volume in a deferred cleanup.
+The same fix, for the same reason, as the main app's.
 
-**A private repo works too**: `buildInputSchema` carries an optional
-`credential` (`{username, token}`) that `deploy.service.ts` fills from
-`resolveGitCredential` and `AgentClientService.build` sends over, since the
-agent has no access to the git-provider tables. `authenticatedCloneUrl` and
-`redactCloneUrl` are hand-mirrored from `$lib/git-clone-url.ts`, and every log
-line and error message goes through the redaction so a token can't reach the
-deployment log.
+**A private repo works too**: `BuildInput` (the `POST /v1/build` body, plain
+JSON decoded and hand-validated by `validateBuildInput`, no schema library)
+carries an optional `Credential` (`{username, token}`) that `deploy.service.ts`
+fills from `resolveGitCredential` and `AgentClientService.build` sends over,
+since the agent has no access to the git-provider tables.
+`authenticatedCloneURL` and `redactCloneURL` (`cmd/agent/git.go`) are
+hand-mirrored from `$lib/git-clone-url.ts`, and every log line and error message
+goes through the redaction so a token can't reach the deployment log.
 
 ## Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-packages.ts`)
 
@@ -135,25 +135,25 @@ already follow `feat:`/`fix:`/`chore:`, no new discipline required). Runs as a
 new `release` job in `.github/workflows/publish.yaml`, alongside the existing
 `code_quality`/`build` jobs, on every push to `main`; a non-releasable push
 (docs/chore-only) is a no-op, not a failure. One version number covers the whole
-repo: the root app plus `packages/agent`'s own `package.json` gets bumped by
-`scripts/bump-version.ts` (`packages/cli/` and `packages/installer/` have no
-`package.json` of their own to bump, they're Go packages now and read the root
-`package.json`'s version directly at build time, see `scripts/build-packages.ts`
-below), an `@semantic-release/exec` `prepareCmd`, not `@semantic-release/npm`,
-this repo has no npm package to publish, and `npm`'s plugin still wants
-registry-shaped config even with `npmPublish: false`; a small script fits this
-codebase's existing "hand-roll a small thing rather than fight a mismatched
-tool" posture better, same instinct as the cron matcher/SigV4 client).
-`scripts/build-packages.ts` builds every release binary: the Bun-based `agent`
-natively per arch, Linux only (`linux-amd64`/`linux-arm64`, via
-`Bun.build({compile: ...})`), and the Go-based `cli`/`installer` cross-compiled
-(`go build` with `GOOS`/`GOARCH` set, exact since Go's cross-compilation is,
-unlike Bun's — see Homerun CLI in `api-and-cli.md`): `cli` for all four targets
-(`amd64`/`arm64`/`darwin-amd64`/`darwin-arm64`), `installer` for `amd64`/`arm64`
-Linux only, it only ever runs on the Linux box it's installing. Eight binaries
-total, so `.releaserc.json`'s release-assets step has something to attach,
-directly serving the "installer (and homerun agent) in each release artifact"
-TODO item, with the CLI's own binaries added the same way for consistency.
+repo: the root `package.json` gets bumped by `scripts/bump-version.ts` (none of
+the three `cmd/` Go programs carry a `package.json` of their own to bump, they
+read the root one's version directly at build time, stamped in via `-ldflags`
+into `internal/buildinfo.Version`, see `scripts/build-packages.ts` below), an
+`@semantic-release/exec` `prepareCmd`, not `@semantic-release/npm`, this repo
+has no npm package to publish, and `npm`'s plugin still wants registry-shaped
+config even with `npmPublish: false`; a small script fits this codebase's
+existing "hand-roll a small thing rather than fight a mismatched tool" posture
+better, same instinct as the cron matcher/SigV4 client).
+`scripts/build-packages.ts` builds every release binary: all three commands
+(`cli`, `installer`, `agent`) are Go now, so every target cross-compiles from
+any one machine (`go build` with `GOOS`/`GOARCH` set, exact, unlike Bun's own
+cross-compilation — see Homerun CLI in `api-and-cli.md`): `cli` for all four
+targets (`amd64`/`arm64`/`darwin-amd64`/`darwin-arm64`), `installer` and `agent`
+for `amd64`/`arm64` Linux only, since both only ever run on the Linux host they
+manage. Eight binaries total, so `.releaserc.json`'s release-assets step has
+something to attach, directly serving the "installer (and homerun agent) in each
+release artifact" TODO item, with the CLI's own binaries added the same way for
+consistency.
 
 **Uses `@semantic-release/github`**, the official plugin: this repo is hosted on
 GitHub (`github.com/orochibraru/homerun`) and runs on GitHub Actions. It
@@ -169,23 +169,27 @@ next step runs `scripts/upload-release-assets.ts <tag>`: one
 skipping any already uploaded at the same size, then
 `gh release edit --draft=false --latest`.
 
-**Every binary is published gzipped, as `<name>.gz`.** A `bun build --compile`
-binary is ~62-82MB of which ~62MB is the embedded Bun runtime (a hello-world
-compiles to the same size), so ten of them was ~800MB per release and the
-sequential upload step ran 40+ minutes. Gzip takes each one to ~26MB, measured,
-and the whole release to ~260MB. Everything that downloads one unpacks it:
-`install.sh`/`bootstrap.sh`/`swarm-join.sh` pipe through `gunzip -c`,
-`release.go`'s `DownloadReleaseBinary` curls `<name>.gz` and shells out to
-`gunzip -f`, and `homerun update` uses `Bun.gunzipSync`. Releases up to v1.0.33
-carry raw, un-suffixed assets, so `scripts/e2e-multipass.ts`'s pinned
-`PREVIOUS_RELEASE` download stays un-suffixed until that pin moves past v1.0.33.
-Real failure it replaced: the plugin uploads all ten ~80MB binaries in one go
-with no retry, uploads took minutes each, and a 504 from `uploads.github.com` on
-the tenth left v1.0.32 a draft with the tag pushed and no way to resume. Since a
-draft isn't `releases/latest`, `install.sh` and `homerun update` never see a
-release until every binary is on it. A failed upload step is finished by hand:
-download the run's `binaries-*` artifacts into `dist/` and run the script with
-that tag.
+**Every binary is published gzipped, as `<name>.gz`.** The rationale predates
+the agent's move to Go: back when it was the one `bun build --compile` binary,
+it was ~62-82MB of which ~62MB was the embedded Bun runtime (a hello-world
+compiled to the same size), so ten of them was ~800MB per release and the
+sequential upload step ran 40+ minutes. Every binary is Go now and none embed a
+language runtime, but the gzip step, the `.gz`-suffixed asset naming and every
+downloader that unpacks one stayed, both for the smaller download and because
+nothing forces re-deriving it: `install.sh`/`bootstrap.sh`/`swarm-join.sh` pipe
+through `gunzip -c`, `cmd/installer/release.go`'s `DownloadReleaseBinary` curls
+`<name>.gz` and shells out to `gunzip -f` the same way, and `cmd/cli`'s own
+`homerun update` (`downloadRelease`) unpacks in-process via
+`internal/release.DownloadGzipped` (`compress/gzip`), the one place this repo
+does it without shelling out. Releases up to v1.0.33 carry raw, un-suffixed
+assets, so `scripts/e2e-multipass.ts`'s pinned `PREVIOUS_RELEASE` download stays
+un-suffixed until that pin moves past v1.0.33. Real failure it replaced: the
+plugin uploads all ten ~80MB binaries in one go with no retry, uploads took
+minutes each, and a 504 from `uploads.github.com` on the tenth left v1.0.32 a
+draft with the tag pushed and no way to resume. Since a draft isn't
+`releases/latest`, `install.sh` and `homerun update` never see a release until
+every binary is on it. A failed upload step is finished by hand: download the
+run's `binaries-*` artifacts into `dist/` and run the script with that tag.
 
 **Container images go to Docker Hub, not GHCR**, deliberately:
 `docker.io/orochibraru/homerun{,-agent,-docs}`. That's the one piece of the
@@ -248,23 +252,20 @@ earlier Gitea-era verification of `scripts/bump-version.ts` and
 `scripts/build-packages.ts` still stands (both were run for real locally, all
 six binaries cross-compiled), since neither is host-specific.
 
-## Homerun Agent + installer (`packages/agent/`, `packages/installer/`)
+## Homerun Agent + installer (`cmd/agent/`, `cmd/installer/`)
 
-Two standalone sub-projects under `packages/`, siblings of `src/` and **not**
-part of the SvelteKit build. `packages/agent/` is still Bun/TypeScript (its own
-`tsconfig.json`, **not** its own `package.json`/`node_modules`, it shares the
-root install, same as every other `packages/*` sub-project, see the Commands
-section above) and compiles to a native binary via `bun build --compile`.
-`packages/installer/` was rewritten from Bun/TypeScript to Go (a Go package in
-the repo-root `go.mod`, shared with `packages/cli/`, no `tsconfig.json` of its
-own any more) to cut its release-binary size from ~81MB (a `bun build --compile`
-binary embeds the whole Bun runtime) to ~2.7MB; behaviour, flags and `--dry-run`
-output are unchanged (diffed against the old TypeScript build for `--mode=agent`
-and both `--mode=full` variants — the `--mode=full` runs came back
-byte-identical, the only `--mode=agent` difference was cosmetic, a literal
-`<uid>` placeholder the old code printed in one dry-run step where the new one
-prints `1000`). See each folder's own README for the full detail; this section
-is the pointer.
+Two standalone sub-projects under `cmd/`, siblings of `src/` and **not** part of
+the SvelteKit build. Both are Go now (a Go module at the repo root, `go.mod`,
+shared with `cmd/cli/`, no `tsconfig.json`/`package.json` of their own). The
+agent was originally Bun/TypeScript and was rewritten to Go for the same reason
+the installer was before it: a `bun build --compile` binary embeds the whole Bun
+runtime (~81MB for a Go-sized program), a plain Go binary is a few MB. The
+installer's own earlier TypeScript→Go rewrite was verified behaviour-identical
+against the old build (`--mode=agent` and both `--mode=full` variants — the
+`--mode=full` runs came back byte-identical, the only `--mode=agent` difference
+was cosmetic, a literal `<uid>` placeholder the old code printed in one dry-run
+step where the new one prints `1000`). See each folder's own README for the full
+detail; this section is the pointer.
 
 The Agent is a selectable build-server connection kind
 (`remote_host.kind: "agent"`, `$lib/services/agent-client.service.ts`'s
@@ -272,73 +273,80 @@ The Agent is a selectable build-server connection kind
 stays standalone tooling (it's not imported by `src/` and isn't meant to be, it
 drives a target machine's shell, not this app's own runtime).
 
-- **`packages/agent/`**, the **Homerun Agent**: a small token-authenticated HTTP
-  server meant to run on a build server's own Docker daemon. Four routes:
-  `GET /v1/health` and `GET /v1/openapi.json` unauthenticated (the latter for
-  the same "spec describes shapes, not data" reason the main app's is public,
-  health so a monitor can probe liveness without holding the token),
-  `POST /v1/build` and `GET /v1/stats` behind `Authorization: Bearer <token>`.
-  It is **not** a deploy target : the deploy/lifecycle/logs routes it used to
-  carry were removed along with remote deploys (see Build servers above), and
-  `AgentClientService.verifyToken` probes `/v1/stats` for exactly that reason.
-  This is the alternative to registering a build server by raw `tcp://`/`ssh://`
-  Docker socket : instead of exposing the daemon itself, the build server runs
-  this agent and the main app only ever talks HTTP-plus-bearer-token to it.
-  **Arch detection is mirrored, not shared**: `packages/installer/detect.go`'s
-  `Arch()` reads Go's own `runtime.GOARCH` (already `amd64`/`arm64`, no
-  remapping needed) and returns a readable error on anything else;
-  `packages/cli/update.go`'s `assetSuffix()` does the equivalent for the CLI's
-  own release-asset naming, adding the `darwin-` prefix for macOS, exiting the
-  same way. Both are Go now and share the same repo-root `go.mod`, but they
-  still don't share a module : each is its own `package main`, and the two
-  functions solve a slightly different problem (the installer only ever runs on
-  Linux, the CLI also targets macOS). Keep both in sync by hand if the mapping
-  ever changes. **Wired into the main app**: `remote_host.kind` (`"docker"` |
-  `"agent"`) + `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
+- **`cmd/agent/`**, the **Homerun Agent**: a small token-authenticated HTTP
+  server meant to run on a build server's own Docker daemon
+  (`cmd/agent/server.go`'s `Server.Handler`). Five routes: `GET /v1/health` and
+  `GET /v1/openapi.json` unauthenticated (the latter for the same "spec
+  describes shapes, not data" reason the main app's is public, health so a
+  monitor can probe liveness without holding the token), `POST /v1/build`,
+  `GET /v1/stats` and `GET /v1/images/save` behind
+  `Authorization: Bearer <token>`. It is **not** a deploy target : the
+  deploy/lifecycle/logs routes it used to carry were removed along with remote
+  deploys (see Build servers above), and `AgentClientService.verifyToken` probes
+  `/v1/stats` for exactly that reason. This is the alternative to registering a
+  build server by raw `tcp://`/`ssh://` Docker socket : instead of exposing the
+  daemon itself, the build server runs this agent and the main app only ever
+  talks HTTP-plus-bearer-token to it. **Arch detection is now genuinely
+  shared**, not just mirrored by hand: `internal/release.Arch` (already
+  `amd64`/`arm64`, no remapping needed) and `internal/release.AssetSuffix` (the
+  same, plus a `darwin-` prefix for macOS) are the one place this repo maps a Go
+  arch/platform onto a release-asset name; `cmd/installer/detect.go`'s `Arch()`
+  and `cmd/cli/update.go`'s `assetSuffix()` both just call through to it now,
+  rather than each keeping its own hand-written copy (a real de-duplication this
+  Go rewrite bought, since Bun and Go couldn't share a module before). **Wired
+  into the main app**: `remote_host.kind` (`"docker"` | `"agent"`) +
+  `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
   (`$lib/services/agent-client.service.ts`, a thin HTTP client over
   `build`/`stats`/`health`), and the Remote Hosts "new host" form's
   connection-type toggle; `deploy.service.ts` branches on
   `RemoteHostDTO.resolveBuildTarget()`'s `kind` to route a git build through
   `DockerService` or `AgentClientService`. The agent has no access to the main
-  app's source tree at runtime, so `packages/agent/docker.ts` and
-  `packages/agent/stats.ts` intentionally re-implement (not import) the
-  equivalent logic from `docker/git-build.ts` and `SystemStatsService`; keep the
-  two in sync by hand if one changes. `packages/agent/schemas.ts` holds the zod
-  schema for the build body, `safeParse`d at the route rather than cast, and
-  `packages/agent/openapi.ts` generates the agent's own OpenAPI 3.1 doc from the
-  same schema, the "one schema, two purposes" approach the main app uses (see
-  OpenAPI above).
-- **`packages/installer/`**, a single-binary installer
-  (`packages/installer/main.go`) meant to be the target of a `curl | bash`
-  one-liner (`packages/installer/bootstrap.sh`) on a fresh Linux server.
-  `--mode=full` defaults to the **system (rootful)** daemon (`options.go`'s
-  `DockerFlavourOf`): enables it, makes it a swarm manager (`swarm.go`'s
-  `EnsureSwarmManager`, `--advertise-addr=` or the default-route address),
-  creates the `homerun` bridge and the attachable `homerun-swarm` overlay, and
-  writes a compose file whose Traefik runs the swarm provider too, so the app
-  boots in swarm mode (see Swarm mode in `docker.md`). The trade-off is a root
-  daemon. `--docker=rootless` (and `--mode=agent`, always) installs Docker
-  Engine + rootless prerequisites (`uidmap`/`dbus-user-session`), creates a
-  dedicated non-root system user, installs **rootless** Docker for it via
-  Docker's own documented flow (`get.docker.com/rootless` →
-  `dockerd-rootless-setuptool.sh`, `loginctl enable-linger` + a `systemd --user`
-  unit so the daemon survives a headless reboot without an active login
-  session), creates `homerun` on that daemon, then installs the Agent
-  (`--mode=agent`, default, own `systemd --user` unit) or the standalone full
-  stack under that account, never as root. `--migrate-to-rootful`
-  (`migrate.go`'s `Migrate`) moves a rootless full install onto the system
-  daemon in swarm mode, volumes and all, and is re-runnable; `--image=` swaps
-  the app image (the e2e suite uses it to run a locally built one). **Binaries
-  and Docker images only, nothing built from source on the target host**
-  (superseding an earlier draft that cloned the repo and ran `bun run build`
-  there): `bootstrap.sh` downloads the `homerun-installer-<arch>` release binary
-  itself and `exec`s it (no Bun, no git); `--mode=agent` downloads the matching
-  `homerun-agent-<arch>` release binary straight to
-  `/usr/local/bin/homerun-agent`; `--mode=full` writes a standalone
-  `compose.yaml` (`fullstack.go`'s `fullStackCompose`, distinct from the root
-  dev `compose.yaml`; see Docker integration above) pulling the published
-  `docker.io/orochibraru/homerun` app image alongside Traefik/Postgres, then
-  `docker compose pull && ...up -d`.
+  app's source tree at runtime, so `cmd/agent/build.go` and `cmd/agent/git.go`
+  intentionally re-implement (not import) the equivalent logic from
+  `docker/git-build.ts`, and `cmd/agent/stats.go` re-implements
+  `SystemStatsService`; keep the two in sync by hand if one changes (the
+  `subproject-sync` agent's job). `cmd/agent/build.go`'s `BuildInput` struct is
+  the build body's shape, hand-validated by `validateBuildInput` in
+  `cmd/agent/server.go` (no schema library, this is Go, not zod), and
+  `cmd/agent/openapi.go` generates the agent's own OpenAPI 3.1 doc from plain Go
+  literals describing the same shapes, the "one schema, two purposes" approach
+  the main app uses with zod (see OpenAPI above) without a shared runtime to
+  hang a real schema library off. `cmd/agent/builders.go` embeds
+  `cmd/agent/builder.sh` and `cmd/agent/builder-tools.json` (`//go:embed`), the
+  same generated-and-pinned build-tool script and checksums the main app's own
+  `builder-run.ts` uses; golden files under `cmd/agent/testdata/*.json` plus
+  `tests/unit/app/agent-builder-parity.test.ts` (on the app side) pin the two
+  together, so the pair can't silently drift the way a hand-copied string could.
+- **`cmd/installer/`**, a single-binary installer (`cmd/installer/main.go`)
+  meant to be the target of a `curl | bash` one-liner
+  (`cmd/installer/bootstrap.sh`) on a fresh Linux server. `--mode=full` defaults
+  to the **system (rootful)** daemon (`options.go`'s `DockerFlavourOf`): enables
+  it, makes it a swarm manager (`swarm.go`'s `EnsureSwarmManager`,
+  `--advertise-addr=` or the default-route address), creates the `homerun`
+  bridge and the attachable `homerun-swarm` overlay, and writes a compose file
+  whose Traefik runs the swarm provider too, so the app boots in swarm mode (see
+  Swarm mode in `docker.md`). The trade-off is a root daemon.
+  `--docker=rootless` (and `--mode=agent`, always) installs Docker Engine +
+  rootless prerequisites (`uidmap`/`dbus-user-session`), creates a dedicated
+  non-root system user, installs **rootless** Docker for it via Docker's own
+  documented flow (`get.docker.com/rootless` → `dockerd-rootless-setuptool.sh`,
+  `loginctl enable-linger` + a `systemd --user` unit so the daemon survives a
+  headless reboot without an active login session), creates `homerun` on that
+  daemon, then installs the Agent (`--mode=agent`, default, own `systemd --user`
+  unit) or the standalone full stack under that account, never as root.
+  `--migrate-to-rootful` (`migrate.go`'s `Migrate`) moves a rootless full
+  install onto the system daemon in swarm mode, volumes and all, and is
+  re-runnable; `--image=` swaps the app image (the e2e suite uses it to run a
+  locally built one). **Binaries and Docker images only, nothing built from
+  source on the target host** (superseding an earlier draft that cloned the repo
+  and ran `bun run build` there): `bootstrap.sh` downloads the
+  `homerun-installer-<arch>` release binary itself and `exec`s it (no Bun, no
+  git); `--mode=agent` downloads the matching `homerun-agent-<arch>` release
+  binary straight to `/usr/local/bin/homerun-agent`; `--mode=full` writes a
+  standalone `compose.yaml` (`fullstack.go`'s `fullStackCompose`, distinct from
+  the root dev `compose.yaml`; see Docker integration above) pulling the
+  published `docker.io/orochibraru/homerun` app image alongside
+  Traefik/Postgres, then `docker compose pull && ...up -d`.
 
   **`--mode=full` resolves an address for the instance and it is never
   `localhost`** (`main.go`'s `resolveHost`): `--domain=` wins, else an
@@ -381,22 +389,22 @@ drives a target machine's shell, not this app's own runtime).
   `--mode=full` end to end on a second VM (real rootless Docker, real
   `docker compose pull && ...up -d` bringing up Traefik, Postgres, and the real
   published `docker.io/orochibraru/homerun` app image, all healthy, dashboard
-  reachable from outside the VM). See `packages/installer/README.md` for the
-  full verification notes and the real bugs this run found and fixed
+  reachable from outside the VM). See `cmd/installer/README.md` for the full
+  verification notes and the real bugs this run found and fixed
   (AppArmor-restricted unprivileged user namespaces on Ubuntu 24.04, an
   RootlessKit privileged-port restriction blocking Traefik's 80/443, an unquoted
   YAML scalar in the generated compose file, a postgres-18 volume-mount-path
   mismatch, and a missing `ORIGIN` env var), all now fixed in `docker.go` and
   `fullstack.go` (these findings predate the Go rewrite, carried forward from
-  the old TypeScript steps of the same name). `packages/installer/swarm-join.sh`
-  has since had its own real two-VM run (see Swarm mode in `docker.md`),
-  replayable with `bun run e2e:multipass --swarm`. `--fresh-swarm` checks a
-  default install boots in swarm mode and routes a 2-replica service,
-  `--migrate` installs the previous release rootless, deploys a service with a
-  named volume holding a marker, runs `--migrate-to-rootful` and checks users,
-  mode, the redeploy, the marker's ownership and routing. `--local-image` builds
-  the app image from the checkout and loads it into each VM, which app-side
-  changes need since the installer otherwise pulls the published image.
+  the old TypeScript steps of the same name). `cmd/installer/swarm-join.sh` has
+  since had its own real two-VM run (see Swarm mode in `docker.md`), replayable
+  with `bun run e2e:multipass --swarm`. `--fresh-swarm` checks a default install
+  boots in swarm mode and routes a 2-replica service, `--migrate` installs the
+  previous release rootless, deploys a service with a named volume holding a
+  marker, runs `--migrate-to-rootful` and checks users, mode, the redeploy, the
+  marker's ownership and routing. `--local-image` builds the app image from the
+  checkout and loads it into each VM, which app-side changes need since the
+  installer otherwise pulls the published image.
 
   This whole run is reproducible, not a one-off: `scripts/e2e-multipass.ts`
   (`bun run e2e:multipass`) automates exactly this, builds the
@@ -418,7 +426,7 @@ drives a target machine's shell, not this app's own runtime).
   GitHub-release resolver). Where the suite above builds from local source and
   runs the binaries directly, this one runs **only what's already published,
   using the commands the docs themselves print**: the one-liners are extracted
-  from `docs/getting-started.md`, `packages/agent/README.md` and
+  from `docs/getting-started.md`, `cmd/agent/README.md` and
   `docs/api-and-cli.md` at run time and executed verbatim (`Vm.runScript` writes
   a documented block to a file and runs it rather than re-typing it), so a
   renamed flag or a moved `raw.githubusercontent.com` path fails the run. Phases
@@ -460,10 +468,12 @@ Three audiences, three places, keep them apart:
 - **The website** (<https://homerun.orochibraru.com>): built from a **separate
   repository** that renders this repo's `docs/*.md` itself. It used to live here
   as `packages/docs/` (a static SvelteKit site published as
-  `docker.io/orochibraru/homerun-docs`); that sub-project, its `scripts/docs.ts`
+  `docker.io/orochibraru/homerun-docs`, from back when `agent`/`cli`/`installer`
+  still lived under `packages/` too); that sub-project, its `scripts/docs.ts`
   wrapper, the `dev:docs`/`build:docs`/`check:docs` scripts, the `docs`
   Dockerfile stage and bake target, and every CI job building or publishing it
-  are all gone. Don't reintroduce a docs site under `packages/`.
+  are all gone. Don't reintroduce a docs site under `cmd/` or elsewhere in this
+  repo.
 
 ## Self-update from the sidebar (`$lib/services/self-update.service.ts`, `$lib/remote/self-update.remote.ts`, `app-version.svelte`)
 

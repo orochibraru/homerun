@@ -1,7 +1,4 @@
 name: Go
-# The Go half of the repo: packages/cli and packages/installer, one module at
-# the root. Separate from code_quality.yaml (which is Bun/SvelteKit) so a Go
-# failure says so by name, and so this can run without installing node_modules.
 
 on:
   workflow_call:
@@ -32,25 +29,22 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # -race catches a data race the ordinary run would report as a pass;
-      # nothing here is concurrent yet, but the CLI's polling loops and the
-      # installer's runner are exactly where one would first appear.
       - name: Test
-        run: go test -race -coverprofile=coverage.out ./packages/...
+        run: go test -race -coverprofile=coverage.out ./cmd/... ./internal/...
 
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -1
 
       - name: Formatting
         run: |
-          unformatted="$(gofmt -l ./packages)"
+          unformatted="$(gofmt -l ./cmd ./internal)"
           if [ -n "$unformatted" ]; then
             echo "::error::gofmt would rewrite: $unformatted"
             exit 1
           fi
 
       - name: Vet
-        run: go vet ./packages/...
+        run: go vet ./cmd/... ./internal/...
 
       - name: Record result
         id: done

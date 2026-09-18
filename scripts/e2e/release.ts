@@ -15,12 +15,12 @@ export class PublishedRelease {
 	 * @throws When the script doesn't point at github.com.
 	 */
 	static #repoFromBootstrap(): string {
-		const source = readFileSync("packages/installer/bootstrap.sh", "utf8");
+		const source = readFileSync("cmd/installer/bootstrap.sh", "utf8");
 		const repo = source.match(/^GIT_REPO="([^"]+)"/m)?.[1];
 		const host = source.match(/^GIT_HOST="([^"]+)"/m)?.[1];
 		if (!repo || host !== "github.com") {
 			throw new Error(
-				`packages/installer/bootstrap.sh points at ${host}/${repo}, which this suite doesn't know how to query (it speaks the GitHub releases API).`,
+				`cmd/installer/bootstrap.sh points at ${host}/${repo}, which this suite doesn't know how to query (it speaks the GitHub releases API).`,
 			);
 		}
 		return repo;

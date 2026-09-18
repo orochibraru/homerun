@@ -4,11 +4,11 @@ description: >-
   Use when asked to check that the documentation reflects what's actually built,
   or for a periodic full sweep. Unlike docs-sync (which starts from a diff),
   this agent starts from the app itself and audits every operator-facing page,
-  docs/*.md, root README.md, packages/agent|installer|cli/README.md, against the
-  real code — routes and sidebar nav, settings pages, schema.ts, config.ts env
-  vars, the REST API/OpenAPI document, CLI commands and flags, installer
-  options, templates, job types — and fixes what's wrong: features documented
-  but not built, features built but undocumented, wrong names, defaults, paths,
+  docs/*.md, root README.md, cmd/agent|installer|cli/README.md, against the real
+  code — routes and sidebar nav, settings pages, schema.ts, config.ts env vars,
+  the REST API/OpenAPI document, CLI commands and flags, installer options,
+  templates, job types — and fixes what's wrong: features documented but not
+  built, features built but undocumented, wrong names, defaults, paths,
   commands, env vars or UI labels, and stale "planned / not yet built" claims.
   Not for CLAUDE.md or .agents/notes/ (contributor docs) unless they contradict
   the same fact, and not for code correctness (repo-gate).
@@ -30,25 +30,24 @@ The docs being audited:
 - `docs/*.md` (each guide page listed in `docs/README.md`, plus `showcase.md`
   and `faq-and-limitations.md`)
 - root `README.md`
-- `packages/agent/README.md`, `packages/installer/README.md`,
-  `packages/cli/README.md`
+- `cmd/agent/README.md`, `cmd/installer/README.md`, `cmd/cli/README.md`
 
 The ground truth to check them against:
 
-| Claim type                          | Source of truth                                                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Pages, tabs, nav entries, UI labels | `src/routes/(protected)/**` directory tree, `src/lib/nav.ts`, sidebar component, button/label text                  |
-| Settings and their defaults         | `src/routes/(protected)/settings/**`, `src/lib/dto/instance-settings-dto.ts`, `schema.ts` defaults                  |
-| Env vars and config file keys       | `src/lib/config.ts`, `homerun.schema.json`, `compose.yaml`, installer `options.go`                                  |
-| Data the app stores                 | `src/lib/server/db/schema.ts`                                                                                       |
-| REST API endpoints, auth, payloads  | `src/routes/api/v1/**`, `openapi.json` (regenerate with `bun run gen` if stale)                                     |
-| CLI commands, flags, output         | `packages/cli/main.go`, `commands.go`, `login.go`, `update.go` (Go, not TypeScript); `go run ./packages/cli --help` |
-| Installer steps and flags           | `packages/installer/main.go`, `options.go`, `*.go` (Go, not TypeScript); `go run ./packages/installer --help`       |
-| Agent endpoints and config          | `packages/agent/index.ts`, `http.ts`, `config.ts`, `openapi.ts`                                                     |
-| Built-in templates                  | the template catalog under `src/lib` (grep `TemplateDTO` / seed data)                                               |
-| Background jobs, schedules, cleanup | `src/lib/services/queue/**`, `cron/**`, `cron.service.ts`, `docker-cleanup-queue.ts`                                |
-| Limitations and planned features    | the code plus `.agents/notes/planned-features.md` and `TODO.md`                                                     |
-| Screenshots                         | `docs/images/**` referenced paths exist                                                                             |
+| Claim type                          | Source of truth                                                                                           |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Pages, tabs, nav entries, UI labels | `src/routes/(protected)/**` directory tree, `src/lib/nav.ts`, sidebar component, button/label text        |
+| Settings and their defaults         | `src/routes/(protected)/settings/**`, `src/lib/dto/instance-settings-dto.ts`, `schema.ts` defaults        |
+| Env vars and config file keys       | `src/lib/config.ts`, `homerun.schema.json`, `compose.yaml`, installer `options.go`                        |
+| Data the app stores                 | `src/lib/server/db/schema.ts`                                                                             |
+| REST API endpoints, auth, payloads  | `src/routes/api/v1/**`, `openapi.json` (regenerate with `bun run gen` if stale)                           |
+| CLI commands, flags, output         | `cmd/cli/main.go`, `commands.go`, `login.go`, `update.go` (Go, not TypeScript); `go run ./cmd/cli --help` |
+| Installer steps and flags           | `cmd/installer/main.go`, `options.go`, `*.go` (Go, not TypeScript); `go run ./cmd/installer --help`       |
+| Agent endpoints and config          | `cmd/agent/main.go`, `server.go`, `config.go`, `openapi.go` (Go, not TypeScript)                          |
+| Built-in templates                  | the template catalog under `src/lib` (grep `TemplateDTO` / seed data)                                     |
+| Background jobs, schedules, cleanup | `src/lib/services/queue/**`, `cron/**`, `cron.service.ts`, `docker-cleanup-queue.ts`                      |
+| Limitations and planned features    | the code plus `.agents/notes/planned-features.md` and `TODO.md`                                           |
+| Screenshots                         | `docs/images/**` referenced paths exist                                                                   |
 
 ## Workflow
 
@@ -70,10 +69,10 @@ The ground truth to check them against:
      `docs/README.md` assigns that topic to. Missing ones get written.
    - Negative claims are the highest-value checks: this repo has shipped
      features while the FAQ still denied they existed. Grep `docs/`, `README.md`
-     and `packages/*/README.md` case-insensitively for "not yet", "no support",
+     and `cmd/*/README.md` case-insensitively for "not yet", "no support",
      "doesn't support", "there's no", "planned", "isn't possible" and "no
      concept of", and verify each hit.
-   - Run the CLI's `--help` and compare against `packages/cli/README.md` and
+   - Run the CLI's `--help` and compare against `cmd/cli/README.md` and
      `docs/api-and-cli.md` verbatim.
    - Check every relative link and `images/` reference resolves.
 4. **Fix it.** Edit the docs directly. Match each page's voice: operator-facing,

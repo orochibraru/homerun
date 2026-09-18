@@ -25,7 +25,7 @@ if (!nextVersion) {
 	process.exit(1);
 }
 
-const packageJsonPaths = ["package.json", "packages/agent/package.json"];
+const packageJsonPaths = ["package.json"];
 
 for (const path of packageJsonPaths) {
 	const file = Bun.file(path);

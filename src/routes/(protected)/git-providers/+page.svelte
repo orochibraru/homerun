@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { GitBranch, Link2, Plus, Trash2, Unlink } from "@lucide/svelte";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import CopyBox from "$lib/components/copy-box.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import EntityList from "$lib/components/entity-list.svelte";
 	import {
@@ -30,9 +31,11 @@
 	const rows = $derived(
 		data.providers.map((provider) => ({
 			connected: data.connectedProviderIds.includes(provider.id),
-			description:
-				data.isAdmin && !data.connectedProviderIds.includes(provider.id)
-					? `Callback URL for this provider's OAuth App: ${callbackUrlFor(provider.id)}`
+			callbackUrl:
+				data.isAdmin &&
+				provider.kind !== "github" &&
+				!data.connectedProviderIds.includes(provider.id)
+					? callbackUrlFor(provider.id)
 					: null,
 			id: provider.id,
 			name: provider.name,
@@ -55,7 +58,17 @@
 		kindOptions.find(([val]) => val === kind)?.[1] ?? "GitHub",
 	);
 	const requiresBaseUrl = $derived(kind === "gitea");
+	const isGithub = $derived(kind === "github");
 	let submitting = $state(false);
+
+	let githubApp = $state<{ action: string; manifest: string } | null>(null);
+	let githubAppForm: HTMLFormElement | null = $state(null);
+
+	async function openGithub(registration: unknown) {
+		githubApp = registration as { action: string; manifest: string };
+		await tick();
+		githubAppForm?.submit();
+	}
 
 	let deleteDialogOpen = $state(false);
 	let pendingDeleteName = $state("");
@@ -79,6 +92,15 @@
   <div class="bg-accent/10 text-accent flex size-10 shrink-0 items-center justify-center rounded-md">
     <GitBranch class="size-5" />
   </div>
+{/snippet}
+
+{#snippet details(provider: ProviderRow)}
+  {#if provider.callbackUrl}
+    <div class="flex flex-col gap-1">
+      <p class="text-text-muted text-xs">Callback URL for this provider's OAuth App</p>
+      <CopyBox class="bg-surface-3" label="the callback URL" value={provider.callbackUrl} />
+    </div>
+  {/if}
 {/snippet}
 
 {#snippet badge(provider: ProviderRow)}
@@ -154,31 +176,40 @@
   {#if data.isAdmin && showAddForm}
     <div class="panel mb-6 rounded-md p-5">
       <p class="text-text-subtle mb-4 text-xs">
-        Register an OAuth App on the provider's own site first (its
-        developer/application settings), then paste the client ID/secret here.
-        The callback URL to give it is shown once you've added the provider
-        below.
+        {#if isGithub}
+          Homerun creates a GitHub App for you: GitHub asks you to confirm it,
+          then to install it on the repositories Homerun should see.
+        {:else}
+          Register an OAuth App on the provider's own site first (its
+          developer/application settings), then paste the client ID/secret
+          here. The callback URL to give it is shown once you've added the
+          provider below.
+        {/if}
       </p>
       {#if form?.error}
         <p class="mb-4 text-sm text-red-500">{form.error}</p>
       {/if}
       <form
-        action="?/addProvider"
+        action={isGithub ? "?/createGithubApp" : "?/addProvider"}
         class="space-y-4"
         method="POST"
         use:enhance={enhanceToast({
           error: "Check the form for errors.",
-          loading: "Adding the provider",
+          loading: isGithub ? "Preparing the GitHub App" : "Adding the provider",
           onSettled: () => {
             submitting = false;
           },
           onStart: () => {
             submitting = true;
           },
-          onSuccess: () => {
+          onSuccess: async (result) => {
+            if (result?.githubApp) {
+              await openGithub(result.githubApp);
+              return;
+            }
             showAddForm = false;
           },
-          success: "Provider added.",
+          success: (result) => (result?.githubApp ? "Opening GitHub" : "Provider added."),
         })}
       >
         <div>
@@ -200,7 +231,7 @@
             class={input}
             id="name"
             name="name"
-            placeholder="e.g. Company GitHub"
+            placeholder={isGithub ? "e.g. homerun-acme" : "e.g. Company GitLab"}
             required
             type="text"
           />
@@ -220,32 +251,52 @@
             />
           </div>
         {/if}
-        <div class="grid grid-cols-2 gap-3">
+        {#if isGithub}
           <div>
-            <label class={label} for="clientId">Client ID</label>
+            <label class={label} for="org">Organization</label>
             <input
               class={input}
-              id="clientId"
-              name="clientId"
-              required
+              id="org"
+              name="org"
+              placeholder="Leave empty to create it on your personal account"
               type="text"
             >
           </div>
-          <div>
-            <label class={label} for="clientSecret">Client secret</label>
-            <input
-              class={input}
-              id="clientSecret"
-              name="clientSecret"
-              required
-              type="password"
-            >
+        {:else}
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class={label} for="clientId">Client ID</label>
+              <input
+                class={input}
+                id="clientId"
+                name="clientId"
+                required
+                type="text"
+              >
+            </div>
+            <div>
+              <label class={label} for="clientSecret">Client secret</label>
+              <input
+                class={input}
+                id="clientSecret"
+                name="clientSecret"
+                required
+                type="password"
+              >
+            </div>
           </div>
-        </div>
+        {/if}
         <div class="flex justify-end">
-          <Button disabled={submitting} type="submit">Add provider</Button>
+          <Button disabled={submitting} type="submit">
+            {isGithub ? "Create GitHub App" : "Add provider"}
+          </Button>
         </div>
       </form>
+      {#if githubApp}
+        <form bind:this={githubAppForm} action={githubApp.action} class="hidden" method="POST">
+          <input name="manifest" type="hidden" value={githubApp.manifest}>
+        </form>
+      {/if}
     </div>
   {/if}
 
@@ -256,7 +307,7 @@
       title="No git providers configured"
     />
   {:else}
-    <EntityList {actions} {badge} items={rows} {media} {view} />
+    <EntityList {actions} {badge} {details} items={rows} {media} {view} />
   {/if}
 </div>
 

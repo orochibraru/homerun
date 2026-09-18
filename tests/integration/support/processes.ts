@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import process from "node:process";
 import { ciTimeout } from "./ci";
 
@@ -53,16 +55,23 @@ async function waitForPort(
 }
 
 /**
- * Spawns the real `agent/index.ts` binary from source (same shape as `bun
- * run dev:agent`), pointed at whatever Docker socket this machine's own
- * `docker context` resolves (the agent's own auto-detection, see
- * packages/agent/config.ts) : a real agent, not a stub, so the deploy-target
- * and build-server scenarios exercise the actual HTTP surface this session
- * built. `port` is picked fresh per run (port.ts) so two runs of this suite
- * never collide on a fixed agent port.
+ * Builds the real Go agent (`cmd/agent`) once and spawns it, pointed at
+ * whatever Docker socket this machine's own `docker context` resolves (the
+ * agent's own auto-detection) : a real agent, not a stub, so the deploy-target
+ * and build-server scenarios exercise the actual HTTP surface. `port` is
+ * picked fresh per run (port.ts) so two runs of this suite never collide on a
+ * fixed agent port.
  */
 export function spawnAgent(port: number, token: string) {
-	const proc = Bun.spawn(["bun", "run", "packages/agent/index.ts"], {
+	const binary = join(tmpdir(), `homerun-agent-it-${process.pid}`);
+	const build = Bun.spawnSync(["go", "build", "-o", binary, "./cmd/agent"], {
+		cwd: process.cwd(),
+		stderr: "pipe",
+	});
+	if (build.exitCode !== 0) {
+		throw new Error(`go build ./cmd/agent failed: ${build.stderr.toString()}`);
+	}
+	const proc = Bun.spawn([binary], {
 		cwd: process.cwd(),
 		env: {
 			...process.env,

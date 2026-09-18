@@ -42,9 +42,6 @@ jobs:
         with:
           bun-version-file: package.json
 
-      # bun run check chains go vet over packages/cli and packages/installer,
-      # so this job needs a Go toolchain even though the Go tests and
-      # golangci-lint live in their own workflow (go.yaml).
       - name: Setup Go
         uses: actions/setup-go@v6
         with:

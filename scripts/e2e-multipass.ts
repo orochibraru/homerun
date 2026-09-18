@@ -273,7 +273,7 @@ async function testCli(fullVm: Vm): Promise<void> {
 		CLI_CONTAINER,
 		"bash",
 		"-c",
-		"curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/packages/cli/install.sh | bash",
+		"curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/install.sh | bash",
 	]);
 	await exec(["docker", "exec", CLI_CONTAINER, "homerun", "--version"]);
 
@@ -383,10 +383,7 @@ async function testSwarm(
 
 	log(`Launching ${workerVm.name} and running swarm-join.sh`);
 	await workerVm.recreate(2, "2G", "12G");
-	await workerVm.transfer(
-		"packages/installer/swarm-join.sh",
-		"/tmp/swarm-join.sh",
-	);
+	await workerVm.transfer("cmd/installer/swarm-join.sh", "/tmp/swarm-join.sh");
 	await workerVm.exec([
 		"bash",
 		"-c",

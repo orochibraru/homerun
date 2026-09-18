@@ -46,7 +46,7 @@ explains that instead, and you upgrade by hand:
   [API & CLI](api-and-cli.md#cli).
 - **The Homerun Agent** on a build server is a plain binary, replace it and
   restart its `systemd --user` unit, see
-  [`packages/agent/README.md`](../packages/agent/README.md).
+  [`cmd/agent/README.md`](../cmd/agent/README.md).
 
 Take a Postgres dump before a major upgrade. Migrations are applied forward-only
 and there's no downgrade path.

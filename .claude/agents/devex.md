@@ -45,9 +45,9 @@ one go, no plans, no severity tiers, out-of-scope findings go in `TODO.md`.
 ### 2. Fresh-clone setup works
 
 - `.env.example` covers every env var `src/lib/config.ts` (and
-  `packages/*/config.ts` for the sub-projects) reads, with no leftovers for vars
-  that are gone. Compare against the real `.env` only for key names, never copy
-  or print its values.
+  `cmd/agent/config.go`/`cmd/cli/config.go` for the sub-projects that read env
+  vars of their own) reads, with no leftovers for vars that are gone. Compare
+  against the real `.env` only for key names, never copy or print its values.
 - `compose.yaml` / `compose.dev.yaml` match what CLAUDE.md and CONTRIBUTING.md
   say local dev needs (Traefik + Postgres, ports, network name).
 - `preinstall` / `prepare` hooks, `patches/`, `bunfig.toml` and `.npmrc` do what

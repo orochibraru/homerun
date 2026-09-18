@@ -48,7 +48,7 @@
  */
 import { afterAll, beforeAll } from "bun:test";
 import process from "node:process";
-import { config as agentConfig } from "../../../packages/agent/config";
+import { config as appConfig } from "../../../src/lib/config";
 import { bootstrapAdmin } from "./bootstrap";
 import { ciTimeout, dumpDockerDiagnostics, stepLog } from "./ci";
 import { AGENT_TOKEN, TEST_AUTH_SECRET, TEST_BASE_DOMAIN } from "./config";
@@ -105,7 +105,7 @@ if (wantsIntegrationTests()) {
 
 				stepLog("Starting socat proxy (second Docker connection)...");
 				const socatPort = getFreePort();
-				const socat = startSocatProxy(socatPort, agentConfig.dockerSocketPath);
+				const socat = startSocatProxy(socatPort, appConfig.docker.socketPath);
 				stopFns.push(socat.stop);
 				rawProcs.push(socat.proc);
 				await socat.ready();
@@ -148,7 +148,7 @@ if (wantsIntegrationTests()) {
 
 				stepLog("Building git-build fixture repo...");
 				const gitFixture = await createGitBuildFixture(
-					agentConfig.dockerSocketPath,
+					appConfig.docker.socketPath,
 				);
 				stopFns.push(gitFixture.stop);
 				const gitBuildFixtureUrl = gitFixture.url;

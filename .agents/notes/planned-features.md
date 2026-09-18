@@ -23,8 +23,8 @@ re-litigating design decisions.
 - **Source integration**: git-based builds and push-to-deploy webhooks exist
   (see Git-based builds and Push-to-deploy). Build servers exist too (see Build
   servers above); adding capacity for _deploys_ is Swarm's job, and
-  `packages/installer/swarm-join.sh` joins a node as a worker (verified on two
-  real VMs, needs the system Docker daemon on every node, see `docker.md`).
+  `cmd/installer/swarm-join.sh` joins a node as a worker (verified on two real
+  VMs, needs the system Docker daemon on every node, see `docker.md`).
 - **Onboarding**: the forced first-run wizard now exists (`/onboarding`, see
   above), and setup diagnostics feed a highlighted deep-link into `/settings`
   instead of a standalone page; DNS automation itself now exists (Cloudflare and

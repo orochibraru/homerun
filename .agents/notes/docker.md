@@ -147,8 +147,8 @@ reordering the chain.
     Errors tab bullet above for the "Resolve" action
     (`ServiceDTO.resolveOrphan()`) this status backs, and Remote hosts/Homerun
     Agent below, `agent-client.service.ts`'s `inspectStatus` and
-    `packages/agent/docker.ts`'s `ContainerNotFoundError` (mapped to a real HTTP
-    404 by `packages/agent/http.ts`) make the same distinction for an
+    `internal/dockerapi`'s `ErrNotFound` (mapped to a real HTTP 404 by
+    `cmd/agent/server.go`'s `saveImage`) make the same distinction for an
     agent-backed host. Docker doesn't strip a container's own ANSI color codes
     from its stdout, every raw-log-line surface (the Logs tab, deploy progress
     panel, deployment history, Errors tab) renders each line through
@@ -339,8 +339,8 @@ all in any compose file, so Homerun itself was reachable on `:3000` and nowhere
 else no matter how carefully `baseDomain` was configured, while every service it
 deployed got a routed hostname. The labels live in
 `tools/compose/app.compose.yaml`, `compose.prod.yaml` and the installer's
-generated compose (`packages/installer/fullstack.go`), and the shape they take
-is the result of testing three candidates against the real dev Traefik:
+generated compose (`cmd/installer/fullstack.go`), and the shape they take is the
+result of testing three candidates against the real dev Traefik:
 
 - `traefik.enable` set to an empty string (what `${DASHBOARD_DOMAIN:+true}`
   expands to when the variable is unset) is **not** silently ignored: Traefik
@@ -369,8 +369,8 @@ a bare IP, since ACME can't issue for one.
 The app itself _is_ containerized for production use (`Dockerfile`,
 `docker-bake.hcl`, built/pushed by `.github/workflows/docker.yaml`; see Release
 automation below). The installer's `--mode=full` generates its own separate
-compose file on the target host (see `packages/installer/` below) rather than
-reusing any of these.
+compose file on the target host (see `cmd/installer/` below) rather than reusing
+any of these.
 
 ## Swarm mode (`instance_settings.orchestrationMode`, `service.replicas`/`swarmServiceId`, `src/lib/services/docker/swarm.ts`)
 
@@ -440,10 +440,10 @@ advertise address (the installer passes one; by hand, run
 `docker swarm init --advertise-addr <ip>` once and save again).
 
 **Migrating a rootless install** (`--migrate-to-rootful`,
-`packages/installer/migrate.go`'s `Migrate`): stops every container on the
-rootless daemon, copies each named volume through `tar --numeric-owner` in
-`alpine:3` on both daemons (ownership as the container saw it, not the subuid on
-disk), recreates volumes with their labels so compose keeps owning them, sets up
+`cmd/installer/migrate.go`'s `Migrate`): stops every container on the rootless
+daemon, copies each named volume through `tar --numeric-owner` in `alpine:3` on
+both daemons (ownership as the container saw it, not the subuid on disk),
+recreates volumes with their labels so compose keeps owning them, sets up
 swarm + networks, rewrites `homerun.yaml`'s `socketPath` and the compose file,
 starts the stack, then waits for the app (so its migrations have run) and sets
 `orchestration_mode = 'swarm'` plus `instance_settings.pendingServiceRedeploy`
@@ -452,7 +452,7 @@ in psql and restarts the app. `applyOnBoot` sees the flag, queues
 `swarmServiceId` under the first admin, and clears it. Progress markers live in
 `<compose dir>/.rootful-migration`, so a re-run skips finished copies and never
 queues the redeploys twice. Verified end to end on a Multipass VM from a real
-v1.0.26 rootless install, see `packages/installer/README.md`.
+v1.0.26 rootless install, see `cmd/installer/README.md`.
 
 **Swarm spec details, and what swarm mode can't do.** Pure helpers in
 `swarm.ts`, tested in `tests/unit/app/swarm-spec.test.ts`: `swarmMount` (an
@@ -488,11 +488,11 @@ node _joining this swarm_ as a worker, which Docker then schedules onto on its
 own; it is never a `remote_host` row. That's exactly why Remote Hosts was cut
 back to build servers (see Build servers above), a second standalone daemon and
 a swarm worker are different things and this app only wires up the latter.
-`packages/installer/swarm-join.sh` (a standalone bash script, documented in
-`packages/installer/README.md`) joins a box as a worker **on its system
-(rootful) daemon** and then runs the released installer binary with
-`--mode=agent` for the agent, rather than hand-copying the TS installer's
-rootless steps (the copy had drifted and lacked the AppArmor profile). Usage:
+`cmd/installer/swarm-join.sh` (a standalone bash script, documented in
+`cmd/installer/README.md`) joins a box as a worker **on its system (rootful)
+daemon** and then runs the released installer binary with `--mode=agent` for the
+agent, rather than hand-copying the TS installer's rootless steps (the copy had
+drifted and lacked the AppArmor profile). Usage:
 `curl -fsSL .../swarm-join.sh | sudo bash -s -- --token=<SWMTKN-...> --manager=<ip>:2377`.
 Once joined, the node is schedulable by the swarm itself, nothing in this app
 has to register it.
@@ -900,5 +900,5 @@ authenticated `GET /v1/images/save?ref=`, `Readable.fromWeb` of the body) into
 `loadImageArchive`. Scan targets then only include the local copy. Not verified
 against a real remote daemon or agent. The `git clone` runs on the build server
 for both kinds, in an `alpine/git` container into a volume on that daemon
-(`git-build.ts` with `remote` set, or `packages/agent/docker.ts`), so the repo
-has to be reachable from the build server.
+(`git-build.ts` with `remote` set, or `cmd/agent/build.go`/`cmd/agent/git.go`),
+so the repo has to be reachable from the build server.

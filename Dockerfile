@@ -60,35 +60,28 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/app/build/server"]
 
-FROM deps AS agent-builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS agent-builder
 
-ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
+WORKDIR /src
 
-WORKDIR /app
+COPY go.mod ./
+COPY cmd/agent ./cmd/agent
+COPY internal ./internal
+COPY package.json ./
 
-RUN apk add --no-cache wget ca-certificates
-
-COPY --from=deps /app/node_modules /app/node_modules
-
-COPY packages/agent /app/packages/agent
-COPY tsconfig.json /app/tsconfig.json
-COPY package.json /app/package.json
-
+ARG TARGETOS
 ARG TARGETARCH
-RUN case "$TARGETARCH" in \
-    amd64) BUN_TARGET=bun-linux-x64-musl ;; \
-    arm64) BUN_TARGET=bun-linux-arm64-musl ;; \
-    *) echo "unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
-    esac; \
-    bun build /app/packages/agent/index.ts --compile --target="$BUN_TARGET" --external cpu-features --minify --outfile /out/homerun-agent
+RUN VERSION="$(sed -n 's/^[[:space:]]*"version": "\(.*\)",*$/\1/p' package.json)"; \
+    CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath \
+    -ldflags "-s -w -X github.com/orochibraru/homerun/internal/buildinfo.Version=${VERSION}" \
+    -o /out/homerun-agent ./cmd/agent
 
 FROM alpine:3 AS agent
 
-RUN apk add --no-cache ca-certificates wget libstdc++ libgcc
+RUN apk add --no-cache ca-certificates wget
 
 COPY --from=agent-builder /out/homerun-agent /usr/local/bin/homerun-agent
 
-ENV BUN_FEATURE_FLAG_EXPERIMENTAL_HTTP2_CLIENT=1
 ENV PORT=7420
 ENV DOCKER_SOCKET_PATH=/var/run/docker.sock
 

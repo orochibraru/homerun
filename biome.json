@@ -178,16 +178,6 @@
 			}
 		},
 		{
-			"includes": ["packages/agent/**"],
-			"linter": {
-				"rules": {
-					"suspicious": {
-						"noConsole": "off"
-					}
-				}
-			}
-		},
-		{
 			"includes": ["src/lib/logger.ts"],
 			"linter": {
 				"rules": {
