@@ -58,7 +58,7 @@
 			let buffer = "";
 
 			while (!cancelled) {
-				// biome-ignore lint/performance/noAwaitInLoops: stream reads are inherently sequential
+				// oxlint-disable-next-line no-await-in-loop -- stream reads are inherently sequential
 				const { done, value } = await reader.read();
 				if (done) {
 					break;
@@ -68,6 +68,7 @@
 				buffer = parts.pop() ?? "";
 				if (parts.length > 0) {
 					lines.push(...parts);
+					// oxlint-disable-next-line no-await-in-loop -- each chunk renders before the next is read
 					await tick();
 					logEl?.scrollTo({ top: logEl.scrollHeight });
 				}

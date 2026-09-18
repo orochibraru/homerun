@@ -395,7 +395,7 @@ export class JobDTO extends BaseDTO<Job> {
 	static async cancelDependents(jobId: string, reason: string): Promise<void> {
 		let frontier = [jobId];
 		while (frontier.length > 0) {
-			// biome-ignore lint/performance/noAwaitInLoops: each level of the dependency chain is only known once the previous one is cancelled
+			// oxlint-disable-next-line no-await-in-loop -- each level of the dependency chain is only known once the previous one is cancelled
 			const cancelled = await db
 				.update(job)
 				.set({ error: reason, finishedAt: new Date(), status: "cancelled" })

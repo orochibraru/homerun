@@ -131,7 +131,6 @@ const isDesktop = new MediaQuery("(min-width: 768px)");
     </form>
   {:else}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <!-- biome-ignore lint/a11y/noNoninteractiveElementInteractions: custom dialog -->
     <fieldset
       class="flex flex-col gap-4"
       disabled={loading}

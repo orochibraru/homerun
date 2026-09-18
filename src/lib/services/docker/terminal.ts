@@ -39,7 +39,7 @@ interface TerminalSession {
 	lastActivity: number;
 	listeners: Set<(chunk: Uint8Array) => void>;
 	serviceId: string;
-	socket: Bun.Socket<undefined>;
+	socket: Bun.Socket;
 	userId: string;
 }
 
@@ -100,7 +100,7 @@ function makeUpgradeReader(
 }
 
 /** Mixin adding the interactive web terminal : session open/subscribe/write/close, backed by the hand-rolled `docker exec` upgrade described above. */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerTerminalMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
@@ -108,7 +108,7 @@ export function DockerTerminalMixin<
 		readonly #sessions = new Map<string, TerminalSession>();
 
 		/** Starts the idle-session reaper alongside the usual mixin-chain construction. */
-		// biome-ignore lint/suspicious/noExplicitAny: TS's mixin pattern requires this exact constructor shape
+		// oxlint-disable-next-line typescript/no-explicit-any -- TS's mixin pattern requires this exact constructor shape
 		constructor(...args: any[]) {
 			super(...args);
 			this.#startReaper();

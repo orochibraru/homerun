@@ -120,7 +120,7 @@ function sleep(ms: number): Promise<void> {
  * one-off mixin ahead of it in the merge chain (see docker.service.ts):
  * mirror copies and scans both run as one-off containers via `runOneOff`.
  */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerImageScanMixin<
 	TBase extends Constructor<BaseDockerService & RequiresOneOffMixin>,
 >(Base: TBase) {
@@ -341,7 +341,7 @@ export function DockerImageScanMixin<
 			}
 			for (const url of candidates) {
 				const client = new MirrorRegistryClient(url);
-				// biome-ignore lint/performance/noAwaitInLoops: the first reachable address wins
+				// oxlint-disable-next-line no-await-in-loop -- the first reachable address wins
 				if (await client.ping()) {
 					return client;
 				}

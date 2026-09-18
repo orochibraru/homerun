@@ -62,8 +62,6 @@ const pageRoute = await import(
 const { AppLogDTO } = await import("../../../src/lib/dto/app-log-dto");
 
 type LogsEvent = Parameters<typeof logsRoute.GET>[0];
-type LoadEvent = Parameters<typeof pageRoute.load>[0];
-type ActionEvent = Parameters<typeof pageRoute.actions.restartTraefik>[0];
 
 function locals(isAdmin: boolean) {
 	return { isAdmin, user: { id: "u1" } };
@@ -110,14 +108,12 @@ describe("system logs access", () => {
 	test("the page load sends a developer home", () => {
 		let thrown: unknown;
 		try {
-			pageRoute.load({ locals: locals(false) } as unknown as LoadEvent);
+			pageRoute.load({ locals: locals(false) });
 		} catch (error) {
 			thrown = error;
 		}
 		expect(thrown).toMatchObject({ location: "/", status: 302 });
-		expect(() =>
-			pageRoute.load({ locals: locals(true) } as unknown as LoadEvent),
-		).not.toThrow();
+		expect(() => pageRoute.load({ locals: locals(true) })).not.toThrow();
 	});
 });
 
@@ -146,7 +142,7 @@ describe("Traefik actions", () => {
 	): Promise<unknown> =>
 		pageRoute.actions[name]({
 			locals: eventLocals,
-		} as unknown as ActionEvent);
+		});
 
 	test("signed out is sent to sign in, a developer home, and nothing runs", async () => {
 		for (const name of ["restartTraefik", "updateTraefik"] as const) {

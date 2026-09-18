@@ -252,11 +252,13 @@ export class MirrorRegistryClient {
 		const repositories: string[] = [];
 		let path: string | null = `/v2/_catalog?n=${CATALOG_PAGE_SIZE}`;
 		while (path) {
-			// biome-ignore lint/performance/noAwaitInLoops: catalog pages are chained by the Link header
+			// oxlint-disable-next-line no-await-in-loop -- catalog pages are chained by the Link header
 			const response = await this.#request(path);
 			if (!response.ok) {
+				// oxlint-disable-next-line no-await-in-loop -- catalog pages are chained by the Link header
 				await this.#fail(response, "Listing the mirror's repositories");
 			}
+			// oxlint-disable-next-line no-await-in-loop -- catalog pages are chained by the Link header
 			const body = (await response.json()) as {
 				repositories?: string[] | null;
 			};
@@ -312,7 +314,7 @@ export class MirrorRegistryClient {
 	async inventory(repository: string): Promise<MirrorTag[]> {
 		const entries: MirrorTag[] = [];
 		for (const tag of await this.tags(repository)) {
-			// biome-ignore lint/performance/noAwaitInLoops: one HEAD at a time keeps the registry idle-friendly
+			// oxlint-disable-next-line no-await-in-loop -- one HEAD at a time keeps the registry idle-friendly
 			const digest = await this.digest(repository, tag);
 			if (digest) {
 				entries.push({ digest, repository, tag });

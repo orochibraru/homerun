@@ -140,11 +140,12 @@
 			} else if (++misses >= MAX_CONSECUTIVE_MISSES) {
 				break;
 			}
-			// biome-ignore lint/performance/noAwaitInLoops: progress polling is sequential by definition
+			// oxlint-disable-next-line no-await-in-loop -- progress polling is sequential by definition
 			await new Promise((r) => setTimeout(r, 1000));
 			if (myGeneration !== pollGeneration) {
 				return;
 			}
+			// oxlint-disable-next-line no-await-in-loop -- progress is polled one request at a time
 			status = await fetchProgress(deploymentId);
 		}
 		if (myGeneration === pollGeneration) {
@@ -225,10 +226,10 @@
 			settleDeploy(deploymentId, body.status);
 		});
 
-		source.onerror = () => {
+		source.addEventListener("error", () => {
 			closeProgressSource();
 			void pollProgress(deploymentId);
-		};
+		});
 	}
 
 	onDestroy(closeProgressSource);

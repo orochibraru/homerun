@@ -7,5 +7,5 @@ import { browserOrigin } from "$lib/server/canonical-origin";
  * data, only shapes, same as any other API's published OpenAPI document.
  * Every documented route still enforces its own auth independently.
  */
-export const GET = async ({ request, url }) =>
+export const GET = ({ request, url }) =>
 	json(buildOpenApiDocument(browserOrigin(request, url)));

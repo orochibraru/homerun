@@ -32,7 +32,7 @@ function firstSessionCookie(res: Response): string {
 			`Sign-up response had no session cookie (got: ${setCookie.join(" | ")})`,
 		);
 	}
-	return sessionCookie.split(";")[0] as string;
+	return sessionCookie.split(";")[0];
 }
 
 export async function bootstrapAdmin(origin: string): Promise<Bootstrapped> {

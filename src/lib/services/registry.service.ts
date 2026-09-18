@@ -246,7 +246,7 @@ class RegistryServiceClass {
 
 		const catalog: RegistryRepository[] = [];
 		for (const repository of repositories.sort()) {
-			// biome-ignore lint/performance/noAwaitInLoops: one registry round trip per repository, and the catalog is small
+			// oxlint-disable-next-line no-await-in-loop -- one registry round trip per repository, and the catalog is small
 			const inventory = await client.inventory(repository);
 			catalog.push({
 				repository,
@@ -281,11 +281,11 @@ class RegistryServiceClass {
 		const client = await DockerService.imageMirrorClient();
 		const inventory = await client.inventory(repository);
 		const digests = new Set(
-			inventory.map((entry) => entry.digest).filter(Boolean) as string[],
+			inventory.map((entry) => entry.digest).filter(Boolean),
 		);
 		let deleted = 0;
 		for (const digest of digests) {
-			// biome-ignore lint/performance/noAwaitInLoops: deletes are one manifest at a time
+			// oxlint-disable-next-line no-await-in-loop -- deletes are one manifest at a time
 			if (await client.deleteManifest({ digest, repository })) {
 				deleted += 1;
 			}

@@ -45,13 +45,14 @@ class MigrationServiceClass {
 				continue;
 			}
 			try {
-				// biome-ignore lint/performance/noAwaitInLoops: each import checks slugs against rows the previous one just inserted
+				// oxlint-disable-next-line no-await-in-loop -- each import checks slugs against rows the previous one just inserted
 				const stackId = await this.#stackFor(
 					entry.projectName,
 					userId,
 					sourceLabel,
 					stacks,
 				);
+				// oxlint-disable-next-line no-await-in-loop -- each plan imports after the previous one so slugs don't collide
 				const imported = await ComposeImportService.importPlan({
 					allowHostAccess,
 					drafts: entry.drafts,

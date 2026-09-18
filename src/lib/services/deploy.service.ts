@@ -364,7 +364,7 @@ class DeploymentServiceClass {
 	): Promise<void> {
 		for (const scan of scans) {
 			const { summary } = scan;
-			// biome-ignore lint/performance/noAwaitInLoops: scan history keeps the order the worker ran them in
+			// oxlint-disable-next-line no-await-in-loop -- scan history keeps the order the worker ran them in
 			await ImageScanDTO.create({
 				counts: summary?.counts,
 				deploymentId: dep.id,
@@ -568,7 +568,7 @@ class DeploymentServiceClass {
 	): Promise<EnqueueDeployResult> {
 		let dependsOnJobId: string | null = null;
 		for (const svc of linked) {
-			// biome-ignore lint/performance/noAwaitInLoops: each linked service's job id is the next one's dependency, so the chain is built in order
+			// oxlint-disable-next-line no-await-in-loop -- each linked service's job id is the next one's dependency, so the chain is built in order
 			const enqueued = await this.enqueueDeploy({
 				dependsOnJobId,
 				svc,

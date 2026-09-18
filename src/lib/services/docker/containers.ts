@@ -265,7 +265,7 @@ interface RequiresNetworkMixin {
  * the merge chain : createAndStartContainer calls
  * `this.ensureSharedNetwork` and `this.connectToStackNetwork`.
  */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerContainerMixin<
 	TBase extends Constructor<BaseDockerService & RequiresNetworkMixin>,
 >(Base: TBase) {

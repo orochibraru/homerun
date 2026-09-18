@@ -100,7 +100,7 @@ export interface GitBuildResult {
 }
 
 /** Git-clone-then-BuildKit-build, tagging the result for the normal deploy pipeline to run like any other image. */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerGitBuildMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
@@ -200,7 +200,7 @@ export function DockerGitBuildMixin<
 			);
 			onProgress?.(`Cloning ${redactCloneUrl(cloneUrl)} (${ref})...`);
 			for (const cmd of gitCheckoutSteps(cloneUrl, ref, REPO_DIR)) {
-				// biome-ignore lint/performance/noAwaitInLoops: each git step works on the previous one's checkout
+				// oxlint-disable-next-line no-await-in-loop -- each git step works on the previous one's checkout
 				const step = await this.#runInWorkspace({
 					cmd,
 					entrypoint: ["git"],
@@ -260,7 +260,7 @@ export function DockerGitBuildMixin<
 				["-C", REPO_DIR, "checkout", "--detach", commit],
 			];
 			for (const cmd of steps) {
-				// biome-ignore lint/performance/noAwaitInLoops: the checkout depends on the fetch before it
+				// oxlint-disable-next-line no-await-in-loop -- the checkout depends on the fetch before it
 				const step = await this.#runInWorkspace({
 					cmd,
 					entrypoint: ["git"],

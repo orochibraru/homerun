@@ -168,13 +168,16 @@ class RevisionHealthServiceClass {
 		let verdict: HealthVerdict = { verdict: "pending" };
 		let current: ServiceDTO | null = svc;
 		while (verdict.verdict === "pending") {
-			// biome-ignore lint/performance/noAwaitInLoops: the health window is sampled one tick at a time
+			// oxlint-disable-next-line no-await-in-loop -- the health window is sampled one tick at a time
 			await sleep(POLL_MS);
+			// oxlint-disable-next-line no-await-in-loop -- the health window is sampled one tick at a time
 			current = await this.#stillCurrent(input, workload);
 			if (!current) {
+				// oxlint-disable-next-line no-await-in-loop -- the health window is sampled one tick at a time
 				await dep.settleHealth(null);
 				return;
 			}
+			// oxlint-disable-next-line no-await-in-loop -- the health window is sampled one tick at a time
 			const sample = await this.#sample(workload, startedAt);
 			verdict = healthVerdict(
 				baseline,

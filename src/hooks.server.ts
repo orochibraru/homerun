@@ -123,7 +123,7 @@ async function waitForDatabase() {
 		try {
 			// Reset connection before each attempt to avoid stale connections
 			if (i > 0) {
-				// biome-ignore lint/performance/noAwaitInLoops: retry backoff: each attempt must follow the previous one
+				// oxlint-disable-next-line no-await-in-loop -- retry backoff: each attempt must follow the previous one
 				await resetDb();
 			}
 			// getDb() alone doesn't prove connectivity : drizzle-orm/bun-sql's
@@ -131,6 +131,7 @@ async function waitForDatabase() {
 			// used to fail synchronously on an inaccessible path here). A
 			// trivial real query is what actually verifies Postgres is up.
 			const db = getDb();
+			// oxlint-disable-next-line no-await-in-loop -- startup retries wait for Postgres one attempt at a time
 			await db.execute("select 1");
 			logger.info("Database connection established.");
 			return;
@@ -143,6 +144,7 @@ async function waitForDatabase() {
 				process.exit(1);
 			}
 			logger.info(`Waiting for database... (attempt ${i + 1}/${maxRetries})`);
+			// oxlint-disable-next-line no-await-in-loop -- startup retries wait for Postgres one attempt at a time
 			await sleep(retryDelay);
 		}
 	}
@@ -166,7 +168,7 @@ async function runMigrations() {
 			// migrate() became an *unhandled* promise rejection outside this
 			// try/catch, which crashes the whole process instead of being
 			// caught and retried below.
-			// biome-ignore lint/performance/noAwaitInLoops: retry loop: one migrate attempt at a time
+			// oxlint-disable-next-line no-await-in-loop -- retry loop: one migrate attempt at a time
 			await migrate(db, {
 				migrationsFolder,
 			});
@@ -184,8 +186,10 @@ async function runMigrations() {
 				process.exit(1);
 			}
 			// Reset the database connection before retrying
+			// oxlint-disable-next-line no-await-in-loop -- startup retries wait for Postgres one attempt at a time
 			await resetDb();
 			retries -= 1;
+			// oxlint-disable-next-line no-await-in-loop -- startup retries wait for Postgres one attempt at a time
 			await sleep(3000);
 		}
 	}

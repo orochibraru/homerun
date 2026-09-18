@@ -136,7 +136,7 @@ class GitWebhookServiceClass {
 			providerId,
 		);
 		for (const svc of services) {
-			// biome-ignore lint/performance/noAwaitInLoops: one provider API call at a time is plenty for a reconnect
+			// oxlint-disable-next-line no-await-in-loop -- one provider API call at a time is plenty for a reconnect
 			await this.sync(svc, {
 				gitProviderId: svc.gitProviderId,
 				gitRepo: svc.gitRepo,

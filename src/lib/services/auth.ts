@@ -146,7 +146,7 @@ function forgetGateAccessOf(userId: string | undefined): Promise<void> {
  * variant for a request on the instance's own IP or `localhost`: cookies
  * `Secure` only over HTTPS and never scoped to the base domain.
  */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: one betterAuth() configuration object literal, not branching logic
+// oxlint-disable-next-line max-lines-per-function -- one betterAuth() configuration object literal, not branching logic
 function buildAuth(directAccess: DirectAccessScheme | null) {
 	return betterAuth({
 		advanced: {
@@ -453,7 +453,7 @@ export async function pruneUndecryptableSigningKeys(): Promise<void> {
 		.from(schema.jwks);
 	const stale: string[] = [];
 	for (const row of rows) {
-		// biome-ignore lint/performance/noAwaitInLoops: Decrypting keys is fairly fast.
+		// oxlint-disable-next-line no-await-in-loop -- Decrypting keys is fairly fast.
 		const readable = await symmetricDecrypt({
 			data: JSON.parse(row.privateKey) as string,
 			key: ctx.secretConfig,

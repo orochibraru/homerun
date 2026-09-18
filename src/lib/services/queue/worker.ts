@@ -123,7 +123,7 @@ class JobWorkerClass extends BaseScheduler {
 	/** Claims every job the Go worker has finished executing, serially, and finalizes each one in the background. */
 	async #finalizeExecuted(): Promise<void> {
 		for (;;) {
-			// biome-ignore lint/performance/noAwaitInLoops: claims are serial so each sees the previous one's committed stage
+			// oxlint-disable-next-line no-await-in-loop -- claims are serial so each sees the previous one's committed stage
 			const executed = await JobDTO.claimFinalize();
 			if (!executed) {
 				return;

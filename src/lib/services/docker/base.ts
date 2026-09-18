@@ -39,5 +39,5 @@ export class BaseDockerService {
  * zero-param) constructor, this is purely what the mixin pattern's type
  * constraint demands.
  */
-// biome-ignore lint/suspicious/noExplicitAny: TS's mixin pattern requires this exact constructor shape
+// oxlint-disable-next-line typescript/no-explicit-any -- TS's mixin pattern requires this exact constructor shape
 export type Constructor<T = object> = new (...args: any[]) => T;

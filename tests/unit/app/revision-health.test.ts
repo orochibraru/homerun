@@ -86,7 +86,7 @@ function running(restartCount = 0): Sample {
 }
 
 function exited(code: number): Sample {
-	return { ...running(), exitCode: code, state: "exited" } as Sample;
+	return { ...running(), exitCode: code, state: "exited" };
 }
 
 interface FakeDep {
@@ -438,11 +438,7 @@ describe("RevisionHealthService.resume", () => {
 		const s = setup({ dep, samples: [running()], svc: fakeService() });
 		const started = spyOn(RevisionHealthService, "watch");
 		track(started);
-		track(
-			spyOn(DeploymentDTO, "listWatching").mockResolvedValue([
-				dep,
-			] as unknown as Deployment[]),
-		);
+		track(spyOn(DeploymentDTO, "listWatching").mockResolvedValue([dep]));
 
 		await RevisionHealthService.resume(s.enqueueRollback);
 		await settled(dep.id);

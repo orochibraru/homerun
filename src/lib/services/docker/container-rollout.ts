@@ -65,7 +65,7 @@ function readyLine(readiness: ReadinessCheck, seconds: number): string {
  * or recreate (remove the old one first). Sits ahead of the container mixin
  * in the merge chain, which calls it from `createAndStartContainer`.
  */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerContainerRolloutMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
@@ -252,10 +252,11 @@ export function DockerContainerRolloutMixin<
 			const startedAt = Date.now();
 			let verdict: ReadinessVerdict = { verdict: "pending" };
 			while (verdict.verdict === "pending") {
-				// biome-ignore lint/performance/noAwaitInLoops: readiness is polled one tick at a time
+				// oxlint-disable-next-line no-await-in-loop -- readiness is polled one tick at a time
 				await new Promise((resolvePromise) =>
 					setTimeout(resolvePromise, ROLLOUT_POLL_MS),
 				);
+				// oxlint-disable-next-line no-await-in-loop -- readiness is polled one tick at a time
 				const info = await container.inspect().catch((error) => {
 					if (isNotFoundError(error)) {
 						return null;

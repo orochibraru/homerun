@@ -86,7 +86,7 @@
 			lines = [""];
 
 			while (!cancelled) {
-				// biome-ignore lint/performance/noAwaitInLoops: stream reads are inherently sequential
+				// oxlint-disable-next-line no-await-in-loop -- stream reads are inherently sequential
 				const { done, value } = await reader.read();
 				if (done) {
 					break;
@@ -95,6 +95,7 @@
 				const parts = pending.split("\n");
 				pending = parts.pop() ?? "";
 				lines = [...lines.slice(0, -1), ...parts, pending];
+				// oxlint-disable-next-line no-await-in-loop -- each chunk renders before the next is read
 				await tick();
 				termEl?.scrollTo({ top: termEl.scrollHeight });
 			}

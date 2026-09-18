@@ -1,6 +1,6 @@
 import { config } from "$lib/config";
 
-export const load = async ({ locals }) => ({
+export const load = ({ locals }) => ({
 	providers: config.auth.oauthProviders
 		.filter((provider) => provider.enabled)
 		.map((provider) => ({

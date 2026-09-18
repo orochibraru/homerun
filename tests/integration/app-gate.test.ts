@@ -61,7 +61,7 @@ function gateCookieFrom(res: Response): string {
 	if (!entry) {
 		throw new Error(`No gate cookie in response (got: ${set.join(" | ")})`);
 	}
-	return entry.split(";")[0] as string;
+	return entry.split(";")[0];
 }
 
 describe("per-app auth gate", () => {

@@ -109,10 +109,11 @@ export function DockerSwarmRolloutMixin<
 						`Swarm didn't finish updating the service within ${Math.round(SWARM_UPDATE_MAX_WAIT_MS / 60_000)} minutes.`,
 					);
 				}
-				// biome-ignore lint/performance/noAwaitInLoops: the update is polled one tick at a time
+				// oxlint-disable-next-line no-await-in-loop -- the update is polled one tick at a time
 				await new Promise((resolvePromise) =>
 					setTimeout(resolvePromise, ROLLOUT_POLL_MS),
 				);
+				// oxlint-disable-next-line no-await-in-loop -- the update is polled one tick at a time
 				const inspected = (await service.inspect()) as InspectedSwarmService;
 				outcome = swarmUpdateOutcome(inspected.UpdateStatus, previousStartedAt);
 			}

@@ -71,7 +71,7 @@ class DocsClass {
 				`${matches.length} code blocks in ${relPath} contain all of: ${needles.join(", ")} (sections: ${matches.map((m) => m.heading).join(" / ")})`,
 			);
 		}
-		return (matches[0] as FencedBlock).code.trim();
+		return matches[0].code.trim();
 	}
 }
 

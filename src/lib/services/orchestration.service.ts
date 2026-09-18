@@ -51,7 +51,7 @@ class OrchestrationServiceClass {
 		}
 		const services = deployedServices(await ServiceDTO.list());
 		for (const service of services) {
-			// biome-ignore lint/performance/noAwaitInLoops: each enqueue writes its own deployment row, and the queue serialises them anyway
+			// oxlint-disable-next-line no-await-in-loop -- each enqueue writes its own deployment row, and the queue serialises them anyway
 			await DeploymentService.enqueueDeploy({ svc: service, userId: adminId });
 		}
 		await settings.clearPendingServiceRedeploy();

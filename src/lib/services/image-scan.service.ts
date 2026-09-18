@@ -106,7 +106,7 @@ class ImageScanServiceClass {
 			)
 			.slice(0, LOGGED_FINDINGS);
 		for (const finding of serious) {
-			// biome-ignore lint/performance/noAwaitInLoops: log lines are appended in order
+			// oxlint-disable-next-line no-await-in-loop -- log lines are appended in order
 			await this.#log(
 				ctx,
 				`  ${finding.severity} ${finding.id} in ${finding.pkg} ${finding.installedVersion}${finding.fixedVersion ? `, fixed in ${finding.fixedVersion}` : ""}`,
@@ -171,13 +171,14 @@ class ImageScanServiceClass {
 		const failures: string[] = [];
 		for (const target of targets) {
 			const shown = target.display ?? target.ref;
-			// biome-ignore lint/performance/noAwaitInLoops: targets are fallbacks, tried one after another
+			// oxlint-disable-next-line no-await-in-loop -- targets are fallbacks, tried one after another
 			await this.#log(
 				ctx,
 				`Scanning ${shown} for vulnerabilities (${target.label})...`,
 			);
 			let summary: TrivySummary;
 			try {
+				// oxlint-disable-next-line no-await-in-loop -- targets are fallbacks, tried one after another
 				summary = await DockerService.scanImage({
 					auth: target.auth,
 					ref: target.ref,
@@ -185,12 +186,14 @@ class ImageScanServiceClass {
 				});
 			} catch (err) {
 				failures.push(`${target.label}: ${reason(err)}`);
+				// oxlint-disable-next-line no-await-in-loop -- targets are fallbacks, tried one after another
 				await this.#log(
 					ctx,
 					`Image scan of ${target.label} failed: ${reason(err)}`,
 				);
 				continue;
 			}
+			// oxlint-disable-next-line no-await-in-loop -- targets are fallbacks, tried one after another
 			await this.recordScanned(
 				ctx,
 				{ label: target.label, shown },
@@ -201,6 +204,7 @@ class ImageScanServiceClass {
 				? evaluateScanPolicy(summary, options.block)
 				: null;
 			if (verdict?.reason) {
+				// oxlint-disable-next-line no-await-in-loop -- targets are fallbacks, tried one after another
 				await this.#log(ctx, verdict.reason);
 				logger.warn(
 					`Deploy blocked by the image scan policy: service=${ctx.svc.id} ref=${shown}`,

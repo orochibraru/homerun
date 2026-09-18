@@ -121,7 +121,7 @@ class ImageMirrorGcServiceClass {
 		const repositories = await client.catalog();
 		const inventory: MirrorTag[] = [];
 		for (const repository of repositories) {
-			// biome-ignore lint/performance/noAwaitInLoops: repositories are walked one at a time to keep the registry quiet
+			// oxlint-disable-next-line no-await-in-loop -- repositories are walked one at a time to keep the registry quiet
 			inventory.push(...(await client.inventory(repository)));
 		}
 		return { inventory, repositories };
@@ -139,7 +139,7 @@ class ImageMirrorGcServiceClass {
 		plan: MirrorGcPlan,
 	): Promise<number> {
 		for (const pin of plan.pins) {
-			// biome-ignore lint/performance/noAwaitInLoops: manifest writes are applied in order
+			// oxlint-disable-next-line no-await-in-loop -- manifest writes are applied in order
 			const pinned = await client.tagManifest(pin);
 			if (pinned) {
 				logger.info(`Kept ${pin.repository}@${pin.digest} as :${pin.tag}`);
@@ -147,7 +147,7 @@ class ImageMirrorGcServiceClass {
 		}
 		let deleted = 0;
 		for (const entry of plan.deletes) {
-			// biome-ignore lint/performance/noAwaitInLoops: manifest deletes are applied in order
+			// oxlint-disable-next-line no-await-in-loop -- manifest deletes are applied in order
 			if (await client.deleteManifest(entry)) {
 				deleted += 1;
 				logger.info(`Deleted ${entry.repository}@${entry.digest}`);

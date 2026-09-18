@@ -136,7 +136,7 @@ const RUN_FLAGS: Record<string, RunFlagHandler> = {
 			eq > 0 ? value.slice(eq + 1) : "";
 	},
 };
-RUN_FLAGS["-l"] = RUN_FLAGS["--label"] as RunFlagHandler;
+RUN_FLAGS["-l"] = RUN_FLAGS["--label"];
 
 /** Splits a `--flag=value` word into its flag and inline value; any other word comes back with no inline value. */
 function splitFlag(word: string): [string, string | undefined] {

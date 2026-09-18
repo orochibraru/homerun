@@ -76,7 +76,7 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 /** Mixin adding one-off/helper container support : running a throwaway container to completion, and extracting an archive into a named volume. */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerOneOffMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {

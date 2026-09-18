@@ -9,9 +9,9 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: How shadcn-ui components are typed
+// oxlint-disable-next-line typescript/no-explicit-any -- How shadcn-ui components are typed
 export type WithoutChild<T> = T extends { child?: any } ? Omit<T, "child"> : T;
-// biome-ignore lint/suspicious/noExplicitAny: How shadcn-ui components are typed
+// oxlint-disable-next-line typescript/no-explicit-any -- How shadcn-ui components are typed
 export type WithoutChildren<T> = T extends { children?: any }
 	? Omit<T, "children">
 	: T;

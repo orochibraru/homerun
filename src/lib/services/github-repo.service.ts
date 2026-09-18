@@ -111,7 +111,7 @@ function renderReadme(
 		return `<a href="${url}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
 	};
 
-	const html = marked.parse(markdown, { async: false, renderer }) as string;
+	const html = marked.parse(markdown, { async: false, renderer });
 
 	return sanitizeHtml(html, {
 		allowedAttributes: {

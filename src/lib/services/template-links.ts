@@ -76,7 +76,7 @@ export async function buildTemplateLinkContext(
 	const links = await TemplateLinkDTO.listForTemplate(templateId);
 	const resolved: ResolvedTemplateLink[] = [];
 	for (const { link, ...linkedTemplate } of links) {
-		// biome-ignore lint/performance/noAwaitInLoops: each slug must account for the ones already picked earlier in this same batch, none of which are committed to the DB yet
+		// oxlint-disable-next-line no-await-in-loop -- each slug must account for the ones already picked earlier in this same batch, none of which are committed to the DB yet
 		const slug = await uniqueSlug(
 			slugify(`${primarySlug}-${link.alias}`),
 			(candidate) => ServiceDTO.slugTaken(candidate),
@@ -153,7 +153,7 @@ export async function createLinkedServices(
 ): Promise<ServiceDTO[]> {
 	const created: ServiceDTO[] = [];
 	for (const link of links) {
-		// biome-ignore lint/performance/noAwaitInLoops: services are created one at a time so each gets a fresh slug-uniqueness check against the ones already committed
+		// oxlint-disable-next-line no-await-in-loop -- services are created one at a time so each gets a fresh slug-uniqueness check against the ones already committed
 		const svc = await ServiceDTO.create({
 			containerPort: link.containerPort,
 			cpuLimit: link.cpuLimit,

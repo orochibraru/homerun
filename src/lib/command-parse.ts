@@ -85,7 +85,7 @@ export function parseCommand(input: string): string[] {
 	};
 
 	for (let i = 0; i < trimmed.length; i += 1) {
-		const char = trimmed[i] as string;
+		const char = trimmed[i];
 		if (char === "\\" && state.quote !== "'" && i + 1 < trimmed.length) {
 			state.current += trimmed[i + 1];
 			state.started = true;

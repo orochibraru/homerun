@@ -61,8 +61,9 @@ class QueueServiceClass {
 			if (Date.now() > deadline) {
 				throw new Error("Timed out waiting for the queued job to finish.");
 			}
-			// biome-ignore lint/performance/noAwaitInLoops: polling one job's terminal status is sequential by definition
+			// oxlint-disable-next-line no-await-in-loop -- polling one job's terminal status is sequential by definition
 			await sleep(WAIT_POLL_MS);
+			// oxlint-disable-next-line no-await-in-loop -- polling one job's terminal status is sequential by definition
 			current = await JobDTO.get(jobId);
 		}
 		if (!current) {

@@ -127,7 +127,7 @@ export function prunableVolumes<
 }
 
 /** Mixin adding the "Docker Cleanup" surface : previewing and pruning unused containers/images/networks/volumes/build cache. */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerCleanupMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
@@ -305,7 +305,7 @@ export function DockerCleanupMixin<
 			let spaceReclaimedBytes = 0;
 			for (const image of candidates) {
 				try {
-					// biome-ignore lint/performance/noAwaitInLoops: images are removed one at a time so a parent/child conflict only skips that one
+					// oxlint-disable-next-line no-await-in-loop -- images are removed one at a time so a parent/child conflict only skips that one
 					await docker.getImage(image.Id ?? "").remove({ force: false });
 					itemsDeleted += 1;
 					spaceReclaimedBytes += image.Size ?? 0;
@@ -373,7 +373,7 @@ export function DockerCleanupMixin<
 					continue;
 				}
 				try {
-					// biome-ignore lint/performance/noAwaitInLoops: volumes are removed one at a time so a volume the daemon refuses only skips that one
+					// oxlint-disable-next-line no-await-in-loop -- volumes are removed one at a time so a volume the daemon refuses only skips that one
 					await docker.getVolume(volume.Name).remove();
 					itemsDeleted += 1;
 					spaceReclaimedBytes += Math.max(0, volume.UsageData?.Size ?? 0);

@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { query } from "$app/server";
 import { ServiceDTO } from "$lib/dto/service-dto";
-import {
-	type StatPoint,
-	type StatRange,
-	StatSampleDTO,
-} from "$lib/dto/stat-sample-dto";
+import { type StatPoint, StatSampleDTO } from "$lib/dto/stat-sample-dto";
 import { requireUser } from "$lib/server/remote-auth";
 import { DockerService, type SwarmReplica } from "$lib/services/docker.service";
 
@@ -44,7 +40,7 @@ export const getStatHistory = query(
 				return [];
 			}
 		}
-		return await StatSampleDTO.history(range as StatRange, serviceId);
+		return await StatSampleDTO.history(range, serviceId);
 	},
 );
 

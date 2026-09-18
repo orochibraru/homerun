@@ -106,7 +106,7 @@ class CloudflareServiceClass {
 			headers: {
 				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
-				...init?.headers,
+				...Object.fromEntries(new Headers(init?.headers)),
 			},
 		});
 		const raw = await response.text();

@@ -389,9 +389,9 @@ describe("PangolinService.verifyConnection", () => {
 			orgId: "org-1",
 			token: "good-token",
 		});
-		const domainCalls = requested.filter((href) => href.includes("/domains"));
-		expect(domainCalls[0]).toContain("offset=0");
-		expect(domainCalls[0]).toContain("limit=1000");
+		const domainCall = requested.find((href) => href.includes("/domains"));
+		expect(domainCall).toContain("offset=0");
+		expect(domainCall).toContain("limit=1000");
 	});
 
 	test("tolerates a trailing slash on the base URL", async () => {

@@ -60,7 +60,7 @@ export function mergeLabels(
 	custom: Record<string, string> | undefined,
 	own: Record<string, string>,
 ): Record<string, string> {
-	return { ...(custom ?? {}), ...own };
+	return { ...custom, ...own };
 }
 
 /** The `Cmd`/`Entrypoint` overrides for a container create, leaving either unset (the image's own) when the service doesn't override it. */

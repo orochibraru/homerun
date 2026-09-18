@@ -64,7 +64,7 @@ export const actions = {
 		const parsed = statusPageSchema.safeParse(Object.fromEntries(form));
 		if (!parsed.success) {
 			return fail(400, {
-				errors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+				errors: parsed.error.flatten().fieldErrors,
 			});
 		}
 		const fieldErrors: Record<string, string[]> = {};

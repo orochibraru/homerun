@@ -12,7 +12,7 @@ const logger = new Logger("GitProviders");
 
 const GITHUB_ORG_PATTERN = /^[a-z\d](?:[a-z\d-]{0,38})$/i;
 
-const VALID_KINDS: GitProviderKind[] = ["gitlab", "gitea", "bitbucket"];
+const VALID_KINDS = new Set<string>(["gitlab", "gitea", "bitbucket"]);
 
 export const load = async ({ parent, locals }) => {
 	const { user } = await parent();
@@ -90,7 +90,7 @@ export const actions = {
 		const clientSecret =
 			(formData.get("clientSecret") as string | null)?.trim() ?? "";
 
-		if (!(kind && VALID_KINDS.includes(kind as GitProviderKind))) {
+		if (!(kind && VALID_KINDS.has(kind))) {
 			return fail(400, { error: "Choose a provider." });
 		}
 		if (!name) {

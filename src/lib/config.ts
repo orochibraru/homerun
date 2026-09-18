@@ -346,7 +346,7 @@ export function isSmtpEnabled(): boolean {
 
 	if (enabledInConfig && !configuredProperly) {
 		// config.ts is a leaf module by design (see CLAUDE.md) : importing $lib/logger here would cycle, since Logger imports config.
-		// biome-ignore lint/suspicious/noConsole: no logger reachable from this module
+		// oxlint-disable-next-line no-console -- no logger reachable from this module
 		console.warn(
 			"SMTP is enabled in configuration but missing required fields. Email verification will not work.",
 		);

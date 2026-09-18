@@ -80,7 +80,7 @@ interface RequiresSwarmMixin {
 }
 
 /** Traefik container management : Homerun's own infra container, a deliberate narrow exception to the managed-label-only rule (see labels.ts). */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerCoreServicesMixin<
 	TBase extends Constructor<BaseDockerService & RequiresSwarmMixin>,
 >(Base: TBase) {

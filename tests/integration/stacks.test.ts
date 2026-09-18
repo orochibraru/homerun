@@ -31,7 +31,7 @@ describe("stacks", () => {
 			},
 		});
 		const stack = expectOk(created.data, created.response);
-		cleanup.track(stack.id as string);
+		cleanup.track(stack.id);
 		expect(created.response.status).toBe(201);
 		expect(stack.slug).toBe(s);
 
@@ -46,7 +46,7 @@ describe("stacks", () => {
 			body: { name: "First", slug: s },
 		});
 		const firstStack = expectOk(first.data, first.response);
-		cleanup.track(firstStack.id as string);
+		cleanup.track(firstStack.id);
 		const second = await client.POST("/stacks", {
 			body: { name: "Second", slug: s },
 		});

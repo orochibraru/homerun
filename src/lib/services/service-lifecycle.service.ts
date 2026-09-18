@@ -119,7 +119,7 @@ class ServiceLifecycleServiceClass {
 		options: { force?: boolean } = {},
 	): Promise<void> {
 		for (const preview of await ServiceGitDTO.listPreviews(svc.id)) {
-			// biome-ignore lint/performance/noAwaitInLoops: each preview's workload removal can fail the whole delete
+			// oxlint-disable-next-line no-await-in-loop -- each preview's workload removal can fail the whole delete
 			await this.deleteService(preview, options);
 		}
 		const failure = await this.#detachWorkload(svc);

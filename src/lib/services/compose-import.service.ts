@@ -80,7 +80,7 @@ class ComposeImportServiceClass {
 				byMount.set(mount.containerPath, match.id);
 				continue;
 			}
-			// biome-ignore lint/performance/noAwaitInLoops: each volume is created before the next one's name collision can be checked
+			// oxlint-disable-next-line no-await-in-loop -- each volume is created before the next one's name collision can be checked
 			const created = await StorageVolumeDTO.create({
 				kind: mount.kind,
 				name: mount.name,
@@ -142,13 +142,14 @@ class ComposeImportServiceClass {
 			volumeName: HOST_FILES_DIR,
 		});
 		for (const mount of mounts) {
-			// biome-ignore lint/performance/noAwaitInLoops: mounts are attached in declaration order
+			// oxlint-disable-next-line no-await-in-loop -- mounts are attached in declaration order
 			const volume = await StorageVolumeDTO.create({
 				kind: "bind",
 				name: bindVolumeName(svc.slug, mount.containerPath),
 				source: `${HOST_FILES_DIR}/${mount.relative}`,
 				userId,
 			});
+			// oxlint-disable-next-line no-await-in-loop -- volumes attach in order to the service just created
 			await ServiceVolumeDTO.attach({
 				containerPath: mount.containerPath,
 				readOnly: true,
@@ -208,7 +209,7 @@ class ComposeImportServiceClass {
 			if (!volumeId) {
 				continue;
 			}
-			// biome-ignore lint/performance/noAwaitInLoops: mounts are inserted in declaration order
+			// oxlint-disable-next-line no-await-in-loop -- mounts are inserted in declaration order
 			await ServiceVolumeDTO.attach({
 				containerPath: mount.containerPath,
 				readOnly: mount.readOnly,
@@ -249,7 +250,7 @@ class ComposeImportServiceClass {
 
 		const services: ServiceDTO[] = [];
 		for (const draft of ordered) {
-			// biome-ignore lint/performance/noAwaitInLoops: slug uniqueness is checked against rows the previous iteration just inserted
+			// oxlint-disable-next-line no-await-in-loop -- slug uniqueness is checked against rows the previous iteration just inserted
 			const created = await this.#createService(
 				draft,
 				stackId,
@@ -270,7 +271,7 @@ class ComposeImportServiceClass {
 		if (services.length === 0) {
 			return;
 		}
-		const primary = services[services.length - 1] as ServiceDTO;
+		const primary = services[services.length - 1];
 		await DeploymentService.enqueueStackDeploy(
 			primary,
 			services.slice(0, -1),

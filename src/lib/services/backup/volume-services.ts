@@ -59,7 +59,7 @@ export async function stopAroundWork<TService, TResult>(
 	const stopped: TService[] = [];
 	try {
 		for (const service of services) {
-			// biome-ignore lint/performance/noAwaitInLoops: stopped one at a time so a failure knows exactly which ones to start again
+			// oxlint-disable-next-line no-await-in-loop -- stopped one at a time so a failure knows exactly which ones to start again
 			await hooks.stop(service);
 			stopped.push(service);
 		}

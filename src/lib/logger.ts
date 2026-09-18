@@ -116,6 +116,24 @@ export interface HttpLog {
 	url: URL;
 }
 
+/**
+ * The extra log arguments as fields of a JSON log line: plain objects are
+ * merged into it, anything else (strings, errors, arrays) goes under
+ * `params`, instead of spreading the argument array into `"0"`, `"1"` keys.
+ */
+export function jsonFields(params: unknown[]): Record<string, unknown> {
+	const isPlain = (value: unknown): value is Record<string, unknown> =>
+		typeof value === "object" &&
+		value !== null &&
+		Object.getPrototypeOf(value) === Object.prototype;
+	const merged: Record<string, unknown> = Object.assign(
+		{},
+		...params.filter(isPlain),
+	);
+	const rest = params.filter((value) => !isPlain(value));
+	return rest.length > 0 ? { ...merged, params: rest } : merged;
+}
+
 export class Logger {
 	logFormat: "console" | "json";
 	prefix?: string;
@@ -138,7 +156,7 @@ export class Logger {
 			this.logLevel = logLevels.DEBUG;
 		} else if (
 			config.logFormat === "console" &&
-			!Object.values(logLevels).includes(config.logLevel as LogLevel)
+			!Object.values(logLevels).includes(config.logLevel)
 		) {
 			throw new Error(
 				`Invalid log level: ${config.logLevel}. Valid levels are: ${Object.values(
@@ -206,7 +224,7 @@ export class Logger {
 			level,
 			message,
 			scope: this.prefix,
-			...metadata,
+			...jsonFields(metadata),
 		});
 	}
 
@@ -276,7 +294,7 @@ export class Logger {
 			logLevels.DEBUG,
 			logLevels.TRACE,
 		];
-		if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
+		if (!acceptedLogLevels.includes(this.logLevel)) {
 			return;
 		}
 
@@ -293,7 +311,7 @@ export class Logger {
 			input,
 			level: logLevels.INFO,
 			scope: this.prefix,
-			...optionalParams,
+			...jsonFields(optionalParams),
 		});
 	}
 
@@ -313,7 +331,7 @@ export class Logger {
 			logLevels.DEBUG,
 			logLevels.TRACE,
 		];
-		if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
+		if (!acceptedLogLevels.includes(this.logLevel)) {
 			return;
 		}
 
@@ -332,7 +350,7 @@ export class Logger {
 			input,
 			level: logLevels.WARN,
 			scope: this.prefix,
-			...optionalParams,
+			...jsonFields(optionalParams),
 		});
 	}
 
@@ -346,7 +364,7 @@ export class Logger {
 	 * If `this.logFormat` is set to 'console', logs an error to the console with a red prefix.
 	 * Otherwise, logs a JSON object with the level set to 'error' and the error as the message.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: This is a logger
+	// oxlint-disable-next-line typescript/no-explicit-any -- This is a logger
 	error(err: any, ...optionalParams: unknown[]) {
 		const acceptedLogLevels = [
 			logLevels.ERROR,
@@ -355,7 +373,7 @@ export class Logger {
 			logLevels.DEBUG,
 			logLevels.TRACE,
 		];
-		if (!acceptedLogLevels.includes(this.logLevel as LogLevel)) {
+		if (!acceptedLogLevels.includes(this.logLevel)) {
 			return;
 		}
 
@@ -374,7 +392,7 @@ export class Logger {
 			level: logLevels.ERROR,
 			message: err,
 			scope: this.prefix,
-			...optionalParams,
+			...jsonFields(optionalParams),
 		});
 	}
 
@@ -405,7 +423,7 @@ export class Logger {
 			input,
 			level: logLevels.DEBUG,
 			scope: this.prefix,
-			...optionalParams,
+			...jsonFields(optionalParams),
 		});
 	}
 
@@ -437,7 +455,7 @@ export class Logger {
 			input,
 			level: logLevels.TRACE,
 			scope: this.prefix,
-			...optionalParams,
+			...jsonFields(optionalParams),
 		});
 	}
 }

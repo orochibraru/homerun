@@ -80,10 +80,18 @@ repos:
         pass_filenames: false
         files: ^(src/routes/api/|src/lib/openapi/|src/lib/config\.ts$|scripts/generate-)
 
-      - id: biome
-        name: Format and lint (Biome)
-        entry: bun run biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true
+      - id: oxlint
+        name: Lint (oxlint)
+        entry: node_modules/.bin/oxlint --type-aware --deny-warnings
         language: system
+        require_serial: true
+        files: \.(ts|tsx|js|jsx|mjs|cjs|svelte)$
+
+      - id: biome
+        name: Format and sort imports (Biome)
+        entry: node_modules/.bin/biome check --write --error-on-warnings --no-errors-on-unmatched --files-ignore-unknown=true
+        language: system
+        require_serial: true
         files: \.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|css|svelte|html)$
 
       - id: format-md
@@ -108,6 +116,7 @@ repos:
         name: Lint (Tailwind)
         entry: bun run scripts/lint-tailwind.ts
         language: system
+        require_serial: true
         files: ^src/.*\.(svelte|css|html)$
 
       - id: check

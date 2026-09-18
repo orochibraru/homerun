@@ -264,7 +264,7 @@ describe("NotificationChannelService delivery", () => {
 			password: "pw",
 			port: 587,
 			user: "u",
-		} as typeof config.smtp;
+		};
 		const sent: { content: string; subject: string; to: string }[] = [];
 		track(
 			spyOn(EmailService.prototype, "send").mockImplementation(async function (

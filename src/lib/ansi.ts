@@ -17,7 +17,7 @@
  * have to read past.
  */
 
-// biome-ignore lint/suspicious/noControlCharactersInRegex: matching the literal ESC control char is the whole point of an ANSI parser
+// oxlint-disable-next-line no-control-regex -- matching the literal ESC control char is the whole point of an ANSI parser
 const ANSI_SGR_RE = /\x1b\[([0-9;]*)m/g;
 
 const FG_COLOR_CLASS: Record<number, string> = {

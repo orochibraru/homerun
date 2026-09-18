@@ -92,17 +92,17 @@ export function deployPhaseStates(
 
 	return phases.map((phase, i) => {
 		if (finished) {
-			return { phase, state: "done" as DeployPhaseState };
+			return { phase, state: "done" };
 		}
 		if (i < index) {
-			return { phase, state: "done" as DeployPhaseState };
+			return { phase, state: "done" };
 		}
 		if (i === index) {
 			return {
 				phase,
-				state: (failed ? "failed" : "active") as DeployPhaseState,
+				state: failed ? "failed" : "active",
 			};
 		}
-		return { phase, state: "pending" as DeployPhaseState };
+		return { phase, state: "pending" };
 	});
 }

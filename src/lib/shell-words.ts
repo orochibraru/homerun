@@ -7,7 +7,7 @@ interface SplitState {
 
 /** Consumes one character inside quotes, returning how many extra characters it used (1 for a backslash escape inside double quotes). */
 function consumeQuoted(state: SplitState, text: string, index: number): number {
-	const char = text[index] as string;
+	const char = text[index];
 	if (char === state.quote) {
 		state.quote = null;
 		return 0;
@@ -22,7 +22,7 @@ function consumeQuoted(state: SplitState, text: string, index: number): number {
 
 /** Consumes one character outside quotes, returning how many extra characters it used (1 for a backslash escape). */
 function consumeBare(state: SplitState, text: string, index: number): number {
-	const char = text[index] as string;
+	const char = text[index];
 	if (/\s/.test(char)) {
 		if (state.inWord) {
 			state.words.push(state.current);

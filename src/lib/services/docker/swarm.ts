@@ -251,7 +251,7 @@ export interface CreateSwarmServiceParams {
  * through `initSwarm` below, the overlay network, and Traefik's
  * `--providers.swarm` flags on the live container.
  */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerSwarmMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {

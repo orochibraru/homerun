@@ -369,7 +369,7 @@ export async function mapLimit<T, R>(
 	limit: number,
 	run: (item: T) => Promise<R>,
 ): Promise<R[]> {
-	const out: R[] = new Array(items.length);
+	const out: R[] = [];
 	let next = 0;
 	const worker = async (): Promise<void> => {
 		if (next >= items.length) {
@@ -377,7 +377,7 @@ export async function mapLimit<T, R>(
 		}
 		const index = next;
 		next += 1;
-		out[index] = await run(items[index] as T);
+		out[index] = await run(items[index]);
 		return worker();
 	};
 	await Promise.all(

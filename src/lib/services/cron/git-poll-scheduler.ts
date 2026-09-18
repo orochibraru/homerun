@@ -25,7 +25,7 @@ export class GitPollScheduler extends BaseScheduler {
 			if (isCommitSha(svc.gitRef) || !svc.gitUrl) {
 				continue;
 			}
-			// biome-ignore lint/performance/noAwaitInLoops: sequential on purpose, provider APIs rate-limit per token
+			// oxlint-disable-next-line no-await-in-loop -- sequential on purpose, provider APIs rate-limit per token
 			await this.#poll(svc, svc.gitUrl).catch((err) => {
 				this.logger.warn(
 					`Couldn't read the branch head: service=${svc.id} : ${err instanceof Error ? err.message : String(err)}`,

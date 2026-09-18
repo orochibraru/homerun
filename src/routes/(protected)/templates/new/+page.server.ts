@@ -46,11 +46,12 @@ async function parseLinks(
 			continue;
 		}
 		const linkedTemplateId = linkTemplateIds[i];
-		// biome-ignore lint/performance/noAwaitInLoops: a handful of link rows at most, validates in order to fail on the first bad one
+		// oxlint-disable-next-line no-await-in-loop -- a handful of link rows at most, validates in order to fail on the first bad one
 		const linked = await TemplateDTO.get(linkedTemplateId);
 		if (!linked) {
 			return { error: "One of the linked containers wasn't found." };
 		}
+		// oxlint-disable-next-line no-await-in-loop -- links are validated in order and the first failure stops
 		if ((await TemplateLinkDTO.countForTemplate(linkedTemplateId)) > 0) {
 			return {
 				error: `"${linked.name}" already links to other containers itself, and can't be linked to in turn.`,

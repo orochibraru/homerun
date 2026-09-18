@@ -13,7 +13,7 @@ import { config } from "$lib/config";
  */
 const globalForDb = globalThis as unknown as {
 	__db_client?: SQL;
-	__db_instance?: BunSQLDatabase<Record<string, never>>;
+	__db_instance?: BunSQLDatabase;
 };
 
 function createClient(): SQL {
@@ -27,7 +27,7 @@ function createClient(): SQL {
 	return client;
 }
 
-function createDb(): BunSQLDatabase<Record<string, never>> {
+function createDb(): BunSQLDatabase {
 	if (globalForDb.__db_instance) {
 		return globalForDb.__db_instance;
 	}

@@ -139,8 +139,9 @@ export function deployProgressStream(
 			try {
 				let finished = await step(emitter, deploymentId, serviceId, deadline);
 				while (!(cancelled || finished)) {
-					// biome-ignore lint/performance/noAwaitInLoops: the interval between polls is the point
+					// oxlint-disable-next-line no-await-in-loop -- the interval between polls is the point
 					await sleep(POLL_MS);
+					// oxlint-disable-next-line no-await-in-loop -- the interval between polls is the point
 					finished = await step(emitter, deploymentId, serviceId, deadline);
 				}
 			} catch {

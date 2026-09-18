@@ -106,7 +106,7 @@ function mountsFor(
 		if (!rawPath) {
 			continue;
 		}
-		const readOnly = /:ro$/.test(rawPath);
+		const readOnly = rawPath.endsWith(":ro");
 		const containerPath = rawPath.replace(/:(ro|rw)$/, "");
 		const type = str(mount, "type");
 		if (type === "file" && typeof mount.content === "string") {

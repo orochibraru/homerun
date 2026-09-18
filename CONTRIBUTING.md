@@ -60,16 +60,16 @@ These are enforced by git hooks, not just CI. The hooks are run by
 prek (`brew install prek`, or `uv tool install prek`), then `bun install` wires
 them up for you (`prepare` runs `prek install`, which installs the pre-commit,
 commit-msg and pre-push hooks). A commit only runs the fast, per-file hooks
-(Biome format + lint, Prettier and markdownlint, gofmt, Tailwind, typos, secret
-scanning), a few seconds. A push runs the whole-repo gates: the type check, unit
-tests (80% coverage gate), golangci-lint and the Go tests. Hooks autofix in
-place, so a commit that gets rejected for "files were modified by this hook"
-just needs `git add` and a re-commit. After pulling this change, run
-`prek install` once so the pre-push hook exists.
+(oxlint, Biome format and import sorting, Prettier and markdownlint, gofmt,
+Tailwind, typos, secret scanning), a few seconds. A push runs the whole-repo
+gates: the type check, unit tests (80% coverage gate), golangci-lint and the Go
+tests. Hooks autofix in place, so a commit that gets rejected for "files were
+modified by this hook" just needs `git add` and a re-commit. After pulling this
+change, run `prek install` once so the pre-push hook exists.
 
 ```sh
 bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then go vet over every package under cmd/ and internal/, plus tsc over scripts/, zero errors AND zero warnings
-bun run lint    # markdownlint-cli2, tailwint and biome check --error-on-warnings, whole repo
+bun run lint    # markdownlint-cli2, tailwint, oxlint --type-aware (linting) and biome check (formatting, import order), whole repo
 ```
 
 Run both after _every_ change, not just once at the end. `bun run check`'s scope

@@ -70,7 +70,7 @@ describe("presets", () => {
 	});
 
 	test("covers every provider the feature promised", () => {
-		const ids = [...OAUTH_PRESETS.map((p) => p.id)].sort((a, b) =>
+		const ids = OAUTH_PRESETS.map((p) => p.id).sort((a, b) =>
 			a.localeCompare(b),
 		);
 		expect(ids).toEqual([

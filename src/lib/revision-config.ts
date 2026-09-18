@@ -42,7 +42,7 @@ export function snapshotRevisionConfig(
 		cpuLimit: service.cpuLimit,
 		dnsResolvable:
 			service.networkMode === "host" ? false : service.dnsResolvable,
-		envVars: { ...(service.envVars ?? {}) },
+		envVars: { ...service.envVars },
 		memoryLimitMb: service.memoryLimitMb,
 		networkMode: service.networkMode,
 		portProtocol: service.portProtocol,

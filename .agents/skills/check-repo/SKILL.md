@@ -5,10 +5,10 @@ description: >-
   gates this codebase enforces: bun run check (svelte-check --fail-on-warnings
   over src/ and tests/ plus tsc over scripts/, plus go vet over every Go package
   under cmd/ and internal/, 0 errors AND 0 warnings) and bun run lint
-  (markdownlint-cli2, tailwint, biome check --error-on-warnings), plus the
-  matching unit tests. Use whenever finishing an edit to this codebase, before
-  saying a change is "done", or after any change under src/, cmd/, internal/,
-  scripts/ or tests/.
+  (markdownlint-cli2, tailwint, oxlint --type-aware --deny-warnings, biome check
+  --error-on-warnings), plus the matching unit tests. Use whenever finishing an
+  edit to this codebase, before saying a change is "done", or after any change
+  under src/, cmd/, internal/, scripts/ or tests/.
 user-invocable: true
 allowed-tools:
   Bash(bun run check), Bash(bun run check:*), Bash(bun run lint), Bash(bun run
@@ -37,13 +37,14 @@ actually reading the failing file first.
    this change touched.
 
 2. **`bun run lint`** — `lint:md` (markdownlint-cli2), `lint:tailwind`
-   (tailwint) and `lint:ts` (`biome check --error-on-warnings`), must be clean,
-   whole repo. If anything is fixable, `bun run lint:fix` (the `--fix`/`--write`
-   half of all three) before re-checking. Note: `.claude/settings.json` already
-   runs `biome check --write` on every edited code file and `prettier --write`
-   on every edited markdown file as PostToolUse hooks, so most formatting drift
-   is caught immediately — this step is the final confirmation, not the first
-   line of defense.
+   (tailwint) and `lint:ts` (`oxlint --type-aware --deny-warnings` for lint
+   rules, then `biome check --error-on-warnings` for formatting and import
+   order), must be clean, whole repo. If anything is fixable, `bun run lint:fix`
+   (the `--fix`/`--write` half of all three) before re-checking. Note:
+   `.claude/settings.json` already runs `biome check --write` on every edited
+   code file and `prettier --write` on every edited markdown file as PostToolUse
+   hooks, so most formatting drift is caught immediately — this step is the
+   final confirmation, not the first line of defense.
 
 3. **If a REST API route under `src/routes/api/v1/`, `$lib/openapi/` or
    `src/lib/config.ts` changed**: `bun run gen`, and keep the regenerated

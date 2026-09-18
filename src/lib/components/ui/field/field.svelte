@@ -38,7 +38,6 @@ let {
 } = $props();
 </script>
 
-<!-- biome-ignore lint/a11y/useSemanticElements: shadcn component-->
 <div
   class={cn(fieldVariants({ orientation }), className)}
   data-orientation={orientation}

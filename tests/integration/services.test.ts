@@ -47,7 +47,7 @@ async function waitForStatus(
 		const { data } = await client.GET("/services/{serviceId}", {
 			params: { path: { serviceId } },
 		});
-		last = data as ServiceStatus | undefined;
+		last = data;
 		if (last?.currentStatus === wanted) {
 			return last;
 		}
@@ -89,17 +89,17 @@ describe("services : image-mode deploy", () => {
 		});
 		const svc = expectOk(created.data, created.response);
 		expect(created.response.status).toBe(201);
-		cleanup.track(svc.id as string);
+		cleanup.track(svc.id);
 		expect(svc.desiredState).toBe("stopped");
 
 		const deployed = await client.POST("/services/{serviceId}/deploy", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		const deployResult = expectOk(deployed.data, deployed.response);
 		expect(deployResult.success).toBe(true);
 		expect(deployResult.containerId).toBeTruthy();
 
-		const status = await waitForStatus(svc.id as string, "running");
+		const status = await waitForStatus(svc.id, "running");
 		expect(status.containerId).toBeTruthy();
 	});
 
@@ -108,7 +108,7 @@ describe("services : image-mode deploy", () => {
 			body: { name: "IT Stack", slug: slug("stack") },
 		});
 		const stack = expectOk(stackRes.data, stackRes.response);
-		stackCleanup.track(stack.id as string);
+		stackCleanup.track(stack.id);
 		expect(stackRes.response.status).toBe(201);
 
 		const created = await client.POST("/services", {
@@ -128,20 +128,20 @@ describe("services : image-mode deploy", () => {
 				pullPolicy: "always",
 				image: "nginx",
 				name: "IT in stack",
-				stackId: stack.id as string,
+				stackId: stack.id,
 				restartPolicy: "no",
 				slug: slug("in-stack"),
 				tag: "alpine",
 			},
 		});
 		const svc = expectOk(created.data, created.response);
-		cleanup.track(svc.id as string);
-		expect(svc.stackId).toBe(stack.id as string);
+		cleanup.track(svc.id);
+		expect(svc.stackId).toBe(stack.id);
 
 		await client.POST("/services/{serviceId}/deploy", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
-		await waitForStatus(svc.id as string, "running");
+		await waitForStatus(svc.id, "running");
 	});
 
 	test("env vars land in the running container", async () => {
@@ -168,15 +168,15 @@ describe("services : image-mode deploy", () => {
 			},
 		});
 		const svc = expectOk(created.data, created.response);
-		cleanup.track(svc.id as string);
+		cleanup.track(svc.id);
 
 		await client.POST("/services/{serviceId}/deploy", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
-		await waitForStatus(svc.id as string, "running");
+		await waitForStatus(svc.id, "running");
 
 		const fetched = await client.GET("/services/{serviceId}", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		const svcAfter = expectOk(fetched.data, fetched.response);
 		expect(svcAfter.envVars).toEqual({
@@ -208,10 +208,10 @@ describe("services : image-mode deploy", () => {
 			},
 		});
 		const svc = expectOk(created.data, created.response);
-		cleanup.track(svc.id as string);
+		cleanup.track(svc.id);
 
 		const deployed = await client.POST("/services/{serviceId}/deploy", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		expect(deployed.response.status).toBe(500);
 		// The route's real failure shape is `{deploymentId, error}` (see
@@ -252,29 +252,29 @@ describe("services : lifecycle", () => {
 			},
 		});
 		const svc = expectOk(created.data, created.response);
-		cleanup.track(svc.id as string);
+		cleanup.track(svc.id);
 		await client.POST("/services/{serviceId}/deploy", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
-		await waitForStatus(svc.id as string, "running");
+		await waitForStatus(svc.id, "running");
 
 		const stopRes = await client.POST("/services/{serviceId}/stop", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		expect(stopRes.response.status).toBe(200);
-		await waitForStatus(svc.id as string, "stopped");
+		await waitForStatus(svc.id, "stopped");
 
 		const startRes = await client.POST("/services/{serviceId}/start", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		expect(startRes.response.status).toBe(200);
-		await waitForStatus(svc.id as string, "running");
+		await waitForStatus(svc.id, "running");
 
 		const restartRes = await client.POST("/services/{serviceId}/restart", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		expect(restartRes.response.status).toBe(200);
-		await waitForStatus(svc.id as string, "running");
+		await waitForStatus(svc.id, "running");
 	});
 });
 
@@ -308,14 +308,14 @@ describe("services : git-build deploy", () => {
 		});
 		const svc = expectOk(created.data, created.response);
 		expect(created.response.status).toBe(201);
-		cleanup.track(svc.id as string);
+		cleanup.track(svc.id);
 
 		const deployed = await client.POST("/services/{serviceId}/deploy", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		const deployResult = expectOk(deployed.data, deployed.response);
 		expect(deployResult.success).toBe(true);
-		await waitForStatus(svc.id as string, "running");
+		await waitForStatus(svc.id, "running");
 	});
 });
 
@@ -350,19 +350,19 @@ describe("services : update and delete", () => {
 				envVars: { PATCHED: "yes" },
 				name: "IT patch-delete (renamed)",
 			},
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		const patchedSvc = expectOk(patched.data, patched.response);
 		expect(patchedSvc.name).toBe("IT patch-delete (renamed)");
 		expect(patchedSvc.envVars).toEqual({ PATCHED: "yes" });
 
 		const deleted = await client.DELETE("/services/{serviceId}", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		expect(deleted.response.status).toBe(204);
 
 		const afterDelete = await client.GET("/services/{serviceId}", {
-			params: { path: { serviceId: svc.id as string } },
+			params: { path: { serviceId: svc.id } },
 		});
 		expect(afterDelete.response.status).toBe(404);
 	});

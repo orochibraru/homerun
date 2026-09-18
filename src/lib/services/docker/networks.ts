@@ -27,7 +27,7 @@ export function stackIdFromNetworkName(name: string): string | null {
 }
 
 /** Per-stack Docker network lifecycle : create/remove/attach. */
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: mixin factory: the body is a class definition, not a procedure
+// oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerNetworkMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
@@ -128,7 +128,7 @@ export function DockerNetworkMixin<
 					skipped.push(orphan);
 					continue;
 				}
-				// biome-ignore lint/performance/noAwaitInLoops: one removal at a time, and a failure has to be attributed to its own network
+				// oxlint-disable-next-line no-await-in-loop -- one removal at a time, and a failure has to be attributed to its own network
 				const gone = await this.getDocker()
 					.getNetwork(orphan.id)
 					.remove()

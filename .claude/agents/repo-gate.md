@@ -31,7 +31,8 @@ suggestion.
    files — a pre-existing-looking failure is still in scope; read the file
    before dismissing it as unrelated.
 2. `bun run lint` — markdownlint-cli2, tailwint and
-   `biome check --error-on-warnings`, must be clean, whole repo.
+   `oxlint --type-aware --deny-warnings` then `biome check --error-on-warnings`,
+   must be clean, whole repo.
 3. `git status`/`git diff` to see what's touched. `bun run check` already runs
    `check:packages` = `check:go` (`go vet ./cmd/... ./internal/...`, covering
    `cmd/agent/`, `cmd/cli/`, `cmd/installer/` and every shared `internal/`
@@ -92,9 +93,9 @@ narrow, specific triggers:
   line comments, no header banners, no prose in YAML/compose/shell files. A
   `/** ... */` block directly above a class method or exported function is the
   one exception and is required (CLAUDE.md's "No comments" rule); flag a missing
-  or stale one instead. Tool directives with a reason (`biome-ignore ...: why`)
-  aren't findings. Comments already present in untouched parts of a file are not
-  a finding.
+  or stale one instead. Tool directives with a reason
+  (`oxlint-disable-next-line <rule> -- why`) aren't findings. Comments already
+  present in untouched parts of a file are not a finding.
 - **Secrets written via `Bun.write(..., { mode: 0o600 })`** — this repo found
   that `Bun.write`'s `mode` option is a silent no-op on the Bun version in use;
   a new secret written this way needs an explicit `node:fs/promises` `chmod()`

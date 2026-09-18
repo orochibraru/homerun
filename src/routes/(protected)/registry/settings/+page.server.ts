@@ -7,7 +7,7 @@ function reason(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-export const load = async () => ({
+export const load = () => ({
 	suggestedHost: config.baseDomain ? `registry.${config.baseDomain}` : "",
 });
 

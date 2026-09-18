@@ -153,7 +153,7 @@ class SelfUpdateServiceClass {
 	async #resolveSelf(): Promise<ResolvedSelf | null> {
 		const docker = DockerService.getDocker();
 		for (const id of await this.#ownContainerIds()) {
-			// biome-ignore lint/performance/noAwaitInLoops: the first candidate that inspects wins, the rest are fallbacks
+			// oxlint-disable-next-line no-await-in-loop -- the first candidate that inspects wins, the rest are fallbacks
 			const info = await docker
 				.getContainer(id)
 				.inspect()
@@ -169,6 +169,7 @@ class SelfUpdateServiceClass {
 				(mount) => mount.Destination === config.docker.socketPath,
 			);
 			return {
+				// oxlint-disable-next-line no-await-in-loop -- one compose project at a time
 				companions: await this.#workerServices(target.project),
 				hostSocketPath: socketMount?.Source ?? config.docker.socketPath,
 				target,

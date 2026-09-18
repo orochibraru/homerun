@@ -700,7 +700,7 @@ export async function waitForChecks(
 	let lastSummary = "";
 	for (;;) {
 		const elapsed = now() - started;
-		// biome-ignore lint/performance/noAwaitInLoops: polling is sequential by definition
+		// oxlint-disable-next-line no-await-in-loop -- polling is sequential by definition
 		const polled = await pollOnce(options, elapsed >= options.graceMs);
 		if (polled) {
 			evaluation = polled;
@@ -710,15 +710,18 @@ export async function waitForChecks(
 			const summary = describeEvaluation(polled);
 			if (summary !== lastSummary) {
 				lastSummary = summary;
+				// oxlint-disable-next-line no-await-in-loop -- status checks are polled one round at a time
 				await options.log(`Waiting for status checks: ${summary}`);
 			}
 		}
 		if (elapsed >= options.timeoutMs) {
 			return { evaluation, outcome: "timeout" };
 		}
+		// oxlint-disable-next-line no-await-in-loop -- status checks are polled one round at a time
 		if (await options.isCancelled()) {
 			return { evaluation, outcome: "cancelled" };
 		}
+		// oxlint-disable-next-line no-await-in-loop -- status checks are polled one round at a time
 		await sleep(options.pollMs);
 	}
 }

@@ -366,8 +366,7 @@ export async function deployWorkerSpec(
 			containerPort: svc.containerPort,
 			healthcheckCommand: svc.healthcheckCommand ?? "",
 			portProtocol: svc.portProtocol ?? "tcp",
-			routed:
-				svc.dnsResolvable !== false && plan.workload.networkMode !== "host",
+			routed: svc.dnsResolvable && plan.workload.networkMode !== "host",
 		},
 		serviceId: svc.id,
 		socketPath: config.docker.socketPath,

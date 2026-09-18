@@ -15,7 +15,9 @@ mock.module("$app/environment", () => ({
 }));
 
 const { config } = await import("../../../src/lib/config");
-const { DEPLOY_LOG_SCOPE, Logger } = await import("../../../src/lib/logger");
+const { DEPLOY_LOG_SCOPE, Logger, jsonFields } = await import(
+	"../../../src/lib/logger"
+);
 const { AppLogDTO } = await import("../../../src/lib/dto/app-log-dto");
 const { NotificationDTO } = await import(
 	"../../../src/lib/dto/notification-dto"
@@ -52,10 +54,10 @@ beforeEach(() => {
 	created = [];
 	notified = [];
 	spies = [
-		spyOn(AppLogDTO, "create").mockImplementation((async (input) => {
+		spyOn(AppLogDTO, "create").mockImplementation(async (input) => {
 			created.push(input as unknown as Record<string, unknown>);
 			return undefined as never;
-		}) as typeof AppLogDTO.create),
+		}),
 		spyOn(NotificationDTO, "notifyServiceError").mockImplementation(
 			async (serviceId: string, message: string) => {
 				notified.push([serviceId, message]);
@@ -141,6 +143,18 @@ describe("Logger console format", () => {
 	});
 });
 
+describe("jsonFields", () => {
+	test("merges plain objects and keeps everything else under params", () => {
+		const err = new Error("boom");
+		expect(jsonFields([])).toEqual({});
+		expect(jsonFields([{ a: 1 }, { b: 2 }])).toEqual({ a: 1, b: 2 });
+		expect(jsonFields(["x", { a: 1 }, err, [1]])).toEqual({
+			a: 1,
+			params: ["x", err, [1]],
+		});
+	});
+});
+
 describe("Logger json format", () => {
 	test("each level logs a structured object with its scope", () => {
 		const out = quietConsole();
@@ -152,7 +166,7 @@ describe("Logger json format", () => {
 		logger.trace("t");
 		logger.error("e");
 		expect(out.log.mock.calls.map(([entry]) => entry)).toEqual([
-			{ 0: "extra", input: "i", level: "info", scope: "Api" },
+			{ input: "i", level: "info", params: ["extra"], scope: "Api" },
 			{ input: "w", level: "warn", scope: "Api" },
 			{ input: "d", level: "debug", scope: "Api" },
 			{ input: "t", level: "trace", scope: "Api" },
@@ -195,7 +209,7 @@ describe("Logger.log", () => {
 		logger.log({ level: "warn", message: "meh", metadata: [{ a: 1 }] });
 		logger.log({ level: "error", message: "bad" });
 		expect(out.log.mock.calls[1][0]).toEqual({
-			0: { a: 1 },
+			a: 1,
 			level: "warn",
 			message: "meh",
 			scope: "Jobs",

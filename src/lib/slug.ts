@@ -23,7 +23,7 @@ export async function uniqueSlug(
 ): Promise<string> {
 	let candidate = base;
 	let attempt = 2;
-	// biome-ignore lint/performance/noAwaitInLoops: each candidate can only be checked once the previous one came back taken
+	// oxlint-disable-next-line no-await-in-loop -- each candidate can only be checked once the previous one came back taken
 	while (await isTaken(candidate)) {
 		candidate = suffixedSlug(base, attempt);
 		attempt += 1;
