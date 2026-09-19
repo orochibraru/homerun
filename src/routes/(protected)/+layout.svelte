@@ -31,6 +31,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import AppVersion from "$lib/components/app-version.svelte";
+	import BrandMark from "$lib/components/brand-mark.svelte";
 	import ErrorBoundary from "$lib/components/error-boundary.svelte";
 	import GlobalSearch from "$lib/components/global-search.svelte";
 	import NotificationBell from "$lib/components/notification-bell.svelte";
@@ -361,10 +362,7 @@
 <div class="flex h-screen overflow-hidden p-2 md:gap-2">
   <!-- ── Desktop sidebar ───────────────────────────────────────── -->
   <aside class="hidden w-56 shrink-0 flex-col md:flex">
-    <div class="flex items-center gap-2.5 px-3 py-2.5">
-      <span class="bg-accent size-3.5 rounded-md"></span>
-      <span class="text-text text-[0.9375rem] font-semibold tracking-tight">homerun</span>
-    </div>
+    <BrandMark class="px-3 py-2.5" />
 
     {#if !data.readOnly}
       <div class="px-2 pb-2">

@@ -15,6 +15,8 @@ When done delete the entry, no bloat.
       services (Traefik, registry, Newt) and self-update run by the worker.
       Starts once the job-type port above lands.
 
+- [ ] Worker should be as verbose as possible.
+
 ## Small
 
 - [ ] Run Cloudflare and Pangolin DNS automation against real accounts and fix

@@ -12,6 +12,7 @@
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
 		SelectContent,
@@ -103,6 +104,26 @@
 	);
 </script>
 
+{#snippet mainToggle(host: string, disabled: boolean)}
+  <div class="flex w-24 shrink-0 justify-center">
+    {#if primary !== "" && primary === host}
+      <span class="bg-accent/10 text-accent rounded-full px-2.5 py-0.5 text-xs font-medium">Main</span>
+    {:else}
+      <Button
+        {disabled}
+        onclick={() => {
+          primary = host;
+        }}
+        size="xs"
+        type="button"
+        variant="ghost"
+      >
+        Make main
+      </Button>
+    {/if}
+  </div>
+{/snippet}
+
 {#snippet applyNote()}
   <p class="text-text-subtle text-xs">Redeploy for changes to take effect.</p>
 {/snippet}
@@ -150,57 +171,52 @@
           success: "Saved. Redeploy for it to take effect.",
         })}
       >
+        <input name="primaryDomain" type="hidden" value={primary}>
         <div class="space-y-2">
-          <div class="border-border flex items-center gap-3 rounded-md border px-3 py-2">
-            <input
-              class="accent-accent"
-              aria-label={`Use ${fallbackHost} as the main domain`}
-              disabled={!defaultEnabled}
-              name="primaryDomain"
-              type="radio"
+          <div class="flex items-center gap-3">
+            <Input
+              class={defaultEnabled ? "" : "text-text-subtle line-through"}
+              aria-label="Default domain"
+              readonly
               value={fallbackHost}
-              bind:group={primary}
-            >
-            <span class="text-text min-w-0 flex-1 truncate font-mono text-sm">{fallbackHost}</span>
-            <label class="text-text-muted flex shrink-0 items-center gap-2 text-xs">
-              <input
-                class="accent-accent"
+            />
+            {@render mainToggle(fallbackHost, !defaultEnabled)}
+            <label class="text-text-muted flex w-20 shrink-0 items-center gap-2 text-xs">
+              <Checkbox
                 name="defaultDomainEnabled"
-                type="checkbox"
+                onCheckedChange={(checked) => {
+                  if (!checked && primary === fallbackHost) {
+                    primary = "";
+                  }
+                }}
                 bind:checked={defaultEnabled}
-              >
+              />
               Routed
             </label>
           </div>
           {#each domains as domain, index (index)}
             <div class="flex items-center gap-3">
-              <input
-                class="accent-accent ml-3"
-                aria-label={`Use ${domain || "this domain"} as the main domain`}
-                checked={primary !== "" && primary === domain}
-                name="primaryDomain"
-                onchange={() => {
-                  primary = domain;
-                }}
-                type="radio"
-                value={domain}
-              >
               <Input
+                aria-label="Domain"
                 name="domains"
                 oninput={(event) => renameDomain(index, event.currentTarget.value)}
                 placeholder="app.example.com"
+                spellcheck="false"
                 type="text"
                 value={domain}
               />
-              <Button
-                aria-label="Remove this domain"
-                onclick={() => removeDomain(index)}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
-              >
-                <Trash2 class="size-4" />
-              </Button>
+              {@render mainToggle(domain, !domain)}
+              <div class="w-20 shrink-0">
+                <Button
+                  aria-label="Remove this domain"
+                  onclick={() => removeDomain(index)}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Trash2 class="size-4" />
+                </Button>
+              </div>
             </div>
           {/each}
         </div>
@@ -216,7 +232,7 @@
           Add domain
         </Button>
         <p class="text-text-subtle text-xs">
-          The selected domain is the service's main link. Point each domain's
+          The main domain is the service's link. Point each domain's
           DNS (A/CNAME) at this server yourself first : this app only tells
           Traefik to route it, it doesn't manage DNS for domains outside
           {data.baseDomain}.

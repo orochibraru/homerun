@@ -3,6 +3,7 @@
 	import { ModeWatcher } from "mode-watcher";
 	import { browser } from "$app/environment";
 	import { onNavigate } from "$app/navigation";
+	import TopLoadingBar from "$lib/components/top-loading-bar.svelte";
 	import { Toaster } from "$lib/components/ui/sonner";
 	import { title } from "$lib/store/title";
 
@@ -27,11 +28,12 @@
 </script>
 
 <svelte:head>
-    <title>Homerun - {$title ?? "Home"}</title>
+	<title>Homerun - {$title ?? "Home"}</title>
 </svelte:head>
 
+<TopLoadingBar />
 <ModeWatcher />
 <main>
-    {@render children()}
+	{@render children()}
 </main>
 <Toaster closeButton position="bottom-right" richColors />
