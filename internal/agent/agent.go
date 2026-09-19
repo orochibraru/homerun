@@ -40,7 +40,7 @@ func Main() {
 		}
 	}
 	log.SetFlags(0)
-	if err := run(loadConfig()); err != nil {
+	if err := run(LoadConfig()); err != nil {
 		fmt.Fprintf(os.Stderr, "[homerun-agent] %s\n", err)
 		os.Exit(1)
 	}
@@ -49,7 +49,7 @@ func Main() {
 // run starts the agent and blocks until it's shut down.
 func run(config Config) error {
 	config.DockerSocketPath = dockersocket.Resolve(config.DockerSocketPath)
-	token, source, err := resolveToken(config.ExplicitToken, config.TokenFile)
+	token, source, err := ResolveToken(config.ExplicitToken, config.TokenFile)
 	if err != nil {
 		return fmt.Errorf("couldn't resolve the agent token: %w", err)
 	}
@@ -68,7 +68,7 @@ func run(config Config) error {
 	}
 	httpServer := &http.Server{Handler: server.Handler(), ReadHeaderTimeout: 30 * time.Second}
 
-	printBanner(config, token, source)
+	PrintBanner(config, token, source)
 	return serveUntilSignalled(httpServer, listener, time.Duration(config.ShutdownTimeoutSeconds)*time.Second)
 }
 
@@ -112,9 +112,9 @@ func serveUntilSignalled(httpServer *http.Server, listener net.Listener, timeout
 	}
 }
 
-// printBanner shows the effective configuration, and the token itself unless it
+// PrintBanner shows the effective configuration, and the token itself unless it
 // came from the environment, where whoever set it already has it.
-func printBanner(config Config, token string, source TokenSource) {
+func PrintBanner(config Config, token string, source TokenSource) {
 	fmt.Println("")
 	fmt.Println("  Homerun Agent is running.")
 	fmt.Printf("  Listening on:   http://0.0.0.0:%d\n", config.Port)

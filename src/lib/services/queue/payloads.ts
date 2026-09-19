@@ -66,4 +66,3 @@ export const notificationDeliveryJobPayload = z.object({
 });
 
 export type DockerCleanupAction = (typeof dockerCleanupActions)[number];
-export type DeployJobPayload = z.infer<typeof deployJobPayload>;

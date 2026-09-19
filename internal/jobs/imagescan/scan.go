@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	trivyImage  = "aquasec/trivy:0.74.0"
+	// TrivyImage is the scanner image Scan runs.
+	TrivyImage  = "aquasec/trivy:0.74.0"
 	cacheVolume = "homerun-trivy-cache"
 	scanTimeout = 20 * time.Minute
 )
@@ -30,8 +31,7 @@ type Target struct {
 	Source Source                `json:"source"`
 }
 
-// Command is the `trivy image` argument list scanning ref from source,
-// mirroring trivyImageCommand in src/lib/services/docker/image-scan-refs.ts.
+// Command is the `trivy image` argument list scanning ref from source.
 func Command(ref string, source Source) []string {
 	var from []string
 	switch source.Kind {
@@ -70,12 +70,12 @@ func hostSocketPath(ctx context.Context, docker *dockerapi.Client, socket string
 // the summarised report. It pulls the Trivy image first when missing, kills
 // the scanner after 20 minutes and always removes its container.
 func Scan(ctx context.Context, docker *dockerapi.Client, socket, network string, target Target) (Summary, error) {
-	exists, err := docker.ImageExists(ctx, trivyImage)
+	exists, err := docker.ImageExists(ctx, TrivyImage)
 	if err != nil {
 		return Summary{}, err
 	}
 	if !exists {
-		if err := docker.PullImage(ctx, trivyImage, nil, nil); err != nil {
+		if err := docker.PullImage(ctx, TrivyImage, nil, nil); err != nil {
 			return Summary{}, err
 		}
 	}
@@ -91,7 +91,7 @@ func Scan(ctx context.Context, docker *dockerapi.Client, socket, network string,
 		Binds:  binds,
 		Cmd:    Command(target.Ref, target.Source),
 		Env:    env,
-		Image:  trivyImage,
+		Image:  TrivyImage,
 		Labels: map[string]string{"homerun.managed": "true"},
 	}, network)
 	if err != nil {

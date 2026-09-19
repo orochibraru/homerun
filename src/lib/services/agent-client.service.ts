@@ -1,10 +1,5 @@
-import { Readable } from "node:stream";
-import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import type { BuildMethod } from "$lib/build-methods";
 import type { GitCredential } from "$lib/git-clone-url";
-import type { RegistryAuth } from "./docker/containers.ts";
-
-const IMAGE_TRANSFER_TIMEOUT_MS = 60 * 60 * 1000;
 
 /** Decrypted connection to a registered Homerun Agent : see remote-host-dto.ts's `toAgentConnection`. */
 export interface AgentConnection {
@@ -20,30 +15,6 @@ class AgentRequestError extends Error {
 		super(message);
 		this.status = status;
 	}
-}
-
-export interface AgentDeployParams {
-	containerPort: number | null;
-	cpuLimit?: number | null;
-	envVars: Record<string, string>;
-	image: string;
-	memoryLimitMb?: number | null;
-	networkMode?: "bridge" | "host";
-	portProtocol?: "tcp" | "udp" | "both";
-	registryAuth?: RegistryAuth | null;
-	restartPolicy: string;
-	serviceId: string;
-	// True when `image:tag` was just built on this same agent by `build()`
-	// below rather than published anywhere : see agent/schemas.ts's
-	// deployInputSchema docstring for why this has to skip the pull.
-	skipPull?: boolean;
-	slug: string;
-	tag: string;
-}
-
-export interface AgentDeployResult {
-	containerId: string;
-	log: string[];
 }
 
 export interface AgentBuildPush {
@@ -77,7 +48,7 @@ export interface AgentBuildResult {
  * A thin HTTP client for a registered Homerun Agent (see agent/README.md).
  * Mirrors `docker/containers.ts`'s DockerService surface closely (deploy,
  * start/stop/restart/remove, inspectStatus, streamLogs) plus `build`
- * (`docker/git-build.ts`'s equivalent), so `deploy.service.ts` and the
+ * (the Go worker's own build step), so `deploy.service.ts` and the
  * various lifecycle call sites (see `service-lifecycle.service.ts`) can
  * treat an agent-backed remote host as a real deploy target/build server
  * instead of the "registered and health-checked, but not usable" state
@@ -149,41 +120,6 @@ class AgentClientServiceClass {
 			push: params.push ?? null,
 			tag: params.tag,
 		});
-	}
-
-	/**
-	 * GET /v1/images/save : streams `ref` off the agent's daemon as a `docker
-	 * save` tarball, for loading onto this host when the build server has no
-	 * cache registry to publish through.
-	 *
-	 * @throws When the agent can't be reached, or answers with an error
-	 *   (the image doesn't exist there, a bad token).
-	 */
-	async saveImage(connection: AgentConnection, ref: string): Promise<Readable> {
-		const url = new URL("/v1/images/save", connection.agentUrl);
-		url.searchParams.set("ref", ref);
-		let response: Response;
-		try {
-			response = await fetch(url, {
-				headers: { authorization: `Bearer ${connection.token}` },
-				signal: AbortSignal.timeout(IMAGE_TRANSFER_TIMEOUT_MS),
-			});
-		} catch (error) {
-			throw new Error(
-				`Couldn't reach the agent at ${connection.agentUrl} : ${error instanceof Error ? error.message : String(error)}`,
-			);
-		}
-		if (!(response.ok && response.body)) {
-			const data = await response.json().catch(() => null);
-			const message =
-				data && typeof data === "object" && "error" in data
-					? String((data as { error: unknown }).error)
-					: `Agent returned ${response.status}.`;
-			throw new AgentRequestError(message, response.status);
-		}
-		return Readable.fromWeb(
-			response.body as unknown as NodeReadableStream<Uint8Array>,
-		);
 	}
 
 	/**

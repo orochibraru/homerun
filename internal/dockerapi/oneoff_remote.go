@@ -36,7 +36,7 @@ func NewRemote(host RemoteHost) (*Client, error) {
 	}
 	address := net.JoinHostPort(parsed.Hostname(), port)
 	if host.TLSCA == "" || host.TLSCert == "" || host.TLSKey == "" {
-		return &Client{http: &http.Client{}, base: "http://" + address}, nil
+		return &Client{http: &http.Client{}, Base: "http://" + address}, nil
 	}
 	roots := x509.NewCertPool()
 	if !roots.AppendCertsFromPEM([]byte(host.TLSCA)) {
@@ -51,5 +51,5 @@ func NewRemote(host RemoteHost) (*Client, error) {
 		MinVersion:   tls.VersionTLS12,
 		RootCAs:      roots,
 	}}
-	return &Client{http: &http.Client{Transport: transport}, base: "https://" + address}, nil
+	return &Client{http: &http.Client{Transport: transport}, Base: "https://" + address}, nil
 }

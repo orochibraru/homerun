@@ -77,6 +77,8 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 	return map[string]any{"key": spec.Key, "sizeBytes": size}, nil
 }
 
+// backup stops spec's services, archives and uploads the volume, then starts
+// them again.
 func backup(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Spec) (int64, error) {
 	if err := runPreCommand(ctx, job, docker, spec.PreCommand); err != nil {
 		return 0, err
@@ -94,6 +96,8 @@ func backup(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Sp
 	return size, nil
 }
 
+// restore downloads spec's backup and extracts it into the volume, wiping it
+// first when spec.Wipe is set, with services stopped throughout.
 func restore(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Spec) (int64, error) {
 	archive, size, err := download(ctx, spec)
 	if err != nil {
@@ -114,7 +118,7 @@ func restore(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec S
 		if _, err := archive.Seek(0, io.SeekStart); err != nil {
 			return err
 		}
-		return withHelper(ctx, docker, spec, false, func(id string) error {
+		return WithHelper(ctx, docker, spec, false, func(id string) error {
 			return docker.PutContainerArchive(ctx, id, spec.MountPath, archive)
 		})
 	})
@@ -125,6 +129,8 @@ func restore(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec S
 	return size, nil
 }
 
+// download fetches spec's backup into a temp file and returns it along with
+// its size.
 func download(ctx context.Context, spec Spec) (*os.File, int64, error) {
 	stream, err := spec.Destination.Get(ctx, spec.Key)
 	if err != nil {
@@ -144,7 +150,8 @@ func download(ctx context.Context, spec Spec) (*os.File, int64, error) {
 	return file, size, nil
 }
 
-func ensureImage(ctx context.Context, docker *dockerapi.Client, image string) error {
+// EnsureImage pulls image if the daemon doesn't already have it.
+func EnsureImage(ctx context.Context, docker *dockerapi.Client, image string) error {
 	exists, err := docker.ImageExists(ctx, image)
 	if err != nil || exists {
 		return err
@@ -152,8 +159,11 @@ func ensureImage(ctx context.Context, docker *dockerapi.Client, image string) er
 	return docker.PullImage(ctx, image, nil, nil)
 }
 
-func withHelper(ctx context.Context, docker *dockerapi.Client, spec Spec, readOnly bool, work func(id string) error) error {
-	if err := ensureImage(ctx, docker, spec.HelperImage); err != nil {
+// WithHelper runs a throwaway helper container with spec's volume mounted at
+// spec.MountPath (read-only when readOnly), passing its id to work, and
+// always removes it afterward.
+func WithHelper(ctx context.Context, docker *dockerapi.Client, spec Spec, readOnly bool, work func(id string) error) error {
+	if err := EnsureImage(ctx, docker, spec.HelperImage); err != nil {
 		return err
 	}
 	bind := spec.Source + ":" + spec.MountPath
@@ -174,9 +184,11 @@ func withHelper(ctx context.Context, docker *dockerapi.Client, spec Spec, readOn
 	return work(id)
 }
 
+// archiveAndUpload tars the volume through a helper container, gzips it on
+// the fly, and streams it to spec.Destination.
 func archiveAndUpload(ctx context.Context, docker *dockerapi.Client, spec Spec) (int64, error) {
 	var size int64
-	err := withHelper(ctx, docker, spec, true, func(id string) error {
+	err := WithHelper(ctx, docker, spec, true, func(id string) error {
 		tarball, err := docker.ContainerArchive(ctx, id, spec.MountPath+"/.")
 		if err != nil {
 			return fmt.Errorf("couldn't read the volume %q: %w", spec.VolumeName, err)
@@ -198,8 +210,10 @@ func archiveAndUpload(ctx context.Context, docker *dockerapi.Client, spec Spec) 
 	return size, err
 }
 
+// wipe deletes every file in the volume through a helper container, before a
+// restore that wants a clean slate.
 func wipe(ctx context.Context, docker *dockerapi.Client, spec Spec) error {
-	if err := ensureImage(ctx, docker, spec.HelperImage); err != nil {
+	if err := EnsureImage(ctx, docker, spec.HelperImage); err != nil {
 		return err
 	}
 	id, err := docker.CreateContainer(ctx, dockerapi.ContainerConfig{
@@ -234,6 +248,8 @@ func wipe(ctx context.Context, docker *dockerapi.Client, spec Spec) error {
 	return fmt.Errorf("Couldn't wipe %q before restoring (exit %d)%s", spec.VolumeName, code, detail(stderr.String()))
 }
 
+// runPreCommand runs pre's command inside its container before the backup,
+// failing the job on a non-zero exit or a 15-minute timeout.
 func runPreCommand(ctx context.Context, job jobs.Job, docker *dockerapi.Client, pre *PreCommand) error {
 	if pre == nil || strings.TrimSpace(pre.Command) == "" {
 		return nil
@@ -255,14 +271,17 @@ func runPreCommand(ctx context.Context, job jobs.Job, docker *dockerapi.Client, 
 	return nil
 }
 
+// detail trims output and, if long, keeps only its tail, for an error message.
 func detail(output string) string {
-	if tail := outputTail(output); tail != "" {
+	if tail := OutputTail(output); tail != "" {
 		return ": " + tail
 	}
 	return "."
 }
 
-func outputTail(output string) string {
+// OutputTail trims output and, if it's longer than outputTailChars, keeps only
+// its tail prefixed with "...".
+func OutputTail(output string) string {
 	trimmed := []rune(strings.TrimSpace(output))
 	if len(trimmed) > outputTailChars {
 		return "..." + string(trimmed[len(trimmed)-outputTailChars:])
@@ -270,9 +289,11 @@ func outputTail(output string) string {
 	return string(trimmed)
 }
 
+// whileStopped stops services, runs work, then starts them again regardless
+// of whether work or a stop failed, recording desired_state either way.
 func whileStopped(ctx context.Context, job jobs.Job, docker *dockerapi.Client, services []Service, work func() error) error {
 	restartCtx := context.WithoutCancel(ctx)
-	return stopAround(services,
+	return StopAround(services,
 		func(service Service) error {
 			setDesiredState(ctx, job, service.ID, "stopped")
 			var err error
@@ -307,6 +328,8 @@ func whileStopped(ctx context.Context, job jobs.Job, docker *dockerapi.Client, s
 	)
 }
 
+// setDesiredState records the service's desired_state, logging but not
+// failing the job when there's no database to write to or the write fails.
 func setDesiredState(ctx context.Context, job jobs.Job, serviceID, state string) {
 	if job.DB() == nil {
 		return
@@ -316,7 +339,10 @@ func setDesiredState(ctx context.Context, job jobs.Job, serviceID, state string)
 	}
 }
 
-func stopAround[T any](services []T, stop, start func(T) error, onStartFailure func(T, error), work func() error) error {
+// StopAround stops every service, runs work, then starts every stopped
+// service again regardless of whether work or a stop failed; onStartFailure
+// reports a service that couldn't be restarted.
+func StopAround[T any](services []T, stop, start func(T) error, onStartFailure func(T, error), work func() error) error {
 	var stopped []T
 	err := func() error {
 		for _, service := range services {

@@ -8,9 +8,6 @@ export const MIRROR_LABEL = "homerun.infra";
 
 export const SKOPEO_IMAGE = "quay.io/skopeo/stable";
 export const SKOPEO_TAG = "latest";
-export const TRIVY_IMAGE = "aquasec/trivy";
-export const TRIVY_TAG = "0.74.0";
-export const TRIVY_CACHE_VOLUME = "homerun-trivy-cache";
 
 export const REGISTRY_AUTH_ENV = "HOMERUN_REGISTRY_AUTH";
 export const MIRROR_SCAN_SOURCE = "the Homerun mirror";
@@ -31,7 +28,6 @@ export const MIRROR_ROUTER = "homerun-registry";
 export const REGISTRY_INTERNAL_USERNAME = "homerun-internal";
 
 const DOCKER_HUB = "docker.io";
-const DIGEST_RE = /sha256:[0-9a-f]{64}/g;
 
 export interface NormalizedImageRef {
 	registry: string;
@@ -104,34 +100,6 @@ export function mirrorRefs(image: string, tag: string): MirrorRefs {
 		loopbackTag: tag,
 		sourceRef: `${normalized.registry}/${normalized.repository}:${tag}`,
 	};
-}
-
-/** Encodes a resolved digest into the `tag@digest` convention this app pins revisions by, so a redeploy can pull the exact image a scan approved. */
-export function pinnedToDigest(
-	image: string,
-	tag: string,
-	digest: string,
-): { image: string; tag: string } {
-	return { image, tag: `${tag}@${digest}` };
-}
-
-/** The last `sha256:...` digest mentioned in skopeo/trivy CLI output, or null if none appears. */
-export function extractDigest(output: string): string | null {
-	const matches = output.match(DIGEST_RE);
-	return matches?.at(-1) ?? null;
-}
-
-/**
- * Builds a Docker-style `config.json` auth file for `registry`, for skopeo
- * to read via `REGISTRY_AUTH_ENV`. Docker Hub gets both its canonical
- * (`docker.io`) and legacy (`index.docker.io`) hostnames keyed to the same
- * credentials, since different tools address it under either name.
- */
-export function registryAuthFile(
-	registry: string,
-	credentials: RegistryCredentials,
-): string {
-	return registryAuthFileFor([{ credentials, registry }]);
 }
 
 /**
@@ -234,56 +202,5 @@ export function isRootlessDaemon(
 ): boolean {
 	return (securityOptions ?? []).some((option) =>
 		option.split(",").includes("name=rootless"),
-	);
-}
-
-function imageSourceFlags(source: TrivySource): string[] {
-	switch (source.kind) {
-		case "remote":
-			return [
-				"--image-src",
-				"remote",
-				...(source.insecure ? ["--insecure"] : []),
-			];
-		case "docker":
-			return ["--image-src", "docker"];
-		default:
-			return ["--image-src", "docker,remote"];
-	}
-}
-
-/** The `trivy image` CLI args to vulnerability-scan `ref`, sourcing it from the local daemon, a remote registry, or trying either, per `source`. */
-export function trivyImageCommand(ref: string, source: TrivySource): string[] {
-	return [
-		"image",
-		...imageSourceFlags(source),
-		"--format",
-		"json",
-		"--quiet",
-		"--scanners",
-		"vuln",
-		"--severity",
-		"UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
-		"--timeout",
-		"15m",
-		ref,
-	];
-}
-
-/**
- * The most useful single line to surface from a failed CLI run's combined
- * output : the last line that looks like an error/fatal/denied/unauthorized
- * message, falling back to the last non-blank line, or `"no output"` when
- * there's nothing at all.
- */
-export function lastErrorLine(output: string): string {
-	const lines = output
-		.split("\n")
-		.map((line) => line.trim())
-		.filter(Boolean);
-	return (
-		lines.findLast((line) => /error|fatal|denied|unauthorized/i.test(line)) ??
-		lines.at(-1) ??
-		"no output"
 	);
 }

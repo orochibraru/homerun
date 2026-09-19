@@ -93,6 +93,7 @@ func ResolveConfig(flagBaseURL, flagAPIKey string) *Config {
 	return &Config{APIKey: apiKey, BaseURL: strings.TrimRight(baseURL, "/")}
 }
 
+// firstNonEmpty returns the first non-empty value, or "".
 func firstNonEmpty(values ...string) string {
 	for _, value := range values {
 		if value != "" {

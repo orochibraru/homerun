@@ -137,19 +137,19 @@ repos:
 
       - id: lint-go
         name: Lint (Go)
-        entry: golangci-lint run ./cmd/... ./internal/...
+        entry: golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...
         language: system
         pass_filenames: false
         stages: [pre-push]
-        files: (^(cmd|internal)/.*\.go$|^go\.mod$|^\.golangci\.yml$)
+        files: (^(cmd|internal|tests/unit/go)/.*\.go$|^go\.mod$|^\.golangci\.yml$)
 
       - id: test-go
         name: Unit Tests (Go)
-        entry: go test ./cmd/... ./internal/...
+        entry: go test ./cmd/... ./internal/... ./tests/unit/go/...
         language: system
         pass_filenames: false
         stages: [pre-push]
-        files: (^(cmd|internal)/.*\.(go|sh|json)$|^go\.mod$)
+        files: (^(cmd|internal|tests/unit/go)/.*\.(go|sh|json)$|^go\.mod$)
 
   - repo: local
     hooks:

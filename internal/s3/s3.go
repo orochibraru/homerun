@@ -39,6 +39,7 @@ type Client struct {
 	Now  func() time.Time `json:"-"`
 }
 
+// httpClient returns c.HTTP, or http.DefaultClient when unset.
 func (c *Client) httpClient() *http.Client {
 	if c.HTTP != nil {
 		return c.HTTP
@@ -46,6 +47,7 @@ func (c *Client) httpClient() *http.Client {
 	return http.DefaultClient
 }
 
+// now returns c.Now(), or time.Now() when unset.
 func (c *Client) now() time.Time {
 	if c.Now != nil {
 		return c.Now()
@@ -53,17 +55,21 @@ func (c *Client) now() time.Time {
 	return time.Now()
 }
 
+// hmacSHA256 computes the HMAC-SHA256 of data keyed by key.
 func hmacSHA256(key []byte, data string) []byte {
 	mac := hmac.New(sha256.New, key)
 	mac.Write([]byte(data))
 	return mac.Sum(nil)
 }
 
-func sha256Hex(data []byte) string {
+// SHA256Hex hex-encodes the SHA-256 digest of data.
+func SHA256Hex(data []byte) string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
 }
 
+// escape percent-encodes s for AWS Signature V4, keeping slashes intact when
+// keepSlash is set.
 func escape(s string, keepSlash bool) string {
 	var b strings.Builder
 	for i := range len(s) {
@@ -79,7 +85,8 @@ func escape(s string, keepSlash bool) string {
 	return b.String()
 }
 
-func canonicalQuery(query url.Values) string {
+// CanonicalQuery renders query in AWS Signature V4's canonical form.
+func CanonicalQuery(query url.Values) string {
 	keys := make([]string, 0, len(query))
 	for key := range query {
 		keys = append(keys, key)
@@ -110,7 +117,7 @@ func Signature(secretAccessKey, region, amzDate, method, canonicalURI, query str
 	canonicalRequest := strings.Join([]string{method, canonicalURI, query, canonicalHeaders.String(), signedHeaders, payloadHash}, "\n")
 	dateStamp := amzDate[:8]
 	scope := dateStamp + "/" + region + "/s3/aws4_request"
-	stringToSign := strings.Join([]string{"AWS4-HMAC-SHA256", amzDate, scope, sha256Hex([]byte(canonicalRequest))}, "\n")
+	stringToSign := strings.Join([]string{"AWS4-HMAC-SHA256", amzDate, scope, SHA256Hex([]byte(canonicalRequest))}, "\n")
 	key := hmacSHA256([]byte("AWS4"+secretAccessKey), dateStamp)
 	key = hmacSHA256(key, region)
 	key = hmacSHA256(key, "s3")
@@ -118,6 +125,7 @@ func Signature(secretAccessKey, region, amzDate, method, canonicalURI, query str
 	return hex.EncodeToString(hmacSHA256(key, stringToSign)), signedHeaders
 }
 
+// objectPath is key's escaped, slash-collapsed path within c.Bucket.
 func (c *Client) objectPath(key string) string {
 	path := "/" + c.Bucket + "/" + key
 	for strings.Contains(path, "//") {
@@ -126,19 +134,21 @@ func (c *Client) objectPath(key string) string {
 	return escape(path, true)
 }
 
+// do sends one signed S3 request and returns the raw response, or an error
+// for a non-2xx status.
 func (c *Client) do(ctx context.Context, method, key string, query url.Values, body []byte) (*http.Response, error) {
 	endpoint, err := url.Parse(strings.TrimRight(c.Endpoint, "/"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid S3 endpoint %q: %w", c.Endpoint, err)
 	}
 	escapedPath := c.objectPath(key)
-	canonical := canonicalQuery(query)
+	canonical := CanonicalQuery(query)
 	target, err := url.Parse(endpoint.Scheme + "://" + endpoint.Host + escapedPath)
 	if err != nil {
 		return nil, err
 	}
 	target.RawQuery = canonical
-	payloadHash := sha256Hex(body)
+	payloadHash := SHA256Hex(body)
 	amzDate := c.now().UTC().Format("20060102T150405Z")
 	headers := map[string]string{
 		"host":                 target.Host,
@@ -167,6 +177,7 @@ func (c *Client) do(ctx context.Context, method, key string, query url.Values, b
 	return nil, fmt.Errorf("S3 %s failed: %s %s", method, response.Status, strings.TrimSpace(string(text)))
 }
 
+// send is do plus reading the response body fully.
 func (c *Client) send(ctx context.Context, method, key string, query url.Values, body []byte) (http.Header, []byte, error) {
 	response, err := c.do(ctx, method, key, query, body)
 	if err != nil {
@@ -215,6 +226,7 @@ func (c *Client) Upload(ctx context.Context, key string, body io.Reader) (int64,
 	return total, nil
 }
 
+// startMultipart initiates a multipart upload for key and returns its upload id.
 func (c *Client) startMultipart(ctx context.Context, key string) (string, error) {
 	_, raw, err := c.send(ctx, http.MethodPost, key, url.Values{"uploads": {""}}, nil)
 	if err != nil {
@@ -234,6 +246,8 @@ type completedPart struct {
 	PartNumber int    `xml:"PartNumber"`
 }
 
+// uploadParts uploads buffer, then the rest of body, as successive parts of
+// uploadID, and completes the multipart upload.
 func (c *Client) uploadParts(ctx context.Context, key, uploadID string, buffer []byte, body io.Reader) (int64, error) {
 	var parts []completedPart
 	var total int64

@@ -13,14 +13,15 @@ import (
 	"github.com/orochibraru/homerun/internal/buildinfo"
 )
 
-// globalFlags are the --base-url/--api-key overrides every command accepts,
+// GlobalFlags are the --base-url/--api-key overrides every command accepts,
 // before or after the subcommand.
-type globalFlags struct {
-	apiKey  string
-	baseURL string
+type GlobalFlags struct {
+	APIKey  string
+	BaseURL string
 }
 
-const usage = `homerun - CLI for the Homerun REST API.
+// Usage is the CLI's top-level help text, printed with no arguments, --help or an unknown command.
+const Usage = `homerun - CLI for the Homerun REST API.
 
 Usage: homerun [--base-url <url>] [--api-key <key>] <command> [options]
 
@@ -76,41 +77,41 @@ env var equivalents.
 func Main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		fmt.Print(usage)
+		fmt.Print(Usage)
 		return
 	}
 
-	global, rest := splitGlobalFlags(args)
+	global, rest := SplitGlobalFlags(args)
 	if len(rest) == 0 {
-		fmt.Print(usage)
+		fmt.Print(Usage)
 		return
 	}
 
 	switch rest[0] {
 	case "login":
-		login(global.baseURL)
+		Login(global.BaseURL)
 	case "logout":
-		logout()
+		Logout()
 	case "update":
-		selfUpdate()
+		SelfUpdate()
 	case "services":
-		runServices(global, rest[1:])
+		RunServices(global, rest[1:])
 	case "stacks":
-		runStacks(global, rest[1:])
+		RunStacks(global, rest[1:])
 	case "templates":
-		runTemplates(global, rest[1:])
+		RunTemplates(global, rest[1:])
 	case "instance":
-		runInstance(global, rest[1:])
+		RunInstance(global, rest[1:])
 	default:
-		fail(fmt.Sprintf("unknown command %q. Run `homerun --help` to see what's available.", rest[0]))
+		Fail(fmt.Sprintf("unknown command %q. Run `homerun --help` to see what's available.", rest[0]))
 	}
 }
 
-// splitGlobalFlags pulls --base-url/--api-key (and --help/--version) out of the
+// SplitGlobalFlags pulls --base-url/--api-key (and --help/--version) out of the
 // argument list wherever they appear, so they work before or after the
 // subcommand, and returns everything else in order.
-func splitGlobalFlags(args []string) (globalFlags, []string) {
-	global := globalFlags{}
+func SplitGlobalFlags(args []string) (GlobalFlags, []string) {
+	global := GlobalFlags{}
 	rest := make([]string, 0, len(args))
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
@@ -128,16 +129,16 @@ func splitGlobalFlags(args []string) (globalFlags, []string) {
 				index++
 				return args[index]
 			}
-			fail(fmt.Sprintf("%s needs a value", name))
+			Fail(fmt.Sprintf("%s needs a value", name))
 			return ""
 		}
 		switch name {
 		case "--base-url":
-			global.baseURL = takeValue()
+			global.BaseURL = takeValue()
 		case "--api-key":
-			global.apiKey = takeValue()
+			global.APIKey = takeValue()
 		case "-h", "--help":
-			fmt.Print(usage)
+			fmt.Print(Usage)
 			os.Exit(0)
 		case "-v", "--version":
 			fmt.Println(buildinfo.Version)
@@ -149,24 +150,24 @@ func splitGlobalFlags(args []string) (globalFlags, []string) {
 	return global, rest
 }
 
-// newFlagSet builds a flag set that reports a bad flag the same way every other
+// NewFlagSet builds a flag set that reports a bad flag the same way every other
 // CLI error is reported, rather than dumping Go's own usage block.
-func newFlagSet(name string) *flag.FlagSet {
+func NewFlagSet(name string) *flag.FlagSet {
 	set := flag.NewFlagSet(name, flag.ContinueOnError)
 	set.SetOutput(io.Discard)
 	set.Usage = func() {}
 	return set
 }
 
-// parse parses one subcommand's flags and returns its positional arguments.
+// Parse parses one subcommand's flags and returns its positional arguments.
 // Go's flag package stops at the first non-flag argument, so this resumes after
 // each positional: `services scans list <id> --json` has to work, not just
 // `--json <id>`.
-func parse(set *flag.FlagSet, args []string) []string {
+func Parse(set *flag.FlagSet, args []string) []string {
 	positionals := []string{}
 	for len(args) > 0 {
 		if err := set.Parse(args); err != nil {
-			fail(err.Error())
+			Fail(err.Error())
 		}
 		rest := set.Args()
 		if len(rest) == 0 {
@@ -178,8 +179,8 @@ func parse(set *flag.FlagSet, args []string) []string {
 	return positionals
 }
 
-// listFlags registers the shared list options on a flag set.
-func listFlags(set *flag.FlagSet) *ListArgs {
+// ListFlags registers the shared list options on a flag set.
+func ListFlags(set *flag.FlagSet) *ListArgs {
 	args := &ListArgs{}
 	set.BoolVar(&args.JSON, "json", false, "print raw JSON instead of a table")
 	set.IntVar(&args.Page, "page", 0, "1-based page number")
@@ -188,95 +189,97 @@ func listFlags(set *flag.FlagSet) *ListArgs {
 	return args
 }
 
-// requirePositiveTimeout rejects a negative --timeout, which would otherwise
+// RequirePositiveTimeout rejects a negative --timeout, which would otherwise
 // silently fall back to the default wait rather than failing.
-func requirePositiveTimeout(seconds int) {
+func RequirePositiveTimeout(seconds int) {
 	if seconds < 0 {
-		fail("--timeout can't be negative.")
+		Fail("--timeout can't be negative.")
 	}
 }
 
-// requireArg returns the positional argument at index, failing with what the command expected.
-func requireArg(args []string, index int, what string) string {
+// RequireArg returns the positional argument at index, failing with what the command expected.
+func RequireArg(args []string, index int, what string) string {
 	if index >= len(args) || args[index] == "" {
-		fail(fmt.Sprintf("missing <%s>. Run `homerun --help` to see the usage.", what))
+		Fail(fmt.Sprintf("missing <%s>. Run `homerun --help` to see the usage.", what))
 	}
 	return args[index]
 }
 
-func runServices(global globalFlags, args []string) {
+// RunServices dispatches a `services` subcommand.
+func RunServices(global GlobalFlags, args []string) {
 	if len(args) == 0 {
-		fail("missing services subcommand. Run `homerun --help` to see what's available.")
+		Fail("missing services subcommand. Run `homerun --help` to see what's available.")
 	}
-	client := func() *Client { return requireClient(global.baseURL, global.apiKey) }
+	client := func() *Client { return RequireClient(global.BaseURL, global.APIKey) }
 
 	switch args[0] {
 	case "list":
-		set := newFlagSet("services list")
-		options := listFlags(set)
-		parse(set, args[1:])
-		servicesList(client(), *options)
+		set := NewFlagSet("services list")
+		options := ListFlags(set)
+		Parse(set, args[1:])
+		ServicesList(client(), *options)
 	case "get":
-		id := requireArg(args, 1, "id")
-		serviceGet(client(), id)
+		id := RequireArg(args, 1, "id")
+		ServiceGet(client(), id)
 	case "deploy", "start", "stop", "restart":
-		id := requireArg(args, 1, "id")
-		serviceAction(client(), args[0], id)
+		id := RequireArg(args, 1, "id")
+		ServiceAction(client(), args[0], id)
 	case "delete":
-		set := newFlagSet("services delete")
+		set := NewFlagSet("services delete")
 		force := set.Bool("force", false, "delete Homerun's record even if the workload couldn't be removed")
-		rest := parse(set, args[1:])
-		id := requireArg(rest, 0, "id")
-		serviceDelete(client(), id, *force)
+		rest := Parse(set, args[1:])
+		id := RequireArg(rest, 0, "id")
+		ServiceDelete(client(), id, *force)
 	case "webhook":
-		id := requireArg(args, 1, "id")
-		serviceWebhook(client(), id)
+		id := RequireArg(args, 1, "id")
+		ServiceWebhook(client(), id)
 	case "revisions":
-		set := newFlagSet("services revisions")
+		set := NewFlagSet("services revisions")
 		asJSON := set.Bool("json", false, "print raw JSON instead of a table")
-		rest := parse(set, args[1:])
-		id := requireArg(rest, 0, "id")
-		revisionsList(client(), id, *asJSON)
+		rest := Parse(set, args[1:])
+		id := RequireArg(rest, 0, "id")
+		RevisionsList(client(), id, *asJSON)
 	case "logs":
-		set := newFlagSet("services logs")
+		set := NewFlagSet("services logs")
 		tail := set.Int("tail", 0, "how many lines of backlog to print, 1 to 10000")
 		follow := set.Bool("follow", false, "keep streaming new lines until interrupted")
 		set.BoolVar(follow, "f", false, "keep streaming new lines until interrupted")
-		rest := parse(set, args[1:])
-		id := requireArg(rest, 0, "id")
-		serviceLogs(client(), id, *follow, *tail)
+		rest := Parse(set, args[1:])
+		id := RequireArg(rest, 0, "id")
+		ServiceLogs(client(), id, *follow, *tail)
 	case "rollback":
-		set := newFlagSet("services rollback")
+		set := NewFlagSet("services rollback")
 		restoreConfig := set.Bool("restore-config", false, "also restore that revision's env vars, resources and networking")
-		rest := parse(set, args[1:])
+		rest := Parse(set, args[1:])
 		revisionID := ""
 		if len(rest) > 1 {
 			revisionID = rest[1]
 		}
-		id := requireArg(rest, 0, "id")
-		serviceRollback(client(), id, revisionID, *restoreConfig)
+		id := RequireArg(rest, 0, "id")
+		ServiceRollback(client(), id, revisionID, *restoreConfig)
 	case "scan":
-		runServiceScan(client, args[1:])
+		RunServiceScan(client, args[1:])
 	case "scans":
-		runScans(client, args[1:])
+		RunScans(client, args[1:])
 	default:
-		fail(fmt.Sprintf("unknown services subcommand %q. Run `homerun --help` to see what's available.", args[0]))
+		Fail(fmt.Sprintf("unknown services subcommand %q. Run `homerun --help` to see what's available.", args[0]))
 	}
 }
 
-func runServiceScan(client func() *Client, args []string) {
-	set := newFlagSet("services scan")
+// RunServiceScan dispatches `services scan`.
+func RunServiceScan(client func() *Client, args []string) {
+	set := NewFlagSet("services scan")
 	wait := set.Bool("wait", false, "wait for the scan to finish and print its findings")
 	failOn := set.String("fail-on", "", "exit non-zero at or above this severity (implies --wait)")
 	timeout := set.Int("timeout", 0, "give up waiting after this long, in seconds")
 	asJSON := set.Bool("json", false, "print raw JSON instead of a summary")
-	rest := parse(set, args)
+	rest := Parse(set, args)
 	if *failOn != "" && !slices.Contains(failOnLevels, *failOn) {
-		fail(fmt.Sprintf("--fail-on must be one of %s", strings.Join(failOnLevels, ", ")))
+		Fail(fmt.Sprintf("--fail-on must be one of %s", strings.Join(failOnLevels, ", ")))
 	}
-	requirePositiveTimeout(*timeout)
-	id := requireArg(rest, 0, "id")
-	serviceScan(client(), id, ScanArgs{
+	RequirePositiveTimeout(*timeout)
+	id := RequireArg(rest, 0, "id")
+	ServiceScan(client(), id, ScanArgs{
 		FailOn:  *failOn,
 		JSON:    *asJSON,
 		Timeout: time.Duration(*timeout) * time.Second,
@@ -284,73 +287,77 @@ func runServiceScan(client func() *Client, args []string) {
 	})
 }
 
-func runScans(client func() *Client, args []string) {
+// RunScans dispatches `services scans list|get`.
+func RunScans(client func() *Client, args []string) {
 	subcommand := "list"
 	rest := args
 	if len(args) > 0 && (args[0] == "list" || args[0] == "get") {
 		subcommand, rest = args[0], args[1:]
 	}
 	if subcommand == "get" {
-		set := newFlagSet("services scans get")
+		set := NewFlagSet("services scans get")
 		asJSON := set.Bool("json", false, "print raw JSON instead of a summary")
-		positional := parse(set, rest)
+		positional := Parse(set, rest)
 		scanID := "latest"
 		if len(positional) > 1 {
 			scanID = positional[1]
 		}
-		id := requireArg(positional, 0, "id")
-		scanGet(client(), id, scanID, *asJSON)
+		id := RequireArg(positional, 0, "id")
+		ScanGet(client(), id, scanID, *asJSON)
 		return
 	}
-	set := newFlagSet("services scans list")
-	options := listFlags(set)
-	positional := parse(set, rest)
-	id := requireArg(positional, 0, "id")
-	scansList(client(), id, *options)
+	set := NewFlagSet("services scans list")
+	options := ListFlags(set)
+	positional := Parse(set, rest)
+	id := RequireArg(positional, 0, "id")
+	ScansList(client(), id, *options)
 }
 
-func runStacks(global globalFlags, args []string) {
+// RunStacks dispatches a `stacks` subcommand.
+func RunStacks(global GlobalFlags, args []string) {
 	if len(args) == 0 || args[0] != "list" {
-		fail("usage: homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]")
+		Fail("usage: homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]")
 	}
-	set := newFlagSet("stacks list")
-	options := listFlags(set)
-	parse(set, args[1:])
-	stacksList(requireClient(global.baseURL, global.apiKey), *options)
+	set := NewFlagSet("stacks list")
+	options := ListFlags(set)
+	Parse(set, args[1:])
+	StacksList(RequireClient(global.BaseURL, global.APIKey), *options)
 }
 
-func runTemplates(global globalFlags, args []string) {
+// RunTemplates dispatches a `templates` subcommand.
+func RunTemplates(global GlobalFlags, args []string) {
 	if len(args) == 0 || args[0] != "list" {
-		fail("usage: homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]")
+		Fail("usage: homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]")
 	}
-	set := newFlagSet("templates list")
-	options := listFlags(set)
-	parse(set, args[1:])
-	templatesList(requireClient(global.baseURL, global.apiKey), *options)
+	set := NewFlagSet("templates list")
+	options := ListFlags(set)
+	Parse(set, args[1:])
+	TemplatesList(RequireClient(global.BaseURL, global.APIKey), *options)
 }
 
-func runInstance(global globalFlags, args []string) {
+// RunInstance dispatches an `instance` subcommand.
+func RunInstance(global GlobalFlags, args []string) {
 	if len(args) == 0 {
-		fail("usage: homerun instance status|update")
+		Fail("usage: homerun instance status|update")
 	}
 	switch args[0] {
 	case "status":
-		set := newFlagSet("instance status")
+		set := NewFlagSet("instance status")
 		asJSON := set.Bool("json", false, "print raw JSON instead of a summary")
-		parse(set, args[1:])
-		instanceStatus(requireClient(global.baseURL, global.apiKey), *asJSON)
+		Parse(set, args[1:])
+		InstanceStatus(RequireClient(global.BaseURL, global.APIKey), *asJSON)
 	case "update":
-		set := newFlagSet("instance update")
+		set := NewFlagSet("instance update")
 		wait := set.Bool("wait", true, "follow the update until the instance is back on the new version, --wait=false to return once it starts")
 		timeout := set.Int("timeout", 0, "with --wait, how long to wait before giving up, in seconds")
-		parse(set, args[1:])
-		requirePositiveTimeout(*timeout)
-		instanceUpdate(
-			requireClient(global.baseURL, global.apiKey),
+		Parse(set, args[1:])
+		RequirePositiveTimeout(*timeout)
+		InstanceUpdate(
+			RequireClient(global.BaseURL, global.APIKey),
 			*wait,
 			time.Duration(*timeout)*time.Second,
 		)
 	default:
-		fail(fmt.Sprintf("unknown instance subcommand %q. Run `homerun --help` to see what's available.", args[0]))
+		Fail(fmt.Sprintf("unknown instance subcommand %q. Run `homerun --help` to see what's available.", args[0]))
 	}
 }

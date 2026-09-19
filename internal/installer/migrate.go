@@ -114,10 +114,10 @@ func VolumeCreateCommand(volume VolumeDefinition) []string {
 		driver = "local"
 	}
 	command := []string{"docker", "volume", "create", "--driver", driver}
-	for _, key := range sortedKeys(volume.Labels) {
+	for _, key := range SortedKeys(volume.Labels) {
 		command = append(command, "--label", key+"="+volume.Labels[key])
 	}
-	for _, key := range sortedKeys(volume.Options) {
+	for _, key := range SortedKeys(volume.Options) {
 		command = append(command, "--opt", key+"="+volume.Options[key])
 	}
 	return append(command, volume.Name)
@@ -159,15 +159,15 @@ func VolumeCopyScript(name, rootlessSocket string) string {
 // fails.
 func Migrate(params MigrationParams) (MigrationReport, error) {
 	run := params.Run
-	composeDir := homeOf(params.Username) + "/homerun"
+	composeDir := HomeOf(params.Username) + "/homerun"
 	composePath := composeDir + "/compose.yaml"
 	stateDir := composeDir + "/.rootful-migration"
 	report := MigrationReport{ComposePath: composePath}
 
-	if !params.DryRun && !fileExists(composePath) {
+	if !params.DryRun && !FileExists(composePath) {
 		return report, fmt.Errorf("No --mode=full install found at %s : nothing to migrate.", composePath)
 	}
-	uid, err := uidOf(run, params.Username)
+	uid, err := UIDOf(run, params.Username)
 	if err != nil {
 		return report, err
 	}
@@ -192,11 +192,11 @@ func Migrate(params MigrationParams) (MigrationReport, error) {
 
 	fmt.Println("\n== 2/6 Stop everything on the rootless daemon ==")
 	volumesFile := stateDir + "/volumes.json"
-	pending, err := copyPending(volumesFile, stateDir)
+	pending, err := CopyPending(volumesFile, stateDir)
 	if err != nil {
 		return report, err
 	}
-	reachable, err := ensureRootlessDaemon(run, pending, rootless, params.Username, uid)
+	reachable, err := EnsureRootlessDaemon(run, pending, rootless, params.Username, uid)
 	if err != nil {
 		return report, err
 	}
@@ -207,13 +207,13 @@ func Migrate(params MigrationParams) (MigrationReport, error) {
 		}
 		report.BindMounts = bindMounts
 		report.OtherContainers = otherContainers
-		if err := stopAll(run, rootless); err != nil {
+		if err := StopAll(run, rootless); err != nil {
 			return report, err
 		}
 	}
 
 	fmt.Println("\n== 3/6 Copy volumes to the system daemon ==")
-	if err := copyVolumes(run, reachable, rootless, rootlessSocket, stateDir, volumesFile); err != nil {
+	if err := CopyVolumes(run, reachable, rootless, rootlessSocket, stateDir, volumesFile); err != nil {
 		return report, err
 	}
 
@@ -229,7 +229,7 @@ func Migrate(params MigrationParams) (MigrationReport, error) {
 	}
 
 	fmt.Println("\n== 5/6 Start the stack on the system daemon ==")
-	host, err := migrationHost(params, composeDir)
+	host, err := MigrationHost(params, composeDir)
 	if err != nil {
 		return report, err
 	}
@@ -250,17 +250,17 @@ func Migrate(params MigrationParams) (MigrationReport, error) {
 	}
 
 	fmt.Println("\n== 6/6 Switch the instance to swarm mode ==")
-	if err := switchInstance(run, composeDir, stateDir); err != nil {
+	if err := SwitchInstance(run, composeDir, stateDir); err != nil {
 		return report, err
 	}
 	disableRootlessDaemon(run, params.Username, uid)
 	return report, nil
 }
 
-// copyPending reports whether any volume still needs copying: true until the
+// CopyPending reports whether any volume still needs copying: true until the
 // volume list has been recorded and every one of them has its done marker.
-func copyPending(volumesFile, stateDir string) (bool, error) {
-	if !fileExists(volumesFile) {
+func CopyPending(volumesFile, stateDir string) (bool, error) {
+	if !FileExists(volumesFile) {
 		return true, nil
 	}
 	body, err := os.ReadFile(volumesFile)
@@ -272,19 +272,19 @@ func copyPending(volumesFile, stateDir string) (bool, error) {
 		return false, err
 	}
 	for _, volume := range volumes {
-		if !fileExists(stateDir + "/" + volume.Name + ".copied") {
+		if !FileExists(stateDir + "/" + volume.Name + ".copied") {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-// ensureRootlessDaemon reports whether the rootless daemon answers, starting it
+// EnsureRootlessDaemon reports whether the rootless daemon answers, starting it
 // through its systemd --user unit when copying is still pending (a re-run after
 // the daemon was already disabled).
 //
 // Fails when copying is pending and the daemon can't be started.
-func ensureRootlessDaemon(run Runner, pending bool, rootless Opts, username, uid string) (bool, error) {
+func EnsureRootlessDaemon(run Runner, pending bool, rootless Opts, username, uid string) (bool, error) {
 	if run.RunOK([]string{"docker", "version", "--format", "{{.Server.Version}}"}, rootless) {
 		return true, nil
 	}
@@ -356,9 +356,9 @@ func inventory(run Runner, rootless Opts) ([]string, []string, error) {
 	return bindMounts, otherContainers, nil
 }
 
-// stopAll stops every running container on the rootless daemon, the stack and
+// StopAll stops every running container on the rootless daemon, the stack and
 // every deployed service, so nothing writes to a volume while it's copied.
-func stopAll(run Runner, rootless Opts) error {
+func StopAll(run Runner, rootless Opts) error {
 	running, err := run.Run([]string{"docker", "ps", "-q"}, rootless)
 	if err != nil {
 		return err
@@ -377,20 +377,20 @@ func stopAll(run Runner, rootless Opts) error {
 	return err
 }
 
-// copyVolumes records the rootless daemon's named volumes once, then recreates
+// CopyVolumes records the rootless daemon's named volumes once, then recreates
 // and fills each one on the system daemon that doesn't have its done marker
 // yet. A volume left half-copied by an earlier run is removed and copied again
 // from scratch.
 //
 // Fails when volumes still need copying but the rootless daemon isn't reachable.
-func copyVolumes(run Runner, reachable bool, rootless Opts, rootlessSocket, stateDir, volumesFile string) error {
-	volumes, err := recordVolumes(run, reachable, rootless, volumesFile)
+func CopyVolumes(run Runner, reachable bool, rootless Opts, rootlessSocket, stateDir, volumesFile string) error {
+	volumes, err := RecordVolumes(run, reachable, rootless, volumesFile)
 	if err != nil {
 		return err
 	}
 	for _, volume := range volumes {
 		marker := stateDir + "/" + volume.Name + ".copied"
-		if fileExists(marker) {
+		if FileExists(marker) {
 			fmt.Printf("%s already copied, skipping.\n", volume.Name)
 			continue
 		}
@@ -419,10 +419,10 @@ func copyVolumes(run Runner, reachable bool, rootless Opts, rootlessSocket, stat
 	return nil
 }
 
-// recordVolumes is the volume definitions to copy, read from the state
+// RecordVolumes is the volume definitions to copy, read from the state
 // directory, or listed from the rootless daemon and written there on the first
 // run.
-func recordVolumes(run Runner, reachable bool, rootless Opts, volumesFile string) ([]VolumeDefinition, error) {
+func RecordVolumes(run Runner, reachable bool, rootless Opts, volumesFile string) ([]VolumeDefinition, error) {
 	if body, err := os.ReadFile(volumesFile); err == nil {
 		var volumes []VolumeDefinition
 		if err := json.Unmarshal(body, &volumes); err != nil {
@@ -458,10 +458,10 @@ func recordVolumes(run Runner, reachable bool, rootless Opts, volumesFile string
 	return volumes, run.WriteFile(volumesFile, string(encoded))
 }
 
-// migrationHost is where the instance is reached: --domain=, else the host the
+// MigrationHost is where the instance is reached: --domain=, else the host the
 // old compose file's ORIGIN default carries, else homerun.yaml's baseDomain,
 // else detected.
-func migrationHost(params MigrationParams, composeDir string) (string, error) {
+func MigrationHost(params MigrationParams, composeDir string) (string, error) {
 	if params.Domain != "" {
 		return params.Domain, nil
 	}
@@ -480,13 +480,13 @@ func migrationHost(params MigrationParams, composeDir string) (string, error) {
 // homerun.yaml's socketPath at the system daemon.
 func rewriteConfig(run Runner, composeDir string) error {
 	backup := composeDir + "/compose.rootless.yaml"
-	if !fileExists(backup) {
+	if !FileExists(backup) {
 		if _, err := run.Run([]string{"cp", composeDir + "/compose.yaml", backup}, Opts{}); err != nil {
 			return err
 		}
 	}
 	configPath := composeDir + "/homerun.yaml"
-	if !fileExists(configPath) {
+	if !FileExists(configPath) {
 		return nil
 	}
 	config, err := os.ReadFile(configPath)
@@ -496,13 +496,13 @@ func rewriteConfig(run Runner, composeDir string) error {
 	return run.WriteFile(configPath, RootfulConfig(string(config)))
 }
 
-// switchInstance waits for the app to answer (it has run its migrations by
+// SwitchInstance waits for the app to answer (it has run its migrations by
 // then), then stores swarm mode, drops a stored rootless socket override and
 // asks for every service to be redeployed, and restarts the app so its boot
 // picks that up. Only done once: a re-run doesn't queue the redeploys again.
-func switchInstance(run Runner, composeDir, stateDir string) error {
+func SwitchInstance(run Runner, composeDir, stateDir string) error {
 	marker := stateDir + "/instance-switched"
-	if fileExists(marker) {
+	if FileExists(marker) {
 		fmt.Println("The instance was already switched to swarm mode, skipping.")
 		return nil
 	}
@@ -549,6 +549,6 @@ func disableRootlessDaemon(run Runner, username, uid string) {
 func userSession(username, uid string) Opts {
 	return Opts{
 		As:  username,
-		Env: map[string]string{"HOME": homeOf(username), "XDG_RUNTIME_DIR": "/run/user/" + uid},
+		Env: map[string]string{"HOME": HomeOf(username), "XDG_RUNTIME_DIR": "/run/user/" + uid},
 	}
 }

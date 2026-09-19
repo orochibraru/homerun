@@ -6,25 +6,27 @@
 happy-dom setup, `@testing-library/svelte`, see its own README. Tests live here,
 under `tests/unit/<package>/`, mirroring the source tree. `cmd/agent/`,
 `cmd/cli/` and `cmd/installer/` are all Go packages in the repo-root `go.mod`
-and aren't part of this suite at all: their own tests sit next to the source
-they cover (`internal/agent/token_test.go`, `internal/cli/cli_test.go`,
-`cmd/installer/*_test.go`), run with `go test ./cmd/agent/...`
-(`bun run test:unit:agent`), `go test ./cmd/cli/...` (`bun run test:unit:cli`)
-and `go test ./cmd/installer/...` (`bun run test:unit:installer`), not
-`bun:test`. There used to be a `tests/unit/agent/` and a
-`tests/unit/installer/`, mirroring the app's shape, before each was rewritten to
-Go and its tests moved next to the source; neither exists any more.
+and aren't part of `bun:test` at all, but every `*_test.go` in the repo follows
+the same not-next-to-source rule: it lives under
+`tests/unit/go/<same path as the package it covers>` (e.g.
+`internal/agent/token.go` is covered by
+`tests/unit/go/internal/agent/token_test.go`) as an external test package
+(`package agent_test`), run with
+`go test ./cmd/agent/... ./internal/agent/... ./tests/unit/go/internal/agent/...`
+(`bun run test:unit:agent`), the `cli`/ `installer` equivalents
+(`bun run test:unit:cli`/`test:unit:installer`), or all of it at once with
+`go test ./cmd/... ./internal/... ./tests/unit/go/...` (`bun run test:go`).
 
 Run everything: `bun run test` (a bare `bun test` also works for the `bun:test`
 half — no wrapper script, `bunfig.toml`'s `[test].preload` handles the rest —
-but `bun run test` also runs `go test ./cmd/... ./internal/...` afterward,
-covering `cmd/agent/`, `cmd/cli/` and `cmd/installer/`). Scoped:
-`bun run test:unit` (app only, no Postgres/Docker needed),
-`bun run test:unit:app`, and `test:unit:agent`/`test:unit:cli`/
-`test:unit:installer` (the Go tests, above, plain `go test`, no Bun preload
-involved). See `tests/integration/README.md` for the separate
-`tests/integration/` suite, and `tests/e2e/README.md` for the real-browser
-Playwright suite (its own runner, `bun run test:e2e`, not part of
+but `bun run test` also runs
+`go test ./cmd/... ./internal/... ./tests/unit/go/...` afterward, covering
+`cmd/agent/`, `cmd/cli/` and `cmd/installer/`). Scoped: `bun run test:unit` (app
+only, no Postgres/Docker needed), `bun run test:unit:app`, and
+`test:unit:agent`/`test:unit:cli`/ `test:unit:installer` (the Go tests, above,
+plain `go test`, no Bun preload involved). See `tests/integration/README.md` for
+the separate `tests/integration/` suite, and `tests/e2e/README.md` for the
+real-browser Playwright suite (its own runner, `bun run test:e2e`, not part of
 `bun run test`'s `bun test` invocation).
 
 ## Mocks are process-global
@@ -38,17 +40,17 @@ also cover the Bun-based agent's own suite (`tests/unit/agent/docker.test.ts`
 mocked `"dockerode"` wholesale, `tests/unit/agent/http.test.ts` spied on
 individual `DockerService` methods); that suite is gone along with the Bun
 agent, replaced by `cmd/agent/`'s own Go tests, which fake the Docker client via
-a real interface instead (`internal/agent/fake_docker_test.go`).
+a real interface instead (`tests/unit/go/internal/agent/fake_docker_test.go`).
 
 ## `cmd/cli/`'s tests set `$HOME` directly, no preload needed
 
-`internal/cli/config.go` resolves its config file path
-(`~/.config/homerun/config.json`) from `os.UserHomeDir()`, which reads `$HOME`
-fresh on every call (unlike the old TypeScript CLI's `os.homedir()`, fixed for
-the life of the process, which is why that version needed a `bunfig.toml`
-preload mocking it). `internal/cli/cli_test.go` just calls
-`t.Setenv("HOME", t.TempDir())` per test, which Go's own test runner resets
-automatically, so there's no shared scratch-directory setup and no
+`internal/homerun/config.go`'s `ConfigDir`/`ConfigPath` resolve the config file
+path (`~/.config/homerun/config.json`) from `os.UserHomeDir()`, which reads
+`$HOME` fresh on every call (unlike the old TypeScript CLI's `os.homedir()`,
+fixed for the life of the process, which is why that version needed a
+`bunfig.toml` preload mocking it). `tests/unit/go/internal/cli/cli_test.go` just
+calls `t.Setenv("HOME", t.TempDir())` per test, which Go's own test runner
+resets automatically, so there's no shared scratch-directory setup and no
 `tests/unit/support/` involvement at all for `go test`.
 
 ## Coverage
@@ -61,12 +63,13 @@ yet.
 ## Fakes over mocking libraries
 
 `internal/installer/exec.go`'s `Runner` is a real Go interface, so its own Go
-tests (`steps_test.go`, `fullstack_test.go`, `migrate_test.go`, `flow_test.go`,
-`main_test.go`, `support_test.go`) pass a fake implementation instead of the
-real `StepRunner`, no mocking library involved — the same "fake over mock"
-posture the old `bun:test` suite used to take with plain object literals for
-this same collaborator, before the installer's Go rewrite moved these tests out
-of `tests/unit/installer/` entirely.
+tests (`tests/unit/go/internal/installer/steps_test.go`, `fullstack_test.go`,
+`migrate_test.go`, `flow_test.go`, `main_test.go`, `support_test.go`, all in
+that same directory) pass a fake implementation instead of the real
+`StepRunner`, no mocking library involved — the same "fake over mock" posture
+the old `bun:test` suite used to take with plain object literals for this same
+collaborator, before the installer's Go rewrite moved these tests out of
+`tests/unit/installer/` entirely.
 
 ## Real bugs this suite caught
 

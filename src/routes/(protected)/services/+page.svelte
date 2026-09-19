@@ -13,6 +13,7 @@
 	import { onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import BulkActionBar from "$lib/components/bulk-action-bar.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EntityList, {
@@ -24,10 +25,10 @@
 	import { labelClass as label } from "$lib/components/form-styles";
 	import Pagination from "$lib/components/pagination.svelte";
 	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
+	import SelectAllRow from "$lib/components/select-all-row.svelte";
 	import ServiceContextMenu from "$lib/components/service-context-menu.svelte";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
-	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
 		SelectContent,
@@ -38,6 +39,7 @@
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
+	import { ListSelection } from "$lib/list-selection.svelte";
 	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -53,7 +55,7 @@
 
 	const view = new ViewMode("services");
 
-	let selectedIds = $state<string[]>([]);
+	const selection = new ListSelection(() => data.services.map((svc) => svc.id));
 
 	const SERVICE_ACTION_LABELS: Record<
 		ServiceAction,
@@ -120,35 +122,8 @@
 		return liveStatus.get(svc.id) ?? svc.currentStatus;
 	}
 
-	const selectedSet = $derived(new Set(selectedIds));
-	const visibleIds = $derived(data.services.map((svc) => svc.id));
-	const allVisibleSelected = $derived(
-		visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id)),
-	);
-
-	// Selection is scoped to the page you can actually see : paginating (or
-	// changing the search/filters) reloads `data.services`, and anything no
-	// longer on screen drops out rather than being silently submitted by the
-	// bulk bar.
-	$effect(() => {
-		const existing = new Set(data.services.map((svc) => svc.id));
-		if (selectedIds.some((id) => !existing.has(id))) {
-			selectedIds = selectedIds.filter((id) => existing.has(id));
-		}
-	});
-
 	function byId(id: string): Svc | undefined {
 		return data.services.find((svc) => svc.id === id);
-	}
-
-	function toggleSelected(id: string) {
-		selectedIds = selectedSet.has(id)
-			? selectedIds.filter((other) => other !== id)
-			: [...selectedIds, id];
-	}
-
-	function toggleAllVisible() {
-		selectedIds = allVisibleSelected ? [] : visibleIds;
 	}
 
 	// Tracks which service's action is in flight, keyed by serviceId, so
@@ -198,7 +173,7 @@
 
 	const bulkSubmit: import("@sveltejs/kit").SubmitFunction = (input) => {
 		const label = SERVICE_ACTION_LABELS[bulkOp];
-		const count = selectedIds.length;
+		const count = selection.count;
 		return enhanceToast({
 			error: `Couldn't ${label.verb} the selected ${plural(count)}.`,
 			loading: `${label.progressive} ${count} ${plural(count)}`,
@@ -209,7 +184,7 @@
 				bulkPending = true;
 			},
 			onSuccess: () => {
-				selectedIds = [];
+				selection.clear();
 			},
 			success: (result) => {
 				const summary = result as
@@ -303,7 +278,7 @@
 	}
 </script>
 
-<div class="p-5 md:p-6 {selectedIds.length > 0 ? 'pb-28' : ''}">
+<div class="p-5 md:p-6 {selection.count > 0 ? 'pb-28' : ''}">
   <div class="border-border mb-5 flex flex-wrap items-end justify-between gap-3 border-b pb-4">
     <div>
       <h1 class="text-text text-lg font-semibold tracking-tight">Services</h1>
@@ -365,19 +340,11 @@
         <p class="text-text-muted text-sm">No services match your filters.</p>
       </div>
     {:else}
-      <div class="mb-4 flex items-center gap-2.5">
-        <Checkbox
-          aria-label="Select all services"
-          checked={allVisibleSelected}
-          indeterminate={selectedIds.length > 0 && !allVisibleSelected}
-          onCheckedChange={toggleAllVisible}
-        />
-        <span class="text-text-subtle text-xs">
-          {selectedIds.length > 0
-          ? `${selectedIds.length} selected`
-          : `Select all ${data.services.length} on this page`}
-        </span>
-      </div>
+      <SelectAllRow
+        noun="services"
+        {selection}
+        visibleCount={data.services.length}
+      />
 
       {#snippet wrapper(item: EntityRow, body: import("svelte").Snippet)}
         {@const svc = byId(item.id)}
@@ -528,10 +495,10 @@
                 subtitle: `${svc.slug}.${data.baseDomain}`,
                 title: svc.name,
               }))}
-              onToggleSelect={toggleSelected}
+              onToggleSelect={(id) => selection.toggle(id)}
               {badge}
               {media}
-              selectedIds={selectedIds}
+              selectedIds={selection.ids}
               {view}
             />
           </div>
@@ -548,102 +515,81 @@
   {/if}
 </div>
 
-{#if selectedIds.length > 0}
-  <div class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-4">
-    <form
-      action="?/bulk"
-      class="panel-strong pointer-events-auto flex flex-wrap items-center gap-2 rounded-md px-4 py-3 shadow-lg"
-      method="POST"
-      bind:this={bulkForm}
-      use:enhance={bulkSubmit}
-    >
-      {#each selectedIds as id (id)}
-        <input name="serviceId" type="hidden" value={id}>
-      {/each}
-      <button
-        class="hidden"
-        name="op"
-        type="submit"
-        value="delete"
-        bind:this={bulkDeleteSubmitter}
-        aria-hidden="true"
-        tabindex="-1"
-      ></button>
+<BulkActionBar
+  action="?/bulk"
+  idField="serviceId"
+  label={plural(selection.count)}
+  pending={bulkPending}
+  {selection}
+  submit={bulkSubmit}
+  bind:form={bulkForm}
+>
+  <button
+    class="hidden"
+    name="op"
+    type="submit"
+    value="delete"
+    bind:this={bulkDeleteSubmitter}
+    aria-hidden="true"
+    tabindex="-1"
+  ></button>
 
-      <span class="text-text mr-1 text-sm font-medium">
-        {selectedIds.length}
-        {plural(selectedIds.length)} selected
-      </span>
-
-      <Button
-        disabled={bulkPending}
-        name="op"
-        onclick={() => {
-          bulkOp = "start";
-        }}
-        size="sm"
-        type="submit"
-        value="start"
-        variant="outline"
-      >
-        <Play class="size-3.5" />
-        Start
-      </Button>
-      <Button
-        disabled={bulkPending}
-        name="op"
-        onclick={() => {
-          bulkOp = "stop";
-        }}
-        size="sm"
-        type="submit"
-        value="stop"
-        variant="outline"
-      >
-        <Square class="size-3.5" />
-        Stop
-      </Button>
-      <Button
-        disabled={bulkPending}
-        name="op"
-        onclick={() => {
-          bulkOp = "restart";
-        }}
-        size="sm"
-        type="submit"
-        value="restart"
-        variant="outline"
-      >
-        <RotateCw class="size-3.5" />
-        Restart
-      </Button>
-      <Button
-        disabled={bulkPending}
-        onclick={() => {
-          bulkOp = "delete";
-          bulkDeleteDialogOpen = true;
-        }}
-        size="sm"
-        type="button"
-        variant="destructive"
-      >
-        <Trash2 class="size-3.5" />
-        Delete
-      </Button>
-      <Button
-        disabled={bulkPending}
-        onclick={() => {
-          selectedIds = [];
-        }}
-        size="sm"
-        type="button"
-        variant="ghost"
-      >
-        Clear
-      </Button>
-    </form>
-  </div>
-{/if}
+  <Button
+    disabled={bulkPending}
+    name="op"
+    onclick={() => {
+      bulkOp = "start";
+    }}
+    size="sm"
+    type="submit"
+    value="start"
+    variant="outline"
+  >
+    <Play class="size-3.5" />
+    Start
+  </Button>
+  <Button
+    disabled={bulkPending}
+    name="op"
+    onclick={() => {
+      bulkOp = "stop";
+    }}
+    size="sm"
+    type="submit"
+    value="stop"
+    variant="outline"
+  >
+    <Square class="size-3.5" />
+    Stop
+  </Button>
+  <Button
+    disabled={bulkPending}
+    name="op"
+    onclick={() => {
+      bulkOp = "restart";
+    }}
+    size="sm"
+    type="submit"
+    value="restart"
+    variant="outline"
+  >
+    <RotateCw class="size-3.5" />
+    Restart
+  </Button>
+  <Button
+    disabled={bulkPending}
+    onclick={() => {
+      bulkOp = "delete";
+      bulkDeleteDialogOpen = true;
+    }}
+    size="sm"
+    type="button"
+    variant="destructive"
+  >
+    <Trash2 class="size-3.5" />
+    Delete
+  </Button>
+</BulkActionBar>
 
 <ConfirmDialog
   bind:open={deleteDialogOpen}
@@ -656,9 +602,9 @@
 
 <ConfirmDialog
   bind:open={bulkDeleteDialogOpen}
-  confirmLabel="Delete {selectedIds.length} {plural(selectedIds.length)}"
-  confirmPhrase="delete {selectedIds.length} {plural(selectedIds.length)}"
-  description={`Delete ${selectedIds.length} selected ${plural(selectedIds.length)}? Their containers are removed and this can't be undone.`}
+  confirmLabel="Delete {selection.count} {plural(selection.count)}"
+  confirmPhrase="delete {selection.count} {plural(selection.count)}"
+  description={`Delete ${selection.count} selected ${plural(selection.count)}? Their containers are removed and this can't be undone.`}
   onConfirm={() => bulkForm?.requestSubmit(bulkDeleteSubmitter ?? undefined)}
   title="Delete selected services"
 />

@@ -16,11 +16,7 @@ import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { enqueueVolumeBackup } from "./backup-queue.ts";
-import {
-	cronMatches,
-	type ParsedCron,
-	parseCronSchedule,
-} from "./cron/cron-expression.ts";
+import { type ParsedCron, parseCronSchedule } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
 import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
 import { MirrorGcScheduler } from "./cron/mirror-gc-scheduler.ts";
@@ -80,11 +76,6 @@ class CronServiceClass {
 	/** Parses a 5-field cron expression for schedule-input validation, see `cron-expression.ts`'s `parseCronSchedule`. */
 	parseCronSchedule(schedule: string): ParsedCron | null {
 		return parseCronSchedule(schedule);
-	}
-
-	/** Whether `schedule` is due at `date`, see `cron-expression.ts`'s `cronMatches`. */
-	cronMatches(schedule: string, date: Date): boolean {
-		return cronMatches(schedule, date);
 	}
 
 	/** Starts the per-service scheduled-redeploy scheduler (idempotent, HMR-safe, see `BaseScheduler.start`). */

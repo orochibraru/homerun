@@ -99,4 +99,35 @@ test.describe
 			await expect(page.getByText("Nightly")).toBeVisible();
 			await expect(page.getByText(/0 3 \* \* \*/)).toBeVisible();
 		});
+
+		test("storage volumes bulk-toggle backups and bulk-delete", async ({
+			page,
+		}) => {
+			for (const name of ["bulk-one", "bulk-two"]) {
+				await page.goto("/storage/new");
+				await page.locator("#name").fill(name);
+				await page.locator("#source").fill(name);
+				await page.getByRole("button", { name: "Create volume" }).click();
+				await expect(page).toHaveURL(/\/storage$/);
+			}
+
+			await page.getByRole("checkbox", { name: "Select all volumes" }).click();
+			await expect(page.getByText("2 volumes selected")).toBeVisible();
+
+			await page.getByRole("button", { name: "Enable backups" }).click();
+			await expect(
+				page.getByText(
+					"0 volumes now backed up, 2 skipped (set a schedule and S3 destination first).",
+				),
+			).toBeVisible();
+
+			await page.getByRole("checkbox", { name: "Select all volumes" }).click();
+			await page
+				.locator('form[action="?/bulk"]')
+				.getByRole("button", { exact: true, name: "Delete" })
+				.click();
+			await page.getByRole("button", { name: "Delete 2 volumes" }).click();
+			await expect(page.getByText("2 volumes deleted.")).toBeVisible();
+			await expect(page.getByText("bulk-one")).toHaveCount(0);
+		});
 	});

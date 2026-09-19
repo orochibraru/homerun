@@ -37,6 +37,7 @@ func KeepTagFor(digest string) string {
 	return KeepTagPrefix + hex
 }
 
+// key is a repository+digest (or tag) map key.
 func key(repository, value string) string {
 	return repository + "@" + value
 }

@@ -59,9 +59,9 @@ func (r *run) localDigest(ctx context.Context, ref string) (string, bool) {
 	return inspected.Digest(), true
 }
 
-// shouldSkipPull mirrors shouldSkipPull in src/lib/pull-policy.ts: the log
-// line explaining why the pull is skipped, or "" to pull.
-func shouldSkipPull(policy string, present bool) string {
+// ShouldSkipPull returns the log line explaining why the pull is skipped,
+// or "" to pull.
+func ShouldSkipPull(policy string, present bool) string {
 	switch policy {
 	case "never":
 		if present {
@@ -83,7 +83,7 @@ func (r *run) pullForDeploy(ctx context.Context) (resolvedImage, error) {
 	spec := r.spec.Image
 	ref := spec.Image + ":" + spec.Tag
 	local, present := r.localDigest(ctx, ref)
-	if skip := shouldSkipPull(spec.PullPolicy, present); skip != "" {
+	if skip := ShouldSkipPull(spec.PullPolicy, present); skip != "" {
 		r.progress.line(skip)
 		if !present {
 			return resolvedImage{}, fmt.Errorf("Pull policy is \"never\" and %s isn't on this host.", ref)
@@ -112,7 +112,10 @@ func (r *run) pullForDeploy(ctx context.Context) (resolvedImage, error) {
 	return resolvedImage{digest: digest, image: spec.Image, tag: spec.Tag}, nil
 }
 
-func describeRevision(revision Revision) string {
+// DescribeRevision is the human summary of revision shown in a rollback's
+// deploy log: its image ref, a shortened digest and, when known, its git ref
+// and commit.
+func DescribeRevision(revision Revision) string {
 	commit := ""
 	if revision.GitCommit != "" {
 		ref := ""
@@ -128,6 +131,8 @@ func describeRevision(revision Revision) string {
 	return revision.ImageRef + digest + commit
 }
 
+// shorten truncates text to length characters, or returns it unchanged when
+// it's already shorter.
 func shorten(text string, length int) string {
 	if len(text) <= length {
 		return text
@@ -139,7 +144,7 @@ func shorten(text string, length int) string {
 // resolveRevisionImage in deploy/revision-step.ts.
 func (r *run) revisionImage(ctx context.Context) (resolvedImage, error) {
 	revision := *r.spec.Image.Revision
-	r.progress.line(fmt.Sprintf("Rolling back to revision %s: %s", shorten(revision.ID, 8), describeRevision(revision)))
+	r.progress.line(fmt.Sprintf("Rolling back to revision %s: %s", shorten(revision.ID, 8), DescribeRevision(revision)))
 	r.progress.line("Skipping the build, the registry pull and the image scan: this exact image already ran here.")
 	resolved, err := r.locateRevision(ctx, revision)
 	if err != nil {
@@ -149,6 +154,8 @@ func (r *run) revisionImage(ctx context.Context) (resolvedImage, error) {
 	return resolved, nil
 }
 
+// locateRevision resolves the exact image a rollback to revision reuses,
+// verifying it's still present by digest or pulling it back by tag.
 func (r *run) locateRevision(ctx context.Context, revision Revision) (resolvedImage, error) {
 	image, tag := revision.Image, revision.Tag
 	if revision.Digest != "" {
@@ -257,8 +264,8 @@ func (r *run) readEnvFiles(ctx context.Context) ([][2]string, error) {
 			}
 			return nil, fmt.Errorf("Couldn't read the env file %s on this host.", path)
 		}
-		for _, pair := range parseDotEnv(result.stdout) {
-			merged = setEnv(merged, pair[0], pair[1])
+		for _, pair := range ParseDotEnv(result.stdout) {
+			merged = SetEnv(merged, pair[0], pair[1])
 		}
 	}
 	return merged, nil
@@ -266,10 +273,10 @@ func (r *run) readEnvFiles(ctx context.Context) ([][2]string, error) {
 
 var envKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
-// parseDotEnv mirrors parseDotEnv in src/lib/env-parse.ts: KEY=value lines,
+// ParseDotEnv mirrors parseDotEnv in src/lib/env-parse.ts: KEY=value lines,
 // an optional export prefix and one layer of matching quotes, skipping blanks,
 // comments and anything that isn't a valid assignment.
-func parseDotEnv(text string) [][2]string {
+func ParseDotEnv(text string) [][2]string {
 	var rows [][2]string
 	for _, raw := range regexp.MustCompile(`\r?\n`).Split(text, -1) {
 		line := strings.TrimSpace(raw)
@@ -289,6 +296,7 @@ func parseDotEnv(text string) [][2]string {
 	return rows
 }
 
+// unquote strips one layer of matching single or double quotes from value.
 func unquote(value string) string {
 	if len(value) >= 2 {
 		first, last := value[0], value[len(value)-1]

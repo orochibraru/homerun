@@ -11,9 +11,9 @@ import (
 	"github.com/orochibraru/homerun/internal/release"
 )
 
-// sysctlConfPath is where the unprivileged-port sysctl is persisted. A variable
+// SysctlConfPath is where the unprivileged-port sysctl is persisted. A variable
 // so tests can point it at a scratch file.
-var sysctlConfPath = "/etc/sysctl.d/90-homerun-rootless-ports.conf"
+var SysctlConfPath = "/etc/sysctl.d/90-homerun-rootless-ports.conf"
 
 // bareIP matches a host that is an IPv4 literal, which ACME can't issue for.
 var bareIP = regexp.MustCompile(`^[0-9.]+$`)
@@ -23,7 +23,7 @@ type FullStackParams struct {
 	// DockerSocket is the daemon the stack runs on.
 	DockerSocket string
 	// Host is the domain or IP this instance will be reached at, never
-	// localhost: see fullStackCompose's doc comment.
+	// localhost: see FullStackCompose's doc comment.
 	Host string
 	// Image replaces the release image (--image=); its pull may fail when it
 	// only exists locally.
@@ -49,14 +49,14 @@ type FullStackParams struct {
 // printed at the end.
 func BringUpFullStack(params FullStackParams) (string, error) {
 	run := params.Run
-	composeDir := homeOf(params.Username) + "/homerun"
+	composeDir := HomeOf(params.Username) + "/homerun"
 	composePath := composeDir + "/compose.yaml"
 	configPath := composeDir + "/homerun.yaml"
 
 	dockerUser := Opts{Env: map[string]string{"DOCKER_HOST": "unix://" + params.DockerSocket}}
 	if !params.Rootful {
 		dockerUser.As = params.Username
-		dockerUser.Env["HOME"] = homeOf(params.Username)
+		dockerUser.Env["HOME"] = HomeOf(params.Username)
 	}
 
 	if _, err := run.Run([]string{"mkdir", "-p", composeDir}, Opts{As: params.Username}); err != nil {
@@ -70,7 +70,7 @@ func BringUpFullStack(params FullStackParams) (string, error) {
 	if err := EnsureAuthSecret(run, params.Username, composeDir); err != nil {
 		return "", err
 	}
-	if err := ensureConfigFile(run, configPath, params.DockerSocket, params.Host); err != nil {
+	if err := EnsureConfigFile(run, configPath, params.DockerSocket, params.Host); err != nil {
 		return "", err
 	}
 	image := params.Image
@@ -79,7 +79,7 @@ func BringUpFullStack(params FullStackParams) (string, error) {
 	}
 	if err := run.WriteFile(
 		composePath,
-		fullStackCompose(image, params.DockerSocket, params.Host, params.Swarm),
+		FullStackCompose(image, params.DockerSocket, params.Host, params.Swarm),
 	); err != nil {
 		return "", err
 	}
@@ -118,19 +118,19 @@ func BringUpFullStack(params FullStackParams) (string, error) {
 // persistently (survives reboot, /etc/sysctl.d/) and applied immediately via
 // `sysctl -p` so this run doesn't also need one.
 func allowPrivilegedPorts(run Runner) error {
-	if err := run.WriteFile(sysctlConfPath, "net.ipv4.ip_unprivileged_port_start=80\n"); err != nil {
+	if err := run.WriteFile(SysctlConfPath, "net.ipv4.ip_unprivileged_port_start=80\n"); err != nil {
 		return err
 	}
-	_, err := run.Run([]string{"sysctl", "-p", sysctlConfPath}, Opts{})
+	_, err := run.Run([]string{"sysctl", "-p", SysctlConfPath}, Opts{})
 	return err
 }
 
-// ensureConfigFile writes homerun.yaml once, same "never clobber an existing
+// EnsureConfigFile writes homerun.yaml once, same "never clobber an existing
 // value" rule as EnsureAuthSecret's own .env. auth.origin is deliberately
 // absent: config.ts falls back to the ORIGIN env var the compose file sets, so
 // there's one place to change it rather than two that can disagree.
-func ensureConfigFile(run Runner, configPath, dockerSocket, host string) error {
-	if fileExists(configPath) {
+func EnsureConfigFile(run Runner, configPath, dockerSocket, host string) error {
+	if FileExists(configPath) {
 		return nil
 	}
 	return run.WriteFile(configPath, fmt.Sprintf(`baseDomain: %s
@@ -183,7 +183,7 @@ func hasAuthSecret(envPath string) bool {
 	return false
 }
 
-// fullStackCompose is the generated compose file. Its shape carries five real,
+// FullStackCompose is the generated compose file. Its shape carries five real,
 // tested-live findings, each of which broke a real install:
 //
 //  1. The AUTH_SECRET line's ${VAR:?message} error message originally contained
@@ -212,7 +212,7 @@ func hasAuthSecret(envPath string) bool {
 // asking it to is a hard error in Traefik's log every refresh), so an IP
 // install gets the router with Traefik's own self-signed cert and a --domain=
 // install gets a real certificate.
-func fullStackCompose(image, dockerSocket, host string, swarm bool) string {
+func FullStackCompose(image, dockerSocket, host string, swarm bool) string {
 	dashboardResolver := "letsencrypt"
 	if bareIP.MatchString(host) {
 		dashboardResolver = ""

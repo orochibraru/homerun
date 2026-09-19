@@ -49,12 +49,6 @@ export interface ExtractIntoVolumeParams {
 	volumeName: string;
 }
 
-export interface ExecResult {
-	exitCode: number;
-	output: string;
-	timedOut: boolean;
-}
-
 export interface OneOffRunResult {
 	exitCode: number;
 	stderr: Buffer;
@@ -100,60 +94,6 @@ export function DockerOneOffMixin<
 				remote: params.remote,
 				tag: params.tag,
 			});
-		}
-
-		/**
-		 * Runs `cmd` inside an already-running container (`docker exec`) and
-		 * waits for it, returning its exit code and combined stdout/stderr.
-		 * Past `timeoutMs` it stops waiting and reports `timedOut: true` with
-		 * exit code -1; the exec itself can't be killed through the API, so it
-		 * may keep running inside the container.
-		 */
-		async execInContainer(
-			containerId: string,
-			cmd: string[],
-			timeoutMs = DEFAULT_TIMEOUT_MS,
-		): Promise<ExecResult> {
-			const docker = this.getDocker();
-			const exec = await docker.getContainer(containerId).exec({
-				AttachStderr: true,
-				AttachStdout: true,
-				Cmd: cmd,
-			});
-			const raw = (await exec.start({
-				hijack: true,
-				stdin: false,
-			})) as unknown as Readable & { destroy: () => void };
-			const combined = new PassThrough();
-			const output = collect(combined);
-			docker.modem.demuxStream(raw, combined, combined);
-			let timer: ReturnType<typeof setTimeout> | undefined;
-			const finished = new Promise<boolean>((resolvePromise, reject) => {
-				raw.on("end", () => resolvePromise(false));
-				raw.on("close", () => resolvePromise(false));
-				raw.on("error", reject);
-				timer = setTimeout(() => resolvePromise(true), timeoutMs);
-			});
-			try {
-				const timedOut = await finished;
-				combined.end();
-				if (timedOut) {
-					raw.destroy();
-					return {
-						exitCode: -1,
-						output: (await output).toString("utf8"),
-						timedOut,
-					};
-				}
-				const inspected = await exec.inspect();
-				return {
-					exitCode: inspected.ExitCode ?? 0,
-					output: (await output).toString("utf8"),
-					timedOut,
-				};
-			} finally {
-				clearTimeout(timer);
-			}
 		}
 
 		/**

@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/orochibraru/homerun/internal/homerun"
 )
 
 const (
@@ -112,8 +114,8 @@ type InstanceUpdateProgress struct {
 	Version  string   `json:"version"`
 }
 
-// listQuery turns the shared list options into the API's query parameters.
-func listQuery(args ListArgs) url.Values {
+// ListQuery turns the shared list options into the API's query parameters.
+func ListQuery(args ListArgs) url.Values {
 	query := url.Values{}
 	if args.Page > 0 {
 		query.Set("page", strconv.Itoa(args.Page))
@@ -127,9 +129,9 @@ func listQuery(args ListArgs) url.Values {
 	return query
 }
 
-// findingsAtOrAbove counts scan findings at level or any more severe level,
+// FindingsAtOrAbove counts scan findings at level or any more severe level,
 // which is what --fail-on gates on. An "unknown" severity never counts.
-func findingsAtOrAbove(counts SeverityCounts, level string) int {
+func FindingsAtOrAbove(counts SeverityCounts, level string) int {
 	byLevel := map[string]int{
 		"critical": counts.Critical,
 		"high":     counts.High,
@@ -146,6 +148,7 @@ func findingsAtOrAbove(counts SeverityCounts, level string) int {
 	return total
 }
 
+// countsLine renders counts as a single "N critical, N high, ..." line.
 func countsLine(counts SeverityCounts) string {
 	return fmt.Sprintf(
 		"%d critical, %d high, %d medium, %d low, %d unknown",
@@ -153,7 +156,8 @@ func countsLine(counts SeverityCounts) string {
 	)
 }
 
-func shorten(value string, length int) string {
+// Shorten truncates value to length runes.
+func Shorten(value string, length int) string {
 	runes := []rune(value)
 	if len(runes) <= length {
 		return value
@@ -161,10 +165,10 @@ func shorten(value string, length int) string {
 	return string(runes[:length])
 }
 
-// revisionRow flattens a revision into a table row, shortening the commit and
+// RevisionRow flattens a revision into a table row, shortening the commit and
 // digest, adding when it last went live, marking it current/previous and
 // whether its image is still retained, and why it was judged unhealthy.
-func revisionRow(revision Revision) map[string]string {
+func RevisionRow(revision Revision) map[string]string {
 	marker := ""
 	if revision.Current {
 		marker = "current"
@@ -175,9 +179,9 @@ func revisionRow(revision Revision) map[string]string {
 		marker = strings.TrimSpace(marker + " (not retained)")
 	}
 	return map[string]string{
-		"commit":         shorten(revision.GitCommit, 7),
+		"commit":         Shorten(revision.GitCommit, 7),
 		"createdAt":      revision.CreatedAt,
-		"digest":         shorten(revision.ImageDigest, 19),
+		"digest":         Shorten(revision.ImageDigest, 19),
 		"health":         revision.Health,
 		"id":             revision.ID,
 		"image":          revision.ImageRef,
@@ -187,9 +191,9 @@ func revisionRow(revision Revision) map[string]string {
 	}
 }
 
-// instanceStatusText summarises an instance update status in a few lines: the
+// InstanceStatusText summarises an instance update status in a few lines: the
 // running and latest versions, then whether an update can start and why not.
-func instanceStatusText(status InstanceUpdateStatus) string {
+func InstanceStatusText(status InstanceUpdateStatus) string {
 	lines := []string{fmt.Sprintf("Running:  v%s", status.Current)}
 	if status.Latest == nil {
 		lines = append(lines, "Latest:   unknown (couldn't reach GitHub)")
@@ -211,8 +215,8 @@ func instanceStatusText(status InstanceUpdateStatus) string {
 	return strings.Join(lines, "\n")
 }
 
-// servicesList lists services as JSON or a table, with a footer when the page is truncated.
-func servicesList(client *Client, args ListArgs) {
+// ServicesList lists services as JSON or a table, with a footer when the page is truncated.
+func ServicesList(client *Client, args ListArgs) {
 	var services []struct {
 		CurrentStatus string `json:"currentStatus"`
 		ID            string `json:"id"`
@@ -221,13 +225,13 @@ func servicesList(client *Client, args ListArgs) {
 		Slug          string `json:"slug"`
 		Tag           string `json:"tag"`
 	}
-	body, header := client.do("GET", "/services", listQuery(args))
+	body, header := client.do("GET", "/services", ListQuery(args))
 	if args.JSON {
-		printJSON(body)
+		PrintJSON(body)
 		return
 	}
 	if err := json.Unmarshal(body, &services); err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	rows := make([]map[string]string, 0, len(services))
 	for _, service := range services {
@@ -239,67 +243,67 @@ func servicesList(client *Client, args ListArgs) {
 			"status": service.CurrentStatus,
 		})
 	}
-	printTable(rows, []string{"id", "name", "slug", "status", "image"})
-	printPageFooter(header, len(services))
+	PrintTable(rows, []string{"id", "name", "slug", "status", "image"})
+	PrintPageFooter(header, len(services))
 }
 
-// serviceGet fetches one service and prints it as JSON.
-func serviceGet(client *Client, id string) {
+// ServiceGet fetches one service and prints it as JSON.
+func ServiceGet(client *Client, id string) {
 	body, _ := client.do("GET", "/services/"+url.PathEscape(id), nil)
-	printJSON(body)
+	PrintJSON(body)
 }
 
-// serviceAction triggers a deploy, start, stop or restart on a service and prints the API's result as JSON.
-func serviceAction(client *Client, action, id string) {
+// ServiceAction triggers a deploy, start, stop or restart on a service and prints the API's result as JSON.
+func ServiceAction(client *Client, action, id string) {
 	body, _ := client.do("POST", fmt.Sprintf("/services/%s/%s", url.PathEscape(id), action), nil)
-	printJSON(body)
+	PrintJSON(body)
 }
 
-// serviceDelete deletes a service, the same danger-zone action as the Settings
+// ServiceDelete deletes a service, the same danger-zone action as the Settings
 // tab's Delete button. Exits on an API error, including the 409 the API answers
 // (without force) when the container or swarm service couldn't be removed.
-func serviceDelete(client *Client, id string, force bool) {
+func ServiceDelete(client *Client, id string, force bool) {
 	query := url.Values{}
 	if force {
 		query.Set("force", "true")
 	}
 	client.do("DELETE", "/services/"+url.PathEscape(id), query)
-	printValue(map[string]any{"deleted": true, "id": id})
+	PrintValue(map[string]any{"deleted": true, "id": id})
 }
 
-// serviceWebhook fetches a service's push-to-deploy webhook URL and secret and
+// ServiceWebhook fetches a service's push-to-deploy webhook URL and secret and
 // prints it as JSON. Exits on an API error, including the 404 when deploy on
 // push isn't turned on.
-func serviceWebhook(client *Client, id string) {
+func ServiceWebhook(client *Client, id string) {
 	body, _ := client.do("GET", fmt.Sprintf("/services/%s/webhook", url.PathEscape(id)), nil)
-	printJSON(body)
+	PrintJSON(body)
 }
 
-// revisionsList lists a service's deployed revisions, one row per revision with
+// RevisionsList lists a service's deployed revisions, one row per revision with
 // redeploys folded in, as JSON or a table.
-func revisionsList(client *Client, serviceID string, asJSON bool) {
+func RevisionsList(client *Client, serviceID string, asJSON bool) {
 	body, _ := client.do("GET", fmt.Sprintf("/services/%s/revisions", url.PathEscape(serviceID)), nil)
 	if asJSON {
-		printJSON(body)
+		PrintJSON(body)
 		return
 	}
 	var revisions []Revision
 	if err := json.Unmarshal(body, &revisions); err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	rows := make([]map[string]string, 0, len(revisions))
 	for _, revision := range revisions {
-		rows = append(rows, revisionRow(revision))
+		rows = append(rows, RevisionRow(revision))
 	}
-	printTable(rows, []string{
+	PrintTable(rows, []string{
 		"id", "createdAt", "lastDeployedAt", "marker", "health", "image", "commit", "digest", "reason",
 	})
 }
 
-// serviceLogs writes a service's logs to stdout: the last tail lines, or with
+// ServiceLogs writes a service's logs to stdout: the last tail lines, or with
 // follow a live stream that only ends when the connection does. Exits on an API
 // error, including the 400 for a service that was never deployed.
-func serviceLogs(client *Client, id string, follow bool, tail int) {
+func ServiceLogs(client *Client, id string, follow bool, tail int) {
 	query := url.Values{}
 	if tail > 0 {
 		query.Set("tail", strconv.Itoa(tail))
@@ -309,22 +313,22 @@ func serviceLogs(client *Client, id string, follow bool, tail int) {
 	}
 	response, err := client.send("GET", fmt.Sprintf("/services/%s/logs", url.PathEscape(id)), query)
 	if err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		body, _ := io.ReadAll(response.Body)
-		fail(apiErrorMessage(response.StatusCode, body))
+		Fail(homerun.APIErrorMessage(response.StatusCode, body))
 	}
 	if _, err := io.Copy(os.Stdout, response.Body); err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 }
 
-// serviceRollback redeploys a service from one of its revisions, the previous
+// ServiceRollback redeploys a service from one of its revisions, the previous
 // one when revisionID is empty. With restoreConfig it also puts back the env
 // vars, resources and networking that revision ran with.
-func serviceRollback(client *Client, serviceID, revisionID string, restoreConfig bool) {
+func ServiceRollback(client *Client, serviceID, revisionID string, restoreConfig bool) {
 	if revisionID == "" {
 		revisionID = "previous"
 	}
@@ -337,21 +341,21 @@ func serviceRollback(client *Client, serviceID, revisionID string, restoreConfig
 		url.PathEscape(serviceID), url.PathEscape(revisionID),
 	)
 	body, _ := client.do("POST", path, query)
-	printJSON(body)
+	PrintJSON(body)
 }
 
-// scansList lists a service's image scans with per-severity counts, as JSON or a table.
-func scansList(client *Client, serviceID string, args ListArgs) {
+// ScansList lists a service's image scans with per-severity counts, as JSON or a table.
+func ScansList(client *Client, serviceID string, args ListArgs) {
 	body, header := client.do(
-		"GET", fmt.Sprintf("/services/%s/scans", url.PathEscape(serviceID)), listQuery(args),
+		"GET", fmt.Sprintf("/services/%s/scans", url.PathEscape(serviceID)), ListQuery(args),
 	)
 	if args.JSON {
-		printJSON(body)
+		PrintJSON(body)
 		return
 	}
 	var scans []ImageScan
 	if err := json.Unmarshal(body, &scans); err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	rows := make([]map[string]string, 0, len(scans))
 	for _, scan := range scans {
@@ -366,30 +370,30 @@ func scansList(client *Client, serviceID string, args ListArgs) {
 			"status":    scan.Status,
 		})
 	}
-	printTable(rows, []string{"id", "scannedAt", "status", "critical", "high", "medium", "low", "image"})
-	printPageFooter(header, len(scans))
+	PrintTable(rows, []string{"id", "scannedAt", "status", "critical", "high", "medium", "low", "image"})
+	PrintPageFooter(header, len(scans))
 }
 
-// scanGet fetches and prints one scan, its summary and findings table or raw
+// ScanGet fetches and prints one scan, its summary and findings table or raw
 // JSON, and returns it so serviceScan can check it against --fail-on.
-func scanGet(client *Client, serviceID, scanID string, asJSON bool) ImageScan {
+func ScanGet(client *Client, serviceID, scanID string, asJSON bool) ImageScan {
 	path := fmt.Sprintf("/services/%s/scans/%s", url.PathEscape(serviceID), url.PathEscape(scanID))
 	body, _ := client.do("GET", path, nil)
 	var scan ImageScan
 	if err := json.Unmarshal(body, &scan); err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	if asJSON {
-		printJSON(body)
+		PrintJSON(body)
 		return scan
 	}
-	printScan(scan)
+	PrintScan(scan)
 	return scan
 }
 
-// printScan prints a scan as a summary header followed by its findings table
+// PrintScan prints a scan as a summary header followed by its findings table
 // and a note when the API truncated the list.
-func printScan(scan ImageScan) {
+func PrintScan(scan ImageScan) {
 	fmt.Printf("Scan %s (%s, %s)\n", scan.ID, scan.Status, scan.ScannedAt)
 	fmt.Printf("Image:    %s\n", scan.ImageRef)
 	if scan.Digest != "" {
@@ -411,7 +415,7 @@ func printScan(scan ImageScan) {
 			"title":     finding.Title,
 		})
 	}
-	printTable(rows, []string{"severity", "id", "package", "installed", "fixed", "title"})
+	PrintTable(rows, []string{"severity", "id", "package", "installed", "fixed", "title"})
 	if scan.TotalFindings > len(scan.Findings) {
 		fmt.Printf(
 			"\nShowing %d of %d findings, most severe first.\n",
@@ -420,13 +424,13 @@ func printScan(scan ImageScan) {
 	}
 }
 
-// queueScan asks the API to queue a scan job and returns the job id to poll.
+// QueueScan asks the API to queue a scan job and returns the job id to poll.
 // With wait, a 409 for a scan already in flight is accepted and that job is
 // reused instead of failing.
-func queueScan(client *Client, serviceID string, wait bool) string {
+func QueueScan(client *Client, serviceID string, wait bool) string {
 	response, err := client.send("POST", fmt.Sprintf("/services/%s/scans", url.PathEscape(serviceID)), nil)
 	if err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	defer response.Body.Close()
 	body, _ := io.ReadAll(response.Body)
@@ -440,13 +444,13 @@ func queueScan(client *Client, serviceID string, wait bool) string {
 	if wait && response.StatusCode == http.StatusConflict && queued.JobID != "" {
 		return queued.JobID
 	}
-	fail(apiErrorMessage(response.StatusCode, body))
+	Fail(homerun.APIErrorMessage(response.StatusCode, body))
 	return ""
 }
 
-// waitForJob polls a job every pollEvery until it reaches a terminal status,
+// WaitForJob polls a job every pollEvery until it reaches a terminal status,
 // exiting the process once timeout has passed.
-func waitForJob(client *Client, jobID string, pollEvery, timeout time.Duration) (string, string) {
+func WaitForJob(client *Client, jobID string, pollEvery, timeout time.Duration) (string, string) {
 	deadline := time.Now().Add(timeout)
 	for {
 		var job struct {
@@ -458,78 +462,78 @@ func waitForJob(client *Client, jobID string, pollEvery, timeout time.Duration) 
 			return job.Status, job.Error
 		}
 		if time.Now().After(deadline) {
-			fail(fmt.Sprintf("Timed out waiting for scan job %s (still %s).", jobID, job.Status))
+			Fail(fmt.Sprintf("Timed out waiting for scan job %s (still %s).", jobID, job.Status))
 		}
-		sleep(pollEvery)
+		Sleep(pollEvery)
 	}
 }
 
-// serviceScan queues an image scan. Without Wait it prints the job id and
+// ServiceScan queues an image scan. Without Wait it prints the job id and
 // returns; with it, polls the job to completion, prints the latest scan and
 // exits non-zero when the job didn't succeed, it timed out, or FailOn findings
 // were found.
-func serviceScan(client *Client, serviceID string, args ScanArgs) {
-	jobID := queueScan(client, serviceID, args.Wait)
+func ServiceScan(client *Client, serviceID string, args ScanArgs) {
+	jobID := QueueScan(client, serviceID, args.Wait)
 	if !args.Wait {
-		printValue(map[string]any{"jobId": jobID, "status": "queued"})
+		PrintValue(map[string]any{"jobId": jobID, "status": "queued"})
 		return
 	}
 	timeout := args.Timeout
 	if timeout <= 0 {
 		timeout = defaultScanTimeout
 	}
-	status, jobError := waitForJob(client, jobID, defaultPollInterval, timeout)
+	status, jobError := WaitForJob(client, jobID, defaultPollInterval, timeout)
 	if status != "succeeded" {
 		if jobError == "" {
 			jobError = "no reason given"
 		}
-		fail(fmt.Sprintf("Scan %s: %s", status, jobError))
+		Fail(fmt.Sprintf("Scan %s: %s", status, jobError))
 	}
-	scan := scanGet(client, serviceID, "latest", args.JSON)
+	scan := ScanGet(client, serviceID, "latest", args.JSON)
 	if args.FailOn == "" {
 		return
 	}
-	found := findingsAtOrAbove(scan.Counts, args.FailOn)
+	found := FindingsAtOrAbove(scan.Counts, args.FailOn)
 	if found > 0 {
 		noun := "findings"
 		if found == 1 {
 			noun = "finding"
 		}
-		fail(fmt.Sprintf(
+		Fail(fmt.Sprintf(
 			"%d %s at or above %s (--fail-on %s).",
 			found, noun, strings.ToUpper(args.FailOn), args.FailOn,
 		))
 	}
 }
 
-// instanceStatus prints the instance's running version, the latest release and
+// InstanceStatus prints the instance's running version, the latest release and
 // whether an update could start now, as JSON or a short summary.
-func instanceStatus(client *Client, asJSON bool) {
+func InstanceStatus(client *Client, asJSON bool) {
 	body, _ := client.do("GET", "/instance/update", nil)
 	if asJSON {
-		printJSON(body)
+		PrintJSON(body)
 		return
 	}
 	var status InstanceUpdateStatus
 	if err := json.Unmarshal(body, &status); err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
-	fmt.Println(instanceStatusText(status))
+	fmt.Println(InstanceStatusText(status))
 }
 
-// instanceUpdate starts a self-update of the instance, the same as the
+// InstanceUpdate starts a self-update of the instance, the same as the
 // sidebar's Update now. With wait, follows the update helper's output from
 // GET /instance/update/progress until the instance answers with the new
 // version, treating failed requests as the restart in progress. Exits on an
 // API error (a 409 carries why it can't update), when the helper exits
 // non-zero, or once the wait times out.
-func instanceUpdate(client *Client, wait bool, timeout time.Duration) {
+func InstanceUpdate(client *Client, wait bool, timeout time.Duration) {
 	var started struct {
 		Version string `json:"version"`
 	}
 	client.decode("POST", "/instance/update", nil, &started)
 	if started.Version == "" {
-		fail("The instance didn't say which version it's updating to.")
+		Fail("The instance didn't say which version it's updating to.")
 		return
 	}
 	fmt.Printf("Updating to v%s.\n", started.Version)
@@ -543,14 +547,14 @@ func instanceUpdate(client *Client, wait bool, timeout time.Duration) {
 	printed := 0
 	restarting := false
 	for {
-		sleep(defaultUpdatePollInterval)
+		Sleep(defaultUpdatePollInterval)
 		var progress InstanceUpdateProgress
 		if getOrFalse(client, "/instance/update/progress", &progress) {
 			restarting = false
 			if progress.Version == started.Version {
 				printed = printNewLines(progress.Log, printed)
 				if progress.State == "exited" && progress.ExitCode != nil && *progress.ExitCode != 0 {
-					fail(fmt.Sprintf(
+					Fail(fmt.Sprintf(
 						"The update helper failed (exit %d). Check `docker logs homerun-updater` on the host.",
 						*progress.ExitCode,
 					))
@@ -560,12 +564,12 @@ func instanceUpdate(client *Client, wait bool, timeout time.Duration) {
 			restarting = true
 			fmt.Println("Waiting for Homerun to come back...")
 		}
-		if current := currentVersionOrEmpty(client); current == started.Version {
+		if current := CurrentVersionOrEmpty(client); current == started.Version {
 			fmt.Printf("Homerun is now on v%s.\n", started.Version)
 			return
 		}
 		if time.Now().After(deadline) {
-			fail(fmt.Sprintf(
+			Fail(fmt.Sprintf(
 				"Timed out waiting for v%s. Check `docker logs homerun-updater` on the host.",
 				started.Version,
 			))
@@ -582,9 +586,9 @@ func printNewLines(log []string, printed int) int {
 	return max(printed, len(log))
 }
 
-// currentVersionOrEmpty reads the instance's running version, treating any
+// CurrentVersionOrEmpty reads the instance's running version, treating any
 // failure as the restart still being in progress.
-func currentVersionOrEmpty(client *Client) string {
+func CurrentVersionOrEmpty(client *Client) string {
 	var status InstanceUpdateStatus
 	if !getOrFalse(client, "/instance/update", &status) {
 		return ""
@@ -608,11 +612,11 @@ func getOrFalse(client *Client, path string, out any) bool {
 	return json.Unmarshal(body, out) == nil
 }
 
-// stacksList lists stacks as JSON or a table, with a footer when the page is truncated.
-func stacksList(client *Client, args ListArgs) {
-	body, header := client.do("GET", "/stacks", listQuery(args))
+// StacksList lists stacks as JSON or a table, with a footer when the page is truncated.
+func StacksList(client *Client, args ListArgs) {
+	body, header := client.do("GET", "/stacks", ListQuery(args))
 	if args.JSON {
-		printJSON(body)
+		PrintJSON(body)
 		return
 	}
 	var stacks []struct {
@@ -621,21 +625,21 @@ func stacksList(client *Client, args ListArgs) {
 		Slug string `json:"slug"`
 	}
 	if err := json.Unmarshal(body, &stacks); err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	rows := make([]map[string]string, 0, len(stacks))
 	for _, stack := range stacks {
 		rows = append(rows, map[string]string{"id": stack.ID, "name": stack.Name, "slug": stack.Slug})
 	}
-	printTable(rows, []string{"id", "name", "slug"})
-	printPageFooter(header, len(stacks))
+	PrintTable(rows, []string{"id", "name", "slug"})
+	PrintPageFooter(header, len(stacks))
 }
 
-// templatesList lists templates as JSON or a table, with a footer when the page is truncated.
-func templatesList(client *Client, args ListArgs) {
-	body, header := client.do("GET", "/templates", listQuery(args))
+// TemplatesList lists templates as JSON or a table, with a footer when the page is truncated.
+func TemplatesList(client *Client, args ListArgs) {
+	body, header := client.do("GET", "/templates", ListQuery(args))
 	if args.JSON {
-		printJSON(body)
+		PrintJSON(body)
 		return
 	}
 	var templates []struct {
@@ -645,7 +649,7 @@ func templatesList(client *Client, args ListArgs) {
 		Tag   string `json:"tag"`
 	}
 	if err := json.Unmarshal(body, &templates); err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	rows := make([]map[string]string, 0, len(templates))
 	for _, template := range templates {
@@ -655,11 +659,11 @@ func templatesList(client *Client, args ListArgs) {
 			"name":  template.Name,
 		})
 	}
-	printTable(rows, []string{"id", "name", "image"})
-	printPageFooter(header, len(templates))
+	PrintTable(rows, []string{"id", "name", "image"})
+	PrintPageFooter(header, len(templates))
 }
 
-// sleep pauses between polls. A variable so tests can make polling instant.
-var sleep = func(d time.Duration) {
+// Sleep pauses between polls. A variable so tests can make polling instant.
+var Sleep = func(d time.Duration) {
 	time.Sleep(d)
 }

@@ -39,19 +39,24 @@ type cpuSample struct {
 // StatsSampler samples host usage. CPU% is a delta against the previous
 // sample, so the sampler keeps the last one; the first call reports 0.
 type StatsSampler struct {
-	mu         sync.Mutex
-	last       *cpuSample
-	procRoot   string
-	runCommand func(name string, args ...string) (string, bool)
+	mu   sync.Mutex
+	last *cpuSample
+	// ProcRoot is where /proc lives, "/proc" outside tests.
+	ProcRoot string
+	// RunCommand runs an external command and reports its stdout, real
+	// exec.Command outside tests.
+	RunCommand func(name string, args ...string) (string, bool)
 }
 
 // NewStatsSampler builds a sampler reading the real /proc and running the real
 // df and nvidia-smi.
 func NewStatsSampler() *StatsSampler {
-	return &StatsSampler{procRoot: "/proc", runCommand: runCommand}
+	return &StatsSampler{ProcRoot: "/proc", RunCommand: RunCommand}
 }
 
-func runCommand(name string, args ...string) (string, bool) {
+// RunCommand runs name with args and returns its stdout, or ("", false) on
+// failure.
+func RunCommand(name string, args ...string) (string, bool) {
 	output, err := exec.Command(name, args...).Output()
 	if err != nil {
 		return "", false
@@ -70,7 +75,7 @@ func (s *StatsSampler) Sample() SystemStats {
 		if s.last != nil && sample.total > s.last.total {
 			idle := float64(sample.idle - s.last.idle)
 			total := float64(sample.total - s.last.total)
-			stats.CPUPercent = clamp(int(math.Round(100*(1-idle/total))), 0, 100)
+			stats.CPUPercent = Clamp(int(math.Round(100*(1-idle/total))), 0, 100)
 		}
 		s.last = &sample
 		s.mu.Unlock()
@@ -91,14 +96,15 @@ func (s *StatsSampler) Sample() SystemStats {
 	return stats
 }
 
-func clamp(value, low, high int) int {
+// Clamp bounds value to [low, high].
+func Clamp(value, low, high int) int {
 	return max(low, min(high, value))
 }
 
 // sampleCPU reads the aggregate line of /proc/stat. Total is user, nice,
 // system, idle and irq, the same five counters the main app sums.
 func (s *StatsSampler) sampleCPU() (cpuSample, bool) {
-	file, err := os.Open(s.procRoot + "/stat")
+	file, err := os.Open(s.ProcRoot + "/stat")
 	if err != nil {
 		return cpuSample{}, false
 	}
@@ -127,7 +133,7 @@ func (s *StatsSampler) sampleCPU() (cpuSample, bool) {
 // MemAvailable, not MemFree: page cache the kernel would hand back on demand
 // isn't memory in use.
 func (s *StatsSampler) memory() (int, int, bool) {
-	file, err := os.Open(s.procRoot + "/meminfo")
+	file, err := os.Open(s.ProcRoot + "/meminfo")
 	if err != nil {
 		return 0, 0, false
 	}
@@ -153,7 +159,7 @@ func (s *StatsSampler) memory() (int, int, bool) {
 
 // disk reads usage of the filesystem holding the working directory via df.
 func (s *StatsSampler) disk() (int, int, int, bool) {
-	output, ok := s.runCommand("df", "-Pk", ".")
+	output, ok := s.RunCommand("df", "-Pk", ".")
 	if !ok {
 		return 0, 0, 0, false
 	}
@@ -174,7 +180,7 @@ func (s *StatsSampler) disk() (int, int, int, bool) {
 // gpu reads the first NVIDIA GPU's name, memory and utilisation via
 // nvidia-smi, or nil when there's none.
 func (s *StatsSampler) gpu() *GPUStats {
-	output, ok := s.runCommand(
+	output, ok := s.RunCommand(
 		"nvidia-smi",
 		"--query-gpu=name,memory.total,memory.used,utilization.gpu",
 		"--format=csv,noheader,nounits",

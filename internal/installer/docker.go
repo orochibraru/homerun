@@ -14,9 +14,9 @@ const (
 	SwarmNetwork = "homerun-swarm"
 )
 
-// usernsSysctlPath is the AppArmor unprivileged-userns restriction toggle. A
+// UsernsSysctlPath is the AppArmor unprivileged-userns restriction toggle. A
 // variable so tests can point it at a scratch file.
-var usernsSysctlPath = "/proc/sys/kernel/apparmor_restrict_unprivileged_userns"
+var UsernsSysctlPath = "/proc/sys/kernel/apparmor_restrict_unprivileged_userns"
 
 // systemDocker targets the system daemon.
 var systemDocker = Opts{Env: map[string]string{"DOCKER_HOST": "unix://" + SystemDockerSocket}}
@@ -25,7 +25,7 @@ var systemDocker = Opts{Env: map[string]string{"DOCKER_HOST": "unix://" + System
 // convenience script: the same one Docker's own docs point to). The rootless
 // extras it ships alongside are what installRootlessPrereqs adds.
 func InstallDockerEngine(run Runner) error {
-	if commandExists("docker") {
+	if CommandExists("docker") {
 		fmt.Println("Docker already installed, skipping engine install.")
 		return nil
 	}
@@ -75,21 +75,21 @@ func InstallRootlessDocker(run Runner, username string) (string, error) {
 	if _, err := run.Run([]string{"loginctl", "enable-linger", username}, Opts{}); err != nil {
 		return "", err
 	}
-	if err := allowRootlessUserns(run, username); err != nil {
+	if err := AllowRootlessUserns(run, username); err != nil {
 		return "", err
 	}
 
-	uid, err := uidOf(run, username)
+	uid, err := UIDOf(run, username)
 	if err != nil {
 		return "", err
 	}
 	xdgRuntimeDir := "/run/user/" + uid
 	session := Opts{
 		As:  username,
-		Env: map[string]string{"HOME": homeOf(username), "XDG_RUNTIME_DIR": xdgRuntimeDir},
+		Env: map[string]string{"HOME": HomeOf(username), "XDG_RUNTIME_DIR": xdgRuntimeDir},
 	}
 
-	if fileExists(homeOf(username) + "/bin/dockerd") {
+	if FileExists(HomeOf(username) + "/bin/dockerd") {
 		fmt.Printf("Rootless Docker already installed for %q, skipping.\n", username)
 	} else {
 		if _, err := run.Run(
@@ -128,7 +128,7 @@ func AddUserToDockerGroup(run Runner, username string) error {
 	return err
 }
 
-// allowRootlessUserns works around Ubuntu's unprivileged-userns restriction.
+// AllowRootlessUserns works around Ubuntu's unprivileged-userns restriction.
 //
 // Real, tested-live finding (a real disposable Multipass Ubuntu 24.04 VM,
 // --mode=agent): Ubuntu 23.10+ restricts unprivileged user namespaces by
@@ -145,8 +145,8 @@ func AddUserToDockerGroup(run Runner, username string) error {
 // /proc entries report a 0-byte size, and Bun.file().text() silently returned
 // "" for this file while node:fs read it correctly. Go's os.ReadFile has no
 // such quirk, so the workaround is gone but the profile it writes is unchanged.
-func allowRootlessUserns(run Runner, username string) error {
-	if readTrimmed(usernsSysctlPath) != "1" {
+func AllowRootlessUserns(run Runner, username string) error {
+	if ReadTrimmed(UsernsSysctlPath) != "1" {
 		return nil
 	}
 
@@ -159,7 +159,7 @@ include <tunables/global>
 
   include if exists <local/home.%s.bin.rootlesskit>
 }
-`, homeOf(username), username)
+`, HomeOf(username), username)
 	if err := run.WriteFile(profilePath, profile); err != nil {
 		return err
 	}
@@ -167,9 +167,9 @@ include <tunables/global>
 	return nil
 }
 
-// readTrimmed is a file's trimmed contents, or the empty string when it can't
+// ReadTrimmed is a file's trimmed contents, or the empty string when it can't
 // be read at all: every caller here treats "unreadable" and "absent" alike.
-func readTrimmed(path string) string {
+func ReadTrimmed(path string) string {
 	body, err := os.ReadFile(path)
 	if err != nil {
 		return ""
@@ -177,9 +177,9 @@ func readTrimmed(path string) string {
 	return strings.TrimSpace(string(body))
 }
 
-// uidOf looks up a user's numeric uid for its XDG_RUNTIME_DIR, falling back to
+// UIDOf looks up a user's numeric uid for its XDG_RUNTIME_DIR, falling back to
 // 1000 when `id` prints nothing (as under --dry-run).
-func uidOf(run Runner, username string) (string, error) {
+func UIDOf(run Runner, username string) (string, error) {
 	result, err := run.Run([]string{"id", "-u", username}, Opts{})
 	if err != nil {
 		return "", err
@@ -201,7 +201,7 @@ func EnsureHomerunNetwork(run Runner, username, dockerSocket string) error {
 	target := Opts{Env: map[string]string{"DOCKER_HOST": "unix://" + dockerSocket}}
 	if username != "" {
 		target.As = username
-		target.Env["HOME"] = homeOf(username)
+		target.Env["HOME"] = HomeOf(username)
 	}
 	if run.RunOK([]string{"docker", "network", "inspect", "homerun"}, target) {
 		fmt.Println("homerun already exists, skipping.")

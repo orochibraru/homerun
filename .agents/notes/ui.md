@@ -222,6 +222,19 @@ users, backups):
   straight from `data` (already one page, already filtered/searched) rather than
   deriving a client-side `filtered` array, and tells a true empty state apart
   from a no-match one via `data.total === 0 && !data.filtered`.
+- Multi-select (services, storage): `list-selection.svelte.ts`'s `ListSelection`
+  class holds the selected ids and, constructed during component init with a
+  `() => visibleIds` getter, drops any id that leaves the visible page
+  (paging/search/filter), so the bulk bar never submits rows you can't see.
+  `select-all-row.svelte` is the select-all checkbox above the list;
+  `EntityList` takes `selectedIds={selection.ids}` and
+  `onToggleSelect={(id) => selection.toggle(id)}`; `bulk-action-bar.svelte` is
+  the fixed bottom bar, a form posting every selected id under `idField` to
+  `action`, with the page's own buttons as children (a destructive op submits
+  through a hidden `name="op"` button after a `ConfirmDialog`). The page's
+  `?/bulk` action returns `{ succeeded, failed }` (storage adds `skipped`: bulk
+  enable only turns on volumes that already have a schedule and S3 destination)
+  for the toast.
 
 **The signed-out surfaces** (`auth/sign-in`, `auth/sign-up`,
 `auth/sign-up/confirm`, `auth/accept-invite`, `auth/error`) all render through

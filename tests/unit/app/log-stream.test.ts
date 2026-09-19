@@ -7,7 +7,7 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { toLogStream } = await import(
+const { demuxDockerFrames, toLogStream } = await import(
 	"../../../src/lib/services/docker/log-stream"
 );
 
@@ -42,5 +42,35 @@ describe("toLogStream", () => {
 		expect(new TextDecoder().decode(value)).toBe("line\n");
 		await reader.cancel();
 		expect(destroy).toHaveBeenCalled();
+	});
+});
+
+describe("demuxDockerFrames", () => {
+	test("unwraps stdout and stderr frames into one block of text", () => {
+		const raw = Buffer.concat([
+			frame(2, "Cloning into '/workspace/repo'...\n"),
+			frame(1, "9f8e7d6c5b4a39281706f5e4d3c2b1a099887766\n"),
+		]);
+
+		expect(demuxDockerFrames(raw)).toBe(
+			"Cloning into '/workspace/repo'...\n9f8e7d6c5b4a39281706f5e4d3c2b1a099887766",
+		);
+	});
+
+	test("a frame whose length byte is printable doesn't leak into the payload", () => {
+		const sha = "9f8e7d6c5b4a39281706f5e4d3c2b1a099887766\n";
+		expect(sha.length).toBe(41);
+
+		expect(demuxDockerFrames(frame(1, sha))).toBe(sha.trim());
+	});
+
+	test("passes TTY output (no frames) straight through", () => {
+		expect(demuxDockerFrames(Buffer.from("plain output\n", "utf8"))).toBe(
+			"plain output",
+		);
+	});
+
+	test("survives an empty buffer", () => {
+		expect(demuxDockerFrames(Buffer.alloc(0))).toBe("");
 	});
 });

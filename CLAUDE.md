@@ -81,10 +81,10 @@ bun run gen              # svelte-kit sync + regenerate openapi.json, tests/inte
 bun run check            # check:app then check:packages, the real gate, see `.agents/notes/testing.md`
 bun run check:app        # svelte-kit sync && svelte-check --fail-on-warnings --tsgo, the SvelteKit half of the gate
 bun run check:packages   # check:go + check:scripts, go vet over every cmd/*/internal/* package plus scripts/
-bun run check:go         # go vet ./cmd/... ./internal/..., every Go sub-project and shared library in one pass
-bun run check:agent      # go vet ./cmd/agent/...
-bun run check:cli        # go vet ./cmd/cli/...
-bun run check:installer  # go vet ./cmd/installer/...
+bun run check:go         # go vet ./cmd/... ./internal/... ./tests/unit/go/..., every Go sub-project and shared library in one pass
+bun run check:agent      # go vet ./cmd/agent/... ./internal/agent/... ./tests/unit/go/internal/agent/...
+bun run check:cli        # go vet ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...
+bun run check:installer  # go vet ./cmd/installer/... ./internal/installer/... ./tests/unit/go/internal/installer/...
 bun run check:scripts    # tsc over scripts/ (tsconfig.scripts.json), scripts/ isn't covered by svelte-check's own include list
 bun run lint             # lint:md (markdownlint-cli2) then lint:tailwind (scripts/lint-tailwind.ts, tailwint in chunks, Tailwind class sorting) then lint:ts (oxlint --type-aware --deny-warnings for linting, `.oxlintrc.json`, then biome check for formatting and import order; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
 bun run lint:fix         # the --write/--fix half of all three (lint:fix:md, lint:fix:tailwind, lint:fix:ts)
@@ -101,12 +101,12 @@ bun run release          # semantic-release, normally CI-only (.github/workflows
 hooks from `.pre-commit-config.yaml`) run on `bun install`.
 
 ```bash
-bun run test              # svelte-kit sync && bun test (unit + integration) then go test ./cmd/... ./internal/..., never tests/e2e/ (Playwright, own runner)
+bun run test              # svelte-kit sync && bun test (unit + integration) then go test ./cmd/... ./internal/... ./tests/unit/go/..., never tests/e2e/ (Playwright, own runner)
 bun run test:unit         # tests/unit/app only, no Postgres/Docker needed; cmd/agent/, cmd/cli/ and cmd/installer/'s own Go tests are separate commands, below
-bun run test:unit:agent   # go test ./cmd/agent/..., its own *_test.go files, not under tests/unit/ and not bun:test
+bun run test:unit:agent   # go test ./cmd/agent/... ./internal/agent/... ./tests/unit/go/internal/agent/..., not bun:test
 bun run test:unit:app     # tests/unit/app, the SvelteKit app's own unit/component tests
-bun run test:unit:cli     # go test ./cmd/cli/..., internal/cli/cli_test.go, not under tests/unit/ and not bun:test
-bun run test:unit:installer  # go test ./cmd/installer/..., its own *_test.go files, not under tests/unit/ and not bun:test
+bun run test:unit:cli     # go test ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/..., not bun:test
+bun run test:unit:installer  # go test ./cmd/installer/... ./internal/installer/... ./tests/unit/go/internal/installer/..., not bun:test
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see .agents/notes/testing.md
 bun run test:e2e:cli      # playwright test over bootstrap + onboarding + ui-cli.spec.ts only, the CLI driven against the E2E app instance
@@ -123,14 +123,14 @@ above and not covered by `svelte-check`. Shared Go libraries live under
 time; `internal/release`, release asset naming/URLs/download;
 `internal/homerun`, the CLI's config and API client; `internal/dockerapi`, a
 stdlib Docker Engine API client over the unix socket the agent drives).
-`check:go` (`go vet ./cmd/... ./internal/...`) covers all of it in one pass;
-`check:agent`/`check:cli`/`check:installer` scope that to one sub-project. All
-three still compile via `scripts/build-packages.ts`, and because Go's
-`GOOS`/`GOARCH` cross-compilation is exact, every target builds from any one
-runner: the CLI's macOS binaries are cross-compiled from a Linux runner too,
-with no macOS runner in CI at all — the installer and the agent get no macOS
-build at all, they only ever run on the Linux box they're installed on (see
-`.agents/notes/packages-and-release.md`). See that note and
+`check:go` (`go vet ./cmd/... ./internal/... ./tests/unit/go/...`) covers all of
+it in one pass; `check:agent`/`check:cli`/`check:installer` scope that to one
+sub-project. All three still compile via `scripts/build-packages.ts`, and
+because Go's `GOOS`/`GOARCH` cross-compilation is exact, every target builds
+from any one runner: the CLI's macOS binaries are cross-compiled from a Linux
+runner too, with no macOS runner in CI at all — the installer and the agent get
+no macOS build at all, they only ever run on the Linux box they're installed on
+(see `.agents/notes/packages-and-release.md`). See that note and
 `.agents/notes/api-and-cli.md` for what each sub-project is.
 
 Test suites, the Postgres/CI wiring and the gotchas behind these scripts:
@@ -358,7 +358,7 @@ that pattern for any new skill.
   - **Mixin-merge**, when several concerns need to call into each other and
     external code should keep addressing one flat symbol,
     `$lib/services/docker.service.ts`: each concern (containers, networks,
-    terminal, reconcile, git-build, custom-ssl, core-services,
+    terminal, reconcile, custom-ssl, core-services,
     `src/lib/services/docker/*.ts`) is a real class extending
     `BaseDockerService` (`docker/base.ts`), merged into one `DockerService` via
     the TS mixin pattern (each file exports a `SomethingMixin(Base)` function;

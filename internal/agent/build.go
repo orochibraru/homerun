@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	gitImage        = "alpine/git:latest"
+	// GitImage is the image the git-clone helper container runs.
+	GitImage        = "alpine/git:latest"
 	workspace       = "/workspace"
 	repoDir         = workspace + "/repo"
 	managedLabel    = "homerun.managed"
@@ -88,20 +89,24 @@ type BuildResult struct {
 type Builder struct {
 	docker     Docker
 	socketPath string
-	newID      func() string
+	// NewID mints the per-build volume/container id suffix, RandomID outside
+	// tests.
+	NewID func() string
 }
 
 // NewBuilder builds a Builder for the daemon behind socketPath.
 func NewBuilder(docker Docker, socketPath string) *Builder {
-	return &Builder{docker: docker, socketPath: socketPath, newID: randomID}
+	return &Builder{docker: docker, socketPath: socketPath, NewID: RandomID}
 }
 
-func randomID() string {
+// RandomID returns a fresh 8-character hex id.
+func RandomID() string {
 	buffer := make([]byte, 4)
 	_, _ = rand.Read(buffer)
 	return hex.EncodeToString(buffer)
 }
 
+// valueOr dereferences pointer, or returns fallback when it's nil or empty.
 func valueOr(pointer *string, fallback string) string {
 	if pointer == nil || *pointer == "" {
 		return fallback
@@ -123,7 +128,7 @@ func (b *Builder) Build(ctx context.Context, input BuildInput) BuildResult {
 // which is what the homerun worker's own local and Docker-remote builds use.
 func (b *Builder) BuildWithProgress(ctx context.Context, input BuildInput, progress func(string)) BuildResult {
 	ref := valueOr(input.GitRef, "main")
-	volume := "homerun-agent-build-" + b.newID()
+	volume := "homerun-agent-build-" + b.NewID()
 	var commit *string
 
 	defer func() {
@@ -133,18 +138,18 @@ func (b *Builder) BuildWithProgress(ctx context.Context, input BuildInput, progr
 	}()
 
 	fail := func(err error) BuildResult {
-		return BuildResult{Commit: commit, Error: redactCloneURL(err.Error()), Success: false}
+		return BuildResult{Commit: commit, Error: RedactCloneURL(err.Error()), Success: false}
 	}
 
-	if err := b.ensureImage(ctx, gitImage, progress); err != nil {
+	if err := b.ensureImage(ctx, GitImage, progress); err != nil {
 		return fail(err)
 	}
 	if err := b.docker.CreateVolume(ctx, volume, map[string]string{managedLabel: "true"}); err != nil {
 		return fail(err)
 	}
 
-	cloneURL := authenticatedCloneURL(input.GitURL, input.Credential)
-	progress(fmt.Sprintf("Cloning %s (%s)...", redactCloneURL(cloneURL), ref))
+	cloneURL := AuthenticatedCloneURL(input.GitURL, input.Credential)
+	progress(fmt.Sprintf("Cloning %s (%s)...", RedactCloneURL(cloneURL), ref))
 	built, err := b.checkout(ctx, cloneURL, ref, valueOr(input.Commit, ""), volume, progress)
 	if built != "" {
 		commit = &built
@@ -202,12 +207,12 @@ func (b *Builder) ensureImage(ctx context.Context, ref string, progress func(str
 // required status checks passed, so the build is that commit or it fails.
 // Returns the commit that will be built, empty when git didn't report one.
 func (b *Builder) checkout(ctx context.Context, cloneURL, ref, commit, volume string, progress func(string)) (string, error) {
-	if err := b.runSteps(ctx, gitCheckoutSteps(cloneURL, ref, repoDir), volume); err != nil {
+	if err := b.runSteps(ctx, GitCheckoutSteps(cloneURL, ref, repoDir), volume); err != nil {
 		return "", err
 	}
 	head := ""
-	if output, code, err := b.runGit(ctx, []string{"-C", repoDir, "rev-parse", "HEAD"}, volume); err == nil && code == 0 {
-		head = extractCommitSHA(output)
+	if output, code, err := b.RunGit(ctx, []string{"-C", repoDir, "rev-parse", "HEAD"}, volume); err == nil && code == 0 {
+		head = ExtractCommitSHA(output)
 	}
 	pinned := strings.ToLower(commit)
 	if pinned != "" && head != pinned {
@@ -236,7 +241,7 @@ func (b *Builder) checkout(ctx context.Context, cloneURL, ref, commit, volume st
 // redacted output.
 func (b *Builder) runSteps(ctx context.Context, steps [][]string, volume string) error {
 	for _, step := range steps {
-		output, code, err := b.runGit(ctx, step, volume)
+		output, code, err := b.RunGit(ctx, step, volume)
 		if err != nil {
 			return err
 		}
@@ -244,15 +249,15 @@ func (b *Builder) runSteps(ctx context.Context, steps [][]string, volume string)
 			if strings.TrimSpace(output) == "" {
 				output = fmt.Sprintf("git exited %d", code)
 			}
-			return errors.New(redactCloneURL(output))
+			return errors.New(RedactCloneURL(output))
 		}
 	}
 	return nil
 }
 
-// runGit runs one git command in a throwaway container with the volume mounted
+// RunGit runs one git command in a throwaway container with the volume mounted
 // at the workspace, bounded by the clone timeout, and always removes it.
-func (b *Builder) runGit(ctx context.Context, cmd []string, volume string) (string, int, error) {
+func (b *Builder) RunGit(ctx context.Context, cmd []string, volume string) (string, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, cloneTimeout)
 	defer cancel()
 	id, err := b.docker.CreateContainer(ctx, dockerapi.ContainerConfig{
@@ -260,7 +265,7 @@ func (b *Builder) runGit(ctx context.Context, cmd []string, volume string) (stri
 		Cmd:        cmd,
 		Entrypoint: []string{"git"},
 		Env:        []string{"GIT_TERMINAL_PROMPT=0"},
-		Image:      gitImage,
+		Image:      GitImage,
 		Labels:     map[string]string{managedLabel: "true"},
 	})
 	if err != nil {
@@ -295,11 +300,11 @@ func (b *Builder) runGit(ctx context.Context, cmd []string, volume string) (stri
 // straight into this daemon. Output is forwarded line by line, and a failure
 // carries its most telling line.
 func (b *Builder) runBuilder(ctx context.Context, input BuilderInput, volume string, progress func(string)) error {
-	env, err := builderEnv(input)
+	env, err := BuilderEnv(input)
 	if err != nil {
 		return err
 	}
-	if err := b.ensureImage(ctx, tools.HelperImage, progress); err != nil {
+	if err := b.ensureImage(ctx, Tools.HelperImage, progress); err != nil {
 		return err
 	}
 	progress(fmt.Sprintf("Building with %s...", input.Method))
@@ -309,13 +314,13 @@ func (b *Builder) runBuilder(ctx context.Context, input BuilderInput, volume str
 	id, err := b.docker.CreateContainer(ctx, dockerapi.ContainerConfig{
 		Binds: []string{
 			volume + ":" + workspace,
-			tools.ToolsVolume + ":/tools",
+			Tools.ToolsVolume + ":/tools",
 			b.socketPath + ":" + containerSocket,
 		},
-		Cmd:        []string{"-c", builderScript},
+		Cmd:        []string{"-c", BuilderScript},
 		Entrypoint: []string{"sh"},
 		Env:        env,
-		Image:      tools.HelperImage,
+		Image:      Tools.HelperImage,
 		Labels:     map[string]string{managedLabel: "true"},
 	})
 	if err != nil {
@@ -339,7 +344,7 @@ func (b *Builder) runBuilder(ctx context.Context, input BuilderInput, volume str
 		go func() { _ = writer.CloseWithError(dockerapi.Demux(logs, writer)) }()
 		scanner := bufio.NewScanner(reader)
 		scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-		scanner.Split(scanLinesAnyEnding)
+		scanner.Split(ScanLinesAnyEnding)
 		for scanner.Scan() {
 			line := strings.TrimRight(scanner.Text(), " \t")
 			if strings.TrimSpace(line) == "" {
@@ -366,14 +371,14 @@ func (b *Builder) runBuilder(ctx context.Context, input BuilderInput, volume str
 	}
 	<-streamed
 	if code != 0 {
-		return errors.New(buildFailureMessage(input.Method, code, recent))
+		return errors.New(BuildFailureMessage(input.Method, code, recent))
 	}
 	return nil
 }
 
-// scanLinesAnyEnding splits on \n, \r\n or a bare \r, since BuildKit's plain
+// ScanLinesAnyEnding splits on \n, \r\n or a bare \r, since BuildKit's plain
 // progress output uses carriage returns to redraw a line.
-func scanLinesAnyEnding(data []byte, atEOF bool) (int, []byte, error) {
+func ScanLinesAnyEnding(data []byte, atEOF bool) (int, []byte, error) {
 	for index, char := range data {
 		if char == '\n' {
 			return index + 1, data[:index], nil

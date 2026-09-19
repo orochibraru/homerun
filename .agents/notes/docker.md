@@ -21,11 +21,13 @@ that extends `Base` (ultimately `BaseDockerService`, `docker/base.ts`, holds the
 shared `getDocker(remote?)`); `docker.service.ts` chains all of them and
 instantiates once. A concern that calls another's method does it via real
 inheritance (`this.inspectStatus(...)`), which is also why the chain has a
-load-bearing order: networks before containers (`createAndStartContainer` calls
-`this.connectToStackNetwork`), containers before reconcile (`syncServiceStatus`
-calls `this.inspectStatus`), containers before one-off (`runOneOff` calls
-`this.pullImage`), see the ordering comment in `docker.service.ts` before
-reordering the chain.
+load-bearing order: containers before one-off (`runOneOff` calls
+`this.pullImage`), containers and swarm before reconcile (`syncServiceStatus`
+calls `this.inspectStatus`/`this.inspectSwarmServiceStatus`), see the ordering
+comment in `docker.service.ts` before reordering the chain. Creating and
+health-gating the container/swarm-service itself for a real deploy no longer
+goes through this mixin chain at all, that now runs in the Go worker, see the
+`containers.ts` bullet below.
 
 - `client.ts`, HMR-safe `dockerode` singleton, socket path from config; not a
   mixin itself, `BaseDockerService.getDocker` wraps its exported `getDocker()`
@@ -34,23 +36,26 @@ reordering the chain.
   exported function rather than a mixin: every container gets
   `homerun.managed=true` + `homerun.service.id=<id>`, plus Traefik discovery
   labels (unless `dnsResolvable` is false, then only the two managed labels, no
-  `traefik.*` at all, so it never gets a router). `listManagedContainers()` and
-  any host-scanning code **must** filter on `homerun.managed=true`, this app
-  must never touch a container it didn't create. When the service belongs to a
-  stack, the public subdomain is `<stackSlug>-<slug>.<baseDomain>` (`stackSlug`
-  param, optional). `serviceHostnames()` (`$lib/service-domains.ts`) resolves
-  the full hostname list — the default hostname first when
-  `defaultDomainEnabled`, then each of `domains` — and one Traefik router is
-  added per hostname (router name `<slug>` for the first, `<slug>-<n>` after
-  it), all pointing at the _same_ `traefik.http.services.<slug>` backend, one
-  loadbalancer config, N hostnames reaching it, not a duplicated service block.
-  When `authRequired` is set, a forwardAuth middleware is attached to every
-  router for the service, pointing at `authCheckUrlFor(serviceId)` —
-  `config.authCheckUrl` with a `?service=<id>` query param, so the gate
-  identifies the service from the URL rather than having to resolve
-  `X-Forwarded-Host` back to a slug or domain — plus `authResponseHeaders` for
-  `GATE_IDENTITY_HEADERS`. Because these are labels, turning the wall on or off
-  only takes effect on the next deploy.
+  `traefik.*` at all, so it never gets a router). Any code enumerating this
+  app's own containers **must** filter on `homerun.managed=true` (the old
+  blanket `listManagedContainers()` helper is gone, nothing lists
+  indiscriminately anymore : status/lifecycle is always by a stored
+  `containerId`/`swarmServiceId`, Docker Cleanup's host-wide listing is the one
+  deliberate exception, see below), this app must never touch a container it
+  didn't create. When the service belongs to a stack, the public subdomain is
+  `<stackSlug>-<slug>.<baseDomain>` (`stackSlug` param, optional).
+  `serviceHostnames()` (`$lib/service-domains.ts`) resolves the full hostname
+  list — the default hostname first when `defaultDomainEnabled`, then each of
+  `domains` — and one Traefik router is added per hostname (router name `<slug>`
+  for the first, `<slug>-<n>` after it), all pointing at the _same_
+  `traefik.http.services.<slug>` backend, one loadbalancer config, N hostnames
+  reaching it, not a duplicated service block. When `authRequired` is set, a
+  forwardAuth middleware is attached to every router for the service, pointing
+  at `authCheckUrlFor(serviceId)` — `config.authCheckUrl` with a `?service=<id>`
+  query param, so the gate identifies the service from the URL rather than
+  having to resolve `X-Forwarded-Host` back to a slug or domain — plus
+  `authResponseHeaders` for `GATE_IDENTITY_HEADERS`. Because these are labels,
+  turning the wall on or off only takes effect on the next deploy.
 - `networks.ts`, `DockerNetworkMixin`, per-stack Docker networks.
   `stackNetworkName(stackId)` is deterministic (`homerun-stack-<id>`, no
   separate id stored, stays a plain exported pure function).
@@ -62,10 +67,12 @@ reordering the chain.
   subdomain are, sibling services keep addressing each other by plain slug) →
   `DockerService.ensureStackNetwork`/`removeStackNetwork`/`connectToStackNetwork`.
   `connectToStackNetwork` calls `ensureStackNetwork` itself first, same
-  re-assert-on-every-deploy shape as `createAndStartContainer`'s own
-  `ensureSharedNetwork()` call below: a network a prune or a Docker Cleanup run
-  removed out from under a still-live stack row gets recreated, rather than
-  failing every subsequent deploy with a raw dockerode 404.
+  re-assert-on-every-deploy shape as the Go worker's own `ensureBridge()` call
+  for a container deploy (`internal/jobs/deploy/container.go`, formerly
+  `createAndStartContainer`'s own `ensureSharedNetwork()` call, see below): a
+  network a prune or a Docker Cleanup run removed out from under a still-live
+  stack row gets recreated, rather than failing every subsequent deploy with a
+  raw dockerode 404.
 - `core-services.ts`, `DockerCoreServicesMixin`, the Traefik container itself :
   `findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`
   (image-only recreate), plus **`applyTraefikFlags(flags)`**, which rewrites
@@ -102,39 +109,48 @@ reordering the chain.
     layer _status change_ (not per byte-tick, dockerode's raw progress events
     are far too chatty to log one-for-one), used to build the live
     deploy-progress log. → `DockerService.pullImage`.
-  - `createAndStartContainer(params, onProgress?)`, container names include a
-    random suffix (`homerun-[<stackSlug>-]<slug>-<hex8>`) so a redeploy never
-    collides on "name already in use"; the _previous_ containers for a service
-    are found by their `homerun.service.id` label, not by name, since names are
-    no longer stable across deploys. **Redeploys are health-gated** through
-    `DockerContainerRolloutMixin` (`docker/container-rollout.ts`, chained
-    between networks and containers): `beginContainerRollout` lists the previous
-    containers and asks the pure `rolloutStrategy` (`docker/rollout.ts`, tested
-    in `tests/unit/app/rollout.test.ts`) for blue-green or recreate. Recreate
-    (nothing running, host networking, or any writable volume) removes them
-    before creating. Blue-green starts the new container alongside, polls
-    `readinessVerdict` every 2s (healthy healthcheck, or running 5s with none;
-    failed on exit, any restart, disappearance, `unhealthy`, or not ready in 5
-    minutes), then removes the old ones in `completeContainerRollout`. On
-    failure it logs the new container's last 20 lines, removes it and throws
-    `RolloutFailedError`, which `#recordFailure` treats like a scan block
-    (`syncServiceStatus`, service not marked failed). What keeps traffic off the
-    new container until it's ready is its Docker healthcheck, picked by
-    `planReadiness`, see "Readiness gate" below. The shared-network slug alias
-    resolves to both copies during the overlap, health or not.
-    `containerSampleFromInspect` is shared with
-    `DockerRevisionMixin.containerHealthSample`. The container is aliased as its
-    slug on the shared network (`NetworkingConfig.EndpointsConfig`) so other
-    services can reach it at `http://<slug>:<containerPort>` regardless of the
-    randomized name; if `params.stackId` is set, it also joins that stack's
-    network under the same alias (`this.connectToStackNetwork`, inherited from
-    the network mixin). `params.volumes` (from
-    `ServiceVolumeDTO.listForService`) becomes `HostConfig.Binds`
-    (`"source:containerPath[:ro]"`, covers both bind-mounts and named volumes
-    with the same syntax). Don't call this directly from a new route, go through
-    `$lib/services/deploy.service.ts`'s `DeploymentService.deployService()`
-    instead (see above), which wraps it with deployment-row bookkeeping. →
-    `DockerService.createAndStartContainer`.
+  - **Creating and starting the container for a real deploy runs in the Go
+    worker now, not on this mixin.** `deploy.service.ts`'s
+    `DeploymentService.deployService()`/`enqueueDeploy()` (via
+    `prepareWorkerDeploy`/`deployWorkerSpec` in `deploy/worker-spec.ts`) hands
+    the worker a `containerCreateTemplate()` body (still built in this file,
+    pure) plus the readiness/rollout inputs, and
+    `internal/jobs/deploy/container.go`'s `startContainer` does the actual
+    create+start, `rollout.go`/`readiness.go` the health gate — the direct Go
+    port of what used to be `DockerContainerRolloutMixin`
+    (`docker/container-rollout.ts`, deleted). Container names still include a
+    random suffix (`<namePrefix>-<hex8>`, `randomSuffix` in
+    `internal/jobs/deploy/readiness.go`) so a redeploy never collides on "name
+    already in use"; the _previous_ containers for a service are still found by
+    their `homerun.service.id` label, not by name. **Redeploys are still
+    health-gated**: `RolloutStrategy` (`internal/jobs/deploy/rollout.go`, tested
+    in `tests/unit/go/internal/jobs/deploy/logic_test.go`, the same pure
+    decision `docker/rollout.ts`'s `rolloutStrategy` used to make) picks
+    blue-green or recreate — recreate (nothing running, host networking, or any
+    writable volume) removes the previous containers first; blue-green starts
+    the new one alongside, `awaitReadyOrDiscard` polls `ReadinessVerdict` every
+    2s (healthy healthcheck, or running 5s with none; failed on exit, any
+    restart, disappearance, `unhealthy`, or not ready in 5 minutes), then
+    `removePrevious`. On failure it logs the new container's last 20 lines,
+    removes it and reports a `rollout-failed` outcome, which
+    `deploy.service.ts`'s `workerFailure` turns back into a `RolloutFailedError`
+    (`docker/rollout.ts`, which now only keeps the shared
+    `ContainerHealthSample`/`containerSampleFromInspect` type and this error
+    class — still used by `DockerRevisionMixin.containerHealthSample` and the
+    post-deploy health watch) that `#recordFailure` treats like a scan block
+    (service not marked failed). What keeps traffic off the new container until
+    it's ready is its Docker healthcheck, picked by `planReadiness`
+    (`internal/jobs/deploy/readiness.go` now, see "Readiness gate" below). The
+    container is aliased as its slug on the shared network so other services can
+    reach it at `http://<slug>:<containerPort>` regardless of the randomized
+    name; when the service is in a stack, `joinStackNetwork` also joins that
+    stack's network under the same alias, best-effort. Volumes still become
+    `HostConfig.Binds` (`"source:containerPath[:ro]"`) inside
+    `containerCreateTemplate`, before the spec ever reaches the worker.
+    `DockerContainerMixin` itself now only keeps `pullImage`,
+    `start`/`stop`/`restart`/`removeContainer`, `inspectStatus`, `streamLogs`
+    and `buildAuthConfig` — no create/start method, and no dependency on the
+    network mixin ahead of it anymore.
   - `start/stop/restartContainer`, `removeContainer`, `inspectStatus` →
     `ContainerStatus`, `containerHealth` → the container's own `State.Health`
     verdict (`null` when the image declares no `HEALTHCHECK`, which is the
@@ -159,12 +175,15 @@ reordering the chain.
     `parseAnsiLine()`), which splits a line into styled `<span>`s rather than
     using `{@html}`, no injection surface even though the source is a live
     container's own output.
-- `reconcile.ts`, `DockerReconcileMixin`,
-  `syncServiceStatus`/`syncAllServiceStatuses`: poll-on-page-load status
-  reconciliation, merged in after the container mixin so `this.inspectStatus` is
-  available. There is intentionally no background worker or Docker event
-  subscriber (yet, see Planned features). →
-  `DockerService.syncServiceStatus`/`syncAllServiceStatuses`.
+- `reconcile.ts`, `DockerReconcileMixin`, `syncServiceStatus`: poll-on-page-load
+  status reconciliation, merged in after the container and swarm mixins so
+  `this.inspectStatus`/`this.inspectSwarmServiceStatus` are available. There is
+  intentionally no Docker event subscriber for status itself (yet, see Planned
+  features) — distinct from the Go job worker that now executes
+  deploys/scans/backups/cron jobs/cleanups, see `worker.md`. →
+  `DockerService.syncServiceStatus`; syncing every one of a user's services in
+  parallel is now just `Promise.all` at the call site
+  (`service-status.remote.ts`'s `syncServiceStatuses`), not a mixin method.
 - `core-services.ts`, `DockerCoreServicesMixin`, `findTraefikContainer()`, a
   deliberate narrow exception to the managed-label-only rule: lookup of the
   Traefik container by image-name prefix, which System Logs uses to put
@@ -186,49 +205,57 @@ reordering the chain.
   Docker-managed named volume out for a backup, see S3 backups above; running a
   user-defined cron job's image, see Cron jobs below). Needs the container mixin
   ahead of it in the chain (`this.pullImage`). **`Tty` is deliberately false
-  here**, unlike `createAndStartContainer`, so Docker's own stream framing keeps
-  stdout and stderr apart : a caller reading a binary tarball off stdout must
-  not get stderr interleaved into it, which is exactly what a TTY container
-  would do. `timeoutMs` kills the container rather than leaving it running, and
-  the result carries `timedOut` so the caller can say so; the container is
-  removed in a `finally` either way. The attached socket is `destroy()`ed
-  explicitly once the run finishes : without that it stays open and keeps Bun's
-  event loop alive, leaking one connection per run in a long-lived server. →
-  `DockerService.runOneOff`.
+  here**, unlike a deployed service's own container (`containerCreateTemplate`'s
+  `Tty: true`), so Docker's own stream framing keeps stdout and stderr apart : a
+  caller reading a binary tarball off stdout must not get stderr interleaved
+  into it, which is exactly what a TTY container would do. `timeoutMs` kills the
+  container rather than leaving it running, and the result carries `timedOut` so
+  the caller can say so; the container is removed in a `finally` either way. The
+  attached socket is `destroy()`ed explicitly once the run finishes : without
+  that it stays open and keeps Bun's event loop alive, leaking one connection
+  per run in a long-lived server. → `DockerService.runOneOff`.
 - `image-scan.ts`, `DockerImageScanMixin`, merged outermost (after cleanup,
-  needs `runOneOff`/`pullImage`/`ensureSharedNetwork`), the mirror and the
-  scanner. `ensureImageMirror()` lazily creates `homerun-mirror` (`registry:2`,
+  needs `runOneOff`/`pullImage`/`ensureSharedNetwork`), now just the mirror
+  registry's own container lifecycle and the Registry page's API access:
+  `ensureImageMirror()` lazily creates `homerun-mirror` (`registry:2`,
   `homerun-mirror-data` volume, shared network, `127.0.0.1:5055->5000`,
   `unless-stopped`, labelled `homerun.infra=mirror` and **not**
   `homerun.managed`, so nothing that lists managed containers ever treats it as
-  a service), same core-infra exception as Traefik. `copyToMirror` runs
-  `quay.io/skopeo/stable` via `runOneOff` on the shared network
-  (`skopeo copy --quiet --dest-tls-verify=false --digestfile /dev/stdout`),
-  passing registry credentials as an auth file written from an env var by an
-  `sh -c` wrapper so they never appear in argv, and reads the digest off stdout.
-  `pullFromMirror` pulls the loopback ref and tags it with the upstream name.
-  `scanImage` runs `aquasec/trivy` (pinned tag) with the `homerun-trivy-cache`
-  volume on `/root/.cache`, JSON output parsed by `$lib/image-scan.ts`'s
-  `summarizeTrivyReport`; for `docker`/`any` sources it binds the daemon socket,
-  resolving the **host** path from this app's own container mounts when it runs
-  in one (`config.docker.socketPath` is the in-container path). Every argv/ref
-  builder is pure in `docker/image-scan-refs.ts`, tested in
-  `tests/unit/app/image-scan.test.ts`. **Real, tested findings**: Docker accepts
-  a loopback registry as insecure with no daemon config (verified on OrbStack);
-  skopeo copies only the host platform's manifest, so the recorded digest is the
-  platform manifest digest, not the upstream index digest;
-  `--digestfile /dev/stdout` works and `--quiet` keeps progress off stdout.
-  **Rootless Docker**: `isRootlessDocker()` (`docker info` security options,
-  pure `isRootlessDaemon`) skips the loopback pull, whose daemon lives in
-  RootlessKit's network namespace and can't reach `127.0.0.1:5055`.
-  `loadFromMirror` then runs skopeo on the shared network
-  (`skopeoArchiveCommand`:
-  `copy --src-tls-verify=false docker://homerun-mirror:5000/... docker-archive:/dev/stdout:<image:tag>`),
-  demuxes the attached stdout straight into `docker.loadImage` (no buffering),
-  and kills skopeo if the load fails. `ImageScanService`'s `#fetchFromMirror`
-  order: loopback pull (rootful only) → mirror load → upstream pull. A loaded
-  image has no `RepoDigests`, so the recorded digest is the mirror copy's. Not
-  verified live on a rootless host.
+  a service), same core-infra exception as Traefik, plus
+  `reconcileRegistry`/`registryInternalAuth`/`imageMirrorClient`/
+  `execInImageMirror`/`imageMirrorUsageBytes`/`isRootlessDocker` for the
+  Registry page and Docker Cleanup's mirror GC (see below). **The actual
+  copy-into-mirror, Trivy scan and pull/load-back for a deploy run in the Go
+  worker now**: `deploy.service.ts`'s `deployWorkerSpec`
+  (`deploy/worker-spec.ts`'s `mirrorSpec`) hands the worker the skopeo
+  copy/archive commands and the mirror's refs/credentials, and
+  `internal/jobs/deploy/scan.go`'s `deployThroughMirror`/`fetchFromMirror`/
+  `loadFromMirror` do the copy, scan and pull/load back, in that order (the Scan
+  now job and Docker Cleanup's own scans go through `internal/jobs/imagescan`'s
+  `Scan` instead, same Trivy command). The old `copyToMirror`'s
+  `quay.io/skopeo/stable` command
+  (`skopeo copy --quiet --dest-tls-verify=false --digestfile /dev/stdout`,
+  credentials as an auth file from an env var so they never appear in argv) and
+  `loadFromMirror`'s skopeo-archive-into-`docker.loadImage` shape are unchanged,
+  just built as a spec on the TS side (`docker/image-scan-refs.ts`'s
+  `skopeoCopyCommand`/`skopeoArchiveCommand`, still pure and tested in
+  `tests/unit/app/image-scan.test.ts`) and run by Go. `scanImage`'s old
+  `aquasec/trivy` command (pinned tag) with the `homerun-trivy-cache` volume on
+  `/root/.cache`, JSON output parsed by `summarizeTrivyReport`, is now
+  `internal/jobs/imagescan/scan.go`'s `Scan` and `imagescan.Summarize` (the Go
+  port of `$lib/image-scan.ts`'s old `summarizeTrivyReport`, which was deleted
+  from the app). **Real, tested findings** (still true, now exercised from the
+  worker): Docker accepts a loopback registry as insecure with no daemon config
+  (verified on OrbStack); skopeo copies only the host platform's manifest, so
+  the recorded digest is the platform manifest digest, not the upstream index
+  digest; `--digestfile /dev/stdout` works and `--quiet` keeps progress off
+  stdout. **Rootless Docker**: `isRootlessDocker()` (`docker info` security
+  options, pure `isRootlessDaemon`) tells the spec to skip the loopback pull,
+  whose daemon lives in RootlessKit's network namespace and can't reach
+  `127.0.0.1:5055`, so the worker loads instead. `fetchFromMirror`'s order:
+  loopback pull (rootful only) → mirror load → upstream pull. A loaded image has
+  no `RepoDigests`, so the recorded digest is the mirror copy's. Not verified
+  live on a rootless host.
 - Docker Cleanup runs in the Go worker (`internal/jobs/cleanup`, prunes via
   `internal/dockerapi/prune.go`): `worker-jobs/docker_cleanup.ts`'s `prepare`
   resolves the retention lists (retained revision image ids, mounted volume
@@ -244,19 +271,22 @@ reordering the chain.
   job, button + size panel on `/docker-cleanup` via `getMirrorUsage`), queued
   daily at 04:00 by `cron/mirror-gc-scheduler.ts` under the first admin's id
   (postponed while deploy/image_scan jobs are queued or running). Keep set is
-  pure in `docker/mirror-registry.ts` (`mirrorKeepSet` + `planMirrorGc`, from
+  pure in `docker/mirror-registry.ts` (`mirrorKeepSet`, from
   `listMirrorReferences` in `$lib/dto/mirror-reference-dto.ts`): per service the
   current `image:tag`, the digest of every **retained revision**
   (`DeploymentDTO.listRetainedRevisions`, the newest
   `instance_settings.retainedImagesPerService` (null = `RETAINED_REVISIONS`, 5;
   1 to 50 on Settings → Docker) distinct images per service,
   `$lib/revisions.ts`), and the last `MIRROR_GC_SCANS_PER_SERVICE` (2) distinct
-  mirror-scan digests. `MirrorRegistryClient` there does catalog (Link paging) →
-  tags → HEAD with an index/list-aware Accept → DELETE by digest, fetch injected
-  so `tests/unit/app/image-mirror-gc.test.ts` mocks it. The mixin reaches the
-  API at `127.0.0.1:5055` or `homerun-mirror:5000` (first that answers `/v2/`,
-  container name first when this app runs in one) and `docker exec`s `du`,
-  `registry garbage-collect --delete-untagged`, `rm -rf` of emptied repo dirs.
+  mirror-scan digests (`planMirrorGc`, which diffs this keep set against the
+  registry's actual inventory, is now `internal/registryapi.PlanGC` in Go, see
+  above; `MirrorRegistryClient` there does catalog (Link paging) → tags → HEAD
+  with an index/list-aware Accept → DELETE by digest, fetch injected so
+  `tests/unit/app/image-mirror-gc.test.ts` mocks the TS `mirrorKeepSet` half).
+  Reaching the API at `127.0.0.1:5055` or `homerun-mirror:5000` (first that
+  answers `/v2/`, container name first when this app runs in one) and
+  `docker exec`ing `du`, `registry garbage-collect --delete-untagged`, `rm -rf`
+  of emptied repo dirs is Go's job too now (`internal/jobs/cleanup/mirror.go`).
   **Real, tested findings**: `--delete-untagged` sweeps every manifest with no
   tag, so a kept older digest must be re-tagged first (`homerun-keep-<digest>`,
   a GET + PUT of the same manifest bytes/content type) or the rollback copy
@@ -265,9 +295,11 @@ reordering the chain.
   claim deleted blobs still exist; a collected image re-copies fine after the
   restart. `ensureImageMirror` recreates a `homerun-mirror` lacking
   `REGISTRY_STORAGE_DELETE_ENABLED=true` (volume persists). An in-process flag
-  (`ImageMirrorGcService.running`, on `globalThis`) makes `deployThroughMirror`
-  fall back to a direct pull while GC runs; the handler also refuses to start
-  while a deploy/image_scan job is running.
+  (`ImageMirrorGcService.running`, on `globalThis`) is read into the deploy spec
+  as `mirror.cleaningUp` (`worker-spec.ts`'s `mirrorSpec`), so
+  `internal/jobs/deploy/scan.go`'s `deployThroughMirror` falls back to a direct
+  pull while GC runs; the handler also refuses to start while a
+  deploy/image_scan job is running.
 - Registry (`/registry`, admin-only, sidebar under Administration): turns
   `homerun-mirror` into a real push/pull registry rather than just a scan cache.
   `RegistryService` (`$lib/services/registry.service.ts`) owns
@@ -318,13 +350,15 @@ column, key derived via `scryptSync` from `config.auth.secret`.
 
 Containers attach to the shared `homerun` Docker network rather than publishing
 host ports, true for the default `networkMode: "bridge"`; see Network mode below
-for the `"host"` exception. **`createAndStartContainer` calls
-`ensureSharedNetwork()` on every local bridge-mode deploy** rather than assuming
-a one-time `docker network create`: compose creates it for a compose-run
-instance and nothing does for a bare `bun run start`, and Docker Cleanup's
-network prune removes it once the last container detaches. Its absence fails at
-container **start**, not create ("network homerun not found"), which is why the
-deploy looked like it had gotten further than it had.
+for the `"host"` exception. **The Go worker's `ensureBridge()` calls
+`EnsureNetwork` on every local bridge-mode deploy**
+(`internal/jobs/deploy/container.go`, formerly `createAndStartContainer`'s own
+`ensureSharedNetwork()`) rather than assuming a one-time
+`docker network create`: compose creates it for a compose-run instance and
+nothing does for a bare `bun run start`, and Docker Cleanup's network prune
+removes it once the last container detaches. Its absence fails at container
+**start**, not create ("network homerun not found"), which is why the deploy
+looked like it had gotten further than it had.
 
 **Compose files.** The actual service definitions live once in
 `tools/compose/{base,app,agent}.compose.yaml` (Traefik + Postgres in `base`, the
@@ -390,14 +424,17 @@ any of these.
 Instance-wide alternative to the single-container-per-service model described
 above, and the default on an installer-made instance:
 `instanceSettings.orchestrationMode` (`"standalone"` | `"swarm"`, null reads as
-standalone, `/settings`) switches every **local** deploy from
-`createAndStartContainer` to `DockerService.createAndStartSwarmService`
-(`DockerSwarmMixin`, `docker/swarm.ts`, chained into the same `DockerService`
-mixin merge as the other concerns, see the ordering note above), creating a real
-Docker Swarm Service (`docker.createService`,
-`Mode: {Replicated: {Replicas: n}}`) instead of a plain container.
-`deploy.service.ts` branches on `orchestrationMode` right alongside its existing
-`buildSource` branch.
+standalone, `/settings`) makes `resolveDeployPlan()` (`deploy/plan.ts`) pick a
+`swarm` `WorkloadPlan` over a `container` one for every **local** deploy.
+`deploy/worker-spec.ts`'s `workloadSpec` then builds a `swarmServiceTemplate()`
+(`docker/swarm.ts`, still pure TS) instead of a `containerCreateTemplate()`, and
+the Go worker's `internal/jobs/deploy/swarm.go`'s `startSwarm` creates or rolls
+out the real Docker Swarm Service (`Mode: {Replicated: {Replicas: n}}`) instead
+of `container.go`'s `startContainer` — `deploy.go`'s `Run` branches on
+`spec.Workload.Kind` the same way `deploy.service.ts` used to branch on
+`orchestrationMode` inline. `DockerService.createAndStartSwarmService` no longer
+exists; a route/DTO acting on an already-running swarm service still goes
+through `DockerSwarmMixin` below for that.
 
 - `service.replicas` (int, default 1, edited on the Compute tab, ignored in
   standalone mode) is the desired replica count.
@@ -407,13 +444,13 @@ Docker Swarm Service (`docker.createService`,
   specific task's container on demand instead (used by the Terminal tab's exec).
 - Mixin surface: `ensureSwarmNetwork` (idempotent overlay network, the
   swarm-mode counterpart to `networks.ts`'s per-stack bridge networks),
-  `createAndStartSwarmService`, `removeSwarmService`, `scaleSwarmService`
-  (stop/start map to scaling to 0 / back to the configured replica count, rather
-  than a real container stop/start), `restartSwarmService` (bumps `ForceUpdate`
-  to recreate every task), `inspectSwarmServiceStatus` (aggregates task states
-  into the same `ContainerStatus` vocabulary standalone mode uses, so the
-  Overview tab doesn't need a separate rendering path), `streamSwarmServiceLogs`
-  (same `ReadableStream` shape as `containers.ts`'s `streamLogs`).
+  `removeSwarmService`, `scaleSwarmService` (stop/start map to scaling to 0 /
+  back to the configured replica count, rather than a real container
+  stop/start), `restartSwarmService` (bumps `ForceUpdate` to recreate every
+  task), `inspectSwarmServiceStatus` (aggregates task states into the same
+  `ContainerStatus` vocabulary standalone mode uses, so the Overview tab doesn't
+  need a separate rendering path), `streamSwarmServiceLogs` (same
+  `ReadableStream` shape as `containers.ts`'s `streamLogs`).
   `docker/reconcile.ts`'s `DockerReconcileMixin` checks `service.swarmServiceId`
   first and calls `inspectSwarmServiceStatus` when present, falling back to the
   standard container path otherwise. The v1 REST API's `start`/`stop`/`restart`
@@ -527,7 +564,7 @@ both nodes, Traefik answering from every replica over the overlay
 every `providers.swarm.refreshSeconds`, set to 2 (`SWARM_REFRESH_SECONDS`) by
 `enableSwarmMode` and the installer, so new replicas join within 2s.
 
-## Readiness gate (`docker/readiness.ts`, `planReadiness` in `docker/container-rollout.ts`)
+## Readiness gate (`docker/readiness.ts`, `planReadiness` in `internal/jobs/deploy/readiness.go`)
 
 A new container or swarm task gets no Traefik traffic before it's ready, like a
 Kubernetes readiness probe, and the only lever that provably does that for both
@@ -578,30 +615,35 @@ providers is a **Docker healthcheck**. Verified facts, from source and live:
   healthcheck (a new server starts as up, and a path check fails on login-walled
   or 404-at-root apps); file-provider config (the routers come from labels).
 
-`readinessCheck` picks, in order: the service's `healthcheckCommand`; nothing
-when the workload isn't routed by Traefik (`dnsResolvable` false, host
-networking, remote host); the image's own `HEALTHCHECK`; nothing for a UDP-only
-port; nothing when the image can't be inspected or has no `/bin/sh`; otherwise
-the generated **listening** check (`listeningScript`): a `CMD-SHELL` loop over
+`ReadinessCheck` (`internal/jobs/deploy/readiness.go`) picks, in order: the
+service's `healthcheckCommand`; nothing when the workload isn't routed by
+Traefik (`dnsResolvable` false, host networking, remote host); the image's own
+`HEALTHCHECK`; nothing for a UDP-only port; nothing when the image can't be
+inspected or has no `/bin/sh`; otherwise the generated **listening** check
+(`listeningScript`, still pure TS in `docker/readiness.ts`, embedded into the
+deploy spec upfront as `healthchecks.listening`): a `CMD-SHELL` loop over
 `/proc/net/tcp` and `/proc/net/tcp6` using only shell builtins, passing once a
 socket is in `LISTEN` (`0A`) on the container port on a non-loopback address. It
 works without nc/curl/wget/bash, verified on busybox ash and Debian dash (a
 loopback-only listener fails it, as it should: Traefik couldn't reach it
 either). `/bin/sh` is detected by creating a never-started throwaway container
-from the image (`homerun-readiness-<hex>`) and `infoArchive`-ing `/bin/sh`,
-which follows `/bin -> usr/bin` and busybox symlinks; `scratch` images
-(`traefik/whoami`, `hello-world`) come back without one. The generated check
-starts probing every second (`StartInterval`, Engine API 1.44+) for a start
-period as long as `ROLLOUT_WINDOW.maxWaitMs`, then every 30s with 3 retries, so
-it's liveness too: a crash-restart resets health to `starting`, which takes the
-container out of Traefik again until it listens (verified). The service
-healthcheck spec (`dockerHealthcheck`) got the same 1s `StartInterval`, so a
-rollout no longer waits 30s for its first probe. Containers and task specs with
-the generated check carry `homerun.readiness=listening`, and `containerHealth`
-returns null for them so the uptime probe keeps its own HTTP/TCP probe rather
-than reporting the generated check as the image's.
+from the image (`homerun-readiness-<hex>`) and `PathExists`-ing `/bin/sh`
+(`internal/dockerapi`'s `HEAD .../containers/<id>/archive`, the Go equivalent of
+dockerode's `infoArchive`), which follows `/bin -> usr/bin` and busybox
+symlinks; `scratch` images (`traefik/whoami`, `hello-world`) come back without
+one. The generated check starts probing every second (`StartInterval`, Engine
+API 1.44+) for a start period as long as `ROLLOUT_WINDOW.maxWaitMs`
+(`docker/rollout.ts`, still TS, read by `listeningHealthcheck` when the spec is
+built), then every 30s with 3 retries, so it's liveness too: a crash-restart
+resets health to `starting`, which takes the container out of Traefik again
+until it listens (verified). The service healthcheck spec (`dockerHealthcheck`)
+got the same 1s `StartInterval`, so a rollout no longer waits 30s for its first
+probe. Containers and task specs with the generated check carry
+`homerun.readiness=listening`, and `containerHealth` returns null for them so
+the uptime probe keeps its own HTTP/TCP probe rather than reporting the
+generated check as the image's.
 
-The deploy log gets one `Readiness: ...` line from `readinessDescription` on
+The deploy log gets one `Readiness: ...` line from `ReadinessDescription` on
 every deploy, standalone and swarm, and the blue-green completion line says
 whether Traefik only now routes to the new container or already was. Known gaps:
 `scratch`/distroless images without a `HEALTHCHECK` (no gate; the service's
@@ -641,7 +683,7 @@ specifically need real host-network access (mDNS/SSDP discovery, e.g. Home
 Assistant), which bridge networking can't provide.
 
 Host mode forces `dnsResolvable` off (both in the stored row, at save time, and
-again defensively at deploy time in `createAndStartContainer`), there's no
+again defensively at spec-build time in `containerCreateTemplate`), there's no
 container-specific IP/network for Traefik's docker provider to route to in host
 mode, only the host's own interfaces, so Traefik labels are skipped entirely
 regardless of what's stored. No stack-network join either (Docker containers in
@@ -657,7 +699,7 @@ does **not** fail at the Docker API level the way you might expect, verified
 live against a real scratch container, Docker silently accepted both and the
 container ended up attached to the named network instead of `"host"`
 (`NetworkSettings.Networks` showed the bridge network, not `host`).
-`createAndStartContainer` explicitly omits `NetworkingConfig` entirely when
+`containerCreateTemplate` explicitly omits `NetworkingConfig` entirely when
 `networkMode === "host"` specifically because of this, sending both is not a
 hard error you'd catch in testing, it's a silent wrong-mode footgun. Also
 verified live: with `NetworkingConfig` correctly omitted, the container comes up
@@ -902,18 +944,21 @@ in the same HMR-safe `globalThis` pattern as the db singleton, for `"docker"`
 hosts.
 
 **A build server doesn't need a cache registry.** The built image lands on the
-build server's own daemon, so it has to be brought across
-(`deploy/build-transfer-step.ts`'s `transferBuiltImage`). With a registry
+build server's own daemon, so it has to be brought across: with a registry
 (`plan.registry` set), a `"docker"` host pushes and this host pulls the
-published ref (an agent already pushed during `/v1/build`). Without one, the
-image is streamed and keeps its local `homerun-build-<slug>:<tag>` name: a
-`"docker"` host through `DockerImageTransferMixin.copyImageFromRemote`
-(`docker/image-transfer.ts`, dockerode `getImage(ref).get()` piped into the
-local `loadImage`), an agent through `AgentClientService.saveImage` (the agent's
-authenticated `GET /v1/images/save?ref=`, `Readable.fromWeb` of the body) into
-`loadImageArchive`. Scan targets then only include the local copy. Not verified
-against a real remote daemon or agent. The `git clone` runs on the build server
-for both kinds, in an `alpine/git` container into a volume on that daemon
-(`git-build.ts` with `remote` set, or
-`internal/agent/build.go`/`internal/agent/git.go`), so the repo has to be
-reachable from the build server.
+published ref (an agent already pushed during `/v1/build`); without one, the
+image is streamed straight from the build server's daemon into this one and
+keeps its local `homerun-build-<slug>:<tag>` name. Both now live in
+`internal/jobs/deploy/build.go`'s `transfer` (a `"docker"` host's
+`dockerapi.Client.SaveImage` piped into `r.docker.LoadImage`, an agent's own
+authenticated `GET /v1/images/save?ref=` streamed the same way, `remote` nil
+distinguishing the two) — the Go port of what used to be
+`docker/image-transfer.ts`'s `DockerImageTransferMixin.copyImageFromRemote` and
+`AgentClientService.saveImage`, both deleted from the app. Scan targets then
+only include the local copy. Not verified against a real remote daemon or agent.
+The `git clone` runs on the build server for both kinds, in an `alpine/git`
+container into a volume on that daemon
+(`internal/agent/build.go`/`internal/agent/git.go`, now the single
+implementation for a local build too, see Git-based builds in
+`services-and-templates.md`), so the repo has to be reachable from the build
+server.

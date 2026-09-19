@@ -32,14 +32,19 @@ page always did.
 
 ## Shared deploy pipeline (`src/lib/services/deploy.service.ts`)
 
-`DeploymentService.deployService(svc, userId, clientDeploymentId?)` is the one
-pull-or-build→create-container→start implementation, used by the service
-Overview page's `deploy` action, `POST /api/v1/services/[serviceId]/deploy`, and
-the cron redeploy scheduler (below). Returns
-`{success, deploymentId, containerId?, error?}` rather than throwing, callers
-decide how to surface failure (a SvelteKit `fail()`, a JSON error body, a
-scheduler log line). Don't reimplement this inline in a new call site; extend
-the shared method instead.
+`DeploymentService.enqueueDeploy(input)` is the one entry point every deploy
+trigger uses — the service Overview page's `deploy` action,
+`POST /api/v1/services/[serviceId]/deploy`, the cron redeploy scheduler (below),
+template/stack quick-deploys and compose import. It creates the `deployment`
+row, marks the service `pending`, and queues a `deploy` job
+(`{deploymentId, jobId}`, coalescing a concurrent enqueue for the same service
+onto whichever is already queued, see `jobs-and-queue.md`). Nothing runs inline
+anymore : **the pipeline itself now runs in the Go worker**, in two TS halves
+around it (`prepareWorkerDeploy`/`finalizeWorkerDeploy`, the job's
+prepare/finalize steps, see "The stage protocol" in `worker.md`) plus
+`internal/jobs/deploy` doing the actual Docker/build work in between. Don't
+reimplement any of this inline in a new call site; extend
+`enqueueDeploy`/`prepareWorkerDeploy` instead.
 
 **The legal combinations are a union, resolved once up front.** The first thing
 the pipeline does (the `config` phase, before volumes, pulls, builds or any
@@ -63,34 +68,63 @@ deployment with a clear message before anything happens: a git service without a
 URL, an image service without an image, a build server that didn't resolve, and
 host networking under swarm (swarm services only join the overlay, this used to
 be silently dropped). Leftover `buildServerRemoteHostId`/`buildCacheRegistryId`
-on an image-source service are ignored and never loaded. Each pipeline step
-(`#resolveImage`, `#buildGitImage`, `#startWorkload`) is a `switch` over the
-variant's `kind` with a `default: return unreachable(plan)` (`never`) arm, so
-adding a variant is a type error until every step handles it. This exists
-because the old shape branched on `buildSource` × build target kind ×
-`orchestrationMode` inline and rejected bad combinations with a `throw` deep in
-the pipeline (the old remote-deploy-target + swarm check only ran after the
-image was already built or pulled). Add a new axis or combination to the union,
-not an `if` in a step.
+on an image-source service are ignored and never loaded. Building the worker
+spec (`deploy/worker-spec.ts`) is itself a `switch` over each variant's `kind`
+(`imageSpec` over `pull`/`revision`/`local-build`/`docker-build`/`agent-build`,
+`workloadSpec` over `container`/`swarm`), each ending
+`default: return unreachable(plan)` (`never`), so adding a variant is a type
+error until every step handles it — the same exhaustive-switch shape
+`#resolveImage`/`#buildGitImage`/`#startWorkload` used to have back when
+`deploy.service.ts` did this work itself, before it moved to the Go worker (see
+below). Add a new axis or combination to the union, not an `if` in a step.
 
-A git build writes the resulting ref back to `svc.image`/`svc.tag` _before_ the
-workload starts, so the container step never needs to know which path produced
-the image; a cross-host build (`docker-build`/`agent-build`) pushes to
-`<registry>/homerun-build-<slug>:<tag>` and pulls that published ref back onto
-this host first.
+Inside the Go worker, resolving the image (including a git build) happens before
+the workload starts (`internal/jobs/deploy/deploy.go`'s `deploy()`:
+`resolveImage` then `startContainer`/`startSwarm`), so the workload step never
+needs to know which path produced the image; a cross-host build
+(`docker-build`/`agent-build`) pushes to `<registry>/homerun-build-<slug>:<tag>`
+and pulls that published ref back onto this host first (`build.go`'s
+`transfer`). The resolved `image`/`tag` only reaches `svc.image`/`svc.tag` in
+the database once the whole job succeeds and reports back :
+`deploy.service.ts`'s `finalizeWorkerDeploy` writes `outcome.serviceImage` (the
+`ImageRef` in the worker's `Result`) as part of recording success, not
+mid-deploy the way the old in-process pipeline did.
+
+## Deploys run in the Go worker (`deploy/worker-spec.ts`, `internal/jobs/deploy`)
+
+`deploy.service.ts`'s `prepareWorkerDeploy` is the `deploy` job's whole prepare
+step (see "The stage protocol" in `worker.md`): resolves the config (a
+rollback's revision and restored config, the config snapshot, the `DeployPlan`,
+the volumes), waits on required status checks for a git build (below), and
+returns `deployWorkerSpec`'s spec — everything `internal/jobs/deploy`'s `Run`
+needs and nothing it has to look up itself (network names, labels, env, registry
+auth, remote host connections, retention lists, all resolved app-side). The Go
+side pulls or builds the image (gating on the image scan, below), then starts
+the container or swarm service, health-gated the same way the old TS pipeline
+was (see "Creating and starting the container" in `docker.md`).
+`finalizeWorkerDeploy` is the finalize step: records the built commit, the
+service's new image, the scan history, then either success (service and
+deployment running, superseded health cleared, DNS synced, health watch armed,
+notifications) or failure (the service kept running when a scan block or a
+failed health-gated rollout left its previous workload in place, via
+`RolloutFailedError`/`ImageScanBlockedError`, mapped from the worker's
+`Result.Failure` by `workerFailure`).
 
 ## Required status checks (`$lib/status-checks.ts`, `StatusCheckService`, `deploy/status-check-step.ts`)
 
 `service.requireStatusChecks` + `requiredStatusChecks` gate a git build. In
-`#resolveImage`, before `#buildGitImage`, `enforceStatusChecks` resolves the
-branch to a SHA through the provider API, logs it, writes `gitCommit`/`gitRef`
-on the deployment and runs `waitForChecks`. Everything provider-shaped is pure
-in `$lib/status-checks.ts`, covered by `tests/unit/app/status-checks.test.ts`
-with a fake fetch: `repoPathFromGitUrl` (https, scp-style, nested GitLab groups,
-a self-hosted base path), `providerApiBase` (also what `git-provider.service.ts`
-`endpoints()` uses now), the per-provider paths (`commitsPath`, `checkSources`)
-and mappers into `CheckResult {name, state: pending|success|failure}`, and
-`StatusCheckClient` (fetch injectable, like `MirrorRegistryClient`).
+`deploy/worker-spec.ts`'s `buildSpec`, before the spec hands the git build over
+to the Go worker, `enforceStatusChecks` resolves the branch to a SHA through the
+provider API, logs it, writes `gitCommit`/`gitRef` on the deployment and runs
+`waitForChecks`, all still on the TS/prepare side (see "Deploys run in the Go
+worker" above) since it needs the git-provider tables. Everything
+provider-shaped is pure in `$lib/status-checks.ts`, covered by
+`tests/unit/app/status-checks.test.ts` with a fake fetch: `repoPathFromGitUrl`
+(https, scp-style, nested GitLab groups, a self-hosted base path),
+`providerApiBase` (also what `git-provider.service.ts` `endpoints()` uses now),
+the per-provider paths (`commitsPath`, `checkSources`) and mappers into
+`CheckResult {name, state: pending|success|failure}`, and `StatusCheckClient`
+(fetch injectable, like `MirrorRegistryClient`).
 
 - GitHub: `commits?sha=<ref>&per_page=1` for the SHA, then check runs
   (`filter=latest`; not completed is pending, `success`/`neutral`/`skipped`
@@ -122,13 +156,12 @@ instead of the generic build failure (nothing on cancellation). Credentials
 (`StatusCheckService.targetFor`): the provider configured for the URL's host
 plus the service owner's connection, else a token embedded in the clone URL,
 else unauthenticated for a well-known host (`inferProviderKind`). The checked
-SHA goes to `buildFromGit` as `commit`: when the shallow clone's HEAD differs (a
-push landed while waiting), `#checkoutCommit` runs
-`git fetch --depth 1 origin <sha>` and `checkout --detach` in the workspace, so
-the build is the checked commit or fails. Agent builds are pinned the same way:
-`AgentClientService.build` sends `commit`, and `internal/agent/git.go`'s
-`gitCheckoutSteps`/`extractCommitSHA` do the same rev-parse, fetch and detached
-checkout, returning the built commit for the deployment row. An agent older than
+SHA travels as `BuildInput.Commit` into `internal/agent.Builder.checkout` — the
+one clone-and-pin implementation every build kind now goes through (see
+Git-based builds below): when the shallow clone's HEAD differs (a push landed
+while waiting), it runs `git fetch --depth 1 origin <sha>` and
+`checkout --detach <sha>` in the workspace, so the build is the checked commit
+or fails, returning the built commit for the deployment row. An agent older than
 that ignores the unrecognized field (Go's `encoding/json` default) and builds
 the branch head.
 
@@ -241,70 +274,84 @@ by digest (the list order unchanged, the superseded revision's health cleared),
 the 404/400 cases, auto-rollback of a restart-looping revision, and marking
 without auto-rollback.
 
-## Image scanning in the pipeline (`image_scan`, `ImageScanService`, `deploy/pull-step.ts`)
+## Image scanning in the pipeline (`image_scan`, `ImageScanService`, `internal/jobs/deploy/scan.go`, `internal/jobs/imagescan`)
 
-Scanning happens inside the `image` phase, before `#startWorkload`, on every
-path that reaches `deployService` (Overview, API/CLI, cron, stack/template
-deploys, the queue). `ImageScanService.policyFor(svc)` combines
-`instance_settings.imageScanEnabled` (null = on) with `service.imageScanEnabled`
-(default true) and carries `block: ScanBlockPolicy`
+Scanning happens inside the deploy job's `image` phase, before the workload
+starts, on every deploy trigger (Overview, API/CLI, cron, stack/template
+deploys, the queue) — the gate itself now runs in the Go worker;
+`ImageScanService.policyFor(svc)` (still TS, read while building the spec)
+combines `instance_settings.imageScanEnabled` (null = on) with
+`service.imageScanEnabled` (default true) and carries `block: ScanBlockPolicy`
 (`InstanceSettingsDTO.imageScanBlockPolicy`: `imageScanBlockSeverity`, null =
 off, `CRITICAL`/`HIGH`/`MEDIUM`/`LOW`, plus `imageScanBlockFixableOnly`). When
-off, a `skipped` row is recorded and the pull is the plain one.
+off, `deploy/worker-spec.ts`'s `scanSpec` returns null and
+`internal/jobs/deploy/scan.go`'s `scanTargets` records a `skipped` row itself.
 
-- **Pull plans** go through `pullForDeploy` (`deploy/pull-step.ts`, split out of
-  `deploy.service.ts` to stay under the 680-line file limit). A pull policy that
-  skips the pull scans the local image (`--image-src docker`). Otherwise
-  `ImageScanService.deployThroughMirror`: `DockerService.copyToMirror` (skopeo)
-  → scan the mirror copy (`--image-src remote --insecure`) → **pull only after
-  the scan**, so a blocked image never lands in the host's image store →
-  `pullFromMirror` pulls `127.0.0.1:5055/<registry>/<repo>:<tag>` and re-tags it
-  as the upstream `image:tag`, so the container, `pullPolicy: missing` and every
-  other reader keep seeing the normal name. Swarm skips the host pull and
-  returns `tag@digest` (`pinnedToDigest`), since workers can't reach a loopback
-  registry; the swarm pre-pull and `createService` both accept that ref.
-- **Fallbacks, all logged into the deployment log**: copy fails → `null`, the
-  caller does the normal pull and a local scan. Scan succeeds but the loopback
-  pull fails → plain upstream pull, no second scan.
-- **Git plans** scan after the build and before `svc.image`/`tag` are written
-  back (`buildScanTargets`, `deploy/scan-targets.ts`): the local tag for
-  `local-build`, the pushed cache-registry ref with its credentials then the
-  local pull for `docker-build`/`agent-build`.
-- `ImageScanService.scan(ctx, targets, {blockSeverity})` tries targets in order,
-  records one `image_scan` row (`ok` with counts + top 200 findings, or `failed`
-  with every target's error), appends the summary and the first five
-  CRITICAL/HIGH findings to the log, notifies on CRITICAL (`image_scan_critical`
-  bell row + the `image.vulnerable` channel event), then evaluates
-  `evaluateScanPolicy()` (`$lib/image-scan.ts`, pure, unit-tested; also used by
-  the Security tab's "would the last scan pass" banner). Blocked: logs the
-  verdict's reason (policy, blocking counts per severity, full counts) and
-  throws `ImageScanBlockedError`, which `#recordFailure` turns into a normal
-  failed deploy (deploy_failure bell + `notifyDeploy`) **without** marking the
-  service failed when a workload already exists, same as a status-check failure:
-  it `syncServiceStatus`es instead, since the old container is still up.
-  `fixableOnly` counts `image_scan.fixable_counts` (findings with a
-  `FixedVersion`); rows from before that column (null) fall back to `counts`.
-  Unknown severity never blocks. **A scanner failure doesn't block by default**,
-  even with a block policy set: `instance_settings.image_scan_required`
-  (`imageScanRequired`, Settings → Docker, `ScanPolicy.required`) makes
-  `ImageScanService.scan`'s every-target-failed path (`#recordUnscanned`) throw
-  `ImageScanBlockedError` after recording the failed row. `scanDeployed` never
-  passes it. Rollbacks (`revision-step.ts`) skip the scan and the policy
-  entirely, deliberately, so auto-rollback can always recover. The git
-  `docker-build`/`agent-build` paths push to the cache registry before the scan;
-  the gate is before `#startWorkload`, not before the push.
-- The Security tab's **Scan now** is an `image_scan` job (dedupe/lock
-  `image_scan:<serviceId>`) running `ImageScanService.scanDeployed`: Trivy with
-  `--image-src docker,remote` against `svc.image:svc.tag` and the service's
-  registry credentials, never blocking.
+- **Pull plans**: `deploy/worker-spec.ts`'s `imageSpec` builds a `mirror` spec
+  (`mirrorSpec`, only when scanning is enabled) alongside the pull. A pull
+  policy that skips the pull scans the local image (`--image-src docker`, no
+  mirror). Otherwise the Go worker's `deployThroughMirror`: copies into the
+  mirror (skopeo, the commands built by `mirrorSpec`) → scans the mirror copy
+  (`--image-src remote --insecure`) → **pulls only after the scan**, so a
+  blocked image never lands in the host's image store → `fetchFromMirror` pulls
+  the loopback ref and re-tags it as the upstream `image:tag`, so the container,
+  `pullPolicy: missing` and every other reader keep seeing the normal name.
+  Swarm skips the host pull and returns `tag@digest` instead (`deploy.go`'s
+  `deployThroughMirror`, once `spec.Workload.Kind == "swarm"`), since workers
+  can't reach a loopback registry; the swarm pre-pull and `CreateSwarmService`
+  both accept that ref.
+- **Fallbacks, all logged into the deployment log**: the mirror copy fails → the
+  worker falls back to the normal pull and a local scan. Scan succeeds but the
+  loopback pull fails → `loadFromMirror`, then a plain upstream pull if that
+  fails too, no second scan.
+- **Git plans** scan after the build, still inside the same worker job, before
+  the app ever learns the new `svc.image`/`svc.tag` (see "Deploys run in the Go
+  worker" above): `buildScanTargets` (`deploy/scan-targets.ts`, still TS, run
+  while building the spec) picks the local tag for `local-build`, or the pushed
+  cache-registry ref with its credentials then the local pull for
+  `docker-build`/`agent-build`.
+- `internal/jobs/deploy/scan.go`'s `scan(ctx, targets, digest)` tries targets in
+  order — the direct Go port of `ImageScanService.scan`, which no longer exists
+  in the app — and reports back a `ScanRecord` per attempt (`ok` with the
+  summary, `failed` with every target's error, or `skipped`) that
+  `deploy.service.ts`'s `#recordWorkerScans` turns into one `image_scan` row
+  each (`ok` with counts + top 200 findings), appends the summary and the first
+  five CRITICAL/HIGH findings to the log, and notifies on CRITICAL
+  (`image_scan_critical` bell row + the `image.vulnerable` channel event) — all
+  still on the TS side, from the worker's reported `Scans`. The block verdict
+  itself (`BlockReason` in `scan.go`, mirroring `evaluateScanPolicy()` in
+  `$lib/image-scan.ts`, still pure TS and still what the Security tab's "would
+  the last scan pass" banner uses) runs in Go: logs the reason (policy, blocking
+  counts per severity, full counts) and returns a `scan-blocked` failure, which
+  `deploy.service.ts`'s `workerFailure` turns into `ImageScanBlockedError` —
+  `#recordFailure` turns that into a normal failed deploy (deploy_failure bell +
+  `notifyDeploy`) **without** marking the service failed when a workload already
+  exists, same as a status-check failure: it `syncServiceStatus`es instead,
+  since the old container is still up. `fixableOnly` counts
+  `image_scan.fixable_counts` (findings with a `FixedVersion`); rows from before
+  that column (null) fall back to `counts`. Unknown severity never blocks. **A
+  scanner failure doesn't block by default**, even with a block policy set:
+  `instance_settings.image_scan_required` (`imageScanRequired`, Settings →
+  Docker, `ScanPolicy.required`) makes `scan.go`'s every-target-failed path
+  throw the same `scan-blocked` failure after recording the failed row. The Scan
+  now job never passes it (below). Rollbacks (`revision-step.ts`) skip the scan
+  and the policy entirely, deliberately, so auto-rollback can always recover.
+  The git `docker-build`/`agent-build` paths push to the cache registry before
+  the scan; the gate is before the workload starts, not before the push.
+- The Security tab's **Scan now** is its own `image_scan` job (dedupe/lock
+  `image_scan:<serviceId>`, `worker-jobs/image_scan.ts`'s prepare/finalize
+  around `internal/jobs/imagescan`'s `Run`/`Scan`): Trivy with
+  `--image-src docker,remote` against `svc.image:svc.tag`
+  (`ImageScanService.deployedScanTarget`) and the service's registry
+  credentials, never blocking.
 
-Verified live on OrbStack against the dev database: a real deploy of
-`nginx:1.27-alpine` through the mirror (copy, scan with 2 critical/35 high,
-loopback pull, re-tag, container up), a `CRITICAL` block on `alpine:3.18.0`
-failing before the pull, a per-service opt-out, and a `missing` pull policy
-scanning the local image. **Not verified live**: swarm pinning, git-build scans,
-cross-host registry scans, rootless Docker's fallback, and the Scan now job
-through the worker.
+Verified live on OrbStack against the dev database (before this moved into the
+Go worker, and not re-verified live since): a real deploy of `nginx:1.27-alpine`
+through the mirror (copy, scan with 2 critical/35 high, loopback pull, re-tag,
+container up), a `CRITICAL` block on `alpine:3.18.0` failing before the pull, a
+per-service opt-out, and a `missing` pull policy scanning the local image. **Not
+verified live**: swarm pinning, git-build scans, cross-host registry scans,
+rootless Docker's fallback, and the Scan now job through the worker.
 
 ## Compose import (`$lib/compose-import.ts`, `$lib/services/compose-import.service.ts`, `(protected)/services/import/`)
 
@@ -488,6 +535,15 @@ render : a panel that can come in behind a skeleton, a poll, a picker's
 on-demand lookup, and the small mutations those surfaces fire. Every one lives
 in `src/lib/remote/`, and Svelte's `compilerOptions.experimental.async` is
 deliberately **not** enabled, nothing here needs `await` in a template.
+
+**Origin check.** SvelteKit refuses every non-GET remote call whose `Origin`
+isn't `url.origin`, before any hook runs, and the adapter pins `url.origin` to
+`ORIGIN`. Real finding: an installer-set IP `ORIGIN` plus a dashboard domain
+added later made every command (the sidebar's Update button included) a bare 403
+while the CLI, on the REST API, worked. Since svelte-smol 1.6.1 the adapter's
+handler uses the `Origin` as the request base for a remote call whose `Origin`
+host equals the request's own `Host`, the same same-host rule
+`$lib/server/csrf.ts` applies to forms, so don't pin the adapter below that.
 
 **What is and isn't allowed to move here.** Anything a page's own correctness
 depends on stays in `load` : the signed-in user, their role/`isAdmin`, their
@@ -829,69 +885,86 @@ subscribed to `service.down`/`service.up`, see Outbound notification channels in
 `NotificationChannelService`) and `tests/unit/app/status-alert.test.ts` for the
 transition logic itself.
 
-## Git-based builds (`src/lib/services/docker/git-build.ts`)
+## Git-based builds (`internal/agent/build.go`, `internal/agent/builders.go`, `internal/jobs/deploy/build.go`)
 
 A service's `buildSource` is `"image"` (bring-your-own, the default) or `"git"`,
 set on the new-service form or edited later on the Source tab, both share the
-same "Deploy from" toggle UI.
+same "Deploy from" toggle UI. **The whole clone-and-build pipeline now lives in
+one place, `internal/agent`** : the SvelteKit app's own copy
+(`docker/git-build.ts`, `docker/builder-run.ts`) was deleted once the `deploy`
+job type moved to the Go worker (see "Deploys run in the Go worker" above).
+`internal/jobs/deploy/build.go`'s `dockerBuild` calls
+`agent.NewBuilder(docker, socket).BuildWithProgress` directly (a local build or
+a `"docker"` build server), and `agentBuild` calls the exact same code over HTTP
+on a registered Homerun Agent build server (`POST /v1/build`) — the same package
+either way, not two implementations kept in sync by hand anymore (see
+`packages-and-release.md`).
 
 **The clone runs in a container, into a Docker volume — never on the host.**
-`buildFromGit()` creates a throwaway `homerun-build-<uuid>` volume, runs
-`alpine/git` against it (`clone --depth 1 --branch <ref> --single-branch` into
-`/workspace/repo`, then a second container for `rev-parse HEAD`), then runs the
-build in a `docker:cli` helper container with that volume mounted (see Build
-methods below, every method including the Dockerfile goes through BuildKit
-there). The result is tagged `homerun-build-<slug>:<timestamp>`, a fresh tag
-every build, same "never reuse a name across deploys" precedent as container
-names. Build output streams into the deployment log line by line. The volume and
-every helper container are always removed afterward (`finally`), success or
-failure. The clone argv comes from `gitCheckoutSteps` (`$lib/git-ref.ts`,
-mirrored by hand in the agent): a branch or tag is one
-`clone --depth 1 --branch`, a full 40-hex commit SHA (`isCommitSha`, short SHAs
-can't be fetched from a remote) is `init`, `remote add origin`,
-`fetch --depth 1 origin <sha>` and `checkout --detach FETCH_HEAD`. A SHA-pinned
-service never matches a push and is never polled.
+`Builder.BuildWithProgress` creates a throwaway `homerun-agent-build-<hex>`
+volume, runs `alpine/git` against it (`gitCheckoutSteps`,
+`internal/agent/git.go`: `clone --depth 1 --branch <ref> --single-branch` into
+`/workspace/repo` for a branch or tag, or
+`init`/`remote add origin`/`fetch --depth 1 origin <sha>`/
+`checkout --detach FETCH_HEAD` for a full 40-hex commit SHA, which
+`clone --branch` can't take), then a second container for `rev-parse HEAD`, then
+runs the build in a `docker:cli` helper container with that volume mounted (see
+Build methods below, every method including the Dockerfile goes through BuildKit
+there). The result is tagged with the caller's own tag (the Go worker's
+`homerun-build-<slug>:<timestamp>` for a local/build-server build, the agent's
+caller-supplied tag otherwise), a fresh tag every build, same "never reuse a
+name across deploys" precedent as container names. Build output streams into the
+deployment log line by line (`progress func(string)`, wired to `job.AppendLog`
+from the worker, to the agent's own process log when it isn't answering
+`/v1/build` inline). The volume and every helper container are always removed
+afterward (`defer`), success or failure. A SHA-pinned service never matches a
+push and is never polled.
 
 This replaced `execFile("git", ...)` into an `mkdtemp()` directory, and it was a
-**production bug fix, not a refactor**: the runtime image is `oven/bun:1-alpine`
-plus `ca-certificates` and `su-exec` (see the `app` stage of the `Dockerfile`),
-which has no `git`, so the old code failed with ENOENT and git-based builds only
-ever worked in dev. Verified by running the base image: `command -v git` finds
-nothing. The temp directory was the second problem — inside the container it was
-the container's own ephemeral writable layer, not a volume, so a large clone
-grew the container unboundedly and vanished on restart.
+**production bug fix, not a refactor**: the app's runtime image is
+`oven/bun:1-alpine` plus `ca-certificates` and `su-exec` (see the `app` stage of
+the `Dockerfile`), which has no `git`, so the old TS code failed with ENOENT and
+git-based builds only ever worked in dev. Verified by running the base image:
+`command -v git` finds nothing. The temp directory was the second problem —
+inside the container it was the container's own ephemeral writable layer, not a
+volume, so a large clone grew the container unboundedly and vanished on restart.
+The agent image (`oven/bun`-free, a plain Go binary) has no `git` either, for
+the same reason, which is why this shape was always shared.
 
 Three things about this shape are load-bearing:
 
 - **It stays on one daemon.** A real Docker-in-Docker sidecar would build on a
   _different_ daemon, and the image would then need a cache registry to get back
-  to the deploy target — the same constraint `deploy.service.ts` already
-  enforces for build servers. The helper container talks to the building
-  daemon's own socket and BuildKit, so the image lands in that daemon's store.
+  to the deploy target — the same constraint `deploy/plan.ts`'s
+  `resolveDeployPlan` already enforces for build servers. The helper container
+  talks to the building daemon's own socket and BuildKit, so the image lands in
+  that daemon's store.
 - **Argv is passed directly, never through `sh -c`.** The repo URL and ref are
   user input.
 - **Container output is demuxed, not stripped.** Docker frames non-TTY output
   with an 8-byte header whose big-endian length bytes are often printable ASCII
   — a 41-byte frame carries `)`. A "drop control characters" pass left that `)`
   glued to the front of the commit SHA (a real, observed
-  `Building commit )68c1b9`), so `demuxDockerFrames` walks the frames properly
-  and `extractCommitSha` matches `\b[0-9a-f]{40}\b` rather than slicing. Both
-  are pure and unit-tested in `tests/unit/app/git-build.test.ts`.
+  `Building commit )68c1b9`), so `internal/dockerapi.Demux` walks the frames
+  properly and `ExtractCommitSHA` (`internal/agent/git.go`) matches
+  `\b[0-9a-f]{40}\b` rather than slicing. Both are unit-tested
+  (`tests/unit/go/internal/agent/git_test.go`, `internal/dockerapi`'s own tests)
+  — the app's old `demuxDockerFrames`/`extractCommitSha`
+  (`tests/unit/app/git-build.test.ts`) are gone along with
+  `docker/git-build.ts`.
 
-`internal/agent/build.go`/`git.go` clone the same way, in an `alpine/git`
-container into a volume, since the agent image has no `git` either.
-
-**Build methods** (`service.gitBuildMethod`, `$lib/build-methods.ts`):
-`dockerfile` (default), `bake`, `nixpacks`, `railpack`, `heroku` and `paketo`
-all go through `#runBuilder`, which runs `BUILDER_SCRIPT`
-(`docker/builder-run.ts`) in a throwaway `docker:29.8.1-cli` container (pinned,
-ships buildx 0.37) on the building daemon with the clone volume at `/workspace`,
-a persistent `homerun-builder-tools` volume at `/tools` and the daemon socket at
+**Build methods** (`service.gitBuildMethod`, `$lib/build-methods.ts` on the form
+side): `dockerfile` (default), `bake`, `nixpacks`, `railpack`, `heroku` and
+`paketo` all go through `Builder.runBuilder`, which runs
+`internal/agent/builder.sh` (`//go:embed`-ed by `internal/agent/builders.go`) in
+a throwaway `docker:29.8.1-cli` container (pinned, ships buildx 0.37) on the
+building daemon with the clone volume at `/workspace`, a persistent
+`homerun-builder-tools` volume at `/tools` and the daemon socket at
 `/var/run/docker.sock`. The socket's bind source is `config.docker.socketPath`
 for a local build (the installer mounts a rootless socket at the same path on
-both sides of the app container, so this is the host path) and
-`/var/run/docker.sock` on a Docker-connection build server; the agent uses its
-own `DOCKER_SOCKET_PATH`.
+both sides of the app container, so this is the host path, passed to the Go
+worker as `spec.SocketPath`) and `/var/run/docker.sock` on a Docker-connection
+build server; the agent uses its own `DOCKER_SOCKET_PATH`.
 
 **The Dockerfile path used to be dockerode's `buildImage()` (the classic
 builder) and was replaced, not kept alongside.** Real bug: a Dockerfile with
@@ -911,26 +984,28 @@ conditional and a target with its own `output = ["type=registry"]` must still
 end up loaded under Homerun's tag (verified live: a target tagged
 `example.invalid/web` with a registry output loaded as
 `homerun-build-live-bake:1` and nothing was pushed). The bake target is
-validated against `BAKE_TARGET_PATTERN` (no leading dash, so it can't be read as
-a flag, no dots, since `--set a.b.tags` splits on the first dot). A failed build
-throws `buildFailureMessage`: the exit code plus the last BuildKit `ERROR` line
-from the last 40 output lines, so the deployment error says why, not "see the
-log" (the agent returns no log at all).
+validated against `bakeTargetPattern` (`internal/agent/builders.go`, compiled
+from `builder-tools.json`'s `bakeTargetPattern`, no leading dash, so it can't be
+read as a flag, no dots, since `--set a.b.tags` splits on the first dot). A
+failed build throws `BuildFailureMessage`: the exit code plus the last BuildKit
+`ERROR` line from the last 40 output lines, so the deployment error says why,
+not "see the log" (the agent returns no log at all).
 
 None of the three tools ships an official CLI image, so the script downloads the
 pinned musl release binary from GitHub once per version into `/tools` and runs
 it. The binary runs with the Docker socket mounted (root-equivalent), so
-`BUILDER_CHECKSUMS` pins a sha256 per tool per arch for both the release archive
-(matching the project's published `checksums.txt`/`.sha256` files, or the GitHub
-release asset digest for Nixpacks, which ships none) and the extracted binary:
-the script verifies the archive before extracting, the binary before installing,
-and the cached binary on every build (a mismatch re-downloads, a mismatched
-download fails the build with "Checksum mismatch"). Verified live: a tampered
-cached binary was re-downloaded, a wrong pinned checksum failed the build and
-installed nothing. Bumping a version means updating these checksums. Commands:
-`nixpacks build <dir> --name <tag>` (shells out to the docker CLI with
-BuildKit), `railpack prepare <dir> --plan-out ...` then `docker buildx build`
-with the build arg
+`builder-tools.json`'s `checksums` (`tools.Checksums` in
+`internal/agent/builders.go`) pins a sha256 per tool per arch for both the
+release archive (matching the project's published `checksums.txt`/`.sha256`
+files, or the GitHub release asset digest for Nixpacks, which ships none) and
+the extracted binary: the script verifies the archive before extracting, the
+binary before installing, and the cached binary on every build (a mismatch
+re-downloads, a mismatched download fails the build with "Checksum mismatch").
+Verified live: a tampered cached binary was re-downloaded, a wrong pinned
+checksum failed the build and installed nothing. Bumping a version means
+updating these checksums. Commands: `nixpacks build <dir> --name <tag>` (shells
+out to the docker CLI with BuildKit), `railpack prepare <dir> --plan-out ...`
+then `docker buildx build` with the build arg
 `BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend:v<version>`,
 `-f <plan> -t <tag> --load <dir>` (the documented production path, no separate
 BuildKit daemon needed), and `pack build <tag> --builder <builder>` with
@@ -938,30 +1013,31 @@ BuildKit daemon needed), and `pack build <tag> --builder <builder>` with
 with `PACK_VOLUME_KEY` set to the image name so a service reuses its cache
 volumes. User input only travels as env vars quoted inside the fixed script,
 never spliced into it. Verified live on Docker Desktop (arm64): Nixpacks and
-Railpack built and ran a Node app through `buildFromGit`. **Real, tested
-findings for pack**: without `--network` it creates an ephemeral bridge network
-per build, which fails with "all predefined address pools have been fully
-subnetted" on a daemon with many networks, hence `--network bridge`; and on
-Docker Desktop's containerd image store the export step fails with "does not
+Railpack built and ran a Node app through `Builder.BuildWithProgress`. **Real,
+tested findings for pack**: without `--network` it creates an ephemeral bridge
+network per build, which fails with "all predefined address pools have been
+fully subnetted" on a daemon with many networks, hence `--network bridge`; and
+on Docker Desktop's containerd image store the export step fails with "does not
 provide the specified platform" (a pack/containerd-store issue, `--platform`
 doesn't help), so buildpacks got as far as export there but weren't seen
 producing an image; a Linux engine with the classic store is the expected
 target. A cache registry is a BuildKit registry cache for `dockerfile`, `bake`
-and `railpack` (see below) and ignored by Nixpacks and pack. The agent is Go and
-can't import `builder-run.ts`, so the two sides share by **file identity**
-instead of by hand-copying: `internal/agent/builder.sh` and
-`internal/agent/builder-tools.json` are checked in verbatim (the same script and
-the same methods/versions/checksums/images/bake-defaults `builder-run.ts`
-exports as TS constants) and `//go:embed`-ed by `internal/agent/builders.go`.
-Two tests pin both sides to those same two files rather than to each other:
-`tests/unit/app/agent-builder-parity.test.ts` (on the app side, `bun:test`)
-asserts `builder-run.ts`'s exports equal what's checked into `cmd/agent/`,
-including golden fixtures under `internal/agent/testdata/*.json` for
-`builderEnv`/build-failure-message parity across every recorded input; and
-`internal/agent/builders_test.go` (on the agent side, `go test`) asserts the
-agent's own runtime behavior against the same embedded files. A change to
-`builder-run.ts` that isn't mirrored into `internal/agent/builder.sh`/
-`builder-tools.json` fails the app-side test, not silently drifts.
+and `railpack` (see below) and ignored by Nixpacks and pack.
+`internal/agent/builder.sh` and `internal/agent/builder-tools.json` (the script,
+methods/versions/checksums/images/bake-defaults) are `//go:embed`-ed by
+`internal/agent/builders.go` and are now the **only** copy : the app's own
+`docker/builder-run.ts`, which used to export the same methods/checksums/etc. as
+TS constants purely so the two sides could be pinned against each other, was
+deleted along with the rest of `docker/git-build.ts`'s TS pipeline. What's left
+of that parity check is narrower: `tests/unit/app/agent-builder-parity.test.ts`
+now only asserts `$lib/build-methods`'s form-facing constants (`BUILD_METHODS`,
+`BAKE_TARGET_PATTERN`, the bake defaults) equal what's checked into
+`builder-tools.json`, so the new-service form and Source tab never offer a
+method or bake default the builder itself would reject — golden-fixture
+`BuilderEnv`/build-failure-message parity across every recorded input is now
+`tests/unit/go/internal/agent/builders_test.go`'s job alone (`go test`, against
+the same embedded files, `tests/unit/go/internal/agent/testdata/*.json`), with
+no TS side left to pin it against.
 
 Any git-clone-able HTTPS URL works, this is what makes it "Git providers,
 including self-hosted Gitea" without any provider-specific API integration for
@@ -975,8 +1051,8 @@ private repo can still fall back to a token embedded in the URL
 **Build cache and build servers** (`build_cache_registry`,
 `service.buildCacheRegistryId`/`buildServerRemoteHostId`,
 `/build-cache-registries`): a git-mode service can name a registry credential to
-use as a BuildKit layer cache: `builderEnv` sets `CACHE_REF`
-(`<registry>/homerun-build-<slug>:buildcache`, `buildCacheRef`) plus the
+use as a BuildKit layer cache: `BuilderEnv` sets `CACHE_REF`
+(`<registry>/homerun-build-<slug>:buildcache`, `BuildCacheRef`) plus the
 credentials, and the script logs in (`docker login --password-stdin` inside the
 ephemeral helper, so nothing persists) and adds
 `--cache-from type=registry,ref=<ref>` and

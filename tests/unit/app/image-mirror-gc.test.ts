@@ -3,14 +3,11 @@ import { splitImageRef } from "../../../src/lib/image-ref";
 import { mirrorRepository } from "../../../src/lib/services/docker/image-scan-refs";
 import {
 	isValidRepository,
-	KEEP_TAG_PREFIX,
-	keepTagFor,
 	MANIFEST_ACCEPT,
 	MirrorRegistryClient,
 	mirrorKeepSet,
 	nextCatalogPath,
 	parseDuKilobytes,
-	planMirrorGc,
 } from "../../../src/lib/services/docker/mirror-registry";
 
 const digest = (char: string) => `sha256:${char.repeat(64)}`;
@@ -74,54 +71,6 @@ describe("mirror keep set", () => {
 			{ digest: digest("a"), repository: ALPINE },
 			{ digest: digest("b"), repository: ALPINE },
 		]);
-	});
-});
-
-describe("planMirrorGc", () => {
-	test("deletes unreferenced manifests, pins untagged keepers, drops dead repositories", () => {
-		const inventory = [
-			{ digest: digest("1"), repository: ALPINE, tag: "3.20" },
-			{ digest: digest("1"), repository: ALPINE, tag: "latest" },
-			{ digest: digest("2"), repository: ALPINE, tag: "3.19" },
-			{ digest: digest("3"), repository: ALPINE, tag: "3.18" },
-			{ digest: digest("9"), repository: ALPINE, tag: keepTagFor(digest("9")) },
-			{ digest: digest("5"), repository: NGINX, tag: "1.27" },
-		];
-		const plan = planMirrorGc(inventory, [ALPINE, NGINX, "ghcr.io/empty"], {
-			digests: [
-				{ digest: digest("2"), repository: ALPINE },
-				{ digest: digest("7"), repository: ALPINE },
-				{ digest: digest("8"), repository: "docker.io/library/gone" },
-			],
-			tags: [{ repository: ALPINE, tag: "3.20" }],
-		});
-		expect(plan.deletes).toEqual([
-			{ digest: digest("3"), repository: ALPINE },
-			{ digest: digest("9"), repository: ALPINE },
-			{ digest: digest("5"), repository: NGINX },
-		]);
-		expect(plan.pins).toEqual([
-			{ digest: digest("7"), repository: ALPINE, tag: keepTagFor(digest("7")) },
-		]);
-		expect(plan.emptiedRepositories).toEqual([NGINX, "ghcr.io/empty"]);
-		expect(plan.keptManifests).toBe(3);
-	});
-
-	test("an empty keep set deletes everything", () => {
-		const plan = planMirrorGc(
-			[{ digest: digest("1"), repository: ALPINE, tag: "3.20" }],
-			[ALPINE],
-			{ digests: [], tags: [] },
-		);
-		expect(plan.deletes).toHaveLength(1);
-		expect(plan.pins).toEqual([]);
-		expect(plan.emptiedRepositories).toEqual([ALPINE]);
-	});
-
-	test("keep tags are valid registry tags", () => {
-		const tag = keepTagFor(digest("f"));
-		expect(tag.startsWith(KEEP_TAG_PREFIX)).toBe(true);
-		expect(tag).toMatch(/^[\w][\w.-]{0,127}$/);
 	});
 });
 
@@ -232,34 +181,6 @@ describe("MirrorRegistryClient", () => {
 		await expect(
 			client.deleteManifest({ digest: digest("1"), repository: ALPINE }),
 		).rejects.toThrow("HTTP 405");
-	});
-
-	test("pins a digest by re-putting its manifest under a tag", async () => {
-		const manifest = JSON.stringify({ schemaVersion: 2 });
-		const type = "application/vnd.oci.image.manifest.v1+json";
-		const { calls, client } = fakeRegistry({
-			[`GET /v2/${ALPINE}/manifests/${digest("7")}`]: () =>
-				new Response(manifest, { headers: { "Content-Type": type } }),
-			[`PUT /v2/${ALPINE}/manifests/${keepTagFor(digest("7"))}`]: () =>
-				new Response(null, { status: 201 }),
-		});
-		expect(
-			await client.tagManifest({
-				digest: digest("7"),
-				repository: ALPINE,
-				tag: keepTagFor(digest("7")),
-			}),
-		).toBe(true);
-		const put = calls.find((call) => call.method === "PUT");
-		expect(put?.headers.get("content-type")).toBe(type);
-		expect(new TextDecoder().decode(put?.body as ArrayBuffer)).toBe(manifest);
-		expect(
-			await client.tagManifest({
-				digest: digest("8"),
-				repository: ALPINE,
-				tag: keepTagFor(digest("8")),
-			}),
-		).toBe(false);
 	});
 
 	test("ping reports an unreachable registry as false", async () => {

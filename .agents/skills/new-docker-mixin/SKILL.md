@@ -44,10 +44,9 @@ don't reintroduce a `class Foo { static bar() {...} }` barrel.
 3. In `docker.service.ts`, add your mixin to the chain. **Order matters and is
    load-bearing** — read the ordering comment already in that file before
    inserting yours. The existing precedent:
-   - **networks before containers** (`createAndStartContainer` calls
-     `this.connectToStackNetwork`)
-   - **containers before reconcile** (`syncServiceStatus` calls
-     `this.inspectStatus`)
+   - **containers before one-off** (`runOneOff` calls `this.pullImage`)
+   - **containers and swarm before reconcile** (`syncServiceStatus` calls
+     `this.inspectStatus`/`this.inspectSwarmServiceStatus`)
 
    If your mixin calls into an existing one's method, it must be chained _after_
    that one. If nothing calls into yours, order relative to unrelated mixins
@@ -61,12 +60,14 @@ don't reintroduce a `class Foo { static bar() {...} }` barrel.
 
 ## If this is a lifecycle operation reachable from a route
 
-Route handlers, the deploy action, the REST API, the cron scheduler, don't call
-`DockerService.createAndStartContainer` (or a new equivalent) directly for a
-full deploy — that's wrapped by `$lib/services/deploy.service.ts`'s
-`DeploymentService.deployService()`, which adds deployment-row bookkeeping. Only
-reach for the raw `DockerService` method directly for a genuinely standalone
-operation (start/stop/restart/logs), not a full deploy.
+Route handlers, the deploy action, the REST API, the cron scheduler, don't build
+a container/swarm-service create body directly for a full deploy — the
+create-and-roll-out step itself now runs in the Go worker
+(`internal/jobs/deploy/container.go`/`swarm.go`, see `worker.md`), reached only
+through `$lib/services/deploy.service.ts`'s `DeploymentService.deployService()`
+/ `enqueueDeploy()`, which build the worker spec and add deployment-row
+bookkeeping. Only reach for a raw `DockerService` method directly for a
+genuinely standalone operation (start/stop/restart/logs), not a full deploy.
 
 ## If this needs to work against a Remote Host
 
@@ -74,11 +75,12 @@ A registered remote host (`RemoteHostDTO`, `remote_host` table) is a build
 server, nothing else — every general remote-deploy branch was removed (migration
 `drizzle/0022_shiny_shiva.sql`), see `.agents/notes/docker.md`'s "Build servers"
 section. Deploys and lifecycle operations always run on the local daemon (or the
-local swarm manager); don't add a remote-host path to a lifecycle mixin. The
-only place `DockerService.getDocker(remote)` is ever called with a non-local
-connection is a git build: thread it through
-`RemoteHostDTO.resolveBuildTarget(hostId)`, the one place a host id becomes a
-`RemoteExecutionTarget`, the same way `docker/git-build.ts` does.
+local swarm manager); don't add a remote-host path to a lifecycle mixin. A git
+build to a `"docker"` build server is resolved the same way, through
+`RemoteHostDTO.resolveBuildTarget(hostId)` (the one place a host id becomes a
+`RemoteExecutionTarget`), but it's the Go worker that opens the actual remote
+connection now (`internal/jobs/deploy/build.go`'s `dockerapi.NewRemote`), not
+`DockerService.getDocker(remote)`.
 
 ## Finish
 

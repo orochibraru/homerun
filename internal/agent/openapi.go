@@ -4,6 +4,7 @@ import "github.com/orochibraru/homerun/internal/buildinfo"
 
 type object = map[string]any
 
+// jsonResponse is an OpenAPI response object with a JSON body of schema.
 func jsonResponse(description string, schema object) object {
 	return object{
 		"content":     object{"application/json": object{"schema": schema}},
@@ -64,7 +65,7 @@ var (
 			"bakeFile":     nullableString,
 			"bakeTarget":   object{"pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]*$", "type": []string{"string", "null"}},
 			"buildContext": nullableString,
-			"buildMethod":  object{"enum": append(toAny(tools.BuildMethods), nil)},
+			"buildMethod":  object{"enum": append(toAny(Tools.BuildMethods), nil)},
 			"commit":       object{"pattern": "^[0-9a-f]{40}$", "type": []string{"string", "null"}},
 			"credential": object{
 				"properties": object{"token": object{"minLength": 1, "type": "string"}, "username": object{"type": "string"}},
@@ -91,6 +92,7 @@ var (
 	}
 )
 
+// toAny widens a string slice to []any, for an OpenAPI enum value.
 func toAny(values []string) []any {
 	out := make([]any, 0, len(values))
 	for _, value := range values {

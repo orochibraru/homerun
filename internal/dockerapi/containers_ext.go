@@ -83,7 +83,7 @@ func (c *Client) ListContainersByLabel(ctx context.Context, label string) ([]Con
 
 // PathExists reports whether path exists inside a container, running or not.
 func (c *Client) PathExists(ctx context.Context, id, path string) (bool, error) {
-	err := c.call(ctx, http.MethodHead, "/containers/"+id+"/archive", url.Values{"path": {path}}, nil)
+	err := c.Call(ctx, http.MethodHead, "/containers/"+id+"/archive", url.Values{"path": {path}}, nil)
 	if errors.Is(err, ErrNotFound) {
 		return false, nil
 	}
@@ -113,4 +113,51 @@ func (c *Client) AttachContainer(ctx context.Context, id string) (io.ReadCloser,
 		return nil, err
 	}
 	return response.Body, nil
+}
+
+// CreateContainerOn creates a container like CreateContainer, attached to
+// network (the HostConfig NetworkMode) when it isn't empty.
+func (c *Client) CreateContainerOn(ctx context.Context, config ContainerConfig, network string) (string, error) {
+	hostConfig := map[string]any{"Binds": config.Binds}
+	if network != "" {
+		hostConfig["NetworkMode"] = network
+	}
+	body := map[string]any{
+		"Cmd":        config.Cmd,
+		"Entrypoint": config.Entrypoint,
+		"Env":        config.Env,
+		"HostConfig": hostConfig,
+		"Image":      config.Image,
+		"Labels":     config.Labels,
+		"Tty":        false,
+	}
+	return c.CreateContainerFrom(ctx, "", body)
+}
+
+// MountSource is the host-side source of the mount container has at
+// destination, or "" when the container doesn't exist or has no such mount.
+func (c *Client) MountSource(ctx context.Context, container, destination string) (string, error) {
+	response, err := c.request(ctx, http.MethodGet, "/containers/"+container+"/json", nil, nil, nil)
+	if errors.Is(err, ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = response.Body.Close() }()
+	var inspected struct {
+		Mounts []struct {
+			Destination string `json:"Destination"`
+			Source      string `json:"Source"`
+		} `json:"Mounts"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&inspected); err != nil {
+		return "", err
+	}
+	for _, mount := range inspected.Mounts {
+		if mount.Destination == destination {
+			return mount.Source, nil
+		}
+	}
+	return "", nil
 }

@@ -6,165 +6,19 @@ import {
 	evaluateScanPolicy,
 	isBlockSeverity,
 	severitiesAtOrAbove,
-	summarizeTrivyReport,
 } from "../../../src/lib/image-scan";
 import type { GitBuildPlan } from "../../../src/lib/services/deploy/plan";
 import { buildScanTargets } from "../../../src/lib/services/deploy/scan-targets";
 import {
-	extractDigest,
 	isRootlessDaemon,
-	lastErrorLine,
 	MIRROR_HOST_PORT,
 	mirrorRefs,
 	normalizeImageRef,
-	pinnedToDigest,
 	REGISTRY_AUTH_ENV,
-	registryAuthFile,
 	skopeoArchiveCommand,
 	skopeoCopyCommand,
-	trivyImageCommand,
 } from "../../../src/lib/services/docker/image-scan-refs";
 import { imageScanMessage } from "../../../src/lib/services/notification-messages";
-
-const DIGEST = `sha256:${"a".repeat(64)}`;
-
-function vulnerability(
-	id: string,
-	severity: string,
-	pkg = "openssl",
-	fixed: string | null = "3.0.9",
-) {
-	return {
-		FixedVersion: fixed ?? undefined,
-		InstalledVersion: "3.0.8",
-		PkgName: pkg,
-		Severity: severity,
-		Title: `${id} title`,
-		VulnerabilityID: id,
-	};
-}
-
-function report(results: unknown[]): string {
-	return JSON.stringify({ ArtifactName: "alpine:3.18.0", Results: results });
-}
-
-describe("summarizeTrivyReport", () => {
-	test("counts findings per severity across every result", () => {
-		const summary = summarizeTrivyReport(
-			report([
-				{
-					Target: "alpine",
-					Vulnerabilities: [
-						vulnerability("CVE-1", "CRITICAL"),
-						vulnerability("CVE-2", "HIGH"),
-						vulnerability("CVE-3", "MEDIUM"),
-					],
-				},
-				{
-					Target: "app/package-lock.json",
-					Vulnerabilities: [
-						vulnerability("GHSA-1", "LOW", "lodash"),
-						vulnerability("CVE-4", "weird", "zlib"),
-					],
-				},
-				{ Target: "clean layer" },
-			]),
-		);
-		expect(summary.counts).toEqual({
-			critical: 1,
-			high: 1,
-			low: 1,
-			medium: 1,
-			unknown: 1,
-		});
-		expect(summary.totalFindings).toBe(5);
-		expect(summary.fixableCounts).toEqual({
-			critical: 1,
-			high: 1,
-			low: 1,
-			medium: 1,
-			unknown: 1,
-		});
-	});
-
-	test("counts only findings with a fixed version as fixable", () => {
-		const summary = summarizeTrivyReport(
-			report([
-				{
-					Vulnerabilities: [
-						vulnerability("CVE-1", "CRITICAL", "a", null),
-						vulnerability("CVE-2", "CRITICAL", "b"),
-						vulnerability("CVE-3", "HIGH", "c", null),
-					],
-				},
-			]),
-		);
-		expect(summary.counts).toEqual({ ...emptyCounts(), critical: 2, high: 1 });
-		expect(summary.fixableCounts).toEqual({ ...emptyCounts(), critical: 1 });
-	});
-
-	test("de-duplicates a CVE reported twice for the same package version", () => {
-		const summary = summarizeTrivyReport(
-			report([
-				{ Vulnerabilities: [vulnerability("CVE-1", "HIGH")] },
-				{ Vulnerabilities: [vulnerability("CVE-1", "HIGH")] },
-				{ Vulnerabilities: [vulnerability("CVE-1", "HIGH", "libssl")] },
-			]),
-		);
-		expect(summary.totalFindings).toBe(2);
-		expect(summary.counts.high).toBe(2);
-	});
-
-	test("sorts by severity, fixable first, and caps what it keeps", () => {
-		const summary = summarizeTrivyReport(
-			report([
-				{
-					Vulnerabilities: [
-						vulnerability("CVE-LOW", "LOW"),
-						vulnerability("CVE-B", "CRITICAL", "b", null),
-						vulnerability("CVE-A", "CRITICAL", "a"),
-						vulnerability("CVE-HIGH", "HIGH"),
-					],
-				},
-			]),
-			3,
-		);
-		expect(summary.findings.map((finding) => finding.id)).toEqual([
-			"CVE-A",
-			"CVE-B",
-			"CVE-HIGH",
-		]);
-		expect(summary.findings[1]?.fixedVersion).toBeNull();
-		expect(summary.totalFindings).toBe(4);
-	});
-
-	test("maps the fields the UI shows", () => {
-		const [finding] = summarizeTrivyReport(
-			report([{ Vulnerabilities: [vulnerability("CVE-9", "critical")] }]),
-		).findings;
-		expect(finding).toEqual({
-			fixedVersion: "3.0.9",
-			id: "CVE-9",
-			installedVersion: "3.0.8",
-			pkg: "openssl",
-			severity: "CRITICAL",
-			title: "CVE-9 title",
-		});
-	});
-
-	test("a report with no results is a clean image", () => {
-		const summary = summarizeTrivyReport(JSON.stringify({ SchemaVersion: 2 }));
-		expect(summary.counts).toEqual(emptyCounts());
-		expect(summary.findings).toEqual([]);
-	});
-
-	test("rejects output that isn't a JSON report", () => {
-		expect(() => summarizeTrivyReport("FATAL no such image")).toThrow(
-			"Trivy didn't return a JSON report.",
-		);
-		expect(() => summarizeTrivyReport("[]")).toThrow();
-	});
-});
 
 describe("evaluateScanPolicy", () => {
 	const counts = { ...emptyCounts(), high: 2, low: 4, medium: 3, unknown: 7 };
@@ -333,37 +187,6 @@ describe("image refs", () => {
 			"homerun-mirror:5000/registry.local-8443/team/app:x",
 		);
 	});
-
-	test("pins a swarm image to the scanned digest", () => {
-		const pinned = pinnedToDigest("nginx", "1.27", DIGEST);
-		expect(`${pinned.image}:${pinned.tag}`).toBe(`nginx:1.27@${DIGEST}`);
-	});
-
-	test("reads the digest skopeo writes, ignoring anything before it", () => {
-		expect(
-			extractDigest(`Copying blob sha256:${"b".repeat(64)}\n${DIGEST}`),
-		).toBe(DIGEST);
-		expect(extractDigest("no digest here")).toBeNull();
-	});
-
-	test("writes a skopeo auth file keyed by the image's registry", () => {
-		const file = JSON.parse(
-			registryAuthFile("docker.io", { password: "p@ss", username: "me" }),
-		);
-		const auth = Buffer.from("me:p@ss").toString("base64");
-		expect(file).toEqual({
-			auths: {
-				"docker.io": { auth },
-				"index.docker.io": { auth },
-			},
-		});
-		expect(
-			Object.keys(
-				JSON.parse(registryAuthFile("ghcr.io", { password: "", username: "u" }))
-					.auths,
-			),
-		).toEqual(["ghcr.io"]);
-	});
 });
 
 describe("helper commands", () => {
@@ -400,44 +223,6 @@ describe("helper commands", () => {
 		expect(command.cmd[0]).toBe("skopeo");
 		expect(command.cmd).toContain("--src-authfile");
 		expect(command.cmd.slice(-2)).toEqual(["docker://src", "docker://dest"]);
-	});
-
-	test("trivy scans the mirror over plain HTTP", () => {
-		const args = trivyImageCommand("homerun-mirror:5000/x:1", {
-			insecure: true,
-			kind: "remote",
-		});
-		expect(args.slice(0, 4)).toEqual([
-			"image",
-			"--image-src",
-			"remote",
-			"--insecure",
-		]);
-		expect(args).toContain("json");
-		expect(args.at(-1)).toBe("homerun-mirror:5000/x:1");
-	});
-
-	test("trivy scans a local image through the socket", () => {
-		expect(trivyImageCommand("app:1", { kind: "docker" }).slice(1, 3)).toEqual([
-			"--image-src",
-			"docker",
-		]);
-		expect(trivyImageCommand("app:1", { kind: "any" })[2]).toBe(
-			"docker,remote",
-		);
-		expect(
-			trivyImageCommand("r/app:1", { insecure: false, kind: "remote" }),
-		).not.toContain("--insecure");
-	});
-
-	test("picks the error line out of helper output", () => {
-		expect(
-			lastErrorLine(
-				"2024 INFO starting\n2024 FATAL unable to find the specified image\n\n",
-			),
-		).toBe("2024 FATAL unable to find the specified image");
-		expect(lastErrorLine("just a line\n")).toBe("just a line");
-		expect(lastErrorLine("")).toBe("no output");
 	});
 });
 

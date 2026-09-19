@@ -2,25 +2,14 @@ import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
 import type { BaseDockerService, Constructor } from "./base.ts";
-import type { ReadinessPlanInput } from "./container-rollout.ts";
-import type {
-	PullImageParams,
-	RegistryAuth,
-	VolumeMountParams,
-} from "./containers.ts";
+import type { RegistryAuth, VolumeMountParams } from "./containers.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
 import { toLogStream } from "./log-stream.ts";
-import {
-	type ReadinessCheck,
-	readinessHealthcheck,
-	readinessLabels,
-} from "./readiness.ts";
 import {
 	type ContainerRuntimeParams,
 	capabilityName,
 	mergeLabels,
 } from "./runtime-options.ts";
-import type { SwarmServiceSpec } from "./swarm-rollout.ts";
 
 const logger = new Logger("Swarm");
 
@@ -190,20 +179,6 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 	};
 }
 
-/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the container mixin's pullImage and the swarm rollout mixin. */
-interface RequiresContainerMixin {
-	planReadiness: (
-		input: ReadinessPlanInput,
-		onProgress?: (line: string) => void,
-	) => Promise<ReadinessCheck>;
-	rollOutSwarmService: (
-		swarmServiceId: string,
-		spec: SwarmServiceSpec,
-		onProgress?: (line: string) => void,
-	) => Promise<{ swarmServiceId: string }>;
-	pullImage: (params: PullImageParams) => Promise<{ digest: string | null }>;
-}
-
 export interface SwarmReadiness {
 	network: string;
 	overlayReady: boolean;
@@ -252,9 +227,9 @@ export interface CreateSwarmServiceParams {
  * `--providers.swarm` flags on the live container.
  */
 // oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
-export function DockerSwarmMixin<
-	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
->(Base: TBase) {
+export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
+	Base: TBase,
+) {
 	return class DockerSwarmService extends Base {
 		/** Whether this daemon is already a swarm manager. */
 		async isSwarmActive(): Promise<boolean> {
@@ -371,137 +346,6 @@ export function DockerSwarmMixin<
 			}
 		}
 
-		/**
-		 * Best-effort pre-pull : same "warn, don't block" posture as a bad
-		 * image ref elsewhere, createService still surfaces a real error if
-		 * the daemon genuinely can't pull the image itself.
-		 */
-		async #prePullImage(
-			params: CreateSwarmServiceParams,
-			onProgress?: (line: string) => void,
-		): Promise<void> {
-			try {
-				await this.pullImage({
-					auth: params.auth,
-					image: params.image,
-					onProgress,
-					tag: params.tag,
-				});
-			} catch (err) {
-				logger.warn(
-					`Pull before service create failed for ${params.image}:${params.tag}`,
-					err,
-				);
-			}
-		}
-
-		/**
-		 * Pulls the image, then creates or updates the swarm service backing
-		 * one Homerun service: ensures the shared overlay network, best-effort
-		 * pre-pulls the image (`#prePullImage`), then either rolls the existing
-		 * swarm service for this service id (found by label, see
-		 * `#findSwarmService`) onto the new spec in place, health-gated
-		 * (`rollOutSwarmService`, with the readiness check `planReadiness`
-		 * picks), or creates it. Reports progress via
-		 * `onProgress`.
-		 *
-		 * @throws When the Docker create-service call fails, or
-		 *   `RolloutFailedError` when swarm rolled the update back.
-		 */
-		async createAndStartSwarmService(
-			params: CreateSwarmServiceParams,
-			onProgress?: (line: string) => void,
-		): Promise<{ swarmServiceId: string }> {
-			const docker = this.getDocker();
-			await this.ensureSwarmNetwork(swarmNetworkName());
-
-			const existing = await this.#findSwarmService(params.serviceId);
-			await this.#prePullImage(params, onProgress);
-
-			if (params.runtime?.privileged || params.runtime?.devices.length) {
-				onProgress?.(
-					"Swarm services can't run privileged or map devices : those settings are ignored under swarm mode.",
-				);
-			}
-			for (const line of await this.#multiNodeWarnings(params)) {
-				onProgress?.(line);
-			}
-			const readiness = await this.planReadiness(
-				{
-					...params,
-					image: `${params.image}:${params.tag}`,
-					workload: "task",
-				},
-				onProgress,
-			);
-			const template = swarmServiceTemplate(params);
-			const spec = {
-				...template,
-				Name: this.#swarmServiceName(params.slug, params.stackSlug),
-				TaskTemplate: {
-					...template.TaskTemplate,
-					ContainerSpec: {
-						...template.TaskTemplate.ContainerSpec,
-						Env: Object.entries(params.envVars).map(([k, v]) => `${k}=${v}`),
-						Healthcheck: readinessHealthcheck(
-							readiness,
-							params.healthcheckCommand,
-						),
-						Image: `${params.image}:${params.tag}`,
-						Labels: {
-							...template.TaskTemplate.ContainerSpec.Labels,
-							...readinessLabels(readiness),
-						},
-					},
-				},
-			};
-			if (existing) {
-				return await this.rollOutSwarmService(existing.ID, spec, onProgress);
-			}
-			onProgress?.("Creating swarm service...");
-			// Swarm has no per-service EXPOSE equivalent to declare protocols
-			// the way standalone containers do, and no port is published
-			// either way (matching the rest of this app's "no host port
-			// publishing by design" stance), so params.portProtocol isn't
-			// attached to anything dockerode's swarm API accepts here.
-			const created = await docker.createService(spec);
-
-			logger.info(
-				`Swarm service created: id=${created.id ?? created.ID} service=${params.serviceId}`,
-			);
-			return { swarmServiceId: created.id ?? created.ID };
-		}
-
-		/**
-		 * What stops working once the swarm has more than one node: an image
-		 * built on this host has no registry for another node to pull it from,
-		 * and a named volume or bind path only exists on the node a replica
-		 * lands on. Empty on a single-node swarm, or when the nodes can't be
-		 * listed.
-		 */
-		async #multiNodeWarnings(
-			params: CreateSwarmServiceParams,
-		): Promise<string[]> {
-			const nodes = await this.getDocker()
-				.listNodes()
-				.catch(() => []);
-			if (nodes.length < 2) {
-				return [];
-			}
-			const warnings: string[] = [];
-			if (params.image.startsWith("homerun-build-")) {
-				warnings.push(
-					"This image was built on this host and never pushed to a registry : replicas placed on another swarm node can't pull it. Set a build cache registry on the Source tab.",
-				);
-			}
-			if ((params.volumes ?? []).length > 0) {
-				warnings.push(
-					"Volumes are local to each swarm node : a replica placed on another node gets its own empty copy.",
-				);
-			}
-			return warnings;
-		}
-
 		/** Removes a swarm service via the Docker API. */
 		async removeSwarmService(swarmServiceId: string): Promise<void> {
 			await this.getDocker().getService(swarmServiceId).remove();
@@ -609,23 +453,6 @@ export function DockerSwarmMixin<
 			return toLogStream(
 				logs as Buffer | (NodeJS.ReadableStream & { destroy: () => void }),
 			);
-		}
-
-		/** Swarm-service name this app gives its services, with a random suffix so a redeploy never collides on "name already in use" (mirrors `#containerName` in containers.ts). */
-		#swarmServiceName(slug: string, stackSlug?: string | null): string {
-			const suffix = crypto.randomUUID().slice(0, 8);
-			const prefix = stackSlug ? `${stackSlug}-` : "";
-			return `homerun-${prefix}${slug}-${suffix}`;
-		}
-
-		/** The currently-running (or last) swarm service for a Homerun service, if any : found by its service-id label, not by name. */
-		async #findSwarmService(serviceId: string): Promise<{ ID: string } | null> {
-			const services = await this.getDocker().listServices({
-				filters: JSON.stringify({
-					label: [`${SERVICE_ID_LABEL}=${serviceId}`],
-				}),
-			});
-			return services[0] ? { ID: services[0].ID } : null;
 		}
 	};
 }

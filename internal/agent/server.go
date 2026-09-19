@@ -45,6 +45,7 @@ func (s *Server) Handler() http.Handler {
 	return mux
 }
 
+// writeJSON writes body as a JSON response with the given status.
 func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -68,6 +69,7 @@ type statusRecorder struct {
 	status int
 }
 
+// WriteHeader records status before delegating to the wrapped ResponseWriter.
 func (r *statusRecorder) WriteHeader(status int) {
 	r.status = status
 	r.ResponseWriter.WriteHeader(status)
@@ -98,13 +100,15 @@ func (s *Server) authed(handler handlerFunc) http.Handler {
 // agent's own, compared in constant time.
 func (s *Server) checkAuth(r *http.Request) bool {
 	presented, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	return ok && presented != "" && tokensMatch(presented, s.token)
+	return ok && presented != "" && TokensMatch(presented, s.token)
 }
 
+// health answers GET /v1/health with the agent's status and version, with no auth required.
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": buildinfo.Version})
 }
 
+// openAPI answers GET /v1/openapi.json with the agent's OpenAPI document.
 func (s *Server) openAPI(w http.ResponseWriter, r *http.Request) {
 	scheme := "http"
 	if r.TLS != nil {
@@ -113,6 +117,7 @@ func (s *Server) openAPI(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, openAPIDocument(fmt.Sprintf("%s://%s", scheme, r.Host)))
 }
 
+// statsRoute answers GET /v1/stats with a fresh host stats sample.
 func (s *Server) statsRoute(w http.ResponseWriter, _ *http.Request) error {
 	writeJSON(w, http.StatusOK, s.stats.Sample())
 	return nil
@@ -125,7 +130,7 @@ func (s *Server) build(w http.ResponseWriter, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		return answer(w, http.StatusBadRequest, map[string]any{
 			"error":  "Invalid request body",
-			"issues": []validationIssue{{Message: "the body isn't valid JSON", Path: []string{}}},
+			"issues": []ValidationIssue{{Message: "the body isn't valid JSON", Path: []string{}}},
 		})
 	}
 	if issues := validateBuildInput(input); len(issues) > 0 {
@@ -148,7 +153,7 @@ func (s *Server) saveImage(w http.ResponseWriter, r *http.Request) error {
 	if ref == "" {
 		return answer(w, http.StatusBadRequest, map[string]any{
 			"error":  "Invalid query",
-			"issues": []validationIssue{{Message: "ref is required", Path: []string{"ref"}}},
+			"issues": []ValidationIssue{{Message: "ref is required", Path: []string{"ref"}}},
 		})
 	}
 	archive, err := s.docker.SaveImage(r.Context(), ref)
@@ -168,8 +173,8 @@ func (s *Server) saveImage(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// validationIssue is one reason a request body was refused.
-type validationIssue struct {
+// ValidationIssue is one reason a request body was refused.
+type ValidationIssue struct {
 	Message string   `json:"message"`
 	Path    []string `json:"path"`
 }
@@ -179,10 +184,10 @@ var commitPattern = regexp.MustCompile(`(?i)^[0-9a-f]{40}$`)
 // validateBuildInput checks a build request the way the TypeScript agent's zod
 // schema did, returning one issue per problem so a malformed request fails as
 // a clean 400 instead of deep inside a docker call.
-func validateBuildInput(input BuildInput) []validationIssue {
-	issues := []validationIssue{}
+func validateBuildInput(input BuildInput) []ValidationIssue {
+	issues := []ValidationIssue{}
 	add := func(message string, path ...string) {
-		issues = append(issues, validationIssue{Message: message, Path: path})
+		issues = append(issues, ValidationIssue{Message: message, Path: path})
 	}
 	if input.GitURL == "" {
 		add("gitUrl is required", "gitUrl")
@@ -193,8 +198,8 @@ func validateBuildInput(input BuildInput) []validationIssue {
 	if input.Commit != nil && *input.Commit != "" && !commitPattern.MatchString(*input.Commit) {
 		add("commit must be a full 40-character SHA", "commit")
 	}
-	if input.BuildMethod != nil && *input.BuildMethod != "" && !isBuildMethod(*input.BuildMethod) {
-		add(fmt.Sprintf("buildMethod must be one of %s", strings.Join(tools.BuildMethods, ", ")), "buildMethod")
+	if input.BuildMethod != nil && *input.BuildMethod != "" && !IsBuildMethod(*input.BuildMethod) {
+		add(fmt.Sprintf("buildMethod must be one of %s", strings.Join(Tools.BuildMethods, ", ")), "buildMethod")
 	}
 	if input.BakeTarget != nil && *input.BakeTarget != "" && !bakeTargetPattern.MatchString(*input.BakeTarget) {
 		add("bakeTarget must be a plain target name", "bakeTarget")

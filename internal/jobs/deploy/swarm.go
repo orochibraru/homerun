@@ -11,7 +11,7 @@ import (
 )
 
 // startSwarm creates or updates the swarm service backing the Homerun
-// service, mirroring createAndStartSwarmService in docker/swarm.ts: an existing
+// service: an existing
 // one is rolled onto the new spec in place, health-gated, anything else is
 // created.
 func (r *run) startSwarm(ctx context.Context, image resolvedImage) (string, error) {
@@ -50,7 +50,7 @@ func (r *run) startSwarm(ctx context.Context, image resolvedImage) (string, erro
 	}
 	containerSpec["Env"] = env
 	containerSpec["Image"] = image.ref()
-	containerSpec["Labels"] = withLabels(containerSpec["Labels"], readinessLabels(check))
+	containerSpec["Labels"] = withLabels(containerSpec["Labels"], ReadinessLabels(check))
 	if healthcheck := r.healthcheck(check); healthcheck != nil {
 		containerSpec["Healthcheck"] = healthcheck
 	}
@@ -87,14 +87,13 @@ func (r *run) multiNodeWarnings(ctx context.Context, image resolvedImage) {
 }
 
 // rollOutSwarm updates an existing swarm service to spec in place (keeping its
-// name, forcing new tasks) and waits for swarm to finish, mirroring
-// rollOutSwarmService in docker/swarm-rollout.ts.
+// name, forcing new tasks) and waits for swarm to finish.
 func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any) (string, error) {
 	inspected, err := r.docker.InspectSwarmService(ctx, id)
 	if err != nil {
 		return "", err
 	}
-	order := swarmUpdateOrder(r.spec.Volumes)
+	order := SwarmUpdateOrder(r.spec.Volumes)
 	if order == "start-first" {
 		r.progress.line("Updating the swarm service : each new task starts first, and swarm stops the old one once the new one is running (healthy, when it has a healthcheck)...")
 	} else {
@@ -128,6 +127,8 @@ func (r *run) rollOutSwarm(ctx context.Context, id string, spec map[string]any) 
 	return id, nil
 }
 
+// awaitSwarmUpdate polls the swarm service update until it completes, fails,
+// or outlives swarmUpdateMaxWait.
 func (r *run) awaitSwarmUpdate(ctx context.Context, id, previousStartedAt string) error {
 	started := time.Now()
 	for {
@@ -144,11 +145,11 @@ func (r *run) awaitSwarmUpdate(ctx context.Context, id, previousStartedAt string
 		if err != nil {
 			return err
 		}
-		switch outcome := swarmUpdateOutcome(inspected, previousStartedAt); outcome.state {
+		switch outcome := SwarmUpdateOutcome(inspected, previousStartedAt); outcome.State {
 		case "completed":
 			return nil
 		case "failed":
-			return &kindError{kind: FailureRolloutFailed, err: errors.New(outcome.reason)}
+			return &kindError{kind: FailureRolloutFailed, err: errors.New(outcome.Reason)}
 		}
 	}
 }

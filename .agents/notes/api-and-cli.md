@@ -190,20 +190,22 @@ through a real account/API key against a real Docker daemon (see
 A standalone **Go** program, a package in a single Go module at the repo root
 (`go.mod`), shared with `cmd/installer/` and `cmd/agent/` (all three now Go, the
 agent was the last to be rewritten from Bun/TypeScript, see
-`packages-and-release.md`): `check:cli` is `go vet ./cmd/cli/...`,
-`test:unit:cli` is `go test ./cmd/cli/...` (`internal/cli/cli_test.go`), and
-`scripts/build-packages.ts` builds it with `go build` rather than
-`Bun.build({compile: ...})`. **Rewritten from TypeScript** to cut release size:
-a `bun build --compile` binary embeds the whole Bun runtime (~81MB on linux/x64,
-same size as a hello-world; `strip`/`--bytecode` changed nothing), the Go binary
-is ~6MB. It hand-rolls arg parsing and uses Go's stdlib `net/http` rather than
-Commander/`openapi-fetch`, and has no generated types at all: it defines small
-structs for only the fields it formats (`commands.go`/`client.go`) and passes
-everything else through as raw JSON. `cmd/cli/generated/` is gone; `bun run gen`
-still regenerates OpenAPI types (`tests/integration/support/openapi-types.ts`),
-but they now feed only `tests/integration/support/client.ts`, not this CLI. Auth
-is `x-api-key`/`--api-key`, same header the REST API's own hooks check first for
-a non-cookie caller. Commands:
+`packages-and-release.md`): `check:cli` is
+`go vet ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`,
+`test:unit:cli` is the `go test` equivalent
+(`tests/unit/go/internal/cli/cli_test.go`), and `scripts/build-packages.ts`
+builds it with `go build` rather than `Bun.build({compile: ...})`. **Rewritten
+from TypeScript** to cut release size: a `bun build --compile` binary embeds the
+whole Bun runtime (~81MB on linux/x64, same size as a hello-world;
+`strip`/`--bytecode` changed nothing), the Go binary is ~6MB. It hand-rolls arg
+parsing and uses Go's stdlib `net/http` rather than Commander/`openapi-fetch`,
+and has no generated types at all: it defines small structs for only the fields
+it formats (`commands.go`/`client.go`) and passes everything else through as raw
+JSON. `cmd/cli/generated/` is gone; `bun run gen` still regenerates OpenAPI
+types (`tests/integration/support/openapi-types.ts`), but they now feed only
+`tests/integration/support/client.ts`, not this CLI. Auth is
+`x-api-key`/`--api-key`, same header the REST API's own hooks check first for a
+non-cookie caller. Commands:
 `services {list,get,deploy,start,stop,restart,scan}`,
 `services scans {list,get}` (`list` is the group's `isDefault` subcommand, so
 `services scans <id>` works), `stacks list`, `templates list`, no

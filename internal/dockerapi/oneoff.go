@@ -40,6 +40,7 @@ type outputWriter struct {
 	onOutput func(string)
 }
 
+// Write buffers chunk and forwards it to onOutput, if set.
 func (w *outputWriter) Write(chunk []byte) (int, error) {
 	w.mu.Lock()
 	w.buffer = append(w.buffer, chunk...)
@@ -115,6 +116,7 @@ func (c *Client) RunOneOff(ctx context.Context, config OneOffConfig) (OneOffResu
 	return OneOffResult{ExitCode: code, Stderr: stderr.buffer, Stdout: stdout.buffer, TimedOut: timedOut.Load()}, nil
 }
 
+// createOneOff creates (but does not start) the one-off container for config.
 func (c *Client) createOneOff(ctx context.Context, config OneOffConfig) (string, error) {
 	hostConfig := map[string]any{"Privileged": config.Privileged}
 	if config.PidMode != "" {

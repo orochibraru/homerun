@@ -4,7 +4,7 @@ import { config } from "$lib/config";
 import { JobDTO } from "$lib/dto/job-dto";
 import { Logger } from "$lib/logger";
 import { APP_VERSION } from "$lib/server/app-version";
-import { demuxDockerFrames } from "$lib/services/docker/git-build";
+import { demuxDockerFrames } from "$lib/services/docker/log-stream";
 import { DockerService } from "$lib/services/docker.service";
 import { JobWorker } from "$lib/services/queue/worker";
 import {

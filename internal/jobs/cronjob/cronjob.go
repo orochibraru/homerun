@@ -76,12 +76,13 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 	output := string(result.Stdout) + string(result.Stderr)
 	return map[string]any{
 		"exitCode": result.ExitCode,
-		"output":   tail(output, maxOutputBytes),
+		"output":   Tail(output, maxOutputBytes),
 		"timedOut": result.TimedOut,
 	}, nil
 }
 
-func tail(text string, limit int) string {
+// Tail returns the last limit bytes of text, cut on a rune boundary.
+func Tail(text string, limit int) string {
 	if len(text) <= limit {
 		return text
 	}
@@ -99,16 +100,20 @@ type flusher struct {
 	pending strings.Builder
 }
 
+// newFlusher builds a flusher appending output to runID's cron_job_run row.
 func newFlusher(job jobs.Job, runID string) *flusher {
 	return &flusher{job: job, runID: runID}
 }
 
+// push appends chunk to the pending buffer, flushed on the next tick.
 func (f *flusher) push(chunk string) {
 	f.mu.Lock()
 	f.pending.WriteString(chunk)
 	f.mu.Unlock()
 }
 
+// start runs the periodic flush loop until the returned stop function is
+// called, which flushes one last time before returning.
 func (f *flusher) start() func() {
 	done := make(chan struct{})
 	finished := make(chan struct{})
@@ -132,6 +137,7 @@ func (f *flusher) start() func() {
 	}
 }
 
+// flush appends the pending buffer to the cron_job_run row, if there is any.
 func (f *flusher) flush() {
 	f.mu.Lock()
 	chunk := f.pending.String()

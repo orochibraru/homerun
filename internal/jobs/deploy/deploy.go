@@ -101,6 +101,7 @@ type Registry struct {
 	Username    string `json:"username"`
 }
 
+// auth converts Registry to the dockerapi.AuthConfig shape.
 func (r Registry) auth() dockerapi.AuthConfig {
 	return dockerapi.AuthConfig{Password: r.Password, ServerAddress: r.RegistryURL, Username: r.Username}
 }
@@ -170,7 +171,10 @@ type kindError struct {
 	err  error
 }
 
+// Error returns the wrapped error's message.
 func (e *kindError) Error() string { return e.err.Error() }
+
+// Unwrap returns the wrapped error.
 func (e *kindError) Unwrap() error { return e.err }
 
 type run struct {
@@ -207,6 +211,8 @@ func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
 	return r.result.asMap(), err
 }
 
+// deploy runs the deploy pipeline: build or resolve the image, scan it, start
+// the container or swarm service, and wait for it to become ready.
 func (r *run) deploy(ctx context.Context) error {
 	resolved, err := r.resolveImage(ctx)
 	if err != nil {
@@ -215,7 +221,7 @@ func (r *run) deploy(ctx context.Context) error {
 	r.result.Image, r.result.Tag, r.result.Digest = resolved.image, resolved.tag, resolved.digest
 	r.progress.serviceStatus(ctx, "starting")
 
-	r.progress.line(phaseContainer)
+	r.progress.line(PhaseContainer)
 	if r.spec.Workload.Kind == "swarm" {
 		id, err := r.startSwarm(ctx, resolved)
 		if err != nil {
@@ -230,13 +236,14 @@ func (r *run) deploy(ctx context.Context) error {
 		r.result.ContainerID = id
 	}
 
-	r.progress.line(phaseNetwork)
+	r.progress.line(PhaseNetwork)
 	if inspected, err := r.docker.InspectImage(ctx, resolved.ref()); err == nil {
 		r.result.ImageID = inspected.ID
 	}
 	return nil
 }
 
+// asMap round-trips Result through JSON into a map, for the job's stored result.
 func (r Result) asMap() map[string]any {
 	raw, err := json.Marshal(r)
 	if err != nil {

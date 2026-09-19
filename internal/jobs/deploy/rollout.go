@@ -16,19 +16,20 @@ const (
 	swarmUpdateMonitorN = 15_000_000_000
 )
 
-// sample is a container's health as the rollout judges it, mirroring
-// ContainerHealthSample in docker/rollout.ts.
-type sample struct {
-	exitCode     *int
-	health       string
-	healthOutput string
-	restartCount int
-	state        string
+// Sample is a container's health as the rollout judges it.
+type Sample struct {
+	ExitCode     *int
+	Health       string
+	HealthOutput string
+	RestartCount int
+	State        string
 }
 
-func sampleFromInspect(info *dockerapi.ContainerInspect) sample {
+// SampleFromInspect reads a Sample off a container inspect, or a "missing"
+// sample when info is nil (the container is gone).
+func SampleFromInspect(info *dockerapi.ContainerInspect) Sample {
 	if info == nil {
-		return sample{health: "none", state: "missing"}
+		return Sample{Health: "none", State: "missing"}
 	}
 	status := info.State.Status
 	if status == "" {
@@ -50,60 +51,69 @@ func sampleFromInspect(info *dockerapi.ContainerInspect) sample {
 		}
 	}
 	exitCode := info.State.ExitCode
-	return sample{exitCode: &exitCode, health: health, healthOutput: output, restartCount: info.RestartCount, state: status}
+	return Sample{ExitCode: &exitCode, Health: health, HealthOutput: output, RestartCount: info.RestartCount, State: status}
 }
 
-type verdict struct {
-	reason string
-	state  string
+// Verdict is a rollout judgement: State is "pending", "ready", "completed" or
+// "failed", with a human Reason for the latter.
+type Verdict struct {
+	Reason string
+	State  string
 }
 
-// readinessVerdict mirrors readinessVerdict in docker/rollout.ts.
-func readinessVerdict(s sample, elapsed, settle, maxWait time.Duration) verdict {
+// ReadinessVerdict judges a new workload's sample after elapsed: ready once
+// healthy (or running for settle without a healthcheck), failed once it
+// disappears, exits, restarts, turns unhealthy or outlives maxWait, pending
+// otherwise.
+func ReadinessVerdict(s Sample, elapsed, settle, maxWait time.Duration) Verdict {
 	switch {
-	case s.state == "missing":
-		return verdict{state: "failed", reason: "The new container disappeared."}
-	case s.state == "exited":
+	case s.State == "missing":
+		return Verdict{State: "failed", Reason: "The new container disappeared."}
+	case s.State == "exited":
 		code := "unknown"
-		if s.exitCode != nil {
-			code = fmt.Sprint(*s.exitCode)
+		if s.ExitCode != nil {
+			code = fmt.Sprint(*s.ExitCode)
 		}
-		return verdict{state: "failed", reason: fmt.Sprintf("The new container exited with code %s.", code)}
-	case s.state == "restarting" || s.restartCount > 0:
-		return verdict{state: "failed", reason: "The new container keeps restarting."}
-	case s.health == "unhealthy":
-		if s.healthOutput != "" {
-			return verdict{state: "failed", reason: "The new container's healthcheck failed: " + s.healthOutput}
+		return Verdict{State: "failed", Reason: fmt.Sprintf("The new container exited with code %s.", code)}
+	case s.State == "restarting" || s.RestartCount > 0:
+		return Verdict{State: "failed", Reason: "The new container keeps restarting."}
+	case s.Health == "unhealthy":
+		if s.HealthOutput != "" {
+			return Verdict{State: "failed", Reason: "The new container's healthcheck failed: " + s.HealthOutput}
 		}
-		return verdict{state: "failed", reason: "The new container's healthcheck failed."}
-	case s.health == "healthy":
-		return verdict{state: "ready"}
-	case s.health == "none" && s.state == "running" && elapsed >= settle:
-		return verdict{state: "ready"}
+		return Verdict{State: "failed", Reason: "The new container's healthcheck failed."}
+	case s.Health == "healthy":
+		return Verdict{State: "ready"}
+	case s.Health == "none" && s.State == "running" && elapsed >= settle:
+		return Verdict{State: "ready"}
 	case elapsed >= maxWait:
-		return verdict{state: "failed", reason: fmt.Sprintf("The new container wasn't ready after %ds.", int(maxWait.Seconds()))}
+		return Verdict{State: "failed", Reason: fmt.Sprintf("The new container wasn't ready after %ds.", int(maxWait.Seconds()))}
 	}
-	return verdict{state: "pending"}
+	return Verdict{State: "pending"}
 }
 
-type strategy struct {
-	blueGreen bool
-	reason    string
+// RolloutPlan is whether a deploy can run the new container alongside the
+// running previous one (blue-green) or must stop it first, with why not.
+type RolloutPlan struct {
+	BlueGreen bool
+	Reason    string
 }
 
-// rolloutStrategy mirrors rolloutStrategy in docker/rollout.ts.
-func rolloutStrategy(hasRunningPrevious, hostNetwork bool, volumes []Volume) strategy {
+// RolloutStrategy runs the new container alongside the running previous one,
+// unless host networking or a writable volume forces a recreate.
+func RolloutStrategy(hasRunningPrevious, hostNetwork bool, volumes []Volume) RolloutPlan {
 	switch {
 	case !hasRunningPrevious:
-		return strategy{}
+		return RolloutPlan{}
 	case hostNetwork:
-		return strategy{reason: "Host networking can't run two copies side by side, so the previous container stops first."}
+		return RolloutPlan{Reason: "Host networking can't run two copies side by side, so the previous container stops first."}
 	case anyWritable(volumes):
-		return strategy{reason: "A writable volume can't safely be shared by two copies, so the previous container stops first."}
+		return RolloutPlan{Reason: "A writable volume can't safely be shared by two copies, so the previous container stops first."}
 	}
-	return strategy{blueGreen: true}
+	return RolloutPlan{BlueGreen: true}
 }
 
+// anyWritable reports whether any volume in volumes is not read-only.
 func anyWritable(volumes []Volume) bool {
 	for _, volume := range volumes {
 		if !volume.ReadOnly {
@@ -113,40 +123,41 @@ func anyWritable(volumes []Volume) bool {
 	return false
 }
 
-// swarmUpdateOrder mirrors swarmUpdateOrder in docker/rollout.ts.
-func swarmUpdateOrder(volumes []Volume) string {
+// SwarmUpdateOrder is stop-first when a writable volume can't be shared by
+// two tasks, start-first otherwise.
+func SwarmUpdateOrder(volumes []Volume) string {
 	if anyWritable(volumes) {
 		return "stop-first"
 	}
 	return "start-first"
 }
 
-// swarmUpdateOutcome mirrors swarmUpdateOutcome in docker/rollout.ts: state is
+// SwarmUpdateOutcome reads a swarm service's update status: State is
 // "pending", "completed" or "failed".
-func swarmUpdateOutcome(service *dockerapi.SwarmService, previousStartedAt string) verdict {
+func SwarmUpdateOutcome(service *dockerapi.SwarmService, previousStartedAt string) Verdict {
 	status := service.UpdateStatus
 	if status == nil || status.State == "" || status.StartedAt == previousStartedAt {
-		return verdict{state: "pending"}
+		return Verdict{State: "pending"}
 	}
 	switch status.State {
 	case "completed":
-		return verdict{state: "completed"}
+		return Verdict{State: "completed"}
 	case "paused", "rollback_started", "rollback_paused", "rollback_completed":
 		reason := "The new swarm tasks didn't become healthy, so swarm kept the previous ones"
 		if status.Message != "" {
-			return verdict{state: "failed", reason: reason + ": " + status.Message}
+			return Verdict{State: "failed", Reason: reason + ": " + status.Message}
 		}
-		return verdict{state: "failed", reason: reason + "."}
+		return Verdict{State: "failed", Reason: reason + "."}
 	}
-	return verdict{state: "pending"}
+	return Verdict{State: "pending"}
 }
 
-// readyLine mirrors readyLine in docker/container-rollout.ts.
-func readyLine(check readiness, seconds int) string {
-	if check.kind == "none" && check.reason == "not-routed" {
+// ReadyLine is the deploy log line for a new container that became ready.
+func ReadyLine(check Readiness, seconds int) string {
+	if check.Kind == "none" && check.Reason == "not-routed" {
 		return fmt.Sprintf("New container kept running for %ds, removing the previous one.", seconds)
 	}
-	if check.kind == "none" {
+	if check.Kind == "none" {
 		return fmt.Sprintf("New container kept running for %ds, removing the previous one (Traefik was already sending it traffic).", seconds)
 	}
 	return fmt.Sprintf("New container passed its readiness check after %ds: Traefik now routes to it, removing the previous one.", seconds)

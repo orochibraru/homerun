@@ -26,7 +26,7 @@ func (c *Client) ContainerArchive(ctx context.Context, id, path string) (io.Read
 // PutContainerArchive unpacks a tar stream (gzipped is fine, the daemon sniffs
 // it) into path inside a container, which doesn't need to be running.
 func (c *Client) PutContainerArchive(ctx context.Context, id, path string, archive io.Reader) error {
-	endpoint := c.base + "/containers/" + id + "/archive?" + url.Values{"path": {path}}.Encode()
+	endpoint := c.Base + "/containers/" + id + "/archive?" + url.Values{"path": {path}}.Encode()
 	request, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, archive)
 	if err != nil {
 		return err
@@ -51,6 +51,8 @@ func (c *Client) PutContainerArchive(ctx context.Context, id, path string, archi
 	return &APIError{Message: message, Status: response.StatusCode}
 }
 
+// ignoreNotModified turns a 304 APIError into nil, for a stop/start on a
+// container already in that state.
 func ignoreNotModified(err error) error {
 	var apiErr *APIError
 	if errors.As(err, &apiErr) && apiErr.Status == http.StatusNotModified {
@@ -61,7 +63,7 @@ func ignoreNotModified(err error) error {
 
 // StopContainer stops a container. One already stopped isn't an error.
 func (c *Client) StopContainer(ctx context.Context, id string) error {
-	return ignoreNotModified(c.call(ctx, http.MethodPost, "/containers/"+id+"/stop", nil, nil))
+	return ignoreNotModified(c.Call(ctx, http.MethodPost, "/containers/"+id+"/stop", nil, nil))
 }
 
 // EnsureContainerStarted starts a container. One already running isn't an error.
@@ -91,6 +93,6 @@ func (c *Client) ScaleSwarmService(ctx context.Context, id string, replicas int)
 		return fmt.Errorf("swarm service %s has no spec", id)
 	}
 	inspected.Spec["Mode"] = map[string]any{"Replicated": map[string]any{"Replicas": replicas}}
-	return c.call(ctx, http.MethodPost, "/services/"+id+"/update",
+	return c.Call(ctx, http.MethodPost, "/services/"+id+"/update",
 		url.Values{"version": {strconv.FormatInt(inspected.Version.Index, 10)}}, inspected.Spec)
 }

@@ -47,8 +47,6 @@ export interface TrivySummary {
 	totalFindings: number;
 }
 
-export const MAX_STORED_FINDINGS = 200;
-
 export const BLOCK_SEVERITY_OPTIONS: ReadonlyArray<{
 	description: string;
 	label: string;
@@ -86,124 +84,13 @@ export const BLOCK_SEVERITY_OPTIONS: ReadonlyArray<{
 	},
 ];
 
-const SEVERITY_RANK: Record<ScanSeverity, number> = {
-	CRITICAL: 0,
-	HIGH: 1,
-	LOW: 3,
-	MEDIUM: 2,
-	UNKNOWN: 4,
-};
-
 /** A fresh per-severity vulnerability count with every severity at zero. */
 export function emptyCounts(): SeverityCounts {
 	return { critical: 0, high: 0, low: 0, medium: 0, unknown: 0 };
 }
 
-function normalizeSeverity(value: unknown): ScanSeverity {
-	const upper = typeof value === "string" ? value.toUpperCase() : "";
-	return (SCAN_SEVERITIES as readonly string[]).includes(upper)
-		? (upper as ScanSeverity)
-		: "UNKNOWN";
-}
-
 function countKey(severity: ScanSeverity): keyof SeverityCounts {
 	return severity.toLowerCase() as keyof SeverityCounts;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-	return value && typeof value === "object" && !Array.isArray(value)
-		? (value as Record<string, unknown>)
-		: null;
-}
-
-function asText(value: unknown): string | null {
-	return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-/**
- * Extracts the vulnerability findings from one Trivy result entry, skipping
- * malformed entries and normalising unknown severities.
- */
-function findingsOf(result: unknown): ImageScanFinding[] {
-	const vulnerabilities = asRecord(result)?.Vulnerabilities;
-	if (!Array.isArray(vulnerabilities)) {
-		return [];
-	}
-	return vulnerabilities.flatMap((raw) => {
-		const entry = asRecord(raw);
-		const id = asText(entry?.VulnerabilityID);
-		if (!(entry && id)) {
-			return [];
-		}
-		return [
-			{
-				fixedVersion: asText(entry.FixedVersion),
-				id,
-				installedVersion: asText(entry.InstalledVersion) ?? "",
-				pkg: asText(entry.PkgName) ?? asText(entry.PkgID) ?? "",
-				severity: normalizeSeverity(entry.Severity),
-				title: asText(entry.Title),
-			},
-		];
-	});
-}
-
-/**
- * Summarises a Trivy JSON report into per-severity counts and a capped list of
- * findings, de-duplicated by vulnerability, package and version and sorted by
- * severity with fixable findings first.
- *
- * @param limit Maximum number of findings kept; `totalFindings` still counts all.
- * @throws When the output isn't a JSON object.
- */
-export function summarizeTrivyReport(
-	raw: string,
-	limit = MAX_STORED_FINDINGS,
-): TrivySummary {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		throw new Error("Trivy didn't return a JSON report.");
-	}
-	const report = asRecord(parsed);
-	if (!report) {
-		throw new Error("Trivy didn't return a JSON report.");
-	}
-	const results = Array.isArray(report.Results) ? report.Results : [];
-
-	const seen = new Set<string>();
-	const unique: ImageScanFinding[] = [];
-	for (const finding of results.flatMap(findingsOf)) {
-		const key = `${finding.id}|${finding.pkg}|${finding.installedVersion}`;
-		if (!seen.has(key)) {
-			seen.add(key);
-			unique.push(finding);
-		}
-	}
-
-	const counts = emptyCounts();
-	const fixableCounts = emptyCounts();
-	for (const finding of unique) {
-		counts[countKey(finding.severity)] += 1;
-		if (finding.fixedVersion !== null) {
-			fixableCounts[countKey(finding.severity)] += 1;
-		}
-	}
-
-	const sorted = unique.toSorted(
-		(a, b) =>
-			SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
-			Number(a.fixedVersion === null) - Number(b.fixedVersion === null) ||
-			a.id.localeCompare(b.id),
-	);
-
-	return {
-		counts,
-		findings: sorted.slice(0, limit),
-		fixableCounts,
-		totalFindings: unique.length,
-	};
 }
 
 const BLOCKING_ORDER: readonly BlockSeverity[] = [
