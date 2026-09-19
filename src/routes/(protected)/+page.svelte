@@ -8,6 +8,7 @@
 		Server,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import HostResources from "$lib/components/host-resources.svelte";
 	import ServiceUsageTable from "$lib/components/service-usage-table.svelte";
@@ -17,6 +18,7 @@
 	import { timeAgo } from "$lib/formatting";
 	import { getSetupStatus } from "$lib/remote/setup.remote";
 	import { title } from "$lib/store/title";
+	import { enhanceToast } from "$lib/toast";
 	import type { ContainerStatus } from "$lib/types";
 
 	const { data } = $props();
@@ -26,6 +28,7 @@
 		(setup.current?.checks ?? []).filter((check) => check.severity !== "ok"),
 	);
 	let reviewOpen = $state(false);
+	let clearingErrors = $state(false);
 
 	onMount(() => {
 		title.set("Dashboard");
@@ -245,11 +248,38 @@
           <AlertTriangle class="size-3" />
           Recent errors
         </h2>
-        {#if data.isAdmin}
-          <a class="text-accent text-xs font-medium hover:underline" href={resolve("/system-logs")}>
-            System logs
-          </a>
-        {/if}
+        <div class="flex items-center gap-3">
+          {#if data.recentErrors.length > 0}
+            <form
+              action="?/clearErrors"
+              method="POST"
+              use:enhance={enhanceToast({
+                error: "Couldn't clear the errors.",
+                loading: "Clearing errors",
+                onSettled: () => {
+                  clearingErrors = false;
+                },
+                onStart: () => {
+                  clearingErrors = true;
+                },
+                success: "Errors cleared.",
+              })}
+            >
+              <button
+                class="text-text-muted hover:text-text text-xs font-medium disabled:opacity-50"
+                disabled={clearingErrors}
+                type="submit"
+              >
+                Clear
+              </button>
+            </form>
+          {/if}
+          {#if data.isAdmin}
+            <a class="text-accent text-xs font-medium hover:underline" href={resolve("/system-logs")}>
+              System logs
+            </a>
+          {/if}
+        </div>
       </div>
       {#if data.recentErrors.length === 0}
         <p class="text-text-muted px-4 py-6 text-center text-xs">

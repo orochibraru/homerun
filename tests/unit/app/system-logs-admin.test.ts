@@ -60,6 +60,7 @@ const pageRoute = await import(
 );
 
 const { AppLogDTO } = await import("../../../src/lib/dto/app-log-dto");
+const { ServiceDTO } = await import("../../../src/lib/dto/service-dto");
 
 type LogsEvent = Parameters<typeof logsRoute.GET>[0];
 
@@ -105,15 +106,48 @@ describe("system logs access", () => {
 		expect(res.status).toBe(401);
 	});
 
-	test("the page load sends a developer home", () => {
-		let thrown: unknown;
-		try {
-			pageRoute.load({ locals: locals(false) });
-		} catch (error) {
-			thrown = error;
-		}
-		expect(thrown).toMatchObject({ location: "/", status: 302 });
-		expect(() => pageRoute.load({ locals: locals(true) })).not.toThrow();
+	test("the page load sends a developer home", async () => {
+		await expect(
+			pageRoute.load({ locals: locals(false) }),
+		).rejects.toMatchObject({ location: "/", status: 302 });
+	});
+
+	test("the page load lists app errors with their service name for an admin", async () => {
+		stub(AppLogDTO, "listRecent", async () => [
+			{
+				toJSON: () => ({
+					createdAt: new Date(0),
+					id: "log-1",
+					level: "error",
+					message: "boom",
+					metadata: null,
+					scope: "Deploy",
+					serviceId: "svc-1",
+				}),
+			},
+		]);
+		stub(ServiceDTO, "list", async () => [{ id: "svc-1", name: "Dashy" }]);
+		const result = await pageRoute.load({ locals: locals(true) });
+		expect(result.appLogs).toMatchObject([
+			{ id: "log-1", message: "boom", serviceName: "Dashy" },
+		]);
+	});
+
+	test("clearing the app log is admin only", async () => {
+		const cleared: unknown[] = [];
+		stub(AppLogDTO, "clear", async (ids?: string[]) => {
+			cleared.push(ids);
+		});
+		const spy = spyOn(console, "log").mockImplementation(() => undefined);
+		await expect(
+			pageRoute.actions.clearAppLogs({ locals: locals(false) }),
+		).rejects.toMatchObject({ location: "/", status: 302 });
+		expect(cleared).toEqual([]);
+		expect(
+			await pageRoute.actions.clearAppLogs({ locals: locals(true) }),
+		).toEqual({ action: "clearAppLogs", success: true });
+		expect(cleared).toEqual([undefined]);
+		spy.mockRestore();
 	});
 });
 

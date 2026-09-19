@@ -111,6 +111,21 @@ export class AppLogDTO extends BaseDTO<AppLog> {
 		return new AppLogDTO(row);
 	}
 
+	/**
+	 * Deletes logged entries: every one when `serviceIds` is omitted, otherwise
+	 * only those attributed to one of `serviceIds`.
+	 */
+	static async clear(serviceIds?: string[]): Promise<void> {
+		if (!serviceIds) {
+			await db.delete(appLog);
+			return;
+		}
+		if (serviceIds.length === 0) {
+			return;
+		}
+		await db.delete(appLog).where(inArray(appLog.serviceId, serviceIds));
+	}
+
 	/** Deletes everything past the newest MAX_ROWS entries. */
 	static async prune(): Promise<void> {
 		const [cutoff] = await db

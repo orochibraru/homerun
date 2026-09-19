@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { Boxes, Loader2, RotateCw, Wrench } from "@lucide/svelte";
+	import {
+		AlertTriangle,
+		Boxes,
+		Loader2,
+		RotateCw,
+		Trash2,
+		Wrench,
+	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -8,11 +15,16 @@
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { timeAgo } from "$lib/formatting";
 	import { getInfraStatus } from "$lib/remote/docker-infra.remote";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
+	const { data } = $props();
+
 	onMount(() => title.set("System Logs"));
+
+	let clearingLogs = $state(false);
 
 	const status = getInfraStatus();
 	const infra = $derived(status.current?.infra ?? []);
@@ -55,9 +67,80 @@
   <div class="mb-6">
     <h1 class="text-text text-lg font-semibold tracking-tight">System Logs</h1>
     <p class="text-text-muted mt-1 text-sm">
-      Logs from core infrastructure this app depends on.
+      Homerun's own warnings and errors, and logs from the infrastructure it depends on.
     </p>
   </div>
+
+  <section class="panel mb-6 rounded-xl">
+    <div class="panel-head">
+      <h2 class="eyebrow flex items-center gap-1.5">
+        <AlertTriangle class="size-3" />
+        Application errors
+      </h2>
+      {#if data.appLogs.length > 0}
+        <form
+          action="?/clearAppLogs"
+          method="POST"
+          use:enhance={enhanceToast({
+            error: "Couldn't clear the application log.",
+            loading: "Clearing application log",
+            onSettled: () => {
+              clearingLogs = false;
+            },
+            onStart: () => {
+              clearingLogs = true;
+            },
+            success: "Application log cleared.",
+          })}
+        >
+          <Button disabled={clearingLogs} size="sm" type="submit" variant="ghost">
+            {#if clearingLogs}
+              <Loader2 class="size-3.5 animate-spin" />
+            {:else}
+              <Trash2 class="size-3.5" />
+            {/if}
+            Clear
+          </Button>
+        </form>
+      {/if}
+    </div>
+    {#if data.appLogs.length === 0}
+      <p class="text-text-muted px-4 py-6 text-center text-xs">
+        Nothing logged at warn or error level.
+      </p>
+    {:else}
+      <div class="divide-border max-h-96 divide-y overflow-y-auto">
+        {#each data.appLogs as entry (entry.id)}
+          <div class="px-4 py-2.5">
+            <span class="flex items-center gap-2">
+              <span
+                class="size-1.5 shrink-0 rounded-full {entry.level === 'error'
+                ? 'bg-red-500'
+                : 'bg-amber-500'}"
+              ></span>
+              <span class="text-text truncate text-xs font-medium">
+                {entry.scope ?? "Instance"}
+              </span>
+              {#if entry.serviceId}
+                <a
+                  class="text-accent truncate text-xs hover:underline"
+                  href="{resolve('/services')}/{entry.serviceId}/observability"
+                >
+                  {entry.serviceName ?? "Deleted service"}
+                </a>
+              {/if}
+              <span class="tabular-nums text-text-subtle ml-auto shrink-0 text-[0.6875rem]">
+                {timeAgo(entry.createdAt)}
+              </span>
+            </span>
+            <p class="text-text-muted mt-0.5 font-mono text-xs break-all whitespace-pre-wrap">
+              {entry.message}
+            </p>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </section>
 
   {#if !status.ready}
     <Skeleton class="h-40 w-full" />
