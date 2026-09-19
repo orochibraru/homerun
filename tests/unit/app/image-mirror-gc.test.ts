@@ -268,4 +268,18 @@ describe("MirrorRegistryClient", () => {
 		);
 		expect(await client.ping()).toBe(false);
 	});
+
+	test("sends Basic credentials when the registry has auth on", async () => {
+		const seen: (string | null)[] = [];
+		const client = new MirrorRegistryClient(
+			"http://mirror:5000",
+			(_url, init) => {
+				seen.push(new Headers(init?.headers).get("Authorization"));
+				return Promise.resolve(new Response("{}"));
+			},
+			{ password: "secret", username: "homerun-internal" },
+		);
+		expect(await client.ping()).toBe(true);
+		expect(seen).toEqual([`Basic ${btoa("homerun-internal:secret")}`]);
+	});
 });

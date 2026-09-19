@@ -324,7 +324,8 @@ export function DockerImageScanMixin<
 		/**
 		 * A `MirrorRegistryClient` pointed at whichever of the mirror's two
 		 * addresses (loopback host port, or its in-network container name)
-		 * actually answers a ping from here. Tries the loopback address
+		 * actually answers a ping from here, authenticated as the internal
+		 * token when registry auth is on. Tries the loopback address
 		 * first, unless this app is itself running in a container (see
 		 * `selfContainer`), in which case the in-network address is tried
 		 * first.
@@ -339,8 +340,9 @@ export function DockerImageScanMixin<
 			if (await this.selfContainer()) {
 				candidates.reverse();
 			}
+			const auth = await this.registryInternalAuth();
 			for (const url of candidates) {
-				const client = new MirrorRegistryClient(url);
+				const client = new MirrorRegistryClient(url, fetch, auth);
 				// oxlint-disable-next-line no-await-in-loop -- the first reachable address wins
 				if (await client.ping()) {
 					return client;

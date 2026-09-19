@@ -205,16 +205,33 @@ export function parseDuKilobytes(output: string): number | null {
 export class MirrorRegistryClient {
 	readonly #baseUrl: string;
 	readonly #fetch: FetchLike;
+	readonly #authorization: string | null;
 
-	constructor(baseUrl: string, fetchImpl: FetchLike = fetch) {
+	constructor(
+		baseUrl: string,
+		fetchImpl: FetchLike = fetch,
+		auth: { password: string; username: string } | null = null,
+	) {
 		this.#baseUrl = baseUrl.replace(/\/+$/, "");
 		this.#fetch = fetchImpl;
+		this.#authorization = auth
+			? `Basic ${btoa(`${auth.username}:${auth.password}`)}`
+			: null;
 	}
 
-	/** Issues a fetch against the mirror's base URL, defaulting to a 30s abort timeout when `init` doesn't supply its own signal. */
+	/**
+	 * Issues a fetch against the mirror's base URL with the client's Basic
+	 * credentials when it has any, defaulting to a 30s abort timeout when
+	 * `init` doesn't supply its own signal.
+	 */
 	async #request(path: string, init?: RequestInit): Promise<Response> {
+		const headers = new Headers(init?.headers);
+		if (this.#authorization) {
+			headers.set("Authorization", this.#authorization);
+		}
 		return await this.#fetch(`${this.#baseUrl}${path}`, {
 			...init,
+			headers,
 			signal: init?.signal ?? AbortSignal.timeout(30_000),
 		});
 	}
