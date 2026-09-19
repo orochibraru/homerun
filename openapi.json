@@ -261,7 +261,7 @@
 				"tags": ["Meta"]
 			},
 			"post": {
-				"description": "Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; poll GET /instance/update until current is the returned version. Admins only.",
+				"description": "Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. Admins only.",
 				"operationId": "post_instance_update",
 				"parameters": [],
 				"responses": {
@@ -347,6 +347,109 @@
 					}
 				],
 				"summary": "Update the instance",
+				"tags": ["Meta"]
+			}
+		},
+		"/instance/update/progress": {
+			"get": {
+				"description": "The update helper container's state and output, to follow an update started with POST /instance/update. The helper outlives the Homerun container it recreates, so this keeps answering once the new version is up; it fails for a moment while the container restarts. Admins only.",
+				"operationId": "get_instance_update_progress",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"exitCode": {
+											"anyOf": [
+												{
+													"type": "number"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The updater's exit code once it has exited, 0 on success"
+										},
+										"log": {
+											"description": "The updater's output lines",
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"state": {
+											"description": "none when no update has run on this host",
+											"enum": ["exited", "none", "running"],
+											"type": "string"
+										},
+										"version": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "null"
+												}
+											],
+											"description": "The version the updater is installing"
+										}
+									},
+									"required": ["exitCode", "log", "state", "version"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Update progress"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not an admin"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Instance update progress",
 				"tags": ["Meta"]
 			}
 		},

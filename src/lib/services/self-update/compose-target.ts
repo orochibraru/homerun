@@ -125,7 +125,11 @@ export function updaterScript(
 		`-p ${shellQuote(target.project)}`,
 		...target.configFiles.map((file) => `-f ${shellQuote(file)}`),
 	].join(" ");
-	const lines = ["set -eu", `cd ${shellQuote(target.workingDir)}`];
+	const lines = [
+		"set -eu",
+		`echo ${shellQuote(`==> Updating Homerun to v${latestVersion}`)}`,
+		`cd ${shellQuote(target.workingDir)}`,
+	];
 
 	if (tag && nextTag && TAG_SAFE_RE.test(tag) && TAG_SAFE_RE.test(nextTag)) {
 		const repoName = repository.split("/").pop() ?? repository;
@@ -145,8 +149,11 @@ export function updaterScript(
 		.map(shellQuote)
 		.join(" ");
 	lines.push(
+		"echo '==> Pulling the new images'",
 		`${compose} pull ${services}`,
+		"echo '==> Recreating the Homerun containers'",
 		`${compose} up -d --no-deps ${services}`,
+		"echo '==> Done'",
 	);
 	return lines.join("\n");
 }

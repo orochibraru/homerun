@@ -39,9 +39,29 @@ export interface paths {
 		put?: never;
 		/**
 		 * Update the instance
-		 * @description Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; poll GET /instance/update until current is the returned version. Admins only.
+		 * @description Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. Admins only.
 		 */
 		post: operations["post_instance_update"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/instance/update/progress": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Instance update progress
+		 * @description The update helper container's state and output, to follow an update started with POST /instance/update. The helper outlives the Homerun container it recreates, so this keeps answering once the new version is up; it fails for a moment while the container restarts. Admins only.
+		 */
+		get: operations["get_instance_update_progress"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -558,6 +578,62 @@ export interface operations {
 			};
 			/** @description Already on the latest release, not running under Docker Compose, or a deploy or job is in flight */
 			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	get_instance_update_progress: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Update progress */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The updater's exit code once it has exited, 0 on success */
+						exitCode: number | null;
+						/** @description The updater's output lines */
+						log: string[];
+						/**
+						 * @description none when no update has run on this host
+						 * @enum {string}
+						 */
+						state: "exited" | "none" | "running";
+						/** @description The version the updater is installing */
+						version: string | null;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not an admin */
+			403: {
 				headers: {
 					[name: string]: unknown;
 				};

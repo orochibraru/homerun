@@ -1,7 +1,8 @@
 <script lang="ts">
 	import CheckBox from "$lib/components/check-box.svelte";
-	import { inputClass, labelClass as label } from "$lib/components/form-styles";
+	import { labelClass as label } from "$lib/components/form-styles";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 	import type { StatusPageScope } from "$lib/types";
 
 	interface StackOption {
@@ -38,6 +39,12 @@
 		isPublic?: boolean;
 		selectedServiceIds?: string[];
 	} = $props();
+
+	const scopeOptions: { label: string; value: StatusPageScope }[] = [
+		{ label: "Every service", value: "global" },
+		{ label: "One stack", value: "stack" },
+		{ label: "Services I pick", value: "custom" },
+	];
 
 	function toggleService(id: string) {
 		selectedServiceIds = selectedServiceIds.includes(id)
@@ -84,11 +91,16 @@
   <div class="grid gap-4 md:grid-cols-2">
     <div>
       <label class={label} for="scope">Covers</label>
-      <select bind:value={scope} class={inputClass} id="scope" name="scope">
-        <option value="global">Every service</option>
-        <option value="stack">One stack</option>
-        <option value="custom">Services I pick</option>
-      </select>
+      <Select.Root name="scope" type="single" bind:value={scope}>
+        <Select.Trigger class="w-full" id="scope">
+          {scopeOptions.find((option) => option.value === scope)?.label}
+        </Select.Trigger>
+        <Select.Content>
+          {#each scopeOptions as option (option.value)}
+            <Select.Item label={option.label} value={option.value} />
+          {/each}
+        </Select.Content>
+      </Select.Root>
       <p class="text-text-subtle mt-1.5 text-xs">
         {scope === "custom"
           ? "Only the services ticked below."
@@ -98,17 +110,17 @@
     {#if scope === "stack"}
       <div>
         <label class={label} for="stackId">Stack</label>
-        <select
-          bind:value={stackId}
-          class={inputClass}
-          id="stackId"
-          name="stackId"
-        >
-          <option value="">Pick a stack…</option>
-          {#each stacks as stack (stack.id)}
-            <option value={stack.id}>{stack.name}</option>
-          {/each}
-        </select>
+        <Select.Root name="stackId" type="single" bind:value={stackId}>
+          <Select.Trigger class="w-full" id="stackId">
+            {stacks.find((stack) => stack.id === stackId)?.name ??
+              "Pick a stack…"}
+          </Select.Trigger>
+          <Select.Content>
+            {#each stacks as stack (stack.id)}
+              <Select.Item label={stack.name} value={stack.id} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
         {#if errors?.stackId}
           <p class="mt-1.5 text-xs text-red-500">{errors.stackId[0]}</p>
         {/if}

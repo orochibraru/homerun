@@ -9,7 +9,7 @@
 		X,
 	} from "@lucide/svelte";
 	import type { SubmitFunction } from "@sveltejs/kit";
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -17,14 +17,12 @@
 	import EntityToolbar, {
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
-	import {
-		inputClass as input,
-		labelClass as label,
-	} from "$lib/components/form-styles";
+	import { labelClass as label } from "$lib/components/form-styles";
 	import Pagination from "$lib/components/pagination.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
+	import { timeAgo } from "$lib/formatting";
 	import { ROLE_OPTIONS, roleLabel } from "$lib/permissions";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -51,6 +49,7 @@
 	);
 	let submitting = $state(false);
 	let editingEmailFor = $state<string | null>(null);
+	const roleForms: Record<string, HTMLFormElement | undefined> = {};
 
 	function submitToast(loading: string, success: string): SubmitFunction {
 		return enhanceToast({
@@ -317,24 +316,38 @@
               </Button>
             </p>
           {/if}
+          <p class="text-text-subtle text-xs">
+            {u.lastSignInAt
+              ? `Last signed in ${timeAgo(u.lastSignInAt)}`
+              : "Never signed in"}
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <form
+            bind:this={roleForms[u.id]}
             action="?/setRole"
             method="POST"
             use:enhance={submitToast("Updating role", "Role updated.")}
           >
             <input name="userId" type="hidden" value={u.id} />
-            <select
-              class="{input} py-1.5 text-xs"
+            <Select.Root
               name="role"
-              onchange={(e) => e.currentTarget.form?.requestSubmit()}
+              onValueChange={async () => {
+                await tick();
+                roleForms[u.id]?.requestSubmit();
+              }}
+              type="single"
               value={u.role ?? "developer"}
             >
-              {#each roleOptions as opt (opt.value)}
-                <option value={opt.value}>{opt.label}</option>
-              {/each}
-            </select>
+              <Select.Trigger class="w-32" aria-label="Role" size="sm">
+                {roleLabel(u.role ?? "developer")}
+              </Select.Trigger>
+              <Select.Content>
+                {#each roleOptions as opt (opt.value)}
+                  <Select.Item label={opt.label} value={opt.value} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </form>
           <form
             action="?/removeUser"

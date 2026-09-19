@@ -9,6 +9,7 @@ import {
 	errorResponse,
 	imageScanResponse,
 	imageScanSummaryResponse,
+	instanceUpdateProgressResponse,
 	instanceUpdateStartResponse,
 	instanceUpdateStatusResponse,
 	jobResponse,
@@ -465,7 +466,7 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; poll GET /instance/update until current is the returned version. Admins only.",
+			"Starts updating this instance to the latest release, like the sidebar's Update now: a helper container pulls the new image and recreates the Homerun container, so the API goes away for a moment. Answers once the helper has started; follow it with GET /instance/update/progress, or poll GET /instance/update until current is the returned version. Admins only.",
 		method: "post",
 		path: "/instance/update",
 		responses: {
@@ -482,6 +483,22 @@ export const routes: RouteDef[] = [
 			},
 		},
 		summary: "Update the instance",
+		tags: ["Meta"],
+	},
+	{
+		description:
+			"The update helper container's state and output, to follow an update started with POST /instance/update. The helper outlives the Homerun container it recreates, so this keeps answering once the new version is up; it fails for a moment while the container restarts. Admins only.",
+		method: "get",
+		path: "/instance/update/progress",
+		responses: {
+			200: {
+				description: "Update progress",
+				schema: instanceUpdateProgressResponse,
+			},
+			401: unauthorized,
+			403: { description: "Not an admin", schema: errorResponse },
+		},
+		summary: "Instance update progress",
 		tags: ["Meta"],
 	},
 	{

@@ -260,6 +260,20 @@ export const instanceUpdateStartResponse = z.object({
 	version: z.string().meta({ description: "The version being installed" }),
 });
 
+export const instanceUpdateProgressResponse = z.object({
+	exitCode: z.number().nullable().meta({
+		description: "The updater's exit code once it has exited, 0 on success",
+	}),
+	log: z.array(z.string()).meta({ description: "The updater's output lines" }),
+	state: z.enum(["exited", "none", "running"]).meta({
+		description: "none when no update has run on this host",
+	}),
+	version: z
+		.string()
+		.nullable()
+		.meta({ description: "The version the updater is installing" }),
+});
+
 export const systemStatsResponse = z.object({
 	cpuPercent: z.number(),
 	diskPercent: z.number().nullable(),

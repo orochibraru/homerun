@@ -51,7 +51,7 @@ Commands:
   templates list                  list templates
 
   instance status                 show the running version, the latest release and whether an update can start
-  instance update [--wait] [--timeout <seconds>]
+  instance update [--wait=false] [--timeout <seconds>]
                                   update the instance to the latest release (not the CLI itself, see ` + "`homerun update`" + `)
 
 List options (services/stacks/templates/scans list):
@@ -341,7 +341,7 @@ func runInstance(global globalFlags, args []string) {
 		instanceStatus(requireClient(global.baseURL, global.apiKey), *asJSON)
 	case "update":
 		set := newFlagSet("instance update")
-		wait := set.Bool("wait", false, "wait until the instance is back on the new version")
+		wait := set.Bool("wait", true, "follow the update until the instance is back on the new version, --wait=false to return once it starts")
 		timeout := set.Int("timeout", 0, "with --wait, how long to wait before giving up, in seconds")
 		parse(set, args[1:])
 		requirePositiveTimeout(*timeout)

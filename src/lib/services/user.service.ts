@@ -225,6 +225,14 @@ class UserServiceClass {
 			.limit(limit);
 	}
 
+	/** Stamps `userId`'s last sign-in time, called from better-auth's session-create hook. */
+	async recordSignIn(userId: string, at: Date): Promise<void> {
+		await db
+			.update(userTable)
+			.set({ lastSignInAt: at })
+			.where(eq(userTable.id, userId));
+	}
+
 	/** The oldest admin user's id, or null if there is none. Used to attribute system-initiated actions (e.g. the scheduled mirror cleanup) to a real user. */
 	async firstAdminId(): Promise<string | null> {
 		const [row] = await db

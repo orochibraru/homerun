@@ -25,12 +25,13 @@ If you can't reach the dashboard, the same update runs from the
 
 ```bash
 homerun instance status             # running and latest version, and whether it can update now
-homerun instance update --wait      # start the update and wait until the new version answers
+homerun instance update             # start the update and follow it until the new version answers
 ```
 
 It goes through the same checks and the same `homerun-updater` container as
 **Update now**, and prints the reason when it refuses. Scripts can call
-`GET /api/v1/instance/update` and `POST /api/v1/instance/update` directly.
+`GET /api/v1/instance/update`, `POST /api/v1/instance/update` and
+`GET /api/v1/instance/update/progress` directly.
 
 ## When it can't update itself
 

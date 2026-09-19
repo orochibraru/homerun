@@ -100,7 +100,7 @@ homerun services revisions <id> [--json]
 homerun services rollback <id> [revisionId] [--restore-config]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun instance status [--json]
-homerun instance update [--wait] [--timeout <seconds>]
+homerun instance update [--wait=false] [--timeout <seconds>]
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
 
@@ -160,10 +160,13 @@ version, the latest release and whether an update can start now (with the reason
 when it can't), `--json` for the raw body. `homerun instance update` calls
 `POST /instance/update`, which starts the same self-update as the dashboard's
 **Update now** and answers `202` with the target version, or `409` with why it
-can't. `--wait` then polls `GET /instance/update` every 3s, ignoring failed
-requests while the container is recreated, until `current` is the new version,
-exiting 1 after `--timeout <seconds>` (default 600). Both are admin-only.
-`homerun update` is unrelated: it updates the CLI binary itself.
+can't. It then follows the update, polling every 3s: it prints the update
+helper's output from `GET /instance/update/progress` as it arrives, ignores
+failed requests while the container is recreated, and stops once
+`GET /instance/update` reports the new version as `current`. It exits 1 when the
+helper fails or after `--timeout <seconds>` (default 600). `--wait=false`
+returns as soon as the update has started. Both are admin-only. `homerun update`
+is unrelated: it updates the CLI binary itself.
 
 `homerun update` self-updates the installed binary in place: it checks the
 latest GitHub release, downloads the `homerun-cli-<arch>` asset for your

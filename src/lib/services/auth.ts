@@ -209,6 +209,15 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 				delete: { after: (row) => forgetGateAccessOf(row?.userId) },
 				update: { after: (row) => forgetGateAccessOf(row?.userId) },
 			},
+			session: {
+				create: {
+					after: async (row) => {
+						if (!row.impersonatedBy) {
+							await UserService.recordSignIn(row.userId, row.createdAt);
+						}
+					},
+				},
+			},
 			user: {
 				create: {
 					// The very first account on the instance becomes admin,

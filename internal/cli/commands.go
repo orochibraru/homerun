@@ -104,6 +104,14 @@ type InstanceUpdateStatus struct {
 	UpdateAvailable bool `json:"updateAvailable"`
 }
 
+// InstanceUpdateProgress is the update helper container's state and output.
+type InstanceUpdateProgress struct {
+	ExitCode *int     `json:"exitCode"`
+	Log      []string `json:"log"`
+	State    string   `json:"state"`
+	Version  string   `json:"version"`
+}
+
 // listQuery turns the shared list options into the API's query parameters.
 func listQuery(args ListArgs) url.Values {
 	query := url.Values{}
@@ -510,9 +518,11 @@ func instanceStatus(client *Client, asJSON bool) {
 }
 
 // instanceUpdate starts a self-update of the instance, the same as the
-// sidebar's Update now. With wait, polls until the instance answers with the
-// new version, treating failed requests as the restart in progress. Exits on an
-// API error (a 409 carries why it can't update) or once the wait times out.
+// sidebar's Update now. With wait, follows the update helper's output from
+// GET /instance/update/progress until the instance answers with the new
+// version, treating failed requests as the restart in progress. Exits on an
+// API error (a 409 carries why it can't update), when the helper exits
+// non-zero, or once the wait times out.
 func instanceUpdate(client *Client, wait bool, timeout time.Duration) {
 	var started struct {
 		Version string `json:"version"`
@@ -530,8 +540,26 @@ func instanceUpdate(client *Client, wait bool, timeout time.Duration) {
 		timeout = defaultInstanceUpdateAfter
 	}
 	deadline := time.Now().Add(timeout)
+	printed := 0
+	restarting := false
 	for {
 		sleep(defaultUpdatePollInterval)
+		var progress InstanceUpdateProgress
+		if getOrFalse(client, "/instance/update/progress", &progress) {
+			restarting = false
+			if progress.Version == started.Version {
+				printed = printNewLines(progress.Log, printed)
+				if progress.State == "exited" && progress.ExitCode != nil && *progress.ExitCode != 0 {
+					fail(fmt.Sprintf(
+						"The update helper failed (exit %d). Check `docker logs homerun-updater` on the host.",
+						*progress.ExitCode,
+					))
+				}
+			}
+		} else if !restarting {
+			restarting = true
+			fmt.Println("Waiting for Homerun to come back...")
+		}
 		if current := currentVersionOrEmpty(client); current == started.Version {
 			fmt.Printf("Homerun is now on v%s.\n", started.Version)
 			return
@@ -545,23 +573,39 @@ func instanceUpdate(client *Client, wait bool, timeout time.Duration) {
 	}
 }
 
+// printNewLines prints the lines of log past the first printed ones and
+// returns how many have been printed now.
+func printNewLines(log []string, printed int) int {
+	for _, line := range log[min(printed, len(log)):] {
+		fmt.Println("  " + line)
+	}
+	return max(printed, len(log))
+}
+
 // currentVersionOrEmpty reads the instance's running version, treating any
 // failure as the restart still being in progress.
 func currentVersionOrEmpty(client *Client) string {
-	response, err := client.send("GET", "/instance/update", nil)
-	if err != nil {
+	var status InstanceUpdateStatus
+	if !getOrFalse(client, "/instance/update", &status) {
 		return ""
+	}
+	return status.Current
+}
+
+// getOrFalse GETs path and decodes its JSON body into out, reporting false
+// instead of exiting on any failure, for polling an instance that may be
+// restarting.
+func getOrFalse(client *Client, path string, out any) bool {
+	response, err := client.send("GET", path, nil)
+	if err != nil {
+		return false
 	}
 	defer response.Body.Close()
 	body, err := io.ReadAll(response.Body)
 	if err != nil || response.StatusCode < 200 || response.StatusCode >= 300 {
-		return ""
+		return false
 	}
-	var status InstanceUpdateStatus
-	if err := json.Unmarshal(body, &status); err != nil {
-		return ""
-	}
-	return status.Current
+	return json.Unmarshal(body, out) == nil
 }
 
 // stacksList lists stacks as JSON or a table, with a footer when the page is truncated.

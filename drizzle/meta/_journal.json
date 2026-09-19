@@ -364,6 +364,13 @@
 			"when": 1789727508116,
 			"tag": "0051_melted_wrecker",
 			"breakpoints": true
+		},
+		{
+			"idx": 52,
+			"version": "7",
+			"when": 1789802575328,
+			"tag": "0052_fat_retro_girl",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

@@ -19,7 +19,8 @@ test.describe
 			await expect(page).toHaveURL(/\/notification-channels$/);
 
 			await page.locator("#channelName").fill("E2E hook");
-			await page.locator("#channelKind").selectOption("webhook");
+			await page.locator("#channelKind").click();
+			await page.getByRole("option", { name: "Webhook" }).click();
 			await page.locator("#channelTarget").fill("https://example.com/hook");
 			await page.getByRole("button", { name: "Add channel" }).click();
 			await expect(page.getByText("Channel added.")).toBeVisible();
@@ -76,7 +77,8 @@ test.describe
 
 			const botToken = "123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw";
 			await page.locator("#channelName").fill("E2E Telegram");
-			await page.locator("#channelKind").selectOption("telegram");
+			await page.locator("#channelKind").click();
+			await page.getByRole("option", { name: "Telegram" }).click();
 			await expect(page.locator("#channelTarget")).toHaveCount(0);
 			await page.locator("#telegramBotToken").fill(botToken);
 			await page.locator("#telegramChatId").fill("-1001234567890");
@@ -95,7 +97,8 @@ test.describe
 			await page.goto("/notification-channels");
 
 			await page.locator("#channelName").fill("Bad Slack");
-			await page.locator("#channelKind").selectOption("slack");
+			await page.locator("#channelKind").click();
+			await page.getByRole("option", { name: "Slack" }).click();
 			await page.locator("#channelTarget").fill("https://example.com/hook");
 			await page.getByRole("button", { name: "Add channel" }).click();
 

@@ -4,6 +4,7 @@ import { config } from "$lib/config";
 import { JobDTO } from "$lib/dto/job-dto";
 import { Logger } from "$lib/logger";
 import { APP_VERSION } from "$lib/server/app-version";
+import { demuxDockerFrames } from "$lib/services/docker/git-build";
 import { DockerService } from "$lib/services/docker.service";
 import { JobWorker } from "$lib/services/queue/worker";
 import {
@@ -34,6 +35,13 @@ export interface LatestRelease {
 	publishedAt: string | null;
 	url: string;
 	version: string;
+}
+
+export interface UpdateProgress {
+	exitCode: number | null;
+	log: string[];
+	state: "exited" | "none" | "running";
+	version: string | null;
 }
 
 export interface ReleaseStatus {
@@ -281,6 +289,39 @@ class SelfUpdateServiceClass {
 			JobWorker.release();
 			throw err;
 		}
+	}
+
+	/**
+	 * The updater container's state and full log, so a caller can follow an
+	 * update it started. The container outlives the app it recreates, so this
+	 * keeps answering from the new version once it's up. `none` when no
+	 * update has run on this host.
+	 */
+	async progress(): Promise<UpdateProgress> {
+		const container = DockerService.getDocker().getContainer(
+			UPDATER_CONTAINER_NAME,
+		);
+		const info = await container
+			.inspect()
+			.catch((err: { statusCode?: number }) => {
+				if (err.statusCode === 404) {
+					return null;
+				}
+				throw err;
+			});
+		if (!info) {
+			return { exitCode: null, log: [], state: "none", version: null };
+		}
+		const raw = await container.logs({ stderr: true, stdout: true });
+		const running = info.State?.Running;
+		return {
+			exitCode: running ? null : (info.State?.ExitCode ?? null),
+			log: demuxDockerFrames(raw)
+				.split(/\r?\n/)
+				.filter((line) => line.trim() !== ""),
+			state: running ? "running" : "exited",
+			version: info.Config?.Labels?.["homerun.self-update"] ?? null,
+		};
 	}
 
 	/**

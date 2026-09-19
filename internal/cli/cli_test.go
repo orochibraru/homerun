@@ -948,6 +948,10 @@ func TestInstanceUpdateWaitsForTheNewVersion(t *testing.T) {
 			fmt.Fprint(writer, `{"version":"1.2.0"}`)
 			return
 		}
+		if request.URL.Path == "/api/v1/instance/update/progress" {
+			writer.WriteHeader(502)
+			return
+		}
 		polls++
 		if polls < 2 {
 			writer.WriteHeader(502)
@@ -963,11 +967,70 @@ func TestInstanceUpdateWaitsForTheNewVersion(t *testing.T) {
 	if !strings.Contains(out, "Updating to v1.2.0.") {
 		t.Errorf("got %q", out)
 	}
+	if strings.Count(out, "Waiting for Homerun to come back...") != 1 {
+		t.Errorf("the restart should be announced once, got %q", out)
+	}
 	if !strings.Contains(out, "Homerun is now on v1.2.0.") {
 		t.Errorf("the wait should end once the new version answers, got %q", out)
 	}
 	if polls != 2 {
 		t.Errorf("a restarting instance should be polled again, got %d polls", polls)
+	}
+}
+
+func TestInstanceUpdatePrintsTheHelperOutputOnce(t *testing.T) {
+	noSleep(t)
+	polls := 0
+	client, _ := fakeAPI(t, func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method == "POST" {
+			fmt.Fprint(writer, `{"version":"1.2.0"}`)
+			return
+		}
+		if request.URL.Path == "/api/v1/instance/update/progress" {
+			polls++
+			if polls == 1 {
+				fmt.Fprint(writer, `{"state":"running","version":"1.2.0","log":["==> Pulling the new images"]}`)
+				return
+			}
+			fmt.Fprint(writer, `{"state":"exited","exitCode":0,"version":"1.2.0","log":["==> Pulling the new images","==> Done"]}`)
+			return
+		}
+		if polls < 2 {
+			fmt.Fprint(writer, `{"current":"1.1.0"}`)
+			return
+		}
+		fmt.Fprint(writer, `{"current":"1.2.0"}`)
+	})
+
+	out, failed := runCLI(t, func() { instanceUpdate(client, true, time.Minute) })
+	if failed != "" {
+		t.Fatalf("failed with %q", failed)
+	}
+	if strings.Count(out, "Pulling the new images") != 1 || !strings.Contains(out, "==> Done") {
+		t.Errorf("each helper line should print exactly once, got %q", out)
+	}
+}
+
+func TestInstanceUpdateFailsWhenTheHelperFails(t *testing.T) {
+	noSleep(t)
+	client, _ := fakeAPI(t, func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method == "POST" {
+			fmt.Fprint(writer, `{"version":"1.2.0"}`)
+			return
+		}
+		if request.URL.Path == "/api/v1/instance/update/progress" {
+			fmt.Fprint(writer, `{"state":"exited","exitCode":1,"version":"1.2.0","log":["pull access denied"]}`)
+			return
+		}
+		fmt.Fprint(writer, `{"current":"1.1.0"}`)
+	})
+
+	out, failed := runCLI(t, func() { instanceUpdate(client, true, time.Minute) })
+	if !strings.Contains(out, "pull access denied") {
+		t.Errorf("the helper's output should be shown, got %q", out)
+	}
+	if !strings.Contains(failed, "failed (exit 1)") {
+		t.Errorf("got %q", failed)
 	}
 }
 

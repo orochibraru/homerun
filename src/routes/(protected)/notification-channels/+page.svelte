@@ -15,9 +15,10 @@
 	import { resolve } from "$app/paths";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
-	import { inputClass, labelClass as label } from "$lib/components/form-styles";
+	import { labelClass as label } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 	import { NOTIFICATION_EVENTS } from "$lib/notification-events";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -28,6 +29,13 @@
 	onMount(() => title.set("Notification Channels"));
 
 	let channelKind = $state<NotificationChannelKind>("discord");
+	const kindOptions: { label: string; value: NotificationChannelKind }[] = [
+		{ label: "Discord", value: "discord" },
+		{ label: "Slack", value: "slack" },
+		{ label: "Telegram", value: "telegram" },
+		{ label: "Webhook", value: "webhook" },
+		{ label: "Email", value: "email" },
+	];
 	let creating = $state(false);
 
 	let deleteDialogOpen = $state(false);
@@ -115,18 +123,17 @@
         </div>
         <div>
           <label class={label} for="channelKind">Kind</label>
-          <select
-            bind:value={channelKind}
-            class={inputClass}
-            id="channelKind"
-            name="kind"
-          >
-            <option value="discord">Discord</option>
-            <option value="slack">Slack</option>
-            <option value="telegram">Telegram</option>
-            <option value="webhook">Webhook</option>
-            <option value="email">Email</option>
-          </select>
+          <Select.Root name="kind" type="single" bind:value={channelKind}>
+            <Select.Trigger class="w-full" id="channelKind">
+              {kindOptions.find((option) => option.value === channelKind)
+                ?.label}
+            </Select.Trigger>
+            <Select.Content>
+              {#each kindOptions as option (option.value)}
+                <Select.Item label={option.label} value={option.value} />
+              {/each}
+            </Select.Content>
+          </Select.Root>
         </div>
         {#if channelKind === "telegram"}
           <div>

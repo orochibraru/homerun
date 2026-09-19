@@ -6,6 +6,7 @@
 	import { inputClass, labelClass } from "$lib/components/form-styles";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
 
 	interface CronHostOption {
@@ -48,6 +49,7 @@
 	}
 
 	let kind = $state<"image" | "exec">(untrack(() => values.kind));
+	let remoteHostId = $state(untrack(() => values.remoteHostId ?? ""));
 	let showRegistry = $state(untrack(() => !!values.registryUsername));
 	let envRows = $state<ParsedEnvVar[]>(untrack(initialEnvRows));
 
@@ -173,17 +175,18 @@
     {#if remoteHosts.length > 0}
       <div>
         <label class={labelClass} for="remoteHostId">Run on</label>
-        <select
-          class={inputClass}
-          id="remoteHostId"
-          name="remoteHostId"
-          value={values.remoteHostId ?? ""}
-        >
-          <option value="">This host</option>
-          {#each remoteHosts as host (host.id)}
-            <option value={host.id}>{host.name}</option>
-          {/each}
-        </select>
+        <Select.Root name="remoteHostId" type="single" bind:value={remoteHostId}>
+          <Select.Trigger class="w-full" id="remoteHostId">
+            {remoteHosts.find((host) => host.id === remoteHostId)?.name ??
+              "This host"}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item label="This host" value="" />
+            {#each remoteHosts as host (host.id)}
+              <Select.Item label={host.name} value={host.id} />
+            {/each}
+          </Select.Content>
+        </Select.Root>
         <p class="text-text-subtle mt-1 text-xs">
           Which Docker daemon runs the container. A Homerun Agent host can't
           take one-off runs : pick a Docker-socket host, or this one.
