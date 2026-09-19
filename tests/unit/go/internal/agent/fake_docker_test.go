@@ -3,9 +3,9 @@ package agent_test
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"strings"
 	"sync"
@@ -60,18 +60,6 @@ func (f *fakeDocker) record(call string) error {
 		}
 	}
 	return nil
-}
-
-// frame wraps output in Docker's multiplexed log framing, the way a non-TTY
-// container's logs come back.
-func frame(output string) []byte {
-	var buffer bytes.Buffer
-	header := make([]byte, 8)
-	header[0] = 1
-	binary.BigEndian.PutUint32(header[4:], uint32(len(output)))
-	buffer.Write(header)
-	buffer.WriteString(output)
-	return buffer.Bytes()
 }
 
 // Ping implements agent.Docker.
@@ -162,7 +150,7 @@ func (f *fakeDocker) ContainerLogs(_ context.Context, id string, _ bool) (io.Rea
 		return nil, err
 	}
 	_, output := f.run(f.config(id))
-	return io.NopCloser(bytes.NewReader(frame(output))), nil
+	return io.NopCloser(bytes.NewReader(testsupport.DockerFrame(1, output))), nil
 }
 
 // KillContainer implements agent.Docker.

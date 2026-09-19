@@ -2,9 +2,9 @@ package cleanup_test
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -28,14 +28,6 @@ type fakeDaemon struct {
 	exits   map[int]int
 	routes  map[string]string
 	execOut func(cmd []string) (stdout string, exit int)
-}
-
-// frame wraps text in Docker's multiplexed log framing for the given stream.
-func frame(stream byte, text string) []byte {
-	header := make([]byte, 8)
-	header[0] = stream
-	binary.BigEndian.PutUint32(header[4:], uint32(len(text)))
-	return append(header, text...)
 }
 
 // newFakeDaemon starts a fake daemon answering routes (or a generic
@@ -64,7 +56,7 @@ func newFakeDaemon(t *testing.T, routes map[string]string) (*dockerapi.Client, *
 			if strings.HasSuffix(r.URL.Path, "/start") {
 				stdout, exit := d.execOut(d.execs[index])
 				d.exits[index] = exit
-				_, _ = w.Write(frame(1, stdout))
+				_, _ = w.Write(testsupport.DockerFrame(1, stdout))
 				return
 			}
 			_, _ = fmt.Fprintf(w, `{"ExitCode":%d}`, d.exits[index])

@@ -3,12 +3,9 @@ package deploy_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
 	"io"
-	"net"
 	"net/http"
-	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -55,28 +52,9 @@ func (d *fakeDaemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// startFakeDaemon serves daemon over a unix socket and returns its path.
-func startFakeDaemon(t *testing.T, daemon http.Handler) string {
-	dir, err := os.MkdirTemp("/tmp", "hrdk")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-	socket := filepath.Join(dir, "d.sock")
-	listener, err := net.Listen("unix", socket)
-	if err != nil {
-		t.Fatal(err)
-	}
-	server := httptest.NewUnstartedServer(daemon)
-	server.Listener = listener
-	server.Start()
-	t.Cleanup(server.Close)
-	return socket
-}
-
 func TestRunPullsAndReplacesTheContainer(t *testing.T) {
 	daemon := &fakeDaemon{previous: "old-container"}
-	socket := startFakeDaemon(t, daemon)
+	socket := testsupport.ServeUnixSocket(t, daemon)
 	spec := deploy.Spec{
 		DeploymentID: "dep",
 		Env:          [][2]string{{"A", "1"}},

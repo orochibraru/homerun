@@ -46,7 +46,7 @@ linters:
 
   exclusions:
     rules:
-      - path: _test\.go$
+      - path: (_test\.go$|^tests/)
         linters:
           - bodyclose
           - errcheck

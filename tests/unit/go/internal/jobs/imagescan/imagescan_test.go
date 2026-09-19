@@ -2,8 +2,8 @@ package imagescan_test
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
+	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -149,14 +149,6 @@ func TestCommand(t *testing.T) {
 	}
 }
 
-// frame wraps payload in Docker's multiplexed log framing for the given stream.
-func frame(stream byte, payload string) []byte {
-	header := make([]byte, 8)
-	header[0] = stream
-	binary.BigEndian.PutUint32(header[4:], uint32(len(payload)))
-	return append(header, payload...)
-}
-
 type fakeDaemon struct {
 	mu      sync.Mutex
 	created map[string]any
@@ -185,7 +177,7 @@ func (d *fakeDaemon) serve(t *testing.T) *dockerapi.Client {
 		case r.URL.Path == "/containers/scan1/wait":
 			_ = json.NewEncoder(w).Encode(map[string]int{"StatusCode": d.exit})
 		case r.URL.Path == "/containers/scan1/logs":
-			_, _ = w.Write(append(frame(1, d.stdout), frame(2, d.stderr)...))
+			_, _ = w.Write(append(testsupport.DockerFrame(1, d.stdout), testsupport.DockerFrame(2, d.stderr)...))
 		case r.Method == http.MethodDelete && r.URL.Path == "/containers/scan1":
 			d.removed = true
 			w.WriteHeader(http.StatusNoContent)

@@ -2,13 +2,9 @@ package cronjob_test
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
-	"net"
+	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
 	"net/http"
-	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,14 +24,6 @@ type fakeDaemon struct {
 	exit    int
 	hang    bool
 	release chan struct{}
-}
-
-// frame wraps text in Docker's multiplexed log framing for the given stream.
-func frame(stream byte, text string) []byte {
-	header := make([]byte, 8)
-	header[0] = stream
-	binary.BigEndian.PutUint32(header[4:], uint32(len(text)))
-	return append(header, text...)
 }
 
 // ServeHTTP answers the fake daemon's canned responses for a cron job run.
@@ -59,9 +47,9 @@ func (d *fakeDaemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case path == "/containers/c1/start":
 		w.WriteHeader(http.StatusNoContent)
 	case path == "/containers/c1/logs":
-		_, _ = w.Write(frame(1, "out\n"))
-		_, _ = w.Write(frame(2, "err\n"))
-		_, _ = w.Write(frame(1, "more\n"))
+		_, _ = w.Write(testsupport.DockerFrame(1, "out\n"))
+		_, _ = w.Write(testsupport.DockerFrame(2, "err\n"))
+		_, _ = w.Write(testsupport.DockerFrame(1, "more\n"))
 	case path == "/containers/c1/wait":
 		if d.hang {
 			<-d.release
@@ -87,26 +75,6 @@ func (d *fakeDaemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// serve runs d over a unix socket and returns its path.
-func serve(t *testing.T, d *fakeDaemon) string {
-	t.Helper()
-	dir, err := os.MkdirTemp("", "cj")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-	socket := filepath.Join(dir, "d.sock")
-	listener, err := net.Listen("unix", socket)
-	if err != nil {
-		t.Fatal(err)
-	}
-	server := httptest.NewUnstartedServer(d)
-	server.Listener = listener
-	server.Start()
-	t.Cleanup(server.Close)
-	return socket
-}
-
 // run executes spec against the fake daemon d and returns its result.
 func run(t *testing.T, d *fakeDaemon, spec cronjob.Spec) map[string]any {
 	t.Helper()
@@ -114,7 +82,7 @@ func run(t *testing.T, d *fakeDaemon, spec cronjob.Spec) map[string]any {
 	if err != nil {
 		t.Fatal(err)
 	}
-	job.DockerSocket = serve(t, d)
+	job.DockerSocket = testsupport.ServeUnixSocket(t, d)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	result, err := cronjob.Run(ctx, job)

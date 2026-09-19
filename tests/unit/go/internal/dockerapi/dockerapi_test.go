@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"github.com/orochibraru/homerun/tests/unit/go/internal/testsupport"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -445,20 +445,12 @@ func TestCreateVolume(t *testing.T) {
 	}
 }
 
-// frame wraps payload in Docker's multiplexed log framing for the given stream.
-func frame(stream byte, payload string) []byte {
-	header := make([]byte, 8)
-	header[0] = stream
-	binary.BigEndian.PutUint32(header[4:], uint32(len(payload)))
-	return append(header, payload...)
-}
-
 func TestDemux(t *testing.T) {
 	var input bytes.Buffer
-	input.Write(frame(1, "out one\n"))
-	input.Write(frame(2, "err one\n"))
-	input.Write(frame(1, "out two\n"))
-	input.Write(frame(1, ""))
+	input.Write(testsupport.DockerFrame(1, "out one\n"))
+	input.Write(testsupport.DockerFrame(2, "err one\n"))
+	input.Write(testsupport.DockerFrame(1, "out two\n"))
+	input.Write(testsupport.DockerFrame(1, ""))
 	var out bytes.Buffer
 	if err := dockerapi.Demux(&input, &out); err != nil {
 		t.Fatalf("Demux: %v", err)
@@ -467,7 +459,7 @@ func TestDemux(t *testing.T) {
 		t.Errorf("Demux wrote %q, want %q", out.String(), want)
 	}
 
-	truncatedBody := append(frame(1, "full\n"), frame(2, "cut short")[:12]...)
+	truncatedBody := append(testsupport.DockerFrame(1, "full\n"), testsupport.DockerFrame(2, "cut short")[:12]...)
 	out.Reset()
 	if err := dockerapi.Demux(bytes.NewReader(truncatedBody), &out); err != nil {
 		t.Errorf("Demux on truncated payload = %v, want nil", err)
@@ -477,7 +469,7 @@ func TestDemux(t *testing.T) {
 	}
 
 	out.Reset()
-	if err := dockerapi.Demux(bytes.NewReader(frame(1, "x")[:5]), &out); err != nil || out.Len() != 0 {
+	if err := dockerapi.Demux(bytes.NewReader(testsupport.DockerFrame(1, "x")[:5]), &out); err != nil || out.Len() != 0 {
 		t.Errorf("Demux on truncated header = %v, wrote %q", err, out.String())
 	}
 	if err := dockerapi.Demux(bytes.NewReader(nil), &out); err != nil {
@@ -488,7 +480,7 @@ func TestDemux(t *testing.T) {
 	if err := dockerapi.Demux(errReader{boom}, &out); !errors.Is(err, boom) {
 		t.Errorf("Demux read error = %v, want boom", err)
 	}
-	if err := dockerapi.Demux(bytes.NewReader(frame(1, "payload")), errWriter{boom}); !errors.Is(err, boom) {
+	if err := dockerapi.Demux(bytes.NewReader(testsupport.DockerFrame(1, "payload")), errWriter{boom}); !errors.Is(err, boom) {
 		t.Errorf("Demux write error = %v, want boom", err)
 	}
 }
