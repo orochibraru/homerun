@@ -1,3 +1,16 @@
+## [1.0.37](https://github.com/orochibraru/homerun/compare/v1.0.36...v1.0.37) (2026-09-19)
+
+### Features
+
+- shadcn selects everywhere, last sign-in on users, live CLI update progress,
+  plus logo, domains polish and registry auth fix
+  ([c7bd3ef](https://github.com/orochibraru/homerun/commit/c7bd3efb4bb539d0cb27172fce2b503466d1d445))
+
+### Bug Fixes
+
+- registry setup
+  ([13151e1](https://github.com/orochibraru/homerun/commit/13151e1ea4bbd0544564a16415fe688f2346ef70))
+
 ## [1.0.36](https://github.com/orochibraru/homerun/compare/v1.0.35...v1.0.36) (2026-09-19)
 
 ### Features
