@@ -1,3 +1,10 @@
+## [1.0.39](https://github.com/orochibraru/homerun/compare/v1.0.38...v1.0.39) (2026-09-19)
+
+### Features
+
+- system errors ([#21](https://github.com/orochibraru/homerun/issues/21))
+  ([bd873f4](https://github.com/orochibraru/homerun/commit/bd873f41fb68473c0920f10fda7a25cd47470922))
+
 ## [1.0.38](https://github.com/orochibraru/homerun/compare/v1.0.37...v1.0.38) (2026-09-19)
 
 ## [1.0.37](https://github.com/orochibraru/homerun/compare/v1.0.36...v1.0.37) (2026-09-19)
