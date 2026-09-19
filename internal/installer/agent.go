@@ -52,7 +52,7 @@ WantedBy=default.target
 //
 // dockerSocket is the rootless daemon's socket path the agent should talk to.
 func InstallAgentSystemdUnit(run Runner, username, dockerSocket string, port int) error {
-	home := homeOf(username)
+	home := HomeOf(username)
 	unitDir := home + "/.config/systemd/user"
 	unit := AgentSystemdUnit(AgentUnitParams{
 		BinaryPath:   agentBinaryPath,
@@ -73,7 +73,7 @@ func InstallAgentSystemdUnit(run Runner, username, dockerSocket string, port int
 		return err
 	}
 
-	uid, err := uidOf(run, username)
+	uid, err := UIDOf(run, username)
 	if err != nil {
 		return err
 	}

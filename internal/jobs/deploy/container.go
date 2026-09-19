@@ -24,6 +24,7 @@ type resolvedImage struct {
 	tag    string
 }
 
+// ref is the image:tag Docker reference for i.
 func (i resolvedImage) ref() string { return i.image + ":" + i.tag }
 
 // workloadEnv is the service's environment as a Docker Env list: the env files
@@ -35,7 +36,7 @@ func (r *run) workloadEnv(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	for _, pair := range r.spec.Env {
-		merged = setEnv(merged, pair[0], pair[1])
+		merged = SetEnv(merged, pair[0], pair[1])
 	}
 	env := make([]string, 0, len(merged))
 	for _, pair := range merged {
@@ -44,7 +45,9 @@ func (r *run) workloadEnv(ctx context.Context) ([]string, error) {
 	return env, nil
 }
 
-func setEnv(env [][2]string, key, value string) [][2]string {
+// SetEnv upserts key=value into env, preserving the existing entry's position
+// when key is already present.
+func SetEnv(env [][2]string, key, value string) [][2]string {
 	for index := range env {
 		if env[index][0] == key {
 			env[index][1] = value
@@ -70,8 +73,7 @@ func withLabels(labels any, extra map[string]string) map[string]any {
 // previous one. When the previous one is running (and neither host networking
 // nor a writable volume rules it out) the new one starts next to it and the
 // previous one is removed only once the new one is ready; otherwise the
-// previous one is removed first. Mirrors createAndStartContainer in
-// docker/containers.ts.
+// previous one is removed first.
 func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, error) {
 	workload := r.spec.Workload
 	env, err := r.workloadEnv(ctx)
@@ -87,12 +89,12 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, 
 	for _, container := range previous {
 		running = running || container.State == "running"
 	}
-	plan := rolloutStrategy(running, workload.HostNetwork, r.spec.Volumes)
-	if plan.blueGreen {
+	plan := RolloutStrategy(running, workload.HostNetwork, r.spec.Volumes)
+	if plan.BlueGreen {
 		r.progress.line("Keeping the previous container serving until the new one is ready...")
 	} else {
-		if plan.reason != "" {
-			r.progress.line(plan.reason)
+		if plan.Reason != "" {
+			r.progress.line(plan.Reason)
 		}
 		r.removePrevious(ctx, previous)
 	}
@@ -106,7 +108,7 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, 
 	body := maps.Clone(workload.Template)
 	body["Env"] = env
 	body["Image"] = image.ref()
-	body["Labels"] = withLabels(body["Labels"], readinessLabels(check))
+	body["Labels"] = withLabels(body["Labels"], ReadinessLabels(check))
 	if healthcheck := r.healthcheck(check); healthcheck != nil {
 		body["Healthcheck"] = healthcheck
 	}
@@ -118,7 +120,7 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, 
 	}
 	r.progress.line("Starting container...")
 	if err := r.docker.StartContainer(ctx, id); err != nil {
-		if plan.blueGreen {
+		if plan.BlueGreen {
 			r.removeQuietly(ctx, id)
 		}
 		return "", err
@@ -126,7 +128,7 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, 
 	log.Printf("[homerun-worker] container created and started: %s (%s)", name, id)
 
 	r.joinStackNetwork(ctx, id)
-	if plan.blueGreen {
+	if plan.BlueGreen {
 		if err := r.awaitReadyOrDiscard(ctx, id, check); err != nil {
 			return "", err
 		}
@@ -136,6 +138,7 @@ func (r *run) startContainer(ctx context.Context, image resolvedImage) (string, 
 	return id, nil
 }
 
+// ensureBridge creates the named bridge network if it doesn't already exist.
 func (r *run) ensureBridge(ctx context.Context, name string) error {
 	_, err := r.docker.EnsureNetwork(ctx, map[string]any{
 		"CheckDuplicate": true,
@@ -163,6 +166,8 @@ func (r *run) joinStackNetwork(ctx context.Context, id string) {
 	}
 }
 
+// reportReachability logs how other services (or, on host networking, this
+// machine) can reach the deployed workload.
 func (r *run) reportReachability() {
 	workload := r.spec.Workload
 	if workload.HostNetwork {
@@ -193,6 +198,7 @@ func (r *run) removePrevious(ctx context.Context, previous []dockerapi.Container
 	wait.Wait()
 }
 
+// removeQuietly removes container id on its own timeout, ignoring any error.
 func (r *run) removeQuietly(ctx context.Context, id string) {
 	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 	defer cancel()
@@ -202,10 +208,10 @@ func (r *run) removeQuietly(ctx context.Context, id string) {
 // awaitReadyOrDiscard polls the new container until it's ready or has failed.
 // On failure it logs the container's last output and removes it, so the
 // previous container keeps serving.
-func (r *run) awaitReadyOrDiscard(ctx context.Context, id string, check readiness) error {
+func (r *run) awaitReadyOrDiscard(ctx context.Context, id string, check Readiness) error {
 	started := time.Now()
-	current := verdict{state: "pending"}
-	for current.state == "pending" {
+	current := Verdict{State: "pending"}
+	for current.State == "pending" {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -215,10 +221,10 @@ func (r *run) awaitReadyOrDiscard(ctx context.Context, id string, check readines
 		if err != nil && !errors.Is(err, dockerapi.ErrNotFound) {
 			return err
 		}
-		current = readinessVerdict(sampleFromInspect(info), time.Since(started), rolloutSettle, rolloutMaxWait)
+		current = ReadinessVerdict(SampleFromInspect(info), time.Since(started), rolloutSettle, rolloutMaxWait)
 	}
-	if current.state == "ready" {
-		r.progress.line(readyLine(check, int(time.Since(started).Round(time.Second).Seconds())))
+	if current.State == "ready" {
+		r.progress.line(ReadyLine(check, int(time.Since(started).Round(time.Second).Seconds())))
 		return nil
 	}
 	if output, err := r.docker.ContainerLogsTail(ctx, id, 20); err == nil {
@@ -229,5 +235,5 @@ func (r *run) awaitReadyOrDiscard(ctx context.Context, id string, check readines
 		}
 	}
 	r.removeQuietly(ctx, id)
-	return &kindError{kind: FailureRolloutFailed, err: errors.New(current.reason + " The previous container keeps serving.")}
+	return &kindError{kind: FailureRolloutFailed, err: errors.New(current.Reason + " The previous container keeps serving.")}
 }

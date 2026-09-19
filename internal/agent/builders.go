@@ -10,13 +10,11 @@ import (
 	"strings"
 )
 
-// builderScript is the shell script that runs a build inside the helper
-// container. It's generated from the main app's own builder-run.ts, and a
-// unit test on each side pins both to it, so the two can't drift the way a
-// hand-copied string would.
+// BuilderScript is the shell script that runs a build inside the helper
+// container, shared by the agent and the homerun worker.
 //
 //go:embed builder.sh
-var builderScript string
+var BuilderScript string
 
 //go:embed builder-tools.json
 var builderToolsJSON []byte
@@ -44,13 +42,15 @@ type BuilderTools struct {
 	ToolsVolume       string                                `json:"toolsVolume"`
 }
 
-// tools is builder-tools.json, parsed once at startup.
-var tools = mustParseTools(builderToolsJSON)
+// Tools is builder-tools.json, parsed once at startup.
+var Tools = MustParseTools(builderToolsJSON)
 
 // bakeTargetPattern is tools.BakeTargetPattern, compiled once.
-var bakeTargetPattern = regexp.MustCompile(tools.BakeTargetPattern)
+var bakeTargetPattern = regexp.MustCompile(Tools.BakeTargetPattern)
 
-func mustParseTools(raw []byte) BuilderTools {
+// MustParseTools parses builder-tools.json, panicking on invalid data since a
+// broken embed should stop the agent at startup, not at build time.
+func MustParseTools(raw []byte) BuilderTools {
 	var parsed BuilderTools
 	if err := json.Unmarshal(raw, &parsed); err != nil {
 		panic(fmt.Sprintf("builder-tools.json is invalid: %s", err))
@@ -58,9 +58,9 @@ func mustParseTools(raw []byte) BuilderTools {
 	return parsed
 }
 
-// isBuildMethod reports whether method is one the builder knows.
-func isBuildMethod(method string) bool {
-	return slices.Contains(tools.BuildMethods, method)
+// IsBuildMethod reports whether method is one the builder knows.
+func IsBuildMethod(method string) bool {
+	return slices.Contains(Tools.BuildMethods, method)
 }
 
 // CacheRegistry is the registry a build imports its BuildKit layer cache from
@@ -83,10 +83,10 @@ type BuilderInput struct {
 	Tag            string
 }
 
-// builderBuildDir is the directory the builder is pointed at: the repository,
+// BuilderBuildDir is the directory the builder is pointed at: the repository,
 // or the build context inside it with surrounding slashes trimmed. A context
 // that climbs out with ".." is refused.
-func builderBuildDir(repoDir, buildContext string) (string, error) {
+func BuilderBuildDir(repoDir, buildContext string) (string, error) {
 	trimmed := strings.Trim(strings.TrimSpace(buildContext), "/")
 	if trimmed == "" || trimmed == "." {
 		return repoDir, nil
@@ -111,17 +111,17 @@ func builderFilePath(repoDir, buildDir, file, fallback string) (string, error) {
 	return resolved, nil
 }
 
-// buildCacheRef is the registry ref a service's BuildKit layer cache lives at.
-func buildCacheRef(registry CacheRegistry, tag string) string {
+// BuildCacheRef is the registry ref a service's BuildKit layer cache lives at.
+func BuildCacheRef(registry CacheRegistry, tag string) string {
 	return strings.TrimRight(registry.RegistryURL, "/") + "/" + strings.Split(tag, ":")[0] + ":buildcache"
 }
 
-// bakeTargetName is the bake target to build, the default when none is given.
+// BakeTargetName is the bake target to build, the default when none is given.
 // Anything but a plain target name is refused, since it reaches the shell.
-func bakeTargetName(target string) (string, error) {
+func BakeTargetName(target string) (string, error) {
 	name := strings.TrimSpace(target)
 	if name == "" {
-		name = tools.DefaultBakeTarget
+		name = Tools.DefaultBakeTarget
 	}
 	if !bakeTargetPattern.MatchString(name) {
 		return "", fmt.Errorf(
@@ -131,10 +131,10 @@ func bakeTargetName(target string) (string, error) {
 	return name, nil
 }
 
-// builderEnv is the builder container's environment. User input only ever
+// BuilderEnv is the builder container's environment. User input only ever
 // reaches the script as variables, never spliced into the script itself.
-func builderEnv(input BuilderInput) ([]string, error) {
-	buildDir, err := builderBuildDir(input.RepoDir, input.BuildContext)
+func BuilderEnv(input BuilderInput) ([]string, error) {
+	buildDir, err := BuilderBuildDir(input.RepoDir, input.BuildContext)
 	if err != nil {
 		return nil, err
 	}
@@ -146,14 +146,14 @@ func builderEnv(input BuilderInput) ([]string, error) {
 		"CACHE_REGISTRY":   "",
 		"CACHE_USERNAME":   "",
 		"IMAGE_TAG":        input.Tag,
-		"NIXPACKS_VERSION": tools.NixpacksVersion,
-		"PACK_VERSION":     tools.PackVersion,
+		"NIXPACKS_VERSION": Tools.NixpacksVersion,
+		"PACK_VERSION":     Tools.PackVersion,
 		"PACK_VOLUME_KEY":  strings.Split(input.Tag, ":")[0],
-		"RAILPACK_VERSION": tools.RailpackVersion,
+		"RAILPACK_VERSION": Tools.RailpackVersion,
 	}
 	if cache := input.CacheRegistry; cache != nil {
 		env["CACHE_PASSWORD"] = cache.Password
-		env["CACHE_REF"] = buildCacheRef(*cache, input.Tag)
+		env["CACHE_REF"] = BuildCacheRef(*cache, input.Tag)
 		env["CACHE_REGISTRY"] = cache.RegistryURL
 		env["CACHE_USERNAME"] = cache.Username
 	}
@@ -165,23 +165,23 @@ func builderEnv(input BuilderInput) ([]string, error) {
 		}
 		env["BUILD_FILE"] = file
 	case "bake":
-		file, err := builderFilePath(input.RepoDir, buildDir, input.BakeFile, tools.DefaultBakeFile)
+		file, err := builderFilePath(input.RepoDir, buildDir, input.BakeFile, Tools.DefaultBakeFile)
 		if err != nil {
 			return nil, err
 		}
-		target, err := bakeTargetName(input.BakeTarget)
+		target, err := BakeTargetName(input.BakeTarget)
 		if err != nil {
 			return nil, err
 		}
 		env["BUILD_FILE"] = file
 		env["BAKE_TARGET"] = target
 	case "heroku", "paketo":
-		env["PACK_BUILDER"] = tools.PackBuilders[input.Method]
+		env["PACK_BUILDER"] = Tools.PackBuilders[input.Method]
 	}
 	return orderedEnv(env), nil
 }
 
-// envOrder is the order builderEnv's variables are emitted in, matching the
+// envOrder is the order BuilderEnv's variables are emitted in, matching the
 // main app's own builderEnv so both produce byte-identical container configs.
 var envOrder = []string{
 	"BUILD_DIR", "BUILD_METHOD", "CACHE_PASSWORD", "CACHE_REF", "CACHE_REGISTRY",
@@ -189,6 +189,7 @@ var envOrder = []string{
 	"PACK_VOLUME_KEY", "RAILPACK_VERSION", "BUILD_FILE", "BAKE_TARGET", "PACK_BUILDER",
 }
 
+// orderedEnv renders env as KEY=value strings in envOrder.
 func orderedEnv(env map[string]string) []string {
 	ordered := make([]string, 0, len(env))
 	for _, key := range envOrder {
@@ -204,10 +205,10 @@ var (
 	anyError       = regexp.MustCompile(`(?i)error`)
 )
 
-// buildFailureMessage is a failed build's error with its most telling output
+// BuildFailureMessage is a failed build's error with its most telling output
 // line: the last line shouting ERROR, else the last mentioning an error, else
 // the last line at all.
-func buildFailureMessage(method string, exitCode int, recentLines []string) string {
+func BuildFailureMessage(method string, exitCode int, recentLines []string) string {
 	lines := make([]string, 0, len(recentLines))
 	for _, line := range recentLines {
 		if trimmed := strings.TrimSpace(line); trimmed != "" {
@@ -225,9 +226,10 @@ func buildFailureMessage(method string, exitCode int, recentLines []string) stri
 	if cause == "" {
 		return summary + "."
 	}
-	return summary + ": " + truncateRunes(cause, 1000)
+	return summary + ": " + TruncateRunes(cause, 1000)
 }
 
+// lastMatching returns the last line matching pattern, or "" when none do.
 func lastMatching(lines []string, pattern *regexp.Regexp) string {
 	for index := len(lines) - 1; index >= 0; index-- {
 		if pattern.MatchString(lines[index]) {
@@ -237,9 +239,9 @@ func lastMatching(lines []string, pattern *regexp.Regexp) string {
 	return ""
 }
 
-// truncateRunes cuts s to at most n UTF-16-ish characters the way JavaScript's
+// TruncateRunes cuts s to at most n UTF-16-ish characters the way JavaScript's
 // slice does for the ASCII build output this sees, without splitting a rune.
-func truncateRunes(s string, n int) string {
+func TruncateRunes(s string, n int) string {
 	runes := []rune(s)
 	if len(runes) <= n {
 		return s

@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// contextHost asks the docker CLI which endpoint its active context uses.
+// ContextHost asks the docker CLI which endpoint its active context uses.
 // A variable so tests can stand in for a machine with or without docker.
-var contextHost = func() string {
+var ContextHost = func() string {
 	output, err := exec.Command("docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}").Output()
 	if err != nil {
 		return ""
@@ -36,7 +36,7 @@ func Detect() string {
 	if host := os.Getenv("DOCKER_HOST"); strings.HasPrefix(host, "unix://") {
 		return strings.TrimPrefix(host, "unix://")
 	}
-	if host := contextHost(); strings.HasPrefix(host, "unix://") {
+	if host := ContextHost(); strings.HasPrefix(host, "unix://") {
 		return strings.TrimPrefix(host, "unix://")
 	}
 	home, _ := os.UserHomeDir()

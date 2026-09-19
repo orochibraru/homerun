@@ -8,21 +8,29 @@ than in this one.
 
 ## The agent's git builds (`internal/agent/build.go`, `internal/agent/git.go`)
 
-`Builder.Build` mirrors the main app's `docker/git-build.ts` by hand (the agent
-is a separate Go binary and can't import from `src/`), **including its
+`Builder.Build`/`BuildWithProgress` is now the **single** implementation of
+"clone a git repo into a container volume, then build it": the SvelteKit app has
+none of its own anymore (`docker/git-build.ts` and `docker/builder-run.ts` were
+deleted once the `deploy` job type moved to the Go worker, see `worker.md`). The
+homerun worker's own local and Docker-build-server builds
+(`internal/jobs/deploy/build.go`'s `dockerBuild`) call this exact same
+`agent.NewBuilder(docker, socket).BuildWithProgress` against whichever daemon
+they're building on; only a registered Homerun Agent build server calls it over
+HTTP instead, through its own `POST /v1/build`
+(`internal/jobs/deploy/build.go`'s `agentBuild`). **Including its
 clone-in-a-container shape**: the agent image has no git binary of its own, so
 cloning can't shell out directly. It pulls `alpine/git`, clones into a named
 volume, tars the context back out, and removes the volume in a deferred cleanup.
-The same fix, for the same reason, as the main app's.
 
-**A private repo works too**: `BuildInput` (the `POST /v1/build` body, plain
-JSON decoded and hand-validated by `validateBuildInput`, no schema library)
-carries an optional `Credential` (`{username, token}`) that `deploy.service.ts`
-fills from `resolveGitCredential` and `AgentClientService.build` sends over,
-since the agent has no access to the git-provider tables.
-`authenticatedCloneURL` and `redactCloneURL` (`internal/agent/git.go`) are
-hand-mirrored from `$lib/git-clone-url.ts`, and every log line and error message
-goes through the redaction so a token can't reach the deployment log.
+**A private repo works too**: `BuildInput` (`POST /v1/build`'s body, and the
+homerun worker's own in-process struct for the other two build kinds) carries an
+optional `Credential` (`{username, token}`) that `deploy/helpers.ts`'s
+`resolveGitCredential` fills, since the agent has no access to the git-provider
+tables. `authenticatedCloneURL` and `redactCloneURL` (`internal/agent/git.go`)
+are the only implementation left of what `$lib/git-clone-url.ts` used to also
+carry (`authenticatedCloneUrl`/`redactCloneUrl`, deleted from the app once
+nothing there called them anymore), and every log line and error message goes
+through the redaction so a token can't reach the deployment log.
 
 ## Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-packages.ts`)
 
@@ -298,26 +306,31 @@ drives a target machine's shell, not this app's own runtime).
   `"agent"`) + `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
   (`$lib/services/agent-client.service.ts`, a thin HTTP client over
   `build`/`stats`/`health`), and the Remote Hosts "new host" form's
-  connection-type toggle; `deploy.service.ts` branches on
-  `RemoteHostDTO.resolveBuildTarget()`'s `kind` to route a git build through
-  `DockerService` or `AgentClientService`. The agent has no access to the main
-  app's source tree at runtime, so `internal/agent/build.go` and
-  `internal/agent/git.go` intentionally re-implement (not import) the equivalent
-  logic from `docker/git-build.ts`, and `internal/agent/stats.go` re-implements
-  `SystemStatsService`; keep the two in sync by hand if one changes (the
-  `subproject-sync` agent's job). `internal/agent/build.go`'s `BuildInput`
-  struct is the build body's shape, hand-validated by `validateBuildInput` in
-  `internal/agent/server.go` (no schema library, this is Go, not zod), and
-  `internal/agent/openapi.go` generates the agent's own OpenAPI 3.1 doc from
-  plain Go literals describing the same shapes, the "one schema, two purposes"
-  approach the main app uses with zod (see OpenAPI above) without a shared
-  runtime to hang a real schema library off. `internal/agent/builders.go` embeds
-  `internal/agent/builder.sh` and `internal/agent/builder-tools.json`
-  (`//go:embed`), the same generated-and-pinned build-tool script and checksums
-  the main app's own `builder-run.ts` uses; golden files under
-  `internal/agent/testdata/*.json` plus
-  `tests/unit/app/agent-builder-parity.test.ts` (on the app side) pin the two
-  together, so the pair can't silently drift the way a hand-copied string could.
+  connection-type toggle; `deploy/worker-spec.ts`'s `buildServerSpec` embeds the
+  resolved target's kind in the deploy spec, and `internal/jobs/deploy/build.go`
+  branches on it to build through a remote `dockerapi.Client` (a `"docker"`
+  host) or over HTTP to the agent (`agentBuild`, `AgentClientService`'s Go
+  equivalent). `internal/agent/build.go`/`git.go`/`builders.go` are no longer a
+  from-scratch reimplementation of anything in `src/` (see "The agent's git
+  builds" above) : the homerun worker imports that same package directly.
+  `internal/agent/stats.go` still is, of `SystemStatsService`, since the agent
+  has no access to the main app's database or config; keep the two in sync by
+  hand if one changes (the `subproject-sync` agent's job).
+  `internal/agent/build.go`'s `BuildInput` struct is the build body's shape,
+  hand-validated by `validateBuildInput` in `internal/agent/server.go` (no
+  schema library, this is Go, not zod), and `internal/agent/openapi.go`
+  generates the agent's own OpenAPI 3.1 doc from plain Go literals describing
+  the same shapes, the "one schema, two purposes" approach the main app uses
+  with zod (see OpenAPI above) without a shared runtime to hang a real schema
+  library off. `internal/agent/builders.go` embeds `internal/agent/builder.sh`
+  and `internal/agent/builder-tools.json` (`//go:embed`), the
+  generated-and-pinned build-tool script and checksums both the agent and the
+  homerun worker run; golden files under
+  `tests/unit/go/internal/agent/testdata/*.json` plus
+  `tests/unit/app/agent-builder-parity.test.ts` (on the app side, now only
+  checking `$lib/build-methods` against `builder-tools.json`'s method list and
+  bake defaults, the form options the app still owns) keep the two from drifting
+  on what the UI offers versus what the builder accepts.
 - **`cmd/installer/`**, a single-binary installer
   (`internal/installer/installer.go`) meant to be the target of a `curl | bash`
   one-liner (`cmd/installer/bootstrap.sh`) on a fresh Linux server.

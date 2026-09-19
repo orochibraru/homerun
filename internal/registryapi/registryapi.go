@@ -75,6 +75,7 @@ func New(base, username, password string) *Client {
 	}
 }
 
+// do sends one authenticated registry API request and returns the raw response.
 func (c *Client) do(ctx context.Context, method, path string, header http.Header, body []byte) (*http.Response, error) {
 	var reader io.Reader
 	if body != nil {
@@ -93,6 +94,7 @@ func (c *Client) do(ctx context.Context, method, path string, header http.Header
 	return c.http.Do(request)
 }
 
+// failure builds an error describing a failed response, its body truncated.
 func failure(response *http.Response, what string) error {
 	raw, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
 	text := strings.TrimSpace(string(raw))

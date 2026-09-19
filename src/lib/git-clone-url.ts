@@ -26,46 +26,6 @@ export function hasEmbeddedCredentials(gitUrl: string): boolean {
 }
 
 /**
- * Embeds a git provider's username and token into an HTTP(S) clone URL so a
- * private repository can be cloned non-interactively. URLs that already carry
- * credentials, non-HTTP URLs, and calls without a credential are returned as is.
- */
-export function authenticatedCloneUrl(
-	gitUrl: string,
-	credential: GitCredential | null,
-): string {
-	if (!credential || hasEmbeddedCredentials(gitUrl)) {
-		return gitUrl;
-	}
-	let url: URL;
-	try {
-		url = new URL(gitUrl);
-	} catch {
-		return gitUrl;
-	}
-	if (url.protocol !== "https:" && url.protocol !== "http:") {
-		return gitUrl;
-	}
-	url.username = encodeURIComponent(credential.username);
-	url.password = encodeURIComponent(credential.token);
-	return url.toString();
-}
-
-/** Masks the credentials in a clone URL so it can be logged or shown. */
-export function redactCloneUrl(gitUrl: string): string {
-	try {
-		const url = new URL(gitUrl);
-		if (url.username || url.password) {
-			url.username = "***";
-			url.password = "";
-		}
-		return url.toString();
-	} catch {
-		return gitUrl;
-	}
-}
-
-/**
  * Turns git's output from a failed clone into a user-facing message, replacing
  * authentication failures with a hint to connect a git provider or use a token
  * URL. Other output is returned unchanged.

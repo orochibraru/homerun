@@ -17,6 +17,13 @@ and a pager once you have more than a page's worth, same toolkit as the
 [services list](services.md#the-services-list), searched/paginated server-side
 the same way.
 
+Tick volumes (or the select-all box above the list, which covers the current
+page) to bring up a bottom bar with bulk **Enable backups**, **Disable backups**
+and **Delete**. Enabling only turns backups on for volumes that already have a
+schedule and an S3 destination set on their backup settings page; the rest are
+skipped and counted in the result. Bulk delete asks for confirmation first, and
+services mounting a deleted volume need a redeploy.
+
 ## The Volumes tab
 
 Mount a [storage volume](storage-volumes.md) into the container path of your

@@ -1,10 +1,10 @@
 // DockerService : Docker operational surface for container lifecycle,
-// networking, git-based builds, Traefik/custom-SSL config, status
+// networking, Traefik/custom-SSL config, status
 // reconciliation, and the interactive terminal. Backs every route/DTO
 // that touches a service's container or the shared Traefik/network infra.
 //
 // Built from real classes, not a bag of re-exported functions : each
-// concern (containers, networks, reconcile, git-build, custom-ssl,
+// concern (containers, networks, reconcile, custom-ssl,
 // core-services/Traefik, terminal) is its own class in services/docker/**,
 // extending BaseDockerService, and all of them merge into one class here
 // via the TS mixin pattern (each file exports a `SomethingMixin(Base)`
@@ -40,50 +40,32 @@ export type { SwarmReplica } from "./docker/swarm-replicas.ts";
 
 import { BaseDockerService } from "./docker/base.ts";
 import { DockerCleanupMixin } from "./docker/cleanup.ts";
-import { DockerContainerRolloutMixin } from "./docker/container-rollout.ts";
 import { DockerContainerMixin } from "./docker/containers.ts";
 import { DockerCoreServicesMixin } from "./docker/core-services.ts";
 import { DockerCustomSslMixin } from "./docker/custom-ssl.ts";
-import { DockerGitBuildMixin } from "./docker/git-build.ts";
 import { DockerImageScanMixin } from "./docker/image-scan.ts";
-import { DockerImageTransferMixin } from "./docker/image-transfer.ts";
 import { DockerNetworkMixin } from "./docker/networks.ts";
 import { DockerOneOffMixin } from "./docker/one-off.ts";
 import { DockerReconcileMixin } from "./docker/reconcile.ts";
 import { DockerRevisionMixin } from "./docker/revisions.ts";
 import { DockerSwarmMixin } from "./docker/swarm.ts";
 import { DockerSwarmReplicasMixin } from "./docker/swarm-replicas.ts";
-import { DockerSwarmRolloutMixin } from "./docker/swarm-rollout.ts";
 import { DockerTerminalMixin } from "./docker/terminal.ts";
 
 // Merge order matters only where one concern calls another's methods via
-// `this` : networks before containers (createAndStartContainer calls
-// connectToStackNetwork), containers before swarm (createAndStartSwarmService
-// calls this.pullImage), containers before one-off (runOneOff calls
-// this.pullImage), containers+swarm before reconcile (syncServiceStatus
-// calls both this.inspectStatus and this.inspectSwarmServiceStatus). The
+// `this` : containers before one-off (runOneOff calls this.pullImage). The
 // rest have no cross-concern dependency, so their position is arbitrary.
-class DockerServiceClass extends DockerImageTransferMixin(
-	DockerRevisionMixin(
-		DockerImageScanMixin(
-			DockerCleanupMixin(
-				DockerOneOffMixin(
-					DockerTerminalMixin(
-						DockerCoreServicesMixin(
-							DockerCustomSslMixin(
-								DockerGitBuildMixin(
-									DockerReconcileMixin(
-										DockerSwarmReplicasMixin(
-											DockerSwarmMixin(
-												DockerSwarmRolloutMixin(
-													DockerContainerMixin(
-														DockerContainerRolloutMixin(
-															DockerNetworkMixin(BaseDockerService),
-														),
-													),
-												),
-											),
-										),
+class DockerServiceClass extends DockerRevisionMixin(
+	DockerImageScanMixin(
+		DockerCleanupMixin(
+			DockerOneOffMixin(
+				DockerTerminalMixin(
+					DockerCoreServicesMixin(
+						DockerCustomSslMixin(
+							DockerReconcileMixin(
+								DockerSwarmReplicasMixin(
+									DockerSwarmMixin(
+										DockerContainerMixin(DockerNetworkMixin(BaseDockerService)),
 									),
 								),
 							),

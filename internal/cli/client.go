@@ -7,9 +7,6 @@ import (
 	"github.com/orochibraru/homerun/internal/homerun"
 )
 
-// ClientConfig is a resolved instance URL and API key, see internal/homerun.
-type ClientConfig = homerun.Config
-
 // Client is the CLI's view of the API client: the same calls as
 // internal/homerun's, except that a failure exits the process with the
 // instance's own error, which is all a CLI command ever wants to do with one.
@@ -17,25 +14,19 @@ type Client struct {
 	api *homerun.Client
 }
 
-// resolveConfig resolves the instance and key from flags, env vars, then the
-// stored login, or nil when either is still missing.
-func resolveConfig(flagBaseURL, flagAPIKey string) *ClientConfig {
-	return homerun.ResolveConfig(flagBaseURL, flagAPIKey)
-}
-
-// newClient builds the API client.
-func newClient(config ClientConfig) *Client {
+// NewClient builds the API client.
+func NewClient(config homerun.Config) *Client {
 	return &Client{api: homerun.NewClient(config)}
 }
 
-// requireClient resolves the client or exits with the "not logged in" message.
-func requireClient(flagBaseURL, flagAPIKey string) *Client {
-	config := resolveConfig(flagBaseURL, flagAPIKey)
+// RequireClient resolves the client or exits with the "not logged in" message.
+func RequireClient(flagBaseURL, flagAPIKey string) *Client {
+	config := homerun.ResolveConfig(flagBaseURL, flagAPIKey)
 	if config == nil {
-		fail("Not logged in. Run `homerun login` to get started.")
+		Fail("Not logged in. Run `homerun login` to get started.")
 		return nil
 	}
-	return newClient(*config)
+	return NewClient(*config)
 }
 
 // send performs one API call and hands back the raw response for a caller
@@ -49,7 +40,7 @@ func (c *Client) send(method, path string, query url.Values) (*http.Response, er
 func (c *Client) do(method, path string, query url.Values) ([]byte, http.Header) {
 	body, header, err := c.api.Do(method, path, query)
 	if err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	return body, header
 }
@@ -58,12 +49,7 @@ func (c *Client) do(method, path string, query url.Values) ([]byte, http.Header)
 func (c *Client) decode(method, path string, query url.Values, out any) http.Header {
 	header, err := c.api.Decode(method, path, query, out)
 	if err != nil {
-		fail(err.Error())
+		Fail(err.Error())
 	}
 	return header
-}
-
-// apiErrorMessage is the message for a failed API call, see internal/homerun.
-func apiErrorMessage(status int, body []byte) string {
-	return homerun.APIErrorMessage(status, body)
 }

@@ -12,26 +12,33 @@ import (
 
 const leaseTimeoutSQL = "interval '60 seconds'"
 
-type claimed struct {
-	attempts int
-	id       string
-	jobType  string
-	spec     string
+// ClaimedJob is one job row leased by a worker: its id, type, encrypted spec
+// and attempt count.
+type ClaimedJob struct {
+	Attempts int
+	ID       string
+	JobType  string
+	Spec     string
 }
 
-type store interface {
-	claim(ctx context.Context, workerID string) (*claimed, error)
-	heartbeat(ctx context.Context, jobID, workerID string) (bool, error)
-	finish(ctx context.Context, jobID, workerID string, result map[string]any, execErr error) error
-	release(ctx context.Context, jobID, workerID string) error
+// Store leases and settles job rows for a Worker. PGStore is the real,
+// Postgres-backed implementation; a test fakes it instead of a database.
+type Store interface {
+	Claim(ctx context.Context, workerID string) (*ClaimedJob, error)
+	Heartbeat(ctx context.Context, jobID, workerID string) (bool, error)
+	Finish(ctx context.Context, jobID, workerID string, result map[string]any, execErr error) error
+	Release(ctx context.Context, jobID, workerID string) error
 }
 
-type pgStore struct {
-	pool *pgxpool.Pool
+// PGStore is Store backed by the app's own Postgres job table.
+type PGStore struct {
+	Pool *pgxpool.Pool
 }
 
-func (s pgStore) claim(ctx context.Context, workerID string) (*claimed, error) {
-	row := s.pool.QueryRow(ctx, `
+// Claim leases the highest-priority, oldest claimable job row (queued for
+// execution and either unleased or whose lease has expired) to workerID.
+func (s PGStore) Claim(ctx context.Context, workerID string) (*ClaimedJob, error) {
+	row := s.Pool.QueryRow(ctx, `
 		with next as (
 			select id from job
 			where status = 'running' and stage = 'execute'
@@ -43,8 +50,8 @@ func (s pgStore) claim(ctx context.Context, workerID string) (*claimed, error) {
 		update job set worker_id = $1, heartbeat_at = `+db.UTCNow+`
 		from next where job.id = next.id
 		returning job.id, job.type, coalesce(job.spec, ''), job.attempts`, workerID)
-	var job claimed
-	if err := row.Scan(&job.id, &job.jobType, &job.spec, &job.attempts); err != nil {
+	var job ClaimedJob
+	if err := row.Scan(&job.ID, &job.JobType, &job.Spec, &job.Attempts); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
@@ -53,8 +60,9 @@ func (s pgStore) claim(ctx context.Context, workerID string) (*claimed, error) {
 	return &job, nil
 }
 
-func (s pgStore) heartbeat(ctx context.Context, jobID, workerID string) (bool, error) {
-	tag, err := s.pool.Exec(ctx, `
+// Heartbeat refreshes jobID's lease and reports whether workerID still owns it.
+func (s PGStore) Heartbeat(ctx context.Context, jobID, workerID string) (bool, error) {
+	tag, err := s.Pool.Exec(ctx, `
 		update job set heartbeat_at = `+db.UTCNow+`
 		where id = $1 and worker_id = $2 and status = 'running' and stage = 'execute'`, jobID, workerID)
 	if err != nil {
@@ -63,7 +71,8 @@ func (s pgStore) heartbeat(ctx context.Context, jobID, workerID string) (bool, e
 	return tag.RowsAffected() == 1, nil
 }
 
-func (s pgStore) finish(ctx context.Context, jobID, workerID string, result map[string]any, execErr error) error {
+// Finish records a leased job's outcome and moves it to the finalize stage.
+func (s PGStore) Finish(ctx context.Context, jobID, workerID string, result map[string]any, execErr error) error {
 	var resultJSON *string
 	if result != nil {
 		encoded, err := json.Marshal(result)
@@ -78,7 +87,7 @@ func (s pgStore) finish(ctx context.Context, jobID, workerID string, result map[
 		text := execErr.Error()
 		message = &text
 	}
-	_, err := s.pool.Exec(ctx, `
+	_, err := s.Pool.Exec(ctx, `
 		update job set stage = 'finalize', executor_result = $3::jsonb, executor_error = $4,
 			worker_id = null, heartbeat_at = null
 		where id = $1 and worker_id = $2 and status = 'running' and stage = 'execute'`,
@@ -86,8 +95,10 @@ func (s pgStore) finish(ctx context.Context, jobID, workerID string, result map[
 	return err
 }
 
-func (s pgStore) release(ctx context.Context, jobID, workerID string) error {
-	_, err := s.pool.Exec(ctx, `
+// Release drops jobID's lease without recording an outcome, so another
+// worker (or this one, after a restart) can claim it again.
+func (s PGStore) Release(ctx context.Context, jobID, workerID string) error {
+	_, err := s.Pool.Exec(ctx, `
 		update job set worker_id = null, heartbeat_at = null
 		where id = $1 and worker_id = $2`, jobID, workerID)
 	return err

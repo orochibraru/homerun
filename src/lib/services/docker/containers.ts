@@ -4,18 +4,9 @@ import type { ContainerStatus } from "$lib/types";
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
-import type {
-	ContainerRollout,
-	ContainerRolloutInput,
-} from "./container-rollout.ts";
-import { buildContainerLabels, MANAGED_LABEL } from "./labels.ts";
+import { buildContainerLabels } from "./labels.ts";
 import { toLogStream } from "./log-stream.ts";
-import {
-	READINESS_LABEL,
-	type ReadinessCheck,
-	readinessHealthcheck,
-	readinessLabels,
-} from "./readiness.ts";
+import { READINESS_LABEL } from "./readiness.ts";
 import {
 	type ContainerRuntimeParams,
 	mergeLabels,
@@ -234,56 +225,15 @@ export function containerCreateTemplate(params: CreateContainerParams) {
 	};
 }
 
-/** What this mixin needs from whatever's ahead of it in the merge chain (see docker.service.ts) : the network and container rollout mixins. */
-interface RequiresNetworkMixin {
-	abandonContainerRollout: (
-		rollout: ContainerRollout,
-		containerId: string,
-		error: unknown,
-	) => Promise<never>;
-	beginContainerRollout: (
-		input: ContainerRolloutInput,
-		onProgress?: (line: string) => void,
-	) => Promise<ContainerRollout>;
-	completeContainerRollout: (
-		rollout: ContainerRollout,
-		containerId: string,
-		onProgress?: (line: string) => void,
-	) => Promise<void>;
-	connectToStackNetwork: (
-		containerId: string,
-		stackId: string,
-		alias: string,
-	) => Promise<void>;
-	ensureSharedNetwork: () => Promise<void>;
-}
-
 /**
- * Container lifecycle : pull, create+start (replacing any previous
- * container for the same service), start/stop/restart/remove, status
- * inspection, log streaming. Requires the network mixin ahead of it in
- * the merge chain : createAndStartContainer calls
- * `this.ensureSharedNetwork` and `this.connectToStackNetwork`.
+ * Container lifecycle : pull, start/stop/restart/remove, status inspection,
+ * log streaming, stats and health sampling.
  */
 // oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerContainerMixin<
-	TBase extends Constructor<BaseDockerService & RequiresNetworkMixin>,
+	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
 	return class DockerContainerService extends Base {
-		/**
-		 * Container name this app gives its containers. Includes a random
-		 * suffix so a redeploy never collides on "name already in use" :
-		 * even if the previous container's removal (below) silently failed
-		 * to fully complete. The *previous* container for a service is
-		 * found by its `homerun.service.id` label, not by name, since names
-		 * are no longer stable across deploys.
-		 */
-		#containerName(slug: string, stackSlug?: string | null): string {
-			const suffix = crypto.randomUUID().slice(0, 8);
-			const prefix = stackSlug ? `${stackSlug}-` : "";
-			return `homerun-${prefix}${slug}-${suffix}`;
-		}
-
 		/**
 		 * Builds a dockerode authconfig from a service's stored registry
 		 * credentials, decrypting the password. Returns undefined for public
@@ -307,25 +257,6 @@ export function DockerContainerMixin<
 				serveraddress: service.registryUrl ?? undefined,
 				username: service.registryUsername,
 			};
-		}
-
-		/**
-		 * Looks up the digest of an already-pulled local image, without
-		 * pulling it. Returns null when the image exists locally but carries
-		 * no digest (never pushed to/pulled from a registry), and undefined
-		 * when the image can't be inspected at all (not present locally, or
-		 * the Docker call failed).
-		 */
-		async localImageDigest(
-			ref: string,
-			remote?: RemoteHostConnection | null,
-		): Promise<string | null | undefined> {
-			try {
-				const inspect = await this.getDocker(remote).getImage(ref).inspect();
-				return inspect.RepoDigests?.[0]?.split("@")[1] ?? null;
-			} catch {
-				return undefined;
-			}
 		}
 
 		/** Pulls `image:tag`, optionally authenticating against a private registry. */
@@ -371,176 +302,6 @@ export function DockerContainerMixin<
 				logger.warn(`Pulled image but inspect failed: ${ref}`, err);
 				return { digest: null };
 			}
-		}
-
-		/**
-		 * Tags a local image under `targetRef` and pushes it, for moving a
-		 * just-built image off the daemon it was built on (a build server,
-		 * see docker/git-build.ts and deploy.service.ts's cross-host build
-		 * path) : the caller pulls `targetRef` back on whichever daemon
-		 * actually needs to run it, via `pullImage` above.
-		 */
-		async pushImage(
-			localRef: string,
-			targetRef: string,
-			auth?: RegistryAuth,
-			remote?: RemoteHostConnection | null,
-		): Promise<void> {
-			const docker = this.getDocker(remote);
-			const lastColon = targetRef.lastIndexOf(":");
-			const lastSlash = targetRef.lastIndexOf("/");
-			const [repo, tag] =
-				lastColon === -1 || lastColon < lastSlash
-					? [targetRef, "latest"]
-					: [targetRef.slice(0, lastColon), targetRef.slice(lastColon + 1)];
-
-			await docker.getImage(localRef).tag({ repo, tag });
-			logger.info(`Pushing image: ${repo}:${tag}`);
-			const stream = await docker
-				.getImage(`${repo}:${tag}`)
-				.push({ authconfig: auth, tag });
-			await new Promise<void>((resolvePromise, reject) => {
-				docker.modem.followProgress(
-					stream,
-					(err: Error | null) => (err ? reject(err) : resolvePromise()),
-					// Per-layer push progress isn't surfaced anywhere : only completion matters here.
-					() => undefined,
-				);
-			});
-			logger.info(`Pushed image: ${repo}:${tag}`);
-		}
-
-		/**
-		 * Builds the full dockerode container-creation options for a service:
-		 * `containerCreateTemplate` plus its env vars, image, the readiness
-		 * healthcheck and label, and the container name.
-		 */
-		#createContainerOptions(
-			params: CreateContainerParams,
-			name: string,
-			readiness: ReadinessCheck,
-		) {
-			const template = containerCreateTemplate(params);
-			return {
-				...template,
-				Env: Object.entries(params.envVars).map(
-					([key, value]) => `${key}=${value}`,
-				),
-				Healthcheck: readinessHealthcheck(readiness, params.healthcheckCommand),
-				Image: `${params.image}:${params.tag}`,
-				Labels: { ...template.Labels, ...readinessLabels(readiness) },
-				name,
-			};
-		}
-
-		/** Best-effort stack-network join : a failure is degraded connectivity, not a failed deploy. */
-		async #joinStackNetwork(
-			containerId: string,
-			params: CreateContainerParams,
-		): Promise<void> {
-			if (!params.stackId || params.remote || params.networkMode === "host") {
-				return;
-			}
-			try {
-				await this.connectToStackNetwork(
-					containerId,
-					params.stackId,
-					params.slug,
-				);
-				logger.info(
-					`Joined stack network: service=${params.serviceId} stack=${params.stackId}`,
-				);
-			} catch (err) {
-				logger.warn(
-					`Could not join stack network: service=${params.serviceId} stack=${params.stackId}`,
-					err,
-				);
-			}
-		}
-
-		/** Tells the operator where the new container is actually reachable, which differs per network mode. */
-		#reportReachability(
-			params: CreateContainerParams,
-			onProgress?: (line: string) => void,
-		): void {
-			if (params.networkMode === "host") {
-				logger.info(
-					`Container on host network: service=${params.serviceId} port=${params.containerPort}`,
-				);
-				onProgress?.(
-					`Running on the host network : reachable directly on this machine's own port ${params.containerPort}, not through Traefik.`,
-				);
-				return;
-			}
-			if (params.remote) {
-				onProgress?.(
-					"Deployed to remote host : not on the shared network, no Traefik routing (see remote host docs).",
-				);
-				return;
-			}
-			logger.info(
-				`Reachable internally at ${params.slug}:${params.containerPort} (service=${params.serviceId})`,
-			);
-			onProgress?.(
-				`Reachable at ${params.slug}:${params.containerPort} from other services.`,
-			);
-		}
-
-		/**
-		 * Creates and starts the container for a service, replacing any
-		 * previous container for the same service. When the previous one is
-		 * running (and neither host networking nor a writable volume rules it
-		 * out, see `rolloutStrategy`), the new container starts next to it and
-		 * the previous one is only removed once the new one is ready, so
-		 * Traefik (which skips a container whose healthcheck hasn't passed,
-		 * see `planReadiness` for the check it gets) keeps routing to the old
-		 * one meanwhile; otherwise the previous
-		 * container is removed first. Ensures the shared Traefik network
-		 * exists first (unless the container is remote or on the host
-		 * network), attaches under a DNS alias equal to the service's slug so
-		 * other services can reach it at `http://<slug>:<containerPort>`
-		 * regardless of the container's own (randomized) name, then
-		 * best-effort joins the service's stack network. Reports progress and
-		 * final reachability via `onProgress`/the logger.
-		 *
-		 * @throws When the Docker create or start call fails, or
-		 *   `RolloutFailedError` when the new container never became ready.
-		 */
-		async createAndStartContainer(
-			params: CreateContainerParams,
-			onProgress?: (line: string) => void,
-		): Promise<{ containerId: string }> {
-			const docker = this.getDocker(params.remote);
-			const name = this.#containerName(params.slug, params.stackSlug);
-
-			const rollout = await this.beginContainerRollout(params, onProgress);
-
-			if (!(params.remote || params.networkMode === "host")) {
-				await this.ensureSharedNetwork();
-			}
-
-			onProgress?.("Creating container...");
-			const container = await docker.createContainer(
-				this.#createContainerOptions(params, name, rollout.readiness),
-			);
-
-			onProgress?.("Starting container...");
-			await container
-				.start()
-				.catch((error) =>
-					this.abandonContainerRollout(rollout, container.id, error),
-				);
-			logger.info(
-				`Container created and started: ${name} (${container.id})${
-					params.remote ? ` on remote host=${params.remote.id}` : ""
-				}`,
-			);
-
-			await this.#joinStackNetwork(container.id, params);
-			await this.completeContainerRollout(rollout, container.id, onProgress);
-			this.#reportReachability(params, onProgress);
-
-			return { containerId: container.id };
 		}
 
 		/** Starts a stopped container via the Docker API. */
@@ -712,18 +473,6 @@ export function DockerContainerMixin<
 			} catch {
 				return null;
 			}
-		}
-
-		/**
-		 * Lists only containers this app created (filtered on MANAGED_LABEL).
-		 * This app must never enumerate, inspect side effects on, or remove
-		 * containers on the host that it didn't create.
-		 */
-		listManagedContainers() {
-			return this.getDocker().listContainers({
-				all: true,
-				filters: JSON.stringify({ label: [`${MANAGED_LABEL}=true`] }),
-			});
 		}
 	};
 }

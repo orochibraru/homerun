@@ -1,8 +1,16 @@
 <script lang="ts">
-	import { CloudUpload, HardDrive, Plus, Trash2 } from "@lucide/svelte";
+	import {
+		CloudOff,
+		CloudUpload,
+		HardDrive,
+		Plus,
+		Trash2,
+	} from "@lucide/svelte";
+	import type { SubmitFunction } from "@sveltejs/kit";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import BulkActionBar from "$lib/components/bulk-action-bar.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import EntityList from "$lib/components/entity-list.svelte";
@@ -10,8 +18,10 @@
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
+	import SelectAllRow from "$lib/components/select-all-row.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
+	import { ListSelection } from "$lib/list-selection.svelte";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 	import { ViewMode } from "$lib/view-mode.svelte";
@@ -41,6 +51,75 @@
 		},
 	];
 
+	const selection = new ListSelection(() => data.volumes.map((vol) => vol.id));
+
+	type BulkOp = "delete" | "disableBackup" | "enableBackup";
+
+	const BULK_LABELS: Record<
+		BulkOp,
+		{ done: string; error: string; progressive: string }
+	> = {
+		delete: {
+			done: "deleted",
+			error: "delete",
+			progressive: "Deleting",
+		},
+		disableBackup: {
+			done: "no longer backed up",
+			error: "turn off backups for",
+			progressive: "Turning off backups for",
+		},
+		enableBackup: {
+			done: "now backed up",
+			error: "turn on backups for",
+			progressive: "Turning on backups for",
+		},
+	};
+
+	let bulkOp = $state<BulkOp>("enableBackup");
+	let bulkPending = $state(false);
+	let bulkDeleteDialogOpen = $state(false);
+	let bulkForm = $state<HTMLFormElement | null>(null);
+	let bulkDeleteSubmitter = $state<HTMLButtonElement | null>(null);
+
+	function plural(count: number): string {
+		return count === 1 ? "volume" : "volumes";
+	}
+
+	const bulkSubmit: SubmitFunction = (input) => {
+		const label = BULK_LABELS[bulkOp];
+		const count = selection.count;
+		return enhanceToast({
+			error: `Couldn't ${label.error} the selected ${plural(count)}.`,
+			loading: `${label.progressive} ${count} ${plural(count)}`,
+			onSettled: () => {
+				bulkPending = false;
+			},
+			onStart: () => {
+				bulkPending = true;
+			},
+			onSuccess: () => {
+				selection.clear();
+			},
+			success: (result) => {
+				const summary = result as
+					| { failed?: number; skipped?: number; succeeded?: number }
+					| undefined;
+				const ok = summary?.succeeded ?? count;
+				const parts = [`${ok} ${plural(ok)} ${label.done}`];
+				if (summary?.skipped) {
+					parts.push(
+						`${summary.skipped} skipped (set a schedule and S3 destination first)`,
+					);
+				}
+				if (summary?.failed) {
+					parts.push(`${summary.failed} failed`);
+				}
+				return `${parts.join(", ")}.`;
+			},
+		})(input);
+	};
+
 	let deleteDialogOpen = $state(false);
 	let pendingDeleteName = $state("");
 	let pendingDeleteForm: HTMLFormElement | null = null;
@@ -52,7 +131,7 @@
 	}
 </script>
 
-<div class="p-5 md:p-6">
+<div class="p-5 md:p-6 {selection.count > 0 ? 'pb-28' : ''}">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div>
       <h1 class="text-text text-lg font-semibold tracking-tight">Storage</h1>
@@ -148,6 +227,12 @@
         <p class="text-text-muted text-sm">No volumes match your filters.</p>
       </div>
     {:else}
+      <SelectAllRow
+        noun="volumes"
+        {selection}
+        visibleCount={data.volumes.length}
+      />
+
       <EntityList
         {actions}
         items={data.volumes.map((vol) => ({
@@ -158,6 +243,8 @@
         }))}
         {media}
         {meta}
+        onToggleSelect={(id) => selection.toggle(id)}
+        selectedIds={selection.ids}
         {view}
       />
 
@@ -170,6 +257,75 @@
     {/if}
   {/if}
 </div>
+
+<BulkActionBar
+  action="?/bulk"
+  idField="volumeId"
+  label={plural(selection.count)}
+  pending={bulkPending}
+  {selection}
+  submit={bulkSubmit}
+  bind:form={bulkForm}
+>
+  <button
+    class="hidden"
+    name="op"
+    type="submit"
+    value="delete"
+    bind:this={bulkDeleteSubmitter}
+    aria-hidden="true"
+    tabindex="-1"
+  ></button>
+  <Button
+    disabled={bulkPending}
+    name="op"
+    onclick={() => {
+      bulkOp = "enableBackup";
+    }}
+    size="sm"
+    type="submit"
+    value="enableBackup"
+    variant="outline"
+  >
+    <CloudUpload class="size-3.5" />
+    Enable backups
+  </Button>
+  <Button
+    disabled={bulkPending}
+    name="op"
+    onclick={() => {
+      bulkOp = "disableBackup";
+    }}
+    size="sm"
+    type="submit"
+    value="disableBackup"
+    variant="outline"
+  >
+    <CloudOff class="size-3.5" />
+    Disable backups
+  </Button>
+  <Button
+    disabled={bulkPending}
+    onclick={() => {
+      bulkOp = "delete";
+      bulkDeleteDialogOpen = true;
+    }}
+    size="sm"
+    type="button"
+    variant="destructive"
+  >
+    <Trash2 class="size-3.5" />
+    Delete
+  </Button>
+</BulkActionBar>
+
+<ConfirmDialog
+  bind:open={bulkDeleteDialogOpen}
+  confirmLabel="Delete {selection.count} {plural(selection.count)}"
+  description={`Delete ${selection.count} selected ${plural(selection.count)}? Services using them will need a redeploy.`}
+  onConfirm={() => bulkForm?.requestSubmit(bulkDeleteSubmitter ?? undefined)}
+  title="Delete selected volumes"
+/>
 
 <ConfirmDialog
   bind:open={deleteDialogOpen}

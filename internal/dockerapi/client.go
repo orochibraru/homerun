@@ -23,7 +23,9 @@ import (
 // Client is a Docker Engine API client bound to one daemon socket.
 type Client struct {
 	http *http.Client
-	base string
+	// Base is the client's base URL ("http://docker" over a unix socket, or an
+	// httptest server's URL in a test).
+	Base string
 }
 
 // New builds a client for the daemon listening on socketPath.
@@ -34,13 +36,13 @@ func New(socketPath string) *Client {
 			return dialer.DialContext(ctx, "unix", socketPath)
 		},
 	}
-	return &Client{http: &http.Client{Transport: transport}, base: "http://docker"}
+	return &Client{http: &http.Client{Transport: transport}, Base: "http://docker"}
 }
 
 // NewWithHTTP builds a client over an arbitrary HTTP client and base URL, for
 // tests that stand an httptest server in for the daemon.
 func NewWithHTTP(client *http.Client, base string) *Client {
-	return &Client{http: client, base: strings.TrimRight(base, "/")}
+	return &Client{http: client, Base: strings.TrimRight(base, "/")}
 }
 
 // AuthConfig is registry credentials, sent as the X-Registry-Auth header.
@@ -69,6 +71,7 @@ type APIError struct {
 	Status  int
 }
 
+// Error renders the daemon's status and message.
 func (e *APIError) Error() string {
 	return fmt.Sprintf("docker: %d %s", e.Status, e.Message)
 }
@@ -83,7 +86,7 @@ func (c *Client) request(
 	body any,
 	auth *AuthConfig,
 ) (*http.Response, error) {
-	endpoint := c.base + path
+	endpoint := c.Base + path
 	if len(query) > 0 {
 		endpoint += "?" + query.Encode()
 	}
@@ -134,8 +137,8 @@ func (c *Client) request(
 	return nil, &APIError{Message: message, Status: response.StatusCode}
 }
 
-// call sends one call and discards a successful body.
-func (c *Client) call(ctx context.Context, method, path string, query url.Values, body any) error {
+// Call sends one request and discards a successful body.
+func (c *Client) Call(ctx context.Context, method, path string, query url.Values, body any) error {
 	response, err := c.request(ctx, method, path, query, body, nil)
 	if err != nil {
 		return err
@@ -146,12 +149,12 @@ func (c *Client) call(ctx context.Context, method, path string, query url.Values
 
 // Ping checks the daemon answers.
 func (c *Client) Ping(ctx context.Context) error {
-	return c.call(ctx, http.MethodGet, "/_ping", nil, nil)
+	return c.Call(ctx, http.MethodGet, "/_ping", nil, nil)
 }
 
 // ImageExists reports whether ref is present on the daemon.
 func (c *Client) ImageExists(ctx context.Context, ref string) (bool, error) {
-	err := c.call(ctx, http.MethodGet, "/images/"+ref+"/json", nil, nil)
+	err := c.Call(ctx, http.MethodGet, "/images/"+ref+"/json", nil, nil)
 	if errors.Is(err, ErrNotFound) {
 		return false, nil
 	}
@@ -192,7 +195,7 @@ func (c *Client) PullImage(ctx context.Context, ref string, auth *AuthConfig, on
 
 // TagImage tags source as repository:tag.
 func (c *Client) TagImage(ctx context.Context, source, repository, tag string) error {
-	return c.call(ctx, http.MethodPost, "/images/"+source+"/tag",
+	return c.Call(ctx, http.MethodPost, "/images/"+source+"/tag",
 		url.Values{"repo": {repository}, "tag": {tag}}, nil)
 }
 
@@ -246,7 +249,7 @@ func (c *Client) CreateContainer(ctx context.Context, config ContainerConfig) (s
 
 // StartContainer starts a created container.
 func (c *Client) StartContainer(ctx context.Context, id string) error {
-	return c.call(ctx, http.MethodPost, "/containers/"+id+"/start", nil, nil)
+	return c.Call(ctx, http.MethodPost, "/containers/"+id+"/start", nil, nil)
 }
 
 // WaitContainer blocks until the container exits and returns its exit code.
@@ -283,7 +286,7 @@ func (c *Client) ContainerLogs(ctx context.Context, id string, follow bool) (io.
 // KillContainer kills a running container. A container that already stopped
 // or is gone isn't an error.
 func (c *Client) KillContainer(ctx context.Context, id string) error {
-	err := c.call(ctx, http.MethodPost, "/containers/"+id+"/kill", nil, nil)
+	err := c.Call(ctx, http.MethodPost, "/containers/"+id+"/kill", nil, nil)
 	var apiErr *APIError
 	if errors.Is(err, ErrNotFound) || (errors.As(err, &apiErr) && apiErr.Status == http.StatusConflict) {
 		return nil
@@ -293,7 +296,7 @@ func (c *Client) KillContainer(ctx context.Context, id string) error {
 
 // RemoveContainer force-removes a container. One that's already gone isn't an error.
 func (c *Client) RemoveContainer(ctx context.Context, id string) error {
-	err := c.call(ctx, http.MethodDelete, "/containers/"+id, url.Values{"force": {"1"}}, nil)
+	err := c.Call(ctx, http.MethodDelete, "/containers/"+id, url.Values{"force": {"1"}}, nil)
 	if errors.Is(err, ErrNotFound) {
 		return nil
 	}
@@ -302,13 +305,13 @@ func (c *Client) RemoveContainer(ctx context.Context, id string) error {
 
 // CreateVolume creates a named volume with labels.
 func (c *Client) CreateVolume(ctx context.Context, name string, labels map[string]string) error {
-	return c.call(ctx, http.MethodPost, "/volumes/create", nil,
+	return c.Call(ctx, http.MethodPost, "/volumes/create", nil,
 		map[string]any{"Labels": labels, "Name": name})
 }
 
 // RemoveVolume force-removes a volume. One that's already gone isn't an error.
 func (c *Client) RemoveVolume(ctx context.Context, name string) error {
-	err := c.call(ctx, http.MethodDelete, "/volumes/"+name, url.Values{"force": {"1"}}, nil)
+	err := c.Call(ctx, http.MethodDelete, "/volumes/"+name, url.Values{"force": {"1"}}, nil)
 	if errors.Is(err, ErrNotFound) {
 		return nil
 	}

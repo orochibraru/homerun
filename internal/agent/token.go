@@ -21,12 +21,12 @@ const (
 	TokenPersisted TokenSource = "persisted"
 )
 
-// resolveToken finds the bearer token every request must present. An explicit
+// ResolveToken finds the bearer token every request must present. An explicit
 // AGENT_TOKEN always wins. Otherwise a token is generated once and persisted
 // to tokenFile, so restarting the agent doesn't invalidate every main app
 // already connected to it. The file holds a full-access credential for this
 // host's daemon, so it's written 0600 in a 0700 directory.
-func resolveToken(explicit, tokenFile string) (string, TokenSource, error) {
+func ResolveToken(explicit, tokenFile string) (string, TokenSource, error) {
 	if explicit != "" {
 		return explicit, TokenFromEnv, nil
 	}
@@ -52,8 +52,8 @@ func resolveToken(explicit, tokenFile string) (string, TokenSource, error) {
 	return token, TokenGenerated, nil
 }
 
-// tokensMatch compares two tokens in constant time, so a wrong guess can't be
+// TokensMatch compares two tokens in constant time, so a wrong guess can't be
 // refined byte by byte from response timing.
-func tokensMatch(presented, expected string) bool {
+func TokensMatch(presented, expected string) bool {
 	return subtle.ConstantTimeCompare([]byte(presented), []byte(expected)) == 1
 }

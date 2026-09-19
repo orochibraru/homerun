@@ -76,6 +76,7 @@ type HelperCommand struct {
 
 var counted = []string{"CRITICAL", "HIGH", "MEDIUM", "LOW"}
 
+// countOf reads the count for one severity out of counts.
 func countOf(counts imagescan.Counts, severity string) int {
 	switch severity {
 	case "CRITICAL":
@@ -90,6 +91,7 @@ func countOf(counts imagescan.Counts, severity string) int {
 	return counts.Unknown
 }
 
+// describeBlockPolicy is the human threshold description used in blockReason's message.
 func describeBlockPolicy(policy BlockPolicy) string {
 	threshold := policy.Severity + " or above"
 	if policy.Severity == "CRITICAL" {
@@ -101,9 +103,9 @@ func describeBlockPolicy(policy BlockPolicy) string {
 	return threshold
 }
 
-// blockReason mirrors evaluateScanPolicy in src/lib/image-scan.ts: the reason
+// BlockReason mirrors evaluateScanPolicy in src/lib/image-scan.ts: the reason
 // a scan blocks the deploy, or "" when it doesn't.
-func blockReason(summary imagescan.Summary, policy BlockPolicy) string {
+func BlockReason(summary imagescan.Summary, policy BlockPolicy) string {
 	if policy.Severity == "" {
 		return ""
 	}
@@ -173,7 +175,7 @@ func (r *run) scan(ctx context.Context, targets []ScanTarget, digest string) err
 		}
 		r.result.Scans = append(r.result.Scans, ScanRecord{Digest: digest, ImageRef: shown, Source: target.Label, Status: "ok", Summary: &summary})
 		r.logSummary(shown, summary)
-		if reason := blockReason(summary, spec.Block); reason != "" {
+		if reason := BlockReason(summary, spec.Block); reason != "" {
 			r.progress.line(reason)
 			return &kindError{kind: FailureScanBlocked, err: errors.New(reason)}
 		}
@@ -201,6 +203,7 @@ func (r *run) scan(ctx context.Context, targets []ScanTarget, digest string) err
 	return nil
 }
 
+// logSummary writes the image scan's counts and top findings to the deploy log.
 func (r *run) logSummary(ref string, summary imagescan.Summary) {
 	r.progress.line(fmt.Sprintf("Image scan of %s: %s.", ref, imagescan.CountsLine(summary.Counts)))
 	serious := 0
@@ -225,6 +228,7 @@ func (r *run) logSummary(ref string, summary imagescan.Summary) {
 
 var digestPattern = regexp.MustCompile(`sha256:[0-9a-f]{64}`)
 
+// lastDigest returns the last sha256 digest found in output, or "".
 func lastDigest(output string) string {
 	matches := digestPattern.FindAllString(output, -1)
 	if len(matches) == 0 {
@@ -236,7 +240,7 @@ func lastDigest(output string) string {
 // deployThroughMirror copies the image into the Homerun mirror, scans it
 // there, then pins the swarm service to the scanned digest or brings the
 // scanned image onto this host. ok is false when it fell back to a direct pull
-// before scanning anything. Mirrors ImageScanService.deployThroughMirror.
+// before scanning anything.
 func (r *run) deployThroughMirror(ctx context.Context) (resolvedImage, bool, error) {
 	spec := r.spec.Image
 	mirror := spec.Mirror

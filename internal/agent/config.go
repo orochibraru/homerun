@@ -24,17 +24,19 @@ type Config struct {
 	TokenFile string
 }
 
-// loadConfig reads the agent's configuration from the environment.
-func loadConfig() Config {
+// LoadConfig reads the agent's configuration from the environment.
+func LoadConfig() Config {
 	return Config{
 		DockerSocketPath:       envOr("DOCKER_SOCKET_PATH", ""),
 		ExplicitToken:          os.Getenv("AGENT_TOKEN"),
 		Port:                   envInt("PORT", 7420),
 		ShutdownTimeoutSeconds: envInt("AGENT_SHUTDOWN_TIMEOUT", 120),
-		TokenFile:              envOr("AGENT_TOKEN_FILE", filepath.Join(homeDir(), ".homerun-agent", "token")),
+		TokenFile:              envOr("AGENT_TOKEN_FILE", filepath.Join(HomeDir(), ".homerun-agent", "token")),
 	}
 }
 
+// envOr reads key from the environment, or returns fallback when it's unset
+// or empty.
 func envOr(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -42,6 +44,8 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
+// envInt reads key from the environment as an integer, or returns fallback
+// when it's unset or unparseable.
 func envInt(key string, fallback int) int {
 	value, err := strconv.Atoi(os.Getenv(key))
 	if err != nil {
@@ -50,8 +54,9 @@ func envInt(key string, fallback int) int {
 	return value
 }
 
-// homeDir is HOME, else USERPROFILE, else /root.
-func homeDir() string {
+// HomeDir resolves the user's home directory: HOME, else USERPROFILE
+// (Windows), else "/root".
+func HomeDir() string {
 	if home := os.Getenv("HOME"); home != "" {
 		return home
 	}

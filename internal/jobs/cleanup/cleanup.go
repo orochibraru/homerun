@@ -27,16 +27,19 @@ type Spec struct {
 
 type summary = map[string]any
 
-func pruneSummary(deleted int, reclaimed int64) summary {
+// PruneSummary is the standard shape for one prune action's result.
+func PruneSummary(deleted int, reclaimed int64) summary {
 	return summary{"itemsDeleted": deleted, "spaceReclaimedBytes": reclaimed}
 }
 
 // Run executes one docker_cleanup job against the local daemon.
 func Run(ctx context.Context, job jobs.Job) (map[string]any, error) {
-	return run(ctx, job, dockerapi.New(job.DockerSocket))
+	return RunWithClient(ctx, job, dockerapi.New(job.DockerSocket))
 }
 
-func run(ctx context.Context, job jobs.Job, docker *dockerapi.Client) (map[string]any, error) {
+// RunWithClient is Run against an explicit Docker client, so a test can pass a
+// fake daemon instead of dialing the real socket.
+func RunWithClient(ctx context.Context, job jobs.Job, docker *dockerapi.Client) (map[string]any, error) {
 	var spec Spec
 	if err := job.DecodeSpec(&spec); err != nil {
 		return nil, err
@@ -71,41 +74,47 @@ type cleaner struct {
 	job    jobs.Job
 }
 
+// logf appends a formatted line to the job's log.
 func (c cleaner) logf(format string, args ...any) {
 	c.job.AppendLog(fmt.Sprintf(format, args...))
 }
 
+// containers prunes every stopped container.
 func (c cleaner) containers(ctx context.Context) (summary, error) {
 	report, err := c.docker.PruneContainers(ctx)
 	if err != nil {
 		return nil, err
 	}
 	c.logf("Pruned %d stopped container(s), reclaimed %d bytes", report.Deleted, report.SpaceReclaimed)
-	return pruneSummary(report.Deleted, report.SpaceReclaimed), nil
+	return PruneSummary(report.Deleted, report.SpaceReclaimed), nil
 }
 
+// networks prunes every unused network.
 func (c cleaner) networks(ctx context.Context) (summary, error) {
 	report, err := c.docker.PruneNetworks(ctx)
 	if err != nil {
 		return nil, err
 	}
 	c.logf("Pruned %d unused network(s)", report.Deleted)
-	return pruneSummary(report.Deleted, 0), nil
+	return PruneSummary(report.Deleted, 0), nil
 }
 
+// buildCache prunes the BuildKit build cache.
 func (c cleaner) buildCache(ctx context.Context) (summary, error) {
 	report, err := c.docker.PruneBuildCache(ctx)
 	if err != nil {
 		return nil, err
 	}
 	c.logf("Pruned build cache, reclaimed %d bytes", report.SpaceReclaimed)
-	return pruneSummary(0, report.SpaceReclaimed), nil
+	return PruneSummary(0, report.SpaceReclaimed), nil
 }
 
+// isDangling reports whether tags is empty or just the dangling "<none>:<none>" tag.
 func isDangling(tags []string) bool {
 	return len(tags) == 0 || (len(tags) == 1 && tags[0] == "<none>:<none>")
 }
 
+// shortID strips a "sha256:" prefix and truncates id to 12 characters.
 func shortID(id string) string {
 	id = strings.TrimPrefix(id, "sha256:")
 	if len(id) > 12 {
@@ -114,6 +123,7 @@ func shortID(id string) string {
 	return id
 }
 
+// setOf turns values into a lookup set.
 func setOf(values []string) map[string]bool {
 	set := make(map[string]bool, len(values))
 	for _, value := range values {
@@ -122,6 +132,8 @@ func setOf(values []string) map[string]bool {
 	return set
 }
 
+// images prunes dangling (or, with all, every tagged-but-unused) images,
+// keeping any in keepIDs.
 func (c cleaner) images(ctx context.Context, all bool, keepIDs []string) (summary, error) {
 	suffix := ""
 	if all {
@@ -133,7 +145,7 @@ func (c cleaner) images(ctx context.Context, all bool, keepIDs []string) (summar
 			return nil, err
 		}
 		c.logf("Pruned %d unused image(s)%s, reclaimed %d bytes", report.Deleted, suffix, report.SpaceReclaimed)
-		return pruneSummary(report.Deleted, report.SpaceReclaimed), nil
+		return PruneSummary(report.Deleted, report.SpaceReclaimed), nil
 	}
 	usage, err := c.docker.SystemDiskUsage(ctx)
 	if err != nil {
@@ -156,9 +168,10 @@ func (c cleaner) images(ctx context.Context, all bool, keepIDs []string) (summar
 		reclaimed += image.Size
 	}
 	c.logf("Pruned %d unused image(s)%s, kept %d retained revision image(s), reclaimed %d bytes", deleted, suffix, len(keep), reclaimed)
-	return pruneSummary(deleted, reclaimed), nil
+	return PruneSummary(deleted, reclaimed), nil
 }
 
+// prunableVolumes filters volumes down to the ones with no mount and not in keep.
 func prunableVolumes(volumes []dockerapi.DiskUsageVolume, keep map[string]bool) []dockerapi.DiskUsageVolume {
 	var prunable []dockerapi.DiskUsageVolume
 	for _, volume := range volumes {
@@ -169,6 +182,7 @@ func prunableVolumes(volumes []dockerapi.DiskUsageVolume, keep map[string]bool) 
 	return prunable
 }
 
+// volumes prunes unused volumes, keeping any named in keepNames.
 func (c cleaner) volumes(ctx context.Context, keepNames []string) (summary, error) {
 	if len(keepNames) == 0 {
 		report, err := c.docker.PruneVolumes(ctx)
@@ -176,7 +190,7 @@ func (c cleaner) volumes(ctx context.Context, keepNames []string) (summary, erro
 			return nil, err
 		}
 		c.logf("Pruned %d unused volume(s), reclaimed %d bytes", report.Deleted, report.SpaceReclaimed)
-		return pruneSummary(report.Deleted, report.SpaceReclaimed), nil
+		return PruneSummary(report.Deleted, report.SpaceReclaimed), nil
 	}
 	usage, err := c.docker.SystemDiskUsage(ctx)
 	if err != nil {
@@ -201,9 +215,11 @@ func (c cleaner) volumes(ctx context.Context, keepNames []string) (summary, erro
 		}
 	}
 	c.logf("Pruned %d unused volume(s), kept %d volume(s) mounted by Homerun services, reclaimed %d bytes", deleted, len(keep), reclaimed)
-	return pruneSummary(deleted, reclaimed), nil
+	return PruneSummary(deleted, reclaimed), nil
 }
 
+// system runs the full container/image/network/build-cache prune, summarized
+// per category.
 func (c cleaner) system(ctx context.Context, keepImageIDs []string) (summary, error) {
 	containers, err := c.containers(ctx)
 	if err != nil {
@@ -224,6 +240,8 @@ func (c cleaner) system(ctx context.Context, keepImageIDs []string) (summary, er
 	return summary{"buildCache": buildCache, "containers": containers, "images": images, "networks": networks}, nil
 }
 
+// stackNetworks removes stack-prefixed networks with no live stack and no
+// attached containers.
 func (c cleaner) stackNetworks(ctx context.Context, prefix string, liveIDs []string) (summary, error) {
 	if prefix == "" {
 		return nil, errors.New("reclaimStackNetworks spec carries no network prefix")
@@ -251,5 +269,5 @@ func (c cleaner) stackNetworks(ctx context.Context, prefix string, liveIDs []str
 	if len(removed) > 0 {
 		c.logf("Reclaimed %d orphan stack network(s): %s", len(removed), strings.Join(removed, ", "))
 	}
-	return pruneSummary(len(removed), 0), nil
+	return PruneSummary(len(removed), 0), nil
 }

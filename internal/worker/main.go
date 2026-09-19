@@ -50,7 +50,7 @@ func Main() {
 		}
 	}
 	log.SetFlags(0)
-	if err := run(loadConfig()); err != nil {
+	if err := run(LoadConfig()); err != nil {
 		fmt.Fprintf(os.Stderr, "[homerun-worker] %s\n", err)
 		os.Exit(1)
 	}
@@ -78,20 +78,20 @@ func run(config Config) error {
 	}
 
 	log.Printf("[homerun-worker] ready: id=%s concurrency=%d docker=%s version=%s", config.ID, config.Concurrency, config.DockerSocketPath, buildinfo.Version)
-	w := &worker{
-		box:               box,
-		concurrency:       config.Concurrency,
-		executors:         Executors,
-		heartbeatInterval: 10 * time.Second,
-		id:                config.ID,
-		pollInterval:      time.Second,
-		shutdownGrace:     60 * time.Second,
-		store:             pgStore{pool: pool},
+	w := &Worker{
+		Box:               box,
+		Concurrency:       config.Concurrency,
+		Executors:         Executors,
+		HeartbeatInterval: 10 * time.Second,
+		ID:                config.ID,
+		PollInterval:      time.Second,
+		ShutdownGrace:     60 * time.Second,
+		Store:             PGStore{Pool: pool},
 	}
-	w.newJob = func(c *claimed, spec json.RawMessage) jobs.Job {
-		return jobs.New(c.id, c.jobType, c.attempts, spec, config.DockerSocketPath, pool)
+	w.NewJob = func(c *ClaimedJob, spec json.RawMessage) jobs.Job {
+		return jobs.New(c.ID, c.JobType, c.Attempts, spec, config.DockerSocketPath, pool)
 	}
-	w.run(ctx)
+	w.Run(ctx)
 	log.Print("[homerun-worker] stopped.")
 	return nil
 }

@@ -23,7 +23,8 @@ type Config struct {
 	ID string
 }
 
-func loadConfig() Config {
+// LoadConfig reads the worker's Config from its environment.
+func LoadConfig() Config {
 	id := os.Getenv("WORKER_ID")
 	if id == "" {
 		host, _ := os.Hostname()

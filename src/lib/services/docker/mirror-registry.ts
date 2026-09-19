@@ -8,7 +8,6 @@ export const MANIFEST_ACCEPT = [
 	"application/vnd.docker.distribution.manifest.v2+json",
 ].join(", ");
 
-export const KEEP_TAG_PREFIX = "homerun-keep-";
 export const MIRROR_GC_SCANS_PER_SERVICE = 2;
 
 const CATALOG_PAGE_SIZE = 1000;
@@ -37,13 +36,6 @@ export interface MirrorKeepSet {
 	tags: Array<RepositoryRef & { tag: string }>;
 }
 
-export interface MirrorGcPlan {
-	deletes: MirrorDigest[];
-	emptiedRepositories: string[];
-	keptManifests: number;
-	pins: MirrorTag[];
-}
-
 export interface ServiceMirrorReference {
 	deployed: ImageDigestRef[];
 	image: string;
@@ -64,16 +56,6 @@ export function isValidRepository(name: string): boolean {
 /** Whether `digest` is a well-formed `sha256:<64 hex chars>` content digest. */
 export function isValidDigest(digest: string): boolean {
 	return DIGEST_RE.test(digest);
-}
-
-/**
- * The synthetic tag name a kept-but-otherwise-untagged manifest is pinned
- * under during garbage collection, so the mirror registry's own GC (which
- * only understands tags, not this app's own deployed/scanned references)
- * doesn't reap it. See `planMirrorGc`.
- */
-export function keepTagFor(digest: string): string {
-	return `${KEEP_TAG_PREFIX}${digest.replace("sha256:", "").slice(0, 32)}`;
 }
 
 function digestRepository(ref: ImageDigestRef): MirrorDigest {
@@ -118,71 +100,6 @@ export function mirrorKeepSet(
 				isValidDigest(entry.digest) && isValidRepository(entry.repository),
 		),
 		tags,
-	};
-}
-
-function key(repository: string, value: string): string {
-	return `${repository}@${value}`;
-}
-
-/**
- * Diffs the mirror's actual `inventory` against a `MirrorKeepSet` to build a
- * garbage-collection plan: which manifests to delete, which kept-but-untagged
- * digests need a synthetic pin tag (`keepTagFor`) so the registry's own GC
- * doesn't reap them, and which of the known `repositories` end up with
- * nothing surviving in them at all.
- */
-export function planMirrorGc(
-	inventory: MirrorTag[],
-	repositories: string[],
-	keep: MirrorKeepSet,
-): MirrorGcPlan {
-	const keptTags = new Set(
-		keep.tags.map((entry) => key(entry.repository, entry.tag)),
-	);
-	const keptDigests = new Set(
-		keep.digests.map((entry) => key(entry.repository, entry.digest)),
-	);
-	for (const entry of inventory) {
-		if (keptTags.has(key(entry.repository, entry.tag))) {
-			keptDigests.add(key(entry.repository, entry.digest));
-		}
-	}
-
-	const tagged = new Set(
-		inventory.map((entry) => key(entry.repository, entry.digest)),
-	);
-	const deletes = new Map<string, MirrorDigest>();
-	for (const entry of inventory) {
-		const id = key(entry.repository, entry.digest);
-		if (!keptDigests.has(id)) {
-			deletes.set(id, { digest: entry.digest, repository: entry.repository });
-		}
-	}
-
-	const known = new Set(repositories);
-	const pins = new Map<string, MirrorTag>();
-	for (const entry of keep.digests) {
-		const id = key(entry.repository, entry.digest);
-		if (known.has(entry.repository) && !tagged.has(id)) {
-			pins.set(id, { ...entry, tag: keepTagFor(entry.digest) });
-		}
-	}
-
-	const survivors = new Set<string>();
-	for (const id of keptDigests) {
-		const [repository] = id.split("@");
-		if (tagged.has(id) || pins.has(id)) {
-			survivors.add(repository);
-		}
-	}
-
-	const keptTagged = [...keptDigests].filter((id) => tagged.has(id)).length;
-	return {
-		deletes: [...deletes.values()],
-		emptiedRepositories: repositories.filter((name) => !survivors.has(name)),
-		keptManifests: keptTagged + pins.size,
-		pins: [...pins.values()],
 	};
 }
 
@@ -338,43 +255,6 @@ export class MirrorRegistryClient {
 			}
 		}
 		return entries;
-	}
-
-	/**
-	 * Copies an existing manifest (read by digest) onto `entry.tag` within
-	 * the same repository (a GET then a PUT). Returns false when the source
-	 * manifest doesn't exist (404) rather than throwing.
-	 *
-	 * @throws On any other failed read or write.
-	 */
-	async tagManifest(entry: MirrorTag): Promise<boolean> {
-		const source = await this.#request(
-			`/v2/${entry.repository}/manifests/${entry.digest}`,
-			{ headers: { Accept: MANIFEST_ACCEPT } },
-		);
-		if (source.status === 404) {
-			return false;
-		}
-		if (!source.ok) {
-			await this.#fail(source, `Reading ${entry.repository}@${entry.digest}`);
-		}
-		const body = await source.arrayBuffer();
-		const response = await this.#request(
-			`/v2/${entry.repository}/manifests/${entry.tag}`,
-			{
-				body,
-				headers: {
-					"Content-Type":
-						source.headers.get("content-type") ??
-						"application/vnd.docker.distribution.manifest.v2+json",
-				},
-				method: "PUT",
-			},
-		);
-		if (!response.ok) {
-			await this.#fail(response, `Tagging ${entry.repository}:${entry.tag}`);
-		}
-		return true;
 	}
 
 	/**

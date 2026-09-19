@@ -67,32 +67,35 @@ two deploys of the same service racing each other, and what keeps a
   process that died, and is put back on the queue. `runJob()` is public
   specifically so `tests/unit/app/queue.test.ts` can drive the
   succeed/retry/permanently-fail decision without an interval.
-- **Go-executed job types** skip their in-process handler: a non-null module in
-  `$lib/services/queue/worker-jobs/` makes `runJob` run its `prepare` step and
-  hand the job to the Go worker, and the tick's finalize pass runs its
-  `finalize` step once the worker reports back. See `worker.md`.
-- **`$lib/services/queue/handlers.ts`** maps a `JobType` to its handler
-  (`deploy` → `DeploymentService.deployService`, `backup` →
-  `S3BackupService.backupVolume`, `cron_job` → `CronJobService.runJob`,
-  `docker_cleanup` → the matching `DockerService.prune*` (unused now, the Go
-  worker runs it, see `worker.md`), `notification_delivery` →
-  `NotificationChannelService.retryDelivery`), each parsing its own payload
-  through a zod schema in `queue/payloads.ts` rather than casting : a payload
-  written by an older version of the app fails as a clean job error instead of
-  deep inside dockerode. Throwing is how a handler reports failure. Kept in its
-  own module so `QueueService` stays importable from `deploy.service.ts` without
-  an import cycle (`handlers` → `deploy.service` → `queue.service`, and `worker`
-  → `handlers`, so `hooks.server.ts` imports the worker directly).
+- **Go-executed job types** skip any in-process handler: a non-null module in
+  `$lib/services/queue/worker-jobs/`
+  (`src/lib/services/queue/worker-jobs/index.ts`'s `workerJobs`) makes `runJob`
+  run its `prepare` step and hand the job to the Go worker, and the tick's
+  finalize pass runs its `finalize` step once the worker reports back. See
+  `worker.md`. **Every heavy job type is Go-executed now** : `deploy`
+  (`worker-jobs/deploy.ts`, wrapping `DeploymentService`'s
+  `prepareWorkerDeploy`/`finalizeWorkerDeploy`), `backup`/`backup_restore`,
+  `cron_job`, `docker_cleanup`, `image_scan`. Only `notification_delivery` still
+  runs fully in-process.
+- **`$lib/services/queue/handlers.ts`** maps a `JobType` to an in-process
+  handler for whatever's left : today just `notification_delivery` →
+  `NotificationChannelService.retryDelivery`
+  (`jobHandlers: Partial<Record<JobType, JobHandler>>`, so a Go-executed type
+  simply has no entry). A handler still parses its own payload through a zod
+  schema in `queue/payloads.ts` rather than casting : a payload written by an
+  older version of the app fails as a clean job error instead of deep inside
+  whatever it touches. Throwing is how a handler reports failure.
 
-**What changed at each trigger point.** `DeploymentService.deployService()` is
-unchanged as the actual pipeline and is still the single source of truth; what
+**What changed at each trigger point.** `DeploymentService`'s pipeline is now
+split across the prepare/execute/finalize stages (see `worker.md`) rather than
+running inline as one function, but it's still the single source of truth; what
 moved is _who calls it_. `DeploymentService.enqueueDeploy()` creates the
 `deployment` row up front with status `"pending"` (and sets the service's
 `currentStatus` to match) and queues the job, so the Overview tab's existing
 progress polling, which already treated `pending` as in-flight and already
 resumes from `svc.currentStatus` after a reload, works unchanged for a deploy
-that hasn't started yet. `deployService()` now reuses an existing deployment row
-when handed its id instead of always creating one.
+that hasn't started yet. `prepareWorkerDeploy()` reuses an existing deployment
+row when handed its id instead of always creating one.
 
 **The Overview tab's progress polling had to grow two things for this**, both
 real bugs found by driving a template quick-deploy in a real browser rather than
@@ -128,8 +131,9 @@ banner is suppressed during a first deploy.
 - Backups (`/backups`'s and `storage/[volumeId]`'s "Run now", plus the backup
   scheduler) enqueue and return : a tar-and-upload could comfortably outlive
   Bun's idle timeout, and neither route called `allowLongRequest()`. The
-  `backup_run` row is still written by `S3BackupService.backupVolume()` when the
-  job actually starts.
+  `backup_run` row is opened by the `backup`/`backup_restore` worker jobs'
+  `prepare` step (`worker-jobs/backup.ts`, `S3BackupService.backupSpec`) when
+  the job is claimed, not when the app enqueues it.
 
 **Retries** are per job type (`maxAttempts`, default 1) with exponential backoff
 : backups get 2 attempts, a notification channel delivery retry gets 4 (queued
@@ -208,8 +212,7 @@ unrestricted. Covered by `tests/unit/app/cron-expression.test.ts`.
 A user-defined scheduled task that isn't tied to a service, unlike
 `service.cronSchedule` (which redeploys an existing service). Two kinds:
 
-- **`kind: "image"`** runs a throwaway container via `DockerService.runOneOff`
-  (see the one-off mixin under Docker integration): image + tag, an optional
+- **`kind: "image"`** runs a throwaway container: image + tag, an optional
   command override, env vars, and optional private-registry credentials
   (`registryPasswordEnc`, same AES-256-GCM scheme as everything else). The
   command override is parsed by `$lib/command-parse.ts`'s `parseCommand`, a
@@ -217,30 +220,30 @@ A user-defined scheduled task that isn't tied to a service, unlike
   taken as Docker-style JSON exec form), tested in
   `tests/unit/app/command-parse.test.ts`.
 - **`kind: "exec"`** ("Host command") runs on the Docker host itself, not in the
-  app's container: `DockerService.runOneOff` with `privileged: true`,
-  `pidMode: "host"` and a throwaway `alpine:3` helper whose command is
+  app's container: a throwaway `alpine:3` helper, `privileged: true`,
+  `pidMode: "host"`, whose command is
   `nsenter -t 1 -m -u -i -n -p -- sh -c <command>` (`docker/host-command.ts`'s
-  `hostCommandArgs`, busybox ships `nsenter`). It used to be `execFile` inside
-  the app container, which is not the host at all once Homerun runs from
-  compose, and handed the app's own environment (`AUTH_SECRET`, `DATABASE_URL`)
-  to the command; now only `job.envVars` reach it, output streams through the
-  same `OutputFlusher` as image jobs, and the timeout is `runOneOff`'s kill.
-  Verified by hand: `docker run --rm --privileged --pid=host alpine:3` running
-  that `nsenter` line with `hostname` prints the host's (OrbStack VM's)
-  hostname. Under rootless Docker PID 1 of the daemon's PID namespace is
-  rootlesskit's, so "host" there means the rootless user namespace.
-  **Admin-only, enforced in `$lib/server/cron-job-form.ts`** (shared by both the
-  create and edit actions, so neither can skip it) rather than only hidden in
-  the UI : it is root on the host, the same class of power the Docker socket
-  already gives.
+  `hostCommandArgs`, busybox ships `nsenter`, still pure TS built into the spec
+  below). It used to be `execFile` inside the app container, which is not the
+  host at all once Homerun runs from compose, and handed the app's own
+  environment (`AUTH_SECRET`, `DATABASE_URL`) to the command; now only
+  `job.envVars` reach it. Verified by hand:
+  `docker run --rm --privileged --pid=host alpine:3` running that `nsenter` line
+  with `hostname` prints the host's (OrbStack VM's) hostname. Under rootless
+  Docker PID 1 of the daemon's PID namespace is rootlesskit's, so "host" there
+  means the rootless user namespace. **Admin-only, enforced in
+  `$lib/server/cron-job-form.ts`** (shared by both the create and edit actions,
+  so neither can skip it) rather than only hidden in the UI : it is root on the
+  host, the same class of power the Docker socket already gives.
 
-`CronJobService.runJob(job)` is the single entry point both the scheduler and
-the manual "Run now" funnel through, and it writes one `cron_job_run` row per
-attempt on every path including a thrown runner, same shape as
-`S3BackupService.backupVolume`. A run keeps `exitCode`, `success`, `error`, and
-the captured stdout+stderr (`CronJobRunDTO.finish` keeps the **last** 64k
-characters rather than the first, since a failure's useful output is at the
-end).
+Both kinds run as a throwaway one-off container **in the Go worker now**, not
+through `DockerService.runOneOff` in-process (see "Executed by the Go worker"
+below); `CronJobService.prepareRun`/`finishRun` write one `cron_job_run` row per
+attempt on every path including a spec that couldn't even be built, same shape
+as the backup/restore worker jobs (see S3 backups below). A run keeps
+`exitCode`, `success`, `error`, and the captured stdout+stderr
+(`CronJobRunDTO.finish` keeps the **last** 64k characters rather than the first,
+since a failure's useful output is at the end).
 
 Wiring follows the existing patterns exactly rather than inventing anything:
 `JobType` gains `"cron_job"` (`$lib/types.ts` + `JOB_TYPE_LABELS`), with its own
@@ -261,12 +264,14 @@ resolves the spec (image ref or the `nsenter` helper, parsed command, env,
 labels, registry auth, and for an image job on a `"docker"` build server its
 `tcp://` connection; `ssh://` hosts are rejected by the worker, agent hosts by
 prepare). Go runs it through `dockerapi.RunOneOff`, appends output to
-`cron_job_run.output` at most once a second, and returns
+`cron_job_run.output` at most once a second (`cronjob.go`'s own `flusher`, the
+Go port of the old in-process `OutputFlusher`), and returns
 `{exitCode, output, timedOut}`; `CronJobService.finishRun` maps that onto the
-outcome (same messages as before) and finishes the run. `CronJobService.runJob`
-is the old in-process path, dead while the worker job is on.
+outcome (same messages as before) and finishes the run. The old in-process
+`CronJobService.runJob`/`#runImage`/`#runExec` and its `OutputFlusher` are gone
+from the app entirely, not just dead code kept around.
 
-## S3 backups (`src/lib/services/s3-backup.service.ts`, `/backups`, `/s3-destinations`)
+## S3 backups (`src/lib/services/s3-backup.service.ts`, `internal/jobs/backup`, `/backups`, `/s3-destinations`)
 
 Per-volume, off by default. The destination itself is a separate, named,
 reusable row (`s3_destination`, `S3DestinationDTO`, managed on
@@ -274,48 +279,52 @@ reusable row (`s3_destination`, `S3DestinationDTO`, managed on
 so several volumes can share one bucket/credential pair; the volume only owns
 `backupEnabled`/`backupSchedule`/`backupPrefix`, edited on `storage/[volumeId]`.
 Every attempt, scheduled or manual, writes a `backup_run` row (`BackupRunDTO`,
-created before the attempt and finalized on every return path, including
-validation failure), and `/backups` is the page over that history, plus a "Run
-now" action per volume, the same one `storage/[volumeId]` offers.
-`S3BackupService` (`s3-backup.service.ts`) holds the whole tar-then-upload
-pipeline (`backupVolume()` → `attemptBackup()`: open the run row, validate
-config, resolve+decrypt the named destination, tar the volume, finalize the run
-row, return the result) plus restore (`listBackups()`/`restoreVolume()`), over a
-hand-rolled AWS Signature V4 client (`putObject`/`signedRequest`, module
-functions) (single-request PUT, no multipart, no SDK dependency, verified
-end-to-end against a local MinIO container during development) that works
-against any S3-compatible endpoint (AWS S3, MinIO, R2, B2, etc.) via path-style
-addressing. `S3BackupService.backupVolume(volume)` (a singleton instance,
-`export const S3BackupService = new S3BackupServiceClass()`) is the callable
-entry point every route/scheduler uses; it PUTs the tarball as
-`<prefix/>volumeName-<timestamp>.tar.gz`. **Both volume kinds are supported**:
-`kind: "bind"` is tar'd straight off the host (`execFile("tar", ...)`), and
-`kind: "volume"` (Docker-managed, whose content isn't visible on the host
-filesystem the same way) is mounted read-only into a throwaway `alpine:3`
-container that tars it to stdout, via `DockerService.runOneOff` (see the one-off
-mixin under Docker integration below). Both paths produce the same bytes, so
-only `S3BackupService`'s private `archiveHostPath()`/`archiveNamedVolume()`
-branch, `attemptBackup` and every caller are kind-agnostic. A non-zero exit from
-the helper fails the run with the helper's own stderr attached, rather than
+opened by the `backup`/`backup_restore` worker jobs' `prepare` step and
+finalized on every return path including a spec that couldn't be built), and
+`/backups` is the page over that history, plus a "Run now" action per volume,
+the same one `storage/[volumeId]` offers.
+
+**The tar-then-upload (and download-then-unpack) pipeline itself runs in the Go
+worker now**: `S3BackupService` (`s3-backup.service.ts`) only resolves and
+returns the spec `internal/jobs/backup/backup.go`'s `Run` needs —
+`backupSpec(volume)`/`restoreSpec(volume, key, options)`, called from
+`worker-jobs/backup.ts`/`backup_restore.ts`'s `prepare` — the destination
+(decrypted via `destinationFor`), the helper image/mount path, the pre-backup
+command's target and, when `backupStopServices`/`options.stopServices`, the
+running services to stop (all resolved by
+`$lib/services/backup/volume-services.ts`'s `VolumeServices`, see Quiescing
+below). `S3Config`'s hand-rolled AWS Signature V4 client (`signedRequest`,
+`listBackups`'s `ListObjectsV2`) is the one part still in TS, since the app
+itself lists backups for the Restore picker; the Go side has its own S3 client
+(`internal/s3`) for the actual PUT/GET. **Both volume kinds are supported**:
+`kind: "bind"` is tar'd straight off the host, and `kind: "volume"`
+(Docker-managed, whose content isn't visible on the host filesystem the same
+way) is mounted read-only into a throwaway helper container that tars it to
+stdout — both now `internal/jobs/backup/backup.go`'s
+`archiveAndUpload`/`withHelper`, one code path for both kinds since a bind's
+source is as mountable as a named volume, matching the old TS
+`archiveHostPath()`/`archiveNamedVolume()` split it replaced. A non-zero exit
+from the helper fails the run with the helper's own stderr attached, rather than
 uploading a truncated/empty tarball. Scheduled backups are one `DueScheduler`
 config over `StorageVolumeDTO.listBackupEnabled()`, see Schedulers above.
-Restore is `S3BackupService.restoreVolume()`, run as a `backup_restore` job, see
-Restoring an S3 backup below.
 
-**Quiescing** lives in `$lib/services/backup/volume-services.ts`
-(`VolumeServices`). `storage_volume.backupStopServices` wraps the tar (not the
-upload) in `whileStopped`: services mounting the volume
-(`ServiceVolumeDTO.serviceIdsForVolume`) that a live `syncServiceStatus` says
-are running get `ServiceLifecycleService.stopService`'d one by one, and every
-one that was stopped is started again in a `finally`, a failed start logged
-rather than thrown. The ordering policy is the pure `stopAroundWork`, covered by
-`tests/unit/app/volume-services.test.ts`. `backupPreCommand` runs first, while
-everything is still up, through `/bin/sh -c` via `DockerService.execInContainer`
-(one-off mixin, a hijacked exec with a 15 minute wait cap) inside
-`backupPreCommandServiceId`'s container (swarm: the running task's container),
-or the first running service using the volume when none is picked. A non-zero
-exit fails the run with the output tail, before anything is tarred. Both are
-per-volume, which is also per-schedule, since a volume has one schedule.
+**Quiescing** is resolved in `$lib/services/backup/volume-services.ts`
+(`VolumeServices`) but executed in Go. `storage_volume.backupStopServices`
+becomes a `stopTargets` list (services mounting the volume,
+`ServiceVolumeDTO.serviceIdsForVolume`, filtered to the ones a live
+`syncServiceStatus` says are running) in the spec;
+`internal/jobs/backup/backup.go`'s `whileStopped` stops each one around the
+tar/unpack (a container `StopContainer` or a swarm service scaled to 0) and
+starts every one it stopped again in a `finally`-equivalent, a failed start
+logged rather than thrown (the pure ordering policy, `stopAround`, is now a Go
+generic, the port of the old TS `stopAroundWork`). `backupPreCommand` still runs
+first, while everything is still up: `VolumeServices.preCommandTarget` resolves
+which container it runs in (the volume's picked service, or the first running
+one using it), and `backup.go`'s `runPreCommand` executes it through
+`/bin/sh -c` via `internal/dockerapi`'s container exec (a 15 minute wait cap). A
+non-zero exit fails the run with the output tail, before anything is tarred.
+Both are per-volume, which is also per-schedule, since a volume has one
+schedule.
 
 ## Cron jobs on another daemon, and live output
 
@@ -326,20 +335,23 @@ resolved, and an **agent** host is refused with a message rather than silently
 running locally : the agent has no one-off run endpoint. Kind `exec` ignores it
 by definition, it's a shell command on the host of this app's own Docker daemon.
 
-**Output arrives while the job runs, not after it.** `runOneOff` takes an
-`onOutput` callback fed from the same demuxed stdout/stderr streams it already
-collects, and `CronJobService`'s `OutputFlusher` batches those chunks into
-`CronJobRunDTO.appendOutput` once a second (one write a second, not one per
-chunk). The job's page re-reads `getCronJobRuns` every 2s while any run has no
-`finishedAt`, so a long job shows progress instead of a spinner and then a wall
-of text.
+**Output arrives while the job runs, not after it.**
+`internal/dockerapi.RunOneOff` takes an `onOutput` callback fed from the same
+demuxed stdout/stderr streams it already collects, and `internal/jobs/cronjob`'s
+own `flusher` (the Go port of the old in-process `OutputFlusher`) batches those
+chunks into `CronJobRunDTO.appendOutput` once a second (one write a second, not
+one per chunk). The job's page re-reads `getCronJobRuns` every 2s while any run
+has no `finishedAt`, so a long job shows progress instead of a spinner and then
+a wall of text.
 
 ## Restoring an S3 backup
 
 `S3BackupService.listBackups(volume)` is ListObjectsV2 against the volume's own
-prefix (same hand-rolled SigV4 as the upload, `signedRequest` shared between GET
-and LIST), and `restoreVolume(volume, key, { wipe, stopServices })` downloads
-one and unpacks it back into the volume.
+prefix (same hand-rolled SigV4 as the app-side upload listing, `signedRequest`
+shared between GET and LIST), and
+`restoreSpec(volume, key, { wipe, stopServices })` is what the `backup_restore`
+worker job hands the Go worker to download `key` and unpack it back into the
+volume.
 
 **It's a queue job**, `backup_restore` (`enqueueVolumeRestore` in
 `backup-queue.ts`, payload `backupRestoreJobPayload`), deduped on
@@ -347,15 +359,16 @@ one and unpacks it back into the volume.
 restore never races a tar of the same volume, and `maxAttempts: 1` (retrying a
 half-applied restore isn't something to do silently). It writes a `backup_run`
 row with `kind: "restore"` and the object `key` (backups now record their
-uploaded `key` too), so the run log and `/backups` (Kind filter) show both. The
-download happens before `whileStopped`, so services are down only for the
-optional `VolumeServices.wipe` (a helper `find <mount> -mindepth 1 -delete`) and
-the unpack. **Docker's own archive endpoint does the unpacking**
-(`DockerService.extractIntoVolume` → `putArchive` into a stopped helper
-container with the target mounted): it accepts a gzipped tar directly, needs no
-`tar` on this host, no stdin plumbing into a running container, and works
-against a remote daemon. One path covers both volume kinds, since a bind's
-source is as mountable as a named volume.
+uploaded `key` too), so the run log and `/backups` (Kind filter) show both.
+`internal/jobs/backup/backup.go`'s `restore` downloads before `whileStopped`, so
+services are down only for the optional `wipe` (a helper
+`find <mount> -mindepth 1 -delete`) and the unpack. **Docker's own archive
+endpoint does the unpacking** (`internal/dockerapi.Client.PutContainerArchive`,
+called from `backup.go`'s `withHelper` against a stopped helper container with
+the target mounted): it accepts a gzipped tar directly, needs no `tar` on this
+host, no stdin plumbing into a running container, and works against a remote
+daemon. One path covers both volume kinds, since a bind's source is as mountable
+as a named volume.
 
 Without `wipe` it's a **restore-over** : files in the archive replace what's on
 disk and anything else is left alone. `stopServices` defaults to on in the UI;

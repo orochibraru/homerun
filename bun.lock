@@ -25,7 +25,7 @@
         "@happy-dom/global-registrator": "^20.11.6",
         "@kitql/helpers": "^0.8.15",
         "@lucide/svelte": "^1.33.0",
-        "@orochibraru/svelte-smol": "^1.6.0",
+        "@orochibraru/svelte-smol": "^1.6.1",
         "@playwright/test": "^1.62.1",
         "@semantic-release/changelog": "^7.0.0",
         "@semantic-release/commit-analyzer": "^13.0.1",
@@ -354,7 +354,7 @@
 
     "@opentelemetry/semantic-conventions": ["@opentelemetry/semantic-conventions@1.43.0", "", {}, "sha512-eSYWTm620tTk45EKSedaUL8MFYI8hW164hIXsgIHyxu3VobUB3fFCu5t0hQby6OoWRPsG1KkKUG2M5UadiLiVg=="],
 
-    "@orochibraru/svelte-smol": ["@orochibraru/svelte-smol@1.6.0", "", { "peerDependencies": { "@sveltejs/kit": "^2.0.0" } }, "sha512-JEu+3BQzsFgCgZJGqYNMFW/hNh+91h632wmFBl76FjWxWhjT0AOspx01h6e7DClLwyv0mAvt17diVVZYwylXBA=="],
+    "@orochibraru/svelte-smol": ["@orochibraru/svelte-smol@1.6.1", "", { "peerDependencies": { "@sveltejs/kit": "^2.0.0" } }, "sha512-gloVlW8Pa+xZ1ilMOZpU80afUNDShNu26klCQ7w1y3hqzDHEMUspccC8Wt80/+FGxSz7I7qe5JW8ezXeMWv3Iw=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.146.0", "", {}, "sha512-XC0QsnnhVe7sLIWmYmdPw7x5P0h4W8vUU3Nv1ySgWXtvCz8NizoAEpGXA0sOYoJQV2Rl13LgURAHQ5cI5ILCSA=="],
 

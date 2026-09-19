@@ -52,6 +52,7 @@ type ExecResult struct {
 	Stdout   string
 }
 
+// pruneDecode sends one call and decodes its JSON answer into target.
 func (c *Client) pruneDecode(ctx context.Context, method, path string, query url.Values, body, target any) error {
 	response, err := c.request(ctx, method, path, query, body, nil)
 	if err != nil {
@@ -61,6 +62,7 @@ func (c *Client) pruneDecode(ctx context.Context, method, path string, query url
 	return json.NewDecoder(response.Body).Decode(target)
 }
 
+// prune POSTs one prune endpoint and summarizes its answer into a PruneReport.
 func (c *Client) prune(ctx context.Context, path, deletedKey string, query url.Values) (PruneReport, error) {
 	var raw map[string]json.RawMessage
 	if err := c.pruneDecode(ctx, http.MethodPost, path, query, nil, &raw); err != nil {
@@ -78,6 +80,7 @@ func (c *Client) prune(ctx context.Context, path, deletedKey string, query url.V
 	return report, nil
 }
 
+// pruneFilters is a prune endpoint's ?filters= query for one key=value filter.
 func pruneFilters(key, value string) url.Values {
 	encoded, _ := json.Marshal(map[string][]string{key: {value}})
 	return url.Values{"filters": {string(encoded)}}
@@ -127,7 +130,7 @@ func (c *Client) SystemDiskUsage(ctx context.Context) (DiskUsage, error) {
 // RemoveUnusedImage removes one image without force, so an image a container
 // or a child image still needs is refused by the daemon.
 func (c *Client) RemoveUnusedImage(ctx context.Context, id string) error {
-	return c.call(ctx, http.MethodDelete, "/images/"+id, url.Values{"force": {"0"}}, nil)
+	return c.Call(ctx, http.MethodDelete, "/images/"+id, url.Values{"force": {"0"}}, nil)
 }
 
 // NetworkList lists every network on the daemon.
@@ -139,7 +142,7 @@ func (c *Client) NetworkList(ctx context.Context) ([]Network, error) {
 
 // NetworkRemove removes one network.
 func (c *Client) NetworkRemove(ctx context.Context, id string) error {
-	return c.call(ctx, http.MethodDelete, "/networks/"+id, nil, nil)
+	return c.Call(ctx, http.MethodDelete, "/networks/"+id, nil, nil)
 }
 
 // ContainerIsRunning reports whether the named container exists and runs.
@@ -158,7 +161,7 @@ func (c *Client) ContainerIsRunning(ctx context.Context, name string) (bool, err
 
 // ContainerRestart restarts the named container.
 func (c *Client) ContainerRestart(ctx context.Context, name string) error {
-	return c.call(ctx, http.MethodPost, "/containers/"+name+"/restart", nil, nil)
+	return c.Call(ctx, http.MethodPost, "/containers/"+name+"/restart", nil, nil)
 }
 
 // ContainerExec runs cmd inside the named running container and waits for it,

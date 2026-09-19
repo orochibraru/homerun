@@ -30,21 +30,21 @@ jobs:
           go-version-file: go.mod
 
       - name: Test
-        run: go test -race -coverprofile=coverage.out ./cmd/... ./internal/...
+        run: go test -race -coverprofile=coverage.out ./cmd/... ./internal/... ./tests/unit/go/...
 
       - name: Coverage summary
         run: go tool cover -func=coverage.out | tail -1
 
       - name: Formatting
         run: |
-          unformatted="$(gofmt -l ./cmd ./internal)"
+          unformatted="$(gofmt -l ./cmd ./internal ./tests/unit/go)"
           if [ -n "$unformatted" ]; then
             echo "::error::gofmt would rewrite: $unformatted"
             exit 1
           fi
 
       - name: Vet
-        run: go vet ./cmd/... ./internal/...
+        run: go vet ./cmd/... ./internal/... ./tests/unit/go/...
 
       - name: Record result
         id: done

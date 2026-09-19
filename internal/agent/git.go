@@ -18,10 +18,10 @@ type GitCredential struct {
 	Username string `json:"username"`
 }
 
-// authenticatedCloneURL injects a credential into an http(s) clone URL, the
+// AuthenticatedCloneURL injects a credential into an http(s) clone URL, the
 // same rules as the main app's authenticatedCloneUrl: a URL that already
 // carries credentials, isn't http(s), or doesn't parse is left alone.
-func authenticatedCloneURL(gitURL string, credential *GitCredential) string {
+func AuthenticatedCloneURL(gitURL string, credential *GitCredential) string {
 	if credential == nil {
 		return gitURL
 	}
@@ -33,9 +33,9 @@ func authenticatedCloneURL(gitURL string, credential *GitCredential) string {
 	return parsed.String()
 }
 
-// redactCloneURL strips any credential back out of every URL in text before it
+// RedactCloneURL strips any credential back out of every URL in text before it
 // reaches a log line or an error message.
-func redactCloneURL(text string) string {
+func RedactCloneURL(text string) string {
 	fields := strings.Fields(text)
 	if len(fields) == 0 {
 		return text
@@ -53,18 +53,18 @@ func redactCloneURL(text string) string {
 	return redacted
 }
 
-// isCommitSHA reports whether a ref is a full 40-character commit SHA, the same
+// IsCommitSHA reports whether a ref is a full 40-character commit SHA, the same
 // rule as the main app's isCommitSha.
-func isCommitSHA(ref string) bool {
+func IsCommitSHA(ref string) bool {
 	return commitSHA.MatchString(strings.TrimSpace(ref))
 }
 
-// gitCheckoutSteps is the git argv lists that check ref out into repoDir, the
+// GitCheckoutSteps is the git argv lists that check ref out into repoDir, the
 // same as the main app's gitCheckoutSteps: one shallow single-branch clone for
 // a branch or tag, an init plus a shallow fetch and detached checkout for a
 // commit SHA.
-func gitCheckoutSteps(cloneURL, ref, repoDir string) [][]string {
-	if !isCommitSHA(ref) {
+func GitCheckoutSteps(cloneURL, ref, repoDir string) [][]string {
+	if !IsCommitSHA(ref) {
 		return [][]string{{
 			"clone", "--depth", "1", "--branch", ref, "--single-branch", cloneURL, repoDir,
 		}}
@@ -78,8 +78,8 @@ func gitCheckoutSteps(cloneURL, ref, repoDir string) [][]string {
 	}
 }
 
-// extractCommitSHA is the first full commit SHA in a git command's output,
+// ExtractCommitSHA is the first full commit SHA in a git command's output,
 // such as `rev-parse HEAD`, or the empty string.
-func extractCommitSHA(output string) string {
+func ExtractCommitSHA(output string) string {
 	return commitSHAInLog.FindString(output)
 }

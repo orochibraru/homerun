@@ -139,12 +139,17 @@ paging through.
   Cleanup, cascade-delete.
 - `services/+page.server.ts`'s `load` used to call
   `DockerService.syncAllServiceStatuses` for every service the user owns on
-  every page load, one Docker `inspect` per service, then re-run the full query.
-  It now syncs only the current page's already-deployed services
-  (`containerId`/`swarmServiceId` set), skips both the sync and the second query
-  entirely when the page has none, and calls `allowLongRequest(platform)` (see
-  Long-running requests below), which it never did before, leaving it exposed to
-  Bun's 10s idle-timeout cut on Linux.
+  every page load, one Docker `inspect` per service, then re-run the full query;
+  syncing only got scoped down to the current page's already-deployed services
+  before it was cut from `load` entirely. **The sync is a remote function now**
+  (`service-status.remote.ts`'s `syncServiceStatuses`, see "Remote functions" in
+  `services-and-templates.md`): `load` just pages
+  `ServiceDTO.listWithStackNamesPaged`, renders the stored `currentStatus`
+  immediately, and the client patches it once the sync round-trips, rather than
+  the page itself blocking on a Docker call. `load` still calls
+  `allowLongRequest(platform)` (see Long-running requests below), which it never
+  did before that first pagination-era change, leaving it exposed to Bun's 10s
+  idle-timeout cut on Linux until then.
 
 **Verified live** against a seeded Postgres, in a real browser and over the REST
 API/CLI: every list page pages correctly, search and filters reach the whole
@@ -279,10 +284,12 @@ OIDC provider in `auth.md`) plus:
   managed on `/s3-destinations`.
 - `backup_run` (`BackupRunDTO`), one row per backup attempt (scheduled or manual
   "Run now"): `volumeId`, `startedAt`/`finishedAt`, `success` (null while still
-  running), `sizeBytes`, `error`. Written from `S3BackupService.backupVolume()`,
-  the one place both the scheduler and the manual action funnel through, so
-  every path gets a log entry including validation failures. Backs `/backups`;
-  `storage_volume.backupLastRunAt` alone only ever remembered a timestamp.
+  running), `sizeBytes`, `error`. Opened by the `backup`/`backup_restore` worker
+  jobs' `prepare` step (`worker-jobs/backup.ts`/`backup_restore.ts`, see
+  `jobs-and-queue.md`), the one place both the scheduler and the manual action
+  funnel through, so every path gets a log entry including validation failures.
+  Backs `/backups`; `storage_volume.backupLastRunAt` alone only ever remembered
+  a timestamp.
 - `cron_job` (`CronJobDTO`), a user-defined scheduled task, independent of
   `service.cronSchedule`: `name`/`description`/`schedule` (5-field cron)/
   `enabled` (off by default), `kind` (`"image"` | `"exec"`), `image`/`tag`/

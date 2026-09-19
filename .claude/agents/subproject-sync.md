@@ -1,17 +1,17 @@
 ---
 name: subproject-sync
-description:
+description: >-
   Use when working in cmd/agent/, cmd/installer/, or cmd/cli/ — the three
   standalone sub-projects at the repo root, not part of the SvelteKit build (not
   covered by the root bun run check). All three are Go packages sharing one
   go.mod at the repo root, plus shared internal/ libraries (buildinfo, release,
-  homerun, dockerapi). Handles keeping cmd/agent/'s hand-reimplemented logic
-  (internal/agent/build.go, git.go, stats.go) in sync with the main app's
-  equivalents (src/lib/services/docker/containers.ts, system-stats.service.ts)
-  after either changes, keeping internal/agent/builder.sh and builder-tools.json
-  in sync with src/lib/services/docker/builder-run.ts (pinned by
-  tests/unit/app/agent-builder-parity.test.ts and
-  internal/agent/builders_test.go), regenerating
+  homerun, dockerapi, jobs, worker). internal/agent/build.go, git.go and
+  builders.go are the single implementation of git-clone-and-build now : both
+  cmd/agent/'s own HTTP server and the homerun worker's internal/jobs/deploy
+  import that same package, no hand-sync needed there anymore. Handles keeping
+  internal/agent/stats.go (still a from-scratch reimplementation, the agent has
+  no access to the main app's database) in sync with
+  src/lib/services/system-stats.service.ts after either changes, regenerating
   tests/integration/support/openapi-types.ts after a REST API change, and
   running each sub-project's own typecheck/test commands. Not for changes purely
   within src/ — use scaffold-feature or repo-gate for those.
@@ -39,19 +39,29 @@ API client over the unix socket, used by the agent).
 ## `cmd/agent/` — the Homerun Agent
 
 A token-authenticated HTTP server meant to run on a remote host's Docker daemon
-(`internal/agent/server.go`). It has **no access to the main app's source tree
-at runtime**, so `internal/agent/build.go`/`git.go` and
-`internal/agent/stats.go` are deliberate, from-scratch reimplementations (not
-imports) of the equivalent logic in `src/lib/services/docker/containers.ts` (and
-`docker/git-build.ts`) and `src/lib/services/system-stats.service.ts`.
+(`internal/agent/server.go`). Its git-clone-and-build pipeline
+(`internal/agent/build.go`/`git.go`/`builders.go`, `//go:embed`ing
+`internal/agent/builder.sh`/`builder-tools.json`) is no longer a hand-mirrored
+copy of anything in `src/` : the SvelteKit app's own TS implementation
+(`docker/git-build.ts`, `docker/builder-run.ts`) was deleted once the `deploy`
+job type moved to the Go worker (see `worker.md`), and
+`internal/jobs/deploy/build.go`'s `dockerBuild` now calls the exact same
+`internal/agent.Builder` for a local or Docker-build-server build that
+`agentBuild` calls over HTTP for an agent-hosted one. Changing the build
+pipeline is a normal single-package Go change now, not a two-sided sync — just
+re-run `tests/unit/app/agent-builder-parity.test.ts` (checks
+`$lib/build-methods` against `builder-tools.json`, the app-side form options,
+all that's left in TS) and `tests/unit/go/internal/agent/builders_test.go`/
+`tests/unit/go/internal/jobs/deploy`'s own tests.
 
-**If you change deploy/container-lifecycle logic in
-`src/lib/services/docker/containers.ts`**
-(pull→remove-previous-by-label→create→start shape, container naming, label
-conventions, etc.), check whether `internal/agent/build.go`/`git.go` needs the
-equivalent change to stay behaviorally consistent, and make it by hand — there
-is no shared module, no codegen, no automated sync. Same for
-`system-stats.service.ts` ↔ `internal/agent/stats.go`.
+`internal/agent/stats.go` is still a genuine from-scratch reimplementation of
+`src/lib/services/system-stats.service.ts` : the agent has no access to the main
+app's database or config, only the remote daemon's own `docker info`/`df`.
+
+**If you change `system-stats.service.ts`**, check whether
+`internal/agent/stats.go` needs the equivalent change to stay behaviorally
+consistent, and make it by hand — there is no shared module, no codegen, no
+automated sync.
 
 **If you change the agent's request/response shapes**, update
 `internal/agent/build.go`'s `BuildInput` struct and `server.go`'s
@@ -59,15 +69,6 @@ is no shared module, no codegen, no automated sync. Same for
 here, this is Go) and `internal/agent/openapi.go` (generates the agent's own
 OpenAPI doc from the same shapes as plain Go literals) together — same "one
 schema, two purposes" pattern as the main app's zod schemas.
-
-**If you change build-tool versions, checksums or the builder script** in
-`src/lib/services/docker/builder-run.ts`, mirror the change into
-`internal/agent/builder.sh` and `internal/agent/builder-tools.json`
-byte-for-byte (the agent `//go:embed`s them rather than importing the TS module
-it can't reach). `tests/unit/app/agent-builder-parity.test.ts` (on the app side)
-and `internal/agent/builders_test.go` (on the agent side) both pin against those
-two files, so a mismatch fails a test rather than silently drifting — run both
-after touching either side.
 
 ## `cmd/cli/` — the Homerun CLI
 

@@ -465,7 +465,7 @@ export const remoteHost = pgTable(
 );
 
 // A named Docker registry used as a *build cache* for git-based builds (see
-// docker/git-build.ts), not a deploy target : buildFromGit pulls
+// internal/agent/build.go), not a deploy target : the build pulls
 // `<registryUrl>/<cacheRepository>:cache-<slug>` as a `--cache-from` source
 // before building and pushes the fresh layers back after, so a repeat build
 // of the same service reuses unchanged layers instead of rebuilding from
@@ -810,7 +810,7 @@ export const service = pgTable(
 			.notNull(),
 		privileged: boolean("privileged").default(false).notNull(),
 		// Registry to use as a git-build layer cache (git mode only, see
-		// docker/git-build.ts) : null means no cache-from/cache-to, every
+		// internal/agent/build.go) : null means no cache-from/cache-to, every
 		// build is from scratch, same as before this existed.
 		buildCacheRegistryId: text("build_cache_registry_id").references(
 			() => buildCacheRegistry.id,
@@ -826,7 +826,7 @@ export const service = pgTable(
 			{ onDelete: "set null" },
 		),
 		// "image" (bring-your-own, the original/default) | "git" (clone +
-		// build a Dockerfile locally : see $lib/services/docker/git-build.ts).
+		// build a Dockerfile locally : see internal/jobs/deploy/build.go).
 		// When "git", `image`/`tag` are overwritten after each successful
 		// build with the resulting local tag, not user-editable directly.
 		buildSource: text("build_source")

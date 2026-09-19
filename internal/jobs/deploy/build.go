@@ -60,6 +60,7 @@ func (r *run) buildImage(ctx context.Context) (resolvedImage, error) {
 	return built, nil
 }
 
+// buildInput builds the agent.BuildInput for a git build tagged tag.
 func (r *run) buildInput(tag string) agent.BuildInput {
 	build := r.spec.Image.Build
 	input := agent.BuildInput{
@@ -79,6 +80,7 @@ func (r *run) buildInput(tag string) agent.BuildInput {
 	return input
 }
 
+// recordCommit stamps the deploy result with the commit and ref that were built.
 func (r *run) recordCommit(commit string) {
 	r.result.Built = true
 	r.result.GitCommit = commit
@@ -198,6 +200,7 @@ func (r *run) agentRequest(ctx context.Context, method, path string, query url.V
 	return nil, fmt.Errorf("Agent returned %d.", response.StatusCode)
 }
 
+// publishedRef is built's ref rewritten to live under registry.
 func publishedRef(registry Registry, built resolvedImage) resolvedImage {
 	return resolvedImage{image: registry.RegistryURL + "/" + built.image, tag: built.tag}
 }

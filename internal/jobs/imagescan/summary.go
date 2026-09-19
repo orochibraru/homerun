@@ -42,6 +42,7 @@ type Summary struct {
 	TotalFindings int       `json:"totalFindings"`
 }
 
+// add increments the counter for severity (unrecognized values count as Unknown).
 func (c *Counts) add(severity string) {
 	switch severity {
 	case "CRITICAL":
@@ -57,6 +58,7 @@ func (c *Counts) add(severity string) {
 	}
 }
 
+// normalizeSeverity upper-cases value and maps it to a known severity, or "UNKNOWN".
 func normalizeSeverity(value any) string {
 	text, _ := value.(string)
 	upper := strings.ToUpper(text)
@@ -68,6 +70,7 @@ func normalizeSeverity(value any) string {
 	return "UNKNOWN"
 }
 
+// asText returns value as a string pointer, or nil when it isn't a non-empty string.
 func asText(value any) *string {
 	text, ok := value.(string)
 	if !ok || text == "" {
@@ -76,6 +79,7 @@ func asText(value any) *string {
 	return &text
 }
 
+// textOr is asText's value, or fallback when there is none.
 func textOr(value any, fallback string) string {
 	if text := asText(value); text != nil {
 		return *text
@@ -83,6 +87,7 @@ func textOr(value any, fallback string) string {
 	return fallback
 }
 
+// findingsOf extracts the Finding list from one Trivy result entry.
 func findingsOf(result any) []Finding {
 	record, _ := result.(map[string]any)
 	vulnerabilities, _ := record["Vulnerabilities"].([]any)
@@ -110,8 +115,7 @@ func findingsOf(result any) []Finding {
 
 // Summarize turns a Trivy JSON report into per-severity counts and at most
 // limit findings, de-duplicated by vulnerability, package and version, sorted
-// by severity with fixable findings first. It mirrors summarizeTrivyReport in
-// src/lib/image-scan.ts, except IDs tie-break by byte order, not locale.
+// by severity with fixable findings first, IDs tie-breaking by byte order.
 func Summarize(raw []byte, limit int) (Summary, error) {
 	var parsed any
 	if err := json.Unmarshal(raw, &parsed); err != nil {

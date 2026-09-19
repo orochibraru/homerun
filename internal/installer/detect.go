@@ -18,20 +18,20 @@ type PackageManager struct {
 	Kind    string
 }
 
-// srcAddress pulls the source address out of `ip route get` output.
-var srcAddress = regexp.MustCompile(`\bsrc\s+(\S+)`)
+// SrcAddress pulls the source address out of `ip route get` output.
+var SrcAddress = regexp.MustCompile(`\bsrc\s+(\S+)`)
 
 // DetectPackageManager picks the host's package manager. Best-effort: apt is
 // the primary target (Debian/Ubuntu, the overwhelming majority of homelab/VPS
 // installs); dnf/yum are supported on a "should work, less exercised" basis.
 func DetectPackageManager() (PackageManager, error) {
-	if commandExists("apt-get") {
+	if CommandExists("apt-get") {
 		return PackageManager{Install: []string{"apt-get", "install", "-y"}, Kind: "apt"}, nil
 	}
-	if commandExists("dnf") {
+	if CommandExists("dnf") {
 		return PackageManager{Install: []string{"dnf", "install", "-y"}, Kind: "dnf"}, nil
 	}
-	if commandExists("yum") {
+	if CommandExists("yum") {
 		return PackageManager{Install: []string{"yum", "install", "-y"}, Kind: "yum"}, nil
 	}
 	return PackageManager{}, errors.New(
@@ -74,19 +74,19 @@ func RequireRoot() error {
 // Returns the empty string when no usable address could be found.
 func HostAddress() string {
 	candidates := []string{}
-	if route := commandOutput([]string{"ip", "-4", "route", "get", "1.1.1.1"}); route != "" {
-		if match := srcAddress.FindStringSubmatch(route); match != nil {
+	if route := CommandOutput([]string{"ip", "-4", "route", "get", "1.1.1.1"}); route != "" {
+		if match := SrcAddress.FindStringSubmatch(route); match != nil {
 			candidates = append(candidates, match[1])
 		}
 	}
-	if hostnames := commandOutput([]string{"hostname", "-I"}); hostnames != "" {
+	if hostnames := CommandOutput([]string{"hostname", "-I"}); hostnames != "" {
 		candidates = append(candidates, strings.Fields(hostnames)...)
 	}
-	return firstRoutableAddress(candidates)
+	return FirstRoutableAddress(candidates)
 }
 
-// firstRoutableAddress is the first candidate that isn't loopback.
-func firstRoutableAddress(candidates []string) string {
+// FirstRoutableAddress is the first candidate that isn't loopback.
+func FirstRoutableAddress(candidates []string) string {
 	for _, address := range candidates {
 		if address == "" || address == "::1" || strings.HasPrefix(address, "127.") {
 			continue
@@ -96,10 +96,10 @@ func firstRoutableAddress(candidates []string) string {
 	return ""
 }
 
-// commandOutput runs a command and returns its stdout, or the empty string when
+// CommandOutput runs a command and returns its stdout, or the empty string when
 // it exits non-zero or can't be spawned. Bypasses the Runner, so it runs even
 // under --dry-run.
-var commandOutput = func(cmd []string) string {
+var CommandOutput = func(cmd []string) string {
 	output, err := exec.Command(cmd[0], cmd[1:]...).Output()
 	if err != nil {
 		return ""

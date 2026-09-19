@@ -9,13 +9,13 @@ import (
 	"strings"
 )
 
-// homeRoot is where user home directories live. A variable, not a constant, so
+// HomeRoot is where user home directories live. A variable, not a constant, so
 // tests can point the whole installer at a scratch directory.
-var homeRoot = "/home"
+var HomeRoot = "/home"
 
-// homeOf is the install user's home directory.
-func homeOf(username string) string {
-	return filepath.Join(homeRoot, username)
+// HomeOf is the install user's home directory.
+func HomeOf(username string) string {
+	return filepath.Join(HomeRoot, username)
 }
 
 // Result is one command's exit code and captured output.
@@ -55,35 +55,35 @@ func NewStepRunner(dryRun bool) *StepRunner {
 	return &StepRunner{dryRun: dryRun}
 }
 
-// envPrefix threads environment variables through sudo explicitly. sudo resets
+// EnvPrefix threads environment variables through sudo explicitly. sudo resets
 // the environment by default (env_reset), so passing them to the child process
 // wouldn't survive it: when running as another user they go through an explicit
 // `env K=V ...` prefix inside the sudo'd command instead.
-func envPrefix(env map[string]string) []string {
+func EnvPrefix(env map[string]string) []string {
 	if len(env) == 0 {
 		return nil
 	}
 	prefix := []string{"env"}
-	for _, key := range sortedKeys(env) {
+	for _, key := range SortedKeys(env) {
 		prefix = append(prefix, fmt.Sprintf("%s=%s", key, env[key]))
 	}
 	return prefix
 }
 
-// fullCommand is the argv actually executed, wrapped in sudo when opts.As is set.
-func fullCommand(cmd []string, opts Opts) []string {
+// FullCommand is the argv actually executed, wrapped in sudo when opts.As is set.
+func FullCommand(cmd []string, opts Opts) []string {
 	if opts.As == "" {
 		return cmd
 	}
 	full := []string{"sudo", "-u", opts.As, "--"}
-	full = append(full, envPrefix(opts.Env)...)
+	full = append(full, EnvPrefix(opts.Env)...)
 	return append(full, cmd...)
 }
 
 // Run runs cmd and returns an error on a non-zero exit: the default for steps
 // where "continue anyway" would leave the system half-configured.
 func (r *StepRunner) Run(cmd []string, opts Opts) (Result, error) {
-	full := fullCommand(cmd, opts)
+	full := FullCommand(cmd, opts)
 	r.log(full, opts)
 	if r.dryRun {
 		return Result{}, nil
@@ -92,7 +92,7 @@ func (r *StepRunner) Run(cmd []string, opts Opts) (Result, error) {
 	command := exec.Command(full[0], full[1:]...)
 	command.Dir = opts.Cwd
 	command.Env = os.Environ()
-	for _, key := range sortedKeys(opts.Env) {
+	for _, key := range SortedKeys(opts.Env) {
 		command.Env = append(command.Env, fmt.Sprintf("%s=%s", key, opts.Env[key]))
 	}
 	var stdout, stderr strings.Builder
@@ -182,9 +182,9 @@ func (r *StepRunner) log(cmd []string, opts Opts) {
 	fmt.Printf("%s %s%s\n", prefix, strings.Join(cmd, " "), cwd)
 }
 
-// sortedKeys keeps generated argv and environment ordering deterministic, since
+// SortedKeys keeps generated argv and environment ordering deterministic, since
 // Go map iteration is deliberately randomized.
-func sortedKeys(values map[string]string) []string {
+func SortedKeys(values map[string]string) []string {
 	keys := make([]string, 0, len(values))
 	for key := range values {
 		keys = append(keys, key)
@@ -197,15 +197,15 @@ func sortedKeys(values map[string]string) []string {
 	return keys
 }
 
-// commandExists reports whether cmd resolves on PATH. Runs for real even under
+// CommandExists reports whether cmd resolves on PATH. Runs for real even under
 // --dry-run, since it only reads.
-var commandExists = func(cmd string) bool {
+var CommandExists = func(cmd string) bool {
 	_, err := exec.LookPath(cmd)
 	return err == nil
 }
 
-// fileExists reports whether path exists, of any kind.
-func fileExists(path string) bool {
+// FileExists reports whether path exists, of any kind.
+func FileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }

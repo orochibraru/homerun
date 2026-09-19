@@ -163,8 +163,8 @@ func Validate(opts Options) string {
 	return ""
 }
 
-// helpText is the installer's usage and flag reference.
-const helpText = `
+// HelpText is the installer's usage and flag reference.
+const HelpText = `
 homerun-install : sets up Docker, then the Homerun Agent or the full stack,
 on a fresh Linux server, entirely from prebuilt release binaries and Docker
 images, nothing built from source.

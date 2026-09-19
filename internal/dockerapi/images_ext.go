@@ -57,7 +57,7 @@ func (c *Client) PullImageEvents(ctx context.Context, ref string, auth *AuthConf
 // LoadImage loads a `docker save` tarball into the daemon, consuming archive
 // as it arrives.
 func (c *Client) LoadImage(ctx context.Context, archive io.Reader) error {
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base+"/images/load?quiet=1", archive)
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Base+"/images/load?quiet=1", archive)
 	if err != nil {
 		return err
 	}

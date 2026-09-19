@@ -60,7 +60,7 @@ func (c *Client) CreateSwarmService(ctx context.Context, spec map[string]any) (s
 
 // UpdateSwarmService replaces a swarm service's spec at version.
 func (c *Client) UpdateSwarmService(ctx context.Context, id string, version int64, spec map[string]any) error {
-	return c.call(ctx, http.MethodPost, "/services/"+id+"/update",
+	return c.Call(ctx, http.MethodPost, "/services/"+id+"/update",
 		url.Values{"version": {strconv.FormatInt(version, 10)}}, spec)
 }
 

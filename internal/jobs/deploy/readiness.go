@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-const readinessLabel = "homerun.readiness"
+// ReadinessLabel marks a workload whose readiness comes from Homerun's
+// generated "listening" check rather than the image's or service's own.
+const ReadinessLabel = "homerun.readiness"
 
 // ReadinessInput is what picking a readiness check needs to know about the
 // service. Routed is false when nothing reaches it through Traefik (not DNS
@@ -21,61 +23,62 @@ type ReadinessInput struct {
 	Routed             bool   `json:"routed"`
 }
 
-// readiness is what holds a new container or swarm task back from Traefik:
+// Readiness is what holds a new container or swarm task back from Traefik:
 // "service-healthcheck", "image-healthcheck", "listening" or "none" (with a
-// reason: "not-routed", "udp-only", "no-shell" or "image-unknown").
-type readiness struct {
-	kind   string
-	reason string
+// Reason: "not-routed", "udp-only", "no-shell" or "image-unknown").
+type Readiness struct {
+	Kind   string
+	Reason string
 }
 
-// imageFacts is what readiness needs to know about an image: whether it
+// ImageFacts is what readiness needs to know about an image: whether it
 // declares a HEALTHCHECK and, when it doesn't, whether it ships /bin/sh.
-type imageFacts struct {
-	hasHealthcheck bool
-	hasShell       bool
+type ImageFacts struct {
+	HasHealthcheck bool
+	HasShell       bool
 }
 
+// hasCommand reports whether the service defines its own healthcheck command.
 func (in ReadinessInput) hasCommand() bool {
 	return strings.TrimSpace(in.HealthcheckCommand) != ""
 }
 
-// needsImage mirrors readinessNeedsImage: only a routed TCP service without
-// its own healthcheck command depends on the image.
-func (in ReadinessInput) needsImage() bool {
+// NeedsImage reports whether the check depends on the image: only a routed
+// TCP service without its own healthcheck command depends on the image.
+func (in ReadinessInput) NeedsImage() bool {
 	return !in.hasCommand() && in.Routed && in.PortProtocol != "udp"
 }
 
-// readinessCheck mirrors readinessCheck in docker/readiness.ts. image is nil
+// ReadinessCheck picks how a new workload proves it's ready. image is nil
 // when the image couldn't be inspected or wasn't looked at.
-func readinessCheck(in ReadinessInput, image *imageFacts) readiness {
+func ReadinessCheck(in ReadinessInput, image *ImageFacts) Readiness {
 	switch {
 	case in.hasCommand():
-		return readiness{kind: "service-healthcheck"}
+		return Readiness{Kind: "service-healthcheck"}
 	case !in.Routed:
-		return readiness{kind: "none", reason: "not-routed"}
-	case image != nil && image.hasHealthcheck:
-		return readiness{kind: "image-healthcheck"}
+		return Readiness{Kind: "none", Reason: "not-routed"}
+	case image != nil && image.HasHealthcheck:
+		return Readiness{Kind: "image-healthcheck"}
 	case in.PortProtocol == "udp":
-		return readiness{kind: "none", reason: "udp-only"}
+		return Readiness{Kind: "none", Reason: "udp-only"}
 	case image == nil:
-		return readiness{kind: "none", reason: "image-unknown"}
-	case !image.hasShell:
-		return readiness{kind: "none", reason: "no-shell"}
+		return Readiness{Kind: "none", Reason: "image-unknown"}
+	case !image.HasShell:
+		return Readiness{Kind: "none", Reason: "no-shell"}
 	default:
-		return readiness{kind: "listening"}
+		return Readiness{Kind: "listening"}
 	}
 }
 
-// imageDeclaresHealthcheck reports whether a Config.Healthcheck.Test is a real
+// ImageDeclaresHealthcheck reports whether a Config.Healthcheck.Test is a real
 // healthcheck rather than none or an explicit NONE.
-func imageDeclaresHealthcheck(test []string) bool {
+func ImageDeclaresHealthcheck(test []string) bool {
 	return len(test) > 0 && test[0] != "NONE"
 }
 
-// readinessDescription mirrors readinessDescription in docker/readiness.ts.
-func readinessDescription(check readiness, port int, workload string) string {
-	switch check.kind {
+// ReadinessDescription is the deploy log line explaining check.
+func ReadinessDescription(check Readiness, port int, workload string) string {
+	switch check.Kind {
 	case "service-healthcheck":
 		return fmt.Sprintf("Readiness: the service's healthcheck command must pass before the new %s gets traffic.", workload)
 	case "image-healthcheck":
@@ -83,7 +86,7 @@ func readinessDescription(check readiness, port int, workload string) string {
 	case "listening":
 		return fmt.Sprintf("Readiness: no healthcheck configured, so Homerun added one that waits for port %d to be listening; the new %s gets traffic only once it passes.", port, workload)
 	}
-	switch check.reason {
+	switch check.Reason {
 	case "not-routed":
 		return "Readiness: not published through Traefik, so there's no traffic to hold back."
 	case "udp-only":
@@ -97,8 +100,8 @@ func readinessDescription(check readiness, port int, workload string) string {
 
 // healthcheck is the Docker Healthcheck to create the workload with, nil to
 // leave the image's own (or none) in place.
-func (r *run) healthcheck(check readiness) map[string]any {
-	switch check.kind {
+func (r *run) healthcheck(check Readiness) map[string]any {
+	switch check.Kind {
 	case "service-healthcheck":
 		return r.spec.Healthchecks.Service
 	case "listening":
@@ -107,10 +110,10 @@ func (r *run) healthcheck(check readiness) map[string]any {
 	return nil
 }
 
-// readinessLabels marks a workload whose health comes from the generated check.
-func readinessLabels(check readiness) map[string]string {
-	if check.kind == "listening" {
-		return map[string]string{readinessLabel: "listening"}
+// ReadinessLabels marks a workload whose health comes from the generated check.
+func ReadinessLabels(check Readiness) map[string]string {
+	if check.Kind == "listening" {
+		return map[string]string{ReadinessLabel: "listening"}
 	}
 	return map[string]string{}
 }
@@ -118,24 +121,26 @@ func readinessLabels(check readiness) map[string]string {
 // planReadiness picks the readiness check for imageRef and reports it on the
 // deploy log. It only inspects the image when the answer depends on it;
 // checking for /bin/sh creates a throwaway, never-started container.
-func (r *run) planReadiness(ctx context.Context, imageRef, workload string) readiness {
+func (r *run) planReadiness(ctx context.Context, imageRef, workload string) Readiness {
 	in := r.spec.Readiness
-	var facts *imageFacts
-	if in.needsImage() {
+	var facts *ImageFacts
+	if in.NeedsImage() {
 		facts = r.imageReadinessFacts(ctx, imageRef)
 	}
-	check := readinessCheck(in, facts)
-	r.progress.line(readinessDescription(check, in.ContainerPort, workload))
+	check := ReadinessCheck(in, facts)
+	r.progress.line(ReadinessDescription(check, in.ContainerPort, workload))
 	return check
 }
 
-func (r *run) imageReadinessFacts(ctx context.Context, imageRef string) *imageFacts {
+// imageReadinessFacts inspects imageRef for a HEALTHCHECK, or probes it for
+// /bin/sh via a throwaway container when it has none.
+func (r *run) imageReadinessFacts(ctx context.Context, imageRef string) *ImageFacts {
 	image, err := r.docker.InspectImage(ctx, imageRef)
 	if err != nil {
 		return nil
 	}
-	if image.Config.Healthcheck != nil && imageDeclaresHealthcheck(image.Config.Healthcheck.Test) {
-		return &imageFacts{hasHealthcheck: true}
+	if image.Config.Healthcheck != nil && ImageDeclaresHealthcheck(image.Config.Healthcheck.Test) {
+		return &ImageFacts{HasHealthcheck: true}
 	}
 	probe, err := r.docker.CreateContainerFrom(ctx, "homerun-readiness-"+randomSuffix(), map[string]any{
 		"Entrypoint":      []string{"/bin/sh"},
@@ -149,9 +154,11 @@ func (r *run) imageReadinessFacts(ctx context.Context, imageRef string) *imageFa
 	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 	defer cancel()
 	_ = r.docker.RemoveContainer(cleanup, probe)
-	return &imageFacts{hasShell: err == nil && hasShell}
+	return &ImageFacts{HasShell: err == nil && hasShell}
 }
 
+// randomSuffix returns a random 8-character hex string, for a unique
+// container/probe name.
 func randomSuffix() string {
 	buffer := make([]byte, 4)
 	_, _ = rand.Read(buffer)

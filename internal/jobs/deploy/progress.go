@@ -9,8 +9,11 @@ import (
 )
 
 const (
-	phaseContainer = "▸ Provisioning container"
-	phaseNetwork   = "▸ Routing traffic"
+	// PhaseContainer is the deploy log line marking the start of container
+	// provisioning.
+	PhaseContainer = "▸ Provisioning container"
+	// PhaseNetwork is the deploy log line marking the start of Traefik routing.
+	PhaseNetwork = "▸ Routing traffic"
 )
 
 type progress struct {

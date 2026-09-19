@@ -69,10 +69,5 @@ export function DockerReconcileMixin<
 
 			return status;
 		}
-
-		/** Syncs every one of a user's services in parallel. Returns nothing : callers re-query the DB after. */
-		async syncAllServiceStatuses(serviceIds: string[]): Promise<void> {
-			await Promise.all(serviceIds.map((id) => this.syncServiceStatus(id)));
-		}
 	};
 }
