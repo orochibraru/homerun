@@ -1,3 +1,10 @@
+## [1.0.36](https://github.com/orochibraru/homerun/compare/v1.0.35...v1.0.36) (2026-09-19)
+
+### Features
+
+- add a home-plate logo and favicon, and polish the service domains list
+  ([8fb8985](https://github.com/orochibraru/homerun/commit/8fb89851a042cff142c07f05caf1b483a419b85f))
+
 ## [1.0.35](https://github.com/orochibraru/homerun/compare/v1.0.34...v1.0.35) (2026-09-18)
 
 ### Features
