@@ -39,20 +39,20 @@ func (s *StatsSampler) darwinMemory() (int, int, bool) {
 	if !ok {
 		return 0, 0, false
 	}
-	pageSize, pages := parseVmStat(stat)
+	pageSize, pages := parseVMStat(stat)
 	if pageSize == 0 {
 		return 0, 0, false
 	}
-	usedKb := int(int64(pages) * pageSize / 1024)
+	usedKb := int(pages * pageSize / 1024)
 	if usedKb > totalKb {
 		usedKb = totalKb
 	}
 	return totalKb, totalKb - usedKb, true
 }
 
-// parseVmStat pulls the page size and the number of occupied pages out of
+// parseVMStat pulls the page size and the number of occupied pages out of
 // `vm_stat`'s output.
-func parseVmStat(output string) (int64, int64) {
+func parseVMStat(output string) (int64, int64) {
 	var pageSize, pages int64
 	for _, line := range strings.Split(output, "\n") {
 		if strings.HasPrefix(line, "Mach Virtual Memory Statistics") {

@@ -27,14 +27,15 @@ actually reading the failing file first.
 
 1. **`bun run check`** — `check:app` (svelte-kit sync + svelte-check with
    `--fail-on-warnings`, full `src/` and `tests/` trees) then `check:packages`
-   (`check:go` = `go vet ./cmd/... ./internal/...`, every Go sub-project — the
-   agent, the CLI and the installer, all three separate `package main`s in the
-   repo-root `go.mod`, not TypeScript any more — plus every shared `internal/`
-   library, in one pass; and `check:scripts` = `tsc --noEmit` over `scripts/`,
-   its own tsconfig). This is the hard gate: 0 errors, 0 warnings. A warning
-   fails it exactly like an error. Scope is always the whole repo regardless of
-   which files were edited, so a failure anywhere is in scope, not just in files
-   this change touched.
+   (`check:go` = `go vet` then `golangci-lint run` over
+   `./cmd/... ./internal/...`, the same pair CI's Go job runs, every Go
+   sub-project — the agent, the CLI and the installer, all three separate
+   `package main`s in the repo-root `go.mod`, not TypeScript any more — plus
+   every shared `internal/` library, in one pass; and `check:scripts` =
+   `tsc --noEmit` over `scripts/`, its own tsconfig). This is the hard gate: 0
+   errors, 0 warnings. A warning fails it exactly like an error. Scope is always
+   the whole repo regardless of which files were edited, so a failure anywhere
+   is in scope, not just in files this change touched.
 
 2. **`bun run lint`** — `lint:md` (markdownlint-cli2), `lint:tailwind`
    (tailwint) and `lint:ts` (`oxlint --type-aware --deny-warnings` for lint

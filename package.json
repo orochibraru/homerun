@@ -89,7 +89,7 @@
 		"check:agent": "go vet ./cmd/agent/... ./internal/agent/... ./tests/unit/go/internal/agent/...",
 		"check:app": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --tsgo",
 		"check:cli": "go vet ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...",
-		"check:go": "go vet ./cmd/... ./internal/... ./tests/unit/go/...",
+		"check:go": "go vet ./cmd/... ./internal/... ./tests/unit/go/... && golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...",
 		"check:installer": "go vet ./cmd/installer/... ./internal/installer/... ./tests/unit/go/internal/installer/...",
 		"check:scripts": "tsc --noEmit --project tsconfig.scripts.json",
 		"check:packages": "bun run check:go && bun run check:scripts",

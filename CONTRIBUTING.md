@@ -94,14 +94,14 @@ bun run lint    # markdownlint-cli2, tailwint, oxlint --type-aware (linting) and
 Run both after _every_ change, not just once at the end. `bun run check`'s scope
 is already the whole repo regardless of which files you touched, so a red result
 elsewhere is still your problem to look at, not something to wave off as
-unrelated without actually checking. `bun run check` includes `go vet` over
-`cmd/agent/`, `cmd/cli/`, `cmd/installer/` and every shared `internal/` library
-(`check:go`) plus the `scripts/` typecheck (`check:scripts`), together
-`check:packages`; `bun run check:agent` / `check:installer` / `check:cli` /
-`check:scripts` run one of them alone. If you changed a REST API route or
-`config.ts`, also run `bun run gen` and commit the regenerated `openapi.json`,
-`homerun.schema.json` and `tests/integration/support/openapi-types.ts`: CI fails
-when they're stale.
+unrelated without actually checking. `bun run check` includes `go vet` and
+`golangci-lint` (the same pair CI's Go job runs) over `cmd/agent/`, `cmd/cli/`,
+`cmd/installer/` and every shared `internal/` library (`check:go`) plus the
+`scripts/` typecheck (`check:scripts`), together `check:packages`;
+`bun run check:agent` / `check:installer` / `check:cli` / `check:scripts` run
+one of them alone. If you changed a REST API route or `config.ts`, also run
+`bun run gen` and commit the regenerated `openapi.json`, `homerun.schema.json`
+and `tests/integration/support/openapi-types.ts`: CI fails when they're stale.
 
 `bun run test:unit` is the fast suite (seconds, no Postgres or Docker needed).
 `bun run test` runs the whole `bun:test` suite, unit + integration, see

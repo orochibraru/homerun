@@ -28,13 +28,14 @@ repo root, no `tsconfig.json`/`package.json` of their own), typechecked with
 `check:agent` = `go vet ./cmd/agent/...`, `check:installer` =
 `go vet ./cmd/installer/...` and `check:cli` = `go vet ./cmd/cli/...`, all three
 (plus every shared `internal/` library) covered in one pass by `check:go` =
-`go vet ./cmd/... ./internal/...`. `bun run check` runs that through
-`check:packages` after the SvelteKit `check:app`. Shared Go libraries live under
-`internal/`: `internal/buildinfo` (the version, stamped in via `-ldflags` at
-build time), `internal/release` (release asset naming/URLs/ download, used by
-both the CLI's `homerun update` and the installer), `internal/homerun` (the
-CLI's own config + API client) and `internal/dockerapi` (a stdlib Docker Engine
-API client over the unix socket, used by the agent).
+`go vet ./cmd/... ./internal/...` plus `golangci-lint run` over the same
+packages. `bun run check` runs that through `check:packages` after the SvelteKit
+`check:app`. Shared Go libraries live under `internal/`: `internal/buildinfo`
+(the version, stamped in via `-ldflags` at build time), `internal/release`
+(release asset naming/URLs/ download, used by both the CLI's `homerun update`
+and the installer), `internal/homerun` (the CLI's own config + API client) and
+`internal/dockerapi` (a stdlib Docker Engine API client over the unix socket,
+used by the agent).
 
 ## `cmd/agent/` — the Homerun Agent
 

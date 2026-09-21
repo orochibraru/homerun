@@ -27,8 +27,9 @@ type ExecConfig struct {
 // false the read side is still frame-multiplexed, so the caller demuxes it;
 // with a TTY it's the raw terminal byte stream.
 type HijackedStream struct {
-	conn   net.Conn
-	reader io.Reader
+	conn     net.Conn
+	reader   io.Reader
+	response *http.Response
 }
 
 // Read takes the next bytes of the exec's output.
@@ -43,8 +44,14 @@ func (s *HijackedStream) Write(chunk []byte) (int, error) {
 
 // Close ends the exec's connection, which the daemon takes as the end of its
 // stdin and tears the process down.
+//
+// The connection goes first: the upgrade response's body is that same
+// connection, so closing it while the connection is still open could block
+// draining a stream that never ends.
 func (s *HijackedStream) Close() error {
-	return s.conn.Close()
+	err := s.conn.Close()
+	_ = s.response.Body.Close()
+	return err
 }
 
 // CreateExec creates an exec instance inside a running container and returns
@@ -140,10 +147,11 @@ func (c *Client) hijack(ctx context.Context, path string, query url.Values, body
 	}
 	if response.StatusCode != http.StatusSwitchingProtocols && response.StatusCode != http.StatusOK {
 		message, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+		_ = response.Body.Close()
 		_ = conn.Close()
 		return nil, &APIError{Message: decodeMessage(message), Status: response.StatusCode}
 	}
-	return &HijackedStream{conn: conn, reader: reader}, nil
+	return &HijackedStream{conn: conn, reader: reader, response: response}, nil
 }
 
 // decodeMessage pulls the daemon's human-readable message out of an error

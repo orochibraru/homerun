@@ -111,7 +111,7 @@ func (h *TerminalHub) pump(current *session) {
 			if !errors.Is(err, io.EOF) {
 				logging.Debugf(scope, "%s ended: %s", current.ID, err)
 			}
-			h.Close(current.ID)
+			_ = h.Close(current.ID)
 			return
 		}
 	}

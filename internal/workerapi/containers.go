@@ -332,11 +332,10 @@ func streamOut(w http.ResponseWriter, r *http.Request, source io.Reader) error {
 	controller := http.NewResponseController(w)
 	_ = controller.SetWriteDeadline(noDeadline)
 	writer := &flushWriter{controller: controller, writer: w}
-	err := dockerapi.DemuxAuto(source, writer)
-	if errors.Is(err, io.EOF) || r.Context().Err() != nil {
-		return nil
+	if err := dockerapi.DemuxAuto(source, writer); err != nil && r.Context().Err() == nil {
+		return err
 	}
-	return err
+	return nil
 }
 
 // notFoundOr answers a missing container as a 404 and reports anything else as

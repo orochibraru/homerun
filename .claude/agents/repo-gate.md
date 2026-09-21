@@ -34,12 +34,12 @@ suggestion.
    `oxlint --type-aware --deny-warnings` then `biome check --error-on-warnings`,
    must be clean, whole repo.
 3. `git status`/`git diff` to see what's touched. `bun run check` already runs
-   `check:packages` = `check:go` (`go vet ./cmd/... ./internal/...`, covering
-   `cmd/agent/`, `cmd/cli/`, `cmd/installer/` and every shared `internal/`
-   library) plus `check:scripts` (`tsc` over `scripts/`); if a REST API route,
-   `$lib/openapi/` or `config.ts` changed, confirm `bun run gen` leaves no diff
-   in `openapi.json`, `homerun.schema.json` or
-   `tests/integration/support/openapi-types.ts`.
+   `check:packages` = `check:go` (`go vet` then `golangci-lint run` over
+   `./cmd/... ./internal/...`, covering `cmd/agent/`, `cmd/cli/`,
+   `cmd/installer/` and every shared `internal/` library) plus `check:scripts`
+   (`tsc` over `scripts/`); if a REST API route, `$lib/openapi/` or `config.ts`
+   changed, confirm `bun run gen` leaves no diff in `openapi.json`,
+   `homerun.schema.json` or `tests/integration/support/openapi-types.ts`.
 4. Run the unit tests for what changed: `bun run test:unit` (seconds), or
    `test:unit:app`/`test:unit:agent`/`test:unit:cli`/`test:unit:installer`.
 

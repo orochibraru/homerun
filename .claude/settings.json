@@ -33,6 +33,18 @@
 						"command": "prek run",
 						"timeout": 90,
 						"statusMessage": "Running status checks..."
+					},
+					{
+						"type": "command",
+						"command": "bun run test:unit",
+						"timeout": 90,
+						"statusMessage": "Running ts tests..."
+					},
+					{
+						"type": "command",
+						"command": "bun run test:go",
+						"timeout": 90,
+						"statusMessage": "Running go tests..."
 					}
 				]
 			}
