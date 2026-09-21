@@ -1,3 +1,12 @@
+# Changelog
+
+## [1.0.40](https://github.com/orochibraru/homerun/compare/v1.0.39...v1.0.40) (2026-09-21)
+
+### Features
+
+- go worker for all (#22)
+  ([dba2d4f](https://github.com/orochibraru/homerun/commit/dba2d4f54386b1ee7be0ecb4d7cf9da6e5e39c1e))
+
 ## [1.0.39](https://github.com/orochibraru/homerun/compare/v1.0.38...v1.0.39) (2026-09-19)
 
 ### Features
