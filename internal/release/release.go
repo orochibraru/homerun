@@ -43,7 +43,7 @@ func Arch(goarch string) (string, error) {
 
 // AssetSuffix is the release-asset suffix for a platform: amd64 or arm64 on
 // Linux, darwin-amd64 or darwin-arm64 on macOS. Only the CLI ships macOS
-// builds; the installer and agent only ever run on the Linux host they manage.
+// builds; the installer and worker only ever run on the Linux host they manage.
 func AssetSuffix(goos, goarch string) (string, error) {
 	arch, err := Arch(goarch)
 	if err != nil {

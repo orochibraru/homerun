@@ -1,4 +1,4 @@
-// Package installer installs Homerun, its agent or a swarm worker onto a Linux host.
+// Package installer installs Homerun, its worker in agent mode or a swarm worker onto a Linux host.
 package installer
 
 import (
@@ -228,7 +228,7 @@ func PackageManagerFor(opts Options) (PackageManager, error) {
 }
 
 // InstallStack is steps 4 and 5 of a fresh install: the networks on the chosen
-// daemon, then the agent or the full stack.
+// daemon, then the agent-mode worker or the full stack.
 func InstallStack(opts Options, run Runner, docker DockerFlavour, dockerSocket, host, arch string) error {
 	rootful := docker == FlavourRootful
 	fmt.Println("\n== 4/5 Networks ==")
@@ -247,10 +247,10 @@ func InstallStack(opts Options, run Runner, docker DockerFlavour, dockerSocket, 
 
 	fmt.Println("\n== 5/5 Install ==")
 	if opts.Mode == ModeAgent {
-		if _, err := InstallAgentBinary(run, opts.Version, arch); err != nil {
+		if _, err := InstallWorkerBinary(run, opts.Version, arch); err != nil {
 			return err
 		}
-		return InstallAgentSystemdUnit(run, opts.RootlessUser, dockerSocket, opts.AgentPort)
+		return InstallWorkerSystemdUnit(run, opts.RootlessUser, dockerSocket, opts.AgentPort)
 	}
 	_, err := BringUpFullStack(FullStackParams{
 		DockerSocket: dockerSocket,
@@ -320,8 +320,8 @@ The rootless daemon is stopped and disabled, its data is untouched. Once you're 
 func PrintNextSteps(opts Options, dockerSocket, host string) {
 	home := HomeOf(opts.RootlessUser)
 	if opts.Mode == ModeAgent {
-		fmt.Printf("Homerun Agent should now be listening on port %d.\n", opts.AgentPort)
-		fmt.Printf("Its token: sudo -u %s cat %s/.homerun-agent/token\n", opts.RootlessUser, home)
+		fmt.Printf("The Homerun worker (agent mode) should now be listening on port %d.\n", opts.AgentPort)
+		fmt.Printf("Its token: sudo -u %s cat %s/.homerun-worker/token\n", opts.RootlessUser, home)
 		fmt.Println("Paste that (plus this host's reachable URL) into the main Homerun instance's Remote Hosts page.")
 		return
 	}

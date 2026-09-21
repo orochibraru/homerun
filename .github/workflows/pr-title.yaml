@@ -21,7 +21,7 @@ jobs:
         run: |
           pattern='^(feat|fix|perf|refactor|docs|chore|ci|build|test|style|revert)(\([a-z0-9._/-]+\))?(!)?: [^ ].*$'
           if [[ ! "$TITLE" =~ $pattern ]]; then
-            echo "::error::PR title \"$TITLE\" isn't a conventional commit. The squash merge uses it as the commit message, so semantic-release can't read it. Expected e.g. \"feat(cli): add --json\" or \"fix: handle an empty compose file\"."
+            echo "::error::PR title \"$TITLE\" isn't a conventional commit. The squash merge uses it as the commit message, so the release can't read it. Expected e.g. \"feat(cli): add --json\" or \"fix: handle an empty compose file\"."
             exit 1
           fi
           type="${BASH_REMATCH[1]}"

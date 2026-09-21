@@ -24,7 +24,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bun run check:app",
+						"command": "bun run check",
 						"timeout": 90,
 						"statusMessage": "Typechecking before handing back..."
 					},
@@ -36,15 +36,9 @@
 					},
 					{
 						"type": "command",
-						"command": "bun run test:unit",
+						"command": "bun run test",
 						"timeout": 90,
-						"statusMessage": "Running ts tests..."
-					},
-					{
-						"type": "command",
-						"command": "bun run test:go",
-						"timeout": 90,
-						"statusMessage": "Running go tests..."
+						"statusMessage": "Running unit tests (TS + Go)..."
 					}
 				]
 			}

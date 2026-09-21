@@ -1,11 +1,14 @@
 [files]
 extend-exclude = [
-  # semantic-release-generated, full of commit-hash substrings (e.g. the "ba"
+  # Release-generated, full of commit-hash substrings (e.g. the "ba"
   # inside "2ba0da5") that read as typos with no prose to actually fix.
   "CHANGELOG.md",
   # A Google-Fonts-style `unicode-range` codepoint list (e.g. "U+0100-02BA"),
   # not prose.
   "src/routes/layout.css",
+  "go.mod",
+  "go.sum",
+  "bun.lock",
 ]
 
 [default.extend-words]

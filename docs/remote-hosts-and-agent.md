@@ -53,25 +53,26 @@ with BuildKit in a `docker:cli` helper container that mounts the build server's
 
 ## Homerun Agent
 
-A standalone binary (`cmd/agent/`) meant to run on a build server's own Docker
-daemon, exposing git builds and host stats over a small token-authenticated HTTP
-API, the alternative to registering a build server by raw `tcp://`/`ssh://`
-socket. Instead of exposing (or SSH-tunneling into) the daemon itself, the build
-server runs this agent and the main app talks to it over plain HTTP with a
-bearer token, this is what the "Homerun Agent" connection type on
-`/remote-hosts` (above) registers.
+Not a separate program any more: `homerun-worker` (`cmd/worker/`), the same
+binary the app itself runs next to, picks **agent mode** whenever it starts with
+no `DATABASE_URL` set. In agent mode it exposes git builds and host stats over a
+small token-authenticated HTTP API, the alternative to registering a build
+server by raw `tcp://`/`ssh://` socket. Instead of exposing (or SSH-tunneling
+into) the daemon itself, the build server runs the worker in agent mode and the
+main app talks to it over plain HTTP with a bearer token, this is what the
+"Homerun Agent" connection type on `/remote-hosts` (above) registers.
 
 ```sh
-go run ./cmd/agent   # from the repo root; talks to /var/run/docker.sock by default
+go run ./cmd/worker   # from the repo root; agent mode as long as DATABASE_URL is unset, talks to /var/run/docker.sock by default
 ```
 
 Or compiled to a standalone binary (no Go toolchain needed on the target host):
-`bun run build:packages` (builds the CLI/installer/agent binaries for both
-arches). On first boot with no `AGENT_TOKEN` set, it generates one and prints
-it, copy that plus this host's reachable URL into `/remote-hosts`'s "new host"
-form, see [`cmd/agent/README.md`](../cmd/agent/README.md) for the full env var
-and HTTP surface reference, plus install options (a Docker image, a prebuilt
-binary, or the installer below).
+`bun scripts/build-packages.ts` (builds the CLI/installer/worker binaries for
+both arches). On first boot with no `WORKER_TOKEN` set, it generates one and
+prints it, copy that plus this host's reachable URL into `/remote-hosts`'s "new
+host" form, see [`cmd/worker/README.md`](../cmd/worker/README.md) for the full
+env var and HTTP surface reference, plus install options (a Docker image, a
+prebuilt binary, or the installer below).
 
 **Wired into the main app**: registering an agent-kind build server and picking
 it on a git-based service's Source tab routes that service's builds through this

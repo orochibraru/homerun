@@ -4,29 +4,33 @@
 `CLAUDE.md`'s note on why `--timeout` is passed explicitly), covering
 `tests/unit/app/`, the SvelteKit app itself — a Svelte-compiling Bun plugin +
 happy-dom setup, `@testing-library/svelte`, see its own README. Tests live here,
-under `tests/unit/<package>/`, mirroring the source tree. `cmd/agent/`,
+under `tests/unit/<package>/`, mirroring the source tree. `cmd/worker/`,
 `cmd/cli/` and `cmd/installer/` are all Go packages in the repo-root `go.mod`
 and aren't part of `bun:test` at all, but every `*_test.go` in the repo follows
 the same not-next-to-source rule: it lives under
 `tests/unit/go/<same path as the package it covers>` (e.g.
-`internal/agent/token.go` is covered by
-`tests/unit/go/internal/agent/token_test.go`) as an external test package
-(`package agent_test`), run with
-`go test ./cmd/agent/... ./internal/agent/... ./tests/unit/go/internal/agent/...`
-(`bun run test:unit:agent`), the `cli`/ `installer` equivalents
-(`bun run test:unit:cli`/`test:unit:installer`), or all of it at once with
-`go test ./cmd/... ./internal/... ./tests/unit/go/...` (`bun run test:go`).
+`internal/httpapi/token.go` is covered by
+`tests/unit/go/internal/httpapi/token_test.go`) as an external test package
+(e.g. `package worker_test`/`package agent_test`), run by scoping `go test` to
+that path, e.g.:
+
+```sh
+go test ./cmd/worker/... ./internal/worker/... ./internal/agent/... ./tests/unit/go/internal/worker/... ./tests/unit/go/internal/agent/...
+```
+
+for the worker (including its agent mode), the `cli`/`installer` equivalents
+narrowed to those paths, or all of it at once with
+`go test ./cmd/... ./internal/... ./tests/unit/go/...` (part of `bun run test`).
 
 Run everything: `bun run test` (a bare `bun test` also works for the `bun:test`
 half — no wrapper script, `bunfig.toml`'s `[test].preload` handles the rest —
 but `bun run test` also runs
-`go test ./cmd/... ./internal/... ./tests/unit/go/...` afterward, covering
-`cmd/agent/`, `cmd/cli/` and `cmd/installer/`). Scoped: `bun run test:unit` (app
-only, no Postgres/Docker needed), `bun run test:unit:app`, and
-`test:unit:agent`/`test:unit:cli`/ `test:unit:installer` (the Go tests, above,
-plain `go test`, no Bun preload involved). See `tests/integration/README.md` for
-the separate `tests/integration/` suite, and `tests/e2e/README.md` for the
-real-browser Playwright suite (its own runner, `bun run test:e2e`, not part of
+`go test ./cmd/... ./internal/... ./tests/unit/go/...` first, covering
+`cmd/worker/`, `cmd/cli/` and `cmd/installer/`, then
+`bun --config=bunfig.unit.toml test tests/unit` for the app; unit only, no
+Postgres/Docker needed). See `tests/integration/README.md` for the separate
+`tests/integration/` suite, and `tests/e2e/README.md` for the real-browser
+Playwright suite (its own runner, `bun run test:e2e`, not part of
 `bun run test`'s `bun test` invocation).
 
 ## Mocks are process-global
@@ -39,8 +43,10 @@ colliding, restoring spies with `mock.restore()` where it matters. This used to
 also cover the Bun-based agent's own suite (`tests/unit/agent/docker.test.ts`
 mocked `"dockerode"` wholesale, `tests/unit/agent/http.test.ts` spied on
 individual `DockerService` methods); that suite is gone along with the Bun
-agent, replaced by `cmd/agent/`'s own Go tests, which fake the Docker client via
-a real interface instead (`tests/unit/go/internal/agent/fake_docker_test.go`).
+agent, replaced by `internal/agent/`'s own Go tests (imported by `cmd/worker`'s
+agent mode, no standalone `cmd/agent/` any more), which fake the Docker client
+via a real interface instead
+(`tests/unit/go/internal/agent/fake_docker_test.go`).
 
 ## `cmd/cli/`'s tests set `$HOME` directly, no preload needed
 
@@ -79,9 +85,9 @@ collaborator, before the installer's Go rewrite moved these tests out of
   persisted token — a full-access API credential — was affected by exactly this,
   fixed at the time by calling `node:fs/promises`'s `chmod()` explicitly after
   `Bun.write` (`node:fs`'s own `mode` option is honored, verified). The agent's
-  Go rewrite sidesteps the whole bug class: `internal/agent/token.go` calls
-  `os.WriteFile(tokenFile, token, 0o600)` then an explicit `os.Chmod`, both of
-  which Go actually honors.
+  Go rewrite sidesteps the whole bug class: `internal/httpapi/token.go`'s
+  `ResolveToken` calls `os.WriteFile(tokenFile, token, 0o600)` then an explicit
+  `os.Chmod`, both of which Go actually honors.
 - `bunfig.toml`'s `[test].timeout` key is silently not honored by Bun 1.4.0 for
   `test()` bodies — every `test/test:*` script passes `--timeout 120000` on the
   CLI instead.
@@ -96,11 +102,12 @@ Bun once coverage from more than one test file needs merging
 independent of provider — `istanbul` avoided it, `v8` didn't). The suite moved
 back to `bun:test` rather than keep the extra dependency around for that.
 
-`tsconfig.json` type-checks `tests/` as part of `svelte-check` (`check:app`),
-same as `src/`; it used to exclude `tests/` entirely, since `bun:test`'s
-`mock()` return type hit real overload-resolution errors under svelte-check's TS
-resolution that don't happen under `tsc`/`bun test` directly, but re-including
-it surfaced real bugs worth catching (see `.agents/notes/testing.md`).
-`cmd/agent/`'s, `cmd/cli/`'s and `cmd/installer/`'s own tests aren't under
-`tests/` at all and aren't TypeScript: `check:agent`, `check:cli` and
-`check:installer` are all `go vet`, not `tsc`.
+`tsconfig.json` type-checks `tests/` as part of `svelte-check` (part of
+`bun run check`), same as `src/`; it used to exclude `tests/` entirely, since
+`bun:test`'s `mock()` return type hit real overload-resolution errors under
+svelte-check's TS resolution that don't happen under `tsc`/`bun test` directly,
+but re-including it surfaced real bugs worth catching (see
+`.agents/notes/testing.md`). `cmd/worker/`'s (including its agent mode),
+`cmd/cli/`'s and `cmd/installer/`'s own tests aren't under `tests/unit/app` at
+all and aren't TypeScript: they're checked with `go vet`, not `tsc`, scoped to
+each sub-project's own path.

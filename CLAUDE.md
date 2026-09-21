@@ -67,74 +67,85 @@ devDependency now, used only by an integration-test fixture, not by the app.
 
 ## Commands
 
-`mise install` installs the pinned Bun, Go, prek and golangci-lint from
-`mise.toml` and runs `mise run docker` (daemon + compose check, creates the
-`homerun` network); bumping one means updating its other pins too, see
-`CONTRIBUTING.md`'s Toolchain section.
+`mise install` installs the pinned Bun, Go and prek from `mise.toml` and runs
+`mise run docker` (daemon + compose check, creates the `homerun` network);
+bumping one means updating its other pins too, see `CONTRIBUTING.md`'s Toolchain
+section. golangci-lint is pinned separately, in its own module
+(`tools/go/go.mod`, kept out of the root `go.mod` so its ~210 indirect deps
+don't feed minimum-version-selection into the binaries this repo ships), run via
+`go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...`;
+bump it with
+`cd tools/go && go get -tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint@vX`.
 
 ```bash
-bun run dev              # scripts/dev.ts, vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change
-bun run dev:app          # vite dev alone
-bun run dev:worker       # the worker alone, same rebuild-on-change loop; also serves the Docker control API the app calls, on WORKER_PORT (7430)
-bun run preview          # vite preview, serves the last vite build (bun run start is closer to production)
-bun run build            # build:app then build:packages, sequential
-bun run build:app        # bun run gen && vite build
-bun run build:packages   # scripts/build-packages.ts, the agent/installer/cli binaries into dist/
+bun run dev              # scripts/dev.ts: vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change; `--only=app`/`--only=worker` runs one half alone
+bun run build            # bun run gen && vite build
 bun run start            # ./build/server (the binary @orochibraru/svelte-smol compiles, serve the built app)
 bun run gen              # svelte-kit sync + regenerate openapi.json, tests/integration/support/openapi-types.ts and homerun.schema.json from source, CI fails if the result isn't committed
-bun run check            # check:app then check:packages, the real gate, see `.agents/notes/testing.md`
-bun run check:app        # svelte-kit sync && svelte-check --fail-on-warnings --tsgo, the SvelteKit half of the gate
-bun run check:packages   # check:go + check:scripts, go vet over every cmd/*/internal/* package plus scripts/
-bun run check:go         # go vet then golangci-lint over ./cmd/... ./internal/... ./tests/unit/go/..., every Go sub-project and shared library in one pass, the same pair CI's Go job runs
-bun run check:agent      # go vet ./cmd/agent/... ./internal/agent/... ./tests/unit/go/internal/agent/...
-bun run check:cli        # go vet ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...
-bun run check:installer  # go vet ./cmd/installer/... ./internal/installer/... ./tests/unit/go/internal/installer/...
-bun run check:scripts    # tsc over scripts/ (tsconfig.scripts.json), scripts/ isn't covered by svelte-check's own include list
-bun run lint             # lint:md (markdownlint-cli2) then lint:tailwind (scripts/lint-tailwind.ts, tailwint in chunks, Tailwind class sorting) then lint:ts (oxlint --type-aware --deny-warnings for linting, `.oxlintrc.json`, then biome check for formatting and import order; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
-bun run lint:fix         # the --write/--fix half of all three (lint:fix:md, lint:fix:tailwind, lint:fix:ts)
-bun run format           # format:md (prettier over **/*.md) + format:ts (biome format --write)
+bun run check            # svelte-check --fail-on-warnings --tsgo, tsc over scripts/, go vet, and golangci-lint (`go tool -modfile=tools/go/go.mod`), the whole gate in one command, see `.agents/notes/testing.md`
+bun run lint             # markdownlint-cli2, scripts/lint-tailwind.ts (Tailwind class sorting) and oxlint --type-aware --deny-warnings (`.oxlintrc.json`; Biome's linter is off, suppress an oxlint rule with `// oxlint-disable-next-line <rule> -- <reason>`)
+bun run lint:fix         # the --fix half of all three
+bun run format           # prettier --write over **/*.md, then biome format --write (formatting only, doesn't gate `bun run lint`; import sorting/formatting is enforced at commit time by the pre-commit hooks instead)
 bun run db:generate      # drizzle-kit generate, regenerate migrations from src/lib/server/db/schema.ts, the app applies them itself at boot
-bun run auth:db:generate # better-auth CLI `auth generate`, writes the Drizzle schema better-auth and its plugins expect, to diff against schema.ts after a better-auth upgrade
-bun run component:add    # shadcn-svelte add <name>, installs a UI primitive into src/lib/components/ui/
-bun run dev:agent        # go run ./cmd/agent, the Homerun Agent against the local Docker socket
 docker compose up -d     # bootstraps Traefik + Postgres for local dev (compose.yaml, needs `docker network create homerun` once), required, the app has no fallback DB, see .agents/notes/docker.md
-bun run release          # semantic-release, normally CI-only (.github/workflows/publish.yaml), see .agents/notes/packages-and-release.md
 ```
 
 `preinstall` (`only-allow bun`) and `prepare` (`prek install`, wires the git
 hooks from `.pre-commit-config.yaml`) run on `bun install`.
 
 ```bash
-bun run test              # svelte-kit sync && bun test (unit + integration) then go test ./cmd/... ./internal/... ./tests/unit/go/..., never tests/e2e/ (Playwright, own runner)
-bun run test:unit         # tests/unit/app only, no Postgres/Docker needed; cmd/agent/, cmd/cli/ and cmd/installer/'s own Go tests are separate commands, below
-bun run test:unit:agent   # go test ./cmd/agent/... ./internal/agent/... ./tests/unit/go/internal/agent/..., not bun:test
-bun run test:unit:app     # tests/unit/app, the SvelteKit app's own unit/component tests
-bun run test:unit:cli     # go test ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/..., not bun:test
-bun run test:unit:installer  # go test ./cmd/installer/... ./internal/installer/... ./tests/unit/go/internal/installer/..., not bun:test
-bun run test:integration  # tests/integration/ only, real Postgres/Docker/agent, see that suite's own README
-bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build:app first, see .agents/notes/testing.md
-bun run test:e2e:cli      # playwright test over bootstrap + onboarding + ui-cli.spec.ts only, the CLI driven against the E2E app instance
-bun run screenshots       # playwright test --config playwright.screenshots.config.ts, regenerates the docs/ screenshots
-bun run e2e:multipass     # scripts/e2e-multipass.ts, real-infra installer/agent/CLI e2e, not wired into CI
-bun run e2e:multipass:release  # scripts/e2e-multipass-release.ts, the same but against the *published* release and the *documented* commands, also not wired into CI (`--only=docs` is the VM-free docs-drift check)
+bun run test              # svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/... then bun --config=bunfig.unit.toml test tests/unit; unit only, no Postgres/Docker needed
+bun run test:integration  # tests/integration/ only, real Postgres/Docker/worker, see that suite's own README
+bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build first, see .agents/notes/testing.md
 ```
 
-`cmd/agent/`, `cmd/cli/` and `cmd/installer/` are three standalone Go programs
-(a single Go module at the repo root, `go.mod`, no
-`tsconfig.json`/`package.json` of their own), not part of the SvelteKit app
-above and not covered by `svelte-check`. Shared Go libraries live under
-`internal/` (`internal/buildinfo`, the version stamped via `-ldflags` at build
-time; `internal/release`, release asset naming/URLs/download;
-`internal/homerun`, the CLI's config and API client; `internal/dockerapi`, a
-stdlib Docker Engine API client over the unix socket the agent drives).
-`check:go` (`go vet ./cmd/... ./internal/... ./tests/unit/go/...`) covers all of
-it in one pass; `check:agent`/`check:cli`/`check:installer` scope that to one
-sub-project. All three still compile via `scripts/build-packages.ts`, and
-because Go's `GOOS`/`GOARCH` cross-compilation is exact, every target builds
-from any one runner: the CLI's macOS binaries are cross-compiled from a Linux
-runner too, with no macOS runner in CI at all — the installer and the agent get
-no macOS build at all, they only ever run on the Linux box they're installed on
-(see `.agents/notes/packages-and-release.md`). See that note and
+Package.json's script list is deliberately short (14 entries): there's no
+`bun run release` (releases run entirely in CI, driven by
+`orochibraru/releaser`, see `.agents/notes/packages-and-release.md`), and a
+handful of scripts that used to exist are now just the raw command, run directly
+instead of through a name: `bun run build:app` → `bun run build`;
+`bun run build:packages` → `bun scripts/build-packages.ts`;
+`check:app`/`check:go`/`check:scripts`/`check:packages`/`check:agent`/
+`check:cli`/`check:installer` → `bun run check` (or the scoped raw command, e.g.
+`go test ./internal/cli/...`, for one slice of it);
+`lint:md`/`lint:ts`/`lint:tailwind`/every `lint:fix:*`/`format:*` →
+`bun run lint`/`lint:fix`/`format`; `test:unit`/`test:unit:app`/
+`test:unit:agent`/`test:unit:cli`/`test:unit:installer`/`test:go` →
+`bun run test` (scope with `go test ./internal/cli/...` or
+`bun --config=bunfig.unit.toml test tests/unit/app` etc.); `test:e2e:cli` →
+`bun run test:e2e tests/e2e/bootstrap.spec.ts tests/e2e/onboarding.spec.ts tests/e2e/ui-cli.spec.ts`;
+`screenshots` →
+`bunx playwright test --config playwright.screenshots.config.ts`;
+`e2e:multipass`/`e2e:multipass:release` → `bun scripts/e2e-multipass.ts` /
+`bun scripts/e2e-multipass-release.ts`; `dev:app`/`dev:worker` →
+`bun run dev --only=app`/`--only=worker`; `dev:agent` → gone, there's no
+standalone agent to run any more, `go run ./cmd/worker` with no `DATABASE_URL`
+is agent mode (see `.agents/notes/packages-and-release.md`); `component:add` →
+`bunx shadcn-svelte add`; `auth:db:generate` → `bunx auth generate`; `preview` →
+gone, use `bun run build && bun run start`.
+
+`cmd/cli/` and `cmd/installer/` are standalone Go programs (a single Go module
+at the repo root, `go.mod`, no `tsconfig.json`/`package.json` of their own), not
+part of the SvelteKit app above and not covered by `svelte-check`; so is
+`cmd/worker/`, which builds the same `homerun-worker` binary that runs both next
+to the app and as the standalone agent-mode binary on a remote build host (see
+`.agents/notes/packages-and-release.md` and `.agents/notes/worker.md`;
+`cmd/agent/` doesn't exist any more, it was merged into `cmd/worker`). Shared Go
+libraries live under `internal/` (`internal/buildinfo`, the version stamped via
+`-ldflags` at build time; `internal/release`, release asset naming/URLs/
+download; `internal/homerun`, the CLI's config and API client;
+`internal/dockerapi`, a stdlib Docker Engine API client over the unix socket the
+worker drives). `go vet ./cmd/... ./internal/... ./tests/unit/go/...` plus
+`golangci-lint` over the same paths (part of `bun run check`) cover all of it in
+one pass; scope either to one sub-project by narrowing the path
+(`./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`, etc.). All
+three still compile via `scripts/build-packages.ts`
+(`bun scripts/build-packages.ts`), and because Go's `GOOS`/`GOARCH`
+cross-compilation is exact, every target builds from any one runner: the CLI's
+macOS binaries are cross-compiled from a Linux runner too, with no macOS runner
+in CI at all — the installer and the worker get no macOS build at all, they only
+ever run on the Linux box they're installed on (see
+`.agents/notes/packages-and-release.md`). See that note and
 `.agents/notes/api-and-cli.md` for what each sub-project is.
 
 Test suites, the Postgres/CI wiring and the gotchas behind these scripts:
@@ -164,12 +175,13 @@ hand:
 - Subagents (`.claude/agents/*.md`): `repo-gate` (final review gate before
   calling a change done, scans for this file's own hard rules),
   `scaffold-feature` (adds a new table+DTO+route end to end), `subproject-sync`
-  (keeps `cmd/agent/`'s hand-reimplemented Docker/stats logic in sync with the
-  main app, regenerates `tests/integration/support/openapi-types.ts` after a
-  REST API change), `ui-consistency` (flags route markup that reimplements an
-  existing shared component/primitive instead of using it, and visual drift
-  between equivalent pages), `docs-sync` (use PROACTIVELY after a code change
-  that adds/removes/changes a feature, checks this file itself, and
+  (keeps `cmd/worker/`'s agent mode's hand-reimplemented Docker/stats logic in
+  sync with the main app, regenerates
+  `tests/integration/support/openapi-types.ts` after a REST API change),
+  `ui-consistency` (flags route markup that reimplements an existing shared
+  component/primitive instead of using it, and visual drift between equivalent
+  pages), `docs-sync` (use PROACTIVELY after a code change that
+  adds/removes/changes a feature, checks this file itself, and
   `TODO.md`/sub-project READMEs, for exactly the kind of staleness this bullet
   list itself just had two live examples of: `ui-consistency` missing from here,
   and three shipped features still marked unbuilt under planned features, both
@@ -417,7 +429,7 @@ to reintroduce a fixed bug.
 | `jobs-and-queue.md`         | The `job` table and worker, cron schedulers, user cron jobs, S3 backups                                                                                               |
 | `worker.md`                 | The Go worker (`cmd/worker`, `internal/worker`, `internal/jobs`), the job stage protocol, porting a job type to Go, the Docker control API (`internal/workerapi`)     |
 | `testing.md`                | `tests/` (unit, integration, e2e), `bunfig.toml`, Playwright, the CI Postgres wiring                                                                                  |
-| `packages-and-release.md`   | `cmd/agent/`, `cmd/installer/`, semantic-release, CI/Docker publishing, `docs/`                                                                                       |
+| `packages-and-release.md`   | `cmd/installer/`, `cmd/worker/`'s agent mode, `orochibraru/releaser`, CI/Docker publishing, `docs/`                                                                   |
 | `dns.md`                    | Cloudflare or Pangolin DNS automation                                                                                                                                 |
 | `observability.md`          | `Logger`, `app_log`, in-app notifications, system stats, setup diagnostics                                                                                            |
 | `planned-features.md`       | Proposing or building something that might be a deliberate gap — check here before designing it                                                                       |

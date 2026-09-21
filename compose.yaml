@@ -16,13 +16,10 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-      target: agent
+      target: worker
     extends:
       file: tools/compose/agent.compose.yaml
       service: agent
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - internal
       - homerun

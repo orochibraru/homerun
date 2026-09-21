@@ -12,7 +12,7 @@ ADVERTISE_ADDRESS=""
 usage() {
 	cat <<'EOF'
 Joins this host to an existing Homerun swarm as a worker, then installs the
-Homerun Agent on it.
+Homerun worker in agent mode on it.
 
   curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/swarm-join.sh \
     | sudo bash -s -- --token=<SWMTKN-...> --manager=<manager-ip>:2377
@@ -24,8 +24,8 @@ Options:
   --manager=<ip>:2377       Manager address (required)
   --advertise-addr=<ip>     Address other nodes reach this one at, needed when
                             this host has several network interfaces
-  --version=<tag>           Release the agent is installed from (default: latest)
-  --user=<name>             Rootless user the agent runs as (default: homerun)
+  --version=<tag>           Release the worker is installed from (default: latest)
+  --user=<name>             Rootless user the worker runs as (default: homerun)
 
 The swarm runs on the system (rootful) Docker daemon: rootless Docker can't
 create the overlay networks swarm services use. Nodes must reach each other on
@@ -88,7 +88,7 @@ if [ "$(uname -s)" != "Linux" ]; then
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
-	echo "error: run as root (sudo bash -s -- ...): installs Docker, joins the swarm and installs the agent." >&2
+	echo "error: run as root (sudo bash -s -- ...): installs Docker, joins the swarm and installs the worker." >&2
 	exit 1
 fi
 
@@ -125,7 +125,7 @@ else
 	docker "${JOIN_ARGUMENTS[@]}" "$MANAGER_ADDRESS"
 fi
 
-echo "==> Installing the Homerun Agent (homerun-installer --mode=agent)"
+echo "==> Installing the Homerun worker in agent mode (homerun-installer --mode=agent)"
 INSTALLER_BINARY="$(mktemp)"
 trap 'rm -f "$INSTALLER_BINARY"' EXIT
 curl -fsSL "$INSTALLER_URL" | gunzip -c > "$INSTALLER_BINARY"
@@ -135,4 +135,4 @@ chmod +x "$INSTALLER_BINARY"
 echo ""
 echo "==> Done."
 echo "This host is a swarm worker: swarm-mode services deployed from Homerun can now be scheduled here."
-echo "The Homerun Agent runs on port 7420 if you also want to register this host as a build server."
+echo "The Homerun worker (agent mode) runs on port 7420 if you also want to register this host as a build server."

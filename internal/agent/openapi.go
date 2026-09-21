@@ -113,8 +113,8 @@ func openAPIDocument(baseURL string) object {
 			},
 		},
 		"info": object{
-			"description": "A single Homerun Agent's own HTTP control surface : builds, image exports and host stats for the one Docker daemon this agent runs on. See cmd/agent/README.md.",
-			"title":       "Homerun Agent API",
+			"description": "The Homerun worker's agent-mode HTTP surface on a remote build host : builds, image exports and host stats for the one Docker daemon it runs on. See cmd/worker/README.md.",
+			"title":       "Homerun worker (agent mode) API",
 			"version":     buildinfo.Version,
 		},
 		"openapi": "3.1.0",

@@ -405,19 +405,21 @@ between containers) instead, see the Docker integration section above.
 
 - `compose.yaml`, **local dev**, Traefik + Postgres only. Deliberately no `app`
   service: dev runs the app directly on the host (`bun run dev`/`bun run start`,
-  alongside `bun run dev:worker`, see `worker.md`) so its own logs aren't
+  alongside `bun run dev --only=worker`, see `worker.md`) so its own logs aren't
   viewable in-app (see `system-logs/` above). This is what
   `docker compose up -d` brings up, and what the app assumes exists.
 - `compose.dev.yaml`, the same plus `app`, `worker` and `agent` built from this
-  repo's own `Dockerfile` (`target: app` for both `app` and `worker`, the
-  `homerun-worker` binary ships inside the same image, see `worker.md`;
-  `target: agent` for the agent), for exercising the containerized app locally.
+  repo's own `Dockerfile` (`target: app` for `app`, `target: worker` for both
+  `worker` and `agent`, since `cmd/agent` was merged into `homerun-worker`, see
+  `packages-and-release.md`; the `agent` service is that same binary started
+  with no `DATABASE_URL`, which is what puts it in agent mode), for exercising
+  the containerized app locally.
 - `compose.prod.yaml`, the operator-facing stack: the published
   `docker.io/orochibraru/homerun` image alongside Traefik and Postgres.
   Deliberately **self-contained**, no `extends:`, since someone who `curl`s just
   this one file down has no `tools/` directory; it's Option B in
   `docs/getting-started.md`, so a change here has to stay in step with that doc
-  (`bun run e2e:multipass:release --only=docs` checks exactly that).
+  (`bun scripts/e2e-multipass-release.ts --only=docs` checks exactly that).
 
 **The dashboard gets its own Traefik router, off one variable
 (`DASHBOARD_DOMAIN`).** The app container used to carry no `traefik.*` labels at
@@ -599,9 +601,9 @@ unit-tested in `tests/unit/app/swarm-rootless.test.ts`), and the installer
 became rootful by default. Verified end to end on two Multipass VMs: rootful
 manager, worker joined through the script, a 3-replica service with tasks on
 both nodes, Traefik answering from every replica over the overlay
-(`bun run e2e:multipass --swarm` replays it). Traefik's swarm provider polls
-every `providers.swarm.refreshSeconds`, set to 2 (`SWARM_REFRESH_SECONDS`) by
-`enableSwarmMode` and the installer, so new replicas join within 2s.
+(`bun scripts/e2e-multipass.ts --swarm` replays it). Traefik's swarm provider
+polls every `providers.swarm.refreshSeconds`, set to 2 (`SWARM_REFRESH_SECONDS`)
+by `enableSwarmMode` and the installer, so new replicas join within 2s.
 
 ## Readiness gate (`docker/readiness.ts`, `planReadiness` in `internal/jobs/deploy/readiness.go`)
 

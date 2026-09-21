@@ -49,7 +49,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Build app from source
-        run: bun run build:app
+        run: bun run build
 
       - name: Install Playwright's Chromium
         run: bunx playwright install --with-deps chromium
@@ -63,7 +63,7 @@ jobs:
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: playwright-results.json
         timeout-minutes: 20
-        run: bun run screenshots -- --reporter=list,json
+        run: bunx playwright test --config playwright.screenshots.config.ts --reporter=list,json
 
       - name: Summarise the run
         id: stats

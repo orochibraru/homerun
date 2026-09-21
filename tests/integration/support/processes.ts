@@ -55,29 +55,33 @@ async function waitForPort(
 }
 
 /**
- * Builds the real Go agent (`cmd/agent`) once and spawns it, pointed at
- * whatever Docker socket this machine's own `docker context` resolves (the
- * agent's own auto-detection) : a real agent, not a stub, so the deploy-target
- * and build-server scenarios exercise the actual HTTP surface. `port` is
+ * Builds the real Go worker (`cmd/worker`) and spawns it in agent mode, pointed
+ * at whatever Docker socket this machine's own `docker context` resolves (the
+ * worker's own auto-detection) : a real remote build host, not a stub, so the
+ * build-server scenarios exercise the actual HTTP surface. `DATABASE_URL` is
+ * stripped from the inherited environment, since its presence is what would
+ * turn this into a full worker leasing jobs from the test database. `port` is
  * picked fresh per run (port.ts) so two runs of this suite never collide on a
  * fixed agent port.
  */
 export function spawnAgent(port: number, token: string) {
-	const binary = join(tmpdir(), `homerun-agent-it-${process.pid}`);
-	const build = Bun.spawnSync(["go", "build", "-o", binary, "./cmd/agent"], {
+	const binary = join(tmpdir(), `homerun-worker-agent-it-${process.pid}`);
+	const build = Bun.spawnSync(["go", "build", "-o", binary, "./cmd/worker"], {
 		cwd: process.cwd(),
 		stderr: "pipe",
 	});
 	if (build.exitCode !== 0) {
-		throw new Error(`go build ./cmd/agent failed: ${build.stderr.toString()}`);
+		throw new Error(`go build ./cmd/worker failed: ${build.stderr.toString()}`);
 	}
+	const env: Record<string, string | undefined> = {
+		...process.env,
+		WORKER_PORT: String(port),
+		WORKER_TOKEN: token,
+	};
+	delete env.DATABASE_URL;
 	const proc = Bun.spawn([binary], {
 		cwd: process.cwd(),
-		env: {
-			...process.env,
-			AGENT_TOKEN: token,
-			PORT: String(port),
-		},
+		env,
 		stderr: "pipe",
 		stdout: "pipe",
 	});

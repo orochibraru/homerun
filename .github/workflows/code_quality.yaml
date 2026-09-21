@@ -47,9 +47,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install golangci-lint
-        run: curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.12.2
-
       # The hooks shell out to the repo's own tooling (bun run gen, biome,
       # prettier, markdownlint, tailwint, svelte-check), so deps have to exist
       # first.
@@ -71,21 +68,18 @@ jobs:
       - name: Run prek
         uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
         env:
-          SKIP: gen,lint-ts,lint-tailwind,test-unit,check
+          SKIP: gen,oxlint,markdownlint,lint-tailwind,test-unit,check
         with:
           extra-args: --all-files --no-fail-fast
 
-      - name: Lint (TS)
-        run: bun run lint:ts
-
-      - name: Lint (MD)
-        run: bun run lint:md
-
-      - name: Lint (Tailwind)
-        run: bun run lint:tailwind
+      - name: Lint
+        run: bun run lint
 
       - name: Type check
-        run: bun run check
+        run:
+          bunx svelte-kit sync && bunx svelte-check --tsconfig ./tsconfig.json
+          --fail-on-warnings --tsgo && bunx tsc --noEmit --project
+          tsconfig.scripts.json
 
       # openapi.json, the integration suite's generated types and the config
       # JSON schema are derived from source. Regenerating has to be a no-op on
@@ -143,13 +137,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y socat
 
       - name: Build app
-        run: bun run build:app
+        run: bun run build
 
       - name: Tests (Unit)
         timeout-minutes: 20
         run:
-          bun run test:unit -- --coverage-reporter=lcov
-          --coverage-dir=coverage/unit
+          bunx svelte-kit sync && bun --config=bunfig.unit.toml test tests/unit
+          --timeout 120000 --coverage-reporter=lcov --coverage-dir=coverage/unit
 
       - name: Tests (Integration)
         timeout-minutes: 30

@@ -1,13 +1,13 @@
 # Homerun installer
 
 Single-command server setup: Docker Engine, a dedicated `homerun` user, the
-Docker networks, and either the Homerun Agent or the full Homerun stack
-(Traefik + Postgres + the app itself), entirely from prebuilt release binaries
-and Docker images. Nothing is built from source, and neither Bun nor `git` need
-to exist on the target host at any point. The full stack runs on the **system
-(rootful)** Docker daemon as a swarm manager by default, so the instance starts
-in swarm mode; `--docker=rootless` keeps the older rootless, standalone-only
-setup, and `--migrate-to-rootful` moves such an install over.
+Docker networks, and either the Homerun worker in agent mode or the full Homerun
+stack (Traefik + Postgres + the app itself), entirely from prebuilt release
+binaries and Docker images. Nothing is built from source, and neither Bun nor
+`git` need to exist on the target host at any point. The full stack runs on the
+**system (rootful)** Docker daemon as a swarm manager by default, so the
+instance starts in swarm mode; `--docker=rootless` keeps the older rootless,
+standalone-only setup, and `--migrate-to-rootful` moves such an install over.
 
 ## The one-liner
 
@@ -21,7 +21,7 @@ the `homerun-installer-<arch>` binary for the target host's architecture from
 this repo's latest GitHub release and `exec`s it directly. Pin a specific
 release instead of the newest one with `--version=vX.Y.Z` (forwarded through to
 the installer binary itself, which also uses it to pick the matching
-`homerun-agent-<arch>` binary, see below).
+`homerun-worker-<arch>` binary, see below).
 
 The one-liner serves `bootstrap.sh` straight from this repo on
 `raw.githubusercontent.com`, so it only works while the repo is public. If it
@@ -89,14 +89,17 @@ socket, the worker included, is root on the host.
    under this account's rootless permissions, never as root.
 4. Creates the `homerun` Docker network on that rootless daemon.
 5. `--mode=agent` (the default mode): downloads the prebuilt
-   `homerun-agent-<arch>` release binary straight to
-   `/usr/local/bin/homerun-agent` and runs it as a `systemd --user` unit under
-   the rootless account, pointed at the rootless socket. The agent always gets a
-   rootless daemon, `--docker=` doesn't apply to it.
-   `--mode=full --docker=rootless`: writes the same compose file without the
-   swarm provider or the overlay, pointed at the rootless socket, and runs
-   compose as that user. The app starts in standalone mode there, and Settings →
-   Docker shows swarm as unavailable with the reason.
+   `homerun-worker-<arch>` release binary straight to
+   `/usr/local/bin/homerun-worker` and runs it as the `homerun-worker`
+   `systemd --user` unit under the rootless account, pointed at the rootless
+   socket, with no `DATABASE_URL` so it starts in agent mode (port
+   `WORKER_PORT`, token persisted to `~/.homerun-worker/token`). A leftover
+   `homerun-agent` unit and binary from before the agent was merged into the
+   worker are stopped and removed. Agent mode always gets a rootless daemon,
+   `--docker=` doesn't apply to it. `--mode=full --docker=rootless`: writes the
+   same compose file without the swarm provider or the overlay, pointed at the
+   rootless socket, and runs compose as that user. The app starts in standalone
+   mode there, and Settings → Docker shows swarm as unavailable with the reason.
 
 Either way, every artifact involved is something CI already published (see
 Release automation in `.agents/notes/packages-and-release.md`); this installer's
@@ -161,17 +164,17 @@ For a `--mode=full` install made rootless (the default before swarm was),
    ownership the subuid mapping gave them).
 
 **Verified** on disposable Multipass Ubuntu 24.04 VMs
-(`bun run e2e:multipass --fresh-swarm --migrate --local-image`): a default
-`--mode=full` install booted in swarm mode with no settings change and Traefik
-served a 2-replica service from both replicas; a real v1.0.26 rootless install
-with an nginx service whose named volume held a marker file (uid 101) was
-migrated, after which the admin user and service rows were intact, the instance
-was in swarm mode, the service had been redeployed as a swarm service on its
-own, the marker was still owned by 101:101 and served through Traefik, and the
-rootless daemon was stopped. A second run of the same command skipped every
-finished step and left the running service alone. That run found that every
-swarm mount used to be `Type: bind`, so a service with a named volume couldn't
-deploy in swarm mode at all (fixed in the app's `swarmMount`).
+(`bun scripts/e2e-multipass.ts --fresh-swarm --migrate --local-image`): a
+default `--mode=full` install booted in swarm mode with no settings change and
+Traefik served a 2-replica service from both replicas; a real v1.0.26 rootless
+install with an nginx service whose named volume held a marker file (uid 101)
+was migrated, after which the admin user and service rows were intact, the
+instance was in swarm mode, the service had been redeployed as a swarm service
+on its own, the marker was still owned by 101:101 and served through Traefik,
+and the rootless daemon was stopped. A second run of the same command skipped
+every finished step and left the running service alone. That run found that
+every swarm mount used to be `Type: bind`, so a service with a named volume
+couldn't deploy in swarm mode at all (fixed in the app's `swarmMount`).
 
 Re-running after a failure is safe: `/home/<user>/homerun/.rootful-migration/`
 records the volume list, each finished copy and the instance switch, and a
@@ -210,10 +213,10 @@ from the same answer, and is still editable afterward in `homerun.yaml` next to
 
 Separate script, not part of the Go installer above: joins this host to an
 existing Homerun swarm as a worker, on the **system (rootful)** Docker daemon,
-then installs the Homerun Agent by downloading the installer binary and running
-it with `--mode=agent`. The manager is on the system daemon too (the
-`--mode=full` default): rootless Docker can't create the overlay networks swarm
-services join.
+then installs the Homerun worker in agent mode by downloading the installer
+binary and running it with `--mode=agent`. The manager is on the system daemon
+too (the `--mode=full` default): rootless Docker can't create the overlay
+networks swarm services join.
 
 Get the join token and manager address from the swarm manager itself first:
 
@@ -231,8 +234,8 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/instal
 Same "only while the repo is public" caveat as `bootstrap.sh` above applies :
 otherwise download `cmd/installer/swarm-join.sh` directly and run it with
 `sudo bash`. Optional flags: `--advertise-addr=<ip>` (needed when the node has
-several network interfaces), `--user=` (the agent's rootless account, default
-`homerun`) and `--version=` (the release the agent comes from, default
+several network interfaces), `--user=` (the worker's rootless account, default
+`homerun`) and `--version=` (the release the worker comes from, default
 `latest`). A `--manager=` without a port gets `:2377`. Re-running it on a node
 that's already in a swarm skips the join. Nodes must reach each other on
 2377/tcp, 7946/tcp+udp and 4789/udp.
@@ -258,10 +261,10 @@ endpoint reachable on the worker. That run found and fixed:
    is now skipped when present, the binary is downloaded next to its target and
    renamed over it, and the agent unit is restarted rather than only started.
 
-`bun run e2e:multipass --swarm` replays this scenario (default manager install,
-swarm switch, `swarm-join.sh` on a second VM, replicated deploy, Traefik check).
-It runs the local script and installer, but the agent on the worker comes from
-the latest published release.
+`bun scripts/e2e-multipass.ts --swarm` replays this scenario (default manager
+install, swarm switch, `swarm-join.sh` on a second VM, replicated deploy,
+Traefik check). It runs the local script and installer, but the worker binary on
+the node comes from the latest published release.
 
 ## Building the installer itself to a binary
 
@@ -273,13 +276,14 @@ any more. From the repo root:
 go run ./cmd/installer --help   # from source
 bun run scripts/build-packages.ts amd64   # or arm64; cross-compiles the installer
                                            # (Linux only, it never runs anywhere
-                                           # else) and the matching Go cli/agent
+                                           # else) and the matching Go cli/worker
                                            # binaries too
 ```
 
-Output lands in `dist/homerun-installer-<arch>` (plus the agent/cli binaries
+Output lands in `dist/homerun-installer-<arch>` (plus the worker/cli binaries
 alongside it). CI does exactly this for every release
-(`.github/workflows/binaries.yaml` + `.releaserc.json`'s GitHub-release assets):
+(`.github/workflows/binaries.yaml` builds them, `orochibraru/releaser` +
+`scripts/upload-release-assets.ts` publish them as GitHub-release assets):
 building locally is only for iterating on the installer itself.
 
 ## What's verified vs. not
@@ -375,20 +379,20 @@ rootless daemon across a real reboot (not exercised, the VMs weren't rebooted).
 `swarm-join.sh` has its own verification notes above.
 
 This whole run is scripted and reproducible, not a one-off: from the repo root,
-`bun run e2e:multipass` (`scripts/e2e-multipass.ts`) builds these binaries from
-local source, launches two disposable Multipass VMs, runs both modes for real,
-and drives the Remote Host + CLI checks above end to end, tearing down after
-(`--keep` to leave the VMs up for inspection, `--skip-build` to reuse a previous
-build). Requires Multipass + Docker locally; deliberately not run in CI (no
-nested virtualization there).
+`bun scripts/e2e-multipass.ts` builds these binaries from local source, launches
+two disposable Multipass VMs, runs both modes for real, and drives the Remote
+Host + CLI checks above end to end, tearing down after (`--keep` to leave the
+VMs up for inspection, `--skip-build` to reuse a previous build). Requires
+Multipass + Docker locally; deliberately not run in CI (no nested virtualization
+there).
 
-`bun run e2e:multipass:release` (`scripts/e2e-multipass-release.ts`) is the
-release-side counterpart: instead of local binaries, it runs the documented
-`curl | sudo bash` one-liners themselves, read straight out of
-`docs/getting-started.md` and `cmd/agent/README.md` at run time and executed
-verbatim, against a real published release (asserting first that the release
-actually shipped all six binaries). Use it after cutting a release, or after
-changing anything in those install instructions, and `--only=docs` on its own
-for a fast, VM-free check that every place documenting the same command still
-agrees (that phase also verifies each documented `raw.githubusercontent.com` URL
-exists in the checkout and is live). Same CI caveat.
+`bun scripts/e2e-multipass-release.ts` is the release-side counterpart: instead
+of local binaries, it runs the documented `curl | sudo bash` one-liners
+themselves, read straight out of `docs/getting-started.md` and
+`cmd/worker/README.md` at run time and executed verbatim, against a real
+published release (asserting first that the release actually shipped all eight
+binaries). Use it after cutting a release, or after changing anything in those
+install instructions, and `--only=docs` on its own for a fast, VM-free check
+that every place documenting the same command still agrees (that phase also
+verifies each documented `raw.githubusercontent.com` URL exists in the checkout
+and is live). Same CI caveat.

@@ -9,8 +9,8 @@ on:
         default: ""
         description:
           "Version to bake into the built binaries (bare X.Y.Z, no leading v,
-          same value cli/agent/version.ts reads from package.json at compile
-          time). Empty means this push isn't releasing, so the binaries build
+          stamped into internal/buildinfo from package.json at compile time).
+          Empty means this push isn't releasing, so the binaries build
           with whatever version is already committed."
 
 permissions:
@@ -39,7 +39,9 @@ jobs:
 
       - name: Bump version for this build
         if: inputs.version != ''
-        run: bun scripts/bump-version.ts ${{ inputs.version }}
+        env:
+          VERSION: ${{ inputs.version }}
+        run: jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
 
       - name: Build binaries
         run: bun run scripts/build-packages.ts

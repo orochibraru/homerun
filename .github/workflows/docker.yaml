@@ -28,7 +28,7 @@ on:
         required: true
         description:
           "Target (family) to build from the root docker-bake.hcl, e.g. app or
-          agent"
+          worker"
         type: string
       app_version:
         required: false

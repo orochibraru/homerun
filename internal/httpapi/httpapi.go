@@ -1,7 +1,8 @@
 // Package httpapi is the HTTP plumbing every Homerun Go service that serves a
 // control surface shares: bearer auth, one log line per request, the
-// error-to-500 translation and the JSON helpers. The agent (cmd/agent) and the
-// worker's Docker control API (cmd/worker) both route with chi on top of it,
+// error-to-500 translation and the JSON helpers. The worker's agent-mode surface
+// (internal/agent) and its Docker control API (internal/worker) both route with
+// chi on top of it,
 // so a fix to auth or logging lands in both rather than in one of two
 // hand-copied servers.
 package httpapi

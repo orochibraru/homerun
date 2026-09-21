@@ -27,27 +27,34 @@ import (
 )
 
 const helpText = `
-homerun-worker : executes Homerun's heavy background jobs (deploys, builds,
-backups, scans, cron jobs, cleanups) leased from the app's Postgres job queue.
+homerun-worker : the Go half of Homerun, in one of two modes.
 
-It also serves the Docker control API the app calls for everything it used to
-do against the Docker socket itself: container status, start/stop/restart,
-logs, the web terminal, host stats, prunes and swarm.
+Next to the app (DATABASE_URL set), it executes the heavy background jobs
+(deploys, builds, backups, scans, cron jobs, cleanups) leased from the app's
+Postgres job queue, and serves the Docker control API the app calls for
+everything that touches Docker: container status, start/stop/restart, logs,
+the web terminal, host stats, prunes and swarm.
+
+On a remote build host (no DATABASE_URL), it's agent mode: a token-protected
+HTTP surface for git builds, image export and host stats, nothing else.
 
 Usage:
   homerun-worker            Start the worker (reads its config from env vars)
   homerun-worker --version  Print the version and exit
 
 Environment:
-  DATABASE_URL        The app's Postgres (required)
+  DATABASE_URL        The app's Postgres; unset means agent mode
   AUTH_SECRET         The app's auth secret, which job specs are encrypted with
   DOCKER_SOCKET_PATH  The local Docker socket, auto-detected when unset
   WORKER_CONCURRENCY  Jobs executed at once, 3 by default
   WORKER_ID           Lease owner name, hostname-pid by default
   WORKER_LOG_LEVEL    debug/info/warn/error, else LOG_LEVEL, info by default
-  WORKER_PORT         Docker control API port, 7430 by default
-  WORKER_TOKEN        Bearer token the app presents, derived from AUTH_SECRET
-                      when unset, so no extra configuration is needed
+  WORKER_PORT         HTTP port, 7430 by default (7420 in agent mode)
+  WORKER_TOKEN        Bearer token callers present. Unset: derived from
+                      AUTH_SECRET next to the app, generated and persisted in
+                      agent mode
+  WORKER_TOKEN_FILE   Where agent mode persists that token,
+                      ~/.homerun-worker/token by default
 `
 
 // Main runs homerun-worker with the process's own arguments, exiting non-zero on failure.
@@ -72,8 +79,8 @@ func Main() {
 
 // run connects, waits for Postgres, and works until SIGINT/SIGTERM.
 func run(config Config) error {
-	if config.DatabaseURL == "" {
-		return fmt.Errorf("DATABASE_URL is required")
+	if config.AgentMode() {
+		return runAgent(config)
 	}
 	box, err := secrets.New(config.AuthSecret)
 	if err != nil {

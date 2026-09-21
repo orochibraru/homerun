@@ -3,6 +3,11 @@
 The backlog, and the only one. There is no priority ordering, pick whatever.
 When done delete the entry, no bloat.
 
+- [ ] Tag orochibraru/releaser v1.4.0 (the `draft` input and dry-run outputs),
+      then re-pin the two `orochibraru/releaser@v1.4.0` lines in
+      `.github/workflows/publish.yaml` to its commit SHA (`pinact run`). Until
+      then the `pinact` hook and the publish workflow fail.
+
 ## Small
 
 - [ ] Run Cloudflare and Pangolin DNS automation against real accounts and fix

@@ -38,14 +38,14 @@ one go, no plans, no severity tiers, out-of-scope findings go in `TODO.md`.
 - `CONTRIBUTING.md`, `AGENTS.md`, `.agents/notes/testing.md`,
   `.agents/skills/*/SKILL.md` and `tests/*/README.md` don't cite commands, flags
   or paths that no longer exist. Grep every `bun run <x>` they mention.
-- Run the cheap ones for real (`bun run check`, `bun run lint`,
-  `bun run test:unit`, `bun run gen`) and read the output: warnings, noisy logs,
-  deprecation notices and slow steps are findings too.
+- Run the cheap ones for real (`bun run check`, `bun run lint`, `bun run test`,
+  `bun run gen`) and read the output: warnings, noisy logs, deprecation notices
+  and slow steps are findings too.
 
 ### 2. Fresh-clone setup works
 
 - `.env.example` covers every env var `src/lib/config.ts` (and
-  `internal/agent/config.go`/`internal/homerun/config.go` for the sub-projects
+  `internal/worker/config.go`/`internal/homerun/config.go` for the sub-projects
   that read env vars of their own) reads, with no leftovers for vars that are
   gone. Compare against the real `.env` only for key names, never copy or print
   its values.
@@ -74,7 +74,9 @@ one go, no plans, no severity tiers, out-of-scope findings go in `TODO.md`.
   files, or have clearly separate scopes. A listed-but-unwired tool is removed
   from `package.json` or wired up.
 - `tsconfig*.json` include lists cover every TS file some gate should check;
-  nothing falls between `check:app`, `check:packages` and `check:scripts`.
+  nothing falls between `svelte-check`'s scope and
+  `tsc --noEmit --project tsconfig.scripts.json` (both run inside
+  `bun run check`).
 - `.vscode/extensions.json` and `settings.json` recommend the tools the repo
   actually uses.
 - Dependencies in `package.json` that nothing imports, and scripts nothing
@@ -96,11 +98,10 @@ one go, no plans, no severity tiers, out-of-scope findings go in `TODO.md`.
 
 ### 6. The inner loop is fast
 
-- Time `bun run check`, `bun run lint` and `bun run test:unit`. Anything
-  unreasonably slow (a test with a real sleep, a check that runs twice, a
-  sequential chain that could be parallel) is a finding.
-- Tests that are flaky or order-dependent: run `bun run test:unit` twice and
-  compare.
+- Time `bun run check`, `bun run lint` and `bun run test`. Anything unreasonably
+  slow (a test with a real sleep, a check that runs twice, a sequential chain
+  that could be parallel) is a finding.
+- Tests that are flaky or order-dependent: run `bun run test` twice and compare.
 
 ## How to act
 

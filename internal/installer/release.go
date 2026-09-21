@@ -5,7 +5,7 @@ import "github.com/orochibraru/homerun/internal/release"
 // DownloadReleaseBinary downloads a release binary (gzipped, see
 // scripts/upload-release-assets.ts) next to dest, unpacks it, makes it
 // executable, then renames it over dest. No git, no build step: this is the
-// only way this installer installs the agent (or itself, via bootstrap.sh).
+// only way this installer installs the worker (or itself, via bootstrap.sh).
 // The rename is what lets a re-run replace a binary that's running: curl
 // writing straight into it fails with "Text file busy" (verified live, curl
 // exit 23).

@@ -1,7 +1,7 @@
 name: E2E
 # Runs Playwright against the image `docker.yaml` just built, rather than
 # building the app a second time from source. Forks push no digest, so
-# `pulled: false` falls back to a local `bun run build:app`.
+# `pulled: false` falls back to a local `bun run build`.
 
 on:
   workflow_call:
@@ -112,7 +112,7 @@ jobs:
       # Only reached on a fork, where no image was pushed to pull.
       - name: Build app from source
         if: ${{ !inputs.pulled }}
-        run: bun run build:app
+        run: bun run build
 
       - name: Install Playwright's Chromium
         run: bunx playwright install --with-deps chromium

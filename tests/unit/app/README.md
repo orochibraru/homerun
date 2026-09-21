@@ -11,11 +11,10 @@ DOM/client build, Bun's test runner otherwise resolves it to the SSR build (no
 the moment a component tries to actually mount, see that file's own comments for
 how each of those was diagnosed.
 
-Run with `bun run test:unit:app` (or as part of `bun run test`/`test:unit`, same
-as every other `tests/unit/<package>/` suite). Not type-checked by
-`bun run check:app` : `tsconfig.json` excludes all of `tests/` from
-`svelte-check` for the `bun:test` overload-resolution reasons documented in the
-root `tests/README.md`.
+Run with `bun --config=bunfig.unit.toml test tests/unit/app` (or as part of
+`bun run test`, same as every other `tests/unit/<package>/` suite). Type-checked
+by `bun run check`'s `svelte-check` pass along with the rest of `tests/`, see
+the root `tests/README.md`.
 
 See `status-badge.test.ts`/`empty-state.test.ts` for the reference shape:
 `render(Component, props)` from `@testing-library/svelte`, assert against the

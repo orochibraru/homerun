@@ -122,12 +122,12 @@ itself every 5s only on the live range. `service-graph.svelte` is the service
 overview's Connections diagram.
 
 **Verify a visual change by actually looking at it.** `tests/e2e/`'s harness
-boots a real app against a real Postgres (`bun run build:app`, then a throwaway
-spec under `tests/e2e/` run with `bun run test:e2e -- tests/e2e/<name>.spec.ts`)
-: sign up, click through onboarding, and screenshot the pages you touched in
-both themes (set `localStorage["mode-watcher-mode"] = "dark"` and reload for the
-dark pass). Delete the spec afterward. Reasoning about token values alone is how
-you ship a button that turns out to be grey.
+boots a real app against a real Postgres (`bun run build`, then a throwaway spec
+under `tests/e2e/` run with `bun run test:e2e -- tests/e2e/<name>.spec.ts`) :
+sign up, click through onboarding, and screenshot the pages you touched in both
+themes (set `localStorage["mode-watcher-mode"] = "dark"` and reload for the dark
+pass). Delete the spec afterward. Reasoning about token values alone is how you
+ship a button that turns out to be grey.
 
 ## Page width and layout
 

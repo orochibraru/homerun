@@ -65,10 +65,10 @@ itself.
 
 ```bash
 go run ./cmd/cli services list             # from source
-go test ./cmd/cli/...                      # its unit tests (bun run test:unit:cli)
-go vet ./cmd/cli/...                       # bun run check:cli
+go test ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...   # its unit tests, part of `bun run test`
+go vet ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...    # part of `bun run check`
 gofmt -w ./cmd/cli                         # CI fails on anything gofmt would rewrite
-bun run scripts/build-packages.ts amd64 darwin-arm64
+bun scripts/build-packages.ts amd64 darwin-arm64
                                                 # any of amd64, arm64, darwin-amd64,
                                                 # darwin-arm64, outputs dist/homerun-cli-<arch>
 ```

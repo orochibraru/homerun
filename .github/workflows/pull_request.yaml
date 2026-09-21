@@ -26,7 +26,6 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.diff.outputs.code }}
-      release: ${{ steps.diff.outputs.release }}
     steps:
       - name: List changed files outside docs
         id: diff
@@ -38,13 +37,6 @@ jobs:
           set -euo pipefail
           files="$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')"
           code="$(printf '%s\n' "$files" | grep -vE '^(docs/|\.agents/|\.claude/)|\.md$' || true)"
-          release="$(printf '%s\n' "$files" | grep -xE 'package\.json|bun\.lock|\.releaserc\.json' || true)"
-          if [ -n "$release" ]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "Release config or dependencies changed: dry-running semantic-release."
-          else
-            echo "release=false" >> "$GITHUB_OUTPUT"
-          fi
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "$code"
@@ -67,51 +59,6 @@ jobs:
     if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/go.yaml
     secrets: inherit
-
-  release-dry-run:
-    name: Release Dry Run
-    needs: [changes]
-    if:
-      needs.changes.outputs.release == 'true' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-          token: ${{ secrets.RELEASE_TOKEN || github.token }}
-
-      - name: Setup bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Setup Node.js for semantic-release
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: 24
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
-
-      # semantic-release bails out on a pull_request event before it runs a
-      # single plugin, and only releases from `main`. Posing as a push to the
-      # PR's own branch, listed as the only release branch, makes it load
-      # every plugin and run verifyConditions, analyzeCommits and
-      # generateNotes for real, so a broken plugin upgrade fails here instead
-      # of on the release after merge. --dry-run still skips prepare/publish.
-      - name: Dry-run semantic-release against this branch
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
-          HEAD_REF: ${{ github.head_ref }}
-        run: |
-          GITHUB_EVENT_NAME=push GITHUB_REF="refs/heads/$HEAD_REF" \
-            bun run semantic-release --dry-run --no-ci --branches "$HEAD_REF"
 
   binaries:
     name: Binaries
@@ -137,8 +84,8 @@ jobs:
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-  build-agent:
-    name: Docker Build (Agent)
+  build-worker:
+    name: Docker Build (Worker)
     needs: [changes, code_quality]
     if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/docker.yaml
@@ -147,10 +94,10 @@ jobs:
       push:
         ${{ github.event.pull_request.head.repo.full_name == github.repository
         }}
-      image_name: orochibraru/homerun-agent
+      image_name: orochibraru/homerun-worker
       registry_name: docker.io
       registry_username: orochibraru
-      bake_target: agent-ci
+      bake_target: worker-ci
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
@@ -189,16 +136,16 @@ jobs:
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
-  publish-agent:
-    name: Publish Agent pr-${{ github.event.pull_request.number }}
-    needs: [e2e, build-agent]
+  publish-worker:
+    name: Publish Worker pr-${{ github.event.pull_request.number }}
+    needs: [e2e, build-worker]
     if: github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/docker-manifest.yaml
     with:
-      image_name: orochibraru/homerun-agent
+      image_name: orochibraru/homerun-worker
       registry_name: docker.io
       registry_username: orochibraru
-      bake_target: agent-ci
+      bake_target: worker-ci
     secrets:
       registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
 
@@ -209,14 +156,13 @@ jobs:
       github.repository
     needs:
       - code_quality
-      - release-dry-run
       - binaries
       - build-app
-      - build-agent
+      - build-worker
       - screenshots
       - e2e
       - publish-app
-      - publish-agent
+      - publish-worker
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -251,14 +197,13 @@ jobs:
               ["E2E", cell(result("e2e"), needs.e2e?.outputs?.summary)],
               ["Docs screenshots", cell(result("screenshots"), needs.screenshots?.outputs?.summary)],
               ["Binaries", cell(result("binaries"))],
-              ["Release dry run", cell(result("release-dry-run"))],
               ["Docker build", cell(result("build-app"))],
             ];
 
             const tag = needs["publish-app"]?.outputs?.["image-tag"];
             const appImage = needs["build-app"]?.outputs?.image;
-            const agentImage = needs["build-agent"]?.outputs?.image;
-            const agentTag = needs["publish-agent"]?.outputs?.["image-tag"];
+            const workerImage = needs["build-worker"]?.outputs?.image;
+            const workerTag = needs["publish-worker"]?.outputs?.["image-tag"];
             const headSha = context.payload.pull_request.head.sha;
             const raw = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${headSha}`;
 
@@ -279,8 +224,8 @@ jobs:
                 "| Image | Tag |",
                 "| --- | --- |",
                 `| \`${appImage}\` | \`${tag}\` |`,
-                ...(result("publish-agent") === "success"
-                  ? [`| \`${agentImage}\` | \`${agentTag ?? tag}\` |`]
+                ...(result("publish-worker") === "success"
+                  ? [`| \`${workerImage}\` | \`${workerTag ?? tag}\` |`]
                   : []),
                 "",
                 "<details><summary>Try this build</summary>",
@@ -347,14 +292,13 @@ jobs:
       - changes
       - code_quality
       - go
-      - release-dry-run
       - binaries
       - build-app
-      - build-agent
+      - build-worker
       - screenshots
       - e2e
       - publish-app
-      - publish-agent
+      - publish-worker
     runs-on: ubuntu-latest
     steps:
       - name: Check results
@@ -363,14 +307,13 @@ jobs:
             "${{ needs.changes.result }}"
             "${{ needs.code_quality.result }}"
             "${{ needs.go.result }}"
-            "${{ needs.release-dry-run.result }}"
             "${{ needs.binaries.result }}"
             "${{ needs.build-app.result }}"
-            "${{ needs.build-agent.result }}"
+            "${{ needs.build-worker.result }}"
             "${{ needs.screenshots.result }}"
             "${{ needs.e2e.result }}"
             "${{ needs.publish-app.result }}"
-            "${{ needs.publish-agent.result }}"
+            "${{ needs.publish-worker.result }}"
           )
           for result in "${results[@]}"; do
             if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then

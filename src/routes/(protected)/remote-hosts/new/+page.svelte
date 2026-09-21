@@ -91,7 +91,7 @@
                 >
                     <p class="font-semibold">Homerun Agent</p>
                     <p class="mt-0.5 text-xs opacity-80">
-                        A host running the standalone agent binary.
+                        A host running homerun-worker in agent mode.
                     </p>
                 </button>
             </div>
@@ -116,8 +116,8 @@
                     type="text"
                 />
                 <p class="mt-1.5 text-xs text-text-subtle">
-                    The agent's own reachable base URL, printed on its own boot
-                    log.
+                    The worker's reachable base URL, port 7420 unless
+                    WORKER_PORT says otherwise.
                 </p>
             </div>
             <div>
@@ -126,7 +126,7 @@
                     class=""
                     id="agentToken"
                     name="agentToken"
-                    placeholder="paste the token printed by the agent on boot"
+                    placeholder="printed on boot, or in ~/.homerun-worker/token"
                     required
                     type="password"
                 />

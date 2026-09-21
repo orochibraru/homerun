@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-// InstallMode is what an install sets up: just the agent, or the full stack.
+// InstallMode is what an install sets up: just the worker in agent mode, or the full stack.
 type InstallMode string
 
 // DockerFlavour is which daemon the stack runs on.
 type DockerFlavour string
 
 const (
-	// ModeAgent installs just the Homerun Agent, for a host that only receives
+	// ModeAgent installs just the Homerun worker in agent mode, for a host that only receives
 	// migrated or placed workloads.
 	ModeAgent InstallMode = "agent"
 	// ModeFull also brings up the main app, Traefik and Postgres via a generated
@@ -32,7 +32,7 @@ type Options struct {
 	// AdvertiseAddress is what `docker swarm init` advertises to other nodes
 	// (rootful --mode=full), detected from the default route when unset.
 	AdvertiseAddress string
-	// AgentPort is the agent's HTTP port.
+	// AgentPort is the agent-mode worker's HTTP port.
 	AgentPort int
 	// Docker is which daemon --mode=full runs the stack on, empty meaning the
 	// default (see DockerFlavourOf).
@@ -165,19 +165,19 @@ func Validate(opts Options) string {
 
 // HelpText is the installer's usage and flag reference.
 const HelpText = `
-homerun-install : sets up Docker, then the Homerun Agent or the full stack,
-on a fresh Linux server, entirely from prebuilt release binaries and Docker
-images, nothing built from source.
+homerun-install : sets up Docker, then the Homerun worker in agent mode or the
+full stack, on a fresh Linux server, entirely from prebuilt release binaries
+and Docker images, nothing built from source.
 
 Usage:
   homerun-install [options]
 
 Options:
   --version=<tag>     Release to install from : "latest" (default) or a tag
-                       like "v1.2.3". Selects the agent/installer/cli
+                       like "v1.2.3". Selects the worker/installer/cli
                        binaries fetched from GitHub releases.
-  --mode=agent|full   agent = just the Homerun Agent (default), on a
-                              rootless daemon
+  --mode=agent|full   agent = just the Homerun worker in agent mode
+                              (default), on a rootless daemon
                       full  = also brings up the main app via docker compose
   --domain=<host>     Domain or IP the instance is reached at (--mode=full).
                       Prompted for, or detected from this host's own address,
@@ -199,7 +199,7 @@ Options:
   --image=<ref>       App image to run instead of the release's
                       docker.io/orochibraru/homerun:<version>
   --user=<name>       System user owning the install (default: homerun)
-  --port=<n>          Agent HTTP port (default: 7420)
+  --port=<n>          Agent-mode worker HTTP port (default: 7420)
   --dry-run           Print every command instead of running it
   --yes, -y            Skip the confirmation prompt (needed for curl | sh)
 `

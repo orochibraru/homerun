@@ -84,9 +84,10 @@ connection now (`internal/jobs/deploy/build.go`'s `dockerapi.NewRemote`), not
 
 ## Finish
 
-Run the `check-repo` skill. If the change also needs to be mirrored into the
-standalone `cmd/agent/` sub-project (see its own README —
-`internal/agent/build.go`/`git.go` re-implement, not import, the equivalent
-logic since the agent is a separate Go binary with no access to this app's
-source tree at runtime), use the `subproject-sync` agent to keep the two in
-sync.
+Run the `check-repo` skill. If the change also needs to be mirrored into
+`cmd/worker/`'s agent mode (see `cmd/worker/README.md` —
+`internal/agent/stats.go` re-implements, not imports, `SystemStatsService`'s
+equivalent logic since agent mode has no access to this app's database or config
+at runtime; `internal/agent/build.go`/`git.go` are imported directly by both the
+worker's own jobs and agent mode, no sync needed there), use the
+`subproject-sync` agent to keep the two in sync.

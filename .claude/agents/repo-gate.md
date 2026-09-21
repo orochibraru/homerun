@@ -4,14 +4,15 @@ description:
   Use PROACTIVELY as a final gate before declaring any change to this repo
   complete, or when explicitly asked to review/verify a diff against this repo's
   own conventions. Runs bun run check (svelte-check --fail-on-warnings, 0
-  errors/0 warnings, whole src/ and tests/ trees) and bun run lint (biome, 0
-  errors), plus go vet per-subproject typechecks for cmd/agent/, cmd/cli/ and
-  cmd/installer/ (and internal/) if touched, and scans the diff for violations
-  of this repo's hard rules (manual typing in route files, raw Drizzle in
-  routes, $derived push/splice, bare toast.success/error on async actions,
-  nested (protected) loads re-checking !locals.user, static-barrel classes,
-  personal-data DTO queries missing their userId scope). Reports findings; does
-  not silently fix them unless asked.
+  errors/0 warnings, whole src/ and tests/ trees) and bun run lint
+  (markdownlint, lint-tailwind, oxlint, 0 errors), plus go vet/golangci-lint
+  per-subproject typechecks for cmd/worker/, cmd/cli/ and cmd/installer/ (and
+  internal/) if touched, and scans the diff for violations of this repo's hard
+  rules (manual typing in route files, raw Drizzle in routes, $derived
+  push/splice, bare toast.success/error on async actions, nested (protected)
+  loads re-checking !locals.user, static-barrel classes, personal-data DTO
+  queries missing their userId scope). Reports findings; does not silently fix
+  them unless asked.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
@@ -30,18 +31,22 @@ suggestion.
    hard gate, not advisory. Scope is always the full tree, not just changed
    files — a pre-existing-looking failure is still in scope; read the file
    before dismissing it as unrelated.
-2. `bun run lint` — markdownlint-cli2, tailwint and
-   `oxlint --type-aware --deny-warnings` then `biome check --error-on-warnings`,
-   must be clean, whole repo.
+2. `bun run lint` — markdownlint-cli2, `scripts/lint-tailwind.ts` and
+   `oxlint --type-aware --deny-warnings`, must be clean, whole repo.
 3. `git status`/`git diff` to see what's touched. `bun run check` already runs
-   `check:packages` = `check:go` (`go vet` then `golangci-lint run` over
-   `./cmd/... ./internal/...`, covering `cmd/agent/`, `cmd/cli/`,
-   `cmd/installer/` and every shared `internal/` library) plus `check:scripts`
-   (`tsc` over `scripts/`); if a REST API route, `$lib/openapi/` or `config.ts`
-   changed, confirm `bun run gen` leaves no diff in `openapi.json`,
-   `homerun.schema.json` or `tests/integration/support/openapi-types.ts`.
-4. Run the unit tests for what changed: `bun run test:unit` (seconds), or
-   `test:unit:app`/`test:unit:agent`/`test:unit:cli`/`test:unit:installer`.
+   `go vet` then `golangci-lint run`
+   (`go tool -modfile=tools/go/go.mod golangci-lint run`) over
+   `./cmd/... ./internal/... ./tests/unit/go/...` (covering `cmd/worker/`
+   including its agent mode, `cmd/cli/`, `cmd/installer/` and every shared
+   `internal/` library) plus `tsc` over `scripts/`; if a REST API route,
+   `$lib/openapi/` or `config.ts` changed, confirm `bun run gen` leaves no diff
+   in `openapi.json`, `homerun.schema.json` or
+   `tests/integration/support/openapi-types.ts`.
+4. Run the unit tests for what changed: `bun run test` (seconds, unit only), or
+   scope it with
+   `go test ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`
+   (swap `cli` for `installer` or `worker`/`agent`) or
+   `bun --config=bunfig.unit.toml test tests/unit/app`.
 
 ## What to scan the diff for (this repo's own hard rules)
 

@@ -7,11 +7,11 @@ variable "HOMERUN_APP_VERSION" {
 }
 
 group "default" {
-  targets = ["app", "agent"]
+  targets = ["app", "worker"]
 }
 
 group "ci" {
-  targets = ["app-ci", "agent-ci"]
+  targets = ["app-ci", "worker-ci"]
 }
 
 target "base" {
@@ -35,25 +35,26 @@ target "app-base" {
   cache-to   = ["type=gha,mode=max,scope=app"]
 }
 
-target "agent-base" {
-  target = "agent"
-  tags       = ["docker.io/orochibraru/homerun-agent:latest", "docker.io/orochibraru/homerun-agent:${TAG}"]
-  cache-from = ["type=gha,scope=agent"]
-  cache-to   = ["type=gha,mode=max,scope=agent"]
+target "worker-base" {
+  target = "worker"
+  tags       = ["docker.io/orochibraru/homerun-worker:latest", "docker.io/orochibraru/homerun-worker:${TAG}"]
+  cache-from = ["type=gha,scope=worker"]
+  cache-to   = ["type=gha,mode=max,scope=worker"]
 }
 
 target "app" {
   inherits   = ["base", "app-base"]
 }
 
-target "agent" {
-  inherits   = ["base", "agent-base"]
+target "worker" {
+  inherits   = ["base", "worker-base"]
+  target     = "worker"
 }
 
 target "app-ci" {
   inherits   = ["ci-base", "app-base"]
 }
 
-target "agent-ci" {
-  inherits   = ["ci-base", "agent-base"]
+target "worker-ci" {
+  inherits   = ["ci-base", "worker-base"]
 }

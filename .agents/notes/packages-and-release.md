@@ -32,7 +32,7 @@ carry (`authenticatedCloneUrl`/`redactCloneUrl`, deleted from the app once
 nothing there called them anymore), and every log line and error message goes
 through the redaction so a token can't reach the deployment log.
 
-## Release automation (`.releaserc.json`, `scripts/bump-version.ts`, `scripts/build-packages.ts`)
+## Release automation (`orochibraru/releaser`, `scripts/upload-release-assets.ts`, `scripts/build-packages.ts`)
 
 **The CI pipeline builds each image once and reuses it.** Both
 `pull_request.yaml` and `publish.yaml` run the same shape: `code_quality` →
@@ -41,9 +41,9 @@ gate/release. `pull_request.yaml` additionally runs `screenshots.yaml` off
 `code_quality`, in parallel with the image builds rather than after them,
 because that one is the exception to "build the image once" : it must run the
 app and worker as local processes to reach the Docker socket (see Screenshots in
-`testing.md`), so it does its own `bun run build:app` and never touches the
-image under test. The split between the last two is the point : `docker.yaml`
-pushes **by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
+`testing.md`), so it does its own `bun run build` and never touches the image
+under test. The split between the last two is the point : `docker.yaml` pushes
+**by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
 `docker pull` that exact digest and run Playwright against the real artefact,
 and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`,
 `vX.Y.Z`, `latest`). Nothing anyone can pull by name is ever published before
@@ -86,11 +86,11 @@ screenshots and `code_quality`'s `ts-test` (its `tests` input). Lint still runs,
 it covers markdown. Keep the two pattern lists in sync.
 
 **PR titles must be conventional commits.** The repo squash-merges with the PR
-title as the commit message, so the title is what `semantic-release` reads.
-`pr-title.yaml` rejects a non-conventional title and leaves a notice saying
-whether the type cuts a release (`feat`/`fix`/`perf`/`refactor`/`docs`, or a
-`!`). A title like "Fix/bug batch" merged without releasing anything before this
-existed.
+title as the commit message, so the title is what `orochibraru/releaser` reads
+to pick the next version and write the changelog. `pr-title.yaml` rejects a
+non-conventional title and leaves a notice saying whether the type cuts a
+release (`feat`/`fix`/`perf`/`refactor`/`docs`, or a `!`). A title like "Fix/bug
+batch" merged without releasing anything before this existed.
 
 **Every PR gets one comment, edited in place.** `pull_request.yaml`'s `summary`
 job runs `if: always()` after everything else and upserts a single comment
@@ -124,56 +124,55 @@ behind the counts is worth knowing before touching it:
 Three consequences worth not re-deriving: **a fork builds but publishes
 nothing** — `push: false` makes the build `type=cacheonly`, so no digest
 artefact exists, which is why `e2e.yaml` takes a `pulled` input and falls back
-to `bun run build:app`, and why every manifest job is gated on the PR not coming
+to `bun run build`, and why every manifest job is gated on the PR not coming
 from a fork. **`pr-cleanup.yaml`** deletes the `pr-<n>` tags when a PR closes
 unmerged (see above for merged ones), so the Docker Hub repos don't accumulate
 one per pull request; a 404 there is normal (e2e failed, so the tag was never
 created). And **`code_quality.yaml` no longer runs e2e at all** — it is `lint` +
-`docs-check` + `ts-test` only, with the heavy gates (`lint:ts`, `lint:tailwind`,
-`check`, `test:unit`) skipped inside prek via `SKIP` and run as their own named
-steps instead, so a red run names the gate that broke rather than burying it in
-one `prek` log. Its `Codegen is current` step runs `bun run gen` and fails on
-any resulting diff, which is what keeps `openapi.json`, `homerun.schema.json`
-and `tests/integration/support/openapi-types.ts` from silently going stale after
-a REST API change (the CLI itself has no generated types to go stale, see
-Homerun CLI in `api-and-cli.md`).
+`docs-check` + `ts-test` only, with the heavy gates (`lint`, `check`, `test`)
+skipped inside prek via `SKIP` and run as their own named steps instead, so a
+red run names the gate that broke rather than burying it in one `prek` log. Its
+`Codegen is current` step runs `bun run gen` and fails on any resulting diff,
+which is what keeps `openapi.json`, `homerun.schema.json` and
+`tests/integration/support/openapi-types.ts` from silently going stale after a
+REST API change (the CLI itself has no generated types to go stale, see Homerun
+CLI in `api-and-cli.md`).
 
-`semantic-release`, driven by conventional-commit messages (this repo's commits
-already follow `feat:`/`fix:`/`chore:`, no new discipline required). Runs as a
-new `release` job in `.github/workflows/publish.yaml`, alongside the existing
-`code_quality`/`build` jobs, on every push to `main`; a non-releasable push
-(docs/chore-only) is a no-op, not a failure. One version number covers the whole
-repo: the root `package.json` gets bumped by `scripts/bump-version.ts` (none of
-the three `cmd/` Go programs carry a `package.json` of their own to bump, they
-read the root one's version directly at build time, stamped in via `-ldflags`
-into `internal/buildinfo.Version`, see `scripts/build-packages.ts` below), an
-`@semantic-release/exec` `prepareCmd`, not `@semantic-release/npm`, this repo
-has no npm package to publish, and `npm`'s plugin still wants registry-shaped
-config even with `npmPublish: false`; a small script fits this codebase's
-existing "hand-roll a small thing rather than fight a mismatched tool" posture
-better, same instinct as the cron matcher/SigV4 client).
+`orochibraru/releaser` (this org's own GitHub Action, replacing the whole
+`semantic-release` plugin chain: `@semantic-release/{exec,git,github,npm}` and
+`.releaserc.json` are gone, along with `scripts/bump-version.ts`), driven by
+conventional-commit messages the same way (this repo's commits already follow
+`feat:`/`fix:`/`chore:`, no new discipline required), with
+`rules: breaking=patch,feat=patch,docs=patch,refactor=patch` (every releasable
+type bumps only the patch digit; there's no automatic minor/major here). It runs
+twice in `.github/workflows/publish.yaml`: the `version` job dry-runs it
+(`dry-run: "true"`) right after checkout, purely to read its `version`/`tag`
+outputs for the app image's baked version and the binaries' `-ldflags` stamp,
+even on a push that won't end up releasing (falls back to the commit SHA when
+there's nothing releasable, see Compute Release Version above); the `release`
+job runs it for real at the end, after every build/test job has passed, with
+`draft: "true"` and `prepare: bunx prettier --write CHANGELOG.md`. A
+non-releasable push (docs/chore-only) is a no-op there too, not a failure. One
+version number covers the whole repo: `releaser` bumps `package.json`'s
+`version` field and `CHANGELOG.md` itself (none of the three `cmd/` Go programs
+carry a `package.json` of their own to bump, they read the root one's version
+directly at build time, stamped in via `-ldflags` into
+`internal/buildinfo.Version`, see `scripts/build-packages.ts` below).
 `scripts/build-packages.ts` builds every release binary: all three commands
-(`cli`, `installer`, `agent`) are Go now, so every target cross-compiles from
-any one machine (`go build` with `GOOS`/`GOARCH` set, exact, unlike Bun's own
+(`cli`, `installer`, `worker`) are Go, so every target cross-compiles from any
+one machine (`go build` with `GOOS`/`GOARCH` set, exact, unlike Bun's own
 cross-compilation — see Homerun CLI in `api-and-cli.md`): `cli` for all four
-targets (`amd64`/`arm64`/`darwin-amd64`/`darwin-arm64`), `installer` and `agent`
-for `amd64`/`arm64` Linux only, since both only ever run on the Linux host they
-manage. Eight binaries total, so `.releaserc.json`'s release-assets step has
-something to attach, directly serving the "installer (and homerun agent) in each
-release artifact" TODO item, with the CLI's own binaries added the same way for
-consistency.
+targets (`amd64`/`arm64`/`darwin-amd64`/`darwin-arm64`), `installer` and
+`worker` for `amd64`/`arm64` Linux only, since both only ever run on the Linux
+host they manage (`worker`'s Linux-only build covers its agent mode too, see
+Homerun Worker's agent mode below). Eight binaries total, so
+`scripts/upload-release-assets.ts` has something to attach.
 
-**Uses `@semantic-release/github`**, the official plugin: this repo is hosted on
-GitHub (`github.com/orochibraru/homerun`) and runs on GitHub Actions. It
-previously lived on a self-hosted Gitea and used
-`@saithodev/semantic-release-gitea`; that migration is done, so don't
-reintroduce Gitea-specific release/CI config.
-
-**The binaries aren't uploaded by `@semantic-release/github`.** It creates the
-release as a draft (`draftRelease: true`), a second `@semantic-release/exec`
-entry's `successCmd` writes the tag to `.release-tag`, and the release job's
-next step runs `scripts/upload-release-assets.ts <tag>`: one
-`gh release upload --clobber` per binary with retries, all ten concurrently,
+**`releaser` doesn't upload the binaries itself.** It creates the release as a
+draft (`draft: "true"`) and reports whether one actually happened
+(`steps.releaser.outputs.released`); when it did, the release job's next step
+runs `scripts/upload-release-assets.ts "$TAG"`: one
+`gh release upload --clobber` per binary with retries, all eight concurrently,
 skipping any already uploaded at the same size, then
 `gh release edit --draft=false --latest`.
 
@@ -200,45 +199,27 @@ every binary is on it. A failed upload step is finished by hand: download the
 run's `binaries-*` artifacts into `dist/` and run the script with that tag.
 
 **Container images go to Docker Hub, not GHCR**, deliberately:
-`docker.io/orochibraru/homerun{,-agent,-docs}`. That's the one piece of the
-pipeline that does _not_ follow the code host, so `docker.yaml`'s login takes a
-real Docker Hub credential (`secrets.DOCKER_REGISTRY_PASSWORD`, an access token;
-the Docker Hub username is the plain `registry_username` input, since it isn't
+`docker.io/orochibraru/homerun{,-worker}`. That's the one piece of the pipeline
+that does _not_ follow the code host, so `docker.yaml`'s login takes a real
+Docker Hub credential (`secrets.DOCKER_REGISTRY_PASSWORD`, an access token; the
+Docker Hub username is the plain `registry_username` input, since it isn't
 secret) rather than the built-in `GITHUB_TOKEN`.
 
 **The release job needs `secrets.RELEASE_TOKEN`, not `GITHUB_TOKEN`**: a
 fine-grained PAT scoped to this repo (Contents + Issues + Pull requests: write).
-`@semantic-release/git` pushes the version bump straight to `main`, and a `main`
-ruleset blocks pushes from anyone but a repo admin, which `github-actions[bot]`
-isn't. It's threaded in twice, as `actions/checkout`'s `token` (git push auth)
-and as the `GH_TOKEN` env var (`@semantic-release/github`'s API calls). The
-`version` job's dry run takes it too, in **both** places, unlike the sibling
-`nuvio-web` repo this CI shape is shared with: here that job's output also feeds
-the `binaries` job's and the app image's baked version, so it has to actually
-resolve rather than silently falling back to a commit SHA. Real bug: that job
-passed `RELEASE_TOKEN` only as `GH_TOKEN` while `actions/checkout` persisted the
-read-only default token, so semantic-release's `git push --dry-run` check 403'd
-(`EGITNOPERMISSION`), the step's `|| true` swallowed it, the version came back
-empty, and v1.0.22 shipped reporting 1.0.21 with a permanent "update available"
-notice. The checkout now takes `RELEASE_TOKEN` too, and a failing dry run fails
-the job instead of falling back; only a successful run with no release-worthy
-commits uses the SHA.
-
-**A PR that can break the release dry-runs it.** `pull_request.yaml`'s `changes`
-job also sets `release=true` when the PR touches `package.json`, `bun.lock` or
-`.releaserc.json`, which is every Renovate bump of a `@semantic-release/*`
-plugin, and `release-dry-run` then runs
-`semantic-release --dry-run --no-ci --branches <head ref>` on a checkout of the
-PR branch. Two things make that a real test rather than a no-op:
-semantic-release returns "triggered by a pull request" before `verifyConditions`
-on a PR event, so the step overrides `GITHUB_EVENT_NAME=push` and `GITHUB_REF`
-to the head branch in the shell (env-ci reads those to detect a PR), and it only
-releases from `main`, so `--branches` makes the PR branch the one release
-branch. It then loads every plugin and runs `verifyConditions`, `analyzeCommits`
-and `generateNotes` for real (checked locally: every plugin loads), with
-`RELEASE_TOKEN` on both checkout and `GH_TOKEN` for the same
-`git push --dry-run` reason as the `version` job above. Skipped on fork PRs (no
-secrets), counted by `CI Gate`, and shown in the summary comment.
+`orochibraru/releaser` pushes the version bump and tag straight to `main`, and a
+`main` ruleset blocks pushes from anyone but a repo admin, which
+`github-actions[bot]` isn't. It's threaded in twice, as `actions/checkout`'s
+`token` (git push auth) and as the action's own `token` input (its API calls).
+The `version` job's dry run takes it too, in **both** places: that job's output
+also feeds the `binaries` job's and the app image's baked version, so it has to
+actually resolve rather than silently falling back to a commit SHA (a real bug
+in the equivalent `semantic-release`-era job — passing the token only as
+`GH_TOKEN` while `actions/checkout` persisted the read-only default token 403'd
+its dry-run push check, the failure was swallowed by a `|| true`, the version
+came back empty, and v1.0.22 shipped reporting 1.0.21 with a permanent "update
+available" notice — is why both jobs' checkouts take `RELEASE_TOKEN` today, and
+why a failing dry run fails the job instead of silently falling back).
 
 **Job ids use `-`, never `:`** (`build-app`, not `build:app`). GitHub rejects a
 colon in a job id outright and refuses to run the whole workflow file; the
@@ -254,83 +235,99 @@ there could only ever fail; this way the build is still a real gate (and still
 warms the layer cache) without needing a credential. `secrets.registry_password`
 is `required: false` for the same reason.
 
-**Not verified**: an actual release running end-to-end on GitHub Actions
-(creating a real tag/release and pushing the version bump back to `main`). The
-earlier Gitea-era verification of `scripts/bump-version.ts` and
-`scripts/build-packages.ts` still stands (both were run for real locally, all
-six binaries cross-compiled), since neither is host-specific.
+**Not verified**: an actual release running end-to-end through
+`orochibraru/releaser` on GitHub Actions (creating a real tag/release and
+pushing the version bump back to `main`), since it's an external action this
+repo doesn't control the internals of. `scripts/build-packages.ts`'s
+cross-compilation is verified live regardless, unrelated to which release tool
+drives it: all eight release binaries build from one machine (run for real
+locally), see Homerun CLI in `api-and-cli.md`.
 
-## Homerun Agent + installer (`cmd/agent/`, `cmd/installer/`)
+## Homerun Worker's agent mode + installer (`internal/agent/`, `internal/worker`, `cmd/installer/`)
 
 Two standalone sub-projects under `cmd/`, siblings of `src/` and **not** part of
-the SvelteKit build. Both are Go now (a Go module at the repo root, `go.mod`,
-shared with `cmd/cli/`, no `tsconfig.json`/`package.json` of their own). The
-agent was originally Bun/TypeScript and was rewritten to Go for the same reason
-the installer was before it: a `bun build --compile` binary embeds the whole Bun
-runtime (~81MB for a Go-sized program), a plain Go binary is a few MB. The
-installer's own earlier TypeScript→Go rewrite was verified behaviour-identical
-against the old build (`--mode=agent` and both `--mode=full` variants — the
-`--mode=full` runs came back byte-identical, the only `--mode=agent` difference
-was cosmetic, a literal `<uid>` placeholder the old code printed in one dry-run
-step where the new one prints `1000`). See each folder's own README for the full
-detail; this section is the pointer.
+the SvelteKit build. Both are Go (a Go module at the repo root, `go.mod`, shared
+with `cmd/cli/`, no `tsconfig.json`/`package.json` of their own). `cmd/agent/`
+**no longer exists as its own binary**: it started as Bun/TypeScript, was
+rewritten to Go for the same reason the installer was before it (a
+`bun build --compile` binary embeds the whole Bun runtime, ~81MB for a Go-sized
+program, a plain Go binary is a few MB), and was then merged into `cmd/worker`
+as that binary's agent mode (`internal/worker/agentmode.go`), one binary picked
+by whether `DATABASE_URL` is set rather than two separate programs — see
+`cmd/worker/README.md` and Homerun Worker in `worker.md` for the mode split
+itself. `internal/agent/` (the git-clone/build/OpenAPI logic) stays a real Go
+package, just no longer one with its own `main`: `internal/worker`'s agent mode
+and the local/Docker-build-server paths in `internal/jobs/deploy/build.go` both
+import it directly (see "The agent's git builds" above). The installer's own
+earlier TypeScript→Go rewrite was verified behaviour-identical against the old
+build (`--mode=agent` and both `--mode=full` variants — the `--mode=full` runs
+came back byte-identical, the only `--mode=agent` difference was cosmetic, a
+literal `<uid>` placeholder the old code printed in one dry-run step where the
+new one prints `1000`). See each folder's own README for the full detail; this
+section is the pointer.
 
-The Agent is a selectable build-server connection kind
+Agent mode is a selectable build-server connection kind
 (`remote_host.kind: "agent"`, `$lib/services/agent-client.service.ts`'s
-`AgentClientService`, see Build servers above for the wiring). The installer
-stays standalone tooling (it's not imported by `src/` and isn't meant to be, it
-drives a target machine's shell, not this app's own runtime).
+`AgentClientService`, see Build servers above for the wiring) — the field still
+says `"agent"`, since that names the _role_ a registered host plays, not which
+binary serves it. The installer stays standalone tooling (it's not imported by
+`src/` and isn't meant to be, it drives a target machine's shell, not this app's
+own runtime).
 
-- **`cmd/agent/`**, the **Homerun Agent**: a small token-authenticated HTTP
-  server meant to run on a build server's own Docker daemon
-  (`internal/agent/server.go`'s `Server.Handler`). Five routes: `GET /v1/health`
-  and `GET /v1/openapi.json` unauthenticated (the latter for the same "spec
+- **Agent mode** (`internal/worker/agentmode.go`'s `runAgent`), the **Homerun
+  Worker with no `DATABASE_URL`**: a small token-authenticated HTTP server meant
+  to run on a build server's own Docker daemon (`internal/agent/server.go`'s
+  `Server.Handler`, unchanged by the merge). Five routes: `GET /v1/health` and
+  `GET /v1/openapi.json` unauthenticated (the latter for the same "spec
   describes shapes, not data" reason the main app's is public, health so a
   monitor can probe liveness without holding the token), `POST /v1/build`,
   `GET /v1/stats` and `GET /v1/images/save` behind
   `Authorization: Bearer <token>`. It is **not** a deploy target : the
   deploy/lifecycle/logs routes it used to carry were removed along with remote
   deploys (see Build servers above), and `AgentClientService.verifyToken` probes
-  `/v1/stats` for exactly that reason. This is the alternative to registering a
-  build server by raw `tcp://`/`ssh://` Docker socket : instead of exposing the
-  daemon itself, the build server runs this agent and the main app only ever
-  talks HTTP-plus-bearer-token to it. **Arch detection is now genuinely
-  shared**, not just mirrored by hand: `internal/release.Arch` (already
-  `amd64`/`arm64`, no remapping needed) and `internal/release.AssetSuffix` (the
-  same, plus a `darwin-` prefix for macOS) are the one place this repo maps a Go
-  arch/platform onto a release-asset name; `internal/installer/detect.go`'s
-  `Arch()` and `internal/cli/update.go`'s `assetSuffix()` both just call through
-  to it now, rather than each keeping its own hand-written copy (a real
-  de-duplication this Go rewrite bought, since Bun and Go couldn't share a
-  module before). **Wired into the main app**: `remote_host.kind` (`"docker"` |
-  `"agent"`) + `agentUrl`/`agentTokenEnc` (schema.ts), `AgentClientService`
-  (`$lib/services/agent-client.service.ts`, a thin HTTP client over
-  `build`/`stats`/`health`), and the Remote Hosts "new host" form's
+  `/v1/stats` for exactly that reason. It deliberately never serves the worker's
+  own Docker control API (exec, terminal, arbitrary container creation) even
+  though the two now share a binary : agent mode's `runAgent` builds its own
+  narrower `http.Handler` rather than reusing `serveControlAPI`, so a leaked
+  agent-mode token still can't reach that surface. This is the alternative to
+  registering a build server by raw `tcp://`/`ssh://` Docker socket : instead of
+  exposing the daemon itself, the build server runs this binary in agent mode
+  and the main app only ever talks HTTP-plus-bearer-token to it. **Arch
+  detection is genuinely shared**, not just mirrored by hand:
+  `internal/release.Arch` (already `amd64`/`arm64`, no remapping needed) and
+  `internal/release.AssetSuffix` (the same, plus a `darwin-` prefix for macOS)
+  are the one place this repo maps a Go arch/platform onto a release-asset name;
+  `internal/installer/detect.go`'s `Arch()` and `internal/cli/update.go`'s
+  `assetSuffix()` both just call through to it now, rather than each keeping its
+  own hand-written copy. **Wired into the main app**: `remote_host.kind`
+  (`"docker"` | `"agent"`) + `agentUrl`/`agentTokenEnc` (schema.ts),
+  `AgentClientService` (`$lib/services/agent-client.service.ts`, a thin HTTP
+  client over `build`/`stats`/`health`), and the Remote Hosts "new host" form's
   connection-type toggle; `deploy/worker-spec.ts`'s `buildServerSpec` embeds the
   resolved target's kind in the deploy spec, and `internal/jobs/deploy/build.go`
   branches on it to build through a remote `dockerapi.Client` (a `"docker"`
-  host) or over HTTP to the agent (`agentBuild`, `AgentClientService`'s Go
-  equivalent). `internal/agent/build.go`/`git.go`/`builders.go` are no longer a
-  from-scratch reimplementation of anything in `src/` (see "The agent's git
-  builds" above) : the homerun worker imports that same package directly.
-  `internal/agent/stats.go` still is, of `SystemStatsService`, since the agent
-  has no access to the main app's database or config; keep the two in sync by
-  hand if one changes (the `subproject-sync` agent's job).
-  `internal/agent/build.go`'s `BuildInput` struct is the build body's shape,
-  hand-validated by `validateBuildInput` in `internal/agent/server.go` (no
-  schema library, this is Go, not zod), and `internal/agent/openapi.go`
-  generates the agent's own OpenAPI 3.1 doc from plain Go literals describing
-  the same shapes, the "one schema, two purposes" approach the main app uses
-  with zod (see OpenAPI above) without a shared runtime to hang a real schema
-  library off. `internal/agent/builders.go` embeds `internal/agent/builder.sh`
-  and `internal/agent/builder-tools.json` (`//go:embed`), the
-  generated-and-pinned build-tool script and checksums both the agent and the
-  homerun worker run; golden files under
-  `tests/unit/go/internal/agent/testdata/*.json` plus
+  host) or over HTTP to the agent-mode worker (`agentBuild`,
+  `AgentClientService`'s Go equivalent). `internal/agent/build.go`'s
+  `BuildInput` struct is the build body's shape, hand-validated by
+  `validateBuildInput` in `internal/agent/server.go` (no schema library, this is
+  Go, not zod), and `internal/agent/openapi.go` generates agent mode's own
+  OpenAPI 3.1 doc from plain Go literals describing the same shapes, the "one
+  schema, two purposes" approach the main app uses with zod (see OpenAPI above)
+  without a shared runtime to hang a real schema library off.
+  `internal/agent/builders.go` embeds `internal/agent/builder.sh` and
+  `internal/agent/builder-tools.json` (`//go:embed`), the generated-and-pinned
+  build-tool script and checksums the homerun worker runs in either mode; golden
+  files under `tests/unit/go/internal/agent/testdata/*.json` plus
   `tests/unit/app/agent-builder-parity.test.ts` (on the app side, now only
   checking `$lib/build-methods` against `builder-tools.json`'s method list and
   bake defaults, the form options the app still owns) keep the two from drifting
-  on what the UI offers versus what the builder accepts.
+  on what the UI offers versus what the builder accepts. Env var renames from
+  the standalone-agent era, no compat shim: `AGENT_TOKEN` → `WORKER_TOKEN`,
+  `AGENT_TOKEN_FILE` → `WORKER_TOKEN_FILE`, `PORT` → `WORKER_PORT`,
+  `AGENT_SHUTDOWN_TIMEOUT` gone (agent mode's shutdown grace is now the fixed
+  `agentShutdownGrace`, 120s). Any existing remote host running the old
+  standalone agent needs reinstalling and re-registering, there's no migration
+  path for its token.
 - **`cmd/installer/`**, a single-binary installer
   (`internal/installer/installer.go`) meant to be the target of a `curl | bash`
   one-liner (`cmd/installer/bootstrap.sh`) on a fresh Linux server.
@@ -346,22 +343,24 @@ drives a target machine's shell, not this app's own runtime).
   Docker's own documented flow (`get.docker.com/rootless` →
   `dockerd-rootless-setuptool.sh`, `loginctl enable-linger` + a `systemd --user`
   unit so the daemon survives a headless reboot without an active login
-  session), creates `homerun` on that daemon, then installs the Agent
-  (`--mode=agent`, default, own `systemd --user` unit) or the standalone full
-  stack under that account, never as root. `--migrate-to-rootful`
-  (`migrate.go`'s `Migrate`) moves a rootless full install onto the system
-  daemon in swarm mode, volumes and all, and is re-runnable; `--image=` swaps
-  the app image (the e2e suite uses it to run a locally built one). **Binaries
-  and Docker images only, nothing built from source on the target host**
-  (superseding an earlier draft that cloned the repo and ran `bun run build`
-  there): `bootstrap.sh` downloads the `homerun-installer-<arch>` release binary
-  itself and `exec`s it (no Bun, no git); `--mode=agent` downloads the matching
-  `homerun-agent-<arch>` release binary straight to
-  `/usr/local/bin/homerun-agent`; `--mode=full` writes a standalone
-  `compose.yaml` (`fullstack.go`'s `fullStackCompose`, distinct from the root
-  dev `compose.yaml`; see Docker integration above) pulling the published
-  `docker.io/orochibraru/homerun` app image alongside Traefik/Postgres, then
-  `docker compose pull && ...up -d`.
+  session), creates `homerun` on that daemon, then installs the worker in agent
+  mode (`--mode=agent`, default, own `systemd --user` unit,
+  `internal/installer/worker.go`'s `InstallWorkerSystemdUnit`, which also
+  removes a leftover `homerun-agent` unit/binary from an install predating the
+  merge) or the standalone full stack under that account, never as root.
+  `--migrate-to-rootful` (`migrate.go`'s `Migrate`) moves a rootless full
+  install onto the system daemon in swarm mode, volumes and all, and is
+  re-runnable; `--image=` swaps the app image (the e2e suite uses it to run a
+  locally built one). **Binaries and Docker images only, nothing built from
+  source on the target host** (superseding an earlier draft that cloned the repo
+  and ran `bun run build` there): `bootstrap.sh` downloads the
+  `homerun-installer-<arch>` release binary itself and `exec`s it (no Bun, no
+  git); `--mode=agent` downloads the matching `homerun-worker-<arch>` release
+  binary straight to `/usr/local/bin/homerun-worker`; `--mode=full` writes a
+  standalone `compose.yaml` (`fullstack.go`'s `fullStackCompose`, distinct from
+  the root dev `compose.yaml`; see Docker integration above) pulling the
+  published `docker.io/orochibraru/homerun` app image alongside
+  Traefik/Postgres, then `docker compose pull && ...up -d`.
 
   **`--mode=full` resolves an address for the instance and it is never
   `localhost`** (`main.go`'s `resolveHost`): `--domain=` wins, else an
@@ -413,47 +412,47 @@ drives a target machine's shell, not this app's own runtime).
   `fullstack.go` (these findings predate the Go rewrite, carried forward from
   the old TypeScript steps of the same name). `cmd/installer/swarm-join.sh` has
   since had its own real two-VM run (see Swarm mode in `docker.md`), replayable
-  with `bun run e2e:multipass --swarm`. `--fresh-swarm` checks a default install
-  boots in swarm mode and routes a 2-replica service, `--migrate` installs the
-  previous release rootless, deploys a service with a named volume holding a
-  marker, runs `--migrate-to-rootful` and checks users, mode, the redeploy, the
-  marker's ownership and routing. `--local-image` builds the app image from the
-  checkout and loads it into each VM, which app-side changes need since the
-  installer otherwise pulls the published image.
+  with `bun scripts/e2e-multipass.ts --swarm`. `--fresh-swarm` checks a default
+  install boots in swarm mode and routes a 2-replica service, `--migrate`
+  installs the previous release rootless, deploys a service with a named volume
+  holding a marker, runs `--migrate-to-rootful` and checks users, mode, the
+  redeploy, the marker's ownership and routing. `--local-image` builds the app
+  image from the checkout and loads it into each VM, which app-side changes need
+  since the installer otherwise pulls the published image.
 
-  This whole run is reproducible, not a one-off: `scripts/e2e-multipass.ts`
-  (`bun run e2e:multipass`) automates exactly this, builds the
-  installer/agent/CLI binaries from local source (not a published release, so it
-  catches a regression before it ships), launches two disposable Multipass VMs,
-  runs the real installer binary on each (`--mode=agent` / `--mode=full`), signs
-  up + onboards the bootstrap admin over the real HTTP API, registers the agent
-  VM as a build server and deploys/stops/starts a real service, then drives a
-  real `homerun login` device-code round trip plus every documented CLI command
-  from a throwaway Docker container, tearing everything down after (`--keep` to
-  leave it running, `--skip-build` to reuse a previous build). Deliberately
-  **not** wired into any GitHub Actions workflow, this repo's CI runners have no
-  nested virtualization for Multipass, it's a local-only tool to run by hand
-  before cutting a release or after touching installer/agent/CLI code.
+  This whole run is reproducible, not a one-off: `bun scripts/e2e-multipass.ts`
+  automates exactly this, builds the installer/worker/CLI binaries from local
+  source (not a published release, so it catches a regression before it ships),
+  launches two disposable Multipass VMs, runs the real installer binary on each
+  (`--mode=agent` / `--mode=full`), signs up + onboards the bootstrap admin over
+  the real HTTP API, registers the agent VM as a build server and
+  deploys/stops/starts a real service, then drives a real `homerun login`
+  device-code round trip plus every documented CLI command from a throwaway
+  Docker container, tearing everything down after (`--keep` to leave it running,
+  `--skip-build` to reuse a previous build). Deliberately **not** wired into any
+  GitHub Actions workflow, this repo's CI runners have no nested virtualization
+  for Multipass, it's a local-only tool to run by hand before cutting a release
+  or after touching installer/worker/CLI code.
 
-  `scripts/e2e-multipass-release.ts` (`bun run e2e:multipass:release`) is its
-  mirror image, and the two share `scripts/e2e/` (`multipass.ts`, the VM/HTTP
-  machinery both drive; `docs.ts`, the docs command extractor; `release.ts`, the
-  GitHub-release resolver). Where the suite above builds from local source and
-  runs the binaries directly, this one runs **only what's already published,
-  using the commands the docs themselves print**: the one-liners are extracted
-  from `docs/getting-started.md`, `cmd/agent/README.md` and
-  `docs/api-and-cli.md` at run time and executed verbatim (`Vm.runScript` writes
-  a documented block to a file and runs it rather than re-typing it), so a
-  renamed flag or a moved `raw.githubusercontent.com` path fails the run. Phases
-  are `--only=`/`--skip=` selectable: `docs` (cross-checks every place the same
-  command is documented, asserts each documented URL exists in this checkout
-  _and_ is live, and asserts the GitHub release under test really published all
-  six binaries, no VM needed, seconds to run), `full`, `agent`, `remote`, `cli`,
-  `compose` (`docs/getting-started.md`'s Option B, on rootful Docker). Because
-  it tests what's published, a fix in the working tree isn't reflected until it
-  ships, that's the point, not a gap, `--ref=<branch>` points the documented
-  URLs at a pushed branch when verifying a docs/installer change before merging,
-  and `--version=vX.Y.Z` pins a release instead of `latest`.
+  `bun scripts/e2e-multipass-release.ts` is its mirror image, and the two share
+  `scripts/e2e/` (`multipass.ts`, the VM/HTTP machinery both drive; `docs.ts`,
+  the docs command extractor; `release.ts`, the GitHub-release resolver). Where
+  the suite above builds from local source and runs the binaries directly, this
+  one runs **only what's already published, using the commands the docs
+  themselves print**: the one-liners are extracted from
+  `docs/getting-started.md`, `cmd/worker/README.md` and `docs/api-and-cli.md` at
+  run time and executed verbatim (`Vm.runScript` writes a documented block to a
+  file and runs it rather than re-typing it), so a renamed flag or a moved
+  `raw.githubusercontent.com` path fails the run. Phases are `--only=`/`--skip=`
+  selectable: `docs` (cross-checks every place the same command is documented,
+  asserts each documented URL exists in this checkout _and_ is live, and asserts
+  the GitHub release under test really published all eight binaries, no VM
+  needed, seconds to run), `full`, `agent`, `remote`, `cli`, `compose`
+  (`docs/getting-started.md`'s Option B, on rootful Docker). Because it tests
+  what's published, a fix in the working tree isn't reflected until it ships,
+  that's the point, not a gap, `--ref=<branch>` points the documented URLs at a
+  pushed branch when verifying a docs/installer change before merging, and
+  `--version=vX.Y.Z` pins a release instead of `latest`.
 
 ## Documentation (`docs/`, `README.md`, `CONTRIBUTING.md`)
 
@@ -471,14 +470,14 @@ Three audiences, three places, keep them apart:
   the root `README.md`; `CONTRIBUTING.md` covers the dev-workflow half. These
   are the source of truth, plain Markdown, readable straight from the repo. The
   commands they print are **executed verbatim** by
-  `bun run e2e:multipass:release` (see above), so a stale install one-liner is a
-  test failure, not just a doc nit. **Configuration docs are UI-first on
-  purpose**: an operator is expected to configure Homerun from `/settings` and
-  the onboarding wizard, never from a file. `docs/configuration.md` leads with
-  the dashboard, treats `DATABASE_URL`/`AUTH_SECRET`/`ORIGIN` as the three
-  unavoidable boot-time values, and demotes `homerun.yaml` to an optional
-  config-as-code path. Don't reintroduce an env-var table as the opening
-  section.
+  `bun scripts/e2e-multipass-release.ts` (see above), so a stale install
+  one-liner is a test failure, not just a doc nit. **Configuration docs are
+  UI-first on purpose**: an operator is expected to configure Homerun from
+  `/settings` and the onboarding wizard, never from a file.
+  `docs/configuration.md` leads with the dashboard, treats
+  `DATABASE_URL`/`AUTH_SECRET`/`ORIGIN` as the three unavoidable boot-time
+  values, and demotes `homerun.yaml` to an optional config-as-code path. Don't
+  reintroduce an env-var table as the opening section.
 
 - **The website** (<https://homerun.orochibraru.com>): built from a **separate
   repository** that renders this repo's `docs/*.md` itself. It used to live here
@@ -499,14 +498,14 @@ queries (`getAppVersion`, `getReleaseStatus`, `getUpdatePreflight`) and one
 
 **The version is `HOMERUN_APP_VERSION`, falling back to `package.json`**
 (`$lib/server/app-version.ts`). Reading `package.json` alone is always one
-release behind in a published image: `semantic-release` bumps it in the
+release behind in a published image: `orochibraru/releaser` bumps it in the
 `release` job, after the image was built, and the promote path retags a PR image
 that was built before the merge. So `docker.yaml` takes an `app_version` input
 (the `version` job's dry-run result) and bakes it as a build arg
 (`docker-bake.hcl` → `Dockerfile` `ARG`/`ENV`), and `publish.yaml`'s `promote`
 job no longer `imagetools create`s the app image: it builds
 `FROM homerun:pr-<n>` + `ENV HOMERUN_APP_VERSION=<version>` for both platforms
-(no `RUN`, so no QEMU) and pushes that as `vX.Y.Z` + `latest`. The agent image
+(no `RUN`, so no QEMU) and pushes that as `vX.Y.Z` + `latest`. The worker image
 is still a plain retag. Without this the notice would never go away after an
 update.
 

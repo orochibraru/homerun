@@ -88,8 +88,8 @@ func TestArch(t *testing.T) {
 }
 
 func TestReleaseAssetURL(t *testing.T) {
-	latest := release.AssetURL("latest", "homerun-agent-amd64.gz")
-	if latest != "https://github.com/orochibraru/homerun/releases/latest/download/homerun-agent-amd64.gz" {
+	latest := release.AssetURL("latest", "homerun-worker-amd64.gz")
+	if latest != "https://github.com/orochibraru/homerun/releases/latest/download/homerun-worker-amd64.gz" {
 		t.Errorf("latest should use the latest-download path, got %q", latest)
 	}
 	pinned := release.AssetURL("v1.2.3", "homerun-cli-arm64.gz")
@@ -109,14 +109,14 @@ func TestImageRef(t *testing.T) {
 
 func TestDownloadReleaseBinaryUnpacksThenRenames(t *testing.T) {
 	run := newFakeRunner()
-	if err := installer.DownloadReleaseBinary(run, "v1.2.3", "homerun-agent-arm64", "/usr/local/bin/homerun-agent"); err != nil {
+	if err := installer.DownloadReleaseBinary(run, "v1.2.3", "homerun-worker-arm64", "/usr/local/bin/homerun-worker"); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{
-		"curl -fsSL https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-agent-arm64.gz -o /usr/local/bin/homerun-agent.download.gz",
-		"gunzip -f /usr/local/bin/homerun-agent.download.gz",
-		"chmod +x /usr/local/bin/homerun-agent.download",
-		"mv -f /usr/local/bin/homerun-agent.download /usr/local/bin/homerun-agent",
+		"curl -fsSL https://github.com/orochibraru/homerun/releases/download/v1.2.3/homerun-worker-arm64.gz -o /usr/local/bin/homerun-worker.download.gz",
+		"gunzip -f /usr/local/bin/homerun-worker.download.gz",
+		"chmod +x /usr/local/bin/homerun-worker.download",
+		"mv -f /usr/local/bin/homerun-worker.download /usr/local/bin/homerun-worker",
 	}
 	got := run.commands()
 	if len(got) != len(want) {
@@ -131,7 +131,7 @@ func TestDownloadReleaseBinaryUnpacksThenRenames(t *testing.T) {
 
 func TestDownloadReleaseBinaryStopsOnFailure(t *testing.T) {
 	run := newFakeRunner().fails("curl")
-	if err := installer.DownloadReleaseBinary(run, "latest", "homerun-agent-amd64", "/usr/local/bin/homerun-agent"); err == nil {
+	if err := installer.DownloadReleaseBinary(run, "latest", "homerun-worker-amd64", "/usr/local/bin/homerun-worker"); err == nil {
 		t.Fatal("a failed download should be an error")
 	}
 	if run.ran("mv -f") {
@@ -437,18 +437,18 @@ func TestEnsureOverlayNetwork(t *testing.T) {
 	}
 }
 
-func TestAgentSystemdUnit(t *testing.T) {
-	unit := installer.AgentSystemdUnit(installer.AgentUnitParams{
-		BinaryPath:   "/usr/local/bin/homerun-agent",
+func TestWorkerSystemdUnit(t *testing.T) {
+	unit := installer.WorkerSystemdUnit(installer.WorkerUnitParams{
+		BinaryPath:   "/usr/local/bin/homerun-worker",
 		DockerSocket: "/run/user/1000/docker.sock",
 		Port:         7420,
-		TokenFile:    "/home/homerun/.homerun-agent/token",
+		TokenFile:    "/home/homerun/.homerun-worker/token",
 	})
 	for _, line := range []string{
-		"ExecStart=/usr/local/bin/homerun-agent",
-		"Environment=PORT=7420",
+		"ExecStart=/usr/local/bin/homerun-worker",
+		"Environment=WORKER_PORT=7420",
 		"Environment=DOCKER_SOCKET_PATH=/run/user/1000/docker.sock",
-		"Environment=AGENT_TOKEN_FILE=/home/homerun/.homerun-agent/token",
+		"Environment=WORKER_TOKEN_FILE=/home/homerun/.homerun-worker/token",
 		"WantedBy=default.target",
 		"Restart=on-failure",
 	} {
@@ -456,28 +456,31 @@ func TestAgentSystemdUnit(t *testing.T) {
 			t.Errorf("unit is missing %q:\n%s", line, unit)
 		}
 	}
+	if strings.Contains(unit, "DATABASE_URL") {
+		t.Errorf("a DATABASE_URL would turn agent mode into a full worker:\n%s", unit)
+	}
 }
 
-func TestInstallAgentBinaryAndUnit(t *testing.T) {
+func TestInstallWorkerBinaryAndUnit(t *testing.T) {
 	home := withHomeRoot(t, "homerun")
 	run := newFakeRunner().answers("id -u", "1500\n")
 
-	path, err := installer.InstallAgentBinary(run, "latest", "arm64")
+	path, err := installer.InstallWorkerBinary(run, "latest", "arm64")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if path != "/usr/local/bin/homerun-agent" {
+	if path != "/usr/local/bin/homerun-worker" {
 		t.Errorf("got %q", path)
 	}
-	if !run.ran("homerun-agent-arm64.gz") {
+	if !run.ran("homerun-worker-arm64.gz") {
 		t.Errorf("the arch's asset should be downloaded, ran %v", run.commands())
 	}
 
 	run = newFakeRunner().answers("id -u", "1500\n")
-	if err := installer.InstallAgentSystemdUnit(run, "homerun", "/run/user/1500/docker.sock", 7420); err != nil {
+	if err := installer.InstallWorkerSystemdUnit(run, "homerun", "/run/user/1500/docker.sock", 7420); err != nil {
 		t.Fatal(err)
 	}
-	unitPath := home + "/.config/systemd/user/homerun-agent.service"
+	unitPath := home + "/.config/systemd/user/homerun-worker.service"
 	unit, ok := run.writes[unitPath]
 	if !ok {
 		t.Fatalf("the unit should be written to %s, wrote %v", unitPath, run.writes)
@@ -486,16 +489,29 @@ func TestInstallAgentBinaryAndUnit(t *testing.T) {
 		t.Errorf("the unit should point at the rootless socket:\n%s", unit)
 	}
 	for _, command := range []string{
+		"systemctl --user disable --now homerun-agent",
+		"rm -f " + home + "/.config/systemd/user/homerun-agent.service /usr/local/bin/homerun-agent",
 		"systemctl --user daemon-reload",
-		"systemctl --user enable homerun-agent",
-		"systemctl --user restart homerun-agent",
+		"systemctl --user enable homerun-worker",
+		"systemctl --user restart homerun-worker",
 	} {
 		if !run.ran(command) {
 			t.Errorf("missing %q in %v", command, run.commands())
 		}
 	}
-	restart := run.callFor(t, "restart homerun-agent")
+	restart := run.callFor(t, "restart homerun-worker")
 	if restart.Opts.As != "homerun" || restart.Opts.Env["XDG_RUNTIME_DIR"] != "/run/user/1500" {
 		t.Errorf("the unit is a systemd --user one, got %+v", restart.Opts)
+	}
+}
+
+func TestInstallWorkerUnitToleratesNoLegacyAgent(t *testing.T) {
+	withHomeRoot(t, "homerun")
+	run := newFakeRunner().answers("id -u", "1500\n").fails("disable --now homerun-agent")
+	if err := installer.InstallWorkerSystemdUnit(run, "homerun", "/run/user/1500/docker.sock", 7420); err != nil {
+		t.Fatalf("a host with no leftover homerun-agent unit should still install: %v", err)
+	}
+	if !run.ran("restart homerun-worker") {
+		t.Errorf("the worker should still be started, ran %v", run.commands())
 	}
 }

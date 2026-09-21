@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -220,29 +219,5 @@ func TestOpenAPIDocumentsEveryRoute(t *testing.T) {
 				t.Errorf("%s should be documented as needing the bearer token", route)
 			}
 		}
-	}
-}
-
-func TestPrintBanner(t *testing.T) {
-	read, write, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	original := os.Stdout
-	os.Stdout = write
-	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock", TokenFile: "/t"}, "tok", httpapi.TokenGenerated)
-	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock", TokenFile: "/t"}, "tok", httpapi.TokenPersisted)
-	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock"}, "hidden", httpapi.TokenFromEnv)
-	_ = write.Close()
-	os.Stdout = original
-	raw, _ := io.ReadAll(read)
-	out := string(raw)
-	for _, fragment := range []string{"generated just now (/t)", "persisted (/t)", "AGENT_TOKEN env var", "Agent token:    tok"} {
-		if !strings.Contains(out, fragment) {
-			t.Errorf("the banner should mention %q:\n%s", fragment, out)
-		}
-	}
-	if strings.Contains(out, "hidden") {
-		t.Error("an env token isn't echoed back, whoever set it already has it")
 	}
 }

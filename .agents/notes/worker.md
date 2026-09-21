@@ -130,6 +130,6 @@ self-update finds the worker service by that label and recreates it with the
 app. The app container itself mounts no Docker socket at all any more and talks
 to this one over `WORKER_URL` (`http://worker:7430` between containers, see
 `docker.md`). Locally: `go run ./cmd/worker` with the app's `.env` values,
-alongside `bun run dev`/`bun run dev:app` (`bun run dev` starts both, see
+alongside `bun run dev`/`bun run dev --only=app` (`bun run dev` starts both, see
 Commands in `CLAUDE.md`). `tests/integration` and the e2e bootstrap spawn it too
 (`spawnWorker`, `startWorkerContainer` when e2e runs against an image).

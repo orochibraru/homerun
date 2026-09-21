@@ -1,3 +1,7 @@
+// Package agent is Homerun's git build engine: clone at a pinned commit, build
+// with the chosen method, optionally push. The worker runs it in-process for a
+// local build, and a worker in agent mode serves it over HTTP (Server) so a
+// remote build host can be asked to build.
 package agent
 
 import (

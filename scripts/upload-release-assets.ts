@@ -14,8 +14,8 @@ interface UploadedAsset {
 }
 
 const ASSETS: ReleaseAsset[] = [
-	{ label: "homerun-agent (linux/amd64)", path: "dist/homerun-agent-amd64" },
-	{ label: "homerun-agent (linux/arm64)", path: "dist/homerun-agent-arm64" },
+	{ label: "homerun-worker (linux/amd64)", path: "dist/homerun-worker-amd64" },
+	{ label: "homerun-worker (linux/arm64)", path: "dist/homerun-worker-arm64" },
 	{
 		label: "homerun-install (linux/amd64)",
 		path: "dist/homerun-installer-amd64",

@@ -90,8 +90,8 @@ func TestInstallStackAgent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !run.ran("homerun-agent-arm64.gz") {
-		t.Error("an agent install should fetch the agent binary")
+	if !run.ran("homerun-worker-arm64.gz") {
+		t.Error("an agent install should fetch the worker binary")
 	}
 	if run.ran("network create --driver overlay") {
 		t.Error("a rootless install has no swarm overlay")
@@ -122,8 +122,8 @@ func TestInstallStackFullRootful(t *testing.T) {
 	if !run.ran("docker compose -f") {
 		t.Error("a full install brings up the stack")
 	}
-	if run.ran("homerun-agent-") {
-		t.Error("a full install doesn't install the agent binary")
+	if run.ran("homerun-worker-") {
+		t.Error("a full install doesn't install the worker binary on the host")
 	}
 	create := run.callFor(t, "network create homerun")
 	if create.Opts.As != "" {
@@ -181,7 +181,7 @@ func TestPrintNextStepsPerMode(t *testing.T) {
 	agent := captureStdout(t, func() {
 		installer.PrintNextSteps(installer.Options{AgentPort: 7420, Mode: installer.ModeAgent, RootlessUser: "homerun"}, "/run/user/1000/docker.sock", "")
 	})
-	if !strings.Contains(agent, "listening on port 7420") || !strings.Contains(agent, ".homerun-agent/token") {
+	if !strings.Contains(agent, "listening on port 7420") || !strings.Contains(agent, ".homerun-worker/token") {
 		t.Errorf("an agent install should point at its port and token:\n%s", agent)
 	}
 

@@ -252,9 +252,11 @@ Three standalone tools live under `cmd/` alongside the main app, each compiling
 to its own binary. All three are Go packages sharing one `go.mod` at the repo
 root, not part of the SvelteKit build:
 
-- [`cmd/agent/`](cmd/agent/README.md): a small token-authenticated HTTP server
-  that lets a second machine build images for this one, without exposing its
-  Docker daemon
+- [`cmd/worker/`](cmd/worker/README.md): the Go worker that runs Homerun's
+  Docker access and background jobs next to the app; run standalone with no
+  `DATABASE_URL`, the same binary becomes a small token-authenticated HTTP
+  server that lets a second machine build images for this one, without exposing
+  its Docker daemon (agent mode)
 - [`cmd/installer/`](cmd/installer/README.md): the one-liner installer used
   above (Docker as a swarm manager, or rootless, plus the agent or full stack,
   and `--migrate-to-rootful` for older rootless installs)

@@ -11,11 +11,11 @@
  * suite (agent/cli/installer *and* integration) end to end.
  *
  * Building the app is a separate, explicit operation, not something this
- * setup does for you: run `bun run build:app` yourself before this suite
+ * setup does for you: run `bun run build` yourself before this suite
  * (see `assertAppIsBuilt` in ./server.ts, which just checks the compiled
  * `build/server` exists and fails fast with that instruction if not, and is
  * shared with tests/e2e's own bootstrap). This used to run
- * `bun run build:app` inline here on every invocation, which meant every
+ * `bun run build` inline here on every invocation, which meant every
  * local re-run of this suite paid a full rebuild even when nothing under
  * `src/` had changed, and any build failure surfaced as a confusing
  * integration-test failure rather than its own build step.
@@ -183,7 +183,7 @@ if (wantsIntegrationTests()) {
 			// bounds `test()` bodies, not beforeAll/afterAll hooks, which bun
 			// defaults to a *separate* 5-second timeout regardless. Without the
 			// explicit second argument below, this whole setup (Postgres +
-			// migrate + agent + socat + bootstrap, `build:app` included back
+			// migrate + agent + socat + bootstrap, `build` included back
 			// when this ran it inline, see this file's own top comment) got
 			// SIGTERM'd at exactly 5000ms, every run, silently eating the real
 			// error underneath a generic "hook timed out" message until this

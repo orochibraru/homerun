@@ -96,7 +96,7 @@
           value={data.host.agentUrl}
         />
         <p class="mt-1.5 text-xs text-text-subtle">
-          The agent's own reachable base URL, printed on its own boot log.
+          The worker's reachable base URL, port 7420 unless WORKER_PORT says otherwise.
         </p>
       </div>
       <div>
