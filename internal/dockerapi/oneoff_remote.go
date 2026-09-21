@@ -1,6 +1,7 @@
 package dockerapi
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -35,8 +36,12 @@ func NewRemote(host RemoteHost) (*Client, error) {
 		port = "2375"
 	}
 	address := net.JoinHostPort(parsed.Hostname(), port)
+	plainDial := func(ctx context.Context) (net.Conn, error) {
+		var dialer net.Dialer
+		return dialer.DialContext(ctx, "tcp", address)
+	}
 	if host.TLSCA == "" || host.TLSCert == "" || host.TLSKey == "" {
-		return &Client{http: &http.Client{}, Base: "http://" + address}, nil
+		return &Client{dial: plainDial, http: &http.Client{}, Base: "http://" + address}, nil
 	}
 	roots := x509.NewCertPool()
 	if !roots.AppendCertsFromPEM([]byte(host.TLSCA)) {
@@ -46,10 +51,15 @@ func NewRemote(host RemoteHost) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the remote host's client certificate: %w", err)
 	}
-	transport := &http.Transport{TLSClientConfig: &tls.Config{
+	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{certificate},
 		MinVersion:   tls.VersionTLS12,
 		RootCAs:      roots,
-	}}
-	return &Client{http: &http.Client{Transport: transport}, Base: "https://" + address}, nil
+	}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	tlsDial := func(ctx context.Context) (net.Conn, error) {
+		dialer := &tls.Dialer{Config: tlsConfig}
+		return dialer.DialContext(ctx, "tcp", address)
+	}
+	return &Client{dial: tlsDial, http: &http.Client{Transport: transport}, Base: "https://" + address}, nil
 }

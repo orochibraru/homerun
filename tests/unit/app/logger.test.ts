@@ -97,7 +97,6 @@ describe("Logger console format", () => {
 		logger.warn("careful");
 		logger.error("broken");
 		logger.debug("dbg");
-		logger.trace("trc");
 		const logged = out.log.mock.calls.map((call) => call.join(" "));
 		expect(
 			logged.some((line) => line.includes("INFO") && line.includes("hello 1")),
@@ -108,20 +107,16 @@ describe("Logger console format", () => {
 		expect(
 			logged.some((line) => line.includes("DEBUG") && line.includes("dbg")),
 		).toBe(true);
-		expect(
-			logged.some((line) => line.includes("TRACE") && line.includes("trc")),
-		).toBe(true);
 		expect(out.error.mock.calls[0].join(" ")).toContain("broken");
 		for (const spy of Object.values(out)) {
 			spy.mockRestore();
 		}
 	});
 
-	test("debug and trace are filtered below their level", () => {
+	test("debug is filtered below its level", () => {
 		const out = quietConsole();
 		const logger = makeLogger("console", "info");
 		logger.debug("hidden");
-		logger.trace("hidden");
 		expect(out.log).not.toHaveBeenCalled();
 		for (const spy of Object.values(out)) {
 			spy.mockRestore();
@@ -163,13 +158,11 @@ describe("Logger json format", () => {
 		logger.info("i", "extra");
 		logger.warn("w");
 		logger.debug("d");
-		logger.trace("t");
 		logger.error("e");
 		expect(out.log.mock.calls.map(([entry]) => entry)).toEqual([
 			{ input: "i", level: "info", params: ["extra"], scope: "Api" },
 			{ input: "w", level: "warn", scope: "Api" },
 			{ input: "d", level: "debug", scope: "Api" },
-			{ input: "t", level: "trace", scope: "Api" },
 		]);
 		expect(out.error.mock.calls[0][0]).toEqual({
 			level: "error",

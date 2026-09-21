@@ -1,4 +1,9 @@
-package agent
+// Package hoststats samples one host's CPU, memory, disk and GPU usage from
+// /proc and a couple of external commands. Both the agent (for a remote host's
+// row on the dashboard) and the worker (for the local host's) serve the same
+// shape from it, so the dashboard renders a remote host exactly like the local
+// one and neither side drifts from the other.
+package hoststats
 
 import (
 	"bufio"
@@ -18,8 +23,7 @@ type GPUStats struct {
 	UtilizationPercent int    `json:"utilizationPercent"`
 }
 
-// SystemStats is GET /v1/stats's answer, the same shape as the main app's own
-// host stats so the dashboard renders a remote host exactly like the local one.
+// SystemStats is what GET /v1/stats answers on either service.
 type SystemStats struct {
 	CPUPercent  int       `json:"cpuPercent"`
 	DiskPercent *int      `json:"diskPercent"`
@@ -65,8 +69,12 @@ func RunCommand(name string, args ...string) (string, bool) {
 }
 
 // Sample reads CPU, memory, disk and GPU usage. Every call replaces the stored
-// CPU sample. On a host without /proc (a macOS dev machine), CPU and memory
-// read as zero rather than failing.
+// CPU sample.
+//
+// /proc is the real path, since that's what Homerun deploys onto. A host
+// without it falls back to the darwin helpers so a developer running the
+// worker natively still sees real numbers instead of a panel full of zeroes;
+// a host with neither reads as zero rather than failing.
 func (s *StatsSampler) Sample() SystemStats {
 	stats := SystemStats{}
 
@@ -79,9 +87,15 @@ func (s *StatsSampler) Sample() SystemStats {
 		}
 		s.last = &sample
 		s.mu.Unlock()
+	} else if percent, ok := s.darwinCPUPercent(); ok {
+		stats.CPUPercent = percent
 	}
 
-	if total, available, ok := s.memory(); ok {
+	total, available, ok := s.memory()
+	if !ok {
+		total, available, ok = s.darwinMemory()
+	}
+	if ok {
 		stats.MemTotalMb = int(math.Round(float64(total) / 1024))
 		stats.MemUsedMb = stats.MemTotalMb - int(math.Round(float64(available)/1024))
 		if total > 0 {

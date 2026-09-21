@@ -21,8 +21,8 @@ From `/remote-hosts`: a name, plus a connection type:
   lighter-weight alternative that doesn't require exposing the Docker daemon
   itself.
 
-Either kind builds: a Docker-connection host runs the build through dockerode,
-an agent host through its own `POST /v1/build`.
+Either kind builds: a Docker-connection host runs the build directly against
+that daemon's Docker API, an agent host through its own `POST /v1/build`.
 
 `/remote-hosts` has a search box and a Connection-type filter (Docker
 socket/Homerun Agent) once you have more than a couple registered, plus a pager

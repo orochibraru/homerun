@@ -40,7 +40,7 @@ through the redaction so a token can't reach the deployment log.
 gate/release. `pull_request.yaml` additionally runs `screenshots.yaml` off
 `code_quality`, in parallel with the image builds rather than after them,
 because that one is the exception to "build the image once" : it must run the
-app as a local process to reach the Docker socket (see Screenshots in
+app and worker as local processes to reach the Docker socket (see Screenshots in
 `testing.md`), so it does its own `bun run build:app` and never touches the
 image under test. The split between the last two is the point : `docker.yaml`
 pushes **by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can

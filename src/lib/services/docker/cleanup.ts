@@ -48,24 +48,20 @@ interface DockerDfContainer {
 	Id?: string;
 	Image?: string;
 	Names?: string[];
-	NetworkSettings?: { Networks?: Record<string, unknown> };
 	SizeRw?: number;
 	State?: string;
-	Status?: string;
 }
 
 interface DockerDfVolume {
-	Driver?: string;
 	Name?: string;
 	UsageData?: { RefCount?: number; Size?: number } | null;
 }
 
 interface DockerDfBuildCache {
-	Description?: string;
 	ID?: string;
 	InUse?: boolean;
-	LastUsedAt?: string;
 	Size?: number;
+	Type?: string;
 }
 
 interface DockerDfResponse {
@@ -73,6 +69,21 @@ interface DockerDfResponse {
 	Containers?: DockerDfContainer[] | null;
 	Images?: DockerDfImage[] | null;
 	Volumes?: DockerDfVolume[] | null;
+}
+
+interface WorkerNetwork {
+	Containers?: Record<string, unknown> | null;
+	Id: string;
+	Name: string;
+}
+
+interface WorkerVolume {
+	Name: string;
+}
+
+interface WorkerPruneReport {
+	itemsDeleted: number;
+	spaceReclaimed: number;
 }
 
 const DEFAULT_NETWORK_NAMES = new Set(["bridge", "host", "none"]);
@@ -132,6 +143,19 @@ export function DockerCleanupMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
 	return class DockerCleanupService extends Base {
+		/** Runs one of the worker's bulk prunes and returns its report as a `PruneSummary`. */
+		async #prune(kind: string, all = false): Promise<PruneSummary> {
+			const report = await this.worker.post<WorkerPruneReport>(
+				`/v1/prune/${kind}`,
+				undefined,
+				all ? { all: "1" } : undefined,
+			);
+			return {
+				itemsDeleted: report.itemsDeleted,
+				spaceReclaimedBytes: report.spaceReclaimed,
+			};
+		}
+
 		/**
 		 * Docker-managed volumes that already exist on the host, for the
 		 * "pull in existing volumes" picker : a fresh Homerun on a machine
@@ -139,8 +163,8 @@ export function DockerCleanupMixin<
 		 * retype names it can already see.
 		 */
 		async listHostVolumes(): Promise<string[]> {
-			const { Volumes } = await this.getDocker().listVolumes();
-			return (Volumes ?? [])
+			const volumes = await this.worker.get<WorkerVolume[]>("/v1/volumes");
+			return volumes
 				.map((volume) => volume.Name)
 				.filter(Boolean)
 				.sort((a, b) => a.localeCompare(b));
@@ -150,8 +174,8 @@ export function DockerCleanupMixin<
 		 * Builds the full "Docker Cleanup" preview : containers, images,
 		 * networks, volumes and build cache the daemon would remove on a
 		 * prune, without actually removing anything. Backed by a single
-		 * `docker system df` call plus `listNetworks`, so it's cheap enough to
-		 * call on every page load.
+		 * `docker system df` call plus the network list, so it's cheap enough
+		 * to call on every page load.
 		 *
 		 * @param keepImageIds Image ids to exclude from the images category
 		 *   even if otherwise unused, e.g. retained revision images a rollback
@@ -165,10 +189,9 @@ export function DockerCleanupMixin<
 			keepVolumeNames: string[] = [],
 		): Promise<CleanupPreview> {
 			const keep = new Set(keepImageIds);
-			const docker = this.getDocker();
 			const [df, networks] = await Promise.all([
-				docker.df() as Promise<DockerDfResponse>,
-				docker.listNetworks(),
+				this.worker.get<DockerDfResponse>("/v1/df"),
+				this.worker.get<WorkerNetwork[]>("/v1/networks"),
 			]);
 
 			const images = df.Images ?? [];
@@ -176,21 +199,14 @@ export function DockerCleanupMixin<
 			const volumes = df.Volumes ?? [];
 			const buildCache = df.BuildCache ?? [];
 
-			const usedNetworkNames = new Set<string>();
-			for (const c of containers) {
-				for (const name of Object.keys(c.NetworkSettings?.Networks ?? {})) {
-					usedNetworkNames.add(name);
-				}
-			}
-
 			return {
 				buildCache: {
 					items: buildCache
 						.filter((b) => !b.InUse)
 						.map((b) => ({
-							detail: b.LastUsedAt ? `last used ${b.LastUsedAt}` : "never used",
+							detail: b.Type,
 							id: b.ID ?? "",
-							label: b.Description || shortId(b.ID),
+							label: shortId(b.ID),
 							sizeBytes: b.Size ?? 0,
 						})),
 					totalCount: buildCache.length,
@@ -200,7 +216,7 @@ export function DockerCleanupMixin<
 					items: containers
 						.filter((c) => c.State !== "running")
 						.map((c) => ({
-							detail: `${c.Image ?? "unknown image"} · ${c.Status ?? c.State}`,
+							detail: `${c.Image ?? "unknown image"} · ${c.State ?? "unknown"}`,
 							id: c.Id ?? "",
 							label: (c.Names?.[0] ?? shortId(c.Id)).replace(/^\//, ""),
 							sizeBytes: c.SizeRw ?? 0,
@@ -218,11 +234,10 @@ export function DockerCleanupMixin<
 							(n) =>
 								!(
 									DEFAULT_NETWORK_NAMES.has(n.Name) ||
-									usedNetworkNames.has(n.Name)
+									Object.keys(n.Containers ?? {}).length > 0
 								),
 						)
 						.map((n) => ({
-							detail: n.Driver,
 							id: n.Id,
 							label: n.Name,
 						})),
@@ -231,7 +246,6 @@ export function DockerCleanupMixin<
 				volumes: {
 					items: prunableVolumes(volumes, new Set(keepVolumeNames)).map(
 						(v) => ({
-							detail: v.Driver,
 							id: v.Name ?? "",
 							label: v.Name ?? "",
 							sizeBytes: v.UsageData?.Size ?? 0,
@@ -248,12 +262,11 @@ export function DockerCleanupMixin<
 
 		/** Removes every stopped container on the host via `docker container prune`. Not scoped to Homerun-managed containers. */
 		async pruneContainers(): Promise<PruneSummary> {
-			const result = await this.getDocker().pruneContainers();
-			const itemsDeleted = result.ContainersDeleted?.length ?? 0;
+			const summary = await this.#prune("containers");
 			logger.info(
-				`Pruned ${itemsDeleted} stopped container(s), reclaimed ${result.SpaceReclaimed ?? 0} bytes`,
+				`Pruned ${summary.itemsDeleted} stopped container(s), reclaimed ${summary.spaceReclaimedBytes} bytes`,
 			);
-			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
+			return summary;
 		}
 
 		/**
@@ -261,8 +274,8 @@ export function DockerCleanupMixin<
 		 * ones). Dangling-only by default; `all` also removes tagged images
 		 * with no container using them. When `keepImageIds` is non-empty,
 		 * delegates to `#pruneImagesKeeping` instead of the daemon's own
-		 * prune, since dockerode's `pruneImages` has no way to exclude
-		 * specific image ids.
+		 * prune, since the Engine's prune has no way to exclude specific
+		 * image ids.
 		 */
 		async pruneImages(
 			all = false,
@@ -271,14 +284,11 @@ export function DockerCleanupMixin<
 			if (keepImageIds.length > 0) {
 				return await this.#pruneImagesKeeping(all, new Set(keepImageIds));
 			}
-			const result = await this.getDocker().pruneImages(
-				all ? { filters: { dangling: ["false"] } } : {},
-			);
-			const itemsDeleted = result.ImagesDeleted?.length ?? 0;
+			const summary = await this.#prune("images", all);
 			logger.info(
-				`Pruned ${itemsDeleted} unused image(s)${all ? " (including tagged)" : ""}, reclaimed ${result.SpaceReclaimed ?? 0} bytes`,
+				`Pruned ${summary.itemsDeleted} unused image(s)${all ? " (including tagged)" : ""}, reclaimed ${summary.spaceReclaimedBytes} bytes`,
 			);
-			return { itemsDeleted, spaceReclaimedBytes: result.SpaceReclaimed ?? 0 };
+			return summary;
 		}
 
 		/**
@@ -292,8 +302,7 @@ export function DockerCleanupMixin<
 			all: boolean,
 			keep: Set<string>,
 		): Promise<PruneSummary> {
-			const docker = this.getDocker();
-			const df = (await docker.df()) as DockerDfResponse;
+			const df = await this.worker.get<DockerDfResponse>("/v1/df");
 			const candidates = (df.Images ?? []).filter(
 				(image) =>
 					image.Id &&
@@ -306,7 +315,9 @@ export function DockerCleanupMixin<
 			for (const image of candidates) {
 				try {
 					// oxlint-disable-next-line no-await-in-loop -- images are removed one at a time so a parent/child conflict only skips that one
-					await docker.getImage(image.Id ?? "").remove({ force: false });
+					await this.worker.delete(
+						`/v1/images/${encodeURIComponent(image.Id ?? "")}`,
+					);
 					itemsDeleted += 1;
 					spaceReclaimedBytes += image.Size ?? 0;
 				} catch (err) {
@@ -321,21 +332,20 @@ export function DockerCleanupMixin<
 
 		/** Removes every unused network on the host via `docker network prune`. Not scoped to Homerun-managed networks. */
 		async pruneNetworks(): Promise<PruneSummary> {
-			const result = await this.getDocker().pruneNetworks();
-			const itemsDeleted = result.NetworksDeleted?.length ?? 0;
-			logger.info(`Pruned ${itemsDeleted} unused network(s)`);
-			return { itemsDeleted, spaceReclaimedBytes: 0 };
+			const summary = await this.#prune("networks");
+			logger.info(`Pruned ${summary.itemsDeleted} unused network(s)`);
+			return { itemsDeleted: summary.itemsDeleted, spaceReclaimedBytes: 0 };
 		}
 
 		/** Clears the daemon's build cache via `docker builder prune`. `itemsDeleted` is always 0 : the daemon's response only reports reclaimed space, not an item count. */
 		async pruneBuildCache(): Promise<PruneSummary> {
-			const result = await this.getDocker().pruneBuilder();
+			const summary = await this.#prune("build-cache");
 			logger.info(
-				`Pruned build cache, reclaimed ${result.SpaceReclaimed ?? 0} bytes`,
+				`Pruned build cache, reclaimed ${summary.spaceReclaimedBytes} bytes`,
 			);
 			return {
 				itemsDeleted: 0,
-				spaceReclaimedBytes: result.SpaceReclaimed ?? 0,
+				spaceReclaimedBytes: summary.spaceReclaimedBytes,
 			};
 		}
 
@@ -350,20 +360,13 @@ export function DockerCleanupMixin<
 		 */
 		async pruneVolumes(keepVolumeNames: string[] = []): Promise<PruneSummary> {
 			if (keepVolumeNames.length === 0) {
-				const result = await this.getDocker().pruneVolumes({
-					filters: { all: ["true"] },
-				});
-				const itemsDeleted = result.VolumesDeleted?.length ?? 0;
+				const summary = await this.#prune("volumes");
 				logger.info(
-					`Pruned ${itemsDeleted} unused volume(s), reclaimed ${result.SpaceReclaimed ?? 0} bytes`,
+					`Pruned ${summary.itemsDeleted} unused volume(s), reclaimed ${summary.spaceReclaimedBytes} bytes`,
 				);
-				return {
-					itemsDeleted,
-					spaceReclaimedBytes: result.SpaceReclaimed ?? 0,
-				};
+				return summary;
 			}
-			const docker = this.getDocker();
-			const df = (await docker.df()) as DockerDfResponse;
+			const df = await this.worker.get<DockerDfResponse>("/v1/df");
 			const keep = new Set(keepVolumeNames);
 			const candidates = prunableVolumes(df.Volumes ?? [], keep);
 			let itemsDeleted = 0;
@@ -374,7 +377,9 @@ export function DockerCleanupMixin<
 				}
 				try {
 					// oxlint-disable-next-line no-await-in-loop -- volumes are removed one at a time so a volume the daemon refuses only skips that one
-					await docker.getVolume(volume.Name).remove();
+					await this.worker.delete(
+						`/v1/volumes/${encodeURIComponent(volume.Name)}`,
+					);
 					itemsDeleted += 1;
 					spaceReclaimedBytes += Math.max(0, volume.UsageData?.Size ?? 0);
 				} catch (err) {

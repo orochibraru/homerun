@@ -1,5 +1,11 @@
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { ContainerSample } from "./containers.ts";
+import type { SwarmTask } from "./swarm.ts";
+
+interface SwarmNodeRow {
+	Description?: { Hostname?: string };
+	ID?: string;
+}
 
 interface RequiresContainerMixin {
 	sampleContainerStats: (
@@ -65,21 +71,22 @@ export function DockerSwarmReplicasMixin<
 		 * manager's socket. Returns an empty list when the service is gone.
 		 */
 		async listSwarmReplicas(swarmServiceId: string): Promise<SwarmReplica[]> {
-			const docker = this.getDocker();
-			let tasks: Awaited<ReturnType<typeof docker.listTasks>>;
+			let tasks: SwarmTask[];
 			try {
-				tasks = await docker.listTasks({
-					filters: JSON.stringify({
-						"desired-state": ["running"],
-						service: [swarmServiceId],
-					}),
-				});
+				tasks = await this.worker.get<SwarmTask[]>(
+					`/v1/swarm/services/${swarmServiceId}/tasks`,
+					{ running: "1" },
+				);
 			} catch {
 				return [];
 			}
 			const [info, nodes] = await Promise.all([
-				docker.info().catch(() => null),
-				docker.listNodes().catch(() => []),
+				this.worker
+					.get<{ Swarm?: { NodeID?: string } }>("/v1/info")
+					.catch(() => null),
+				this.worker
+					.get<SwarmNodeRow[]>("/v1/swarm/nodes")
+					.catch(() => [] as SwarmNodeRow[]),
 			]);
 			const localNodeId: string | undefined = info?.Swarm?.NodeID;
 			const hostnames = new Map(

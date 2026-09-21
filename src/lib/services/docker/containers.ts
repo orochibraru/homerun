@@ -5,8 +5,6 @@ import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RemoteHostConnection } from "./client.ts";
 import { buildContainerLabels } from "./labels.ts";
-import { toLogStream } from "./log-stream.ts";
-import { READINESS_LABEL } from "./readiness.ts";
 import {
 	type ContainerRuntimeParams,
 	mergeLabels,
@@ -18,26 +16,6 @@ export type { ContainerStatus } from "$lib/types";
 export type { RemoteHostConnection } from "./client.ts";
 
 const logger = new Logger("Docker");
-
-function isNotFoundError(error: unknown): boolean {
-	return (error as { statusCode?: number } | null)?.statusCode === 404;
-}
-
-function containerStateToStatus(state: {
-	ExitCode: number;
-	Status: string;
-}): ContainerStatus {
-	if (state.Status === "running") {
-		return "running";
-	}
-	if (state.Status === "created" || state.Status === "restarting") {
-		return "starting";
-	}
-	if (state.Status === "exited" || state.Status === "dead") {
-		return state.ExitCode === 0 ? "stopped" : "failed";
-	}
-	return "stopped";
-}
 
 export interface RegistryAuth {
 	password: string;
@@ -66,19 +44,70 @@ export interface ContainerSample {
 	netTxBytes: number;
 }
 
-/** The subset of the daemon's stats payload this app reads; dockerode types it as `unknown`. */
-interface DockerStats {
-	cpu_stats: {
-		cpu_usage: { percpu_usage?: number[]; total_usage: number };
-		online_cpus?: number;
-		system_cpu_usage?: number;
+interface PullStreamLine {
+	done?: boolean;
+	error?: string;
+	id?: string;
+	status?: string;
+}
+
+/**
+ * Drains the worker's NDJSON pull progress into `onProgress`, one line per
+ * layer status change, and throws whatever the terminating `{done:true}` line
+ * reports as an error.
+ *
+ * The worker already collapses the daemon's per-byte-range progress down to
+ * one event per layer status change; the map here is the second half of that,
+ * dropping a repeated status for a layer the deploy log has already narrated.
+ */
+async function consumePullProgress(
+	stream: ReadableStream<Uint8Array>,
+	onProgress?: (line: string) => void,
+): Promise<void> {
+	const reader = stream.getReader();
+	const decoder = new TextDecoder();
+	const lastStatusById = new Map<string, string>();
+
+	const consume = (line: string): string | null => {
+		const trimmed = line.trim();
+		if (trimmed === "") {
+			return null;
+		}
+		const event = JSON.parse(trimmed) as PullStreamLine;
+		if (event.done) {
+			return event.error ?? null;
+		}
+		if (!event.status) {
+			return null;
+		}
+		const key = event.id ?? "";
+		if (lastStatusById.get(key) !== event.status) {
+			lastStatusById.set(key, event.status);
+			onProgress?.(event.id ? `${event.status}: ${event.id}` : event.status);
+		}
+		return null;
 	};
-	memory_stats: { limit?: number; usage?: number };
-	networks?: Record<string, { rx_bytes?: number; tx_bytes?: number }>;
-	precpu_stats: {
-		cpu_usage: { total_usage: number };
-		system_cpu_usage?: number;
-	};
+
+	let buffer = "";
+	let failure: string | null = null;
+	for (;;) {
+		// oxlint-disable-next-line no-await-in-loop -- a stream is read one chunk at a time by definition
+		const { done, value } = await reader.read();
+		if (done) {
+			break;
+		}
+		buffer += decoder.decode(value, { stream: true });
+		const lines = buffer.split("\n");
+		buffer = lines.pop() ?? "";
+		for (const line of lines) {
+			failure = consume(line) ?? failure;
+		}
+	}
+	failure = consume(buffer) ?? failure;
+
+	if (failure) {
+		throw new Error(failure);
+	}
 }
 
 export interface VolumeMountParams {
@@ -125,7 +154,7 @@ export interface CreateContainerParams {
 	// belongs to a stack (e.g. "<stackSlug>-<slug>.<baseDomain>").
 	stackSlug?: string | null;
 	// When set, this container is created on a remote Docker daemon instead
-	// of the local socket : see docker/client.ts's getDocker(). Note: the
+	// of the local socket : see RemoteHostConnection. Note: the
 	// shared/stack Docker networks and Traefik itself all live on the
 	// *local* host, so a remote-hosted service isn't reachable through the
 	// normal internal-network or Traefik paths : only directly, if you
@@ -157,7 +186,7 @@ function networkModeFor(params: CreateContainerParams): string | undefined {
 }
 
 /**
- * The dockerode `HostConfig` for a service's container: volume binds (Docker's
+ * The Engine `HostConfig` for a service's container: volume binds (Docker's
  * `source:target[:ro]` form covers a host path and a named volume alike),
  * memory/CPU limits, network mode, restart policy and the runtime options.
  */
@@ -235,9 +264,9 @@ export function DockerContainerMixin<
 >(Base: TBase) {
 	return class DockerContainerService extends Base {
 		/**
-		 * Builds a dockerode authconfig from a service's stored registry
-		 * credentials, decrypting the password. Returns undefined for public
-		 * images (no registryUsername set).
+		 * Builds the registry authconfig the worker's pull route takes, from a
+		 * service's stored credentials, decrypting the password. Returns
+		 * undefined for public images (no registryUsername set).
 		 */
 		buildAuthConfig(service: {
 			registryUrl: string | null;
@@ -259,125 +288,105 @@ export function DockerContainerMixin<
 			};
 		}
 
-		/** Pulls `image:tag`, optionally authenticating against a private registry. */
+		/**
+		 * Pulls `image:tag` through the worker, optionally authenticating
+		 * against a private registry, narrating each layer status change to
+		 * `onProgress` as the worker reports it.
+		 * @throws whatever the pull failed with, as the worker reported it.
+		 */
 		async pullImage(
 			params: PullImageParams,
 		): Promise<{ digest: string | null }> {
-			const { image, tag, auth, onProgress, remote } = params;
-			const docker = this.getDocker(remote);
-			const ref = `${image}:${tag}`;
+			const ref = `${params.image}:${params.tag}`;
 
 			logger.info(`Pulling image: ${ref}`);
-			onProgress?.(`Pulling ${ref}...`);
-			const stream = await docker.pull(ref, auth ? { authconfig: auth } : {});
+			params.onProgress?.(`Pulling ${ref}...`);
 
-			// Docker emits one progress event per byte-range update per layer :
-			// far too chatty to log a line for each. Only emit a line when a
-			// given layer's status actually changes ("Downloading" → "Pull
-			// complete" etc).
-			const lastStatusById = new Map<string, string>();
-			await new Promise<void>((resolvePromise, reject) => {
-				docker.modem.followProgress(
-					stream,
-					(err: Error | null) => (err ? reject(err) : resolvePromise()),
-					(event: PullProgressEvent) => {
-						const key = event.id ?? "";
-						if (lastStatusById.get(key) === event.status) {
-							return;
-						}
-						lastStatusById.set(key, event.status);
-						onProgress?.(
-							event.id ? `${event.status}: ${event.id}` : event.status,
-						);
-					},
-				);
+			const progress = await this.worker.stream("v1/images/pull", {
+				body: { auth: params.auth, ref },
+				method: "POST",
 			});
+			await consumePullProgress(progress, params.onProgress);
 
-			try {
-				const inspect = await docker.getImage(ref).inspect();
-				const digest = inspect.RepoDigests?.[0]?.split("@")[1] ?? null;
-				logger.info(`Pulled image: ${ref} digest=${digest ?? "unknown"}`);
-				return { digest };
-			} catch (err) {
-				logger.warn(`Pulled image but inspect failed: ${ref}`, err);
-				return { digest: null };
-			}
+			const { digest } = await this.worker.get<{
+				digest?: string | null;
+				id: string | null;
+			}>("v1/images/id", { ref });
+			logger.info(`Pulled image: ${ref} digest=${digest || "unknown"}`);
+			return { digest: digest || null };
 		}
 
-		/** Starts a stopped container via the Docker API. */
+		/** Starts a stopped container. Already running isn't an error. */
 		async startContainer(
 			containerId: string,
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<void> {
-			await this.getDocker(remote).getContainer(containerId).start();
+			await this.worker.post(`v1/containers/${containerId}/start`);
 			logger.info(`Container started: ${containerId}`);
 		}
 
-		/** Stops a running container via the Docker API. */
+		/** Stops a running container. Already stopped isn't an error. */
 		async stopContainer(
 			containerId: string,
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<void> {
-			await this.getDocker(remote).getContainer(containerId).stop();
+			await this.worker.post(`v1/containers/${containerId}/stop`);
 			logger.info(`Container stopped: ${containerId}`);
 		}
 
-		/** Restarts a container via the Docker API. */
+		/** Restarts a container. */
 		async restartContainer(
 			containerId: string,
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<void> {
-			await this.getDocker(remote).getContainer(containerId).restart();
+			await this.worker.post(`v1/containers/${containerId}/restart`);
 			logger.info(`Container restarted: ${containerId}`);
 		}
 
-		/** Removes a container via the Docker API, forcing removal (stopping it first) by default. */
+		/** Removes a container, forcing removal (stopping it first) by default. One already gone isn't an error. */
 		async removeContainer(
 			containerId: string,
 			opts?: { force?: boolean },
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<void> {
-			await this.getDocker(remote)
-				.getContainer(containerId)
-				.remove({ force: opts?.force ?? true });
+			await this.worker.delete(`v1/containers/${containerId}`, {
+				force: opts?.force === false ? undefined : "1",
+			});
 			logger.info(`Container removed: ${containerId}`);
 		}
 
-		/** Inspects a container's live Docker state and maps it to our status enum. */
+		/**
+		 * A container's live state as our status enum. The mapping itself lives
+		 * in the worker now, which also answers `missing` for a container the
+		 * daemon no longer has rather than failing the call.
+		 */
 		async inspectStatus(
 			containerId: string,
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<ContainerStatus> {
-			try {
-				const info = await this.getDocker(remote)
-					.getContainer(containerId)
-					.inspect();
-				return containerStateToStatus(info.State);
-			} catch (error) {
-				return isNotFoundError(error) ? "missing" : "failed";
-			}
+			const { status } = await this.worker.get<{ status: ContainerStatus }>(
+				`v1/containers/${containerId}/status`,
+			);
+			return status;
 		}
 
 		/**
 		 * A container's combined stdout/stderr as a web ReadableStream: live
 		 * and never-ending unless `follow` is false, in which case it's the
-		 * last `tail` lines (default 200) and closes.
+		 * last `tail` lines (default 200) and closes. The worker strips the
+		 * daemon's stdout/stderr frame headers, so this is plain text.
 		 */
-		async streamLogs(
+		streamLogs(
 			containerId: string,
 			opts?: { tail?: number; follow?: boolean },
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<ReadableStream<Uint8Array>> {
-			const container = this.getDocker(remote).getContainer(containerId);
-			const base = { stderr: true, stdout: true, tail: opts?.tail ?? 200 };
-			return opts?.follow === false
-				? toLogStream(await container.logs({ ...base, follow: false }))
-				: toLogStream(
-						(await container.logs({
-							...base,
-							follow: true,
-						})) as NodeJS.ReadableStream & { destroy: () => void },
-					);
+			return this.worker.stream(`v1/containers/${containerId}/logs`, {
+				query: {
+					follow: opts?.follow === false ? "0" : "1",
+					tail: String(opts?.tail ?? 200),
+				},
+			});
 		}
 
 		/**
@@ -387,50 +396,16 @@ export function DockerContainerMixin<
 		 * network counters as the daemon reports them (cumulative since the
 		 * container started, so rates are derived at read time).
 		 *
-		 * Returns null rather than throwing for anything that isn't running,
-		 * which is the normal case for most of the list this is called over.
+		 * Null rather than a throw for anything that isn't running, which is
+		 * the normal case for most of the list this is called over.
 		 */
-		async sampleContainerStats(
+		sampleContainerStats(
 			containerId: string,
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<ContainerSample | null> {
-			try {
-				const stats = (await this.getDocker(remote)
-					.getContainer(containerId)
-					.stats({ stream: false })) as DockerStats;
-
-				const cpuDelta =
-					stats.cpu_stats.cpu_usage.total_usage -
-					stats.precpu_stats.cpu_usage.total_usage;
-				const systemDelta =
-					(stats.cpu_stats.system_cpu_usage ?? 0) -
-					(stats.precpu_stats.system_cpu_usage ?? 0);
-				const cores =
-					stats.cpu_stats.online_cpus ??
-					stats.cpu_stats.cpu_usage.percpu_usage?.length ??
-					1;
-				const cpuPercent =
-					systemDelta > 0 && cpuDelta > 0
-						? (cpuDelta / systemDelta) * cores * 100
-						: 0;
-
-				const networks = Object.values(stats.networks ?? {});
-				return {
-					cpuPercent: Math.max(0, cpuPercent),
-					memLimitMb: (stats.memory_stats.limit ?? 0) / 1024 / 1024,
-					memUsedMb: (stats.memory_stats.usage ?? 0) / 1024 / 1024,
-					netRxBytes: networks.reduce(
-						(sum, net) => sum + (net.rx_bytes ?? 0),
-						0,
-					),
-					netTxBytes: networks.reduce(
-						(sum, net) => sum + (net.tx_bytes ?? 0),
-						0,
-					),
-				};
-			} catch {
-				return null;
-			}
+			return this.worker.get<ContainerSample | null>(
+				`v1/containers/${containerId}/stats`,
+			);
 		}
 
 		/**
@@ -440,39 +415,26 @@ export function DockerContainerMixin<
 		 */
 		async containerHealth(
 			containerId: string,
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<{ output: string | null; status: string } | null> {
-			try {
-				const info = await this.getDocker(remote)
-					.getContainer(containerId)
-					.inspect();
-				const health = info.State?.Health;
-				if (!health?.Status || info.Config?.Labels?.[READINESS_LABEL]) {
-					return null;
-				}
-				return {
-					output: health.Log?.at(-1)?.Output?.trim() || null,
-					status: health.Status,
-				};
-			} catch {
-				return null;
-			}
+			const health = await this.worker.get<{
+				output: string | null;
+				status: string;
+			} | null>(`v1/containers/${containerId}/health`);
+			return health
+				? { output: health.output?.trim() || null, status: health.status }
+				: null;
 		}
 
 		/** The container's own IP on the first network it's attached to, for the internal liveness probe. */
 		async containerAddress(
 			containerId: string,
-			remote?: RemoteHostConnection | null,
+			_remote?: RemoteHostConnection | null,
 		): Promise<string | null> {
-			try {
-				const info = await this.getDocker(remote)
-					.getContainer(containerId)
-					.inspect();
-				const networks = Object.values(info.NetworkSettings?.Networks ?? {});
-				return networks.find((net) => net.IPAddress)?.IPAddress ?? null;
-			} catch {
-				return null;
-			}
+			const { address } = await this.worker.get<{ address: string | null }>(
+				`v1/containers/${containerId}/address`,
+			);
+			return address;
 		}
 	};
 }

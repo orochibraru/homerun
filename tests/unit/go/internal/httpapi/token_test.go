@@ -1,17 +1,17 @@
-package agent_test
+package httpapi_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/orochibraru/homerun/internal/agent"
+	"github.com/orochibraru/homerun/internal/httpapi"
 )
 
 func TestResolveTokenExplicitWins(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "token")
-	token, source, err := agent.ResolveToken("from-env", file)
-	if err != nil || token != "from-env" || source != agent.TokenFromEnv {
+	token, source, err := httpapi.ResolveToken("from-env", file)
+	if err != nil || token != "from-env" || source != httpapi.TokenFromEnv {
 		t.Fatalf("got %q %q %v", token, source, err)
 	}
 	if _, err := os.Stat(file); err == nil {
@@ -22,8 +22,8 @@ func TestResolveTokenExplicitWins(t *testing.T) {
 func TestResolveTokenGeneratesPersistsAndReuses(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "nested", "token")
 
-	first, source, err := agent.ResolveToken("", file)
-	if err != nil || source != agent.TokenGenerated || len(first) != 64 {
+	first, source, err := httpapi.ResolveToken("", file)
+	if err != nil || source != httpapi.TokenGenerated || len(first) != 64 {
 		t.Fatalf("want a fresh 32-byte hex token, got %q %q %v", first, source, err)
 	}
 	info, err := os.Stat(file)
@@ -37,8 +37,8 @@ func TestResolveTokenGeneratesPersistsAndReuses(t *testing.T) {
 		t.Errorf("its directory should be 0700, got %o", dir.Mode().Perm())
 	}
 
-	second, source, err := agent.ResolveToken("", file)
-	if err != nil || source != agent.TokenPersisted || second != first {
+	second, source, err := httpapi.ResolveToken("", file)
+	if err != nil || source != httpapi.TokenPersisted || second != first {
 		t.Errorf("a restart must reuse the persisted token, got %q %q %v", second, source, err)
 	}
 }
@@ -48,8 +48,8 @@ func TestResolveTokenRegeneratesAWhitespaceFile(t *testing.T) {
 	if err := os.WriteFile(file, []byte("  \n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	token, source, err := agent.ResolveToken("", file)
-	if err != nil || source != agent.TokenGenerated || token == "" {
+	token, source, err := httpapi.ResolveToken("", file)
+	if err != nil || source != httpapi.TokenGenerated || token == "" {
 		t.Errorf("a blank file counts as absent, got %q %q %v", token, source, err)
 	}
 }
@@ -59,8 +59,8 @@ func TestResolveTokenTrimsAPersistedToken(t *testing.T) {
 	if err := os.WriteFile(file, []byte("  abc123\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	token, source, err := agent.ResolveToken("", file)
-	if err != nil || token != "abc123" || source != agent.TokenPersisted {
+	token, source, err := httpapi.ResolveToken("", file)
+	if err != nil || token != "abc123" || source != httpapi.TokenPersisted {
 		t.Errorf("got %q %q %v", token, source, err)
 	}
 }
@@ -70,7 +70,7 @@ func TestResolveTokenReportsAnUnwritableLocation(t *testing.T) {
 	if err := os.WriteFile(blocker, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := agent.ResolveToken("", filepath.Join(blocker, "token")); err == nil {
+	if _, _, err := httpapi.ResolveToken("", filepath.Join(blocker, "token")); err == nil {
 		t.Error("a token that can't be persisted must fail startup, not be lost on restart")
 	}
 }
@@ -86,8 +86,20 @@ func TestTokensMatch(t *testing.T) {
 		{"", "", true},
 	}
 	for _, testCase := range cases {
-		if got := agent.TokensMatch(testCase.a, testCase.b); got != testCase.want {
+		if got := httpapi.TokensMatch(testCase.a, testCase.b); got != testCase.want {
 			t.Errorf("%q vs %q: want %t", testCase.a, testCase.b, testCase.want)
 		}
+	}
+}
+
+func TestHomeDirFallbacks(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "/users/win")
+	if got := httpapi.HomeDir(); got != "/users/win" {
+		t.Errorf("got %q", got)
+	}
+	t.Setenv("USERPROFILE", "")
+	if got := httpapi.HomeDir(); got != "/root" {
+		t.Errorf("got %q", got)
 	}
 }

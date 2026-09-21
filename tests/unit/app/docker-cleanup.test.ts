@@ -24,22 +24,32 @@ const VOLUMES = [
 function fakeCleanupService() {
 	const removed: string[] = [];
 	let daemonPruneCalls = 0;
-	const docker = {
-		df: async () => ({ Volumes: VOLUMES }),
-		getVolume: (name: string) => ({
-			remove: async () => {
-				removed.push(name);
-			},
-		}),
-		listNetworks: async () => [],
-		pruneVolumes: async () => {
-			daemonPruneCalls += 1;
-			return { SpaceReclaimed: 0, VolumesDeleted: [] };
+	const worker = {
+		delete: async (path: string) => {
+			const name = path.replace("/v1/volumes/", "");
+			removed.push(decodeURIComponent(name));
+			return { ok: true };
+		},
+		get: async (path: string) => {
+			if (path === "/v1/df") {
+				return { Volumes: VOLUMES };
+			}
+			if (path === "/v1/volumes") {
+				return VOLUMES;
+			}
+			return [];
+		},
+		post: async (path: string) => {
+			if (path === "/v1/prune/volumes") {
+				daemonPruneCalls += 1;
+				return { itemsDeleted: 0, spaceReclaimed: 0 };
+			}
+			return { itemsDeleted: 0, spaceReclaimed: 0 };
 		},
 	};
 	class FakeBase {
-		getDocker() {
-			return docker;
+		get worker() {
+			return worker;
 		}
 	}
 	const Service = DockerCleanupMixin(

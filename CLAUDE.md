@@ -59,7 +59,11 @@ Git-based builds below.
 
 Stack: SvelteKit 2 (Svelte 5 runes) + Bun runtime, better-auth, Drizzle ORM over
 Postgres (via Bun's built-in `SQL` client, `drizzle-orm/bun-sql`, no `pg`
-dependency needed), Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
+dependency needed), Tailwind v4 + shadcn-svelte ("vega" style). The app holds no
+Docker socket itself: every Docker call goes over HTTP to the Go worker
+(`cmd/worker`), which is the only process that opens one, see
+`.agents/notes/docker.md` and `.agents/notes/worker.md`. `dockerode` is a
+devDependency now, used only by an integration-test fixture, not by the app.
 
 ## Commands
 
@@ -71,7 +75,7 @@ dependency needed), Tailwind v4 + shadcn-svelte ("vega" style), dockerode.
 ```bash
 bun run dev              # scripts/dev.ts, vite plus the Go job worker (cmd/worker), rebuilt and restarted on every .go change
 bun run dev:app          # vite dev alone
-bun run dev:worker       # the worker alone, same rebuild-on-change loop
+bun run dev:worker       # the worker alone, same rebuild-on-change loop; also serves the Docker control API the app calls, on WORKER_PORT (7430)
 bun run preview          # vite preview, serves the last vite build (bun run start is closer to production)
 bun run build            # build:app then build:packages, sequential
 bun run build:app        # bun run gen && vite build
@@ -411,7 +415,7 @@ to reintroduce a fixed bug.
 | `api-and-cli.md`            | `src/routes/api/v1/`, the OpenAPI document, `cmd/cli/`, long-running requests and Bun's idle timeout                                                                  |
 | `services-and-templates.md` | The deploy pipeline, compose import, service links, templates and template links, git-based builds, git providers, SSE deploy progress, remote functions              |
 | `jobs-and-queue.md`         | The `job` table and worker, cron schedulers, user cron jobs, S3 backups                                                                                               |
-| `worker.md`                 | The Go worker (`cmd/worker`, `internal/worker`, `internal/jobs`), the job stage protocol, porting a job type to Go                                                    |
+| `worker.md`                 | The Go worker (`cmd/worker`, `internal/worker`, `internal/jobs`), the job stage protocol, porting a job type to Go, the Docker control API (`internal/workerapi`)     |
 | `testing.md`                | `tests/` (unit, integration, e2e), `bunfig.toml`, Playwright, the CI Postgres wiring                                                                                  |
 | `packages-and-release.md`   | `cmd/agent/`, `cmd/installer/`, semantic-release, CI/Docker publishing, `docs/`                                                                                       |
 | `dns.md`                    | Cloudflare or Pangolin DNS automation                                                                                                                                 |

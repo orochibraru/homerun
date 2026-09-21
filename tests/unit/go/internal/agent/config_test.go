@@ -48,15 +48,3 @@ func TestLoadConfigFromEnv(t *testing.T) {
 		t.Error("an unparseable port falls back to the default")
 	}
 }
-
-func TestHomeDirFallbacks(t *testing.T) {
-	t.Setenv("HOME", "")
-	t.Setenv("USERPROFILE", "/users/win")
-	if got := agent.HomeDir(); got != "/users/win" {
-		t.Errorf("got %q", got)
-	}
-	t.Setenv("USERPROFILE", "")
-	if got := agent.HomeDir(); got != "/root" {
-		t.Errorf("got %q", got)
-	}
-}

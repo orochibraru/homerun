@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/orochibraru/homerun/internal/httpapi"
 )
 
 // Config is the agent's environment, read once at startup with sane defaults.
@@ -31,7 +33,7 @@ func LoadConfig() Config {
 		ExplicitToken:          os.Getenv("AGENT_TOKEN"),
 		Port:                   envInt("PORT", 7420),
 		ShutdownTimeoutSeconds: envInt("AGENT_SHUTDOWN_TIMEOUT", 120),
-		TokenFile:              envOr("AGENT_TOKEN_FILE", filepath.Join(HomeDir(), ".homerun-agent", "token")),
+		TokenFile:              envOr("AGENT_TOKEN_FILE", filepath.Join(httpapi.HomeDir(), ".homerun-agent", "token")),
 	}
 }
 
@@ -52,16 +54,4 @@ func envInt(key string, fallback int) int {
 		return fallback
 	}
 	return value
-}
-
-// HomeDir resolves the user's home directory: HOME, else USERPROFILE
-// (Windows), else "/root".
-func HomeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if home := os.Getenv("USERPROFILE"); home != "" {
-		return home
-	}
-	return "/root"
 }

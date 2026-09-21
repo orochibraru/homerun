@@ -44,11 +44,6 @@ export function newestFirst<T extends RevisionLike>(rows: T[]): T[] {
 	);
 }
 
-/** The newest deployment row that is a revision, or null when there is none. */
-export function currentRevision<T extends RevisionLike>(rows: T[]): T | null {
-	return newestFirst(rows).find(isRevision) ?? null;
-}
-
 /**
  * Finds the rollback target: the newest revision older than the current one that
  * ran a different image and isn't marked unhealthy or rolled back.

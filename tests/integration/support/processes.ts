@@ -93,7 +93,10 @@ export function spawnAgent(port: number, token: string) {
 	};
 }
 
-const WORKER_READY = "[homerun-worker] ready:";
+// Matches both the current "[info] [worker] ready:" and the older
+// "[homerun-worker] ready:" a previously published image would print, so the
+// harness works against either binary.
+const WORKER_READY = "worker] ready:";
 
 /** Resolves once the spawned worker has logged its ready line, or throws with its output if it exits or `deadlineMs` passes first. */
 async function waitForWorker(
@@ -116,13 +119,16 @@ async function waitForWorker(
 export interface SpawnWorkerOptions {
 	authSecret: string;
 	databaseUrl: string;
+	port: number;
 }
 
 /**
  * Builds the real Go worker (`cmd/worker`) and spawns it against the test
  * Postgres with the same `AUTH_SECRET` as the spawned app, so job specs the
- * app encrypts decrypt on the worker side. Ready once it prints its `ready:`
- * line, which it does after its first successful ping.
+ * app encrypts decrypt on the worker side. The same secret also derives the
+ * Docker control API's bearer token on both sides, so the spawned app can
+ * reach the worker without either being told a token. Ready once it prints
+ * its `ready:` line, which it does after its first successful ping.
  */
 export function spawnWorker(options: SpawnWorkerOptions) {
 	const binary = join(tmpdir(), `homerun-worker-it-${process.pid}`);
@@ -140,6 +146,7 @@ export function spawnWorker(options: SpawnWorkerOptions) {
 			AUTH_SECRET: options.authSecret,
 			DATABASE_URL: options.databaseUrl,
 			WORKER_ID: `integration-${process.pid}`,
+			WORKER_PORT: String(options.port),
 		},
 		stderr: "pipe",
 		stdout: "pipe",

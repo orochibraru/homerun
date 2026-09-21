@@ -17,14 +17,18 @@ type PruneReport struct {
 
 // DiskUsageImage is one image of a `docker system df` answer.
 type DiskUsageImage struct {
-	Containers int      `json:"Containers"`
-	ID         string   `json:"Id"`
-	RepoTags   []string `json:"RepoTags"`
-	Size       int64    `json:"Size"`
+	Containers  int      `json:"Containers"`
+	Created     int64    `json:"Created"`
+	ID          string   `json:"Id"`
+	RepoDigests []string `json:"RepoDigests"`
+	RepoTags    []string `json:"RepoTags"`
+	SharedSize  int64    `json:"SharedSize"`
+	Size        int64    `json:"Size"`
 }
 
 // DiskUsageVolume is one volume of a `docker system df` answer.
 type DiskUsageVolume struct {
+	Driver    string `json:"Driver"`
 	Name      string `json:"Name"`
 	UsageData *struct {
 		RefCount int   `json:"RefCount"`
@@ -32,15 +36,46 @@ type DiskUsageVolume struct {
 	} `json:"UsageData"`
 }
 
-// DiskUsage is the images and volumes halves of `docker system df`.
+// DiskUsageContainer is one container of a `docker system df` answer.
+type DiskUsageContainer struct {
+	ID              string   `json:"Id"`
+	Image           string   `json:"Image"`
+	Names           []string `json:"Names"`
+	NetworkSettings *struct {
+		Networks map[string]json.RawMessage `json:"Networks"`
+	} `json:"NetworkSettings"`
+	SizeRootFs int64  `json:"SizeRootFs"`
+	SizeRw     int64  `json:"SizeRw"`
+	State      string `json:"State"`
+	Status     string `json:"Status"`
+}
+
+// DiskUsageBuildCache is one build cache record of a `docker system df` answer.
+type DiskUsageBuildCache struct {
+	Description string `json:"Description"`
+	ID          string `json:"ID"`
+	InUse       bool   `json:"InUse"`
+	LastUsedAt  string `json:"LastUsedAt"`
+	Shared      bool   `json:"Shared"`
+	Size        int64  `json:"Size"`
+	Type        string `json:"Type"`
+}
+
+// DiskUsage is `docker system df`, whole: the Docker Cleanup page previews
+// every category from it, so nothing is dropped here the way it was when only
+// a deploy read this.
 type DiskUsage struct {
-	Images  []DiskUsageImage  `json:"Images"`
-	Volumes []DiskUsageVolume `json:"Volumes"`
+	BuildCache []DiskUsageBuildCache `json:"BuildCache"`
+	Containers []DiskUsageContainer  `json:"Containers"`
+	Images     []DiskUsageImage      `json:"Images"`
+	LayersSize int64                 `json:"LayersSize"`
+	Volumes    []DiskUsageVolume     `json:"Volumes"`
 }
 
 // Network is one entry of the daemon's network list.
 type Network struct {
 	Containers map[string]json.RawMessage `json:"Containers"`
+	Driver     string                     `json:"Driver"`
 	ID         string                     `json:"Id"`
 	Name       string                     `json:"Name"`
 }
@@ -120,7 +155,7 @@ func (c *Client) PruneVolumes(ctx context.Context) (PruneReport, error) {
 	return c.prune(ctx, "/volumes/prune", "VolumesDeleted", pruneFilters("all", "true"))
 }
 
-// SystemDiskUsage is `docker system df`'s images and volumes.
+// SystemDiskUsage is `docker system df`, every category of it.
 func (c *Client) SystemDiskUsage(ctx context.Context) (DiskUsage, error) {
 	var usage DiskUsage
 	err := c.pruneDecode(ctx, http.MethodGet, "/system/df", nil, nil, &usage)

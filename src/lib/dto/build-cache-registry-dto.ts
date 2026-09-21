@@ -170,7 +170,7 @@ export class BuildCacheRegistryDTO extends BaseDTO<BuildCacheRegistry> {
 		return this.row.username;
 	}
 
-	/** Decrypted password, for a dockerode authconfig only : never exposed to a `load` return value. */
+	/** Decrypted password, for a registry authconfig only : never exposed to a `load` return value. */
 	decryptPassword(): string {
 		return decryptSecret(this.row.passwordEnc) ?? "";
 	}

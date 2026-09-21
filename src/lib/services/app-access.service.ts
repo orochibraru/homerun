@@ -1,9 +1,5 @@
 import { eq } from "drizzle-orm";
-import {
-	accountProviderIdFor,
-	emailMatchesPattern,
-	methodForAccountProviderId,
-} from "$lib/auth-providers";
+import { accountProviderIdFor, emailMatchesPattern } from "$lib/auth-providers";
 import type { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { db } from "$lib/server/db/lib";
@@ -245,17 +241,6 @@ class AppAccessServiceClass {
 				}
 			}),
 		);
-	}
-
-	/** The distinct sign-in methods (mapped from linked account provider ids) the user has connected. */
-	async linkedMethods(userId: string): Promise<string[]> {
-		const accounts = await db
-			.select({ providerId: accountTable.providerId })
-			.from(accountTable)
-			.where(eq(accountTable.userId, userId));
-		return [
-			...new Set(accounts.map((a) => methodForAccountProviderId(a.providerId))),
-		];
 	}
 
 	/** The user's email, role and ban state, or null if the user row doesn't exist. */

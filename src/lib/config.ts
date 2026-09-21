@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
@@ -25,6 +26,24 @@ import { z } from "zod";
  *    bind-mounted in, no `docker` CLI at all).
  * 4. The original hardcoded default, as the final fallback.
  */
+/**
+ * The bearer token for the worker's Docker control API, derived from the auth
+ * secret the app and the worker must already agree on.
+ *
+ * This is what makes the pair zero-configuration: neither side is told the
+ * token and no file passes between them, they both compute the same one from
+ * `AUTH_SECRET` (the identical derivation lives in Go, see
+ * `httpapi.DeriveToken`). It's an HMAC rather than the secret itself so a
+ * leaked control token doesn't also hand over the key every `*Enc` column is
+ * encrypted with. `WORKER_TOKEN` still wins, for anyone who'd rather rotate
+ * the two independently.
+ */
+function deriveWorkerToken(secret: string): string {
+	return createHmac("sha256", secret)
+		.update("homerun-worker-control")
+		.digest("hex");
+}
+
 function detectDockerSocketPath(): string {
 	const dockerHost = Bun.env.DOCKER_HOST;
 	if (dockerHost?.startsWith("unix://")) {
@@ -130,9 +149,13 @@ export const yamlConfigSchema = z.object({
 			entrypoint: z.string().optional(),
 		})
 		.optional(),
+	worker: z
+		.object({
+			token: z.string().optional(),
+			url: z.string().optional(),
+		})
+		.optional(),
 });
-
-export type YamlConfig = z.infer<typeof yamlConfigSchema>;
 
 /** The fully-resolved runtime shape, every field defaulted : what `parseConfig()` builds from the YAML file (validated above) plus the env-only fields. */
 const configSchema = z.object({
@@ -193,6 +216,16 @@ const configSchema = z.object({
 			certResolver: z.string().default("letsencrypt"),
 			dynamicConfigDir: z.string().optional(),
 			entrypoint: z.string().default("websecure"),
+		})
+		.prefault({}),
+	// The Go worker's Docker control API. The app makes no Docker calls of its
+	// own any more : it asks the worker, which is the process that actually
+	// holds the socket. Nothing here is optional in practice, an instance
+	// without a reachable worker can't show a container's status at all.
+	worker: z
+		.object({
+			token: z.string().default(""),
+			url: z.string().default("http://localhost:7430"),
 		})
 		.prefault({}),
 });
@@ -300,6 +333,20 @@ export const parseConfig = (): AppConfig => {
 				yamlConfig.traefik?.dynamicConfigDir,
 				Bun.env.TRAEFIK_DYNAMIC_CONFIG_DIR,
 			),
+		},
+		worker: {
+			...yamlConfig.worker,
+			// WORKER_TOKEN is the same value the worker itself reads, so one
+			// variable configures both sides of the control API.
+			token: firstNonBlank(
+				yamlConfig.worker?.token,
+				Bun.env.WORKER_TOKEN,
+				deriveWorkerToken(
+					firstNonBlank(Bun.env.AUTH_SECRET, Bun.env.BETTER_AUTH_SECRET) ??
+						"default-secret",
+				),
+			),
+			url: firstNonBlank(yamlConfig.worker?.url, Bun.env.WORKER_URL),
 		},
 	});
 };

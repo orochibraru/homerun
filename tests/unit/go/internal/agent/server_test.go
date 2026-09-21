@@ -11,6 +11,8 @@ import (
 
 	"github.com/orochibraru/homerun/internal/buildinfo"
 	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/orochibraru/homerun/internal/hoststats"
+	"github.com/orochibraru/homerun/internal/httpapi"
 
 	"github.com/orochibraru/homerun/internal/agent"
 )
@@ -20,7 +22,7 @@ const testToken = "s3cret"
 // newTestServer starts an httptest server over an agent.Server backed by docker.
 func newTestServer(t *testing.T, docker *fakeDocker) *httptest.Server {
 	t.Helper()
-	sampler := &agent.StatsSampler{ProcRoot: t.TempDir(), RunCommand: commands(nil)}
+	sampler := &hoststats.StatsSampler{ProcRoot: t.TempDir(), RunCommand: func(string, ...string) (string, bool) { return "", false }}
 	server := httptest.NewServer(agent.NewServer(testToken, docker, newTestBuilder(docker), sampler).Handler())
 	t.Cleanup(server.Close)
 	return server
@@ -73,7 +75,7 @@ func TestProtectedRoutesNeedTheBearerToken(t *testing.T) {
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("the right token is let in, got %d", response.StatusCode)
 	}
-	var stats agent.SystemStats
+	var stats hoststats.SystemStats
 	if err := json.Unmarshal([]byte(body), &stats); err != nil {
 		t.Errorf("stats should be JSON, got %q", body)
 	}
@@ -159,8 +161,8 @@ func TestBuildRouteValidatesTheBody(t *testing.T) {
 			continue
 		}
 		var decoded struct {
-			Error  string                  `json:"error"`
-			Issues []agent.ValidationIssue `json:"issues"`
+			Error  string                    `json:"error"`
+			Issues []httpapi.ValidationIssue `json:"issues"`
 		}
 		if err := json.Unmarshal([]byte(answer), &decoded); err != nil || decoded.Error != "Invalid request body" || len(decoded.Issues) == 0 {
 			t.Errorf("%s: want the error plus its issues, got %q", name, answer)
@@ -228,9 +230,9 @@ func TestPrintBanner(t *testing.T) {
 	}
 	original := os.Stdout
 	os.Stdout = write
-	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock", TokenFile: "/t"}, "tok", agent.TokenGenerated)
-	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock", TokenFile: "/t"}, "tok", agent.TokenPersisted)
-	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock"}, "hidden", agent.TokenFromEnv)
+	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock", TokenFile: "/t"}, "tok", httpapi.TokenGenerated)
+	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock", TokenFile: "/t"}, "tok", httpapi.TokenPersisted)
+	agent.PrintBanner(agent.Config{Port: 7420, DockerSocketPath: "/sock"}, "hidden", httpapi.TokenFromEnv)
 	_ = write.Close()
 	os.Stdout = original
 	raw, _ := io.ReadAll(read)

@@ -3,15 +3,12 @@ import {
 	swarmSampleFromTasks,
 	type WorkloadHealthSample,
 } from "$lib/revisions";
+import { isNotFound } from "$lib/server/worker-client";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import {
 	type ContainerHealthSample,
 	containerSampleFromInspect,
 } from "./rollout.ts";
-
-function isNotFound(error: unknown): boolean {
-	return (error as { statusCode?: number } | null)?.statusCode === 404;
-}
 
 /** Mixin adding revision-tracking support : resolving local image ids for retained revisions, and sampling a running workload's health for rollback decisions. */
 export function DockerRevisionMixin<
@@ -20,11 +17,11 @@ export function DockerRevisionMixin<
 	return class DockerRevisionService extends Base {
 		/** The local image id `ref` resolves to, or null if it isn't (or is no longer) present on this daemon. */
 		async localImageId(ref: string): Promise<string | null> {
-			try {
-				return (await this.getDocker().getImage(ref).inspect()).Id ?? null;
-			} catch {
-				return null;
-			}
+			const { id } = await this.worker.get<{ id: string | null }>(
+				"v1/images/id",
+				{ ref },
+			);
+			return id;
 		}
 
 		/** The distinct local image ids among `refs` that still exist on this daemon, deduplicated. */
@@ -44,7 +41,9 @@ export function DockerRevisionMixin<
 		): Promise<ContainerHealthSample> {
 			try {
 				return containerSampleFromInspect(
-					await this.getDocker().getContainer(containerId).inspect(),
+					await this.worker.get<
+						Parameters<typeof containerSampleFromInspect>[0]
+					>(`v1/containers/${containerId}/inspect`),
 				);
 			} catch (error) {
 				if (!isNotFound(error)) {
@@ -64,18 +63,15 @@ export function DockerRevisionMixin<
 			swarmServiceId: string,
 			since: Date,
 		): Promise<WorkloadHealthSample> {
-			const docker = this.getDocker();
-			const spec = (await docker.getService(swarmServiceId).inspect()).Spec as {
-				Mode?: { Replicated?: { Replicas?: number } };
-			};
-			const tasks = (await docker.listTasks({
-				filters: JSON.stringify({ service: [swarmServiceId] }),
-			})) as SwarmTaskLike[];
-			return swarmSampleFromTasks(
-				tasks,
-				spec.Mode?.Replicated?.Replicas ?? 1,
-				since,
-			);
+			const [{ replicas }, tasks] = await Promise.all([
+				this.worker.get<{ replicas: number }>(
+					`v1/swarm/services/${swarmServiceId}/replicas`,
+				),
+				this.worker.get<SwarmTaskLike[]>(
+					`v1/swarm/services/${swarmServiceId}/tasks`,
+				),
+			]);
+			return swarmSampleFromTasks(tasks, replicas, since);
 		}
 	};
 }

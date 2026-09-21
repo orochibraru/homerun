@@ -11,19 +11,28 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sort"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/orochibraru/homerun/internal/buildinfo"
 	"github.com/orochibraru/homerun/internal/db"
+	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/orochibraru/homerun/internal/httpapi"
 	"github.com/orochibraru/homerun/internal/jobs"
+	"github.com/orochibraru/homerun/internal/logging"
 	"github.com/orochibraru/homerun/internal/secrets"
 )
 
 const helpText = `
 homerun-worker : executes Homerun's heavy background jobs (deploys, builds,
 backups, scans, cron jobs, cleanups) leased from the app's Postgres job queue.
+
+It also serves the Docker control API the app calls for everything it used to
+do against the Docker socket itself: container status, start/stop/restart,
+logs, the web terminal, host stats, prunes and swarm.
 
 Usage:
   homerun-worker            Start the worker (reads its config from env vars)
@@ -35,6 +44,10 @@ Environment:
   DOCKER_SOCKET_PATH  The local Docker socket, auto-detected when unset
   WORKER_CONCURRENCY  Jobs executed at once, 3 by default
   WORKER_ID           Lease owner name, hostname-pid by default
+  WORKER_LOG_LEVEL    debug/info/warn/error, else LOG_LEVEL, info by default
+  WORKER_PORT         Docker control API port, 7430 by default
+  WORKER_TOKEN        Bearer token the app presents, derived from AUTH_SECRET
+                      when unset, so no extra configuration is needed
 `
 
 // Main runs homerun-worker with the process's own arguments, exiting non-zero on failure.
@@ -50,6 +63,7 @@ func Main() {
 		}
 	}
 	log.SetFlags(0)
+	logging.SetLevelFromEnv()
 	if err := run(LoadConfig()); err != nil {
 		fmt.Fprintf(os.Stderr, "[homerun-worker] %s\n", err)
 		os.Exit(1)
@@ -77,7 +91,24 @@ func run(config Config) error {
 		return err
 	}
 
-	log.Printf("[homerun-worker] ready: id=%s concurrency=%d docker=%s version=%s", config.ID, config.Concurrency, config.DockerSocketPath, buildinfo.Version)
+	token := config.ExplicitToken
+	source := "WORKER_TOKEN"
+	if token == "" {
+		token = httpapi.DeriveToken(config.AuthSecret, httpapi.WorkerControlPurpose)
+		source = "derived from AUTH_SECRET"
+	}
+	docker := dockerapi.New(config.DockerSocketPath)
+	stopAPI, err := serveControlAPI(ctx, config, token, docker)
+	if err != nil {
+		return err
+	}
+	defer stopAPI()
+
+	logging.Infof(scope, "ready: id=%s concurrency=%d docker=%s version=%s",
+		config.ID, config.Concurrency, config.DockerSocketPath, buildinfo.Version)
+	logging.Infof(scope, "docker control API on :%d (token %s)", config.Port, source)
+	logging.Debugf(scope, "executors registered: %s", strings.Join(executorNames(), ", "))
+	logging.Debugf(scope, "poll=1s heartbeat=10s lease-timeout=60s shutdown-grace=60s")
 	w := &Worker{
 		Box:               box,
 		Concurrency:       config.Concurrency,
@@ -92,7 +123,7 @@ func run(config Config) error {
 		return jobs.New(c.ID, c.JobType, c.Attempts, spec, config.DockerSocketPath, pool)
 	}
 	w.Run(ctx)
-	log.Print("[homerun-worker] stopped.")
+	logging.Infof(scope, "stopped")
 	return nil
 }
 
@@ -109,7 +140,7 @@ func waitForDatabase(ctx context.Context, pool *pgxpool.Pool) error {
 			return ctx.Err()
 		}
 		if !logged {
-			log.Printf("[homerun-worker] waiting for Postgres: %s", err)
+			logging.Warnf(scope, "waiting for Postgres: %s", err)
 			logged = true
 		}
 		select {
@@ -118,4 +149,14 @@ func waitForDatabase(ctx context.Context, pool *pgxpool.Pool) error {
 		case <-time.After(time.Second):
 		}
 	}
+}
+
+// executorNames lists the job types this worker can execute, for the boot log.
+func executorNames() []string {
+	names := make([]string, 0, len(Executors))
+	for name := range Executors {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }

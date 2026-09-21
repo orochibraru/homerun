@@ -14,7 +14,6 @@ func TestFullStackComposeShape(t *testing.T) {
 	for _, fragment := range []string{
 		"image: docker.io/orochibraru/homerun:v1.2.3",
 		"ORIGIN: ${ORIGIN:-http://homerun.example.com:3000}",
-		"DOCKER_SOCKET_PATH: /var/run/docker.sock",
 		"postgres-data:/var/lib/postgresql",
 		"traefik.http.routers.homerun.tls.certresolver=${DASHBOARD_CERT_RESOLVER:-letsencrypt}",
 		"- /var/run/docker.sock:/var/run/docker.sock:ro",
@@ -34,6 +33,26 @@ func TestFullStackComposeShape(t *testing.T) {
 	}
 }
 
+func TestFullStackComposeAppTalksToTheWorkerInsteadOfTheSocket(t *testing.T) {
+	compose := installer.FullStackCompose("img", "/run/user/1000/docker.sock", "homerun.example.com", false)
+	app := compose[strings.Index(compose, "  app:"):strings.Index(compose, "  worker:")]
+
+	for _, fragment := range []string{
+		"WORKER_URL: ${WORKER_URL:-http://worker:7430}",
+		"WORKER_TOKEN: ${WORKER_TOKEN:-}",
+	} {
+		if !strings.Contains(app, fragment) {
+			t.Errorf("app service is missing %q:\n%s", fragment, app)
+		}
+	}
+	if strings.Contains(app, "docker.sock") {
+		t.Errorf("the app makes no Docker calls of its own, only the worker holds the socket:\n%s", app)
+	}
+	if strings.Contains(app, "DOCKER_SOCKET_PATH") {
+		t.Errorf("DOCKER_SOCKET_PATH is the worker's, the app reads socketPath from homerun.yaml:\n%s", app)
+	}
+}
+
 func TestFullStackComposeRunsTheWorkerFromTheAppImage(t *testing.T) {
 	compose := installer.FullStackCompose("docker.io/orochibraru/homerun:1.2.3", "/run/user/1000/docker.sock", "example.com", false)
 	worker := compose[strings.Index(compose, "  worker:"):strings.Index(compose, "  traefik:")]
@@ -43,6 +62,9 @@ func TestFullStackComposeRunsTheWorkerFromTheAppImage(t *testing.T) {
 		`AUTH_SECRET: "${AUTH_SECRET:?`,
 		"DOCKER_SOCKET_PATH: /run/user/1000/docker.sock",
 		"- /run/user/1000/docker.sock:/run/user/1000/docker.sock",
+		"WORKER_PORT: ${WORKER_PORT:-7430}",
+		"WORKER_TOKEN: ${WORKER_TOKEN:-}",
+		"expose:\n      - \"${WORKER_PORT:-7430}\"",
 		"homerun.role=worker",
 		"disable: true",
 	} {
@@ -81,7 +103,7 @@ func TestFullStackComposeMountsTraefikSocketAtTheConventionalPath(t *testing.T) 
 		t.Error("Traefik's docker provider defaults to /var/run/docker.sock inside its own container")
 	}
 	if !strings.Contains(compose, "- /run/user/1000/docker.sock:/run/user/1000/docker.sock") {
-		t.Error("the app's own mount keeps the host path, which is what homerun.yaml points at")
+		t.Error("the worker's own mount keeps the host path, which is what homerun.yaml points at")
 	}
 }
 

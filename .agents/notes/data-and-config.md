@@ -55,10 +55,11 @@ yet built).
   into a service, shown on the service's Volumes tab.
 - `remote-host-dto.ts`, `RemoteHostDTO`:
   `get`/`list`/`listPaged`/`listBuildServers`/`create`/`update`/`delete`,
-  `toConnection()` (decrypts TLS material into what `DockerService.getDocker()`
-  wants), and the static `resolveBuildTarget(hostId)` that turns a host id into
-  the `RemoteExecutionTarget` `deploy.service.ts` branches on, see Build servers
-  below.
+  `toConnection()` (decrypts TLS material into what the Go worker's
+  `internal/dockerapi.RemoteHost` wants), and the static
+  `resolveBuildTarget(hostId)` that turns a host id into the
+  `RemoteExecutionTarget` a build's spec carries to the worker, see Build
+  servers below.
 - `s3-destination-dto.ts`, `S3DestinationDTO`:
   `get`/`list`/`listPaged`/`create`/`update`/`delete`, plus
   `decryptSecretAccessKey()` (for the S3 client only, never a `load` return

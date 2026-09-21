@@ -8,30 +8,62 @@ than in this one.
 
 ## Docker integration (`src/lib/services/docker.service.ts`, `src/lib/services/docker/`)
 
-`DockerService` (`docker.service.ts`) is a singleton instance
-(`export const DockerService = new DockerServiceClass()`) of a class built from
-real per-concern classes merged via the TS mixin pattern, **not** a static
-barrel re-exporting loose functions (see the OOP convention note above; this
-module is its reference implementation). Every route/DTO imports `DockerService`
-from there and calls instance methods on it (`DockerService.pullImage(...)`),
-never reaching into `services/docker/*` directly, that part of the contract is
-unchanged from before the mixin refactor. Each concern file under
+**The app holds no Docker socket at all.** Every engine call goes over HTTP to
+the Go worker's Docker control API (`internal/workerapi`, served alongside the
+job loop by `cmd/worker`, see `worker.md`), which is the process that actually
+holds `/var/run/docker.sock`. `DockerService` (`docker.service.ts`) is a
+singleton instance (`export const DockerService = new DockerServiceClass()`) of
+a class built from real per-concern classes merged via the TS mixin pattern,
+**not** a static barrel re-exporting loose functions (see the OOP convention
+note above; this module is its reference implementation). Every route/DTO
+imports `DockerService` from there and calls instance methods on it
+(`DockerService.pullImage(...)`), never reaching into `services/docker/*`
+directly, that part of the contract is unchanged from before the mixin refactor,
+and unchanged again by the move off dockerode : a mixin's public surface is
+identical, only what runs underneath a method changed, from a dockerode call to
+`this.worker.get/post/delete/stream(...)`. Each concern file under
 `services/docker/` exports a `SomethingMixin(Base)` function returning a class
 that extends `Base` (ultimately `BaseDockerService`, `docker/base.ts`, holds the
-shared `getDocker(remote?)`); `docker.service.ts` chains all of them and
-instantiates once. A concern that calls another's method does it via real
-inheritance (`this.inspectStatus(...)`), which is also why the chain has a
-load-bearing order: containers before one-off (`runOneOff` calls
-`this.pullImage`), containers and swarm before reconcile (`syncServiceStatus`
-calls `this.inspectStatus`/`this.inspectSwarmServiceStatus`), see the ordering
-comment in `docker.service.ts` before reordering the chain. Creating and
-health-gating the container/swarm-service itself for a real deploy no longer
-goes through this mixin chain at all, that now runs in the Go worker, see the
-`containers.ts` bullet below.
+shared `worker` getter onto `WorkerClient`, `$lib/server/worker-client.ts`);
+`docker.service.ts` chains all of them and instantiates once. A concern that
+calls another's method does it via real inheritance (`this.inspectStatus(...)`),
+which is also why the chain has a load-bearing order: containers before one-off
+(`runOneOff` calls `this.pullImage`), containers and swarm before reconcile
+(`syncServiceStatus` calls
+`this.inspectStatus`/`this.inspectSwarmServiceStatus`), see the ordering comment
+in `docker.service.ts` before reordering the chain. Creating and health-gating
+the container/swarm-service itself for a real deploy no longer goes through this
+mixin chain at all, that now runs in the Go worker, see the `containers.ts`
+bullet below.
 
-- `client.ts`, HMR-safe `dockerode` singleton, socket path from config; not a
-  mixin itself, `BaseDockerService.getDocker` wraps its exported `getDocker()`
-  function. → `DockerService.getDocker`.
+`WorkerClient` (`$lib/server/worker-client.ts`) is the whole of that HTTP
+client: thin `get`/`post`/`delete`/`putRaw`/`postRaw`/`stream` methods against
+`config.worker.url` (env `WORKER_URL`, default `http://localhost:7430`),
+authenticated with a bearer token both sides read from `WORKER_TOKEN` — or, when
+that's unset, both independently derive from `AUTH_SECRET` (`config.ts`'s
+`deriveWorkerToken`/Go's `httpapi.DeriveToken`, same HMAC-SHA256 over the
+literal `"homerun-worker-control"`), so an app and a worker started with nothing
+but a shared `AUTH_SECRET` already agree on a token with no file or extra env
+var to pass between them. A non-2xx answer throws `WorkerRequestError` (status +
+the worker's own `{error}` message, `isNotFound()` for a 404); a worker that
+can't be reached at all throws a distinct "Couldn't reach the Homerun worker"
+error rather than a bare `fetch failed`, since that's a different failure with a
+different fix. `stream()` has no timeout (a followed log, the terminal, a pull's
+progress are meant to stay open, the caller's `AbortSignal` is what ends them);
+every other call gets a generous 60s timeout, since some of these are genuinely
+slow against the daemon rather than broken (`docker stop`'s SIGTERM grace
+period, a Traefik recreate doing stop+remove+create in one request).
+`AdminService`'s setup diagnostics check the worker and the daemon it fronts as
+two separate checks (`GET /v1/health` then `GET /v1/info`) precisely because
+they now fail for different reasons with different fixes, see
+`observability.md`.
+
+- `client.ts`, no longer a dockerode singleton, now just the
+  `RemoteHostConnection` interface : the shape a `remote_host` row stores and
+  the Go worker's own `dockerapi.RemoteHost` expects. A remote build server's
+  actual Docker connection (`tcp://`, optionally TLS) is opened in Go
+  (`internal/dockerapi.NewRemote`, from `internal/jobs/deploy/build.go`), not by
+  this app; see Build servers below.
 - `labels.ts`, pure label-building (no Docker client, no state), stays a plain
   exported function rather than a mixin: every container gets
   `homerun.managed=true` + `homerun.service.id=<id>`, plus Traefik discovery
@@ -59,20 +91,20 @@ goes through this mixin chain at all, that now runs in the Go worker, see the
 - `networks.ts`, `DockerNetworkMixin`, per-stack Docker networks.
   `stackNetworkName(stackId)` is deterministic (`homerun-stack-<id>`, no
   separate id stored, stays a plain exported pure function).
-  `ensureStackNetwork`/`removeStackNetwork` (idempotent create/remove, called
-  from `StackDTO.create`/`cascadeDelete`) and
-  `connectToStackNetwork(containerId, stackId, alias)` attaches a container to
-  its stack's network under a DNS alias equal to the service's slug (the
+  `ensureStackNetwork`/`removeStackNetwork` (idempotent create/remove over the
+  worker's `POST`/`DELETE /v1/networks`, called from
+  `StackDTO.create`/`cascadeDelete`) →
+  `DockerService.ensureStackNetwork`/`removeStackNetwork`. A container actually
+  joining its stack's network under a DNS alias equal to the service's slug (the
   _internal_ alias is never stack-prefixed, only the container name and public
-  subdomain are, sibling services keep addressing each other by plain slug) →
-  `DockerService.ensureStackNetwork`/`removeStackNetwork`/`connectToStackNetwork`.
-  `connectToStackNetwork` calls `ensureStackNetwork` itself first, same
+  subdomain are, sibling services keep addressing each other by plain slug) is
+  `joinStackNetwork` in the Go worker now, not a TS mixin method at all, same
   re-assert-on-every-deploy shape as the Go worker's own `ensureBridge()` call
   for a container deploy (`internal/jobs/deploy/container.go`, formerly
   `createAndStartContainer`'s own `ensureSharedNetwork()` call, see below): a
   network a prune or a Docker Cleanup run removed out from under a still-live
   stack row gets recreated, rather than failing every subsequent deploy with a
-  raw dockerode 404.
+  raw 404 from the Engine.
 - `core-services.ts`, `DockerCoreServicesMixin`, the Traefik container itself :
   `findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`
   (image-only recreate), plus **`applyTraefikFlags(flags)`**, which rewrites
@@ -105,10 +137,11 @@ goes through this mixin chain at all, that now runs in the Go worker, see the
   avoid reading as "the Service service" next to `dto/service-dto.ts`), the
   operational surface, merged in right after the network mixin (see the ordering
   note above):
-  - `pullImage(image, tag, auth?, onProgress?)`, `onProgress` is called once per
-    layer _status change_ (not per byte-tick, dockerode's raw progress events
-    are far too chatty to log one-for-one), used to build the live
-    deploy-progress log. → `DockerService.pullImage`.
+  - `pullImage(image, tag, auth?, onProgress?)` streams `POST v1/images/pull`
+    off the worker and calls `onProgress` once per layer _status change_ (not
+    per byte-tick, the Engine's raw progress events are far too chatty to log
+    one-for-one), used to build the live deploy-progress log. →
+    `DockerService.pullImage`.
   - **Creating and starting the container for a real deploy runs in the Go
     worker now, not on this mixin.** `deploy.service.ts`'s
     `DeploymentService.deployService()`/`enqueueDeploy()` (via
@@ -192,11 +225,12 @@ goes through this mixin chain at all, that now runs in the Go worker, see the
   `DockerService.findTraefikContainer`/`restartTraefikContainer`/`updateTraefikContainer`.
 - `cleanup.ts`, `DockerCleanupMixin`, host-wide (not per-service, deliberately
   the one mixin that isn't scoped to `homerun.managed=true` containers, see
-  Docker Cleanup below) `docker.df()`-backed preview (`getCleanupPreview()` →
+  Docker Cleanup below) `GET /v1/df`-backed preview (`getCleanupPreview()` →
   `CleanupPreview`) plus
   `pruneContainers`/`pruneImages(all?)`/`pruneNetworks`/`pruneBuildCache`/
-  `pruneVolumes`/`pruneSystem`, thin wrappers over dockerode's own
-  `prune*`/`pruneBuilder` calls. → `DockerService.getCleanupPreview`/
+  `pruneVolumes`/`pruneSystem`, thin wrappers over the worker's own
+  `POST /v1/prune/*` routes (`internal/dockerapi/prune.go`). →
+  `DockerService.getCleanupPreview`/
   `pruneContainers`/`pruneImages`/`pruneNetworks`/`pruneBuildCache`/
   `pruneVolumes`/`pruneSystem`.
 - `one-off.ts`, `DockerOneOffMixin`, `runOneOff(params)`: pull-if-missing,
@@ -361,18 +395,23 @@ removes it once the last container detaches. Its absence fails at container
 looked like it had gotten further than it had.
 
 **Compose files.** The actual service definitions live once in
-`tools/compose/{base,app,agent}.compose.yaml` (Traefik + Postgres in `base`, the
-app and Agent in the other two); each root-level file is a thin `extends:`
-composition of those, so Traefik's flags or Postgres's image change in one
-place:
+`tools/compose/{base,app,worker,agent}.compose.yaml` (Traefik + Postgres in
+`base`, the app, worker and Agent in the others); each root-level file is a thin
+`extends:` composition of those, so Traefik's flags or Postgres's image change
+in one place. **Only the worker service mounts `/var/run/docker.sock`**, in
+every compose file that has one : the app container carries no Docker socket
+mount at all any more, it reaches Docker over `WORKER_URL` (`http://worker:7430`
+between containers) instead, see the Docker integration section above.
 
 - `compose.yaml`, **local dev**, Traefik + Postgres only. Deliberately no `app`
-  service: dev runs the app directly on the host (`bun run dev`/`bun run start`)
-  so its own logs aren't viewable in-app (see `system-logs/` above). This is
-  what `docker compose up -d` brings up, and what the app assumes exists.
-- `compose.dev.yaml`, the same plus `app` and `agent` built from this repo's own
-  `Dockerfile` (`target: app`/`target: agent`), for exercising the containerized
-  app locally.
+  service: dev runs the app directly on the host (`bun run dev`/`bun run start`,
+  alongside `bun run dev:worker`, see `worker.md`) so its own logs aren't
+  viewable in-app (see `system-logs/` above). This is what
+  `docker compose up -d` brings up, and what the app assumes exists.
+- `compose.dev.yaml`, the same plus `app`, `worker` and `agent` built from this
+  repo's own `Dockerfile` (`target: app` for both `app` and `worker`, the
+  `homerun-worker` binary ships inside the same image, see `worker.md`;
+  `target: agent` for the agent), for exercising the containerized app locally.
 - `compose.prod.yaml`, the operator-facing stack: the published
   `docker.io/orochibraru/homerun` image alongside Traefik and Postgres.
   Deliberately **self-contained**, no `extends:`, since someone who `curl`s just
@@ -781,37 +820,47 @@ the schema, and the container reconciliation this page drives.
 ## Web terminal (`src/lib/services/docker/terminal.ts`)
 
 Per-service "Terminal" tab, runs `/bin/sh` in the live container (rejects the
-request if the service isn't `currentStatus: "running"`). No WebSocket, this app
-has no custom server to hang a `ws` upgrade off (`vite dev` in dev, a plain
-built server via `bun run start` in prod), so it's chunked HTTP instead:
-`POST .../terminal/open` creates the session,
+request if the service isn't `currentStatus: "running"`). No WebSocket, neither
+this app nor the Go worker hangs a `ws` upgrade off anything, so it's chunked
+HTTP end to end: `POST .../terminal/open` creates the session,
 `GET .../terminal/[sessionId]/stream` is one long-lived streamed response for
 output (same `ReadableStream` shape as `streamLogs`),
 `POST .../terminal/[sessionId]/input` sends stdin a chunk at a time,
-`POST .../terminal/[sessionId]/close` ends it early (a 15-minute-idle reaper
-also runs regardless, `setInterval`, HMR-safe `globalThis` guard like the other
-schedulers). Every route re-checks session ownership (`userId` match)
-independently, `terminal.ts` only trusts the `containerId` it's given, it
-doesn't do its own auth.
+`POST .../terminal/[sessionId]/close` ends it early. Every app route re-checks
+session ownership (`userId` match) independently, `docker/terminal.ts`
+(`DockerTerminalMixin`) only trusts the `containerId` it's given, it doesn't do
+its own auth — the shell, the hijacked stream and the idle reaper (15 minutes,
+`internal/workerapi`'s `TerminalHub`, a ticker goroutine rather than the app's
+old `setInterval`) all live in the Go worker now, this mixin only keeps its own
+session book (service, user, container) mapping a session id to who it belongs
+to, since the worker only ever sees a container id and has no notion of users.
+Opening a session is `POST /v1/terminal {containerId}` on the worker, which
+returns a session id the app then streams/writes/closes by hitting
+`/v1/terminal/<id>/stream`\|`/input`\|itself for `DELETE`.
 
-**Load-bearing implementation detail**: dockerode's normal
-`exec.start({hijack:true})`, the standard way to get an interactive exec's
-duplex stream, hangs forever under Bun. Confirmed with a minimal repro before
-writing any route code: `container.exec()` (plain request/response, creates the
-exec) resolves fine, but `.start()` with hijacking (an HTTP/1.1
-`Connection: Upgrade` handshake handing back a raw socket) never resolves, Bun's
-`node:http` compatibility layer doesn't complete that handshake the way Node's
-does. The fix in `terminal.ts` is to do the _start_ step manually: open a raw
-`Bun.connect()` Unix-socket connection to the Docker daemon, write the HTTP/1.1
-Upgrade request by hand, and treat the socket as the raw duplex TTY stream once
-the `101 UPGRADED` header block has been read past. Verified against a real
-container end-to-end (real command in, real output back) before wiring it into
-routes. If a future change touches this file, re-verify this still holds, it's a
-Bun-runtime quirk, not a documented/guaranteed API contract, and could change
-with a Bun upgrade.
+**Load-bearing implementation detail, now resolved by moving to Go.**
+dockerode's normal `exec.start({hijack:true})`, the standard way to get an
+interactive exec's duplex stream, hangs forever under Bun: confirmed with a
+minimal repro before writing any route code, `container.exec()` (plain
+request/response, creates the exec) resolves fine, but `.start()` with hijacking
+(an HTTP/1.1 `Connection: Upgrade` handshake handing back a raw socket) never
+resolves, Bun's `node:http` compatibility layer doesn't complete that handshake
+the way Node's does. The old TypeScript fix was to do the _start_ step by hand:
+open a raw `Bun.connect()` Unix-socket connection to the Docker daemon, write
+the HTTP/1.1 Upgrade request itself, and treat the socket as the raw duplex TTY
+stream once the `101 UPGRADED` header block had been read past. That workaround
+is gone along with the rest of the app's dockerode usage — Go has no such bug,
+`internal/dockerapi`'s `CreateExec`/`StartExecHijacked`
+(`internal/dockerapi/exec.go`) do the Engine's normal hijack protocol directly
+over the daemon's unix socket with the standard library's own connection
+hijacking, no manual HTTP framing needed, and `internal/workerapi/terminal.go`'s
+`TerminalHub.Open`/`pump` are what actually run it. **Verified against a real
+container end-to-end** (real command in, real output back) round-tripping
+through the worker's control API before wiring it into the app's routes.
 
 Audit trail is session-level, not per-keystroke: open/close are logged via the
-standard `Logger` pattern (service/container/session/user ids), individual
+standard `Logger` pattern on the app side (service/container/session/user ids)
+and `log.Printf` on the worker side (session id, container id), individual
 commands typed into the shell are not. That's a deliberate scope cut, not an
 oversight, logging raw TTY bytes verbatim would be noisy and wouldn't cleanly
 map to discrete commands anyway (arrow-key history, tab-completion, etc. all
@@ -933,15 +982,18 @@ connection-type toggle), both real build servers:
 
 `RemoteHostDTO.resolveBuildTarget(hostId)` is the one place a host id becomes a
 `RemoteExecutionTarget` (`{kind: "local"}` / `{kind: "docker", connection}` /
-`{kind: "agent", connection}`); `deploy.service.ts` branches on that `kind` to
-route the build through `DockerService` or `AgentClientService`.
+`{kind: "agent", connection}`); `deploy.service.ts` only resolves which kind of
+target this deploy has, `deploy/worker-spec.ts`'s `buildServerSpec` folds the
+target into the spec handed to the Go worker, and
+`internal/jobs/deploy/build.go` is what actually opens the connection and runs
+the build — for `kind: "docker"` that's `internal/dockerapi.NewRemote`
+(`tcp://`, optionally TLS), for `kind: "agent"` its own `POST /v1/build`.
 `RemoteHostDTO.listBuildServers()` is what the Source tab's build-server picker
 reads : every registered host qualifies, there's no per-host opt-in flag.
-`services/docker/client.ts`'s `getDocker(remote?: RemoteHostConnection)`
-(exposed as `DockerService.getDocker`, see Docker integration below) caches one
-dockerode client per host (keyed by remote host id, `"local"` for the default)
-in the same HMR-safe `globalThis` pattern as the db singleton, for `"docker"`
-hosts.
+`services/docker/client.ts` (see Docker integration above) only keeps the
+`RemoteHostConnection` shape for a `"docker"` host now, it doesn't open a client
+itself; `RemoteHostDTO.toConnection()` decrypts the stored TLS material into
+what `internal/dockerapi.RemoteHost` expects.
 
 **A build server doesn't need a cache registry.** The built image lands on the
 build server's own daemon, so it has to be brought across: with a registry

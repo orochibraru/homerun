@@ -18,13 +18,14 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - app_data:/app/data
       - traefik_dynamic:/app/traefik-dynamic
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
       TRAEFIK_DYNAMIC_CONFIG_DIR: /app/traefik-dynamic
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}
+      WORKER_URL: ${WORKER_URL:-http://worker:7430}
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
     healthcheck:
       interval: 30s
       retries: 3

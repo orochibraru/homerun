@@ -15,7 +15,7 @@ const logger = new Logger("Registry");
 /** The reserved token Homerun's own scan and deploy pipeline authenticates with once auth is on. */
 export const INTERNAL_USERNAME = REGISTRY_INTERNAL_USERNAME;
 
-/** What a `docker login` needs, and what skopeo/trivy/dockerode are handed internally. */
+/** What a `docker login` needs, and what skopeo/trivy and the worker's own pulls are handed internally. */
 export interface RegistryCredentials {
 	password: string;
 	username: string;

@@ -12,5 +12,9 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:-}
       DOCKER_SOCKET_PATH: /var/run/docker.sock
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+      WORKER_PORT: ${WORKER_PORT:-7430}
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
+    expose:
+      - "${WORKER_PORT:-7430}"
     healthcheck:
       disable: true

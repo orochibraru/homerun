@@ -104,9 +104,11 @@ if (wantsIntegrationTests()) {
 				await runMigrations(pg.databaseUrl);
 
 				stepLog("Building and starting the Go worker...");
+				const workerPort = getFreePort();
 				const worker = spawnWorker({
 					authSecret: TEST_AUTH_SECRET,
 					databaseUrl: pg.databaseUrl,
+					port: workerPort,
 				});
 				stopFns.push(worker.stop);
 				rawProcs.push(worker.proc);
@@ -135,6 +137,7 @@ if (wantsIntegrationTests()) {
 					databaseUrl: pg.databaseUrl,
 					origin,
 					port: appPort,
+					workerUrl: `http://localhost:${workerPort}`,
 				});
 				stopFns.push(app.stop);
 				rawProcs.push(app.proc);

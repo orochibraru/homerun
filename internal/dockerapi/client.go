@@ -18,10 +18,21 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
+
+	"github.com/orochibraru/homerun/internal/logging"
 )
+
+// engineScope labels every Docker Engine call in the log, so a deploy that
+// misbehaves can be read as the sequence of calls it actually made.
+const engineScope = "docker"
 
 // Client is a Docker Engine API client bound to one daemon socket.
 type Client struct {
+	// dial opens a raw connection to the same daemon the HTTP client reaches,
+	// for the endpoints that hand back a hijacked duplex stream instead of a
+	// response body (an interactive exec, see Hijack).
+	dial func(ctx context.Context) (net.Conn, error)
 	http *http.Client
 	// Base is the client's base URL ("http://docker" over a unix socket, or an
 	// httptest server's URL in a test).
@@ -30,19 +41,31 @@ type Client struct {
 
 // New builds a client for the daemon listening on socketPath.
 func New(socketPath string) *Client {
+	dial := func(ctx context.Context) (net.Conn, error) {
+		var dialer net.Dialer
+		return dialer.DialContext(ctx, "unix", socketPath)
+	}
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			var dialer net.Dialer
-			return dialer.DialContext(ctx, "unix", socketPath)
+			return dial(ctx)
 		},
 	}
-	return &Client{http: &http.Client{Transport: transport}, Base: "http://docker"}
+	return &Client{dial: dial, http: &http.Client{Transport: transport}, Base: "http://docker"}
 }
 
 // NewWithHTTP builds a client over an arbitrary HTTP client and base URL, for
 // tests that stand an httptest server in for the daemon.
 func NewWithHTTP(client *http.Client, base string) *Client {
-	return &Client{http: client, Base: strings.TrimRight(base, "/")}
+	base = strings.TrimRight(base, "/")
+	dial := func(ctx context.Context) (net.Conn, error) {
+		parsed, err := url.Parse(base)
+		if err != nil {
+			return nil, err
+		}
+		var dialer net.Dialer
+		return dialer.DialContext(ctx, "tcp", parsed.Host)
+	}
+	return &Client{dial: dial, http: client, Base: base}
 }
 
 // AuthConfig is registry credentials, sent as the X-Registry-Auth header.
@@ -112,10 +135,15 @@ func (c *Client) request(
 		}
 		request.Header.Set("X-Registry-Auth", base64.URLEncoding.EncodeToString(encoded))
 	}
+	started := time.Now()
 	response, err := c.http.Do(request)
 	if err != nil {
+		logging.Debugf(engineScope, "%s %s failed after %s: %s",
+			method, path, time.Since(started).Round(time.Millisecond), err)
 		return nil, err
 	}
+	logging.Debugf(engineScope, "%s %s - %d (%s)",
+		method, path, response.StatusCode, time.Since(started).Round(time.Millisecond))
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		return response, nil
 	}

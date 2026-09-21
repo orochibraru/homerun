@@ -4,7 +4,6 @@ import type { ContainerStatus } from "$lib/types";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { RegistryAuth, VolumeMountParams } from "./containers.ts";
 import { buildContainerLabels, SERVICE_ID_LABEL } from "./labels.ts";
-import { toLogStream } from "./log-stream.ts";
 import {
 	type ContainerRuntimeParams,
 	capabilityName,
@@ -179,6 +178,32 @@ export function swarmServiceTemplate(params: CreateSwarmServiceParams) {
 	};
 }
 
+interface DaemonInfo {
+	SecurityOptions?: string[];
+	ServerVersion?: string;
+	Swarm?: {
+		ControlAvailable?: boolean;
+		LocalNodeState?: string;
+		NodeID?: string;
+	};
+}
+
+export interface SwarmTask {
+	DesiredState?: string;
+	ID?: string;
+	NodeID?: string;
+	ServiceID?: string;
+	Slot?: number;
+	Status?: {
+		ContainerStatus?: { ContainerID?: string; ExitCode?: number } | null;
+		Err?: string;
+		Message?: string;
+		State?: string;
+		Timestamp?: string;
+	};
+	UpdatedAt?: string | null;
+}
+
 export interface SwarmReadiness {
 	network: string;
 	overlayReady: boolean;
@@ -212,7 +237,7 @@ export interface CreateSwarmServiceParams {
 
 /**
  * Docker Swarm equivalent of docker/containers.ts, for services deployed
- * under `instanceSettings.orchestrationMode === "swarm"` : a dockerode
+ * under `instanceSettings.orchestrationMode === "swarm"` : a swarm
  *Service* (replicated, self-healing, scalable) instead of a single
  * container. Deliberately local-only for v1 : this app's Remote Hosts
  * feature (an arbitrary separate Docker daemon) doesn't apply the same way
@@ -233,7 +258,7 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 	return class DockerSwarmService extends Base {
 		/** Whether this daemon is already a swarm manager. */
 		async isSwarmActive(): Promise<boolean> {
-			const info = await this.getDocker().info();
+			const info = await this.worker.get<DaemonInfo>("/v1/info");
 			return info?.Swarm?.LocalNodeState === "active";
 		}
 
@@ -244,7 +269,7 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 		 * @throws When this daemon runs rootless.
 		 */
 		async assertSwarmCapableDaemon(): Promise<void> {
-			const info = await this.getDocker().info();
+			const info = await this.worker.get<DaemonInfo>("/v1/info");
 			const reason = swarmUnavailableReason(info?.SecurityOptions);
 			if (reason) {
 				throw new Error(reason);
@@ -257,8 +282,8 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 		 * the daemon can't be reached, since that isn't a reason to refuse.
 		 */
 		async swarmModeUnavailableReason(): Promise<string | null> {
-			const info = await this.getDocker()
-				.info()
+			const info = await this.worker
+				.get<DaemonInfo>("/v1/info")
 				.catch(() => null);
 			return info ? swarmUnavailableReason(info.SecurityOptions) : null;
 		}
@@ -269,8 +294,8 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 		 * reached.
 		 */
 		async detectInitialOrchestrationMode(): Promise<"standalone" | "swarm"> {
-			const info = await this.getDocker()
-				.info()
+			const info = await this.worker
+				.get<DaemonInfo>("/v1/info")
 				.catch(() => null);
 			return info ? initialOrchestrationMode(info) : "standalone";
 		}
@@ -283,10 +308,12 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 		 * nothing.
 		 */
 		async initSwarm(): Promise<boolean> {
-			if (await this.isSwarmActive()) {
+			const { alreadyActive } = await this.worker.post<{
+				alreadyActive: boolean;
+			}>("/v1/swarm/init");
+			if (alreadyActive) {
 				return false;
 			}
-			await this.getDocker().swarmInit({ ListenAddr: "0.0.0.0:2377" });
 			logger.info("Swarm initialised on this host");
 			return true;
 		}
@@ -299,20 +326,22 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 		 */
 		async swarmReadiness(): Promise<SwarmReadiness> {
 			const network = swarmNetworkName();
-			const docker = this.getDocker();
 			const [active, networks] = await Promise.all([
 				this.isSwarmActive().catch(() => false),
-				docker.listNetworks().catch(() => []),
+				this.worker
+					.get<{ Name: string }[]>("/v1/networks")
+					.catch(() => [] as { Name: string }[]),
 			]);
-			const traefik = await this.getDocker()
-				.listContainers({ all: true })
+			const traefik = await this.worker
+				.get<{ Id: string; Image: string }[]>("/v1/containers", { all: "1" })
 				.then((rows) => rows.find((row) => row.Image.startsWith("traefik")))
 				.catch(() => undefined);
-			const cmd = traefik
-				? await docker
-						.getContainer(traefik.Id)
-						.inspect()
-						.then((info) => info.Config.Cmd ?? [])
+			const cmd: string[] = traefik
+				? await this.worker
+						.get<{ Config?: { Cmd?: string[] | null } }>(
+							`/v1/containers/${traefik.Id}/inspect`,
+						)
+						.then((info) => info.Config?.Cmd ?? [])
 						.catch(() => [])
 				: [];
 			return {
@@ -330,25 +359,15 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 
 		/** Idempotent : swarm networks are cluster-wide, created once and reused by every swarm-mode service. */
 		async ensureSwarmNetwork(name: string): Promise<void> {
-			const docker = this.getDocker();
-			try {
-				await docker.createNetwork({
-					Attachable: true,
-					Driver: "overlay",
-					Name: name,
-				});
-				logger.info(`Swarm overlay network created: ${name}`);
-			} catch (err) {
-				const message = err instanceof Error ? err.message : String(err);
-				if (!message.includes("already exists")) {
-					throw err;
-				}
-			}
+			await this.worker.post<{ ok: boolean }>("/v1/swarm/overlay", { name });
+			logger.info(`Swarm overlay network ready: ${name}`);
 		}
 
-		/** Removes a swarm service via the Docker API. */
+		/** Removes a swarm service. One already gone isn't an error. */
 		async removeSwarmService(swarmServiceId: string): Promise<void> {
-			await this.getDocker().getService(swarmServiceId).remove();
+			await this.worker.delete<{ ok: boolean }>(
+				`/v1/swarm/services/${swarmServiceId}`,
+			);
 		}
 
 		/** "Stop"/"start" in swarm terms : scale replicas to 0, or back up to the service's configured count. */
@@ -356,57 +375,27 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 			swarmServiceId: string,
 			replicas: number,
 		): Promise<void> {
-			const service = this.getDocker().getService(swarmServiceId);
-			const inspected = await service.inspect();
-			await service.update({
-				...inspected.Spec,
-				Mode: { Replicated: { Replicas: replicas } },
-				version: inspected.Version.Index,
-			});
+			await this.worker.post<{ ok: boolean }>(
+				`/v1/swarm/services/${swarmServiceId}/scale`,
+				{ replicas },
+			);
 		}
 
 		/** "Restart" in swarm terms : a force-update, which recreates every task's container even though the spec is unchanged. */
 		async restartSwarmService(swarmServiceId: string): Promise<void> {
-			const service = this.getDocker().getService(swarmServiceId);
-			const inspected = await service.inspect();
-			await service.update({
-				...inspected.Spec,
-				TaskTemplate: {
-					...inspected.Spec.TaskTemplate,
-					ForceUpdate: (inspected.Spec.TaskTemplate.ForceUpdate ?? 0) + 1,
-				},
-				version: inspected.Version.Index,
-			});
+			await this.worker.post<{ ok: boolean }>(
+				`/v1/swarm/services/${swarmServiceId}/restart`,
+			);
 		}
 
 		/** Aggregate status across every task of the service, same ContainerStatus vocabulary standalone mode uses. */
 		async inspectSwarmServiceStatus(
 			swarmServiceId: string,
 		): Promise<ContainerStatus> {
-			const docker = this.getDocker();
-			let spec: { Mode?: { Replicated?: { Replicas?: number } } };
-			try {
-				spec = (await docker.getService(swarmServiceId).inspect()).Spec;
-			} catch {
-				return "stopped";
-			}
-			if ((spec.Mode?.Replicated?.Replicas ?? 0) === 0) {
-				return "stopped";
-			}
-			const tasks = await docker.listTasks({
-				filters: JSON.stringify({ service: [swarmServiceId] }),
-			});
-			const states = tasks.map((t) => t.Status?.State as string);
-			if (states.some((s) => s === "running")) {
-				return "running";
-			}
-			if (states.some((s) => s === "failed" || s === "rejected")) {
-				return "failed";
-			}
-			if (states.length === 0) {
-				return "pending";
-			}
-			return "starting";
+			const data = await this.worker.get<{ status: ContainerStatus }>(
+				`/v1/swarm/services/${swarmServiceId}/status`,
+			);
+			return data.status;
 		}
 
 		/**
@@ -418,15 +407,12 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 		async getRunningTaskContainerId(
 			swarmServiceId: string,
 		): Promise<string | null> {
-			const docker = this.getDocker();
 			const [tasks, info] = await Promise.all([
-				docker.listTasks({
-					filters: JSON.stringify({
-						"desired-state": ["running"],
-						service: [swarmServiceId],
-					}),
-				}),
-				docker.info(),
+				this.worker.get<SwarmTask[]>(
+					`/v1/swarm/services/${swarmServiceId}/tasks`,
+					{ running: "1" },
+				),
+				this.worker.get<DaemonInfo>("/v1/info"),
 			]);
 			const localNodeId = info?.Swarm?.NodeID;
 			const running = tasks.find(
@@ -437,22 +423,17 @@ export function DockerSwarmMixin<TBase extends Constructor<BaseDockerService>>(
 			return running?.Status?.ContainerStatus?.ContainerID ?? null;
 		}
 
-		/** Same Web ReadableStream shape and options as containers.ts's streamLogs, so a logs route doesn't need to know which mode it's in. */
-		async streamSwarmServiceLogs(
+		/** Same Web ReadableStream shape and options as containers.ts's streamLogs, so a logs route doesn't need to know which mode it's in. The worker demuxes the frames, so what comes back is already plain text. */
+		streamSwarmServiceLogs(
 			swarmServiceId: string,
 			opts?: { tail?: number; follow?: boolean },
 		): Promise<ReadableStream<Uint8Array>> {
-			const logs = await this.getDocker()
-				.getService(swarmServiceId)
-				.logs({
-					follow: opts?.follow !== false,
-					stderr: true,
-					stdout: true,
-					tail: opts?.tail ?? 200,
-				});
-			return toLogStream(
-				logs as Buffer | (NodeJS.ReadableStream & { destroy: () => void }),
-			);
+			return this.worker.stream(`/v1/swarm/services/${swarmServiceId}/logs`, {
+				query: {
+					follow: opts?.follow === false ? "0" : "1",
+					tail: String(opts?.tail ?? 200),
+				},
+			});
 		}
 	};
 }

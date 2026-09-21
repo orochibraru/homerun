@@ -66,14 +66,16 @@ is documented in
    `--providers.swarm.network=homerun-swarm`,
    `--providers.swarm.refreshSeconds=2` flags the app's `enableSwarmMode`
    applies, so the app's boot-time check finds nothing to change and never
-   recreates Traefik. The app gets `DOCKER_SOCKET_PATH: /var/run/docker.sock`.
+   recreates Traefik. The worker gets `DOCKER_SOCKET_PATH: /var/run/docker.sock`
+   and the socket mount; the app gets neither, only `WORKER_URL` and
+   `WORKER_TOKEN`, and asks the worker over its control API.
 
 The app picks swarm mode on its own the first time it boots against a fresh
 database on a rootful swarm manager (see `OrchestrationService.applyOnBoot`);
 nothing is seeded by the installer, and an existing database keeps its mode.
 
 The trade-off: the Docker daemon runs as root, so anything that reaches its
-socket, the app included, is root on the host.
+socket, the worker included, is root on the host.
 
 `--docker=rootless` (`--mode=full`) and `--mode=agent`:
 

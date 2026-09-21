@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/orochibraru/homerun/internal/jobs"
+	"github.com/orochibraru/homerun/internal/logging"
 	"github.com/orochibraru/homerun/internal/secrets"
 )
+
+// scope labels every line this file logs.
+const scope = "worker"
 
 // Worker leases and executes jobs from a Store until its Run context is
 // cancelled.
@@ -57,7 +60,7 @@ func (w *Worker) Run(ctx context.Context) {
 	case <-done:
 		return
 	case <-time.After(w.ShutdownGrace):
-		log.Printf("[homerun-worker] in-flight jobs outlived the %s shutdown grace, cancelling them.", w.ShutdownGrace)
+		logging.Warnf(scope, "in-flight jobs outlived the %s shutdown grace, cancelling them", w.ShutdownGrace)
 		cancelExec()
 	}
 	<-done
@@ -75,9 +78,14 @@ func (w *Worker) fill(ctx, execCtx context.Context, slots chan struct{}, inFligh
 		if err != nil || job == nil {
 			<-slots
 			w.reportClaimError(err)
+			if err == nil {
+				logging.Debugf(scope, "nothing to claim (%d/%d slots busy)", len(slots), w.Concurrency)
+			}
 			return
 		}
 		w.lastClaimErr = ""
+		logging.Debugf(scope, "claimed job=%s type=%s attempt=%d (%d/%d slots busy)",
+			job.ID, job.JobType, job.Attempts, len(slots), w.Concurrency)
 		inFlight.Add(1)
 		go func() {
 			defer inFlight.Done()
@@ -94,7 +102,7 @@ func (w *Worker) reportClaimError(err error) {
 		return
 	}
 	w.lastClaimErr = err.Error()
-	log.Printf("[homerun-worker] couldn't claim a job: %s", err)
+	logging.Errorf(scope, "couldn't claim a job: %s", err)
 }
 
 // execute runs one leased job with a heartbeat, then hands the outcome back
@@ -102,7 +110,8 @@ func (w *Worker) reportClaimError(err error) {
 // taken over) cancels the execution and writes nothing; a shutdown that
 // cancels it releases the lease instead of recording a failure.
 func (w *Worker) execute(ctx, execCtx context.Context, job *ClaimedJob) {
-	log.Printf("[homerun-worker] job started: type=%s job=%s attempt=%d", job.JobType, job.ID, job.Attempts)
+	started := time.Now()
+	logging.Infof(scope, "job started: type=%s job=%s attempt=%d", job.JobType, job.ID, job.Attempts)
 	runCtx, cancel := context.WithCancel(execCtx)
 	defer cancel()
 
@@ -122,26 +131,32 @@ func (w *Worker) execute(ctx, execCtx context.Context, job *ClaimedJob) {
 	defer done()
 	select {
 	case <-lost:
-		log.Printf("[homerun-worker] job %s is no longer leased to this worker, dropping its result.", job.ID)
+		logging.Warnf(scope, "job %s is no longer leased to this worker after %s, dropping its result",
+			job.ID, took(started))
 		return
 	default:
 	}
 	if execErr != nil && execCtx.Err() != nil && ctx.Err() != nil {
-		log.Printf("[homerun-worker] job %s interrupted by shutdown, releasing it for re-execution.", job.ID)
+		logging.Infof(scope, "job %s interrupted by shutdown after %s, releasing it for re-execution",
+			job.ID, took(started))
 		if err := w.Store.Release(bookkeeping, job.ID, w.ID); err != nil {
-			log.Printf("[homerun-worker] couldn't release job %s: %s", job.ID, err)
+			logging.Errorf(scope, "couldn't release job %s: %s", job.ID, err)
 		}
 		return
 	}
 	if err := w.Store.Finish(bookkeeping, job.ID, w.ID, result, execErr); err != nil {
-		log.Printf("[homerun-worker] couldn't record job %s's outcome: %s", job.ID, err)
+		logging.Errorf(scope, "couldn't record job %s's outcome: %s", job.ID, err)
 		return
 	}
 	if execErr != nil {
-		log.Printf("[homerun-worker] job failed: type=%s job=%s : %s", job.JobType, job.ID, execErr)
+		logging.Errorf(scope, "job failed: type=%s job=%s after=%s : %s",
+			job.JobType, job.ID, took(started), execErr)
 		return
 	}
-	log.Printf("[homerun-worker] job executed: type=%s job=%s", job.JobType, job.ID)
+	logging.Infof(scope, "job executed: type=%s job=%s after=%s", job.JobType, job.ID, took(started))
+	if logging.Enabled(logging.LevelDebug) {
+		logging.Debugf(scope, "job %s returned %d result field(s)", job.ID, len(result))
+	}
 }
 
 // heartbeat refreshes the lease every HeartbeatInterval until stop closes.
@@ -158,14 +173,16 @@ func (w *Worker) heartbeat(ctx context.Context, jobID string, cancel context.Can
 		}
 		ours, err := w.Store.Heartbeat(ctx, jobID, w.ID)
 		if err != nil {
-			log.Printf("[homerun-worker] heartbeat for job %s failed: %s", jobID, err)
+			logging.Warnf(scope, "heartbeat for job %s failed: %s", jobID, err)
 			continue
 		}
 		if !ours {
+			logging.Warnf(scope, "lost the lease on job %s", jobID)
 			close(lost)
 			cancel()
 			return
 		}
+		logging.Debugf(scope, "heartbeat ok for job %s", jobID)
 	}
 }
 
@@ -177,6 +194,7 @@ func (w *Worker) dispatch(ctx context.Context, job *ClaimedJob) (result map[stri
 			result, err = nil, fmt.Errorf("executor panicked: %v", recovered)
 		}
 	}()
+	logging.Debugf(scope, "dispatching job %s to the %s executor", job.ID, job.JobType)
 	executor, ok := w.Executors[job.JobType]
 	if !ok {
 		return nil, fmt.Errorf("the worker has no executor for job type %q", job.JobType)
@@ -186,4 +204,10 @@ func (w *Worker) dispatch(ctx context.Context, job *ClaimedJob) (result map[stri
 		return nil, fmt.Errorf("couldn't decrypt the job spec (is AUTH_SECRET the same as the app's?): %w", err)
 	}
 	return executor(ctx, w.NewJob(job, json.RawMessage(spec)))
+}
+
+// took renders how long a job ran, rounded to something a log line can be
+// scanned for rather than nanoseconds.
+func took(started time.Time) time.Duration {
+	return time.Since(started).Round(time.Millisecond)
 }

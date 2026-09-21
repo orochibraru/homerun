@@ -88,6 +88,27 @@ Two more exist and you can usually ignore them: `PORT` (default `3000`, the port
 the app listens on inside its container) and `CONFIG_FILE` (default
 `./homerun.yaml`, where the optional file below lives).
 
+### The app and the worker
+
+Homerun's Docker access lives in a separate `worker` container, not the
+dashboard container itself: the app asks the worker for everything from a
+container's status to the web terminal, over a small internal HTTP API. Every
+compose file in this repo already wires the two together with working defaults,
+so you only need these if you're running them apart from each other or want more
+control:
+
+| Var            | Default                    | Meaning                                                                                                                                                   |
+| -------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WORKER_URL`   | `http://worker:7430`       | Where the app reaches the worker. Change this if the worker runs on a different host or under a different service name.                                   |
+| `WORKER_TOKEN` | derived from `AUTH_SECRET` | The shared bearer token the app presents to the worker. Leave it unset (both sides derive the same one automatically) unless you want to set it yourself. |
+| `WORKER_PORT`  | `7430`                     | The port the worker listens on for that API. Set on the worker's own environment, not the app's.                                                          |
+
+Nothing deploys, no container status refreshes and the web terminal won't open
+while the app can't reach the worker, so if something feels stuck, check the
+dashboard's setup diagnostics first (see
+[The dashboard](dashboard.md#setup-diagnostics)): it reports the worker and the
+Docker socket it fronts as two separate checks.
+
 ## Compose-only variables
 
 Read by `compose.prod.yaml` itself, not by the app, so they only apply if you're

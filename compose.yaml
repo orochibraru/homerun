@@ -36,6 +36,12 @@ services:
     extends:
       file: tools/compose/worker.compose.yaml
       service: worker
+    # Published here and nowhere else: in this file the app runs on the host
+    # (bun run dev), so it reaches the control API over localhost rather than
+    # the compose network. Every other compose file keeps the port on the
+    # internal network, where only the app container needs it.
+    ports:
+      - "${WORKER_PORT:-7430}:${WORKER_PORT:-7430}"
     depends_on:
       postgres:
         condition: service_healthy

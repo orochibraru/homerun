@@ -32,6 +32,10 @@ export interface SpawnAppOptions {
 	databaseUrl: string;
 	origin: string;
 	port: number;
+	// The spawned worker's Docker control API. The app holds no Docker socket
+	// of its own any more, so without this it can't read a container's status,
+	// stream logs or open a terminal.
+	workerUrl: string;
 }
 
 export async function spawnApp(options: SpawnAppOptions): Promise<SpawnedApp> {
@@ -44,6 +48,7 @@ export async function spawnApp(options: SpawnAppOptions): Promise<SpawnedApp> {
 			DATABASE_URL: options.databaseUrl,
 			ORIGIN: options.origin,
 			PORT: String(options.port),
+			WORKER_URL: options.workerUrl,
 		},
 		stderr: "pipe",
 		stdout: "pipe",

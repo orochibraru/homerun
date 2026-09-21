@@ -16,6 +16,8 @@ import (
 	"github.com/orochibraru/homerun/internal/buildinfo"
 	"github.com/orochibraru/homerun/internal/dockerapi"
 	"github.com/orochibraru/homerun/internal/dockersocket"
+	"github.com/orochibraru/homerun/internal/hoststats"
+	"github.com/orochibraru/homerun/internal/httpapi"
 )
 
 const helpText = `
@@ -49,7 +51,7 @@ func Main() {
 // run starts the agent and blocks until it's shut down.
 func run(config Config) error {
 	config.DockerSocketPath = dockersocket.Resolve(config.DockerSocketPath)
-	token, source, err := ResolveToken(config.ExplicitToken, config.TokenFile)
+	token, source, err := httpapi.ResolveToken(config.ExplicitToken, config.TokenFile)
 	if err != nil {
 		return fmt.Errorf("couldn't resolve the agent token: %w", err)
 	}
@@ -61,7 +63,7 @@ func run(config Config) error {
 		return fmt.Errorf("Docker isn't reachable at %s: %w", config.DockerSocketPath, err)
 	}
 
-	server := NewServer(token, docker, NewBuilder(docker, config.DockerSocketPath), NewStatsSampler())
+	server := NewServer(token, docker, NewBuilder(docker, config.DockerSocketPath), hoststats.NewStatsSampler())
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
 	if err != nil {
 		return err
@@ -114,20 +116,20 @@ func serveUntilSignalled(httpServer *http.Server, listener net.Listener, timeout
 
 // PrintBanner shows the effective configuration, and the token itself unless it
 // came from the environment, where whoever set it already has it.
-func PrintBanner(config Config, token string, source TokenSource) {
+func PrintBanner(config Config, token string, source httpapi.TokenSource) {
 	fmt.Println("")
 	fmt.Println("  Homerun Agent is running.")
 	fmt.Printf("  Listening on:   http://0.0.0.0:%d\n", config.Port)
 	fmt.Printf("  Docker socket:  %s\n", config.DockerSocketPath)
 	switch source {
-	case TokenFromEnv:
+	case httpapi.TokenFromEnv:
 		fmt.Println("  Token source:   AGENT_TOKEN env var")
-	case TokenGenerated:
+	case httpapi.TokenGenerated:
 		fmt.Printf("  Token source:   generated just now (%s)\n", config.TokenFile)
 	default:
 		fmt.Printf("  Token source:   persisted (%s)\n", config.TokenFile)
 	}
-	if source != TokenFromEnv {
+	if source != httpapi.TokenFromEnv {
 		fmt.Println("")
 		fmt.Printf("  Agent token:    %s\n", token)
 		fmt.Println("  Keep this token secret : it's a full-access credential for this host's Docker daemon.")
