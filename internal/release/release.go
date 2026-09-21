@@ -77,24 +77,37 @@ func ImageRef(version string) string {
 // LatestTag asks GitHub for the newest published release's tag. A draft isn't
 // returned, so a release whose assets are still uploading is never offered.
 func LatestTag(client *http.Client) (string, error) {
-	response, err := client.Get(fmt.Sprintf("%s/repos/%s/releases/latest", APIBase, Repo))
+	release, err := fetchRelease(client, "latest")
 	if err != nil {
-		return "", fmt.Errorf("Couldn't check for updates: %w", err)
+		return "", err
+	}
+	return release.TagName, nil
+}
+
+// githubRelease is as much of a GitHub release as the update checks read.
+type githubRelease struct {
+	Name    string `json:"name"`
+	TagName string `json:"tag_name"`
+}
+
+// fetchRelease reads one release, "latest" or "tags/<tag>".
+func fetchRelease(client *http.Client, which string) (githubRelease, error) {
+	var found githubRelease
+	response, err := client.Get(fmt.Sprintf("%s/repos/%s/releases/%s", APIBase, Repo, which))
+	if err != nil {
+		return found, fmt.Errorf("Couldn't check for updates: %w", err)
 	}
 	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return "", fmt.Errorf(
+		return found, fmt.Errorf(
 			"Couldn't check for updates: %d %s",
 			response.StatusCode, http.StatusText(response.StatusCode),
 		)
 	}
-	var latest struct {
-		TagName string `json:"tag_name"`
+	if err := json.NewDecoder(response.Body).Decode(&found); err != nil {
+		return found, fmt.Errorf("Couldn't read the latest release: %w", err)
 	}
-	if err := json.NewDecoder(response.Body).Decode(&latest); err != nil {
-		return "", fmt.Errorf("Couldn't read the latest release: %w", err)
-	}
-	return latest.TagName, nil
+	return found, nil
 }
 
 // DownloadGzipped fetches a gzipped release asset, unpacks it into a new

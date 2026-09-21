@@ -66,16 +66,29 @@ prerelease tagged `canary` that its `canary` job deletes (`--cleanup-tag`) and
 recreates at the new SHA every run, uploading through
 `upload-release-assets.ts canary --prerelease` (which publishes it with
 `--latest=false`). Everything stable reads `releases/latest` or `:latest`, which
-a prerelease never is, so nothing stable moves. **A stable release is the manual
-`release.yaml`** (`workflow_dispatch`, `main` only, same `publish` concurrency
-group): it refuses unless the `canary` tag's commit matches `main` apart from
-docs paths (the same pattern list as `paths-ignore`), dry-runs `releaser` for
-the version (failing when nothing is releasable), rebuilds the binaries with
-that version, retags the canary `<sha>` images as `vX.Y.Z`, `latest` and
-`canary` (the app one through the same `FROM`+`ENV HOMERUN_APP_VERSION` build as
-`promote`, so a canary instance lands on the stable version and stops seeing the
-notice), then runs `releaser` for real and uploads. Nothing is rebuilt or
-re-tested at release: what ships is exactly what ran as canary.
+a prerelease never is, so nothing stable moves.
+
+**A stable release is merging the release PR.** The `canary` job's last step
+runs `releaser` (v1.5.0+) with `release-pr: true`, which force-pushes a
+`chore(release): X.Y.Z` commit (`CHANGELOG.md` + `package.json` version, built
+on top of `main`) to `releaser/release` and opens or updates its PR, with
+`RELEASE_TOKEN` so the PR's own checks run (a `github.token` PR triggers no
+workflows). `pull_request.yaml`'s `changes` job treats that PR as docs-only when
+nothing but `CHANGELOG.md` and `package.json`'s version changed, so it doesn't
+rebuild anything. When the squash lands, `publish.yaml`'s `resolve` job spots
+the `chore(release): X.Y.Z (#N)` subject and runs the `stable*` jobs **instead
+of** the canary pipeline: `stable` refuses unless the `canary` tag's commit
+matches this one apart from docs paths and the release bump, and dry-runs
+`releaser` (`release-pr` mode reads the version off the release commit);
+`stable-binaries` rebuilds the binaries with that version; `stable-images`
+retags the canary `<sha>` images as `vX.Y.Z`, `latest` and `canary` (the app one
+through the same `FROM`+`ENV HOMERUN_APP_VERSION` build as `promote`, so a
+canary instance lands on the stable version and stops seeing the notice);
+`stable-release` runs `releaser` for real, which tags the release commit and
+drafts the release, then uploads. Nothing is rebuilt or re-tested at release:
+what ships is exactly what ran as canary. The release commit has no `[skip ci]`
+(`release-pr` mode needs that push to run), which is why the subject check
+exists.
 
 **A merge to `main` doesn't rebuild what the PR already tested.**
 `publish.yaml`'s `resolve` job looks up the merged PR and promotes its `pr-<n>`
@@ -170,27 +183,29 @@ conventional-commit messages the same way (this repo's commits already follow
 type bumps only the patch digit; there's no automatic minor/major here). It runs
 three times: `publish.yaml`'s `version` job dry-runs it (`dry-run: "true"`)
 purely to read the next `version` for the canary stamp (falling back to
-`package.json`'s version when nothing is releasable); `release.yaml`'s `resolve`
-job dry-runs it for the stable version and tag; its `release` job runs it for
-real at the end, with `draft: "true"` and
-`prepare: bunx prettier --write CHANGELOG.md`. One version number covers the
-whole repo: `releaser` bumps `package.json`'s `version` field and `CHANGELOG.md`
-itself (none of the three `cmd/` Go programs carry a `package.json` of their own
-to bump, they read the root one's version directly at build time, stamped in via
-`-ldflags` into `internal/buildinfo.Version`, see `scripts/build-packages.ts`
-below). `scripts/build-packages.ts` builds every release binary: all three
-commands (`cli`, `installer`, `worker`) are Go, so every target cross-compiles
-from any one machine (`go build` with `GOOS`/`GOARCH` set, exact, unlike Bun's
-own cross-compilation — see Homerun CLI in `api-and-cli.md`): `cli` for all four
-targets (`amd64`/`arm64`/`darwin-amd64`/`darwin-arm64`), `installer` and
-`worker` for `amd64`/`arm64` Linux only, since both only ever run on the Linux
-host they manage (`worker`'s Linux-only build covers its agent mode too, see
-Homerun Worker's agent mode below). Eight binaries total, so
+`package.json`'s version when nothing is releasable); the `canary` job runs it
+for real with `release-pr: true` and
+`prepare: bunx prettier --write CHANGELOG.md` to keep the release PR current;
+the `stable` job dry-runs it for the stable version and tag, and
+`stable-release` runs it for real with `draft: "true"`. One version number
+covers the whole repo: `releaser` bumps `package.json`'s `version` field and
+`CHANGELOG.md` itself (none of the three `cmd/` Go programs carry a
+`package.json` of their own to bump, they read the root one's version directly
+at build time, stamped in via `-ldflags` into `internal/buildinfo.Version`, see
+`scripts/build-packages.ts` below). `scripts/build-packages.ts` builds every
+release binary: all three commands (`cli`, `installer`, `worker`) are Go, so
+every target cross-compiles from any one machine (`go build` with
+`GOOS`/`GOARCH` set, exact, unlike Bun's own cross-compilation — see Homerun CLI
+in `api-and-cli.md`): `cli` for all four targets
+(`amd64`/`arm64`/`darwin-amd64`/`darwin-arm64`), `installer` and `worker` for
+`amd64`/`arm64` Linux only, since both only ever run on the Linux host they
+manage (`worker`'s Linux-only build covers its agent mode too, see Homerun
+Worker's agent mode below). Eight binaries total, so
 `scripts/upload-release-assets.ts` has something to attach.
 
 **`releaser` doesn't upload the binaries itself.** It creates the release as a
 draft (`draft: "true"`) and reports whether one actually happened
-(`steps.releaser.outputs.released`); when it did, `release.yaml`'s next step
+(`steps.releaser.outputs.released`); when it did, `stable-release`'s next step
 runs `scripts/upload-release-assets.ts "$TAG"`: one
 `gh release upload --clobber` per binary with retries, all eight concurrently,
 skipping any already uploaded at the same size, then
@@ -225,22 +240,19 @@ Docker Hub credential (`secrets.DOCKER_REGISTRY_PASSWORD`, an access token; the
 Docker Hub username is the plain `registry_username` input, since it isn't
 secret) rather than the built-in `GITHUB_TOKEN`.
 
-**`release.yaml` (and `publish.yaml`'s `canary` job) need
+**`publish.yaml`'s `canary` and `stable-release` jobs need
 `secrets.RELEASE_TOKEN`, not `GITHUB_TOKEN`**: a fine-grained PAT scoped to this
-repo (Contents + Issues + Pull requests: write). `orochibraru/releaser` pushes
-the version bump and tag straight to `main`, and a `main` ruleset blocks pushes
-from anyone but a repo admin, which `github-actions[bot]` isn't. It's threaded
-in twice, as `actions/checkout`'s `token` (git push auth) and as the action's
-own `token` input (its API calls). The `version` job's dry run takes it too, in
-**both** places: that job's output also feeds the `binaries` job's and the app
-image's baked version, so it has to actually resolve rather than silently
-falling back to a commit SHA (a real bug in the equivalent
-`semantic-release`-era job — passing the token only as `GH_TOKEN` while
-`actions/checkout` persisted the read-only default token 403'd its dry-run push
-check, the failure was swallowed by a `|| true`, the version came back empty,
-and v1.0.22 shipped reporting 1.0.21 with a permanent "update available" notice
-— is why both jobs' checkouts take `RELEASE_TOKEN` today, and why a failing dry
-run fails the job instead of silently falling back).
+repo (Contents + Issues + Pull requests: write). Nothing pushes to `main` any
+more, but `releaser` still pushes the `releaser/release` branch and the release
+tag, and opens the release PR: with the default token that PR would trigger no
+workflows, so its required `CI Gate` would never report. It's threaded in twice,
+as `actions/checkout`'s `token` (git push auth) and as the action's own `token`
+input (its API calls). The dry runs (`version`, `stable`) need no token:
+releaser v1.5.0's dry run makes no API call or push, and an empty version fails
+the `stable` job loudly rather than shipping a wrong one (a real bug in the
+`semantic-release`-era job: a swallowed 403 in its dry run returned an empty
+version, and v1.0.22 shipped reporting 1.0.21 with a permanent "update
+available" notice).
 
 **Job ids use `-`, never `:`** (`build-app`, not `build:app`). GitHub rejects a
 colon in a job id outright and refuses to run the whole workflow file; the

@@ -33,10 +33,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           files="$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename')"
           code="$(printf '%s\n' "$files" | grep -vE '^(docs/|\.agents/|\.claude/)|\.md$' || true)"
+          if [ "$HEAD_REF" = "releaser/release" ] && [ "$code" = "package.json" ] \
+            && [ "$(gh api "repos/$REPO/contents/package.json?ref=$BASE_SHA" --jq .content | base64 -d | jq -S 'del(.version)')" \
+              = "$(gh api "repos/$REPO/contents/package.json?ref=$HEAD_SHA" --jq .content | base64 -d | jq -S 'del(.version)')" ]; then
+            echo "Release PR: only CHANGELOG.md and package.json's version change, nothing to rebuild."
+            code=""
+          fi
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "$code"

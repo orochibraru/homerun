@@ -137,7 +137,9 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/in
 ```
 
 `homerun update` re-runs that from inside the binary, replacing itself with the
-latest release. `homerun --version` tells you what you have.
+latest release; `homerun update --channel canary` follows the canary builds
+instead (install one with `install.sh --version=canary`). It never downgrades.
+`homerun --version` tells you what you have.
 
 ### Logging in
 
@@ -179,7 +181,7 @@ Session management, run these once rather than per-task:
 ```bash
 homerun login --base-url <url>   # device-code login, saves an API key
 homerun logout                   # clear the saved login
-homerun update                   # self-update to the latest release
+homerun update [--channel canary] # self-update to the latest release (or canary build)
 homerun --version
 ```
 
@@ -204,6 +206,7 @@ homerun stacks list [--json]
 homerun templates list [--json]
 homerun instance status [--json]
 homerun instance update [--wait=false] [--timeout <seconds>]
+homerun instance channel stable|canary
 ```
 
 No `create`/`update` yet (`homerun update` above is the CLI's own self-updater,

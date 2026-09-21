@@ -13,11 +13,13 @@ import (
 	"github.com/orochibraru/homerun/internal/release"
 )
 
-// SelfUpdate replaces the running binary with the latest GitHub release when
-// it's newer, falling back to `sudo mv` when the install directory isn't
-// writable. Exits the process on any failure, including a platform with no
-// prebuilt binaries, which is checked before anything touches the network.
-func SelfUpdate() {
+// SelfUpdate replaces the running binary with the newest release on channel
+// ("stable" or "canary") when it's strictly newer, falling back to `sudo mv`
+// when the install directory isn't writable. Never downgrades: a canary CLI
+// updating on stable stays put until a stable release overtakes it. Exits the
+// process on any failure, including a platform with no prebuilt binaries,
+// which is checked before anything touches the network.
+func SelfUpdate(channel string) {
 	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		Fail("`homerun update` only supports Linux and macOS, the platforms prebuilt binaries are published for.")
 	}
@@ -27,11 +29,14 @@ func SelfUpdate() {
 		Fail(err.Error())
 	}
 
-	fmt.Println("Checking for updates...")
-	tag := LatestReleaseTag()
-	latestVersion := strings.TrimPrefix(tag, "v")
-	if latestVersion == buildinfo.Version {
-		fmt.Printf("Already up to date (v%s).\n", buildinfo.Version)
+	fmt.Printf("Checking for %s updates...\n", channel)
+	tag, latestVersion := LatestRelease(channel)
+	if !release.IsNewer(latestVersion, buildinfo.Version) {
+		if release.IsNewer(buildinfo.Version, latestVersion) {
+			fmt.Printf("Already up to date (v%s, ahead of %s v%s).\n", buildinfo.Version, channel, latestVersion)
+		} else {
+			fmt.Printf("Already up to date (v%s).\n", buildinfo.Version)
+		}
 		return
 	}
 
@@ -43,6 +48,26 @@ func SelfUpdate() {
 	}
 
 	fmt.Printf("Updated to v%s. Run 'homerun --version' to confirm.\n", latestVersion)
+}
+
+// LatestRelease is the tag to download from and the version it carries for
+// channel: the newest stable release, or the rolling canary prerelease.
+// Exits on failure or an unknown channel.
+func LatestRelease(channel string) (string, string) {
+	switch channel {
+	case "stable":
+		tag := LatestReleaseTag()
+		return tag, strings.TrimPrefix(tag, "v")
+	case "canary":
+		version, err := release.CanaryVersion(http.DefaultClient)
+		if err != nil {
+			Fail(err.Error())
+		}
+		return release.CanaryTag, version
+	default:
+		Fail(fmt.Sprintf("unknown channel %q: use stable or canary.", channel))
+		return "", ""
+	}
 }
 
 // LatestReleaseTag asks GitHub for the newest release's tag, exiting on failure.

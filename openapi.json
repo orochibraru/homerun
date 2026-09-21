@@ -356,6 +356,116 @@
 				"tags": ["Meta"]
 			}
 		},
+		"/instance/update/channel": {
+			"patch": {
+				"description": "Sets the release channel self-update follows, like Settings → General → Release channel. Switching from canary back to stable never downgrades: updates just stop until a stable release is newer than the running canary. Admins only.",
+				"operationId": "patch_instance_update_channel",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"additionalProperties": false,
+								"properties": {
+									"channel": {
+										"description": "stable follows stable releases; canary every build merged to main. Switching back to stable never downgrades",
+										"enum": ["stable", "canary"],
+										"type": "string"
+									}
+								},
+								"required": ["channel"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"channel": {
+											"enum": ["stable", "canary"],
+											"type": "string"
+										}
+									},
+									"required": ["channel"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Channel saved"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unknown channel"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not an admin"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Set the update channel",
+				"tags": ["Meta"]
+			}
+		},
 		"/instance/update/progress": {
 			"get": {
 				"description": "The update helper container's state and output, to follow an update started with POST /instance/update. The helper outlives the Homerun container it recreates, so this keeps answering once the new version is up; it fails for a moment while the container restarts. Admins only.",

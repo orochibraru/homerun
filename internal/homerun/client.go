@@ -1,6 +1,7 @@
 package homerun
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,15 +35,27 @@ func NewClient(config Config) *Client {
 // x-api-key is the header the instance checks first for a non-cookie caller.
 // The caller closes the body.
 func (c *Client) Send(method, path string, query url.Values) (*http.Response, error) {
+	return c.send(method, path, query, nil)
+}
+
+// send is Send with an optional JSON request body.
+func (c *Client) send(method, path string, query url.Values, body []byte) (*http.Response, error) {
 	endpoint := c.baseURL + "/api/v1" + path
 	if len(query) > 0 {
 		endpoint += "?" + query.Encode()
 	}
-	request, err := http.NewRequest(method, endpoint, nil)
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	request, err := http.NewRequest(method, endpoint, reader)
 	if err != nil {
 		return nil, err
 	}
 	request.Header.Set("x-api-key", c.apiKey)
+	if body != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
 	return c.http.Do(request)
 }
 
@@ -54,6 +67,34 @@ func (c *Client) Do(method, path string, query url.Values) ([]byte, http.Header,
 		return nil, nil, err
 	}
 	defer func() { _ = response.Body.Close() }()
+	return readResponse(response)
+}
+
+// DecodeJSON sends payload as a JSON body and decodes a 2xx answer into out.
+// A non-2xx answer is an *APIError carrying the status and body.
+func (c *Client) DecodeJSON(method, path string, payload, out any) error {
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	response, err := c.send(method, path, nil, encoded)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = response.Body.Close() }()
+	body, _, err := readResponse(response)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(body, out); err != nil {
+		return fmt.Errorf("couldn't read the instance's answer: %w", err)
+	}
+	return nil
+}
+
+// readResponse reads a response's body, turning a non-2xx status into an
+// *APIError carrying the status and body. The caller closes the body.
+func readResponse(response *http.Response) ([]byte, http.Header, error) {
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, nil, err

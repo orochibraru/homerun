@@ -140,3 +140,10 @@ export const createStackApiBody = z.object({
 	name: z.string().min(1).max(100),
 	slug: z.string().regex(SLUG_RE),
 });
+
+export const updateChannelApiBody = z.object({
+	channel: z.enum(["stable", "canary"]).meta({
+		description:
+			"stable follows stable releases; canary every build merged to main. Switching back to stable never downgrades",
+	}),
+});

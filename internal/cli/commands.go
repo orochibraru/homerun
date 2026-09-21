@@ -95,6 +95,7 @@ type Revision struct {
 
 // InstanceUpdateStatus is what the instance reports about its own version.
 type InstanceUpdateStatus struct {
+	Channel string `json:"channel"`
 	Current string `json:"current"`
 	Latest  *struct {
 		Version string `json:"version"`
@@ -192,9 +193,13 @@ func RevisionRow(revision Revision) map[string]string {
 }
 
 // InstanceStatusText summarises an instance update status in a few lines: the
-// running and latest versions, then whether an update can start and why not.
+// running version, the channel and its latest version, then whether an update
+// can start and why not.
 func InstanceStatusText(status InstanceUpdateStatus) string {
 	lines := []string{fmt.Sprintf("Running:  v%s", status.Current)}
+	if status.Channel != "" {
+		lines = append(lines, fmt.Sprintf("Channel:  %s", status.Channel))
+	}
 	if status.Latest == nil {
 		lines = append(lines, "Latest:   unknown (couldn't reach GitHub)")
 		return strings.Join(lines, "\n")
@@ -519,6 +524,23 @@ func InstanceStatus(client *Client, asJSON bool) {
 		Fail(err.Error())
 	}
 	fmt.Println(InstanceStatusText(status))
+}
+
+// InstanceChannel sets the release channel the instance updates from, "stable"
+// or "canary", and prints what it's now on. Exits on an unknown channel before
+// calling the API, or on an API error.
+func InstanceChannel(client *Client, channel string) {
+	if channel != "stable" && channel != "canary" {
+		Fail(fmt.Sprintf("unknown channel %q: use stable or canary.", channel))
+	}
+	var saved struct {
+		Channel string `json:"channel"`
+	}
+	client.decodeJSON("PATCH", "/instance/update/channel", map[string]string{"channel": channel}, &saved)
+	fmt.Printf("Channel set to %s.\n", saved.Channel)
+	if saved.Channel == "stable" {
+		fmt.Println("Running a canary? Updates resume once a stable release is newer.")
+	}
 }
 
 // InstanceUpdate starts a self-update of the instance, the same as the

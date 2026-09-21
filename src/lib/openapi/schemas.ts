@@ -258,6 +258,10 @@ export const instanceUpdateStatusResponse = z.object({
 	updateAvailable: z.boolean(),
 });
 
+export const instanceUpdateChannelResponse = z.object({
+	channel: z.enum(["stable", "canary"]),
+});
+
 export const instanceUpdateStartResponse = z.object({
 	version: z.string().meta({ description: "The version being installed" }),
 });

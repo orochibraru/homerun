@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	createServiceApiBody,
 	createStackApiBody,
+	updateChannelApiBody,
 	updateServiceApiBody,
 } from "$lib/server/validation/api";
 import {
@@ -9,6 +10,7 @@ import {
 	errorResponse,
 	imageScanResponse,
 	imageScanSummaryResponse,
+	instanceUpdateChannelResponse,
 	instanceUpdateProgressResponse,
 	instanceUpdateStartResponse,
 	instanceUpdateStatusResponse,
@@ -499,6 +501,24 @@ export const routes: RouteDef[] = [
 			403: { description: "Not an admin", schema: errorResponse },
 		},
 		summary: "Instance update progress",
+		tags: ["Meta"],
+	},
+	{
+		description:
+			"Sets the release channel self-update follows, like Settings → General → Release channel. Switching from canary back to stable never downgrades: updates just stop until a stable release is newer than the running canary. Admins only.",
+		method: "patch",
+		path: "/instance/update/channel",
+		requestBody: updateChannelApiBody,
+		responses: {
+			200: {
+				description: "Channel saved",
+				schema: instanceUpdateChannelResponse,
+			},
+			400: { description: "Unknown channel", schema: errorResponse },
+			401: unauthorized,
+			403: { description: "Not an admin", schema: errorResponse },
+		},
+		summary: "Set the update channel",
 		tags: ["Meta"],
 	},
 	{

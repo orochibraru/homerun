@@ -53,3 +53,10 @@ func (c *Client) decode(method, path string, query url.Values, out any) http.Hea
 	}
 	return header
 }
+
+// decodeJSON sends payload as a JSON body and unmarshals the answer into out, exiting on failure.
+func (c *Client) decodeJSON(method, path string, payload, out any) {
+	if err := c.api.DecodeJSON(method, path, payload, out); err != nil {
+		Fail(err.Error())
+	}
+}

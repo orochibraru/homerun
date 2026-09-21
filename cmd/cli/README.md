@@ -82,7 +82,7 @@ four, and the release version is stamped in at build time with
 ```bash
 homerun login [--base-url <url>]
 homerun logout
-homerun update
+homerun update [--channel stable|canary]
 homerun --version
 homerun services list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services get <id>
@@ -101,6 +101,7 @@ homerun services rollback <id> [revisionId] [--restore-config]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun instance status [--json]
 homerun instance update [--wait=false] [--timeout <seconds>]
+homerun instance channel stable|canary
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
 
@@ -156,25 +157,31 @@ once it's finished, same contract as `homerun services deploy`.
 resources and networking that revision ran with.
 
 `homerun instance status` calls `GET /instance/update` and prints the running
-version, the latest release and whether an update can start now (with the reason
-when it can't), `--json` for the raw body. `homerun instance update` calls
-`POST /instance/update`, which starts the same self-update as the dashboard's
-**Update now** and answers `202` with the target version, or `409` with why it
-can't. It then follows the update, polling every 3s: it prints the update
-helper's output from `GET /instance/update/progress` as it arrives, ignores
-failed requests while the container is recreated, and stops once
-`GET /instance/update` reports the new version as `current`. It exits 1 when the
-helper fails or after `--timeout <seconds>` (default 600). `--wait=false`
-returns as soon as the update has started. Both are admin-only. `homerun update`
-is unrelated: it updates the CLI binary itself.
+version, the release channel, its latest release and whether an update can start
+now (with the reason when it can't), `--json` for the raw body.
+`homerun instance update` calls `POST /instance/update`, which starts the same
+self-update as the dashboard's **Update now** and answers `202` with the target
+version, or `409` with why it can't. It then follows the update, polling every
+3s: it prints the update helper's output from `GET /instance/update/progress` as
+it arrives, ignores failed requests while the container is recreated, and stops
+once `GET /instance/update` reports the new version as `current`. It exits 1
+when the helper fails or after `--timeout <seconds>` (default 600).
+`--wait=false` returns as soon as the update has started.
+`homerun instance channel stable|canary` calls `PATCH /instance/update/channel`,
+the same setting as Settings → General → Release channel. All three are
+admin-only. `homerun update` is unrelated: it updates the CLI binary itself.
 
 `homerun update` self-updates the installed binary in place: it checks the
-latest GitHub release, downloads the `homerun-cli-<arch>` asset for your
-architecture (same one `install.sh` installs), and replaces the running binary
-(`sudo`'d automatically if the install directory isn't writable by your user,
-same as `install.sh`). Release assets are gzipped, so it unpacks the download
-before replacing the binary. Linux and macOS, same as installation itself.
-`homerun --version` (or `-v`) just prints the current version, no network call.
+newest release on `--channel` (`stable`, the default, reads `releases/latest`;
+`canary` reads the rolling `canary` prerelease, whose version is in its name),
+updates only when that version is strictly newer, so a canary CLI running
+`homerun update` stays put until stable overtakes it rather than downgrading,
+downloads the `homerun-cli-<arch>` asset for your architecture (same one
+`install.sh` installs), and replaces the running binary (`sudo`'d automatically
+if the install directory isn't writable by your user, same as `install.sh`).
+Release assets are gzipped, so it unpacks the download before replacing the
+binary. Linux and macOS, same as installation itself. `homerun --version` (or
+`-v`) just prints the current version, no network call.
 
 ## After a REST API change
 

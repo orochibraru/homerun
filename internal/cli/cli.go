@@ -28,7 +28,8 @@ Usage: homerun [--base-url <url>] [--api-key <key>] <command> [options]
 Commands:
   login [--base-url <url>]        log in via a device-code flow and save the resulting API key
   logout                          clear the saved login
-  update                          self-update the installed binary to the latest release
+  update [--channel stable|canary]
+                                  self-update the installed binary to the newest release on a channel (default stable, never downgrades)
 
   services list                   list services
   services get <id>               get a service by id
@@ -51,9 +52,10 @@ Commands:
   stacks list                     list stacks
   templates list                  list templates
 
-  instance status                 show the running version, the latest release and whether an update can start
+  instance status                 show the running version, the channel, its latest release and whether an update can start
   instance update [--wait=false] [--timeout <seconds>]
-                                  update the instance to the latest release (not the CLI itself, see ` + "`homerun update`" + `)
+                                  update the instance to the latest release on its channel (not the CLI itself, see ` + "`homerun update`" + `)
+  instance channel stable|canary  set the release channel the instance updates from (switching back to stable never downgrades)
 
 List options (services/stacks/templates/scans list):
   --json                          print raw JSON instead of a table
@@ -93,7 +95,10 @@ func Main() {
 	case "logout":
 		Logout()
 	case "update":
-		SelfUpdate()
+		set := NewFlagSet("update")
+		channel := set.String("channel", "stable", "release channel to update from: stable or canary")
+		Parse(set, rest[1:])
+		SelfUpdate(*channel)
 	case "services":
 		RunServices(global, rest[1:])
 	case "stacks":
@@ -338,7 +343,7 @@ func RunTemplates(global GlobalFlags, args []string) {
 // RunInstance dispatches an `instance` subcommand.
 func RunInstance(global GlobalFlags, args []string) {
 	if len(args) == 0 {
-		Fail("usage: homerun instance status|update")
+		Fail("usage: homerun instance status|update|channel")
 	}
 	switch args[0] {
 	case "status":
@@ -357,6 +362,11 @@ func RunInstance(global GlobalFlags, args []string) {
 			*wait,
 			time.Duration(*timeout)*time.Second,
 		)
+	case "channel":
+		if len(args) != 2 {
+			Fail("usage: homerun instance channel stable|canary")
+		}
+		InstanceChannel(RequireClient(global.BaseURL, global.APIKey), args[1])
 	default:
 		Fail(fmt.Sprintf("unknown instance subcommand %q. Run `homerun --help` to see what's available.", args[0]))
 	}

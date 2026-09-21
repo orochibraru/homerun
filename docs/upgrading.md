@@ -48,7 +48,8 @@ If you can't reach the dashboard, the same update runs from the
 [CLI](api-and-cli.md#cli), logged in as an admin:
 
 ```bash
-homerun instance status             # running and latest version, and whether it can update now
+homerun instance status             # running version, channel, latest version, and whether it can update now
+homerun instance channel canary     # switch the release channel (or back to stable)
 homerun instance update             # start the update and follow it until the new version answers
 ```
 

@@ -165,11 +165,14 @@ func TestInstanceStatusText(t *testing.T) {
 		t.Errorf("no latest release should say so, got %q", unreachable)
 	}
 
-	status := cli.InstanceUpdateStatus{Current: "1.0.0", UpdateAvailable: true}
+	status := cli.InstanceUpdateStatus{Channel: "canary", Current: "1.0.0", UpdateAvailable: true}
 	status.Latest = &struct {
 		Version string `json:"version"`
 	}{Version: "1.1.0"}
 	status.Preflight.Ready = true
+	if !strings.Contains(cli.InstanceStatusText(status), "Channel:  canary") {
+		t.Errorf("the channel should be shown, got %q", cli.InstanceStatusText(status))
+	}
 	if !strings.Contains(cli.InstanceStatusText(status), "run `homerun instance update`") {
 		t.Errorf("a ready update should point at the command, got %q", cli.InstanceStatusText(status))
 	}
@@ -1943,12 +1946,80 @@ func TestSelfUpdateStopsWhenAlreadyCurrent(t *testing.T) {
 	t.Cleanup(server.Close)
 	stubGitHub(t, server.URL, server.URL)
 
-	out, failed := runCLI(t, cli.SelfUpdate)
+	out, failed := runCLI(t, func() { cli.SelfUpdate("stable") })
 	if failed != "" {
 		t.Fatalf("failed with %q", failed)
 	}
 	if !strings.Contains(out, "Already up to date (v1.2.3).") {
 		t.Errorf("got %q", out)
+	}
+}
+
+func TestSelfUpdateNeverDowngradesACanary(t *testing.T) {
+	originalVersion := buildinfo.Version
+	buildinfo.Version = "1.0.41-canary.5"
+	t.Cleanup(func() { buildinfo.Version = originalVersion })
+
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(writer, `{"tag_name":"v1.0.40"}`)
+	}))
+	t.Cleanup(server.Close)
+	stubGitHub(t, server.URL, server.URL)
+
+	out, failed := runCLI(t, func() { cli.SelfUpdate("stable") })
+	if failed != "" {
+		t.Fatalf("failed with %q", failed)
+	}
+	if !strings.Contains(out, "Already up to date (v1.0.41-canary.5, ahead of stable v1.0.40).") {
+		t.Errorf("a canary ahead of stable must stay put, got %q", out)
+	}
+}
+
+func TestLatestReleaseOnTheCanaryChannel(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if !strings.HasSuffix(request.URL.Path, "/releases/tags/canary") {
+			http.NotFound(writer, request)
+			return
+		}
+		fmt.Fprint(writer, `{"name":"Canary 1.0.41-canary.7","tag_name":"canary"}`)
+	}))
+	t.Cleanup(server.Close)
+	stubGitHub(t, server.URL, server.URL)
+
+	var tag, version string
+	if _, failed := runCLI(t, func() { tag, version = cli.LatestRelease("canary") }); failed != "" {
+		t.Fatalf("failed with %q", failed)
+	}
+	if tag != "canary" || version != "1.0.41-canary.7" {
+		t.Errorf("got tag %q version %q", tag, version)
+	}
+	if _, failed := runCLI(t, func() { cli.LatestRelease("nightly") }); !strings.Contains(failed, "unknown channel") {
+		t.Errorf("an unknown channel must be refused, got %q", failed)
+	}
+}
+
+func TestInstanceChannelPatchesTheChannel(t *testing.T) {
+	client, seen := jsonAPI(t, `{"channel":"canary"}`)
+	out, failed := runCLI(t, func() { cli.InstanceChannel(client, "canary") })
+	if failed != "" {
+		t.Fatalf("failed with %q", failed)
+	}
+	request := (*seen)[0]
+	if request.Method != http.MethodPatch || request.Path != "/api/v1/instance/update/channel" {
+		t.Errorf("got %s %s", request.Method, request.Path)
+	}
+	if request.Body != `{"channel":"canary"}` || request.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("got body %q, content type %q", request.Body, request.Header.Get("Content-Type"))
+	}
+	if !strings.Contains(out, "Channel set to canary.") {
+		t.Errorf("got %q", out)
+	}
+
+	if _, failed := runCLI(t, func() { cli.InstanceChannel(client, "nightly") }); !strings.Contains(failed, "unknown channel") {
+		t.Errorf("an unknown channel must be refused before calling the API, got %q", failed)
+	}
+	if len(*seen) != 1 {
+		t.Errorf("an unknown channel must not reach the API, saw %d requests", len(*seen))
 	}
 }
 

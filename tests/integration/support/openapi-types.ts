@@ -48,6 +48,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/instance/update/channel": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Set the update channel
+		 * @description Sets the release channel self-update follows, like Settings → General → Release channel. Switching from canary back to stable never downgrades: updates just stop until a stable release is newer than the running canary. Admins only.
+		 */
+		patch: operations["patch_instance_update_channel"];
+		trace?: never;
+	};
 	"/instance/update/progress": {
 		parameters: {
 			query?: never;
@@ -583,6 +603,75 @@ export interface operations {
 			};
 			/** @description Already on the latest release, not running under Docker Compose, or a deploy or job is in flight */
 			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+		};
+	};
+	patch_instance_update_channel: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * @description stable follows stable releases; canary every build merged to main. Switching back to stable never downgrades
+					 * @enum {string}
+					 */
+					channel: "stable" | "canary";
+				};
+			};
+		};
+		responses: {
+			/** @description Channel saved */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @enum {string} */
+						channel: "stable" | "canary";
+					};
+				};
+			};
+			/** @description Unknown channel */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not an admin */
+			403: {
 				headers: {
 					[name: string]: unknown;
 				};
