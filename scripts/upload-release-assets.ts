@@ -95,8 +95,11 @@ async function upload(tag: string, path: string, label: string): Promise<void> {
 }
 
 const tag = process.argv[2];
+const prerelease = process.argv.includes("--prerelease");
 if (!tag) {
-	console.error("Usage: bun scripts/upload-release-assets.ts <tag>");
+	console.error(
+		"Usage: bun scripts/upload-release-assets.ts <tag> [--prerelease]",
+	);
 	process.exit(1);
 }
 
@@ -114,5 +117,16 @@ await Promise.all(
 	}),
 );
 
-await gh(["release", "edit", tag, "--draft=false", "--latest"]);
+await gh(
+	prerelease
+		? [
+				"release",
+				"edit",
+				tag,
+				"--draft=false",
+				"--prerelease",
+				"--latest=false",
+			]
+		: ["release", "edit", tag, "--draft=false", "--latest"],
+);
 console.log(`Published ${tag}`);

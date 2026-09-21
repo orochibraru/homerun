@@ -12,7 +12,8 @@ import (
 type SwarmService struct {
 	ID   string `json:"ID"`
 	Spec struct {
-		Name         string `json:"Name"`
+		Labels       map[string]string `json:"Labels"`
+		Name         string            `json:"Name"`
 		TaskTemplate struct {
 			ForceUpdate int `json:"ForceUpdate"`
 		} `json:"TaskTemplate"`

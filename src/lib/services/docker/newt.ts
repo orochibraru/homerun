@@ -16,6 +16,14 @@ export interface ContainerCreateOptions {
 	name?: string;
 }
 
+/** A swarm service-create body, as much of it as a core service's spec sets. */
+export interface SwarmServiceSpec {
+	Labels: Record<string, string>;
+	Mode: Record<string, unknown>;
+	Name: string;
+	TaskTemplate: Record<string, unknown>;
+}
+
 export interface NewtCredentials {
 	endpoint: string;
 	id: string;
@@ -29,6 +37,25 @@ export const CORE_HASH_LABEL = "homerun.core.hash";
 export const NEWT_HEALTHCHECK =
 	"wget -qO- http://127.0.0.1:2112/metrics | grep -Eq '^newt_websocket_connected(\\{[^}]*\\})? 1$'";
 
+/** Newt's environment and the hash of everything that shapes a Newt workload on `network` in `mode`, so a sync can tell whether the running one is still current. */
+function newtShape(
+	credentials: NewtCredentials,
+	network: string,
+	mode: "container" | { nodeId: string },
+): { env: string[]; hash: string } {
+	const env = [
+		`PANGOLIN_ENDPOINT=${credentials.endpoint}`,
+		`NEWT_ID=${credentials.id}`,
+		`NEWT_SECRET=${credentials.secret}`,
+		"NEWT_METRICS_PROMETHEUS_ENABLED=true",
+	];
+	const shape = [NEWT_IMAGE, network, NEWT_HEALTHCHECK, env];
+	const hash = createHash("sha256")
+		.update(JSON.stringify(mode === "container" ? shape : [...shape, mode]))
+		.digest("hex");
+	return { env, hash };
+}
+
 /**
  * The create options for Homerun's own Newt container on `network`, labelled
  * with a hash of everything that shapes it so a sync can tell whether the
@@ -38,15 +65,7 @@ export function newtContainerSpec(
 	credentials: NewtCredentials,
 	network: string,
 ): ContainerCreateOptions {
-	const env = [
-		`PANGOLIN_ENDPOINT=${credentials.endpoint}`,
-		`NEWT_ID=${credentials.id}`,
-		`NEWT_SECRET=${credentials.secret}`,
-		"NEWT_METRICS_PROMETHEUS_ENABLED=true",
-	];
-	const hash = createHash("sha256")
-		.update(JSON.stringify([NEWT_IMAGE, network, NEWT_HEALTHCHECK, env]))
-		.digest("hex");
+	const { env, hash } = newtShape(credentials, network, "container");
 	return {
 		Env: env,
 		Healthcheck: dockerHealthcheck(NEWT_HEALTHCHECK),
@@ -57,5 +76,38 @@ export function newtContainerSpec(
 		Image: NEWT_IMAGE,
 		Labels: { [CORE_HASH_LABEL]: hash, [CORE_LABEL]: "newt" },
 		name: NEWT_CONTAINER_NAME,
+	};
+}
+
+/**
+ * The Engine spec for Homerun's own Newt tunnel as a one-replica swarm service
+ * on the swarm overlay `network`, which Traefik is attached to in swarm mode.
+ * Pinned to `nodeId`, the node Traefik runs on, so the tunnel reaches it by
+ * name and the local container listing that picks the tunnel target sees
+ * the task. Carries the same hash label as the container, on the service, and
+ * the core label on its task containers too so `findNewtContainer` still
+ * finds them.
+ */
+export function newtSwarmServiceSpec(
+	credentials: NewtCredentials,
+	network: string,
+	nodeId: string,
+): SwarmServiceSpec {
+	const { env, hash } = newtShape(credentials, network, { nodeId });
+	return {
+		Labels: { [CORE_HASH_LABEL]: hash, [CORE_LABEL]: "newt" },
+		Mode: { Replicated: { Replicas: 1 } },
+		Name: NEWT_CONTAINER_NAME,
+		TaskTemplate: {
+			ContainerSpec: {
+				Env: env,
+				HealthCheck: dockerHealthcheck(NEWT_HEALTHCHECK),
+				Image: NEWT_IMAGE,
+				Labels: { [CORE_LABEL]: "newt" },
+			},
+			Networks: [{ Target: network }],
+			Placement: { Constraints: [`node.id == ${nodeId}`] },
+			RestartPolicy: { Condition: "any" },
+		},
 	};
 }

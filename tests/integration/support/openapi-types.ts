@@ -484,9 +484,14 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
+						/**
+						 * @description The release channel updates follow, set on Settings → General
+						 * @enum {string}
+						 */
+						channel: "stable" | "canary";
 						/** @description The running version */
 						current: string;
-						/** @description The latest GitHub release, null when it couldn't be checked */
+						/** @description The newest release on the channel, null when it couldn't be checked */
 						latest: {
 							publishedAt: string | null;
 							url: string;

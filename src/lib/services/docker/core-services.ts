@@ -18,6 +18,7 @@ import {
 	NEWT_CONTAINER_NAME,
 	type NewtCredentials,
 	newtContainerSpec,
+	newtSwarmServiceSpec,
 } from "./newt.ts";
 import { SWARM_REFRESH_SECONDS, swarmNetworkName } from "./swarm.ts";
 import { tunnelTargetHostFrom } from "./tunnel.ts";
@@ -78,7 +79,14 @@ interface RequiresSwarmMixin {
 	ensureSharedNetwork: () => Promise<void>;
 	ensureSwarmNetwork: (name: string) => Promise<void>;
 	initSwarm: () => Promise<boolean>;
+	removeSwarmService: (swarmServiceId: string) => Promise<void>;
 	pullImage: (params: { image: string; tag: string }) => Promise<unknown>;
+}
+
+/** A swarm service inspect, as much of it as the Newt sync reads. */
+interface InspectedSwarmService {
+	ID: string;
+	Spec: { Labels?: Record<string, string> };
 }
 
 /** One row of the worker's container listing, as much of it as this file reads. */
@@ -404,25 +412,75 @@ export function DockerCoreServicesMixin<
 		}
 
 		/**
-		 * Converges Homerun's own Newt container onto `credentials`: removes it
-		 * when they're null, leaves it alone when the running one was created
-		 * from the same spec (starting it if it stopped), and otherwise pulls
-		 * the image and recreates it on the shared network, next to Traefik.
-		 * It's core infrastructure, never a service, so it carries the core
-		 * label rather than the managed one. Failures are logged, not thrown.
+		 * Converges Homerun's own Newt tunnel onto `credentials`: a plain
+		 * container on the shared network in standalone mode, a one-replica
+		 * swarm service on the swarm overlay in swarm mode, removing whichever
+		 * of the two the current mode doesn't use first. Each is left alone
+		 * when it was created from the same spec and recreated otherwise;
+		 * null credentials remove both. It's core infrastructure, never a
+		 * service, so it carries the core label rather than the managed one.
+		 * Failures are logged, not thrown.
 		 */
-		async syncNewtContainer(
+		async syncNewt(
 			credentials: NewtCredentials | null,
+			swarm: boolean,
 		): Promise<void> {
 			try {
-				await this.#convergeNewt(credentials);
+				if (swarm) {
+					await this.#convergeNewtContainer(null);
+					await this.#convergeNewtService(credentials);
+				} else {
+					await this.#convergeNewtService(null);
+					await this.#convergeNewtContainer(credentials);
+				}
 			} catch (err) {
-				logger.warn("Couldn't sync the Newt container", err);
+				logger.warn("Couldn't sync the Newt tunnel", err);
 			}
 		}
 
-		/** The body of `syncNewtContainer`, throwing on any Docker failure. */
-		async #convergeNewt(credentials: NewtCredentials | null): Promise<void> {
+		/** Converges the swarm-mode Newt service, removing it for null credentials. Throws on any Docker failure. */
+		async #convergeNewtService(
+			credentials: NewtCredentials | null,
+		): Promise<void> {
+			const existing = await this.worker
+				.get<InspectedSwarmService>(`/v1/swarm/services/${NEWT_CONTAINER_NAME}`)
+				.catch(() => null);
+
+			if (!credentials) {
+				if (existing) {
+					await this.removeSwarmService(existing.ID);
+					logger.info("Newt swarm service removed");
+				}
+				return;
+			}
+
+			const network = swarmNetworkName();
+			await this.ensureSwarmNetwork(network);
+			const info = await this.worker.get<{ Swarm?: { NodeID?: string } }>(
+				"/v1/info",
+			);
+			const nodeId = info.Swarm?.NodeID;
+			if (!nodeId) {
+				throw new Error("This host isn't a swarm node.");
+			}
+			const spec = newtSwarmServiceSpec(credentials, network, nodeId);
+			if (
+				existing?.Spec.Labels?.[CORE_HASH_LABEL] ===
+				spec.Labels[CORE_HASH_LABEL]
+			) {
+				return;
+			}
+			if (existing) {
+				await this.removeSwarmService(existing.ID);
+			}
+			await this.worker.post("/v1/swarm/services", spec);
+			logger.info("Newt swarm service created");
+		}
+
+		/** Converges the standalone Newt container, removing it for null credentials. Throws on any Docker failure. */
+		async #convergeNewtContainer(
+			credentials: NewtCredentials | null,
+		): Promise<void> {
 			const existing = await this.worker
 				.get<InspectedContainer>(
 					`/v1/containers/${NEWT_CONTAINER_NAME}/inspect`,

@@ -8,15 +8,16 @@ import (
 	"github.com/orochibraru/homerun/internal/installer"
 )
 
-func TestFullStackComposeShape(t *testing.T) {
-	compose := installer.FullStackCompose("docker.io/orochibraru/homerun:v1.2.3", "/var/run/docker.sock", "homerun.example.com", false)
+func TestComposeFileShape(t *testing.T) {
+	compose := installer.ComposeFile
 
 	for _, fragment := range []string{
-		"image: docker.io/orochibraru/homerun:v1.2.3",
-		"ORIGIN: ${ORIGIN:-http://homerun.example.com:3000}",
+		"# homerun:generated",
+		"image: ${HOMERUN_IMAGE:-docker.io/orochibraru/homerun}:${HOMERUN_VERSION:-latest}",
+		"ORIGIN: ${ORIGIN:-http://${HOMERUN_HOST:?",
 		"postgres-data:/var/lib/postgresql",
-		"traefik.http.routers.homerun.tls.certresolver=${DASHBOARD_CERT_RESOLVER:-letsencrypt}",
-		"- /var/run/docker.sock:/var/run/docker.sock:ro",
+		"traefik.http.routers.homerun.tls.certresolver=${DASHBOARD_CERT_RESOLVER-letsencrypt}",
+		"- ${HOMERUN_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro",
 	} {
 		if !strings.Contains(compose, fragment) {
 			t.Errorf("compose is missing %q", fragment)
@@ -29,12 +30,17 @@ func TestFullStackComposeShape(t *testing.T) {
 		t.Error("the AUTH_SECRET expression must stay quoted, or compose reads its message as YAML")
 	}
 	if strings.Contains(compose, "providers.swarm") {
-		t.Error("a non-swarm install should not configure Traefik's swarm provider")
+		t.Error("the base file should not configure Traefik's swarm provider, the overlay does")
+	}
+	for _, volume := range []string{"postgres-data", "traefik-certs", "traefik-dynamic", "homerun-data"} {
+		if !strings.Contains(compose, "  "+volume+": {}") {
+			t.Errorf("renaming volume %s would orphan every existing install's data", volume)
+		}
 	}
 }
 
-func TestFullStackComposeAppTalksToTheWorkerInsteadOfTheSocket(t *testing.T) {
-	compose := installer.FullStackCompose("img", "/run/user/1000/docker.sock", "homerun.example.com", false)
+func TestComposeFileAppTalksToTheWorkerInsteadOfTheSocket(t *testing.T) {
+	compose := installer.ComposeFile
 	app := compose[strings.Index(compose, "  app:"):strings.Index(compose, "  worker:")]
 
 	for _, fragment := range []string{
@@ -53,15 +59,15 @@ func TestFullStackComposeAppTalksToTheWorkerInsteadOfTheSocket(t *testing.T) {
 	}
 }
 
-func TestFullStackComposeRunsTheWorkerFromTheAppImage(t *testing.T) {
-	compose := installer.FullStackCompose("docker.io/orochibraru/homerun:1.2.3", "/run/user/1000/docker.sock", "example.com", false)
+func TestComposeFileRunsTheWorkerFromTheAppImage(t *testing.T) {
+	compose := installer.ComposeFile
 	worker := compose[strings.Index(compose, "  worker:"):strings.Index(compose, "  traefik:")]
 	for _, fragment := range []string{
-		"image: docker.io/orochibraru/homerun:1.2.3",
+		"image: ${HOMERUN_IMAGE:-docker.io/orochibraru/homerun}:${HOMERUN_VERSION:-latest}",
 		`command: ["/usr/local/bin/homerun-worker"]`,
 		`AUTH_SECRET: "${AUTH_SECRET:?`,
-		"DOCKER_SOCKET_PATH: /run/user/1000/docker.sock",
-		"- /run/user/1000/docker.sock:/run/user/1000/docker.sock",
+		"DOCKER_SOCKET_PATH: ${HOMERUN_DOCKER_SOCKET:-/var/run/docker.sock}",
+		"- ${HOMERUN_DOCKER_SOCKET:-/var/run/docker.sock}:${HOMERUN_DOCKER_SOCKET:-/var/run/docker.sock}",
 		"WORKER_PORT: ${WORKER_PORT:-7430}",
 		"WORKER_TOKEN: ${WORKER_TOKEN:-}",
 		"expose:\n      - \"${WORKER_PORT:-7430}\"",
@@ -74,36 +80,60 @@ func TestFullStackComposeRunsTheWorkerFromTheAppImage(t *testing.T) {
 	}
 }
 
-func TestFullStackComposeBareIPHasNoCertResolver(t *testing.T) {
-	compose := installer.FullStackCompose("img", "/var/run/docker.sock", "203.0.113.10", false)
-	if !strings.Contains(compose, "certresolver=${DASHBOARD_CERT_RESOLVER:-}") {
-		t.Error("ACME can't issue for a bare IP, so the resolver must be left blank")
-	}
-	if !strings.Contains(compose, "ORIGIN: ${ORIGIN:-http://203.0.113.10:3000}") {
-		t.Error("the IP should still be the ORIGIN default, never localhost")
-	}
-}
-
-func TestFullStackComposeSwarm(t *testing.T) {
-	compose := installer.FullStackCompose("img", "/var/run/docker.sock", "homerun.example.com", true)
+func TestComposeSwarmFile(t *testing.T) {
 	for _, fragment := range []string{
+		"# homerun:generated",
 		"--providers.swarm=true",
 		"--providers.swarm.network=homerun-swarm",
 		"  homerun-swarm:\n    name: homerun-swarm\n    external: true",
 	} {
-		if !strings.Contains(compose, fragment) {
-			t.Errorf("a swarm install is missing %q", fragment)
+		if !strings.Contains(installer.ComposeSwarmFile, fragment) {
+			t.Errorf("the swarm overlay is missing %q", fragment)
 		}
+	}
+	base := installer.ComposeFile
+	baseCommand := base[strings.Index(base, "--providers.docker=true"):strings.Index(base, "    extra_hosts:")]
+	if !strings.Contains(installer.ComposeSwarmFile, baseCommand) {
+		t.Error("compose replaces a service's command wholesale, so the overlay must repeat every base Traefik flag")
 	}
 }
 
-func TestFullStackComposeMountsTraefikSocketAtTheConventionalPath(t *testing.T) {
-	compose := installer.FullStackCompose("img", "/run/user/1000/docker.sock", "homerun.example.com", false)
-	if !strings.Contains(compose, "- /run/user/1000/docker.sock:/var/run/docker.sock:ro") {
-		t.Error("Traefik's docker provider defaults to /var/run/docker.sock inside its own container")
+func TestComposeEnv(t *testing.T) {
+	env := installer.ComposeEnv("docker.io/orochibraru/homerun:v1.2.3", "/run/user/1000/docker.sock", "homerun.example.com")
+	want := map[string]string{
+		"DASHBOARD_CERT_RESOLVER": "letsencrypt",
+		"HOMERUN_DOCKER_SOCKET":   "/run/user/1000/docker.sock",
+		"HOMERUN_HOST":            "homerun.example.com",
+		"HOMERUN_IMAGE":           "docker.io/orochibraru/homerun",
+		"HOMERUN_VERSION":         "v1.2.3",
 	}
-	if !strings.Contains(compose, "- /run/user/1000/docker.sock:/run/user/1000/docker.sock") {
-		t.Error("the worker's own mount keeps the host path, which is what homerun.yaml points at")
+	for key, value := range want {
+		if env[key] != value {
+			t.Errorf("%s: got %q, want %q", key, env[key], value)
+		}
+	}
+
+	bareIP := installer.ComposeEnv("localhost:5000/homerun", "/var/run/docker.sock", "203.0.113.10")
+	if bareIP["DASHBOARD_CERT_RESOLVER"] != "" {
+		t.Error("ACME can't issue for a bare IP, so the resolver must be left blank")
+	}
+	if bareIP["HOMERUN_IMAGE"] != "localhost:5000/homerun" || bareIP["HOMERUN_VERSION"] != "latest" {
+		t.Errorf("a registry port isn't a tag, got %v", bareIP)
+	}
+}
+
+func TestSetEnvValuesReplacesAndAppendsWithoutTouchingTheRest(t *testing.T) {
+	envPath := t.TempDir() + "/.env"
+	if err := os.WriteFile(envPath, []byte("AUTH_SECRET=keep\nHOMERUN_VERSION=v1.0.0\nACME_EMAIL=me@example.com\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run := newFakeRunner()
+	if err := installer.SetEnvValues(run, envPath, map[string]string{"HOMERUN_VERSION": "v1.2.3", "HOMERUN_HOST": "example.com"}); err != nil {
+		t.Fatal(err)
+	}
+	want := "AUTH_SECRET=keep\nHOMERUN_VERSION=v1.2.3\nACME_EMAIL=me@example.com\nHOMERUN_HOST=example.com\n"
+	if run.writes[envPath] != want {
+		t.Errorf("got %q, want %q", run.writes[envPath], want)
 	}
 }
 
@@ -207,6 +237,15 @@ func TestBringUpFullStackRootless(t *testing.T) {
 	if composePath != home+"/homerun/compose.yaml" {
 		t.Errorf("got %q", composePath)
 	}
+	if run.writes[composePath] != installer.ComposeFile {
+		t.Error("the install writes the static compose file verbatim")
+	}
+	if !strings.Contains(run.writes[home+"/homerun/.env"], "HOMERUN_HOST=homerun.example.com\n") {
+		t.Error("the host lives in .env, the compose file is static")
+	}
+	if _, swarm := run.writes[home+"/homerun/compose.swarm.yaml"]; swarm {
+		t.Error("a non-swarm install has no swarm overlay")
+	}
 	if run.writes[sysctl] != "net.ipv4.ip_unprivileged_port_start=80\n" {
 		t.Error("rootless Docker can't publish 80/443 without lowering the unprivileged port start")
 	}
@@ -229,7 +268,7 @@ func TestBringUpFullStackRootless(t *testing.T) {
 }
 
 func TestBringUpFullStackRootful(t *testing.T) {
-	withHomeRoot(t, "homerun")
+	home := withHomeRoot(t, "homerun")
 	run := newFakeRunner()
 
 	if _, err := installer.BringUpFullStack(installer.FullStackParams{
@@ -252,10 +291,15 @@ func TestBringUpFullStackRootful(t *testing.T) {
 	if !strings.Contains(strings.Join(pull.Cmd, " "), "--ignore-pull-failures") {
 		t.Error("--image= may only exist locally, so its pull must be allowed to fail")
 	}
-	for path, content := range run.writes {
-		if strings.HasSuffix(path, "compose.yaml") && !strings.Contains(content, "image: local/homerun:dev") {
-			t.Error("--image= should replace the release image")
-		}
+	env := run.writes[home+"/homerun/.env"]
+	if !strings.Contains(env, "HOMERUN_IMAGE=local/homerun\n") || !strings.Contains(env, "HOMERUN_VERSION=dev\n") {
+		t.Errorf("--image= should replace the release image, .env is %q", env)
+	}
+	if run.writes[home+"/homerun/compose.swarm.yaml"] != installer.ComposeSwarmFile {
+		t.Error("a swarm install writes the swarm overlay")
+	}
+	if !strings.Contains(strings.Join(up.Cmd, " "), "-f "+home+"/homerun/compose.swarm.yaml up -d") {
+		t.Errorf("the swarm overlay must be part of the compose invocation, ran %v", up.Cmd)
 	}
 	if run.ran("sysctl -p") {
 		t.Error("a rootful install has no unprivileged-port problem to work around")

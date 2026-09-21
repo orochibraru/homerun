@@ -51,6 +51,7 @@ WORKDIR /app
 COPY --from=app-builder --chown=bun:bun /app/build /app/build
 COPY --from=app-builder --chown=bun:bun /app/drizzle/ /app/drizzle
 COPY --from=go-builder /out/homerun-worker /usr/local/bin/homerun-worker
+COPY internal/installer/compose.yaml internal/installer/compose.swarm.yaml /app/compose/
 COPY tools/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

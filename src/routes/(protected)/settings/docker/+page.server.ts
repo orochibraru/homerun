@@ -109,6 +109,7 @@ export const actions = {
 					: await DockerService.disableSwarmMode();
 			const settings = await InstanceSettingsDTO.get();
 			await settings.updateOrchestrationMode(mode);
+			void DockerService.syncNewt(settings.newtCredentials(), mode === "swarm");
 			logger.info(
 				`Orchestration mode updated: mode=${mode} user=${locals.user.id}`,
 			);

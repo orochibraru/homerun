@@ -123,15 +123,32 @@ list and could be redeployed, scaled or deleted like an app.
 `instance_settings.pangolinNewtEndpoint`/`pangolinNewtId`/`pangolinNewtSecretEnc`
 (Pangolin card and the onboarding DNS step, all three or none, checked by
 `newtFieldsError` in `dns-settings-form.ts`) now drive
-`DockerService.syncNewtContainer`, which converges one `homerun-newt` container
-(spec in `docker/newt.ts`) on the shared network: labelled `homerun.core=newt`
-rather than the managed label, so no service list or reconcile sees it, while
+`DockerService.syncNewt(credentials, swarm)`, which converges one `homerun-newt`
+workload (specs in `docker/newt.ts`): a plain container on the shared network in
+standalone mode, and in swarm mode a one-replica swarm service on the swarm
+overlay (which Traefik is attached to), pinned with a `node.id ==` constraint to
+this node, where Traefik runs, so the tunnel reaches Traefik by name and
+`tunnelTargetHostFrom`'s local container listing sees the task. Whichever form
+the current mode doesn't use is removed first, so switching the orchestration
+mode (`settings/docker`'s `updateOrchestration` resyncs it) swaps one for the
+other. Both are labelled `homerun.core=newt` (the service's task containers too)
+rather than the managed label, so no service list or reconcile sees them, while
 `listInfraContainers` does (System logs). A `homerun.core.hash` label of the
-spec makes the sync a no-op unless something changed. It runs on boot and from
-`applyAndRebuild`, and `InstanceSettingsDTO.newtCredentials()` is null (so the
-container is removed) whenever Pangolin itself isn't fully configured. Seeding
-deletes the retired template row; a service an admin already deployed from it
-stays and has to be deleted by hand.
+spec (mode and node included for the service) makes the sync a no-op unless
+something changed. It runs on boot and from `applyAndRebuild`, and
+`InstanceSettingsDTO.newtCredentials()` is null (so both are removed) whenever
+Pangolin itself isn't fully configured. Neither is part of the compose project,
+so self-update never recreates or removes it. The swarm form goes through the
+worker's `POST /v1/swarm/services` and `GET /v1/swarm/services/{id}` (id or
+name). Seeding deletes the retired template row; a service an admin already
+deployed from it stays and has to be deleted by hand.
+
+**Editing a service's domains syncs right away**, not on its next deploy: the
+Networking tab's `updateDomains` fires `syncServiceDomainsDns(previous, next)`
+for a `dnsResolvable` service, syncing every current hostname and deleting the
+ones it dropped. Real bug it fixed: with Pangolin connected, a newly added
+domain got no resource until someone redeployed. Traefik still needs the
+redeploy to route it, which is what the save toast says.
 
 **The dashboard's own hostname is synced too.** `dns.service.ts`'s
 `syncDashboardDns` runs on boot and after every settings save

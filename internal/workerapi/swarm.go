@@ -15,6 +15,8 @@ func (s *Server) mountSwarm(r chi.Router) {
 	r.Post("/v1/swarm/init", httpapi.H(s.initSwarm))
 	r.Get("/v1/swarm/nodes", httpapi.H(s.listSwarmNodes))
 	r.Post("/v1/swarm/overlay", httpapi.H(s.ensureOverlay))
+	r.Post("/v1/swarm/services", httpapi.H(s.createSwarmService))
+	r.Get("/v1/swarm/services/{id}", httpapi.H(s.inspectSwarmService))
 	r.Get("/v1/swarm/services/{id}/status", httpapi.H(s.swarmServiceStatus))
 	r.Get("/v1/swarm/services/{id}/replicas", httpapi.H(s.swarmServiceReplicas))
 	r.Get("/v1/swarm/services/{id}/tasks", httpapi.H(s.swarmServiceTasks))
@@ -73,6 +75,38 @@ func (s *Server) ensureOverlay(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// createSwarmService creates a swarm service from a raw Engine spec, for the
+// app's own core services (the Newt tunnel in swarm mode); a deploy's services
+// are created by the deploy job instead.
+func (s *Server) createSwarmService(w http.ResponseWriter, r *http.Request) error {
+	var spec map[string]any
+	if !httpapi.DecodeJSON(w, r, &spec) {
+		return nil
+	}
+	if name, _ := spec["Name"].(string); name == "" {
+		return httpapi.Invalid(w, "Invalid request body",
+			[]httpapi.ValidationIssue{{Message: "Name is required", Path: []string{"Name"}}})
+	}
+	id, err := s.docker.CreateSwarmService(r.Context(), spec)
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusCreated, map[string]string{"id": id})
+}
+
+// inspectSwarmService answers with a swarm service's id, name and labels,
+// looked up by id or name.
+func (s *Server) inspectSwarmService(w http.ResponseWriter, r *http.Request) error {
+	service, err := s.docker.InspectSwarmService(r.Context(), chi.URLParam(r, "id"))
+	if errors.Is(err, dockerapi.ErrNotFound) {
+		return httpapi.Error(w, http.StatusNotFound, "No such swarm service.")
+	}
+	if err != nil {
+		return err
+	}
+	return httpapi.Answer(w, http.StatusOK, service)
 }
 
 // swarmServiceStatus aggregates a service's tasks into one dashboard status.

@@ -371,6 +371,13 @@
 			"when": 1789802575328,
 			"tag": "0052_fat_retro_girl",
 			"breakpoints": true
+		},
+		{
+			"idx": 53,
+			"version": "7",
+			"when": 1789996552884,
+			"tag": "0053_swift_silvermane",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

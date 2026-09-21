@@ -30,6 +30,13 @@ on:
           "Target (family) to build from the root docker-bake.hcl, e.g. app or
           worker"
         type: string
+      extra_tag:
+        required: false
+        default: ""
+        description:
+          "A second, moving tag applied alongside image_tag, e.g. canary. Empty
+          applies none"
+        type: string
       app_version:
         required: false
         default: ""
@@ -81,7 +88,7 @@ jobs:
           images: ${{ env.IMAGE }}
           tags: |
             type=raw,value=${{ inputs.image_tag }}
-            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
+            type=raw,value=${{ inputs.extra_tag }},enable=${{ inputs.extra_tag != '' }}
 
       - name: Rename meta bake definition file
         run: |

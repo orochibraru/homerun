@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
+	composeEnvDefaults,
 	composeTargetFrom,
 	containerIdFromMountinfo,
 	pinnedTagFor,
@@ -38,6 +42,9 @@ describe("version comparison", () => {
 	test("ranks a prerelease below its release", () => {
 		expect(compareVersions("1.1.0-beta.2", "1.1.0")).toBe(-1);
 		expect(compareVersions("1.1.0-beta.10", "1.1.0-beta.2")).toBe(1);
+		expect(compareVersions("1.0.41-canary.100", "1.0.41-canary.99")).toBe(1);
+		expect(isNewerVersion("1.0.41", "1.0.41-canary.100")).toBe(true);
+		expect(isNewerVersion("1.0.40", "1.0.41-canary.100")).toBe(false);
 	});
 
 	test("never reports an update for something that isn't a version", () => {
@@ -106,12 +113,19 @@ describe("image tags", () => {
 		});
 	});
 
+	test("canary always runs the moving canary tag", () => {
+		expect(pinnedTagFor("v1.0.20", "1.0.22-canary.7", "canary")).toBe("canary");
+		expect(pinnedTagFor("latest", "1.0.22-canary.7", "canary")).toBe("canary");
+		expect(pinnedTagFor("canary", "1.0.22-canary.7", "canary")).toBeNull();
+	});
+
 	test("only rewrites a pinned tag, keeping its v prefix style", () => {
-		expect(pinnedTagFor("latest", "1.0.22")).toBeNull();
-		expect(pinnedTagFor("v1.0.20", "1.0.22")).toBe("v1.0.22");
-		expect(pinnedTagFor("1.0.20", "1.0.22")).toBe("1.0.22");
-		expect(pinnedTagFor("pr-12", "1.0.22")).toBe("v1.0.22");
-		expect(pinnedTagFor("v1.0.22", "1.0.22")).toBeNull();
+		expect(pinnedTagFor("latest", "1.0.22", "stable")).toBeNull();
+		expect(pinnedTagFor("canary", "1.0.22", "stable")).toBe("v1.0.22");
+		expect(pinnedTagFor("v1.0.20", "1.0.22", "stable")).toBe("v1.0.22");
+		expect(pinnedTagFor("1.0.20", "1.0.22", "stable")).toBe("1.0.22");
+		expect(pinnedTagFor("pr-12", "1.0.22", "stable")).toBe("v1.0.22");
+		expect(pinnedTagFor("v1.0.22", "1.0.22", "stable")).toBeNull();
 	});
 });
 
@@ -124,13 +138,17 @@ describe("updaterScript", () => {
 		if (!target) {
 			throw new Error("expected a target");
 		}
-		const script = updaterScript(target, "1.0.22");
+		const script = updaterScript(target, {
+			channel: "stable",
+			version: "1.0.22",
+		});
 		expect(script).not.toContain("sed");
-		expect(script).toContain(
-			"docker compose -p 'homerun' -f '/home/homerun/homerun/compose.yaml' pull 'app'",
-		);
+		expect(script).toContain("set -- -f '/home/homerun/homerun/compose.yaml'");
+		expect(script).toContain(`docker compose -p 'homerun' "$@" pull 'app'`);
 		expect(script).toContain("up -d --no-deps 'app'");
-		expect(script.indexOf(" pull ")).toBeLessThan(script.indexOf(" up -d "));
+		expect(script.indexOf("pull 'app'")).toBeLessThan(
+			script.indexOf(" up -d "),
+		);
 	});
 
 	test("recreates the worker service alongside the app", () => {
@@ -138,7 +156,11 @@ describe("updaterScript", () => {
 		if (!target) {
 			throw new Error("expected a target");
 		}
-		const script = updaterScript(target, "1.0.22", ["worker", "app"]);
+		const script = updaterScript(
+			target,
+			{ channel: "stable", version: "1.0.22" },
+			{ companions: ["worker", "app"] },
+		);
 		expect(script).toContain("pull 'app' 'worker'");
 		expect(script).toContain("up -d --no-deps 'app' 'worker'");
 	});
@@ -151,11 +173,29 @@ describe("updaterScript", () => {
 		if (!target) {
 			throw new Error("expected a target");
 		}
-		const script = updaterScript(target, "1.0.22");
+		const script = updaterScript(target, {
+			channel: "stable",
+			version: "1.0.22",
+		});
 		expect(script).toContain("homerun:)v1\\.0\\.20");
 		expect(script).toContain("\\1v1.0.22\\2");
 		expect(script).toContain("HOMERUN_VERSION=");
-		expect(script.indexOf("sed")).toBeLessThan(script.indexOf(" pull "));
+		expect(script.indexOf("sed")).toBeLessThan(script.indexOf("pull 'app'"));
+	});
+
+	test("never recreates Traefik, Postgres or anything outside the project", () => {
+		const target = composeTargetFrom(labels, "homerun:latest");
+		if (!target) {
+			throw new Error("expected a target");
+		}
+		const script = updaterScript(
+			target,
+			{ channel: "stable", version: "1.0.22" },
+			{ companions: ["worker"] },
+		);
+		expect(script).not.toContain("--remove-orphans");
+		expect(script).not.toMatch(/up -d(?! --no-deps)/);
+		expect(script).not.toContain("traefik");
 	});
 
 	test("mounts the socket and the project dir at their host paths", () => {
@@ -168,4 +208,176 @@ describe("updaterScript", () => {
 			"/home/homerun/homerun:/home/homerun/homerun",
 		]);
 	});
+});
+
+describe("composeEnvDefaults", () => {
+	test("recovers the host, resolver, origin and socket off the running app", () => {
+		expect(
+			composeEnvDefaults(
+				{
+					"traefik.http.routers.homerun.rule": "Host(`203.0.113.10`)",
+					"traefik.http.routers.homerun.tls.certresolver": "",
+				},
+				"http://203.0.113.10:3000",
+				"/run/user/1000/docker.sock",
+			),
+		).toEqual({
+			DASHBOARD_CERT_RESOLVER: "",
+			HOMERUN_DOCKER_SOCKET: "/run/user/1000/docker.sock",
+			HOMERUN_HOST: "203.0.113.10",
+			ORIGIN: "http://203.0.113.10:3000",
+		});
+	});
+
+	test("leaves out what it can't recover", () => {
+		expect(composeEnvDefaults({}, undefined, "/var/run/docker.sock")).toEqual({
+			HOMERUN_DOCKER_SOCKET: "/var/run/docker.sock",
+		});
+	});
+});
+
+const FAKE_DOCKER = `#!/bin/sh
+echo "docker $*" >> "$DOCKER_LOG"
+if [ "$1" = run ]; then
+	eval "file=\\\${$#}"
+	printf '# homerun:generated\\nnew %s\\n' "$(basename "$file")"
+fi
+`;
+
+/** Runs `script` under sh in a scratch compose dir holding `files`, with a fake `docker` on PATH, and returns the dir's files afterwards plus every docker call made. */
+async function runUpdater(
+	files: Record<string, string>,
+	image: string,
+	envDefaults: Record<string, string> = {},
+	channel: "canary" | "stable" = "stable",
+): Promise<{
+	calls: string[];
+	dir: string;
+	read: (name: string) => Promise<string>;
+}> {
+	const dir = await mkdtemp(join(tmpdir(), "homerun-updater-"));
+	const bin = await mkdtemp(join(tmpdir(), "homerun-bin-"));
+	await writeFile(join(bin, "docker"), FAKE_DOCKER, { mode: 0o755 });
+	for (const [name, content] of Object.entries(files)) {
+		await writeFile(join(dir, name), content);
+	}
+	const target = composeTargetFrom(
+		{
+			...labels,
+			"com.docker.compose.project.config_files": join(dir, "compose.yaml"),
+			"com.docker.compose.project.working_dir": dir,
+		},
+		image,
+	);
+	if (!target) {
+		throw new Error("expected a target");
+	}
+	const log = join(dir, "docker.log");
+	const proc = Bun.spawn(
+		[
+			"sh",
+			"-c",
+			updaterScript(
+				target,
+				{ channel, version: "1.0.22" },
+				{ companions: ["worker"], envDefaults },
+			),
+		],
+		{
+			env: { DOCKER_LOG: log, PATH: `${bin}:${process.env.PATH}` },
+			stderr: "pipe",
+			stdout: "pipe",
+		},
+	);
+	const code = await proc.exited;
+	if (code !== 0) {
+		throw new Error(await new Response(proc.stderr).text());
+	}
+	const calls = (await readFile(log, "utf8")).trim().split("\n");
+	return { calls, dir, read: (name) => readFile(join(dir, name), "utf8") };
+}
+
+describe("updaterScript against a real shell", () => {
+	test("replaces a generated compose file with the new image's and pins .env", async () => {
+		const { calls, read } = await runUpdater(
+			{
+				".env":
+					"AUTH_SECRET=keep\nHOMERUN_VERSION=v1.0.20\nHOMERUN_HOST=mine.example.com",
+				"compose.yaml": "# homerun:generated\nold\n",
+			},
+			"docker.io/orochibraru/homerun:v1.0.20",
+			{ HOMERUN_HOST: "ignored.example.com", ORIGIN: "http://x:3000" },
+		);
+		expect(await read("compose.yaml")).toBe(
+			"# homerun:generated\nnew compose.yaml\n",
+		);
+		const env = await read(".env");
+		expect(env).toContain("AUTH_SECRET=keep\n");
+		expect(env).toContain("HOMERUN_HOST=mine.example.com\n");
+		expect(env).not.toContain("ignored.example.com");
+		expect(env).toContain("ORIGIN=http://x:3000\n");
+		expect(env).toContain("HOMERUN_IMAGE=docker.io/orochibraru/homerun\n");
+		expect(env).toContain("HOMERUN_VERSION=v1.0.22\n");
+		expect(env).not.toContain("v1.0.20");
+		expect(calls).toContain(
+			"docker run --rm --entrypoint cat docker.io/orochibraru/homerun:v1.0.22 /app/compose/compose.yaml",
+		);
+		expect(calls.at(-1)).toMatch(
+			/^docker compose -p homerun -f compose\.yaml up -d --no-deps app worker$/,
+		);
+	});
+
+	test("switching to canary points .env at the canary image", async () => {
+		const { calls, read } = await runUpdater(
+			{
+				".env": "AUTH_SECRET=keep\nHOMERUN_VERSION=v1.0.20\n",
+				"compose.yaml": "# homerun:generated\nold\n",
+			},
+			"docker.io/orochibraru/homerun:v1.0.20",
+			{},
+			"canary",
+		);
+		expect(await read(".env")).toContain("HOMERUN_VERSION=canary\n");
+		expect(calls).toContain("docker pull docker.io/orochibraru/homerun:canary");
+	});
+
+	test("migrates an old installer file, keeping a swarm install on the swarm overlay", async () => {
+		const { calls, read } = await runUpdater(
+			{
+				".env": "AUTH_SECRET=keep\n",
+				"compose.yaml":
+					"# Generated by the Homerun installer (--mode=full).\n      - --providers.swarm=true\n",
+			},
+			"docker.io/orochibraru/homerun:latest",
+			{ HOMERUN_HOST: "203.0.113.10" },
+		);
+		expect(await read("compose.swarm.yaml")).toBe(
+			"# homerun:generated\nnew compose.swarm.yaml\n",
+		);
+		const env = await read(".env");
+		expect(env).toContain("HOMERUN_HOST=203.0.113.10\n");
+		expect(env).toContain("HOMERUN_VERSION=latest\n");
+		expect(calls.at(-1)).toBe(
+			"docker compose -p homerun -f compose.yaml -f compose.swarm.yaml up -d --no-deps app worker",
+		);
+	});
+
+	test.skipIf(process.platform === "darwin")(
+		"leaves a hand-written compose file alone apart from its pinned tag",
+		async () => {
+			const { calls, dir, read } = await runUpdater(
+				{
+					"compose.yaml": "services:\n  app:\n    image: homerun:v1.0.20\n",
+				},
+				"homerun:v1.0.20",
+			);
+			expect(await read("compose.yaml")).toBe(
+				"services:\n  app:\n    image: homerun:v1.0.22\n",
+			);
+			expect(calls.some((call) => call.startsWith("docker run"))).toBe(false);
+			expect(calls.at(-1)).toBe(
+				`docker compose -p homerun -f ${join(dir, "compose.yaml")} up -d --no-deps app worker`,
+			);
+		},
+	);
 });

@@ -26,5 +26,8 @@ export function applyAndRebuild(settings: InstanceSettingsDTO) {
 	rebuildAuth();
 	void DockerService.syncDashboardRouter();
 	void syncDashboardDns();
-	void DockerService.syncNewtContainer(settings.newtCredentials());
+	void DockerService.syncNewt(
+		settings.newtCredentials(),
+		settings.orchestrationMode === "swarm",
+	);
 }

@@ -18,6 +18,7 @@
 		"@fontsource-variable/inter": "^5.3.0",
 		"@fontsource-variable/jetbrains-mono": "^5.3.0",
 		"@happy-dom/global-registrator": "^20.11.6",
+		"@j178/prek": "^0.5.3",
 		"@kitql/helpers": "^0.8.15",
 		"@lucide/svelte": "^1.33.0",
 		"@orochibraru/svelte-smol": "^1.6.1",
@@ -71,7 +72,7 @@
 	"private": true,
 	"scripts": {
 		"preinstall": "bunx only-allow bun",
-		"prepare": "prek install --allow-missing-config || true",
+		"prepare": "svelte-kit sync || true && prek install --allow-missing-config || true",
 		"dev": "bun scripts/dev.ts",
 		"build": "bun run gen && vite build",
 		"start": "./build/server",

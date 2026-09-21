@@ -109,3 +109,27 @@ export async function syncDashboardDns(): Promise<void> {
 		}
 	}
 }
+
+/**
+ * Brings DNS in line with a service's edited domains right away, rather than
+ * on its next deploy: syncs every hostname in `next` and deletes the ones
+ * `previous` had that `next` dropped, across every configured provider. Logs
+ * the outcome per hostname and provider rather than returning it, since
+ * nothing awaits this call.
+ */
+export async function syncServiceDomainsDns(
+	previous: string[],
+	next: string[],
+): Promise<void> {
+	const removed = previous.filter((hostname) => !next.includes(hostname));
+	const results = [...(await syncDns(next)), ...(await deleteDns(removed))];
+	for (const result of results) {
+		if (result.ok) {
+			logger.info(`Service domain (${result.provider}): ${result.detail}`);
+		} else {
+			logger.warn(
+				`Service domain sync failed (${result.provider}): ${result.detail}`,
+			);
+		}
+	}
+}

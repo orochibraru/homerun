@@ -45,18 +45,41 @@ app and worker as local processes to reach the Docker socket (see Screenshots in
 under test. The split between the last two is the point : `docker.yaml` pushes
 **by digest only** (`push-by-digest=true`, no tag), so `e2e.yaml` can
 `docker pull` that exact digest and run Playwright against the real artefact,
-and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`,
-`vX.Y.Z`, `latest`). Nothing anyone can pull by name is ever published before
-e2e has passed against it, and the app is built once per platform instead of
-once for the image plus again from source for the tests. The per-platform
+and `docker-manifest.yaml` only then applies the friendly tag (`pr-<n>`, or
+`<sha>` + `canary` on `main`). Nothing anyone can pull by name is ever published
+before e2e has passed against it, and the app is built once per platform instead
+of once for the image plus again from source for the tests. The per-platform
 digests and the `docker-metadata-action` bake file travel between those
 workflows as run artefacts, which is why they must stay in one workflow run
 (`uses:`, not a separate `workflow_run`). Both arches build natively
 (`ubuntu-24.04-arm` for arm64), never under QEMU.
 
+**A merge to `main` is a canary, not a release.** The flow is trunk-based with
+promotion, deliberately not a `next`/`canary` branch: squash-merging a branch
+into `main` would collapse every PR title `releaser` reads into one commit and
+leave the two branches permanently diverged. Instead `publish.yaml` publishes
+every push to `main` as the canary : images tagged `<sha>` + `canary` (never
+`latest`), binaries stamped `<next version>-canary.<run number>` (a run number,
+not the SHA, so two canaries order correctly, and the self-update notice ranks a
+canary below the release it becomes, see `version.ts`), and a rolling GitHub
+prerelease tagged `canary` that its `canary` job deletes (`--cleanup-tag`) and
+recreates at the new SHA every run, uploading through
+`upload-release-assets.ts canary --prerelease` (which publishes it with
+`--latest=false`). Everything stable reads `releases/latest` or `:latest`, which
+a prerelease never is, so nothing stable moves. **A stable release is the manual
+`release.yaml`** (`workflow_dispatch`, `main` only, same `publish` concurrency
+group): it refuses unless the `canary` tag's commit matches `main` apart from
+docs paths (the same pattern list as `paths-ignore`), dry-runs `releaser` for
+the version (failing when nothing is releasable), rebuilds the binaries with
+that version, retags the canary `<sha>` images as `vX.Y.Z`, `latest` and
+`canary` (the app one through the same `FROM`+`ENV HOMERUN_APP_VERSION` build as
+`promote`, so a canary instance lands on the stable version and stops seeing the
+notice), then runs `releaser` for real and uploads. Nothing is rebuilt or
+re-tested at release: what ships is exactly what ran as canary.
+
 **A merge to `main` doesn't rebuild what the PR already tested.**
 `publish.yaml`'s `resolve` job looks up the merged PR and promotes its `pr-<n>`
-images straight to `vX.Y.Z` + `latest` (`promote`, a
+images straight to `<sha>` + `canary` (`promote`, a
 `docker buildx imagetools create`, no build, no e2e, no `code_quality`) when
 three things hold: the squash commit's tree matches the PR head's tree apart
 from `CHANGELOG.md` and `package.json`'s `version` field (the ruleset doesn't
@@ -69,7 +92,7 @@ image and failed on flake the PR had never hit, blocking the release. The app
 image doesn't embed the version, so that diff can't change what ships. Anything
 else (a direct push, a stale PR, a fork) falls back to the full build → e2e →
 manifest chain. Binaries always rebuild, since the release version is baked into
-them. The release job accepts either path. `pr-<n>` tags of a merged PR are
+them. The `canary` job accepts either path. `pr-<n>` tags of a merged PR are
 deleted by `publish.yaml`'s `cleanup` once the images are published, not by
 `pr-cleanup.yaml` (which now only handles PRs closed unmerged), otherwise the
 two would race on merge and delete the tag being promoted. Both call
@@ -145,23 +168,20 @@ conventional-commit messages the same way (this repo's commits already follow
 `feat:`/`fix:`/`chore:`, no new discipline required), with
 `rules: breaking=patch,feat=patch,docs=patch,refactor=patch` (every releasable
 type bumps only the patch digit; there's no automatic minor/major here). It runs
-twice in `.github/workflows/publish.yaml`: the `version` job dry-runs it
-(`dry-run: "true"`) right after checkout, purely to read its `version`/`tag`
-outputs for the app image's baked version and the binaries' `-ldflags` stamp,
-even on a push that won't end up releasing (falls back to the commit SHA when
-there's nothing releasable, see Compute Release Version above); the `release`
-job runs it for real at the end, after every build/test job has passed, with
-`draft: "true"` and `prepare: bunx prettier --write CHANGELOG.md`. A
-non-releasable push (docs/chore-only) is a no-op there too, not a failure. One
-version number covers the whole repo: `releaser` bumps `package.json`'s
-`version` field and `CHANGELOG.md` itself (none of the three `cmd/` Go programs
-carry a `package.json` of their own to bump, they read the root one's version
-directly at build time, stamped in via `-ldflags` into
-`internal/buildinfo.Version`, see `scripts/build-packages.ts` below).
-`scripts/build-packages.ts` builds every release binary: all three commands
-(`cli`, `installer`, `worker`) are Go, so every target cross-compiles from any
-one machine (`go build` with `GOOS`/`GOARCH` set, exact, unlike Bun's own
-cross-compilation — see Homerun CLI in `api-and-cli.md`): `cli` for all four
+three times: `publish.yaml`'s `version` job dry-runs it (`dry-run: "true"`)
+purely to read the next `version` for the canary stamp (falling back to
+`package.json`'s version when nothing is releasable); `release.yaml`'s `resolve`
+job dry-runs it for the stable version and tag; its `release` job runs it for
+real at the end, with `draft: "true"` and
+`prepare: bunx prettier --write CHANGELOG.md`. One version number covers the
+whole repo: `releaser` bumps `package.json`'s `version` field and `CHANGELOG.md`
+itself (none of the three `cmd/` Go programs carry a `package.json` of their own
+to bump, they read the root one's version directly at build time, stamped in via
+`-ldflags` into `internal/buildinfo.Version`, see `scripts/build-packages.ts`
+below). `scripts/build-packages.ts` builds every release binary: all three
+commands (`cli`, `installer`, `worker`) are Go, so every target cross-compiles
+from any one machine (`go build` with `GOOS`/`GOARCH` set, exact, unlike Bun's
+own cross-compilation — see Homerun CLI in `api-and-cli.md`): `cli` for all four
 targets (`amd64`/`arm64`/`darwin-amd64`/`darwin-arm64`), `installer` and
 `worker` for `amd64`/`arm64` Linux only, since both only ever run on the Linux
 host they manage (`worker`'s Linux-only build covers its agent mode too, see
@@ -170,7 +190,7 @@ Homerun Worker's agent mode below). Eight binaries total, so
 
 **`releaser` doesn't upload the binaries itself.** It creates the release as a
 draft (`draft: "true"`) and reports whether one actually happened
-(`steps.releaser.outputs.released`); when it did, the release job's next step
+(`steps.releaser.outputs.released`); when it did, `release.yaml`'s next step
 runs `scripts/upload-release-assets.ts "$TAG"`: one
 `gh release upload --clobber` per binary with retries, all eight concurrently,
 skipping any already uploaded at the same size, then
@@ -205,21 +225,22 @@ Docker Hub credential (`secrets.DOCKER_REGISTRY_PASSWORD`, an access token; the
 Docker Hub username is the plain `registry_username` input, since it isn't
 secret) rather than the built-in `GITHUB_TOKEN`.
 
-**The release job needs `secrets.RELEASE_TOKEN`, not `GITHUB_TOKEN`**: a
-fine-grained PAT scoped to this repo (Contents + Issues + Pull requests: write).
-`orochibraru/releaser` pushes the version bump and tag straight to `main`, and a
-`main` ruleset blocks pushes from anyone but a repo admin, which
-`github-actions[bot]` isn't. It's threaded in twice, as `actions/checkout`'s
-`token` (git push auth) and as the action's own `token` input (its API calls).
-The `version` job's dry run takes it too, in **both** places: that job's output
-also feeds the `binaries` job's and the app image's baked version, so it has to
-actually resolve rather than silently falling back to a commit SHA (a real bug
-in the equivalent `semantic-release`-era job — passing the token only as
-`GH_TOKEN` while `actions/checkout` persisted the read-only default token 403'd
-its dry-run push check, the failure was swallowed by a `|| true`, the version
-came back empty, and v1.0.22 shipped reporting 1.0.21 with a permanent "update
-available" notice — is why both jobs' checkouts take `RELEASE_TOKEN` today, and
-why a failing dry run fails the job instead of silently falling back).
+**`release.yaml` (and `publish.yaml`'s `canary` job) need
+`secrets.RELEASE_TOKEN`, not `GITHUB_TOKEN`**: a fine-grained PAT scoped to this
+repo (Contents + Issues + Pull requests: write). `orochibraru/releaser` pushes
+the version bump and tag straight to `main`, and a `main` ruleset blocks pushes
+from anyone but a repo admin, which `github-actions[bot]` isn't. It's threaded
+in twice, as `actions/checkout`'s `token` (git push auth) and as the action's
+own `token` input (its API calls). The `version` job's dry run takes it too, in
+**both** places: that job's output also feeds the `binaries` job's and the app
+image's baked version, so it has to actually resolve rather than silently
+falling back to a commit SHA (a real bug in the equivalent
+`semantic-release`-era job — passing the token only as `GH_TOKEN` while
+`actions/checkout` persisted the read-only default token 403'd its dry-run push
+check, the failure was swallowed by a `|| true`, the version came back empty,
+and v1.0.22 shipped reporting 1.0.21 with a permanent "update available" notice
+— is why both jobs' checkouts take `RELEASE_TOKEN` today, and why a failing dry
+run fails the job instead of silently falling back).
 
 **Job ids use `-`, never `:`** (`build-app`, not `build:app`). GitHub rejects a
 colon in a job id outright and refuses to run the whole workflow file; the
@@ -356,11 +377,16 @@ own runtime).
   and ran `bun run build` there): `bootstrap.sh` downloads the
   `homerun-installer-<arch>` release binary itself and `exec`s it (no Bun, no
   git); `--mode=agent` downloads the matching `homerun-worker-<arch>` release
-  binary straight to `/usr/local/bin/homerun-worker`; `--mode=full` writes a
-  standalone `compose.yaml` (`fullstack.go`'s `fullStackCompose`, distinct from
-  the root dev `compose.yaml`; see Docker integration above) pulling the
-  published `docker.io/orochibraru/homerun` app image alongside
-  Traefik/Postgres, then `docker compose pull && ...up -d`.
+  binary straight to `/usr/local/bin/homerun-worker`; `--mode=full` writes the
+  static, generated `compose.yaml` (`internal/installer/compose.yaml`,
+  `go:embed` as `ComposeFile`, plus `compose.swarm.yaml` on a swarm install;
+  distinct from the root dev `compose.yaml`) and puts everything per-host in
+  `.env` (`ComposeEnv`: `HOMERUN_HOST`, `HOMERUN_DOCKER_SOCKET`,
+  `HOMERUN_IMAGE`, `HOMERUN_VERSION`, `DASHBOARD_CERT_RESOLVER`, upserted by
+  `SetEnvValues` without touching other lines), then
+  `docker compose pull && ...up -d`. The file is static so self-update can
+  overwrite it wholesale, see Self-update below; the same two files are `COPY`d
+  into the app image at `/app/compose/`.
 
   **`--mode=full` resolves an address for the instance and it is never
   `localhost`** (`main.go`'s `resolveHost`): `--domain=` wins, else an
@@ -509,16 +535,20 @@ job no longer `imagetools create`s the app image: it builds
 is still a plain retag. Without this the notice would never go away after an
 update.
 
-**Latest release** is `GET /repos/orochibraru/homerun/releases/latest`, cached
-on the service instance for ten minutes (five minutes after a failure, which
-returns `null` rather than an error). Comparison is `self-update/version.ts`'s
-small semver compare, a leading `v` is ignored and a non-version never counts as
-newer. The sidebar refreshes `getReleaseStatus` on the same ten-minute interval,
-so a release shows up without reloading the page or restarting the container.
-The same status and start are exposed to admins as
-`GET/POST /api/v1/instance/update` (`homerun instance status`/`update`), for
-when the dashboard itself is unreachable; a refused start is a `409` carrying
-`start()`'s message.
+**The channel** is `instance_settings.update_channel` (`stable` when null), set
+on Settings → General. **Latest release** is
+`GET /repos/orochibraru/homerun/releases/latest` for stable, and
+`/releases/tags/canary` for canary, whose version is parsed off the release name
+(`Canary <version>`, written by `publish.yaml`'s `canary` job: keep the two in
+sync) since its tag never moves. Cached per channel on the service instance for
+ten minutes (five minutes after a failure, which returns `null` rather than an
+error). Comparison is `self-update/version.ts`'s small semver compare, a leading
+`v` is ignored and a non-version never counts as newer. The sidebar refreshes
+`getReleaseStatus` on the same ten-minute interval, so a release shows up
+without reloading the page or restarting the container. The same status and
+start are exposed to admins as `GET/POST /api/v1/instance/update`
+(`homerun instance status`/`update`), for when the dashboard itself is
+unreachable; a refused start is a `409` carrying `start()`'s message.
 
 **Finding its own compose project.** The service inspects its own container
 (`os.hostname()` first, then the 64-hex id out of `/proc/self/mountinfo`) and
@@ -538,15 +568,42 @@ with the socket at `/var/run/docker.sock` and the working dir plus every config
 file's dir bind-mounted at their host paths. Any throw releases the hold. The
 helper is a plain container with restart policy `no` and no auto-remove,
 independent of the app container, so stopping the app doesn't take it down and
-its logs survive a failed run. Its script (`updaterScript`) bumps a pinned tag
-first when the running image isn't `:latest` (`sed` over the config files for
-`<repo>:<oldtag>`, and `HOMERUN_VERSION=<oldtag>` in `.env`, keeping the `v`
-prefix style), then `docker compose -p <project> -f … pull <service>` and
-`up -d --no-deps <service>`. Verified by running the generated `sed` lines in a
-real `alpine:3` container against a sample compose file and `.env`, and
-`docker:cli` does ship the compose plugin. **Not verified**: a real end-to-end
-update on an installed instance, and the CI changes above (nothing here can run
-GitHub Actions).
+its logs survive a failed run. Its script (`updaterScript`) branches in shell on
+the project dir's `compose.yaml`:
+
+- **Generated** (first-line `# homerun:generated`, or the pre-static installer's
+  `# Generated by the Homerun installer` header): fills in any `.env` key the
+  static file reads that `.env` lacks, recovered off the running app by
+  `composeEnvDefaults` (host from the dashboard router rule label, resolver
+  label, `ORIGIN` env, socket path; never overriding an existing key), rewrites
+  `HOMERUN_VERSION` to the target tag, `docker pull`s the new image and `cat`s
+  `/app/compose/compose.yaml` (and `compose.swarm.yaml` when that file exists or
+  the old one had `providers.swarm`) out of it over the old files, in place so
+  owner and mode survive. Real reason: an old compose file can be incompatible
+  with a new image, and the image is the one thing that's guaranteed to match
+  its own version, canary and `pr-<n>` included, with no GitHub asset to fetch.
+- **Hand-written**: never replaced, only a pinned tag is bumped (`sed` over the
+  config files for `<repo>:<oldtag>`, and `HOMERUN_VERSION=<oldtag>` in `.env`,
+  keeping the `v` prefix style).
+
+Either way the target tag is `pinnedTagFor`'s: always `canary` on the canary
+channel; on stable, `latest` stays `latest` and anything else (a version,
+`canary`, `pr-<n>`) is pinned to the release, which is how switching back from
+canary lands on a stable tag. Switching back never downgrades because only a
+strictly newer version counts as an update, and a release outranks its own
+canaries.
+
+Then `docker compose -p <project> "$@" pull` and `up -d --no-deps` for the app
+and its worker companions only. **Never Traefik, Postgres or anything outside
+the project**: Traefik carries flags the app applies at runtime (swarm provider,
+ACME email, custom SSL) that a compose recreate would drop, and the Newt tunnel
+is a bare container or swarm service with no compose labels, which `--no-deps`
+without `--remove-orphans` can't touch. The script is exercised under a real
+`sh` against a fake `docker` in `tests/unit/app/self-update.test.ts` (the
+hand-written case skips on macOS, whose BSD `sed -i` differs from the updater's
+busybox one), and `docker:cli` does ship the compose plugin. **Not verified**: a
+real end-to-end update on an installed instance, and the CI changes above
+(nothing here can run GitHub Actions).
 
 **The hold is in memory, not a DB column**, on purpose: it lives exactly as long
 as the process that's about to be replaced, so the new container boots with the

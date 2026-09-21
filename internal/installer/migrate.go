@@ -458,12 +458,16 @@ func RecordVolumes(run Runner, reachable bool, rootless Opts, volumesFile string
 	return volumes, run.WriteFile(volumesFile, string(encoded))
 }
 
-// MigrationHost is where the instance is reached: --domain=, else the host the
-// old compose file's ORIGIN default carries, else homerun.yaml's baseDomain,
-// else detected.
+// MigrationHost is where the instance is reached: --domain=, else .env's
+// HOMERUN_HOST, else the host a pre-static compose file's ORIGIN default
+// carries, else homerun.yaml's baseDomain, else detected.
 func MigrationHost(params MigrationParams, composeDir string) (string, error) {
 	if params.Domain != "" {
 		return params.Domain, nil
+	}
+	env, _ := os.ReadFile(composeDir + "/.env")
+	if host := EnvValue(string(env), "HOMERUN_HOST"); host != "" && !loopbackHost.MatchString(host) {
+		return host, nil
 	}
 	compose, _ := os.ReadFile(composeDir + "/compose.yaml")
 	if host := HostFromCompose(string(compose)); host != "" {

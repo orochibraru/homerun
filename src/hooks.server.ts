@@ -231,7 +231,10 @@ export const init = async () => {
 	});
 	await DockerService.syncDashboardRouter();
 	void syncDashboardDns();
-	void DockerService.syncNewtContainer(settings.newtCredentials());
+	void DockerService.syncNewt(
+		settings.newtCredentials(),
+		settings.orchestrationMode === "swarm",
+	);
 	await OrchestrationService.applyOnBoot(settings, created).catch((err) => {
 		logger.warn("Couldn't apply the orchestration mode on boot", err);
 	});

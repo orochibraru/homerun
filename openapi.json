@@ -122,6 +122,11 @@
 								"schema": {
 									"additionalProperties": false,
 									"properties": {
+										"channel": {
+											"description": "The release channel updates follow, set on Settings → General",
+											"enum": ["stable", "canary"],
+											"type": "string"
+										},
 										"current": {
 											"description": "The running version",
 											"type": "string"
@@ -157,7 +162,7 @@
 													"type": "null"
 												}
 											],
-											"description": "The latest GitHub release, null when it couldn't be checked"
+											"description": "The newest release on the channel, null when it couldn't be checked"
 										},
 										"preflight": {
 											"additionalProperties": false,
@@ -201,6 +206,7 @@
 										}
 									},
 									"required": [
+										"channel",
 										"current",
 										"latest",
 										"preflight",

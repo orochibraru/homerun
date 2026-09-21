@@ -227,6 +227,10 @@ export const revisionResponse = z.object({
 export const successResponse = z.object({ success: z.boolean() });
 
 export const instanceUpdateStatusResponse = z.object({
+	channel: z.enum(["stable", "canary"]).meta({
+		description:
+			"The release channel updates follow, set on Settings → General",
+	}),
 	current: z.string().meta({ description: "The running version" }),
 	latest: z
 		.object({
@@ -237,7 +241,7 @@ export const instanceUpdateStatusResponse = z.object({
 		.nullable()
 		.meta({
 			description:
-				"The latest GitHub release, null when it couldn't be checked",
+				"The newest release on the channel, null when it couldn't be checked",
 		}),
 	preflight: z.object({
 		pendingDeploys: z.number(),

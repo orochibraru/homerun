@@ -79,4 +79,27 @@ export const actions = {
 		logger.info(`Core instance settings updated: user=${locals.user.id}`);
 		return { savedSection: "core", success: true };
 	},
+
+	updateChannel: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const formData = await request.formData();
+		const channel = formData.get("updateChannel");
+		if (channel !== "stable" && channel !== "canary") {
+			return fail(400, {
+				error: "Pick the stable or canary channel.",
+				savedSection: "channel",
+			});
+		}
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateUpdateChannel(channel);
+		logger.info(
+			`Update channel set: channel=${channel} user=${locals.user.id}`,
+		);
+		return { savedSection: "channel", success: true };
+	},
 };

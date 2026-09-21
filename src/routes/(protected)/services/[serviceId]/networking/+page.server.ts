@@ -11,6 +11,7 @@ import {
 	normalizeDomains,
 	serviceHostnames,
 } from "$lib/service-domains";
+import { syncServiceDomainsDns } from "$lib/services/dns.service";
 import { DockerService } from "$lib/services/docker.service";
 import { encryptSecret } from "$lib/services/secrets";
 
@@ -73,6 +74,11 @@ export const actions = {
 					"Keep at least one domain, or turn public routing off in the Network section.",
 			});
 		}
+		const previous = serviceHostnames(
+			svc.toJSON(),
+			stack?.slug,
+			config.baseDomain,
+		);
 		const chosen = String(formData.get("primaryDomain") ?? "")
 			.trim()
 			.toLowerCase();
@@ -82,6 +88,9 @@ export const actions = {
 			domains,
 			primaryDomain: hostnames.includes(chosen) ? chosen : hostnames[0],
 		});
+		if (svc.dnsResolvable) {
+			void syncServiceDomainsDns(previous, hostnames);
+		}
 
 		logger.info(
 			`Domains updated: service=${svc.id} domains=${hostnames.join(",")} user=${locals.user.id}`,

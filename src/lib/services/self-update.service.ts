@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { config } from "$lib/config";
+import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { JobDTO } from "$lib/dto/job-dto";
 import { Logger } from "$lib/logger";
 import { APP_VERSION } from "$lib/server/app-version";
@@ -11,6 +12,7 @@ import {
 	COMPOSE_PROJECT_LABEL,
 	COMPOSE_SERVICE_LABEL,
 	type ComposeTarget,
+	composeEnvDefaults,
 	composeTargetFrom,
 	containerIdFromMountinfo,
 	UPDATER_CONTAINER_NAME,
@@ -23,8 +25,12 @@ import {
 } from "./self-update/compose-target.ts";
 import { isNewerVersion, normalizeVersion } from "./self-update/version.ts";
 
-const RELEASES_URL =
-	"https://api.github.com/repos/orochibraru/homerun/releases/latest";
+const RELEASE_URLS = {
+	canary:
+		"https://api.github.com/repos/orochibraru/homerun/releases/tags/canary",
+	stable: "https://api.github.com/repos/orochibraru/homerun/releases/latest",
+} as const;
+const CANARY_NAME_PREFIX = "Canary ";
 const RELEASE_CACHE_MS = 10 * 60 * 1000;
 const RELEASE_FAILURE_CACHE_MS = 5 * 60 * 1000;
 const RELEASE_TIMEOUT_MS = 5000;
@@ -51,7 +57,10 @@ export interface UpdateProgress {
 	version: string | null;
 }
 
+export type UpdateChannel = "canary" | "stable";
+
 export interface ReleaseStatus {
+	channel: UpdateChannel;
 	current: string;
 	latest: LatestRelease | null;
 	updateAvailable: boolean;
@@ -68,38 +77,55 @@ export interface UpdatePreflight {
 interface ResolvedSelf {
 	companions: string[];
 	hostSocketPath: string;
+	labels: Record<string, string>;
 	target: ComposeTarget;
 }
 
 class SelfUpdateServiceClass {
 	readonly currentVersion = normalizeVersion(APP_VERSION) ?? APP_VERSION;
-	#release: { expiresAt: number; value: LatestRelease | null } | null = null;
-	#inFlightRelease: Promise<LatestRelease | null> | null = null;
+	readonly #release = new Map<
+		UpdateChannel,
+		{ expiresAt: number; value: LatestRelease | null }
+	>();
+	readonly #inFlightRelease = new Map<
+		UpdateChannel,
+		Promise<LatestRelease | null>
+	>();
 
 	/**
-	 * The latest GitHub release, cached in `#release` for `RELEASE_CACHE_MS`
-	 * (or `RELEASE_FAILURE_CACHE_MS` after a failed check, so a GitHub outage
-	 * doesn't hammer the API every call). Concurrent calls during a refresh
-	 * share the same in-flight fetch via `#inFlightRelease`.
+	 * The newest release on `channel`, cached per channel in `#release` for
+	 * `RELEASE_CACHE_MS` (or `RELEASE_FAILURE_CACHE_MS` after a failed check,
+	 * so a GitHub outage doesn't hammer the API every call). Concurrent calls
+	 * during a refresh share the same in-flight fetch via `#inFlightRelease`.
 	 */
-	async latestRelease(): Promise<LatestRelease | null> {
-		if (this.#release && this.#release.expiresAt > Date.now()) {
-			return this.#release.value;
+	async latestRelease(channel: UpdateChannel): Promise<LatestRelease | null> {
+		const cached = this.#release.get(channel);
+		if (cached && cached.expiresAt > Date.now()) {
+			return cached.value;
 		}
-		this.#inFlightRelease ??= this.#fetchLatestRelease().finally(() => {
-			this.#inFlightRelease = null;
-		});
-		return await this.#inFlightRelease;
+		let inFlight = this.#inFlightRelease.get(channel);
+		if (!inFlight) {
+			inFlight = this.#fetchLatestRelease(channel).finally(() => {
+				this.#inFlightRelease.delete(channel);
+			});
+			this.#inFlightRelease.set(channel, inFlight);
+		}
+		return await inFlight;
 	}
 
 	/**
-	 * Fetches and caches the latest GitHub release, writing to `#release`
-	 * either way. Never throws: logs and caches a null result on any network
-	 * error, non-2xx response, or unparseable tag.
+	 * Fetches and caches the newest release on `channel`, writing to
+	 * `#release` either way: `releases/latest` for stable, the rolling
+	 * `canary` prerelease for canary, whose version is in its name
+	 * (`Canary <version>`) since its tag never changes. Never throws: logs
+	 * and caches a null result on any network error, non-2xx response, or
+	 * unparseable version.
 	 */
-	async #fetchLatestRelease(): Promise<LatestRelease | null> {
+	async #fetchLatestRelease(
+		channel: UpdateChannel,
+	): Promise<LatestRelease | null> {
 		try {
-			const res = await fetch(RELEASES_URL, {
+			const res = await fetch(RELEASE_URLS[channel], {
 				headers: {
 					Accept: "application/vnd.github+json",
 					"User-Agent": "homerun",
@@ -111,34 +137,49 @@ class SelfUpdateServiceClass {
 			}
 			const body = (await res.json()) as {
 				html_url: string;
+				name: string | null;
 				published_at: string | null;
 				tag_name: string;
 			};
-			const version = normalizeVersion(body.tag_name);
+			const label =
+				channel === "canary"
+					? (body.name ?? "").replace(CANARY_NAME_PREFIX, "")
+					: body.tag_name;
+			const version = normalizeVersion(label);
 			if (!version) {
-				throw new Error(`Unexpected release tag ${body.tag_name}`);
+				throw new Error(`Unexpected ${channel} release ${label}`);
 			}
 			const value = {
 				publishedAt: body.published_at,
 				url: body.html_url,
 				version,
 			};
-			this.#release = { expiresAt: Date.now() + RELEASE_CACHE_MS, value };
+			this.#release.set(channel, {
+				expiresAt: Date.now() + RELEASE_CACHE_MS,
+				value,
+			});
 			return value;
 		} catch (err) {
 			logger.warn("Couldn't check for a newer release", err);
-			this.#release = {
+			this.#release.set(channel, {
 				expiresAt: Date.now() + RELEASE_FAILURE_CACHE_MS,
 				value: null,
-			};
+			});
 			return null;
 		}
 	}
 
-	/** The current vs. latest version and whether an update is available, for the settings page's update card. */
+	/**
+	 * The current vs. latest version on the configured channel and whether an
+	 * update is available. Only a strictly newer version counts, so an
+	 * instance switched from canary back to stable sees nothing until a
+	 * stable release overtakes the canary it runs.
+	 */
 	async releaseStatus(): Promise<ReleaseStatus> {
-		const latest = await this.latestRelease();
+		const { updateChannel: channel } = await InstanceSettingsDTO.get();
+		const latest = await this.latestRelease(channel);
 		return {
+			channel,
 			current: this.currentVersion,
 			latest,
 			updateAvailable:
@@ -185,6 +226,7 @@ class SelfUpdateServiceClass {
 				// oxlint-disable-next-line no-await-in-loop -- one compose project at a time
 				companions: await this.#workerServices(target.project),
 				hostSocketPath: socketMount?.Source ?? config.docker.socketPath,
+				labels: info.Config.Labels ?? {},
 				target,
 			};
 		}
@@ -266,7 +308,9 @@ class SelfUpdateServiceClass {
 	async start(): Promise<{ version: string }> {
 		const status = await this.releaseStatus();
 		if (!(status.latest && status.updateAvailable)) {
-			throw new Error("Homerun is already on the latest release.");
+			throw new Error(
+				`Homerun is already on the latest ${status.channel} release.`,
+			);
 		}
 		if (JobWorker.held) {
 			throw new Error("An update is already starting.");
@@ -285,7 +329,7 @@ class SelfUpdateServiceClass {
 			if (!self) {
 				throw new Error("Couldn't find this app's own compose service.");
 			}
-			await this.#launchUpdater(self, status.latest.version);
+			await this.#launchUpdater(self, status.latest.version, status.channel);
 			logger.info(
 				`Update to ${status.latest.version} started: project=${self.target.project} service=${self.target.service}`,
 			);
@@ -331,9 +375,14 @@ class SelfUpdateServiceClass {
 	 * Pulls the `docker` CLI image, removes any leftover updater container
 	 * from a previous run, then creates and starts a fresh one bound to the
 	 * host Docker socket and compose directories, running `updaterScript` to
-	 * pull and recreate this app's own service.
+	 * refresh a generated compose file and pull and recreate this app's own
+	 * service.
 	 */
-	async #launchUpdater(self: ResolvedSelf, version: string): Promise<void> {
+	async #launchUpdater(
+		self: ResolvedSelf,
+		version: string,
+		channel: UpdateChannel,
+	): Promise<void> {
 		await DockerService.pullImage({
 			image: UPDATER_IMAGE,
 			tag: UPDATER_IMAGE_TAG,
@@ -343,7 +392,20 @@ class SelfUpdateServiceClass {
 		});
 		const created = await WorkerClient.post<{ id: string }>("/v1/containers", {
 			body: {
-				Cmd: [updaterScript(self.target, version, self.companions)],
+				Cmd: [
+					updaterScript(
+						self.target,
+						{ channel, version },
+						{
+							companions: self.companions,
+							envDefaults: composeEnvDefaults(
+								self.labels,
+								Bun.env.ORIGIN,
+								self.hostSocketPath,
+							),
+						},
+					),
+				],
 				Entrypoint: ["sh", "-c"],
 				HostConfig: {
 					Binds: updaterBinds(self.target, self.hostSocketPath),

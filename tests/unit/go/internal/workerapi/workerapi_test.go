@@ -182,6 +182,27 @@ func TestSwarmStatusAggregation(t *testing.T) {
 	}
 }
 
+func TestInspectSwarmServiceByName(t *testing.T) {
+	api := newAPI(t, &fakeDaemon{bodies: map[string]string{
+		"/services/homerun-newt": `{"ID":"s1","Spec":{"Name":"homerun-newt","Labels":{"homerun.core":"newt"}}}`,
+	}})
+	status, body := call(t, api, http.MethodGet, "/v1/swarm/services/homerun-newt", false)
+	if status != http.StatusOK || !strings.Contains(body, `"homerun.core":"newt"`) {
+		t.Fatalf("the labels are what tells a sync whether the service is current, got %d %s", status, body)
+	}
+	if status, _ := call(t, api, http.MethodGet, "/v1/swarm/services/gone", false); status != http.StatusNotFound {
+		t.Fatalf("a missing service must read as 404, got %d", status)
+	}
+}
+
+func TestCreateSwarmServiceNeedsAName(t *testing.T) {
+	api := newAPI(t, &fakeDaemon{bodies: map[string]string{"/services/create": `{"ID":"s1"}`}})
+	status, body := call(t, api, http.MethodPost, "/v1/swarm/services", false)
+	if status != http.StatusBadRequest {
+		t.Fatalf("an empty body has no name, got %d %s", status, body)
+	}
+}
+
 func TestASwarmServiceScaledToZeroIsStopped(t *testing.T) {
 	api := newAPI(t, &fakeDaemon{bodies: map[string]string{
 		"/services/s1": `{"Spec":{"Mode":{"Replicated":{"Replicas":0}}}}`,

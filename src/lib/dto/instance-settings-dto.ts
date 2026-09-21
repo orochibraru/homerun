@@ -211,6 +211,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			traefikCertResolver: null,
 			traefikDynamicConfigDir: null,
 			traefikEntrypoint: null,
+			updateChannel: null,
 			updatedAt: now,
 		};
 		const inserted = await db
@@ -302,6 +303,16 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	/** "standalone" (default, null means the same thing) | "swarm". */
 	get orchestrationMode(): "standalone" | "swarm" {
 		return this.row.orchestrationMode ?? "standalone";
+	}
+
+	/** Which releases self-update follows: stable releases, or every canary build of `main`. */
+	get updateChannel(): "canary" | "stable" {
+		return this.row.updateChannel ?? "stable";
+	}
+
+	/** Persists which release channel self-update follows. */
+	async updateUpdateChannel(channel: "canary" | "stable"): Promise<void> {
+		await this.persist({ updateChannel: channel });
 	}
 
 	/** Persists whether services deploy as plain containers or swarm services. */

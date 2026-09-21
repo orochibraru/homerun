@@ -58,10 +58,15 @@ is documented in
    standalone containers) and the attachable `homerun-swarm` overlay, the same
    name and shape the app's own `ensureSwarmNetwork` uses
    (`<networkName>-swarm`), so Traefik's compose container can join it.
-5. Writes `compose.yaml` under `/home/<user>/homerun/` (see `fullstack.go`) and
-   runs `docker compose pull && ...up -d` as root. Traefik mounts
-   `/var/run/docker.sock`, joins both networks and runs both providers, its
-   command ending in exactly the `--providers.swarm=true`,
+5. Writes the generated `compose.yaml` plus its `compose.swarm.yaml` overlay
+   under `/home/<user>/homerun/` (`internal/installer/compose*.yaml`, static:
+   the host, socket, image and cert resolver go into `.env` as `HOMERUN_HOST`,
+   `HOMERUN_DOCKER_SOCKET`, `HOMERUN_IMAGE`/`HOMERUN_VERSION` and
+   `DASHBOARD_CERT_RESOLVER`) and runs `docker compose pull && ...up -d` with
+   both files as root. Both are marked `# homerun:generated` and overwritten by
+   every self-update, so settings belong in `.env`, never in them. Traefik
+   mounts `/var/run/docker.sock`, joins both networks and runs both providers,
+   its command ending in exactly the `--providers.swarm=true`,
    `--providers.swarm.exposedByDefault=false`,
    `--providers.swarm.network=homerun-swarm`,
    `--providers.swarm.refreshSeconds=2` flags the app's `enableSwarmMode`
@@ -188,8 +193,9 @@ installer asks, offering this host's own address (the source IP of its route out
 to the internet, else `hostname -I`) as the blank-answer default. A
 `curl | bash` install has no TTY on stdin, so it takes that detected address
 silently rather than hanging on a prompt nobody can answer. Whatever it lands on
-becomes `baseDomain` in the generated `homerun.yaml` and the `ORIGIN` default in
-the generated `compose.yaml`, and is printed at the end as the dashboard URL.
+becomes `baseDomain` in the generated `homerun.yaml` and `HOMERUN_HOST` in
+`.env` (the generated `compose.yaml`'s `ORIGIN` default and dashboard router
+host), and is printed at the end as the dashboard URL.
 
 `--mode=full` needs `AUTH_SECRET` set before the app container will start: the
 generated `compose.yaml` fails closed on a missing one rather than booting with
@@ -197,17 +203,17 @@ an insecure default (the installer itself generates this automatically into
 `.env`, this only matters if running the compose file standalone, outside the
 installer). Put it (and anything else you want to override, `POSTGRES_PASSWORD`,
 `ORIGIN`, `ACME_EMAIL`) in a `.env` file next to that `compose.yaml`, then
-`sudo docker compose -f compose.yaml up -d` (as the rootless user with its
-`DOCKER_HOST` on a `--docker=rootless` install). Set `ORIGIN` there if the
-instance moves to another address after install (the compose file's own default
-is whatever `--domain=`/detection resolved to). Getting it wrong is not
+`sudo docker compose -f compose.yaml -f compose.swarm.yaml up -d` (plain
+`-f compose.yaml` as the rootless user with its `DOCKER_HOST` on a
+`--docker=rootless` install). Set `ORIGIN` (or `HOMERUN_HOST`) there if the
+instance moves to another address after install. Getting it wrong is not
 cosmetic, real, reported finding: better-auth's trusted origins are derived from
 `ORIGIN` alone, so a stale one makes every sign-in and the very first sign-up
 403 with "Invalid origin" from the address you are actually using, and absolute
 URLs this app constructs (e.g. the CLI login flow's own approval link) point at
-the wrong host too. See `fullstack.go`'s own doc comment. Base domain is seeded
-from the same answer, and is still editable afterward in `homerun.yaml` next to
-`compose.yaml`, or on `/settings`.
+the wrong host too. See `ComposeFile`'s doc comment in `fullstack.go`. Base
+domain is seeded from the same answer, and is still editable afterward in
+`homerun.yaml` next to `compose.yaml`, or on `/settings`.
 
 ## Joining a host to a swarm (`swarm-join.sh`)
 
