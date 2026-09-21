@@ -87,5 +87,5 @@
 		"db:generate": "drizzle-kit generate"
 	},
 	"type": "module",
-	"version": "1.0.39"
+	"version": "1.0.40"
 }
