@@ -16,23 +16,6 @@
 			"allowedVersions": "<7"
 		},
 		{
-			"matchPackageNames": [
-				"semantic-release",
-				"@semantic-release/**",
-				"conventional-changelog-**"
-			],
-			"groupName": "semantic-release"
-		},
-		{
-			"matchPackageNames": [
-				"semantic-release",
-				"@semantic-release/**",
-				"conventional-changelog-**"
-			],
-			"matchUpdateTypes": ["major"],
-			"dependencyDashboardApproval": true
-		},
-		{
 			"matchDepNames": ["bun", "oven/bun", "@types/bun"],
 			"groupName": "bun"
 		},

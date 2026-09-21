@@ -663,31 +663,9 @@ describe("hasDockerfile", () => {
 	});
 });
 
-describe("defaultsFor", () => {
-	test("only Gitea needs a base URL", () => {
-		expect(GitProviderService.defaultsFor("github")).toEqual({
-			name: "GitHub",
-			requiresBaseUrl: false,
-		});
-		expect(GitProviderService.defaultsFor("gitlab")).toEqual({
-			name: "GitLab",
-			requiresBaseUrl: false,
-		});
-		expect(GitProviderService.defaultsFor("gitea")).toEqual({
-			name: "Gitea",
-			requiresBaseUrl: true,
-		});
-		expect(GitProviderService.defaultsFor("bitbucket")).toEqual({
-			name: "Bitbucket",
-			requiresBaseUrl: false,
-		});
-	});
-
-	test("an unknown kind throws everywhere it's switched on", () => {
+describe("authorizeUrl", () => {
+	test("an unknown kind throws", () => {
 		const bogus = "svn" as GitProviderConfig["kind"];
-		expect(() => GitProviderService.defaultsFor(bogus)).toThrow(
-			"Unknown git provider kind: svn",
-		);
 		expect(() =>
 			GitProviderService.authorizeUrl(providerOf(bogus), "s", "cb"),
 		).toThrow("Unknown git provider kind: svn");

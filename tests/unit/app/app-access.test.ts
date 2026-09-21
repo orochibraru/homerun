@@ -273,17 +273,3 @@ describe("AppAccessService.recheck", () => {
 		expect(refreshToken).not.toHaveBeenCalled();
 	});
 });
-
-describe("AppAccessService.linkedMethods", () => {
-	test("maps provider ids to distinct sign-in methods", async () => {
-		tables.accounts = [
-			keycloakAccount([], "a"),
-			keycloakAccount([], "b"),
-			{ id: "c", idToken: null, providerId: "credential", refreshToken: null },
-		];
-		expect((await AppAccessService.linkedMethods("u1")).sort()).toEqual([
-			"oauth:keycloak",
-			"password",
-		]);
-	});
-});

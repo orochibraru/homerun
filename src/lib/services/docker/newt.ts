@@ -1,6 +1,20 @@
 import { createHash } from "node:crypto";
-import type { ContainerCreateOptions } from "dockerode";
 import { dockerHealthcheck } from "./healthcheck.ts";
+
+/**
+ * A Docker Engine container-create body, as much of it as a core container's
+ * spec sets. `name` is carried alongside the rest here and split back out by
+ * the caller, since the Engine takes it as a query parameter rather than a
+ * body field.
+ */
+export interface ContainerCreateOptions {
+	Env?: string[];
+	Healthcheck?: Record<string, unknown>;
+	HostConfig?: Record<string, unknown>;
+	Image?: string;
+	Labels?: Record<string, string>;
+	name?: string;
+}
 
 export interface NewtCredentials {
 	endpoint: string;

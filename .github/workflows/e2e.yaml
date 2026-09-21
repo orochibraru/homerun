@@ -1,7 +1,7 @@
 name: E2E
 # Runs Playwright against the image `docker.yaml` just built, rather than
 # building the app a second time from source. Forks push no digest, so
-# `pulled: false` falls back to a local `bun run build:app`.
+# `pulled: false` falls back to a local `bun run build`.
 
 on:
   workflow_call:
@@ -65,15 +65,15 @@ jobs:
     env:
       HOMERUN_TEST_POSTGRES_URL: postgres://homerun:homerun@127.0.0.1:5432/homerun_test
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Setup bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: go.mod
 
@@ -82,7 +82,7 @@ jobs:
 
       - name: Login to Container registry
         if: inputs.pulled
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ inputs.registry_name }}
           username: ${{ inputs.registry_username }}
@@ -91,7 +91,7 @@ jobs:
       # The digest artefact is a single empty file named after the digest.
       - name: Download amd64 digest
         if: inputs.pulled
-        uses: orochibraru/download-artifact@v8
+        uses: orochibraru/download-artifact@f4f92658c2471fe1dd133b163218066198a0a395 # v8
         with:
           name: digests-${{ inputs.bake_target }}-linux-amd64
           path: ${{ runner.temp }}/digest
@@ -112,7 +112,7 @@ jobs:
       # Only reached on a fork, where no image was pushed to pull.
       - name: Build app from source
         if: ${{ !inputs.pulled }}
-        run: bun run build:app
+        run: bun run build
 
       - name: Install Playwright's Chromium
         run: bunx playwright install --with-deps chromium
@@ -134,7 +134,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: orochibraru/upload-artifact@v8
+        uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
         with:
           name: playwright-report
           path: |

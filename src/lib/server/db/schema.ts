@@ -431,8 +431,8 @@ export const remoteHost = pgTable(
 		agentUrl: text("agent_url"),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull(),
 		// "tcp://host:2376" (optionally TLS-secured with the ca/cert/key
-		// below) or "ssh://user@host" : passed to dockerode's constructor
-		// as-is, parsed by docker/client.ts's getDocker(). Never a bare
+		// below) or "ssh://user@host" : handed to the worker's remote client
+		// as-is, parsed by the worker's remote-daemon client. Never a bare
 		// "unix://..." : the local socket is always the implicit default
 		// for deploys, not a row in this table. Only
 		// set when kind = "docker".
@@ -481,7 +481,7 @@ export const buildCacheRegistry = pgTable(
 		// AES-256-GCM ciphertext, same scheme as service.registryPasswordEnc.
 		passwordEnc: text("password_enc").notNull(),
 		// "registry.example.com" or "ghcr.io" : no scheme, matches how
-		// dockerode's authconfig.serveraddress and image ref prefixes are
+		// the Engine's authconfig.serveraddress and image ref prefixes are
 		// both written.
 		registryUrl: text("registry_url").notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date" })
@@ -592,8 +592,8 @@ export const instanceSettings = pgTable("instance_settings", {
 	onboardingCompletedAt: timestamp("onboarding_completed_at", {
 		mode: "date",
 	}),
-	// "standalone" (dockerode createContainer, one container per service) |
-	// "swarm" (dockerode createService : replicas, rolling updates, overlay
+	// "standalone" (one container per service) |
+	// "swarm" (a swarm service : replicas, rolling updates, overlay
 	// networking). A fresh instance picks swarm when its daemon is already a
 	// rootful swarm manager, see hooks.server.ts and docker/swarm.ts.
 	orchestrationMode: text("orchestration_mode").$type<"standalone" | "swarm">(),
@@ -967,7 +967,7 @@ export const service = pgTable(
 		// Swarm mode's equivalent of `containerId` : the Docker Swarm service
 		// id backing this Homerun service, when deployed under
 		// orchestrationMode="swarm". `containerId` stays null in that case
-		// (there's no single container, dockerode's Task API resolves the
+		// (there's no single container, the Engine's Task API resolves the
 		// live container id per-task when one's needed, e.g. the Terminal
 		// tab : see docker/swarm.ts).
 		swarmServiceId: text("swarm_service_id"),

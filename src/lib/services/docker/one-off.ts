@@ -1,13 +1,12 @@
-import { PassThrough, type Readable } from "node:stream";
 import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
-import type { RemoteHostConnection } from "./client.ts";
 import type { RegistryAuth } from "./containers.ts";
 import { MANAGED_LABEL } from "./labels.ts";
 
 const logger = new Logger("Docker");
 
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
+const NS_PER_MS = 1_000_000;
 
 interface RequiresContainerMixin {
 	pullImage: (params: {
@@ -15,7 +14,6 @@ interface RequiresContainerMixin {
 		tag: string;
 		auth?: RegistryAuth;
 		onProgress?: (line: string) => void;
-		remote?: RemoteHostConnection | null;
 	}) => Promise<{ digest: string | null }>;
 }
 
@@ -28,13 +26,9 @@ export interface OneOffRunParams {
 	image: string;
 	labels?: Record<string, string>;
 	networkName?: string | null;
-	/** Called with each chunk of the container's own stdout/stderr as it arrives, for a caller that wants to show a run before it finishes. */
-	onOutput?: (chunk: string) => void;
-	onProgress?: (line: string) => void;
 	/** `"host"` shares the host's PID namespace, which is what lets a privileged helper `nsenter` into PID 1. */
 	pidMode?: string | null;
 	privileged?: boolean;
-	remote?: RemoteHostConnection | null;
 	tag: string;
 	timeoutMs?: number;
 	workingDir?: string | null;
@@ -44,7 +38,6 @@ export interface ExtractIntoVolumeParams {
 	archive: Buffer;
 	image: string;
 	mountPath: string;
-	remote?: RemoteHostConnection | null;
 	tag: string;
 	volumeName: string;
 }
@@ -56,17 +49,16 @@ export interface OneOffRunResult {
 	timedOut: boolean;
 }
 
-function collect(stream: PassThrough): Promise<Buffer> {
-	return new Promise((resolvePromise, reject) => {
-		const chunks: Buffer[] = [];
-		stream.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
-		stream.on("error", reject);
-		stream.on("end", () => resolvePromise(Buffer.concat(chunks)));
-	});
+interface WorkerOneOffResult {
+	ExitCode: number;
+	Stderr: string | null;
+	Stdout: string | null;
+	TimedOut: boolean;
 }
 
-function isNotFoundError(error: unknown): boolean {
-	return (error as { statusCode?: number } | null)?.statusCode === 404;
+/** Turns the worker's base64-encoded output bytes back into a Buffer, empty when the container said nothing. */
+function decodeOutput(value: string | null): Buffer {
+	return value ? Buffer.from(value, "base64") : Buffer.alloc(0);
 }
 
 /** Mixin adding one-off/helper container support : running a throwaway container to completion, and extracting an archive into a named volume. */
@@ -75,135 +67,88 @@ export function DockerOneOffMixin<
 	TBase extends Constructor<BaseDockerService & RequiresContainerMixin>,
 >(Base: TBase) {
 	return class DockerOneOffService extends Base {
-		/** Pulls `params.image:params.tag` if it isn't already present locally on `params.remote`'s daemon. */
-		async #ensureImage(params: OneOffRunParams): Promise<void> {
-			const docker = this.getDocker(params.remote);
-			const ref = `${params.image}:${params.tag}`;
-			try {
-				await docker.getImage(ref).inspect();
+		/** Pulls `image:tag` if the daemon doesn't already have it. */
+		async #ensureImage(image: string, tag: string): Promise<void> {
+			const ref = `${image}:${tag}`;
+			const local = await this.worker.get<{ id: string | null }>(
+				"/v1/images/id",
+				{ ref },
+			);
+			if (local.id) {
 				return;
-			} catch (err) {
-				if (!isNotFoundError(err)) {
-					throw err;
-				}
 			}
-			await this.pullImage({
-				auth: params.auth,
-				image: params.image,
-				onProgress: params.onProgress,
-				remote: params.remote,
-				tag: params.tag,
-			});
+			await this.pullImage({ image, tag });
 		}
 
 		/**
 		 * Unpacks a tar (gzipped is fine, Docker sniffs it) into a named
-		 * volume, through a stopped helper container that has the volume
-		 * mounted. The daemon does the extraction, so this works against a
-		 * remote one and needs nothing on this host.
+		 * volume, through a never-started helper container that has the volume
+		 * mounted. The daemon does the extraction, so nothing is needed on this
+		 * host beyond the archive itself.
+		 *
+		 * @throws When the helper container can't be created or the archive
+		 * can't be written into it.
 		 */
 		async extractIntoVolume(params: ExtractIntoVolumeParams): Promise<void> {
-			await this.#ensureImage({
-				image: params.image,
-				remote: params.remote,
-				tag: params.tag,
-			});
-			const docker = this.getDocker(params.remote);
-			const container = await docker.createContainer({
-				Entrypoint: ["true"],
-				HostConfig: {
-					Binds: [`${params.volumeName}:${params.mountPath}`],
+			await this.#ensureImage(params.image, params.tag);
+			const { id } = await this.worker.post<{ id: string }>("/v1/containers", {
+				body: {
+					Entrypoint: ["true"],
+					HostConfig: {
+						Binds: [`${params.volumeName}:${params.mountPath}`],
+					},
+					Image: `${params.image}:${params.tag}`,
+					Labels: { [MANAGED_LABEL]: "true" },
 				},
-				Image: `${params.image}:${params.tag}`,
-				Labels: { [MANAGED_LABEL]: "true" },
 			});
 			try {
-				await container.putArchive(params.archive, { path: params.mountPath });
+				await this.worker.putRaw(
+					`/v1/containers/${id}/archive`,
+					new Uint8Array(params.archive),
+					{
+						path: params.mountPath,
+					},
+				);
 			} finally {
-				await container.remove({ force: true }).catch((err) => {
-					logger.warn(`Couldn't remove restore helper ${container.id}`, err);
-				});
+				await this.worker
+					.delete(`/v1/containers/${id}`, { force: "1" })
+					.catch((error: unknown) => {
+						logger.warn(`Couldn't remove restore helper ${id}`, error);
+					});
 			}
 		}
 
 		/**
 		 * Runs a container to completion and collects its stdout/stderr and
-		 * exit code, pulling the image first if needed. Streams live output
-		 * chunks to `params.onOutput` as they arrive if given. Kills the
-		 * container if it hasn't finished within `timeoutMs`
-		 * (`timedOut: true` in the result rather than throwing), and always
-		 * removes the container afterward regardless of outcome.
+		 * exit code, pulling the image first if the daemon lacks it. Kills the
+		 * container if it hasn't finished within `timeoutMs`, 30 minutes by
+		 * default (`timedOut: true` in the result rather than throwing). The
+		 * worker owns the whole run and always removes the container, whatever
+		 * the outcome.
 		 */
 		async runOneOff(params: OneOffRunParams): Promise<OneOffRunResult> {
-			await this.#ensureImage(params);
-
-			const docker = this.getDocker(params.remote);
-			const container = await docker.createContainer({
+			const result = await this.worker.post<WorkerOneOffResult>("/v1/one-off", {
+				Auth: params.auth,
+				Binds: params.binds,
 				Cmd: params.cmd,
 				Entrypoint: params.entrypoint ?? undefined,
 				Env: Object.entries(params.envVars ?? {}).map(
 					([key, value]) => `${key}=${value}`,
 				),
-				HostConfig: {
-					Binds:
-						params.binds && params.binds.length > 0 ? params.binds : undefined,
-					NetworkMode: params.networkName ?? undefined,
-					PidMode: params.pidMode ?? undefined,
-					Privileged: params.privileged ?? undefined,
-				},
 				Image: `${params.image}:${params.tag}`,
 				Labels: { ...params.labels, [MANAGED_LABEL]: "true" },
-				Tty: false,
+				NetworkMode: params.networkName ?? undefined,
+				PidMode: params.pidMode ?? undefined,
+				Privileged: params.privileged ?? false,
+				Timeout: (params.timeoutMs ?? DEFAULT_TIMEOUT_MS) * NS_PER_MS,
 				WorkingDir: params.workingDir ?? undefined,
 			});
-
-			const stdoutStream = new PassThrough();
-			const stderrStream = new PassThrough();
-			const stdoutDone = collect(stdoutStream);
-			const stderrDone = collect(stderrStream);
-			if (params.onOutput) {
-				const forward = (chunk: Buffer) =>
-					params.onOutput?.(chunk.toString("utf8"));
-				stdoutStream.on("data", forward);
-				stderrStream.on("data", forward);
-			}
-
-			const raw = (await container.attach({
-				stderr: true,
-				stdout: true,
-				stream: true,
-			})) as unknown as Readable & { destroy: () => void };
-			docker.modem.demuxStream(raw, stdoutStream, stderrStream);
-			const streamDone = new Promise<void>((resolvePromise) => {
-				raw.on("end", resolvePromise);
-				raw.on("close", resolvePromise);
-			});
-
-			let timedOut = false;
-			const timer = setTimeout(() => {
-				timedOut = true;
-				container.kill().catch(() => undefined);
-			}, params.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-
-			try {
-				await container.start();
-				const wait = (await container.wait()) as { StatusCode: number };
-				await streamDone;
-				stdoutStream.end();
-				stderrStream.end();
-				return {
-					exitCode: wait.StatusCode,
-					stderr: await stderrDone,
-					stdout: await stdoutDone,
-					timedOut,
-				};
-			} finally {
-				clearTimeout(timer);
-				raw.destroy();
-				await container.remove({ force: true }).catch((err) => {
-					logger.warn(`Couldn't remove one-off container ${container.id}`, err);
-				});
-			}
+			return {
+				exitCode: result.ExitCode,
+				stderr: decodeOutput(result.Stderr),
+				stdout: decodeOutput(result.Stdout),
+				timedOut: result.TimedOut,
+			};
 		}
 	};
 }

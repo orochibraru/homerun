@@ -15,15 +15,19 @@ const oneOffCleanupTimeout = 30 * time.Second
 
 // OneOffConfig describes a throwaway container RunOneOff runs to completion.
 type OneOffConfig struct {
-	Auth       *AuthConfig
-	Cmd        []string
-	Env        []string
-	Image      string
-	Labels     map[string]string
-	OnOutput   func(chunk string)
-	PidMode    string
-	Privileged bool
-	Timeout    time.Duration
+	Auth        *AuthConfig
+	Binds       []string
+	Cmd         []string
+	Entrypoint  []string
+	Env         []string
+	Image       string
+	Labels      map[string]string
+	NetworkMode string
+	OnOutput    func(chunk string) `json:"-"`
+	PidMode     string
+	Privileged  bool
+	Timeout     time.Duration
+	WorkingDir  string
 }
 
 // OneOffResult is a finished one-off container's exit code and output.
@@ -122,6 +126,12 @@ func (c *Client) createOneOff(ctx context.Context, config OneOffConfig) (string,
 	if config.PidMode != "" {
 		hostConfig["PidMode"] = config.PidMode
 	}
+	if len(config.Binds) > 0 {
+		hostConfig["Binds"] = config.Binds
+	}
+	if config.NetworkMode != "" {
+		hostConfig["NetworkMode"] = config.NetworkMode
+	}
 	body := map[string]any{
 		"Cmd":        config.Cmd,
 		"Env":        config.Env,
@@ -129,6 +139,12 @@ func (c *Client) createOneOff(ctx context.Context, config OneOffConfig) (string,
 		"Image":      config.Image,
 		"Labels":     config.Labels,
 		"Tty":        false,
+	}
+	if len(config.Entrypoint) > 0 {
+		body["Entrypoint"] = config.Entrypoint
+	}
+	if config.WorkingDir != "" {
+		body["WorkingDir"] = config.WorkingDir
 	}
 	response, err := c.request(ctx, http.MethodPost, "/containers/create", nil, body, nil)
 	if err != nil {

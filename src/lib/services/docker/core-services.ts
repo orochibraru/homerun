@@ -3,6 +3,7 @@ import { hostname } from "node:os";
 import { join } from "node:path";
 import { config } from "$lib/config";
 import { Logger } from "$lib/logger";
+import { WorkerRequestError } from "$lib/server/worker-client";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import { certResolverFor } from "./cert-resolver.ts";
 import {
@@ -71,12 +72,76 @@ export function applyFlags(
 	return [...kept, ...added];
 }
 
-/** What this mixin needs from the swarm mixin, which is merged ahead of it (see docker.service.ts). */
+/** What this mixin needs from the swarm and container mixins, both merged ahead of it (see docker.service.ts). */
 interface RequiresSwarmMixin {
 	assertSwarmCapableDaemon: () => Promise<void>;
 	ensureSharedNetwork: () => Promise<void>;
 	ensureSwarmNetwork: (name: string) => Promise<void>;
 	initSwarm: () => Promise<boolean>;
+	pullImage: (params: { image: string; tag: string }) => Promise<unknown>;
+}
+
+/** One row of the worker's container listing, as much of it as this file reads. */
+interface ListedContainer {
+	HostConfig?: { NetworkMode?: string };
+	Id: string;
+	Image: string;
+	Labels: Record<string, string> | null;
+	Names: string[];
+	NetworkSettings?: { Networks?: Record<string, unknown> };
+	State: string;
+}
+
+/** A container inspect body, as much of it as this file reads. */
+interface InspectedContainer {
+	Config: {
+		Cmd?: string[];
+		Image: string;
+		Labels?: Record<string, string>;
+	};
+	HostConfig: Record<string, unknown>;
+	Id: string;
+	Image: string;
+	Name?: string;
+	NetworkSettings?: {
+		Networks?: Record<
+			string,
+			{ Aliases?: string[] | null; IPAMConfig?: unknown; IPAddress?: string }
+		>;
+	};
+	State: { Running: boolean };
+}
+
+/**
+ * Splits an image reference into the image and tag `pullImage` wants. A
+ * reference with no tag pulls "latest", the same default the daemon applies.
+ */
+function splitImageRef(ref: string): { image: string; tag: string } {
+	const separator = ref.lastIndexOf(":");
+	const slash = ref.lastIndexOf("/");
+	if (separator === -1 || separator < slash) {
+		return { image: ref, tag: "latest" };
+	}
+	return { image: ref.slice(0, separator), tag: ref.slice(separator + 1) };
+}
+
+/**
+ * The network attachments to carry over when a container is recreated: only
+ * the fields that decide which networks it rejoins and under which aliases,
+ * never the inspect-only ones the daemon assigns fresh (NetworkID, EndpointID,
+ * Gateway, IPAddress).
+ */
+function endpointsToPreserve(
+	info: InspectedContainer,
+): Record<string, { Aliases?: string[] | null; IPAMConfig?: unknown }> {
+	return Object.fromEntries(
+		Object.entries(info.NetworkSettings?.Networks ?? {}).map(
+			([netName, endpoint]) => [
+				netName,
+				{ Aliases: endpoint.Aliases, IPAMConfig: endpoint.IPAMConfig },
+			],
+		),
+	);
 }
 
 /** Traefik container management : Homerun's own infra container, a deliberate narrow exception to the managed-label-only rule (see labels.ts). */
@@ -91,9 +156,8 @@ export function DockerCoreServicesMixin<
 		 * that lookup fails, e.g. running outside Docker in dev.
 		 */
 		async selfContainer(): Promise<SelfContainer | null> {
-			const info = await this.getDocker()
-				.getContainer(hostname())
-				.inspect()
+			const info = await this.worker
+				.get<InspectedContainer>(`/v1/containers/${hostname()}/inspect`)
 				.catch(() => null);
 			if (!info) {
 				return null;
@@ -119,9 +183,9 @@ export function DockerCoreServicesMixin<
 		 * can reach it by that name), otherwise "localhost".
 		 */
 		async tunnelTargetHost(): Promise<string> {
-			const containers = await this.getDocker()
-				.listContainers()
-				.catch(() => []);
+			const containers = await this.worker
+				.get<ListedContainer[]>("/v1/containers")
+				.catch(() => [] as ListedContainer[]);
 			return tunnelTargetHostFrom(containers);
 		}
 
@@ -184,9 +248,10 @@ export function DockerCoreServicesMixin<
 		 * standalone Traefik is a documented fallback too).
 		 */
 		async findTraefikContainer(): Promise<TraefikInfo | null> {
-			const containers = await this.getDocker().listContainers({
-				all: true,
-			});
+			const containers = await this.worker.get<ListedContainer[]>(
+				"/v1/containers",
+				{ all: "1" },
+			);
 			const match = containers.find((c) => c.Image.startsWith("traefik"));
 			if (!match) {
 				return null;
@@ -210,7 +275,7 @@ export function DockerCoreServicesMixin<
 			if (!traefik) {
 				throw new Error("Traefik container not found.");
 			}
-			await this.getDocker().getContainer(traefik.id).restart();
+			await this.worker.post(`/v1/containers/${traefik.id}/restart`);
 			logger.info(`Traefik container restarted: ${traefik.id}`);
 		}
 
@@ -233,14 +298,14 @@ export function DockerCoreServicesMixin<
 		async applyTraefikFlags(
 			flags: Record<string, string | null>,
 		): Promise<TraefikUpdateResult> {
-			const docker = this.getDocker();
 			const traefik = await this.findTraefikContainer();
 			if (!traefik) {
 				throw new Error("Traefik container not found.");
 			}
 
-			const container = docker.getContainer(traefik.id);
-			const info = await container.inspect();
+			const info = await this.worker.get<InspectedContainer>(
+				`/v1/containers/${traefik.id}/inspect`,
+			);
 			const cmd = info.Config.Cmd ?? [];
 			const next = applyFlags(cmd, flags);
 			if (
@@ -254,29 +319,7 @@ export function DockerCoreServicesMixin<
 			}
 
 			const wasRunning = info.State.Running;
-			const endpointsConfig = Object.fromEntries(
-				Object.entries(info.NetworkSettings.Networks ?? {}).map(
-					([netName, ep]) => [
-						netName,
-						{ Aliases: ep.Aliases, IPAMConfig: ep.IPAMConfig },
-					],
-				),
-			);
-
-			await container.stop().catch(() => {
-				// Already stopped : remove() below still applies.
-			});
-			await container.remove();
-			const recreated = await docker.createContainer({
-				...info.Config,
-				Cmd: next,
-				HostConfig: info.HostConfig,
-				NetworkingConfig: { EndpointsConfig: endpointsConfig },
-				name: traefik.name,
-			});
-			if (wasRunning) {
-				await recreated.start();
-			}
+			await this.#recreate(traefik, info, { Cmd: next }, wasRunning);
 
 			logger.info(`Traefik recreated with updated flags: ${next.join(" ")}`);
 			return {
@@ -297,7 +340,10 @@ export function DockerCoreServicesMixin<
 		 * touches them.
 		 */
 		async listInfraContainers(): Promise<InfraContainer[]> {
-			const containers = await this.getDocker().listContainers({ all: true });
+			const containers = await this.worker.get<ListedContainer[]>(
+				"/v1/containers",
+				{ all: "1" },
+			);
 			return containers
 				.filter(
 					(container) =>
@@ -305,21 +351,22 @@ export function DockerCoreServicesMixin<
 						(container.Labels?.["com.docker.compose.project"] ||
 							container.Labels?.[CORE_LABEL]),
 				)
-				.map((container) => ({
-					id: container.Id,
-					image: container.Image,
-					name:
-						container.Names[0]?.replace(LEADING_SLASH_RE, "") ??
-						container.Id.slice(0, 12),
-					project:
-						container.Labels["com.docker.compose.project"] ??
-						(container.Labels[CORE_LABEL] ? "homerun" : ""),
-					service:
-						container.Labels["com.docker.compose.service"] ??
-						container.Labels[CORE_LABEL] ??
-						"",
-					state: container.State,
-				}))
+				.map((container) => {
+					const labels = container.Labels ?? {};
+					return {
+						id: container.Id,
+						image: container.Image,
+						name:
+							container.Names[0]?.replace(LEADING_SLASH_RE, "") ??
+							container.Id.slice(0, 12),
+						project:
+							labels["com.docker.compose.project"] ??
+							(labels[CORE_LABEL] ? "homerun" : ""),
+						service:
+							labels["com.docker.compose.service"] ?? labels[CORE_LABEL] ?? "",
+						state: container.State,
+					};
+				})
 				.sort((a, b) => a.name.localeCompare(b.name));
 		}
 
@@ -330,7 +377,10 @@ export function DockerCoreServicesMixin<
 		 * Matched on the image name, same shape as findTraefikContainer.
 		 */
 		async findNewtContainer(): Promise<InfraContainer | null> {
-			const containers = await this.getDocker().listContainers({ all: true });
+			const containers = await this.worker.get<ListedContainer[]>(
+				"/v1/containers",
+				{ all: "1" },
+			);
 			const match =
 				containers.find(
 					(container) => container.Labels?.[CORE_LABEL] === "newt",
@@ -373,15 +423,17 @@ export function DockerCoreServicesMixin<
 
 		/** The body of `syncNewtContainer`, throwing on any Docker failure. */
 		async #convergeNewt(credentials: NewtCredentials | null): Promise<void> {
-			const docker = this.getDocker();
-			const existing = await docker
-				.getContainer(NEWT_CONTAINER_NAME)
-				.inspect()
+			const existing = await this.worker
+				.get<InspectedContainer>(
+					`/v1/containers/${NEWT_CONTAINER_NAME}/inspect`,
+				)
 				.catch(() => null);
 
 			if (!credentials) {
 				if (existing) {
-					await docker.getContainer(existing.Id).remove({ force: true });
+					await this.worker.delete(`/v1/containers/${existing.Id}`, {
+						force: "1",
+					});
 					logger.info("Newt container removed");
 				}
 				return;
@@ -395,24 +447,61 @@ export function DockerCoreServicesMixin<
 					spec.Labels?.[CORE_HASH_LABEL]
 			) {
 				if (!existing.State.Running) {
-					await docker.getContainer(NEWT_CONTAINER_NAME).start();
+					await this.worker.post(`/v1/containers/${NEWT_CONTAINER_NAME}/start`);
 					logger.info("Newt container started");
 				}
 				return;
 			}
 
-			const stream = await docker.pull(spec.Image ?? "");
-			await new Promise<void>((resolvePromise, reject) => {
-				docker.modem.followProgress(stream, (err: Error | null) =>
-					err ? reject(err) : resolvePromise(),
-				);
-			});
+			await this.pullImage(splitImageRef(spec.Image ?? ""));
 			if (existing) {
-				await docker.getContainer(existing.Id).remove({ force: true });
+				await this.worker.delete(`/v1/containers/${existing.Id}`, {
+					force: "1",
+				});
 			}
-			const container = await docker.createContainer(spec);
-			await container.start();
+			const { name, ...body } = spec;
+			const created = await this.worker.post<{ id: string }>("/v1/containers", {
+				body,
+				name,
+			});
+			await this.worker.post(`/v1/containers/${created.id}/start`);
 			logger.info("Newt container created");
+		}
+
+		/**
+		 * Stops, removes and recreates a core container from its own inspected
+		 * config with `changes` applied on top, reattaching it to the same
+		 * networks under the same aliases, and starting it again only if it
+		 * was running.
+		 *
+		 * Everything it recreates with is read back off the container that was
+		 * already running; only what the caller names in `changes` differs.
+		 * There is a brief routing gap while the old container is gone, and no
+		 * rollback if the new one fails to start, because by then there is
+		 * nothing left to roll back to.
+		 */
+		async #recreate(
+			target: TraefikInfo,
+			info: InspectedContainer,
+			changes: Record<string, unknown>,
+			wasRunning: boolean,
+		): Promise<void> {
+			await this.worker.post(`/v1/containers/${target.id}/stop`).catch(() => {
+				// Already stopped : the remove below still applies.
+			});
+			await this.worker.delete(`/v1/containers/${target.id}`);
+			const created = await this.worker.post<{ id: string }>("/v1/containers", {
+				body: {
+					...info.Config,
+					...changes,
+					HostConfig: info.HostConfig,
+					NetworkingConfig: { EndpointsConfig: endpointsToPreserve(info) },
+				},
+				name: target.name,
+			});
+			if (wasRunning) {
+				await this.worker.post(`/v1/containers/${created.id}/start`);
+			}
 		}
 
 		/** Attaches Traefik to one more network, ignoring "already attached". */
@@ -422,12 +511,13 @@ export function DockerCoreServicesMixin<
 				return;
 			}
 			try {
-				await this.getDocker()
-					.getNetwork(network)
-					.connect({ Container: traefik.id });
+				await this.worker.post(`/v1/containers/${traefik.id}/connect`, {
+					aliases: [],
+					network,
+				});
 				logger.info(`Traefik attached to ${network}`);
 			} catch (err) {
-				const status = (err as { statusCode?: number }).statusCode;
+				const status = err instanceof WorkerRequestError ? err.status : 0;
 				if (status !== 403 && status !== 409) {
 					throw err;
 				}
@@ -534,26 +624,24 @@ export function DockerCoreServicesMixin<
 		 * roll back to : the old one is already gone).
 		 */
 		async updateTraefikContainer(): Promise<TraefikUpdateResult> {
-			const docker = this.getDocker();
 			const traefik = await this.findTraefikContainer();
 			if (!traefik) {
 				throw new Error("Traefik container not found.");
 			}
 
-			const container = docker.getContainer(traefik.id);
-			const info = await container.inspect();
+			const info = await this.worker.get<InspectedContainer>(
+				`/v1/containers/${traefik.id}/inspect`,
+			);
 			const ref = info.Config.Image;
 
 			logger.info(`Pulling latest image for Traefik: ${ref}`);
-			const stream = await docker.pull(ref);
-			await new Promise<void>((resolvePromise, reject) => {
-				docker.modem.followProgress(stream, (err: Error | null) =>
-					err ? reject(err) : resolvePromise(),
-				);
-			});
+			await this.pullImage(splitImageRef(ref));
 
-			const pulled = await docker.getImage(ref).inspect();
-			if (pulled.Id === info.Image) {
+			const pulled = await this.worker.get<{ id: string | null }>(
+				"/v1/images/id",
+				{ ref },
+			);
+			if (pulled.id === info.Image) {
 				logger.info(`Traefik already up to date: ${ref}`);
 				return {
 					message: `Already running the latest ${ref}.`,
@@ -562,38 +650,7 @@ export function DockerCoreServicesMixin<
 			}
 
 			logger.info(`Recreating Traefik container with updated image: ${ref}`);
-			const wasRunning = info.State.Running;
-
-			// Only preserve the fields that matter for reattaching to the same
-			// network(s) under the same alias(es) : not the read-only
-			// inspect-only fields (NetworkID, EndpointID, Gateway, IPAddress,
-			// ...) that come back alongside them, which the daemon assigns
-			// fresh on create anyway.
-			const endpointsConfig = Object.fromEntries(
-				Object.entries(info.NetworkSettings.Networks ?? {}).map(
-					([netName, ep]) => [
-						netName,
-						{ Aliases: ep.Aliases, IPAMConfig: ep.IPAMConfig },
-					],
-				),
-			);
-
-			await container.stop().catch(() => {
-				// Already stopped : fine, remove() below still applies.
-			});
-			await container.remove();
-
-			const recreated = await docker.createContainer({
-				...info.Config,
-				HostConfig: info.HostConfig,
-				Image: ref,
-				NetworkingConfig: { EndpointsConfig: endpointsConfig },
-				name: traefik.name,
-			});
-
-			if (wasRunning) {
-				await recreated.start();
-			}
+			await this.#recreate(traefik, info, { Image: ref }, info.State.Running);
 
 			logger.info(`Traefik updated and recreated: ${ref}`);
 			return {

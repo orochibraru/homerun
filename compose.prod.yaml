@@ -9,6 +9,8 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-homerun}:${POSTGRES_PASSWORD:-homerun}@postgres:5432/${POSTGRES_DB:-homerun}
       AUTH_SECRET: "${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}"
+      WORKER_URL: ${WORKER_URL:-http://worker:7430}
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
       TRAEFIK_DYNAMIC_CONFIG_DIR: /app/traefik-dynamic
       ORIGIN: "${ORIGIN:?set ORIGIN in .env to the scheme+host you open the dashboard at, e.g. http://203.0.113.10:3000 - a localhost default makes the first sign-up fail with Invalid origin from any other machine}"
     labels:
@@ -21,7 +23,6 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - app_data:/app/data
       - traefik_dynamic:/app/traefik-dynamic
     healthcheck:
@@ -49,6 +50,8 @@ services:
       AUTH_SECRET: "${AUTH_SECRET:?set AUTH_SECRET in .env before starting, e.g. openssl rand -hex 32 or bunx auth secret}"
       DOCKER_SOCKET_PATH: /var/run/docker.sock
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+      WORKER_PORT: ${WORKER_PORT:-7430}
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:

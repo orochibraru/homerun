@@ -7,7 +7,7 @@ import {
 	webhookIdFrom,
 } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
-import type { GitProviderConfig, GitProviderKind } from "$lib/server/db/schema";
+import type { GitProviderConfig } from "$lib/server/db/schema";
 import { providerApiBase } from "$lib/status-checks";
 import { decryptSecret, encryptSecret } from "./secrets.ts";
 
@@ -707,27 +707,6 @@ class GitProviderServiceClass {
 		} catch (err) {
 			logger.warn(`Dockerfile check failed: ${repoFullName}@${ref}`, err);
 			return false;
-		}
-	}
-
-	/** The display name and whether a base URL is required, for a new provider of this kind (Gitea only, being self-hosted-only). */
-	defaultsFor(kind: GitProviderKind): {
-		name: string;
-		requiresBaseUrl: boolean;
-	} {
-		switch (kind) {
-			case "github":
-				return { name: "GitHub", requiresBaseUrl: false };
-			case "gitlab":
-				return { name: "GitLab", requiresBaseUrl: false };
-			case "gitea":
-				return { name: "Gitea", requiresBaseUrl: true };
-			case "bitbucket":
-				return { name: "Bitbucket", requiresBaseUrl: false };
-			default: {
-				const exhaustive: never = kind;
-				throw new Error(`Unknown git provider kind: ${exhaustive}`);
-			}
 		}
 	}
 }

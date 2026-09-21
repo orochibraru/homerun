@@ -139,7 +139,7 @@ if (runWorker) {
 
 if (runApp) {
 	children.push(
-		Bun.spawn(["bun", "run", "dev:app"], {
+		Bun.spawn(["bunx", "vite", "dev"], {
 			stdio: ["inherit", "inherit", "inherit"],
 		}),
 	);

@@ -4,11 +4,11 @@ description: >-
   Use when asked to check that the documentation reflects what's actually built,
   or for a periodic full sweep. Unlike docs-sync (which starts from a diff),
   this agent starts from the app itself and audits every operator-facing page,
-  docs/*.md, root README.md, cmd/agent|installer|cli/README.md, against the real
-  code — routes and sidebar nav, settings pages, schema.ts, config.ts env vars,
-  the REST API/OpenAPI document, CLI commands and flags, installer options,
-  templates, job types — and fixes what's wrong: features documented but not
-  built, features built but undocumented, wrong names, defaults, paths,
+  docs/*.md, root README.md, cmd/worker|installer|cli/README.md, against the
+  real code — routes and sidebar nav, settings pages, schema.ts, config.ts env
+  vars, the REST API/OpenAPI document, CLI commands and flags, installer
+  options, templates, job types — and fixes what's wrong: features documented
+  but not built, features built but undocumented, wrong names, defaults, paths,
   commands, env vars or UI labels, and stale "planned / not yet built" claims.
   Not for CLAUDE.md or .agents/notes/ (contributor docs) unless they contradict
   the same fact, and not for code correctness (repo-gate).
@@ -30,7 +30,7 @@ The docs being audited:
 - `docs/*.md` (each guide page listed in `docs/README.md`, plus `showcase.md`
   and `faq-and-limitations.md`)
 - root `README.md`
-- `cmd/agent/README.md`, `cmd/installer/README.md`, `cmd/cli/README.md`
+- `cmd/worker/README.md`, `cmd/installer/README.md`, `cmd/cli/README.md`
 
 The ground truth to check them against:
 
@@ -88,8 +88,8 @@ The ground truth to check them against:
 
 ## Verify
 
-- `bun run lint:md` clean over every file you touched (and `bun run format:md`
-  if tables got misaligned).
+- `bun run lint` clean over every file you touched (markdownlint is part of it;
+  `bun run format` if tables got misaligned).
 - Re-grep the terms you changed across all audited surfaces to make sure you
   didn't leave the same stale claim on another page.
 - If CLAUDE.md or `.agents/notes/` states the same fact you just corrected, fix

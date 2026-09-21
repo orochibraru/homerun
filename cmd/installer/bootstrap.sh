@@ -3,7 +3,7 @@
 #
 #   curl -fsSL https://<host>/install.sh | sudo bash -s -- [--version=vX.Y.Z] [installer flags...]
 #
-# Every release publishes prebuilt agent/cli/installer binaries for
+# Every release publishes prebuilt worker/cli/installer binaries for
 # linux/amd64 + linux/arm64 as GitHub release assets on this repo
 # (.github/workflows/binaries.yaml + .releaserc.json), and pushes the app
 # itself as a Docker image (.github/workflows/docker.yaml). This script just
@@ -58,5 +58,5 @@ curl -fsSL "$DOWNLOAD_URL" | gunzip -c > "$BIN"
 chmod +x "$BIN"
 
 # All original args (including --version=, which the installer itself also
-# reads to pick a matching agent binary / app image) are forwarded as-is.
+# reads to pick a matching worker binary / app image) are forwarded as-is.
 exec "$BIN" "$@"

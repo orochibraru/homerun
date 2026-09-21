@@ -19,19 +19,19 @@ interface Target {
 
 const VERSION_FLAG = `-X github.com/orochibraru/homerun/internal/buildinfo.Version=${pkg.version}`;
 
-// Every shipped binary is Go (cmd/cli, cmd/installer, cmd/agent), and Go's
+// Every shipped binary is Go (cmd/cli, cmd/installer, cmd/worker), and Go's
 // GOOS/GOARCH cross-compilation is exact, so all of them build from any one
-// machine. Only the CLI gets macOS builds: the installer and the agent only ever
-// run on the Linux host they manage.
+// machine. Only the CLI gets macOS builds: the installer and the worker only
+// ever run on the Linux host they manage.
 const targets: Target[] = [
 	{
-		commands: ["cli", "installer", "agent"],
+		commands: ["cli", "installer", "worker"],
 		goarch: "amd64",
 		goos: "linux",
 		name: "amd64",
 	},
 	{
-		commands: ["cli", "installer", "agent"],
+		commands: ["cli", "installer", "worker"],
 		goarch: "arm64",
 		goos: "linux",
 		name: "arm64",

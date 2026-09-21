@@ -19,6 +19,12 @@ export interface OrphanNetwork {
 	stackId: string;
 }
 
+interface WorkerNetwork {
+	Containers?: Record<string, unknown> | null;
+	Id: string;
+	Name: string;
+}
+
 /** The stack id a stack network's name encodes, or null for any other network. */
 export function stackIdFromNetworkName(name: string): string | null {
 	return name.startsWith(STACK_NETWORK_PREFIX)
@@ -32,24 +38,22 @@ export function DockerNetworkMixin<
 	TBase extends Constructor<BaseDockerService>,
 >(Base: TBase) {
 	return class DockerNetworkService extends Base {
-		/** Creates a bridge network if it doesn't already exist. Idempotent. */
+		/**
+		 * Creates a bridge network if it doesn't already exist, answering
+		 * whether this call is the one that created it. Idempotent : the worker
+		 * treats a network that's already there as success rather than a 409.
+		 */
 		async #ensureNetwork(name: string): Promise<boolean> {
-			try {
-				await this.getDocker().createNetwork({
+			const { created } = await this.worker.post<{ created: boolean }>(
+				"/v1/networks",
+				{
 					CheckDuplicate: true,
 					Driver: "bridge",
 					Labels: { [MANAGED_LABEL]: "true" },
 					Name: name,
-				});
-				return true;
-			} catch (err) {
-				// 409 = already exists : fine, idempotent by design.
-				const status = (err as { statusCode?: number }).statusCode;
-				if (status !== 409) {
-					throw err;
-				}
-				return false;
-			}
+				},
+			);
+			return created;
 		}
 
 		/**
@@ -78,7 +82,7 @@ export function DockerNetworkMixin<
 		async removeStackNetwork(stackId: string): Promise<void> {
 			const name = stackNetworkName(stackId);
 			try {
-				await this.getDocker().getNetwork(name).remove();
+				await this.worker.delete(`/v1/networks/${encodeURIComponent(name)}`);
 				logger.info(`Stack network removed: ${name}`);
 			} catch {
 				// Already gone, or never existed : nothing to clean up.
@@ -94,10 +98,10 @@ export function DockerNetworkMixin<
 		async findOrphanStackNetworks(
 			liveStackIds: Set<string>,
 		): Promise<OrphanNetwork[]> {
-			const networks = await this.getDocker().listNetworks();
+			const networks = await this.worker.get<WorkerNetwork[]>("/v1/networks");
 			const orphans: OrphanNetwork[] = [];
 			for (const net of networks) {
-				const stackId = stackIdFromNetworkName(net.Name ?? "");
+				const stackId = stackIdFromNetworkName(net.Name);
 				if (!stackId || liveStackIds.has(stackId)) {
 					continue;
 				}

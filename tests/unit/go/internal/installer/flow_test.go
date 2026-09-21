@@ -119,8 +119,8 @@ func TestInstallDryRunWholeFlow(t *testing.T) {
 		"== 1/5 Docker engine + rootless prerequisites ==",
 		"== 5/5 Install ==",
 		"[dry-run] loginctl enable-linger homerun",
-		"homerun-agent.service",
-		"Homerun Agent should now be listening on port 7420.",
+		"homerun-worker.service",
+		"The Homerun worker (agent mode) should now be listening on port 7420.",
 	} {
 		if !strings.Contains(agent, fragment) {
 			t.Errorf("an agent dry run should mention %q:\n%s", fragment, agent)
@@ -290,8 +290,8 @@ func TestStepFailuresPropagate(t *testing.T) {
 			return installer.EnsureHomerunNetwork(r, "", installer.SystemDockerSocket)
 		}},
 		{"swarm info", []string{"docker info"}, func(r installer.Runner) error { return installer.EnsureSwarmManager(r, "") }},
-		{"agent unit", []string{"mkdir -p"}, func(r installer.Runner) error {
-			return installer.InstallAgentSystemdUnit(r, "homerun", "/run/user/1000/docker.sock", 7420)
+		{"worker unit", []string{"mkdir -p"}, func(r installer.Runner) error {
+			return installer.InstallWorkerSystemdUnit(r, "homerun", "/run/user/1000/docker.sock", 7420)
 		}},
 		{"compose up", []string{"up -d"}, func(r installer.Runner) error {
 			_, err := installer.BringUpFullStack(installer.FullStackParams{

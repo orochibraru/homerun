@@ -4,6 +4,7 @@ import { dev } from "$app/env";
 import { config, isPlaceholderAuthSecret, isSmtpEnabled } from "$lib/config";
 import { db } from "$lib/server/db/lib";
 import { user as userTable } from "$lib/server/db/schema";
+import { WorkerClient } from "$lib/server/worker-client";
 import { DASHBOARD_ROUTER_FILE } from "./docker/dashboard.ts";
 import { hasTraefikRouterFor } from "./docker/labels.ts";
 import { DockerService } from "./docker.service.ts";
@@ -223,10 +224,29 @@ class AdminServiceClass {
 		};
 	}
 
-	/** Whether the configured Docker socket answers a ping, since nothing can deploy without it. */
+	/**
+	 * Whether Docker is actually reachable, which now means two things in a
+	 * row: the worker answers at all, and the daemon answers the worker.
+	 *
+	 * They're reported apart on purpose. The app holds no Docker socket any
+	 * more, so "nothing deploys" has two quite different causes with two quite
+	 * different fixes, and collapsing them into one "Docker socket" line sent
+	 * the operator to check a socket the app doesn't even open.
+	 */
 	async #dockerCheck(): Promise<SetupCheck> {
-		const dockerOk = await DockerService.getDocker()
-			.ping()
+		const workerUp = await WorkerClient.get("/v1/health")
+			.then(() => true)
+			.catch(() => false);
+		if (!workerUp) {
+			return {
+				detail: `Couldn't reach the Homerun worker at ${WorkerClient.baseUrl} : it's the process that talks to Docker, so nothing will deploy, no container status will refresh and the terminal won't open until it's running.`,
+				envVar: "WORKER_URL",
+				id: "docker",
+				label: "Homerun worker",
+				severity: "danger",
+			};
+		}
+		const dockerOk = await WorkerClient.get("/v1/info")
 			.then(() => true)
 			.catch(() => false);
 		if (dockerOk) {
@@ -238,7 +258,7 @@ class AdminServiceClass {
 			};
 		}
 		return {
-			detail: `Couldn't reach the Docker socket at ${config.docker.socketPath} : nothing will deploy until this is fixed (env var below, or the Docker section of /settings).`,
+			detail: `The worker is up but Docker isn't answering it at ${config.docker.socketPath} : nothing will deploy until this is fixed (env var below, set on the worker).`,
 			envVar: "DOCKER_SOCKET_PATH",
 			id: "docker",
 			label: "Docker socket",

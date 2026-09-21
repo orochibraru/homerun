@@ -13,8 +13,7 @@ ARG TARGETARCH
 RUN VERSION="$(sed -n 's/^[[:space:]]*"version": "\(.*\)",*$/\1/p' package.json)"; \
     CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath \
     -ldflags "-s -w -X github.com/orochibraru/homerun/internal/buildinfo.Version=${VERSION}" \
-    -o /out/ ./cmd/agent ./cmd/worker && \
-    mv /out/agent /out/homerun-agent && mv /out/worker /out/homerun-worker
+    -o /out/homerun-worker ./cmd/worker
 
 FROM oven/bun:1.4.2-alpine AS deps-base
 
@@ -35,7 +34,7 @@ COPY . .
 
 COPY --from=deps /app/node_modules /app/node_modules
 
-RUN bun run build:app
+RUN bun run build
 
 # The svelte-smol adapter compiles the app to a single standalone binary
 # (`build/server`) that bundles every JS dependency, so the runtime image
@@ -79,13 +78,13 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/app/build/server"]
 
-FROM alpine:3 AS agent
+FROM alpine:3 AS worker
 
 RUN apk add --no-cache ca-certificates wget
 
-COPY --from=go-builder /out/homerun-agent /usr/local/bin/homerun-agent
+COPY --from=go-builder /out/homerun-worker /usr/local/bin/homerun-worker
 
-ENV PORT=7420
+ENV WORKER_PORT=7420
 ENV DOCKER_SOCKET_PATH=/var/run/docker.sock
 
 EXPOSE 7420
@@ -93,4 +92,4 @@ EXPOSE 7420
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD ["sh", "-c", "wget --no-verbose --tries=1 --spider http://0.0.0.0:7420/v1/health || exit 1"]
 
-ENTRYPOINT ["/usr/local/bin/homerun-agent"]
+ENTRYPOINT ["/usr/local/bin/homerun-worker"]

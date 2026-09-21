@@ -140,14 +140,14 @@ async function readDocumentedCommands(): Promise<DocumentedCommands> {
 	);
 
 	const installerAgent = Docs.command(
-		"cmd/agent/README.md",
+		"cmd/worker/README.md",
 		"bootstrap.sh",
 		"--mode=agent",
 	);
 	assert(
 		normalizeCommand(installerAgent) ===
 			normalizeCommand(installerFull).replace("--mode=full", "--mode=agent"),
-		`cmd/agent/README.md's --mode=agent one-liner isn't docs/getting-started.md's with the mode swapped:\n  ${normalizeCommand(installerAgent)}`,
+		`cmd/worker/README.md's --mode=agent one-liner isn't docs/getting-started.md's with the mode swapped:\n  ${normalizeCommand(installerAgent)}`,
 	);
 
 	const cliInstall = Docs.command("docs/api-and-cli.md", "cmd/cli/install.sh");
@@ -193,8 +193,8 @@ async function resolveRelease(): Promise<PublishedRelease> {
 	log(`Resolving the published release under test (${version})`);
 	const release = await PublishedRelease.resolve(version);
 	release.assertAssets([
-		"homerun-agent-amd64.gz",
-		"homerun-agent-arm64.gz",
+		"homerun-worker-amd64.gz",
+		"homerun-worker-arm64.gz",
 		"homerun-cli-amd64.gz",
 		"homerun-cli-arm64.gz",
 		"homerun-cli-darwin-amd64.gz",
@@ -214,7 +214,7 @@ async function provisionAgent(
 ): Promise<{ token: string; url: string }> {
 	log(`Launching ${vm.name} and running the documented agent one-liner`);
 	await vm.recreate(1, "2G", "10G");
-	showCommand("cmd/agent/README.md", cmds.installerAgent);
+	showCommand("cmd/worker/README.md", cmds.installerAgent);
 	await vm.runScript(pinned(cmds.installerAgent));
 
 	const ip = await vm.ip();
@@ -223,7 +223,7 @@ async function provisionAgent(
 		await vm.exec([
 			"sudo",
 			"cat",
-			`/home/${ROOTLESS_USER}/.homerun-agent/token`,
+			`/home/${ROOTLESS_USER}/.homerun-worker/token`,
 		])
 	).trim();
 

@@ -9,19 +9,28 @@ dev server) is needed for either of those paths.
 ## Prerequisites
 
 - [mise](https://mise.jdx.dev), then `mise install` in the repo: it installs the
-  Bun, Go, prek and golangci-lint versions pinned in `mise.toml`. Without mise,
-  install those four yourself at the same versions (Go is only needed for `cmd/`
-  and `internal/`, the worker, agent, CLI and installer)
+  Bun, Go and prek versions pinned in `mise.toml`. Without mise, install those
+  three yourself at the same versions (Go is only needed for `cmd/` and
+  `internal/`, the worker, its agent mode, the CLI and the installer).
+  golangci-lint is pinned separately, see below, mise doesn't install it.
 - Docker (for Traefik + Postgres, and for the containers the app itself will
   manage once it's running)
 
 ## Toolchain (mise)
 
-`mise.toml` pins the tools a checkout needs outside `node_modules`: Bun, Go,
-prek and golangci-lint. `mise install` installs them, and mise's shell
-activation (`eval "$(mise activate zsh)"`, see
+`mise.toml` pins the tools a checkout needs outside `node_modules`: Bun, Go and
+prek. `mise install` installs them, and mise's shell activation
+(`eval "$(mise activate zsh)"`, see
 [mise's docs](https://mise.jdx.dev/getting-started.html)) puts those versions on
 `PATH` inside the repo. `mise ls` shows what's active.
+
+**golangci-lint is pinned separately**, in its own Go module (`tools/go/go.mod`,
+kept out of the root `go.mod` deliberately, so its ~210 indirect dependencies
+don't feed minimum-version-selection into the binaries this repo ships), and run
+via `go tool`, not installed as a standalone binary:
+`go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...`
+(part of `bun run check` and a pre-commit hook, below). Bump it with
+`cd tools/go && go get -tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint@vX`.
 
 mise can't install Docker itself, only check it: `mise run docker` (also run
 after every `mise install`) fails if no daemon is reachable or `docker compose`
@@ -30,9 +39,8 @@ v2 is missing, and creates the `homerun` network if it doesn't exist yet.
 CI doesn't use mise, so the same versions are also pinned elsewhere, and a bump
 has to touch every copy: Bun in `package.json`'s `packageManager` and the
 `Dockerfile`'s `oven/bun` tags, Go in `go.mod` and the `Dockerfile`'s `golang`
-tag, golangci-lint in `.github/workflows/go.yaml` and `code_quality.yaml`, prek
-via `j178/prek-action` in `code_quality.yaml`. Renovate updates `mise.toml`
-along with the rest.
+tag, prek via `j178/prek-action` in `code_quality.yaml`. Renovate updates
+`mise.toml` along with the rest.
 
 ## Setup
 
@@ -58,19 +66,23 @@ wizard (base domain / Docker / Traefik / email).
 prefixed `[worker]`. Deploys, builds, scans, backups, cron jobs and Docker
 cleanups only run while it's up. It rebuilds and restarts on every change under
 `cmd/` or `internal/`; a change that doesn't compile prints the error and leaves
-the previous worker running. `bun run dev:app` is vite alone,
-`bun run dev:worker` the worker alone. Without Go installed, run the worker in
-Docker instead: `docker compose --profile worker up -d --build worker` (rebuild
-it after a Go change).
+the previous worker running. `bun run dev --only=app` is vite alone,
+`bun run dev --only=worker` the worker alone. Without Go installed, run the
+worker in Docker instead: `docker compose --profile worker up -d --build worker`
+(rebuild it after a Go change).
 
 `bun run build && bun run start` runs the built app instead of the Vite dev
 server, closer to how the production Docker image runs it, still directly on the
 host, still against the same `compose.yaml` Postgres/Traefik.
 
-`cmd/agent/`, `cmd/cli/` and `cmd/installer/` are all Go programs (one `go.mod`
-at the repo root, no `bun install` needed for any of them): `go run ./cmd/agent`
-(also `bun run dev:agent`), `go run ./cmd/cli services list`,
-`go run ./cmd/installer --dry-run`, etc.
+`cmd/cli/` and `cmd/installer/` are both Go programs (one `go.mod` at the repo
+root, no `bun install` needed for either of them):
+`go run ./cmd/cli services list`, `go run ./cmd/installer --dry-run`, etc.
+`cmd/worker` is the third: `go run ./cmd/worker` next to a running Postgres runs
+the local job worker (what `bun run dev` already starts for you); with no
+`DATABASE_URL` set, the same command instead runs it in **agent mode**, the
+standalone build-server binary that used to be `cmd/agent/` before it was merged
+into the worker, see [`cmd/worker/README.md`](cmd/worker/README.md).
 
 ## Before every change: the hard gates
 
@@ -87,33 +99,36 @@ commit that gets rejected for "files were modified by this hook" just needs
 the pre-push hook exists.
 
 ```sh
-bun run check   # svelte-check --fail-on-warnings over src/ and tests/, then go vet over every package under cmd/ and internal/, plus tsc over scripts/, zero errors AND zero warnings
-bun run lint    # markdownlint-cli2, tailwint, oxlint --type-aware (linting) and biome check (formatting, import order), whole repo
+bun run check   # svelte-check --fail-on-warnings over src/ and tests/, tsc over scripts/, go vet and golangci-lint over every package under cmd/ and internal/, zero errors AND zero warnings
+bun run lint    # markdownlint-cli2, lint-tailwind.ts and oxlint --type-aware --deny-warnings, whole repo
 ```
 
 Run both after _every_ change, not just once at the end. `bun run check`'s scope
 is already the whole repo regardless of which files you touched, so a red result
 elsewhere is still your problem to look at, not something to wave off as
-unrelated without actually checking. `bun run check` includes `go vet` over
-`cmd/agent/`, `cmd/cli/`, `cmd/installer/` and every shared `internal/` library
-(`check:go`) plus the `scripts/` typecheck (`check:scripts`), together
-`check:packages`; `bun run check:agent` / `check:installer` / `check:cli` /
-`check:scripts` run one of them alone. If you changed a REST API route or
-`config.ts`, also run `bun run gen` and commit the regenerated `openapi.json`,
-`homerun.schema.json` and `tests/integration/support/openapi-types.ts`: CI fails
-when they're stale.
+unrelated without actually checking. `bun run check` includes `go vet` and
+`golangci-lint` (the same pair CI's Go job runs, golangci-lint via
+`go tool -modfile=tools/go/go.mod`, see Toolchain above) over `cmd/cli/`,
+`cmd/installer/`, `cmd/worker/` and every shared `internal/` library; scope
+either one to a single sub-project by narrowing the path yourself (e.g.
+`go vet ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`). If
+you changed a REST API route or `config.ts`, also run `bun run gen` and commit
+the regenerated `openapi.json`, `homerun.schema.json` and
+`tests/integration/support/openapi-types.ts`: CI fails when they're stale.
 
-`bun run test:unit` is the fast suite (seconds, no Postgres or Docker needed).
-`bun run test` runs the whole `bun:test` suite, unit + integration, see
-`CLAUDE.md`'s "Commands" section for the full breakdown of `test`/`test:*`
-scripts and `.agents/notes/testing.md` for what integration and E2E need.
+`bun run test` is the fast suite (seconds, no Postgres or Docker needed): Go
+tests plus the `bun:test` unit suite. `bun run test:integration` needs a real
+Postgres and Docker daemon, see `CLAUDE.md`'s "Commands" section for the full
+breakdown of `test`/`test:*` scripts and `.agents/notes/testing.md` for what
+integration and E2E need.
 
 Two real-infrastructure suites live outside that (Multipass + Docker locally,
-never in CI): `bun run e2e:multipass` drives the installer/agent/CLI built from
-your working tree, and `bun run e2e:multipass:release` drives the published
-release using the commands the docs themselves print. If you touched an install
-instruction, `bun run e2e:multipass:release --only=docs` is the seconds-long,
-VM-free half of the latter.
+never in CI): `bun scripts/e2e-multipass.ts` drives the installer/worker/CLI
+built from your working tree, and `bun scripts/e2e-multipass-release.ts` drives
+the published release using the commands the docs themselves print. If you
+touched an install instruction,
+`bun scripts/e2e-multipass-release.ts --only=docs` is the seconds-long, VM-free
+half of the latter.
 
 ## Conventions
 
@@ -128,10 +143,10 @@ what Claude Code reads when working in this repo).
 
 Commit messages follow
 [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`,
-`chore:`, etc.). `semantic-release` drives version bumps and changelog
-generation from them on every push to `main` (`.releaserc.json`,
-`.github/workflows/publish.yaml`), so a misformatted subject line isn't just a
-style nit, it changes what actually ships.
+`chore:`, etc.). `orochibraru/releaser` drives version bumps and changelog
+generation from them on every push to `main` (`.github/workflows/publish.yaml`),
+so a misformatted subject line isn't just a style nit, it changes what actually
+ships.
 
 PRs are squash-merged with the PR title as the commit message, so the **PR
 title** is what counts, and CI fails a PR whose title isn't a conventional
@@ -141,8 +156,8 @@ commit. Only `feat`, `fix`, `perf`, `refactor`, `docs` and breaking changes
 
 ## Releases
 
-Don't run `bun run release` yourself; it's CI-only, triggered on push to `main`.
-See the "Release automation" section of
+There's no local release command; releasing is CI-only, triggered on push to
+`main` by `orochibraru/releaser`. See the "Release automation" section of
 [`.agents/notes/packages-and-release.md`](.agents/notes/packages-and-release.md)
-for what it does (binaries for `cmd/agent`/`cmd/installer`/`cmd/cli`, the Docker
-image, the GitHub release).
+for what it does (binaries for `cmd/cli`/`cmd/installer`/`cmd/worker`, the
+Docker image, the GitHub release).

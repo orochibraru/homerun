@@ -45,16 +45,6 @@ export function timeAgo(date: Date | string): string {
 	return `${Math.floor(diff / 86_400_000)}d ago`;
 }
 
-/** Deterministic small hash, used to pick a stable gradient/color per entity id. */
-export function getHash(id: string): number {
-	let hash = 0;
-	for (let i = 0; i < id.length; i += 1) {
-		hash = Math.imul(31, hash) + id.charCodeAt(i);
-		hash |= 0;
-	}
-	return Math.abs(hash);
-}
-
 const UPPERCASE_RE = /[A-Z]/;
 const DIGIT_RE = /[0-9]/;
 const SYMBOL_RE = /[^A-Za-z0-9]/;

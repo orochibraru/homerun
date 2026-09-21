@@ -4,11 +4,42 @@ Homerun reference notes, loaded on demand rather than every session. `CLAUDE.md`
 holds the rules that always apply plus an index of the sibling notes in this
 directory.
 
-The homerun worker is a separate Go binary that executes the heavy job types
-(deploys and builds, image scans, backups and restores, cron jobs, Docker
-cleanups). The SvelteKit app keeps the database, the queue and the business
-rules: it decides _what_ to do, the worker only does it. `notification_delivery`
-stays in-process in TypeScript (light HTTP work).
+The homerun worker is a separate Go binary that does two jobs, not one: it
+executes the heavy job types (deploys and builds, image scans, backups and
+restores, cron jobs, Docker cleanups) leased from Postgres, **and** it's the
+only process that holds the Docker socket at all, so it also serves a Docker
+control HTTP API (`internal/workerapi`) that the SvelteKit app calls for
+everything else. The app keeps the database and the business rules: it decides
+_what_ to do, the worker only does it, over whichever of the two surfaces below
+fits what's being asked. `notification_delivery` stays in-process in TypeScript
+(light HTTP work, no Docker).
+
+## Two surfaces, one reason each
+
+**The job queue (Postgres) is for what must survive a restart.** A deploy, a
+build, a backup, a cron run and a cleanup can each take anywhere from seconds to
+minutes, and a browser tab closing or a redeploy of the worker itself must not
+lose one mid-flight — see "Why Postgres, not HTTP" below for why that rules out
+a plain request for these.
+
+**The Docker control API (`internal/workerapi`, HTTP on `WORKER_PORT`) is for
+what a page is waiting on right now, plus the three things that can't be a job
+at all because they stream.** Reading a container's status, starting/stopping/
+restarting it, listing networks/volumes, running `docker system df`/prune, swarm
+init/inspect: none of these need to survive the worker restarting, they need to
+answer _this request_, so a synchronous HTTP call with a real response body is
+the right shape, not a queued row the caller would have to poll. Three things go
+through it because they literally cannot be a job: **logs** and the **web
+terminal** are open-ended streams a "job" with a start and an end can't model,
+and **host stats** are a live snapshot, not a result to store. See `docker.md`'s
+Docker integration section for the client side (`$lib/server/worker-client.ts`,
+`WorkerClient`) and Web terminal section for the terminal specifically.
+
+A job's own executor (`internal/jobs/<pkg>`) still talks to the daemon directly
+through `internal/dockerapi`, same as before this split, it doesn't go back
+through the worker's own HTTP API : the control API exists for the _app_, which
+has no other way to reach Docker, not for code that's already running inside the
+worker process.
 
 ## Why Postgres, not HTTP
 
@@ -82,7 +113,12 @@ Env: `DATABASE_URL` (required), `AUTH_SECRET` (else `BETTER_AUTH_SECRET`, else
 `default-secret`, the same resolution as the app, and it must match the app's,
 since `internal/secrets` derives the same scrypt key), `DOCKER_SOCKET_PATH`
 (else `internal/dockersocket` detection, shared with the agent),
-`WORKER_CONCURRENCY` (3), `WORKER_ID` (hostname-pid). Flags: `--version`,
+`WORKER_CONCURRENCY` (3), `WORKER_ID` (hostname-pid), `WORKER_PORT` (7430, where
+the Docker control API listens, deliberately not the agent's 7420 since a host
+can run both), `WORKER_TOKEN` (the bearer token the app must present to that
+API; unset, both sides derive one from `AUTH_SECRET` via
+`httpapi.DeriveToken`/`config.ts`'s `deriveWorkerToken`, same HMAC, so a fresh
+install needs no extra secret to configure the pair). Flags: `--version`,
 `--help`.
 
 The binary ships inside the app image at `/usr/local/bin/homerun-worker`.
@@ -91,6 +127,9 @@ Production runs a second container from the same image with that as its
 socket group fixup and the drop to the `bun` user apply), the Docker socket
 mounted, the image healthcheck disabled, and the label `homerun.role=worker`:
 self-update finds the worker service by that label and recreates it with the
-app. Locally: `go run ./cmd/worker` with the app's `.env` values.
-`tests/integration` and the e2e bootstrap spawn it too (`spawnWorker`,
-`startWorkerContainer` when e2e runs against an image).
+app. The app container itself mounts no Docker socket at all any more and talks
+to this one over `WORKER_URL` (`http://worker:7430` between containers, see
+`docker.md`). Locally: `go run ./cmd/worker` with the app's `.env` values,
+alongside `bun run dev`/`bun run dev --only=app` (`bun run dev` starts both, see
+Commands in `CLAUDE.md`). `tests/integration` and the e2e bootstrap spawn it too
+(`spawnWorker`, `startWorkerContainer` when e2e runs against an image).

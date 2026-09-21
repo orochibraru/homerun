@@ -10,8 +10,8 @@ removed this repo's previous E2E harness deliberately (see
 harness" section); this rebuilds it from scratch rather than resurrecting
 anything.
 
-Requires `bun run build:app` run first (this suite doesn't build the app for
-you), a Postgres to run against, and a Chromium build
+Requires `bun run build` run first (this suite doesn't build the app for you), a
+Postgres to run against, and a Chromium build
 (`bunx playwright install chromium` if the first run reports one missing).
 Postgres comes from `tests/integration/support/postgres.ts`, shared with that
 suite: a CI service container when `HOMERUN_TEST_POSTGRES_URL` is set (each run
@@ -131,9 +131,9 @@ created through the REST API with the CLI's own key, since the CLI has no
 only exercised on their 404 path : CI runs the app as a container with no Docker
 socket, so a real deploy can't be asserted the same way in both places.
 
-`bun run test:e2e:cli` runs just `bootstrap.spec.ts`, `onboarding.spec.ts` and
-this file, which is the minimum it needs. The `ui-` prefix is for sort order (it
-signs in as the admin, so it must run after onboarding).
+`bun run test:e2e tests/e2e/bootstrap.spec.ts tests/e2e/onboarding.spec.ts tests/e2e/ui-cli.spec.ts`
+runs just those three specs, which is the minimum it needs. The `ui-` prefix is
+for sort order (it signs in as the admin, so it must run after onboarding).
 
 A bad-key call logs an "Invalid API key" warning that shows up in the
 dashboard's notification feed, whose text contains "Authentication" : a spec

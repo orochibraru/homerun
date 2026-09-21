@@ -1,57 +1,13 @@
-import Bun from "bun";
-import { config } from "$lib/config";
+import { Logger } from "$lib/logger";
 import type { BaseDockerService, Constructor } from "./base.ts";
 
-/**
- * Interactive `docker exec` sessions, exposed to the browser over plain
- * chunked HTTP rather than a WebSocket : this app has no custom server
- * (SvelteKit route handlers only, `vite dev` in dev / a plain Bun HTTP
- * server via `bun run start` in prod), so there's no upgrade hook to hang
- * a `ws` server off. Output streams via one long-lived GET (same
- * ReadableStream pattern as streamLogs in containers.ts); input is sent via
- * short POSTs, one per line/keystroke-batch, each writing straight into
- * the exec's stdin. Less slick than a real terminal library, genuinely
- * usable for basic shell work.
- *
- * **Why this doesn't use dockerode's `exec.start()`**: verified during
- * development that it hangs forever under Bun : `exec.start({hijack:true})`
- * relies on Node's `http.request` completing an HTTP/1.1 `Connection:
- * Upgrade` handshake and handing back the raw duplex socket, and that
- * upgrade flow never resolves under Bun's `node:http` compatibility layer
- * (confirmed via a minimal repro before writing this). `container.exec()`
- * : the *create* call, a normal request/response : works fine and is
- * still used below. Only the *start* step is done manually: a raw
- * `Bun.connect()` Unix-socket connection to the Docker daemon, writing
- * the HTTP/1.1 Upgrade request by hand and treating the socket as a raw
- * duplex stream once the "101 UPGRADED" response header block is past :
- * confirmed working end-to-end (real shell prompt, real command echoed
- * back) against a live container before this was wired into routes.
- *
- * Security-sensitive by nature (arbitrary command execution inside a
- * container this app manages) : every route that touches this module
- * MUST re-check service ownership itself; this module only trusts the
- * containerId it's given.
- */
+const logger = new Logger("Docker");
 
 interface TerminalSession {
 	containerId: string;
-	createdAt: number;
-	lastActivity: number;
-	listeners: Set<(chunk: Uint8Array) => void>;
 	serviceId: string;
-	socket: Bun.Socket;
 	userId: string;
 }
-
-const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
-const REAP_INTERVAL_MS = 60 * 1000;
-
-// Survives Vite HMR the same way the other schedulers do (cron.service.ts) :
-// guards the *interval*, not the sessions themselves (those live on the
-// DockerService singleton instance, see #sessions below).
-const globalForTerminal = globalThis as unknown as {
-	__terminal_reaper?: ReturnType<typeof setInterval>;
-};
 
 export interface OpenSessionParams {
 	containerId: string;
@@ -59,47 +15,19 @@ export interface OpenSessionParams {
 	userId: string;
 }
 
-const HEADER_END = "\r\n\r\n";
-
 /**
- * Reads past the `101 UPGRADED` header block on the hand-rolled exec socket
- * before forwarding raw TTY bytes (see the module docstring for why the
- * upgrade handshake is written by hand rather than via dockerode).
+ * Mixin adding the interactive web terminal : session open/subscribe/write/close.
+ *
+ * The shell itself lives in the Go worker, which owns the exec, the hijacked
+ * stream and the idle reaper. What stays here is the part the worker can't
+ * know: who a session belongs to. The worker only ever sees a container id, so
+ * this mixin keeps its own session book (service, user, container) and checks
+ * the user on every operation, exactly as it did when it held the socket.
+ *
+ * Security-sensitive by nature (arbitrary command execution inside a container
+ * this app manages) : every route that touches this module MUST re-check
+ * service ownership itself; this module only trusts the containerId it's given.
  */
-function makeUpgradeReader(
-	listeners: Set<(chunk: Uint8Array) => void>,
-): (chunk: Buffer) => void {
-	let headerBuffer = "";
-	let headersParsed = false;
-
-	const emit = (bytes: Uint8Array): void => {
-		for (const listener of listeners) {
-			listener(bytes);
-		}
-	};
-
-	return (chunk: Buffer): void => {
-		if (headersParsed) {
-			emit(new Uint8Array(chunk));
-			return;
-		}
-
-		headerBuffer += chunk.toString("binary");
-		const idx = headerBuffer.indexOf(HEADER_END);
-		if (idx === -1) {
-			return;
-		}
-
-		headersParsed = true;
-		const rest = headerBuffer.slice(idx + HEADER_END.length);
-		headerBuffer = "";
-		if (rest) {
-			emit(new Uint8Array(Buffer.from(rest, "binary")));
-		}
-	};
-}
-
-/** Mixin adding the interactive web terminal : session open/subscribe/write/close, backed by the hand-rolled `docker exec` upgrade described above. */
 // oxlint-disable-next-line max-lines-per-function -- mixin factory: the body is a class definition, not a procedure
 export function DockerTerminalMixin<
 	TBase extends Constructor<BaseDockerService>,
@@ -107,94 +35,52 @@ export function DockerTerminalMixin<
 	return class DockerTerminalService extends Base {
 		readonly #sessions = new Map<string, TerminalSession>();
 
-		/** Starts the idle-session reaper alongside the usual mixin-chain construction. */
-		// oxlint-disable-next-line typescript/no-explicit-any -- TS's mixin pattern requires this exact constructor shape
-		constructor(...args: any[]) {
-			super(...args);
-			this.#startReaper();
+		/** Starts a new interactive shell session inside the container, and remembers whose it is. */
+		async openTerminalSession(params: OpenSessionParams): Promise<string> {
+			const { sessionId } = await this.worker.post<{ sessionId: string }>(
+				"/v1/terminal",
+				{ containerId: params.containerId },
+			);
+			this.#sessions.set(sessionId, {
+				containerId: params.containerId,
+				serviceId: params.serviceId,
+				userId: params.userId,
+			});
+			return sessionId;
 		}
 
 		/**
-		 * Arms the interval that closes any session idle longer than
-		 * `IDLE_TIMEOUT_MS`. Guarded by `globalForTerminal.__terminal_reaper`
-		 * so a Vite HMR reload doesn't stack a second interval on top of the
-		 * first, same pattern `cron.service.ts` uses for its schedulers.
+		 * Pumps the worker's output stream into `onChunk` until the shell ends,
+		 * the reader cancels through `signal`, or the connection drops, then
+		 * forgets the session so a dead one stops reading as open.
 		 */
-		#startReaper(): void {
-			if (globalForTerminal.__terminal_reaper) {
-				return;
-			}
-			globalForTerminal.__terminal_reaper = setInterval(() => {
-				const now = Date.now();
-				for (const [id, session] of this.#sessions) {
-					if (now - session.lastActivity > IDLE_TIMEOUT_MS) {
-						this.closeSession(id);
-					}
+		async #pump(
+			sessionId: string,
+			signal: AbortSignal,
+			onChunk: (chunk: Uint8Array) => void,
+		): Promise<void> {
+			try {
+				const stream = await this.worker.stream(
+					`/v1/terminal/${sessionId}/stream`,
+					{ signal },
+				);
+				await stream.pipeTo(
+					new WritableStream<Uint8Array>({
+						/** Hands each raw TTY chunk the worker sent straight to the subscriber. */
+						write(chunk) {
+							onChunk(chunk);
+						},
+					}),
+					{ signal },
+				);
+				this.#sessions.delete(sessionId);
+			} catch (error) {
+				if (signal.aborted) {
+					return;
 				}
-			}, REAP_INTERVAL_MS);
-		}
-
-		/** Starts a new interactive shell session inside the container. Tries `/bin/sh` : the one shell essentially every image has. */
-		async openTerminalSession(params: OpenSessionParams): Promise<string> {
-			const container = this.getDocker().getContainer(params.containerId);
-			const exec = await container.exec({
-				AttachStderr: true,
-				AttachStdin: true,
-				AttachStdout: true,
-				Cmd: ["/bin/sh"],
-				Tty: true,
-			});
-
-			const sessionId = crypto.randomUUID();
-			const listeners = new Set<(chunk: Uint8Array) => void>();
-
-			const startPayload = JSON.stringify({ Detach: false, Tty: true });
-			const startRequest = [
-				`POST /exec/${exec.id}/start HTTP/1.1`,
-				"Host: docker",
-				"Content-Type: application/json",
-				`Content-Length: ${Buffer.byteLength(startPayload)}`,
-				"Connection: Upgrade",
-				"Upgrade: tcp",
-				"",
-				startPayload,
-			].join("\r\n");
-
-			const sessions = this.#sessions;
-			const onData = makeUpgradeReader(listeners);
-
-			const socket = await Bun.connect({
-				socket: {
-					/** Forgets the session once the daemon closes its end of the raw exec socket. */
-					close() {
-						sessions.delete(sessionId);
-					},
-					/** Feeds each raw chunk from the daemon through the upgrade-header reader, then out to subscribed listeners. */
-					data(_s, chunk) {
-						onData(chunk);
-					},
-					/** Forgets the session on a socket error, same as a clean close. */
-					error() {
-						sessions.delete(sessionId);
-					},
-				},
-				unix: config.docker.socketPath,
-			});
-
-			socket.write(startRequest);
-
-			const now = Date.now();
-			this.#sessions.set(sessionId, {
-				containerId: params.containerId,
-				createdAt: now,
-				lastActivity: now,
-				listeners,
-				serviceId: params.serviceId,
-				socket,
-				userId: params.userId,
-			});
-
-			return sessionId;
+				this.#sessions.delete(sessionId);
+				logger.warn(`Terminal stream ${sessionId} ended`, error);
+			}
 		}
 
 		/**
@@ -210,9 +96,9 @@ export function DockerTerminalMixin<
 			if (!session || session.userId !== userId) {
 				return null;
 			}
-			session.lastActivity = Date.now();
-			session.listeners.add(onChunk);
-			return () => session.listeners.delete(onChunk);
+			const controller = new AbortController();
+			void this.#pump(sessionId, controller.signal, onChunk);
+			return () => controller.abort();
 		}
 
 		/** Writes to the session's stdin. Returns false if the session doesn't exist / isn't owned by this user. */
@@ -221,23 +107,24 @@ export function DockerTerminalMixin<
 			if (!session || session.userId !== userId) {
 				return false;
 			}
-			session.lastActivity = Date.now();
-			session.socket.write(data);
+			this.worker
+				.postRaw(`/v1/terminal/${sessionId}/input`, data)
+				.catch((error: unknown) => {
+					logger.warn(`Couldn't write to terminal session ${sessionId}`, error);
+				});
 			return true;
 		}
 
 		/** Closes and forgets a session. No-op if it's already gone. */
 		closeSession(sessionId: string): void {
-			const session = this.#sessions.get(sessionId);
-			if (!session) {
+			if (!this.#sessions.delete(sessionId)) {
 				return;
 			}
-			try {
-				session.socket.end();
-			} catch {
-				// Already closed on the Docker side : fine.
-			}
-			this.#sessions.delete(sessionId);
+			this.worker
+				.delete(`/v1/terminal/${sessionId}`)
+				.catch((error: unknown) => {
+					logger.warn(`Couldn't close terminal session ${sessionId}`, error);
+				});
 		}
 
 		/** Whether `sessionId` exists and belongs to `userId`. */

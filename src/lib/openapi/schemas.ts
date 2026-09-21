@@ -224,8 +224,6 @@ export const revisionResponse = z.object({
 	]),
 });
 
-export const okResponse = z.object({ ok: z.boolean() });
-
 export const successResponse = z.object({ success: z.boolean() });
 
 export const instanceUpdateStatusResponse = z.object({

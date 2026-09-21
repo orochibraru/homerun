@@ -4,7 +4,7 @@ import { config } from "$lib/config";
 import { JobDTO } from "$lib/dto/job-dto";
 import { Logger } from "$lib/logger";
 import { APP_VERSION } from "$lib/server/app-version";
-import { demuxDockerFrames } from "$lib/services/docker/log-stream";
+import { isNotFound, WorkerClient } from "$lib/server/worker-client";
 import { DockerService } from "$lib/services/docker.service";
 import { JobWorker } from "$lib/services/queue/worker";
 import {
@@ -30,6 +30,13 @@ const RELEASE_FAILURE_CACHE_MS = 5 * 60 * 1000;
 const RELEASE_TIMEOUT_MS = 5000;
 
 const logger = new Logger("SelfUpdate");
+
+/** A container inspect body, as much of it as the self-update flow reads. */
+interface InspectedSelf {
+	Config: { Image: string; Labels?: Record<string, string> };
+	Mounts?: { Destination: string; Source: string }[];
+	State?: { ExitCode?: number; Running?: boolean };
+}
 
 export interface LatestRelease {
 	publishedAt: string | null;
@@ -159,13 +166,11 @@ class SelfUpdateServiceClass {
 	 * isn't running as a Compose-managed container).
 	 */
 	async #resolveSelf(): Promise<ResolvedSelf | null> {
-		const docker = DockerService.getDocker();
 		for (const id of await this.#ownContainerIds()) {
 			// oxlint-disable-next-line no-await-in-loop -- the first candidate that inspects wins, the rest are fallbacks
-			const info = await docker
-				.getContainer(id)
-				.inspect()
-				.catch(() => null);
+			const info = await WorkerClient.get<InspectedSelf>(
+				`/v1/containers/${id}/inspect`,
+			).catch(() => null);
 			if (!info) {
 				continue;
 			}
@@ -173,7 +178,7 @@ class SelfUpdateServiceClass {
 			if (!target) {
 				return null;
 			}
-			const socketMount = info.Mounts.find(
+			const socketMount = info.Mounts?.find(
 				(mount) => mount.Destination === config.docker.socketPath,
 			);
 			return {
@@ -188,17 +193,17 @@ class SelfUpdateServiceClass {
 
 	/** Compose service names of the homerun-worker containers (`homerun.role=worker`) in `project`, recreated alongside the app since they run the same image. */
 	async #workerServices(project: string): Promise<string[]> {
-		const containers = await DockerService.getDocker().listContainers({
-			all: true,
-			filters: {
-				label: [
-					`${COMPOSE_PROJECT_LABEL}=${project}`,
-					`${WORKER_ROLE_LABEL}=${WORKER_ROLE}`,
-				],
-			},
+		const containers = await WorkerClient.get<
+			{ Labels: Record<string, string> | null }[]
+		>("/v1/containers", {
+			all: "1",
+			label: `${COMPOSE_PROJECT_LABEL}=${project}`,
 		});
 		return containers
-			.map((container) => container.Labels[COMPOSE_SERVICE_LABEL])
+			.filter(
+				(container) => container.Labels?.[WORKER_ROLE_LABEL] === WORKER_ROLE,
+			)
+			.map((container) => container.Labels?.[COMPOSE_SERVICE_LABEL])
 			.filter((service): service is string => !!service);
 	}
 
@@ -298,27 +303,25 @@ class SelfUpdateServiceClass {
 	 * update has run on this host.
 	 */
 	async progress(): Promise<UpdateProgress> {
-		const container = DockerService.getDocker().getContainer(
-			UPDATER_CONTAINER_NAME,
-		);
-		const info = await container
-			.inspect()
-			.catch((err: { statusCode?: number }) => {
-				if (err.statusCode === 404) {
-					return null;
-				}
-				throw err;
-			});
+		const info = await WorkerClient.get<InspectedSelf>(
+			`/v1/containers/${UPDATER_CONTAINER_NAME}/inspect`,
+		).catch((err: unknown) => {
+			if (isNotFound(err)) {
+				return null;
+			}
+			throw err;
+		});
 		if (!info) {
 			return { exitCode: null, log: [], state: "none", version: null };
 		}
-		const raw = await container.logs({ stderr: true, stdout: true });
+		const log = await WorkerClient.stream(
+			`/v1/containers/${UPDATER_CONTAINER_NAME}/logs`,
+			{ query: { follow: "0", tail: "0" } },
+		).then((stream) => new Response(stream).text());
 		const running = info.State?.Running;
 		return {
 			exitCode: running ? null : (info.State?.ExitCode ?? null),
-			log: demuxDockerFrames(raw)
-				.split(/\r?\n/)
-				.filter((line) => line.trim() !== ""),
+			log: log.split(/\r?\n/).filter((line) => line.trim() !== ""),
 			state: running ? "running" : "exited",
 			version: info.Config?.Labels?.["homerun.self-update"] ?? null,
 		};
@@ -335,27 +338,23 @@ class SelfUpdateServiceClass {
 			image: UPDATER_IMAGE,
 			tag: UPDATER_IMAGE_TAG,
 		});
-		const docker = DockerService.getDocker();
-		await docker
-			.getContainer(UPDATER_CONTAINER_NAME)
-			.remove({ force: true })
-			.catch((err: { statusCode?: number }) => {
-				if (err.statusCode !== 404) {
-					throw err;
-				}
-			});
-		const container = await docker.createContainer({
-			Cmd: [updaterScript(self.target, version, self.companions)],
-			Entrypoint: ["sh", "-c"],
-			HostConfig: {
-				Binds: updaterBinds(self.target, self.hostSocketPath),
-				RestartPolicy: { Name: "no" },
+		await WorkerClient.delete(`/v1/containers/${UPDATER_CONTAINER_NAME}`, {
+			force: "1",
+		});
+		const created = await WorkerClient.post<{ id: string }>("/v1/containers", {
+			body: {
+				Cmd: [updaterScript(self.target, version, self.companions)],
+				Entrypoint: ["sh", "-c"],
+				HostConfig: {
+					Binds: updaterBinds(self.target, self.hostSocketPath),
+					RestartPolicy: { Name: "no" },
+				},
+				Image: `${UPDATER_IMAGE}:${UPDATER_IMAGE_TAG}`,
+				Labels: { "homerun.self-update": version },
 			},
-			Image: `${UPDATER_IMAGE}:${UPDATER_IMAGE_TAG}`,
-			Labels: { "homerun.self-update": version },
 			name: UPDATER_CONTAINER_NAME,
 		});
-		await container.start();
+		await WorkerClient.post(`/v1/containers/${created.id}/start`);
 	}
 }
 

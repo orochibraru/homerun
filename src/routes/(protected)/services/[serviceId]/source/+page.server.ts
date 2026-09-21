@@ -86,7 +86,7 @@ interface BuildTargets {
  * Validates the chosen build server exists, returning field errors or
  * null. No cache registry is needed: without one the built image is streamed
  * back to this host. Both remote-host kinds (docker and agent) are real build servers,
- * see deploy.service.ts's git-build branch and AgentClientService.build :
+ * see the worker's git-build step (internal/jobs) :
  * real, tested-in-review bug this replaced, a stale "docker only" leftover
  * from before that integration.
  */

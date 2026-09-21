@@ -117,7 +117,7 @@ async function throughTraefik(
 }
 
 async function buildBinaries(): Promise<void> {
-	log(`Building installer/agent/cli binaries for ${arch}`);
+	log(`Building installer/worker/cli binaries for ${arch}`);
 	if (skipBuild) {
 		console.log(`  --skip-build : reusing dist/homerun-*-${arch}`);
 		return;
@@ -126,7 +126,9 @@ async function buildBinaries(): Promise<void> {
 }
 
 async function provisionAgent(vm: Vm): Promise<{ token: string; url: string }> {
-	log(`Launching ${vm.name} and installing the Homerun Agent (--mode=agent)`);
+	log(
+		`Launching ${vm.name} and installing the Homerun worker in agent mode (--mode=agent)`,
+	);
 	await vm.recreate(1, "2G", "10G");
 	await vm.transfer(`dist/homerun-installer-${arch}`, "/tmp/homerun-installer");
 	await vm.exec(["chmod", "+x", "/tmp/homerun-installer"]);
@@ -137,7 +139,7 @@ async function provisionAgent(vm: Vm): Promise<{ token: string; url: string }> {
 		await vm.exec([
 			"sudo",
 			"cat",
-			`/home/${ROOTLESS_USER}/.homerun-agent/token`,
+			`/home/${ROOTLESS_USER}/.homerun-worker/token`,
 		])
 	).trim();
 

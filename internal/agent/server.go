@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -9,10 +8,13 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/orochibraru/homerun/internal/buildinfo"
 	"github.com/orochibraru/homerun/internal/dockerapi"
+	"github.com/orochibraru/homerun/internal/hoststats"
+	"github.com/orochibraru/homerun/internal/httpapi"
 )
 
 // Server is the agent's HTTP control surface: /v1/health and /v1/openapi.json
@@ -20,12 +22,12 @@ import (
 type Server struct {
 	builder *Builder
 	docker  Docker
-	stats   *StatsSampler
+	stats   *hoststats.StatsSampler
 	token   string
 }
 
 // NewServer builds the server for one daemon and one token.
-func NewServer(token string, docker Docker, builder *Builder, stats *StatsSampler) *Server {
+func NewServer(token string, docker Docker, builder *Builder, stats *hoststats.StatsSampler) *Server {
 	return &Server{builder: builder, docker: docker, stats: stats, token: token}
 }
 
@@ -33,79 +35,26 @@ func NewServer(token string, docker Docker, builder *Builder, stats *StatsSample
 // Remote Hosts page polls it every few seconds, which would drown everything
 // else out.
 func (s *Server) Handler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/health", s.health)
-	mux.HandleFunc("GET /v1/openapi.json", s.openAPI)
-	mux.Handle("GET /v1/stats", s.authed(s.statsRoute))
-	mux.Handle("POST /v1/build", s.authed(s.build))
-	mux.Handle("GET /v1/images/save", s.authed(s.saveImage))
-	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "Not found"})
+	router := chi.NewRouter()
+	router.Use(httpapi.RequestLog("/v1/health"))
+	router.NotFound(httpapi.NotFound)
+	router.MethodNotAllowed(httpapi.MethodNotAllowed)
+
+	router.Get("/v1/health", s.health)
+	router.Get("/v1/openapi.json", s.openAPI)
+
+	router.Group(func(authed chi.Router) {
+		authed.Use(httpapi.BearerAuth(s.token))
+		authed.Get("/v1/stats", httpapi.H(s.statsRoute))
+		authed.Post("/v1/build", httpapi.H(s.build))
+		authed.Get("/v1/images/save", httpapi.H(s.saveImage))
 	})
-	return mux
-}
-
-// writeJSON writes body as a JSON response with the given status.
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
-}
-
-// answer writes a JSON response for a request the route has fully handled,
-// such as a refused body, so there's no error left for authed to report.
-func answer(w http.ResponseWriter, status int, body any) error {
-	writeJSON(w, status, body)
-	return nil
-}
-
-// handlerFunc is a route that reports its failures as an error, turned into a
-// 500 with the message by authed.
-type handlerFunc func(w http.ResponseWriter, r *http.Request) error
-
-// statusRecorder remembers the status a handler wrote, for the request log.
-type statusRecorder struct {
-	http.ResponseWriter
-	status int
-}
-
-// WriteHeader records status before delegating to the wrapped ResponseWriter.
-func (r *statusRecorder) WriteHeader(status int) {
-	r.status = status
-	r.ResponseWriter.WriteHeader(status)
-}
-
-// authed wraps a route with the bearer-token check, a log line per request
-// and the shared error-to-500 translation, so a request that reached the agent
-// and did real work always leaves a trace in its own log.
-func (s *Server) authed(handler handlerFunc) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		if !s.checkAuth(r) {
-			log.Printf("[http] %s %s - 401", r.Method, r.URL.Path)
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
-			return
-		}
-		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-		if err := handler(recorder, r); err != nil {
-			log.Printf("[http] %s %s - 500 (%dms): %s", r.Method, r.URL.Path, time.Since(start).Milliseconds(), err)
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-			return
-		}
-		log.Printf("[http] %s %s - %d (%dms)", r.Method, r.URL.Path, recorder.status, time.Since(start).Milliseconds())
-	})
-}
-
-// checkAuth reports whether the request carries a Bearer token matching the
-// agent's own, compared in constant time.
-func (s *Server) checkAuth(r *http.Request) bool {
-	presented, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	return ok && presented != "" && TokensMatch(presented, s.token)
+	return router
 }
 
 // health answers GET /v1/health with the agent's status and version, with no auth required.
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": buildinfo.Version})
+	httpapi.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": buildinfo.Version})
 }
 
 // openAPI answers GET /v1/openapi.json with the agent's OpenAPI document.
@@ -114,12 +63,12 @@ func (s *Server) openAPI(w http.ResponseWriter, r *http.Request) {
 	if r.TLS != nil {
 		scheme = "https"
 	}
-	writeJSON(w, http.StatusOK, openAPIDocument(fmt.Sprintf("%s://%s", scheme, r.Host)))
+	httpapi.WriteJSON(w, http.StatusOK, openAPIDocument(fmt.Sprintf("%s://%s", scheme, r.Host)))
 }
 
 // statsRoute answers GET /v1/stats with a fresh host stats sample.
 func (s *Server) statsRoute(w http.ResponseWriter, _ *http.Request) error {
-	writeJSON(w, http.StatusOK, s.stats.Sample())
+	httpapi.WriteJSON(w, http.StatusOK, s.stats.Sample())
 	return nil
 }
 
@@ -127,21 +76,18 @@ func (s *Server) statsRoute(w http.ResponseWriter, _ *http.Request) error {
 // answers with one JSON result: 200 when it succeeded, 500 when it didn't.
 func (s *Server) build(w http.ResponseWriter, r *http.Request) error {
 	var input BuildInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		return answer(w, http.StatusBadRequest, map[string]any{
-			"error":  "Invalid request body",
-			"issues": []ValidationIssue{{Message: "the body isn't valid JSON", Path: []string{}}},
-		})
+	if !httpapi.DecodeJSON(w, r, &input) {
+		return nil
 	}
 	if issues := validateBuildInput(input); len(issues) > 0 {
-		return answer(w, http.StatusBadRequest, map[string]any{"error": "Invalid request body", "issues": issues})
+		return httpapi.Invalid(w, "Invalid request body", issues)
 	}
 	result := s.builder.Build(r.Context(), input)
 	status := http.StatusOK
 	if !result.Success {
 		status = http.StatusInternalServerError
 	}
-	writeJSON(w, status, result)
+	httpapi.WriteJSON(w, status, result)
 	return nil
 }
 
@@ -151,14 +97,11 @@ func (s *Server) build(w http.ResponseWriter, r *http.Request) error {
 func (s *Server) saveImage(w http.ResponseWriter, r *http.Request) error {
 	ref := r.URL.Query().Get("ref")
 	if ref == "" {
-		return answer(w, http.StatusBadRequest, map[string]any{
-			"error":  "Invalid query",
-			"issues": []ValidationIssue{{Message: "ref is required", Path: []string{"ref"}}},
-		})
+		return httpapi.Invalid(w, "Invalid query", []httpapi.ValidationIssue{{Message: "ref is required", Path: []string{"ref"}}})
 	}
 	archive, err := s.docker.SaveImage(r.Context(), ref)
 	if errors.Is(err, dockerapi.ErrNotFound) {
-		return answer(w, http.StatusNotFound, map[string]string{"error": fmt.Sprintf("Image %s not found.", ref)})
+		return httpapi.Error(w, http.StatusNotFound, fmt.Sprintf("Image %s not found.", ref))
 	}
 	if err != nil {
 		return err
@@ -173,21 +116,15 @@ func (s *Server) saveImage(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// ValidationIssue is one reason a request body was refused.
-type ValidationIssue struct {
-	Message string   `json:"message"`
-	Path    []string `json:"path"`
-}
-
 var commitPattern = regexp.MustCompile(`(?i)^[0-9a-f]{40}$`)
 
 // validateBuildInput checks a build request the way the TypeScript agent's zod
 // schema did, returning one issue per problem so a malformed request fails as
 // a clean 400 instead of deep inside a docker call.
-func validateBuildInput(input BuildInput) []ValidationIssue {
-	issues := []ValidationIssue{}
+func validateBuildInput(input BuildInput) []httpapi.ValidationIssue {
+	issues := []httpapi.ValidationIssue{}
 	add := func(message string, path ...string) {
-		issues = append(issues, ValidationIssue{Message: message, Path: path})
+		issues = append(issues, httpapi.ValidationIssue{Message: message, Path: path})
 	}
 	if input.GitURL == "" {
 		add("gitUrl is required", "gitUrl")

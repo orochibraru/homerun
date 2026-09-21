@@ -1,28 +1,28 @@
-import type Docker from "dockerode";
-import { getDocker, type RemoteHostConnection } from "./client.ts";
-
-export type { RemoteHostConnection } from "./client.ts";
+import { WorkerClient } from "$lib/server/worker-client";
 
 /**
  * Shared base every Docker concern class extends (containers, networks,
- * terminal, git-build, custom-ssl, core-services, reconcile) : each one is
- * its own real class, not a bag of loose exported functions, and all of
- * them merge into one `DockerService` via the TS mixin functions each file
- * exports (see docker.service.ts for the merge order). This base just
- * wraps client.ts's HMR-safe connection cache so every concern method can
- * call `this.getDocker(remote)` instead of importing `getDocker` directly.
- * Public, not protected : some callers (e.g. admin.service.ts's Docker
- * socket reachability check) need the raw dockerode client directly,
- * same as when this was a static `DockerService.getDocker` delegate.
- * Not `abstract` : TS's mixin pattern requires a concrete (instantiable)
- * base constructor type, and this class is never instantiated on its
- * own anyway, only ever as the bottom of the merge chain in
- * docker.service.ts.
+ * terminal, swarm, custom-ssl, core-services, reconcile) : each one is its own
+ * real class, not a bag of loose exported functions, and all of them merge
+ * into one `DockerService` via the TS mixin functions each file exports (see
+ * docker.service.ts for the merge order).
+ *
+ * This base used to hand out a dockerode client. It now hands out the Go
+ * worker's Docker control API instead : the app holds no Docker socket at all,
+ * the worker is the process that does, and every engine call goes over HTTP to
+ * it. What did *not* change is the split of responsibilities — deciding what
+ * should happen (labels, container specs, swarm templates, keep sets) stays
+ * here with the database, and the worker only performs the call and reports
+ * what it saw.
+ *
+ * Not `abstract` : TS's mixin pattern requires a concrete (instantiable) base
+ * constructor type, and this class is never instantiated on its own anyway,
+ * only ever as the bottom of the merge chain in docker.service.ts.
  */
 export class BaseDockerService {
-	/** Gets (or opens and caches) the dockerode client for `remote`, or the local socket when omitted. See `client.ts`'s `getDocker`. */
-	getDocker(remote?: RemoteHostConnection | null): Docker {
-		return getDocker(remote);
+	/** The Go worker's Docker control API, which every concern's engine calls go through. */
+	get worker(): typeof WorkerClient {
+		return WorkerClient;
 	}
 }
 

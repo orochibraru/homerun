@@ -10,8 +10,9 @@ description:
   src/lib/services/*.ts or src/lib/dto/*.ts file, a new route under src/routes/,
   a new .claude/agents or .agents/skills entry, a Planned features item that's
   now actually built, or a changed env var in config.ts. Not for reviewing code
-  correctness (see repo-gate) or syncing cmd/agent/, cmd/cli/ logic (see
-  subproject-sync) — this agent's only job is keeping the docs honest.
+  correctness (see repo-gate) or syncing cmd/worker/'s agent mode, cmd/cli/
+  logic (see subproject-sync) — this agent's only job is keeping the docs
+  honest.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---
@@ -45,8 +46,8 @@ service" for another session's worth of changes, because only `CLAUDE.md` got
 updated as part of that PR, not `docs/`. Your job is to find and close both
 kinds of drift, **in both doc surfaces**, after a code change lands, not to
 review whether the code itself is correct (that's `repo-gate`) or to keep
-`cmd/agent/`'s hand-reimplemented logic in sync with the main app (that's
-`subproject-sync`).
+`cmd/worker/`'s agent mode's hand-reimplemented logic in sync with the main app
+(that's `subproject-sync`).
 
 ## Workflow
 
@@ -74,7 +75,7 @@ review whether the code itself is correct (that's `repo-gate`) or to keep
      alongside it is also resolved, see how the DNS-automation and notifications
      bullets were split rather than deleted outright as a model for this).
    - A new standalone sub-project or one of
-     `cmd/agent/`/`cmd/installer/`/`cmd/cli/` gaining real new behavior → its
+     `cmd/worker/`/`cmd/installer/`/`cmd/cli/` gaining real new behavior → its
      own `README.md` too, not just CLAUDE.md.
 
    Then do the equivalent mapping against `docs/` + root `README.md`, this is
@@ -94,7 +95,7 @@ review whether the code itself is correct (that's `repo-gate`) or to keep
    - Root `README.md`'s "Features" bullet list is the top-level marketing-ish
      summary, a genuinely new capability usually earns one short bullet there
      too, terser than the docs/ page, cross-linking into `docs/`.
-   - Sub-project READMEs (`cmd/agent/README.md`, `cmd/installer/README.md`,
+   - Sub-project READMEs (`cmd/worker/README.md`, `cmd/installer/README.md`,
      `cmd/cli/README.md`) are a third layer under this same umbrella, same
      trigger as the CLAUDE.md sub-project rule above.
 

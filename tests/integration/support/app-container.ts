@@ -104,6 +104,8 @@ export async function startAppContainer(
 			"-e",
 			`PORT=${String(options.port)}`,
 			"-e",
+			`WORKER_URL=${workerUrlForContainer(options.workerUrl)}`,
+			"-e",
 			"HOMERUN_DISABLE_AUTH_RATE_LIMIT=1",
 			image,
 		],
@@ -156,11 +158,12 @@ export async function startAppContainer(
  */
 export async function startWorkerContainer(
 	image: string,
-	options: Pick<SpawnAppOptions, "authSecret" | "databaseUrl">,
+	options: Pick<SpawnAppOptions, "authSecret" | "databaseUrl" | "workerUrl">,
 ): Promise<SpawnedApp> {
 	const name = E2E_WORKER_CONTAINER_NAME;
 	await dockerRemove(name);
 	const hostNetwork = process.platform === "linux";
+	const port = workerPortOf(options.workerUrl);
 	const proc = Bun.spawn(
 		[
 			"docker",
@@ -170,13 +173,20 @@ export async function startWorkerContainer(
 			name,
 			...(hostNetwork
 				? ["--network", "host"]
-				: ["--add-host", "host.docker.internal:host-gateway"]),
+				: [
+						"--add-host",
+						"host.docker.internal:host-gateway",
+						"-p",
+						`${port}:${port}`,
+					]),
 			"-v",
 			"/var/run/docker.sock:/var/run/docker.sock",
 			"-e",
 			`AUTH_SECRET=${options.authSecret}`,
 			"-e",
 			`DATABASE_URL=${hostNetwork ? options.databaseUrl : databaseUrlForContainer(options.databaseUrl)}`,
+			"-e",
+			`WORKER_PORT=${port}`,
 			image,
 			"/usr/local/bin/homerun-worker",
 		],
@@ -191,7 +201,7 @@ export async function startWorkerContainer(
 	const timeoutMs = ciTimeout(30_000, 60_000);
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
-		if ((await containerLogs(name)).includes("[homerun-worker] ready:")) {
+		if ((await containerLogs(name)).includes("worker] ready:")) {
 			return { proc, stop: () => dockerRemove(name) };
 		}
 		await new Promise((r) => setTimeout(r, 500));
@@ -199,4 +209,22 @@ export async function startWorkerContainer(
 	const logs = await containerLogs(name);
 	await dockerRemove(name);
 	throw new Error(`The worker in ${image} never became ready:\n${logs}`);
+}
+
+/** The port a worker control-API URL points at. */
+function workerPortOf(workerUrl: string): number {
+	return Number(new URL(workerUrl).port || "7430");
+}
+
+/**
+ * The worker's control API as the app *container* has to address it. On Linux
+ * both containers share the host's network namespace, so the URL is already
+ * right; elsewhere the worker publishes its port on the host and the app has
+ * to go back out through host.docker.internal to reach it.
+ */
+function workerUrlForContainer(workerUrl: string): string {
+	if (process.platform === "linux") {
+		return workerUrl;
+	}
+	return `http://host.docker.internal:${workerPortOf(workerUrl)}`;
 }

@@ -484,7 +484,8 @@ the transport ladder here is, in order of preference:
   bare chunked stream here.
 - **Chunked HTTP both ways** where a client→server channel is genuinely needed :
   only the web terminal, which already does this (`terminal/[sessionId]/input`),
-  and which needed its own raw `Bun.connect()` hijack anyway (see Web terminal).
+  and whose actual shell now lives in the Go worker's own hijacked exec anyway
+  (see Web terminal in `docker.md`).
 - **A remote `query`/`command`** (see Remote functions below) for any
   dashboard-only request/response call that isn't a stream : a panel that loads
   behind a skeleton, a poll, a small mutation the bell or a picker fires. This

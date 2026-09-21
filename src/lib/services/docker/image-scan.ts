@@ -1,7 +1,7 @@
-import { PassThrough, type Readable } from "node:stream";
 import { config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import { isNotFound } from "$lib/server/worker-client";
 import { decryptSecret } from "../secrets.ts";
 import type { BaseDockerService, Constructor } from "./base.ts";
 import type { PullImageParams, RegistryAuth } from "./containers.ts";
@@ -42,6 +42,13 @@ interface RequiresOneOffMixin {
 	selfContainer: () => Promise<SelfContainer | null>;
 }
 
+interface MirrorInspect {
+	Config?: { Env?: string[]; Labels?: Record<string, string> };
+	Id: string;
+	NetworkSettings?: { Networks?: Record<string, unknown> };
+	State?: { Running?: boolean };
+}
+
 export interface MirrorExecResult {
 	exitCode: number;
 	stderr: string;
@@ -57,21 +64,6 @@ export interface ScanImageParams {
 	auth?: RegistryAuth;
 	ref: string;
 	source: TrivySource;
-}
-
-function isNotFoundError(error: unknown): boolean {
-	return (error as { statusCode?: number } | null)?.statusCode === 404;
-}
-
-function collect(stream: PassThrough): Promise<string> {
-	return new Promise((resolvePromise, reject) => {
-		const chunks: Buffer[] = [];
-		stream.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
-		stream.on("error", reject);
-		stream.on("end", () =>
-			resolvePromise(Buffer.concat(chunks).toString("utf8")),
-		);
-	});
 }
 
 function sleep(ms: number): Promise<void> {
@@ -90,6 +82,24 @@ export function DockerImageScanMixin<
 	TBase extends Constructor<BaseDockerService & RequiresOneOffMixin>,
 >(Base: TBase) {
 	return class DockerImageScanService extends Base {
+		/** The mirror container's inspect body, or null when it doesn't exist. */
+		async #inspectMirror(): Promise<MirrorInspect | null> {
+			return await this.worker
+				.get<MirrorInspect>(`/v1/containers/${MIRROR_CONTAINER_NAME}/inspect`)
+				.catch((err: unknown) => {
+					if (isNotFound(err)) {
+						return null;
+					}
+					throw err;
+				});
+		}
+
+		/** Starts the mirror container and waits out the grace period it needs before it answers. */
+		async #startMirror(id: string): Promise<void> {
+			await this.worker.post(`/v1/containers/${id}/start`);
+			await sleep(MIRROR_START_GRACE_MS);
+		}
+
 		/**
 		 * Pulls the mirror registry image if it isn't already present, then
 		 * creates and starts its container: bound to the mirror's storage
@@ -98,34 +108,38 @@ export function DockerImageScanMixin<
 		 * Waits a short grace period for it to come up before returning.
 		 */
 		async #createMirror(desired?: RegistryDesiredState): Promise<void> {
-			const docker = this.getDocker();
-			try {
-				await docker.getImage(`${MIRROR_IMAGE}:${MIRROR_IMAGE_TAG}`).inspect();
-			} catch {
+			const image = `${MIRROR_IMAGE}:${MIRROR_IMAGE_TAG}`;
+			const present = await this.worker.get<{ id: string | null }>(
+				"/v1/images/id",
+				{ ref: image },
+			);
+			if (!present.id) {
 				await this.pullImage({ image: MIRROR_IMAGE, tag: MIRROR_IMAGE_TAG });
 			}
 			const state = desired ?? (await this.registryDesiredState());
-			const container = await docker.createContainer({
-				Env: registryEnv(state),
-				ExposedPorts: { [`${MIRROR_INTERNAL_PORT}/tcp`]: {} },
-				HostConfig: {
-					Binds: [
-						`${MIRROR_VOLUME}:${MIRROR_STORAGE_DIR}`,
-						`${MIRROR_AUTH_VOLUME}:${MIRROR_AUTH_DIR}`,
-					],
-					NetworkMode: config.docker.networkName,
-					PortBindings: {
-						[`${MIRROR_INTERNAL_PORT}/tcp`]: [
-							{ HostIp: "127.0.0.1", HostPort: String(MIRROR_HOST_PORT) },
+			const created = await this.worker.post<{ id: string }>("/v1/containers", {
+				body: {
+					Env: registryEnv(state),
+					ExposedPorts: { [`${MIRROR_INTERNAL_PORT}/tcp`]: {} },
+					HostConfig: {
+						Binds: [
+							`${MIRROR_VOLUME}:${MIRROR_STORAGE_DIR}`,
+							`${MIRROR_AUTH_VOLUME}:${MIRROR_AUTH_DIR}`,
 						],
+						NetworkMode: config.docker.networkName,
+						PortBindings: {
+							[`${MIRROR_INTERNAL_PORT}/tcp`]: [
+								{ HostIp: "127.0.0.1", HostPort: String(MIRROR_HOST_PORT) },
+							],
+						},
+						RestartPolicy: { Name: "unless-stopped" },
 					},
-					RestartPolicy: { Name: "unless-stopped" },
+					Image: image,
+					Labels: registryLabels(state),
 				},
-				Image: `${MIRROR_IMAGE}:${MIRROR_IMAGE_TAG}`,
-				Labels: registryLabels(state),
 				name: MIRROR_CONTAINER_NAME,
 			});
-			await container.start();
+			await this.worker.post(`/v1/containers/${created.id}/start`);
 			logger.info(
 				`Image mirror created: ${MIRROR_CONTAINER_NAME} on 127.0.0.1:${MIRROR_HOST_PORT}`,
 			);
@@ -195,13 +209,7 @@ export function DockerImageScanMixin<
 		 */
 		async reconcileRegistry(desired: RegistryDesiredState): Promise<void> {
 			await this.ensureSharedNetwork();
-			const container = this.getDocker().getContainer(MIRROR_CONTAINER_NAME);
-			const info = await container.inspect().catch((err) => {
-				if (isNotFoundError(err)) {
-					return null;
-				}
-				throw err;
-			});
+			const info = await this.#inspectMirror();
 			if (!info) {
 				await this.#createMirror(desired);
 				return;
@@ -214,15 +222,14 @@ export function DockerImageScanMixin<
 				)
 			) {
 				if (!info.State?.Running) {
-					await container.start();
-					await sleep(MIRROR_START_GRACE_MS);
+					await this.#startMirror(info.Id);
 				}
 				return;
 			}
 			logger.info(
 				`Recreating ${MIRROR_CONTAINER_NAME} (auth=${desired.authEnabled}, host=${desired.publicHost ?? "internal"}); ${MIRROR_VOLUME} keeps its data.`,
 			);
-			await container.remove({ force: true });
+			await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
 			await this.#createMirror(desired);
 		}
 
@@ -235,14 +242,8 @@ export function DockerImageScanMixin<
 		 */
 		async ensureImageMirror(): Promise<void> {
 			await this.ensureSharedNetwork();
-			const container = this.getDocker().getContainer(MIRROR_CONTAINER_NAME);
-			let info: Awaited<ReturnType<typeof container.inspect>>;
-			try {
-				info = await container.inspect();
-			} catch (err) {
-				if (!isNotFoundError(err)) {
-					throw err;
-				}
+			const info = await this.#inspectMirror();
+			if (!info) {
 				await this.#createMirror();
 				return;
 			}
@@ -257,32 +258,24 @@ export function DockerImageScanMixin<
 				logger.info(
 					`Recreating ${MIRROR_CONTAINER_NAME} to match its settings; ${MIRROR_VOLUME} keeps its data.`,
 				);
-				await container.remove({ force: true });
+				await this.worker.delete(`/v1/containers/${info.Id}`, { force: "1" });
 				await this.#createMirror(desired);
 				return;
 			}
 			if (!info.NetworkSettings?.Networks?.[config.docker.networkName]) {
-				await this.getDocker()
-					.getNetwork(config.docker.networkName)
-					.connect({ Container: info.Id });
+				await this.worker.post(`/v1/containers/${info.Id}/connect`, {
+					aliases: [],
+					network: config.docker.networkName,
+				});
 			}
 			if (!info.State?.Running) {
-				await container.start();
-				await sleep(MIRROR_START_GRACE_MS);
+				await this.#startMirror(info.Id);
 			}
 		}
 
 		/** Whether the image mirror container exists and is currently running. */
 		async imageMirrorRunning(): Promise<boolean> {
-			const info = await this.getDocker()
-				.getContainer(MIRROR_CONTAINER_NAME)
-				.inspect()
-				.catch((err) => {
-					if (isNotFoundError(err)) {
-						return null;
-					}
-					throw err;
-				});
+			const info = await this.#inspectMirror();
 			return info?.State?.Running === true;
 		}
 
@@ -318,36 +311,12 @@ export function DockerImageScanMixin<
 			);
 		}
 
-		/** Runs `cmd` inside the running mirror container via `docker exec`, returning its demuxed stdout/stderr and exit code. */
+		/** Runs `cmd` inside the running mirror container via the worker's exec route, returning its separated stdout/stderr and exit code. */
 		async execInImageMirror(cmd: string[]): Promise<MirrorExecResult> {
-			const docker = this.getDocker();
-			const exec = await docker.getContainer(MIRROR_CONTAINER_NAME).exec({
-				AttachStderr: true,
-				AttachStdout: true,
-				Cmd: cmd,
+			return await this.worker.post<MirrorExecResult>("/v1/exec", {
+				cmd,
+				container: MIRROR_CONTAINER_NAME,
 			});
-			const raw = (await exec.start({
-				hijack: true,
-				stdin: false,
-			})) as unknown as Readable;
-			const stdoutStream = new PassThrough();
-			const stderrStream = new PassThrough();
-			const stdout = collect(stdoutStream);
-			const stderr = collect(stderrStream);
-			docker.modem.demuxStream(raw, stdoutStream, stderrStream);
-			await new Promise<void>((resolvePromise, reject) => {
-				raw.on("end", resolvePromise);
-				raw.on("close", resolvePromise);
-				raw.on("error", reject);
-			});
-			stdoutStream.end();
-			stderrStream.end();
-			const inspected = await exec.inspect();
-			return {
-				exitCode: inspected.ExitCode ?? 0,
-				stderr: await stderr,
-				stdout: await stdout,
-			};
 		}
 
 		/**
@@ -369,8 +338,8 @@ export function DockerImageScanMixin<
 
 		/** Whether the local daemon is rootless Docker, which can't pull from the mirror's loopback port. */
 		async isRootlessDocker(): Promise<boolean> {
-			const info = await this.getDocker()
-				.info()
+			const info = await this.worker
+				.get<{ SecurityOptions?: string[] | null }>("/v1/info")
 				.catch(() => null);
 			return isRootlessDaemon(info?.SecurityOptions);
 		}

@@ -1,10 +1,4 @@
-import { execFile } from "node:child_process";
-import os from "node:os";
-import { promisify } from "node:util";
-import { Logger } from "$lib/logger";
-
-const logger = new Logger("SystemStats");
-const execFileAsync = promisify(execFile);
+import { WorkerClient } from "$lib/server/worker-client";
 
 export interface SystemStats {
 	cpuPercent: number;
@@ -22,123 +16,39 @@ export interface GpuStats {
 	utilizationPercent: number;
 }
 
-const DF_LINE_RE = /\s+/;
-
-/** Disk usage of the filesystem containing the app's working directory, via `df`. Returns nulls (rather than throwing) if `df`'s output can't be parsed. */
-async function getDiskUsage(): Promise<{
-	totalGb: number | null;
-	usedGb: number | null;
-}> {
-	try {
-		// -P for POSIX-standard single-line-per-filesystem output, -k for
-		// kilobyte blocks (portable across macOS/Linux, unlike -h's units).
-		const { stdout } = await execFileAsync("df", ["-Pk", "."]);
-		const lines = stdout.trim().split("\n");
-		const dataLine = lines.at(-1);
-		if (!dataLine) {
-			return { totalGb: null, usedGb: null };
-		}
-		const parts = dataLine.trim().split(DF_LINE_RE);
-		const totalKb = Number(parts[1]);
-		const usedKb = Number(parts[2]);
-		if (!(Number.isFinite(totalKb) && Number.isFinite(usedKb))) {
-			return { totalGb: null, usedGb: null };
-		}
-		return { totalGb: totalKb / 1024 / 1024, usedGb: usedKb / 1024 / 1024 };
-	} catch (err) {
-		logger.warn("Disk usage check failed", err);
-		return { totalGb: null, usedGb: null };
-	}
+interface HostStats {
+	cpuPercent: number;
+	diskPercent: number | null;
+	diskTotalMb: number | null;
+	diskUsedMb: number | null;
+	gpu: GpuStats | null;
+	memPercent: number;
+	memTotalMb: number;
+	memUsedMb: number;
 }
 
-const CSV_SEPARATOR_RE = /,\s*/;
-
-/** Best-effort : most hosts running this app have no GPU, that's the expected/common case, not an error. */
-async function getGpuStats(): Promise<GpuStats | null> {
-	try {
-		const { stdout } = await execFileAsync("nvidia-smi", [
-			"--query-gpu=name,utilization.gpu,memory.used,memory.total",
-			"--format=csv,noheader,nounits",
-		]);
-		const [line] = stdout.trim().split("\n");
-		if (!line) {
-			return null;
-		}
-		const [name, util, memUsed, memTotal] = line.split(CSV_SEPARATOR_RE);
-		return {
-			memTotalMb: Number(memTotal),
-			memUsedMb: Number(memUsed),
-			name: name.trim(),
-			utilizationPercent: Number(util),
-		};
-	} catch {
-		// No nvidia-smi on PATH : no GPU, or a non-NVIDIA one. Not an error.
-		return null;
-	}
-}
-
-interface CpuSample {
-	idle: number;
-	total: number;
-}
+const MB_PER_GB = 1024;
 
 /** Host-level (not per-container) CPU/RAM/disk/GPU stats for the dashboard. */
 class SystemStatsServiceClass {
-	// os.cpus() returns cumulative counters since boot : CPU% needs a delta
-	// between two samples. Real instance state (rather than the module-scope
-	// `let` this used to be) : the singleton this class is exported as below
-	// lives for the app's lifetime, so behavior is identical, repeated
-	// calls (e.g. a polling dashboard) diff against the previous call
-	// instead of each blocking for a fresh sample window, this is just the
-	// OOP-correct place for that state to live.
-	#lastCpuSample: CpuSample | null = null;
-
-	/** Sums idle and total CPU time across all cores since boot, per `os.cpus()`'s cumulative counters. */
-	#sampleCpuTimes(): CpuSample {
-		const cpus = os.cpus();
-		let idle = 0;
-		let total = 0;
-		for (const cpu of cpus) {
-			idle += cpu.times.idle;
-			total +=
-				cpu.times.user +
-				cpu.times.nice +
-				cpu.times.sys +
-				cpu.times.idle +
-				cpu.times.irq;
-		}
-		return { idle, total };
-	}
-
-	/** CPU% since the previous call, diffing against `#lastCpuSample`. Returns 0 on the first call (no prior sample to diff against) or if the sampling window is degenerate. */
-	#getCpuPercent(): number {
-		const sample = this.#sampleCpuTimes();
-		if (!this.#lastCpuSample) {
-			this.#lastCpuSample = sample;
-			return 0;
-		}
-		const idleDelta = sample.idle - this.#lastCpuSample.idle;
-		const totalDelta = sample.total - this.#lastCpuSample.total;
-		this.#lastCpuSample = sample;
-		if (totalDelta <= 0) {
-			return 0;
-		}
-		return Math.max(0, Math.min(100, 100 * (1 - idleDelta / totalDelta)));
-	}
-
-	/** Current host CPU/RAM/disk/GPU snapshot, run for the dashboard's Host Resources panel and the stats sampler. CPU% is stateful, see `#lastCpuSample`. */
+	/**
+	 * Current host CPU/RAM/disk/GPU snapshot, run for the dashboard's Host
+	 * Resources panel and the stats sampler. Read from the Go worker, which is
+	 * the process on the real Docker host : the app may be a container, and its
+	 * own `os`/`df` readings would describe that container's limits rather than
+	 * the machine's. CPU% is a delta against the worker's previous sample, so
+	 * the first call after the worker starts reports 0.
+	 */
 	async getSystemStats(): Promise<SystemStats> {
-		const [disk, gpu] = await Promise.all([getDiskUsage(), getGpuStats()]);
-		const memTotalMb = os.totalmem() / 1024 / 1024;
-		const memUsedMb = memTotalMb - os.freemem() / 1024 / 1024;
-
+		const host = await WorkerClient.get<HostStats>("/v1/host/stats");
 		return {
-			cpuPercent: this.#getCpuPercent(),
-			diskTotalGb: disk.totalGb,
-			diskUsedGb: disk.usedGb,
-			gpu,
-			memTotalMb,
-			memUsedMb,
+			cpuPercent: host.cpuPercent,
+			diskTotalGb:
+				host.diskTotalMb === null ? null : host.diskTotalMb / MB_PER_GB,
+			diskUsedGb: host.diskUsedMb === null ? null : host.diskUsedMb / MB_PER_GB,
+			gpu: host.gpu,
+			memTotalMb: host.memTotalMb,
+			memUsedMb: host.memUsedMb,
 		};
 	}
 }

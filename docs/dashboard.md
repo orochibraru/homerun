@@ -37,8 +37,12 @@ authentication providers for an admin.
 
 Homerun runs a handful of read-only checks on every dashboard load: base domain,
 Origin and auth secret still at their defaults, the Traefik container reachable,
-the Docker socket reachable, and SMTP fully configured if you turned it on. Any
-that aren't OK show up as a banner at the top of the dashboard.
+the [worker](configuration.md#the-app-and-the-worker) reachable and the Docker
+socket it fronts answering, and SMTP fully configured if you turned it on. The
+worker and Docker checks are reported separately on purpose: a worker that's
+down and a worker that's up but can't reach Docker are different problems with
+different fixes. Any that aren't OK show up as a banner at the top of the
+dashboard.
 
 The banner links straight into `/settings`, on whichever tab the offending field
 lives, and rings the relevant fields so you can see what it's complaining about

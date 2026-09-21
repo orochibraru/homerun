@@ -12,9 +12,9 @@ import { buildOpenApiDocument } from "../src/lib/openapi/build";
 // `assist.actions.source.useSortedKeys` enforces alphabetical key order on
 // every JSON file in the repo, including this one, and this script now runs
 // automatically on every integration-test run (tests/integration/support/
-// setup.ts's own `bun run build:app` step), not just a one-off `bun run
-// build` — an unsorted write here would leave the working tree lint-dirty
-// after every test run, real friction this replaces.
+// setup.ts), not just a one-off `bun run build` — an unsorted write here would
+// leave the working tree lint-dirty after every test run, real friction this
+// replaces.
 function sortKeysDeep(value: unknown): unknown {
 	if (Array.isArray(value)) {
 		return value.map(sortKeysDeep);

@@ -58,8 +58,10 @@ host's architecture and runs it, which:
    on, so it takes the detected address otherwise).
 5. Writes a standalone compose file and runs `docker compose up -d` against it
    on the system daemon: Traefik (with both its docker and swarm providers on),
-   Postgres, and the app itself, all pulled from published images, then prints
-   the dashboard URL.
+   Postgres, the app itself and a `worker` container from the same image (the
+   only one of the four that touches the Docker socket, see
+   [Configuration](configuration.md#the-app-and-the-worker)), all pulled from
+   published images, then prints the dashboard URL.
 
 The instance starts in [swarm mode](swarm-mode.md): every service deploys as a
 replicated swarm service, and more machines can join as workers. **The trade-off
@@ -125,8 +127,10 @@ flags (`--user=`, `--port=`, `--image=`).
 
 Already have Docker set up the way you want it (rootful is fine here) and just
 want the stack? [`compose.prod.yaml`](../compose.prod.yaml) runs Traefik +
-Postgres + the app itself, all pulled from published images, no installer, no
-rootless setup, no source checkout:
+Postgres + the app + a `worker` container (see
+[Configuration](configuration.md#the-app-and-the-worker) for what that is), all
+pulled from published images, no installer, no rootless setup, no source
+checkout:
 
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/orochibraru/homerun/main/compose.prod.yaml

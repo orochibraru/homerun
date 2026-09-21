@@ -106,7 +106,7 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		};
 	}
 
-	/** Every registered host, all of which are build servers : `kind: "docker"` (a raw dockerode `buildImage()`) and `kind: "agent"` (its own `POST /v1/build`) alike. */
+	/** Every registered host, all of which are build servers : `kind: "docker"` (the worker builds straight against that daemon) and `kind: "agent"` (its own `POST /v1/build`) alike. */
 	static listBuildServers(): Promise<RemoteHostDTO[]> {
 		return RemoteHostDTO.list();
 	}
@@ -170,7 +170,7 @@ export class RemoteHostDTO extends BaseDTO<RemoteHost> {
 		await db.delete(remoteHost).where(eq(remoteHost.id, this.row.id));
 	}
 
-	/** Decrypts the stored TLS material into what docker/client.ts's getDocker() expects. Only meaningful for `kind: "docker"`. */
+	/** Decrypts the stored TLS material into the `RemoteHostConnection` shape the worker's own remote-daemon client expects. Only meaningful for `kind: "docker"`. */
 	toConnection(): RemoteHostConnection {
 		return {
 			dockerHost: this.row.dockerHost ?? "",

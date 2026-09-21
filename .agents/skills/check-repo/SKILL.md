@@ -3,17 +3,17 @@ name: check-repo
 description: >-
   Run this before considering any change to this repo done. Executes the real
   gates this codebase enforces: bun run check (svelte-check --fail-on-warnings
-  over src/ and tests/ plus tsc over scripts/, plus go vet over every Go package
-  under cmd/ and internal/, 0 errors AND 0 warnings) and bun run lint
-  (markdownlint-cli2, tailwint, oxlint --type-aware --deny-warnings, biome check
-  --error-on-warnings), plus the matching unit tests. Use whenever finishing an
-  edit to this codebase, before saying a change is "done", or after any change
-  under src/, cmd/, internal/, scripts/ or tests/.
+  over src/ and tests/, tsc over scripts/, plus go vet and golangci-lint over
+  every Go package under cmd/ and internal/, 0 errors AND 0 warnings) and bun
+  run lint (markdownlint-cli2, lint-tailwind.ts, oxlint --type-aware
+  --deny-warnings), plus the matching unit tests. Use whenever finishing an edit
+  to this codebase, before saying a change is "done", or after any change under
+  src/, cmd/, internal/, scripts/ or tests/.
 user-invocable: true
 allowed-tools:
-  Bash(bun run check), Bash(bun run check:*), Bash(bun run lint), Bash(bun run
-  lint:*), Bash(bun run test:unit*), Bash(bun run gen), Bash(bunx biome check
-  *), Bash(git diff *), Bash(git status *)
+  Bash(bun run check), Bash(bun run lint), Bash(bun run lint:fix), Bash(bun run
+  test), Bash(bun run gen), Bash(go vet *), Bash(go test *), Bash(go tool *),
+  Bash(bunx biome check *), Bash(git diff *), Bash(git status *)
 ---
 
 # check-repo
@@ -25,26 +25,27 @@ actually reading the failing file first.
 
 ## Steps
 
-1. **`bun run check`** — `check:app` (svelte-kit sync + svelte-check with
-   `--fail-on-warnings`, full `src/` and `tests/` trees) then `check:packages`
-   (`check:go` = `go vet ./cmd/... ./internal/...`, every Go sub-project — the
-   agent, the CLI and the installer, all three separate `package main`s in the
-   repo-root `go.mod`, not TypeScript any more — plus every shared `internal/`
-   library, in one pass; and `check:scripts` = `tsc --noEmit` over `scripts/`,
-   its own tsconfig). This is the hard gate: 0 errors, 0 warnings. A warning
+1. **`bun run check`** — svelte-check (`--fail-on-warnings`, full `src/` and
+   `tests/` trees), `tsc --noEmit` over `scripts/` (its own tsconfig), then
+   `go vet` and `golangci-lint run`
+   (`go tool -modfile=tools/go/go.mod golangci-lint run`, the same pair CI's Go
+   job runs) over `./cmd/... ./internal/... ./tests/unit/go/...` — every Go
+   sub-project (the CLI, the installer, and the worker including its agent mode,
+   all `package main`s in the repo-root `go.mod`) plus every shared `internal/`
+   library, in one pass. This is the hard gate: 0 errors, 0 warnings. A warning
    fails it exactly like an error. Scope is always the whole repo regardless of
    which files were edited, so a failure anywhere is in scope, not just in files
-   this change touched.
+   this change touched. Scope to one sub-project by narrowing the path yourself,
+   e.g.
+   `go vet ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`.
 
-2. **`bun run lint`** — `lint:md` (markdownlint-cli2), `lint:tailwind`
-   (tailwint) and `lint:ts` (`oxlint --type-aware --deny-warnings` for lint
-   rules, then `biome check --error-on-warnings` for formatting and import
-   order), must be clean, whole repo. If anything is fixable, `bun run lint:fix`
-   (the `--fix`/`--write` half of all three) before re-checking. Note:
-   `.claude/settings.json` already runs `biome check --write` on every edited
-   code file and `prettier --write` on every edited markdown file as PostToolUse
-   hooks, so most formatting drift is caught immediately — this step is the
-   final confirmation, not the first line of defense.
+2. **`bun run lint`** — `markdownlint-cli2`, `scripts/lint-tailwind.ts` and
+   `oxlint --type-aware --deny-warnings`, must be clean, whole repo. If anything
+   is fixable, `bun run lint:fix` before re-checking. Note: this script no
+   longer runs Biome — formatting/import-order is enforced by the pre-commit
+   hooks instead, and `.claude/settings.json` already runs `biome check --write`
+   on every edited code file and `prettier --write` on every edited markdown
+   file as PostToolUse hooks, so most formatting drift is caught immediately.
 
 3. **If a REST API route under `src/routes/api/v1/`, `$lib/openapi/` or
    `src/lib/config.ts` changed**: `bun run gen`, and keep the regenerated
@@ -52,9 +53,11 @@ actually reading the failing file first.
    `tests/integration/support/openapi-types.ts` in the change. CI fails when
    they're stale.
 
-4. **Run the unit tests that cover what changed**: `bun run test:unit` for
-   everything (a few seconds), or `bun run test:unit:app` / `test:unit:agent` /
-   `test:unit:cli` / `test:unit:installer` for one area.
+4. **Run the unit tests that cover what changed**: `bun run test` for everything
+   (a few seconds, unit only, no Postgres/Docker needed), or scope it —
+   `bun --config=bunfig.unit.toml test tests/unit/app` for the SvelteKit side,
+   `go test ./cmd/cli/... ./internal/cli/... ./tests/unit/go/internal/cli/...`
+   (swap `cli` for `installer` or `worker`/`agent`) for one Go sub-project.
 
 5. **IDE diagnostics are not ground truth in this repo.** If an inline IDE error
    looks suspicious or doesn't match what `bun run check` reports, trust

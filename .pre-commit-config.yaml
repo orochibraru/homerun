@@ -65,6 +65,17 @@ repos:
       - id: actionlint
         name: Lint Github Actions
 
+  - repo: local
+    hooks:
+      - id: pinact
+        name: Pin Github Actions
+        entry: pinact run
+        language: golang
+        language_version: 1.27.1
+        additional_dependencies:
+          [github.com/suzuki-shunsuke/pinact/v5/cmd/pinact@v5.0.0]
+        files: ^\.github/workflows/.*\.ya?ml$
+
   - repo: https://github.com/hadolint/hadolint
     rev: v2.15.1
     hooks:
@@ -121,7 +132,7 @@ repos:
 
       - id: check
         name: Type Check
-        entry: bash -c 'bun run check:app && bun run check:scripts'
+        entry: bash -c 'bunx svelte-kit sync && bunx svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --tsgo && bunx tsc --noEmit --project tsconfig.scripts.json'
         language: system
         pass_filenames: false
         stages: [pre-push]
@@ -129,7 +140,7 @@ repos:
 
       - id: test-unit
         name: Unit Tests
-        entry: bun run test:unit
+        entry: bash -c 'bunx svelte-kit sync && bun --config=bunfig.unit.toml test tests/unit --timeout 120000'
         language: system
         pass_filenames: false
         stages: [pre-push]
@@ -137,11 +148,11 @@ repos:
 
       - id: lint-go
         name: Lint (Go)
-        entry: golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...
+        entry: go tool -modfile=tools/go/go.mod golangci-lint run ./cmd/... ./internal/... ./tests/unit/go/...
         language: system
         pass_filenames: false
         stages: [pre-push]
-        files: (^(cmd|internal|tests/unit/go)/.*\.go$|^go\.mod$|^\.golangci\.yml$)
+        files: (^(cmd|internal|tests/unit/go)/.*\.go$|^go\.mod$|^tools/go/go\.mod$|^\.golangci\.yml$)
 
       - id: test-go
         name: Unit Tests (Go)

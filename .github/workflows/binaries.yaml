@@ -9,8 +9,8 @@ on:
         default: ""
         description:
           "Version to bake into the built binaries (bare X.Y.Z, no leading v,
-          same value cli/agent/version.ts reads from package.json at compile
-          time). Empty means this push isn't releasing, so the binaries build
+          stamped into internal/buildinfo from package.json at compile time).
+          Empty means this push isn't releasing, so the binaries build
           with whatever version is already committed."
 
 permissions:
@@ -22,15 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Setup bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: go.mod
 
@@ -39,13 +39,15 @@ jobs:
 
       - name: Bump version for this build
         if: inputs.version != ''
-        run: bun scripts/bump-version.ts ${{ inputs.version }}
+        env:
+          VERSION: ${{ inputs.version }}
+        run: jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
 
       - name: Build binaries
         run: bun run scripts/build-packages.ts
 
       - name: Upload binaries
-        uses: orochibraru/upload-artifact@v8
+        uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
         with:
           name: binaries-all
           path: dist/*

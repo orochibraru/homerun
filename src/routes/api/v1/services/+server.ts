@@ -38,7 +38,7 @@ export const GET = async ({ locals, url }) => {
  * silently created an image-mode service instead (buildSource defaulting
  * to "image", image/tag defaulting to "" since a git-mode request doesn't
  * send them), which then failed at deploy time trying to pull an empty
- * image ref (dockerode/the daemon surfaces that as a confusing
+ * image ref (the daemon surfaces that as a confusing
  * "Get \"http:\": http: no Host in request URL" 500, nothing about a
  * missing image). The REST API and the CLI built on it couldn't create a
  * git-build service at all before this fix.

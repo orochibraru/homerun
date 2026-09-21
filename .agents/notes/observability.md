@@ -9,14 +9,22 @@ than in this one.
 ## Setup diagnostics (`src/lib/services/admin.service.ts`)
 
 `AdminService.runSetupChecks()`, read-only diagnostics (base domain/auth
-secret/origin still at their defaults, Traefik container reachable, Docker
-socket reachable, SMTP fully configured if enabled), each with a severity and
-the env var that fixes it. Reads `config`, which already reflects any DB-backed
-instance settings merged over the env defaults (see Config and Instance settings
-below), these checks just report the effective value, they don't care which
-layer it came from. DNS automation (Cloudflare/Pangolin, see below) is separate
-from this check, `runSetupChecks()` doesn't currently flag an unset DNS
-provider, that's an opt-in feature, not a base-instance misconfiguration.
+secret/origin still at their defaults, Traefik container reachable, the Go
+worker and its Docker socket reachable, SMTP fully configured if enabled), each
+with a severity and the env var that fixes it. **The Docker check is really two,
+reported apart on purpose**: `#dockerCheck()` first asks the worker's own
+`GET /v1/health` (is the worker process even up), then, only if that answered,
+`GET /v1/info` (is Docker answering _the worker_). The app holds no socket of
+its own any more, so "nothing deploys" now has two different causes with two
+different fixes (`WORKER_URL` pointing nowhere, vs. a live worker whose
+`DOCKER_SOCKET_PATH` is wrong), and collapsing them into one "Docker socket"
+line used to send the operator to check a socket the app doesn't even open.
+Reads `config`, which already reflects any DB-backed instance settings merged
+over the env defaults (see Config and Instance settings below), these checks
+just report the effective value, they don't care which layer it came from. DNS
+automation (Cloudflare/Pangolin, see below) is separate from this check,
+`runSetupChecks()` doesn't currently flag an unset DNS provider, that's an
+opt-in feature, not a base-instance misconfiguration.
 
 **`dashboard-router` is the one check that reads this app's own container.**
 `DockerService.selfContainerLabels()` inspects it (Docker sets a container's
@@ -47,15 +55,23 @@ into view on mount. Two checks (`auth-secret`, env-only; `traefik`, a
 live-container check) deliberately have no entry in the map, nothing to
 highlight for either.
 
-## System stats (`src/lib/services/system-stats.service.ts`)
+## System stats (`src/lib/services/system-stats.service.ts`, `internal/hoststats`)
 
-`SystemStatsService.getSystemStats()`, host-level (not per-container)
-CPU/RAM/disk via Node's `os` module + a shelled-out `df -Pk .`, plus a
-best-effort GPU read via `nvidia-smi` (returns `gpu: null` when absent, the
-common case, not an error; no other vendor supported). CPU% needs a delta
-between two samples (`os.cpus()` gives cumulative counters since boot), so a
-module-scope `lastCpuSample` is diffed on each call, first call after boot
-always reads 0%. Polled by the dashboard's `/system-stats` endpoint every 5s.
+`SystemStatsService.getSystemStats()` is a thin call to the Go worker's
+`GET /v1/host/stats`, not a local read any more : the app may itself be a
+container, and its own `os`/`df` readings would describe that container's limits
+rather than the real machine's, which is exactly why this moved.
+`internal/hoststats`'s `StatsSampler` (Go, not to be confused with the
+`$lib/services/stats/stats-sampler.ts` one below; shared with the agent, see
+`packages-and-release.md`, so a remote host's row on the dashboard renders from
+the identical shape as the local one) reads `/proc/stat` and `/proc/meminfo`
+directly and shells out to `df -Pk .` for disk and `nvidia-smi` for a
+best-effort GPU read (`gpu: null` when absent, the common case, not an error; no
+other vendor supported). CPU% needs a delta between two samples, so the sampler
+keeps the last one as an instance field and diffs on each call, the first call
+after the **worker** starts (not the app) always reads 0%. Polled by the
+dashboard's `/system-stats` endpoint every 5s, which now round-trips through the
+worker on every poll rather than reading in-process.
 
 ## Recorded resource history (`stat_sample`, `StatSampleDTO`, `$lib/remote/stats.remote.ts`)
 

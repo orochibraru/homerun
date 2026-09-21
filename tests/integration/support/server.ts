@@ -10,13 +10,13 @@ export const APP_ENTRY = "./build/server";
  * Fails fast with a clear instruction when the app hasn't been built yet,
  * rather than letting `spawnApp` below time out with a confusing "app never
  * became healthy" message. Building is a separate, explicit operation
- * (`bun run build:app`), neither suite does it for you.
+ * (`bun run build`), neither suite does it for you.
  */
 export function assertAppIsBuilt(): void {
 	const entry = join(process.cwd(), APP_ENTRY);
 	if (!existsSync(entry)) {
 		throw new Error(
-			`${entry} doesn't exist : run \`bun run build:app\` first, this suite no longer builds the app for you.`,
+			`${entry} doesn't exist : run \`bun run build\` first, this suite no longer builds the app for you.`,
 		);
 	}
 }
@@ -32,6 +32,10 @@ export interface SpawnAppOptions {
 	databaseUrl: string;
 	origin: string;
 	port: number;
+	// The spawned worker's Docker control API. The app holds no Docker socket
+	// of its own any more, so without this it can't read a container's status,
+	// stream logs or open a terminal.
+	workerUrl: string;
 }
 
 export async function spawnApp(options: SpawnAppOptions): Promise<SpawnedApp> {
@@ -44,6 +48,7 @@ export async function spawnApp(options: SpawnAppOptions): Promise<SpawnedApp> {
 			DATABASE_URL: options.databaseUrl,
 			ORIGIN: options.origin,
 			PORT: String(options.port),
+			WORKER_URL: options.workerUrl,
 		},
 		stderr: "pipe",
 		stdout: "pipe",

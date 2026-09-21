@@ -34,34 +34,46 @@ describe("sumReplicaSamples", () => {
 
 describe("listSwarmReplicas", () => {
 	function fakeService(sampled: string[]) {
-		const docker = {
-			info: async () => ({ Swarm: { NodeID: "local-node" } }),
-			listNodes: async () => [
-				{ Description: { Hostname: "manager" }, ID: "local-node" },
-				{ Description: { Hostname: "worker-1" }, ID: "remote-node" },
-			],
-			listTasks: async () => [
-				{
-					DesiredState: "running",
-					ID: "task-remote",
-					NodeID: "remote-node",
-					Slot: 2,
-					Status: { ContainerStatus: { ContainerID: "c2" }, State: "running" },
-					UpdatedAt: "2026-09-17T10:00:00Z",
-				},
-				{
-					DesiredState: "running",
-					ID: "task-local",
-					NodeID: "local-node",
-					Slot: 1,
-					Status: { ContainerStatus: { ContainerID: "c1" }, State: "running" },
-					UpdatedAt: "2026-09-17T10:00:00Z",
-				},
-			],
+		const worker = {
+			get: async (path: string) => {
+				if (path === "/v1/info") {
+					return { Swarm: { NodeID: "local-node" } };
+				}
+				if (path === "/v1/swarm/nodes") {
+					return [
+						{ Description: { Hostname: "manager" }, ID: "local-node" },
+						{ Description: { Hostname: "worker-1" }, ID: "remote-node" },
+					];
+				}
+				return [
+					{
+						DesiredState: "running",
+						ID: "task-remote",
+						NodeID: "remote-node",
+						Slot: 2,
+						Status: {
+							ContainerStatus: { ContainerID: "c2" },
+							State: "running",
+						},
+						UpdatedAt: "2026-09-17T10:00:00Z",
+					},
+					{
+						DesiredState: "running",
+						ID: "task-local",
+						NodeID: "local-node",
+						Slot: 1,
+						Status: {
+							ContainerStatus: { ContainerID: "c1" },
+							State: "running",
+						},
+						UpdatedAt: "2026-09-17T10:00:00Z",
+					},
+				];
+			},
 		};
 		class FakeBase {
-			getDocker() {
-				return docker;
+			get worker() {
+				return worker;
 			}
 			async sampleContainerStats(containerId: string) {
 				sampled.push(containerId);

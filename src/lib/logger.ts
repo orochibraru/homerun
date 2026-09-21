@@ -96,8 +96,6 @@ function persistLog(
 	}
 }
 
-export type LogFormats = "console" | "json";
-
 export const logLevels = {
 	DEBUG: "debug",
 	ERROR: "error",
@@ -422,38 +420,6 @@ export class Logger {
 		return console.log({
 			input,
 			level: logLevels.DEBUG,
-			scope: this.prefix,
-			...jsonFields(optionalParams),
-		});
-	}
-
-	/**
-	 * Logs a TRACE level message to the console.
-	 * @param input The input to log. Can be any type. If an object, it will be stringified.
-	 * @param optionalParams Any additional parameters to log.
-	 * If `this.logFormat` is set to 'console', the message will be logged as a console.log with a white prefix, preceded by a blank line.
-	 * Otherwise, it will be logged as a JSON object with the level set to 'trace'.
-	 */
-	trace(input: unknown, ...optionalParams: unknown[]) {
-		const acceptedLogLevels = [logLevels.TRACE];
-		// @ts-expect-error Completely normal we're catching this behaviour
-		if (!acceptedLogLevels.includes(this.logLevel)) {
-			return;
-		}
-
-		if (this.logFormat === "console") {
-			console.log();
-			return console.log(
-				this.prettyPrefix,
-				white(`[LEVEL::${logLevels.TRACE.toUpperCase()}]`),
-				input,
-				...optionalParams,
-			);
-		}
-
-		return console.log({
-			input,
-			level: logLevels.TRACE,
 			scope: this.prefix,
 			...jsonFields(optionalParams),
 		});

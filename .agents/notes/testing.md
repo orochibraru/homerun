@@ -12,30 +12,34 @@ than in this one.
 `test`/`test:*` script passes `--timeout` explicitly since `bunfig.toml`'s
 `[test].timeout` key is silently unhonored on Bun 1.4.0). Covers
 `tests/unit/app/`: the SvelteKit app itself. Tests live under
-`tests/unit/<package>/`, not next to the source files they cover. `cmd/agent/`,
+`tests/unit/<package>/`, not next to the source files they cover. `cmd/worker/`,
 `cmd/cli/` and `cmd/installer/` are all separate Go packages (one repo-root
 `go.mod`) and aren't part of `bun:test` at all, but their tests follow the same
 not-next-to-source convention as the TypeScript side: every `*_test.go` in the
 repo lives under `tests/unit/go/<same path as the package it covers>` (e.g.
-`internal/agent/token.go` is covered by
-`tests/unit/go/internal/agent/token_test.go`) as an external test package
-(`package agent_test`, importing the real `agent` package), never inside
+`internal/httpapi/token.go` is covered by
+`tests/unit/go/internal/httpapi/token_test.go`) as an external test package
+(e.g. `package agent_test`, importing the real `agent` package), never inside
 `internal/`/`cmd/` themselves. Getting there meant exporting the unexported
 functions/types/fields each test exercises, rather than a same-package white-box
 test or an `export_test.go` shim (which would have to stay in the package
 directory). Fake/helper types shared by several test files in one package sit in
 their own file in that same `tests/unit/go/...` directory (e.g.
 `tests/unit/go/internal/agent/fake_docker_test.go`, shared by that package's
-other test files). Run with
-`go test ./cmd/agent/... ./internal/agent/... ./tests/unit/go/internal/agent/...`
-(`bun run test:unit:agent`), the `cli`/ `installer` equivalents
-(`bun run test:unit:cli`/`test:unit:installer`), or all of it via
-`go test ./cmd/... ./internal/... ./tests/unit/go/...` (`bun run test:go`, part
-of `bun run test`). Shared Go libraries under `internal/` (`buildinfo`,
-`release`, `homerun`, `dockerapi`, `worker`, `jobs/*`, etc.) are covered the
-same way (`tests/unit/go/internal/release/release_test.go`, etc.) with no
-dedicated `test:unit:*` script of their own since no sub-project owns them
-exclusively. `tests/unit/app/` covers the SvelteKit app itself, a couple of
+other test files). Run with:
+
+```sh
+go test ./cmd/worker/... ./internal/worker/... ./internal/agent/... ./tests/unit/go/internal/worker/... ./tests/unit/go/internal/agent/...
+```
+
+for the worker (including its agent mode), the `cli`/`installer` equivalents
+scoped the same way, or all of it via
+`go test ./cmd/... ./internal/... ./tests/unit/go/...` (part of `bun run test`).
+Shared Go libraries under `internal/` (`buildinfo`, `release`, `homerun`,
+`dockerapi`, `worker`, `jobs/*`, etc.) are covered the same way
+(`tests/unit/go/internal/release/release_test.go`, etc.), scoped the same
+path-narrowing way as any of them since there's no dedicated script per
+sub-project. `tests/unit/app/` covers the SvelteKit app itself, a couple of
 component tests plus the pure modules under `$lib` that are worth pinning down
 directly (`long-request.test.ts`, see Long-running requests below;
 `queue.test.ts`; `toast.test.ts`; `compose-import.test.ts`;
@@ -46,16 +50,18 @@ anything that's a real transform with no DB or Docker dependency belongs here
 rather than in `tests/integration/`, which is still where most of `src/` is
 exercised.
 
-Run everything: `bun run test` (bare `bun test` also works for the `bun:test`
-half, no wrapper script — `bunfig.toml`'s `[test].preload` handles the rest —
-but `bun run test` also runs `go test ./cmd/... ./internal/...` afterward,
-covering `cmd/agent/`, `cmd/cli/` and `cmd/installer/`). Scoped:
-`bun run test:unit` and `test:unit:app` set `HOMERUN_SKIP_INTEGRATION_SETUP=1`
-so the preloaded integration bootstrap (real Postgres container) doesn't run for
-a unit-only invocation; `test:unit:agent`, `test:unit:cli` and
-`test:unit:installer` are all plain `go test`, no Bun preload involved at all.
+Run everything: `bun run test` —
+`go test ./cmd/... ./internal/... ./tests/unit/go/...` first, covering
+`cmd/worker/` (including its agent mode), `cmd/cli/` and `cmd/installer/`, then
+`bun --config=bunfig.unit.toml test tests/unit` afterward for the app half. That
+config's own `[test].preload` (not `bunfig.toml`'s) is what keeps this
+unit-only: it doesn't preload `tests/integration/support/setup.ts` at all, so
+the real-Postgres-container integration bootstrap never runs for it, unlike a
+bare `bun test` (which reads `bunfig.toml`, does preload it, and gates it with
+`HOMERUN_SKIP_INTEGRATION_SETUP` instead). Scope the Go half to one sub-project
+the same way as above; there's no dedicated script per sub-project any more.
 `tests/integration/` is a separate suite with its own `beforeAll`/`afterAll`
-(real Postgres/Docker/agent, see `tests/integration/README.md`), and
+(real Postgres/Docker/worker, see `tests/integration/README.md`), and
 `tests/e2e/` is a third, Playwright, outside `bun test` entirely (see E2E
 browser tests below). `tests/integration/README.md` and `tests/e2e/README.md`
 are the counterparts living next to the code.
@@ -98,20 +104,21 @@ of the suite in one process without colliding, restoring spies with
 `mock.restore()` where it matters. This used to also cover the Bun-based agent's
 own test suite (`tests/unit/agent/docker.test.ts` mocked `"dockerode"`
 wholesale); that suite is gone along with the Bun agent, replaced by
-`cmd/agent/`'s own Go tests, which fake the Docker client via a real interface
-instead (`tests/unit/go/internal/agent/fake_docker_test.go`).
+`internal/agent/`'s own Go tests (imported by `cmd/worker`'s agent mode, no
+standalone `cmd/agent/` any more), which fake the Docker client via a real
+interface instead (`tests/unit/go/internal/agent/fake_docker_test.go`).
 
-`tsconfig.json` type-checks `tests/` as part of `svelte-check` (`check:app`),
-same as `src/`. It used to exclude `tests/` entirely, which meant ~115 test
-files had no type-checking gate at all; re-including them surfaced a handful of
-real bugs (a `[Date, Date]` tuple cast in `queue.test.ts` that should've been
-`[string, Date]`, a `never`-typed `daemon` in `git-fixture.ts` from a TS/tsgo
-control-flow quirk that doesn't re-widen a `let` narrowed to `null` across a
-closure call inside a `catch` block, worked around with a `{ daemon: T | null }`
-object instead of a bare `let`). `bun:test`'s `spyOn` needs an explicit
-`Mock<typeof console.log>` annotation rather than `ReturnType<typeof spyOn>`,
-which resolves to `any` since `spyOn`'s type parameters can't be inferred
-without a call site.
+`tsconfig.json` type-checks `tests/` as part of `svelte-check` (part of
+`bun run check`), same as `src/`. It used to exclude `tests/` entirely, which
+meant ~115 test files had no type-checking gate at all; re-including them
+surfaced a handful of real bugs (a `[Date, Date]` tuple cast in `queue.test.ts`
+that should've been `[string, Date]`, a `never`-typed `daemon` in
+`git-fixture.ts` from a TS/tsgo control-flow quirk that doesn't re-widen a `let`
+narrowed to `null` across a closure call inside a `catch` block, worked around
+with a `{ daemon: T | null }` object instead of a bare `let`). `bun:test`'s
+`spyOn` needs an explicit `Mock<typeof console.log>` annotation rather than
+`ReturnType<typeof spyOn>`, which resolves to `any` since `spyOn`'s type
+parameters can't be inferred without a call site.
 
 ## `cmd/cli/`'s Go tests set `$HOME` per test, no preload needed
 
@@ -138,11 +145,11 @@ threshold enforced yet.
 `retry = 2` retries a failing test up to 2x (3 attempts total) before it's
 reported failed, to absorb transient CI flakiness (real Postgres/Docker in
 `tests/integration/`). Unit and integration are the only suites this governs,
-`test:e2e` is Playwright and `e2e:multipass` is its own script, neither reads
-`bunfig.toml`. `beforeEach`/`afterEach` **do** re-run around each retry attempt
-(verified, only `beforeAll`/`afterAll` stay once-per-file), so a test that
-cleans up per-test gets a genuinely fresh attempt rather than inheriting the
-failed one's leftovers.
+`test:e2e` is Playwright and `scripts/e2e-multipass.ts` is its own script,
+neither reads `bunfig.toml`. `beforeEach`/`afterEach` **do** re-run around each
+retry attempt (verified, only `beforeAll`/`afterAll` stay once-per-file), so a
+test that cleans up per-test gets a genuinely fresh attempt rather than
+inheriting the failed one's leftovers.
 
 `[test].rerunEach` (run every test file N times, to surface a flake rather than
 hide one) is the opposite policy and **cannot be combined with `retry`**, Bun
@@ -209,8 +216,8 @@ such quirk, and `internal/installer/docker.go`'s doc comment on
 previous one in `feat: better classes`, `87c925d`, and this document said for a
 while that none existed, that's stale, it was rebuilt from scratch rather than
 un-deleted). Real Playwright driving real Chromium against a real _built_ app
-(`bun run build:app` first, this suite doesn't build for you) backed by a
-throwaway Postgres container, run with `bun run test:e2e`, deliberately outside
+(`bun run build` first, this suite doesn't build for you) backed by a throwaway
+Postgres container, run with `bun run test:e2e`, deliberately outside
 `bun run test`, Playwright is its own runner and `bunfig.toml`'s retry/coverage
 settings don't reach it. See `tests/e2e/README.md` for the full detail; the
 load-bearing parts:
@@ -283,12 +290,13 @@ of the `reset` bug under Conventions above, and (`ui-cli.spec.ts`) the `homerun`
 CLI, a Go program compiled from source in `beforeAll`, run against the same
 instance, logged in through its real device-code flow approved in the browser,
 then every list/get command, the flag/env overrides, 401/404 exits and logout
-(`bun run test:e2e:cli` runs it with only the bootstrap and onboarding specs
-ahead of it; see `tests/e2e/README.md` for why it strips `FORCE_COLOR` from the
-CLI's env). Not covered by the specs above: a real deploy (the screenshot
-pipeline below does one, on purpose, and is the only thing here that touches
-Docker). Add browser-level cases here; don't re-prove API shapes
-`tests/integration/` already covers directly and faster.
+(`bun run test:e2e tests/e2e/bootstrap.spec.ts tests/e2e/onboarding.spec.ts tests/e2e/ui-cli.spec.ts`
+runs it with only the bootstrap and onboarding specs ahead of it; see
+`tests/e2e/README.md` for why it strips `FORCE_COLOR` from the CLI's env). Not
+covered by the specs above: a real deploy (the screenshot pipeline below does
+one, on purpose, and is the only thing here that touches Docker). Add
+browser-level cases here; don't re-prove API shapes `tests/integration/` already
+covers directly and faster.
 
 ## Screenshots for the docs (`tests/e2e/screenshots/`, `bun run screenshots`)
 
@@ -296,11 +304,11 @@ The images in `docs/images/`, which `docs/showcase.md` and the README's hero
 both publish, are **generated, not taken by hand** : `bun run screenshots` runs
 `tests/e2e/screenshots/docs-screenshots.spec.ts` through
 `playwright.screenshots.config.ts`. It reuses the E2E harness above (same
-`globalSetup`, same throwaway Postgres, same fixed port, same
-`bun run build:app` prerequisite) but has its own config so the ordinary
-`bun run test:e2e` doesn't shoot screenshots on every run :
-`playwright.config.ts` carries `testIgnore: "screenshots/**"` for exactly that
-reason, and the screenshot config's `testDir` points at the subfolder.
+`globalSetup`, same throwaway Postgres, same fixed port, same `bun run build`
+prerequisite) but has its own config so the ordinary `bun run test:e2e` doesn't
+shoot screenshots on every run : `playwright.config.ts` carries
+`testIgnore: "screenshots/**"` for exactly that reason, and the screenshot
+config's `testDir` points at the subfolder.
 
 - **It signs in once.** The bootstrap test saves `storageState` to
   `test-results/screenshots-auth.json` and every later test runs under
