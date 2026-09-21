@@ -33,28 +33,28 @@ func TestIsNewer(t *testing.T) {
 	}
 }
 
-func TestCanaryVersionReadsTheReleaseName(t *testing.T) {
+func TestLatestCanaryPicksTheNewestPrerelease(t *testing.T) {
 	serve(t, func(writer http.ResponseWriter, request *http.Request) {
-		if !strings.HasSuffix(request.URL.Path, "/releases/tags/canary") {
+		if !strings.HasSuffix(request.URL.Path, "/releases") {
 			http.NotFound(writer, request)
 			return
 		}
-		fmt.Fprint(writer, `{"name":"Canary 1.0.41-canary.12","tag_name":"canary"}`)
+		fmt.Fprint(writer, `[{"tag_name":"v1.0.41","prerelease":false},{"tag_name":"canary","prerelease":true},{"tag_name":"v1.0.41-canary.12","prerelease":true},{"tag_name":"v1.0.41-canary.11","prerelease":true}]`)
 	})
-	version, err := release.CanaryVersion(http.DefaultClient)
+	tag, version, err := release.LatestCanary(http.DefaultClient)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != "1.0.41-canary.12" {
-		t.Errorf("got %q", version)
+	if tag != "v1.0.41-canary.12" || version != "1.0.41-canary.12" {
+		t.Errorf("got tag %q version %q", tag, version)
 	}
 }
 
-func TestCanaryVersionRefusesANameWithoutAVersion(t *testing.T) {
+func TestLatestCanaryFailsWithoutAPrerelease(t *testing.T) {
 	serve(t, func(writer http.ResponseWriter, _ *http.Request) {
-		fmt.Fprint(writer, `{"name":"canary","tag_name":"canary"}`)
+		fmt.Fprint(writer, `[{"tag_name":"v1.0.40","prerelease":false}]`)
 	})
-	if _, err := release.CanaryVersion(http.DefaultClient); err == nil {
-		t.Error("a name the version can't be read from must fail, not update to garbage")
+	if _, _, err := release.LatestCanary(http.DefaultClient); err == nil {
+		t.Error("no canary must fail, not update to a stable release")
 	}
 }

@@ -51,7 +51,7 @@ func SelfUpdate(channel string) {
 }
 
 // LatestRelease is the tag to download from and the version it carries for
-// channel: the newest stable release, or the rolling canary prerelease.
+// channel: the newest stable release, or the newest canary prerelease.
 // Exits on failure or an unknown channel.
 func LatestRelease(channel string) (string, string) {
 	switch channel {
@@ -59,11 +59,11 @@ func LatestRelease(channel string) (string, string) {
 		tag := LatestReleaseTag()
 		return tag, strings.TrimPrefix(tag, "v")
 	case "canary":
-		version, err := release.CanaryVersion(http.DefaultClient)
+		tag, version, err := release.LatestCanary(http.DefaultClient)
 		if err != nil {
 			Fail(err.Error())
 		}
-		return release.CanaryTag, version
+		return tag, version
 	default:
 		Fail(fmt.Sprintf("unknown channel %q: use stable or canary.", channel))
 		return "", ""

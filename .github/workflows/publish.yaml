@@ -319,18 +319,19 @@ jobs:
           pattern: binaries-*
           merge-multiple: true
 
-      - name: Replace the rolling canary prerelease
+      - name: Publish the canary prerelease
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           SHA: ${{ github.sha }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           set -euo pipefail
-          gh release delete canary --cleanup-tag --yes || true
-          gh release create canary --draft --prerelease --target "$SHA" \
+          gh release view "v$VERSION" >/dev/null 2>&1 || gh release create "v$VERSION" --draft --prerelease --target "$SHA" \
             --title "Canary $VERSION" \
-            --notes "Rolling build of $SHA, replaced on every merge to main. Not a stable release: run it with HOMERUN_VERSION=canary. Merge the open chore(release) PR to release it."
-          bun scripts/upload-release-assets.ts canary --prerelease
+            --notes "Canary build of $SHA. Not a stable release: run it with HOMERUN_VERSION=canary. Merge the open chore(release) PR to release it."
+          bun scripts/upload-release-assets.ts "v$VERSION" --prerelease
+          gh release list --limit 100 --json tagName,isPrerelease --jq '[.[] | select(.isPrerelease)] | .[5:] | .[].tagName' \
+            | xargs -r -n1 gh release delete --cleanup-tag --yes
 
       - name: Open or update the release PR
         uses: orochibraru/releaser@8f478365f81c3cb21134515bb4fbc9abc8eb34d9 # v1.5.0
@@ -357,10 +358,13 @@ jobs:
 
       - name: Check the canary is what this release ships
         id: canary
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git fetch --quiet --force origin 'refs/tags/canary:refs/tags/canary'
-          sha="$(git rev-parse 'canary^{commit}')"
+          tag="$(gh release list --exclude-drafts --limit 100 --json tagName,isPrerelease --jq '[.[] | select(.isPrerelease)][0].tagName')"
+          git fetch --quiet --force origin "refs/tags/$tag:refs/tags/$tag"
+          sha="$(git rev-parse "$tag^{commit}")"
           drift="$(git diff --name-only "$sha" HEAD -- . ':(glob,exclude)docs/**' ':(glob,exclude)**/*.md' ':(glob,exclude).agents/**' ':(glob,exclude).claude/**' ':(exclude)package.json')"
           if [ -n "$drift" ] || [ "$(git show "$sha:package.json" | jq -S 'del(.version)')" != "$(jq -S 'del(.version)' package.json)" ]; then
             echo "::error::The release PR carries changes the canary ($sha) wasn't built from. Let Publish finish on main, then re-run this workflow."

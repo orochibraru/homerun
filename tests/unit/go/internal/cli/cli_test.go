@@ -1977,11 +1977,11 @@ func TestSelfUpdateNeverDowngradesACanary(t *testing.T) {
 
 func TestLatestReleaseOnTheCanaryChannel(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if !strings.HasSuffix(request.URL.Path, "/releases/tags/canary") {
+		if !strings.HasSuffix(request.URL.Path, "/releases") {
 			http.NotFound(writer, request)
 			return
 		}
-		fmt.Fprint(writer, `{"name":"Canary 1.0.41-canary.7","tag_name":"canary"}`)
+		fmt.Fprint(writer, `[{"tag_name":"v1.0.41-canary.7","prerelease":true}]`)
 	}))
 	t.Cleanup(server.Close)
 	stubGitHub(t, server.URL, server.URL)
@@ -1990,7 +1990,7 @@ func TestLatestReleaseOnTheCanaryChannel(t *testing.T) {
 	if _, failed := runCLI(t, func() { tag, version = cli.LatestRelease("canary") }); failed != "" {
 		t.Fatalf("failed with %q", failed)
 	}
-	if tag != "canary" || version != "1.0.41-canary.7" {
+	if tag != "v1.0.41-canary.7" || version != "1.0.41-canary.7" {
 		t.Errorf("got tag %q version %q", tag, version)
 	}
 	if _, failed := runCLI(t, func() { cli.LatestRelease("nightly") }); !strings.Contains(failed, "unknown channel") {

@@ -8,14 +8,6 @@ import (
 	"strings"
 )
 
-// CanaryTag is the rolling prerelease every merge to main replaces.
-const CanaryTag = "canary"
-
-// canaryNamePrefix starts the canary prerelease's name, "Canary <version>",
-// as publish.yaml's canary job writes it: its tag never moves, so the name is
-// the only place the version is.
-const canaryNamePrefix = "Canary "
-
 var versionRe = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$`)
 
 // Version is a parsed semver-ish version: major, minor, patch and an optional
@@ -89,16 +81,24 @@ func compareIdentifier(a, b string) int {
 	return strings.Compare(a, b)
 }
 
-// CanaryVersion asks GitHub for the rolling canary prerelease and returns the
-// version in its name.
-func CanaryVersion(client *http.Client) (string, error) {
-	release, err := fetchRelease(client, "tags/"+CanaryTag)
-	if err != nil {
-		return "", err
+// LatestCanary asks GitHub for the newest published prerelease, one per
+// merge to main tagged v<version> by publish.yaml's canary job, and returns
+// its tag and version.
+func LatestCanary(client *http.Client) (string, string, error) {
+	var releases []struct {
+		githubRelease
+		Prerelease bool `json:"prerelease"`
 	}
-	version := strings.TrimPrefix(release.Name, canaryNamePrefix)
-	if _, ok := ParseVersion(version); !ok {
-		return "", fmt.Errorf("Couldn't read the canary release's version from %q.", release.Name)
+	if err := fetchJSON(client, "?per_page=30", &releases); err != nil {
+		return "", "", err
 	}
-	return version, nil
+	for _, candidate := range releases {
+		if !candidate.Prerelease {
+			continue
+		}
+		if _, ok := ParseVersion(candidate.TagName); ok {
+			return candidate.TagName, strings.TrimPrefix(candidate.TagName, "v"), nil
+		}
+	}
+	return "", "", fmt.Errorf("No canary release found.")
 }

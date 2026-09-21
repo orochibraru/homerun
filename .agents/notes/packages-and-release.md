@@ -61,12 +61,14 @@ leave the two branches permanently diverged. Instead `publish.yaml` publishes
 every push to `main` as the canary : images tagged `<sha>` + `canary` (never
 `latest`), binaries stamped `<next version>-canary.<run number>` (a run number,
 not the SHA, so two canaries order correctly, and the self-update notice ranks a
-canary below the release it becomes, see `version.ts`), and a rolling GitHub
-prerelease tagged `canary` that its `canary` job deletes (`--cleanup-tag`) and
-recreates at the new SHA every run, uploading through
-`upload-release-assets.ts canary --prerelease` (which publishes it with
-`--latest=false`). Everything stable reads `releases/latest` or `:latest`, which
-a prerelease never is, so nothing stable moves.
+canary below the release it becomes, see `version.ts`), and a GitHub prerelease
+tagged `v<version>` per run, uploaded through
+`upload-release-assets.ts v<version> --prerelease` (which publishes it with
+`--latest=false`), keeping the newest five. Not one rolling `canary` tag:
+immutable releases are on, and a tag an immutable release ever used can never be
+recreated, even after deleting it (that's how `canary` got burned). Everything
+stable reads `releases/latest` or `:latest`, which a prerelease never is, so
+nothing stable moves.
 
 **A stable release is merging the release PR.** The `canary` job's last step
 runs `releaser` (v1.5.0+) with `release-pr: true`, which force-pushes a
@@ -77,8 +79,8 @@ workflows). `pull_request.yaml`'s `changes` job treats that PR as docs-only when
 nothing but `CHANGELOG.md` and `package.json`'s version changed, so it doesn't
 rebuild anything. When the squash lands, `publish.yaml`'s `resolve` job spots
 the `chore(release): X.Y.Z (#N)` subject and runs the `stable*` jobs **instead
-of** the canary pipeline: `stable` refuses unless the `canary` tag's commit
-matches this one apart from docs paths and the release bump, and dry-runs
+of** the canary pipeline: `stable` refuses unless the newest canary prerelease's
+commit matches this one apart from docs paths and the release bump, and dry-runs
 `releaser` (`release-pr` mode reads the version off the release commit);
 `stable-binaries` rebuilds the binaries with that version; `stable-images`
 retags the canary `<sha>` images as `vX.Y.Z`, `latest` and `canary` (the app one
@@ -549,18 +551,18 @@ update.
 
 **The channel** is `instance_settings.update_channel` (`stable` when null), set
 on Settings → General. **Latest release** is
-`GET /repos/orochibraru/homerun/releases/latest` for stable, and
-`/releases/tags/canary` for canary, whose version is parsed off the release name
-(`Canary <version>`, written by `publish.yaml`'s `canary` job: keep the two in
-sync) since its tag never moves. Cached per channel on the service instance for
-ten minutes (five minutes after a failure, which returns `null` rather than an
-error). Comparison is `self-update/version.ts`'s small semver compare, a leading
-`v` is ignored and a non-version never counts as newer. The sidebar refreshes
-`getReleaseStatus` on the same ten-minute interval, so a release shows up
-without reloading the page or restarting the container. The same status and
-start are exposed to admins as `GET/POST /api/v1/instance/update`
-(`homerun instance status`/`update`), for when the dashboard itself is
-unreachable; a refused start is a `409` carrying `start()`'s message.
+`GET /repos/orochibraru/homerun/releases/latest` for stable, and the first
+prerelease in `/releases?per_page=30` whose tag parses as a version for canary
+(the Go CLI's `release.LatestCanary` does the same). Cached per channel on the
+service instance for ten minutes (five minutes after a failure, which returns
+`null` rather than an error). Comparison is `self-update/version.ts`'s small
+semver compare, a leading `v` is ignored and a non-version never counts as
+newer. The sidebar refreshes `getReleaseStatus` on the same ten-minute interval,
+so a release shows up without reloading the page or restarting the container.
+The same status and start are exposed to admins as
+`GET/POST /api/v1/instance/update` (`homerun instance status`/`update`), for
+when the dashboard itself is unreachable; a refused start is a `409` carrying
+`start()`'s message.
 
 **Finding its own compose project.** The service inspects its own container
 (`os.hostname()` first, then the 64-hex id out of `/proc/self/mountinfo`) and

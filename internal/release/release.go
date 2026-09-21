@@ -93,21 +93,26 @@ type githubRelease struct {
 // fetchRelease reads one release, "latest" or "tags/<tag>".
 func fetchRelease(client *http.Client, which string) (githubRelease, error) {
 	var found githubRelease
-	response, err := client.Get(fmt.Sprintf("%s/repos/%s/releases/%s", APIBase, Repo, which))
+	return found, fetchJSON(client, "/"+which, &found)
+}
+
+// fetchJSON decodes the releases endpoint plus suffix into target.
+func fetchJSON(client *http.Client, suffix string, target any) error {
+	response, err := client.Get(fmt.Sprintf("%s/repos/%s/releases%s", APIBase, Repo, suffix))
 	if err != nil {
-		return found, fmt.Errorf("Couldn't check for updates: %w", err)
+		return fmt.Errorf("Couldn't check for updates: %w", err)
 	}
 	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return found, fmt.Errorf(
+		return fmt.Errorf(
 			"Couldn't check for updates: %d %s",
 			response.StatusCode, http.StatusText(response.StatusCode),
 		)
 	}
-	if err := json.NewDecoder(response.Body).Decode(&found); err != nil {
-		return found, fmt.Errorf("Couldn't read the latest release: %w", err)
+	if err := json.NewDecoder(response.Body).Decode(target); err != nil {
+		return fmt.Errorf("Couldn't read the latest release: %w", err)
 	}
-	return found, nil
+	return nil
 }
 
 // DownloadGzipped fetches a gzipped release asset, unpacks it into a new

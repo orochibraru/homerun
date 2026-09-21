@@ -173,15 +173,15 @@ admin-only. `homerun update` is unrelated: it updates the CLI binary itself.
 
 `homerun update` self-updates the installed binary in place: it checks the
 newest release on `--channel` (`stable`, the default, reads `releases/latest`;
-`canary` reads the rolling `canary` prerelease, whose version is in its name),
-updates only when that version is strictly newer, so a canary CLI running
-`homerun update` stays put until stable overtakes it rather than downgrading,
-downloads the `homerun-cli-<arch>` asset for your architecture (same one
-`install.sh` installs), and replaces the running binary (`sudo`'d automatically
-if the install directory isn't writable by your user, same as `install.sh`).
-Release assets are gzipped, so it unpacks the download before replacing the
-binary. Linux and macOS, same as installation itself. `homerun --version` (or
-`-v`) just prints the current version, no network call.
+`canary` reads the newest `v<version>-canary.<n>` prerelease), updates only when
+that version is strictly newer, so a canary CLI running `homerun update` stays
+put until stable overtakes it rather than downgrading, downloads the
+`homerun-cli-<arch>` asset for your architecture (same one `install.sh`
+installs), and replaces the running binary (`sudo`'d automatically if the
+install directory isn't writable by your user, same as `install.sh`). Release
+assets are gzipped, so it unpacks the download before replacing the binary.
+Linux and macOS, same as installation itself. `homerun --version` (or `-v`) just
+prints the current version, no network call.
 
 ## After a REST API change
 

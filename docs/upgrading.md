@@ -34,9 +34,9 @@ Pick one on **Settings → General → Release channel**:
   cut by hand from a canary that's already been running), the same ones the
   installer, `install.sh` and `homerun update` follow.
 - **Canary**: the notice offers every build merged to `main`, published as the
-  `:canary` image and the rolling
-  [`canary` prerelease](https://github.com/orochibraru/homerun/releases/tag/canary).
-  Updating moves your install to the `canary` tag (`HOMERUN_VERSION=canary`).
+  `:canary` image and a `vX.Y.Z-canary.N`
+  [prerelease](https://github.com/orochibraru/homerun/releases). Updating moves
+  your install to the `canary` tag (`HOMERUN_VERSION=canary`).
 
 Switching back from canary to stable never downgrades. The notice just stays
 quiet until a stable release is newer than the canary you run, and that update

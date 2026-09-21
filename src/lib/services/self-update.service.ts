@@ -27,10 +27,9 @@ import { isNewerVersion, normalizeVersion } from "./self-update/version.ts";
 
 const RELEASE_URLS = {
 	canary:
-		"https://api.github.com/repos/orochibraru/homerun/releases/tags/canary",
+		"https://api.github.com/repos/orochibraru/homerun/releases?per_page=30",
 	stable: "https://api.github.com/repos/orochibraru/homerun/releases/latest",
 } as const;
-const CANARY_NAME_PREFIX = "Canary ";
 const RELEASE_CACHE_MS = 10 * 60 * 1000;
 const RELEASE_FAILURE_CACHE_MS = 5 * 60 * 1000;
 const RELEASE_TIMEOUT_MS = 5000;
@@ -115,9 +114,8 @@ class SelfUpdateServiceClass {
 
 	/**
 	 * Fetches and caches the newest release on `channel`, writing to
-	 * `#release` either way: `releases/latest` for stable, the rolling
-	 * `canary` prerelease for canary, whose version is in its name
-	 * (`Canary <version>`) since its tag never changes. Never throws: logs
+	 * `#release` either way: `releases/latest` for stable, the newest
+	 * versioned prerelease (one per merge to main) for canary. Never throws: logs
 	 * and caches a null result on any network error, non-2xx response, or
 	 * unparseable version.
 	 */
@@ -135,16 +133,20 @@ class SelfUpdateServiceClass {
 			if (!res.ok) {
 				throw new Error(`GitHub answered ${res.status}`);
 			}
-			const body = (await res.json()) as {
+			interface Release {
 				html_url: string;
-				name: string | null;
+				prerelease: boolean;
 				published_at: string | null;
 				tag_name: string;
-			};
-			const label =
-				channel === "canary"
-					? (body.name ?? "").replace(CANARY_NAME_PREFIX, "")
-					: body.tag_name;
+			}
+			const json = (await res.json()) as Release | Release[];
+			const body = Array.isArray(json)
+				? json.find((r) => r.prerelease && normalizeVersion(r.tag_name))
+				: json;
+			if (!body) {
+				throw new Error(`No ${channel} release found`);
+			}
+			const label = body.tag_name;
 			const version = normalizeVersion(label);
 			if (!version) {
 				throw new Error(`Unexpected ${channel} release ${label}`);
