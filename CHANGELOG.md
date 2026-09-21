@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.41](https://github.com/orochibraru/homerun/compare/v1.0.40...v1.0.41) (2026-09-21)
+
+### Features
+
+- stable/canary release channel in settings, sync Pangolin/DNS when a service's
+  domains change
+  ([610ac6f](https://github.com/orochibraru/homerun/commit/610ac6f7ef557052d848cdf66fac828cba87b6a5))
+
+### Bug Fixes
+
+- **ci:** publish one immutable v<version> prerelease per canary instead of a
+  rolling canary tag
+  ([a914946](https://github.com/orochibraru/homerun/commit/a914946177d9d3c31d2d46ade6137e5f7537196b))
+
 ## [1.0.40](https://github.com/orochibraru/homerun/compare/v1.0.39...v1.0.40) (2026-09-21)
 
 ### Features
