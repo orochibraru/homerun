@@ -288,3 +288,31 @@ func TestUnknownPathsAnswerJSON(t *testing.T) {
 		t.Fatalf("want a JSON 404, got %d %s", status, body)
 	}
 }
+
+func TestConnectContainerPassesTheDaemonStatusThrough(t *testing.T) {
+	api := newAPI(t, &fakeDaemon{
+		bodies: map[string]string{"/networks/overlay/connect": `{"message":"endpoint already exists"}`},
+		status: map[string]int{"/networks/overlay/connect": http.StatusForbidden},
+	})
+	connect := func(network string) int {
+		request, err := http.NewRequest(http.MethodPost, api.URL+"/v1/containers/abc/connect",
+			strings.NewReader(`{"network":"`+network+`","aliases":[]}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		request.Header.Set("Authorization", "Bearer "+token)
+		request.Header.Set("Content-Type", "application/json")
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = response.Body.Close()
+		return response.StatusCode
+	}
+	if status := connect("overlay"); status != http.StatusForbidden {
+		t.Fatalf("an already-attached container must answer 403, got %d", status)
+	}
+	if status := connect("missing"); status != http.StatusNotFound {
+		t.Fatalf("a missing network or container must answer 404, got %d", status)
+	}
+}

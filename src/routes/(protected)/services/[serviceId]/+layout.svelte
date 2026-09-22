@@ -19,6 +19,7 @@
 	import { page } from "$app/state";
 	import StatusBadge from "$lib/components/status-badge.svelte";
 	import TabNav, { type NavTab } from "$lib/components/tab-nav.svelte";
+	import { timeAgo } from "$lib/formatting";
 	import { syncServiceStatuses } from "$lib/remote/service-status.remote";
 	import { primaryHostname } from "$lib/service-domains";
 
@@ -202,6 +203,15 @@
       <span aria-hidden="true">·</span>
       <span class="text-text-subtle">
         internal: {svc.slug}:{svc.containerPort}
+      </span>
+    {/if}
+    {#if data.lastDeployedAt}
+      <span aria-hidden="true">·</span>
+      <span
+        class="text-text-subtle"
+        title={new Date(data.lastDeployedAt).toLocaleString()}
+      >
+        deployed {timeAgo(data.lastDeployedAt)}
       </span>
     {/if}
   </p>

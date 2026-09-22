@@ -231,6 +231,9 @@ describe("UptimeProbe tick", () => {
 		const h = harness([
 			svc({ containerId: null, dnsResolvable: true, swarmServiceId: "sw" }),
 		]);
+		track(
+			spyOn(DockerService, "getRunningTaskContainerId").mockResolvedValue(null),
+		);
 		const verify: boolean[] = [];
 		globalThis.fetch = (async (
 			_url: string,
@@ -248,6 +251,11 @@ describe("UptimeProbe tick", () => {
 		expect(verify).toEqual([true, false]);
 		expect(h.recorded[0]).toEqual([
 			expect.objectContaining({
+				detail: "No running task on this node.",
+				kind: "internal",
+				ok: false,
+			}),
+			expect.objectContaining({
 				detail:
 					"HTTP 200 · certificate not trusted (self-signed, or not issued yet)",
 				kind: "external",
@@ -263,6 +271,9 @@ describe("UptimeProbe tick", () => {
 		const h = harness([
 			svc({ containerId: null, dnsResolvable: true, swarmServiceId: "sw" }),
 		]);
+		track(
+			spyOn(DockerService, "getRunningTaskContainerId").mockResolvedValue(null),
+		);
 		let calls = 0;
 		globalThis.fetch = (async () => {
 			calls += 1;
@@ -272,6 +283,11 @@ describe("UptimeProbe tick", () => {
 		await new TestProbe().run();
 
 		expect(h.recorded[0]).toEqual([
+			expect.objectContaining({
+				detail: "No running task on this node.",
+				kind: "internal",
+				ok: false,
+			}),
 			expect.objectContaining({
 				detail: "Timed out.",
 				kind: "external",
@@ -286,8 +302,50 @@ describe("UptimeProbe tick", () => {
 		const h = harness([
 			svc({ containerId: null, dnsResolvable: true, swarmServiceId: "sw" }),
 		]);
+		track(
+			spyOn(DockerService, "getRunningTaskContainerId").mockResolvedValue(null),
+		);
 		await new TestProbe().run();
-		expect(h.recorded).toEqual([[]]);
+		expect(h.recorded).toEqual([
+			[
+				expect.objectContaining({
+					detail: "No running task on this node.",
+					kind: "internal",
+					ok: false,
+				}),
+			],
+		]);
+	});
+
+	test("a swarm service is probed by its overlay alias via its running task", async () => {
+		const h = harness([
+			svc({ containerId: null, slug: "it-tools", swarmServiceId: "sw" }),
+		]);
+		track(
+			spyOn(DockerService, "getRunningTaskContainerId").mockResolvedValue(
+				"task-ctr",
+			),
+		);
+		const health = spyOn(DockerService, "containerHealth").mockResolvedValue(
+			null,
+		);
+		track(health);
+		const address = spyOn(DockerService, "containerAddress");
+		track(address);
+		const urls: string[] = [];
+		globalThis.fetch = (async (url: string) => {
+			urls.push(url);
+			return new Response("", { status: 200 });
+		}) as unknown as typeof fetch;
+
+		await new TestProbe().run();
+
+		expect(health).toHaveBeenCalledWith("task-ctr");
+		expect(address).not.toHaveBeenCalled();
+		expect(urls).toEqual(["http://it-tools:8080/"]);
+		expect(h.recorded[0]).toEqual([
+			expect.objectContaining({ kind: "internal", ok: true }),
+		]);
 	});
 
 	test("a database image is probed over TCP", async () => {

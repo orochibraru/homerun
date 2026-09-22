@@ -562,21 +562,25 @@ export function DockerCoreServicesMixin<
 			}
 		}
 
-		/** Attaches Traefik to one more network, ignoring "already attached". */
-		async #connectTraefik(network: string): Promise<void> {
-			const traefik = await this.findTraefikContainer();
-			if (!traefik) {
-				return;
-			}
+		/**
+		 * Attaches a container to one more network, ignoring "already
+		 * attached" and, when `ignoreMissing`, a container that doesn't exist.
+		 */
+		async #connect(
+			containerId: string,
+			network: string,
+			ignoreMissing = false,
+		): Promise<void> {
 			try {
-				await this.worker.post(`/v1/containers/${traefik.id}/connect`, {
+				await this.worker.post(`/v1/containers/${containerId}/connect`, {
 					aliases: [],
 					network,
 				});
-				logger.info(`Traefik attached to ${network}`);
+				logger.info(`${containerId} attached to ${network}`);
 			} catch (err) {
 				const status = err instanceof WorkerRequestError ? err.status : 0;
-				if (status !== 403 && status !== 409) {
+				const ignored = [403, 409, ...(ignoreMissing ? [404] : [])];
+				if (!ignored.includes(status)) {
 					throw err;
 				}
 			}
@@ -587,7 +591,8 @@ export function DockerCoreServicesMixin<
 		 * actually requires on the host, in order: `docker swarm init` (this
 		 * daemon has to be a manager before a single service can be created),
 		 * an **attachable overlay** network for those services to share,
-		 * Traefik attached to it, and Traefik's swarm provider turned on so it
+		 * this app and Traefik attached to it (the app so the uptime probe
+		 * reaches swarm services by alias), and Traefik's swarm provider turned on so it
 		 * discovers them at all. Before this, flipping that select only wrote
 		 * a database row and every swarm deploy failed on a daemon that
 		 * wasn't in a swarm.
@@ -610,15 +615,17 @@ export function DockerCoreServicesMixin<
 			const network = swarmNetworkName();
 			await this.ensureSwarmNetwork(network);
 			steps.push(`Overlay network ${network} is ready.`);
+			await this.#connect(hostname(), network, true);
 
-			if (!(await this.findTraefikContainer())) {
+			const traefik = await this.findTraefikContainer();
+			if (!traefik) {
 				steps.push(
 					`No Traefik container on this host : attach your proxy to ${network} and turn on its swarm provider by hand.`,
 				);
 				return steps;
 			}
 
-			await this.#connectTraefik(network);
+			await this.#connect(traefik.id, network);
 			const applied = await this.applyTraefikFlags({
 				"providers.swarm": "true",
 				"providers.swarm.exposedByDefault": "false",

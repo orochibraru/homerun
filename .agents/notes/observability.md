@@ -269,6 +269,19 @@ fails on the first attempt as before.
 output put raw `\x1b[32m` sequences into the uptime row, which the panel renders
 as plain text : they showed up on screen as `[32mStatus: 200`.
 
+**A swarm service gets an internal probe too.** It used to be skipped outright
+(`containerId` is null in swarm mode), so its "From the network" row sat on "No
+beats recorded yet" forever with no hint why. The probe now resolves the
+service's running task on this node (`getRunningTaskContainerId`) for the
+healthcheck, and aims TCP/HTTP at the overlay alias `<slug>:<port>` rather than
+a container IP. That only resolves because `enableSwarmMode` attaches this app's
+own container to the overlay (re-asserted on every boot by `CoreServicesWatch`).
+No running task on this node records a failure. For that attach to be
+idempotent, the worker's `/v1/containers/{id}/connect` passes the daemon's
+status through (403 already attached, 404 missing) instead of a blanket 500,
+which had also made every re-assert after the first fail on Traefik's
+already-attached overlay.
+
 **The internal probe isn't always HTTP**, and
 `internalProbeMethod(image, hasHealthcheck)` picks between three, in this order:
 

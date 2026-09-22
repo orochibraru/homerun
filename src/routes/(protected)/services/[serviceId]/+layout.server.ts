@@ -1,5 +1,6 @@
 import { error } from "@sveltejs/kit";
 import { config } from "$lib/config";
+import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
 import { serviceHostname } from "$lib/services/dns.service";
@@ -13,7 +14,10 @@ export const load = async ({ params, parent }) => {
 		error(404, "Service not found");
 	}
 
-	const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
+	const [stack, [lastDeploy]] = await Promise.all([
+		svc.stackId ? StackDTO.get(svc.stackId) : null,
+		DeploymentDTO.listRevisions(svc.id, 1),
+	]);
 
 	return {
 		baseDomain: config.baseDomain,
@@ -23,6 +27,9 @@ export const load = async ({ params, parent }) => {
 			config.traefik.certResolver,
 			config.pangolinEnabled,
 		),
+		lastDeployedAt: lastDeploy
+			? (lastDeploy.toJSON().finishedAt ?? lastDeploy.toJSON().createdAt)
+			: null,
 		stackSlug: stack?.slug ?? null,
 		publicScheme: config.traefik.entrypoint === "web" ? "http" : "https",
 		service: svc.toJSON(),

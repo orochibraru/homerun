@@ -262,7 +262,9 @@ type connectContainerBody struct {
 	Network string   `json:"network"`
 }
 
-// connectContainer attaches a container to a network under its aliases.
+// connectContainer attaches a container to a network under its aliases,
+// answering with the daemon's own status on failure so callers can tell
+// "already attached" (403) and "no such container" (404) apart.
 func (s *Server) connectContainer(w http.ResponseWriter, r *http.Request) error {
 	var input connectContainerBody
 	if !httpapi.DecodeJSON(w, r, &input) {
@@ -273,6 +275,13 @@ func (s *Server) connectContainer(w http.ResponseWriter, r *http.Request) error 
 			[]httpapi.ValidationIssue{{Message: "network is required", Path: []string{"network"}}})
 	}
 	err := s.docker.ConnectNetwork(r.Context(), input.Network, chi.URLParam(r, "id"), input.Aliases)
+	if errors.Is(err, dockerapi.ErrNotFound) {
+		return httpapi.Error(w, http.StatusNotFound, err.Error())
+	}
+	var apiErr *dockerapi.APIError
+	if errors.As(err, &apiErr) {
+		return httpapi.Error(w, apiErr.Status, apiErr.Message)
+	}
 	if err != nil {
 		return err
 	}

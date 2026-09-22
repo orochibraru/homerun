@@ -193,16 +193,26 @@ export class UptimeProbe extends BaseScheduler {
 
 	/**
 	 * Probes a service from inside the Docker network: its own healthcheck if
-	 * it has one, else TCP or HTTP against its container address. Returns
-	 * null when the service has no container, which includes a swarm service
-	 * (only the external probe runs for those).
+	 * it has one, else TCP or HTTP against its container address, or against
+	 * its overlay alias for a swarm service. A swarm service with no running
+	 * task on this node records a failure.
 	 */
-	async #internal(svc: ServiceDTO): Promise<ProbeResult | null> {
-		if (!svc.containerId) {
-			return null;
+	async #internal(svc: ServiceDTO): Promise<ProbeResult> {
+		const containerId =
+			svc.containerId ||
+			(svc.swarmServiceId
+				? await DockerService.getRunningTaskContainerId(svc.swarmServiceId)
+				: null);
+		if (!containerId) {
+			return {
+				detail: "No running task on this node.",
+				kind: "internal",
+				ok: false,
+				serviceId: svc.id,
+			};
 		}
 
-		const health = await DockerService.containerHealth(svc.containerId);
+		const health = await DockerService.containerHealth(containerId);
 		const method = internalProbeMethod(svc.image, health !== null);
 		if (method === "healthcheck" && health) {
 			const output = health.output ? stripAnsi(health.output).trim() : "";
@@ -215,7 +225,9 @@ export class UptimeProbe extends BaseScheduler {
 			};
 		}
 
-		const address = await DockerService.containerAddress(svc.containerId);
+		const address = svc.containerId
+			? await DockerService.containerAddress(svc.containerId)
+			: svc.slug;
 		if (!address) {
 			return {
 				detail: "The container has no address on the Docker network.",
