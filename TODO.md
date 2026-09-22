@@ -10,11 +10,9 @@ When done delete the entry, no bloat.
       done, a live run needs a Cloudflare token and a permission rule for DNS
       changes.
 
-- [ ] Have the worker converge the core services (Traefik, the registry, Newt)
-      at its own boot rather than the app triggering it from `hooks.server.ts`.
-      The app performs no Docker work either way — it asks the worker — but the
-      trigger still lives on the app side, so a worker restarted alone doesn't
-      re-assert them.
+- [ ] The auto-detected forward-auth URL (`setDetectedAuthCheckUrl` in
+      `hooks.server.ts`) is only resolved at app boot, so an app that boots
+      before the worker is up never gets it until its next restart.
 
 ## Medium
 

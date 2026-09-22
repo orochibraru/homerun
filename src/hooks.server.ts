@@ -29,7 +29,6 @@ import {
 } from "$lib/services/auth";
 import { CronService } from "$lib/services/cron.service";
 import { DeploymentService } from "$lib/services/deploy.service";
-import { syncDashboardDns } from "$lib/services/dns.service";
 import { DockerService } from "$lib/services/docker.service";
 import { OrchestrationService } from "$lib/services/orchestration.service";
 import { JobWorker } from "$lib/services/queue/worker";
@@ -199,12 +198,11 @@ async function runMigrations() {
  * Server boot sequence, run once before the first request : waits for the
  * database, migrates and seeds built-in templates, applies DB-backed instance
  * settings (plus the auto-detected forward-auth URL when running in a
- * container), rebuilds auth, syncs the dashboard's Traefik router and DNS,
- * picks the orchestration mode for a brand new instance and queues the
- * redeploys `--migrate-to-rootful` asked for, re-asserts swarm mode on the
- * host (a `docker compose up` recreating Traefik drops its swarm provider
- * flags) when that's the orchestration mode, then
- * starts the job worker, rollout health watches and every scheduler.
+ * container), rebuilds auth, picks the orchestration mode for a brand new
+ * instance and queues the redeploys `--migrate-to-rootful` asked for, then
+ * starts the job worker, rollout health watches and every scheduler,
+ * including the core-services watch that asserts the dashboard router, DNS,
+ * Newt and swarm mode every time the worker (re)starts.
  */
 export const init = async () => {
 	await waitForDatabase();
@@ -229,20 +227,9 @@ export const init = async () => {
 	await pruneUndecryptableSigningKeys().catch((err) => {
 		logger.warn("Couldn't check the OIDC signing keys", err);
 	});
-	await DockerService.syncDashboardRouter();
-	void syncDashboardDns();
-	void DockerService.syncNewt(
-		settings.newtCredentials(),
-		settings.orchestrationMode === "swarm",
-	);
 	await OrchestrationService.applyOnBoot(settings, created).catch((err) => {
 		logger.warn("Couldn't apply the orchestration mode on boot", err);
 	});
-	if (settings.orchestrationMode === "swarm") {
-		void DockerService.enableSwarmMode().catch((err) => {
-			logger.warn("Couldn't re-assert swarm mode on this host", err);
-		});
-	}
 
 	JobWorker.start();
 	void DeploymentService.resumeHealthWatches();
@@ -254,6 +241,7 @@ export const init = async () => {
 	CronService.startUptimeProbe();
 	CronService.startMirrorGcScheduler();
 	CronService.startGitPollScheduler();
+	CronService.startCoreServicesWatch();
 };
 
 /**

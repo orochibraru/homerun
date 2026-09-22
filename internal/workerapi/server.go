@@ -12,6 +12,7 @@ package workerapi
 
 import (
 	"context"
+	"crypto/rand"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -24,6 +25,7 @@ import (
 
 // Server answers the app's Docker control calls for one daemon.
 type Server struct {
+	bootID    string
 	docker    *dockerapi.Client
 	stats     *hoststats.StatsSampler
 	terminals *TerminalHub
@@ -34,6 +36,7 @@ type Server struct {
 // terminal hub's reaper runs for the life of ctx.
 func NewServer(ctx context.Context, token string, docker *dockerapi.Client) *Server {
 	return &Server{
+		bootID:    rand.Text(),
 		docker:    docker,
 		stats:     hoststats.NewStatsSampler(),
 		terminals: NewTerminalHub(ctx, docker),
@@ -64,9 +67,12 @@ func (s *Server) Handler() http.Handler {
 }
 
 // health answers with the worker's version, so the app can tell a worker
-// that's up from one that's merely listening.
+// that's up from one that's merely listening, and a boot id that changes on
+// every worker start, so the app can tell it restarted and re-converge the
+// core services onto it.
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	httpapi.WriteJSON(w, http.StatusOK, map[string]string{
+		"bootId":  s.bootID,
 		"status":  "ok",
 		"version": buildinfo.Version,
 	})

@@ -517,18 +517,22 @@ that isn't rootless, standalone otherwise). An existing row is never flipped.
 Docker calls `DockerService.enableSwarmMode()` (see `core-services.ts` above):
 `swarmInit` when the daemon isn't a manager, the `<networkName>-swarm` overlay,
 Traefik attached to it, and Traefik v3's `--providers.swarm` flags written onto
-the live container via `applyTraefikFlags`. `hooks.server.ts`'s `init()` calls
-it again (fire and forget) whenever the stored mode is `swarm`, since a
-`docker compose up` recreating Traefik from the compose file drops flags the app
-added; `applyTraefikFlags` no-ops when they already hold, so a normal boot never
-bounces the proxy. The action persists the mode **only after** host preparation
-succeeded (it used to save first and report "Mode saved, but the host couldn't
-be prepared", leaving a rootless instance stored as swarm with every deploy
-failing), and the page's `load` asks `swarmModeUnavailableReason()` so a
-rootless daemon shows the reason and a disabled Swarm option before submit. Not
-handled by the app: a multi-interface host where `swarmInit` can't pick an
-advertise address (the installer passes one; by hand, run
-`docker swarm init --advertise-addr <ip>` once and save again).
+the live container via `applyTraefikFlags`. The core-services watch
+(`cron/core-services-watch.ts`, started from `hooks.server.ts`'s `init()`) calls
+it again whenever the stored mode is `swarm` and the worker's `/v1/health`
+`bootId` changes (first contact included), alongside the dashboard router, DNS
+and `syncNewt`, since a `docker compose up` recreating Traefik from the compose
+file drops flags the app added, and a worker restarted alone (or not up yet when
+the app booted) would otherwise never see them re-asserted; `applyTraefikFlags`
+no-ops when they already hold, so a normal boot never bounces the proxy. The
+action persists the mode **only after** host preparation succeeded (it used to
+save first and report "Mode saved, but the host couldn't be prepared", leaving a
+rootless instance stored as swarm with every deploy failing), and the page's
+`load` asks `swarmModeUnavailableReason()` so a rootless daemon shows the reason
+and a disabled Swarm option before submit. Not handled by the app: a
+multi-interface host where `swarmInit` can't pick an advertise address (the
+installer passes one; by hand, run `docker swarm init --advertise-addr <ip>`
+once and save again).
 
 **Migrating a rootless install** (`--migrate-to-rootful`,
 `internal/installer/migrate.go`'s `Migrate`): stops every container on the

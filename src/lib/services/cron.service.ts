@@ -16,6 +16,7 @@ import { CronJobDTO } from "$lib/dto/cron-job-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { enqueueVolumeBackup } from "./backup-queue.ts";
+import { CoreServicesWatch } from "./cron/core-services-watch.ts";
 import { type ParsedCron, parseCronSchedule } from "./cron/cron-expression.ts";
 import { DueScheduler } from "./cron/due-scheduler.ts";
 import { GitPollScheduler } from "./cron/git-poll-scheduler.ts";
@@ -73,6 +74,8 @@ class CronServiceClass {
 
 	private readonly gitPollScheduler = new GitPollScheduler();
 
+	private readonly coreServicesWatch = new CoreServicesWatch();
+
 	/** Parses a 5-field cron expression for schedule-input validation, see `cron-expression.ts`'s `parseCronSchedule`. */
 	parseCronSchedule(schedule: string): ParsedCron | null {
 		return parseCronSchedule(schedule);
@@ -111,6 +114,11 @@ class CronServiceClass {
 	/** Starts the branch poller that deploys on push when a webhook can't be delivered. */
 	startGitPollScheduler(): void {
 		this.gitPollScheduler.start();
+	}
+
+	/** Starts the watch that re-asserts the core services every time the worker (re)starts. */
+	startCoreServicesWatch(): void {
+		this.coreServicesWatch.start();
 	}
 }
 

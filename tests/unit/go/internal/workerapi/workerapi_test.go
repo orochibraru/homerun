@@ -82,6 +82,27 @@ func TestHealthIsOpenAndEverythingElseIsNot(t *testing.T) {
 	}
 }
 
+func TestHealthBootIDIsStablePerServerAndDiffersAcrossRestarts(t *testing.T) {
+	daemon := &fakeDaemon{bodies: map[string]string{}}
+	bootID := func(api *httptest.Server) string {
+		_, body := call(t, api, http.MethodGet, "/v1/health", true)
+		var health struct {
+			BootID string `json:"bootId"`
+		}
+		if err := json.Unmarshal([]byte(body), &health); err != nil || health.BootID == "" {
+			t.Fatalf("health must carry a bootId, got %s", body)
+		}
+		return health.BootID
+	}
+	first := newAPI(t, daemon)
+	if id := bootID(first); id != bootID(first) {
+		t.Fatal("one worker process must answer the same bootId every time")
+	}
+	if bootID(first) == bootID(newAPI(t, daemon)) {
+		t.Fatal("a restarted worker must answer a new bootId")
+	}
+}
+
 func TestContainerStatusDerivation(t *testing.T) {
 	cases := map[string]struct {
 		state    string
