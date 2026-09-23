@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.42](https://github.com/orochibraru/homerun/compare/v1.0.41...v1.0.42) (2026-09-22)
+
+### Features
+
+- re-assert core services whenever the worker (re)starts, keyed on a worker boot
+  id
+  ([c8cc39c](https://github.com/orochibraru/homerun/commit/c8cc39ca022707c2d7e8811b9fd5e92bf7e1905a))
+
+### Bug Fixes
+
+- **docker:** bump go-builder image to golang 1.27 to match go.mod
+  ([e5889ea](https://github.com/orochibraru/homerun/commit/e5889ea0b43ac4e848685d393e80cebe977b917f))
+- probe swarm services internally via their overlay alias and show last deploy
+  time in the service header
+  ([a004e63](https://github.com/orochibraru/homerun/commit/a004e636f50d96b95471d44aab524319f3817625))
+
 ## [1.0.41](https://github.com/orochibraru/homerun/compare/v1.0.40...v1.0.41) (2026-09-21)
 
 ### Features
