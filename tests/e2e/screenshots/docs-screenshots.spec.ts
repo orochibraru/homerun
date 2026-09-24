@@ -147,10 +147,19 @@ const SHOTS: Shot[] = [
 
 async function capture(page: Page, name: string): Promise<void> {
 	const png = await page.screenshot({ fullPage: false });
-	await Bun.write(
-		join(OUT_DIR, `${name}.webp`),
-		await new Bun.Image(png).webp({ quality: 90 }).bytes(),
-	);
+	const webp = await page.evaluate(async (base64) => {
+		const bitmap = await createImageBitmap(
+			new Blob([Uint8Array.fromBase64(base64)], { type: "image/png" }),
+		);
+		const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+		canvas.getContext("2d")?.drawImage(bitmap, 0, 0);
+		const blob = await canvas.convertToBlob({
+			quality: 0.9,
+			type: "image/webp",
+		});
+		return new Uint8Array(await blob.arrayBuffer()).toBase64();
+	}, png.toString("base64"));
+	await writeFile(join(OUT_DIR, `${name}.webp`), Buffer.from(webp, "base64"));
 }
 
 async function settle(page: Page): Promise<void> {
