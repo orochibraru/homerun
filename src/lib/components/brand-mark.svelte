@@ -20,8 +20,8 @@
         fill="none"
         stroke="#000"
         stroke-linecap="round"
-        stroke-width="2.6"
-        d="M9 24.5Q12 12 25 8"
+        stroke-width="2.8"
+        d="M9.5 21Q12 12 25 8.5"
       />
     </mask>
     <path
@@ -29,10 +29,10 @@
       stroke="currentColor"
       stroke-linejoin="round"
       stroke-width="1.5"
-      d="M16 3.5 28 13.5V26a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V13.5Z"
+      d="M4 10.5a1.5 1.5 0 0 1 1.5-1.5h19a1.5 1.5 0 0 1 1.5 1.5V19l-11 9.5L4 19Z"
       mask="url(#{maskId})"
     />
-    <circle cx="27" cy="5" r="2.6" fill="currentColor" />
+    <circle cx="27.5" cy="6" r="2.6" fill="currentColor" />
   </svg>
   <span
     class="text-text font-semibold tracking-tight {size === 'lg'
