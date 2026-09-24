@@ -34,6 +34,12 @@ type Options struct {
 	AdvertiseAddress string
 	// AgentPort is the agent-mode worker's HTTP port.
 	AgentPort int
+	// DashboardPort, HTTPPort and HTTPSPort are the host ports --mode=full
+	// publishes the dashboard and Traefik's two entrypoints on, 0 leaving
+	// whatever .env already has (the compose file defaults to 3000, 80 and 443).
+	DashboardPort int
+	HTTPPort      int
+	HTTPSPort     int
 	// Docker is which daemon --mode=full runs the stack on, empty meaning the
 	// default (see DockerFlavourOf).
 	Docker DockerFlavour
@@ -124,11 +130,21 @@ func ParseArgs(argv []string) (Options, bool, error) {
 		case strings.HasPrefix(arg, "--advertise-addr="):
 			opts.AdvertiseAddress = strings.TrimPrefix(arg, "--advertise-addr=")
 		case strings.HasPrefix(arg, "--port="):
-			port, err := strconv.Atoi(strings.TrimPrefix(arg, "--port="))
-			if err != nil {
-				return opts, false, fmt.Errorf("--port= needs a number, got %q", strings.TrimPrefix(arg, "--port="))
+			if err := parsePort(arg, &opts.AgentPort); err != nil {
+				return opts, false, err
 			}
-			opts.AgentPort = port
+		case strings.HasPrefix(arg, "--dashboard-port="):
+			if err := parsePort(arg, &opts.DashboardPort); err != nil {
+				return opts, false, err
+			}
+		case strings.HasPrefix(arg, "--http-port="):
+			if err := parsePort(arg, &opts.HTTPPort); err != nil {
+				return opts, false, err
+			}
+		case strings.HasPrefix(arg, "--https-port="):
+			if err := parsePort(arg, &opts.HTTPSPort); err != nil {
+				return opts, false, err
+			}
 		case strings.HasPrefix(arg, "--domain="):
 			opts.Domain = strings.TrimPrefix(arg, "--domain=")
 		case strings.HasPrefix(arg, "--image="):
@@ -144,6 +160,34 @@ func ParseArgs(argv []string) (Options, bool, error) {
 	return opts, false, nil
 }
 
+// parsePort reads a --flag=<n> argument's number into target.
+func parsePort(arg string, target *int) error {
+	flag, value, _ := strings.Cut(arg, "=")
+	port, err := strconv.Atoi(value)
+	if err != nil || port < 1 || port > 65535 {
+		return fmt.Errorf("%s= needs a port number, got %q", flag, value)
+	}
+	*target = port
+	return nil
+}
+
+// PortEnv is the .env keys the compose file publishes its ports from, only for
+// the ports given on the command line, so a re-run without them keeps the
+// ports an earlier run or the admin chose.
+func PortEnv(opts Options) map[string]string {
+	env := map[string]string{}
+	for key, port := range map[string]int{
+		"HOMERUN_DASHBOARD_PORT": opts.DashboardPort,
+		"HOMERUN_HTTP_PORT":      opts.HTTPPort,
+		"HOMERUN_HTTPS_PORT":     opts.HTTPSPort,
+	} {
+		if port != 0 {
+			env[key] = strconv.Itoa(port)
+		}
+	}
+	return env
+}
+
 // Validate makes the cross-flag checks the per-token parser can't.
 //
 // It returns an error message, or the empty string when the combination is valid.
@@ -156,6 +200,9 @@ func Validate(opts Options) string {
 	}
 	if opts.MigrateToRootful && opts.Docker == FlavourRootless {
 		return "--migrate-to-rootful moves an install onto the system daemon : drop --docker=rootless."
+	}
+	if (opts.DashboardPort != 0 || opts.HTTPPort != 0 || opts.HTTPSPort != 0) && opts.Mode != ModeFull {
+		return "--dashboard-port, --http-port and --https-port only apply to --mode=full."
 	}
 	if opts.AdvertiseAddress != "" && DockerFlavourOf(opts) != FlavourRootful {
 		return "--advertise-addr only applies to a rootful --mode=full install, the only kind that runs a swarm."
@@ -196,6 +243,18 @@ Options:
                       system daemon in swarm mode : copies every volume, keeps
                       .env and homerun.yaml, redeploys every service. Safe to
                       re-run after a failure.
+  --dashboard-port=<n>
+                      Host port the dashboard is published on (--mode=full,
+                      default: 3000)
+  --http-port=<n>, --https-port=<n>
+                      Host ports Traefik's web/websecure entrypoints are
+                      published on (--mode=full, default: 80 and 443). Use
+                      e.g. 8080/8443 to install next to another proxy (Dokploy,
+                      Coolify) and take over 80/443 later by re-running with
+                      --http-port=80 --https-port=443. Let's Encrypt can't
+                      issue certificates until 80 is Homerun's.
+                      Only written when given : a re-run without them keeps
+                      what .env has.
   --image=<ref>       App image to run instead of the release's
                       docker.io/orochibraru/homerun:<version>
   --user=<name>       System user owning the install (default: homerun)

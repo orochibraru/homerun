@@ -153,3 +153,21 @@ func TestHelpTextCoversEveryFlag(t *testing.T) {
 		}
 	}
 }
+
+func TestPortEnvOnlyWritesGivenPorts(t *testing.T) {
+	opts, _, err := installer.ParseArgs([]string{"--mode=full", "--dashboard-port=4500", "--http-port=8080"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	env := installer.PortEnv(opts)
+	if len(env) != 2 || env["HOMERUN_DASHBOARD_PORT"] != "4500" || env["HOMERUN_HTTP_PORT"] != "8080" {
+		t.Errorf("unexpected port env: %v", env)
+	}
+	if _, _, err := installer.ParseArgs([]string{"--https-port=70000"}); err == nil {
+		t.Error("an out-of-range port should fail")
+	}
+	agent, _, _ := installer.ParseArgs([]string{"--http-port=8080"})
+	if installer.Validate(agent) == "" {
+		t.Error("port flags should be rejected outside --mode=full")
+	}
+}

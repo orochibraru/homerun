@@ -114,7 +114,9 @@ server for a different Homerun instance, not the full app. Add `--dry-run` to
 print every command without running anything, `--version=vX.Y.Z` to pin a
 release instead of the latest one, and see
 [`cmd/installer/README.md`](../cmd/installer/README.md) for the rest of the
-flags (`--user=`, `--port=`, `--image=`).
+flags (`--user=`, `--port=`, `--image=`, and `--dashboard-port=`/
+`--http-port=`/`--https-port=` to install next to another proxy, see
+[Migrating from Dokploy or Coolify](migrating-from-dokploy-or-coolify.md#on-the-same-host)).
 
 > The installer's mutating steps (package install, rootful and rootless Docker
 > setup, the swarm, systemd units, the rootless-to-rootful migration) are

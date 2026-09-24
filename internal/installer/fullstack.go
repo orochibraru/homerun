@@ -31,6 +31,8 @@ type FullStackParams struct {
 	// Image replaces the release image (--image=); its pull may fail when it
 	// only exists locally.
 	Image string
+	// Ports is the port keys to write into .env, see PortEnv.
+	Ports map[string]string
 	// Rootful runs compose as root against the system daemon instead of as
 	// Username against its rootless one (--docker=rootful).
 	Rootful bool
@@ -80,7 +82,9 @@ func BringUpFullStack(params FullStackParams) (string, error) {
 	if image == "" {
 		image = release.ImageRef(params.Version)
 	}
-	if err := SetEnvValues(run, composeDir+"/.env", ComposeEnv(image, params.DockerSocket, params.Host)); err != nil {
+	env := ComposeEnv(image, params.DockerSocket, params.Host)
+	maps.Copy(env, params.Ports)
+	if err := SetEnvValues(run, composeDir+"/.env", env); err != nil {
 		return "", err
 	}
 	if err := run.WriteFile(composePath, ComposeFile); err != nil {

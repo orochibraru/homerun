@@ -256,6 +256,7 @@ func InstallStack(opts Options, run Runner, docker DockerFlavour, dockerSocket, 
 		DockerSocket: dockerSocket,
 		Host:         host,
 		Image:        opts.Image,
+		Ports:        PortEnv(opts),
 		Rootful:      rootful,
 		Run:          run,
 		Swarm:        rootful,
@@ -326,7 +327,7 @@ func PrintNextSteps(opts Options, dockerSocket, host string) {
 		return
 	}
 	composePath := home + "/homerun/compose.yaml"
-	fmt.Printf("Dashboard: http://%s:3000\n", host)
+	fmt.Printf("Dashboard: http://%s:%s\n", host, DashboardPort(home+"/homerun"))
 	fmt.Printf("The full stack should be coming up under %s, check with:\n", composePath)
 	asUser := "sudo"
 	if DockerFlavourOf(opts) != FlavourRootful {

@@ -119,6 +119,9 @@ reached at, see below), `--docker=rootful|rootless` (`--mode=full` only, default
 `rootful`), `--advertise-addr=` (rootful only), `--migrate-to-rootful` (see
 below), `--image=` (run another app image, e.g. a locally loaded build; its pull
 failing is tolerated), `--user=` (install account name), `--port=` (agent port),
+`--dashboard-port=`/`--http-port=`/`--https-port=` (`--mode=full` host ports,
+default 3000/80/443, only written to `.env` when given, see
+[installing next to Dokploy](../../docs/migrating-from-dokploy-or-coolify.md#on-the-same-host)),
 `--dry-run` (prints every command instead of running it, see below),
 `--yes`/`-y` (no confirmation prompt, needed for a non-interactive
 `curl | bash`).

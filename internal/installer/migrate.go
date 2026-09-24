@@ -500,6 +500,16 @@ func rewriteConfig(run Runner, composeDir string) error {
 	return run.WriteFile(configPath, RootfulConfig(string(config)))
 }
 
+// DashboardPort is the host port the dashboard is published on: .env's
+// HOMERUN_DASHBOARD_PORT, else the compose file's default.
+func DashboardPort(composeDir string) string {
+	env, _ := os.ReadFile(composeDir + "/.env")
+	if port := EnvValue(string(env), "HOMERUN_DASHBOARD_PORT"); port != "" {
+		return port
+	}
+	return "3000"
+}
+
 // SwitchInstance waits for the app to answer (it has run its migrations by
 // then), then stores swarm mode, drops a stored rootless socket override and
 // asks for every service to be redeployed, and restarts the app so its boot
@@ -514,9 +524,10 @@ func SwitchInstance(run Runner, composeDir, stateDir string) error {
 	compose := systemDocker
 	compose.Cwd = composeDir
 
+	port := DashboardPort(composeDir)
 	if _, err := run.Run([]string{
 		"bash", "-c",
-		`for attempt in $(seq 1 90); do code=$(curl -s -o /dev/null -w "%{http_code}" -m 5 http://127.0.0.1:3000/ || true); case "$code" in 2*|3*|4*) exit 0;; esac; sleep 2; done; echo "The app never answered on :3000" >&2; exit 1`,
+		`for attempt in $(seq 1 90); do code=$(curl -s -o /dev/null -w "%{http_code}" -m 5 http://127.0.0.1:` + port + `/ || true); case "$code" in 2*|3*|4*) exit 0;; esac; sleep 2; done; echo "The app never answered on :` + port + `" >&2; exit 1`,
 	}, Opts{}); err != nil {
 		return err
 	}

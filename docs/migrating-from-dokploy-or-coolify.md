@@ -56,3 +56,34 @@ For Dokploy, create the token under **Settings → Profile → API/CLI**. For
 Coolify, create it under **Keys & Tokens** with the `read` and `read:sensitive`
 permissions: without `read:sensitive`, env values and database passwords come
 back hidden.
+
+## On the same host
+
+Dokploy and Coolify already hold ports 80, 443 and 3000, so install Homerun next
+to them on other ports:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/installer/bootstrap.sh \
+  | sudo bash -s -- --mode=full --domain=homerun.example.com \
+    --dashboard-port=4500 --http-port=8080 --https-port=8443
+```
+
+On a Dokploy host the swarm already exists and the installer reuses it. Open
+`http://homerun.example.com:4500`, run the import against the old instance's own
+URL, and check every service, its env vars and its volumes before deploying
+anything. Imported named volumes point at the data the old platform created on
+this host: **stop the old app before deploying its Homerun copy**, two
+containers writing the same database volume corrupt it.
+
+Routing can be checked before the switch with
+`curl -k -H 'Host: app.example.com' https://127.0.0.1:8443`. Let's Encrypt can't
+issue certificates while port 80 isn't Homerun's, so expect Traefik's
+self-signed one until then.
+
+To take over 80/443, stop the old proxy (`docker stop dokploy-traefik` on
+Dokploy, `docker stop coolify-proxy` on Coolify), then run the same one-liner
+again, same `--domain=`, with `--http-port=80 --https-port=443`, or set
+`HOMERUN_HTTP_PORT=80` and `HOMERUN_HTTPS_PORT=443` in
+`/home/homerun/homerun/.env` and run `sudo docker compose up -d traefik` there
+(add `-f compose.yaml -f compose.swarm.yaml` on a swarm install). Restart the
+old proxy to roll back.
