@@ -272,7 +272,7 @@ export const BUILTIN_TEMPLATES_APPS: BuiltinTemplate[] = [
 			ORIGIN: "https://drive.example.com",
 			STORAGE_PATH: "/data/storage",
 		},
-		icon: "",
+		icon: "penombre.svg",
 		id: "builtin-penombre",
 		image: "orochibraru/penombre",
 		sourceUrl: "https://github.com/orochibraru/penombre",
@@ -280,6 +280,23 @@ export const BUILTIN_TEMPLATES_APPS: BuiltinTemplate[] = [
 		tag: "latest",
 		tags: ["drive", "files", "storage", "sync", "nextcloud-alternative"],
 		websiteUrl: "https://orochibraru.com/penombre",
+	},
+	{
+		category: "dashboard",
+		containerPort: 3000,
+		description:
+			"Homelab start page : links with live status, weather and host vitals. Set ORIGIN to the URL you'll reach it at, forms fail behind the proxy without it.",
+		envVars: {
+			ORIGIN: "https://dash.example.com",
+		},
+		icon: "bercail.svg",
+		id: "builtin-bercail",
+		image: "orochibraru/bercail",
+		sourceUrl: "https://github.com/orochibraru/bercail",
+		name: "Bercail",
+		tag: "latest",
+		tags: ["dashboard", "start-page", "bookmarks", "status", "weather"],
+		websiteUrl: "https://orochibraru.com/bercail",
 	},
 	{
 		category: "other",
