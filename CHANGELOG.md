@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.47](https://github.com/orochibraru/homerun/compare/v1.0.46...v1.0.47) (2026-09-24)
+
+### Bug Fixes
+
+- **screenshots:** encode webp in chromium, playwright workers have no Bun
+  global
+  ([78594d1](https://github.com/orochibraru/homerun/commit/78594d1fd25bd50654983a697c68c687bf89932d))
+- **auth:** drop better-auth's unset baseURL warning
+  ([27ac4f5](https://github.com/orochibraru/homerun/commit/27ac4f529a2e7b15a1cec51f76e32fbb1a7643af))
+
 ## [1.0.46](https://github.com/orochibraru/homerun/compare/v1.0.45...v1.0.46) (2026-09-24)
 
 ### Features
