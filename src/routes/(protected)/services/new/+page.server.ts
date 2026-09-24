@@ -1,12 +1,15 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { config } from "$lib/config";
+import { HOST_VOLUME_PREFIX } from "$lib/constants";
 import { BuildCacheRegistryDTO } from "$lib/dto/build-cache-registry-dto";
 import { GitConnectionDTO } from "$lib/dto/git-connection-dto";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { NotificationDTO } from "$lib/dto/notification-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
+import { ServiceVolumeDTO } from "$lib/dto/service-volume-dto";
 import { StackDTO } from "$lib/dto/stack-dto";
+import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { TemplateDTO } from "$lib/dto/template-dto";
 import { TemplateLinkDTO } from "$lib/dto/template-link-dto";
 import { Logger } from "$lib/logger";
@@ -27,6 +30,15 @@ import {
 } from "$lib/services/template-links";
 
 const logger = new Logger("Services");
+
+const NEW_VOLUME = "new";
+
+interface VolumeMountInput {
+	containerPath: string;
+	newName: string;
+	readOnly: boolean;
+	volumeId: string;
+}
 
 function buildSourceFields(input: CreateServiceInput, slug: string) {
 	if (input.buildSource !== "git") {
@@ -68,14 +80,21 @@ export const load = async ({ url, parent, locals }) => {
 
 	const stack = stackId && (await StackDTO.get(stackId)) ? stackId : null;
 	const template = templateId ? await TemplateDTO.get(templateId) : null;
-	const [settings, connections, cacheRegistries, templateLinks, existing] =
-		await Promise.all([
-			InstanceSettingsDTO.get(),
-			GitConnectionDTO.listForUser(user.id),
-			BuildCacheRegistryDTO.list(),
-			template ? TemplateLinkDTO.listForTemplate(template.id) : [],
-			ServiceDTO.list(),
-		]);
+	const [
+		settings,
+		connections,
+		cacheRegistries,
+		templateLinks,
+		existing,
+		volumes,
+	] = await Promise.all([
+		InstanceSettingsDTO.get(),
+		GitConnectionDTO.listForUser(user.id),
+		BuildCacheRegistryDTO.list(),
+		template ? TemplateLinkDTO.listForTemplate(template.id) : [],
+		ServiceDTO.list(),
+		StorageVolumeDTO.list(),
+	]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
 	return {
@@ -113,6 +132,12 @@ export const load = async ({ url, parent, locals }) => {
 			alias: l.link.alias,
 			icon: l.linkedTemplateIcon,
 			name: l.linkedTemplateName,
+		})),
+		volumes: volumes.map((v) => ({
+			id: v.id,
+			kind: v.kind,
+			name: v.name,
+			source: v.source,
 		})),
 	};
 };
@@ -194,6 +219,102 @@ async function takenFieldFailure(
 	} as const;
 }
 
+/**
+ * Reads the Volumes step's parallel `volume*` fields into one mount per row,
+ * skipping rows left entirely blank. Returns an error message instead when a
+ * row is half filled or its mount path isn't absolute.
+ */
+function parseVolumeMounts(
+	formData: FormData,
+): { mounts: VolumeMountInput[] } | { error: string } {
+	const ids = formData.getAll("volumeId").map(String);
+	const names = formData.getAll("volumeNewName").map(String);
+	const paths = formData.getAll("volumeContainerPath").map(String);
+	const readOnly = formData.getAll("volumeReadOnly").map(String);
+	const mounts: VolumeMountInput[] = [];
+	for (const [i, volumeId] of ids.entries()) {
+		const containerPath = (paths[i] ?? "").trim();
+		if (!(volumeId || containerPath)) {
+			continue;
+		}
+		if (!(volumeId && containerPath)) {
+			return { error: "Every volume needs both a volume and a mount path." };
+		}
+		if (!containerPath.startsWith("/")) {
+			return {
+				error: `Mount path "${containerPath}" must be absolute (start with /).`,
+			};
+		}
+		mounts.push({
+			containerPath,
+			newName: (names[i] ?? "").trim(),
+			readOnly: readOnly[i] === "on",
+			volumeId,
+		});
+	}
+	return { mounts };
+}
+
+/**
+ * Mounts each wizard volume row into the new service, first creating the
+ * StorageVolume for a "new" row (named `<slug>-data` when left blank) or for
+ * a Docker volume on this machine Homerun hadn't registered yet.
+ */
+async function attachVolumeMounts(
+	mounts: VolumeMountInput[],
+	svc: ServiceDTO,
+	userId: string,
+) {
+	await Promise.all(
+		mounts.map(async (mount, i) => {
+			const vol = await resolveMountVolume(mount, svc.slug, i, userId);
+			if (!vol) {
+				logger.warn(
+					`Volume not found, skipped: service=${svc.id} volume=${mount.volumeId}`,
+				);
+				return;
+			}
+			await ServiceVolumeDTO.attach({
+				containerPath: mount.containerPath,
+				readOnly: mount.readOnly,
+				serviceId: svc.id,
+				volumeId: vol.id,
+			});
+		}),
+	);
+}
+
+/** The StorageVolume a wizard row points at, created on the spot when the row asks for a new or host volume. */
+function resolveMountVolume(
+	mount: VolumeMountInput,
+	slug: string,
+	index: number,
+	userId: string,
+) {
+	if (mount.volumeId === NEW_VOLUME) {
+		const name =
+			mount.newName || (index === 0 ? `${slug}-data` : `${slug}-data-${index}`);
+		return StorageVolumeDTO.create({
+			description: `Created with ${slug}`,
+			kind: "volume",
+			name,
+			source: name,
+			userId,
+		});
+	}
+	if (mount.volumeId.startsWith(HOST_VOLUME_PREFIX)) {
+		const name = mount.volumeId.slice(HOST_VOLUME_PREFIX.length);
+		return StorageVolumeDTO.create({
+			description: "Imported from this machine",
+			kind: "volume",
+			name,
+			source: name,
+			userId,
+		});
+	}
+	return StorageVolumeDTO.get(mount.volumeId);
+}
+
 /** Logs and notifies a service the wizard just created. */
 function announceCreated(
 	svc: ServiceDTO,
@@ -231,6 +352,28 @@ async function createServiceFromForm(
 	}
 
 	const input = result.data;
+
+	const volumes = parseVolumeMounts(formData);
+	if ("error" in volumes) {
+		return {
+			failure: fail(400, {
+				errors: { volumes: [volumes.error] },
+				values: Object.fromEntries(formData),
+			}),
+		} as const;
+	}
+	if (input.authRequired && !config.auth.origin) {
+		return {
+			failure: fail(400, {
+				errors: {
+					authRequired: [
+						"Set Origin under Settings → General first : the login wall sends visitors to this instance's sign-in page, so Homerun has to know its own public URL.",
+					],
+				},
+				values: Object.fromEntries(formData),
+			}),
+		} as const;
+	}
 
 	const taken = await takenFieldFailure(input, formData);
 	if (taken) {
@@ -286,6 +429,8 @@ async function createServiceFromForm(
 		gitRepo: null,
 		gitWebhookId: null,
 	});
+
+	await attachVolumeMounts(volumes.mounts, svc, userId);
 
 	announceCreated(svc, input, userId);
 

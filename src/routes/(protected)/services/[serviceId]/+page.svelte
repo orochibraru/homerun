@@ -1,9 +1,7 @@
 <script lang="ts">
 	import {
 		CheckCircle2,
-		ChevronDown,
 		Circle,
-		Clock,
 		Play,
 		Rocket,
 		RotateCw,
@@ -11,22 +9,18 @@
 		XCircle,
 	} from "@lucide/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
-	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
-	import { goto, refreshAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConnectionStrings from "$lib/components/connection-strings.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
 	import ReplicaStats from "$lib/components/replica-stats.svelte";
 	import ServiceGraph from "$lib/components/service-graph.svelte";
-	import StatusBadge from "$lib/components/status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import UsageChart from "$lib/components/usage-chart.svelte";
 	import { deployPhaseStates } from "$lib/deploy-phases";
-	import { timeAgo } from "$lib/formatting";
-	import { randomId } from "$lib/random-id";
+	import { DeployProgress } from "$lib/deploy-progress.svelte";
 	import { isDeployed, workloadId } from "$lib/service-state";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
@@ -37,12 +31,10 @@
 
 	onMount(() => title.set(svc.name));
 
-	let pendingAction = $state<string | null>(null);
-	let progressLines = $state<string[]>([]);
-	let progressStatus = $state("pending");
-	let progressSource: EventSource | null = null;
-	let pollGeneration = 0;
-	let expandedDeploymentId = $state<string | null>(null);
+	const progress = new DeployProgress({
+		id: () => svc.id,
+		name: () => svc.name,
+	});
 
 	const ACTION_LABELS: Record<
 		string,
@@ -59,227 +51,25 @@
 			error: `Couldn't ${label.verb} ${svc.name}.`,
 			loading: `${label.progressive} ${svc.name}`,
 			onSettled: () => {
-				pendingAction = null;
+				progress.pendingAction = null;
 			},
 			onStart: () => {
-				pendingAction = action;
+				progress.pendingAction = action;
 			},
 			success: `${svc.name} ${label.done}.`,
 		});
 	}
 
-	const IN_FLIGHT_STATUSES = new Set(["pending", "pulling", "starting"]);
+	onDestroy(() => progress.close());
 
-	/** One poll tick : returns the deployment's current status, or undefined on a missed tick. */
-	async function fetchProgress(
-		deploymentId: string,
-	): Promise<string | undefined> {
-		try {
-			const res = await fetch(
-				resolve(
-					"/(protected)/services/[serviceId]/deployments/[deploymentId]/progress",
-					{
-						deploymentId,
-						serviceId: svc.id,
-					},
-				),
-			);
-			if (res.ok) {
-				const body = (await res.json()) as {
-					log: string;
-					status: string;
-				};
-				progressLines = body.log.split("\n").filter(Boolean);
-				progressStatus = body.status;
-				return body.status;
-			}
-		} catch {
-			// A missed poll tick isn't worth surfacing : the next one usually succeeds.
-		}
-	}
-
-	// Polling starts client-side (see deployEnhance below) before the
-	// deploy action's own POST has even reached the server, so the very
-	// first tick(s) almost always race ahead of DeploymentDTO.create() and
-	// come back 404 ("not found yet"), not just an occasional dropped
-	// request. A missing status must be retried like any other missed
-	// tick, not treated as "done" : only an explicit terminal status (not
-	// in IN_FLIGHT_STATUSES) actually stops the loop. Capped so a
-	// genuinely broken connection doesn't poll forever.
-	const MAX_CONSECUTIVE_MISSES = 30;
-
-	/**
-	 * Polls until the deployment reaches a terminal status, then clears
-	 * pendingAction itself : this is the single mechanism for a live deploy
-	 * just submitted from this tab, for resuming the progress view after a
-	 * mid-deploy page reload, AND for a deploy queued somewhere else
-	 * entirely (a template quick-deploy, the create wizard, cron) that this
-	 * page is only arriving at (see onMount below), since in all three
-	 * cases there's no other signal telling the client when it's done. It
-	 * pulls the page's own data along on every status transition too : the
-	 * header status pill and the deployment-history rows come from `load`,
-	 * not from this endpoint, and would otherwise sit frozen until a manual
-	 * reload.
-	 */
-	async function pollProgress(deploymentId: string) {
-		pollGeneration += 1;
-		const myGeneration = pollGeneration;
-		let status = await fetchProgress(deploymentId);
-		let lastStatus = status;
-		let misses = 0;
-		while (myGeneration === pollGeneration) {
-			if (status) {
-				misses = 0;
-				if (status !== lastStatus) {
-					lastStatus = status;
-					void refreshAll();
-				}
-				if (!IN_FLIGHT_STATUSES.has(status)) {
-					break;
-				}
-			} else if (++misses >= MAX_CONSECUTIVE_MISSES) {
-				break;
-			}
-			// oxlint-disable-next-line no-await-in-loop -- progress polling is sequential by definition
-			await new Promise((r) => setTimeout(r, 1000));
-			if (myGeneration !== pollGeneration) {
-				return;
-			}
-			// oxlint-disable-next-line no-await-in-loop -- progress is polled one request at a time
-			status = await fetchProgress(deploymentId);
-		}
-		if (myGeneration === pollGeneration) {
-			settleDeploy(deploymentId, status ?? "");
-		}
-	}
-
-	/**
-	 * Ends the progress view once a deploy reaches a terminal status. A failed
-	 * deploy opens its revision instead of refreshing: `refreshAll` claims the
-	 * navigation token a microtask later than `goto`, so running both cancels
-	 * the navigation.
-	 */
-	function settleDeploy(deploymentId: string, status: string) {
-		pendingAction = null;
-		if (status !== "failed") {
-			void refreshAll();
-			return;
-		}
-		toast.error(`${svc.name} failed to deploy.`, {
-			action: {
-				label: "See why",
-				onClick: () => goto(revisionHref(deploymentId)),
-			},
-			description: "Opening the revision that failed.",
-		});
-		void goto(revisionHref(deploymentId));
-	}
-
-	function closeProgressSource() {
-		progressSource?.close();
-		progressSource = null;
-	}
-
-	/**
-	 * Live deploy progress over server-sent events : the server pushes each
-	 * new log line and status transition instead of the client asking once a
-	 * second. Falls back to pollProgress above if the stream can't be held
-	 * open (a buffering proxy, a dropped connection mid-deploy).
-	 */
-	function revisionHref(deploymentId: string): string {
-		return `${resolve("/(protected)/services/[serviceId]/revisions", {
-			serviceId: svc.id,
-		})}?deployment=${deploymentId}`;
-	}
-
-	function watchProgress(deploymentId: string) {
-		pollGeneration += 1;
-		closeProgressSource();
-
-		const source = new EventSource(
-			resolve(
-				"/(protected)/services/[serviceId]/deployments/[deploymentId]/events",
-				{ deploymentId, serviceId: svc.id },
-			),
-		);
-		progressSource = source;
-		let lastStatus = "";
-
-		source.addEventListener("progress", (event) => {
-			const body = JSON.parse((event as MessageEvent).data) as {
-				log: string;
-				status: string;
-			};
-			progressLines = body.log.split("\n").filter(Boolean);
-			progressStatus = body.status;
-			if (body.status !== lastStatus) {
-				lastStatus = body.status;
-				void refreshAll();
-			}
-		});
-
-		source.addEventListener("done", (event) => {
-			closeProgressSource();
-			const body = JSON.parse((event as MessageEvent).data) as {
-				status: string;
-			};
-			settleDeploy(deploymentId, body.status);
-		});
-
-		source.addEventListener("error", () => {
-			closeProgressSource();
-			void pollProgress(deploymentId);
-		});
-	}
-
-	onDestroy(closeProgressSource);
-
-	onMount(() => {
-		const [latest] = data.deployments;
-		if (!latest) {
-			return;
-		}
-		if (
-			IN_FLIGHT_STATUSES.has(latest.status) ||
-			IN_FLIGHT_STATUSES.has(svc.currentStatus)
-		) {
-			pendingAction = "deploy";
-			watchProgress(latest.id);
-		}
-	});
-
-	function deployEnhance() {
-		let submittedDeploymentId: string | null = null;
-		return enhanceToast({
-			error: `Couldn't queue a deploy for ${svc.name}.`,
-			loading: `Queueing a deploy for ${svc.name}`,
-			onComplete: () => refreshAll(),
-			onStart: () => {
-				pendingAction = "deploy";
-				progressLines = [];
-				progressStatus = "pending";
-			},
-			onSubmit: ({ formData }) => {
-				submittedDeploymentId = randomId();
-				formData.set("deploymentId", submittedDeploymentId);
-				watchProgress(submittedDeploymentId);
-			},
-			onSuccess: (data) => {
-				const actual = data?.deploymentId;
-				if (typeof actual === "string" && actual !== submittedDeploymentId) {
-					watchProgress(actual);
-				}
-			},
-			success: `${svc.name} is queued for deploy.`,
-		});
-	}
+	onMount(() => progress.resume(data.deployments[0], svc.currentStatus));
 
 	let progressEl = $state<HTMLElement | undefined>();
 
 	// A build streams hundreds of lines; pinning the view to the bottom is the
 	// only way to watch one happen without chasing the scrollbar.
 	$effect(() => {
-		const lineCount = progressLines.length;
+		const lineCount = progress.progressLines.length;
 		if (lineCount > 0 && progressEl) {
 			void tick().then(() => {
 				progressEl?.scrollTo({ top: progressEl.scrollHeight });
@@ -290,9 +80,9 @@
 
 <!-- ═══ Actions ═══ -->
 <div class="mb-4 flex flex-wrap gap-2">
-    <form action="?/deploy" method="POST" use:enhance={deployEnhance()}>
-        <Button disabled={pendingAction !== null} type="submit">
-            {#if pendingAction === "deploy"}
+    <form action="?/deploy" method="POST" use:enhance={progress.deployEnhance()}>
+        <Button disabled={progress.pendingAction !== null} type="submit">
+            {#if progress.pendingAction === "deploy"}
                 <Spinner />
                 {svc.containerId ? "Deploying…" : "Deploying…"}
             {:else}
@@ -311,11 +101,11 @@
             >
                 <Button
                     class="border-red-100 bg-red-600/10 text-red-600 dark:border-red-600"
-                    disabled={pendingAction !== null}
+                    disabled={progress.pendingAction !== null}
                     type="submit"
                     variant="outline"
                 >
-                    {#if pendingAction === "stop"}
+                    {#if progress.pendingAction === "stop"}
                         <Spinner />
                     {:else}
                         <Square class="size-4" />
@@ -331,11 +121,11 @@
             >
                 <Button
                     class="border-green-100 bg-green-600/10 text-green-600 dark:border-green-600"
-                    disabled={pendingAction !== null}
+                    disabled={progress.pendingAction !== null}
                     type="submit"
                     variant="outline"
                 >
-                    {#if pendingAction === "start"}
+                    {#if progress.pendingAction === "start"}
                         <Spinner />
                     {:else}
                         <Play class="size-4" />
@@ -351,11 +141,11 @@
             use:enhance={withPending("restart")}
         >
             <Button
-                disabled={pendingAction !== null}
+                disabled={progress.pendingAction !== null}
                 type="submit"
                 variant="outline"
             >
-                {#if pendingAction === "restart"}
+                {#if progress.pendingAction === "restart"}
                     <Spinner />
                 {:else}
                     <RotateCw class="size-4" />
@@ -390,10 +180,10 @@
     </div>
 </div>
 
-{#if pendingAction === "deploy"}
+{#if progress.pendingAction === "deploy"}
     <div class="panel mb-6 rounded-md">
         <ul class="border-border grid gap-2 border-b px-5 py-4 sm:grid-cols-3">
-            {#each deployPhaseStates(progressLines.join("\n"), progressStatus, svc.buildSource) as { phase, state } (phase.id)}
+            {#each deployPhaseStates(progress.progressLines.join("\n"), progress.progressStatus, svc.buildSource) as { phase, state } (phase.id)}
                 <li class="flex items-center gap-2 text-xs">
                     {#if state === "done"}
                         <CheckCircle2 class="size-3.5 shrink-0 text-emerald-500" />
@@ -415,10 +205,10 @@
             class="h-48 overflow-y-auto rounded-b-md log-output"
             bind:this={progressEl}
         >
-            {#if progressLines.length === 0}
+            {#if progress.progressLines.length === 0}
                 <span class="text-zinc-500">Waiting for the deploy to start…</span>
             {:else}
-                {#each progressLines as line, i (i)}
+                {#each progress.progressLines as line, i (i)}
                     <AnsiLine {line} />
                 {/each}
             {/if}
@@ -426,7 +216,7 @@
     </div>
 {/if}
 
-{#if !(isDeployed(svc) || pendingAction === "deploy")}
+{#if !(isDeployed(svc) || progress.pendingAction === "deploy")}
     <div
         class="border-border bg-surface-2 text-text-muted mb-6 rounded-md border p-4 text-sm"
     >
@@ -435,7 +225,7 @@
         <span class="text-text">{svc.image}:{svc.tag}</span>
         and start it.
     </div>
-{:else if pendingAction !== "deploy"}
+{:else if progress.pendingAction !== "deploy"}
     <!-- Live container logs, right on the Overview tab : same panel as the
        Logs tab (see $lib/components/live-log-viewer.svelte), just shorter.
        Hidden mid-deploy since the progress panel above already covers

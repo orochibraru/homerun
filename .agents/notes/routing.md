@@ -126,17 +126,17 @@ deep-linking into `/settings`.
   admin-only `settings/migrate/` tab (source picker, then one nested route per
   source), see "Migrating from Dokploy or Coolify" in
   `services-and-templates.md`.
-- `new/+page.svelte`, click-config create form, a 4-step wizard (Basic info /
-  Networking / Environment / Compute, one `<form>` throughout, steps hidden via
-  a CSS class rather than `{#if}` so field state survives navigating between
-  them); accepts `?stackId=` and/or `?templateId=` query params to pre-fill from
-  a stack or template context. "Deploy from" toggles between a Docker image and
-  a git repo (see Git-based builds below), same toggle repeated on the service's
-  own Source tab for editing after creation. Two submit actions share one
-  `createServiceFromForm()` helper (`new/+page.server.ts`) that validates +
-  creates the row: `create` (secondary button, "Create service", persists config
-  only, same as before) and `createAndDeploy` (primary button, "Create and
-  Deploy", calls `allowLongRequest(platform)` then
+- `new/+page.svelte`, click-config create form, a 5-step wizard (Basic info /
+  Networking / Environment / Volumes / Compute, one `<form>` throughout, steps
+  hidden via a CSS class rather than `{#if}` so field state survives navigating
+  between them); accepts `?stackId=` and/or `?templateId=` query params to
+  pre-fill from a stack or template context. "Deploy from" toggles between a
+  Docker image and a git repo (see Git-based builds below), same toggle repeated
+  on the service's own Source tab for editing after creation. Two submit actions
+  share one `createServiceFromForm()` helper (`new/+page.server.ts`) that
+  validates + creates the row: `create` (secondary button, "Create service",
+  persists config only, same as before) and `createAndDeploy` (primary button,
+  "Create and Deploy", calls `allowLongRequest(platform)` then
   `DeploymentService.deployService()` before redirecting straight to the new
   service's Overview tab instead of the services/stack list). A min-height
   wrapper around the step content keeps the Next/Back button row's vertical

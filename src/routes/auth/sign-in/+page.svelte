@@ -1,10 +1,5 @@
 <script lang="ts">
-	import {
-		ArrowLeft,
-		ArrowRight,
-		Fingerprint,
-		TriangleAlert,
-	} from "@lucide/svelte";
+	import { ArrowRight, Fingerprint, TriangleAlert } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 	import { goto, onNavigate, refreshAll } from "$app/navigation";
@@ -12,20 +7,17 @@
 	import { authClient, signIn, useSession } from "$lib/auth-client";
 	import Alert from "$lib/components/alert.svelte";
 	import AuthShell from "$lib/components/auth-shell.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
 	import PasswordField from "$lib/components/password-field.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { rememberOauthAttempt } from "$lib/oauth-attempt";
-	import {
-		completeAccountSetup,
-		lookupSignIn,
-		resendSetupCode,
-	} from "$lib/remote/sign-in.remote";
+	import { lookupSignIn } from "$lib/remote/sign-in.remote";
 	import type { SignInProvider } from "$lib/services/account-setup.service";
 	import { title } from "$lib/store/title";
 	import { toastError } from "$lib/toast";
+	import SetupForm from "./setup-form.svelte";
+	import TwoFactorForm from "./two-factor-form.svelte";
 
 	const { data } = $props();
 
@@ -88,27 +80,18 @@
 		window.location.assign(target);
 	}
 
-	function signedInToast(message: string) {
+	function signedInToast(message: string): { success?: string } {
 		return data.redirectTo || data.oauthSignIn ? {} : { success: message };
 	}
 
 	let twoFactorStep = $state(false);
-	let twoFactorMode = $state<"backup" | "totp">("totp");
-	let twoFactorCode = $state("");
-	let trustDevice = $state(false);
 	let step = $state<"email" | "password" | "setup" | "sso">("email");
 	let stepProviders = $state<SignInProvider[]>([]);
 	let setupEmailed = $state(false);
-	let setupCode = $state("");
-	let newPassword = $state("");
-	let confirmPassword = $state("");
 
 	function backToEmail() {
 		step = "email";
 		password = "";
-		setupCode = "";
-		newPassword = "";
-		confirmPassword = "";
 	}
 
 	async function continueCallback(e: SubmitEvent): Promise<string> {
@@ -146,58 +129,6 @@
 			error: (err) => toastError(err, "Couldn't check that email."),
 			loading: "Checking your account",
 			success: (message: string) => message,
-		});
-	}
-
-	async function setupCallback(e: SubmitEvent) {
-		e.preventDefault();
-		loading = true;
-		try {
-			if (newPassword !== confirmPassword) {
-				throw new Error("The two passwords don't match.");
-			}
-			await completeAccountSetup({
-				code: setupEmailed ? setupCode.trim() : null,
-				email,
-				password: newPassword,
-			});
-			const { error } = await signIn.email({ email, password: newPassword });
-			if (error) {
-				throw new Error(error.message ?? "Couldn't sign you in.");
-			}
-			newPassword = "";
-			confirmPassword = "";
-			await finishSignIn();
-		} catch (err) {
-			loading = false;
-			newPassword = "";
-			confirmPassword = "";
-			throw err;
-		}
-	}
-
-	function handleSetup(e: SubmitEvent) {
-		return toast.promise(setupCallback(e), {
-			error: (err) => toastError(err, "Couldn't set up your account."),
-			loading: "Setting up your account",
-			...signedInToast("Your account is ready"),
-		});
-	}
-
-	async function resendCallback() {
-		loading = true;
-		try {
-			await resendSetupCode(email);
-		} finally {
-			loading = false;
-		}
-	}
-
-	function handleResend() {
-		return toast.promise(resendCallback(), {
-			error: (err) => toastError(err, "Couldn't send a new code."),
-			loading: "Sending a new code",
-			success: `We emailed a new code to ${email}.`,
 		});
 	}
 
@@ -282,8 +213,6 @@
 			password = "";
 			if (result && "twoFactorRedirect" in result && result.twoFactorRedirect) {
 				loading = false;
-				twoFactorCode = "";
-				twoFactorMode = "totp";
 				twoFactorStep = true;
 				return "two-factor";
 			}
@@ -308,40 +237,6 @@
 								? "Enter your verification code to finish signing in."
 								: "Signed in successfully",
 					}),
-		});
-	}
-
-	async function verifyTwoFactorCallback(e: SubmitEvent) {
-		e.preventDefault();
-		loading = true;
-		try {
-			const code = twoFactorCode.trim();
-			const { error } =
-				twoFactorMode === "totp"
-					? await authClient.twoFactor.verifyTotp({
-							code,
-							trustDevice,
-						})
-					: await authClient.twoFactor.verifyBackupCode({
-							code,
-							trustDevice,
-						});
-			if (error) {
-				throw new Error(error.message ?? "That code didn't match.");
-			}
-			await finishSignIn();
-		} catch (err) {
-			twoFactorCode = "";
-			loading = false;
-			throw err;
-		}
-	}
-
-	function handleVerifyTwoFactor(e: SubmitEvent) {
-		return toast.promise(verifyTwoFactorCallback(e), {
-			error: (err) => toastError(err, "That code didn't match."),
-			loading: "Checking your code",
-			...signedInToast("Signed in successfully"),
 		});
 	}
 
@@ -485,86 +380,14 @@
             </p>
         </div>
     {:else if twoFactorStep}
-        <form class="space-y-4" novalidate onsubmit={handleVerifyTwoFactor}>
-            <p class="text-text-muted text-sm">
-                {#if twoFactorMode === "totp"}
-                    Enter the 6-digit code from your authenticator app.
-                {:else}
-                    Enter one of the backup codes you saved when setting up
-                    two-factor authentication.
-                {/if}
-            </p>
-            <div>
-                <label
-                    class="text-text mb-1.5 block text-sm font-medium"
-                    for="twoFactorCode"
-                >
-                    {twoFactorMode === "totp"
-                        ? "Verification code"
-                        : "Backup code"}
-                </label>
-                <Input
-                    autocomplete="one-time-code"
-                    class="h-10 font-mono tracking-widest"
-                    disabled={loading}
-                    id="twoFactorCode"
-                    inputmode={twoFactorMode === "totp" ? "numeric" : "text"}
-                    placeholder={twoFactorMode === "totp"
-                        ? "123456"
-                        : "xxxxx-xxxxx"}
-                    required
-                    bind:value={twoFactorCode}
-                />
-            </div>
-            <CheckBox
-                helperText="Skip the code on this browser for the next 30 days."
-                id="trustDevice"
-                label="Trust this device"
-                name="trustDevice"
-                bind:checked={trustDevice}
-            />
-            <Button
-                class="h-10 w-full"
-                disabled={loading || !twoFactorCode.trim()}
-                type="submit"
-            >
-                {#if loading}
-                    <Spinner />
-                    Verifying…
-                {:else}
-                    Verify
-                    <ArrowRight class="size-4 opacity-70" />
-                {/if}
-            </Button>
-            <div class="flex items-center justify-between gap-2">
-                <Button
-                    disabled={loading}
-                    onclick={() => {
-                        twoFactorStep = false;
-                        twoFactorCode = "";
-                    }}
-                    size="sm"
-                    variant="ghost"
-                >
-                    <ArrowLeft class="size-4" />
-                    Back
-                </Button>
-                <Button
-                    disabled={loading}
-                    onclick={() => {
-                        twoFactorMode =
-                            twoFactorMode === "totp" ? "backup" : "totp";
-                        twoFactorCode = "";
-                    }}
-                    size="sm"
-                    variant="ghost"
-                >
-                    {twoFactorMode === "totp"
-                        ? "Use a backup code"
-                        : "Use authenticator app"}
-                </Button>
-            </div>
-        </form>
+        <TwoFactorForm
+            onBack={() => {
+                twoFactorStep = false;
+            }}
+            onVerified={finishSignIn}
+            successMessage={signedInToast("Signed in successfully").success}
+            bind:loading
+        />
     {:else}
         {#if step === "email"}
             <form class="space-y-4" novalidate onsubmit={handleContinue}>
@@ -638,80 +461,14 @@
                 {@render oauthButtons(stepProviders)}
             </div>
         {:else}
-            <form class="space-y-4" novalidate onsubmit={handleSetup}>
-                {@render emailSummary()}
-                <p class="text-text-muted text-sm">
-                    {#if setupEmailed}
-                        Enter the 6-digit code we emailed you, then choose your
-                        password.
-                    {:else}
-                        Your account is new: choose your password.
-                    {/if}
-                </p>
-                {#if setupEmailed}
-                    <div>
-                        <label
-                            class="text-text mb-1.5 block text-sm font-medium"
-                            for="setupCode"
-                        >
-                            Verification code
-                        </label>
-                        <Input
-                            autocomplete="one-time-code"
-                            class="h-10 font-mono tracking-widest"
-                            disabled={loading}
-                            id="setupCode"
-                            inputmode="numeric"
-                            placeholder="123456"
-                            required
-                            bind:value={setupCode}
-                        />
-                    </div>
-                {/if}
-                <PasswordField
-                    autocomplete="new-password"
-                    disabled={loading}
-                    id="newPassword"
-                    label="New password"
-                    bind:value={newPassword}
-                />
-                <PasswordField
-                    autocomplete="new-password"
-                    disabled={loading}
-                    id="confirmPassword"
-                    label="Confirm password"
-                    bind:value={confirmPassword}
-                />
-                <p class="text-text-subtle text-xs">At least 12 characters.</p>
-                <Button
-                    class="h-10 w-full"
-                    disabled={loading ||
-                        !newPassword ||
-                        !confirmPassword ||
-                        (setupEmailed && !setupCode.trim())}
-                    type="submit"
-                >
-                    {#if loading}
-                        <Spinner />
-                        Setting up…
-                    {:else}
-                        Set password and sign in
-                        <ArrowRight class="size-4 opacity-70" />
-                    {/if}
-                </Button>
-                {#if setupEmailed}
-                    <div class="text-center">
-                        <button
-                            class="text-text-muted hover:text-text text-xs underline-offset-4 hover:underline"
-                            disabled={loading}
-                            onclick={handleResend}
-                            type="button"
-                        >
-                            Send a new code
-                        </button>
-                    </div>
-                {/if}
-            </form>
+            <SetupForm
+                {email}
+                emailed={setupEmailed}
+                onSignedIn={finishSignIn}
+                successMessage={signedInToast("Your account is ready").success}
+                summary={emailSummary}
+                bind:loading
+            />
         {/if}
     {/if}
 

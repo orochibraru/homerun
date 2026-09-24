@@ -209,9 +209,10 @@ skips is hidden in a file, see [Configuration](configuration.md).
    something from the built-in catalog, which is the fastest way to see it work
    end to end. **Quick Deploy** on a template card creates and deploys it with
    no further input.
-2. The wizard walks four steps: basic info, networking (container port and
-   whether it gets a public subdomain), environment variables, and compute
-   limits.
+2. The wizard walks five steps: basic info, networking (container port and
+   whether it gets a public subdomain), environment variables, volumes (a new
+   named volume, an existing one, or one already on this machine, mounted at a
+   path), and compute limits.
 3. **Create and Deploy** drops you on the service's Overview tab with live
    progress, pull, create, start, streaming as it happens.
 4. Once it's running, it's reachable at `<slug>.<your base domain>` over TLS,

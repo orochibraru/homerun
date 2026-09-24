@@ -64,8 +64,8 @@ applied to the container itself.
 
 ## Deploying something new
 
-Four steps — basic info, networking, environment, compute — from an image or
-straight from a git repo's Dockerfile.
+Five steps — basic info, networking, environment, volumes, compute — from an
+image or straight from a git repo's Dockerfile.
 
 ![The deploy wizard](images/deploy.png)
 ![The deploy wizard, dark](images/deploy-dark.png)

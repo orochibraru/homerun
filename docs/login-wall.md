@@ -2,7 +2,9 @@
 
 A deployed service can require a login before anyone reaches it. Turn on
 **Require login to access this app** on the service's **Security** tab, under
-Login wall.
+Login wall, or in the deploy wizard's Networking step. Turning it on in the
+wizard enables the built-in Homerun login as the sign-in method; add OAuth
+providers or an allow-list on the Security tab afterwards.
 
 **How it works.** Traefik's forwardAuth middleware asks Homerun about every
 request to that hostname. A visitor without a valid session for that app is

@@ -1,13 +1,5 @@
 <script lang="ts">
-	import {
-		ArrowLeft,
-		Check,
-		CheckCircle2,
-		ChevronDown,
-		Play,
-		Trash2,
-		XCircle,
-	} from "@lucide/svelte";
+	import { ArrowLeft, Check, ChevronDown, Play, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -15,6 +7,8 @@
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
 	import CronJobFields from "$lib/components/cron-job-fields.svelte";
+	import PanelHeader from "$lib/components/panel-header.svelte";
+	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { timeAgo } from "$lib/formatting";
@@ -138,9 +132,7 @@
 
   {#if runs.length > 0}
     <section class="panel rounded-md">
-      <div class="border-border border-b px-5 py-4">
-        <h2 class="eyebrow">Run history</h2>
-      </div>
+      <PanelHeader title="Run history" />
       <div class="divide-border divide-y">
         {#each runs as run (run.id)}
           <div>
@@ -151,13 +143,11 @@
               }}
               type="button"
             >
-              {#if run.success === null}
-                <Spinner class="size-3.5 shrink-0" />
-              {:else if run.success}
-                <CheckCircle2 class="size-3.5 shrink-0 text-emerald-500" />
-              {:else}
-                <XCircle class="size-3.5 shrink-0 text-red-500" />
-              {/if}
+              <RunStatusBadge iconOnly success={run.success}>
+                {#snippet running()}
+                  <Spinner class="size-3.5 shrink-0" />
+                {/snippet}
+              </RunStatusBadge>
               <span class="text-text-muted min-w-0 flex-1 truncate text-xs">
                 {new Date(run.startedAt).toLocaleString()}
                 {#if run.exitCode !== null}

@@ -1,50 +1,25 @@
 <script lang="ts">
 	import {
-		ArrowLeft,
-		ArrowRight,
 		Check,
-		ChevronDown,
 		Cpu,
-		GitBranch,
-		Lock,
+		HardDrive,
 		Network,
-		Plus,
-		Rocket,
 		Server,
 		SlidersHorizontal,
-		Trash2,
-		X,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
-	import { resolve } from "$app/paths";
-	import {
-		DEFAULT_BAKE_FILE,
-		DEFAULT_BAKE_TARGET,
-		isBuildMethod,
-	} from "$lib/build-methods";
 	import Alert from "$lib/components/alert.svelte";
-	import BuildMethodField from "$lib/components/build-method-field.svelte";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import EnvPasteButton from "$lib/components/env-paste-button.svelte";
-	import GitSourceFields from "$lib/components/git-source-fields.svelte";
-	import ImageCheckWarning from "$lib/components/image-check-warning.svelte";
-	import ServiceLinkPicker from "$lib/components/service-link-picker.svelte";
 	import TemplateIcon from "$lib/components/template-icon.svelte";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import {
-		SelectContent,
-		SelectItem,
-		Select as SelectRoot,
-		SelectTrigger,
-	} from "$lib/components/ui/select/index.js";
-	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { mergeEnvRows, type ParsedEnvVar } from "$lib/env-parse";
-	import { isDatabaseImage } from "$lib/service-link";
 	import { runtimeOptionsSummary } from "$lib/service-runtime";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import BasicInfoStep, { slugify } from "./basic-info-step.svelte";
+	import ComputeStep from "./compute-step.svelte";
+	import EnvironmentStep from "./environment-step.svelte";
+	import NetworkingStep from "./networking-step.svelte";
+	import VolumesStep from "./volumes-step.svelte";
+	import WizardNav from "./wizard-nav.svelte";
 
 	const { data, form } = $props();
 
@@ -52,8 +27,6 @@
 		title.set("Deploy a Service");
 	});
 
-	const label = "block mb-1.5 text-sm font-medium text-text";
-	const errorClass = "mt-1.5 text-xs text-red-500";
 	const values = $derived(form?.values as Record<string, string> | undefined);
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 	// Flat list of every error message, so a field we forgot to render a
@@ -65,6 +38,7 @@
 		{ icon: Server, label: "Basic info" },
 		{ icon: Network, label: "Networking" },
 		{ icon: SlidersHorizontal, label: "Environment" },
+		{ icon: HardDrive, label: "Volumes" },
 		{ icon: Cpu, label: "Compute" },
 	];
 	// Every field lives in $state (not an uncontrolled `value={}`) so its
@@ -73,151 +47,11 @@
 	// state) never unmount between steps.
 	let currentStep = $state(0);
 
-	let name = $derived(
-		(form?.values?.name as string | undefined) ?? data.template?.name ?? "",
-	);
 	let slug = $derived(
-		(form?.values?.slug as string | undefined) ??
-			(data.template ? slugify(data.template.name) : ""),
-	);
-	let slugTouched = $state(false);
-	let submittingAction = $state<"create" | "createAndDeploy" | null>(null);
-	let showRegistry = $derived(!!values?.registryUsername);
-
-	let buildSource = $derived<"image" | "git">(
-		(values?.buildSource as "image" | "git" | undefined) ?? "image",
+		values?.slug ?? (data.template ? slugify(data.template.name) : ""),
 	);
 	let image = $derived(values?.image ?? data.template?.image ?? "");
-	let tag = $derived(values?.tag ?? data.template?.tag ?? "latest");
-	let registryUrl = $derived(values?.registryUrl ?? "");
-	let registryUsername = $derived(values?.registryUsername ?? "");
-	let gitUrl = $derived(values?.gitUrl ?? "");
-	let gitRef = $derived(values?.gitRef ?? "main");
-	let gitProviderId = $derived(values?.gitProviderId ?? "");
-	let gitRepo = $derived(values?.gitRepo ?? "");
-	let autoDeployOnPush = $derived(values?.autoDeployOnPush === "on");
-	let gitBuildMethod = $derived(
-		isBuildMethod(values?.gitBuildMethod)
-			? values.gitBuildMethod
-			: "dockerfile",
-	);
-	let gitDockerfilePath = $derived(values?.gitDockerfilePath ?? "");
-	let gitBakeFile = $derived(values?.gitBakeFile ?? "");
-	let gitBakeTarget = $derived(values?.gitBakeTarget ?? "");
-	let gitBuildContext = $derived(values?.gitBuildContext ?? "");
-	let buildCacheRegistryId = $derived(values?.buildCacheRegistryId ?? "");
-	const buildCacheRegistryLabel = $derived(
-		data.buildCacheRegistries.find((r) => r.id === buildCacheRegistryId)
-			?.name ?? "No cache",
-	);
-
-	let containerPort = $derived(
-		values?.containerPort ?? String(data.template?.containerPort ?? ""),
-	);
-	let authRequired = $derived(values?.authRequired === "on");
-	let networkMode = $derived<"bridge" | "host">(
-		values?.networkMode === "host" ? "host" : "bridge",
-	);
-	let portProtocol = $derived<"tcp" | "udp" | "both">(
-		values?.portProtocol === "udp"
-			? "udp"
-			: values?.portProtocol === "both"
-				? "both"
-				: "tcp",
-	);
-	// Datastores default to private : they're reached by their siblings over
-	// the stack network, and a public hostname for a Postgres is a mistake
-	// waiting to happen. A resubmit keeps whatever the user actually chose.
-	let dnsResolvable = $derived(
-		values?.dnsResolvable === undefined
-			? !isDatabaseImage(image)
-			: values.dnsResolvable !== "off" && values.dnsResolvable !== "false",
-	);
-	let restartPolicy = $derived(
-		values?.restartPolicy ?? data.template?.restartPolicy ?? "unless-stopped",
-	);
-	let cpuLimit = $derived(values?.cpuLimit ?? data.template?.cpuLimit ?? "");
-	let memoryLimitMb = $derived(
-		values?.memoryLimitMb ?? String(data.template?.memoryLimitMb ?? ""),
-	);
-
-	const restartPolicyOptions: [string, string][] = [
-		["unless-stopped", "Unless stopped"],
-		["always", "Always"],
-		["on-failure", "On failure"],
-		["no", "Never"],
-	];
-	const restartPolicyLabel = $derived(
-		restartPolicyOptions.find(([val]) => val === restartPolicy)?.[1] ??
-			"Unless stopped",
-	);
-
-	function slugify(value: string): string {
-		return value
-			.toLowerCase()
-			.trim()
-			.replace(/[^a-z0-9-]+/g, "-")
-			.replace(/-+/g, "-")
-			.replace(/^-|-$/g, "")
-			.slice(0, 63);
-	}
-
-	function onNameInput() {
-		if (!slugTouched) {
-			slug = slugify(name);
-		}
-	}
-
-	function onSlugInput() {
-		slugTouched = true;
-	}
-
-	interface EnvRow {
-		key: string;
-		value: string;
-	}
-	function envRowsFromTemplate(): EnvRow[] {
-		const entries = data.template
-			? Object.entries(data.template.envVars ?? {}).map(([key, value]) => ({
-					key,
-					value,
-				}))
-			: [];
-		return entries.length > 0 ? entries : [{ key: "", value: "" }];
-	}
-
-	// $state, not $derived: pushed/spliced into directly below
-	// (addEnvRow/removeEnvRow), a $derived value is read-only, so mutating
-	// it doesn't reliably stick (see the same fix in settings/+page.svelte
-	// for the OAuth-providers form this pattern was originally copied from).
-	// Seeded once at init; re-synced if `data.template` changes (picking a
-	// different template mid-form via the template-context query param).
-	let envRows = $state<EnvRow[]>(envRowsFromTemplate());
-	$effect(() => {
-		envRows = envRowsFromTemplate();
-	});
-
-	function addEnvRow() {
-		envRows.push({ key: "", value: "" });
-	}
-
-	function removeEnvRow(i: number) {
-		envRows.splice(i, 1);
-		if (envRows.length === 0) {
-			envRows.push({ key: "", value: "" });
-		}
-	}
-
-	function importEnvRows(imported: ParsedEnvVar[]) {
-		envRows = mergeEnvRows(envRows, imported, (row) => row);
-	}
-
-	function goNext() {
-		currentStep = Math.min(currentStep + 1, STEPS.length - 1);
-	}
-	function goBack() {
-		currentStep = Math.max(currentStep - 1, 0);
-	}
+	let submittingAction = $state<"create" | "createAndDeploy" | null>(null);
 
 	function stepButtonClass(i: number): string {
 		if (i === currentStep) {
@@ -240,7 +74,7 @@
 
   <!-- ═══ Step indicator ═══ -->
   <div class="flex items-center gap-1">
-    {#each STEPS as step, i}
+    {#each STEPS as step, i (step.label)}
       {@const StepIcon = step.icon}
       <button
         class="
@@ -353,585 +187,42 @@
 
     <div class="flex min-h-136 flex-col gap-6">
       <div class="flex-1 space-y-6">
-        <!-- ═══ Step 1: Basic info ═══ -->
-        <section
-          class="rounded-md panel"
-          class:hidden={currentStep !== 0}
-        >
-          <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-            <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-              <Server class="size-4" />
-            </div>
-            <div>
-              <h2 class="eyebrow">Basic info</h2>
-              <p class="text-xs text-text-muted">Name it and point at an image.</p>
-            </div>
-          </div>
-
-          <div class="space-y-5 p-5">
-            <div>
-              <label class={label} for="name">
-                Name <span class="text-red-500">*</span>
-              </label>
-              <Input
-                id="name"
-                name="name"
-                oninput={onNameInput}
-                placeholder="My API"
-                required
-                type="text"
-                bind:value={name}
-              />
-              {#if errors?.name}
-                <p class={errorClass}>{errors.name[0]}</p>
-              {/if}
-            </div>
-
-            <div>
-              <label class={label} for="slug">
-                Slug <span class="text-red-500">*</span>
-              </label>
-              <Input
-                id="slug"
-                maxlength={63}
-                name="slug"
-                oninput={onSlugInput}
-                pattern="[a-z0-9\-]+"
-                placeholder="my-api"
-                required
-                type="text"
-                bind:value={slug}
-              />
-              <p class="mt-1 text-xs text-text-subtle">
-                Routed at
-                <span class="text-accent">{slug || "your-slug"}.{
-                    data.baseDomain
-                  }</span>
-              </p>
-              {#if errors?.slug}
-                <p class={errorClass}>{errors.slug[0]}</p>
-              {/if}
-            </div>
-
-            <div>
-              <div class={label}>Deploy from</div>
-              <div class="flex gap-2">
-                <button
-                  class="
-                    flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
-                    'image'
-                    ? 'border-accent bg-accent-light text-accent'
-                    : 'border-border text-text-muted hover:bg-surface-2'}
-                 "
-                  onclick={() => {
-                    buildSource = "image";
-                  }}
-                  type="button"
-                >
-                  <Server class="size-4" />
-                  Docker image
-                </button>
-                <button
-                  class="
-                    flex flex-1 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-all {buildSource ===
-                    'git'
-                    ? 'border-accent bg-accent-light text-accent'
-                    : 'border-border text-text-muted hover:bg-surface-2'}
-                 "
-                  onclick={() => {
-                    buildSource = "git";
-                  }}
-                  type="button"
-                >
-                  <GitBranch class="size-4" />
-                  Git repository
-                </button>
-              </div>
-              <input name="buildSource" type="hidden" value={buildSource}>
-            </div>
-
-            {#if buildSource === "image"}
-              <div class="grid grid-cols-3 gap-3">
-                <div class="col-span-2">
-                  <label class={label} for="image">
-                    Image <span class="text-red-500">*</span>
-                  </label>
-                  <Input
-                    id="image"
-                    name="image"
-                    placeholder="ghcr.io/acme/api"
-                    required
-                    type="text"
-                    bind:value={image}
-                  />
-                  {#if errors?.image}
-                    <p class={errorClass}>{errors.image[0]}</p>
-                  {/if}
-                </div>
-                <div>
-                  <label class={label} for="tag">Tag</label>
-                  <Input
-                    id="tag"
-                    name="tag"
-                    placeholder="latest"
-                    type="text"
-                    bind:value={tag}
-                  />
-                </div>
-              </div>
-
-              <ImageCheckWarning {image} {registryUrl} {registryUsername} {tag} />
-            {:else}
-              <GitSourceFields
-                {errorClass}
-                {errors}
-                labelClass={label}
-                providers={data.connectedGitProviders}
-                bind:autoDeployOnPush
-                bind:gitProviderId
-                bind:gitRef
-                bind:gitRepo
-                bind:gitUrl
-              />
-              <BuildMethodField labelClass={label} bind:value={gitBuildMethod} />
-              {#if gitBuildMethod === "dockerfile"}
-                <div>
-                  <label class={label} for="gitDockerfilePath">Dockerfile path</label>
-                  <Input
-                    id="gitDockerfilePath"
-                    name="gitDockerfilePath"
-                    placeholder="Dockerfile"
-                    type="text"
-                    bind:value={gitDockerfilePath}
-                  />
-                </div>
-              {/if}
-              {#if gitBuildMethod === "bake"}
-                <div>
-                  <label class={label} for="gitBakeFile">Bake file</label>
-                  <Input
-                    id="gitBakeFile"
-                    name="gitBakeFile"
-                    placeholder={DEFAULT_BAKE_FILE}
-                    type="text"
-                    bind:value={gitBakeFile}
-                  />
-                  <p class="text-text-muted mt-1.5 text-xs">
-                    Relative to the build context: docker-bake.hcl, docker-bake.json or a compose file.
-                  </p>
-                </div>
-                <div>
-                  <label class={label} for="gitBakeTarget">Bake target</label>
-                  <Input
-                    id="gitBakeTarget"
-                    name="gitBakeTarget"
-                    placeholder={DEFAULT_BAKE_TARGET}
-                    type="text"
-                    bind:value={gitBakeTarget}
-                  />
-                  {#if errors?.gitBakeTarget}
-                    <p class={errorClass}>{errors.gitBakeTarget[0]}</p>
-                  {/if}
-                </div>
-              {/if}
-              <div>
-                <label class={label} for="gitBuildContext">
-                  Build context (subdirectory)
-                </label>
-                <Input
-                  id="gitBuildContext"
-                  name="gitBuildContext"
-                  placeholder="Leave blank for repo root"
-                  type="text"
-                  bind:value={gitBuildContext}
-                />
-              </div>
-              <div>
-                <label class={label} for="buildCacheRegistryId">
-                  Build cache registry
-                </label>
-                {#if data.buildCacheRegistries.length === 0}
-                  <p class="text-xs text-text-muted">
-                    No registries configured.
-                    <a class="text-accent underline" href={resolve("/build-cache-registries")}>
-                      Add one
-                    </a>
-                    to speed up rebuilds by reusing unchanged layers.
-                  </p>
-                {:else}
-                  <SelectRoot
-                    name="buildCacheRegistryId"
-                    type="single"
-                    bind:value={buildCacheRegistryId}
-                  >
-                    <SelectTrigger id="buildCacheRegistryId">
-                      {buildCacheRegistryLabel}
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem label="No cache" value="" />
-                      {#each data.buildCacheRegistries as reg (reg.id)}
-                        <SelectItem label={reg.name} value={reg.id} />
-                      {/each}
-                    </SelectContent>
-                  </SelectRoot>
-                {/if}
-              </div>
-            {/if}
-          </div>
-        </section>
-
-        <!-- ═══ Step 1: Private registry (collapsible) ═══ -->
-        <section
-          class="rounded-md panel"
-          class:hidden={currentStep !== 0}
-        >
-          <Button
-            class="h-auto w-full items-center justify-start gap-3 px-5 py-4 font-normal"
-            onclick={() => {
-              showRegistry = !showRegistry;
-            }}
-            variant="ghost"
-          >
-            <div class="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400">
-              <Lock class="size-4" />
-            </div>
-            <div class="flex-1 text-left">
-              <h2 class="eyebrow">Private registry</h2>
-              <p class="text-xs text-text-muted">
-                Only needed for non-public images.
-              </p>
-            </div>
-            <ChevronDown
-              class="
-                size-4 text-text-muted transition-transform {showRegistry
-                ? 'rotate-180'
-                : ''}
-             "
-            />
-          </Button>
-
-          {#if showRegistry}
-            <div class="space-y-4 border-t border-border p-5">
-              <div>
-                <label class={label} for="registryUrl"> Registry URL </label>
-                <Input
-                  id="registryUrl"
-                  name="registryUrl"
-                  placeholder="ghcr.io (blank = Docker Hub)"
-                  type="text"
-                  bind:value={registryUrl}
-                />
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class={label} for="registryUsername"> Username </label>
-                  <Input
-                    id="registryUsername"
-                    name="registryUsername"
-                    type="text"
-                    bind:value={registryUsername}
-                  />
-                </div>
-                <div>
-                  <label class={label} for="registryPassword">
-                    Password / token
-                  </label>
-                  <Input
-                    id="registryPassword"
-                    name="registryPassword"
-                    type="password"
-                  />
-                </div>
-              </div>
-            </div>
-          {/if}
-        </section>
-
-        <!-- ═══ Step 2: Networking ═══ -->
-        <section
-          class="rounded-md panel"
-          class:hidden={currentStep !== 1}
-        >
-          <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-            <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-              <Network class="size-4" />
-            </div>
-            <div>
-              <h2 class="eyebrow">Networking</h2>
-              <p class="text-xs text-text-muted">
-                The port it listens on, and how it's routed.
-              </p>
-            </div>
-          </div>
-
-          <div class="space-y-5 p-5">
-            <div>
-              <label class={label} for="containerPort">
-                Container port <span class="text-red-500">*</span>
-              </label>
-              <Input
-                id="containerPort"
-                max="65535"
-                min="1"
-                name="containerPort"
-                placeholder="3000"
-                required={currentStep === 1}
-                type="number"
-                bind:value={containerPort}
-              />
-              <p class="mt-1 text-xs text-text-subtle">
-                The port your app listens on inside the container.
-              </p>
-              {#if errors?.containerPort}
-                <p class={errorClass}>{errors.containerPort[0]}</p>
-              {/if}
-            </div>
-
-            <CheckBox
-              helperText="Get a public {slug || 'slug'}.{data.baseDomain} route. Turn off to keep this service reachable only from other services on the same network."
-              id="dnsResolvable"
-              label="DNS-resolvable"
-              name="dnsResolvable"
-              bind:checked={dnsResolvable}
-            />
-
-            {#if dnsResolvable}
-              <div>
-                <label class={label} for="domain">Domain</label>
-                <Input
-                  id="domain"
-                  name="domain"
-                  placeholder="app.example.com"
-                  type="text"
-                  value={values?.domain ?? ""}
-                />
-                <p class="mt-1 text-xs text-text-subtle">
-                  Optional hostname of your own, used as the service's main
-                  link. Point its DNS at this host; Traefik requests a
-                  certificate for it on deploy. Add more on the Networking tab.
-                </p>
-                {#if errors?.domain}
-                  <p class={errorClass}>{errors.domain[0]}</p>
-                {/if}
-              </div>
-
-              <CheckBox
-                helperText="Visitors have to sign in to this Homerun instance before they reach the service. Fine-grained rules (emails, groups, OAuth providers) are on the Security tab once it exists."
-                id="authRequired"
-                label="Require login to access this app"
-                name="authRequired"
-                bind:checked={authRequired}
-              />
-            {/if}
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label class={label} for="networkMode">Network mode</label>
-                <SelectRoot name="networkMode" type="single" bind:value={networkMode}>
-                  <SelectTrigger class="w-full" id="networkMode">
-                    {networkMode === "host" ? "Host" : "Bridge"}
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem label="Bridge" value="bridge" />
-                    <SelectItem label="Host" value="host" />
-                  </SelectContent>
-                </SelectRoot>
-                <p class="mt-1 text-xs text-text-subtle">
-                  Host shares the machine's network namespace : needed for
-                  mDNS/SSDP apps, and not routable by Traefik.
-                </p>
-              </div>
-              <div>
-                <label class={label} for="portProtocol">Protocol</label>
-                <SelectRoot name="portProtocol" type="single" bind:value={portProtocol}>
-                  <SelectTrigger class="w-full" id="portProtocol">
-                    {portProtocol === "udp"
-                    ? "UDP"
-                    : portProtocol === "both"
-                      ? "Both"
-                      : "TCP"}
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem label="TCP" value="tcp" />
-                    <SelectItem label="UDP" value="udp" />
-                    <SelectItem label="Both" value="both" />
-                  </SelectContent>
-                </SelectRoot>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ═══ Step 3: Environment ═══ -->
-        <section
-          class="rounded-md panel"
-          class:hidden={currentStep !== 2}
-        >
-          <div class="border-b border-border px-5 py-4">
-            <h2 class="eyebrow">Environment variables</h2>
-            <p class="text-xs text-text-muted">
-              Passed to the container at deploy time.
-            </p>
-          </div>
-
-          <div class="space-y-2.5 p-5">
-            {#each envRows as row, i}
-              <div class="flex items-center gap-2">
-                <Input
-                  class=""
-                  name="envKey"
-                  placeholder="KEY"
-                  type="text"
-                  bind:value={row.key}
-                />
-                <Input
-                  class=""
-                  name="envValue"
-                  placeholder="value"
-                  type="text"
-                  bind:value={row.value}
-                />
-                <Button
-                  aria-label="Remove"
-                  class="shrink-0 text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                  onclick={() => removeEnvRow(i)}
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  <Trash2 class="size-4" />
-                </Button>
-              </div>
-            {/each}
-
-            <div class="mt-1 flex flex-wrap items-center gap-4">
-              <Button class="h-auto p-0" onclick={addEnvRow} variant="link">
-                <Plus class="size-3.5" />
-                Add variable
-              </Button>
-              <EnvPasteButton onImport={importEnvRows} />
-              <ServiceLinkPicker
-                onImport={importEnvRows}
-                services={data.linkableServices}
-              />
-            </div>
-          </div>
-        </section>
-
-        <!-- ═══ Step 4: Compute ═══ -->
-        <section
-          class="rounded-md panel"
-          class:hidden={currentStep !== 3}
-        >
-          <div class="flex items-center gap-3 border-b border-border px-5 py-4">
-            <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-              <Cpu class="size-4" />
-            </div>
-            <h2 class="eyebrow">Compute</h2>
-          </div>
-          <div class="space-y-5 p-5">
-            <div>
-              <label class={label} for="restartPolicy"> Restart policy </label>
-              <SelectRoot
-                name="restartPolicy"
-                type="single"
-                bind:value={restartPolicy}
-              >
-                <SelectTrigger class="w-full" id="restartPolicy">
-                  {restartPolicyLabel}
-                </SelectTrigger>
-                <SelectContent>
-                  {#each restartPolicyOptions as [val, lbl] (val)}
-                    <SelectItem label={lbl} value={val} />
-                  {/each}
-                </SelectContent>
-              </SelectRoot>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class={label} for="cpuLimit"> CPU limit </label>
-                <Input
-                  id="cpuLimit"
-                  name="cpuLimit"
-                  placeholder="e.g. 0.5 (cores)"
-                  type="text"
-                  bind:value={cpuLimit}
-                />
-                {#if errors?.cpuLimit}
-                  <p class={errorClass}>{errors.cpuLimit[0]}</p>
-                {/if}
-              </div>
-              <div>
-                <label class={label} for="memoryLimitMb"> Memory limit (MB) </label>
-                <Input
-                  id="memoryLimitMb"
-                  min="1"
-                  name="memoryLimitMb"
-                  placeholder="e.g. 512"
-                  type="number"
-                  bind:value={memoryLimitMb}
-                />
-                {#if errors?.memoryLimitMb}
-                  <p class={errorClass}>{errors.memoryLimitMb[0]}</p>
-                {/if}
-              </div>
-            </div>
-            <p class="text-xs text-text-subtle">Leave blank for unlimited.</p>
-          </div>
-        </section>
+        <BasicInfoStep
+          {data}
+          {errors}
+          hidden={currentStep !== 0}
+          {values}
+          bind:image
+          bind:slug
+        />
+        <NetworkingStep
+          {data}
+          {errors}
+          hidden={currentStep !== 1}
+          {image}
+          {slug}
+          {values}
+        />
+        <EnvironmentStep {data} hidden={currentStep !== 2} />
+        <VolumesStep
+          {errors}
+          hidden={currentStep !== 3}
+          {slug}
+          volumes={data.volumes}
+        />
+        <ComputeStep
+          {errors}
+          hidden={currentStep !== 4}
+          template={data.template}
+          {values}
+        />
       </div>
 
-      <!-- ═══ Step nav ═══ -->
-      <div class="flex justify-between gap-3">
-        <div>
-          {#if currentStep > 0}
-            <Button onclick={goBack} variant="outline">
-              <ArrowLeft class="size-4" />
-              Back
-            </Button>
-          {/if}
-        </div>
-        <div class="flex gap-3">
-          <Button href={resolve("/services")} variant="outline">
-            <X class="size-4" />
-            Cancel
-          </Button>
-          {#if currentStep < STEPS.length - 1}
-            <Button onclick={goNext}>
-              Next
-              <ArrowRight class="size-4" />
-            </Button>
-          {:else}
-            <Button
-              disabled={submittingAction !== null}
-              formaction="?/create"
-              type="submit"
-              variant="outline"
-            >
-              {#if submittingAction === "create"}
-                <Spinner />
-                Creating…
-              {:else}
-                <Plus class="size-4" />
-                Create service
-              {/if}
-            </Button>
-            <Button
-              disabled={submittingAction !== null}
-              formaction="?/createAndDeploy"
-              type="submit"
-            >
-              {#if submittingAction === "createAndDeploy"}
-                <Spinner />
-                Creating…
-              {:else}
-                <Rocket class="size-4" />
-                Create and Deploy
-              {/if}
-            </Button>
-          {/if}
-        </div>
-      </div>
+      <WizardNav
+        stepCount={STEPS.length}
+        {submittingAction}
+        bind:currentStep
+      />
     </div>
   </form>
 </div>

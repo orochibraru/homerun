@@ -1,18 +1,9 @@
 <script lang="ts">
-	import {
-		ArrowLeft,
-		Check,
-		CheckCircle2,
-		CloudUpload,
-		RotateCcw,
-		XCircle,
-	} from "@lucide/svelte";
+	import { ArrowLeft, Check, CloudUpload } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -22,10 +13,11 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { formatBytes, timeAgo } from "$lib/formatting";
-	import { getVolumeBackups } from "$lib/remote/backups.remote";
+	import { timeAgo } from "$lib/formatting";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import RestorePanel from "./restore-panel.svelte";
+	import RunLogTable from "./run-log-table.svelte";
 
 	const { data, form } = $props();
 	const vol = $derived(data.volume);
@@ -36,13 +28,6 @@
 
 	let submitting = $state(false);
 	let backingUp = $state(false);
-	let showBackups = $state(false);
-	let restoringKey = $state<string | null>(null);
-	let restoreDialogOpen = $state(false);
-	let pendingRestoreKey = $state("");
-	let pendingRestoreForm: HTMLFormElement | null = null;
-	let restoreWipe = $state(false);
-	let restoreStopServices = $state(true);
 	let preCommandServiceId = $state(
 		untrack(() => vol.backupPreCommandServiceId ?? ""),
 	);
@@ -50,29 +35,11 @@
 		data.services.find((service) => service.id === preCommandServiceId)?.name ??
 			"First running service using this volume",
 	);
-	const restoreDescription = $derived(
-		[
-			`Queue a restore of "${pendingRestoreKey}" into ${vol.name}?`,
-			restoreWipe
-				? "Everything currently in the volume is deleted first."
-				: "Files in the archive replace what's on disk and anything else is left alone.",
-			restoreStopServices
-				? "Running services using this volume are stopped for the restore and started again after."
-				: "Nothing is stopped : restoring under a running container can leave it with half-old, half-new data.",
-		].join(" "),
-	);
-
-	const backups = $derived(getVolumeBackups(data.volume.id));
 	const destinationName = $derived(
 		data.destinations.find((d) => d.id === vol.s3DestinationId)?.name ??
 			"this destination",
 	);
 
-	function requestRestore(e: MouseEvent, key: string) {
-		pendingRestoreForm = (e.currentTarget as HTMLElement).closest("form");
-		pendingRestoreKey = key;
-		restoreDialogOpen = true;
-	}
 	let s3DestinationId = $state(untrack(() => vol.s3DestinationId ?? ""));
 	const destinationLabel = $derived(
 		data.destinations.find((d) => d.id === s3DestinationId)?.name ??
@@ -287,170 +254,14 @@
   </form>
 
   {#if vol.s3DestinationId}
-    <section class="rounded-md panel">
-      <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-        <h2 class="eyebrow">Restore</h2>
-        <Button
-          onclick={() => {
-            showBackups = true;
-            void backups.refresh();
-          }}
-          size="sm"
-          variant="ghost"
-        >
-          <RotateCcw class="size-3.5" />
-          {showBackups ? "Refresh list" : "List backups"}
-        </Button>
-      </div>
-      <div class="p-5">
-        {#if !showBackups}
-          <p class="text-text-muted text-sm">
-            Unpacks a backup from
-            <span class="font-mono text-xs">{destinationName}</span>
-            back into this volume, in the background. It shows up in the run
-            log below like a backup does.
-          </p>
-        {:else if backups.error}
-          <p class="text-sm text-red-500">
-            Couldn't list this bucket : {backups.error.message}
-          </p>
-        {:else if !backups.current}
-          <Skeleton class="h-16 w-full" />
-        {:else if backups.current.length === 0}
-          <p class="text-text-muted text-sm">
-            No backups for this volume in that bucket yet.
-          </p>
-        {:else}
-          <div class="mb-3 grid gap-3 sm:grid-cols-2">
-            <CheckBox
-              helperText="Delete everything in the volume before unpacking, so files that aren't in the backup don't survive the restore."
-              id="restoreWipe"
-              label="Wipe the volume first"
-              name="restoreWipeToggle"
-              bind:checked={restoreWipe}
-            />
-            <CheckBox
-              helperText="Stop the running services that mount this volume for the restore, and start them again after."
-              id="restoreStopServices"
-              label="Stop services during the restore"
-              name="restoreStopServicesToggle"
-              bind:checked={restoreStopServices}
-            />
-          </div>
-          <ul class="divide-border divide-y">
-            {#each backups.current as backup (backup.key)}
-              <li class="flex items-center gap-3 py-2">
-                <div class="min-w-0 flex-1">
-                  <p class="text-text truncate font-mono text-xs">
-                    {backup.key}
-                  </p>
-                  <p class="text-text-subtle mt-0.5 text-xs">
-                    {backup.lastModified
-                      ? new Date(backup.lastModified).toLocaleString()
-                      : "unknown date"}
-                    · {formatBytes(backup.sizeBytes)}
-                  </p>
-                </div>
-                <form
-                  action="?/restore"
-                  method="POST"
-                  use:enhance={enhanceToast({
-                    error: "Couldn't queue the restore.",
-                    loading: "Queueing the restore",
-                    onSettled: () => {
-                      restoringKey = null;
-                    },
-                    onStart: () => {
-                      restoringKey = backup.key;
-                    },
-                    success: "Restore queued : it shows up in the run log once it starts.",
-                  })}
-                >
-                  <input name="key" type="hidden" value={backup.key}>
-                  <input name="wipe" type="hidden" value={restoreWipe ? "on" : ""}>
-                  <input
-                    name="stopServices"
-                    type="hidden"
-                    value={restoreStopServices ? "on" : ""}
-                  >
-                  <Button
-                    disabled={restoringKey !== null}
-                    onclick={(e) => requestRestore(e, backup.key)}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    {#if restoringKey === backup.key}
-                      <Spinner />
-                      Queueing…
-                    {:else}
-                      Restore
-                    {/if}
-                  </Button>
-                </form>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </div>
-    </section>
+    <RestorePanel
+      {destinationName}
+      volumeId={vol.id}
+      volumeName={vol.name}
+    />
   {/if}
 
   {#if data.runs.length > 0}
-    <section class="rounded-md panel">
-      <div class="border-b border-border px-5 py-4">
-        <h2 class="eyebrow">Run log</h2>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-border text-left text-xs uppercase text-text-muted">
-              <th class="px-5 py-3 font-medium">Started</th>
-              <th class="px-5 py-3 font-medium">Kind</th>
-              <th class="px-5 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each data.runs as run (run.id)}
-              <tr class="border-b border-border/60 last:border-0">
-                <td class="px-5 py-3 text-text-muted">
-                  {new Date(run.startedAt).toLocaleString()}
-                </td>
-                <td class="px-5 py-3 text-text-muted" title={run.key ?? ""}>
-                  {run.kind === "restore" ? "Restore" : "Backup"}
-                </td>
-                <td class="px-5 py-3">
-                  {#if run.success === null}
-                    <span class="text-xs text-text-muted">Running</span>
-                  {:else if run.success}
-                    <span class="flex items-center gap-1 text-xs text-emerald-600">
-                      <CheckCircle2 class="size-3.5" />
-                      Success
-                    </span>
-                  {:else}
-                    <span
-                      class="flex items-center gap-1 text-xs text-red-500"
-                      title={run.error ?? ""}
-                    >
-                      <XCircle class="size-3.5" />
-                      Failed
-                    </span>
-                  {/if}
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <RunLogTable runs={data.runs} />
   {/if}
 </div>
-
-<ConfirmDialog
-  bind:open={restoreDialogOpen}
-  confirmLabel="Restore"
-  description={restoreDescription}
-  destructive={restoreWipe}
-  onConfirm={() => pendingRestoreForm?.requestSubmit()}
-  title="Restore this backup?"
-/>

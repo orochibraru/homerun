@@ -1,13 +1,5 @@
 <script lang="ts">
-	import {
-		CheckCircle2,
-		Clock,
-		Play,
-		Plus,
-		Terminal,
-		Trash2,
-		XCircle,
-	} from "@lucide/svelte";
+	import { Clock, Play, Plus, Terminal, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -18,6 +10,8 @@
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
+	import PanelHeader from "$lib/components/panel-header.svelte";
+	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import ViewModeToggle from "$lib/components/view-mode-toggle.svelte";
 	import { timeAgo } from "$lib/formatting";
@@ -186,19 +180,15 @@
 
     {#if data.runs.length > 0}
       <section class="panel mt-8 rounded-md">
-        <div class="border-border border-b px-5 py-4">
-          <h2 class="eyebrow">Recent runs</h2>
-        </div>
+        <PanelHeader title="Recent runs" />
         <div class="divide-border divide-y">
           {#each data.runs as entry (entry.run.id)}
             <div class="flex items-center gap-3 px-5 py-3 text-sm">
-              {#if entry.run.success === null}
-                <Clock class="text-text-muted size-3.5 shrink-0" />
-              {:else if entry.run.success}
-                <CheckCircle2 class="size-3.5 shrink-0 text-emerald-500" />
-              {:else}
-                <XCircle class="size-3.5 shrink-0 text-red-500" />
-              {/if}
+              <RunStatusBadge iconOnly success={entry.run.success}>
+                {#snippet running()}
+                  <Clock class="text-text-muted size-3.5 shrink-0" />
+                {/snippet}
+              </RunStatusBadge>
               <span class="text-text truncate">{entry.jobName}</span>
               <span class="text-text-muted ml-auto shrink-0 text-xs">
                 {timeAgo(entry.run.startedAt)}

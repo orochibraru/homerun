@@ -11,6 +11,7 @@ import {
 	or,
 	type SQL,
 } from "drizzle-orm";
+import { PASSWORD_METHOD } from "$lib/auth-providers";
 import type { BuildMethod } from "$lib/build-methods";
 import { SERVICE_STATUS_CONFIG, UNGROUPED_LABEL } from "$lib/constants";
 import { db } from "$lib/server/db/lib";
@@ -286,7 +287,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			authAllowedEmails: [],
 			authAllowedGroups: [],
 			authAllowedUserIds: [],
-			authProviders: [],
+			authProviders: input.authRequired ? [PASSWORD_METHOD] : [],
 			authRequired: input.authRequired ?? false,
 			cpuLimit: input.cpuLimit ?? null,
 			dnsResolvable: input.dnsResolvable ?? true,

@@ -97,6 +97,7 @@ test.describe
 			await page.locator("#containerPort").fill("80");
 			await page.getByRole("button", { name: "Next" }).click();
 			await page.getByRole("button", { name: "Next" }).click();
+			await page.getByRole("button", { name: "Next" }).click();
 			await page.getByRole("button", { name: "Create service" }).click();
 			// The wizard lands on the service it just created, not on the list.
 			await expect(page).toHaveURL(/\/services\/[0-9a-f-]{36}$/);

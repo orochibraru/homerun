@@ -14,6 +14,7 @@
 	import AsyncBlock from "$lib/components/async-block.svelte";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import PanelHeader from "$lib/components/panel-header.svelte";
 	import Skeleton from "$lib/components/skeleton.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import {
@@ -21,9 +22,17 @@
 		getMirrorUsage,
 		getOrphanStackNetworks,
 	} from "$lib/remote/docker-infra.remote";
-	import type { CleanupItem } from "$lib/services/docker.service";
 	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	import { type EnhanceToastOptions, enhanceToast } from "$lib/toast";
+	import {
+		type CleanupAction,
+		confirmCopy,
+		describeResult,
+		formatBytes,
+		sumSize,
+	} from "./cleanup";
+	import CleanupItemList from "./cleanup-item-list.svelte";
+	import CleanupPanel from "./cleanup-panel.svelte";
 
 	const { form } = $props();
 
@@ -32,70 +41,6 @@
 	const mirror = getMirrorUsage();
 
 	onMount(() => title.set("Docker Cleanup"));
-
-	type CleanupAction =
-		| "pruneBuildCache"
-		| "pruneContainers"
-		| "pruneImages"
-		| "pruneMirror"
-		| "pruneNetworks"
-		| "pruneSystem"
-		| "pruneVolumes"
-		| "reclaimStackNetworks";
-
-	const confirmCopy: Record<
-		CleanupAction,
-		{ confirmLabel: string; description: string; title: string }
-	> = {
-		pruneBuildCache: {
-			confirmLabel: "Prune",
-			description:
-				"Removes the Docker builder's cache. The next git-based build starts from scratch, or from a configured build-cache registry if one's set.",
-			title: "Prune build cache?",
-		},
-		pruneContainers: {
-			confirmLabel: "Prune",
-			description:
-				"Permanently removes every stopped container on this host, not just ones this app created. Their logs and any un-mounted data inside them are gone.",
-			title: "Prune stopped containers?",
-		},
-		pruneImages: {
-			confirmLabel: "Prune",
-			description:
-				"Removes dangling images by default. Check “Include tagged, unused images” below to remove any image not used by a container, tagged or not.",
-			title: "Prune images?",
-		},
-		pruneMirror: {
-			confirmLabel: "Clean up",
-			description:
-				"Deletes every image in the homerun-mirror registry that no service runs, keeping each service's current image and its last two scanned versions, then reclaims the space. Deploys wait until it's done.",
-			title: "Clean up the image mirror?",
-		},
-		pruneNetworks: {
-			confirmLabel: "Prune",
-			description:
-				"Removes every Docker network on this host not currently used by a container.",
-			title: "Prune unused networks?",
-		},
-		reclaimStackNetworks: {
-			confirmLabel: "Reclaim",
-			description:
-				"Removes the per-stack networks whose stack no longer exists. One with containers still attached is left alone. Nothing else on this host is touched.",
-			title: "Reclaim orphaned stack networks?",
-		},
-		pruneSystem: {
-			confirmLabel: "Clean up",
-			description:
-				"Runs stopped-container, dangling-image, unused-network, and build-cache pruning together, same as docker system prune. Doesn't touch volumes.",
-			title: "Clean up this Docker host?",
-		},
-		pruneVolumes: {
-			confirmLabel: "Prune",
-			description:
-				"Permanently deletes every Docker-managed volume on this host that no container uses. A volume mounted into a Homerun service is always kept, even while that service is stopped or has no container. This can't be undone.",
-			title: "Prune unused volumes?",
-		},
-	};
 
 	let pendingAction = $state<CleanupAction | null>(null);
 	let confirmAction = $state<CleanupAction | null>(null);
@@ -117,67 +62,25 @@
 		confirmForm?.requestSubmit();
 	}
 
-	function formatBytes(bytes: number): string {
-		const units = ["B", "KB", "MB", "GB", "TB"];
-		let value = bytes;
-		let i = 0;
-		while (value >= 1024 && i < units.length - 1) {
-			value /= 1024;
-			i += 1;
-		}
-		return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-	}
-
-	function sumSize(items: CleanupItem[]): number {
-		return items.reduce((sum, item) => sum + (item.sizeBytes ?? 0), 0);
-	}
-
-	function isSystemResult(
-		result: unknown,
-	): result is Record<
-		string,
-		{ itemsDeleted: number; spaceReclaimedBytes: number }
-	> {
-		return !!result && typeof result === "object" && "containers" in result;
-	}
-
-	function describeResult(result: unknown): string {
-		if (isSystemResult(result)) {
-			const parts = Object.values(result);
-			const items = parts.reduce((sum, p) => sum + p.itemsDeleted, 0);
-			const bytes = parts.reduce((sum, p) => sum + p.spaceReclaimedBytes, 0);
-			return `Cleaned up ${items} item(s), reclaimed ${formatBytes(bytes)}.`;
-		}
-		const r = result as { itemsDeleted: number; spaceReclaimedBytes: number };
-		return `Removed ${r.itemsDeleted} item(s), reclaimed ${formatBytes(r.spaceReclaimedBytes)}.`;
+	function pruneToast(
+		action: CleanupAction,
+		extra: Partial<EnhanceToastOptions> = {},
+	) {
+		return enhanceToast({
+			error: "Docker cleanup action failed.",
+			loading: "Running cleanup",
+			onSettled: () => {
+				pendingAction = null;
+			},
+			onStart: () => {
+				pendingAction = action;
+			},
+			success: (data) =>
+				describeResult((data as { result?: unknown } | undefined)?.result),
+			...extra,
+		});
 	}
 </script>
-
-{#snippet itemList(items: CleanupItem[], dimUnlessTagged = false)}
-  {#if items.length === 0}
-    <p class="text-text-subtle px-1 py-2 text-xs">Nothing to clean up.</p>
-  {:else}
-    <ul class="max-h-48 space-y-1 overflow-y-auto">
-      {#each items as item (item.id)}
-        <li
-          class="bg-surface-2 flex items-center justify-between gap-3 rounded-lg px-3 py-1.5 text-xs {dimUnlessTagged && item.dangling === false && !includeTagged ? 'opacity-40' : ''}"
-        >
-          <div class="min-w-0">
-            <p class="text-text truncate">{item.label}</p>
-            {#if item.detail}
-              <p class="text-text-subtle truncate">{item.detail}</p>
-            {/if}
-          </div>
-          {#if item.sizeBytes != null}
-            <span class="text-text-muted shrink-0">
-              {formatBytes(item.sizeBytes)}
-            </span>
-          {/if}
-        </li>
-      {/each}
-    </ul>
-  {/if}
-{/snippet}
 
 <div class="p-5 md:p-6">
   <div class="mb-6">
@@ -200,250 +103,126 @@
       {/each}
     {/snippet}
     {#snippet children(preview)}
+    {@const tiles = [
+      { label: "Images", sub: `${formatBytes(sumSize(preview.images.items))} reclaimable`, value: preview.images.totalCount },
+      { label: "Containers", sub: `${preview.containers.items.length} stopped`, value: preview.containers.totalCount },
+      { label: "Networks", sub: `${preview.networks.items.length} unused`, value: preview.networks.totalCount },
+      { label: "Volumes", sub: `${preview.volumes.items.length} unused`, value: preview.volumes.totalCount },
+      { label: "Build cache", sub: `${preview.buildCache.items.length} unused record(s)`, value: formatBytes(preview.buildCache.totalSizeBytes ?? 0) },
+    ]}
     <div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
-      <div class="panel rounded-md p-4">
-        <p class="eyebrow">Images</p>
-        <p class="tabular-nums text-text mt-1 text-xl font-semibold">
-          {preview.images.totalCount}
-        </p>
-        <p class="text-text-subtle mt-0.5 text-xs">
-          {formatBytes(sumSize(preview.images.items))} reclaimable
-        </p>
-      </div>
-      <div class="panel rounded-md p-4">
-        <p class="eyebrow">Containers</p>
-        <p class="tabular-nums text-text mt-1 text-xl font-semibold">
-          {preview.containers.totalCount}
-        </p>
-        <p class="text-text-subtle mt-0.5 text-xs">
-          {preview.containers.items.length} stopped
-        </p>
-      </div>
-      <div class="panel rounded-md p-4">
-        <p class="eyebrow">Networks</p>
-        <p class="tabular-nums text-text mt-1 text-xl font-semibold">
-          {preview.networks.totalCount}
-        </p>
-        <p class="text-text-subtle mt-0.5 text-xs">
-          {preview.networks.items.length} unused
-        </p>
-      </div>
-      <div class="panel rounded-md p-4">
-        <p class="eyebrow">Volumes</p>
-        <p class="tabular-nums text-text mt-1 text-xl font-semibold">
-          {preview.volumes.totalCount}
-        </p>
-        <p class="text-text-subtle mt-0.5 text-xs">
-          {preview.volumes.items.length} unused
-        </p>
-      </div>
-      <div class="panel rounded-md p-4">
-        <p class="eyebrow">Build cache</p>
-        <p class="tabular-nums text-text mt-1 text-xl font-semibold">
-          {formatBytes(preview.buildCache.totalSizeBytes ?? 0)}
-        </p>
-        <p class="text-text-subtle mt-0.5 text-xs">
-          {preview.buildCache.items.length} unused record(s)
-        </p>
-      </div>
+      {#each tiles as tile (tile.label)}
+        <div class="panel rounded-md p-4">
+          <p class="eyebrow">{tile.label}</p>
+          <p class="tabular-nums text-text mt-1 text-xl font-semibold">
+            {tile.value}
+          </p>
+          <p class="text-text-subtle mt-0.5 text-xs">{tile.sub}</p>
+        </div>
+      {/each}
     </div>
 
     <section class="panel mb-6 rounded-md">
-      <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
-        <div class="flex items-center gap-2">
-          <Eraser class="text-text-muted size-4" />
-          <div>
-            <h2 class="eyebrow">Quick cleanup</h2>
-            <p class="text-text-muted text-xs">
-              Stopped containers, dangling images, unused networks, and build
-              cache. Same set as `docker system prune`.
-            </p>
-          </div>
-        </div>
-        <form action="?/pruneSystem" method="POST"
-        use:enhance={enhanceToast({
-          error: "Docker cleanup action failed.",
-          loading: "Running cleanup",
-          onSettled: () => {
-            pendingAction = null;
-          },
-          onStart: () => {
-            pendingAction = "pruneSystem";
-          },
-          success: (data) =>
-            describeResult((data as { result?: unknown } | undefined)?.result),
-        })}
-        >
-          <Button
-            disabled={pendingAction !== null}
-            onclick={(e) => requestConfirm("pruneSystem", e)}
-            type="button"
-          >
-            {#if pendingAction === "pruneSystem"}
-              <Loader2 class="size-3.5 animate-spin" />
-            {:else}
-              <Eraser class="size-3.5" />
-            {/if}
-            Clean up now
-          </Button>
-        </form>
-      </div>
+      <PanelHeader
+        description="Stopped containers, dangling images, unused networks, and build cache. Same set as `docker system prune`."
+        icon={Eraser}
+        title="Quick cleanup"
+      >
+        {#snippet trailing()}
+          <form action="?/pruneSystem" method="POST" use:enhance={pruneToast("pruneSystem")}>
+            <Button
+              disabled={pendingAction !== null}
+              onclick={(e) => requestConfirm("pruneSystem", e)}
+              type="button"
+            >
+              {#if pendingAction === "pruneSystem"}
+                <Loader2 class="size-3.5 animate-spin" />
+              {:else}
+                <Eraser class="size-3.5" />
+              {/if}
+              Clean up now
+            </Button>
+          </form>
+        {/snippet}
+      </PanelHeader>
     </section>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <section class="panel rounded-md">
-        <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
-          <div class="flex items-center gap-2">
-            <Boxes class="text-text-muted size-4" />
-            <h2 class="eyebrow">Containers</h2>
-          </div>
-          <form action="?/pruneContainers" method="POST"
-        use:enhance={enhanceToast({
-          error: "Docker cleanup action failed.",
-          loading: "Running cleanup",
-          onSettled: () => {
-            pendingAction = null;
-          },
-          onStart: () => {
-            pendingAction = "pruneContainers";
-          },
-          success: (data) =>
-            describeResult((data as { result?: unknown } | undefined)?.result),
-        })}
-        >
-            <Button
-              disabled={pendingAction !== null}
-              onclick={(e) => requestConfirm("pruneContainers", e)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {#if pendingAction === "pruneContainers"}
-                <Loader2 class="size-3.5 animate-spin" />
-              {/if}
-              Prune stopped
-            </Button>
-          </form>
-        </div>
-        <div class="p-5">
-          {@render itemList(preview.containers.items)}
-        </div>
-      </section>
+      <CleanupPanel
+        action="pruneContainers"
+        buttonLabel="Prune stopped"
+        icon={Boxes}
+        items={preview.containers.items}
+        onConfirm={(e) => requestConfirm("pruneContainers", e)}
+        {pendingAction}
+        submit={pruneToast("pruneContainers")}
+        title="Containers"
+      />
+
+      <CleanupPanel
+        action="pruneImages"
+        buttonLabel="Prune images"
+        dimTagged={!includeTagged}
+        icon={Layers}
+        items={preview.images.items}
+        onConfirm={(e) => requestConfirm("pruneImages", e)}
+        {pendingAction}
+        submit={pruneToast("pruneImages")}
+        title="Images"
+      >
+        {#snippet extraFields()}
+          <CheckBox
+            bind:checked={includeTagged}
+            helperText="Also remove unused images that still have a tag, not just dangling ones."
+            id="includeTagged"
+            label="Include tagged, unused images"
+            name="all"
+          />
+        {/snippet}
+      </CleanupPanel>
 
       <section class="panel rounded-md">
-        <form action="?/pruneImages" method="POST"
-        use:enhance={enhanceToast({
-          error: "Docker cleanup action failed.",
-          loading: "Running cleanup",
-          onSettled: () => {
-            pendingAction = null;
-          },
-          onStart: () => {
-            pendingAction = "pruneImages";
-          },
-          success: (data) =>
-            describeResult((data as { result?: unknown } | undefined)?.result),
-        })}
-        >
-          <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
+        <PanelHeader icon={NetworkIcon} title="Networks">
+          {#snippet trailing()}
             <div class="flex items-center gap-2">
-              <Layers class="text-text-muted size-4" />
-              <h2 class="eyebrow">Images</h2>
+              <form
+                action="?/reclaimStackNetworks"
+                method="POST"
+                use:enhance={pruneToast("reclaimStackNetworks", {
+                  loading: "Reclaiming orphaned stack networks",
+                  onComplete: () => orphans.refresh(),
+                })}
+              >
+                <Button
+                  disabled={pendingAction !== null}
+                  onclick={(e) => requestConfirm("reclaimStackNetworks", e)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {#if pendingAction === "reclaimStackNetworks"}
+                    <Loader2 class="size-3.5 animate-spin" />
+                  {/if}
+                  Reclaim orphaned
+                </Button>
+              </form>
+              <form action="?/pruneNetworks" method="POST" use:enhance={pruneToast("pruneNetworks")}>
+                <Button
+                  disabled={pendingAction !== null}
+                  onclick={(e) => requestConfirm("pruneNetworks", e)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {#if pendingAction === "pruneNetworks"}
+                    <Loader2 class="size-3.5 animate-spin" />
+                  {/if}
+                  Prune unused
+                </Button>
+              </form>
             </div>
-            <Button
-              disabled={pendingAction !== null}
-              onclick={(e) => requestConfirm("pruneImages", e)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {#if pendingAction === "pruneImages"}
-                <Loader2 class="size-3.5 animate-spin" />
-              {/if}
-              Prune images
-            </Button>
-          </div>
-          <div class="space-y-3 p-5">
-            <CheckBox
-              bind:checked={includeTagged}
-              helperText="Also remove unused images that still have a tag, not just dangling ones."
-              id="includeTagged"
-              label="Include tagged, unused images"
-              name="all"
-            />
-            {@render itemList(preview.images.items, true)}
-          </div>
-        </form>
-      </section>
-
-      <section class="panel rounded-md">
-        <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
-          <div class="flex items-center gap-2">
-            <NetworkIcon class="text-text-muted size-4" />
-            <h2 class="eyebrow">Networks</h2>
-          </div>
-          <div class="flex items-center gap-2">
-            <form
-              action="?/reclaimStackNetworks"
-              method="POST"
-              use:enhance={enhanceToast({
-                error: "Docker cleanup action failed.",
-                loading: "Reclaiming orphaned stack networks",
-                onComplete: () => orphans.refresh(),
-                onSettled: () => {
-                  pendingAction = null;
-                },
-                onStart: () => {
-                  pendingAction = "reclaimStackNetworks";
-                },
-                success: (data) =>
-                  describeResult(
-                    (data as { result?: unknown } | undefined)?.result,
-                  ),
-              })}
-            >
-              <Button
-                disabled={pendingAction !== null}
-                onclick={(e) => requestConfirm("reclaimStackNetworks", e)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {#if pendingAction === "reclaimStackNetworks"}
-                  <Loader2 class="size-3.5 animate-spin" />
-                {/if}
-                Reclaim orphaned
-              </Button>
-            </form>
-            <form action="?/pruneNetworks" method="POST"
-          use:enhance={enhanceToast({
-            error: "Docker cleanup action failed.",
-            loading: "Running cleanup",
-            onSettled: () => {
-              pendingAction = null;
-            },
-            onStart: () => {
-              pendingAction = "pruneNetworks";
-            },
-            success: (data) =>
-              describeResult((data as { result?: unknown } | undefined)?.result),
-          })}
-          >
-              <Button
-                disabled={pendingAction !== null}
-                onclick={(e) => requestConfirm("pruneNetworks", e)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {#if pendingAction === "pruneNetworks"}
-                  <Loader2 class="size-3.5 animate-spin" />
-                {/if}
-                Prune unused
-              </Button>
-            </form>
-          </div>
-        </div>
+          {/snippet}
+        </PanelHeader>
         <div class="space-y-3 p-5">
           {#if orphans.current && orphans.current.length > 0}
             <div class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
@@ -465,92 +244,54 @@
               </ul>
             </div>
           {/if}
-          {@render itemList(preview.networks.items)}
+          <CleanupItemList items={preview.networks.items} />
         </div>
       </section>
 
-      <section class="panel rounded-md">
-        <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
-          <div class="flex items-center gap-2">
-            <HardDrive class="text-text-muted size-4" />
-            <h2 class="eyebrow">Build cache</h2>
-          </div>
-          <form action="?/pruneBuildCache" method="POST"
-        use:enhance={enhanceToast({
-          error: "Docker cleanup action failed.",
-          loading: "Running cleanup",
-          onSettled: () => {
-            pendingAction = null;
-          },
-          onStart: () => {
-            pendingAction = "pruneBuildCache";
-          },
-          success: (data) =>
-            describeResult((data as { result?: unknown } | undefined)?.result),
-        })}
-        >
-            <Button
-              disabled={pendingAction !== null}
-              onclick={(e) => requestConfirm("pruneBuildCache", e)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {#if pendingAction === "pruneBuildCache"}
-                <Loader2 class="size-3.5 animate-spin" />
-              {/if}
-              Prune cache
-            </Button>
-          </form>
-        </div>
-        <div class="p-5">
-          {@render itemList(preview.buildCache.items)}
-        </div>
-      </section>
+      <CleanupPanel
+        action="pruneBuildCache"
+        buttonLabel="Prune cache"
+        icon={HardDrive}
+        items={preview.buildCache.items}
+        onConfirm={(e) => requestConfirm("pruneBuildCache", e)}
+        {pendingAction}
+        submit={pruneToast("pruneBuildCache")}
+        title="Build cache"
+      />
     </div>
 
   <section class="panel mt-6 rounded-md">
-    <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-4">
-      <div class="flex items-center gap-2">
-        <ShieldCheck class="text-text-muted size-4" />
-        <div>
-          <h2 class="eyebrow">Image mirror</h2>
-          <p class="text-text-muted text-xs">
-            The <code>homerun-mirror</code> registry images are scanned in.
-            Cleaned up daily at 04:00 : anything no service runs goes, each
-            service's current image and last two scanned versions stay.
-          </p>
-        </div>
-      </div>
-      <form action="?/pruneMirror" method="POST"
-      use:enhance={enhanceToast({
-        error: "Mirror cleanup failed.",
-        loading: "Cleaning up the image mirror",
-        onComplete: () => mirror.refresh(),
-        onSettled: () => {
-          pendingAction = null;
-        },
-        onStart: () => {
-          pendingAction = "pruneMirror";
-        },
-        success: (data) =>
-          describeResult((data as { result?: unknown } | undefined)?.result),
-      })}
-      >
-        <Button
-          disabled={pendingAction !== null || !mirror.current?.running}
-          onclick={(e) => requestConfirm("pruneMirror", e)}
-          size="sm"
-          type="button"
-          variant="outline"
+    <PanelHeader icon={ShieldCheck} title="Image mirror">
+      {#snippet description()}
+        The <code>homerun-mirror</code> registry images are scanned in.
+        Cleaned up daily at 04:00 : anything no service runs goes, each
+        service's current image and last two scanned versions stay.
+      {/snippet}
+      {#snippet trailing()}
+        <form
+          action="?/pruneMirror"
+          method="POST"
+          use:enhance={pruneToast("pruneMirror", {
+            error: "Mirror cleanup failed.",
+            loading: "Cleaning up the image mirror",
+            onComplete: () => mirror.refresh(),
+          })}
         >
-          {#if pendingAction === "pruneMirror"}
-            <Loader2 class="size-3.5 animate-spin" />
-          {/if}
-          Clean up mirror
-        </Button>
-      </form>
-    </div>
+          <Button
+            disabled={pendingAction !== null || !mirror.current?.running}
+            onclick={(e) => requestConfirm("pruneMirror", e)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {#if pendingAction === "pruneMirror"}
+              <Loader2 class="size-3.5 animate-spin" />
+            {/if}
+            Clean up mirror
+          </Button>
+        </form>
+      {/snippet}
+    </PanelHeader>
     <div class="p-5">
       {#if mirror.error}
         <p class="text-text-subtle text-xs">Couldn't read the mirror's size.</p>
@@ -590,20 +331,7 @@
           Volumes mounted into a Homerun service are never listed or pruned.
         </p>
       </div>
-      <form action="?/pruneVolumes" class="ml-auto" method="POST"
-      use:enhance={enhanceToast({
-        error: "Docker cleanup action failed.",
-        loading: "Running cleanup",
-        onSettled: () => {
-          pendingAction = null;
-        },
-        onStart: () => {
-          pendingAction = "pruneVolumes";
-        },
-        success: (data) =>
-          describeResult((data as { result?: unknown } | undefined)?.result),
-      })}
-      >
+      <form action="?/pruneVolumes" class="ml-auto" method="POST" use:enhance={pruneToast("pruneVolumes")}>
         <Button
           disabled={pendingAction !== null}
           onclick={(e) => requestConfirm("pruneVolumes", e)}
@@ -618,7 +346,7 @@
       </form>
     </div>
       <div class="p-5">
-        {@render itemList(preview.volumes.items)}
+        <CleanupItemList items={preview.volumes.items} />
       </div>
     </section>
     {/snippet}

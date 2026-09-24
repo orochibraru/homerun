@@ -1,22 +1,10 @@
 <script lang="ts">
-	import {
-		Check,
-		Clock,
-		FolderKanban,
-		LayoutGrid,
-		RotateCcw,
-		Server,
-		Settings,
-		ShieldCheck,
-		Trash2Icon,
-		TriangleAlertIcon,
-	} from "@lucide/svelte";
-	import { onMount, tick } from "svelte";
+	import { Check, Settings } from "@lucide/svelte";
+	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import CheckBox from "$lib/components/check-box.svelte";
-	import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+	import PanelHeader from "$lib/components/panel-header.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -26,11 +14,16 @@
 		SelectTrigger,
 	} from "$lib/components/ui/select/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
-	import { timeAgo } from "$lib/formatting";
 	import { PULL_POLICIES } from "$lib/pull-policy";
 	import { isDeployed } from "$lib/service-state";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
+	import AutoRedeploySection from "./auto-redeploy-section.svelte";
+	import AutoRollbackSection from "./auto-rollback-section.svelte";
+	import DangerZoneSection from "./danger-zone-section.svelte";
+	import ImageScanSection from "./image-scan-section.svelte";
+	import SaveAsTemplateSection from "./save-as-template-section.svelte";
+	import StackSection from "./stack-section.svelte";
 
 	const { data, form } = $props();
 	const svc = $derived(data.service);
@@ -52,12 +45,6 @@
 	const errors = $derived(form?.errors as Record<string, string[]> | undefined);
 
 	let submitting = $state(false);
-	let deleteDialogOpen = $state(false);
-	let deleteForm = $state<HTMLFormElement | null>(null);
-	let deleting = $state(false);
-	let forceDelete = $state(false);
-	let forceDeleteDialogOpen = $state(false);
-	let detachError = $state("");
 
 	const restartPolicyOptions: [string, string][] = [
 		["unless-stopped", "Unless stopped"],
@@ -75,26 +62,15 @@
 	const pullPolicyOption = $derived(
 		PULL_POLICIES.find((opt) => opt.value === pullPolicy) ?? PULL_POLICIES[0],
 	);
-
-	let stackId = $derived(svc.stackId ?? "");
-	const stackLabel = $derived(
-		data.stacks.find((p) => p.id === stackId)?.name ?? "Ungrouped",
-	);
 </script>
 
 <div class="space-y-6">
   <section class="panel rounded-md">
-    <div class="border-border flex items-center gap-3 border-b px-5 py-4">
-      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-        <Settings class="size-4" />
-      </div>
-      <div>
-        <h2 class="eyebrow">Service settings</h2>
-        <p class="text-text-muted text-xs">
-          Changes take effect on the next deploy.
-        </p>
-      </div>
-    </div>
+    <PanelHeader
+      description="Changes take effect on the next deploy."
+      icon={Settings}
+      title="Service settings"
+    />
 
     <form
       action="?/update"
@@ -250,301 +226,10 @@
     </form>
   </section>
 
-  <!-- ═══ Stack ═══ -->
-  <section class="panel rounded-md">
-    <div class="flex items-center justify-between gap-4 p-5">
-      <div class="flex items-center gap-3">
-        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-          <FolderKanban class="size-4" />
-        </div>
-        <div>
-          <p class="text-text text-sm font-medium">Stack</p>
-          <p class="text-text-muted text-xs">
-            Move this service into a different stack, or ungroup it.
-          </p>
-        </div>
-      </div>
-      <form
-        action="?/moveStack"
-        class="flex w-75 items-center gap-2"
-        method="POST"
-        use:enhance={enhanceToast({
-          error: "Couldn't move the service.",
-          loading: "Moving the service",
-          success: "Moved.",
-        })}
-      >
-        <SelectRoot name="stackId" type="single" bind:value={stackId}>
-          <SelectTrigger class="w-full">
-            {stackLabel}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem label="Ungrouped" value="" />
-            {#each data.stacks as stack (stack.id)}
-              <SelectItem label={stack.name} value={stack.id} />
-            {/each}
-          </SelectContent>
-        </SelectRoot>
-        <Button class="shrink-0" type="submit" variant="outline">Move</Button>
-      </form>
-    </div>
-  </section>
-
-  <!-- ═══ Save as template ═══ -->
-  <section class="panel rounded-md">
-    <div class="flex items-center justify-between gap-4 p-5">
-      <div class="flex items-center gap-3">
-        <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-          <LayoutGrid class="size-4" />
-        </div>
-        <div>
-          <p class="text-text text-sm font-medium">Save as template</p>
-          <p class="text-text-muted text-xs">
-            Reuse this config to deploy another service later.
-          </p>
-        </div>
-      </div>
-      <form
-        action="?/saveAsTemplate"
-        method="POST"
-        use:enhance={enhanceToast({
-          error: "Couldn't save the template.",
-          loading: "Saving as a template",
-          success: "Saved as a template.",
-        })}
-      >
-        <Button class="shrink-0" type="submit" variant="outline">
-          Save as template
-        </Button>
-      </form>
-    </div>
-  </section>
-
-  <section class="panel rounded-md p-5">
-    <div class="mb-4 flex items-center gap-3">
-      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-        <RotateCcw class="size-4" />
-      </div>
-      <div>
-        <p class="text-text text-sm font-medium">Auto-rollback</p>
-        <p class="text-text-muted text-xs">
-          Every deploy is watched for 90 seconds (longer while a healthcheck is
-          still starting). A revision that exits, restart-loops or fails its
-          healthcheck is reported either way. Past revisions are on the
-          <a
-            class="text-accent underline"
-            href={resolve("/(protected)/services/[serviceId]/revisions", {
-              serviceId: svc.id,
-            })}
-          >Revisions</a>
-          tab.
-        </p>
-      </div>
-    </div>
-    <form
-      action="?/updateAutoRollback"
-      class="space-y-3"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't save auto-rollback.",
-        loading: "Saving auto-rollback",
-        success: "Saved.",
-      })}
-    >
-      <CheckBox
-        checked={svc.autoRollback}
-        helperText="When the new revision is unhealthy, redeploy the previous healthy revision automatically instead of leaving it running."
-        id="autoRollback"
-        label="Auto-rollback when a new revision is unhealthy"
-        name="autoRollback"
-      />
-      <Button type="submit" variant="outline">Save</Button>
-    </form>
-  </section>
-
-  <section class="panel rounded-md p-5">
-    <div class="mb-4 flex items-center gap-3">
-      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-        <ShieldCheck class="size-4" />
-      </div>
-      <div>
-        <p class="text-text text-sm font-medium">Image scanning</p>
-        <p class="text-text-muted text-xs">
-          Scans the image for known vulnerabilities on every deploy, through
-          Homerun's pull mirror. Results are on the
-          <a
-            class="text-accent underline"
-            href={resolve("/(protected)/services/[serviceId]/security", {
-              serviceId: svc.id,
-            })}
-          >Security</a>
-          tab.
-        </p>
-      </div>
-    </div>
-    <form
-      action="?/updateImageScan"
-      class="space-y-3"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Couldn't save image scanning.",
-        loading: "Saving image scanning",
-        success: "Saved.",
-      })}
-    >
-      <CheckBox
-        checked={svc.imageScanEnabled}
-        helperText="Pull through the mirror and scan before this service's workload starts. Turning it off pulls straight from the registry."
-        id="imageScanEnabled"
-        label="Scan this service's image"
-        name="imageScanEnabled"
-      />
-      <Button type="submit" variant="outline">Save</Button>
-    </form>
-  </section>
-
-  <!-- ═══ Auto-redeploy (cron) ═══ -->
-  <section class="panel rounded-md p-5">
-    <div class="mb-4 flex items-center gap-3">
-      <div class="bg-accent/10 text-accent flex size-8 items-center justify-center rounded-lg">
-        <Clock class="size-4" />
-      </div>
-      <div>
-        <p class="text-text text-sm font-medium">Auto-redeploy schedule</p>
-        <p class="text-text-muted text-xs">
-          Periodically repull the image and redeploy : useful for tracking a
-          <code>:latest</code>
-          tag. Disabled by default.
-        </p>
-      </div>
-    </div>
-
-    <form
-      action="?/updateCron"
-      class="space-y-3"
-      method="POST"
-      use:enhance={enhanceToast({
-        error: "Check the schedule for errors.",
-        loading: "Saving the schedule",
-        success: "Saved.",
-      })}
-    >
-      {#if form?.cronError}
-        <p class={errorClass}>{form.cronError}</p>
-      {/if}
-
-      <CheckBox
-        checked={svc.cronEnabled}
-        helperText="Automatically re-deploy this app"
-        id="cronEnabled"
-        label="Enable auto-redeploy"
-        name="cronEnabled"
-      />
-      <div>
-        <label class={label} for="cronSchedule">Schedule (cron syntax)</label>
-        <Input
-          class=""
-          id="cronSchedule"
-          name="cronSchedule"
-          placeholder="0 3 * * *"
-          type="text"
-          value={svc.cronSchedule ?? ""}
-        />
-        <p class="text-text-subtle mt-1.5 text-xs">
-          Standard 5-field cron ("min hour day month weekday"), server local
-          time. E.g. <code>0 3 * * *</code> = every day at 3am.
-          {#if svc.cronLastRunAt}
-            · last run {timeAgo(svc.cronLastRunAt)}
-          {/if}
-        </p>
-      </div>
-      <Button type="submit" variant="outline">Save schedule</Button>
-    </form>
-  </section>
-
-  <!-- ═══ Danger zone ═══ -->
-  <section class="bg-surface rounded-md border border-red-200 dark:border-red-900/40">
-    <div class="flex items-center gap-3 border-b border-red-100 px-5 py-4 dark:border-red-900/30">
-      <div class="flex size-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
-        <TriangleAlertIcon class="size-4" />
-      </div>
-      <div>
-        <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">
-          Danger zone
-        </h2>
-        <p class="text-text-muted text-xs">
-          Irreversible. Removes the container and all deployment history.
-        </p>
-      </div>
-    </div>
-    <div class="p-5">
-      <form
-        action="?/delete"
-        class="flex flex-wrap items-center justify-between gap-4"
-        method="POST"
-        bind:this={deleteForm}
-        use:enhance={enhanceToast({
-          error: "Couldn't delete the service.",
-          loading: "Deleting the service",
-          onFailure: (result) => {
-            deleting = false;
-            if (result?.detachFailed && !forceDelete) {
-              detachError = String(result.error ?? "");
-              forceDeleteDialogOpen = true;
-            }
-            forceDelete = false;
-          },
-          onStart: () => {
-            deleting = true;
-          },
-          success: "Service deleted.",
-        })}
-      >
-        <input name="force" type="hidden" value={forceDelete ? "true" : "false"} />
-        <div>
-          <p class="text-text text-sm font-medium">Delete this service</p>
-          <p class="text-text-muted mt-0.5 text-xs">
-            Its container will be stopped and removed. This can't be undone.
-          </p>
-        </div>
-        <Button
-          disabled={deleting}
-          onclick={() => {
-            deleteDialogOpen = true;
-          }}
-          type="button"
-          variant="destructive"
-        >
-          {#if deleting}
-            <Spinner />
-            Deleting…
-          {:else}
-            <Trash2Icon class="size-4" />
-            Delete service
-          {/if}
-        </Button>
-      </form>
-    </div>
-  </section>
+  <StackSection stackId={svc.stackId} stacks={data.stacks} />
+  <SaveAsTemplateSection />
+  <AutoRollbackSection {svc} />
+  <ImageScanSection {svc} />
+  <AutoRedeploySection cronError={form?.cronError} {svc} />
+  <DangerZoneSection name={svc.name} />
 </div>
-
-<ConfirmDialog
-  bind:open={deleteDialogOpen}
-  confirmLabel="Delete service"
-  confirmPhrase={svc.name}
-  description={`Deleting "${svc.name}" stops and removes its container and erases its deployment history. This can't be undone.`}
-  onConfirm={() => deleteForm?.requestSubmit()}
-  title="Delete service"
-/>
-
-<ConfirmDialog
-  bind:open={forceDeleteDialogOpen}
-  confirmLabel="Delete anyway"
-  description={`${detachError} Deleting anyway removes only Homerun's record of "${svc.name}" : if its workload still exists on the host, remove it yourself.`}
-  onConfirm={async () => {
-    forceDelete = true;
-    await tick();
-    deleteForm?.requestSubmit();
-  }}
-  title="Delete the record anyway?"
-/>

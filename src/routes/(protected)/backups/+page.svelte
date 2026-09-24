@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, CloudUpload, Play, XCircle } from "@lucide/svelte";
+	import { CloudUpload, Play } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -8,6 +8,7 @@
 		type FilterGroup,
 	} from "$lib/components/entity-toolbar.svelte";
 	import Pagination from "$lib/components/pagination.svelte";
+	import RunStatusBadge from "$lib/components/run-status-badge.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import Spinner from "$lib/components/ui/spinner/spinner.svelte";
 	import { title } from "$lib/store/title";
@@ -183,25 +184,14 @@
                 </td>
                 <td class="text-text-muted px-4 py-3">{formatSize(run.sizeBytes)}</td>
                 <td class="px-4 py-3">
-                  {#if run.success === null}
-                    <span class="text-text-muted flex items-center gap-1 text-xs">
-                      <Spinner class="size-3" />
-                      Running
-                    </span>
-                  {:else if run.success}
-                    <span class="flex items-center gap-1 text-xs text-emerald-600">
-                      <CheckCircle2 class="size-3.5" />
-                      Success
-                    </span>
-                  {:else}
-                    <span
-                      class="flex items-center gap-1 text-xs text-red-500"
-                      title={run.error ?? ""}
-                    >
-                      <XCircle class="size-3.5" />
-                      Failed
-                    </span>
-                  {/if}
+                  <RunStatusBadge error={run.error} success={run.success}>
+                    {#snippet running()}
+                      <span class="text-text-muted flex items-center gap-1 text-xs">
+                        <Spinner class="size-3" />
+                        Running
+                      </span>
+                    {/snippet}
+                  </RunStatusBadge>
                 </td>
               </tr>
             {/each}

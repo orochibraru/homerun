@@ -152,12 +152,17 @@ component, so it doesn't force a markup shape change on pages that predate it;
 wired into Remote Hosts and the service Networking tab so far), `stepper.svelte`
 (the step-indicator-bar-plus-Back/Next chrome and unlocked-step gating every
 multi-step form needs, extracted while building the onboarding wizard, see
-Onboarding below; not yet retrofitted onto `services/new`'s own inlined
-equivalent), and `skeleton.svelte` (one pulsing placeholder block, sized by a
-`class` prop, the pending branch every remote-query-backed panel renders, see
-Remote functions below), `alert.svelte` (the inline banner, `error`/`warning`/
-`info`/`success`, optional `title` and `actions` snippet, `role="alert"` when
-it's an error — eight pages had hand-rolled the same
+Onboarding below; `services/new` keeps its own `wizard-nav.svelte` since its
+steps are all clickable at any time and it has two submit buttons),
+`panel-header.svelte` (icon tile + eyebrow title + description + optional
+trailing action, the header of most `panel` sections), `run-status-badge.svelte`
+(a backup/cron run's running/success/failed state),
+`git-build-fields.svelte`/`registry-fields.svelte` (shared by `services/new` and
+the service Source tab), and `skeleton.svelte` (one pulsing placeholder block,
+sized by a `class` prop, the pending branch every remote-query-backed panel
+renders, see Remote functions below), `alert.svelte` (the inline banner,
+`error`/`warning`/ `info`/`success`, optional `title` and `actions` snippet,
+`role="alert"` when it's an error — eight pages had hand-rolled the same
 `border-red-200 bg-red-50 …` div before it existed), `async-block.svelte`
 (pending/ready/failed over one remote query, with a Retry, see Remote functions
 in `services-and-templates.md`), and `error-boundary.svelte` (a

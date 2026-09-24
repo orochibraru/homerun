@@ -11,7 +11,8 @@ description: >-
   local gates that don't match CI, contributor notes (.agents/notes, CLAUDE.md,
   AGENTS.md, CONTRIBUTING.md) contradicting the code, skills/agents pointing at
   files that moved, dead dependencies and scripts, unclear startup errors, slow
-  or flaky tests. Not for operator-facing docs/ (docs-audit), JSDoc
+  or flaky tests, and oversized Svelte files (over 400 lines) that need
+  splitting into components. Not for operator-facing docs/ (docs-audit), JSDoc
   (doc-comments) or reviewing a diff against conventions (repo-gate).
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
@@ -103,8 +104,42 @@ one go, no plans, no severity tiers, out-of-scope findings go in `TODO.md`.
   that could be parallel) is a finding.
 - Tests that are flaky or order-dependent: run `bun run test` twice and compare.
 
+### 7. No Svelte file is too long to hold in your head
+
+- List every `.svelte` file over 400 lines, longest first:
+
+  ```bash
+  find src -name '*.svelte' -not -path '*/components/ui/*' \
+    | xargs wc -l | sort -rn | awk '$1 > 400'
+  ```
+
+  Every hit is a finding; an 1100-line `+page.svelte` is unmaintainable no
+  matter how tidy each block is.
+
+- Split each one along its natural seams (a wizard step, a tab-like panel, a
+  dialog, a repeated row editor, a sidebar card):
+  - A piece that another page also renders, or clearly could, goes to
+    `src/lib/components/` as a reusable component. Check for an existing one
+    first, the `ui-consistency` agent's list of shared components is a start.
+  - A piece only this route uses goes next to the route, as a
+    `PascalCase.svelte` file (or `components/` subfolder) in the route's own
+    directory. SvelteKit only treats `+`-prefixed files as routes, so these are
+    ordinary components.
+  - Split components are non-route code: type their `$props()` with an explicit
+    `interface Props`, use `$bindable()` for state the parent owns, and pass
+    `form`/`data` slices down rather than the whole object. The route file
+    itself keeps its untyped `const { data, form } = $props();`.
+  - Keep behaviour identical: same field `name`s, same DOM order inside a
+    `<form>`, same `class:hidden` (not `{#if}`) where the original relied on
+    nodes staying mounted. Run the route's e2e spec after splitting.
+- Aim for every resulting file under 400 lines. A file that stays over after a
+  sensible split (one genuinely long, flat form) goes in the report with the
+  reason, not in a contortion.
+
 ## How to act
 
+- Split oversized Svelte files (area 7) directly; that's a fix, not a `TODO.md`
+  entry.
 - Fix clear-cut problems directly: wrong/missing docs for commands,
   `.env.example` drift, broken note paths, missing symlinks, dead scripts,
   gitignore gaps, CI/local mismatches with an obvious correct side.
@@ -123,6 +158,6 @@ one go, no plans, no severity tiers, out-of-scope findings go in `TODO.md`.
 
 ## Report
 
-Group by the six areas above: what you fixed (file + one line), what you added
+Group by the seven areas above: what you fixed (file + one line), what you added
 to `TODO.md`, and the timings from area 6. If an area had nothing wrong, say so
 in one line.
