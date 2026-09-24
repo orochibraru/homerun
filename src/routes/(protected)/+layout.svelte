@@ -301,7 +301,7 @@
         href={item.href}
         onclick={onNavigate}
       >
-        <NavIcon class="size-4 shrink-0" />
+        <NavIcon class="text-accent size-4 shrink-0" />
         {item.label}
       </a>
     {/each}

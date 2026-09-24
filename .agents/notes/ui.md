@@ -334,9 +334,9 @@ per-user instead of a singleton row.
   follows across devices; a browser that already has its own mode-watcher entry
   is left alone, that entry owns it from then on. This is additive to, not a
   replacement for, mode-watcher's own localStorage persistence.
-- **Sidebar**: no per-category colors. Icons inherit the item's text color;
-  items are `font-medium`, the active one `font-semibold text-accent`. A
-  "colorful" per-category mode existed and was removed as noise.
+- **Sidebar**: no per-category colors. Every icon is `text-accent`; items are
+  `font-medium`, the active one `font-semibold text-accent`. A "colorful"
+  per-category mode existed and was removed as noise.
 - **Accent color**: `(protected)/+layout.svelte`'s root wrapper div gets an
   inline `style` computed from `accentColor` (a `"#rrggbb"` hex string, `null`
   meaning "use the built-in default") that overrides
