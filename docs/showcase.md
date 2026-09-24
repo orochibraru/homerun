@@ -15,7 +15,7 @@ the real thing.
 Service counts, live host CPU/RAM/disk, the deployments that just ran, and the
 jump-off points for the next one.
 
-![The dashboard](images/hero.png) ![The dashboard, dark](images/hero-dark.png)
+![The dashboard](images/hero.webp) ![The dashboard, dark](images/hero-dark.webp)
 
 ## Services
 
@@ -23,15 +23,15 @@ Every service you own, with its status, image and stack. Search, filters and
 paging are server-side, and the checkboxes drive Start/Stop/Restart/Delete in
 bulk.
 
-![The services list](images/services.png)
-![The services list, dark](images/services-dark.png)
+![The services list](images/services.webp)
+![The services list, dark](images/services-dark.webp)
 
 A single service: its live status, the hostname Traefik routes to it, the
 actions that matter, its resource usage over time, the services it connects to,
 and its log tail.
 
-![A service's overview](images/service.png)
-![A service's overview, dark](images/service-dark.png)
+![A service's overview](images/service.webp)
+![A service's overview, dark](images/service-dark.webp)
 
 ## Live logs
 
@@ -39,8 +39,8 @@ and its log tail.
 on the Observability tab next to its uptime probes and errors. The same viewer
 backs the tail on the overview page.
 
-![Streaming container logs](images/logs.png)
-![Streaming container logs, dark](images/logs-dark.png)
+![Streaming container logs](images/logs.webp)
+![Streaming container logs, dark](images/logs-dark.webp)
 
 ## Networking
 
@@ -48,27 +48,27 @@ The public hostname, extra domains, the container port and protocol, bridge or
 host networking. Most of these are Traefik labels, so the tab tells you plainly
 that changing them needs a redeploy.
 
-![The networking tab](images/networking.png)
-![The networking tab, dark](images/networking-dark.png)
+![The networking tab](images/networking.webp)
+![The networking tab, dark](images/networking-dark.webp)
 
 ## Environment and compute
 
 Environment variables with a paste-a-`.env` shortcut, and CPU/memory limits
 applied to the container itself.
 
-![Environment variables](images/env.png)
-![Environment variables, dark](images/env-dark.png)
+![Environment variables](images/env.webp)
+![Environment variables, dark](images/env-dark.webp)
 
-![Compute limits](images/compute.png)
-![Compute limits, dark](images/compute-dark.png)
+![Compute limits](images/compute.webp)
+![Compute limits, dark](images/compute-dark.webp)
 
 ## Deploying something new
 
 Five steps — basic info, networking, environment, volumes, compute — from an
 image or straight from a git repo's Dockerfile.
 
-![The deploy wizard](images/deploy.png)
-![The deploy wizard, dark](images/deploy-dark.png)
+![The deploy wizard](images/deploy.webp)
+![The deploy wizard, dark](images/deploy-dark.webp)
 
 ## Templates
 
@@ -76,15 +76,15 @@ A built-in catalog of common self-hosted apps with real logos, one-click Quick
 Deploy, and companion containers that come along with the primary. Your own
 services can be saved as templates too.
 
-![The template catalog](images/templates.png)
-![The template catalog, dark](images/templates-dark.png)
+![The template catalog](images/templates.webp)
+![The template catalog, dark](images/templates-dark.webp)
 
 ## Stacks
 
 A stack puts its services on a shared Docker network, so they reach each other
 by slug (`http://cache:6379`) without going back out through Traefik.
 
-![A stack](images/stack.png) ![A stack, dark](images/stack-dark.png)
+![A stack](images/stack.webp) ![A stack, dark](images/stack-dark.webp)
 
 ## Instance settings
 
@@ -92,21 +92,21 @@ Base domain, Docker socket, Traefik, DNS automation and SMTP — stored in the
 database and applied live, with the env var behind each field shown as its
 placeholder.
 
-![Instance settings](images/settings.png)
-![Instance settings, dark](images/settings-dark.png)
+![Instance settings](images/settings.webp)
+![Instance settings, dark](images/settings-dark.webp)
 
 ## Users
 
 Admins and developers sharing every resource, email invitations, and account
 removal that hands what the account created over to an admin.
 
-![The users page](images/users.png)
-![The users page, dark](images/users-dark.png)
+![The users page](images/users.webp)
+![The users page, dark](images/users-dark.webp)
 
 ## Signing in
 
 The first account created on a blank instance becomes the admin. After that,
 every account is created by an admin, optionally through an OAuth/OIDC provider.
 
-![The sign-in page](images/sign-in.png)
-![The sign-in page, dark](images/sign-in-dark.png)
+![The sign-in page](images/sign-in.webp)
+![The sign-in page, dark](images/sign-in-dark.webp)

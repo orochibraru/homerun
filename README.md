@@ -15,7 +15,7 @@ babysit.
 
 <!-- Regenerate with `bun run screenshots`; do not edit by hand. -->
 
-[![Homerun's dashboard](docs/images/hero.png)](docs/showcase.md)
+[![Homerun's dashboard](docs/images/hero.webp)](docs/showcase.md)
 
 **[See the full showcase →](docs/showcase.md)** — every screen, light and dark,
 generated from a real instance.

@@ -26,10 +26,10 @@ jobs:
     env:
       DOCS_TRIGGER_TOKEN: ${{ secrets.DOCS_TRIGGER_TOKEN }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Download the captured images
-        uses: orochibraru/download-artifact@f4f92658c2471fe1dd133b163218066198a0a395 # v8
+        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           name: docs-images
           path: docs/images

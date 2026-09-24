@@ -35,7 +35,7 @@ jobs:
       promote: ${{ steps.resolve.outputs.promote }}
       release: ${{ steps.kind.outputs.release }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -122,13 +122,13 @@ jobs:
       tag: ${{ steps.compute.outputs.tag }}
       version: ${{ steps.compute.outputs.version }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Dry-run release to compute the next version
         id: releaser
-        uses: orochibraru/releaser@8f478365f81c3cb21134515bb4fbc9abc8eb34d9 # v1.5.0
+        uses: orochibraru/releaser@f4e670849b608549cd6ac88d32eeb41cab364709 # v1.7.1
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch
@@ -299,7 +299,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
@@ -313,7 +313,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Download binaries
-        uses: orochibraru/download-artifact@f4f92658c2471fe1dd133b163218066198a0a395 # v8
+        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           path: dist
           pattern: binaries-*
@@ -334,7 +334,7 @@ jobs:
             | xargs -r -n1 gh release delete --cleanup-tag --yes
 
       - name: Open or update the release PR
-        uses: orochibraru/releaser@8f478365f81c3cb21134515bb4fbc9abc8eb34d9 # v1.5.0
+        uses: orochibraru/releaser@f4e670849b608549cd6ac88d32eeb41cab364709 # v1.7.1
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch
@@ -352,7 +352,7 @@ jobs:
       tag: ${{ steps.releaser.outputs.tag }}
       version: ${{ steps.releaser.outputs.version }}
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -376,7 +376,7 @@ jobs:
 
       - name: Dry-run release to read the version
         id: releaser
-        uses: orochibraru/releaser@8f478365f81c3cb21134515bb4fbc9abc8eb34d9 # v1.5.0
+        uses: orochibraru/releaser@f4e670849b608549cd6ac88d32eeb41cab364709 # v1.7.1
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch
@@ -434,7 +434,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
@@ -448,7 +448,7 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Download binaries
-        uses: orochibraru/download-artifact@f4f92658c2471fe1dd133b163218066198a0a395 # v8
+        uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
         with:
           path: dist
           pattern: binaries-*
@@ -456,7 +456,7 @@ jobs:
 
       - name: Tag the release commit and draft the release
         id: releaser
-        uses: orochibraru/releaser@8f478365f81c3cb21134515bb4fbc9abc8eb34d9 # v1.5.0
+        uses: orochibraru/releaser@f4e670849b608549cd6ac88d32eeb41cab364709 # v1.7.1
         with:
           branch: main
           rules: breaking=patch,feat=patch,docs=patch,refactor=patch

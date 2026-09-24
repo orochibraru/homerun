@@ -145,6 +145,14 @@ const SHOTS: Shot[] = [
 	},
 ];
 
+async function capture(page: Page, name: string): Promise<void> {
+	const png = await page.screenshot({ fullPage: false });
+	await Bun.write(
+		join(OUT_DIR, `${name}.webp`),
+		await new Bun.Image(png).webp({ quality: 90 }).bytes(),
+	);
+}
+
 async function settle(page: Page): Promise<void> {
 	await page.waitForLoadState("domcontentloaded");
 	await page.waitForTimeout(1500);
@@ -260,13 +268,7 @@ test.describe("signed in", () => {
 				await shot.prepare?.(page);
 				await settle(page);
 
-				await page.screenshot({
-					fullPage: false,
-					path: join(
-						OUT_DIR,
-						`${shot.name}${theme === "dark" ? "-dark" : ""}.png`,
-					),
-				});
+				await capture(page, `${shot.name}${theme === "dark" ? "-dark" : ""}`);
 			});
 		}
 	}
@@ -283,10 +285,7 @@ for (const theme of ["light", "dark"] as const) {
 		await page.getByRole("button", { exact: true, name: "Continue" }).click();
 		await page.locator("#password").fill(PASSWORD);
 		await settle(page);
-		await page.screenshot({
-			fullPage: false,
-			path: join(OUT_DIR, `sign-in${theme === "dark" ? "-dark" : ""}.png`),
-		});
+		await capture(page, `sign-in${theme === "dark" ? "-dark" : ""}`);
 	});
 }
 
@@ -294,7 +293,7 @@ test("writes an index of what was captured", async () => {
 	const lines = [...SHOTS, { doc: "/auth/sign-in", name: "sign-in" }].flatMap(
 		(shot) =>
 			["", "-dark"].map(
-				(suffix) => `- \`${shot.name}${suffix}.png\` — ${shot.doc}`,
+				(suffix) => `- \`${shot.name}${suffix}.webp\` — ${shot.doc}`,
 			),
 	);
 	await writeFile(
