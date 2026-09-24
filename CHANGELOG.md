@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.46](https://github.com/orochibraru/homerun/compare/v1.0.45...v1.0.46) (2026-09-24)
+
+### Features
+
+- **services:** add rebuild, fresh build, pull image and kill actions, show
+  lifecycle buttons on swarm, equal-height dashboard cards
+  ([9b9279c](https://github.com/orochibraru/homerun/commit/9b9279c3de3052c8fc2fdd3705f85c2f65a13aaa))
+
 ## [1.0.45](https://github.com/orochibraru/homerun/compare/v1.0.44...v1.0.45) (2026-09-24)
 
 ### Features
