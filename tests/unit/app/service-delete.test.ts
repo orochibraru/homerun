@@ -10,6 +10,7 @@ mock.module("$app/environment", () => ({
 let removeError: unknown = null;
 const removed: string[] = [];
 const dockerCalls: unknown[][] = [];
+let imageIds: (string | null)[] = [];
 
 function record(name: string) {
 	return async (...args: unknown[]) => {
@@ -19,7 +20,11 @@ function record(name: string) {
 }
 
 const fakeDocker: Record<string, unknown> = {
+	buildAuthConfig: () => ({ password: "p", username: "u" }),
 	inspectStatus: record("inspectStatus"),
+	killContainer: record("killContainer"),
+	localImageId: async () => imageIds.shift() ?? null,
+	pullImage: record("pullImage"),
 	removeContainer: async (id: string, ...rest: unknown[]) => {
 		dockerCalls.push(["removeContainer", id, ...rest]);
 		if (removeError) {
@@ -368,5 +373,52 @@ describe("ServiceLifecycleService.deleteStack", () => {
 		);
 		expect(webhooksRemoved).toEqual([]);
 		expect(dnsDeletes).toEqual([]);
+	});
+});
+
+describe("ServiceLifecycleService kill/pull", () => {
+	test("killService records the stop before killing the container", async () => {
+		const { state, svc } = fakeService();
+		await ServiceLifecycleService.killService(svc);
+		expect(state.updates).toEqual([{ desiredState: "stopped" }]);
+		expect(dockerCalls).toEqual([["killContainer", "c1"]]);
+	});
+
+	test("killService refuses a swarm service", async () => {
+		const { svc } = fakeService({ containerId: null, swarmServiceId: "sw1" });
+		await expect(ServiceLifecycleService.killService(svc)).rejects.toThrow(
+			"can't be killed",
+		);
+		expect(dockerCalls).toEqual([]);
+	});
+
+	test("pullServiceImage pulls with the service's credentials and reports a change", async () => {
+		const { svc } = fakeService({ image: "nginx", tag: "latest" });
+		imageIds = ["sha256:old", "sha256:new"];
+		expect(await ServiceLifecycleService.pullServiceImage(svc)).toEqual({
+			changed: true,
+		});
+		expect(dockerCalls).toEqual([
+			[
+				"pullImage",
+				{
+					auth: { password: "p", username: "u" },
+					image: "nginx",
+					tag: "latest",
+				},
+			],
+		]);
+
+		imageIds = ["sha256:same", "sha256:same"];
+		expect(await ServiceLifecycleService.pullServiceImage(svc)).toEqual({
+			changed: false,
+		});
+	});
+
+	test("pullServiceImage refuses a git service", async () => {
+		const { svc } = fakeService({ buildSource: "git" });
+		await expect(ServiceLifecycleService.pullServiceImage(svc)).rejects.toThrow(
+			"builds from git",
+		);
 	});
 });
