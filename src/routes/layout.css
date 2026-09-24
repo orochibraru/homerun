@@ -317,7 +317,7 @@
 @layer base {
 	html {
 		scroll-behavior: smooth;
-		font-size: 110%;
+		font-size: 100%;
 		@apply font-sans;
 	}
 

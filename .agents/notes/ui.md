@@ -14,15 +14,15 @@ built from. Nothing under `src/routes`/`src/lib` should hardcode a hex value or
 a blur/shadow stack, route it through a token here instead.
 
 - **Two typefaces, and mono is now rare.** `--font-sans` is Inter Variable
-  (`@fontsource-variable/inter`), and the root font size is 110% so the whole
-  rem-based UI (type and spacing) renders a notch larger; `--font-mono` is
-  JetBrains Mono, and it is reserved for **code, logs and terminal output** :
-  `live-log-viewer.svelte`, `ansi-line.svelte`, the Terminal tab, System Logs,
-  the Errors tab and the env paste box. Everything else — nav, labels, status
-  badges, metrics, image refs, hostnames — is sans. An earlier pass made mono
-  the UI's voice across the board and it read as a terminal emulator rather than
-  an app. `tech` survives as _tabular figures only_ (`font-variant-numeric`), so
-  live-updating numbers still don't reflow.
+  (`@fontsource-variable/inter`), and the root font size is the browser default
+  100% (it was 110%, which rendered the whole rem-based UI too large);
+  `--font-mono` is JetBrains Mono, and it is reserved for **code, logs and
+  terminal output** : `live-log-viewer.svelte`, `ansi-line.svelte`, the Terminal
+  tab, System Logs, the Errors tab and the env paste box. Everything else — nav,
+  labels, status badges, metrics, image refs, hostnames — is sans. An earlier
+  pass made mono the UI's voice across the board and it read as a terminal
+  emulator rather than an app. `tech` survives as _tabular figures only_
+  (`font-variant-numeric`), so live-updating numbers still don't reflow.
 - **The design is ported from Penombre** (`orochibraru/penombre`'s
   `src/app.css`), deliberately, because that app's look is the target. Four
   things carry it:
