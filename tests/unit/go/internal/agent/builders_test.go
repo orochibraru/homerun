@@ -3,6 +3,7 @@ package agent_test
 import (
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -211,5 +212,24 @@ func TestTruncateRunes(t *testing.T) {
 	}
 	if got := agent.TruncateRunes("hi", 5); got != "hi" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestBuilderEnvNoCache(t *testing.T) {
+	input := agent.BuilderInput{Method: "dockerfile", RepoDir: "/workspace/repo", Tag: "app:1"}
+	cached, err := agent.BuilderEnv(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(cached, "NO_CACHE=1") {
+		t.Error("a normal build shouldn't carry NO_CACHE")
+	}
+	input.NoCache = true
+	fresh, err := agent.BuilderEnv(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh[len(fresh)-1] != "NO_CACHE=1" {
+		t.Errorf("a fresh build should end with NO_CACHE=1, got %v", fresh)
 	}
 }

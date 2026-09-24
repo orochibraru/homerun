@@ -75,6 +75,7 @@ var (
 			"dockerfilePath": nullableString,
 			"gitRef":         nullableString,
 			"gitUrl":         object{"minLength": 1, "type": "string"},
+			"noCache":        object{"type": "boolean"},
 			"push": object{
 				"properties": object{
 					"password":    object{"type": "string"},

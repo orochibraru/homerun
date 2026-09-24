@@ -53,6 +53,7 @@ import { enforceStatusChecks } from "./status-check-step.ts";
 export interface WorkerSpecContext {
 	dep: DeploymentDTO;
 	mounts: ServiceMounts;
+	noCache: boolean;
 	plan: DeployPlan;
 	stack: StackDTO | null;
 	svc: ServiceDTO;
@@ -209,6 +210,7 @@ async function buildSpec(
 			commit: commit ?? "",
 			credential: await resolveGitCredential(plan.git.gitUrl, ctx.userId),
 			git: plan.git,
+			noCache: ctx.noCache,
 			registry,
 			server: plan.kind === "local-build" ? null : buildServerSpec(plan.server),
 		},

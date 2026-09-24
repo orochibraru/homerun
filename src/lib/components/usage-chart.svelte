@@ -101,7 +101,7 @@
 	});
 </script>
 
-<section class="panel rounded-xl">
+<section class="panel flex flex-col rounded-xl">
   <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
     <div class="flex items-baseline gap-3">
       <h2 class="eyebrow">{title}</h2>
@@ -141,7 +141,7 @@
     </div>
   </div>
 
-  <div class="p-4">
+  <div class="flex flex-1 flex-col p-4">
     {#if history.error}
       <p class="text-text-muted py-8 text-center text-xs">
         Couldn't load the history.
@@ -154,7 +154,7 @@
       </p>
     {:else}
       <svg
-        class="h-28 w-full"
+        class="min-h-28 w-full flex-1"
         preserveAspectRatio="none"
         role="img"
         viewBox="0 0 100 40"

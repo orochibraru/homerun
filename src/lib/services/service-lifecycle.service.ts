@@ -105,6 +105,43 @@ class ServiceLifecycleServiceClass {
 	}
 
 	/**
+	 * Kills a standalone service's container outright (SIGKILL, no grace
+	 * period) and persists `desiredState: "stopped"` first, same as a stop.
+	 *
+	 * @throws When the service runs in swarm mode, or has no container yet.
+	 */
+	async killService(svc: ServiceDTO): Promise<void> {
+		if (svc.swarmServiceId) {
+			throw new Error("A swarm service can't be killed, stop it instead.");
+		}
+		const containerId = this.#requireContainer(svc);
+		await svc.update({ desiredState: "stopped" });
+		await DockerService.killContainer(containerId);
+	}
+
+	/**
+	 * Pulls a registry-sourced service's image and tag onto this host with its
+	 * registry credentials, without redeploying it.
+	 *
+	 * @returns Whether the pull brought a different image than the one already
+	 * on this host.
+	 * @throws When the service builds from a git repo.
+	 */
+	async pullServiceImage(svc: ServiceDTO): Promise<{ changed: boolean }> {
+		if (svc.buildSource === "git") {
+			throw new Error("This service builds from git, rebuild it instead.");
+		}
+		const ref = `${svc.image}:${svc.tag}`;
+		const before = await DockerService.localImageId(ref);
+		await DockerService.pullImage({
+			auth: DockerService.buildAuthConfig(svc),
+			image: svc.image,
+			tag: svc.tag,
+		});
+		return { changed: (await DockerService.localImageId(ref)) !== before };
+	}
+
+	/**
 	 * Deletes a service: removes its pull request previews first, then its
 	 * swarm service or container, its git webhook and its row. A workload
 	 * Docker reports as already gone counts as removed.

@@ -56,6 +56,7 @@ interface ResolvedImage {
 export interface EnqueueDeployInput {
 	clientDeploymentId?: string | null;
 	dependsOnJobId?: string | null;
+	noCache?: boolean;
 	restoreConfig?: boolean;
 	rollbackOfDeploymentId?: string | null;
 	svc: ServiceDTO;
@@ -304,9 +305,8 @@ class DeploymentServiceClass {
 	 *   the way a failed deploy always has.
 	 */
 	async prepareWorkerDeploy(job: JobDTO): Promise<Record<string, unknown>> {
-		const { deploymentId, serviceId, trigger, userId } = deployJobPayload.parse(
-			job.payload,
-		);
+		const { deploymentId, noCache, serviceId, trigger, userId } =
+			deployJobPayload.parse(job.payload);
 		const svc = await ServiceDTO.get(serviceId);
 		if (!svc) {
 			const message = "The service was deleted before its deploy ran.";
@@ -350,7 +350,7 @@ class DeploymentServiceClass {
 			const mounts = await ServiceVolumeDTO.listForService(svc.id);
 			const stack = svc.stackId ? await StackDTO.get(svc.stackId) : null;
 			await dep.appendLog(phaseLine("image"));
-			return await deployWorkerSpec({ ...ctx, mounts, plan, stack });
+			return await deployWorkerSpec({ ...ctx, mounts, noCache, plan, stack });
 		} catch (err) {
 			throw new Error(await this.#recordFailure(ctx, err, trigger));
 		}
@@ -527,6 +527,7 @@ class DeploymentServiceClass {
 			lockKey: `service:${svc.id}`,
 			payload: {
 				deploymentId: dep.id,
+				noCache: input.noCache ?? false,
 				serviceId: svc.id,
 				trigger: input.trigger ?? "manual",
 				userId,

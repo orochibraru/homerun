@@ -5,6 +5,7 @@ import type { NotificationEvent } from "$lib/types";
 
 export const deployJobPayload = z.object({
 	deploymentId: z.string(),
+	noCache: z.boolean().default(false),
 	serviceId: z.string(),
 	trigger: z.enum(DEPLOY_TRIGGERS).default("manual"),
 	userId: z.string(),

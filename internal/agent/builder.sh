@@ -62,6 +62,9 @@ case "$BUILD_METHOD" in
       exit 1
     fi
     set -- build --progress plain -f "$BUILD_FILE" -t "$IMAGE_TAG" --load
+    if [ -n "${NO_CACHE:-}" ]; then
+      set -- "$@" --no-cache
+    fi
     if [ -n "$CACHE_REF" ]; then
       use_cache_builder
       set -- "$@" --builder homerun-cache --cache-from "type=registry,ref=$CACHE_REF" --cache-to "type=registry,ref=$CACHE_REF,mode=max,ignore-error=true"
@@ -82,6 +85,9 @@ case "$BUILD_METHOD" in
       exit 1
     fi
     set -- bake --progress plain -f "$BUILD_FILE" --set "$targets.tags=$IMAGE_TAG" --set "$targets.output=type=docker"
+    if [ -n "${NO_CACHE:-}" ]; then
+      set -- "$@" --no-cache
+    fi
     if [ -n "$CACHE_REF" ]; then
       use_cache_builder
       set -- "$@" --builder homerun-cache --set "$targets.cache-from=type=registry,ref=$CACHE_REF" --set "$targets.cache-to=type=registry,ref=$CACHE_REF,mode=max,ignore-error=true"
@@ -90,12 +96,19 @@ case "$BUILD_METHOD" in
     ;;
   nixpacks)
     fetch "nixpacks-$NIXPACKS_VERSION" "https://github.com/railwayapp/nixpacks/releases/download/v$NIXPACKS_VERSION/nixpacks-v$NIXPACKS_VERSION-$nix.tar.gz" nixpacks "$nix_archive" "$nix_binary"
-    exec "/tools/nixpacks-$NIXPACKS_VERSION" build "$BUILD_DIR" --name "$IMAGE_TAG"
+    set -- build "$BUILD_DIR" --name "$IMAGE_TAG"
+    if [ -n "${NO_CACHE:-}" ]; then
+      set -- "$@" --no-cache
+    fi
+    exec "/tools/nixpacks-$NIXPACKS_VERSION" "$@"
     ;;
   railpack)
     fetch "railpack-$RAILPACK_VERSION" "https://github.com/railwayapp/railpack/releases/download/v$RAILPACK_VERSION/railpack-v$RAILPACK_VERSION-$rail.tar.gz" railpack "$rail_archive" "$rail_binary"
     "/tools/railpack-$RAILPACK_VERSION" prepare "$BUILD_DIR" --plan-out /tmp/railpack-plan.json --info-out /tmp/railpack-info.json
     set -- build --progress plain --build-arg "BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend:v$RAILPACK_VERSION" -f /tmp/railpack-plan.json -t "$IMAGE_TAG" --load
+    if [ -n "${NO_CACHE:-}" ]; then
+      set -- "$@" --no-cache
+    fi
     if [ -n "$CACHE_REF" ]; then
       use_cache_builder
       set -- "$@" --builder homerun-cache --cache-from "type=registry,ref=$CACHE_REF" --cache-to "type=registry,ref=$CACHE_REF,mode=max,ignore-error=true"
@@ -104,7 +117,11 @@ case "$BUILD_METHOD" in
     ;;
   heroku|paketo)
     fetch "pack-$PACK_VERSION" "https://github.com/buildpacks/pack/releases/download/v$PACK_VERSION/pack-v$PACK_VERSION-$pk.tgz" pack "$pk_archive" "$pk_binary"
-    exec "/tools/pack-$PACK_VERSION" build "$IMAGE_TAG" --builder "$PACK_BUILDER" --path "$BUILD_DIR" --trust-builder --pull-policy if-not-present --network bridge
+    set -- build "$IMAGE_TAG" --builder "$PACK_BUILDER" --path "$BUILD_DIR" --trust-builder --pull-policy if-not-present --network bridge
+    if [ -n "${NO_CACHE:-}" ]; then
+      set -- "$@" --clear-cache
+    fi
+    exec "/tools/pack-$PACK_VERSION" "$@"
     ;;
   *)
     echo "Unknown build method $BUILD_METHOD" >&2

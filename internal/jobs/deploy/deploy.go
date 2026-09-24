@@ -79,6 +79,7 @@ type BuildSpec struct {
 	Commit     string               `json:"commit"`
 	Credential *agent.GitCredential `json:"credential"`
 	Git        GitSource            `json:"git"`
+	NoCache    bool                 `json:"noCache"`
 	Registry   *Registry            `json:"registry"`
 	Server     *BuildServer         `json:"server"`
 }

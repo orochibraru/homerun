@@ -1,19 +1,23 @@
 # Deploying
 
-The Overview tab has Deploy/Start/Stop/Restart plus a live progress panel. The
-panel shows six phases, resolving configuration, preparing volumes, fetching
-image, provisioning container, routing traffic, ready, ticking off as they
-complete, with the raw build/pull output streaming underneath. Progress arrives
-over server-sent events (the server pushes each new line and status change; if
-that stream can't be held open, the panel falls back to polling), and it resumes
-correctly if you reload the page mid-deploy, or if the deploy was started
-somewhere else entirely (a template quick-deploy, cron). Below it sit a
-**Resource usage** chart for the service's own container (CPU, memory and
-network traffic, live or over the last hour, day, week, month, year or all of
-it, sampled every minute), a **Connections** panel listing the services it
-references through env vars and the ones that reference it, and a tail of its
-live logs. Deployment history, every attempt with its status, image and full
-log, is on the [Revisions](revisions-and-rollback.md) tab.
+The Overview tab has Deploy (Rebuild for a git service), Start/Stop, Restart
+and, depending on the service, **Fresh build** (a git rebuild that ignores every
+cached layer), **Pull image** (pulls the configured image and tag without
+redeploying, and tells you whether it changed) and **Kill** (SIGKILLs a
+standalone container with no grace period; swarm services only get Stop), plus a
+live progress panel. The panel shows six phases, resolving configuration,
+preparing volumes, fetching image, provisioning container, routing traffic,
+ready, ticking off as they complete, with the raw build/pull output streaming
+underneath. Progress arrives over server-sent events (the server pushes each new
+line and status change; if that stream can't be held open, the panel falls back
+to polling), and it resumes correctly if you reload the page mid-deploy, or if
+the deploy was started somewhere else entirely (a template quick-deploy, cron).
+Below it sit a **Resource usage** chart for the service's own container (CPU,
+memory and network traffic, live or over the last hour, day, week, month, year
+or all of it, sampled every minute), a **Connections** panel listing the
+services it references through env vars and the ones that reference it, and a
+tail of its live logs. Deployment history, every attempt with its status, image
+and full log, is on the [Revisions](revisions-and-rollback.md) tab.
 
 **Redeploys are health-gated.** When the service already has a running
 container, the new one starts next to it and the old one keeps serving until the

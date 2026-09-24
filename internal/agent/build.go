@@ -76,6 +76,7 @@ type BuildInput struct {
 	DockerfilePath *string        `json:"dockerfilePath"`
 	GitRef         *string        `json:"gitRef"`
 	GitURL         string         `json:"gitUrl"`
+	NoCache        bool           `json:"noCache"`
 	Push           *PushTarget    `json:"push"`
 	Tag            string         `json:"tag"`
 
@@ -168,6 +169,7 @@ func (b *Builder) BuildWithProgress(ctx context.Context, input BuildInput, progr
 		BuildContext:   valueOr(input.BuildContext, ""),
 		DockerfilePath: valueOr(input.DockerfilePath, ""),
 		Method:         valueOr(input.BuildMethod, "dockerfile"),
+		NoCache:        input.NoCache,
 		RepoDir:        repoDir,
 		Tag:            input.Tag,
 	}

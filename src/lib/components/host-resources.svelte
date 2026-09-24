@@ -63,7 +63,7 @@
   </div>
 {/snippet}
 
-<div class="panel">
+<div class="panel overflow-hidden rounded-xl">
   {#if stats.error}
     <p class="text-text-muted px-4 py-3 text-xs">Host resource stats are unavailable right now.</p>
   {:else if stats.ready}

@@ -72,6 +72,7 @@ func (r *run) buildInput(tag string) agent.BuildInput {
 		DockerfilePath: build.Git.DockerfilePath,
 		GitRef:         build.Git.GitRef,
 		GitURL:         build.Git.GitURL,
+		NoCache:        build.NoCache,
 		Tag:            tag,
 	}
 	if build.Commit != "" {

@@ -334,6 +334,12 @@ export function DockerContainerMixin<
 			logger.info(`Container stopped: ${containerId}`);
 		}
 
+		/** Sends SIGKILL to a container, skipping the stop grace period. Already stopped isn't an error. */
+		async killContainer(containerId: string): Promise<void> {
+			await this.worker.post(`v1/containers/${containerId}/kill`);
+			logger.info(`Container killed: ${containerId}`);
+		}
+
 		/** Restarts a container. */
 		async restartContainer(
 			containerId: string,

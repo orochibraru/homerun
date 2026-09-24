@@ -6,7 +6,6 @@ import { ServiceDTO } from "$lib/dto/service-dto";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
 import { DeploymentService } from "$lib/services/deploy.service";
-import { DockerService } from "$lib/services/docker.service";
 import { ServiceLifecycleService } from "$lib/services/service-lifecycle.service";
 
 const logger = new Logger("Services");
@@ -68,11 +67,62 @@ export const actions = {
 
 		const { deploymentId } = await DeploymentService.enqueueDeploy({
 			clientDeploymentId,
+			noCache: formData.get("noCache") === "1",
 			svc,
 			userId: locals.user.id,
 		});
 
 		return { deploymentId, success: true };
+	},
+
+	kill: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		try {
+			await ServiceLifecycleService.killService(svc);
+		} catch (error) {
+			return lifecycleFailure("kill", error);
+		}
+		logger.info(`Service killed: service=${svc.id} user=${locals.user.id}`);
+		NotificationDTO.notify({
+			message: `"${svc.name}" was killed.`,
+			serviceId: svc.id,
+			type: "service_stopped",
+		});
+		return { success: true };
+	},
+
+	pull: async ({ params, locals, platform }) => {
+		allowLongRequest(platform);
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const svc = await ServiceDTO.get(params.serviceId);
+		if (!svc) {
+			return fail(404, { error: "Service not found." });
+		}
+		try {
+			const { changed } = await ServiceLifecycleService.pullServiceImage(svc);
+			logger.info(
+				`Image pulled: service=${svc.id} changed=${changed} user=${locals.user.id}`,
+			);
+			return {
+				message: changed
+					? `Pulled a newer ${svc.image}:${svc.tag}, redeploy to run it.`
+					: `${svc.image}:${svc.tag} is already up to date.`,
+				success: true,
+			};
+		} catch (error) {
+			logger.error("Failed to pull service image", error);
+			return fail(500, {
+				error: `Couldn't pull ${svc.image}:${svc.tag} : ${error instanceof Error ? error.message : "unknown error"}.`,
+			});
+		}
 	},
 
 	restart: async ({ params, locals, platform }) => {
@@ -84,19 +134,8 @@ export const actions = {
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
-		if (svc.swarmServiceId) {
-			await DockerService.restartSwarmService(svc.swarmServiceId);
-			logger.info(
-				`Swarm service restarted: service=${svc.id} user=${locals.user.id}`,
-			);
-			return { success: true };
-		}
-		if (!svc.containerId) {
-			return fail(400, { error: "This service hasn't been deployed yet." });
-		}
-
 		try {
-			await ServiceLifecycleService.restart(svc.containerId);
+			await ServiceLifecycleService.restartService(svc);
 		} catch (error) {
 			return lifecycleFailure("restart", error);
 		}
@@ -112,32 +151,11 @@ export const actions = {
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
-		if (svc.swarmServiceId) {
-			await DockerService.scaleSwarmService(
-				svc.swarmServiceId,
-				svc.replicas || 1,
-			);
-			await svc.update({ desiredState: "running" });
-			logger.info(
-				`Swarm service started: service=${svc.id} user=${locals.user.id}`,
-			);
-			NotificationDTO.notify({
-				message: `"${svc.name}" was started.`,
-				serviceId: svc.id,
-				type: "service_started",
-			});
-			return { success: true };
-		}
-		if (!svc.containerId) {
-			return fail(400, { error: "This service hasn't been deployed yet." });
-		}
-
 		try {
-			await ServiceLifecycleService.start(svc.containerId);
+			await ServiceLifecycleService.startService(svc);
 		} catch (error) {
 			return lifecycleFailure("start", error);
 		}
-		await svc.update({ desiredState: "running" });
 		logger.info(`Service started: service=${svc.id} user=${locals.user.id}`);
 		NotificationDTO.notify({
 			message: `"${svc.name}" was started.`,
@@ -156,23 +174,6 @@ export const actions = {
 		if (!svc) {
 			return fail(404, { error: "Service not found." });
 		}
-		if (svc.swarmServiceId) {
-			await DockerService.scaleSwarmService(svc.swarmServiceId, 0);
-			await svc.update({ desiredState: "stopped" });
-			logger.info(
-				`Swarm service stopped: service=${svc.id} user=${locals.user.id}`,
-			);
-			NotificationDTO.notify({
-				message: `"${svc.name}" was stopped.`,
-				serviceId: svc.id,
-				type: "service_stopped",
-			});
-			return { success: true };
-		}
-		if (!svc.containerId) {
-			return fail(400, { error: "This service hasn't been deployed yet." });
-		}
-
 		try {
 			await ServiceLifecycleService.stopService(svc);
 		} catch (error) {

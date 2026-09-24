@@ -29,6 +29,7 @@ func (s *Server) mountContainers(r chi.Router) {
 	r.Post("/v1/containers/{id}/start", httpapi.H(s.startContainer))
 	r.Post("/v1/containers/{id}/stop", httpapi.H(s.stopContainer))
 	r.Post("/v1/containers/{id}/restart", httpapi.H(s.restartContainer))
+	r.Post("/v1/containers/{id}/kill", httpapi.H(s.killContainer))
 	r.Delete("/v1/containers/{id}", httpapi.H(s.removeContainer))
 	r.Get("/v1/containers/{id}/status", httpapi.H(s.containerStatus))
 	r.Get("/v1/containers/{id}/health", httpapi.H(s.containerHealth))
@@ -118,6 +119,14 @@ func (s *Server) stopContainer(w http.ResponseWriter, r *http.Request) error {
 // restartContainer restarts a container.
 func (s *Server) restartContainer(w http.ResponseWriter, r *http.Request) error {
 	if err := s.docker.ContainerRestart(r.Context(), chi.URLParam(r, "id")); err != nil {
+		return notFoundOr(w, err)
+	}
+	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// killContainer sends SIGKILL to a container. One already stopped isn't an error.
+func (s *Server) killContainer(w http.ResponseWriter, r *http.Request) error {
+	if err := s.docker.KillContainer(r.Context(), chi.URLParam(r, "id")); err != nil {
 		return notFoundOr(w, err)
 	}
 	return httpapi.Answer(w, http.StatusOK, map[string]bool{"ok": true})

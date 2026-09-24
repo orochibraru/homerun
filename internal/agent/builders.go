@@ -79,6 +79,7 @@ type BuilderInput struct {
 	CacheRegistry  *CacheRegistry
 	DockerfilePath string
 	Method         string
+	NoCache        bool
 	RepoDir        string
 	Tag            string
 }
@@ -157,6 +158,9 @@ func BuilderEnv(input BuilderInput) ([]string, error) {
 		env["CACHE_REGISTRY"] = cache.RegistryURL
 		env["CACHE_USERNAME"] = cache.Username
 	}
+	if input.NoCache {
+		env["NO_CACHE"] = "1"
+	}
 	switch input.Method {
 	case "dockerfile":
 		file, err := builderFilePath(input.RepoDir, buildDir, input.DockerfilePath, "Dockerfile")
@@ -186,7 +190,7 @@ func BuilderEnv(input BuilderInput) ([]string, error) {
 var envOrder = []string{
 	"BUILD_DIR", "BUILD_METHOD", "CACHE_PASSWORD", "CACHE_REF", "CACHE_REGISTRY",
 	"CACHE_USERNAME", "IMAGE_TAG", "NIXPACKS_VERSION", "PACK_VERSION",
-	"PACK_VOLUME_KEY", "RAILPACK_VERSION", "BUILD_FILE", "BAKE_TARGET", "PACK_BUILDER",
+	"PACK_VOLUME_KEY", "RAILPACK_VERSION", "BUILD_FILE", "BAKE_TARGET", "PACK_BUILDER", "NO_CACHE",
 }
 
 // orderedEnv renders env as KEY=value strings in envOrder.

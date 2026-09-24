@@ -2,11 +2,15 @@
 	import {
 		CheckCircle2,
 		Circle,
+		Download,
+		Hammer,
 		Play,
 		Rocket,
 		RotateCw,
+		Sparkles,
 		Square,
 		XCircle,
+		Zap,
 	} from "@lucide/svelte";
 	import { onDestroy, onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
@@ -40,6 +44,12 @@
 		string,
 		{ done: string; progressive: string; verb: string }
 	> = {
+		kill: { done: "killed", progressive: "Killing", verb: "kill" },
+		pull: {
+			done: "pulled",
+			progressive: "Pulling the image for",
+			verb: "pull the image for",
+		},
 		restart: { done: "restarted", progressive: "Restarting", verb: "restart" },
 		start: { done: "started", progressive: "Starting", verb: "start" },
 		stop: { done: "stopped", progressive: "Stopping", verb: "stop" },
@@ -56,9 +66,14 @@
 			onStart: () => {
 				progress.pendingAction = action;
 			},
-			success: `${svc.name} ${label.done}.`,
+			success: (data) =>
+				typeof data?.message === "string"
+					? data.message
+					: `${svc.name} ${label.done}.`,
 		});
 	}
+
+	let freshBuild = $state(false);
 
 	onDestroy(() => progress.close());
 
@@ -81,18 +96,65 @@
 <!-- ═══ Actions ═══ -->
 <div class="mb-4 flex flex-wrap gap-2">
     <form action="?/deploy" method="POST" use:enhance={progress.deployEnhance()}>
-        <Button disabled={progress.pendingAction !== null} type="submit">
-            {#if progress.pendingAction === "deploy"}
+        <Button
+            disabled={progress.pendingAction !== null}
+            onclick={() => (freshBuild = false)}
+            type="submit"
+        >
+            {#if progress.pendingAction === "deploy" && !freshBuild}
                 <Spinner />
-                {svc.containerId ? "Deploying…" : "Deploying…"}
+                {svc.buildSource === "git" ? "Building…" : "Deploying…"}
+            {:else if svc.buildSource === "git" && isDeployed(svc)}
+                <Hammer class="size-4" />
+                Rebuild
             {:else}
                 <Rocket class="size-4" />
-                {svc.containerId ? "Redeploy" : "Deploy"}
+                {isDeployed(svc) ? "Redeploy" : "Deploy"}
             {/if}
         </Button>
     </form>
 
-    {#if svc.containerId}
+    {#if svc.buildSource === "git"}
+        <form
+            action="?/deploy"
+            method="POST"
+            use:enhance={progress.deployEnhance()}
+        >
+            <input name="noCache" type="hidden" value="1" />
+            <Button
+                disabled={progress.pendingAction !== null}
+                onclick={() => (freshBuild = true)}
+                title="Rebuild from scratch, ignoring every cached layer"
+                type="submit"
+                variant="outline"
+            >
+                {#if progress.pendingAction === "deploy" && freshBuild}
+                    <Spinner />
+                {:else}
+                    <Sparkles class="size-4" />
+                {/if}
+                Fresh build
+            </Button>
+        </form>
+    {:else}
+        <form action="?/pull" method="POST" use:enhance={withPending("pull")}>
+            <Button
+                disabled={progress.pendingAction !== null}
+                title="Pull {svc.image}:{svc.tag} without redeploying"
+                type="submit"
+                variant="outline"
+            >
+                {#if progress.pendingAction === "pull"}
+                    <Spinner />
+                {:else}
+                    <Download class="size-4" />
+                {/if}
+                Pull image
+            </Button>
+        </form>
+    {/if}
+
+    {#if isDeployed(svc)}
         {#if svc.desiredState === "running"}
             <form
                 action="?/stop"
@@ -153,6 +215,29 @@
                 Restart
             </Button>
         </form>
+
+        {#if svc.containerId}
+            <form
+                action="?/kill"
+                method="POST"
+                use:enhance={withPending("kill")}
+            >
+                <Button
+                    class="border-red-100 bg-red-600/10 text-red-600 dark:border-red-600"
+                    disabled={progress.pendingAction !== null}
+                    title="SIGKILL the container, no grace period"
+                    type="submit"
+                    variant="outline"
+                >
+                    {#if progress.pendingAction === "kill"}
+                        <Spinner />
+                    {:else}
+                        <Zap class="size-4" />
+                    {/if}
+                    Kill
+                </Button>
+            </form>
+        {/if}
     {/if}
 </div>
 
