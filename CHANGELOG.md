@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.44](https://github.com/orochibraru/homerun/compare/v1.0.43...v1.0.44) (2026-09-24)
+
+### Features
+
+- **ui:** tint sidebar nav icons with the accent and regenerate docs screenshots
+  ([652453b](https://github.com/orochibraru/homerun/commit/652453b882fe70691ff73bbb0c9d86d665ddef69))
+- **brand:** replace the house logo with a home-plate mark and drop the
+  favicon's background box
+  ([e9cf65b](https://github.com/orochibraru/homerun/commit/e9cf65b399d8e9c03c6cabbb6ba9cb8385d67f70))
+- **ui:** make bordeaux the default accent and drop per-category sidebar colors
+  ([2ee7841](https://github.com/orochibraru/homerun/commit/2ee7841ca6f0574ebe1425d833fbe8c7c87ebf6d))
+
 ## [1.0.43](https://github.com/orochibraru/homerun/compare/v1.0.42...v1.0.43) (2026-09-24)
 
 ### Features
