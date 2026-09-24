@@ -391,9 +391,11 @@ This whole run is scripted and reproducible, not a one-off: from the repo root,
 `bun scripts/e2e-multipass.ts` builds these binaries from local source, launches
 two disposable Multipass VMs, runs both modes for real, and drives the Remote
 Host + CLI checks above end to end, tearing down after (`--keep` to leave the
-VMs up for inspection, `--skip-build` to reuse a previous build). Requires
-Multipass + Docker locally; deliberately not run in CI (no nested virtualization
-there).
+VMs up for inspection, `--skip-build` to reuse a previous build, `--dokploy` for
+the same-host move off Dokploy, see
+[Migrating from Dokploy or Coolify](../../docs/migrating-from-dokploy-or-coolify.md#on-the-same-host)).
+Requires Multipass + Docker locally; deliberately not run in CI (no nested
+virtualization there).
 
 `bun scripts/e2e-multipass-release.ts` is the release-side counterpart: instead
 of local binaries, it runs the documented `curl | sudo bash` one-liners

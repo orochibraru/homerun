@@ -456,9 +456,16 @@ own runtime).
   install boots in swarm mode and routes a 2-replica service, `--migrate`
   installs the previous release rootless, deploys a service with a named volume
   holding a marker, runs `--migrate-to-rootful` and checks users, mode, the
-  redeploy, the marker's ownership and routing. `--local-image` builds the app
-  image from the checkout and loads it into each VM, which app-side changes need
-  since the installer otherwise pulls the published image.
+  redeploy, the marker's ownership and routing. `--dokploy` installs Dokploy
+  (driven through its own REST API: sign-up, API key, an nginx app on a named
+  volume with a domain, a Postgres), installs Homerun next to it with
+  `--dashboard-port=4500 --http-port=8080 --https-port=8443`, checks Dokploy
+  still serves on 80, imports both through Settings → Migrate, stops each on
+  Dokploy, deploys the Homerun copy and checks both markers survived on the
+  shared volumes, then stops `dokploy-traefik` and re-runs the installer with
+  80/443. `--local-image` builds the app image from the checkout and loads it
+  into each VM, which app-side changes need since the installer otherwise pulls
+  the published image.
 
   This whole run is reproducible, not a one-off: `bun scripts/e2e-multipass.ts`
   automates exactly this, builds the installer/worker/CLI binaries from local

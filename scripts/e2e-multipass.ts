@@ -24,6 +24,13 @@ const SWARM_WORKER_VM = "homerun-e2e-swarm-worker";
 const SWARM_REPLICAS = 3;
 const FRESH_SWARM_VM = "homerun-e2e-fresh-swarm";
 const MIGRATE_VM = "homerun-e2e-migrate";
+const DOKPLOY_VM = "homerun-e2e-dokploy";
+const DOKPLOY_PORT = 3000;
+const SIDE_BY_SIDE_FLAGS = [
+	"--dashboard-port=4500",
+	"--http-port=8080",
+	"--https-port=8443",
+];
 const LOCAL_IMAGE = "homerun-e2e:local";
 const PREVIOUS_RELEASE = "v1.0.26";
 const ADMIN_EMAIL = "e2e@homerun-multipass-suite.local";
@@ -36,6 +43,7 @@ const keep = args.has("--keep");
 const swarm = args.has("--swarm");
 const freshSwarm = args.has("--fresh-swarm");
 const migrate = args.has("--migrate");
+const dokploy = args.has("--dokploy");
 const localImage = args.has("--local-image");
 const localImageArchive = `${tmpdir()}/homerun-e2e-image.tar.gz`;
 
@@ -95,11 +103,12 @@ async function sql(vm: Vm, query: string): Promise<string> {
 	).trim();
 }
 
-/** Fetches a path on a service through Traefik on the VM (the web entrypoint serves TLS on :80) and returns the body. */
+/** Fetches a path on a service through Traefik on the VM (the web entrypoint serves TLS, on :80 unless published elsewhere) and returns the body. */
 async function throughTraefik(
 	vm: Vm,
 	host: string,
 	path: string,
+	port = 80,
 ): Promise<string> {
 	const { stdout } = await exec(
 		[
@@ -108,8 +117,8 @@ async function throughTraefik(
 			"-m",
 			"5",
 			"--resolve",
-			`${host}:80:${await vm.ip()}`,
-			`https://${host}:80${path}`,
+			`${host}:${port}:${await vm.ip()}`,
+			`https://${host}:${port}${path}`,
 		],
 		{ allowFailure: true },
 	);
@@ -163,6 +172,15 @@ async function provisionFull(
 	);
 	await vm.recreate(2, "4G", "20G");
 	installerFlags.push(...(await loadLocalImage(vm)));
+	return installFull(vm, installerFlags);
+}
+
+/** Runs this checkout's installer in `--mode=full` on an existing VM and waits for the dashboard on `port`. */
+async function installFull(
+	vm: Vm,
+	installerFlags: string[],
+	port = APP_PORT,
+): Promise<AppClient> {
 	await vm.transfer(`dist/homerun-installer-${arch}`, "/tmp/homerun-installer");
 	await vm.exec(["chmod", "+x", "/tmp/homerun-installer"]);
 	await vm.exec([
@@ -174,7 +192,7 @@ async function provisionFull(
 	]);
 
 	const ip = await vm.ip();
-	const baseUrl = `http://${ip}:${APP_PORT}`;
+	const baseUrl = `http://${ip}:${port}`;
 
 	await waitFor(`app healthy at ${baseUrl}`, async () => {
 		const res = await fetch(baseUrl, { redirect: "manual" }).catch(() => null);
@@ -658,6 +676,333 @@ async function testMigration(vm: Vm): Promise<void> {
 	console.log("  Users, services, the marker and routing all survived.");
 }
 
+/** A Dokploy instance's REST API, signed in by session cookie until an API key replaces it. */
+class DokployClient {
+	#headers: Record<string, string> = {};
+
+	constructor(readonly baseUrl: string) {}
+
+	/**
+	 * Calls `/api/<path>`: a GET without a body, a JSON POST with one. Keeps the
+	 * session cookie a sign-in sets.
+	 *
+	 * @throws When Dokploy answers non-2xx.
+	 */
+	async call<T>(path: string, body?: unknown): Promise<T> {
+		const res = await fetch(`${this.baseUrl}/api/${path}`, {
+			body: body === undefined ? undefined : JSON.stringify(body),
+			headers: { ...this.#headers, "content-type": "application/json" },
+			method: body === undefined ? "GET" : "POST",
+		});
+		const text = await res.text();
+		if (!res.ok) {
+			throw new Error(`Dokploy ${path} -> ${res.status}: ${text}`);
+		}
+		const cookies = res.headers
+			.getSetCookie()
+			.map((raw) => raw.split(";", 1)[0])
+			.join("; ");
+		if (cookies && !this.#headers["x-api-key"]) {
+			this.#headers.cookie = cookies;
+		}
+		return (text ? JSON.parse(text) : null) as T;
+	}
+
+	/** Swaps the session cookie for an API key on every later call. */
+	useApiKey(key: string): void {
+		this.#headers = { "x-api-key": key };
+	}
+}
+
+/** Waits until the Dokploy swarm service `appName` runs its one replica. */
+async function dokployRunning(vm: Vm, appName: string): Promise<void> {
+	await waitFor(
+		`Dokploy's ${appName} running`,
+		async () =>
+			(
+				await vm.dockerRoot([
+					"service",
+					"ls",
+					"--filter",
+					`name=${appName}`,
+					"--format",
+					"{{.Replicas}}",
+				])
+			).trim() === "1/1",
+		{ intervalMs: 3000, timeoutMs: 300_000 },
+	);
+}
+
+/** Runs `psql` inside the first running task of a swarm service and returns its unaligned rows. */
+async function psqlInService(
+	vm: Vm,
+	serviceFilter: string,
+	query: string,
+): Promise<string> {
+	const container = (
+		await vm.dockerRoot(["ps", "-q", "--filter", serviceFilter])
+	)
+		.trim()
+		.split("\n")[0];
+	assert(container, `No running container for ${serviceFilter}`);
+	return (
+		await vm.dockerRoot([
+			"exec",
+			container,
+			"psql",
+			"-U",
+			"e2e",
+			"-d",
+			"e2e",
+			"-tAc",
+			query,
+		])
+	).trim();
+}
+
+/**
+ * Scenario (c), the same-host move off Dokploy: installs Dokploy, gives it an
+ * nginx app on a named volume with a domain and a Postgres database, both
+ * holding a marker. Installs Homerun next to it with the side-by-side ports,
+ * checks Dokploy still owns 80, imports both through Settings, Migrate, stops
+ * each on Dokploy and deploys its Homerun copy, checks both markers came across
+ * with their volumes, then takes over 80/443 by stopping dokploy-traefik and
+ * re-running the installer.
+ *
+ * @throws When any check fails or times out.
+ */
+async function testDokployMigration(vm: Vm): Promise<void> {
+	log(`Launching ${vm.name} and installing Dokploy`);
+	await vm.recreate(2, "6G", "30G");
+	await vm.exec([
+		"bash",
+		"-c",
+		"curl -sSL https://dokploy.com/install.sh | sudo sh",
+	]);
+	const ip = await vm.ip();
+	const dokployUrl = `http://${ip}:${DOKPLOY_PORT}`;
+	await waitFor(
+		"Dokploy answering",
+		async () => (await fetch(`${dokployUrl}/api/health`).catch(() => null))?.ok,
+		{ intervalMs: 3000, timeoutMs: 300_000 },
+	);
+
+	log("Creating Dokploy's admin and an API key");
+	const dokployApi = new DokployClient(dokployUrl);
+	const credentials = { email: ADMIN_EMAIL, password: ADMIN_PASSWORD };
+	await new DokployClient(dokployUrl).call("auth/sign-up/email", {
+		...credentials,
+		lastName: "E2E",
+		name: "Multipass",
+	});
+	await dokployApi.call("auth/sign-in/email", credentials);
+	const session = await dokployApi.call<{
+		session: { activeOrganizationId: string };
+	}>("auth/get-session");
+	const { key } = await dokployApi.call<{ key: string }>("user.createApiKey", {
+		metadata: { organizationId: session.session.activeOrganizationId },
+		name: "homerun-e2e",
+		rateLimitEnabled: false,
+	});
+	dokployApi.useApiKey(key);
+
+	log("Deploying an nginx app on a named volume and a Postgres on Dokploy");
+	const { environment } = await dokployApi.call<{
+		environment: { environmentId: string };
+	}>("project.create", { name: "e2e" });
+	const app = await dokployApi.call<{ applicationId: string; appName: string }>(
+		"application.create",
+		{
+			appName: "e2e-nginx",
+			environmentId: environment.environmentId,
+			name: "e2e-nginx",
+		},
+	);
+	await dokployApi.call("application.saveDockerProvider", {
+		applicationId: app.applicationId,
+		dockerImage: "nginx:alpine",
+		password: null,
+		registryUrl: null,
+		username: null,
+	});
+	await dokployApi.call("mounts.create", {
+		mountPath: "/usr/share/nginx/html",
+		serviceId: app.applicationId,
+		serviceType: "application",
+		type: "volume",
+		volumeName: "e2e-dokploy-html",
+	});
+	const dokployHost = "e2e-nginx.dokploy-e2e.local";
+	await dokployApi.call("domain.create", {
+		applicationId: app.applicationId,
+		certificateType: "none",
+		domainType: "application",
+		host: dokployHost,
+		https: false,
+		path: "/",
+		port: 80,
+	});
+	await dokployApi.call("application.deploy", {
+		applicationId: app.applicationId,
+	});
+	const db = await dokployApi.call<{ appName: string; postgresId: string }>(
+		"postgres.create",
+		{
+			appName: "e2e-db",
+			databaseName: "e2e",
+			databasePassword: "e2e-password",
+			databaseUser: "e2e",
+			dockerImage: "postgres:16",
+			environmentId: environment.environmentId,
+			name: "e2e-db",
+		},
+	);
+	await dokployApi.call("postgres.deploy", { postgresId: db.postgresId });
+	await dokployRunning(vm, app.appName);
+	await dokployRunning(vm, db.appName);
+
+	await vm.dockerRoot([
+		"run",
+		"--rm",
+		"-v",
+		"e2e-dokploy-html:/html",
+		"alpine:3",
+		"sh",
+		"-c",
+		`echo ${MARKER} > /html/marker.txt`,
+	]);
+	const dokployDb = `label=com.docker.swarm.service.name=${db.appName}`;
+	await waitFor("Dokploy's Postgres accepting queries", () =>
+		psqlInService(
+			vm,
+			dokployDb,
+			`create table if not exists marker(value text primary key); insert into marker values ('${MARKER}') on conflict do nothing`,
+		).then(() => true),
+	);
+	const viaDokploy = async () =>
+		(
+			await exec(
+				[
+					"curl",
+					"-s",
+					"-m",
+					"5",
+					"--resolve",
+					`${dokployHost}:80:${ip}`,
+					`http://${dokployHost}/marker.txt`,
+				],
+				{ allowFailure: true },
+			)
+		).stdout.includes(MARKER);
+	await waitFor("marker served by Dokploy's Traefik", viaDokploy);
+
+	log(`Installing Homerun next to Dokploy (${SIDE_BY_SIDE_FLAGS.join(" ")})`);
+	const installerFlags = [...SIDE_BY_SIDE_FLAGS, ...(await loadLocalImage(vm))];
+	const client = await installFull(vm, installerFlags, 4500);
+	await bootstrapAdmin(client);
+	assert(
+		await viaDokploy(),
+		"Dokploy stopped serving after Homerun's install.",
+	);
+	assert(
+		(await fetch(`${dokployUrl}/api/health`).catch(() => null))?.ok,
+		"Dokploy's dashboard stopped answering after Homerun's install.",
+	);
+
+	log("Importing both from Dokploy through Settings, Migrate");
+	const form = new FormData();
+	form.append("baseUrl", dokployUrl);
+	form.append("token", key);
+	form.append("ids", app.applicationId);
+	form.append("ids", db.postgresId);
+	const imported = await client.request("/settings/migrate/dokploy?/import", {
+		body: form,
+		method: "POST",
+	});
+	const importBody = await imported.text();
+	assert(
+		imported.ok && !importBody.includes('"type":"failure"'),
+		`Import failed: ${importBody}`,
+	);
+	const services = (
+		await sql(vm, "select id, image from service order by image")
+	)
+		.split("\n")
+		.map((line) => line.split("|"));
+	const nginx = services.find(([, image]) => image?.includes("nginx"))?.[0];
+	const postgres = services.find(([, image]) =>
+		image?.includes("postgres"),
+	)?.[0];
+	assert(
+		nginx && postgres,
+		`Expected an nginx and a postgres service, got ${JSON.stringify(services)}`,
+	);
+
+	log("Stopping each on Dokploy and deploying its Homerun copy");
+	await dokployApi.call("application.stop", {
+		applicationId: app.applicationId,
+	});
+	await dokployApi.call("postgres.stop", { postgresId: db.postgresId });
+	for (const id of [nginx, postgres]) {
+		await client.postJson(`/api/v1/services/${id}/deploy`, {});
+		await waitFor(
+			`service ${id} running on Homerun`,
+			async () =>
+				(await sql(
+					vm,
+					`select current_status from service where id = '${id}'`,
+				)) === "running",
+			{ intervalMs: 5000, timeoutMs: 300_000 },
+		);
+	}
+	const rule = await vm.dockerRoot([
+		"service",
+		"inspect",
+		await sql(vm, `select swarm_service_id from service where id = '${nginx}'`),
+		"--format",
+		"{{json .Spec.Labels}}",
+	]);
+	const homerunHost = /Host\(`([^`]+)`\)/.exec(rule)?.[1];
+	assert(homerunHost, `No Traefik host rule on the nginx service: ${rule}`);
+	await waitFor(
+		"nginx volume's marker served through Homerun's Traefik on :8080",
+		async () =>
+			(await throughTraefik(vm, homerunHost, "/marker.txt", 8080)).includes(
+				MARKER,
+			),
+		{ intervalMs: 2000, timeoutMs: 120_000 },
+	);
+	const swarmServiceId = await sql(
+		vm,
+		`select swarm_service_id from service where id = '${postgres}'`,
+	);
+	const rows = await waitFor("Postgres marker row on Homerun", () =>
+		psqlInService(
+			vm,
+			`label=com.docker.swarm.service.id=${swarmServiceId}`,
+			"select value from marker",
+		),
+	);
+	assert(rows === MARKER, `Postgres data didn't come across: "${rows}"`);
+
+	log("Taking over 80/443 from Dokploy");
+	await vm.dockerRoot(["stop", "dokploy-traefik"]);
+	await installFull(
+		vm,
+		[...installerFlags, "--http-port=80", "--https-port=443"],
+		4500,
+	);
+	await waitFor(
+		"marker served through Homerun's Traefik on :80",
+		async () =>
+			(await throughTraefik(vm, homerunHost, "/marker.txt")).includes(MARKER),
+		{ intervalMs: 2000, timeoutMs: 120_000 },
+	);
+	console.log(
+		"  Both services, their volumes and routing moved off Dokploy on the same host.",
+	);
+}
+
 async function cleanup(): Promise<void> {
 	if (keep) {
 		console.log(
@@ -665,9 +1010,10 @@ async function cleanup(): Promise<void> {
 		);
 		console.log(`  multipass shell ${FULL_VM}`);
 		console.log(`  multipass shell ${AGENT_VM}`);
+		console.log(`  multipass shell ${DOKPLOY_VM}`);
 		console.log(`  docker exec -it ${CLI_CONTAINER} bash`);
 		console.log(
-			`\nClean up later with: multipass delete ${FULL_VM} ${AGENT_VM} --purge && docker rm -f ${CLI_CONTAINER}`,
+			`\nClean up later with: multipass delete ${FULL_VM} ${AGENT_VM} ${DOKPLOY_VM} --purge && docker rm -f ${CLI_CONTAINER}`,
 		);
 		return;
 	}
@@ -689,6 +1035,15 @@ async function main(): Promise<void> {
 		await preflight(["multipass", "docker"]);
 		await buildBinaries();
 		await buildLocalImage();
+
+		if (dokploy) {
+			await testDokployMigration(new Vm(DOKPLOY_VM));
+			console.log(
+				`\n✔ Dokploy migration checks passed (${Math.round((Date.now() - startedAt) / 1000)}s).`,
+			);
+			await cleanup();
+			return;
+		}
 
 		if (freshSwarm || migrate) {
 			if (freshSwarm) {
