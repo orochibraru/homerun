@@ -470,3 +470,11 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           TAG: ${{ steps.releaser.outputs.tag }}
         run: bun scripts/upload-release-assets.ts "$TAG"
+
+  stable-screenshots:
+    name: Refresh Screenshots
+    needs: [stable-release]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/screenshots-refresh.yaml
+    secrets: inherit

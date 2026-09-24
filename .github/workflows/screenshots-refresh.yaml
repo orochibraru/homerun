@@ -2,6 +2,7 @@ name: Refresh Screenshots
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
   group: screenshots-refresh
@@ -27,6 +28,8 @@ jobs:
       DOCS_TRIGGER_TOKEN: ${{ secrets.DOCS_TRIGGER_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Download the captured images
         uses: orochibraru/download-artifact@554003634ca680409ecdbf97e0de85a6002f420b # 8.0.2
@@ -45,6 +48,7 @@ jobs:
             exit 0
           fi
           git commit -m "chore(docs): refresh screenshots [skip ci]"
+          git pull --rebase origin "$GITHUB_REF_NAME"
           git push
           echo "pushed=true" >> "$GITHUB_OUTPUT"
 

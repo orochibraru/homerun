@@ -369,13 +369,16 @@ result with `[skip ci]`, then pings the docs site the way `docs-update.yaml`
 does — `[skip ci]` stops the push from re-running the whole publish pipeline,
 and a `GITHUB_TOKEN` push wouldn't trigger `docs-update.yaml` anyway.
 
-**Refreshing the gallery is deliberate, not automatic, and that's the point.**
-The png can't be diffed for drift: the pages carrying live data (the dashboard,
-a service's overview, the log viewer) come out byte-different on every single
-run — live CPU%, "just now", the container's random name suffix — so ~8 of the
-26 files change even when nothing in the app did, and PNG blobs don't
-delta-compress. Regenerating on every merge would add megabytes of history for
-no signal. Run the refresh workflow when the UI has actually changed.
+**The gallery refreshes once per stable release, not per merge.**
+`publish.yaml`'s `stable-screenshots` job calls `screenshots-refresh.yaml` (also
+`workflow_call`) after `stable-release`, so the published images track what
+users actually run. Not per merge because the images can't be diffed for drift:
+the pages carrying live data (the dashboard, a service's overview, the log
+viewer) come out byte-different on every run — live CPU%, "just now", the
+container's random name suffix — so ~8 of the 26 files change even when nothing
+in the app did, and image blobs don't delta-compress. The commit step rebases
+onto the branch tip before pushing, since main can move during the ~20 minute
+capture. Run the refresh workflow by hand to update between releases.
 
 `docs/images/README.md` is written by the run itself and must come out already
 prettier-formatted (the spec hard-wraps its one prose line exactly where

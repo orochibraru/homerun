@@ -84,6 +84,7 @@
 		"test": "svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/... && bun --config=bunfig.unit.toml test tests/unit --timeout 120000",
 		"test:integration": "bun test tests/integration --timeout 120000",
 		"test:e2e": "playwright test",
+		"screenshots": "playwright test --config playwright.screenshots.config.ts",
 		"db:generate": "drizzle-kit generate"
 	},
 	"type": "module",

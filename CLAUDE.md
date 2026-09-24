@@ -97,9 +97,10 @@ hooks from `.pre-commit-config.yaml`) run on `bun install`.
 bun run test              # svelte-kit sync && go test ./cmd/... ./internal/... ./tests/unit/go/... then bun --config=bunfig.unit.toml test tests/unit; unit only, no Postgres/Docker needed
 bun run test:integration  # tests/integration/ only, real Postgres/Docker/worker, see that suite's own README
 bun run test:e2e          # playwright test, tests/e2e/, real Chromium against a real built app, needs bun run build first, see .agents/notes/testing.md
+bun run screenshots       # regenerate docs/images/ through playwright.screenshots.config.ts, same prerequisites as test:e2e plus a Docker daemon (it really deploys); CI reruns it and commits the result after every stable release
 ```
 
-Package.json's script list is deliberately short (14 entries): there's no
+Package.json's script list is deliberately short (15 entries): there's no
 `bun run release` (releases run entirely in CI, driven by
 `orochibraru/releaser`, see `.agents/notes/packages-and-release.md`), and a
 handful of scripts that used to exist are now just the raw command, run directly
@@ -114,8 +115,6 @@ instead of through a name: `bun run build:app` → `bun run build`;
 `bun run test` (scope with `go test ./internal/cli/...` or
 `bun --config=bunfig.unit.toml test tests/unit/app` etc.); `test:e2e:cli` →
 `bun run test:e2e tests/e2e/bootstrap.spec.ts tests/e2e/onboarding.spec.ts tests/e2e/ui-cli.spec.ts`;
-`screenshots` →
-`bunx playwright test --config playwright.screenshots.config.ts`;
 `e2e:multipass`/`e2e:multipass:release` → `bun scripts/e2e-multipass.ts` /
 `bun scripts/e2e-multipass-release.ts`; `dev:app`/`dev:worker` →
 `bun run dev --only=app`/`--only=worker`; `dev:agent` → gone, there's no
