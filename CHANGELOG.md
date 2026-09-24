@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.43](https://github.com/orochibraru/homerun/compare/v1.0.42...v1.0.43) (2026-09-24)
+
+### Features
+
+- **installer:** add --dashboard-port/--http-port/--https-port to install next
+  to Dokploy and take over 80/443 later
+  ([b03ce43](https://github.com/orochibraru/homerun/commit/b03ce43ababd002ac1794231ea3efb99f05952d8))
+
 ## [1.0.42](https://github.com/orochibraru/homerun/compare/v1.0.41...v1.0.42) (2026-09-22)
 
 ### Features
