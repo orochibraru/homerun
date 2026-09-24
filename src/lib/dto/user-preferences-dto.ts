@@ -4,7 +4,6 @@ import { type UserPreferences, userPreferences } from "$lib/server/db/schema";
 import { BaseDTO } from "./base-dto";
 
 export type ThemePreference = "light" | "dark" | "system";
-export type SidebarColorIntensity = "colorful" | "accent";
 
 /**
  * Wraps the `user_preferences` table : one row per user, the /profile/appearance
@@ -29,7 +28,6 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 		const row: UserPreferences = {
 			accentColor: null,
 			createdAt: now,
-			sidebarColorIntensity: "colorful",
 			theme: "system",
 			updatedAt: now,
 			userId,
@@ -41,13 +39,6 @@ export class UserPreferencesDTO extends BaseDTO<UserPreferences> {
 	/** Persists the user's light/dark/system theme choice. */
 	async updateTheme(theme: ThemePreference): Promise<void> {
 		await this.persist({ theme });
-	}
-
-	/** Persists how strongly the sidebar is tinted with the accent colour. */
-	async updateSidebarColorIntensity(
-		sidebarColorIntensity: SidebarColorIntensity,
-	): Promise<void> {
-		await this.persist({ sidebarColorIntensity });
 	}
 
 	/** Null resets to the built-in --color-accent default. */

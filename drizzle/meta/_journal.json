@@ -378,6 +378,13 @@
 			"when": 1789996552884,
 			"tag": "0053_swift_silvermane",
 			"breakpoints": true
+		},
+		{
+			"idx": 54,
+			"version": "7",
+			"when": 1790248009278,
+			"tag": "0054_colorful_warlock",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

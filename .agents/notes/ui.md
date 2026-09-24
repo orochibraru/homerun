@@ -315,11 +315,11 @@ tab on the profile layout (`profile/+layout.svelte`, alongside Personal
 Information/Security/Sessions/Authorized Clients/Notifications, the last of
 which sets the event x channel matrix for Outbound notification channels, see
 `observability.md`), backed by `profile/appearance/+page.server.ts`'s three
-actions (`updateTheme`/`updateSidebar`/`updateAccent`, each validated by its own
-zod schema in `$lib/server/validation/appearance.ts`) calling
-`UserPreferencesDTO.get(userId)`'s `updateTheme`/`updateSidebarColorIntensity`/
-`updateAccentColor`, which share `InstanceSettingsDTO`'s private-`persist()`
--per-section shape but per-user instead of a singleton row.
+actions (`updateTheme`/`updateAccent`, each validated by its own zod schema in
+`$lib/server/validation/appearance.ts`) calling
+`UserPreferencesDTO.get(userId)`'s `updateTheme`/`updateAccentColor`, which
+share `InstanceSettingsDTO`'s private-`persist()` -per-section shape but
+per-user instead of a singleton row.
 
 - **Theme**: `mode-watcher` (already an installed dependency, mounted in the
   root `+layout.svelte`) was previously dead code, hardcoded to
@@ -334,12 +334,9 @@ zod schema in `$lib/server/validation/appearance.ts`) calling
   follows across devices; a browser that already has its own mode-watcher entry
   is left alone, that entry owns it from then on. This is additive to, not a
   replacement for, mode-watcher's own localStorage persistence.
-- **Sidebar color intensity**: `(protected)/+layout.svelte`'s existing
-  `categoryColors` map (Administration=red, Infrastructure=emerald,
-  Integrations=violet, Workspace=accent) is now conditionally bypassed by a
-  `colorful` derived boolean; when `sidebarColorIntensity === "accent"`, every
-  category's `{@const color = ...}` resolves to the shared `fallbackColor`
-  (Workspace's accent entry) instead of its own.
+- **Sidebar**: no per-category colors. Icons inherit the item's text color;
+  items are `font-medium`, the active one `font-semibold text-accent`. A
+  "colorful" per-category mode existed and was removed as noise.
 - **Accent color**: `(protected)/+layout.svelte`'s root wrapper div gets an
   inline `style` computed from `accentColor` (a `"#rrggbb"` hex string, `null`
   meaning "use the built-in default") that overrides

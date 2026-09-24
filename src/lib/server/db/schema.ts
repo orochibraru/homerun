@@ -1493,14 +1493,6 @@ export const userPreferences = pgTable("user_preferences", {
 	// default", see (protected)/+layout.svelte.
 	accentColor: text("accent_color"),
 	createdAt: timestamp("created_at", { mode: "date" }).notNull(),
-	// "colorful" (default, today's behavior : each sidebar nav category gets
-	// its own distinct color) | "accent" (every category collapses to the one
-	// shared accent color instead) : see (protected)/+layout.svelte's
-	// categoryColors map.
-	sidebarColorIntensity: text("sidebar_color_intensity")
-		.$type<"colorful" | "accent">()
-		.default("colorful")
-		.notNull(),
 	// "system" (default, off the OS's own light/dark preference) | "light" |
 	// "dark" : applied via the mode-watcher package already mounted in the
 	// root layout (src/routes/+layout.svelte), this table is just its

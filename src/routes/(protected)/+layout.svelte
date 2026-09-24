@@ -241,49 +241,6 @@
 		items: (typeof allNavItems)[number][];
 	}
 
-	// Color-codes each nav category (TODO.md's "color coding throughout the
-	// UI so things are easier to visually locate") : a category is a visual
-	// grouping, not just a text label, its icons/active-state pick up a
-	// distinct accent instead of every item sharing the one generic
-	// `accent` color. Literal Tailwind classes (not template-built) : JIT
-	// needs the full class string present in source to include it.
-	const categoryColors: Record<
-		string,
-		{ activeBg: string; activeText: string; dot: string; icon: string }
-	> = {
-		Administration: {
-			activeBg: "bg-red-500/10",
-			activeText: "text-red-600 dark:text-red-400",
-			dot: "bg-red-500",
-			icon: "text-red-500",
-		},
-		Infrastructure: {
-			activeBg: "bg-emerald-500/10",
-			activeText: "text-emerald-600 dark:text-emerald-400",
-			dot: "bg-emerald-500",
-			icon: "text-emerald-500",
-		},
-		Integrations: {
-			activeBg: "bg-violet-500/10",
-			activeText: "text-violet-600 dark:text-violet-400",
-			dot: "bg-violet-500",
-			icon: "text-violet-500",
-		},
-		Workspace: {
-			activeBg: "bg-accent-light",
-			activeText: "text-accent",
-			dot: "bg-accent",
-			icon: "text-accent",
-		},
-	};
-	const fallbackColor = categoryColors.Workspace;
-	// "Single accent color" mode (see /profile/appearance) : every category
-	// collapses to this same shared-accent entry Workspace already used,
-	// rather than each keeping its own distinct color.
-	const colorful = $derived(
-		data.preferences.sidebarColorIntensity === "colorful",
-	);
-
 	const accentCss = $derived.by(() => {
 		const hex = data.preferences.accentColor ?? "";
 		if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
@@ -328,7 +285,6 @@
 
 {#snippet navGroups(groups: NavGroup[], onNavigate?: () => void)}
   {#each groups as group (group.heading)}
-    {@const color = colorful ? (categoryColors[group.heading] ?? fallbackColor) : fallbackColor}
     <p class="text-text-subtle mt-5 mb-1.5 px-2.5 text-xs font-medium">
       {group.heading}
     </p>
@@ -339,13 +295,13 @@
         class="
           group/nav relative mb-0.5 flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] transition-colors duration-150
           {active
-          ? `border-sidebar-border bg-sidebar-accent ${color.activeText} font-medium`
-          : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent'}
+          ? 'border-sidebar-border bg-sidebar-accent text-accent font-semibold'
+          : 'text-text-muted hover:bg-surface-2 hover:text-text border-transparent font-medium'}
        "
         href={item.href}
         onclick={onNavigate}
       >
-        <NavIcon class="size-4 shrink-0 {active ? '' : color.icon}" />
+        <NavIcon class="size-4 shrink-0" />
         {item.label}
       </a>
     {/each}

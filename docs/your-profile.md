@@ -55,11 +55,8 @@ A per-account "Appearance" tab on your profile page controls:
 - **Theme**: light, dark, or match system (the default). Changes apply instantly
   and are saved to your account, so the choice follows you to a new browser or
   device, not just the one you set it on.
-- **Sidebar color intensity**: "Colorful" (default, each sidebar section gets
-  its own color) or "Single accent color" (every section uses the same, more
-  muted, color).
 - **Main color accent**: pick a preset or a custom color for buttons, links, and
-  highlighted state throughout the dashboard.
+  highlighted state throughout the dashboard. Bordeaux is the default.
 
 These are personal preferences, not instance-wide settings, each account picks
 its own independently of `/settings`.

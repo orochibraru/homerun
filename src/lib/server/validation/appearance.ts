@@ -9,10 +9,6 @@ export const themeSchema = z.object({
 	theme: z.enum(["light", "dark", "system"]),
 });
 
-export const sidebarColorIntensitySchema = z.object({
-	sidebarColorIntensity: z.enum(["colorful", "accent"]),
-});
-
 export const accentColorSchema = z.object({
 	// Blank means "reset to the built-in default".
 	accentColor: z.union([z.literal(""), hexColorSchema]),

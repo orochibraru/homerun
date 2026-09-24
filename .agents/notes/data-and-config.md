@@ -365,8 +365,8 @@ OIDC provider in `auth.md`) plus:
 - `user_preferences` (`UserPreferencesDTO`), one row per user, `userId` itself
   as the primary key (a genuine 1:1 extension of `user`, not a singleton like
   `instance_settings`): `theme` (`"light"` | `"dark"` | `"system"` default),
-  `sidebarColorIntensity` (`"colorful"` default | `"accent"`), `accentColor`
-  (nullable hex string). See Appearance preferences below.
+  `accentColor` (nullable hex string, null = the built-in bordeaux). See
+  Appearance preferences below.
 
 **Postgres enforces the schema's `onDelete: "cascade"`/`"set null"` FK
 constraints for real.** (This app ran on SQLite until the Postgres conversion

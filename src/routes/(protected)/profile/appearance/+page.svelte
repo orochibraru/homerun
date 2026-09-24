@@ -14,8 +14,10 @@
 
 	const { data } = $props();
 
-	const DEFAULT_ACCENT = "#7c3aed";
+	const DEFAULT_ACCENT = "#8b1e3f";
 	const PRESET_ACCENTS = [
+		"#8b1e3f",
+		"#7c3aed",
 		"#0b8ac0",
 		"#22c55e",
 		"#f97316",
@@ -29,9 +31,6 @@
 	// Seeded once from the initial load : untrack() is intentional, not a
 	// lint workaround (same pattern as /settings' own $state seeds).
 	let theme = $state(untrack(() => data.preferences.theme));
-	let sidebarColorIntensity = $state(
-		untrack(() => data.preferences.sidebarColorIntensity),
-	);
 	let accentColor = $state(
 		untrack(() => data.preferences.accentColor ?? DEFAULT_ACCENT),
 	);
@@ -47,10 +46,6 @@
 		dark: "Dark",
 		light: "Light",
 		system: "Match system",
-	};
-	const sidebarLabels: Record<typeof sidebarColorIntensity, string> = {
-		accent: "Single accent color",
-		colorful: "Colorful",
 	};
 
 	onMount(() => title.set("Appearance"));
@@ -85,43 +80,6 @@
                     <SelectItem label="Match system" value="system" />
                     <SelectItem label="Light" value="light" />
                     <SelectItem label="Dark" value="dark" />
-                </SelectContent>
-            </SelectRoot>
-            <div class="flex justify-end">
-                <Button type="submit">Save</Button>
-            </div>
-        </form>
-    </section>
-
-    <!-- ═══ Sidebar color intensity ═══ -->
-    <section class="panel rounded-md">
-        <div class="border-border border-b px-5 py-4">
-            <h2 class="eyebrow">
-                Sidebar color intensity
-            </h2>
-            <p class="text-text-muted text-xs">
-                "Colorful" gives each sidebar section its own color so they're
-                easier to tell apart at a glance. "Single accent color" keeps
-                every section the same, more muted, color instead.
-            </p>
-        </div>
-        <form
-            action="?/updateSidebar"
-            class="space-y-4 p-5"
-            method="POST"
-            use:enhance={saveToast("Sidebar color intensity")}
-        >
-            <SelectRoot
-                name="sidebarColorIntensity"
-                type="single"
-                bind:value={sidebarColorIntensity}
-            >
-                <SelectTrigger id="sidebarColorIntensity">
-                    {sidebarLabels[sidebarColorIntensity]}
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem label="Colorful" value="colorful" />
-                    <SelectItem label="Single accent color" value="accent" />
                 </SelectContent>
             </SelectRoot>
             <div class="flex justify-end">
