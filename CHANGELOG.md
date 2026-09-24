@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.45](https://github.com/orochibraru/homerun/compare/v1.0.44...v1.0.45) (2026-09-24)
+
+### Features
+
+- **services:** add a volumes step and default login to Homerun sign-in in the
+  wizard, split every oversized svelte file
+  ([974f672](https://github.com/orochibraru/homerun/commit/974f6726104cdfbc75a176b20fd15c7b0065b8a3))
+- **templates:** add Bercail and give Penombre and Bercail their icons
+  ([eb7d8a3](https://github.com/orochibraru/homerun/commit/eb7d8a3e7e6826a19aab380a28b54328895e1556))
+
 ## [1.0.44](https://github.com/orochibraru/homerun/compare/v1.0.43...v1.0.44) (2026-09-24)
 
 ### Features
