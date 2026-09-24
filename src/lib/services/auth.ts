@@ -275,6 +275,9 @@ function buildAuth(directAccess: DirectAccessScheme | null) {
 		logger: {
 			level: dev ? "debug" : config.logLevel,
 			log: (level, message, ...metadata) => {
+				if (message.startsWith("[better-auth] Base URL is not set")) {
+					return;
+				}
 				// Send logs to a custom logging service
 				logger.log({
 					level,
