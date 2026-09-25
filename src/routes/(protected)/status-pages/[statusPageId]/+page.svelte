@@ -1,11 +1,5 @@
 <script lang="ts">
-	import {
-		Activity,
-		ArrowLeft,
-		ExternalLink,
-		Save,
-		Trash2,
-	} from "@lucide/svelte";
+	import { Activity, ExternalLink, Save, Trash2 } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -53,14 +47,6 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <a
-    class="text-text-muted hover:text-text mb-4 inline-flex items-center gap-1.5 text-sm"
-    href={resolve("/status-pages")}
-  >
-    <ArrowLeft class="size-3.5" />
-    Status Page
-  </a>
-
   <div class="mb-6 flex flex-wrap items-center gap-3">
     <h1 class="text-text text-lg font-semibold tracking-tight">{page.name}</h1>
     {#if page.isPublic}

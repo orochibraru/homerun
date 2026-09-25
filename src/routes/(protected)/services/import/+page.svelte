@@ -1,11 +1,5 @@
 <script lang="ts">
-	import {
-		AlertTriangle,
-		ArrowLeft,
-		FileUp,
-		HardDrive,
-		Rocket,
-	} from "@lucide/svelte";
+	import { AlertTriangle, FileUp, HardDrive, Rocket } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -53,14 +47,6 @@
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
-  <a
-    class="text-text-muted hover:text-text inline-flex items-center gap-1.5 text-sm"
-    href={resolve("/services")}
-  >
-    <ArrowLeft class="size-3.5" />
-    Services
-  </a>
-
   <div>
     <h1 class="text-text text-lg font-semibold tracking-tight">
       Import a compose file

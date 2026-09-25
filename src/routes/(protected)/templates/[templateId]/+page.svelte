@@ -1,6 +1,5 @@
 <script lang="ts">
 	import {
-		ArrowLeft,
 		ExternalLink,
 		GitBranch,
 		GitCommitHorizontal,
@@ -38,14 +37,6 @@
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
-    <a
-        class="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text"
-        href={resolve("/templates")}
-    >
-        <ArrowLeft class="size-3.5" />
-        Templates
-    </a>
-
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="flex items-center gap-4">
             <TemplateIcon

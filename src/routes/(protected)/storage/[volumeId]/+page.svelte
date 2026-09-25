@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, Check, CloudUpload } from "@lucide/svelte";
+	import { Check, CloudUpload } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -48,14 +48,6 @@
 </script>
 
 <div class="space-y-6 p-6 md:p-8">
-  <a
-    class="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text"
-    href={resolve("/storage")}
-  >
-    <ArrowLeft class="size-3.5" />
-    Storage
-  </a>
-
   <div>
     <h1 class="text-text text-lg font-semibold tracking-tight">{vol.name}</h1>
     <p class="mt-1 text-sm text-text-muted">

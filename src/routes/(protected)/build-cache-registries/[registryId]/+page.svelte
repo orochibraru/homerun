@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { ArrowLeft } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -19,14 +18,6 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <a
-    class="text-text-muted hover:text-text mb-4 inline-flex items-center gap-1.5 text-sm"
-    href={resolve("/build-cache-registries")}
-  >
-    <ArrowLeft class="size-3.5" />
-    Build Cache Registries
-  </a>
-
   <div class="mb-8">
     <h1 class="text-text text-lg font-semibold tracking-tight">
       {registry.name}

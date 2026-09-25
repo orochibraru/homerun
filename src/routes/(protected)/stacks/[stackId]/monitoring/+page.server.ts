@@ -1,9 +1,7 @@
 import { DeploymentDTO } from "$lib/dto/deployment-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
 
-export const load = async ({ params, parent }) => {
-	await parent();
-	const services = await ServiceDTO.listByStack(params.stackId);
+export const load = async ({ parent }) => {
+	const { services } = await parent();
 	const recentDeployments = await DeploymentDTO.listRecentForServices(
 		services.map((svc) => svc.id),
 	);
@@ -14,6 +12,5 @@ export const load = async ({ params, parent }) => {
 			serviceName: r.serviceName,
 			serviceSlug: r.serviceSlug,
 		})),
-		services: services.map((s) => s.toJSON()),
 	};
 };

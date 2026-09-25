@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, KeyRound, Power, Trash2 } from "@lucide/svelte";
+	import { KeyRound, Power, Trash2 } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -41,11 +41,7 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <Button href={resolve("/authentication")} size="sm" variant="ghost">
-      <ArrowLeft class="size-4" />
-      Authentication
-    </Button>
-    <div class="mt-2 flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <h1 class="text-text text-xl font-semibold">{data.app.name}</h1>
       {#if data.app.disabled}
         <span

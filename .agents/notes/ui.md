@@ -50,6 +50,14 @@ a blur/shadow stack, route it through a token here instead.
   pane with the sticky header inside it. The sidebar carries the one primary
   action (`Deploy a service`, full width, brand-filled) above the nav, the way
   Penombre's "New" button does.
+- **Navigation up is the header's breadcrumb trail, not per-page back links.**
+  `breadcrumbs.svelte` builds it from the URL: top-level segments take their
+  sidebar label, an id segment takes the `name`/`label`/`title` of whichever
+  `page.data` object has that `id`, anything else is the humanized segment.
+  Don't add an `← Parent` link to a page; a URL prefix that isn't a real page
+  goes in the layout's `skip` list. The pane's `<main>` is `relative` so
+  absolutely-positioned content (`sr-only` spans) is contained by its scroll
+  area instead of stretching the document into a second scrollbar.
 - **The accent picker has to move more than one variable, and it has to move
   them on the document root.** `/profile/appearance` writes `--color-accent`,
   and the `(protected)` layout's `accentCss` also sets `--color-ink`,

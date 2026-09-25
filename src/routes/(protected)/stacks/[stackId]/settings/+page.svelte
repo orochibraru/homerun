@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AlertTriangle, ArrowLeft, Check, Trash2 } from "@lucide/svelte";
+	import { AlertTriangle, Check, Trash2 } from "@lucide/svelte";
 	import { onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -26,24 +26,7 @@
 	let detachError = $state("");
 </script>
 
-<div class="p-5 md:p-6">
-  <a
-    class="text-text-muted hover:text-text mb-4 inline-flex items-center gap-1.5 text-sm"
-    href={resolve("/(protected)/stacks/[stackId]", { stackId: stack.id })}
-  >
-    <ArrowLeft class="size-3.5" />
-    {stack.name}
-  </a>
-
-  <div class="border-border mb-5 border-b pb-4">
-    <h1 class="text-text text-lg font-semibold tracking-tight">
-      Stack settings
-    </h1>
-    <p class="text-text-muted mt-0.5 text-xs">
-      Its name, slug and description, and deleting it.
-    </p>
-  </div>
-
+<div>
   <section class="panel mb-4 rounded-xl">
     <div class="panel-head">
       <h2 class="eyebrow">Stack</h2>

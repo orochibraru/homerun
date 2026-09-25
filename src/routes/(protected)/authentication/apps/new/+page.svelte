@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, ArrowRight } from "@lucide/svelte";
+	import { ArrowRight } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -29,11 +29,7 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <Button href={resolve("/authentication")} size="sm" variant="ghost">
-      <ArrowLeft class="size-4" />
-      Authentication
-    </Button>
-    <h1 class="text-text mt-2 text-xl font-semibold">
+    <h1 class="text-text text-xl font-semibold">
       {form?.created ? `${form.created.name} is registered` : "Register an app"}
     </h1>
     <p class="text-text-muted mt-1 text-sm">

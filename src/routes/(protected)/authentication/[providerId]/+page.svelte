@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, ExternalLink, Trash2 } from "@lucide/svelte";
+	import { ExternalLink, Trash2 } from "@lucide/svelte";
 	import { onMount, untrack } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -38,11 +38,7 @@
 
 <div class="space-y-6 p-6 md:p-8">
   <div>
-    <Button href={resolve("/authentication")} size="sm" variant="ghost">
-      <ArrowLeft class="size-4" />
-      Authentication
-    </Button>
-    <h1 class="text-text mt-2 text-xl font-semibold">{data.provider.label}</h1>
+    <h1 class="text-text text-xl font-semibold">{data.provider.label}</h1>
     <p class="text-text-subtle mt-1 text-sm">{data.provider.name}</p>
   </div>
 

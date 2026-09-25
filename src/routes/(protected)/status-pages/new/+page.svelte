@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, Plus } from "@lucide/svelte";
+	import { Plus } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -35,14 +35,6 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <a
-    class="text-text-muted hover:text-text mb-4 inline-flex items-center gap-1.5 text-sm"
-    href={resolve("/status-pages")}
-  >
-    <ArrowLeft class="size-3.5" />
-    Status Page
-  </a>
-
   <h1 class="text-text mb-6 text-lg font-semibold tracking-tight">
     New status page
   </h1>

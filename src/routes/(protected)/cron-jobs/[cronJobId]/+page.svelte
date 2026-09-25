@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, Check, ChevronDown, Play, Trash2 } from "@lucide/svelte";
+	import { Check, ChevronDown, Play, Trash2 } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
@@ -43,14 +43,6 @@
 </script>
 
 <div class="space-y-6 p-5 md:p-6">
-  <a
-    class="text-text-muted hover:text-text inline-flex items-center gap-1.5 text-sm"
-    href={resolve("/cron-jobs")}
-  >
-    <ArrowLeft class="size-3.5" />
-    Cron Jobs
-  </a>
-
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <h1 class="text-text text-lg font-semibold tracking-tight">{job.name}</h1>

@@ -1,0 +1,93 @@
+<script lang="ts">
+	import { ChevronRight } from "@lucide/svelte";
+	import { page } from "$app/state";
+
+	interface Crumb {
+		href: string;
+		label: string;
+	}
+
+	const {
+		roots,
+		skip = [],
+	}: {
+		roots: { href: string; label: string }[];
+		skip?: string[];
+	} = $props();
+
+	/**
+	 * Finds a display name for an id segment among the current page's loaded
+	 * data, so `/stacks/<uuid>` reads as the stack's name.
+	 */
+	function entityName(segment: string): string | null {
+		for (const value of Object.values(page.data)) {
+			if (value && typeof value === "object" && "id" in value) {
+				const entity = value as Record<string, unknown>;
+				if (entity.id === segment) {
+					const name = entity.name ?? entity.label ?? entity.title;
+					if (typeof name === "string" && name) {
+						return name;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	/** Turns a static path segment like `cron-jobs` into `Cron jobs`. */
+	function humanize(segment: string): string {
+		const text = decodeURIComponent(segment).replaceAll("-", " ");
+		return text.charAt(0).toUpperCase() + text.slice(1);
+	}
+
+	const crumbs = $derived.by<Crumb[]>(() => {
+		const segments = page.url.pathname.split("/").filter(Boolean);
+		if (segments.length === 0) {
+			return [
+				{
+					href: "/",
+					label: roots.find((r) => r.href === "/")?.label ?? "Overview",
+				},
+			];
+		}
+		const out: Crumb[] = [];
+		let href = "";
+		for (const segment of segments) {
+			href += `/${segment}`;
+			if (skip.includes(href)) {
+				continue;
+			}
+			const label =
+				roots.find((r) => r.href === href)?.label ??
+				entityName(segment) ??
+				humanize(segment);
+			out.push({ href, label });
+		}
+		return out;
+	});
+</script>
+
+<nav aria-label="Breadcrumb" class="min-w-0 flex-1">
+  <ol class="flex min-w-0 items-center gap-1 text-sm">
+    {#each crumbs as crumb, i (crumb.href)}
+      {@const last = i === crumbs.length - 1}
+      <li class="flex min-w-0 items-center gap-1 {last ? '' : 'shrink-0'}">
+        {#if i > 0}
+          <ChevronRight class="text-text-subtle size-3.5 shrink-0" />
+        {/if}
+        {#if last}
+          <span aria-current="page" class="text-text truncate font-medium">
+            {crumb.label}
+          </span>
+        {:else}
+          <a
+            class="text-text-muted hover:text-text max-w-48 truncate transition-colors"
+            href={crumb.href}
+          >
+            {crumb.label}
+          </a>
+        {/if}
+      </li>
+    {/each}
+  </ol>
+</nav>

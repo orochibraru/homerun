@@ -7,12 +7,12 @@
 	import { page } from "$app/state";
 	import AppVersion from "$lib/components/app-version.svelte";
 	import BrandMark from "$lib/components/brand-mark.svelte";
+	import Breadcrumbs from "$lib/components/breadcrumbs.svelte";
 	import ErrorBoundary from "$lib/components/error-boundary.svelte";
 	import GlobalSearch from "$lib/components/global-search.svelte";
 	import NotificationBell from "$lib/components/notification-bell.svelte";
 	import ProfileMenu from "$lib/components/profile-menu.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
-	import { title } from "$lib/store/title";
 	import { allNavItems } from "./nav-items";
 
 	const { data, children } = $props();
@@ -186,9 +186,7 @@
           <Menu class="size-5" />
         {/if}
       </Button>
-      <span class="text-text flex-1 truncate text-sm font-medium">
-        {$title || "Dashboard"}
-      </span>
+      <Breadcrumbs roots={allNavItems} skip={["/authentication/apps"]} />
       {#if data.readOnly}
         <span
           class="text-text-muted border-border rounded-full border px-2 py-0.5 text-[0.7rem] font-medium"

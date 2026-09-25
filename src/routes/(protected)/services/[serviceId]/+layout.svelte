@@ -1,6 +1,5 @@
 <script lang="ts">
 	import {
-		ArrowLeft,
 		Clock,
 		Container,
 		Cpu,
@@ -179,14 +178,6 @@
 </script>
 
 <div class="p-5 md:p-6">
-  <a
-    class="text-text-muted hover:text-text mb-4 inline-flex items-center gap-1.5 text-sm"
-    href={resolve("/services")}
-  >
-    <ArrowLeft class="size-3.5" />
-    Services
-  </a>
-
   <!-- ── Hero ─────────────────────────────────────────────── -->
   <div class="mb-6 flex flex-wrap items-center gap-3">
     <h1 class="text-text text-lg font-semibold tracking-tight">{svc.name}</h1>
