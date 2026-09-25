@@ -142,8 +142,8 @@ docker network create homerun
 docker compose -f compose.prod.yaml up -d
 ```
 
-**You fill in exactly two values**, both in `.env`, and then you're
-done with files for good:
+**You fill in exactly two values**, both in `.env`, and then you're done with
+files for good:
 
 - `AUTH_SECRET`, any long random string (`openssl rand -hex 32`). It signs your
   sessions and encrypts every secret Homerun stores, so don't leave it blank and

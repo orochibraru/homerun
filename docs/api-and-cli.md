@@ -279,13 +279,13 @@ fix your services with the same login the CLI uses:
 claude mcp add homerun -- homerun mcp
 ```
 
-It reads: `list_services`, `get_service`, `get_service_config`,
-`service_logs`, `list_revisions`, `list_stacks`, `system_stats` and
-`instance_status`. It changes: `update_service`, `deploy_service`,
-`restart_service`, `start_service`, `stop_service` and `rollback_service`.
-Deleting a service is deliberately not a tool. `homerun mcp --read-only` leaves
-out every tool that changes something, for an agent you only want diagnosing;
-a read-only API key enforces the same thing on the instance's side.
+It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
+`list_revisions`, `list_stacks`, `system_stats` and `instance_status`. It
+changes: `update_service`, `deploy_service`, `restart_service`, `start_service`,
+`stop_service` and `rollback_service`. Deleting a service is deliberately not a
+tool. `homerun mcp --read-only` leaves out every tool that changes something,
+for an agent you only want diagnosing; a read-only API key enforces the same
+thing on the instance's side.
 
 ### Working on the CLI itself
 

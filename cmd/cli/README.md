@@ -185,8 +185,8 @@ Linux and macOS, same as installation itself. `homerun --version` (or `-v`) just
 prints the current version, no network call.
 
 `homerun mcp [--read-only]` serves an MCP server over stdio for AI agents, a
-thin layer of tools over the same REST calls; see
-`docs/api-and-cli.md` for the tool list.
+thin layer of tools over the same REST calls; see `docs/api-and-cli.md` for the
+tool list.
 
 ## After a REST API change
 

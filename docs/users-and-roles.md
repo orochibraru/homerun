@@ -24,9 +24,9 @@ sign out, change their password, manage passkeys and two-factor, set
 preferences, clear their notification bell, create API keys (always read-only)
 and log in the CLI. They don't see the admin-only pages.
 
-**The first account created on a fresh instance becomes admin
-automatically.** After that, there's no public sign-up, every other account is
-created by an admin from `/users`:
+**The first account created on a fresh instance becomes admin automatically.**
+After that, there's no public sign-up, every other account is created by an
+admin from `/users`:
 
 - **Direct-create**, name/email/role only, no password to set or hand over. The
   new account signs in itself the first time: it enters its email on the sign-in
