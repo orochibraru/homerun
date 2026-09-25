@@ -19,9 +19,9 @@ jump-off points for the next one.
 
 ## Services
 
-Every service you own, with its status, image and stack. Search, filters and
-paging are server-side, and the checkboxes drive Start/Stop/Restart/Delete in
-bulk.
+Every service on the instance, with its status, image and stack. Search, filters
+and paging are server-side, and the checkboxes drive Start/Stop/Restart/Delete
+in bulk.
 
 ![The services list](images/services.webp)
 ![The services list, dark](images/services-dark.webp)

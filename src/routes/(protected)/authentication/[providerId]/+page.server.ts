@@ -61,7 +61,7 @@ export const actions = {
 		logger.info(
 			`OAuth provider deleted: name=${params.providerId} user=${locals.user.id}`,
 		);
-		throw redirect(303, resolve("/authentication"));
+		throw redirect(303, resolve("/authentication/providers"));
 	},
 	update: async ({ request, locals, params }) => {
 		if (!locals.user) {

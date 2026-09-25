@@ -16,18 +16,19 @@ can deploy from repeatedly without re-entering everything. Two kinds:
   internet; an app with no official logo falls back to a colored icon for its
   category.
 - **Custom**, save any service's current config as a template from its Settings
-  tab, or build one from scratch under `Templates → New`, whose **Runtime**
-  section takes the same fields as a service's Runtime tab plus env files. Owned
-  by the account that created it and visible only to them.
+  tab, or build one from scratch under `Templates → New Template`, whose
+  **Runtime** section takes the same fields as a service's Runtime tab plus env
+  files. Like every other resource, a custom template is shared with every
+  account on the instance, see [Users and roles](users-and-roles.md).
 
 ## Host access
 
 Privileged mode, devices, added capabilities and env files give a container
 access to the host, so they stay admin-only on templates too. Only an admin can
-set them on `Templates → New`, and only an admin can deploy a template that
-carries any of them, whether through **Quick Deploy** or **Configure**. That
-includes a template whose linked companion carries them: the whole deploy is
-refused with a message naming each template that needs host access, before
+set them on `Templates → New Template`, and only an admin can deploy a template
+that carries any of them, whether through **Quick Deploy** or **Configure**.
+That includes a template whose linked companion carries them: the whole deploy
+is refused with a message naming each template that needs host access, before
 anything is created. Non-admins see the same warning on the template's details
 page and in the New Service wizard, and Quick Deploy is disabled there.
 
@@ -67,8 +68,8 @@ an hour per IP), or down just means the panel doesn't render.
 A template can pull its companions along with it. WordPress ships linked to
 MySQL, Umami and Miniflux to PostgreSQL, Paperless-ngx to Redis, and you can
 link your own the same way from the "Linked containers" section on
-`Templates → New`: tick any other template, give it an alias (defaults to a slug
-of its name), and deploying the primary deploys the companions too.
+`Templates → New Template`: tick any other template, give it an alias (defaults
+to a slug of its name), and deploying the primary deploys the companions too.
 
 Env vars on the primary template can then reference a companion:
 
@@ -77,6 +78,13 @@ Env vars on the primary template can then reference a companion:
 - `{{db.POSTGRES_PASSWORD}}` resolves to the companion's own value for that env
   var, so the primary and the database agree on a password without you typing it
   twice.
+- `{{secret}}` in a template's own env vars or command becomes a random
+  48-character value, fresh for every service created from it and the same
+  everywhere it appears in that template. The cache templates (Redis, Valkey,
+  Dragonfly, KeyDB, Garnet) use it to start with a password in `REDIS_PASSWORD`,
+  so a link to them, and an app template that links one, gets a URL that
+  authenticates. In the wizard you see the generated value and can change it;
+  the command follows what you submit.
 
 An alias that doesn't resolve is left in the deployed env var verbatim rather
 than silently blanked, so a typo is visible instead of mysterious.

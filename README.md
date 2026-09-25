@@ -196,6 +196,10 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[REST API & OpenAPI](docs/api-and-cli.md)**: everything in the dashboard is
   also a typed JSON API (`/api/v1`), authenticated by session or API key, with a
   live Swagger UI
+- **[MCP server](docs/api-and-cli.md#mcp-server-for-ai-agents)**: let Claude or
+  any MCP agent diagnose and fix your services; claude.ai signs in through an
+  OAuth client you register under Authentication → Sign in with Homerun, Claude
+  Code uses an API key instead
 - **[The `homerun` CLI](cmd/cli/README.md)**: a small (~6MB) standalone Go
   binary, logs in through a device-code flow and updates itself
 
@@ -226,7 +230,7 @@ Dokploy, Coolify, and friends are great, but there are stuff I can't get around:
 - **[`⌘K` search](docs/dashboard.md#search)**: jump to any page, or to anything
   on the instance, from anywhere
 - **[Appearance](docs/your-profile.md#appearance)**: light/dark/system theme,
-  sidebar intensity and a custom accent color per account
+  and a color palette or a custom accent color per account
 
 ## Configuration
 

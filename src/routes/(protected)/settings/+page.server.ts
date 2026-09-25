@@ -12,6 +12,7 @@ import {
 	nullableText,
 } from "$lib/server/validation/instance-settings-form";
 import { AccountSecurityService } from "$lib/services/account-security.service";
+import { isUpdateChannel } from "$lib/update-channel";
 
 const logger = new Logger("InstanceSettings");
 
@@ -91,9 +92,9 @@ export const actions = {
 		}
 		const formData = await request.formData();
 		const channel = formData.get("updateChannel");
-		if (channel !== "stable" && channel !== "canary") {
+		if (!isUpdateChannel(channel)) {
 			return fail(400, {
-				error: "Pick the stable or canary channel.",
+				error: "Pick the stable, canary or nightly channel.",
 				savedSection: "channel",
 			});
 		}

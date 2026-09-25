@@ -173,7 +173,7 @@
           <Menu class="size-5" />
         {/if}
       </Button>
-      <Breadcrumbs roots={allNavItems} skip={["/authentication/apps"]} />
+      <Breadcrumbs roots={allNavItems} />
       {#if data.readOnly}
         <span
           class="text-text-muted border-border rounded-full border px-2 py-0.5 text-[0.7rem] font-medium"

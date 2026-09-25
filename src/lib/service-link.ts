@@ -125,7 +125,10 @@ export function detectLinkEngine(image: string): LinkEngine {
  * hostname just because the wizard's DNS checkbox starts checked.
  */
 export function isDatabaseImage(image: string): boolean {
-	return detectLinkEngine(image).id !== "generic";
+	return (
+		detectLinkEngine(image).id !== "generic" ||
+		/(^|\/)[^/]*memcached/.test(image.toLowerCase())
+	);
 }
 
 /**

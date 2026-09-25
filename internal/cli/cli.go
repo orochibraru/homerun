@@ -28,7 +28,7 @@ Usage: homerun [--base-url <url>] [--api-key <key>] <command> [options]
 Commands:
   login [--base-url <url>]        log in via a device-code flow and save the resulting API key
   logout                          clear the saved login
-  update [--channel stable|canary]
+  update [--channel stable|canary|nightly]
                                   self-update the installed binary to the newest release on a channel (default stable, never downgrades)
 
   services list                   list services
@@ -57,7 +57,8 @@ Commands:
   instance status                 show the running version, the channel, its latest release and whether an update can start
   instance update [--wait=false] [--timeout <seconds>]
                                   update the instance to the latest release on its channel (not the CLI itself, see ` + "`homerun update`" + `)
-  instance channel stable|canary  set the release channel the instance updates from (switching back to stable never downgrades)
+  instance channel stable|canary|nightly
+                                  set the release channel the instance updates from (switching to a more stable one never downgrades)
 
 List options (services/stacks/templates/scans list):
   --json                          print raw JSON instead of a table
@@ -98,7 +99,7 @@ func Main() {
 		Logout()
 	case "update":
 		set := NewFlagSet("update")
-		channel := set.String("channel", "stable", "release channel to update from: stable or canary")
+		channel := set.String("channel", "stable", "release channel to update from: stable, canary or nightly")
 		Parse(set, rest[1:])
 		SelfUpdate(*channel)
 	case "services":
@@ -378,7 +379,7 @@ func RunInstance(global GlobalFlags, args []string) {
 		)
 	case "channel":
 		if len(args) != 2 {
-			Fail("usage: homerun instance channel stable|canary")
+			Fail("usage: homerun instance channel stable|canary|nightly")
 		}
 		InstanceChannel(RequireClient(global.BaseURL, global.APIKey), args[1])
 	default:

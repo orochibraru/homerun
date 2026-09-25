@@ -1981,7 +1981,7 @@ func TestLatestReleaseOnTheCanaryChannel(t *testing.T) {
 			http.NotFound(writer, request)
 			return
 		}
-		fmt.Fprint(writer, `[{"tag_name":"v1.0.41-canary.7","prerelease":true}]`)
+		fmt.Fprint(writer, `[{"tag_name":"v1.0.41-nightly.8","prerelease":true},{"tag_name":"v1.0.41-canary.7","prerelease":true}]`)
 	}))
 	t.Cleanup(server.Close)
 	stubGitHub(t, server.URL, server.URL)
@@ -1993,7 +1993,7 @@ func TestLatestReleaseOnTheCanaryChannel(t *testing.T) {
 	if tag != "v1.0.41-canary.7" || version != "1.0.41-canary.7" {
 		t.Errorf("got tag %q version %q", tag, version)
 	}
-	if _, failed := runCLI(t, func() { cli.LatestRelease("nightly") }); !strings.Contains(failed, "unknown channel") {
+	if _, failed := runCLI(t, func() { cli.LatestRelease("beta") }); !strings.Contains(failed, "unknown channel") {
 		t.Errorf("an unknown channel must be refused, got %q", failed)
 	}
 }
@@ -2015,7 +2015,7 @@ func TestInstanceChannelPatchesTheChannel(t *testing.T) {
 		t.Errorf("got %q", out)
 	}
 
-	if _, failed := runCLI(t, func() { cli.InstanceChannel(client, "nightly") }); !strings.Contains(failed, "unknown channel") {
+	if _, failed := runCLI(t, func() { cli.InstanceChannel(client, "beta") }); !strings.Contains(failed, "unknown channel") {
 		t.Errorf("an unknown channel must be refused before calling the API, got %q", failed)
 	}
 	if len(*seen) != 1 {

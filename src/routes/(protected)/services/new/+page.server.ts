@@ -29,6 +29,12 @@ import {
 	resolveEnvVarsWithLinks,
 	templateHostAccessRefusal,
 } from "$lib/services/template-links";
+import {
+	fillSecretInEnv,
+	fillSecretInRuntime,
+	generateTemplateSecret,
+	submittedSecret,
+} from "$lib/template-secrets";
 
 const logger = new Logger("Services");
 
@@ -75,6 +81,25 @@ function buildSourceFields(input: CreateServiceInput, slug: string) {
 }
 
 /** The type and icon a service created from `template` starts with, none without one. */
+/**
+ * The runtime options a service created from `template` in the wizard starts
+ * with: the template's own, its `{{secret}}` filled with the password the form
+ * submitted for it (the operator may have changed the generated one), or a
+ * fresh one when the form had none.
+ */
+function wizardRuntime(
+	template: TemplateDTO | null,
+	envVars: Record<string, string>,
+) {
+	if (!template) {
+		return undefined;
+	}
+	const secret =
+		submittedSecret(template.toJSON().envVars ?? {}, envVars) ??
+		generateTemplateSecret();
+	return fillSecretInRuntime(template.runtimeOptions, secret);
+}
+
 function templateIdentity(template: TemplateDTO | null): {
 	category: string | null;
 	icon: string | null;
@@ -131,7 +156,15 @@ export const load = async ({ url, parent, locals }) => {
 			})),
 		stackId: stack,
 		stacks: stacks.map((row) => ({ id: row.id, name: row.name })),
-		template: template?.toJSON() ?? null,
+		template: template
+			? {
+					...template.toJSON(),
+					envVars: fillSecretInEnv(
+						template.toJSON().envVars ?? {},
+						generateTemplateSecret(),
+					),
+				}
+			: null,
 		templateHostAccessRefusal:
 			template && !locals.isAdmin
 				? templateHostAccessRefusal(
@@ -434,7 +467,7 @@ async function createServiceFromForm(
 		registryUrl: input.registryUrl || null,
 		registryUsername: input.registryUsername || null,
 		restartPolicy: input.restartPolicy,
-		runtime: template?.runtimeOptions,
+		runtime: wizardRuntime(template, envVars),
 		slug: input.slug,
 		userId,
 		...buildSourceFields(input, input.slug),

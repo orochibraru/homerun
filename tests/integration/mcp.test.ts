@@ -107,6 +107,7 @@ describe("MCP server", () => {
 		const names = listed.result?.tools?.map((tool) => tool.name) ?? [];
 		expect(names).toContain("get_service_config");
 		expect(names).toContain("deploy_service");
+		expect(names).toContain("list_deployments");
 		expect(names).not.toContain("delete_service");
 
 		const called = await readRpc(
@@ -234,16 +235,15 @@ describe("MCP server", () => {
 
 		const tokened = await nativeFetch(`${origin}/api/v1/auth/oauth2/token`, {
 			body: new URLSearchParams({
+				client_id: clientId,
+				client_secret: clientSecret,
 				code,
 				code_verifier: verifier,
 				grant_type: "authorization_code",
 				redirect_uri: redirectUri,
 				resource,
 			}),
-			headers: {
-				authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-				"content-type": "application/x-www-form-urlencoded",
-			},
+			headers: { "content-type": "application/x-www-form-urlencoded" },
 			method: "POST",
 		});
 		expect(tokened.status).toBe(200);

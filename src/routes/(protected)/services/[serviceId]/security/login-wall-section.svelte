@@ -140,7 +140,7 @@
             {#if oauthProviders.length === 0}
               <p class="text-text-subtle text-xs">
                 No OAuth provider is enabled yet. Add one on the
-                <a class="text-accent" href={resolve("/authentication")}>
+                <a class="text-accent" href={resolve("/authentication/providers")}>
                   Authentication
                 </a>
                 page to offer it here.

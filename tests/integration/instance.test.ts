@@ -32,7 +32,7 @@ describe("instance update channel", () => {
 
 	test("refuses an unknown channel", async () => {
 		const res = await client.PATCH("/instance/update/channel", {
-			body: { channel: "nightly" as "canary" },
+			body: { channel: "beta" as "canary" },
 		});
 		expect(res.response.status).toBe(400);
 	});

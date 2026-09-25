@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BUILD_METHODS } from "$lib/build-methods";
+import { UPDATE_CHANNELS } from "$lib/update-channel";
 
 /**
  * Response-shape schemas for the OpenAPI spec. Request bodies are generated
@@ -247,10 +248,38 @@ export const revisionResponse = z.object({
 	]),
 });
 
+export const deploymentResponse = z.object({
+	createdAt: isoTimestamp,
+	errorMessage: z.string().nullable().meta({
+		description: "Why the deploy failed, null unless status is failed",
+	}),
+	finishedAt: isoTimestamp.nullable(),
+	gitCommit: z.string().nullable(),
+	gitRef: z.string().nullable(),
+	id: z.string(),
+	imageDigest: z.string().nullable(),
+	imageRef: z.string().nullable(),
+	log: z.string().nullable().meta({
+		description:
+			"The deploy's progress lines as the dashboard shows them: pull, scan, rollout, and the Docker error when it failed",
+	}),
+	rollbackOfDeploymentId: z.string().nullable(),
+	startedAt: isoTimestamp.nullable(),
+	status: z.enum([
+		"pending",
+		"pulling",
+		"starting",
+		"running",
+		"stopped",
+		"failed",
+		"missing",
+	]),
+});
+
 export const successResponse = z.object({ success: z.boolean() });
 
 export const instanceUpdateStatusResponse = z.object({
-	channel: z.enum(["stable", "canary"]).meta({
+	channel: z.enum(UPDATE_CHANNELS).meta({
 		description:
 			"The release channel updates follow, set on Settings → General",
 	}),
@@ -282,7 +311,7 @@ export const instanceUpdateStatusResponse = z.object({
 });
 
 export const instanceUpdateChannelResponse = z.object({
-	channel: z.enum(["stable", "canary"]),
+	channel: z.enum(UPDATE_CHANNELS),
 });
 
 export const instanceUpdateStartResponse = z.object({

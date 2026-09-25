@@ -9,7 +9,7 @@ moving your services over.
 
 It's actively developed and runs on real hardware, but it's a single-maintainer
 project, and "production" here means your homelab or your own server. Keep
-[backups](storage-volumes.md), and take a Postgres dump before a major upgrade:
+[backups](backups.md), and take a Postgres dump before a major upgrade:
 migrations only run forward.
 
 ## Can several people share the same services?
@@ -17,10 +17,12 @@ migrations only run forward.
 Yes. Every account sees and manages every service, stack, volume, backup and the
 rest of the instance's resources, whoever created them. Sessions, API keys,
 preferences, git connections, the bell feed and notification channels stay
-personal. Homerun has no teams and no per-stack permissions: the two roles,
-admin and developer, only differ in which instance-wide pages they can open. An
-API key has the full permissions of its account. Deleting an account hands what
-it created over to another admin. See [Users and roles](users-and-roles.md).
+personal. Homerun has no teams and no per-stack permissions: admin and developer
+only differ in which instance-wide pages they can open, and the third role,
+read-only, can look at everything but change nothing. An API key has the
+permissions of its account, or read-only ones if it was created that way.
+Deleting an account hands what it created over to another admin. See
+[Users and roles](users-and-roles.md).
 
 ## Can it build an app without a Dockerfile?
 
@@ -84,13 +86,13 @@ are dropped with a warning. See [Importing a compose file](compose-import.md).
   so Homerun reads the branch head through the provider's API instead, which
   only works for GitHub, GitLab, Gitea and Bitbucket. Pull request previews
   still need the webhook.
-- **Every publicly routed app depends on the dashboard being up.** The login
-  wall's check is attached to every service so it can be switched on and off
-  without a redeploy, which means Traefik refuses requests to any routed app
-  while Homerun itself is down. Removing someone at your identity provider is
-  picked up within about five minutes when the app filters on groups and the
-  provider issues refresh tokens, otherwise at their next sign-in or within
-  eight hours. See [Per-app login wall](login-wall.md).
+- **An app behind the login wall depends on the dashboard being up.** Traefik
+  asks Homerun about every request to it, so it refuses requests while Homerun
+  itself is down; apps without the wall are served by Traefik directly and keep
+  working. Turning the wall on or off redeploys the service. Removing someone at
+  your identity provider is picked up within about five minutes when the app
+  filters on groups and the provider issues refresh tokens, otherwise at their
+  next sign-in or within eight hours. See [Per-app login wall](login-wall.md).
 - **Backups aren't paused for writes.** A volume is tarred while its service
   keeps running, which can tear a database mid-write. Dump the database into a
   bind mount with a [cron job](scheduling.md#cron-jobs) and back that up

@@ -17,6 +17,7 @@ import {
 } from "$lib/server/db/schema";
 import type { NewtCredentials } from "$lib/services/docker/newt";
 import { decryptSecret, encryptSecret } from "$lib/services/secrets";
+import type { UpdateChannel } from "$lib/update-channel";
 import { BaseDTO } from "./base-dto";
 
 /** Fixed id : this table only ever holds one row. */
@@ -326,13 +327,13 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 		return this.row.orchestrationMode ?? "standalone";
 	}
 
-	/** Which releases self-update follows: stable releases, or every canary build of `main`. */
-	get updateChannel(): "canary" | "stable" {
+	/** Which releases self-update follows: stable releases, every e2e-tested canary build of `main`, or every nightly build of it. */
+	get updateChannel(): UpdateChannel {
 		return this.row.updateChannel ?? "stable";
 	}
 
 	/** Persists which release channel self-update follows. */
-	async updateUpdateChannel(channel: "canary" | "stable"): Promise<void> {
+	async updateUpdateChannel(channel: UpdateChannel): Promise<void> {
 		await this.persist({ updateChannel: channel });
 	}
 

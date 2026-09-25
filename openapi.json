@@ -124,7 +124,7 @@
 									"properties": {
 										"channel": {
 											"description": "The release channel updates follow, set on Settings → General",
-											"enum": ["stable", "canary"],
+											"enum": ["stable", "canary", "nightly"],
 											"type": "string"
 										},
 										"current": {
@@ -358,7 +358,7 @@
 		},
 		"/instance/update/channel": {
 			"patch": {
-				"description": "Sets the release channel self-update follows, like Settings → General → Release channel. Switching from canary back to stable never downgrades: updates just stop until a stable release is newer than the running canary. Admins only.",
+				"description": "Sets the release channel self-update follows, like Settings → General → Release channel. Switching to a more stable channel (nightly → canary → stable) never downgrades: updates just stop until that channel has a release newer than the running one. Admins only.",
 				"operationId": "patch_instance_update_channel",
 				"parameters": [],
 				"requestBody": {
@@ -368,8 +368,8 @@
 								"additionalProperties": false,
 								"properties": {
 									"channel": {
-										"description": "stable follows stable releases; canary every build merged to main. Switching back to stable never downgrades",
-										"enum": ["stable", "canary"],
+										"description": "stable follows stable releases; canary every build merged to main that passed e2e; nightly every build merged to main, published before e2e. Switching to a more stable channel never downgrades",
+										"enum": ["stable", "canary", "nightly"],
 										"type": "string"
 									}
 								},
@@ -388,7 +388,7 @@
 									"additionalProperties": false,
 									"properties": {
 										"channel": {
-											"enum": ["stable", "canary"],
+											"enum": ["stable", "canary", "nightly"],
 											"type": "string"
 										}
 									},
@@ -5279,6 +5279,244 @@
 				],
 				"summary": "Deploy a service",
 				"tags": ["Services"]
+			}
+		},
+		"/services/{serviceId}/deployments": {
+			"get": {
+				"description": "The service's latest deploy attempts, newest first, failed ones included, with each one's error and progress log. Unlike revisions, which only list deploys that produced a running image, this shows why a deploy failed.",
+				"operationId": "get_services__serviceId__deployments",
+				"parameters": [
+					{
+						"description": "Service id",
+						"in": "path",
+						"name": "serviceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "How many deployments to return, 1 to 50 (default 10)",
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"additionalProperties": false,
+										"properties": {
+											"createdAt": {
+												"description": "ISO 8601 timestamp",
+												"example": "2026-08-20T12:00:00.000Z",
+												"type": "string"
+											},
+											"errorMessage": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "Why the deploy failed, null unless status is failed"
+											},
+											"finishedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"example": "2026-08-20T12:00:00.000Z",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitCommit": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"gitRef": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"id": {
+												"type": "string"
+											},
+											"imageDigest": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"imageRef": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"log": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												],
+												"description": "The deploy's progress lines as the dashboard shows them: pull, scan, rollout, and the Docker error when it failed"
+											},
+											"rollbackOfDeploymentId": {
+												"anyOf": [
+													{
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"startedAt": {
+												"anyOf": [
+													{
+														"description": "ISO 8601 timestamp",
+														"example": "2026-08-20T12:00:00.000Z",
+														"type": "string"
+													},
+													{
+														"type": "null"
+													}
+												]
+											},
+											"status": {
+												"enum": [
+													"pending",
+													"pulling",
+													"starting",
+													"running",
+													"stopped",
+													"failed",
+													"missing"
+												],
+												"type": "string"
+											}
+										},
+										"required": [
+											"createdAt",
+											"errorMessage",
+											"finishedAt",
+											"gitCommit",
+											"gitRef",
+											"id",
+											"imageDigest",
+											"imageRef",
+											"log",
+											"rollbackOfDeploymentId",
+											"startedAt",
+											"status"
+										],
+										"type": "object"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "The service's deployments"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "An invalid limit"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"additionalProperties": false,
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"issues": {}
+									},
+									"required": ["error"],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not found"
+					}
+				},
+				"security": [
+					{
+						"apiKey": []
+					},
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List a service's deployments",
+				"tags": ["Revisions"]
 			}
 		},
 		"/services/{serviceId}/logs": {

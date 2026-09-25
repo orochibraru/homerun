@@ -19,6 +19,8 @@ test.describe
 				.getByRole("link", { exact: true, name: "Authentication" })
 				.click();
 			await expect(page).toHaveURL(/\/authentication$/);
+			await page.getByRole("link", { exact: true, name: "Providers" }).click();
+			await expect(page).toHaveURL(/\/authentication\/providers$/);
 			await expect(page.getByText("No providers yet")).toBeVisible();
 			await expect(page.getByText("0 configured")).toBeVisible();
 		});
@@ -27,7 +29,7 @@ test.describe
 			page,
 		}) => {
 			await signIn(page);
-			await page.goto("/authentication");
+			await page.goto("/authentication/providers");
 			await page.getByRole("link", { name: "Add provider" }).first().click();
 			await expect(page).toHaveURL(/\/authentication\/new$/);
 
@@ -62,7 +64,7 @@ test.describe
 			).toBeVisible();
 			await expect(page.locator("#name")).toHaveAttribute("readonly", "");
 
-			await page.goto("/authentication");
+			await page.goto("/authentication/providers");
 			await expect(page.getByText("1 configured")).toBeVisible();
 			await expect(page.getByRole("link", { name: /My Login/ })).toBeVisible();
 		});
@@ -82,7 +84,7 @@ test.describe
 			await expect(confirm).toBeEnabled();
 			await confirm.click();
 
-			await expect(page).toHaveURL(/\/authentication$/);
+			await expect(page).toHaveURL(/\/authentication\/providers$/);
 			await expect(page.getByText("No providers yet")).toBeVisible();
 		});
 

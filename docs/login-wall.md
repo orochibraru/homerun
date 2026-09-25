@@ -17,9 +17,9 @@ own hostname, so the app stays reachable for eight hours without signing in
 again. Nothing is shared with your other apps: each one gets its own cookie, and
 a cookie issued for one hostname is rejected on any other.
 
-This needs **Origin** set under Settings → General, since that's the URL
-visitors are sent to in order to sign in. Saving the setting is refused with an
-explanation if it isn't set yet. It does **not** need **Cross-subdomain
+This needs the **Dashboard URL** set under Settings → General, since that's the
+URL visitors are sent to in order to sign in. Saving the setting is refused with
+an explanation if it isn't set yet. It does **not** need **Cross-subdomain
 cookies** (Settings → General), which is unrelated to this flow.
 
 **Sign-in methods.** Nothing is enabled by default: pick at least one of the

@@ -10,10 +10,10 @@ provider connections, terminal sessions, bell feed and notification channels.
 Every account gets a copy of each bell notification, and every account's own
 notification channels hear about every event. Between admin and developer, the
 only difference is a few admin-only pages, **Users**, **Authentication**,
-**Settings**, **System Logs** and **Docker Cleanup** (see
-[Docker Cleanup](docker-cleanup.md)), plus admin-only actions elsewhere:
-registering a git provider's OAuth app and host-command cron jobs. There's no
-finer-grained permission system yet (no per-stack access control, no teams).
+**Settings**, **System Logs**, **Registry**, **Docker Cleanup** and **DNS**,
+plus admin-only actions elsewhere: registering a git provider's OAuth app and
+host-command cron jobs. There's no finer-grained permission system yet (no
+per-stack access control, no teams).
 
 **Read-only** accounts see everything a developer sees but can't change
 anything: every form, button and API call that writes is refused with "This

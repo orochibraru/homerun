@@ -194,7 +194,12 @@ hand:
   longer match their signature), `devex` (walks the contributor path, fresh
   clone → setup → dev → test → gates → CI, and fixes the friction: undocumented
   or broken scripts, `.env.example` drift, local gates that don't match CI,
-  tooling overlap, stale `.agents/notes` paths, slow or flaky tests).
+  tooling overlap, stale `.agents/notes` paths, slow or flaky tests),
+  `docs-consistency` (reads the operator docs as one set: the same fact stated
+  differently on two pages, a UI label or term spelled two ways, broken menu
+  paths, links and anchors, an index that misses or misdescribes a page, pages
+  that stopped making sense, verifying what it touches against the code;
+  `docs-audit` owns exhaustive code-to-docs coverage).
 
 Skill content lives under `.agents/skills/<name>/SKILL.md` with a symlink from
 `.claude/skills/`, matching the existing `shadcn-svelte` skill's layout, keep

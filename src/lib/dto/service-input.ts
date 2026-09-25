@@ -7,6 +7,8 @@ import type { PullPolicy } from "$lib/types";
 /** Fields a caller supplies to insert a new service row. */
 export interface NewServiceInput {
 	authRequired?: boolean;
+	/** Off by default for a database or cache image, which has no HTTP to probe and no public route to watch. */
+	uptimeEnabled?: boolean;
 	buildCacheRegistryId?: string | null;
 	buildServerRemoteHostId?: string | null;
 	buildSource?: "image" | "git";

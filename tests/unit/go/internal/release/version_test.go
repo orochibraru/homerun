@@ -21,6 +21,9 @@ func TestIsNewer(t *testing.T) {
 		{"1.0.41-canary.100", "1.0.41-canary.99", true},
 		{"1.0.41-canary.9", "1.0.41-canary.10", false},
 		{"1.0.41-canary.3", "1.0.40", true},
+		{"1.0.41-canary.101", "1.0.41-nightly.100", true},
+		{"1.0.41-nightly.100", "1.0.41-canary.100", false},
+		{"1.0.41-nightly.9", "1.0.41-canary.10", false},
 		{"1.0.40", "1.0.40", false},
 		{"1.2.0", "1.10.0", false},
 		{"latest", "1.0.0", false},
@@ -33,28 +36,35 @@ func TestIsNewer(t *testing.T) {
 	}
 }
 
-func TestLatestCanaryPicksTheNewestPrerelease(t *testing.T) {
+func TestLatestPrereleasePicksTheNewestOnItsChannel(t *testing.T) {
 	serve(t, func(writer http.ResponseWriter, request *http.Request) {
 		if !strings.HasSuffix(request.URL.Path, "/releases") {
 			http.NotFound(writer, request)
 			return
 		}
-		fmt.Fprint(writer, `[{"tag_name":"v1.0.41","prerelease":false},{"tag_name":"canary","prerelease":true},{"tag_name":"v1.0.41-canary.12","prerelease":true},{"tag_name":"v1.0.41-canary.11","prerelease":true}]`)
+		fmt.Fprint(writer, `[{"tag_name":"v1.0.41","prerelease":false},{"tag_name":"canary","prerelease":true},{"tag_name":"v1.0.41-nightly.13","prerelease":true},{"tag_name":"v1.0.41-canary.12","prerelease":true},{"tag_name":"v1.0.41-canary.11","prerelease":true}]`)
 	})
-	tag, version, err := release.LatestCanary(http.DefaultClient)
+	tag, version, err := release.LatestPrerelease(http.DefaultClient, "canary")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if tag != "v1.0.41-canary.12" || version != "1.0.41-canary.12" {
-		t.Errorf("got tag %q version %q", tag, version)
+		t.Errorf("canary: got tag %q version %q", tag, version)
+	}
+	tag, _, err = release.LatestPrerelease(http.DefaultClient, "nightly")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag != "v1.0.41-nightly.13" {
+		t.Errorf("nightly: got tag %q", tag)
 	}
 }
 
-func TestLatestCanaryFailsWithoutAPrerelease(t *testing.T) {
+func TestLatestPrereleaseFailsWithoutOne(t *testing.T) {
 	serve(t, func(writer http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(writer, `[{"tag_name":"v1.0.40","prerelease":false}]`)
 	})
-	if _, _, err := release.LatestCanary(http.DefaultClient); err == nil {
+	if _, _, err := release.LatestPrerelease(http.DefaultClient, "canary"); err == nil {
 		t.Error("no canary must fail, not update to a stable release")
 	}
 }

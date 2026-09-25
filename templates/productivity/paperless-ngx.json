@@ -10,7 +10,7 @@
 	"websiteUrl": "https://docs.paperless-ngx.com",
 	"sourceUrl": "https://github.com/paperless-ngx/paperless-ngx",
 	"envVars": {
-		"PAPERLESS_REDIS": "redis://{{redis}}:6379",
+		"PAPERLESS_REDIS": "redis://:{{redis.REDIS_PASSWORD}}@{{redis}}:6379",
 		"PAPERLESS_SECRET_KEY": "change-me-to-a-random-string",
 		"PAPERLESS_TIME_ZONE": "UTC",
 		"PAPERLESS_URL": "https://paperless.example.com"

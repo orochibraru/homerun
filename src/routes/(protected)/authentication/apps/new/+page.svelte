@@ -9,6 +9,7 @@
 		type OauthAppFieldValues,
 	} from "$lib/components/oauth-app-fields.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import { CLAUDE_MCP_CALLBACK } from "$lib/oidc-provider";
 	import { title } from "$lib/store/title";
 	import { enhanceToast } from "$lib/toast";
 
@@ -26,14 +27,13 @@
 
 	onMount(() => title.set("Register an app"));
 
-	const CLAUDE_CALLBACK = "https://claude.ai/api/mcp/auth_callback";
-	const isClaude = $derived(values.redirectUris.includes(CLAUDE_CALLBACK));
+	const isClaude = $derived(values.redirectUris.includes(CLAUDE_MCP_CALLBACK));
 
 	function useClaudePreset() {
 		values.confidential = true;
 		values.enableEndSession = false;
 		values.name = "Claude";
-		values.redirectUris = CLAUDE_CALLBACK;
+		values.redirectUris = CLAUDE_MCP_CALLBACK;
 		values.requirePkce = true;
 		values.skipConsent = false;
 	}
@@ -75,7 +75,7 @@
         issuer={data.issuer}
       />
       <div class="flex justify-end">
-        <Button href={resolve("/authentication")}>
+        <Button href={resolve("/authentication/apps")}>
           Done
           <ArrowRight class="size-4" />
         </Button>
@@ -120,7 +120,7 @@
         <OauthAppFields {values} />
 
         <div class="flex justify-end gap-2">
-          <Button href={resolve("/authentication")} type="button" variant="ghost">
+          <Button href={resolve("/authentication/apps")} type="button" variant="ghost">
             Cancel
           </Button>
           <Button disabled={submitting} type="submit">Register app</Button>

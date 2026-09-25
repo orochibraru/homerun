@@ -27,6 +27,9 @@ func (r *run) startSwarm(ctx context.Context, image resolvedImage) (string, erro
 	}); err != nil {
 		return "", err
 	}
+	if PublishesThroughIngress(workload.Template) {
+		r.ensureIngress(ctx)
+	}
 	existing, err := r.docker.SwarmServicesByLabel(ctx, serviceIDLabel+"="+r.spec.ServiceID)
 	if err != nil {
 		return "", err
@@ -68,6 +71,38 @@ func (r *run) startSwarm(ctx context.Context, image resolvedImage) (string, erro
 	}
 	log.Printf("[homerun-worker] swarm service created: id=%s service=%s", id, r.spec.ServiceID)
 	return id, nil
+}
+
+// PublishesThroughIngress reports whether a swarm service spec publishes a
+// port through the routing mesh, which needs the swarm's ingress network.
+func PublishesThroughIngress(spec map[string]any) bool {
+	endpoint, _ := spec["EndpointSpec"].(map[string]any)
+	ports, _ := endpoint["Ports"].([]any)
+	for _, raw := range ports {
+		port, _ := raw.(map[string]any)
+		if mode, _ := port["PublishMode"].(string); mode == "" || mode == "ingress" {
+			return true
+		}
+	}
+	return false
+}
+
+// ensureIngress recreates the swarm's ingress network when it's gone, since
+// swarm refuses to publish a port without one. A failure is only logged: the
+// service update that follows reports the real error.
+func (r *run) ensureIngress(ctx context.Context) {
+	created, err := r.docker.EnsureNetwork(ctx, map[string]any{
+		"Driver":  "overlay",
+		"Ingress": true,
+		"Name":    "ingress",
+	})
+	if err != nil {
+		log.Printf("[homerun-worker] couldn't ensure the swarm ingress network: service=%s : %s", r.spec.ServiceID, err)
+		return
+	}
+	if created {
+		r.progress.line("Recreated the swarm's ingress network, which published ports need.")
+	}
 }
 
 // multiNodeWarnings says what stops working once the swarm has more than one

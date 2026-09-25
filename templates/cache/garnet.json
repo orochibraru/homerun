@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Garnet",
-	"description": "Microsoft Research's cache store speaking the Redis protocol (MIT), built for low tail latency. Unauthenticated by default.",
+	"description": "Microsoft Research's cache store speaking the Redis protocol (MIT), built for low tail latency. Starts with a generated password in REDIS_PASSWORD, which links to it pick up.",
 	"image": "ghcr.io/microsoft/garnet",
 	"tag": "latest",
 	"containerPort": 6379,
@@ -9,5 +9,8 @@
 	"tags": ["cache", "key-value", "redis", "foss"],
 	"websiteUrl": "https://microsoft.github.io/garnet",
 	"sourceUrl": "https://github.com/microsoft/garnet",
-	"envVars": {}
+	"envVars": {
+		"REDIS_PASSWORD": "{{secret}}"
+	},
+	"command": ["--auth", "Password", "--password", "{{secret}}"]
 }

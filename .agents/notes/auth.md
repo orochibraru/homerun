@@ -886,10 +886,10 @@ token has. An anonymous call gets a 401 with
 Clients can't register themselves (no dynamic registration, no CIMD): open
 registration let anything on the internet create a client, which only a consent
 screen then stood in front of. An admin creates the claude.ai connector under
-Authentication → Apps (the **Claude connector** preset fills in
-`https://claude.ai/api/mcp/auth_callback`, confidential, PKCE, consent on) and
-pastes its ID and secret into Claude's connector form. `mcp()` binds every
-client created that way to the MCP resource
+Authentication → Sign in with Homerun → Register app (the **Claude connector**
+preset fills in `https://claude.ai/api/mcp/auth_callback`, confidential, PKCE,
+consent on) and pastes its ID and secret into Claude's connector form. `mcp()`
+binds every client created that way to the MCP resource
 (`clientRegistrationDefaultResources`), so its access tokens carry the MCP
 audience. Claude Code and other headless agents use an API key header instead.
 MCP clients look for discovery at the site root, not under the auth base path,

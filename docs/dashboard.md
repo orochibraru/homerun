@@ -52,8 +52,9 @@ authentication providers for an admin.
 
 ## Setup diagnostics
 
-Homerun runs a handful of read-only checks on every dashboard load: base domain,
-Origin and auth secret still at their defaults, the Traefik container reachable,
+Homerun runs a handful of read-only checks on every dashboard load: base domain
+and auth secret still at their defaults, no Dashboard URL set, the dashboard's
+own hostname actually routed to it by Traefik, the Traefik container reachable,
 the [worker](configuration.md#the-app-and-the-worker) reachable and the Docker
 socket it fronts answering, Traefik still running with the flags your settings
 put on it (the swarm provider, the HTTP cache plugin, the ACME email), and SMTP

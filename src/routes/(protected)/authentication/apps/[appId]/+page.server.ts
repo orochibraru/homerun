@@ -118,6 +118,6 @@ export const actions = {
 				`OAuth app deleted: client=${app.clientId} user=${locals.user.id}`,
 			);
 		}
-		throw redirect(303, resolve("/authentication"));
+		throw redirect(303, resolve("/authentication/apps"));
 	},
 };

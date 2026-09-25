@@ -20,8 +20,8 @@ opens the update dialog:
   update writes the target version to `HOMERUN_VERSION` in `.env`.
 - A compose file you wrote yourself is never replaced. If it or `.env` pins a
   version tag (`image: …:v1.0.20`, or `HOMERUN_VERSION=v1.0.20` with
-  `compose.prod.yaml`), that tag is bumped to the new release first. `latest`
-  and `canary` are just pulled again.
+  `compose.prod.yaml`), that tag is bumped to the new release first. `latest`,
+  `canary` and `nightly` are just pulled again.
 - **A broken release never replaces a working one.** Before switching, the
   updater boots the new version next to the running one as a throwaway
   `homerun-update-candidate` container. The candidate isn't routed by Traefik
@@ -46,14 +46,21 @@ Pick one on **Settings → General → Release channel**:
 - **Stable** (the default): the update notice offers stable releases (`vX.Y.Z`,
   cut by hand from a canary that's already been running), the same ones the
   installer, `install.sh` and `homerun update` follow.
-- **Canary**: the notice offers every build merged to `main`, published as the
-  `:canary` image and a `vX.Y.Z-canary.N`
+- **Canary**: the notice offers every build merged to `main` once it passed the
+  end-to-end tests, published as the `:canary` image and a `vX.Y.Z-canary.N`
   [prerelease](https://github.com/orochibraru/homerun/releases). Updating moves
   your install to the `canary` tag (`HOMERUN_VERSION=canary`).
+- **Nightly**: the same builds as canary, published as the `:nightly` image and
+  a `vX.Y.Z-nightly.N` prerelease as soon as they're built, before the
+  end-to-end tests run. A build that fails them still ships here, so expect
+  breakage. Updating moves your install to the `nightly` tag
+  (`HOMERUN_VERSION=nightly`). The update's own pre-switch check still keeps a
+  build that can't boot off your instance.
 
-Switching back from canary to stable never downgrades. The notice just stays
-quiet until a stable release is newer than the canary you run, and that update
-moves you back to a pinned stable tag.
+Canary and nightly builds of the same merge share their number `N`, so switching
+between them works both ways. Switching to a more stable channel never
+downgrades: the notice stays quiet until that channel has a release newer than
+the one you run, and that update moves you to its tag.
 
 ## Without the dashboard
 
@@ -62,7 +69,7 @@ If you can't reach the dashboard, the same update runs from the
 
 ```bash
 homerun instance status             # running version, channel, latest version, and whether it can update now
-homerun instance channel canary     # switch the release channel (or back to stable)
+homerun instance channel canary     # switch the release channel (stable, canary or nightly)
 homerun instance update             # start the update and follow it until the new version answers
 ```
 

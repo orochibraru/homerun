@@ -14,7 +14,7 @@ import (
 )
 
 // SelfUpdate replaces the running binary with the newest release on channel
-// ("stable" or "canary") when it's strictly newer, falling back to `sudo mv`
+// ("stable", "canary" or "nightly") when it's strictly newer, falling back to `sudo mv`
 // when the install directory isn't writable. Never downgrades: a canary CLI
 // updating on stable stays put until a stable release overtakes it. Exits the
 // process on any failure, including a platform with no prebuilt binaries,
@@ -51,21 +51,22 @@ func SelfUpdate(channel string) {
 }
 
 // LatestRelease is the tag to download from and the version it carries for
-// channel: the newest stable release, or the newest canary prerelease.
+// channel: the newest stable release, or the newest canary or nightly
+// prerelease.
 // Exits on failure or an unknown channel.
 func LatestRelease(channel string) (string, string) {
 	switch channel {
 	case "stable":
 		tag := LatestReleaseTag()
 		return tag, strings.TrimPrefix(tag, "v")
-	case "canary":
-		tag, version, err := release.LatestCanary(http.DefaultClient)
+	case "canary", "nightly":
+		tag, version, err := release.LatestPrerelease(http.DefaultClient, channel)
 		if err != nil {
 			Fail(err.Error())
 		}
 		return tag, version
 	default:
-		Fail(fmt.Sprintf("unknown channel %q: use stable or canary.", channel))
+		Fail(fmt.Sprintf("unknown channel %q: use stable, canary or nightly.", channel))
 		return "", ""
 	}
 }

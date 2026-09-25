@@ -14,7 +14,7 @@
 		"DATABASE_URI": "postgresql://{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}",
 		"HOST_NAME": "https://aiometadata.example.com",
 		"NODE_ENV": "production",
-		"REDIS_URL": "redis://{{redis}}:6379",
+		"REDIS_URL": "redis://:{{redis.REDIS_PASSWORD}}@{{redis}}:6379",
 		"TMDB_API_KEY": ""
 	},
 	"links": [

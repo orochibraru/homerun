@@ -13,6 +13,7 @@ import {
 	quietUptimeProbes,
 	resumeUptimeProbes,
 } from "$lib/services/uptime/quiet";
+import type { UpdateChannel } from "$lib/update-channel";
 import {
 	COMPOSE_PROJECT_LABEL,
 	COMPOSE_SERVICE_LABEL,
@@ -30,11 +31,10 @@ import {
 } from "./self-update/compose-target.ts";
 import { isNewerVersion, normalizeVersion } from "./self-update/version.ts";
 
-const RELEASE_URLS = {
-	canary:
-		"https://api.github.com/repos/orochibraru/homerun/releases?per_page=30",
-	stable: "https://api.github.com/repos/orochibraru/homerun/releases/latest",
-} as const;
+const RELEASES_URL =
+	"https://api.github.com/repos/orochibraru/homerun/releases?per_page=30";
+const LATEST_RELEASE_URL =
+	"https://api.github.com/repos/orochibraru/homerun/releases/latest";
 const RELEASE_CACHE_MS = 10 * 60 * 1000;
 const UPDATE_POLL_MS = 5000;
 const UPDATE_WATCH_MS = 30 * 60 * 1000;
@@ -62,8 +62,6 @@ export interface UpdateProgress {
 	state: "exited" | "none" | "running";
 	version: string | null;
 }
-
-export type UpdateChannel = "canary" | "stable";
 
 export interface ReleaseStatus {
 	channel: UpdateChannel;
@@ -122,7 +120,8 @@ class SelfUpdateServiceClass {
 	/**
 	 * Fetches and caches the newest release on `channel`, writing to
 	 * `#release` either way: `releases/latest` for stable, the newest
-	 * versioned prerelease (one per merge to main) for canary. Never throws: logs
+	 * `v<version>-<channel>.<n>` prerelease (one per merge to main) for canary
+	 * and nightly. Never throws: logs
 	 * and caches a null result on any network error, non-2xx response, or
 	 * unparseable version.
 	 */
@@ -130,13 +129,16 @@ class SelfUpdateServiceClass {
 		channel: UpdateChannel,
 	): Promise<LatestRelease | null> {
 		try {
-			const res = await fetch(RELEASE_URLS[channel], {
-				headers: {
-					Accept: "application/vnd.github+json",
-					"User-Agent": "homerun",
+			const res = await fetch(
+				channel === "stable" ? LATEST_RELEASE_URL : RELEASES_URL,
+				{
+					headers: {
+						Accept: "application/vnd.github+json",
+						"User-Agent": "homerun",
+					},
+					signal: AbortSignal.timeout(RELEASE_TIMEOUT_MS),
 				},
-				signal: AbortSignal.timeout(RELEASE_TIMEOUT_MS),
-			});
+			);
 			if (!res.ok) {
 				throw new Error(`GitHub answered ${res.status}`);
 			}
@@ -148,7 +150,12 @@ class SelfUpdateServiceClass {
 			}
 			const json = (await res.json()) as Release | Release[];
 			const body = Array.isArray(json)
-				? json.find((r) => r.prerelease && normalizeVersion(r.tag_name))
+				? json.find(
+						(r) =>
+							r.prerelease &&
+							r.tag_name.includes(`-${channel}.`) &&
+							normalizeVersion(r.tag_name),
+					)
 				: json;
 			if (!body) {
 				throw new Error(`No ${channel} release found`);
@@ -181,8 +188,8 @@ class SelfUpdateServiceClass {
 	/**
 	 * The current vs. latest version on the configured channel and whether an
 	 * update is available. Only a strictly newer version counts, so an
-	 * instance switched from canary back to stable sees nothing until a
-	 * stable release overtakes the canary it runs.
+	 * instance switched to a more stable channel sees nothing until that
+	 * channel has a release newer than the one it runs.
 	 */
 	async releaseStatus(): Promise<ReleaseStatus> {
 		const { updateChannel: channel } = await InstanceSettingsDTO.get();

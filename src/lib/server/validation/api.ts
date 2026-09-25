@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BAKE_TARGET_PATTERN, BUILD_METHODS } from "$lib/build-methods";
 import { DOMAIN_RE } from "$lib/service-domains";
+import { UPDATE_CHANNELS } from "$lib/update-channel";
 
 /**
  * Request-body schemas for the JSON REST API (`src/routes/api/v1/**`) : kept
@@ -156,8 +157,8 @@ export const createStackApiBody = z.object({
 });
 
 export const updateChannelApiBody = z.object({
-	channel: z.enum(["stable", "canary"]).meta({
+	channel: z.enum(UPDATE_CHANNELS).meta({
 		description:
-			"stable follows stable releases; canary every build merged to main. Switching back to stable never downgrades",
+			"stable follows stable releases; canary every build merged to main that passed e2e; nightly every build merged to main, published before e2e. Switching to a more stable channel never downgrades",
 	}),
 });

@@ -63,7 +63,7 @@ export interface paths {
 		head?: never;
 		/**
 		 * Set the update channel
-		 * @description Sets the release channel self-update follows, like Settings → General → Release channel. Switching from canary back to stable never downgrades: updates just stop until a stable release is newer than the running canary. Admins only.
+		 * @description Sets the release channel self-update follows, like Settings → General → Release channel. Switching to a more stable channel (nightly → canary → stable) never downgrades: updates just stop until that channel has a release newer than the running one. Admins only.
 		 */
 		patch: operations["patch_instance_update_channel"];
 		trace?: never;
@@ -205,6 +205,26 @@ export interface paths {
 		 * @description Awaits the full pull-or-build → create → start pipeline and returns once it's done : no separate polling endpoint for API clients. An optional tag switches an image-based service to that tag first, which is how CI deploys the image it just pushed.
 		 */
 		post: operations["post_services__serviceId__deploy"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/services/{serviceId}/deployments": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List a service's deployments
+		 * @description The service's latest deploy attempts, newest first, failed ones included, with each one's error and progress log. Unlike revisions, which only list deploys that produced a running image, this shows why a deploy failed.
+		 */
+		get: operations["get_services__serviceId__deployments"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -548,7 +568,7 @@ export interface operations {
 						 * @description The release channel updates follow, set on Settings → General
 						 * @enum {string}
 						 */
-						channel: "stable" | "canary";
+						channel: "stable" | "canary" | "nightly";
 						/** @description The running version */
 						current: string;
 						/** @description The newest release on the channel, null when it couldn't be checked */
@@ -666,10 +686,10 @@ export interface operations {
 			content: {
 				"application/json": {
 					/**
-					 * @description stable follows stable releases; canary every build merged to main. Switching back to stable never downgrades
+					 * @description stable follows stable releases; canary every build merged to main that passed e2e; nightly every build merged to main, published before e2e. Switching to a more stable channel never downgrades
 					 * @enum {string}
 					 */
-					channel: "stable" | "canary";
+					channel: "stable" | "canary" | "nightly";
 				};
 			};
 		};
@@ -682,7 +702,7 @@ export interface operations {
 				content: {
 					"application/json": {
 						/** @enum {string} */
-						channel: "stable" | "canary";
+						channel: "stable" | "canary" | "nightly";
 					};
 				};
 			};
@@ -2064,6 +2084,95 @@ export interface operations {
 						deploymentId: string;
 						error?: string;
 						success: boolean;
+					};
+				};
+			};
+		};
+	};
+	get_services__serviceId__deployments: {
+		parameters: {
+			query?: {
+				/** @description How many deployments to return, 1 to 50 (default 10) */
+				limit?: string;
+			};
+			header?: never;
+			path: {
+				/** @description Service id */
+				serviceId: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description The service's deployments */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description ISO 8601 timestamp
+						 * @example 2026-08-20T12:00:00.000Z
+						 */
+						createdAt: string;
+						/** @description Why the deploy failed, null unless status is failed */
+						errorMessage: string | null;
+						finishedAt: string | null;
+						gitCommit: string | null;
+						gitRef: string | null;
+						id: string;
+						imageDigest: string | null;
+						imageRef: string | null;
+						/** @description The deploy's progress lines as the dashboard shows them: pull, scan, rollout, and the Docker error when it failed */
+						log: string | null;
+						rollbackOfDeploymentId: string | null;
+						startedAt: string | null;
+						/** @enum {string} */
+						status:
+							| "pending"
+							| "pulling"
+							| "starting"
+							| "running"
+							| "stopped"
+							| "failed"
+							| "missing";
+					}[];
+				};
+			};
+			/** @description An invalid limit */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Unauthorized */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
+					};
+				};
+			};
+			/** @description Not found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						error: string;
+						issues?: unknown;
 					};
 				};
 			};

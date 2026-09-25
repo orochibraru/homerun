@@ -28,6 +28,8 @@ export interface OidcUser {
 
 export const MCP_PATH = "/api/v1/mcp";
 
+export const CLAUDE_MCP_CALLBACK = "https://claude.ai/api/mcp/auth_callback";
+
 /**
  * Whether the MCP server can run on this origin: MCP clients only accept an
  * HTTPS resource, or plain HTTP on a loopback host for development. On any

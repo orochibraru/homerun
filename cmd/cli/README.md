@@ -82,7 +82,7 @@ four, and the release version is stamped in at build time with
 ```bash
 homerun login [--base-url <url>]
 homerun logout
-homerun update [--channel stable|canary]
+homerun update [--channel stable|canary|nightly]
 homerun --version
 homerun services list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun services get <id>
@@ -102,7 +102,7 @@ homerun services rollback <id> [revisionId] [--restore-config]
 homerun stacks list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 homerun instance status [--json]
 homerun instance update [--wait=false] [--timeout <seconds>]
-homerun instance channel stable|canary
+homerun instance channel stable|canary|nightly
 homerun templates list [--json] [--page <n>] [--per-page <n>] [--search <term>]
 ```
 
@@ -113,8 +113,8 @@ When a listing is only part of the total, a trailing line says so
 (`Showing 10 of 60 (page 1 of 6). Use --page/--per-page for the rest.`); nothing
 is printed when everything fit on one page. There's no `create`/`update` for a
 service yet (`homerun update` above is the CLI self-updater, unrelated),
-straightforward to add the same way (`commands.ts` already has the `unwrap()`
-helper every command uses).
+straightforward to add the same way as the existing commands in
+`internal/cli/commands.go`.
 
 `homerun services delete <id>` calls `DELETE /services/{serviceId}`, the same
 danger-zone action as the Settings tab's Delete button; `--force` adds
@@ -135,8 +135,8 @@ prints the raw scan instead. `homerun services scan <id>` calls
 it polls `GET /jobs/{jobId}` every 2s until the job finishes, then prints the
 latest scan; a `409` (a scan already in flight) is followed rather than treated
 as an error when waiting. `--fail-on <level>` implies `--wait` and exits 1 when
-the scan's counts at or above that severity are non-zero (`findingsAtOrAbove()`
-in `commands.ts`); a failed or cancelled job, or a wait past
+the scan's counts at or above that severity are non-zero (`FindingsAtOrAbove()`
+in `internal/cli/commands.go`); a failed or cancelled job, or a wait past
 `--timeout <seconds>` (default 1800), exits 1 too.
 
 `homerun services logs <id>` calls `GET /services/{serviceId}/logs` and writes
@@ -168,21 +168,22 @@ it arrives, ignores failed requests while the container is recreated, and stops
 once `GET /instance/update` reports the new version as `current`. It exits 1
 when the helper fails or after `--timeout <seconds>` (default 600).
 `--wait=false` returns as soon as the update has started.
-`homerun instance channel stable|canary` calls `PATCH /instance/update/channel`,
-the same setting as Settings → General → Release channel. All three are
-admin-only. `homerun update` is unrelated: it updates the CLI binary itself.
+`homerun instance channel stable|canary|nightly` calls
+`PATCH /instance/update/channel`, the same setting as Settings → General →
+Release channel. All three are admin-only. `homerun update` is unrelated: it
+updates the CLI binary itself.
 
 `homerun update` self-updates the installed binary in place: it checks the
 newest release on `--channel` (`stable`, the default, reads `releases/latest`;
-`canary` reads the newest `v<version>-canary.<n>` prerelease), updates only when
-that version is strictly newer, so a canary CLI running `homerun update` stays
-put until stable overtakes it rather than downgrading, downloads the
-`homerun-cli-<arch>` asset for your architecture (same one `install.sh`
-installs), and replaces the running binary (`sudo`'d automatically if the
-install directory isn't writable by your user, same as `install.sh`). Release
-assets are gzipped, so it unpacks the download before replacing the binary.
-Linux and macOS, same as installation itself. `homerun --version` (or `-v`) just
-prints the current version, no network call.
+`canary` and `nightly` read the newest `v<version>-<channel>.<n>` prerelease),
+updates only when that version is strictly newer, so a canary CLI running
+`homerun update` stays put until stable overtakes it rather than downgrading,
+downloads the `homerun-cli-<arch>` asset for your architecture (same one
+`install.sh` installs), and replaces the running binary (`sudo`'d automatically
+if the install directory isn't writable by your user, same as `install.sh`).
+Release assets are gzipped, so it unpacks the download before replacing the
+binary. Linux and macOS, same as installation itself. `homerun --version` (or
+`-v`) just prints the current version, no network call.
 
 ## After a REST API change
 

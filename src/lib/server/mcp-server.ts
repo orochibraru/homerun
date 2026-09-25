@@ -9,6 +9,7 @@ import { config } from "$lib/config";
 import { MCP_PATH, mcpAllowed } from "$lib/oidc-provider";
 import { APP_VERSION } from "$lib/server/app-version";
 import { allowLongRequest } from "$lib/server/long-request";
+import { REDACTED, redactText, restoreRedacted } from "$lib/server/mcp-redact";
 
 export type ApiCall = (
 	method: "DELETE" | "GET" | "PATCH" | "POST",
@@ -18,7 +19,7 @@ export type ApiCall = (
 
 const INSTRUCTIONS = `Homerun is a self-hosted PaaS: each service is one Docker container or swarm service, routed by Traefik at its domains.
 
-To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs and list_revisions (each revision's health and the reason it failed). Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network.
+To diagnose a service: find its id with list_services, read get_service (status, container and swarm ids) and get_service_config (its settings grouped like the dashboard tabs), then service_logs, list_deployments (each deploy attempt's error and log, the place to look when a deploy failed) and list_revisions (each revision's health and the reason it failed). Swarm logs can interleave every task generation, dead ones included, so check timestamps before blaming a line on the running task. Services in one stack reach each other by slug on the stack's network.
 
 To fix one: update_service changes settings (applied on the next deploy), deploy_service rolls them out, restart_service restarts without redeploying, rollback_service redeploys an earlier revision. Say what you're about to change before changing it.`;
 
@@ -26,9 +27,9 @@ const serviceId = z.string().describe("The service's id, from list_services");
 const read = { openWorldHint: false, readOnlyHint: true };
 const change = { destructiveHint: false, openWorldHint: false };
 
-/** The API's answer as a tool result: its body as text, flagged as an error on a non-2xx status. */
+/** The API's answer as a tool result: its body as text with secrets redacted, flagged as an error on a non-2xx status. */
 async function asResult(response: Response): Promise<CallToolResult> {
-	const text = await response.text();
+	const text = redactText(await response.text());
 	return {
 		content: [
 			{
@@ -43,6 +44,35 @@ async function asResult(response: Response): Promise<CallToolResult> {
 /** A path under a service, with its id escaped. */
 function servicePath(id: string, suffix = ""): string {
 	return `/services/${encodeURIComponent(id)}${suffix}`;
+}
+
+/** Registers the tool that reads a service's deploy attempts, failed ones included. */
+function registerDeploymentTools(server: McpServer, api: ApiCall): void {
+	server.registerTool(
+		"list_deployments",
+		{
+			annotations: read,
+			description:
+				"A service's latest deploy attempts, newest first, failed ones included: each one's status, error and progress log. Read this when a deploy failed, since a deploy that never started a container leaves nothing in service_logs.",
+			inputSchema: z.object({
+				limit: z
+					.number()
+					.int()
+					.min(1)
+					.max(50)
+					.optional()
+					.describe("How many deployments to return (default 10)"),
+				serviceId,
+			}),
+		},
+		async ({ limit, serviceId: id }) =>
+			asResult(
+				await api(
+					"GET",
+					servicePath(id, `/deployments${limit ? `?limit=${limit}` : ""}`),
+				),
+			),
+	);
 }
 
 /** Registers the tools that read one service or find it: list, record, config, logs and revisions. */
@@ -88,7 +118,7 @@ function registerReadTools(server: McpServer, api: ApiCall): void {
 		{
 			annotations: read,
 			description:
-				"A service's full record: status, container and swarm ids, image, domains and every setting as stored.",
+				"A service's full record: status, container and swarm ids, image, domains and every setting as stored. Env var values are redacted.",
 			inputSchema: z.object({ serviceId }),
 		},
 		async ({ serviceId: id }) => asResult(await api("GET", servicePath(id))),
@@ -99,7 +129,7 @@ function registerReadTools(server: McpServer, api: ApiCall): void {
 		{
 			annotations: read,
 			description:
-				"A service's settings grouped by dashboard tab (source, env, volumes, networking, compute, runtime, security, settings), secrets left out.",
+				"A service's settings grouped by dashboard tab (source, env, volumes, networking, compute, runtime, security, settings). Env var values are redacted.",
 			inputSchema: z.object({ serviceId }),
 		},
 		async ({ serviceId: id }) =>
@@ -176,6 +206,36 @@ function registerInstanceTools(server: McpServer, api: ApiCall): void {
 	);
 }
 
+/**
+ * Patches a service for `update_service`, first restoring any env var the
+ * agent sent back as `REDACTED` to its stored value.
+ */
+async function updateService(
+	api: ApiCall,
+	id: string,
+	changes: Record<string, unknown>,
+): Promise<CallToolResult> {
+	if (!(changes.envVars && typeof changes.envVars === "object")) {
+		return asResult(await api("PATCH", servicePath(id), changes));
+	}
+	const current = await api("GET", servicePath(id));
+	if (!current.ok) {
+		return asResult(current);
+	}
+	const { envVars } = (await current.json()) as {
+		envVars: Record<string, string>;
+	};
+	return asResult(
+		await api("PATCH", servicePath(id), {
+			...changes,
+			envVars: restoreRedacted(
+				changes.envVars as Record<string, unknown>,
+				envVars,
+			),
+		}),
+	);
+}
+
 /** Registers the tools that change a service: settings, deploy, restart/start/stop and rollback. */
 function registerChangeTools(server: McpServer, api: ApiCall): void {
 	server.registerTool(
@@ -188,13 +248,12 @@ function registerChangeTools(server: McpServer, api: ApiCall): void {
 				changes: z
 					.record(z.string(), z.unknown())
 					.describe(
-						'The fields to change, as PATCH /services/{serviceId} takes them, e.g. {"envVars": {"KEY": "value"}} (envVars replaces the whole map, so send every var)',
+						`The fields to change, as PATCH /services/{serviceId} takes them, e.g. {"envVars": {"KEY": "value"}} (envVars replaces the whole map, so send every var; a var left as "${REDACTED}" keeps its stored value)`,
 					),
 				serviceId,
 			}),
 		},
-		async ({ changes, serviceId: id }) =>
-			asResult(await api("PATCH", servicePath(id), changes)),
+		({ changes, serviceId: id }) => updateService(api, id, changes),
 	);
 
 	server.registerTool(
@@ -283,6 +342,7 @@ export function createHomerunMcpServer(api: ApiCall): McpServer {
 		{ instructions: INSTRUCTIONS },
 	);
 	registerReadTools(server, api);
+	registerDeploymentTools(server, api);
 	registerInstanceTools(server, api);
 	registerChangeTools(server, api);
 	return server;

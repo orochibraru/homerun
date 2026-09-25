@@ -12,6 +12,14 @@ on:
           stamped into internal/buildinfo from package.json at compile time).
           Empty means this push isn't releasing, so the binaries build
           with whatever version is already committed."
+      artifact:
+        required: false
+        type: string
+        default: binaries-all
+        description:
+          "Name of the uploaded artifact. The canary release downloads
+          binaries-*, so a second build in the same run (nightly) needs a name
+          outside that pattern."
 
 permissions:
   contents: read
@@ -51,7 +59,7 @@ jobs:
       - name: Upload binaries
         uses: orochibraru/upload-artifact@aeca548ce375fd719f0400e020a3ad90509632bc # v8.0.1
         with:
-          name: binaries-all
+          name: ${{ inputs.artifact }}
           path: dist/*
           if-no-files-found: error
           retention-days: 1

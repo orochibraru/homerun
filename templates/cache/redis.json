@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Redis",
-	"description": "In-memory key-value store. Unauthenticated by default.",
+	"description": "In-memory key-value store. Starts with a generated password in REDIS_PASSWORD, which links to it pick up.",
 	"image": "redis",
 	"tag": "alpine",
 	"containerPort": 6379,
@@ -9,5 +9,8 @@
 	"tags": ["cache", "key-value", "nosql", "queue"],
 	"websiteUrl": "https://redis.io",
 	"sourceUrl": "https://github.com/redis/redis",
-	"envVars": {}
+	"envVars": {
+		"REDIS_PASSWORD": "{{secret}}"
+	},
+	"command": ["redis-server", "--requirepass", "{{secret}}"]
 }

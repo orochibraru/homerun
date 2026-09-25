@@ -601,7 +601,9 @@ export const instanceSettings = pgTable("instance_settings", {
 	// rootful swarm manager, see hooks.server.ts and docker/swarm.ts.
 	orchestrationMode: text("orchestration_mode").$type<"standalone" | "swarm">(),
 	pendingServiceRedeploy: boolean("pending_service_redeploy"),
-	updateChannel: text("update_channel").$type<"canary" | "stable">(),
+	updateChannel: text("update_channel").$type<
+		"canary" | "nightly" | "stable"
+	>(),
 	// Self-hosted Pangolin (https://api.pangolin.net/v1/docs/, a tunnel/
 	// reverse-proxy manager, not a plain DNS API) : an alternative to the
 	// Cloudflare integration above for instances that front themselves with

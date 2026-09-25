@@ -40,6 +40,8 @@ that `403` on every write.
 - `GET /api/v1/services/:id/revisions`,
   `POST /api/v1/services/:id/revisions/:revisionId/deploy`: revisions and
   rollback, see [Revisions](#revisions) below
+- `GET /api/v1/services/:id/deployments?limit=10`: the latest deploy attempts,
+  failed ones included, each with its error and progress log (up to 50)
 - `GET /api/v1/jobs/:jobId`: the status of a queued job, such as a scan
 - `GET /api/v1/system-stats`: host CPU/RAM/disk/GPU
 - `GET/POST /api/v1/instance/update`: the running version, the latest release
@@ -124,21 +126,24 @@ request.
 
 Homerun serves an [MCP](https://modelcontextprotocol.io) server at
 `https://<your dashboard>/api/v1/mcp`, so an AI agent can diagnose and fix your
-services for you. It needs the dashboard to be reachable over HTTPS from
+services for you. It only runs when the Dashboard URL is `https` (or plain HTTP
+on `localhost`), since MCP clients refuse anything else; on any other address
+the endpoint answers 404 saying so. The dashboard also has to be reachable from
 wherever the agent runs.
 
 Nothing can connect to it until you allow it: MCP clients can't register
 themselves, an admin creates each one.
 
-- **claude.ai** (and Claude Desktop, which uses the same connectors): under
-  **Authentication → Apps → Register an app**, click **Claude connector**, then
-  **Register app**. In Claude, open Settings → Connectors → Add custom
-  connector, paste the MCP URL above, and under Advanced settings the client ID
-  and secret Homerun just showed you. Claude sends you to Homerun's sign-in
-  page, Homerun asks you to allow it, and from then on it acts as you.
-- **Claude Code**, or anything headless: pass an API key, created under Profile
-  → Authorized Clients. A read-only key gives an agent that can diagnose but not
-  change anything.
+- **claude.ai** (and Claude Desktop, which uses the same connectors): on the
+  **Authentication** page's **Sign in with Homerun** tab, click **Register
+  app**, then **Claude connector**, then **Register app**. In Claude, open
+  Settings → Connectors → Add custom connector, paste the MCP URL above, and
+  under Advanced settings the client ID and secret Homerun just showed you.
+  Claude sends you to Homerun's sign-in page, Homerun asks you to allow it, and
+  from then on it acts as you.
+- **Claude Code**, or anything headless: no OAuth client needed, pass an API key
+  instead, created under Profile → Authorized Clients. A read-only key gives an
+  agent that can diagnose but not change anything.
 
 ```bash
 claude mcp add --transport http homerun \
@@ -146,14 +151,19 @@ claude mcp add --transport http homerun \
 ```
 
 It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
-`list_revisions`, `list_stacks`, `system_stats` and `instance_status`. It
-changes: `update_service`, `deploy_service`, `restart_service`, `start_service`,
+`list_deployments` (each deploy attempt's error and log), `list_revisions`,
+`list_stacks`, `system_stats` and `instance_status`. It changes:
+`update_service`, `deploy_service`, `restart_service`, `start_service`,
 `stop_service` and `rollback_service`. Deleting a service is deliberately not a
 tool. Every tool goes through the REST API with your own permissions, so a
-read-only account or API key can diagnose but not change anything. To disconnect
-Claude, revoke it under Profile → Authorized Clients (it can't refresh its
-access any more, and the token it holds expires within the hour), or delete its
-app under Authentication → Apps to cut it off for everyone.
+read-only account or API key can diagnose but not change anything. Env var
+values never reach the agent: tools show each one as `[redacted]`, and an
+`update_service` call that sends `[redacted]` back keeps the stored value. Logs
+are passed through as they are, so an app that prints its own secrets still
+leaks them there. To disconnect Claude, revoke it under Profile → Authorized
+Clients (it can't refresh its access any more, and the token it holds expires
+within the hour), or delete its app under Authentication → Sign in with Homerun
+to cut it off for everyone.
 
 ## CLI
 
@@ -172,9 +182,9 @@ curl -fsSL https://raw.githubusercontent.com/orochibraru/homerun/main/cmd/cli/in
 ```
 
 `homerun update` re-runs that from inside the binary, replacing itself with the
-latest release; `homerun update --channel canary` follows the canary builds
-instead (install one with `install.sh --version=canary`). It never downgrades.
-`homerun --version` tells you what you have.
+latest release; `homerun update --channel canary` (or `nightly`) follows those
+builds instead (install one with `install.sh --version=canary`). It never
+downgrades. `homerun --version` tells you what you have.
 
 ### Logging in
 
@@ -216,7 +226,7 @@ Session management, run these once rather than per-task:
 ```bash
 homerun login --base-url <url>   # device-code login, saves an API key
 homerun logout                   # clear the saved login
-homerun update [--channel canary] # self-update to the latest release (or canary build)
+homerun update [--channel canary|nightly] # self-update to the latest release (or canary/nightly build)
 homerun --version
 ```
 
@@ -242,7 +252,7 @@ homerun stacks list [--json]
 homerun templates list [--json]
 homerun instance status [--json]
 homerun instance update [--wait=false] [--timeout <seconds>]
-homerun instance channel stable|canary
+homerun instance channel stable|canary|nightly
 ```
 
 No `create`/`update` yet (`homerun update` above is the CLI's own self-updater,

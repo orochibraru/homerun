@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Valkey",
-	"description": "Linux Foundation fork of Redis from before its licence change, BSD-licensed and wire-compatible : a drop-in for anything that speaks Redis. Unauthenticated by default.",
+	"description": "Linux Foundation fork of Redis from before its licence change, BSD-licensed and wire-compatible : a drop-in for anything that speaks Redis. Starts with a generated password in REDIS_PASSWORD, which links to it pick up.",
 	"image": "valkey/valkey",
 	"tag": "8-alpine",
 	"containerPort": 6379,
@@ -9,5 +9,8 @@
 	"tags": ["cache", "key-value", "redis", "queue", "foss"],
 	"websiteUrl": "https://valkey.io",
 	"sourceUrl": "https://github.com/valkey-io/valkey",
-	"envVars": {}
+	"envVars": {
+		"REDIS_PASSWORD": "{{secret}}"
+	},
+	"command": ["valkey-server", "--requirepass", "{{secret}}"]
 }

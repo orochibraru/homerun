@@ -1,4 +1,4 @@
-import { OIDC_SCOPES } from "$lib/oidc-provider";
+import { CLAUDE_MCP_CALLBACK, OIDC_SCOPES } from "$lib/oidc-provider";
 import { auth } from "./auth.ts";
 
 /**
@@ -22,6 +22,22 @@ export interface OauthAppInput {
 	redirectUris: string[];
 	requirePkce: boolean;
 	skipConsent: boolean;
+}
+
+/**
+ * How a new app authenticates at the token endpoint. better-auth accepts only
+ * the method a client registered with, and Claude's connector sends its secret
+ * in the request body, so a client with Claude's callback registers for that.
+ */
+function tokenAuthMethod(
+	input: OauthAppInput,
+): "client_secret_basic" | "client_secret_post" | "none" {
+	if (!input.confidential) {
+		return "none";
+	}
+	return input.redirectUris.includes(CLAUDE_MCP_CALLBACK)
+		? "client_secret_post"
+		: "client_secret_basic";
 }
 
 export interface CreatedOauthApp {
@@ -62,9 +78,7 @@ class OauthAppServiceClass {
 				response_types: ["code"],
 				scope: OIDC_SCOPES.join(" "),
 				skip_consent: input.skipConsent,
-				token_endpoint_auth_method: input.confidential
-					? "client_secret_basic"
-					: "none",
+				token_endpoint_auth_method: tokenAuthMethod(input),
 			},
 		});
 		return {

@@ -198,6 +198,15 @@ describe("revisions : health-gated rollout", () => {
 		});
 		expect(res.response.status).toBe(500);
 		expect(await containerImage(id)).toBe("nginx:1.27-alpine");
+
+		const deployments = await client.GET("/services/{serviceId}/deployments", {
+			params: { path: { serviceId: id }, query: { limit: "2" } },
+		});
+		const [failed, previous] = expectOk(deployments.data, deployments.response);
+		expect(failed?.status).toBe("failed");
+		expect(failed?.errorMessage).toBeTruthy();
+		expect(failed?.log).toContain("hello-world");
+		expect(previous?.status).toBe("running");
 	}, 240_000);
 
 	test("a routed service without a healthcheck gets the listening readiness check and only switches once it passes", async () => {

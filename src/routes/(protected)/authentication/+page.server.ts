@@ -1,52 +1,17 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { oauthMethod } from "$lib/auth-providers";
-import { config, isSmtpEnabled } from "$lib/config";
+import { isSmtpEnabled } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
-import { OauthClientDTO } from "$lib/dto/oauth-client-dto";
-import { ServiceDTO } from "$lib/dto/service-dto";
-import { oidcDiscoveryUrl } from "$lib/oidc-provider";
 import { checkbox } from "$lib/server/validation/instance-settings-form";
 import { PASSKEY_SIGN_IN, PASSWORD_SIGN_IN } from "$lib/sign-in-methods";
 
 const PREFERRED_FIELD_PREFIX = "preferred:";
 
-export const load = async ({ locals, parent }) => {
+export const load = async ({ parent }) => {
 	await parent();
-	if (!locals.isAdmin) {
-		throw redirect(302, resolve("/"));
-	}
-
-	const [settings, services, oauthApps] = await Promise.all([
-		InstanceSettingsDTO.get(),
-		ServiceDTO.list(),
-		OauthClientDTO.list(),
-	]);
-
-	const gated = services
-		.filter((svc) => svc.authRequired)
-		.map((svc) => ({
-			id: svc.id,
-			methods: svc.authProviders,
-			name: svc.name,
-		}));
-
+	const settings = await InstanceSettingsDTO.get();
 	return {
-		callbackBase: config.auth.origin ?? null,
-		gatedServices: gated,
-		oauthApps: oauthApps.map((app) => app.summary()),
-		oidcDiscoveryUrl: config.auth.origin
-			? oidcDiscoveryUrl(config.auth.origin)
-			: null,
-		providers: settings.toJSON().oauthProviders.map((p) => ({
-			clientId: p.clientId,
-			discoveryUrl: p.discoveryUrl,
-			enabled: p.enabled,
-			label: p.label || p.name,
-			name: p.name,
-			usedBy: gated.filter((svc) => svc.methods.includes(oauthMethod(p.name)))
-				.length,
-		})),
 		preferredSignInMethods: settings.preferredSignInMethods,
 		securityPolicy: settings.securityPolicy,
 		signInMethods: [

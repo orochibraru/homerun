@@ -90,7 +90,7 @@ function tokenAuthOptions(provider: {
  * `mcp` (better-auth's OAuth provider bound to the MCP endpoint as a protected
  * resource) serves authorize/token/userinfo/discovery under the auth base
  * path. Clients can't register themselves: an admin creates each one under
- * Authentication → Apps (a claude.ai connector included) and hands its ID and
+ * Authentication → Sign in with Homerun (a claude.ai connector included) and hands its ID and
  * secret over, so nothing Homerun didn't issue can even ask for a token.
  * MCP only accepts an HTTPS origin (or loopback HTTP), so on any other one the
  * plain `oauthProvider` serves "Sign in with Homerun" without it: `mcp()`

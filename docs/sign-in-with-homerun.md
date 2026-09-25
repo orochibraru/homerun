@@ -9,8 +9,8 @@ sign-in methods) applies to these sign-ins too.
 It needs the **Dashboard URL** set under Settings → General: Homerun signs
 tokens as that address, and apps discover everything else from it.
 
-**Registering an app.** On the Authentication page, under **Sign in with
-Homerun**, click **Register app**:
+**Registering an app.** On the Authentication page's **Sign in with Homerun**
+tab, click **Register app**:
 
 - **Name**: shown on the consent screen.
 - **Redirect URIs**: the callback URL from the app's own OIDC settings, one per
@@ -30,6 +30,17 @@ Homerun**, click **Register app**:
 Registering shows the client ID and client secret. **The secret is shown only
 once**; if you lose it, open the app and use **Rotate secret**, then paste the
 new one into the app.
+
+**Connecting Claude.** claude.ai and Claude Desktop reach Homerun's
+[MCP server](api-and-cli.md#mcp-server-for-ai-agents) as an app registered here:
+Claude can't register itself, so a Homerun connector in Claude fails to
+authenticate until an admin creates its client. On the **Register app** page,
+click **Claude connector** (it fills in Claude's callback URL, a confidential
+client with PKCE and the consent screen on), then **Register app**, and paste
+the MCP URL, client ID and secret the next screen shows into Claude's Settings →
+Connectors → Add custom connector (the ID and secret go under Advanced
+settings). The button only shows once the Dashboard URL is `https` (or plain
+HTTP on `localhost`).
 
 **Configuring the app.** Most apps only need three values:
 

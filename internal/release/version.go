@@ -8,7 +8,10 @@ import (
 	"strings"
 )
 
-var versionRe = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$`)
+var (
+	versionRe = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$`)
+	buildRe   = regexp.MustCompile(`^[A-Za-z]+\.(\d+)$`)
+)
 
 // Version is a parsed semver-ish version: major, minor, patch and an optional
 // prerelease, build metadata ignored.
@@ -35,6 +38,8 @@ func ParseVersion(input string) (Version, bool) {
 // IsNewer reports whether candidate is a strictly newer version than
 // current: a release outranks its own prereleases, and prereleases compare
 // identifier by identifier, numbers numerically (canary.10 after canary.9).
+// Two main builds (canary.N, nightly.N) compare by run number alone, since
+// both channels stamp the same publish run's number.
 // False when either doesn't parse, so a dev build never "updates" anywhere.
 func IsNewer(candidate, current string) bool {
 	left, okLeft := ParseVersion(candidate)
@@ -61,6 +66,9 @@ func comparePrerelease(a, b string) int {
 	case b == "":
 		return -1
 	}
+	if buildA, buildB := buildRe.FindStringSubmatch(a), buildRe.FindStringSubmatch(b); buildA != nil && buildB != nil {
+		return compareIdentifier(buildA[1], buildB[1])
+	}
 	left, right := strings.Split(a, "."), strings.Split(b, ".")
 	for i := range min(len(left), len(right)) {
 		if order := compareIdentifier(left[i], right[i]); order != 0 {
@@ -81,10 +89,10 @@ func compareIdentifier(a, b string) int {
 	return strings.Compare(a, b)
 }
 
-// LatestCanary asks GitHub for the newest published prerelease, one per
-// merge to main tagged v<version> by publish.yaml's canary job, and returns
-// its tag and version.
-func LatestCanary(client *http.Client) (string, string, error) {
+// LatestPrerelease asks GitHub for the newest published prerelease on
+// channel ("canary" or "nightly"), one per merge to main tagged
+// v<version>-<channel>.<n> by publish.yaml, and returns its tag and version.
+func LatestPrerelease(client *http.Client, channel string) (string, string, error) {
 	var releases []struct {
 		githubRelease
 		Prerelease bool `json:"prerelease"`
@@ -93,12 +101,12 @@ func LatestCanary(client *http.Client) (string, string, error) {
 		return "", "", err
 	}
 	for _, candidate := range releases {
-		if !candidate.Prerelease {
+		if !candidate.Prerelease || !strings.Contains(candidate.TagName, "-"+channel+".") {
 			continue
 		}
 		if _, ok := ParseVersion(candidate.TagName); ok {
 			return candidate.TagName, strings.TrimPrefix(candidate.TagName, "v"), nil
 		}
 	}
-	return "", "", fmt.Errorf("No canary release found.")
+	return "", "", fmt.Errorf("No %s release found.", channel)
 }

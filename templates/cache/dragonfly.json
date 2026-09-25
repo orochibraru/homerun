@@ -1,7 +1,7 @@
 {
 	"$schema": "../schema.json",
 	"name": "Dragonfly",
-	"description": "Multi-threaded, Redis- and Memcached-compatible in-memory store, much higher throughput per box than Redis. Unauthenticated by default.",
+	"description": "Multi-threaded, Redis- and Memcached-compatible in-memory store, much higher throughput per box than Redis. Starts with a generated password in REDIS_PASSWORD, which links to it pick up.",
 	"image": "docker.dragonflydb.io/dragonflydb/dragonfly",
 	"tag": "latest",
 	"containerPort": 6379,
@@ -9,5 +9,8 @@
 	"tags": ["cache", "key-value", "redis", "memcached"],
 	"websiteUrl": "https://www.dragonflydb.io",
 	"sourceUrl": "https://github.com/dragonflydb/dragonfly",
-	"envVars": {}
+	"envVars": {
+		"REDIS_PASSWORD": "{{secret}}"
+	},
+	"command": ["dragonfly", "--logtostderr", "--requirepass", "{{secret}}"]
 }

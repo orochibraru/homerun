@@ -70,6 +70,23 @@ recreated, even after deleting it (that's how `canary` got burned). Everything
 stable reads `releases/latest` or `:latest`, which a prerelease never is, so
 nothing stable moves.
 
+**Every canary build also ships as a nightly, before e2e.** `publish.yaml`'s
+`nightly` job runs as soon as the images exist (built by `docker.yaml`, or the
+PR's `pr-<n>` on the promote path), without waiting for `e2e`: it assembles the
+per-platform digests into `:nightly`, restamps the app with
+`HOMERUN_APP_VERSION=<version>-nightly.<run>` through the same `FROM`+`ENV`
+build as `promote`, and publishes a `v<version>-nightly.<run>` prerelease with
+its own binaries (`nightly-binaries`, a second `binaries.yaml` call whose
+artifact name sits outside the `binaries-*` pattern the canary job downloads). A
+build that fails e2e still ships as nightly; that's the point. Canary and
+nightly share `github.run_number`, and both version comparers (`version.ts`,
+`internal/release/version.go`) order two `<word>.<n>` prereleases by `n` alone,
+so switching between the channels works both ways instead of `nightly` always
+sorting above `canary` lexically. Every prerelease lookup filters by its label
+(`-canary.` / `-nightly.`): the app's self-update, the CLI's `LatestPrerelease`,
+each channel's keep-five retention, and the `stable` job's "newest canary"
+check, which would otherwise try to release a nightly.
+
 **A stable release is merging the release PR.** The `canary` job's last step
 runs `releaser` (v1.5.0+) with `release-pr: true`, which force-pushes a
 `chore(release): X.Y.Z` commit (`CHANGELOG.md` + `package.json` version, built

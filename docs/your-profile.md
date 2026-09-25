@@ -3,7 +3,7 @@
 The profile pages (reached from the avatar menu, not the sidebar) are per
 account:
 
-- **Personal information**, your name and email. Changing an unverified email
+- **Personal Information**, your name and email. Changing an unverified email
   takes effect immediately; a verified one needs confirming from a link sent to
   the address you're leaving, so it stays locked until SMTP is configured or an
   admin changes it for you from `/users` (see
@@ -18,7 +18,7 @@ account:
 - **Sessions**, every browser currently signed in as you, with the device and
   when it was last seen. Revoke any of them, useful after signing in somewhere
   you don't control.
-- **Authorized clients**, API keys, including the ones the
+- **Authorized Clients**, API keys, including the ones the
   [CLI](api-and-cli.md#logging-in) created for itself through its device-code
   login. Create a key here to use the REST API or CLI without a browser session,
   and revoke one the same way. A key is shown once, at creation. Below the keys,

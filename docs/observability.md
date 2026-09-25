@@ -18,6 +18,11 @@ and the reason for the latest failure plus hints for fixing it:
   service that isn't DNS-resolvable, and while the base domain is a loopback
   address like `localhost`, since probing it from this machine proves nothing.
 
+Over HTTP any response under 500 counts as up, a 401 or 404 included, and a 5xx
+counts as down. Probing pauses while Homerun disrupts routing on purpose, during
+its own boot, a Traefik restart and a self-update, so those don't show up as
+outages.
+
 A probe that goes down fires the **Service down** event on any
 [notification channel](notifications.md) subscribed to it, and **Service
 recovered** once it has stayed up for 15 minutes. A service that keeps falling
@@ -25,10 +30,12 @@ over and coming back alerts once, not on every cycle. Results are kept for a
 week; **Clear heartbeats** empties the history. Uptime also feeds
 [status pages](status-pages.md).
 
-Probing is on for every service by default. **Turn off** in the Uptime panel's
-header stops both probes for that service (the panel then says so), **Turn on**
-resumes them; the REST API takes the same switch as `uptimeEnabled` on
-`PATCH /api/v1/services/:id`.
+Probing is on by default for every service except databases and caches
+(Postgres, MySQL/MariaDB, MongoDB, Redis-compatibles, RabbitMQ, Memcached),
+which have nothing public to watch; turn it on for one of those if you want a
+TCP check. **Turn off** in the Uptime panel's header stops both probes for that
+service (the panel then says so), **Turn on** resumes them; the REST API takes
+the same switch as `uptimeEnabled` on `PATCH /api/v1/services/:id`.
 
 ## Logs
 

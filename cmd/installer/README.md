@@ -337,7 +337,7 @@ disposable VM/CI runner this environment doesn't have" note):
   runs services, see
   [`docs/remote-hosts-and-agent.md`](../../docs/remote-hosts-and-agent.md).
 
-This run found and fixed five real bugs, originally in
+These runs found and fixed seven real bugs, originally in
 `cmd/installer/steps/rootless-docker.ts` and `.../steps/full-stack.ts` (the old
 TypeScript installer); the fixes carried forward and now live in `docker.go` and
 `fullstack.go` after the Go rewrite (see each file's own doc comments for the

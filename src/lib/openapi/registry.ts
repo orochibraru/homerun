@@ -8,6 +8,7 @@ import {
 } from "$lib/server/validation/api";
 import { serviceConfigSchema } from "$lib/service-config";
 import {
+	deploymentResponse,
 	deployResultResponse,
 	errorResponse,
 	imageScanResponse,
@@ -255,6 +256,31 @@ export const routes: RouteDef[] = [
 			500: { description: "Deploy failed", schema: deployResultResponse },
 		},
 		summary: "Deploy a revision (roll back)",
+		tags: ["Revisions"],
+	},
+	{
+		description:
+			"The service's latest deploy attempts, newest first, failed ones included, with each one's error and progress log. Unlike revisions, which only list deploys that produced a running image, this shows why a deploy failed.",
+		method: "get",
+		path: "/services/{serviceId}/deployments",
+		pathParams: [{ description: "Service id", name: "serviceId" }],
+		queryParams: [
+			{
+				description: "How many deployments to return, 1 to 50 (default 10)",
+				name: "limit",
+			},
+		],
+		responses: {
+			200: {
+				description: "The service's deployments",
+				isArray: true,
+				schema: deploymentResponse,
+			},
+			400: { description: "An invalid limit", schema: errorResponse },
+			401: unauthorized,
+			404: notFound,
+		},
+		summary: "List a service's deployments",
 		tags: ["Revisions"],
 	},
 	{
@@ -528,7 +554,7 @@ export const routes: RouteDef[] = [
 	},
 	{
 		description:
-			"Sets the release channel self-update follows, like Settings → General → Release channel. Switching from canary back to stable never downgrades: updates just stop until a stable release is newer than the running canary. Admins only.",
+			"Sets the release channel self-update follows, like Settings → General → Release channel. Switching to a more stable channel (nightly → canary → stable) never downgrades: updates just stop until that channel has a release newer than the running one. Admins only.",
 		method: "patch",
 		path: "/instance/update/channel",
 		requestBody: updateChannelApiBody,

@@ -60,7 +60,7 @@ The app runs directly on the host (not in a container) so it can reach the
 Docker socket without any socket-forwarding; [`compose.yaml`](compose.yaml) only
 runs Traefik and Postgres. The first account you create becomes admin
 automatically; signing in for the first time drops you into the onboarding
-wizard (base domain / Docker / Traefik / email).
+wizard (base domain / Docker / Traefik / email / DNS).
 
 `bun run dev` also runs the job worker (`cmd/worker`, Go), with its output
 prefixed `[worker]`. Deploys, builds, scans, backups, cron jobs and Docker
@@ -168,7 +168,10 @@ new files up on its next build and seeds them at boot.
   vars then reference the linked service as `{{db}}` (its hostname) and
   `{{db.VAR}}` (one of its env vars), e.g.
   `"postgres://{{db.POSTGRES_USER}}:{{db.POSTGRES_PASSWORD}}@{{db}}:5432/{{db.POSTGRES_DB}}"`.
-  Only templates without links of their own can be linked.
+  Only templates without links of their own can be linked. `{{secret}}` in a
+  template's env vars or command is a random value generated per service,
+  identical everywhere it appears in that template: use it for a password the
+  env and the command have to agree on, as the cache templates do.
 
 `bun --config=bunfig.unit.toml test tests/unit/app/builtin-templates.test.ts`
 validates every file, resolves every link and checks every icon exists; it runs

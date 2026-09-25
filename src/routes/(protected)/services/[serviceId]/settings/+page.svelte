@@ -125,9 +125,20 @@
           value={values.slug}
         />
         <p class="text-text-subtle mt-1 text-xs">
-          Routed at
-          <span class="text-accent">{values.slug}.{data.baseDomain}</span>
-          : redeploy to apply a change.
+          {#if svc.dnsResolvable && svc.networkMode !== "host" && svc.defaultDomainEnabled}
+            Routed at
+            <span class="text-accent">{values.slug}.{data.baseDomain}</span>
+            : redeploy to apply a change.
+          {:else if svc.dnsResolvable && svc.networkMode !== "host"}
+            Its own domains are routed, not {values.slug}.{data.baseDomain}.
+            Other services reach it at
+            <span class="text-accent">{values.slug}</span>
+            : redeploy to apply a change.
+          {:else}
+            Not publicly routed. Other services reach it at
+            <span class="text-accent">{values.slug}</span>
+            : redeploy to apply a change.
+          {/if}
         </p>
         {#if errors?.slug}
           <p class={errorClass}>{errors.slug[0]}</p>

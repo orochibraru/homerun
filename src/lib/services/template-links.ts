@@ -11,6 +11,11 @@ import { Logger } from "$lib/logger";
 import { isDatabaseImage } from "$lib/service-link";
 import type { ServiceRuntimeOptions } from "$lib/service-runtime";
 import { uniqueSlug } from "$lib/slug";
+import {
+	fillSecretInEnv,
+	fillSecretInRuntime,
+	generateTemplateSecret,
+} from "$lib/template-secrets";
 import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service";
 
@@ -70,7 +75,9 @@ export function resolveLinkTokens(
 /**
  * Resolves every service linked to a template into a `ResolvedTemplateLink`,
  * assigning each a unique slug derived from `primarySlug` and the link's
- * alias (checked against `ServiceDTO.slugTaken`, not yet persisted).
+ * alias (checked against `ServiceDTO.slugTaken`, not yet persisted), and its
+ * own fresh `{{secret}}`, filled in before the primary template reads its env
+ * through `{{alias.KEY}}`.
  */
 export async function buildTemplateLinkContext(
 	templateId: string,
@@ -84,17 +91,21 @@ export async function buildTemplateLinkContext(
 			slugify(`${primarySlug}-${link.alias}`),
 			(candidate) => ServiceDTO.slugTaken(candidate),
 		);
+		const secret = generateTemplateSecret();
 		resolved.push({
 			alias: link.alias,
 			category: linkedTemplate.linkedTemplateCategory,
 			containerPort: linkedTemplate.linkedTemplateContainerPort,
 			cpuLimit: linkedTemplate.linkedTemplateCpuLimit,
-			envVars: linkedTemplate.linkedTemplateEnvVars,
+			envVars: fillSecretInEnv(linkedTemplate.linkedTemplateEnvVars, secret),
 			icon: linkedTemplate.linkedTemplateIcon,
 			image: linkedTemplate.linkedTemplateImage,
 			memoryLimitMb: linkedTemplate.linkedTemplateMemoryLimitMb,
 			restartPolicy: linkedTemplate.linkedTemplateRestartPolicy,
-			runtime: linkedTemplate.linkedTemplateRuntime,
+			runtime: fillSecretInRuntime(
+				linkedTemplate.linkedTemplateRuntime,
+				secret,
+			),
 			slug,
 			tag: linkedTemplate.linkedTemplateTag,
 			templateName: linkedTemplate.linkedTemplateName,
@@ -216,10 +227,13 @@ export async function createServiceFromTemplate(
 			? await createStackForLinkedServices(row.name, userId)
 			: stackId;
 
-	const envVars =
+	const secret = generateTemplateSecret();
+	const envVars = fillSecretInEnv(
 		links.length > 0
 			? resolveEnvVarsWithLinks(row.envVars ?? {}, links)
-			: (row.envVars ?? {});
+			: (row.envVars ?? {}),
+		secret,
+	);
 
 	const svc = await ServiceDTO.create({
 		category: row.category,
@@ -236,7 +250,7 @@ export async function createServiceFromTemplate(
 		name: row.name,
 		stackId: finalStackId,
 		restartPolicy: row.restartPolicy,
-		runtime: template.runtimeOptions,
+		runtime: fillSecretInRuntime(template.runtimeOptions, secret),
 		slug,
 		tag: row.tag,
 		userId,

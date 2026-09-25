@@ -42,7 +42,6 @@ at start, so restart them after saving.
 
 ## The Volumes tab
 
-Mount a [storage volume](storage-volumes.md) into the container path of your
-choice, read-write or read-only, from the Volumes tab, including creating a
-brand-new volume inline without leaving the page. A volume becomes "shared"
-simply by mounting it into more than one service.
+Mount a storage volume into the container path of your choice, read-write or
+read-only, from a service's Volumes tab, including creating a brand-new volume
+inline without leaving the page.

@@ -90,7 +90,8 @@ sync by hand.
 - **[Per-app login wall](login-wall.md)**: requiring a sign-in before anyone
   reaches a service, and who's allowed through.
 - **[Sign in with Homerun](sign-in-with-homerun.md)**: Homerun as an OIDC
-  provider for the apps you host.
+  provider for the apps you host, and registering the client Claude needs to use
+  the MCP server.
 
 ## Operations and maintenance
 
@@ -107,8 +108,9 @@ sync by hand.
 - **[Status pages](status-pages.md)**: private or public uptime pages.
 - **[Upgrading Homerun](upgrading.md)**: the one-click update, and upgrading by
   hand.
-- **[API & CLI](api-and-cli.md)**: the REST API, the live Swagger UI, and the
-  `homerun` CLI.
+- **[API & CLI](api-and-cli.md)**: the REST API, the live Swagger UI, the
+  `homerun` CLI, and the MCP server for AI agents (Claude needs an OAuth client
+  registered first).
 
 ## Something's out of date
 

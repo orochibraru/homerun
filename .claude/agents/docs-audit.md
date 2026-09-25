@@ -36,7 +36,7 @@ The ground truth to check them against:
 
 | Claim type                          | Source of truth                                                                                               |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Pages, tabs, nav entries, UI labels | `src/routes/(protected)/**` directory tree, `src/lib/nav.ts`, sidebar component, button/label text            |
+| Pages, tabs, nav entries, UI labels | `src/routes/(protected)/**` directory tree, `src/routes/(protected)/nav-items.ts`, button/label text          |
 | Settings and their defaults         | `src/routes/(protected)/settings/**`, `src/lib/dto/instance-settings-dto.ts`, `schema.ts` defaults            |
 | Env vars and config file keys       | `src/lib/config.ts`, `homerun.schema.json`, `compose.yaml`, installer `options.go`                            |
 | Data the app stores                 | `src/lib/server/db/schema.ts`                                                                                 |

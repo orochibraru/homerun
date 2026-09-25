@@ -3,6 +3,8 @@ import type { OauthTokenAuthMethod } from "$lib/server/db/schema";
 
 const NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
 
+const RESERVED_NAMES = new Set(["apps", "new", "protected", "providers"]);
+
 export interface ParsedOauthProvider {
 	error: string | null;
 	input: OauthProviderInput | null;
@@ -89,6 +91,12 @@ export async function parseOauthProviderForm(
 		return {
 			error:
 				'The provider id can only contain lowercase letters, digits and hyphens, and must start with a letter or digit : it appears in the redirect URI (for example "pocket-id").',
+			input: null,
+		};
+	}
+	if (RESERVED_NAMES.has(name)) {
+		return {
+			error: `"${name}" is taken by an Authentication page, pick another id.`,
 			input: null,
 		};
 	}

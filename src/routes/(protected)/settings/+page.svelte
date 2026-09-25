@@ -26,6 +26,7 @@
 
 	const CHANNEL_LABELS = {
 		canary: "Canary",
+		nightly: "Nightly",
 		stable: "Stable",
 	} as const;
 	let updateChannel = $derived(data.settings.updateChannel ?? "stable");
@@ -280,13 +281,15 @@
           <SelectContent>
             <SelectItem label="Stable" value="stable" />
             <SelectItem label="Canary" value="canary" />
+            <SelectItem label="Nightly" value="nightly" />
           </SelectContent>
         </SelectRoot>
         <p class="text-text-subtle mt-1.5 text-xs">
-          <strong>Canary</strong> offers every build merged to <code>main</code>, ahead of
-          the next stable release. Switching back to <strong>Stable</strong> doesn't
-          downgrade: updates just stop until a stable release is newer than the canary
-          you run.
+          <strong>Canary</strong> offers every build merged to <code>main</code> once it
+          passed the end-to-end tests, ahead of the next stable release.
+          <strong>Nightly</strong> offers the same builds before those tests run, so it
+          can ship a broken one. Switching to a more stable channel doesn't downgrade:
+          updates just stop until that channel has a release newer than the one you run.
         </p>
       </div>
       <div class="flex justify-end">

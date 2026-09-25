@@ -99,7 +99,7 @@
       <OauthProviderFields callbackBase={data.callbackBase} {values} />
 
       <div class="flex justify-end gap-2">
-        <Button href={resolve("/authentication")} type="button" variant="ghost">
+        <Button href={resolve("/authentication/providers")} type="button" variant="ghost">
           Cancel
         </Button>
         <Button disabled={submitting} type="submit">Add provider</Button>

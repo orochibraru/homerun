@@ -546,20 +546,20 @@ func InstanceStatus(client *Client, asJSON bool) {
 	fmt.Println(InstanceStatusText(status))
 }
 
-// InstanceChannel sets the release channel the instance updates from, "stable"
-// or "canary", and prints what it's now on. Exits on an unknown channel before
+// InstanceChannel sets the release channel the instance updates from, "stable",
+// "canary" or "nightly", and prints what it's now on. Exits on an unknown channel before
 // calling the API, or on an API error.
 func InstanceChannel(client *Client, channel string) {
-	if channel != "stable" && channel != "canary" {
-		Fail(fmt.Sprintf("unknown channel %q: use stable or canary.", channel))
+	if channel != "stable" && channel != "canary" && channel != "nightly" {
+		Fail(fmt.Sprintf("unknown channel %q: use stable, canary or nightly.", channel))
 	}
 	var saved struct {
 		Channel string `json:"channel"`
 	}
 	client.decodeJSON("PATCH", "/instance/update/channel", map[string]string{"channel": channel}, &saved)
 	fmt.Printf("Channel set to %s.\n", saved.Channel)
-	if saved.Channel == "stable" {
-		fmt.Println("Running a canary? Updates resume once a stable release is newer.")
+	if saved.Channel != "nightly" {
+		fmt.Printf("Running a less stable build? Updates resume once a %s release is newer.\n", saved.Channel)
 	}
 }
 

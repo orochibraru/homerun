@@ -16,6 +16,10 @@ import {
 	isNewerVersion,
 	normalizeVersion,
 } from "../../../src/lib/services/self-update/version";
+import {
+	isUpdateChannel,
+	type UpdateChannel,
+} from "../../../src/lib/update-channel";
 
 const labels = {
 	"com.docker.compose.project": "homerun",
@@ -45,6 +49,11 @@ describe("version comparison", () => {
 		expect(compareVersions("1.0.41-canary.100", "1.0.41-canary.99")).toBe(1);
 		expect(isNewerVersion("1.0.41", "1.0.41-canary.100")).toBe(true);
 		expect(isNewerVersion("1.0.40", "1.0.41-canary.100")).toBe(false);
+		expect(isNewerVersion("1.0.41-canary.101", "1.0.41-nightly.100")).toBe(
+			true,
+		);
+		expect(compareVersions("1.0.41-canary.100", "1.0.41-nightly.100")).toBe(0);
+		expect(isNewerVersion("1.0.41-nightly.9", "1.0.41-canary.10")).toBe(false);
 	});
 
 	test("never reports an update for something that isn't a version", () => {
@@ -117,11 +126,16 @@ describe("image tags", () => {
 		expect(pinnedTagFor("v1.0.20", "1.0.22-canary.7", "canary")).toBe("canary");
 		expect(pinnedTagFor("latest", "1.0.22-canary.7", "canary")).toBe("canary");
 		expect(pinnedTagFor("canary", "1.0.22-canary.7", "canary")).toBeNull();
+		expect(pinnedTagFor("canary", "1.0.22-nightly.8", "nightly")).toBe(
+			"nightly",
+		);
+		expect(pinnedTagFor("nightly", "1.0.22-nightly.8", "nightly")).toBeNull();
 	});
 
 	test("only rewrites a pinned tag, keeping its v prefix style", () => {
 		expect(pinnedTagFor("latest", "1.0.22", "stable")).toBeNull();
 		expect(pinnedTagFor("canary", "1.0.22", "stable")).toBe("v1.0.22");
+		expect(pinnedTagFor("nightly", "1.0.22", "stable")).toBe("v1.0.22");
 		expect(pinnedTagFor("v1.0.20", "1.0.22", "stable")).toBe("v1.0.22");
 		expect(pinnedTagFor("1.0.20", "1.0.22", "stable")).toBe("1.0.22");
 		expect(pinnedTagFor("pr-12", "1.0.22", "stable")).toBe("v1.0.22");
@@ -255,7 +269,7 @@ async function runUpdater(
 	files: Record<string, string>,
 	image: string,
 	envDefaults: Record<string, string> = {},
-	channel: "canary" | "stable" = "stable",
+	channel: UpdateChannel = "stable",
 	failures: { app?: boolean; candidate?: boolean } = {},
 ): Promise<{
 	calls: string[];
@@ -462,5 +476,13 @@ describe("the updater's safety net", () => {
 		).toHaveLength(2);
 		expect(await read(".env")).toBe("HOMERUN_VERSION=v1.0.21\n");
 		expect(await read("compose.yaml")).toBe("# homerun:generated\nold\n");
+	});
+});
+
+describe("isUpdateChannel", () => {
+	test("accepts the three channels and nothing else", () => {
+		expect(["stable", "canary", "nightly"].every(isUpdateChannel)).toBe(true);
+		expect(isUpdateChannel("beta")).toBe(false);
+		expect(isUpdateChannel(null)).toBe(false);
 	});
 });

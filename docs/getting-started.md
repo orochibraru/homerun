@@ -228,6 +228,9 @@ per-app login wall.
 `GET /api/health` returns a plain `200 OK`, useful for a container healthcheck
 or an uptime monitor, and unauthenticated by design (the same "describes shape,
 not data" carve-out as `/api/v1/openapi.json`, see [API & CLI](api-and-cli.md)).
+`GET /api/v1/ready` goes further: `200` only once the database and the auth
+layer answer, `503` with the error otherwise. It's also unauthenticated, and
+it's what a [self-update](upgrading.md) waits on before switching.
 
 ## Next steps
 

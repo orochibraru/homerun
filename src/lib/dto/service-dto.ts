@@ -24,6 +24,7 @@ import {
 	searchCondition,
 	sortOrder,
 } from "$lib/server/list-query";
+import { isDatabaseImage } from "$lib/service-link";
 import { runtimeOptionsFrom } from "$lib/service-runtime";
 import type { ContainerStatus, PullPolicy } from "$lib/types";
 import { BaseDTO } from "./base-dto";
@@ -407,7 +408,7 @@ export class ServiceDTO extends BaseDTO<Service> {
 			slug: input.slug,
 			swarmServiceId: null,
 			tag: input.tag,
-			uptimeEnabled: true,
+			uptimeEnabled: input.uptimeEnabled ?? !isDatabaseImage(input.image),
 			updatedAt: now,
 			userId: input.userId,
 		};

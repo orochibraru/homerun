@@ -1,12 +1,12 @@
 # Services
 
-A **service** is one deployed container. Create one from `Services → New`,
-either standalone or pre-filled from a [stack](stacks.md) or
-[template](templates.md) via `?stackId=`/`?templateId=`. The wizard's primary
-button, **Create and Deploy**, persists the config and immediately deploys it,
-landing you on the new service's Overview tab; **Create service**, the secondary
-button, just persists the config, the same as before, deploy later from the
-Overview tab yourself.
+A **service** is one deployed container. Create one from
+`Services → Deploy a Service`, either standalone or pre-filled from a
+[stack](stacks.md) or [template](templates.md) via `?stackId=`/`?templateId=`.
+The wizard's primary button, **Create and Deploy**, persists the config and
+immediately deploys it, landing you on the new service's Overview tab; **Create
+service**, the secondary button, just persists the config, the same as before,
+deploy later from the Overview tab yourself.
 
 ## The services list
 
@@ -14,9 +14,9 @@ Overview tab yourself.
 filters, a sort (newest, oldest, name either way, recently updated; it's in the
 URL, so a sorted view can be bookmarked), and a list/card view toggle that
 remembers your choice per browser; both the search and filters are applied on
-the server, so they reach every service you own, not just whichever page happens
-to be on screen. Once you have more than a page's worth, a pager at the bottom
-shows "26–50 of 60" and lets you step through the rest. Check one or more
+the server, so they reach every service on the instance, not just whichever page
+happens to be on screen. Once you have more than a page's worth, a pager at the
+bottom shows "26–50 of 60" and lets you step through the rest. Check one or more
 services (a "select all" scopes to whatever's on the **current page**,
 paginating or changing the search/filters clears your selection) to bring up a
 bottom bar with bulk Start/Stop/Restart/Delete: bulk actions run against every

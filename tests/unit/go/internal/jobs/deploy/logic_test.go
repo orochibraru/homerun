@@ -245,3 +245,25 @@ func TestDescribeRevision(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestPublishesThroughIngress(t *testing.T) {
+	spec := func(ports ...any) map[string]any {
+		return map[string]any{"EndpointSpec": map[string]any{"Ports": ports}}
+	}
+	cases := []struct {
+		name string
+		spec map[string]any
+		want bool
+	}{
+		{"no endpoint spec", map[string]any{}, false},
+		{"no ports", spec(), false},
+		{"an ingress port", spec(map[string]any{"PublishMode": "ingress"}), true},
+		{"the default mode is ingress", spec(map[string]any{"TargetPort": 22.0}), true},
+		{"host mode only", spec(map[string]any{"PublishMode": "host"}), false},
+	}
+	for _, c := range cases {
+		if got := deploy.PublishesThroughIngress(c.spec); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
+}
