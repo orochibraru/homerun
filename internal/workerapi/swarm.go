@@ -2,7 +2,9 @@ package workerapi
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/go-chi/chi/v5"
 
@@ -178,18 +180,45 @@ func (s *Server) swarmServiceTasks(w http.ResponseWriter, r *http.Request) error
 	return httpapi.Answer(w, http.StatusOK, tasks)
 }
 
-// swarmServiceLogs streams a swarm service's aggregated task logs.
+// swarmServiceLogs streams the logs of a swarm service's current tasks only,
+// timestamped, each line labelled with its replica when there are several.
+// Docker's own service logs interleave every task generation, dead ones
+// included, in no reliable order, so an old revision's crash read like the
+// running task's. A service with no current task falls back to those
+// aggregated logs, the only place its last failure still shows.
 func (s *Server) swarmServiceLogs(w http.ResponseWriter, r *http.Request) error {
+	id := chi.URLParam(r, "id")
 	follow := r.URL.Query().Get("follow") != "0"
-	logs, err := s.docker.SwarmServiceLogs(r.Context(), chi.URLParam(r, "id"), tailParam(r), follow)
-	if errors.Is(err, dockerapi.ErrNotFound) {
-		return httpapi.Error(w, http.StatusNotFound, "No such swarm service.")
-	}
-	if err != nil {
+	tasks, err := s.docker.ListSwarmTasks(r.Context(), id, true)
+	if err != nil && !errors.Is(err, dockerapi.ErrNotFound) {
 		return err
 	}
-	defer func() { _ = logs.Close() }()
-	return streamOut(w, r, logs)
+	if len(tasks) == 0 {
+		logs, err := s.docker.SwarmServiceLogs(r.Context(), id, tailParam(r), follow)
+		if errors.Is(err, dockerapi.ErrNotFound) {
+			return httpapi.Error(w, http.StatusNotFound, "No such swarm service.")
+		}
+		if err != nil {
+			return err
+		}
+		defer func() { _ = logs.Close() }()
+		return streamOut(w, r, logs)
+	}
+	sort.Slice(tasks, func(i, j int) bool { return tasks[i].Slot < tasks[j].Slot })
+	streams := make([]taskStream, 0, len(tasks))
+	for _, task := range tasks {
+		logs, err := s.docker.SwarmTaskLogs(r.Context(), task.ID, tailParam(r), follow)
+		if err != nil {
+			continue
+		}
+		defer func() { _ = logs.Close() }()
+		prefix := ""
+		if len(tasks) > 1 {
+			prefix = fmt.Sprintf("[replica %d] ", task.Slot)
+		}
+		streams = append(streams, taskStream{logs: logs, prefix: prefix})
+	}
+	return streamTasks(w, r, streams)
 }
 
 // scaleSwarmServiceBody is the replica count to scale to.

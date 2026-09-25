@@ -1,0 +1,1 @@
+ALTER TABLE "notification_channel" ALTER COLUMN "events" SET DEFAULT '["build.failed","build.checks_failed","update.failed","deploy.unhealthy","deploy.rolled_back","resource.warning","resource.critical"]'::jsonb;

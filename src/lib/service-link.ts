@@ -21,6 +21,7 @@ export interface LinkEngine {
 }
 
 export interface LinkTargetService {
+	command?: string[] | null;
 	containerPort: number;
 	envVars: Record<string, string>;
 	image: string;
@@ -99,7 +100,7 @@ const IMAGE_MATCHERS: Array<[RegExp, LinkEngineId]> = [
 	[/(^|\/).*mariadb.*/, "mariadb"],
 	[/(^|\/).*(mysql|percona).*/, "mysql"],
 	[/(^|\/).*(mongo).*/, "mongo"],
-	[/(^|\/).*(redis|valkey|dragonfly).*/, "redis"],
+	[/(^|\/).*(redis|valkey|dragonfly|keydb|garnet).*/, "redis"],
 	[/(^|\/).*(rabbitmq).*/, "rabbitmq"],
 ];
 
@@ -233,7 +234,11 @@ function credentialsFor(
 		case "redis":
 			return {
 				database: null,
-				password: firstOf(env, ["REDIS_PASSWORD"]),
+				password: firstOf(
+					env,
+					["REDIS_PASSWORD", "VALKEY_PASSWORD"],
+					requirePassword(target.command),
+				),
 				scheme: "redis",
 				user: "",
 			};
@@ -247,6 +252,20 @@ function credentialsFor(
 		default:
 			return { database: null, password: "", scheme: "http", user: "" };
 	}
+}
+
+/**
+ * The password a Redis-compatible server is started with through
+ * `--requirepass`, whether the command is an argument list or one shell
+ * string (`sh -c "exec redis-server --requirepass 'secret'"`, what the Dokploy
+ * and Coolify migrations write). Empty when there's none.
+ */
+export function requirePassword(command: string[] | null | undefined): string {
+	const joined = (command ?? []).join(" ");
+	const match = /--requirepass(?:=|\s+)(?:'([^']*)'|"([^"]*)"|(\S+))/.exec(
+		joined,
+	);
+	return match ? (match[1] ?? match[2] ?? match[3] ?? "") : "";
 }
 
 function authorityFor(credentials: Credentials, host: string): string {

@@ -1,5 +1,6 @@
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { StatSampleDTO } from "$lib/dto/stat-sample-dto";
+import { CapacityService } from "../capacity.service.ts";
 import { BaseScheduler } from "../cron/base-scheduler.ts";
 import type { ContainerSample } from "../docker/containers.ts";
 import { sumReplicaSamples } from "../docker/swarm-replicas.ts";
@@ -14,7 +15,8 @@ const PRUNE_EVERY_TICKS = 60;
  * service with a running container (or, in swarm mode, the sum over its
  * replicas running on this host), which is what the dashboard's and a
  * service's own resource graphs read back. Nothing else records history :
- * the Host Resources panel polls live values and keeps none.
+ * the Host Resources panel polls live values and keeps none. Each host
+ * sample is also checked against the resource thresholds (`CapacityService`).
  */
 export class StatsSampler extends BaseScheduler {
 	protected readonly label = "Stats";
@@ -50,6 +52,9 @@ export class StatsSampler extends BaseScheduler {
 			SystemStatsService.getSystemStats(),
 			ServiceDTO.listRunningWithContainers(),
 		]);
+		await CapacityService.evaluate(host).catch((err) => {
+			this.logger.warn("Couldn't check the resource thresholds", err);
+		});
 
 		const samples = await Promise.all(
 			services.map(async (svc) => {

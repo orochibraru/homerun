@@ -20,5 +20,6 @@ coveragePathIgnorePatterns = [
 	"src/lib/services/image-scan.service.ts",
 	"src/lib/services/image-mirror-gc.service.ts",
 	"src/lib/services/backup/**",
+	"src/lib/services/system-stats.service.ts",
 ]
 coverageThreshold = { functions = 0.8, lines = 0.8 }

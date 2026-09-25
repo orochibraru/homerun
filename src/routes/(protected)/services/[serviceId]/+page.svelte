@@ -290,6 +290,7 @@
         />
         <ConnectionStrings
             service={{
+                command: svc.command,
                 containerPort: svc.containerPort,
                 envVars: svc.envVars ?? {},
                 image: svc.image,

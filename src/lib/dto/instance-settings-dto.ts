@@ -1,5 +1,9 @@
 import { eq } from "drizzle-orm";
 import type { BlockSeverity, ScanBlockPolicy } from "$lib/image-scan";
+import {
+	type ResourceThresholds,
+	withDefaults,
+} from "$lib/resource-thresholds";
 import { RETAINED_REVISIONS } from "$lib/revisions";
 import type { SecurityPolicy } from "$lib/security-policy";
 import { db } from "$lib/server/db/lib";
@@ -202,6 +206,7 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 			registryPublicHost: null,
 			requirePasskey: null,
 			requireTwoFactor: null,
+			resourceThresholds: null,
 			retainedImagesPerService: null,
 			smtpEnabled: null,
 			smtpFrom: null,
@@ -302,6 +307,18 @@ export class InstanceSettingsDTO extends BaseDTO<InstanceSettings> {
 	 */
 	async updateTraefik(input: InstanceSettingsTraefikInput): Promise<void> {
 		await this.persist(input);
+	}
+
+	/** The soft and hard usage thresholds per resource, the defaults where none is saved. */
+	get resourceThresholds(): ResourceThresholds {
+		return withDefaults(this.row.resourceThresholds);
+	}
+
+	/** Persists every resource category's soft and hard threshold. */
+	async updateResourceThresholds(
+		thresholds: ResourceThresholds,
+	): Promise<void> {
+		await this.persist({ resourceThresholds: thresholds });
 	}
 
 	/** "standalone" (default, null means the same thing) | "swarm". */

@@ -427,6 +427,27 @@
 			"when": 1790345889611,
 			"tag": "0060_curious_randall_flagg",
 			"breakpoints": true
+		},
+		{
+			"idx": 61,
+			"version": "7",
+			"when": 1790355710171,
+			"tag": "0061_known_earthquake",
+			"breakpoints": true
+		},
+		{
+			"idx": 62,
+			"version": "7",
+			"when": 1790355736852,
+			"tag": "0062_wet_major_mapleleaf",
+			"breakpoints": true
+		},
+		{
+			"idx": 63,
+			"version": "7",
+			"when": 1790356111385,
+			"tag": "0063_tearful_morgan_stark",
+			"breakpoints": true
 		}
 	],
 	"version": "7"

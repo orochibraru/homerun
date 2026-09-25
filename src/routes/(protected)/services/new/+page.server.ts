@@ -18,6 +18,7 @@ import {
 	createServiceSchema,
 	parseEnvVars,
 } from "$lib/server/validation/service";
+import { CapacityService } from "$lib/services/capacity.service";
 import { DeploymentService } from "$lib/services/deploy.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
@@ -96,6 +97,7 @@ export const load = async ({ url, parent, locals }) => {
 		templateLinks,
 		existing,
 		volumes,
+		stacks,
 	] = await Promise.all([
 		InstanceSettingsDTO.get(),
 		GitConnectionDTO.listForUser(user.id),
@@ -103,6 +105,7 @@ export const load = async ({ url, parent, locals }) => {
 		template ? TemplateLinkDTO.listForTemplate(template.id) : [],
 		ServiceDTO.list(),
 		StorageVolumeDTO.list(),
+		StackDTO.list(),
 	]);
 	const providersById = new Map(settings.gitProviders.map((p) => [p.id, p]));
 
@@ -110,12 +113,14 @@ export const load = async ({ url, parent, locals }) => {
 		baseDomain: config.baseDomain,
 		buildCacheRegistries: cacheRegistries.map((r) => r.toJSON()),
 		linkableServices: existing.map((svc) => ({
+			command: svc.command,
 			containerPort: svc.containerPort,
 			envVars: svc.envVars ?? {},
 			id: svc.id,
 			image: svc.image,
 			name: svc.name,
 			slug: svc.slug,
+			stackId: svc.stackId,
 		})),
 		connectedGitProviders: connections
 			.filter((c) => providersById.has(c.providerId))
@@ -125,6 +130,7 @@ export const load = async ({ url, parent, locals }) => {
 				providerUsername: c.providerUsername,
 			})),
 		stackId: stack,
+		stacks: stacks.map((row) => ({ id: row.id, name: row.name })),
 		template: template?.toJSON() ?? null,
 		templateHostAccessRefusal:
 			template && !locals.isAdmin
@@ -461,6 +467,10 @@ export const actions = {
 		}
 
 		const formData = await request.formData();
+		const full = await CapacityService.refusal();
+		if (full) {
+			return fail(409, { error: full, values: Object.fromEntries(formData) });
+		}
 		const result = await createServiceFromForm(formData, {
 			id: locals.user.id,
 			isAdmin: locals.isAdmin,

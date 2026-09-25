@@ -8,6 +8,7 @@ import {
 	type CreateServiceApiInput,
 	createServiceApiBody,
 } from "$lib/server/validation/api";
+import { CapacityService } from "$lib/services/capacity.service";
 import { GitWebhookService } from "$lib/services/git-webhook.service";
 import { encryptSecret } from "$lib/services/secrets";
 
@@ -119,6 +120,11 @@ export const POST = async ({ request, locals }) => {
 
 	if (await ServiceDTO.slugTaken(input.slug)) {
 		return json({ error: "That slug is already in use." }, { status: 409 });
+	}
+
+	const full = await CapacityService.refusal();
+	if (full) {
+		return json({ error: full }, { status: 409 });
 	}
 
 	const stackId =

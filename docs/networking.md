@@ -36,8 +36,9 @@ into Traefik (Traefik is recreated and downloads the plugin on start, so the
 server needs internet access then). Recreating Traefik from the compose file
 (`docker compose up --force-recreate`, a self-update) drops the plugin again;
 Homerun loads it back as soon as its worker is up, and until then a cached
-service answers 404. Each service then opts in on its Networking tab with
-**Cache for (seconds)**, applied on its next deploy.
+service answers 404; the dashboard's setup banner says so, with a **Re-apply**
+button. Each service then opts in on its Networking tab with **Cache for
+(seconds)**, applied on its next deploy.
 
 The cache is keyed on each visitor's cookies and credentials, so a logged-in
 page is only ever served back to the session that fetched it, never to someone

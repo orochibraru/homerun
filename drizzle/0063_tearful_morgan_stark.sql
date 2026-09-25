@@ -1,0 +1,1 @@
+ALTER TABLE "backup_run" ADD COLUMN "job_id" text;

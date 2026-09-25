@@ -220,6 +220,7 @@ export const actions = {
 
 		const engine = detectLinkEngine(target.image);
 		const linkTarget = {
+			command: target.command,
 			containerPort: target.containerPort,
 			envVars: target.envVars,
 			image: target.image,

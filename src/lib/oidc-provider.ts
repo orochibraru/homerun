@@ -28,6 +28,30 @@ export interface OidcUser {
 
 export const MCP_PATH = "/api/v1/mcp";
 
+/**
+ * Whether the MCP server can run on this origin: MCP clients only accept an
+ * HTTPS resource, or plain HTTP on a loopback host for development. On any
+ * other origin (a LAN IP over HTTP) Homerun runs without it rather than
+ * failing to start its auth layer.
+ */
+export function mcpAllowed(origin: string): boolean {
+	if (!URL.canParse(origin)) {
+		return false;
+	}
+	const { hostname, protocol } = new URL(origin);
+	if (protocol === "https:") {
+		return true;
+	}
+	const host = hostname.replace(/^\[|\]$/g, "");
+	return (
+		protocol === "http:" &&
+		(host === "localhost" ||
+			host.endsWith(".localhost") ||
+			host === "::1" ||
+			/^127(\.\d{1,3}){3}$/.test(host))
+	);
+}
+
 /** The MCP endpoint's URL, which is also the audience its access tokens are bound to. */
 export function mcpResource(origin: string): string {
 	return `${origin.replace(/\/+$/, "")}${MCP_PATH}`;

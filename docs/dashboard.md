@@ -9,6 +9,15 @@
   every five seconds. It loads behind a placeholder rather than blocking the
   page, so a slow `df` never holds the dashboard up. No card, or no
   `nvidia-smi`, just means the GPU block doesn't render, it isn't an error.
+- **Resource limits**: each of CPU, memory, disk and GPU has a soft and a hard
+  threshold (Settings → General → Resource limits, 85% and 95% by default),
+  checked against the host once a minute. Crossing the soft one sends a
+  **Resource warning**; crossing the hard one sends **Resource critical**, shows
+  a red banner here, and refuses new services (from the wizard, a template, a
+  compose import or migration, the API, or a pull request preview) until usage
+  drops back. Each crossing alerts once, not every minute, and a **Resources
+  recovered** follows when everything is back under its soft threshold. If the
+  host's stats can't be read, nothing is refused.
 - **Resource usage history**, the same host CPU and memory as a chart, live or
   over the last hour, day, week, month, year or all of it, from a sample taken
   every minute and kept for a year, next to a **per-service usage** table of the
@@ -46,17 +55,22 @@ authentication providers for an admin.
 Homerun runs a handful of read-only checks on every dashboard load: base domain,
 Origin and auth secret still at their defaults, the Traefik container reachable,
 the [worker](configuration.md#the-app-and-the-worker) reachable and the Docker
-socket it fronts answering, and SMTP fully configured if you turned it on. The
-worker and Docker checks are reported separately on purpose: a worker that's
-down and a worker that's up but can't reach Docker are different problems with
-different fixes. Any that aren't OK show up as a banner at the top of the
-dashboard.
+socket it fronts answering, Traefik still running with the flags your settings
+put on it (the swarm provider, the HTTP cache plugin, the ACME email), and SMTP
+fully configured if you turned it on. The worker and Docker checks are reported
+separately on purpose: a worker that's down and a worker that's up but can't
+reach Docker are different problems with different fixes. Any that aren't OK
+show up as a banner at the top of the dashboard.
 
 The banner links straight into `/settings`, on whichever tab the offending field
 lives, and rings the relevant fields so you can see what it's complaining about
 rather than hunting for it. Two checks have nothing to deep-link to: the auth
-secret is env-only (`AUTH_SECRET`, change it and restart), and the Traefik check
-is about a live container rather than a setting.
+secret is env-only (`AUTH_SECRET`, change it and restart), and the Traefik
+checks are about a live container rather than a setting. When Traefik has lost
+flags your settings put on it, usually because it was recreated from the compose
+file, an admin gets a **Re-apply** button that puts them back (Traefik restarts,
+so routes drop for a few seconds). Homerun also re-applies them on its own every
+time its worker starts.
 
 There's no separate `/setup` page, the banner plus `/settings` is the whole
 flow.

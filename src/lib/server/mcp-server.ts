@@ -6,7 +6,7 @@ import {
 import type { RequestEvent } from "@sveltejs/kit";
 import { z } from "zod";
 import { config } from "$lib/config";
-import { MCP_PATH } from "$lib/oidc-provider";
+import { MCP_PATH, mcpAllowed } from "$lib/oidc-provider";
 import { APP_VERSION } from "$lib/server/app-version";
 import { allowLongRequest } from "$lib/server/long-request";
 
@@ -300,6 +300,15 @@ const FORWARDED_AUTH_HEADERS = ["authorization", "cookie", "x-api-key"];
  */
 export async function serveMcp(event: RequestEvent): Promise<Response> {
 	const { fetch, locals, platform, request } = event;
+	if (!(config.auth.origin && mcpAllowed(config.auth.origin))) {
+		return new Response(
+			JSON.stringify({
+				error:
+					"The MCP server needs the dashboard served over HTTPS: set its URL to an https:// one in Settings → General.",
+			}),
+			{ headers: { "content-type": "application/json" }, status: 404 },
+		);
+	}
 	if (!locals.user) {
 		const origin = config.auth.origin?.replace(/\/+$/, "");
 		return new Response(JSON.stringify({ error: "Unauthorized" }), {

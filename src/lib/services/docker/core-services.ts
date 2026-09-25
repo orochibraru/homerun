@@ -76,6 +76,71 @@ export function applyFlags(
 	return [...kept, ...added];
 }
 
+export interface TraefikExpectation {
+	acmeEmail: string | null;
+	certResolver: string;
+	httpCache: boolean;
+	swarm: boolean;
+}
+
+/**
+ * The command-line flags the running Traefik needs for these settings, grouped
+ * by what they're for, so a drift can be named in words. Only what the
+ * settings turn on: a flag the settings don't ask for is left alone.
+ */
+export function expectedTraefikFlags(
+	expectation: TraefikExpectation,
+): Record<string, Record<string, string>> {
+	const groups: Record<string, Record<string, string>> = {};
+	if (expectation.swarm) {
+		groups["the swarm provider"] = {
+			"providers.swarm": "true",
+			"providers.swarm.exposedByDefault": "false",
+			"providers.swarm.network": swarmNetworkName(),
+			"providers.swarm.refreshSeconds": String(SWARM_REFRESH_SECONDS),
+		};
+	}
+	if (expectation.httpCache) {
+		groups["the HTTP cache plugin"] = {
+			"experimental.plugins.souin.modulename": SOUIN_MODULE,
+			"experimental.plugins.souin.version": SOUIN_VERSION,
+		};
+	}
+	if (expectation.acmeEmail) {
+		groups["the ACME email"] = {
+			[`certificatesresolvers.${expectation.certResolver}.acme.email`]:
+				expectation.acmeEmail,
+		};
+	}
+	return groups;
+}
+
+/**
+ * Which of `expected`'s groups the running Traefik's command is missing or
+ * runs with another value. A bare boolean flag (`--providers.swarm`) counts as
+ * `true`, and flag names match case-insensitively, as Traefik reads them.
+ */
+export function missingTraefikFlags(
+	cmd: string[],
+	expected: Record<string, Record<string, string>>,
+): string[] {
+	const given = new Map<string, string>();
+	for (const arg of cmd) {
+		if (!arg.startsWith("--")) {
+			continue;
+		}
+		const [key = "", ...value] = arg.slice(2).split("=");
+		given.set(key.toLowerCase(), value.length > 0 ? value.join("=") : "true");
+	}
+	return Object.entries(expected)
+		.filter(([, flags]) =>
+			Object.entries(flags).some(
+				([key, value]) => given.get(key.toLowerCase()) !== value,
+			),
+		)
+		.map(([group]) => group);
+}
+
 /** What this mixin needs from the swarm and container mixins, both merged ahead of it (see docker.service.ts). */
 interface RequiresSwarmMixin {
 	assertSwarmCapableDaemon: () => Promise<void>;
@@ -671,6 +736,61 @@ export function DockerCoreServicesMixin<
 				"experimental.plugins.souin.modulename": enabled ? SOUIN_MODULE : null,
 				"experimental.plugins.souin.version": enabled ? SOUIN_VERSION : null,
 			});
+		}
+
+		/**
+		 * Which parts of the Traefik configuration the settings call for the
+		 * running container lacks, in words ("the HTTP cache plugin"), or null
+		 * when there's no Traefik container to compare against.
+		 */
+		async traefikDrift(
+			expectation: TraefikExpectation,
+		): Promise<string[] | null> {
+			const traefik = await this.findTraefikContainer();
+			if (!traefik) {
+				return null;
+			}
+			const info = await this.worker.get<InspectedContainer>(
+				`/v1/containers/${traefik.id}/inspect`,
+			);
+			return missingTraefikFlags(
+				info.Config.Cmd ?? [],
+				expectedTraefikFlags(expectation),
+			);
+		}
+
+		/**
+		 * Puts every Traefik flag the settings call for back onto the running
+		 * container: swarm mode (network attachments included) when that's the
+		 * orchestration mode, then the HTTP cache plugin and the ACME email.
+		 * Recreating Traefik from the compose file (`docker compose up
+		 * --force-recreate`, a self-update) drops all of them. Each step is
+		 * independent: one failing is reported and the others still run.
+		 *
+		 * @returns A line per step that failed, empty when all of them held.
+		 */
+		async reassertTraefikConfig(
+			expectation: TraefikExpectation,
+		): Promise<string[]> {
+			const failures: string[] = [];
+			const attempt = async (what: string, step: () => Promise<unknown>) => {
+				await step().catch((err: unknown) => {
+					failures.push(
+						`${what}: ${err instanceof Error ? err.message : String(err)}`,
+					);
+				});
+			};
+			if (expectation.swarm) {
+				await attempt("swarm mode", () => this.enableSwarmMode());
+			}
+			await attempt("HTTP cache plugin", () =>
+				this.applyHttpCache(expectation.httpCache),
+			);
+			if (expectation.acmeEmail) {
+				const email = expectation.acmeEmail;
+				await attempt("ACME email", () => this.applyAcmeEmail(email));
+			}
+			return failures;
 		}
 
 		/**

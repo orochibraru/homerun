@@ -30,12 +30,13 @@ export class BackupRunDTO extends BaseDTO<BackupRun> {
 	 */
 	static async create(
 		volumeId: string,
-		options: { key?: string | null; kind?: BackupRunKind } = {},
+		options: { jobId?: string; key?: string | null; kind?: BackupRunKind } = {},
 	): Promise<BackupRunDTO> {
 		const row: BackupRun = {
 			error: null,
 			finishedAt: null,
 			id: crypto.randomUUID(),
+			jobId: options.jobId ?? null,
 			key: options.key ?? null,
 			kind: options.kind ?? "backup",
 			sizeBytes: null,

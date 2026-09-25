@@ -4,6 +4,7 @@
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import CheckBox from "$lib/components/check-box.svelte";
+	import ScheduleField from "$lib/components/schedule-field.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -96,18 +97,11 @@
         name="backupEnabled"
       />
 
-      <div>
-        <label class={label} for="backupSchedule"
-        >Schedule (cron syntax)</label>
-        <Input
-          class=""
-          id="backupSchedule"
-          name="backupSchedule"
-          placeholder="0 3 * * *"
-          type="text"
-          value={vol.backupSchedule ?? ""}
-        />
-      </div>
+      <ScheduleField
+        id="backupSchedule"
+        name="backupSchedule"
+        value={vol.backupSchedule}
+      />
 
       <CheckBox
         checked={vol.backupStopServices}

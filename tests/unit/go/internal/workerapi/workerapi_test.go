@@ -316,3 +316,38 @@ func TestConnectContainerPassesTheDaemonStatusThrough(t *testing.T) {
 		t.Fatalf("a missing network or container must answer 404, got %d", status)
 	}
 }
+
+func TestSwarmLogsOnlyStreamCurrentTasksLabelledByReplica(t *testing.T) {
+	api := newAPI(t, &fakeDaemon{bodies: map[string]string{
+		"/tasks":           `[{"ID":"t2","Slot":2},{"ID":"t1","Slot":1}]`,
+		"/tasks/t1/logs":   "2026-09-25T10:00:00Z ready\n",
+		"/tasks/t2/logs":   "2026-09-25T10:00:01Z listening",
+		"/services/s/logs": "old generation crashed\n",
+	}})
+	status, body := call(t, api, http.MethodGet, "/v1/swarm/services/s/logs?follow=0", false)
+	if status != http.StatusOK {
+		t.Fatalf("status %d: %s", status, body)
+	}
+	for _, want := range []string{
+		"[replica 1] 2026-09-25T10:00:00Z ready\n",
+		"[replica 2] 2026-09-25T10:00:01Z listening\n",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q in %q", want, body)
+		}
+	}
+	if strings.Contains(body, "old generation") {
+		t.Errorf("dead generations leaked into %q", body)
+	}
+}
+
+func TestSwarmLogsFallBackToTheServiceWhenNoTaskIsCurrent(t *testing.T) {
+	api := newAPI(t, &fakeDaemon{bodies: map[string]string{
+		"/tasks":           `[]`,
+		"/services/s/logs": "exec format error\n",
+	}})
+	_, body := call(t, api, http.MethodGet, "/v1/swarm/services/s/logs?follow=0", false)
+	if body != "exec format error\n" {
+		t.Errorf("body = %q", body)
+	}
+}

@@ -3,6 +3,9 @@
 	import { toast } from "svelte-sonner";
 	import { labelClass } from "$lib/components/form-styles";
 	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
+	import ServicePicker, {
+		type PickableService,
+	} from "$lib/components/service-picker.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import {
@@ -24,9 +27,13 @@
 	const {
 		onImport,
 		services,
+		stackId,
+		stacks,
 	}: {
 		onImport: (rows: ParsedEnvVar[]) => void;
-		services: Array<LinkTargetService & { id: string }>;
+		services: Array<LinkTargetService & PickableService>;
+		stackId: string | null;
+		stacks: { id: string; name: string }[];
 	} = $props();
 
 	let open = $state(false);
@@ -109,18 +116,14 @@
     </p>
   {:else}
     <div class="space-y-4">
-      <div>
-        <label class={labelClass} for="linkServiceId">Service</label>
-        <SelectRoot type="single" bind:value={serviceId}>
-          <SelectTrigger class="w-full" id="linkServiceId">
-            {target ? target.name : "Pick a service…"}
-          </SelectTrigger>
-          <SelectContent>
-            {#each services as svc (svc.id)}
-              <SelectItem label="{svc.name} ({svc.image})" value={svc.id} />
-            {/each}
-          </SelectContent>
-        </SelectRoot>
+      <div class="space-y-4">
+        <ServicePicker
+          id="linkService"
+          {services}
+          {stackId}
+          {stacks}
+          bind:value={serviceId}
+        />
         {#if engine && target}
           <p class="text-text-subtle mt-1.5 text-xs">
             Detected {engine.label} · reachable at

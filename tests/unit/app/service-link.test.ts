@@ -4,6 +4,7 @@ import {
 	defaultUrlKey,
 	defaultVarPrefix,
 	detectLinkEngine,
+	requirePassword,
 } from "../../../src/lib/service-link";
 
 const postgres = {
@@ -122,5 +123,44 @@ describe("buildLinkEnv", () => {
 				urlKey: defaultUrlKey(engine, other),
 			}),
 		).toEqual([{ key: "ACME_API_URL", value: "http://acme-api:3000" }]);
+	});
+});
+
+describe("Redis passwords set on the command line", () => {
+	test("reads --requirepass from a shell string or an argument list", () => {
+		expect(
+			requirePassword(["-c", "exec redis-server --requirepass 'gitea'"]),
+		).toBe("gitea");
+		expect(requirePassword(["redis-server", "--requirepass", "s3cret"])).toBe(
+			"s3cret",
+		);
+		expect(requirePassword(["--requirepass=abc"])).toBe("abc");
+		expect(requirePassword(['valkey-server --requirepass "q"'])).toBe("q");
+		expect(requirePassword(null)).toBe("");
+		expect(requirePassword(["redis-server"])).toBe("");
+	});
+
+	test("a link to a Valkey started with --requirepass carries the password", () => {
+		const valkey = {
+			command: ["-c", "exec redis-server --requirepass 'gitea'"],
+			containerPort: 6379,
+			envVars: {},
+			image: "valkey/valkey:9",
+			name: "Cache",
+			slug: "gitea-redis",
+		};
+		expect(
+			buildLinkEnv({
+				format: "url",
+				prefix: "REDIS",
+				target: valkey,
+				urlKey: "REDIS_URL",
+			}),
+		).toEqual([{ key: "REDIS_URL", value: "redis://:gitea@gitea-redis:6379" }]);
+	});
+
+	test("KeyDB and Garnet are Redis-compatible", () => {
+		expect(detectLinkEngine("eqalpha/keydb").id).toBe("redis");
+		expect(detectLinkEngine("ghcr.io/microsoft/garnet").id).toBe("redis");
 	});
 });

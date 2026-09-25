@@ -2,14 +2,18 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { dev } from "$app/env";
 import { config, isPlaceholderAuthSecret, isSmtpEnabled } from "$lib/config";
+import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { db } from "$lib/server/db/lib";
 import { user as userTable } from "$lib/server/db/schema";
 import { WorkerClient } from "$lib/server/worker-client";
+import { traefikExpectation } from "./cron/core-services-watch.ts";
 import { DASHBOARD_ROUTER_FILE } from "./docker/dashboard.ts";
 import { hasTraefikRouterFor } from "./docker/labels.ts";
 import { DockerService } from "./docker.service.ts";
 
 export interface SetupCheck {
+	/** A fix the dashboard can run in one click, instead of a settings field to edit. */
+	action?: "reapply-traefik";
 	detail: string;
 	envVar?: string;
 	id: string;
@@ -75,6 +79,10 @@ class AdminServiceClass {
 			await this.#traefikCheck(),
 			await this.#dockerCheck(),
 		];
+		const traefikConfig = await this.#traefikConfigCheck();
+		if (traefikConfig) {
+			checks.push(traefikConfig);
+		}
 
 		const dashboardHost = this.#dashboardHost();
 		if (dashboardHost) {
@@ -221,6 +229,38 @@ class AdminServiceClass {
 			id: "traefik",
 			label: "Traefik ingress",
 			severity: "warn",
+		};
+	}
+
+	/**
+	 * Whether the running Traefik still has the flags the settings put on it
+	 * (the swarm provider, the HTTP cache plugin, the ACME email). Recreating
+	 * it from the compose file drops them: with the cache on, every cached
+	 * service then answers 404. Null when there's no Traefik or the worker
+	 * can't be asked, which other checks already report.
+	 */
+	async #traefikConfigCheck(): Promise<SetupCheck | null> {
+		const settings = await InstanceSettingsDTO.get();
+		const missing = await DockerService.traefikDrift(
+			traefikExpectation(settings.orchestrationMode === "swarm"),
+		).catch(() => null);
+		if (!missing) {
+			return null;
+		}
+		if (missing.length === 0) {
+			return {
+				detail: "Running with every flag the settings call for.",
+				id: "traefik-config",
+				label: "Traefik configuration",
+				severity: "ok",
+			};
+		}
+		return {
+			action: "reapply-traefik",
+			detail: `Traefik is running without ${missing.join(", ")}, probably recreated from the compose file. Services that depend on it won't route until it's re-applied.`,
+			id: "traefik-config",
+			label: "Traefik configuration",
+			severity: "danger",
 		};
 	}
 

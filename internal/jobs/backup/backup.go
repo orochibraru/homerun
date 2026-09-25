@@ -86,6 +86,7 @@ func backup(ctx context.Context, job jobs.Job, docker *dockerapi.Client, spec Sp
 	var size int64
 	err := whileStopped(ctx, job, docker, spec.StopServices, func() error {
 		var err error
+		job.AppendLog(fmt.Sprintf("Archiving %s and uploading it as %s", spec.VolumeName, spec.Key))
 		size, err = archiveAndUpload(ctx, docker, spec)
 		return err
 	})
@@ -268,6 +269,7 @@ func runPreCommand(ctx context.Context, job jobs.Job, docker *dockerapi.Client, 
 		return fmt.Errorf("The pre-backup command in %q exited %d%s", pre.ServiceName, result.ExitCode,
 			detail(result.Stdout+result.Stderr))
 	}
+	job.AppendLog("Pre-backup command finished" + detail(result.Stdout+result.Stderr))
 	return nil
 }
 

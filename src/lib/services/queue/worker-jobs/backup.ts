@@ -88,7 +88,7 @@ export const backupWorkerJob: WorkerJob | null = {
 	async prepare(job) {
 		const { volumeId } = backupJobPayload.parse(job.payload);
 		const volume = await jobVolume(volumeId, "backup");
-		const run = await BackupRunDTO.create(volume.id);
+		const run = await BackupRunDTO.create(volume.id, { jobId: job.id });
 		try {
 			return await withRun(run, () => S3BackupService.backupSpec(volume));
 		} catch (err) {

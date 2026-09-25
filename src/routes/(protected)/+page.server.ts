@@ -5,6 +5,8 @@ import { DeploymentDTO } from "$lib/dto/deployment-dto";
 import { ServiceDTO } from "$lib/dto/service-dto";
 import { UptimeCheckDTO } from "$lib/dto/uptime-check-dto";
 import { Logger } from "$lib/logger";
+import { describeReading } from "$lib/resource-thresholds";
+import { CapacityService } from "$lib/services/capacity.service";
 import { isProbed } from "$lib/services/uptime/uptime-probe";
 
 const logger = new Logger("Dashboard");
@@ -14,11 +16,14 @@ export const load = async ({ locals, parent }) => {
 	// before this load runs : parent() gives the already-guaranteed user.
 	await parent();
 
-	const [services, recentDeployments, uptime] = await Promise.all([
-		ServiceDTO.list(),
-		DeploymentDTO.listRecent(),
-		UptimeCheckDTO.latest(),
-	]);
+	const [services, recentDeployments, uptime, hardBreaches] = await Promise.all(
+		[
+			ServiceDTO.list(),
+			DeploymentDTO.listRecent(),
+			UptimeCheckDTO.latest(),
+			CapacityService.hardBreaches(),
+		],
+	);
 	const recentErrors = locals.isAdmin
 		? await AppLogDTO.listRecent(5)
 		: await AppLogDTO.listRecentForServices(
@@ -33,6 +38,7 @@ export const load = async ({ locals, parent }) => {
 
 	return {
 		isAdmin: locals.isAdmin,
+		overCapacity: hardBreaches.map(describeReading),
 		recentDeployments: recentDeployments.map((r) => ({
 			...r.deployment.toJSON(),
 			serviceName: r.serviceName,

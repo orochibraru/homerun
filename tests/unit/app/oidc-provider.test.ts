@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	mcpAllowed,
 	mcpResource,
 	oidcClaimsFor,
 	oidcDiscoveryUrl,
@@ -15,6 +16,19 @@ const ada = {
 	name: "Ada Lovelace",
 	role: "admin",
 };
+
+describe("mcpAllowed", () => {
+	test("HTTPS or loopback HTTP only, never a LAN IP over HTTP", () => {
+		expect(mcpAllowed("https://homerun.example.com")).toBe(true);
+		expect(mcpAllowed("http://localhost:5173")).toBe(true);
+		expect(mcpAllowed("http://127.0.0.1:3000")).toBe(true);
+		expect(mcpAllowed("http://[::1]:3000")).toBe(true);
+		expect(mcpAllowed("http://app.localhost")).toBe(true);
+		expect(mcpAllowed("http://192.168.1.20:3000")).toBe(false);
+		expect(mcpAllowed("http://homerun.example.com")).toBe(false);
+		expect(mcpAllowed("not a url")).toBe(false);
+	});
+});
 
 describe("mcpResource", () => {
 	test("is the MCP endpoint's URL, ignoring a trailing slash", () => {

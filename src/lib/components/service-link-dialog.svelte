@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { Check, ChevronsUpDown, Link2 } from "@lucide/svelte";
+	import { Link2 } from "@lucide/svelte";
 	import { enhance } from "$app/forms";
 	import CheckBox from "$lib/components/check-box.svelte";
 	import { labelClass as label } from "$lib/components/form-styles";
 	import ResponsiveDialog from "$lib/components/responsive-dialog.svelte";
+	import ServicePicker from "$lib/components/service-picker.svelte";
 	import { Button } from "$lib/components/ui/button/index.js";
-	import * as Command from "$lib/components/ui/command/index.js";
-	import * as Popover from "$lib/components/ui/popover/index.js";
 	import {
 		SelectContent,
 		SelectItem,
@@ -34,7 +33,6 @@
 
 	let open = $state(false);
 	let linkTargetId = $state("");
-	let pickerOpen = $state(false);
 	let linkFormat = $state<"url" | "jdbc" | "vars">("url");
 	let alsoGroup = $state(true);
 
@@ -90,58 +88,14 @@
     })}
   >
     <input name="serviceId" type="hidden" value={service?.id ?? ""}>
-    <div>
-      <label class={label} for="targetId">Link to</label>
-      <input name="targetId" type="hidden" value={linkTargetId}>
-      <Popover.Root bind:open={pickerOpen}>
-        <Popover.Trigger>
-          {#snippet child({ props })}
-            <Button
-              {...props}
-              class="w-full justify-between"
-              id="targetId"
-              role="combobox"
-              type="button"
-              variant="outline"
-            >
-              <span class="truncate {linkTargetId ? '' : 'text-text-muted'}">
-                {linkCandidates.find((svc) => svc.id === linkTargetId)?.name
-                ?? "Pick a service…"}
-              </span>
-              <ChevronsUpDown class="size-4 shrink-0 opacity-50" />
-            </Button>
-          {/snippet}
-        </Popover.Trigger>
-        <Popover.Content class="w-(--bits-popover-anchor-width) p-0">
-          <Command.Root>
-            <Command.Input placeholder="Search services…" />
-            <Command.List>
-              <Command.Empty>No service matches.</Command.Empty>
-              <Command.Group>
-                {#each linkCandidates as svc (svc.id)}
-                  <Command.Item
-                    keywords={[svc.image]}
-                    onSelect={() => {
-                      linkTargetId = svc.id;
-                      pickerOpen = false;
-                    }}
-                    value="{svc.name} {svc.id}"
-                  >
-                    <Check
-                      class="size-4 {linkTargetId === svc.id ? '' : 'opacity-0'}"
-                    />
-                    <span class="truncate">{svc.name}</span>
-                    <span class="text-text-subtle ml-auto truncate text-[0.6875rem]">
-                      {svc.image}
-                    </span>
-                  </Command.Item>
-                {/each}
-              </Command.Group>
-            </Command.List>
-          </Command.Root>
-        </Popover.Content>
-      </Popover.Root>
-    </div>
+    <input name="targetId" type="hidden" value={linkTargetId}>
+    <ServicePicker
+      id="linkTarget"
+      services={linkCandidates}
+      stackId={service?.stackId ?? null}
+      {stacks}
+      bind:value={linkTargetId}
+    />
     <div>
       <label class={label} for="format">Inject as</label>
       <SelectRoot name="format" type="single" bind:value={linkFormat}>

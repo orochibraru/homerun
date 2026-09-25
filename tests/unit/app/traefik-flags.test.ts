@@ -6,7 +6,7 @@ mock.module("$app/environment", () => ({
 	dev: false,
 }));
 
-const { applyFlags } = await import(
+const { applyFlags, expectedTraefikFlags, missingTraefikFlags } = await import(
 	"../../../src/lib/services/docker/core-services"
 );
 
@@ -49,5 +49,58 @@ describe("applyFlags", () => {
 		const next = applyFlags(CMD, { "providers.docker": "false" });
 		expect(next).toContain("--providers.docker.exposedbydefault=false");
 		expect(next).toContain("--providers.docker=false");
+	});
+});
+
+describe("Traefik drift", () => {
+	const everything = expectedTraefikFlags({
+		acmeEmail: "me@example.com",
+		certResolver: "letsencrypt",
+		httpCache: true,
+		swarm: true,
+	});
+
+	test("a Traefik recreated from the compose file misses what the settings added", () => {
+		expect(missingTraefikFlags(CMD, everything)).toEqual([
+			"the swarm provider",
+			"the HTTP cache plugin",
+			"the ACME email",
+		]);
+	});
+
+	test("the flags as Homerun or compose.swarm.yaml write them count as present", () => {
+		const cmd = [
+			...CMD.filter((arg) => !arg.includes("acme.email")),
+			"--providers.swarm",
+			"--providers.swarm.exposedByDefault=false",
+			"--providers.swarm.network=homerun-swarm",
+			"--providers.swarm.refreshSeconds=2",
+			"--experimental.plugins.souin.modulename=github.com/darkweak/souin",
+			"--experimental.plugins.souin.version=v1.7.9",
+			"--certificatesresolvers.letsencrypt.acme.email=me@example.com",
+		];
+		expect(missingTraefikFlags(cmd, everything)).toEqual([]);
+	});
+
+	test("a setting that's off expects nothing, and an old value is drift", () => {
+		expect(
+			expectedTraefikFlags({
+				acmeEmail: null,
+				certResolver: "letsencrypt",
+				httpCache: false,
+				swarm: false,
+			}),
+		).toEqual({});
+		expect(
+			missingTraefikFlags(
+				CMD,
+				expectedTraefikFlags({
+					acmeEmail: "new@example.com",
+					certResolver: "letsencrypt",
+					httpCache: false,
+					swarm: false,
+				}),
+			),
+		).toEqual(["the ACME email"]);
 	});
 });

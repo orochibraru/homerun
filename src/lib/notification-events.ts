@@ -89,6 +89,26 @@ export const NOTIFICATION_EVENTS: NotificationEventInfo[] = [
 		group: "Uptime",
 		label: "Service recovered",
 	},
+	{
+		description:
+			"The server's CPU, memory, disk or GPU crossed its soft threshold.",
+		event: "resource.warning",
+		group: "Server",
+		label: "Resource warning",
+	},
+	{
+		description:
+			"The server crossed a hard threshold: new services are refused until it drops back.",
+		event: "resource.critical",
+		group: "Server",
+		label: "Resource critical",
+	},
+	{
+		description: "Every resource that crossed a threshold is back under it.",
+		event: "resource.recovered",
+		group: "Server",
+		label: "Resources recovered",
+	},
 ];
 
 export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
@@ -97,6 +117,8 @@ export const DEFAULT_NOTIFICATION_EVENTS: NotificationEvent[] = [
 	"update.failed",
 	"deploy.unhealthy",
 	"deploy.rolled_back",
+	"resource.warning",
+	"resource.critical",
 ];
 
 const EVENT_SET = new Set<string>(
@@ -119,7 +141,9 @@ export function isFailureEvent(event: NotificationEvent): boolean {
 		event === "build.checks_failed" ||
 		event === "deploy.unhealthy" ||
 		event === "deploy.rolled_back" ||
-		event === "image.vulnerable"
+		event === "image.vulnerable" ||
+		event === "resource.warning" ||
+		event === "resource.critical"
 	);
 }
 

@@ -9,6 +9,7 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
 import { Logger } from "$lib/logger";
 import { allowLongRequest } from "$lib/server/long-request";
+import { CapacityService } from "$lib/services/capacity.service";
 import { ComposeImportService } from "$lib/services/compose-import.service";
 
 const logger = new Logger("ComposeImport");
@@ -104,6 +105,11 @@ export const actions = {
 				error: HOST_ACCESS_MESSAGE,
 				plan: parsed.plan,
 			});
+		}
+
+		const full = await CapacityService.refusal();
+		if (full) {
+			return fail(409, { compose, error: full, plan: parsed.plan });
 		}
 
 		const stackId = (formData.get("stackId") as string | null) || null;

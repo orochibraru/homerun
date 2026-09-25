@@ -16,6 +16,7 @@
 	} from "$lib/components/ui/select/index.js";
 	import { getReleaseStatus } from "$lib/remote/self-update.remote";
 	import { getSetupStatus } from "$lib/remote/setup.remote";
+	import { RESOURCE_KINDS, RESOURCE_LABELS } from "$lib/resource-thresholds";
 	import { nextPasskeyRpId, strandedPasskeyCount } from "$lib/security-policy";
 	import { enhanceToast, saveToast } from "$lib/toast";
 
@@ -200,6 +201,53 @@
         label="Cross-subdomain cookies"
         name="authCrossSubdomainCookies"
       />
+      <div class="flex justify-end">
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel rounded-md">
+    <div class="border-border border-b px-5 py-4">
+      <h2 class="eyebrow">Resource limits</h2>
+      <p class="text-text-muted text-xs">
+        How full the server gets before Homerun says so. Past the soft limit it
+        sends a <strong>Resource warning</strong>; past the hard limit it sends
+        <strong>Resource critical</strong> and refuses new services until usage
+        drops back. Checked once a minute; the GPU counts only on a host that
+        has one.
+      </p>
+    </div>
+    <form
+      action="?/updateResources"
+      class="space-y-4 p-5"
+      method="POST"
+      use:enhance={saveToast("Resource limits")}
+    >
+      <div class="grid grid-cols-[auto_1fr_1fr] items-center gap-x-4 gap-y-3 text-sm">
+        <span></span>
+        <span class={label}>Soft %</span>
+        <span class={label}>Hard %</span>
+        {#each RESOURCE_KINDS as kind (kind)}
+          <span class="text-text">{RESOURCE_LABELS[kind]}</span>
+          <Input
+            aria-label="{RESOURCE_LABELS[kind]} soft threshold"
+            max="100"
+            min="1"
+            name="{kind}Soft"
+            type="number"
+            value={data.resourceThresholds[kind].soft}
+          />
+          <Input
+            aria-label="{RESOURCE_LABELS[kind]} hard threshold"
+            max="100"
+            min="1"
+            name="{kind}Hard"
+            type="number"
+            value={data.resourceThresholds[kind].hard}
+          />
+        {/each}
+      </div>
       <div class="flex justify-end">
         <Button type="submit">Save</Button>
       </div>

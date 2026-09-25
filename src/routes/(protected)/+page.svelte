@@ -8,6 +8,7 @@
 		Server,
 	} from "@lucide/svelte";
 	import { onMount } from "svelte";
+	import { toast } from "svelte-sonner";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
 	import HostResources from "$lib/components/host-resources.svelte";
@@ -16,9 +17,12 @@
 	import { Button } from "$lib/components/ui/button";
 	import UsageChart from "$lib/components/usage-chart.svelte";
 	import { timeAgo } from "$lib/formatting";
-	import { getSetupStatus } from "$lib/remote/setup.remote";
+	import {
+		getSetupStatus,
+		reapplyTraefikConfig,
+	} from "$lib/remote/setup.remote";
 	import { title } from "$lib/store/title";
-	import { enhanceToast } from "$lib/toast";
+	import { enhanceToast, toastError } from "$lib/toast";
 	import type { ContainerStatus } from "$lib/types";
 
 	const { data } = $props();
@@ -28,6 +32,25 @@
 		(setup.current?.checks ?? []).filter((check) => check.severity !== "ok"),
 	);
 	let reviewOpen = $state(false);
+	let reapplying = $state(false);
+
+	async function reapplyCallback() {
+		reapplying = true;
+		try {
+			await reapplyTraefikConfig();
+		} finally {
+			reapplying = false;
+		}
+	}
+
+	function handleReapply() {
+		return toast.promise(reapplyCallback(), {
+			error: (error) =>
+				toastError(error, "Couldn't re-apply the Traefik configuration."),
+			loading: "Re-applying the Traefik configuration",
+			success: "Traefik is back on the settings' configuration.",
+		});
+	}
 	let clearingErrors = $state(false);
 
 	onMount(() => {
@@ -111,6 +134,16 @@
                   </p>
                 {/if}
               </div>
+              {#if issue.action === "reapply-traefik" && data.user?.role === "admin"}
+                <button
+                  class="eyebrow shrink-0 text-amber-700 hover:underline disabled:opacity-50 dark:text-amber-400"
+                  disabled={reapplying}
+                  onclick={handleReapply}
+                  type="button"
+                >
+                  Re-apply
+                </button>
+              {/if}
               {#if fields.length > 0}
                 <a
                   class="eyebrow shrink-0 text-amber-700 hover:underline dark:text-amber-400"
@@ -122,6 +155,25 @@
             </li>
           {/each}
         </ul>
+      {/if}
+    </div>
+  {/if}
+
+  {#if data.overCapacity.length > 0}
+    <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-2.5 text-xs">
+      <CircleX class="size-3.5 shrink-0 text-red-500" />
+      <p class="min-w-0 flex-1 text-red-700 dark:text-red-300">
+        <span class="font-medium">Server past its hard resource limit:</span>
+        {data.overCapacity.join(", ")}. New services are refused until usage
+        drops back.
+      </p>
+      {#if data.isAdmin}
+        <a
+          class="eyebrow shrink-0 text-red-700 hover:underline dark:text-red-400"
+          href={resolve("/settings")}
+        >
+          Limits
+        </a>
       {/if}
     </div>
   {/if}

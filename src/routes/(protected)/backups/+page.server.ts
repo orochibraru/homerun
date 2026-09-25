@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { resolve } from "$app/paths";
 import { BackupRunDTO } from "$lib/dto/backup-run-dto";
+import { JobDTO } from "$lib/dto/job-dto";
 import { S3DestinationDTO } from "$lib/dto/s3-destination-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { Logger } from "$lib/logger";
@@ -19,15 +20,22 @@ export const load = async ({ parent, url }) => {
 		S3DestinationDTO.list(),
 	]);
 	const destinationNames = new Map(destinations.map((d) => [d.id, d.name]));
+	const logs = await JobDTO.logsFor(
+		runs.items.map(({ run }) => run.toJSON().jobId),
+	);
 
 	return {
 		filtered: query.active,
 		page: runs.page,
 		perPage: runs.perPage,
-		runs: runs.items.map(({ run, volumeName }) => ({
-			...run.toJSON(),
-			volumeName,
-		})),
+		runs: runs.items.map(({ run, volumeName }) => {
+			const row = run.toJSON();
+			return {
+				...row,
+				log: (row.jobId && logs.get(row.jobId)) || "",
+				volumeName,
+			};
+		}),
 		total: runs.total,
 		volumes: volumes.map((v) => ({
 			destinationName: v.s3DestinationId

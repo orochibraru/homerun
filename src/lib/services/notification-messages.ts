@@ -22,8 +22,9 @@ export interface ChannelMessage {
 	event: NotificationEvent;
 	fields: MessageField[];
 	link: string | null;
-	serviceId: string;
-	serviceName: string;
+	/** Null for a message about the whole server rather than one service. */
+	serviceId: string | null;
+	serviceName: string | null;
 	timestamp: string;
 	title: string;
 }

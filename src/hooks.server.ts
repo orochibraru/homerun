@@ -305,10 +305,12 @@ function isOidcProviderPath(pathname: string): boolean {
 }
 
 /**
- * Whether this is the login wall's forwardAuth check. Traefik forwards the
- * gated app's own request headers to it, so an `Authorization: Bearer` there
- * is that app's token (Umami's API calls carry one), not a Homerun API key,
- * and the check reads its own gate cookie rather than `locals.user` anyway.
+ * Whether this is the login wall's forwardAuth check. It skips the session
+ * and API-key lookups entirely: the check reads its own gate cookie, never
+ * `locals.user`; an `Authorization: Bearer` there is the gated app's own token
+ * (Umami's API calls carry one), not a Homerun API key; and every routed
+ * service calls it on every request, so an auth layer that fails to build
+ * (a bad dashboard URL did) must not take every site down with the dashboard.
  */
 function isAuthCheckPath(url: URL): boolean {
 	return url.pathname === "/api/v1/auth-check";
@@ -401,6 +403,13 @@ async function applyApiKeyAuth(event: RequestEvent): Promise<Response | null> {
  * SvelteKit routes that live under its base path.
  */
 const authHandler: Handle = async ({ event, resolve }) => {
+	if (isAuthCheckPath(event.url)) {
+		event.locals.isAdmin = false;
+		event.locals.apiKeyScope = null;
+		event.locals.readOnly = false;
+		return resolve(event);
+	}
+
 	const signUpClosed = await signUpClosedResponse(event);
 	if (signUpClosed) {
 		return signUpClosed;
@@ -417,9 +426,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
 		// Make session and user available on server
 		event.locals.session = session.session;
 		event.locals.user = session.user;
-	} else if (
-		!(isOidcProviderPath(event.url.pathname) || isAuthCheckPath(event.url))
-	) {
+	} else if (!isOidcProviderPath(event.url.pathname)) {
 		const rejected = await applyApiKeyAuth(event);
 		if (rejected) {
 			return rejected;

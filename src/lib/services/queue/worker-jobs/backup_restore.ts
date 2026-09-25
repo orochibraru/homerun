@@ -20,7 +20,11 @@ export const backupRestoreWorkerJob: WorkerJob | null = {
 			job.payload,
 		);
 		const volume = await jobVolume(volumeId, "restore");
-		const run = await BackupRunDTO.create(volume.id, { key, kind: "restore" });
+		const run = await BackupRunDTO.create(volume.id, {
+			jobId: job.id,
+			key,
+			kind: "restore",
+		});
 		return await withRun(run, () =>
 			S3BackupService.restoreSpec(volume, key, { stopServices, wipe }),
 		);

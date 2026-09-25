@@ -3,6 +3,7 @@ import { resolve } from "$app/paths";
 import { config } from "$lib/config";
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { Logger } from "$lib/logger";
+import { parseThresholds } from "$lib/resource-thresholds";
 import { passkeyRpId } from "$lib/security-policy";
 import { normalizeBaseDomain } from "$lib/server/validation/base-domain";
 import {
@@ -18,6 +19,7 @@ export const load = async ({ parent }) => {
 	await parent();
 	return {
 		passkeyCount: await AccountSecurityService.countAllPasskeys(),
+		resourceThresholds: (await InstanceSettingsDTO.get()).resourceThresholds,
 		passkeyRpId: passkeyRpId(config.auth.origin) ?? "localhost",
 	};
 };
@@ -101,5 +103,25 @@ export const actions = {
 			`Update channel set: channel=${channel} user=${locals.user.id}`,
 		);
 		return { savedSection: "channel", success: true };
+	},
+
+	updateResources: async ({ request, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		if (!locals.isAdmin) {
+			throw redirect(302, resolve("/"));
+		}
+		const formData = await request.formData();
+		const parsed = parseThresholds(
+			(name) => formData.get(name) as string | null,
+		);
+		if (typeof parsed === "string") {
+			return fail(400, { error: parsed, savedSection: "resources" });
+		}
+		const settings = await InstanceSettingsDTO.get();
+		await settings.updateResourceThresholds(parsed);
+		logger.info(`Resource thresholds saved: user=${locals.user.id}`);
+		return { savedSection: "resources", success: true };
 	},
 };

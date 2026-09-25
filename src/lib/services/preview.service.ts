@@ -5,6 +5,7 @@ import { isCommitSha } from "$lib/git-ref";
 import { type PullRequestEvent, previewSlug } from "$lib/git-webhooks";
 import { Logger } from "$lib/logger";
 import type { ContainerStatus } from "$lib/types";
+import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { serviceHostname } from "./dns.service.ts";
 import { ServiceLifecycleService } from "./service-lifecycle.service.ts";
@@ -162,6 +163,10 @@ class PreviewServiceClass {
 				reason: `The slug ${slug} is already taken by another service.`,
 				status: "ignored",
 			};
+		}
+		const full = await CapacityService.refusal();
+		if (full) {
+			return { reason: full, status: "ignored" };
 		}
 		const settings = mirroredSettings(parent);
 		const preview = await ServiceDTO.create({

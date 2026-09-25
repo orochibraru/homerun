@@ -14,6 +14,7 @@ import { EmailService } from "./email.service";
 import {
 	type ChannelMessage,
 	deployMessage,
+	type MessageField,
 	withStackTitle,
 } from "./notification-messages";
 import { QueueService } from "./queue.service";
@@ -61,6 +62,13 @@ export function messageSubject(message: ChannelMessage): string {
 	return `[Homerun] ${message.title}`;
 }
 
+/** A message's fields with its service first, or just its fields for a message about the whole server. */
+function withService(message: ChannelMessage): MessageField[] {
+	return message.serviceName
+		? [{ name: "Service", value: message.serviceName }, ...message.fields]
+		: message.fields;
+}
+
 /** Renders a channel message as plain-text body lines, for email and the generic webhook payload. */
 export function messageBody(message: ChannelMessage): string {
 	const label =
@@ -69,7 +77,7 @@ export function messageBody(message: ChannelMessage): string {
 	const lines = [
 		message.title,
 		"",
-		`Service: ${message.serviceName}`,
+		...(message.serviceName ? [`Service: ${message.serviceName}`] : []),
 		`Event: ${label}`,
 		...message.fields.map((field) => `${field.name}: ${field.value}`),
 		`At: ${message.timestamp}`,
@@ -93,10 +101,7 @@ export function discordPayload(message: ChannelMessage) {
 			{
 				color: isFailureEvent(message.event) ? DISCORD_RED : DISCORD_GREEN,
 				description: detail ? `\`\`\`\n${detail}\n\`\`\`` : undefined,
-				fields: [
-					{ name: "Service", value: message.serviceName },
-					...message.fields,
-				].map((field) => ({
+				fields: withService(message).map((field) => ({
 					inline: field.value.length <= DISCORD_INLINE_MAX,
 					name: field.name,
 					value: keepHead(field.value, DISCORD_FIELD_LIMIT),
@@ -121,10 +126,7 @@ export function slackPayload(message: ChannelMessage) {
 			{
 				color: isFailureEvent(message.event) ? SLACK_RED : SLACK_GREEN,
 				fallback: message.title,
-				fields: [
-					{ name: "Service", value: message.serviceName },
-					...message.fields,
-				].map((field) => ({
+				fields: withService(message).map((field) => ({
 					short: field.value.length <= SLACK_INLINE_MAX,
 					title: field.name,
 					value: keepHead(field.value, SLACK_TEXT_LIMIT),
@@ -152,8 +154,7 @@ export function telegramPayload(chatId: string, message: ChannelMessage) {
 	const lines = [
 		`<b>${escapeHtml(message.title)}</b>`,
 		"",
-		`<b>Service:</b> ${escapeHtml(message.serviceName)}`,
-		...message.fields.map(
+		...withService(message).map(
 			(field) => `<b>${escapeHtml(field.name)}:</b> ${escapeHtml(field.value)}`,
 		),
 	];
@@ -261,7 +262,7 @@ class NotificationChannelServiceClass {
 		}
 		const titled = withStackTitle(
 			message,
-			await this.#stackNameOf(message.serviceId),
+			message.serviceId ? await this.#stackNameOf(message.serviceId) : null,
 		);
 		await Promise.all(channels.map((channel) => this.#send(channel, titled)));
 	}

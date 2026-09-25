@@ -56,6 +56,9 @@ export type NotificationEvent =
 	| "deploy.succeeded"
 	| "image.vulnerable"
 	| "service.down"
-	| "service.up";
+	| "service.up"
+	| "resource.warning"
+	| "resource.critical"
+	| "resource.recovered";
 
 export type PullPolicy = "always" | "missing" | "never";

@@ -15,6 +15,7 @@ import { Logger } from "$lib/logger";
 import { DOMAIN_RE, normalizeDomains } from "$lib/service-domains";
 import { uniqueSlug } from "$lib/slug";
 import { tarArchive } from "$lib/tar";
+import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service.ts";
 import { DockerService } from "./docker.service.ts";
 import { encryptSecret } from "./secrets.ts";
@@ -254,6 +255,7 @@ class ComposeImportServiceClass {
 	 * for privileged mode, devices, added capabilities or host env files.
 	 */
 	async importPlan(input: ComposeImportInput): Promise<ComposeImportResult> {
+		await CapacityService.assertRoomForNewService();
 		if (
 			!input.allowHostAccess &&
 			input.drafts.some((draft) => hostAccessRequested(draft))

@@ -94,6 +94,8 @@
       <ServiceLinkPicker
         onImport={importEnvRows}
         services={data.linkableServices}
+        stackId={data.stackId}
+        stacks={data.stacks}
       />
     </div>
   </div>

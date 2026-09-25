@@ -134,6 +134,23 @@ func (c *Client) SwarmServiceLogs(ctx context.Context, id string, tail int, foll
 	return response.Body, nil
 }
 
+// SwarmTaskLogs opens one swarm task's logs with a timestamp on every line,
+// following them when follow is set. The caller closes the stream.
+func (c *Client) SwarmTaskLogs(ctx context.Context, id string, tail int, follow bool) (io.ReadCloser, error) {
+	query := url.Values{"stderr": {"1"}, "stdout": {"1"}, "timestamps": {"1"}}
+	if follow {
+		query.Set("follow", "1")
+	}
+	if tail > 0 {
+		query.Set("tail", strconv.Itoa(tail))
+	}
+	response, err := c.request(ctx, http.MethodGet, "/tasks/"+id+"/logs", query, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return response.Body, nil
+}
+
 // SwarmServiceReplicas is a replicated service's configured replica count.
 func (c *Client) SwarmServiceReplicas(ctx context.Context, id string) (int, error) {
 	var inspected struct {

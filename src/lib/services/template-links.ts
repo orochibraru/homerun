@@ -11,6 +11,7 @@ import { Logger } from "$lib/logger";
 import { isDatabaseImage } from "$lib/service-link";
 import type { ServiceRuntimeOptions } from "$lib/service-runtime";
 import { uniqueSlug } from "$lib/slug";
+import { CapacityService } from "./capacity.service.ts";
 import { DeploymentService } from "./deploy.service";
 
 const logger = new Logger("Templates");
@@ -273,6 +274,10 @@ export async function quickDeployFromTemplate(
 	const template = await TemplateDTO.get(templateId);
 	if (!template) {
 		return { error: "Template not found.", ok: false, status: 404 };
+	}
+	const full = await CapacityService.refusal();
+	if (full) {
+		return { error: full, ok: false, status: 409 };
 	}
 
 	const created = await createServiceFromTemplate(template, params);

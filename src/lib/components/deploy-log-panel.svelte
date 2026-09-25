@@ -6,9 +6,12 @@
 	const {
 		errorMessage,
 		log,
+		logName = "build log",
 	}: {
 		errorMessage: string | null;
 		log: string;
+		/** What the log is, for the copy button: "build log", "backup log". */
+		logName?: string;
 	} = $props();
 
 	const lines = $derived(log.split("\n").filter(Boolean));
@@ -21,7 +24,7 @@
   <div class="flex items-center justify-end bg-zinc-900 px-2 py-1">
     <CopyButton
       class="text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-      label={errorMessage ? "the error and build log" : "the build log"}
+      label={errorMessage ? `the error and ${logName}` : `the ${logName}`}
       text={errorMessage ? "Copy error and log" : "Copy log"}
       value={copyValue}
     />

@@ -6,6 +6,7 @@ import {
 import { InstanceSettingsDTO } from "$lib/dto/instance-settings-dto";
 import { WorkerClient } from "$lib/server/worker-client";
 import { syncDashboardDns } from "../dns.service.ts";
+import type { TraefikExpectation } from "../docker/core-services.ts";
 import { DockerService } from "../docker.service.ts";
 import { BaseScheduler } from "./base-scheduler.ts";
 
@@ -31,6 +32,16 @@ export async function detectAuthCheckUrl(): Promise<boolean> {
 	const settings = await InstanceSettingsDTO.get();
 	applyInstanceSettings(settings.toConfigOverride());
 	return true;
+}
+
+/** What the running Traefik should be configured with, from the effective settings. */
+export function traefikExpectation(swarm: boolean): TraefikExpectation {
+	return {
+		acmeEmail: config.traefik.acmeEmail ?? null,
+		certResolver: config.traefik.certResolver,
+		httpCache: config.traefik.httpCache,
+		swarm,
+	};
 }
 
 export class CoreServicesWatch extends BaseScheduler {
@@ -78,21 +89,12 @@ export class CoreServicesWatch extends BaseScheduler {
 			settings.newtCredentials(),
 			settings.orchestrationMode === "swarm",
 		);
-		if (settings.orchestrationMode === "swarm") {
-			await DockerService.enableSwarmMode().catch((err) => {
-				this.logger.warn("Couldn't re-assert swarm mode on this host", err);
-			});
-		}
-		await DockerService.applyHttpCache(config.traefik.httpCache).catch(
-			(err) => {
-				this.logger.warn("Couldn't re-assert the HTTP cache plugin", err);
-			},
+		const failures = await DockerService.reassertTraefikConfig(
+			traefikExpectation(settings.orchestrationMode === "swarm"),
 		);
-		if (config.traefik.acmeEmail) {
-			await DockerService.applyAcmeEmail(config.traefik.acmeEmail).catch(
-				(err) => {
-					this.logger.warn("Couldn't re-assert the ACME email", err);
-				},
+		for (const failure of failures) {
+			this.logger.warn(
+				`Couldn't re-assert the Traefik configuration: ${failure}`,
 			);
 		}
 	}

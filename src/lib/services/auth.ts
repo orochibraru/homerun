@@ -3,6 +3,11 @@ import { apiKey } from "@better-auth/api-key";
 import { cimd } from "@better-auth/cimd";
 import { fetchClientMetadataResource } from "@better-auth/cimd/node";
 import { mcp } from "@better-auth/mcp";
+import {
+	type OAuthOptions,
+	oauthProvider,
+	type Scope,
+} from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -24,6 +29,7 @@ import { resolveAdvertisedTokenAuth } from "$lib/auth-providers";
 import { config, isSmtpEnabled } from "$lib/config";
 import { Logger } from "$lib/logger";
 import {
+	mcpAllowed,
 	mcpResource,
 	OIDC_CLAIMS,
 	OIDC_SCOPES,
@@ -87,7 +93,11 @@ function tokenAuthOptions(provider: {
  * resource) serves authorize/token/userinfo/discovery under the auth base
  * path. MCP clients like claude.ai register themselves, through a Client ID
  * Metadata Document (`cimd`) or open dynamic registration: a registered client
- * still needs a Homerun user to sign in and consent before it gets a token. Empty until the dashboard's origin is known, because the issuer
+ * still needs a Homerun user to sign in and consent before it gets a token.
+ * MCP only accepts an HTTPS origin (or loopback HTTP), so on any other one the
+ * plain `oauthProvider` serves "Sign in with Homerun" without it: `mcp()`
+ * throws on such an origin, which took the whole auth layer, and every
+ * request with it, down. Empty until the dashboard's origin is known, because the issuer
  * has to be an absolute URL and `baseURL` is deliberately left unset (see
  * buildAuth); `rebuildAuth()` adds them once instance settings supply it.
  */
@@ -95,29 +105,39 @@ function oidcProviderPlugins(origin: string | undefined) {
 	if (!origin) {
 		return [];
 	}
+	const provider: OAuthOptions<Scope[]> = {
+		advertisedMetadata: {
+			claims_supported: [...OIDC_CLAIMS],
+			scopes_supported: [...OIDC_SCOPES],
+		},
+		clientPrivileges: ({ user }) => user?.role === "admin",
+		consentPage: "/auth/consent",
+		customIdTokenClaims: ({ user, scopes }) =>
+			oidcClaimsFor(user as OidcUser, scopes),
+		customUserInfoClaims: ({ user, scopes }) =>
+			oidcClaimsFor(user as OidcUser, scopes),
+		loginPage: "/auth/sign-in",
+		scopes: [...OIDC_SCOPES],
+	};
 	return [
 		jwt({
 			jwks: { keyPairConfig: { alg: "RS256", modulusLength: 2048 } },
 			jwt: { issuer: oidcIssuer(origin) },
 		}),
-		mcp({
-			advertisedMetadata: {
-				claims_supported: [...OIDC_CLAIMS],
-				scopes_supported: [...OIDC_SCOPES],
-			},
-			clientPrivileges: ({ user }) => user?.role === "admin",
-			consentPage: "/auth/consent",
-			customIdTokenClaims: ({ user, scopes }) =>
-				oidcClaimsFor(user as OidcUser, scopes),
-			customUserInfoClaims: ({ user, scopes }) =>
-				oidcClaimsFor(user as OidcUser, scopes),
-			allowDynamicClientRegistration: true,
-			allowUnauthenticatedClientRegistration: true,
-			loginPage: "/auth/sign-in",
-			resource: mcpResource(origin),
-			scopes: [...OIDC_SCOPES],
-		}),
-		cimd({ fetchClientMetadataResource, metadataProfile: "mcp-2026-07-28" }),
+		...(mcpAllowed(origin)
+			? [
+					mcp({
+						...provider,
+						allowDynamicClientRegistration: true,
+						allowUnauthenticatedClientRegistration: true,
+						resource: mcpResource(origin),
+					}),
+					cimd({
+						fetchClientMetadataResource,
+						metadataProfile: "mcp-2026-07-28",
+					}),
+				]
+			: [oauthProvider(provider)]),
 	];
 }
 

@@ -490,6 +490,10 @@ export class ServiceDTO extends BaseDTO<Service> {
 	get containerPort(): number {
 		return this.row.containerPort;
 	}
+	/** The command the container runs with instead of the image's own, or null for the image's. */
+	get command(): string[] | null {
+		return this.row.command;
+	}
 	/** The service's environment variables, empty when none are stored. */
 	get envVars(): Record<string, string> {
 		return this.row.envVars ?? {};

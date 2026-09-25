@@ -19,6 +19,7 @@ import type {
 	SeverityCounts,
 } from "$lib/image-scan";
 import type { PublishedPort } from "$lib/published-ports";
+import type { ResourceKind, Threshold } from "$lib/resource-thresholds";
 import type { BackupRunKind, RevisionConfig } from "$lib/revision-config";
 import type {
 	ContainerStatus,
@@ -646,6 +647,9 @@ export const instanceSettings = pgTable("instance_settings", {
 	preferredSignInMethods: jsonb("preferred_sign_in_methods").$type<string[]>(),
 	requirePasskey: boolean("require_passkey"),
 	requireTwoFactor: boolean("require_two_factor"),
+	resourceThresholds: jsonb("resource_thresholds").$type<
+		Partial<Record<ResourceKind, Partial<Threshold>>>
+	>(),
 	smtpEnabled: boolean("smtp_enabled"),
 	smtpFrom: text("smtp_from"),
 	smtpHost: text("smtp_host"),
@@ -1161,6 +1165,7 @@ export const backupRun = pgTable(
 		error: text("error"),
 		finishedAt: timestamp("finished_at", { mode: "date" }),
 		id: text("id").primaryKey(),
+		jobId: text("job_id"),
 		key: text("key"),
 		kind: text("kind").$type<BackupRunKind>().default("backup").notNull(),
 		sizeBytes: integer("size_bytes"),
@@ -1299,6 +1304,7 @@ export const notification = pgTable(
 				| "build_checks_failed"
 				| "deploy_unhealthy"
 				| "deploy_rolled_back"
+				| "resource_alert"
 			>()
 			.notNull(),
 		userId: text("user_id")
@@ -1655,6 +1661,8 @@ export const notificationChannel = pgTable(
 				"update.failed",
 				"deploy.unhealthy",
 				"deploy.rolled_back",
+				"resource.warning",
+				"resource.critical",
 			]),
 		id: text("id").primaryKey(),
 		kind: text("kind").$type<NotificationChannelKind>().notNull(),

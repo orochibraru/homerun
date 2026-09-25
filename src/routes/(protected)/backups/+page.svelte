@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { CloudUpload, Play } from "@lucide/svelte";
+	import { ChevronRight, CloudUpload, Play } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { enhance } from "$app/forms";
+	import { invalidateAll } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import DeployLogPanel from "$lib/components/deploy-log-panel.svelte";
 	import EmptyState from "$lib/components/empty-state.svelte";
 	import EntityToolbar, {
 		type FilterGroup,
@@ -24,6 +26,19 @@
 	);
 
 	let runningVolumeId = $state<string | null>(null);
+	let expandedRunId = $state<string | null>(null);
+
+	function toggleRun(id: string) {
+		expandedRunId = expandedRunId === id ? null : id;
+	}
+
+	$effect(() => {
+		if (!data.runs.some((run) => run.success === null)) {
+			return;
+		}
+		const timer = setInterval(() => invalidateAll(), 3000);
+		return () => clearInterval(timer);
+	});
 
 	const filters: FilterGroup[] = [
 		{
@@ -175,8 +190,29 @@
               {@const durationMs = run.finishedAt
               ? new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()
               : null}
-              <tr class="border-border/60 border-b last:border-0">
-                <td class="text-text px-4 py-3 font-medium">{run.volumeName}</td>
+              <tr
+                class="border-border/60 hover:bg-surface-2 cursor-pointer border-b last:border-0"
+                onclick={() => toggleRun(run.id)}
+              >
+                <td class="text-text px-4 py-3 font-medium">
+                  <button
+                    class="flex items-center gap-1.5 text-left"
+                    aria-expanded={expandedRunId === run.id}
+                    onclick={(event) => {
+                      event.stopPropagation();
+                      toggleRun(run.id);
+                    }}
+                    type="button"
+                  >
+                    <ChevronRight
+                      class="text-text-subtle size-3.5 shrink-0 transition-transform {expandedRunId ===
+                      run.id
+                        ? 'rotate-90'
+                        : ''}"
+                    />
+                    {run.volumeName}
+                  </button>
+                </td>
                 <td class="text-text-muted px-4 py-3" title={run.key ?? ""}>
                   {run.kind === "restore" ? "Restore" : "Backup"}
                 </td>
@@ -196,6 +232,25 @@
                   </RunStatusBadge>
                 </td>
               </tr>
+              {#if expandedRunId === run.id}
+                <tr class="border-border/60 border-b last:border-0">
+                  <td class="pt-3" colspan="6">
+                    {#if run.log || run.error}
+                      <DeployLogPanel
+                        errorMessage={run.error}
+                        log={run.log}
+                        logName="{run.kind} log"
+                      />
+                    {:else}
+                      <p class="text-text-muted px-5 pb-3 text-xs">
+                        {run.success === null
+                          ? "Waiting for the first line…"
+                          : "This run has no log: it ran before runs kept one."}
+                      </p>
+                    {/if}
+                  </td>
+                </tr>
+              {/if}
             {/each}
           </tbody>
         </table>

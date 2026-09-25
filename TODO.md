@@ -12,22 +12,12 @@ When done delete the entry, no bloat.
 
 ## Medium
 
-- [ ] Notifications for server resource usage, set thresholds in admin (per
-      category, CPU, memory, disk, GPU), default to 85% for all. Soft and hard
-      thresholds. Soft alerts, hard prevents adding new resources. Also show
-      alert in admin when hard threshold is reached.
-- [ ] Swarm service logs (Observability tab, `homerun services logs`) mix the
-      output of every task generation, dead ones included, in no reliable order,
-      so a crash from an old revision reads like the current task's. Show only
-      the current tasks' logs, or at least timestamp and label each line with
-      its task.
-- [ ] Setup diagnostics: check the running Traefik against what the settings
-      expect (the Souin plugin when the HTTP cache is on, the swarm provider in
-      swarm mode, the ACME email) and flag the drift with a one-click re-apply.
-      A `docker compose up --force-recreate` silently dropped the plugin and
-      404'd every cached service; the worker-boot re-assert fixes the common
-      case, this catches the rest.
+- [ ] Volume backups: clicking a backup run opens its logs, like a deployment's
+      page.
 
 ## Large
 
-<!--  -->
+- [ ] Zero-downtime self-updates: run the app and the worker as swarm services
+      with start-first updates and rollback on a failed healthcheck, so a broken
+      canary rolls itself back and the instance stays usable. Touches the
+      installer's compose files and the self-update path.
