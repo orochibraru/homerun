@@ -33,3 +33,5 @@ When done delete the entry, no bloat.
       backed by a short-lived helper container through the worker (list, read,
       write, upload), and/or a one-click "Open in code-server" that deploys the
       code-server template with the volume mounted at /config.
+- [ ] Use CDN-like features for caching, optional. Something like Varnish used
+      by Fastly?

@@ -9,6 +9,7 @@ import {
 	BUILTIN_TEMPLATE_CATEGORIES,
 	parseBuiltinTemplates,
 } from "../../../src/lib/server/db/builtin-templates";
+import { templateCategoryLabel } from "../../../src/lib/template-categories";
 
 const root = join(import.meta.dir, "../../..");
 
@@ -148,5 +149,13 @@ describe("parseBuiltinTemplates", () => {
 				"/templates/other/c.json": leaf,
 			}),
 		).toThrow(/only leaf templates/);
+	});
+});
+
+describe("templateCategoryLabel", () => {
+	test("labels a known category and passes an unknown one through", () => {
+		expect(templateCategoryLabel("ai")).toBe("AI");
+		expect(templateCategoryLabel("cms")).toBe("CMS");
+		expect(templateCategoryLabel("custom-thing")).toBe("custom-thing");
 	});
 });
