@@ -27,6 +27,11 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] A per-variable "secret" switch on the service Environment tab, stored with
+      the var, that the MCP server (and any other export) always redacts
+      whatever its name. Today redaction goes by name pattern plus URL passwords
+      and password arguments, which misses a secret under an innocent name
+      (`TMDB_API`).
 - [ ] Swarm deploys can lose a service's slug alias in Docker's DNS when the old
       and new task overlap (moby's alias-removal race): only the full service
       name still resolves, and every link to the slug breaks (AIOMetadata →

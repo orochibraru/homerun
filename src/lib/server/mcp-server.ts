@@ -9,7 +9,12 @@ import { config } from "$lib/config";
 import { MCP_PATH, mcpAllowed } from "$lib/oidc-provider";
 import { APP_VERSION } from "$lib/server/app-version";
 import { allowLongRequest } from "$lib/server/long-request";
-import { REDACTED, redactText, restoreRedacted } from "$lib/server/mcp-redact";
+import {
+	mergeEnvChanges,
+	REDACTED,
+	redactText,
+	restoreArgv,
+} from "$lib/server/mcp-redact";
 
 export type ApiCall = (
 	method: "DELETE" | "GET" | "PATCH" | "POST",
@@ -118,7 +123,7 @@ function registerReadTools(server: McpServer, api: ApiCall): void {
 		{
 			annotations: read,
 			description:
-				"A service's full record: status, container and swarm ids, image, domains and every setting as stored. Env var values are redacted.",
+				"A service's full record: status, container and swarm ids, image, domains and every setting as stored. Secret-looking env vars, URL passwords and password arguments are redacted.",
 			inputSchema: z.object({ serviceId }),
 		},
 		async ({ serviceId: id }) => asResult(await api("GET", servicePath(id))),
@@ -129,7 +134,7 @@ function registerReadTools(server: McpServer, api: ApiCall): void {
 		{
 			annotations: read,
 			description:
-				"A service's settings grouped by dashboard tab (source, env, volumes, networking, compute, runtime, security, settings). Env var values are redacted.",
+				"A service's settings grouped by dashboard tab (source, env, volumes, networking, compute, runtime, security, settings). Secret-looking env vars, URL passwords and password arguments are redacted.",
 			inputSchema: z.object({ serviceId }),
 		},
 		async ({ serviceId: id }) =>
@@ -207,33 +212,57 @@ function registerInstanceTools(server: McpServer, api: ApiCall): void {
 }
 
 /**
- * Patches a service for `update_service`, first restoring any env var the
- * agent sent back as `REDACTED` to its stored value.
+ * Patches a service for `update_service`. Env changes are merged into the
+ * stored vars (`null` deletes one) rather than replacing them, and anything
+ * the agent only saw redacted (an env value, a URL's password, a password
+ * argument in the command) keeps its stored value; a placeholder that doesn't
+ * match anything stored is refused instead of written.
  */
 async function updateService(
 	api: ApiCall,
 	id: string,
 	changes: Record<string, unknown>,
 ): Promise<CallToolResult> {
-	if (!(changes.envVars && typeof changes.envVars === "object")) {
+	const touchesSecrets = ["command", "entrypoint", "envVars"].some(
+		(key) => key in changes,
+	);
+	if (!touchesSecrets) {
 		return asResult(await api("PATCH", servicePath(id), changes));
 	}
 	const current = await api("GET", servicePath(id));
 	if (!current.ok) {
 		return asResult(current);
 	}
-	const { envVars } = (await current.json()) as {
-		envVars: Record<string, string>;
+	const stored = (await current.json()) as {
+		command: string[] | null;
+		entrypoint: string[] | null;
+		envVars: Record<string, string> | null;
 	};
-	return asResult(
-		await api("PATCH", servicePath(id), {
-			...changes,
-			envVars: restoreRedacted(
-				changes.envVars as Record<string, unknown>,
-				envVars,
-			),
-		}),
-	);
+	try {
+		const patch = { ...changes };
+		if (patch.envVars && typeof patch.envVars === "object") {
+			patch.envVars = mergeEnvChanges(
+				patch.envVars as Record<string, unknown>,
+				stored.envVars ?? {},
+			);
+		}
+		for (const key of ["command", "entrypoint"] as const) {
+			if (Array.isArray(patch[key])) {
+				patch[key] = restoreArgv(patch[key] as unknown[], stored[key]);
+			}
+		}
+		return asResult(await api("PATCH", servicePath(id), patch));
+	} catch (err) {
+		return {
+			content: [
+				{
+					text: err instanceof Error ? err.message : String(err),
+					type: "text",
+				},
+			],
+			isError: true,
+		};
+	}
 }
 
 /** Registers the tools that change a service: settings, deploy, restart/start/stop and rollback. */
@@ -248,7 +277,7 @@ function registerChangeTools(server: McpServer, api: ApiCall): void {
 				changes: z
 					.record(z.string(), z.unknown())
 					.describe(
-						`The fields to change, as PATCH /services/{serviceId} takes them, e.g. {"envVars": {"KEY": "value"}} (envVars replaces the whole map, so send every var; a var left as "${REDACTED}" keeps its stored value)`,
+						`The fields to change, as PATCH /services/{serviceId} takes them, e.g. {"envVars": {"KEY": "value"}}. envVars is merged into the stored vars: send only the ones to change, null deletes one. Anything left as you read it, "${REDACTED}" included, keeps its stored value.`,
 					),
 				serviceId,
 			}),

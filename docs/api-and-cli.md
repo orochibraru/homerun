@@ -156,14 +156,26 @@ It reads: `list_services`, `get_service`, `get_service_config`, `service_logs`,
 `update_service`, `deploy_service`, `restart_service`, `start_service`,
 `stop_service` and `rollback_service`. Deleting a service is deliberately not a
 tool. Every tool goes through the REST API with your own permissions, so a
-read-only account or API key can diagnose but not change anything. Env var
-values never reach the agent: tools show each one as `[redacted]`, and an
-`update_service` call that sends `[redacted]` back keeps the stored value. Logs
-are passed through as they are, so an app that prints its own secrets still
-leaks them there. To disconnect Claude, revoke it under Profile → Authorized
-Clients (it can't refresh its access any more, and the token it holds expires
-within the hour), or delete its app under Authentication → Sign in with Homerun
-to cut it off for everyone.
+read-only account or API key can diagnose but not change anything.
+
+Secrets don't reach the agent, the rest stays readable:
+
+- An env var whose name has a secret-looking part (`PASSWORD`, `SECRET`,
+  `TOKEN`, `KEY`, `CREDENTIAL`, `PRIVATE`, `SALT`…) shows as `[redacted]`.
+- Any other value is shown as is, except a URL's password
+  (`postgres://app:[redacted]@db:5432/app`).
+- A `--requirepass` or `--password` argument in a command is also redacted, in
+  logs too.
+
+`update_service` merges env changes into what's stored: send only the vars to
+change, `null` deletes one. Anything sent back exactly as the agent read it,
+redaction included, keeps its stored value, and a placeholder that matches
+nothing stored is refused rather than written. A secret under a name that
+doesn't look like one (`TMDB_API`) isn't caught, and an app that prints its own
+secrets in some other form still leaks them in its logs. To disconnect Claude,
+revoke it under Profile → Authorized Clients (it can't refresh its access any
+more, and the token it holds expires within the hour), or delete its app under
+Authentication → Sign in with Homerun to cut it off for everyone.
 
 ## CLI
 
