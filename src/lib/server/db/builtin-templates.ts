@@ -601,4 +601,34 @@ export const BUILTIN_TEMPLATE_LINKS: BuiltinTemplateLink[] = [
 		linkedTemplateId: "builtin-redis",
 		templateId: "builtin-paperless-ngx",
 	},
+	{
+		alias: "db",
+		id: "builtin-link-aiostreams-postgres",
+		linkedTemplateId: "builtin-postgres",
+		templateId: "builtin-aiostreams",
+	},
+	{
+		alias: "db",
+		id: "builtin-link-aiometadata-postgres",
+		linkedTemplateId: "builtin-postgres",
+		templateId: "builtin-aiometadata",
+	},
+	{
+		alias: "redis",
+		id: "builtin-link-aiometadata-redis",
+		linkedTemplateId: "builtin-redis",
+		templateId: "builtin-aiometadata",
+	},
+	{
+		alias: "db",
+		id: "builtin-link-stremthru-postgres",
+		linkedTemplateId: "builtin-postgres",
+		templateId: "builtin-stremthru",
+	},
+	{
+		alias: "db",
+		id: "builtin-link-comet-postgres",
+		linkedTemplateId: "builtin-postgres",
+		templateId: "builtin-comet",
+	},
 ];

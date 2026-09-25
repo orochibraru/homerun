@@ -221,7 +221,7 @@ describe("evaluateChecks", () => {
 	});
 
 	test("a missing check waits while anything runs or before the grace period", () => {
-		expect(evaluateChecks(["e2e"], [], true).outcome).toBe("pending");
+		expect(evaluateChecks(["e2e"], [], false).outcome).toBe("pending");
 		expect(
 			evaluateChecks(["e2e"], [result("build", "pending")], true).outcome,
 		).toBe("pending");
@@ -238,6 +238,10 @@ describe("evaluateChecks", () => {
 		);
 		expect(evaluation.outcome).toBe("fail");
 		expect(evaluation.missing).toEqual(["e2e"]);
+	});
+
+	test("a commit nothing reports on fails once the grace expired", () => {
+		expect(evaluateChecks(["prek"], [], true).outcome).toBe("fail");
 	});
 });
 

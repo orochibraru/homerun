@@ -75,6 +75,30 @@ export const actions = {
 		return { deploymentId, success: true };
 	},
 
+	cancel: async ({ params, locals }) => {
+		if (!locals.user) {
+			throw redirect(302, resolve("/auth/sign-in"));
+		}
+		const [latest] = await DeploymentDTO.listForService(params.serviceId, 1);
+		const status = latest?.toJSON().status;
+		if (
+			!latest ||
+			!(status === "pending" || status === "pulling" || status === "starting")
+		) {
+			return fail(409, { error: "Nothing is deploying right now." });
+		}
+		await latest.appendLog("Cancelled.");
+		await latest.update({
+			errorMessage: "Cancelled.",
+			finishedAt: new Date(),
+			status: "failed",
+		});
+		logger.info(
+			`Deploy cancelled: service=${params.serviceId} deployment=${latest.id} user=${locals.user.id}`,
+		);
+		return { success: true };
+	},
+
 	kill: async ({ params, locals }) => {
 		if (!locals.user) {
 			throw redirect(302, resolve("/auth/sign-in"));

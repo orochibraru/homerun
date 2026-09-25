@@ -392,8 +392,7 @@ function outcomeOf(
 	if (evaluation.missing.length === 0) {
 		return "pass";
 	}
-	const everythingFinished =
-		results.length > 0 && results.every((r) => r.state !== "pending");
+	const everythingFinished = results.every((r) => r.state !== "pending");
 	return everythingFinished && graceExpired ? "fail" : "pending";
 }
 

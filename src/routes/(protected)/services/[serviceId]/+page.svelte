@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Ban,
 		CheckCircle2,
 		Circle,
 		Download,
@@ -113,6 +114,23 @@
             {/if}
         </Button>
     </form>
+
+    {#if progress.pendingAction === "deploy"}
+        <form
+            action="?/cancel"
+            method="POST"
+            use:enhance={enhanceToast({
+                error: "Couldn't cancel the deploy.",
+                loading: `Cancelling the deploy of ${svc.name}`,
+                success: "Deploy cancelled.",
+            })}
+        >
+            <Button type="submit" variant="outline">
+                <Ban class="size-4" />
+                Cancel
+            </Button>
+        </form>
+    {/if}
 
     {#if svc.buildSource === "git"}
         <form

@@ -16,4 +16,15 @@ When done delete the entry, no bloat.
 
 ## Medium
 
+- [ ] Deploy Cancel only stops the app-side wait (status checks). A queued job
+      that hasn't started yet still runs, and a Go-side build/pull keeps going
+      and overwrites the `failed` status when it finishes : the worker needs to
+      poll the deployment row (or take a cancel call) and kill the build.
+
 ## Large
+
+- [ ] Browse and edit files inside a volume (or a host path) from the UI, for
+      config files imported from Dokploy's file mounts: a Files tab on a volume
+      backed by a short-lived helper container through the worker (list, read,
+      write, upload), and/or a one-click "Open in code-server" that deploys the
+      code-server template with the volume mounted at /config.
