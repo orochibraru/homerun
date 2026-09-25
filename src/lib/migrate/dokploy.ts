@@ -155,6 +155,13 @@ function publicPort(row: RawRow): number | null {
 	return null;
 }
 
+function dokployDomains(row: RawRow): string[] {
+	return rows(row.domains).flatMap((domain) => {
+		const host = str(domain, "host");
+		return host ? [host] : [];
+	});
+}
+
 function limits(row: RawRow): {
 	cpuLimit: string | null;
 	memoryLimitMb: number | null;
@@ -262,6 +269,7 @@ interface AppContext {
 	base: {
 		command: string[] | null;
 		cpuLimit: string | null;
+		domains: string[];
 		entrypoint: string[] | null;
 		envVars: Record<string, string>;
 		files: ComposeFileDraft[];
@@ -386,6 +394,7 @@ export function dokployApplication(
 			envVars: parseEnvBlob(row.env),
 			files: dokployFileMounts(row),
 			name,
+			domains: dokployDomains(row),
 			public: rows(row.domains).length > 0,
 			...dokployStartCommand(row),
 			...limits(row),
@@ -523,8 +532,12 @@ export function dokployCompose(
 			parsed.drafts.find((d) => d.key === target) ??
 			(parsed.drafts.length === 1 ? parsed.drafts[0] : undefined);
 		const port = num(domain, "port");
+		const host = str(domain, "host");
 		if (draft) {
 			draft.dnsResolvable = true;
+			if (host && !draft.domains.includes(host)) {
+				draft.domains.push(host);
+			}
 			if (port) {
 				draft.containerPort = port;
 			}

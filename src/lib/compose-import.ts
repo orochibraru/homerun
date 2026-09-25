@@ -46,6 +46,7 @@ export interface ComposeServiceDraft {
 	dependsOn: string[];
 	devices: string[];
 	dnsResolvable: boolean;
+	domains: string[];
 	entrypoint: string[] | null;
 	envFiles: string[];
 	envVars: Record<string, string>;
@@ -616,6 +617,7 @@ function draftFor(
 		dependsOn: parseDependsOn(raw.depends_on),
 		devices: parseDevices(raw.devices),
 		dnsResolvable: networkMode === "bridge" && published,
+		domains: [],
 		entrypoint: argvFrom(raw.entrypoint),
 		envFiles: envFiles.envFiles,
 		envVars: { ...envFiles.envVars, ...parseEnvironment(raw.environment) },

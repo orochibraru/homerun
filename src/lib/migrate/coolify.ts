@@ -146,8 +146,26 @@ function appBase(row: RawRow, name: string, env: Record<string, string>) {
 		envVars: env,
 		memoryLimitMb: coolifyMemoryMb(row.limits_memory),
 		name,
+		domains: coolifyDomains(str(row, "fqdn")),
 		public: !!str(row, "fqdn"),
 	};
+}
+
+function coolifyDomains(fqdn: string | null): string[] {
+	return (fqdn ?? "").split(",").flatMap((entry) => {
+		const trimmed = entry.trim();
+		if (!trimmed) {
+			return [];
+		}
+		try {
+			return [
+				new URL(/^[a-z]+:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`)
+					.hostname,
+			];
+		} catch {
+			return [];
+		}
+	});
 }
 
 function blockedApp(blocked: string, summary: string): AppOutcome {

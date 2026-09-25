@@ -167,6 +167,7 @@ describe("dokployApplication", () => {
 			build: null,
 			containerPort: 1411,
 			dnsResolvable: true,
+			domains: ["auth.example.com"],
 			envVars: { APP_URL: "https://auth.example.com", TRUST_PROXY: "true" },
 			image: "ghcr.io/pocket-id/pocket-id",
 			slug: "pocket-id",
@@ -387,6 +388,7 @@ describe("dokployCompose", () => {
 		expect(entry.drafts[0]).toMatchObject({
 			containerPort: 8384,
 			dnsResolvable: true,
+			domains: ["sync.example.com"],
 			image: "lscr.io/linuxserver/syncthing",
 			tag: "latest",
 		});

@@ -212,6 +212,7 @@ export interface SingleDraftInput {
 	containerPort: number | null;
 	cpuLimit?: string | null;
 	devices?: string[];
+	domains?: string[];
 	entrypoint?: string[] | null;
 	envVars: Record<string, string>;
 	files?: ComposeFileDraft[];
@@ -245,6 +246,7 @@ export function singleDraft(input: SingleDraftInput): ComposeServiceDraft {
 		dependsOn: [],
 		devices: input.devices ?? [],
 		dnsResolvable: input.public,
+		domains: input.domains ?? [],
 		entrypoint: input.entrypoint ?? null,
 		envFiles: [],
 		envVars: input.envVars,

@@ -336,7 +336,10 @@
           value={data.settings.pangolinTargetPort ?? ""}
         />
         <p class="text-text-subtle mt-1.5 text-xs">
-          The local port on that site's host a Resource's Target forwards to.
+          The local port on that site's host a Resource's Target forwards to:
+          the host port Traefik's 443 is published on. Ignored when the target
+          host is detected as Traefik's container name, which is always
+          reached on 443.
           Unset defaults to <strong>443</strong>, this instance's own
           <code class="">websecure</code> Traefik entrypoint, and the
           Target is created as <code class="">https</code>. Every

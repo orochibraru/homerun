@@ -12,6 +12,7 @@ import { StackDTO } from "$lib/dto/stack-dto";
 import { StorageVolumeDTO } from "$lib/dto/storage-volume-dto";
 import { HOST_ACCESS_MESSAGE, hostAccessRequested } from "$lib/host-access";
 import { Logger } from "$lib/logger";
+import { DOMAIN_RE, normalizeDomains } from "$lib/service-domains";
 import { uniqueSlug } from "$lib/slug";
 import { tarArchive } from "$lib/tar";
 import { DeploymentService } from "./deploy.service.ts";
@@ -159,6 +160,18 @@ class ComposeImportServiceClass {
 		}
 	}
 
+	/** The draft's valid hostnames that no other service already routes, so an imported domain never collides with an existing one. */
+	async #freeDomains(raw: string[]): Promise<string[]> {
+		const free: string[] = [];
+		for (const domain of normalizeDomains(raw)) {
+			// oxlint-disable-next-line no-await-in-loop -- a handful of domains per service
+			if (DOMAIN_RE.test(domain) && !(await ServiceDTO.domainTaken([domain]))) {
+				free.push(domain);
+			}
+		}
+		return free;
+	}
+
 	/**
 	 * Creates one service row from a parsed compose draft, resolves and
 	 * attaches its volume mounts (`#resolveVolumes`), and fires a
@@ -170,12 +183,14 @@ class ComposeImportServiceClass {
 		userId: string,
 		volumes: StorageVolumeDTO[],
 	): Promise<ServiceDTO> {
+		const domains = await this.#freeDomains(draft.domains);
 		const svc = await ServiceDTO.create({
 			...this.#registryColumns(draft),
 			buildSource: draft.build ? "git" : "image",
 			containerPort: draft.containerPort,
 			cpuLimit: draft.cpuLimit,
 			dnsResolvable: draft.dnsResolvable,
+			domains,
 			envVars: draft.envVars,
 			gitBuildContext: draft.build?.context ?? null,
 			gitBuildMethod: draft.build?.method ?? "dockerfile",

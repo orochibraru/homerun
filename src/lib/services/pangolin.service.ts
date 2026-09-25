@@ -225,7 +225,9 @@ class PangolinServiceClass {
 	 * Loads instance settings and returns the resolved Pangolin call
 	 * parameters, or `null` when Pangolin integration isn't fully configured.
 	 * Decrypts the stored API token, and when no explicit target host is set,
-	 * resolves one via `DockerService.tunnelTargetHost()`.
+	 * resolves one via `DockerService.tunnelTargetHost()`; a detected Traefik
+	 * container name always pairs with Traefik's in-container port 443, since
+	 * the configured port is a host port.
 	 */
 	private async settingsOrNull(): Promise<{
 		baseUrl: string;
@@ -247,14 +249,17 @@ class PangolinServiceClass {
 		if (!(token && baseUrl && orgId && mainSiteName)) {
 			return null;
 		}
+		const targetHost =
+			settings.pangolinTargetHost ?? (await DockerService.tunnelTargetHost());
+		const inNetwork =
+			!settings.pangolinTargetHost && targetHost !== "localhost";
 		return {
 			baseUrl,
 			mainSiteName,
 			orgId,
 			ownsAuth: settings.pangolinOwnsAuth,
-			port: settings.pangolinTargetPort,
-			targetHost:
-				settings.pangolinTargetHost ?? (await DockerService.tunnelTargetHost()),
+			port: inNetwork ? 443 : settings.pangolinTargetPort,
+			targetHost,
 			token,
 		};
 	}
