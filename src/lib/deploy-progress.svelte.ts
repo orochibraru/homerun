@@ -18,6 +18,7 @@ export class DeployProgress {
 	pendingAction = $state<string | null>(null);
 	progressLines = $state<string[]>([]);
 	progressStatus = $state("pending");
+	failedDeploymentId = $state<string | null>(null);
 	#progressSource: EventSource | null = null;
 	#pollGeneration = 0;
 
@@ -34,13 +35,19 @@ export class DeployProgress {
 	/**
 	 * Picks the progress view back up when the page arrives mid-deploy (a reload,
 	 * or a deploy queued elsewhere: a template quick-deploy, the create wizard,
-	 * cron), since nothing else tells the client when it's done.
+	 * cron), since nothing else tells the client when it's done. A latest deploy
+	 * that already failed is only flagged for the page's alert, never watched
+	 * again, even when the service's own status still reads as in flight.
 	 */
 	resume(
 		latest: { id: string; status: string } | undefined,
 		serviceStatus: string,
 	): void {
 		if (!latest) {
+			return;
+		}
+		if (latest.status === "failed") {
+			this.failedDeploymentId = latest.id;
 			return;
 		}
 		if (
@@ -127,25 +134,23 @@ export class DeployProgress {
 	}
 
 	/**
-	 * Ends the progress view once a deploy reaches a terminal status. A failed
-	 * deploy opens its revision instead of refreshing: `refreshAll` claims the
-	 * navigation token a microtask later than `goto`, so running both cancels
-	 * the navigation.
+	 * Ends the progress view once a deploy reaches a terminal status and
+	 * refreshes the page. A failed deploy stays on the page: it's flagged for the
+	 * page's alert and toasted with a link to its revision, never navigated to.
 	 */
 	settleDeploy(deploymentId: string, status: string): void {
 		this.pendingAction = null;
+		void refreshAll();
 		if (status !== "failed") {
-			void refreshAll();
 			return;
 		}
+		this.failedDeploymentId = deploymentId;
 		toast.error(`${this.#service.name()} failed to deploy.`, {
 			action: {
 				label: "See why",
 				onClick: () => goto(this.revisionHref(deploymentId)),
 			},
-			description: "Opening the revision that failed.",
 		});
-		void goto(this.revisionHref(deploymentId));
 	}
 
 	/**
@@ -207,6 +212,7 @@ export class DeployProgress {
 			onComplete: () => refreshAll(),
 			onStart: () => {
 				this.pendingAction = "deploy";
+				this.failedDeploymentId = null;
 				this.progressLines = [];
 				this.progressStatus = "pending";
 			},

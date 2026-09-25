@@ -16,6 +16,7 @@
 	import { onDestroy, onMount, tick } from "svelte";
 	import { enhance } from "$app/forms";
 	import { resolve } from "$app/paths";
+	import Alert from "$lib/components/alert.svelte";
 	import AnsiLine from "$lib/components/ansi-line.svelte";
 	import ConnectionStrings from "$lib/components/connection-strings.svelte";
 	import LiveLogViewer from "$lib/components/live-log-viewer.svelte";
@@ -93,6 +94,22 @@
 		}
 	});
 </script>
+
+{#if progress.failedDeploymentId && progress.pendingAction !== "deploy"}
+  {@const failedId = progress.failedDeploymentId}
+  <Alert class="mb-4" title="The last deploy failed">
+    Its revision has the error and the full log.
+    {#snippet actions()}
+      <Button
+        href={progress.revisionHref(failedId)}
+        size="sm"
+        variant="outline"
+      >
+        See why
+      </Button>
+    {/snippet}
+  </Alert>
+{/if}
 
 <!-- ═══ Actions ═══ -->
 <div class="mb-4 flex flex-wrap gap-2">
